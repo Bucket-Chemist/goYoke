@@ -1,0 +1,198 @@
+%% GOgent Fortress Phase 0 Dependency Graph
+%% Generated: 2026-01-15
+%% Total tickets: 56
+
+graph TB
+    %% Styling
+    classDef critical fill:#ff6b6b,stroke:#c92a2a,color:#fff
+    classDef high fill:#ffa94d,stroke:#fd7e14,color:#000
+    classDef medium fill:#74c0fc,stroke:#339af0,color:#000
+    classDef low fill:#b2f2bb,stroke:#51cf66,color:#000
+    classDef complete fill:#d0d0d0,stroke:#909090,color:#000
+
+    %% Week 0: Prework
+    GOgent000[GOgent-000<br/>Baseline]:::critical
+
+    %% Week 1 Day 1-2: Foundation
+    GOgent001[GOgent-001<br/>Go Module]:::critical
+    GOgent002[GOgent-002<br/>STDIN Timeout]:::high
+    GOgent003[GOgent-003<br/>Parse ToolEvent]:::critical
+    GOgent004a[GOgent-004a<br/>Load Schema]:::critical
+    GOgent004b[GOgent-004b<br/>Read Tier]:::high
+    GOgent005[GOgent-005<br/>Parse Task Input]:::high
+    GOgent006[GOgent-006<br/>XDG Paths]:::medium
+    GOgent007[GOgent-007<br/>Tool Permissions]:::critical
+    GOgent008a[GOgent-008a<br/>Hook Response]:::critical
+    GOgent008b[GOgent-008b<br/>Capture Corpus]:::high
+    GOgent009[GOgent-009<br/>Error Format]:::low
+
+    %% Week 1 Day 3-5: Overrides & Permissions
+    GOgent010[GOgent-010<br/>Parse Overrides]:::medium
+    GOgent011[GOgent-011<br/>Violation Logging]:::high
+    GOgent012[GOgent-012<br/>Escape Hatch Tests]:::medium
+    GOgent013[GOgent-013<br/>Scout Metrics]:::medium
+    GOgent014[GOgent-014<br/>Metrics Freshness]:::low
+    GOgent015[GOgent-015<br/>Tier Update]:::medium
+    GOgent016[GOgent-016<br/>Complexity Tests]:::medium
+    GOgent017[GOgent-017<br/>Tool Permission Check]:::critical
+    GOgent018[GOgent-018<br/>Wildcard Tools]:::medium
+    GOgent019[GOgent-019<br/>Permission Tests]:::high
+
+    %% Week 1 Day 6-7: Validation CLI
+    GOgent020[GOgent-020<br/>Opus Blocking]:::critical
+    GOgent021[GOgent-021<br/>Model Mismatch]:::low
+    GOgent022[GOgent-022<br/>Delegation Ceiling]:::medium
+    GOgent023[GOgent-023<br/>Subagent Validation]:::high
+    GOgent024[GOgent-024<br/>Task Validation Tests]:::high
+    GOgent024b[GOgent-024b<br/>Validation Orchestrator]:::critical
+    GOgent025[GOgent-025<br/>gogent-validate CLI]:::critical
+
+    %% Week 2 Day 1-3: Session Archive
+    GOgent026[GOgent-026<br/>Parse SessionEnd]:::high
+    GOgent027[GOgent-027<br/>Session Metrics]:::high
+    GOgent028[GOgent-028<br/>Handoff Generation]:::critical
+    GOgent029[GOgent-029<br/>Format Learnings]:::medium
+    GOgent030[GOgent-030<br/>Format Violations]:::medium
+    GOgent031[GOgent-031<br/>Archive Files]:::high
+    GOgent032[GOgent-032<br/>Archive Integration]:::high
+    GOgent033[GOgent-033<br/>gogent-archive CLI]:::critical
+
+    %% Week 2 Day 4-6: Sharp Edge Memory
+    GOgent034[GOgent-034<br/>Parse PostToolUse]:::high
+    GOgent035[GOgent-035<br/>Failure Detection]:::critical
+    GOgent036[GOgent-036<br/>Failure Tracking]:::critical
+    GOgent037[GOgent-037<br/>Sharp Edge Capture]:::high
+    GOgent038[GOgent-038<br/>Response Generation]:::critical
+    GOgent039[GOgent-039<br/>Sharp Edge Integration]:::high
+    GOgent040[GOgent-040<br/>gogent-sharp-edge CLI]:::critical
+
+    %% Week 3 Day 1-3: Integration & Regression
+    GOgent004c[GOgent-004c<br/>Config Tests]:::medium
+    GOgent041[GOgent-041<br/>Test Harness]:::critical
+    GOgent042[GOgent-042<br/>Validate Integration]:::high
+    GOgent043[GOgent-043<br/>Archive Integration]:::high
+    GOgent044[GOgent-044<br/>Sharp Edge Integration]:::high
+    GOgent045[GOgent-045<br/>Performance Benchmarks]:::high
+    GOgent046[GOgent-046<br/>E2E Workflow Tests]:::high
+    GOgent047[GOgent-047<br/>Regression Tests]:::critical
+
+    %% Week 3 Day 4-7: Deployment & Cutover
+    GOgent048[GOgent-048<br/>Installation Script]:::critical
+    GOgent048b[GOgent-048b<br/>WSL2 Testing]:::medium
+    GOgent049[GOgent-049<br/>Parallel Testing]:::critical
+    GOgent050[GOgent-050<br/>Cutover Decision]:::critical
+    GOgent051[GOgent-051<br/>Cutover Script]:::critical
+    GOgent052[GOgent-052<br/>Rollback Script]:::critical
+    GOgent053[GOgent-053<br/>Documentation]:::high
+    GOgent054[GOgent-054<br/>Health Check]:::high
+    GOgent055[GOgent-055<br/>Post-Cutover Validation]:::critical
+
+    %% Dependencies - Week 0 → Week 1
+    GOgent000 --> GOgent001
+    GOgent000 --> GOgent002
+    GOgent000 --> GOgent003
+    GOgent000 --> GOgent004a
+    GOgent000 --> GOgent005
+    GOgent000 --> GOgent006
+    GOgent000 --> GOgent007
+    GOgent000 --> GOgent008a
+    GOgent000 --> GOgent008b
+    GOgent000 --> GOgent009
+
+    %% Week 1 Day 1-2 Internal
+    GOgent001 --> GOgent002
+    GOgent001 --> GOgent003
+    GOgent001 --> GOgent004a
+    GOgent002 --> GOgent003
+    GOgent002 --> GOgent005
+    GOgent002 --> GOgent008a
+    GOgent003 --> GOgent004a
+    GOgent003 --> GOgent005
+    GOgent003 --> GOgent013
+    GOgent004a --> GOgent004b
+    GOgent004a --> GOgent007
+    GOgent004a --> GOgent013
+    GOgent004b --> GOgent007
+
+    %% Week 1 Day 3-5
+    GOgent010 --> GOgent011
+    GOgent011 --> GOgent012
+    GOgent011 --> GOgent030
+    GOgent006 --> GOgent011
+    GOgent006 --> GOgent027
+    GOgent013 --> GOgent014
+    GOgent014 --> GOgent015
+    GOgent013 --> GOgent015
+    GOgent015 --> GOgent016
+    GOgent007 --> GOgent017
+    GOgent017 --> GOgent018
+    GOgent017 --> GOgent019
+    GOgent018 --> GOgent019
+
+    %% Week 1 Day 6-7
+    GOgent005 --> GOgent020
+    GOgent005 --> GOgent023
+    GOgent020 --> GOgent024
+    GOgent022 --> GOgent024
+    GOgent023 --> GOgent024
+    GOgent024 --> GOgent024b
+    GOgent007 --> GOgent024b
+    GOgent008a --> GOgent024b
+    GOgent020 --> GOgent024b
+    GOgent024b --> GOgent025
+
+    %% Week 2 Day 1-3
+    GOgent026 --> GOgent027
+    GOgent026 --> GOgent028
+    GOgent027 --> GOgent028
+    GOgent028 --> GOgent032
+    GOgent029 --> GOgent032
+    GOgent030 --> GOgent032
+    GOgent031 --> GOgent032
+    GOgent032 --> GOgent033
+
+    %% Week 2 Day 4-6
+    GOgent034 --> GOgent035
+    GOgent034 --> GOgent036
+    GOgent035 --> GOgent036
+    GOgent036 --> GOgent037
+    GOgent036 --> GOgent038
+    GOgent008a --> GOgent038
+    GOgent037 --> GOgent039
+    GOgent038 --> GOgent039
+    GOgent039 --> GOgent040
+
+    %% Week 3 Day 1-3
+    GOgent004a --> GOgent004c
+    GOgent004b --> GOgent004c
+    GOgent000 --> GOgent041
+    GOgent008b --> GOgent041
+    GOgent025 --> GOgent042
+    GOgent041 --> GOgent042
+    GOgent042 --> GOgent046
+    GOgent033 --> GOgent043
+    GOgent041 --> GOgent043
+    GOgent043 --> GOgent046
+    GOgent040 --> GOgent044
+    GOgent041 --> GOgent044
+    GOgent044 --> GOgent046
+    GOgent041 --> GOgent045
+    GOgent042 --> GOgent045
+    GOgent043 --> GOgent045
+    GOgent044 --> GOgent045
+    GOgent000 --> GOgent047
+    GOgent041 --> GOgent047
+
+    %% Week 3 Day 4-7
+    GOgent048 --> GOgent048b
+    GOgent048 --> GOgent049
+    GOgent048 --> GOgent051
+    GOgent049 --> GOgent050
+    GOgent050 --> GOgent051
+    GOgent051 --> GOgent052
+    GOgent051 --> GOgent053
+    GOgent051 --> GOgent054
+    GOgent051 --> GOgent055
+
+    %% Critical path highlights (longest dependency chain)
+    linkStyle 0,1,2,3,10,12,14,48,49,50,51,52 stroke:#ff0000,stroke-width:3px

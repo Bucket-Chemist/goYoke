@@ -1,0 +1,664 @@
+=== RUN   TestGetGOgentDir_XDG_RUNTIME_DIR
+--- PASS: TestGetGOgentDir_XDG_RUNTIME_DIR (0.00s)
+=== RUN   TestGetGOgentDir_XDG_CACHE_HOME
+--- PASS: TestGetGOgentDir_XDG_CACHE_HOME (0.00s)
+=== RUN   TestGetGOgentDir_Fallback
+--- PASS: TestGetGOgentDir_Fallback (0.00s)
+=== RUN   TestGetGOgentDir_EmptyXDGVars
+--- PASS: TestGetGOgentDir_EmptyXDGVars (0.00s)
+=== RUN   TestGetTierFilePath
+--- PASS: TestGetTierFilePath (0.00s)
+=== RUN   TestGetMaxDelegationPath
+--- PASS: TestGetMaxDelegationPath (0.00s)
+=== RUN   TestGetViolationsLogPath
+--- PASS: TestGetViolationsLogPath (0.00s)
+=== RUN   TestGetGOgentDir_PriorityOrder
+--- PASS: TestGetGOgentDir_PriorityOrder (0.00s)
+=== RUN   TestGetGOgentDir_CreatesDirectory
+--- PASS: TestGetGOgentDir_CreatesDirectory (0.00s)
+=== RUN   TestGetCurrentTier
+=== RUN   TestGetCurrentTier/valid_tier:_haiku
+=== RUN   TestGetCurrentTier/valid_tier:_haiku_thinking
+=== RUN   TestGetCurrentTier/valid_tier:_sonnet
+=== RUN   TestGetCurrentTier/valid_tier:_opus
+=== RUN   TestGetCurrentTier/valid_tier:_external
+=== RUN   TestGetCurrentTier/missing_file_returns_external
+=== RUN   TestGetCurrentTier/empty_file_returns_external
+=== RUN   TestGetCurrentTier/whitespace_only_returns_external
+=== RUN   TestGetCurrentTier/leading_whitespace_trimmed
+=== RUN   TestGetCurrentTier/trailing_whitespace_trimmed
+=== RUN   TestGetCurrentTier/leading_and_trailing_whitespace_trimmed
+=== RUN   TestGetCurrentTier/invalid_tier_value
+=== RUN   TestGetCurrentTier/uppercase_tier_(invalid)
+=== RUN   TestGetCurrentTier/mixed_case_tier_(invalid)
+--- PASS: TestGetCurrentTier (0.00s)
+    --- PASS: TestGetCurrentTier/valid_tier:_haiku (0.00s)
+    --- PASS: TestGetCurrentTier/valid_tier:_haiku_thinking (0.00s)
+    --- PASS: TestGetCurrentTier/valid_tier:_sonnet (0.00s)
+    --- PASS: TestGetCurrentTier/valid_tier:_opus (0.00s)
+    --- PASS: TestGetCurrentTier/valid_tier:_external (0.00s)
+    --- PASS: TestGetCurrentTier/missing_file_returns_external (0.00s)
+    --- PASS: TestGetCurrentTier/empty_file_returns_external (0.00s)
+    --- PASS: TestGetCurrentTier/whitespace_only_returns_external (0.00s)
+    --- PASS: TestGetCurrentTier/leading_whitespace_trimmed (0.00s)
+    --- PASS: TestGetCurrentTier/trailing_whitespace_trimmed (0.00s)
+    --- PASS: TestGetCurrentTier/leading_and_trailing_whitespace_trimmed (0.00s)
+    --- PASS: TestGetCurrentTier/invalid_tier_value (0.00s)
+    --- PASS: TestGetCurrentTier/uppercase_tier_(invalid) (0.00s)
+    --- PASS: TestGetCurrentTier/mixed_case_tier_(invalid) (0.00s)
+=== RUN   TestIsValidTier
+=== RUN   TestIsValidTier/haiku_is_valid
+=== RUN   TestIsValidTier/haiku_thinking_is_valid
+=== RUN   TestIsValidTier/sonnet_is_valid
+=== RUN   TestIsValidTier/opus_is_valid
+=== RUN   TestIsValidTier/external_is_valid
+=== RUN   TestIsValidTier/invalid_tier
+=== RUN   TestIsValidTier/empty_tier
+=== RUN   TestIsValidTier/uppercase_tier
+=== RUN   TestIsValidTier/mixed_case_tier
+=== RUN   TestIsValidTier/whitespace_tier
+--- PASS: TestIsValidTier (0.00s)
+    --- PASS: TestIsValidTier/haiku_is_valid (0.00s)
+    --- PASS: TestIsValidTier/haiku_thinking_is_valid (0.00s)
+    --- PASS: TestIsValidTier/sonnet_is_valid (0.00s)
+    --- PASS: TestIsValidTier/opus_is_valid (0.00s)
+    --- PASS: TestIsValidTier/external_is_valid (0.00s)
+    --- PASS: TestIsValidTier/invalid_tier (0.00s)
+    --- PASS: TestIsValidTier/empty_tier (0.00s)
+    --- PASS: TestIsValidTier/uppercase_tier (0.00s)
+    --- PASS: TestIsValidTier/mixed_case_tier (0.00s)
+    --- PASS: TestIsValidTier/whitespace_tier (0.00s)
+PASS
+coverage: 93.5% of statements
+ok  	github.com/Exact-Mass/l-a-g-GO/pkg/config	0.005s	coverage: 93.5% of statements
+=== RUN   TestLoadAgentIndex
+    agents_test.go:26: ✓ Loaded 21 agents from agents-index.json v2.2.0
+--- PASS: TestLoadAgentIndex (0.00s)
+=== RUN   TestUnmarshalProductionAgentIndex
+    agents_test.go:182: ✓ Successfully unmarshaled all v2.2.0 fields for 21 agents
+--- PASS: TestUnmarshalProductionAgentIndex (0.00s)
+=== RUN   TestAgentIndexValidate
+=== RUN   TestAgentIndexValidate/valid_index
+=== RUN   TestAgentIndexValidate/version_mismatch
+=== RUN   TestAgentIndexValidate/duplicate_agent_ID
+=== RUN   TestAgentIndexValidate/model_tiers_references_unknown_agent
+--- PASS: TestAgentIndexValidate (0.00s)
+    --- PASS: TestAgentIndexValidate/valid_index (0.00s)
+    --- PASS: TestAgentIndexValidate/version_mismatch (0.00s)
+    --- PASS: TestAgentIndexValidate/duplicate_agent_ID (0.00s)
+    --- PASS: TestAgentIndexValidate/model_tiers_references_unknown_agent (0.00s)
+=== RUN   TestValidateAgent
+=== RUN   TestValidateAgent/valid_agent
+=== RUN   TestValidateAgent/valid_external_agent
+=== RUN   TestValidateAgent/missing_id
+=== RUN   TestValidateAgent/missing_tools_(non-external)
+=== RUN   TestValidateAgent/invalid_numeric_tier
+=== RUN   TestValidateAgent/invalid_string_tier
+--- PASS: TestValidateAgent (0.00s)
+    --- PASS: TestValidateAgent/valid_agent (0.00s)
+    --- PASS: TestValidateAgent/valid_external_agent (0.00s)
+    --- PASS: TestValidateAgent/missing_id (0.00s)
+    --- PASS: TestValidateAgent/missing_tools_(non-external) (0.00s)
+    --- PASS: TestValidateAgent/invalid_numeric_tier (0.00s)
+    --- PASS: TestValidateAgent/invalid_string_tier (0.00s)
+=== RUN   TestGetAgentByID
+=== RUN   TestGetAgentByID/existing_agent
+=== RUN   TestGetAgentByID/unknown_agent
+--- PASS: TestGetAgentByID (0.00s)
+    --- PASS: TestGetAgentByID/existing_agent (0.00s)
+    --- PASS: TestGetAgentByID/unknown_agent (0.00s)
+=== RUN   TestGetAgentsByTier
+=== RUN   TestGetAgentsByTier/haiku_tier
+=== RUN   TestGetAgentsByTier/sonnet_tier
+=== RUN   TestGetAgentsByTier/unknown_tier
+--- PASS: TestGetAgentsByTier (0.00s)
+    --- PASS: TestGetAgentsByTier/haiku_tier (0.00s)
+    --- PASS: TestGetAgentsByTier/sonnet_tier (0.00s)
+    --- PASS: TestGetAgentsByTier/unknown_tier (0.00s)
+=== RUN   TestGetToolsForAgent
+--- PASS: TestGetToolsForAgent (0.00s)
+=== RUN   TestFindAgentByLanguage
+=== RUN   TestFindAgentByLanguage/Python
+=== RUN   TestFindAgentByLanguage/Go
+=== RUN   TestFindAgentByLanguage/Unknown
+--- PASS: TestFindAgentByLanguage (0.00s)
+    --- PASS: TestFindAgentByLanguage/Python (0.00s)
+    --- PASS: TestFindAgentByLanguage/Go (0.00s)
+    --- PASS: TestFindAgentByLanguage/Unknown (0.00s)
+=== RUN   TestFindAgentByPattern
+--- PASS: TestFindAgentByPattern (0.00s)
+=== RUN   TestFindAgentByTrigger
+--- PASS: TestFindAgentByTrigger (0.00s)
+=== RUN   TestFindAgentByCategory
+=== RUN   TestFindAgentByCategory/language_category
+=== RUN   TestFindAgentByCategory/architecture_category
+=== RUN   TestFindAgentByCategory/unknown_category
+--- PASS: TestFindAgentByCategory (0.00s)
+    --- PASS: TestFindAgentByCategory/language_category (0.00s)
+    --- PASS: TestFindAgentByCategory/architecture_category (0.00s)
+    --- PASS: TestFindAgentByCategory/unknown_category (0.00s)
+=== RUN   TestGetScoutAgents
+--- PASS: TestGetScoutAgents (0.00s)
+=== RUN   TestGetTierForAgent
+=== RUN   TestGetTierForAgent/haiku_tier_agent
+=== RUN   TestGetTierForAgent/sonnet_tier_agent
+=== RUN   TestGetTierForAgent/unknown_agent
+--- PASS: TestGetTierForAgent (0.00s)
+    --- PASS: TestGetTierForAgent/haiku_tier_agent (0.00s)
+    --- PASS: TestGetTierForAgent/sonnet_tier_agent (0.00s)
+    --- PASS: TestGetTierForAgent/unknown_agent (0.00s)
+=== RUN   TestProductionAgentIndexCompleteness
+    agents_test.go:795: ✓ All 21 expected agents found and accessible
+--- PASS: TestProductionAgentIndexCompleteness (0.00s)
+=== RUN   TestValidateDependencies_CircularDependency
+=== RUN   TestValidateDependencies_CircularDependency/direct_circular_dependency
+=== RUN   TestValidateDependencies_CircularDependency/indirect_circular_dependency_(A→B→C→A)
+=== RUN   TestValidateDependencies_CircularDependency/no_circular_dependency_(linear_chain)
+=== RUN   TestValidateDependencies_CircularDependency/diamond_dependency_(no_cycle)
+--- PASS: TestValidateDependencies_CircularDependency (0.00s)
+    --- PASS: TestValidateDependencies_CircularDependency/direct_circular_dependency (0.00s)
+    --- PASS: TestValidateDependencies_CircularDependency/indirect_circular_dependency_(A→B→C→A) (0.00s)
+    --- PASS: TestValidateDependencies_CircularDependency/no_circular_dependency_(linear_chain) (0.00s)
+    --- PASS: TestValidateDependencies_CircularDependency/diamond_dependency_(no_cycle) (0.00s)
+=== RUN   TestValidateDependencies_MissingDependency
+--- PASS: TestValidateDependencies_MissingDependency (0.00s)
+=== RUN   TestValidateDependencies_MultiLevelDependencies
+--- PASS: TestValidateDependencies_MultiLevelDependencies (0.00s)
+=== RUN   TestLoadAgentIndex_Concurrent
+--- PASS: TestLoadAgentIndex_Concurrent (0.00s)
+=== RUN   TestParseToolEvent_ValidEvents
+=== RUN   TestParseToolEvent_ValidEvents/Task_tool
+=== RUN   TestParseToolEvent_ValidEvents/Read_tool
+=== RUN   TestParseToolEvent_ValidEvents/Write_tool
+=== RUN   TestParseToolEvent_ValidEvents/Edit_tool
+=== RUN   TestParseToolEvent_ValidEvents/Bash_tool
+=== RUN   TestParseToolEvent_ValidEvents/Glob_tool
+=== RUN   TestParseToolEvent_ValidEvents/Grep_tool
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_sonnet_model
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_opus_model
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_Plan_subagent_type
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_general-purpose_subagent_type
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_Explore_subagent_type
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_force-tier_override
+=== RUN   TestParseToolEvent_ValidEvents/Task_with_force-delegation_override
+=== RUN   TestParseToolEvent_ValidEvents/R_implementation_task
+--- PASS: TestParseToolEvent_ValidEvents (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Read_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Write_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Edit_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Bash_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Glob_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Grep_tool (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_sonnet_model (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_opus_model (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_Plan_subagent_type (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_general-purpose_subagent_type (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_Explore_subagent_type (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_force-tier_override (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/Task_with_force-delegation_override (0.00s)
+    --- PASS: TestParseToolEvent_ValidEvents/R_implementation_task (0.00s)
+=== RUN   TestParsePostToolEvent_ValidEvents
+=== RUN   TestParsePostToolEvent_ValidEvents/Bash_success
+=== RUN   TestParsePostToolEvent_ValidEvents/Bash_failure
+=== RUN   TestParsePostToolEvent_ValidEvents/Read_tool_response
+=== RUN   TestParsePostToolEvent_ValidEvents/Write_tool_response
+=== RUN   TestParsePostToolEvent_ValidEvents/Task_tool_response
+--- PASS: TestParsePostToolEvent_ValidEvents (0.00s)
+    --- PASS: TestParsePostToolEvent_ValidEvents/Bash_success (0.00s)
+    --- PASS: TestParsePostToolEvent_ValidEvents/Bash_failure (0.00s)
+    --- PASS: TestParsePostToolEvent_ValidEvents/Read_tool_response (0.00s)
+    --- PASS: TestParsePostToolEvent_ValidEvents/Write_tool_response (0.00s)
+    --- PASS: TestParsePostToolEvent_ValidEvents/Task_tool_response (0.00s)
+=== RUN   TestParseToolEvent_ErrorCases
+=== RUN   TestParseToolEvent_ErrorCases/malformed_JSON
+=== RUN   TestParseToolEvent_ErrorCases/missing_tool_name
+=== RUN   TestParseToolEvent_ErrorCases/missing_hook_event_name
+=== RUN   TestParseToolEvent_ErrorCases/empty_tool_name
+=== RUN   TestParseToolEvent_ErrorCases/empty_hook_event_name
+--- PASS: TestParseToolEvent_ErrorCases (0.00s)
+    --- PASS: TestParseToolEvent_ErrorCases/malformed_JSON (0.00s)
+    --- PASS: TestParseToolEvent_ErrorCases/missing_tool_name (0.00s)
+    --- PASS: TestParseToolEvent_ErrorCases/missing_hook_event_name (0.00s)
+    --- PASS: TestParseToolEvent_ErrorCases/empty_tool_name (0.00s)
+    --- PASS: TestParseToolEvent_ErrorCases/empty_hook_event_name (0.00s)
+=== RUN   TestParsePostToolEvent_ErrorCases
+=== RUN   TestParsePostToolEvent_ErrorCases/malformed_JSON
+=== RUN   TestParsePostToolEvent_ErrorCases/missing_tool_response
+=== RUN   TestParsePostToolEvent_ErrorCases/missing_tool_name
+=== RUN   TestParsePostToolEvent_ErrorCases/missing_hook_event_name
+--- PASS: TestParsePostToolEvent_ErrorCases (0.00s)
+    --- PASS: TestParsePostToolEvent_ErrorCases/malformed_JSON (0.00s)
+    --- PASS: TestParsePostToolEvent_ErrorCases/missing_tool_response (0.00s)
+    --- PASS: TestParsePostToolEvent_ErrorCases/missing_tool_name (0.00s)
+    --- PASS: TestParsePostToolEvent_ErrorCases/missing_hook_event_name (0.00s)
+=== RUN   TestParseTaskInput_ValidCases
+=== RUN   TestParseTaskInput_ValidCases/complete_Task_input
+=== RUN   TestParseTaskInput_ValidCases/sonnet_model
+=== RUN   TestParseTaskInput_ValidCases/opus_model
+=== RUN   TestParseTaskInput_ValidCases/Plan_subagent_type
+=== RUN   TestParseTaskInput_ValidCases/minimal_Task_input_with_only_prompt
+=== RUN   TestParseTaskInput_ValidCases/Task_with_force-tier_override
+=== RUN   TestParseTaskInput_ValidCases/Task_with_force-delegation_override
+=== RUN   TestParseTaskInput_ValidCases/long_prompt
+--- PASS: TestParseTaskInput_ValidCases (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/complete_Task_input (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/sonnet_model (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/opus_model (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/Plan_subagent_type (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/minimal_Task_input_with_only_prompt (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/Task_with_force-tier_override (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/Task_with_force-delegation_override (0.00s)
+    --- PASS: TestParseTaskInput_ValidCases/long_prompt (0.00s)
+=== RUN   TestParseTaskInput_ErrorCases
+=== RUN   TestParseTaskInput_ErrorCases/missing_prompt
+=== RUN   TestParseTaskInput_ErrorCases/empty_prompt
+=== RUN   TestParseTaskInput_ErrorCases/nil_tool_input
+--- PASS: TestParseTaskInput_ErrorCases (0.00s)
+    --- PASS: TestParseTaskInput_ErrorCases/missing_prompt (0.00s)
+    --- PASS: TestParseTaskInput_ErrorCases/empty_prompt (0.00s)
+    --- PASS: TestParseTaskInput_ErrorCases/nil_tool_input (0.00s)
+=== RUN   TestParseToolEvent_Timeout
+--- PASS: TestParseToolEvent_Timeout (0.10s)
+=== RUN   TestParsePostToolEvent_Timeout
+--- PASS: TestParsePostToolEvent_Timeout (0.10s)
+=== RUN   TestParseToolEvent_EmptyInput
+--- PASS: TestParseToolEvent_EmptyInput (0.00s)
+=== RUN   TestTruncate
+=== RUN   TestTruncate/data_shorter_than_maxLen
+=== RUN   TestTruncate/data_equal_to_maxLen
+=== RUN   TestTruncate/data_longer_than_maxLen
+=== RUN   TestTruncate/empty_data
+=== RUN   TestTruncate/maxLen_zero
+--- PASS: TestTruncate (0.00s)
+    --- PASS: TestTruncate/data_shorter_than_maxLen (0.00s)
+    --- PASS: TestTruncate/data_equal_to_maxLen (0.00s)
+    --- PASS: TestTruncate/data_longer_than_maxLen (0.00s)
+    --- PASS: TestTruncate/empty_data (0.00s)
+    --- PASS: TestTruncate/maxLen_zero (0.00s)
+=== RUN   TestParseEventCorpus
+    events_test.go:900: Corpus contains 171 events
+    events_test.go:950: PreToolUse events: 88
+    events_test.go:951: PostToolUse events: 83
+    events_test.go:961: ✓ Successfully parsed 171/171 corpus events
+--- PASS: TestParseEventCorpus (0.01s)
+=== RUN   TestErrorMessageFormat
+=== RUN   TestErrorMessageFormat/ParseToolEvent_malformed_JSON
+=== RUN   TestErrorMessageFormat/ParseToolEvent_missing_tool_name
+=== RUN   TestErrorMessageFormat/ParsePostToolEvent_missing_tool_response
+--- PASS: TestErrorMessageFormat (0.00s)
+    --- PASS: TestErrorMessageFormat/ParseToolEvent_malformed_JSON (0.00s)
+    --- PASS: TestErrorMessageFormat/ParseToolEvent_missing_tool_name (0.00s)
+    --- PASS: TestErrorMessageFormat/ParsePostToolEvent_missing_tool_response (0.00s)
+=== RUN   TestParseTaskInput_FromCorpus
+    events_test.go:1061: Task events in corpus: 2
+    events_test.go:1071: ✓ Successfully parsed 2 Task inputs from corpus
+--- PASS: TestParseTaskInput_FromCorpus (0.01s)
+=== RUN   TestEcosystem_GOgent002
+    integration_test.go:27: ✅ Ecosystem Test GOgent-002: Schema loading pipeline operational
+--- PASS: TestEcosystem_GOgent002 (0.00s)
+=== RUN   TestEcosystem_GOgent003
+    integration_test.go:67: ✅ Ecosystem Test GOgent-003: Schema-Agent integration validated
+--- PASS: TestEcosystem_GOgent003 (0.00s)
+=== RUN   TestEcosystem_GOgent004a
+    integration_test.go:73: GOgent-004a not yet implemented - validation engine pending
+--- SKIP: TestEcosystem_GOgent004a (0.00s)
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/memory-archivist
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/codebase-search
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/librarian
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/scaffolder
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/tech-docs-writer
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/code-reviewer
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/python-pro
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/python-ux
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/r-pro
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/r-shiny-pro
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/go-pro
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/go-cli
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/go-tui
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/go-api
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/go-concurrent
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/orchestrator
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/architect
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/einstein
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/gemini-slave
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/staff-architect-critical-review
+=== RUN   TestEcosystem_AllAgentsMappedCorrectly/haiku-scout
+=== NAME  TestEcosystem_AllAgentsMappedCorrectly
+    integration_test.go:139: ✅ Ecosystem Test: All 21 agents correctly mapped to subagent_types
+--- PASS: TestEcosystem_AllAgentsMappedCorrectly (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/memory-archivist (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/codebase-search (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/librarian (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/scaffolder (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/tech-docs-writer (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/code-reviewer (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/python-pro (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/python-ux (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/r-pro (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/r-shiny-pro (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/go-pro (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/go-cli (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/go-tui (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/go-api (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/go-concurrent (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/orchestrator (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/architect (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/einstein (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/gemini-slave (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/staff-architect-critical-review (0.00s)
+    --- PASS: TestEcosystem_AllAgentsMappedCorrectly/haiku-scout (0.00s)
+=== RUN   TestEcosystem_BackwardCompatibility
+=== RUN   TestEcosystem_BackwardCompatibility/SchemaAPIStability
+=== RUN   TestEcosystem_BackwardCompatibility/AgentIndexAPIStability
+    integration_test.go:185: haiku_thinking tier has no agents (OK if tier not in model_tiers): [routing] Unknown tier: haiku_thinking
+=== RUN   TestEcosystem_BackwardCompatibility/CrossReferenceStability
+=== NAME  TestEcosystem_BackwardCompatibility
+    integration_test.go:203: ✅ Ecosystem Test: Backward compatibility validated
+--- PASS: TestEcosystem_BackwardCompatibility (0.00s)
+    --- PASS: TestEcosystem_BackwardCompatibility/SchemaAPIStability (0.00s)
+    --- PASS: TestEcosystem_BackwardCompatibility/AgentIndexAPIStability (0.00s)
+    --- PASS: TestEcosystem_BackwardCompatibility/CrossReferenceStability (0.00s)
+=== RUN   TestCheckToolPermission_Allowed
+=== RUN   TestCheckToolPermission_Allowed/haiku_allows_Read
+=== RUN   TestCheckToolPermission_Allowed/haiku_allows_Grep
+=== RUN   TestCheckToolPermission_Allowed/sonnet_allows_Write
+=== RUN   TestCheckToolPermission_Allowed/sonnet_allows_Bash
+--- PASS: TestCheckToolPermission_Allowed (0.00s)
+    --- PASS: TestCheckToolPermission_Allowed/haiku_allows_Read (0.00s)
+    --- PASS: TestCheckToolPermission_Allowed/haiku_allows_Grep (0.00s)
+    --- PASS: TestCheckToolPermission_Allowed/sonnet_allows_Write (0.00s)
+    --- PASS: TestCheckToolPermission_Allowed/sonnet_allows_Bash (0.00s)
+=== RUN   TestCheckToolPermission_Denied
+=== RUN   TestCheckToolPermission_Denied/haiku_denies_Write
+=== RUN   TestCheckToolPermission_Denied/haiku_denies_Task
+=== RUN   TestCheckToolPermission_Denied/sonnet_denies_Task
+=== RUN   TestCheckToolPermission_Denied/haiku_denies_unknown_tool
+--- PASS: TestCheckToolPermission_Denied (0.00s)
+    --- PASS: TestCheckToolPermission_Denied/haiku_denies_Write (0.00s)
+    --- PASS: TestCheckToolPermission_Denied/haiku_denies_Task (0.00s)
+    --- PASS: TestCheckToolPermission_Denied/sonnet_denies_Task (0.00s)
+    --- PASS: TestCheckToolPermission_Denied/haiku_denies_unknown_tool (0.00s)
+=== RUN   TestCheckToolPermission_Wildcard
+=== RUN   TestCheckToolPermission_Wildcard/wildcard_allows_Read
+=== RUN   TestCheckToolPermission_Wildcard/wildcard_allows_Write
+=== RUN   TestCheckToolPermission_Wildcard/wildcard_allows_Task
+=== RUN   TestCheckToolPermission_Wildcard/wildcard_allows_Bash
+=== RUN   TestCheckToolPermission_Wildcard/wildcard_allows_custom_tool
+--- PASS: TestCheckToolPermission_Wildcard (0.00s)
+    --- PASS: TestCheckToolPermission_Wildcard/wildcard_allows_Read (0.00s)
+    --- PASS: TestCheckToolPermission_Wildcard/wildcard_allows_Write (0.00s)
+    --- PASS: TestCheckToolPermission_Wildcard/wildcard_allows_Task (0.00s)
+    --- PASS: TestCheckToolPermission_Wildcard/wildcard_allows_Bash (0.00s)
+    --- PASS: TestCheckToolPermission_Wildcard/wildcard_allows_custom_tool (0.00s)
+=== RUN   TestCheckToolPermission_UnknownTier
+--- PASS: TestCheckToolPermission_UnknownTier (0.00s)
+=== RUN   TestFindTierForTool
+=== RUN   TestFindTierForTool/Read_found_in_haiku_(first_tier)
+=== RUN   TestFindTierForTool/TodoWrite_found_in_haiku_thinking
+=== RUN   TestFindTierForTool/Write_found_in_sonnet
+=== RUN   TestFindTierForTool/Task_found_in_opus
+=== RUN   TestFindTierForTool/CustomExternal_found_in_external
+=== RUN   TestFindTierForTool/Unknown_tool_returns_unknown
+--- PASS: TestFindTierForTool (0.00s)
+    --- PASS: TestFindTierForTool/Read_found_in_haiku_(first_tier) (0.00s)
+    --- PASS: TestFindTierForTool/TodoWrite_found_in_haiku_thinking (0.00s)
+    --- PASS: TestFindTierForTool/Write_found_in_sonnet (0.00s)
+    --- PASS: TestFindTierForTool/Task_found_in_opus (0.00s)
+    --- PASS: TestFindTierForTool/CustomExternal_found_in_external (0.00s)
+    --- PASS: TestFindTierForTool/Unknown_tool_returns_unknown (0.00s)
+=== RUN   TestFindTierForTool_WildcardPriority
+--- PASS: TestFindTierForTool_WildcardPriority (0.00s)
+=== RUN   TestFormatPermissionError
+=== RUN   TestFormatPermissionError/basic_permission_error
+=== RUN   TestFormatPermissionError/single_allowed_tool
+=== RUN   TestFormatPermissionError/wildcard_allowed_tools
+--- PASS: TestFormatPermissionError (0.00s)
+    --- PASS: TestFormatPermissionError/basic_permission_error (0.00s)
+    --- PASS: TestFormatPermissionError/single_allowed_tool (0.00s)
+    --- PASS: TestFormatPermissionError/wildcard_allowed_tools (0.00s)
+=== RUN   TestCheckToolPermission_AllowedToolsPopulated
+--- PASS: TestCheckToolPermission_AllowedToolsPopulated (0.00s)
+=== RUN   TestCheckToolPermission_IntegrationWithSchema
+=== RUN   TestCheckToolPermission_IntegrationWithSchema/haiku_can_Read
+=== RUN   TestCheckToolPermission_IntegrationWithSchema/haiku_cannot_Write
+=== RUN   TestCheckToolPermission_IntegrationWithSchema/haiku_thinking_can_TodoWrite
+=== RUN   TestCheckToolPermission_IntegrationWithSchema/haiku_thinking_cannot_Task
+=== RUN   TestCheckToolPermission_IntegrationWithSchema/sonnet_can_Bash
+=== RUN   TestCheckToolPermission_IntegrationWithSchema/opus_wildcard_allows_anything
+--- PASS: TestCheckToolPermission_IntegrationWithSchema (0.00s)
+    --- PASS: TestCheckToolPermission_IntegrationWithSchema/haiku_can_Read (0.00s)
+    --- PASS: TestCheckToolPermission_IntegrationWithSchema/haiku_cannot_Write (0.00s)
+    --- PASS: TestCheckToolPermission_IntegrationWithSchema/haiku_thinking_can_TodoWrite (0.00s)
+    --- PASS: TestCheckToolPermission_IntegrationWithSchema/haiku_thinking_cannot_Task (0.00s)
+    --- PASS: TestCheckToolPermission_IntegrationWithSchema/sonnet_can_Bash (0.00s)
+    --- PASS: TestCheckToolPermission_IntegrationWithSchema/opus_wildcard_allows_anything (0.00s)
+=== RUN   TestFindTierForTool_MissingTiers
+=== RUN   TestFindTierForTool_MissingTiers/Read_found_in_haiku
+=== RUN   TestFindTierForTool_MissingTiers/Write_found_in_sonnet_(skips_missing_haiku_thinking)
+=== RUN   TestFindTierForTool_MissingTiers/Unknown_tool_returns_unknown_(missing_opus_wildcard)
+--- PASS: TestFindTierForTool_MissingTiers (0.00s)
+    --- PASS: TestFindTierForTool_MissingTiers/Read_found_in_haiku (0.00s)
+    --- PASS: TestFindTierForTool_MissingTiers/Write_found_in_sonnet_(skips_missing_haiku_thinking) (0.00s)
+    --- PASS: TestFindTierForTool_MissingTiers/Unknown_tool_returns_unknown_(missing_opus_wildcard) (0.00s)
+=== RUN   TestNewBlockResponse
+--- PASS: TestNewBlockResponse (0.00s)
+=== RUN   TestNewWarnResponse
+--- PASS: TestNewWarnResponse (0.00s)
+=== RUN   TestNewPassResponse
+--- PASS: TestNewPassResponse (0.00s)
+=== RUN   TestAddField
+=== RUN   TestAddField/add_string_field
+=== RUN   TestAddField/add_int_field
+=== RUN   TestAddField/add_map_field
+=== RUN   TestAddField/add_field_to_nil_hookSpecificOutput
+--- PASS: TestAddField (0.00s)
+    --- PASS: TestAddField/add_string_field (0.00s)
+    --- PASS: TestAddField/add_int_field (0.00s)
+    --- PASS: TestAddField/add_map_field (0.00s)
+    --- PASS: TestAddField/add_field_to_nil_hookSpecificOutput (0.00s)
+=== RUN   TestValidate_ValidCases
+=== RUN   TestValidate_ValidCases/valid_block_response
+=== RUN   TestValidate_ValidCases/valid_warn_response
+=== RUN   TestValidate_ValidCases/valid_pass_response
+=== RUN   TestValidate_ValidCases/block_with_additional_fields
+=== RUN   TestValidate_ValidCases/warn_with_complex_hookSpecificOutput
+--- PASS: TestValidate_ValidCases (0.00s)
+    --- PASS: TestValidate_ValidCases/valid_block_response (0.00s)
+    --- PASS: TestValidate_ValidCases/valid_warn_response (0.00s)
+    --- PASS: TestValidate_ValidCases/valid_pass_response (0.00s)
+    --- PASS: TestValidate_ValidCases/block_with_additional_fields (0.00s)
+    --- PASS: TestValidate_ValidCases/warn_with_complex_hookSpecificOutput (0.00s)
+=== RUN   TestValidate_InvalidCases
+=== RUN   TestValidate_InvalidCases/invalid_decision_value
+=== RUN   TestValidate_InvalidCases/block_without_reason
+=== RUN   TestValidate_InvalidCases/warn_without_reason
+=== RUN   TestValidate_InvalidCases/missing_hookSpecificOutput
+=== RUN   TestValidate_InvalidCases/missing_hookEventName
+=== RUN   TestValidate_InvalidCases/empty_hookEventName_string
+=== RUN   TestValidate_InvalidCases/hookEventName_wrong_type
+--- PASS: TestValidate_InvalidCases (0.00s)
+    --- PASS: TestValidate_InvalidCases/invalid_decision_value (0.00s)
+    --- PASS: TestValidate_InvalidCases/block_without_reason (0.00s)
+    --- PASS: TestValidate_InvalidCases/warn_without_reason (0.00s)
+    --- PASS: TestValidate_InvalidCases/missing_hookSpecificOutput (0.00s)
+    --- PASS: TestValidate_InvalidCases/missing_hookEventName (0.00s)
+    --- PASS: TestValidate_InvalidCases/empty_hookEventName_string (0.00s)
+    --- PASS: TestValidate_InvalidCases/hookEventName_wrong_type (0.00s)
+=== RUN   TestMarshal_OutputFormat
+=== RUN   TestMarshal_OutputFormat/block_response
+=== RUN   TestMarshal_OutputFormat/warn_response
+--- PASS: TestMarshal_OutputFormat (0.00s)
+    --- PASS: TestMarshal_OutputFormat/block_response (0.00s)
+    --- PASS: TestMarshal_OutputFormat/warn_response (0.00s)
+=== RUN   TestMarshal_PassResponse
+--- PASS: TestMarshal_PassResponse (0.00s)
+=== RUN   TestMarshal_InvalidResponse
+--- PASS: TestMarshal_InvalidResponse (0.00s)
+=== RUN   TestMarshal_FlexibleHookSpecificOutput
+=== RUN   TestMarshal_FlexibleHookSpecificOutput/permission_decision_fields
+=== RUN   TestMarshal_FlexibleHookSpecificOutput/additional_context
+=== RUN   TestMarshal_FlexibleHookSpecificOutput/complex_nested_structure
+--- PASS: TestMarshal_FlexibleHookSpecificOutput (0.00s)
+    --- PASS: TestMarshal_FlexibleHookSpecificOutput/permission_decision_fields (0.00s)
+    --- PASS: TestMarshal_FlexibleHookSpecificOutput/additional_context (0.00s)
+    --- PASS: TestMarshal_FlexibleHookSpecificOutput/complex_nested_structure (0.00s)
+=== RUN   TestIntegration_EventToResponse
+    response_test.go:585: Integration test complete. Marshaled JSON:
+        {
+          "decision": "block",
+          "reason": "Task(opus) invocation blocked. Use /einstein instead.",
+          "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": "Einstein must use GAP document protocol",
+            "sessionID": "test-session",
+            "toolName": "Task"
+          }
+        }
+--- PASS: TestIntegration_EventToResponse (0.00s)
+=== RUN   TestDecisionConstants
+--- PASS: TestDecisionConstants (0.00s)
+=== RUN   TestResponseErrorMessageFormat
+=== RUN   TestResponseErrorMessageFormat/invalid_decision
+=== RUN   TestResponseErrorMessageFormat/missing_reason_for_block
+=== RUN   TestResponseErrorMessageFormat/missing_hookEventName
+--- PASS: TestResponseErrorMessageFormat (0.00s)
+    --- PASS: TestResponseErrorMessageFormat/invalid_decision (0.00s)
+    --- PASS: TestResponseErrorMessageFormat/missing_reason_for_block (0.00s)
+    --- PASS: TestResponseErrorMessageFormat/missing_hookEventName (0.00s)
+=== RUN   TestValidate_EmptyHookSpecificOutputExceptHookEventName
+--- PASS: TestValidate_EmptyHookSpecificOutputExceptHookEventName (0.00s)
+=== RUN   TestAddField_MultipleCalls
+--- PASS: TestAddField_MultipleCalls (0.00s)
+=== RUN   TestAddField_Overwrite
+--- PASS: TestAddField_Overwrite (0.00s)
+=== RUN   TestMarshal_WriteError
+--- PASS: TestMarshal_WriteError (0.00s)
+=== RUN   TestMarshal_NonSerializableValue
+--- PASS: TestMarshal_NonSerializableValue (0.00s)
+=== RUN   TestStaffArchitectCriticalReviewIntegration
+=== RUN   TestStaffArchitectCriticalReviewIntegration/GetSubagentTypeForAgent
+=== RUN   TestStaffArchitectCriticalReviewIntegration/Validate
+=== RUN   TestStaffArchitectCriticalReviewIntegration/ValidateAgentSubagentPair
+--- PASS: TestStaffArchitectCriticalReviewIntegration (0.00s)
+    --- PASS: TestStaffArchitectCriticalReviewIntegration/GetSubagentTypeForAgent (0.00s)
+    --- PASS: TestStaffArchitectCriticalReviewIntegration/Validate (0.00s)
+    --- PASS: TestStaffArchitectCriticalReviewIntegration/ValidateAgentSubagentPair (0.00s)
+=== RUN   TestUnmarshalProductionSchema
+=== RUN   TestUnmarshalProductionSchema/SubagentTypeFields
+=== RUN   TestUnmarshalProductionSchema/DelegationCeilingFields
+=== RUN   TestUnmarshalProductionSchema/BlockedPatterns
+=== RUN   TestUnmarshalProductionSchema/AgentSubagentMapping
+=== RUN   TestUnmarshalProductionSchema/EscalationRules
+=== RUN   TestUnmarshalProductionSchema/OpusTierConfig
+=== RUN   TestUnmarshalProductionSchema/ExternalTierProtocols
+=== RUN   TestUnmarshalProductionSchema/MetaRules
+--- PASS: TestUnmarshalProductionSchema (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/SubagentTypeFields (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/DelegationCeilingFields (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/BlockedPatterns (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/AgentSubagentMapping (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/EscalationRules (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/OpusTierConfig (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/ExternalTierProtocols (0.00s)
+    --- PASS: TestUnmarshalProductionSchema/MetaRules (0.00s)
+=== RUN   TestSchemaValidate
+=== RUN   TestSchemaValidate/valid_schema
+=== RUN   TestSchemaValidate/version_mismatch
+=== RUN   TestSchemaValidate/invalid_tier_name
+=== RUN   TestSchemaValidate/undefined_subagent_type_reference
+--- PASS: TestSchemaValidate (0.00s)
+    --- PASS: TestSchemaValidate/valid_schema (0.00s)
+    --- PASS: TestSchemaValidate/version_mismatch (0.00s)
+    --- PASS: TestSchemaValidate/invalid_tier_name (0.00s)
+    --- PASS: TestSchemaValidate/undefined_subagent_type_reference (0.00s)
+=== RUN   TestGetTier
+--- PASS: TestGetTier (0.00s)
+=== RUN   TestGetSubagentTypeForAgent
+--- PASS: TestGetSubagentTypeForAgent (0.00s)
+=== RUN   TestValidateAgentSubagentPair
+=== RUN   TestValidateAgentSubagentPair/valid_pairing_-_codebase-search_+_Explore
+=== RUN   TestValidateAgentSubagentPair/valid_pairing_-_python-pro_+_general-purpose
+=== RUN   TestValidateAgentSubagentPair/invalid_pairing_-_wrong_subagent_type
+=== RUN   TestValidateAgentSubagentPair/unknown_agent
+--- PASS: TestValidateAgentSubagentPair (0.00s)
+    --- PASS: TestValidateAgentSubagentPair/valid_pairing_-_codebase-search_+_Explore (0.00s)
+    --- PASS: TestValidateAgentSubagentPair/valid_pairing_-_python-pro_+_general-purpose (0.00s)
+    --- PASS: TestValidateAgentSubagentPair/invalid_pairing_-_wrong_subagent_type (0.00s)
+    --- PASS: TestValidateAgentSubagentPair/unknown_agent (0.00s)
+=== RUN   TestGetTierLevel
+--- PASS: TestGetTierLevel (0.00s)
+=== RUN   TestLoadSchema
+--- PASS: TestLoadSchema (0.00s)
+=== RUN   TestReadStdin_Success
+=== RUN   TestReadStdin_Success/small_input
+=== RUN   TestReadStdin_Success/multiline_input
+=== RUN   TestReadStdin_Success/input_with_special_characters
+--- PASS: TestReadStdin_Success (0.00s)
+    --- PASS: TestReadStdin_Success/small_input (0.00s)
+    --- PASS: TestReadStdin_Success/multiline_input (0.00s)
+    --- PASS: TestReadStdin_Success/input_with_special_characters (0.00s)
+=== RUN   TestReadStdin_Timeout
+--- PASS: TestReadStdin_Timeout (0.10s)
+=== RUN   TestReadStdin_EmptyInput
+--- PASS: TestReadStdin_EmptyInput (0.00s)
+=== RUN   TestReadStdin_LargeInput
+--- PASS: TestReadStdin_LargeInput (0.00s)
+=== RUN   TestReadStdin_ImmediateEOF
+--- PASS: TestReadStdin_ImmediateEOF (0.00s)
+=== RUN   TestReadStdin_ReadError
+--- PASS: TestReadStdin_ReadError (0.00s)
+=== RUN   TestReadStdin_MultipleTimeouts
+=== RUN   TestReadStdin_MultipleTimeouts/fast_read_within_timeout
+=== RUN   TestReadStdin_MultipleTimeouts/slow_read_exceeds_timeout
+=== RUN   TestReadStdin_MultipleTimeouts/borderline_timing
+--- PASS: TestReadStdin_MultipleTimeouts (0.15s)
+    --- PASS: TestReadStdin_MultipleTimeouts/fast_read_within_timeout (0.01s)
+    --- PASS: TestReadStdin_MultipleTimeouts/slow_read_exceeds_timeout (0.05s)
+    --- PASS: TestReadStdin_MultipleTimeouts/borderline_timing (0.09s)
+=== RUN   TestReadStdin_ErrorMessageFormat
+=== RUN   TestReadStdin_ErrorMessageFormat/timeout_error_format
+=== RUN   TestReadStdin_ErrorMessageFormat/empty_input_error_format
+=== RUN   TestReadStdin_ErrorMessageFormat/read_error_format
+--- PASS: TestReadStdin_ErrorMessageFormat (0.10s)
+    --- PASS: TestReadStdin_ErrorMessageFormat/timeout_error_format (0.10s)
+    --- PASS: TestReadStdin_ErrorMessageFormat/empty_input_error_format (0.00s)
+    --- PASS: TestReadStdin_ErrorMessageFormat/read_error_format (0.00s)
+PASS
+coverage: 93.7% of statements
+ok  	github.com/Exact-Mass/l-a-g-GO/pkg/routing	(cached)	coverage: 93.7% of statements
+=== RUN   TestHookWorkflow_FullPipeline
+=== RUN   TestHookWorkflow_FullPipeline/block_task_opus
+=== RUN   TestHookWorkflow_FullPipeline/warn_subagent_mismatch
+=== RUN   TestHookWorkflow_FullPipeline/pass_with_context
+--- PASS: TestHookWorkflow_FullPipeline (0.00s)
+    --- PASS: TestHookWorkflow_FullPipeline/block_task_opus (0.00s)
+    --- PASS: TestHookWorkflow_FullPipeline/warn_subagent_mismatch (0.00s)
+    --- PASS: TestHookWorkflow_FullPipeline/pass_with_context (0.00s)
+=== RUN   TestHookWorkflow_ErrorHandling
+=== RUN   TestHookWorkflow_ErrorHandling/invalid_json_input
+=== RUN   TestHookWorkflow_ErrorHandling/validation_failure
+=== RUN   TestHookWorkflow_ErrorHandling/missing_hook_event_name
+--- PASS: TestHookWorkflow_ErrorHandling (0.00s)
+    --- PASS: TestHookWorkflow_ErrorHandling/invalid_json_input (0.00s)
+    --- PASS: TestHookWorkflow_ErrorHandling/validation_failure (0.00s)
+    --- PASS: TestHookWorkflow_ErrorHandling/missing_hook_event_name (0.00s)
+=== RUN   TestHookWorkflow_RealWorldScenario
+    hook_response_integration_test.go:284: ✓ Response would be accepted by Claude Code:
+        {
+          "decision": "block",
+          "reason": "Subagent_type violation: codebase-search requires 'Explore', got 'general-purpose'",
+          "hookSpecificOutput": {
+            "agent": "codebase-search",
+            "correct": "Explore",
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "requested": "general-purpose"
+          }
+        }
+--- PASS: TestHookWorkflow_RealWorldScenario (0.00s)
+PASS
+coverage: [no statements]
+ok  	github.com/Exact-Mass/l-a-g-GO/test/integration	0.003s	coverage: [no statements]

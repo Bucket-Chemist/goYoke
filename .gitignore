@@ -1,0 +1,28 @@
+# Binaries
+gogent-validate
+gogent-archive
+gogent-sharp-edge
+gogent-daemon
+gogent
+
+# Test output
+*.test
+*.out
+coverage.txt
+
+# Test audit logs (keep .gitkeep)
+test/audit/**
+!test/audit/.gitkeep
+
+# Temporary files
+*.tmp
+.cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Obsidian
+.obsidian/

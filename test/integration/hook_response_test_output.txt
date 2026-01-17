@@ -1,0 +1,32 @@
+=== RUN   TestHookWorkflow_FullPipeline
+=== RUN   TestHookWorkflow_FullPipeline/block_task_opus
+=== RUN   TestHookWorkflow_FullPipeline/warn_subagent_mismatch
+=== RUN   TestHookWorkflow_FullPipeline/pass_with_context
+--- PASS: TestHookWorkflow_FullPipeline (0.00s)
+    --- PASS: TestHookWorkflow_FullPipeline/block_task_opus (0.00s)
+    --- PASS: TestHookWorkflow_FullPipeline/warn_subagent_mismatch (0.00s)
+    --- PASS: TestHookWorkflow_FullPipeline/pass_with_context (0.00s)
+=== RUN   TestHookWorkflow_ErrorHandling
+=== RUN   TestHookWorkflow_ErrorHandling/invalid_json_input
+=== RUN   TestHookWorkflow_ErrorHandling/validation_failure
+=== RUN   TestHookWorkflow_ErrorHandling/missing_hook_event_name
+--- PASS: TestHookWorkflow_ErrorHandling (0.00s)
+    --- PASS: TestHookWorkflow_ErrorHandling/invalid_json_input (0.00s)
+    --- PASS: TestHookWorkflow_ErrorHandling/validation_failure (0.00s)
+    --- PASS: TestHookWorkflow_ErrorHandling/missing_hook_event_name (0.00s)
+=== RUN   TestHookWorkflow_RealWorldScenario
+    hook_response_integration_test.go:284: ✓ Response would be accepted by Claude Code:
+        {
+          "decision": "block",
+          "reason": "Subagent_type violation: codebase-search requires 'Explore', got 'general-purpose'",
+          "hookSpecificOutput": {
+            "agent": "codebase-search",
+            "correct": "Explore",
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "requested": "general-purpose"
+          }
+        }
+--- PASS: TestHookWorkflow_RealWorldScenario (0.00s)
+PASS
+ok  	github.com/Exact-Mass/l-a-g-GO/test/integration	0.003s
