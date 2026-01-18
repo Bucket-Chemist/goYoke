@@ -10,6 +10,8 @@ gogent
 *.out
 coverage.txt
 
+/migration_plan/tickets/.current-ticket
+
 # Test audit logs (keep .gitkeep)
 test/audit/**
 !test/audit/.gitkeep
