@@ -48,3 +48,9 @@ func GetMaxDelegationPath() string {
 func GetViolationsLogPath() string {
 	return filepath.Join(GetGOgentDir(), "routing-violations.jsonl")
 }
+
+// GetProjectViolationsLogPath returns project-scoped violation log path.
+// Used for dual-write pattern - integrates with session archive.
+func GetProjectViolationsLogPath(projectDir string) string {
+	return filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
+}

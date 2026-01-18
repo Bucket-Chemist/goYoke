@@ -26,8 +26,8 @@ func TestLogViolation(t *testing.T) {
 		Allowed:       "Read, Glob, Grep",
 	}
 
-	// Log violation
-	if err := LogViolation(v); err != nil {
+	// Log violation (empty projectDir for backward compatibility)
+	if err := LogViolation(v, ""); err != nil {
 		t.Fatalf("Failed to log violation: %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestLogViolation_AppendMode(t *testing.T) {
 		Tool:          "Write",
 		Reason:        "First violation",
 	}
-	if err := LogViolation(v1); err != nil {
+	if err := LogViolation(v1, ""); err != nil {
 		t.Fatalf("Failed to log first violation: %v", err)
 	}
 
@@ -102,7 +102,7 @@ func TestLogViolation_AppendMode(t *testing.T) {
 		Agent:         "architect",
 		Reason:        "Second violation",
 	}
-	if err := LogViolation(v2); err != nil {
+	if err := LogViolation(v2, ""); err != nil {
 		t.Fatalf("Failed to log second violation: %v", err)
 	}
 
@@ -159,7 +159,7 @@ func TestLogViolation_CreatesLogFile(t *testing.T) {
 		ViolationType: "test_violation",
 		Reason:        "Testing file creation",
 	}
-	if err := LogViolation(v); err != nil {
+	if err := LogViolation(v, ""); err != nil {
 		t.Fatalf("Failed to log violation: %v", err)
 	}
 
@@ -189,7 +189,7 @@ func TestLogViolation_AllFields(t *testing.T) {
 		Override:      "--force-tier=sonnet",
 	}
 
-	if err := LogViolation(v); err != nil {
+	if err := LogViolation(v, ""); err != nil {
 		t.Fatalf("Failed to log violation: %v", err)
 	}
 
@@ -249,7 +249,7 @@ func TestLogViolation_JSONLFormat(t *testing.T) {
 	}
 
 	for _, v := range violations {
-		if err := LogViolation(v); err != nil {
+		if err := LogViolation(v, ""); err != nil {
 			t.Fatalf("Failed to log violation: %v", err)
 		}
 	}
@@ -295,7 +295,7 @@ func TestLogViolation_OmitemptyFields(t *testing.T) {
 		Reason:        "Testing omitempty",
 	}
 
-	if err := LogViolation(v); err != nil {
+	if err := LogViolation(v, ""); err != nil {
 		t.Fatalf("Failed to log violation: %v", err)
 	}
 
@@ -336,5 +336,130 @@ func TestLogViolation_OmitemptyFields(t *testing.T) {
 	}
 	if !strings.Contains(jsonStr, `"timestamp":`) {
 		t.Error("timestamp should be present")
+	}
+}
+
+// Test new enhanced fields are marshaled correctly
+func TestViolation_EnhancedFields(t *testing.T) {
+	v := &Violation{
+		SessionID:       "test-123",
+		ViolationType:   "tier_mismatch",
+		Agent:           "tech-docs-writer",
+		File:            "docs/system-guide.md",
+		CurrentTier:     "haiku",
+		RequiredTier:    "haiku_thinking",
+		TaskDescription: "Update system guide with new routing rules",
+		HookDecision:    "block",
+		ProjectDir:      "/home/user/my-project",
+	}
+
+	data, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	// Verify all new fields present in JSON
+	var parsed map[string]any
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("Unmarshal failed: %v", err)
+	}
+
+	expectedFields := []string{
+		"file", "current_tier", "required_tier",
+		"task_description", "hook_decision", "project_dir",
+	}
+	for _, field := range expectedFields {
+		if _, ok := parsed[field]; !ok {
+			t.Errorf("Missing field: %s", field)
+		}
+	}
+}
+
+// Test dual-write pattern
+func TestLogViolation_DualWrite(t *testing.T) {
+	// Setup temp directories for both logs
+	tmpGlobal := t.TempDir()
+	tmpProject := t.TempDir()
+
+	// Mock config paths
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+	os.Setenv("XDG_RUNTIME_DIR", tmpGlobal)
+
+	// Log violation with project directory
+	v := &Violation{
+		SessionID:     "test-dual",
+		ViolationType: "tool_permission",
+		Tool:          "Write",
+		Reason:        "Test dual write",
+	}
+
+	if err := LogViolation(v, tmpProject); err != nil {
+		t.Fatalf("LogViolation failed: %v", err)
+	}
+
+	// Verify global log exists
+	globalPath := filepath.Join(tmpGlobal, "gogent", "routing-violations.jsonl")
+	if _, err := os.Stat(globalPath); os.IsNotExist(err) {
+		t.Error("Global log not created")
+	}
+
+	// Verify project log exists
+	projectPath := filepath.Join(tmpProject, ".claude", "memory", "routing-violations.jsonl")
+	if _, err := os.Stat(projectPath); os.IsNotExist(err) {
+		t.Error("Project log not created")
+	}
+
+	// Verify both logs contain same entry
+	globalData, err := os.ReadFile(globalPath)
+	if err != nil {
+		t.Fatalf("Failed to read global log: %v", err)
+	}
+	projectData, err := os.ReadFile(projectPath)
+	if err != nil {
+		t.Fatalf("Failed to read project log: %v", err)
+	}
+
+	if string(globalData) != string(projectData) {
+		t.Error("Global and project logs diverged")
+	}
+
+	// Verify ProjectDir was populated
+	var logged Violation
+	if err := json.Unmarshal(globalData, &logged); err != nil {
+		t.Fatalf("Failed to parse logged violation: %v", err)
+	}
+	if logged.ProjectDir != tmpProject {
+		t.Errorf("Expected ProjectDir %q, got %q", tmpProject, logged.ProjectDir)
+	}
+}
+
+// Test dual-write handles project log failure gracefully
+func TestLogViolation_ProjectLogFailureGraceful(t *testing.T) {
+	tmpGlobal := t.TempDir()
+
+	// Mock config paths
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+	os.Setenv("XDG_RUNTIME_DIR", tmpGlobal)
+
+	// Use invalid project directory (write will fail)
+	invalidProjectDir := "/dev/null/invalid"
+
+	v := &Violation{
+		SessionID:     "test-graceful",
+		ViolationType: "test",
+		Reason:        "Test graceful degradation",
+	}
+
+	// Should NOT return error even if project log fails
+	if err := LogViolation(v, invalidProjectDir); err != nil {
+		t.Errorf("LogViolation should not fail when project log fails: %v", err)
+	}
+
+	// Global log should still be written
+	globalPath := filepath.Join(tmpGlobal, "gogent", "routing-violations.jsonl")
+	if _, err := os.Stat(globalPath); os.IsNotExist(err) {
+		t.Error("Global log should be created even if project log fails")
 	}
 }

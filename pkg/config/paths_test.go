@@ -221,3 +221,46 @@ func TestGetGOgentDir_CreatesDirectory(t *testing.T) {
 		t.Errorf("Expected permissions 0755, got %o", info.Mode().Perm())
 	}
 }
+
+func TestGetProjectViolationsLogPath(t *testing.T) {
+	tests := []struct {
+		name       string
+		projectDir string
+		expected   string
+	}{
+		{
+			name:       "absolute path",
+			projectDir: "/home/user/my-project",
+			expected:   "/home/user/my-project/.claude/memory/routing-violations.jsonl",
+		},
+		{
+			name:       "relative path",
+			projectDir: "my-project",
+			expected:   "my-project/.claude/memory/routing-violations.jsonl",
+		},
+		{
+			name:       "nested project",
+			projectDir: "/home/user/workspace/nested/project",
+			expected:   "/home/user/workspace/nested/project/.claude/memory/routing-violations.jsonl",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetProjectViolationsLogPath(tt.projectDir)
+			if result != tt.expected {
+				t.Errorf("Expected %s, got %s", tt.expected, result)
+			}
+
+			// Verify path ends with .jsonl
+			if !strings.HasSuffix(result, ".jsonl") {
+				t.Error("Expected path to end with .jsonl")
+			}
+
+			// Verify path contains .claude/memory
+			if !strings.Contains(result, ".claude/memory") {
+				t.Error("Expected path to contain .claude/memory")
+			}
+		})
+	}
+}

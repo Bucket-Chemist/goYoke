@@ -575,7 +575,7 @@
         "enhancement"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-012",
@@ -605,7 +605,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 5,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-013",
@@ -640,7 +640,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-014",

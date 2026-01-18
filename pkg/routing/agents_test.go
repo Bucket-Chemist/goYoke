@@ -1126,6 +1126,304 @@ func TestLoadAgentIndex_Concurrent(t *testing.T) {
 	}
 }
 
+// P0 COVERAGE TESTS: Missing Error Paths
+
+// TestValidateAgent_MissingName verifies validation fails on empty Name field.
+func TestValidateAgent_MissingName(t *testing.T) {
+	agent := Agent{
+		ID:          "test-agent",
+		Name:        "", // Missing
+		Model:       "haiku",
+		Tier:        1.0,
+		Category:    "task",
+		Path:        "test-agent",
+		Tools:       []string{"Read"},
+		Description: "Test",
+	}
+
+	err := agent.ValidateAgent()
+	if err == nil {
+		t.Fatal("expected error for missing name, got nil")
+	}
+
+	if !contains(err.Error(), "name") {
+		t.Errorf("expected error about 'name', got: %v", err)
+	}
+}
+
+// TestValidateAgent_MissingCategory verifies validation fails on empty Category field.
+func TestValidateAgent_MissingCategory(t *testing.T) {
+	agent := Agent{
+		ID:          "test-agent",
+		Name:        "Test Agent",
+		Model:       "haiku",
+		Tier:        1.0,
+		Category:    "", // Missing
+		Path:        "test-agent",
+		Tools:       []string{"Read"},
+		Description: "Test",
+	}
+
+	err := agent.ValidateAgent()
+	if err == nil {
+		t.Fatal("expected error for missing category, got nil")
+	}
+
+	if !contains(err.Error(), "category") {
+		t.Errorf("expected error about 'category', got: %v", err)
+	}
+}
+
+// TestValidateAgent_MissingPath verifies validation fails on empty Path field.
+func TestValidateAgent_MissingPath(t *testing.T) {
+	agent := Agent{
+		ID:          "test-agent",
+		Name:        "Test Agent",
+		Model:       "haiku",
+		Tier:        1.0,
+		Category:    "task",
+		Path:        "", // Missing
+		Tools:       []string{"Read"},
+		Description: "Test",
+	}
+
+	err := agent.ValidateAgent()
+	if err == nil {
+		t.Fatal("expected error for missing path, got nil")
+	}
+
+	if !contains(err.Error(), "path") {
+		t.Errorf("expected error about 'path', got: %v", err)
+	}
+}
+
+// TestLoadAgentIndex_NoXDGConfig verifies HOME fallback when XDG_CONFIG_HOME not set.
+func TestLoadAgentIndex_NoXDGConfig(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	origHOME := os.Getenv("HOME")
+	defer func() {
+		if origXDG != "" {
+			os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		os.Setenv("HOME", origHOME)
+	}()
+
+	// Unset XDG_CONFIG_HOME, keep HOME
+	os.Unsetenv("XDG_CONFIG_HOME")
+
+	// Should fall back to HOME/.config
+	index, err := LoadAgentIndex()
+
+	// We expect this to succeed (fallback to HOME/.config/../.claude/agents/agents-index.json)
+	if err != nil {
+		// If it fails, verify it's not because of missing HOME
+		if !contains(err.Error(), "Failed to read") {
+			t.Errorf("unexpected error: %v", err)
+		}
+		// File not found is acceptable in test environment
+	} else {
+		if len(index.Agents) == 0 {
+			t.Error("expected agents to be loaded via HOME fallback")
+		}
+	}
+}
+
+// TestLoadAgentIndex_NoHomeEnv verifies error when neither XDG nor HOME set.
+func TestLoadAgentIndex_NoHomeEnv(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	origHOME := os.Getenv("HOME")
+	defer func() {
+		if origXDG != "" {
+			os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+		os.Setenv("HOME", origHOME)
+	}()
+
+	// Unset both XDG_CONFIG_HOME and HOME
+	os.Unsetenv("XDG_CONFIG_HOME")
+	os.Unsetenv("HOME")
+
+	index, err := LoadAgentIndex()
+
+	if err == nil {
+		t.Fatal("expected error when HOME not set, got nil")
+	}
+
+	if index != nil {
+		t.Errorf("expected nil index, got: %v", index)
+	}
+
+	if !contains(err.Error(), "HOME") {
+		t.Errorf("expected error about HOME, got: %v", err)
+	}
+}
+
+// TestLoadAgentIndex_FileNotFound verifies error handling for missing file.
+func TestLoadAgentIndex_FileNotFound(t *testing.T) {
+	// Create temp directory that won't have agents-index.json
+	tmpDir := t.TempDir()
+
+	// Save original env
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+
+	// Point to non-existent location
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	index, err := LoadAgentIndex()
+
+	if err == nil {
+		t.Fatal("expected error for missing file, got nil")
+	}
+
+	if index != nil {
+		t.Errorf("expected nil index, got: %v", index)
+	}
+
+	if !contains(err.Error(), "Failed to read") {
+		t.Errorf("expected 'Failed to read' error, got: %v", err)
+	}
+}
+
+// TestLoadAgentIndex_MalformedJSON verifies error handling for corrupted JSON.
+func TestLoadAgentIndex_MalformedJSON(t *testing.T) {
+	// Create temp directory structure: tmpDir/.config/../.claude/agents/
+	tmpDir := t.TempDir()
+	configDir := tmpDir + "/config"
+	claudeDir := tmpDir + "/.claude/agents"
+
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatalf("failed to create .claude/agents dir: %v", err)
+	}
+
+	malformedJSON := `{"version": "2.2.0", "agents": [malformed json`
+	agentIndexPath := claudeDir + "/agents-index.json"
+	if err := os.WriteFile(agentIndexPath, []byte(malformedJSON), 0644); err != nil {
+		t.Fatalf("failed to write malformed JSON: %v", err)
+	}
+
+	// Save original env
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer func() {
+		if origXDG != "" {
+			os.Setenv("XDG_CONFIG_HOME", origXDG)
+		} else {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		}
+	}()
+
+	// Point XDG_CONFIG_HOME to tmpDir/config so path becomes tmpDir/config/../.claude/agents/
+	os.Setenv("XDG_CONFIG_HOME", configDir)
+
+	index, err := LoadAgentIndex()
+
+	if err == nil {
+		t.Fatal("expected error for malformed JSON, got nil")
+	}
+
+	if index != nil {
+		t.Errorf("expected nil index, got: %v", index)
+	}
+
+	if !contains(err.Error(), "Failed to parse") {
+		t.Errorf("expected 'Failed to parse' error, got: %v", err)
+	}
+}
+
+// P1 COVERAGE TESTS: Important Edge Cases
+
+// TestValidateAgent_TierBoundaries verifies tier boundary validation (1.0 and 3.0).
+func TestValidateAgent_TierBoundaries(t *testing.T) {
+	tests := []struct {
+		name    string
+		tier    interface{}
+		wantErr bool
+	}{
+		{
+			name:    "tier exactly 1.0 (valid boundary)",
+			tier:    1.0,
+			wantErr: false,
+		},
+		{
+			name:    "tier exactly 3.0 (valid boundary)",
+			tier:    3.0,
+			wantErr: false,
+		},
+		{
+			name:    "tier below 1.0 (invalid)",
+			tier:    0.5,
+			wantErr: true,
+		},
+		{
+			name:    "tier above 3.0 (invalid)",
+			tier:    3.5,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent := Agent{
+				ID:          "test-agent",
+				Name:        "Test Agent",
+				Model:       "haiku",
+				Tier:        tt.tier,
+				Category:    "task",
+				Path:        "test-agent",
+				Tools:       []string{"Read"},
+				Description: "Test",
+			}
+
+			err := agent.ValidateAgent()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAgent() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && !contains(err.Error(), "tier") {
+				t.Errorf("expected error about tier, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestGetToolsForAgent_UnknownAgent verifies error for non-existent agent.
+func TestGetToolsForAgent_UnknownAgent(t *testing.T) {
+	index := &AgentIndex{
+		Agents: []Agent{
+			{ID: "known-agent", Tools: []string{"Read"}},
+		},
+	}
+
+	tools, err := index.GetToolsForAgent("unknown-agent")
+
+	if err == nil {
+		t.Fatal("expected error for unknown agent, got nil")
+	}
+
+	if tools != nil {
+		t.Errorf("expected nil tools, got: %v", tools)
+	}
+
+	if !contains(err.Error(), "unknown") && !contains(err.Error(), "Unknown agent") {
+		t.Errorf("expected error about unknown agent, got: %v", err)
+	}
+}
+
 // Helper function for case-insensitive substring check
 func contains(s, substr string) bool {
 	// Simple case-insensitive substring search
