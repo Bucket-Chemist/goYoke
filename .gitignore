@@ -26,3 +26,7 @@ test/audit/**
 
 # Obsidian
 .obsidian/
+
+# Audits
+/audit/
+/.ticket-audits/

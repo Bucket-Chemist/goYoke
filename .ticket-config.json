@@ -1,1 +1,15 @@
-{"tickets_dir": "migration_plan/tickets"}
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "gogent-fortress",
+  "audit_config": {
+    "enabled": true,
+    "audit_dir": "test/audit",
+    "test_commands": {
+      "go": {
+        "unit": "go test -v ./...",
+        "race": "go test -race ./...",
+        "coverage": "go test -coverprofile={audit_dir}/coverage.out ./..."
+      }
+    }
+  }
+}

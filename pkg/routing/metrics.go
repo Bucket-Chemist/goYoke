@@ -88,3 +88,32 @@ func (m *ScoutMetrics) Age() int64 {
 	}
 	return time.Now().Unix() - m.Timestamp
 }
+
+// MetricsConfig defines TTL and fallback behavior
+type MetricsConfig struct {
+	TTLSeconds   int    // Default: 300 (5 minutes)
+	FallbackTier string // Default: "sonnet"
+}
+
+// DefaultMetricsConfig returns standard config
+func DefaultMetricsConfig() *MetricsConfig {
+	return &MetricsConfig{
+		TTLSeconds:   300, // 5 minutes
+		FallbackTier: "sonnet",
+	}
+}
+
+// GetActiveTier returns tier based on metrics freshness
+// If fresh: returns recommended_tier from metrics
+// If stale: returns fallback tier
+func (m *ScoutMetrics) GetActiveTier(config *MetricsConfig) string {
+	if m == nil {
+		return config.FallbackTier
+	}
+
+	if m.IsFresh(config.TTLSeconds) {
+		return m.RecommendedTier
+	}
+
+	return config.FallbackTier
+}

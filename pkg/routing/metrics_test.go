@@ -307,6 +307,64 @@ func TestAge_Nil(t *testing.T) {
 	}
 }
 
+func TestGetActiveTier_Fresh(t *testing.T) {
+	now := time.Now().Unix()
+	metrics := &ScoutMetrics{
+		RecommendedTier: "haiku",
+		Timestamp:       now - 60, // 1 minute old
+	}
+
+	config := &MetricsConfig{
+		TTLSeconds:   300, // 5 minutes
+		FallbackTier: "sonnet",
+	}
+
+	tier := metrics.GetActiveTier(config)
+	if tier != "haiku" {
+		t.Errorf("Expected fresh tier 'haiku', got: %s", tier)
+	}
+}
+
+func TestGetActiveTier_Stale(t *testing.T) {
+	now := time.Now().Unix()
+	metrics := &ScoutMetrics{
+		RecommendedTier: "haiku",
+		Timestamp:       now - 400, // 6.7 minutes old
+	}
+
+	config := &MetricsConfig{
+		TTLSeconds:   300, // 5 minutes
+		FallbackTier: "sonnet",
+	}
+
+	tier := metrics.GetActiveTier(config)
+	if tier != "sonnet" {
+		t.Errorf("Expected fallback tier 'sonnet', got: %s", tier)
+	}
+}
+
+func TestGetActiveTier_Nil(t *testing.T) {
+	var metrics *ScoutMetrics
+	config := DefaultMetricsConfig()
+
+	tier := metrics.GetActiveTier(config)
+	if tier != "sonnet" {
+		t.Errorf("Expected fallback tier 'sonnet' for nil metrics, got: %s", tier)
+	}
+}
+
+func TestDefaultMetricsConfig(t *testing.T) {
+	config := DefaultMetricsConfig()
+
+	if config.TTLSeconds != 300 {
+		t.Errorf("Expected default TTL 300s, got: %d", config.TTLSeconds)
+	}
+
+	if config.FallbackTier != "sonnet" {
+		t.Errorf("Expected default fallback 'sonnet', got: %s", config.FallbackTier)
+	}
+}
+
 // Helper function to check if string contains substring
 func containsString(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsSubstring(s, substr))
