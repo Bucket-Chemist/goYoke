@@ -1402,14 +1402,14 @@ func TestValidationResult_ToJSON(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `ValidationOrchestrator` runs all checks in sequence
-- [ ] Returns "allow" when all checks pass
-- [ ] Returns "block" on first hard failure (opus, ceiling, subagent_type)
-- [ ] Model mismatch is warning only, doesn't block
-- [ ] Collects all violations for logging
-- [ ] `ToJSON()` outputs valid JSON structure
-- [ ] Tests cover allow, opus block, ceiling block, subagent_type block
-- [ ] `go test ./pkg/routing` passes
+- [x] `ValidationOrchestrator` runs all checks in sequence
+- [x] Returns "allow" when all checks pass
+- [x] Returns "block" on first hard failure (opus, ceiling, subagent_type)
+- [x] Model mismatch is warning only, doesn't block
+- [x] Collects all violations for logging
+- [x] `ToJSON()` outputs valid JSON structure
+- [x] Tests cover allow, opus block, ceiling block, subagent_type block
+- [x] `go test ./pkg/routing` passes
 
 **Why This Matters**: Orchestrator provides single entry point for all Task validation. Makes hook implementation simpler.
 

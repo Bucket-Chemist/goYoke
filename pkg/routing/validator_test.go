@@ -1,0 +1,171 @@
+package routing
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestValidationOrchestrator_AllowedTask(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: true},
+		},
+		TierLevels: TierLevels{
+			Haiku: 10, Sonnet: 20,
+		},
+		AgentSubagentMapping: AgentSubagentMapping{
+			PythonPro: "general-purpose",
+		},
+	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+
+	taskInput := map[string]interface{}{
+		"model":         "sonnet",
+		"prompt":        "AGENT: python-pro\n\nImplement feature",
+		"subagent_type": "general-purpose",
+	}
+
+	result := orchestrator.ValidateTask(taskInput, "test-session")
+
+	if result.Decision != "allow" {
+		t.Errorf("Expected allow, got: %s (reason: %s)", result.Decision, result.Reason)
+	}
+
+	if len(result.Violations) > 0 {
+		t.Errorf("Expected no violations, got: %d", len(result.Violations))
+	}
+}
+
+func TestValidationOrchestrator_OpusBlocked(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: true},
+		},
+	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+
+	taskInput := map[string]interface{}{
+		"model":  "opus",
+		"prompt": "AGENT: python-pro\n\nComplex task",
+	}
+
+	result := orchestrator.ValidateTask(taskInput, "test-session")
+
+	if result.Decision != "block" {
+		t.Error("Opus should be blocked")
+	}
+
+	if result.EinsteinBlocked == nil {
+		t.Error("Expected einstein blocked result")
+	}
+
+	if len(result.Violations) == 0 {
+		t.Error("Expected violation logged")
+	}
+}
+
+func TestValidationOrchestrator_CeilingViolation(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create delegation ceiling file
+	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	os.MkdirAll(ceilingDir, 0755)
+	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("haiku"), 0644)
+
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: false}, // Allow opus at schema level
+		},
+		TierLevels: TierLevels{
+			Haiku: 10, Sonnet: 20,
+		},
+	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+
+	taskInput := map[string]interface{}{
+		"model":  "sonnet",
+		"prompt": "AGENT: python-pro\n\nTask",
+	}
+
+	result := orchestrator.ValidateTask(taskInput, "test-session")
+
+	if result.Decision != "block" {
+		t.Error("Ceiling violation should block")
+	}
+
+	if result.CeilingViolation == "" {
+		t.Error("Expected ceiling violation message")
+	}
+}
+
+func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: false},
+		},
+		AgentSubagentMapping: AgentSubagentMapping{
+			CodebaseSearch: "Explore",
+		},
+	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+
+	taskInput := map[string]interface{}{
+		"model":         "sonnet",
+		"prompt":        "AGENT: codebase-search\n\nFind files",
+		"subagent_type": "general-purpose", // Wrong!
+	}
+
+	result := orchestrator.ValidateTask(taskInput, "test-session")
+
+	if result.Decision != "block" {
+		t.Error("Subagent_type mismatch should block")
+	}
+
+	if result.SubagentTypeInvalid == nil {
+		t.Error("Expected subagent type validation result")
+	}
+
+	if len(result.Violations) == 0 {
+		t.Error("Expected violation logged")
+	}
+}
+
+func TestValidationResult_ToJSON(t *testing.T) {
+	result := &ValidationResult{
+		Decision: "block",
+		Reason:   "Test block reason",
+		Violations: []*Violation{
+			{
+				ViolationType: "test_violation",
+				Reason:        "Test reason",
+			},
+		},
+	}
+
+	jsonStr, err := result.ToJSON()
+	if err != nil {
+		t.Fatalf("ToJSON failed: %v", err)
+	}
+
+	// Verify valid JSON
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
+		t.Fatalf("Generated invalid JSON: %v", err)
+	}
+
+	if parsed["decision"] != "block" {
+		t.Error("JSON should contain decision field")
+	}
+}
