@@ -137,3 +137,64 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+func TestValidateModelMatch_ExactMatch(t *testing.T) {
+	agentConfig := &AgentConfig{
+		Model: "sonnet",
+	}
+
+	matches, warning := ValidateModelMatch("test-agent", agentConfig, "sonnet")
+
+	if !matches {
+		t.Error("Expected exact model match")
+	}
+
+	if warning != "" {
+		t.Errorf("Expected no warning, got: %s", warning)
+	}
+}
+
+func TestValidateModelMatch_Mismatch(t *testing.T) {
+	agentConfig := &AgentConfig{
+		Model: "sonnet",
+	}
+
+	matches, warning := ValidateModelMatch("test-agent", agentConfig, "haiku")
+
+	if matches {
+		t.Error("Expected model mismatch detection")
+	}
+
+	if warning == "" {
+		t.Error("Expected warning for model mismatch")
+	}
+
+	if !strings.Contains(warning, "sonnet") || !strings.Contains(warning, "haiku") {
+		t.Errorf("Warning should mention both expected and requested models: %s", warning)
+	}
+}
+
+func TestValidateModelMatch_AllowedModels(t *testing.T) {
+	agentConfig := &AgentConfig{
+		Model:         "sonnet",
+		AllowedModels: []string{"sonnet", "haiku"},
+	}
+
+	tests := []struct {
+		model    string
+		expected bool
+	}{
+		{"sonnet", true},
+		{"haiku", true},
+		{"opus", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.model, func(t *testing.T) {
+			matches, _ := ValidateModelMatch("test-agent", agentConfig, tt.model)
+			if matches != tt.expected {
+				t.Errorf("Model %s: expected match=%v, got %v", tt.model, tt.expected, matches)
+			}
+		})
+	}
+}

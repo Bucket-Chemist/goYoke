@@ -3,6 +3,7 @@ package routing
 import (
 	"fmt"
 	"regexp"
+	"slices"
 )
 
 // TaskValidationResult represents result of Task tool validation
@@ -80,4 +81,46 @@ func extractAgentFromPrompt(prompt string) string {
 		return matches[1]
 	}
 	return ""
+}
+
+// AgentConfig represents agent metadata from agents-index.json
+type AgentConfig struct {
+	Model         string   `json:"model"`
+	SubagentType  string   `json:"subagent_type"`
+	AllowedModels []string `json:"allowed_models,omitempty"`
+}
+
+// AgentsIndex represents the full agents-index.json structure
+type AgentsIndex struct {
+	Agents map[string]AgentConfig `json:"agents"`
+}
+
+// ValidateModelMatch checks if Task model matches agent's expected model
+// Warning messages are logged to violations.jsonl with type "model_mismatch_warning"
+// and included in CLI output's additionalContext field
+func ValidateModelMatch(agentName string, agentConfig *AgentConfig, requestedModel string) (bool, string) {
+	// If agent specifies allowed_models, check against that list
+	if len(agentConfig.AllowedModels) > 0 {
+		if slices.Contains(agentConfig.AllowedModels, requestedModel) {
+			return true, ""
+		}
+
+		return false, fmt.Sprintf(
+			"[task-validation] Model mismatch. Agent expects models: %v. Requested: %s. This may cause unexpected behavior.",
+			agentConfig.AllowedModels,
+			requestedModel,
+		)
+	}
+
+	// Otherwise check against single model field
+	if agentConfig.Model != requestedModel {
+		return false, fmt.Sprintf(
+			"[task-validation] Model mismatch. Agent '%s' expects model '%s'. Requested: '%s'. This may cause suboptimal performance.",
+			agentName,
+			agentConfig.Model,
+			requestedModel,
+		)
+	}
+
+	return true, ""
 }
