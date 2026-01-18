@@ -84,7 +84,7 @@ func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, se
 		return result // No opus config, allow
 	}
 
-	taskBlocked, _ := opusConfig.TaskInvocationBlocked.(bool)
+	taskBlocked := opusConfig.TaskInvocationBlocked
 	if !taskBlocked {
 		return result // Blocking not enabled, allow
 	}
@@ -278,6 +278,10 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
 ```
 
 **Acceptance Criteria**:
@@ -318,7 +322,9 @@ type AgentsIndex struct {
 }
 
 // ValidateModelMatch checks if Task model matches agent's expected model
-func ValidateModelMatch(agentConfig *AgentConfig, requestedModel string) (bool, string) {
+// Warning messages are logged to violations.jsonl with type "model_mismatch_warning"
+// and included in CLI output's additionalContext field
+func ValidateModelMatch(agentName string, agentConfig *AgentConfig, requestedModel string) (bool, string) {
 	// If agent specifies allowed_models, check against that list
 	if len(agentConfig.AllowedModels) > 0 {
 		for _, allowed := range agentConfig.AllowedModels {
@@ -338,7 +344,7 @@ func ValidateModelMatch(agentConfig *AgentConfig, requestedModel string) (bool, 
 	if agentConfig.Model != requestedModel {
 		return false, fmt.Sprintf(
 			"[task-validation] Model mismatch. Agent '%s' expects model '%s'. Requested: '%s'. This may cause suboptimal performance.",
-			"", // Agent name passed separately
+			agentName,
 			agentConfig.Model,
 			requestedModel,
 		)
@@ -478,18 +484,17 @@ func LoadDelegationCeiling(projectDir string) (*DelegationCeiling, error) {
 
 // CheckDelegationCeiling validates if requested model is within ceiling
 func CheckDelegationCeiling(schema *Schema, ceiling *DelegationCeiling, requestedModel string) (bool, string) {
-	// Get tier levels for comparison
-	tierLevels := schema.TierLevels
-	if tierLevels == nil {
-		// No tier levels defined, allow all
+	// Get tier level for ceiling
+	ceilingLevel, err := schema.GetTierLevel(ceiling.MaxTier)
+	if err != nil {
+		// Unknown ceiling tier, allow (permissive fallback)
 		return true, ""
 	}
 
-	ceilingLevel, ceilingExists := tierLevels[ceiling.MaxTier]
-	requestedLevel, requestedExists := tierLevels[requestedModel]
-
-	if !ceilingExists || !requestedExists {
-		// Can't compare unknown tiers, allow
+	// Get tier level for requested model
+	requestedLevel, err := schema.GetTierLevel(requestedModel)
+	if err != nil {
+		// Unknown requested tier, allow
 		return true, ""
 	}
 
@@ -516,6 +521,7 @@ package routing
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -552,10 +558,10 @@ func TestLoadDelegationCeiling_NoFile(t *testing.T) {
 
 func TestCheckDelegationCeiling_WithinCeiling(t *testing.T) {
 	schema := &Schema{
-		TierLevels: map[string]int{
-			"haiku":  10,
-			"sonnet": 20,
-			"opus":   30,
+		TierLevels: TierLevels{
+			Haiku:  10,
+			Sonnet: 20,
+			Opus:   30,
 		},
 	}
 
@@ -576,10 +582,10 @@ func TestCheckDelegationCeiling_WithinCeiling(t *testing.T) {
 
 func TestCheckDelegationCeiling_ExceedsCeiling(t *testing.T) {
 	schema := &Schema{
-		TierLevels: map[string]int{
-			"haiku":  10,
-			"sonnet": 20,
-			"opus":   30,
+		TierLevels: TierLevels{
+			Haiku:  10,
+			Sonnet: 20,
+			Opus:   30,
 		},
 	}
 
@@ -606,7 +612,7 @@ func TestCheckDelegationCeiling_ExceedsCeiling(t *testing.T) {
 
 func TestCheckDelegationCeiling_NoTierLevels(t *testing.T) {
 	schema := &Schema{
-		TierLevels: nil,
+		TierLevels: TierLevels{},
 	}
 
 	ceiling := &DelegationCeiling{MaxTier: "haiku"}
@@ -616,6 +622,10 @@ func TestCheckDelegationCeiling_NoTierLevels(t *testing.T) {
 	if !allowed {
 		t.Error("Should allow all when tier levels not defined")
 	}
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
 ```
 
@@ -675,16 +685,9 @@ func ValidateSubagentType(schema *Schema, targetAgent string, requestedType stri
 		return result
 	}
 
-	// Get required subagent_type from schema mapping
-	mapping := schema.AgentSubagentMapping
-	if mapping == nil {
-		// No mapping defined, allow any
-		result.Valid = true
-		return result
-	}
-
-	requiredType, exists := mapping[targetAgent]
-	if !exists {
+	// Use schema method to get required type
+	requiredType, err := schema.GetSubagentTypeForAgent(targetAgent)
+	if err != nil {
 		// Agent not in mapping, allow (might be custom agent)
 		result.Valid = true
 		return result
@@ -730,15 +733,16 @@ func (v *SubagentTypeValidation) FormatSubagentTypeError() string {
 package routing
 
 import (
+	"strings"
 	"testing"
 )
 
 func TestValidateSubagentType_Correct(t *testing.T) {
 	schema := &Schema{
-		AgentSubagentMapping: map[string]string{
-			"python-pro":      "general-purpose",
-			"codebase-search": "Explore",
-			"orchestrator":    "Plan",
+		AgentSubagentMapping: AgentSubagentMapping{
+			PythonPro:      "general-purpose",
+			CodebaseSearch: "Explore",
+			Orchestrator:   "Plan",
 		},
 	}
 
@@ -765,9 +769,9 @@ func TestValidateSubagentType_Correct(t *testing.T) {
 
 func TestValidateSubagentType_Incorrect(t *testing.T) {
 	schema := &Schema{
-		AgentSubagentMapping: map[string]string{
-			"python-pro":      "general-purpose",
-			"codebase-search": "Explore",
+		AgentSubagentMapping: AgentSubagentMapping{
+			PythonPro:      "general-purpose",
+			CodebaseSearch: "Explore",
 		},
 	}
 
@@ -802,8 +806,8 @@ func TestValidateSubagentType_Incorrect(t *testing.T) {
 
 func TestValidateSubagentType_NoAgent(t *testing.T) {
 	schema := &Schema{
-		AgentSubagentMapping: map[string]string{
-			"python-pro": "general-purpose",
+		AgentSubagentMapping: AgentSubagentMapping{
+			PythonPro: "general-purpose",
 		},
 	}
 
@@ -817,8 +821,8 @@ func TestValidateSubagentType_NoAgent(t *testing.T) {
 
 func TestValidateSubagentType_AgentNotInMapping(t *testing.T) {
 	schema := &Schema{
-		AgentSubagentMapping: map[string]string{
-			"python-pro": "general-purpose",
+		AgentSubagentMapping: AgentSubagentMapping{
+			PythonPro: "general-purpose",
 		},
 	}
 
@@ -832,7 +836,7 @@ func TestValidateSubagentType_AgentNotInMapping(t *testing.T) {
 
 func TestValidateSubagentType_NoMapping(t *testing.T) {
 	schema := &Schema{
-		AgentSubagentMapping: nil,
+		AgentSubagentMapping: AgentSubagentMapping{},
 	}
 
 	result := ValidateSubagentType(schema, "python-pro", "Explore")
@@ -870,6 +874,10 @@ func TestFormatSubagentTypeError(t *testing.T) {
 		t.Error("Fix should reference the agent")
 	}
 }
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
+}
 ```
 
 **Acceptance Criteria**:
@@ -902,9 +910,10 @@ Integration tests for complete Task validation workflow.
 package integration
 
 import (
+	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 func TestTaskValidation_CompleteWorkflow(t *testing.T) {
@@ -920,15 +929,15 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 				Model: "claude-3-haiku",
 			},
 		},
-		TierLevels: map[string]int{
-			"haiku":  10,
-			"sonnet": 20,
-			"opus":   30,
+		TierLevels: routing.TierLevels{
+			Haiku:  10,
+			Sonnet: 20,
+			Opus:   30,
 		},
-		AgentSubagentMapping: map[string]string{
-			"python-pro":      "general-purpose",
-			"codebase-search": "Explore",
-			"tech-docs-writer": "general-purpose",
+		AgentSubagentMapping: routing.AgentSubagentMapping{
+			PythonPro:      "general-purpose",
+			CodebaseSearch: "Explore",
+			TechDocsWriter: "general-purpose",
 		},
 	}
 
@@ -1018,18 +1027,18 @@ func TestTaskValidation_RealWorldScenarios(t *testing.T) {
 				TaskInvocationBlocked: true,
 			},
 		},
-		AgentSubagentMapping: map[string]string{
-			"python-pro":       "general-purpose",
-			"python-ux":        "general-purpose",
-			"r-pro":            "general-purpose",
-			"r-shiny-pro":      "general-purpose",
-			"codebase-search":  "Explore",
-			"scaffolder":       "general-purpose",
-			"tech-docs-writer": "general-purpose",
-			"librarian":        "Explore",
-			"code-reviewer":    "Explore",
-			"orchestrator":     "Plan",
-			"architect":        "Plan",
+		AgentSubagentMapping: routing.AgentSubagentMapping{
+			PythonPro:      "general-purpose",
+			PythonUX:       "general-purpose",
+			RPro:           "general-purpose",
+			RShinyPro:      "general-purpose",
+			CodebaseSearch: "Explore",
+			Scaffolder:     "general-purpose",
+			TechDocsWriter: "general-purpose",
+			Librarian:      "Explore",
+			CodeReviewer:   "Explore",
+			Orchestrator:   "Plan",
+			Architect:      "Plan",
 		},
 	}
 
@@ -1059,6 +1068,10 @@ func TestTaskValidation_RealWorldScenarios(t *testing.T) {
 			}
 		})
 	}
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
 ```
 
@@ -1097,6 +1110,15 @@ import (
 
 **Implementation**:
 ```go
+// NewValidationOrchestrator creates orchestrator with all dependencies loaded
+func NewValidationOrchestrator(schema *Schema, projectDir string, agentsIndex *AgentsIndex) *ValidationOrchestrator {
+	return &ValidationOrchestrator{
+		Schema:      schema,
+		ProjectDir:  projectDir,
+		AgentsIndex: agentsIndex,
+	}
+}
+
 // ValidationOrchestrator coordinates all Task validation checks
 type ValidationOrchestrator struct {
 	Schema      *Schema
@@ -1142,7 +1164,7 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 	// Check 2: Model mismatch (warning only, not blocking)
 	if v.AgentsIndex != nil && targetAgent != "" {
 		if agentConfig, exists := v.AgentsIndex.Agents[targetAgent]; exists {
-			matches, warning := ValidateModelMatch(&agentConfig, model)
+			matches, warning := ValidateModelMatch(targetAgent, &agentConfig, model)
 			if !matches {
 				result.ModelMismatch = warning
 				// Don't block, just warn
@@ -1218,20 +1240,19 @@ import (
 func TestValidationOrchestrator_AllowedTask(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	orchestrator := &ValidationOrchestrator{
-		Schema: &Schema{
-			Tiers: map[string]TierConfig{
-				"opus": {TaskInvocationBlocked: true},
-			},
-			TierLevels: map[string]int{
-				"haiku": 10, "sonnet": 20,
-			},
-			AgentSubagentMapping: map[string]string{
-				"python-pro": "general-purpose",
-			},
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: true},
 		},
-		ProjectDir: tmpDir,
+		TierLevels: TierLevels{
+			Haiku: 10, Sonnet: 20,
+		},
+		AgentSubagentMapping: AgentSubagentMapping{
+			PythonPro: "general-purpose",
+		},
 	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
 
 	taskInput := map[string]interface{}{
 		"model":         "sonnet",
@@ -1253,14 +1274,13 @@ func TestValidationOrchestrator_AllowedTask(t *testing.T) {
 func TestValidationOrchestrator_OpusBlocked(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	orchestrator := &ValidationOrchestrator{
-		Schema: &Schema{
-			Tiers: map[string]TierConfig{
-				"opus": {TaskInvocationBlocked: true},
-			},
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: true},
 		},
-		ProjectDir: tmpDir,
 	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
 
 	taskInput := map[string]interface{}{
 		"model":  "opus",
@@ -1290,17 +1310,16 @@ func TestValidationOrchestrator_CeilingViolation(t *testing.T) {
 	os.MkdirAll(ceilingDir, 0755)
 	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("haiku"), 0644)
 
-	orchestrator := &ValidationOrchestrator{
-		Schema: &Schema{
-			Tiers: map[string]TierConfig{
-				"opus": {TaskInvocationBlocked: false}, // Allow opus at schema level
-			},
-			TierLevels: map[string]int{
-				"haiku": 10, "sonnet": 20,
-			},
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: false}, // Allow opus at schema level
 		},
-		ProjectDir: tmpDir,
+		TierLevels: TierLevels{
+			Haiku: 10, Sonnet: 20,
+		},
 	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
 
 	taskInput := map[string]interface{}{
 		"model":  "sonnet",
@@ -1321,17 +1340,16 @@ func TestValidationOrchestrator_CeilingViolation(t *testing.T) {
 func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	orchestrator := &ValidationOrchestrator{
-		Schema: &Schema{
-			Tiers: map[string]TierConfig{
-				"opus": {TaskInvocationBlocked: false},
-			},
-			AgentSubagentMapping: map[string]string{
-				"codebase-search": "Explore",
-			},
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {TaskInvocationBlocked: false},
 		},
-		ProjectDir: tmpDir,
+		AgentSubagentMapping: AgentSubagentMapping{
+			CodebaseSearch: "Explore",
+		},
 	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
 
 	taskInput := map[string]interface{}{
 		"model":         "sonnet",
@@ -1419,8 +1437,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 ```
 
@@ -1438,7 +1455,7 @@ func main() {
 	}
 
 	// Load routing schema
-	schema, err := config.LoadRoutingSchema()
+	schema, err := routing.LoadSchema()
 	if err != nil {
 		outputError(fmt.Sprintf("Failed to load routing schema: %v", err))
 		os.Exit(1)
@@ -1459,10 +1476,7 @@ func main() {
 	}
 
 	// Create validation orchestrator
-	orchestrator := &routing.ValidationOrchestrator{
-		Schema:     schema,
-		ProjectDir: projectDir,
-	}
+	orchestrator := routing.NewValidationOrchestrator(schema, projectDir, nil)
 
 	// Validate task
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
@@ -1472,7 +1486,9 @@ func main() {
 
 	// Log violations if any
 	for _, violation := range result.Violations {
-		routing.LogViolation(violation)
+		if err := routing.LogViolation(violation, projectDir); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log violation: %v\n", err)
+		}
 	}
 }
 

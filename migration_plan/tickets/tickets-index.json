@@ -706,7 +706,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-016",
@@ -736,7 +736,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-017",
@@ -770,7 +770,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-018",
@@ -802,7 +802,8 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "skipped",
+      "skipped_reason": "Redundant with GOgent-017. CheckToolPermission() already handles wildcard detection and AllowedTools field population. Proposed IsWildcardTier() and GetToolsList() are unnecessary abstractions with no callers. Type mismatches in ticket code."
     },
     {
       "id": "GOgent-019",
@@ -813,8 +814,7 @@
       "day": 5,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-017",
-        "GOgent-018"
+        "GOgent-017"
       ],
       "blocks": [],
       "priority": "high",
@@ -833,7 +833,8 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "skipped",
+      "skipped_reason": "Verified via evidence-based audit: All 7 acceptance criteria met by existing permissions_test.go (553 lines, 96.9% coverage). Integration tests pass. Real schema validation complete. Orchestrator verification confirmed no additional tests needed. See audit: orchestrator agent aee3b5b."
     },
     {
       "id": "GOgent-020",
