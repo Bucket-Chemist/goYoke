@@ -285,13 +285,13 @@ func contains(s, substr string) bool {
 ```
 
 **Acceptance Criteria**:
-- [ ] `ValidateTaskInvocation()` blocks Task(model: opus)
-- [ ] Blocks Task with target agent=einstein (any model)
-- [ ] Allows normal Task invocations (sonnet, haiku agents)
-- [ ] Creates violation record with correct type
-- [ ] Violation includes model, agent, and reason
-- [ ] Tests cover opus model, einstein agent, allowed cases
-- [ ] `go test ./pkg/routing` passes
+- [x] `ValidateTaskInvocation()` blocks Task(model: opus)
+- [x] Blocks Task with target agent=einstein (any model)
+- [x] Allows normal Task invocations (sonnet, haiku agents)
+- [x] Creates violation record with correct type
+- [x] Violation includes model, agent, and reason
+- [x] Tests cover opus model, einstein agent, allowed cases
+- [x] `go test ./pkg/routing` passes
 
 **Why This Matters**: Prevents $3+ cost waste from Task(opus) calls. Forces use of /einstein which is 72% cheaper.
 
