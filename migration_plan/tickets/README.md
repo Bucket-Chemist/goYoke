@@ -30,8 +30,8 @@
 | [03-week1-validation-cli.md](03-week1-validation-cli.md) | GOgent-020 to 025 | ~12h | Task validation, opus blocking, CLI build |
 | [04-week2-session-archive.md](04-week2-session-archive.md) | GOgent-026 to 033 | ~12h | session-archive hook translation |
 | [05-week2-sharp-edge-memory.md](05-week2-sharp-edge-memory.md) | GOgent-034 to 040 | ~12h | sharp-edge-detector hook translation |
-| [06-week3-integration-tests.md](06-week3-integration-tests.md) | GOgent-041 to 047 | ~14h | Integration tests, corpus validation |
-| [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) | GOgent-048 to 055 | ~14h | Benchmarking, installation, cutover |
+| [06-week3-integration-tests.md](06-week3-integration-tests.md) | GOgent-094 to 047 | ~14h | Integration tests, corpus validation |
+| [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) | GOgent-101 to 055 | ~14h | Benchmarking, installation, cutover |
 
 ---
 
@@ -102,9 +102,9 @@ GOgent-024 (Task Tests) → GOgent-024b (Wire Orchestrator) → GOgent-025 (Buil
     ↓
 [Week 2: Sharp Edge - GOgent-034 to 040]
     ↓
-[Week 3: Integration - GOgent-041 to 047]
+[Week 3: Integration - GOgent-094 to 047]
     ↓
-[Week 3: Deployment - GOgent-048 to 055]
+[Week 3: Deployment - GOgent-101 to 055]
 ```
 
 ---
@@ -150,13 +150,13 @@ GOgent-024 (Task Tests) → GOgent-024b (Wire Orchestrator) → GOgent-025 (Buil
 - [ ] Session archival tested with real JSONL
 
 ### ✅ Week 3 Mid-Point (Wednesday - GO/NO-GO Decision)
-- [ ] GOgent-041 to 047 complete (integration tests)
+- [ ] GOgent-094 to 047 complete (integration tests)
 - [ ] 100-event corpus regression test: 100% match Bash output
 - [ ] Performance benchmark: ≤ baseline from GOgent-000
 - [ ] **Decision**: Proceed to cutover or rollback?
 
 ### ✅ Week 3 Complete (Friday - Production Cutover)
-- [ ] GOgent-048 to 055 complete
+- [ ] GOgent-101 to 055 complete
 - [ ] Installation script tested on clean system
 - [ ] Parallel testing (24hrs) successful
 - [ ] Hooks switched to Go binaries
@@ -251,8 +251,8 @@ func ParseToolEvent(r io.Reader, timeout time.Duration) (*ToolEvent, error) {
 - GOgent-034-040: sharp-edge-detector translation
 
 **Testing & Deployment**:
-- GOgent-041-047: Integration tests
-- GOgent-048-055: Benchmarking, installation, cutover
+- GOgent-094-047: Integration tests
+- GOgent-101-055: Benchmarking, installation, cutover
 
 ---
 

@@ -141,8 +141,8 @@ Breakdown:
 | GOgent-020 to 025 (full detail) | 6 | 2-3 hours |
 | GOgent-026 to 033 (full detail) | 8 | 3-4 hours |
 | GOgent-034 to 040 (full detail) | 7 | 3-4 hours |
-| GOgent-041 to 047 (full detail) | 7 | 3-4 hours |
-| GOgent-048 to 055 (full detail) | 8 | 3-4 hours |
+| GOgent-094 to 047 (full detail) | 7 | 3-4 hours |
+| GOgent-101 to 055 (full detail) | 8 | 3-4 hours |
 | Main index update | 1 | 1 hour |
 | **Total** | **44** | **~20-25 hours** |
 

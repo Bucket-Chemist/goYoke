@@ -10,7 +10,7 @@
 ## Navigation
 
 - **Previous**: [04-week2-session-archive.md](04-week2-session-archive.md) - GOgent-026 to 033
-- **Next**: [06-week3-integration-tests.md](06-week3-integration-tests.md) - GOgent-041 to 047
+- **Next**: [06-week3-load-routing-context.md](06-week3-load-routing-context.md) - GOgent-056 to 062
 - **Overview**: [00-overview.md](00-overview.md) - Testing strategy, rollback plan, standards
 - **Template**: [TICKET-TEMPLATE.md](TICKET-TEMPLATE.md) - Required ticket structure
 
@@ -1550,4 +1550,4 @@ func outputError(message string) {
 
 ---
 
-**Next**: [06-week3-integration-tests.md](06-week3-integration-tests.md) - GOgent-041 to 047 (Integration and regression tests)
+**Next**: [06-week3-integration-tests.md](06-week3-integration-tests.md) - GOgent-094 to 047 (Integration and regression tests)

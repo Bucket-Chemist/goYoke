@@ -28,7 +28,7 @@
 ./scripts/ticket-workflow.sh status
 
 # Start specific ticket
-./scripts/ticket-workflow.sh GOgent-042
+./scripts/ticket-workflow.sh GOgent-095
 ```
 
 ---
@@ -56,8 +56,13 @@ tickets/
 ├── 04-week2-session-archive.md        ← GOgent-026 to 033 (35KB, 8 tickets)
 ├── 05-week2-sharp-edge-memory.md      ← GOgent-034 to 040 (32KB, 7 tickets)
 │
-├── 06-week3-integration-tests.md      ← GOgent-041 to 047 (42KB, 7 tickets)
-└── 07-week3-deployment-cutover.md     ← GOgent-048 to 055 (48KB, 8 tickets)
+├── 06-week3-load-routing-context.md   ← GOgent-056 to 062 (35KB, 7 tickets)
+├── 07-week3-agent-workflow-hooks.md   ← GOgent-063 to 074 (55KB, 12 tickets)
+├── 08-week4-advanced-enforcement.md   ← GOgent-075 to 086 (43KB, 12 tickets)
+├── 09-week4-observability-remaining.md ← GOgent-087 to 093 (24KB, 7 tickets)
+│
+├── 10-week5-integration-tests.md      ← GOgent-094 to 100+ (42KB+, 13-14 tickets) ⚠️ REFACTORED
+└── 11-week5-deployment-cutover.md     ← GOgent-101 to 108 (48KB+, 8 tickets) ⚠️ REFACTORED
 ```
 
 ---
@@ -185,13 +190,13 @@ tickets/
 | Ticket | Title | Time | Priority | Dependencies |
 |--------|-------|------|----------|--------------|
 | GOgent-004c | Config Circular Dependency Tests | 1h | Medium | GOgent-004a, 004b |
-| GOgent-041 | Test Harness for Corpus Replay | 2h | Critical | GOgent-000, 008b |
-| GOgent-042 | Integration Tests for validate-routing | 2h | High | GOgent-025, 041 |
-| GOgent-043 | Integration Tests for session-archive | 1.5h | High | GOgent-033, 041 |
-| GOgent-044 | Integration Tests for sharp-edge-detector | 1.5h | High | GOgent-040, 041 |
-| GOgent-045 | Performance Benchmarks | 2h | High | GOgent-041, 042, 043, 044 |
-| GOgent-046 | End-to-End Workflow Tests | 2h | High | GOgent-042, 043, 044 |
-| GOgent-047 | Regression Tests (Go vs Bash) | 2h | Critical | GOgent-000, 041 |
+| GOgent-094 | Test Harness for Corpus Replay | 2h | Critical | GOgent-000, 008b |
+| GOgent-095 | Integration Tests for validate-routing | 2h | High | GOgent-025, 041 |
+| GOgent-096 | Integration Tests for session-archive | 1.5h | High | GOgent-033, 041 |
+| GOgent-097 | Integration Tests for sharp-edge-detector | 1.5h | High | GOgent-040, 041 |
+| GOgent-098 | Performance Benchmarks | 2h | High | GOgent-094, 042, 043, 044 |
+| GOgent-099 | End-to-End Workflow Tests | 2h | High | GOgent-095, 043, 044 |
+| GOgent-100 | Regression Tests (Go vs Bash) | 2h | Critical | GOgent-000, 041 |
 
 **Total**: 14 hours
 
@@ -201,19 +206,127 @@ tickets/
 
 | Ticket | Title | Time | Priority | Dependencies |
 |--------|-------|------|----------|--------------|
-| GOgent-048 | Installation Script | 2h | Critical | (all above complete) |
-| GOgent-048b | WSL2 Compatibility Testing | 1.5h | Medium | GOgent-048 |
-| GOgent-049 | Parallel Testing (24hrs) | 2h | Critical | GOgent-048 |
-| GOgent-050 | Cutover Decision Workflow | 1h | Critical | GOgent-049 |
-| GOgent-051 | Symlink Cutover Script | 1h | Critical | GOgent-048, 050 |
-| GOgent-052 | Rollback Script & Testing | 1h | Critical | GOgent-051 |
-| GOgent-053 | Documentation Updates | 1.5h | High | GOgent-051 |
-| GOgent-054 | Performance Regression Monitoring | 1h | High | GOgent-051 |
-| GOgent-055 | Post-Cutover Validation Checklist | 1h | Critical | GOgent-051 |
+| GOgent-101 | Installation Script | 2h | Critical | (all above complete) |
+| GOgent-101b | WSL2 Compatibility Testing | 1.5h | Medium | GOgent-101 |
+| GOgent-102 | Parallel Testing (24hrs) | 2h | Critical | GOgent-101 |
+| GOgent-103 | Cutover Decision Workflow | 1h | Critical | GOgent-102 |
+| GOgent-104 | Symlink Cutover Script | 1h | Critical | GOgent-101, 050 |
+| GOgent-105 | Rollback Script & Testing | 1h | Critical | GOgent-104 |
+| GOgent-106 | Documentation Updates | 1.5h | High | GOgent-104 |
+| GOgent-107 | Performance Regression Monitoring | 1h | High | GOgent-104 |
+| GOgent-108 | Post-Cutover Validation Checklist | 1h | Critical | GOgent-104 |
 
 **Total**: 12 hours
 
 **Week 3 Total**: 26 hours
+
+---
+
+### Week 3-4: Additional Hook Implementations (38 tickets, ~57 hours)
+
+#### Week 3 Days 3-4: Session Initialization (7 tickets)
+
+**File**: [06-week3-load-routing-context.md](06-week3-load-routing-context.md)
+
+| Ticket | Title | Time | Priority | Dependencies |
+|--------|-------|------|----------|--------------|
+| GOgent-056 | SessionStart Event Parsing | 1.5h | Critical | GOgent-002 |
+| GOgent-057 | Routing Schema Loading | 1.5h | Critical | GOgent-004a |
+| GOgent-058 | Handoff Document Loading | 1h | High | GOgent-056 |
+| GOgent-059 | Pending Learnings & Git Integration | 1.5h | Medium | - |
+| GOgent-060 | Project Type Detection | 1.5h | High | - |
+| GOgent-061 | Session Context Response | 1.5h | Critical | GOgent-056-060 |
+| GOgent-062 | Build gogent-load-context CLI | 1.5h | Critical | GOgent-061 |
+
+**Total**: 11 hours
+
+#### Week 3 Days 5-7 & Week 4 Days 1-2: Agent Workflow Hooks (12 tickets)
+
+**File**: [07-week3-agent-workflow-hooks.md](07-week3-agent-workflow-hooks.md)
+
+| Ticket | Title | Time | Priority | Dependencies |
+|--------|-------|------|----------|--------------|
+| GOgent-063 | SubagentStop Event Parsing | 1.5h | High | GOgent-002 |
+| GOgent-064 | Agent Type Detection | 1.5h | Critical | GOgent-063 |
+| GOgent-065 | Tier-Specific Response Templates | 2h | Critical | GOgent-064 |
+| GOgent-066 | Decision Logging | 1h | Medium | GOgent-065 |
+| GOgent-067 | Agent Endstate Integration Tests | 1.5h | High | GOgent-066 |
+| GOgent-068 | Build gogent-agent-endstate CLI | 1.5h | Critical | GOgent-067 |
+| GOgent-069 | Tool Counter Management | 1.5h | Critical | GOgent-056 |
+| GOgent-070 | Routing Reminder Injection | 1h | High | GOgent-069 |
+| GOgent-071 | Auto-Flush Logic | 2h | Critical | GOgent-070 |
+| GOgent-072 | Archive Generation | 1.5h | Medium | GOgent-071 |
+| GOgent-073 | Attention Gate Integration Tests | 1.5h | High | GOgent-072 |
+| GOgent-074 | Build gogent-attention-gate CLI | 1.5h | Critical | GOgent-073 |
+
+**Total**: 18 hours
+
+#### Week 4 Days 3-6: Advanced Enforcement (12 tickets)
+
+**File**: [08-week4-advanced-enforcement.md](08-week4-advanced-enforcement.md)
+
+| Ticket | Title | Time | Priority | Dependencies |
+|--------|-------|------|----------|--------------|
+| GOgent-075 | Transcript Parsing | 1.5h | Critical | GOgent-002 |
+| GOgent-076 | Background Task Detection | 2h | Critical | GOgent-075 |
+| GOgent-077 | Task Collection Verification | 1.5h | Critical | GOgent-076 |
+| GOgent-078 | Blocking Response Generation | 1h | High | GOgent-077 |
+| GOgent-079 | Orchestrator Guard Integration Tests | 1.5h | High | GOgent-078 |
+| GOgent-080 | Build gogent-orchestrator-guard CLI | 1.5h | Critical | GOgent-079 |
+| GOgent-081 | PreToolUse Event Parsing | 1.5h | High | GOgent-002 |
+| GOgent-082 | File Path Extraction | 1h | Medium | GOgent-081 |
+| GOgent-083 | Enforcement Pattern Matching | 1.5h | Critical | GOgent-082 |
+| GOgent-084 | Warning Response Generation | 1h | Medium | GOgent-083 |
+| GOgent-085 | Doc Theater Integration Tests | 1.5h | High | GOgent-084 |
+| GOgent-086 | Build gogent-doc-theater CLI | 1.5h | Critical | GOgent-085 |
+
+**Total**: 18 hours
+
+#### Week 4 Days 7 & Week 5 Days 1-2: Observability & Remaining (7 tickets)
+
+**File**: [09-week4-observability-remaining.md](09-week4-observability-remaining.md)
+
+| Ticket | Title | Time | Priority | Dependencies |
+|--------|-------|------|----------|--------------|
+| GOgent-087 | Benchmark Event Parsing | 1.5h | Medium | GOgent-002 |
+| GOgent-088 | Timing Capture & Metrics | 1.5h | Medium | GOgent-087 |
+| GOgent-089 | Benchmark JSONL Logging | 1h | Low | GOgent-088 |
+| GOgent-090 | Build gogent-benchmark CLI | 1h | Medium | GOgent-089 |
+| GOgent-091 | stop-gate.sh Investigation | 1.5h | Low | - |
+| GOgent-092 | stop-gate Translation (if needed) | 2h | Low | GOgent-091 |
+| GOgent-093 | stop-gate Integration Tests | 1.5h | Low | GOgent-092 |
+
+**Total**: 10 hours
+
+**Week 3-4 Total**: 57 hours
+
+---
+
+### Week 5: Testing & Deployment (15 tickets, ~38-42 hours)
+
+⚠️ **REFACTORED: Originally weeks 6-7, now expanded to test/deploy ALL 7 hooks**
+
+#### Week 5 Days 3-5: Integration & Regression Tests (13-14 tickets)
+
+**File**: [10-week5-integration-tests.md](10-week5-integration-tests.md)
+
+Original 7 tickets (GOgent-094-100) PLUS 6 new integration test tickets (GOgent-100b-100g) for new hooks.
+
+**See file for complete ticket details.**
+
+**Total**: ~22-24 hours
+
+#### Week 5 Days 6-7: Deployment & Cutover (8 tickets, expanded scope)
+
+**File**: [11-week5-deployment-cutover.md](11-week5-deployment-cutover.md)
+
+Same 8 tickets (GOgent-101-055) but each expanded to handle ALL 7 hooks instead of just 3.
+
+**See file for complete refactoring details.**
+
+**Total**: ~16-18 hours
+
+**Week 5 Total**: ~38-42 hours
 
 ---
 
@@ -224,10 +337,13 @@ tickets/
 | Pre-Work | 1 | 2 | 0.25 |
 | Week 1 | 25 | 35 | 4.4 |
 | Week 2 | 15 | 22.5 | 2.8 |
-| Week 3 | 15 | 26 | 3.3 |
-| **Total** | **56** | **85.5** | **10.7** |
+| Week 3-4 | 45 | 68 | 8.5 |
+| Week 5 | 21-22 | 38-42 | 4.8-5.3 |
+| **Total** | **107-108** | **165.5-169.5** | **20.7-21.2** |
 
-**Actual Duration**: 3 weeks (15 work days) with buffer for testing, reviews, and integration.
+**Actual Duration**: ~5 weeks (25 work days) with buffer for testing, reviews, and integration.
+
+**Note**: Weeks 3-4 add 38 new hook implementation tickets (GOgent-056 to 093). Week 5 expands original testing/deployment with 6-7 additional tickets for comprehensive coverage.
 
 ---
 
@@ -250,13 +366,13 @@ GOgent-025 (gogent-validate CLI)
   ↓
 GOgent-033, 040 (other CLIs)
   ↓
-GOgent-041 (test harness)
+GOgent-094 (test harness)
   ↓
-GOgent-042, 043, 044, 047 (integration/regression)
+GOgent-095, 043, 044, 047 (integration/regression)
   ↓
-GOgent-048, 049 (installation, parallel test)
+GOgent-101, 049 (installation, parallel test)
   ↓
-GOgent-050, 051 (cutover decision & execution)
+GOgent-103, 051 (cutover decision & execution)
 ```
 
 **Total Critical Path**: ~18 tickets, ~30 hours

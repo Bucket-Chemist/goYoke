@@ -35,7 +35,7 @@ The following changes were made based on staff architect critical review:
 | **GOgent-008b** | Capture real event corpus during Week 1 | C-3 | 100 real events for regression testing |
 | **GOgent-024b** | Wire validation orchestrator | Implied | Connect all validation checks |
 | **GOgent-033** | Benchmark all hooks against baseline | Performance | Verify Go ≤ Bash latency |
-| **GOgent-048b** | WSL2 testing coverage | M-8 | Ensure Windows compatibility |
+| **GOgent-101b** | WSL2 testing coverage | M-8 | Ensure Windows compatibility |
 | **All tickets** | File paths: /tmp → XDG with fallback | M-2 | Avoid noexec and reboot clearing |
 | **All hooks** | Add stdin timeout (5s default) | M-6 | Prevent hanging hooks |
 | **All tickets** | Formalize error message standards | Consistency | `[component] What. Why. How to fix.` |
@@ -99,7 +99,7 @@ go test ./...
 go test ./... -cover
 ```
 
-### 2. Integration Tests (Week 3 - GOgent-041 to 046)
+### 2. Integration Tests (Week 3 - GOgent-094 to 046)
 
 **Purpose**: Test end-to-end workflows with real Claude Code event data
 
@@ -136,7 +136,7 @@ func TestValidateRouting_RealCorpus(t *testing.T) {
 
 **Pass Criteria**: 100% match on validation decisions (allow/block)
 
-### 3. Regression Tests (Week 3 - GOgent-047)
+### 3. Regression Tests (Week 3 - GOgent-100)
 
 **Purpose**: Ensure Go output exactly matches Bash output
 
@@ -282,7 +282,7 @@ claude
 
 ### Risk Mitigation
 
-**Parallel Testing Period** (GOgent-049):
+**Parallel Testing Period** (GOgent-102):
 - Run both Bash and Go hooks simultaneously for 24 hours
 - Go hooks write decisions to separate log file
 - Compare decisions post-facto (no impact on production)
@@ -312,11 +312,11 @@ This catches issues BEFORE full cutover, making rollback unnecessary.
 ### Operational Requirements
 
 - [ ] Installation script works: `scripts/install.sh` succeeds on clean system
-- [ ] Parallel testing runs for 24hrs without issues (GOgent-049)
+- [ ] Parallel testing runs for 24hrs without issues (GOgent-102)
 - [ ] Rollback plan documented and tested (can revert in <5 minutes)
 - [ ] Error messages follow standard format (100% compliance)
 - [ ] All logs written to `~/.gogent/hooks.log` (structured JSON)
-- [ ] WSL2 compatibility verified (GOgent-048b)
+- [ ] WSL2 compatibility verified (GOgent-101b)
 
 ### Quality Requirements
 
@@ -584,9 +584,9 @@ Based on complexity and risk, implement in this order:
 
 ### Week 3 (Testing Priority)
 
-10. **test/integration/validate_test.go** - Quality gate (GOgent-041-046)
+10. **test/integration/validate_test.go** - Quality gate (GOgent-094-046)
 11. **test/benchmark/hooks_bench.go** - Performance gate (GOgent-033)
-12. **scripts/install.sh** - Deployment (GOgent-048)
+12. **scripts/install.sh** - Deployment (GOgent-101)
 
 ---
 

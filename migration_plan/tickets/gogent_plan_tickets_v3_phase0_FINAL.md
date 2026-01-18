@@ -20,7 +20,7 @@
 - Added GOgent-008b: Capture real event corpus (C-3)
 - Added GOgent-024b: Wire validation orchestrator (implied)
 - Added GOgent-033: Benchmark all hooks (performance)
-- Added GOgent-048b: WSL2 testing (M-8)
+- Added GOgent-101b: WSL2 testing (M-8)
 - Fixed file paths: /tmp → XDG with fallback (M-2)
 - Added stdin timeout to all hooks (M-6)
 - Added error message standards throughout
@@ -1669,13 +1669,13 @@ Due to length constraints, here's the complete ticket list structure:
 
 ### Week 3: Integration + Cutover (12 tickets)
 - GOgent-004c: Complete config tests (after event parsing)
-- GOgent-041-046: Integration tests
+- GOgent-094-046: Integration tests
 - GOgent-033: Benchmark all hooks (fixes performance gap)
-- GOgent-047: Regression tests (100-event corpus)
-- GOgent-048: Installation script
-- GOgent-048b: WSL2 testing (fixes M-8)
-- GOgent-049: Parallel testing (24hrs)
-- GOgent-050: Cutover decision
+- GOgent-100: Regression tests (100-event corpus)
+- GOgent-101: Installation script
+- GOgent-101b: WSL2 testing (fixes M-8)
+- GOgent-102: Parallel testing (24hrs)
+- GOgent-103: Cutover decision
 
 ---
 
@@ -1724,7 +1724,7 @@ mv sharp-edge-detector.go.bak sharp-edge-detector
 
 3. **Investigation**: Fix Go bugs, re-test locally, re-deploy
 
-**Risk Mitigation**: Parallel testing period (GOgent-049) catches issues before full cutover.
+**Risk Mitigation**: Parallel testing period (GOgent-102) catches issues before full cutover.
 
 ---
 
@@ -1749,7 +1749,7 @@ mv sharp-edge-detector.go.bak sharp-edge-detector
 - [ ] Rollback plan documented and tested
 - [ ] Error messages follow standard format
 - [ ] All logs written to ~/.gogent/hooks.log
-- [ ] WSL2 compatibility verified (GOgent-048b)
+- [ ] WSL2 compatibility verified (GOgent-101b)
 
 ---
 

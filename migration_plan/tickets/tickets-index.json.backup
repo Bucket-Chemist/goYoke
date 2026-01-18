@@ -2,10 +2,10 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 108,
+    "total_tickets": 95,
     "total_weeks": 5,
     "created": "2026-01-15",
-    "version": "1.4"
+    "version": "1.2"
   },
   "tickets": [
     {
@@ -418,8 +418,8 @@
         "GOgent-002"
       ],
       "blocks": [
-        "GOgent-094",
-        "GOgent-100"
+        "GOgent-041",
+        "GOgent-047"
       ],
       "priority": "high",
       "tags": [
@@ -1045,7 +1045,7 @@
         "GOgent-024b"
       ],
       "blocks": [
-        "GOgent-095"
+        "GOgent-042"
       ],
       "priority": "critical",
       "tags": [
@@ -1307,7 +1307,7 @@
         "GOgent-032"
       ],
       "blocks": [
-        "GOgent-096"
+        "GOgent-043"
       ],
       "priority": "critical",
       "tags": [
@@ -1539,7 +1539,7 @@
         "GOgent-039"
       ],
       "blocks": [
-        "GOgent-097"
+        "GOgent-044"
       ],
       "priority": "critical",
       "tags": [
@@ -1560,7 +1560,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-094",
+      "id": "GOgent-041",
       "title": "Test Harness for Corpus Replay",
       "description": "Build harness to replay events from corpus through hooks",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1572,10 +1572,10 @@
         "GOgent-008b"
       ],
       "blocks": [
-        "GOgent-095",
-        "GOgent-096",
-        "GOgent-097",
-        "GOgent-100"
+        "GOgent-042",
+        "GOgent-043",
+        "GOgent-044",
+        "GOgent-047"
       ],
       "priority": "critical",
       "tags": [
@@ -1597,7 +1597,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-095",
+      "id": "GOgent-042",
       "title": "Integration Tests for validate-routing",
       "description": "Test complete validate-routing workflow with corpus",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1606,10 +1606,10 @@
       "time_estimate": "2h",
       "dependencies": [
         "GOgent-025",
-        "GOgent-094"
+        "GOgent-041"
       ],
       "blocks": [
-        "GOgent-099"
+        "GOgent-046"
       ],
       "priority": "high",
       "tags": [
@@ -1630,7 +1630,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-096",
+      "id": "GOgent-043",
       "title": "Integration Tests for session-archive",
       "description": "Test session-archive workflow: metrics, handoff, archival",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1639,10 +1639,10 @@
       "time_estimate": "1.5h",
       "dependencies": [
         "GOgent-033",
-        "GOgent-094"
+        "GOgent-041"
       ],
       "blocks": [
-        "GOgent-099"
+        "GOgent-046"
       ],
       "priority": "high",
       "tags": [
@@ -1663,7 +1663,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-097",
+      "id": "GOgent-044",
       "title": "Integration Tests for sharp-edge-detector",
       "description": "Test sharp edge detection: failures, counting, blocking",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1672,10 +1672,10 @@
       "time_estimate": "1.5h",
       "dependencies": [
         "GOgent-040",
-        "GOgent-094"
+        "GOgent-041"
       ],
       "blocks": [
-        "GOgent-099"
+        "GOgent-046"
       ],
       "priority": "high",
       "tags": [
@@ -1696,7 +1696,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-098",
+      "id": "GOgent-045",
       "title": "Performance Benchmarks",
       "description": "Benchmark hook latency and memory (<5ms p99, <10MB)",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1704,10 +1704,10 @@
       "day": 2,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-094",
-        "GOgent-095",
-        "GOgent-096",
-        "GOgent-097"
+        "GOgent-041",
+        "GOgent-042",
+        "GOgent-043",
+        "GOgent-044"
       ],
       "blocks": [],
       "priority": "high",
@@ -1729,17 +1729,17 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-099",
+      "id": "GOgent-046",
       "title": "End-to-End Workflow Tests",
-      "description": "Test cross-hook workflows: validation → sharp edge → archive",
+      "description": "Test cross-hook workflows: validation \u2192 sharp edge \u2192 archive",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
       "day": 3,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-095",
-        "GOgent-096",
-        "GOgent-097"
+        "GOgent-042",
+        "GOgent-043",
+        "GOgent-044"
       ],
       "blocks": [],
       "priority": "high",
@@ -1761,7 +1761,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-100",
+      "id": "GOgent-047",
       "title": "Regression Tests (Go vs Bash)",
       "description": "Compare Go output vs Bash on 100+ event corpus",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1770,7 +1770,7 @@
       "time_estimate": "2h",
       "dependencies": [
         "GOgent-000",
-        "GOgent-094"
+        "GOgent-041"
       ],
       "blocks": [],
       "priority": "critical",
@@ -1792,7 +1792,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-101",
+      "id": "GOgent-048",
       "title": "Installation Script",
       "description": "Automated installation with build, test, backup",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1801,9 +1801,9 @@
       "time_estimate": "2h",
       "dependencies": [],
       "blocks": [
-        "GOgent-101b",
-        "GOgent-102",
-        "GOgent-104"
+        "GOgent-048b",
+        "GOgent-049",
+        "GOgent-051"
       ],
       "priority": "critical",
       "tags": [
@@ -1825,7 +1825,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-101b",
+      "id": "GOgent-048b",
       "title": "WSL2 Compatibility Testing",
       "description": "Test hooks on WSL2 (fixes M-8)",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1833,7 +1833,7 @@
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-101"
+        "GOgent-048"
       ],
       "blocks": [],
       "priority": "medium",
@@ -1856,7 +1856,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-102",
+      "id": "GOgent-049",
       "title": "Parallel Testing (24hrs)",
       "description": "Run Go and Bash side-by-side, compare outputs",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1864,10 +1864,10 @@
       "day": 5,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-101"
+        "GOgent-048"
       ],
       "blocks": [
-        "GOgent-103"
+        "GOgent-050"
       ],
       "priority": "critical",
       "tags": [
@@ -1888,7 +1888,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-103",
+      "id": "GOgent-050",
       "title": "Cutover Decision Workflow",
       "description": "Define GO/NO-GO criteria and cutover process",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1896,10 +1896,10 @@
       "day": 6,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-102"
+        "GOgent-049"
       ],
       "blocks": [
-        "GOgent-104"
+        "GOgent-051"
       ],
       "priority": "critical",
       "tags": [
@@ -1920,7 +1920,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-104",
+      "id": "GOgent-051",
       "title": "Symlink Cutover Script",
       "description": "Atomic script to switch hooks from Bash to Go",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1928,14 +1928,14 @@
       "day": 6,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-101",
-        "GOgent-103"
+        "GOgent-048",
+        "GOgent-050"
       ],
       "blocks": [
-        "GOgent-105",
-        "GOgent-106",
-        "GOgent-107",
-        "GOgent-108"
+        "GOgent-052",
+        "GOgent-053",
+        "GOgent-054",
+        "GOgent-055"
       ],
       "priority": "critical",
       "tags": [
@@ -1956,7 +1956,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-105",
+      "id": "GOgent-052",
       "title": "Rollback Script & Testing",
       "description": "Rollback to Bash hooks in <5min",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1964,7 +1964,7 @@
       "day": 6,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-104"
+        "GOgent-051"
       ],
       "blocks": [],
       "priority": "critical",
@@ -1987,7 +1987,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-106",
+      "id": "GOgent-053",
       "title": "Documentation Updates",
       "description": "Update README, create migration notes, troubleshooting guide",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -1995,7 +1995,7 @@
       "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-104"
+        "GOgent-051"
       ],
       "blocks": [],
       "priority": "high",
@@ -2018,7 +2018,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-107",
+      "id": "GOgent-054",
       "title": "Performance Regression Monitoring",
       "description": "Health check script to monitor hook performance post-cutover",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -2026,7 +2026,7 @@
       "day": 7,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-104"
+        "GOgent-051"
       ],
       "blocks": [],
       "priority": "high",
@@ -2048,7 +2048,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-108",
+      "id": "GOgent-055",
       "title": "Post-Cutover Validation Checklist",
       "description": "Validation checklist after 48hr monitoring period",
       "file": "tickets/11-week5-deployment-cutover.md",
@@ -2056,7 +2056,7 @@
       "day": 7,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-104"
+        "GOgent-051"
       ],
       "blocks": [],
       "priority": "critical",
@@ -2390,7 +2390,7 @@
     {
       "id": "GOgent-066",
       "title": "Integration Tests for agent-endstate",
-      "description": "Comprehensive tests covering event parsing → response generation → logging workflow",
+      "description": "Comprehensive tests covering event parsing \u2192 response generation \u2192 logging workflow",
       "file": "tickets/07-week3-agent-workflow-hooks.md",
       "week": 3,
       "day": 1,
@@ -2543,7 +2543,7 @@
     {
       "id": "GOgent-071",
       "title": "Integration Tests for attention-gate",
-      "description": "End-to-end tests for tool counter → reminder/flush workflow",
+      "description": "End-to-end tests for tool counter \u2192 reminder/flush workflow",
       "file": "tickets/07-week3-agent-workflow-hooks.md",
       "week": 3,
       "day": 1,
@@ -2598,68 +2598,6 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-073",
-      "title": "Archive Generation for RAG Indexing",
-      "description": "Generate markdown summaries of attention-gate data for RAG indexing",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-072"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "archival",
-        "RAG",
-        "markdown"
-      ],
-      "files_to_create": [
-        "pkg/workflow/archive_generator.go",
-        "pkg/workflow/archive_generator_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-073-archive-generation",
-      "pr_labels": [
-        "archival",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-074",
-      "title": "Attention-Gate Edge Cases & Error Handling",
-      "description": "Handle edge cases in tool counter management and flush logic",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-073"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "edge-cases",
-        "error-handling"
-      ],
-      "files_to_create": [
-        "pkg/workflow/counter_edge_cases_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-074-attention-gate-edge-cases",
-      "pr_labels": [
-        "testing",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
       "status": "pending"
     },
     {
@@ -2931,99 +2869,6 @@
       "git_branch": "gogent-083-gogent-doc-theater-cli",
       "pr_labels": [
         "cli",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-084",
-      "title": "Doc-Theater Response Generation",
-      "description": "Generate warning responses when documentation theater is detected",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-083"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "response",
-        "warning"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/theater_response.go",
-        "pkg/enforcement/theater_response_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-084-theater-response",
-      "pr_labels": [
-        "enforcement",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 4,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-085",
-      "title": "Doc-Theater Logging & Metrics",
-      "description": "Log detected documentation theater patterns for analysis",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-084"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "logging",
-        "metrics"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/theater_logging.go",
-        "pkg/enforcement/theater_logging_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-085-theater-logging",
-      "pr_labels": [
-        "logging",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-086",
-      "title": "Doc-Theater Configuration & Tuning",
-      "description": "Add configuration for pattern sensitivity and excluded files",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-085"
-      ],
-      "blocks": [],
-      "priority": "low",
-      "tags": [
-        "configuration",
-        "tuning"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/theater_config.go",
-        "pkg/enforcement/theater_config_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-086-theater-config",
-      "pr_labels": [
-        "config",
         "week-5",
         "phase-0"
       ],

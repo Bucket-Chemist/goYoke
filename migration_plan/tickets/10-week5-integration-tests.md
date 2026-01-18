@@ -1,6 +1,6 @@
 # Week 3 Part 1: Integration & Regression Tests
 
-**Phase 0 - Week 3 Days 1-3** | GOgent-004c, 041-047 (7 tickets)
+**Phase 0 - Week 3 Days 1-3** | GOgent-004c, 094-100 (7 tickets)
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Previous | Up | Next |
 |----------|-----|------|
-| [05-week2-sharp-edge-memory.md](05-week2-sharp-edge-memory.md) | [README.md](README.md) | [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) |
+| [09-week4-observability-remaining.md](09-week4-observability-remaining.md) | [README.md](README.md) | [11-week5-deployment-cutover.md](11-week5-deployment-cutover.md) |
 
 **Cross-References:**
 - Standards: [00-overview.md](00-overview.md)
@@ -24,19 +24,47 @@ Week 3 Part 1 completes the Phase 0 Go translation by implementing comprehensive
 
 **Key Components:**
 - **GOgent-004c**: Config circular dependency tests (deferred from Week 1)
-- **GOgent-041**: Test harness for event corpus replay
-- **GOgent-042**: Integration tests for validate-routing hook
-- **GOgent-043**: Integration tests for session-archive hook
-- **GOgent-044**: Integration tests for sharp-edge-detector hook
-- **GOgent-045**: Performance benchmarks (target <5ms p99)
-- **GOgent-046**: End-to-end workflow integration tests
-- **GOgent-047**: Regression tests comparing Go vs Bash output
+- **GOgent-094**: Test harness for event corpus replay
+- **GOgent-095**: Integration tests for validate-routing hook
+- **GOgent-096**: Integration tests for session-archive hook
+- **GOgent-097**: Integration tests for sharp-edge-detector hook
+- **GOgent-098**: Performance benchmarks (target <5ms p99)
+- **GOgent-099**: End-to-end workflow integration tests
+- **GOgent-100**: Regression tests comparing Go vs Bash output
 
 **Testing Philosophy:**
 - Unit tests verify individual functions (covered in Week 1-2 tickets)
 - Integration tests verify complete hook workflows
 - Regression tests verify Go output matches Bash exactly
 - Benchmarks verify performance meets targets
+
+---
+
+## ⚠️ REFACTORING REQUIRED
+
+**Status**: This plan was created before weeks 8-11 were added
+
+**Current Scope**: Tests only 3 hooks (validate-routing, session-archive, sharp-edge)
+
+**Required Changes**:
+1. Expand GOgent-095 to test validate-routing hook
+2. Expand GOgent-096 to test session-archive hook
+3. Expand GOgent-097 to test sharp-edge-detector hook
+4. **ADD GOgent-100b**: Integration tests for load-routing-context (1.5h)
+5. **ADD GOgent-100c**: Integration tests for agent-endstate (1.5h)
+6. **ADD GOgent-100d**: Integration tests for attention-gate (1.5h)
+7. **ADD GOgent-100e**: Integration tests for orchestrator-completion-guard (1.5h)
+8. **ADD GOgent-100f**: Integration tests for detect-documentation-theater (1h)
+9. **ADD GOgent-100g**: Integration tests for benchmark-logger (1h)
+10. Update GOgent-098 (benchmarks) to include ALL 7 hooks
+11. Update GOgent-099 (end-to-end) to test complete hook chain
+12. Update GOgent-100 (regression) to cover ALL hooks
+
+**New Total**: 13-14 tickets, ~22-24 hours (vs original 7 tickets, 14 hours)
+
+**See**: [UNTRACKED_HOOKS.md](UNTRACKED_HOOKS.md) for hook descriptions
+
+**Implementation Note**: This refactoring should be done AFTER weeks 8-11 are complete.
 
 ---
 
@@ -220,7 +248,7 @@ func TestLoadAgentConfig_Concurrent(t *testing.T) {
 
 ---
 
-### GOgent-041: Test Harness for Event Corpus Replay
+### GOgent-094: Test Harness for Event Corpus Replay
 
 **Time**: 2 hours
 **Dependencies**: GOgent-000 (corpus), GOgent-008b (event parsers)
@@ -597,10 +625,10 @@ func TestCompareResults(t *testing.T) {
 
 ---
 
-### GOgent-042: Integration Tests for validate-routing Hook
+### GOgent-095: Integration Tests for validate-routing Hook
 
 **Time**: 2 hours
-**Dependencies**: GOgent-041 (harness), GOgent-025 (gogent-validate binary)
+**Dependencies**: GOgent-094 (harness), GOgent-025 (gogent-validate binary)
 
 **Task**:
 Test complete validate-routing workflow using corpus events, verify blocking logic and violation logging.
@@ -898,10 +926,10 @@ func setupTestRoutingSchema(t *testing.T, projectDir string) {
 
 ---
 
-### GOgent-043: Integration Tests for session-archive Hook
+### GOgent-096: Integration Tests for session-archive Hook
 
 **Time**: 1.5 hours
-**Dependencies**: GOgent-041 (harness), GOgent-033 (gogent-archive binary)
+**Dependencies**: GOgent-094 (harness), GOgent-033 (gogent-archive binary)
 
 **Task**:
 Test session-archive workflow: metrics collection, handoff generation, file archival.
@@ -1182,10 +1210,10 @@ func createToolCounterLog(t *testing.T, projectDir, tool string, count int) {
 
 ---
 
-### GOgent-044: Integration Tests for sharp-edge-detector Hook
+### GOgent-097: Integration Tests for sharp-edge-detector Hook
 
 **Time**: 1.5 hours
-**Dependencies**: GOgent-041 (harness), GOgent-040 (gogent-sharp-edge binary)
+**Dependencies**: GOgent-094 (harness), GOgent-040 (gogent-sharp-edge binary)
 
 **Task**:
 Test sharp edge detection workflow: failure detection, consecutive counting, blocking responses.
@@ -1495,10 +1523,10 @@ func createSharpEdgeCorpus(t *testing.T, corpusPath, projectDir string) {
 
 ---
 
-### GOgent-045: Performance Benchmarks
+### GOgent-098: Performance Benchmarks
 
 **Time**: 2 hours
-**Dependencies**: GOgent-041 (harness), GOgent-042-044 (hook binaries)
+**Dependencies**: GOgent-094 (harness), GOgent-095-044 (hook binaries)
 
 **Task**:
 Benchmark hook execution latency and memory usage. Target: <5ms p99 latency, <10MB memory per hook.
@@ -1866,10 +1894,10 @@ go test -bench=. ./test/benchmark -benchmem -benchtime=10s
 
 ---
 
-### GOgent-046: End-to-End Workflow Integration Tests
+### GOgent-099: End-to-End Workflow Integration Tests
 
 **Time**: 2 hours
-**Dependencies**: GOgent-042-044 (integration tests)
+**Dependencies**: GOgent-095-044 (integration tests)
 
 **Task**:
 Test cross-hook workflows: validation blocks → sharp edge detection → session archival.
@@ -2193,10 +2221,10 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 
 ---
 
-### GOgent-047: Regression Tests (Go vs Bash Comparison)
+### GOgent-100: Regression Tests (Go vs Bash Comparison)
 
 **Time**: 2 hours
-**Dependencies**: GOgent-000 (corpus), GOgent-041 (harness), all hook binaries
+**Dependencies**: GOgent-000 (corpus), GOgent-094 (harness), all hook binaries
 
 **Task**:
 Run 100-event corpus through both Go and Bash implementations, verify identical output (except timestamps).
@@ -2614,13 +2642,13 @@ go test ./test/regression -v
 Week 3 Part 1 completes the Phase 0 testing suite with:
 
 - **GOgent-004c**: Config circular dependency tests (deferred from Week 1)
-- **GOgent-041**: Test harness for corpus replay (foundation for all tests)
-- **GOgent-042**: Integration tests for validate-routing hook
-- **GOgent-043**: Integration tests for session-archive hook
-- **GOgent-044**: Integration tests for sharp-edge-detector hook
-- **GOgent-045**: Performance benchmarks (<5ms p99, <10MB memory targets)
-- **GOgent-046**: End-to-end workflow integration tests
-- **GOgent-047**: Regression tests comparing Go vs Bash output
+- **GOgent-094**: Test harness for corpus replay (foundation for all tests)
+- **GOgent-095**: Integration tests for validate-routing hook
+- **GOgent-096**: Integration tests for session-archive hook
+- **GOgent-097**: Integration tests for sharp-edge-detector hook
+- **GOgent-098**: Performance benchmarks (<5ms p99, <10MB memory targets)
+- **GOgent-099**: End-to-end workflow integration tests
+- **GOgent-100**: Regression tests comparing Go vs Bash output
 
 **Quality Gates**:
 - Integration tests verify complete hook workflows
@@ -2628,10 +2656,10 @@ Week 3 Part 1 completes the Phase 0 testing suite with:
 - Regression tests ensure Go output matches Bash exactly
 - End-to-end tests validate cross-hook pipelines
 
-**Next**: [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) - Installation, parallel testing, and GO/NO-GO cutover decision (GOgent-048 to 055)
+**Next**: [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) - Installation, parallel testing, and GO/NO-GO cutover decision (GOgent-101 to 055)
 
 ---
 
 **File Status**: ✅ Complete
-**Tickets**: 7 (GOgent-004c, 041-047)
+**Tickets**: 7 (GOgent-004c, 094-100)
 **Detail Level**: Full implementation + comprehensive tests

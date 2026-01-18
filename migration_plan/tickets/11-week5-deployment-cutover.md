@@ -1,21 +1,21 @@
 # Week 3 Part 2: Deployment & Cutover
 
-**Phase 0 - Week 3 Days 4-7** | GOgent-048, 048b, 049, 050-055 (8 tickets)
+**Phase 0 - Week 3 Days 4-7** | GOgent-101, 101b, 102, 103-108 (8 tickets)
 
 ---
 
 ## Navigation
 
-| Previous                                                       | Up                     | Next           |
-| -------------------------------------------------------------- | ---------------------- | -------------- |
-| [06-week3-integration-tests.md](06-week3-integration-tests.md) | [README.md](README.md) | _(Final File)_ |
+| Previous                                                         | Up                     | Next           |
+| ---------------------------------------------------------------- | ---------------------- | -------------- |
+| [10-week5-integration-tests.md](10-week5-integration-tests.md) | [README.md](README.md) | _(Final File)_ |
 
 **Cross-References:**
 
 - Standards: [00-overview.md](00-overview.md)
 - Baseline: [00-prework.md](00-prework.md) (GOgent-000)
-- All Implementation: [01-week1-foundation-events.md](01-week1-foundation-events.md) through [05-week2-sharp-edge-memory.md](05-week2-sharp-edge-memory.md)
-- Testing: [06-week3-integration-tests.md](06-week3-integration-tests.md)
+- All Implementation: [01-week1-foundation-events.md](01-week1-foundation-events.md) through [09-week4-observability-remaining.md](09-week4-observability-remaining.md)
+- Testing: [10-week5-integration-tests.md](10-week5-integration-tests.md)
 
 ---
 
@@ -25,15 +25,15 @@ Week 3 Part 2 completes Phase 0 with deployment preparation, parallel testing, a
 
 **Key Components:**
 
-- **GOgent-048**: Installation script for automated deployment
-- **GOgent-048b**: WSL2 compatibility testing (fixes M-8)
-- **GOgent-049**: Parallel testing (24hrs Go and Bash side-by-side)
-- **GOgent-050**: Cutover decision workflow and criteria
-- **GOgent-051**: Symlink cutover script
-- **GOgent-052**: Rollback testing
-- **GOgent-053**: Documentation updates
-- **GOgent-054**: Performance regression monitoring
-- **GOgent-055**: Post-cutover validation checklist
+- **GOgent-101**: Installation script for automated deployment
+- **GOgent-101b**: WSL2 compatibility testing (fixes M-8)
+- **GOgent-102**: Parallel testing (24hrs Go and Bash side-by-side)
+- **GOgent-103**: Cutover decision workflow and criteria
+- **GOgent-104**: Symlink cutover script
+- **GOgent-105**: Rollback testing
+- **GOgent-106**: Documentation updates
+- **GOgent-107**: Performance regression monitoring
+- **GOgent-108**: Post-cutover validation checklist
 
 **Deployment Philosophy:**
 
@@ -45,9 +45,76 @@ Week 3 Part 2 completes Phase 0 with deployment preparation, parallel testing, a
 
 ---
 
+## ⚠️ REFACTORING REQUIRED
+
+**Status**: This plan was created before weeks 8-11 were added
+
+**Current Scope**: Deploys only 3 hooks (validate-routing, session-archive, sharp-edge-detector)
+
+**Required Changes**:
+
+1. **GOgent-101** (Installation Script):
+   - Update to install ALL 7 hook binaries:
+     * gogent-validate
+     * gogent-archive
+     * gogent-sharp-edge
+     * **gogent-load-context** (NEW)
+     * **gogent-agent-endstate** (NEW)
+     * **gogent-attention-gate** (NEW)
+     * **gogent-orchestrator-guard** (NEW)
+     * **gogent-doc-theater** (NEW)
+     * **gogent-benchmark** (NEW)
+     * **gogent-stop-gate** (NEW - if investigation determines translation needed)
+   - Update symlink creation for all hooks
+   - Expand to `~/.local/bin` for all binaries
+
+2. **GOgent-102** (Parallel Testing):
+   - Expand to run ALL 7 hooks side-by-side for 24 hours
+   - Update parallel-test.sh to invoke all hook pairs
+   - Monitor all hook outputs for discrepancies
+
+3. **GOgent-104** (Cutover Script):
+   - Update symlink cutover for ALL hooks:
+     * SessionStart → gogent-load-context
+     * SubagentStop → gogent-agent-endstate
+     * PostToolUse (attention) → gogent-attention-gate
+     * SubagentStop (orchestrator) → gogent-orchestrator-guard
+     * PreToolUse (CLAUDE.md) → gogent-doc-theater
+     * PostToolUse (benchmark) → gogent-benchmark
+     * (stop-gate if applicable)
+   - Verify all hooks in `~/.claude/hooks/` point to Go binaries
+
+4. **GOgent-105** (Rollback):
+   - Update rollback procedure to restore ALL hooks
+   - Test rollback with all 7 hooks active
+
+5. **GOgent-107** (Performance Monitoring):
+   - Monitor ALL 7 hooks for performance regression
+   - Expand p99 latency checks to all hooks
+
+6. **GOgent-108** (Post-Cutover Validation):
+   - Expand checklist to verify ALL 7 hooks:
+     * SessionStart fires and loads context
+     * SubagentStop triggers endstate actions
+     * Attention gate fires every 10 tool calls
+     * Orchestrator guard blocks uncollected tasks
+     * Doc theater warns on CLAUDE.md edits
+     * Benchmark logging captures metrics
+     * (stop-gate if applicable)
+
+**Ticket Count**: Remains at 8 tickets, but scope significantly expanded
+
+**Time Estimate**: May increase from 12h to ~16-18h due to expanded coverage
+
+**See**: [UNTRACKED_HOOKS.md](UNTRACKED_HOOKS.md) for hook descriptions
+
+**Implementation Note**: This refactoring should be done AFTER weeks 8-11 are complete and week 6 integration tests pass.
+
+---
+
 ## Tickets
 
-### GOgent-048: Installation Script
+### GOgent-101: Installation Script
 
 **Time**: 2 hours
 **Dependencies**: All GOgent-001 to 047 complete
@@ -351,10 +418,10 @@ echo "=========================================="
 
 ---
 
-### GOgent-048b: WSL2 Compatibility Testing
+### GOgent-101b: WSL2 Compatibility Testing
 
 **Time**: 1.5 hours
-**Dependencies**: GOgent-048
+**Dependencies**: GOgent-101
 
 **Task**:
 Test installation and hook execution on WSL2 (Windows Subsystem for Linux). Addresses M-8 (WSL2 path handling).
@@ -576,10 +643,10 @@ echo "WSL2 environment is compatible with gogent-fortress Go hooks."
 
 ---
 
-### GOgent-049: Parallel Testing Script
+### GOgent-102: Parallel Testing Script
 
 **Time**: 2 hours
-**Dependencies**: GOgent-048
+**Dependencies**: GOgent-101
 
 **Task**:
 Run Go and Bash hooks in parallel for 24 hours, comparing outputs and monitoring for issues.
@@ -794,10 +861,10 @@ cat "$TEST_LOG_DIR/report.md"
 
 ---
 
-### GOgent-050: Cutover Decision Workflow
+### GOgent-103: Cutover Decision Workflow
 
 **Time**: 1 hour
-**Dependencies**: GOgent-049 (parallel testing complete)
+**Dependencies**: GOgent-102 (parallel testing complete)
 
 **Task**:
 Define cutover decision criteria and workflow. Document GO/NO-GO checklist.
@@ -1127,10 +1194,10 @@ Rollback immediately if any of these occur during monitoring:
 
 ---
 
-### GOgent-051: Symlink Cutover Script
+### GOgent-104: Symlink Cutover Script
 
 **Time**: 1 hour
-**Dependencies**: GOgent-050 (decision made)
+**Dependencies**: GOgent-103 (decision made)
 
 **Task**:
 Create script that atomically switches symlinks from Bash to Go hooks.
@@ -1318,10 +1385,10 @@ fi
 
 ---
 
-### GOgent-052: Rollback Script and Testing
+### GOgent-105: Rollback Script and Testing
 
 **Time**: 1 hour
-**Dependencies**: GOgent-051
+**Dependencies**: GOgent-104
 
 **Task**:
 Create rollback script that restores Bash hooks in <5 minutes. Test rollback process.
@@ -1611,10 +1678,10 @@ echo "=========================================="
 
 ---
 
-### GOgent-053: Documentation Updates
+### GOgent-106: Documentation Updates
 
 **Time**: 1.5 hours
-**Dependencies**: GOgent-051 (cutover complete)
+**Dependencies**: GOgent-104 (cutover complete)
 
 **Task**:
 Update project documentation to reflect Go implementation, including README, migration notes, and troubleshooting guide.
@@ -1710,7 +1777,7 @@ See [Troubleshooting Guide](docs/troubleshooting.md) for common issues.
 
 The GOgent Fortress hooks have been migrated from Bash to Go. This migration provides:
 
-- **Performance**: ~50% faster hook execution (measured in GOgent-045)
+- **Performance**: ~50% faster hook execution (measured in GOgent-098)
 - **Reliability**: Type-safe implementation reduces runtime errors
 - **Maintainability**: Easier to extend and test
 - **Compatibility**: 99%+ behavioral compatibility with Bash implementation
@@ -1817,7 +1884,7 @@ cp ~/.claude/hooks/backup-*/sharp-edge-detector ~/.claude/hooks/
 
 ## Performance Improvements
 
-Measured in GOgent-045 benchmarks:
+Measured in GOgent-098 benchmarks:
 
 | Hook                | Bash (p50) | Go (p50) | Improvement |
 | ------------------- | ---------- | -------- | ----------- |
@@ -1837,7 +1904,7 @@ A: Yes. Go hooks read the same JSONL files as Bash.
 A: Yes. Run `./scripts/rollback.sh`.
 
 **Q: Does this work on WSL2?**
-A: Yes. Tested in GOgent-048b.
+A: Yes. Tested in GOgent-101b.
 
 **Q: When should I migrate?**
 A: After parallel testing shows 99%+ match rate.
@@ -2088,10 +2155,10 @@ Include in bug reports:
 
 ---
 
-### GOgent-054: Performance Regression Monitoring
+### GOgent-107: Performance Regression Monitoring
 
 **Time**: 1 hour
-**Dependencies**: GOgent-051 (cutover complete)
+**Dependencies**: GOgent-104 (cutover complete)
 
 **Task**:
 Create monitoring script that detects performance regressions post-cutover.
@@ -2301,10 +2368,10 @@ echo "For violations: cat $VIOLATIONS_LOG"
 
 ---
 
-### GOgent-055: Post-Cutover Validation Checklist
+### GOgent-108: Post-Cutover Validation Checklist
 
 **Time**: 1 hour
-**Dependencies**: GOgent-051 (cutover complete), 48 hours elapsed
+**Dependencies**: GOgent-104 (cutover complete), 48 hours elapsed
 
 **Task**:
 Create validation checklist and script to verify cutover success after 48-hour monitoring period.
@@ -2630,15 +2697,15 @@ All of the following MUST be true:
 
 Week 3 Part 2 completes Phase 0 with deployment and cutover workflow:
 
-- **GOgent-048**: Automated installation script
-- **GOgent-048b**: WSL2 compatibility testing (M-8)
-- **GOgent-049**: 24-hour parallel testing
-- **GOgent-050**: Cutover decision workflow with GO/NO-GO criteria
-- **GOgent-051**: Atomic symlink cutover script
-- **GOgent-052**: Rollback script (<5min) with testing
-- **GOgent-053**: Documentation updates (README, migration notes, troubleshooting)
-- **GOgent-054**: Performance regression monitoring (health check)
-- **GOgent-055**: Post-cutover validation after 48 hours
+- **GOgent-101**: Automated installation script
+- **GOgent-101b**: WSL2 compatibility testing (M-8)
+- **GOgent-102**: 24-hour parallel testing
+- **GOgent-103**: Cutover decision workflow with GO/NO-GO criteria
+- **GOgent-104**: Atomic symlink cutover script
+- **GOgent-105**: Rollback script (<5min) with testing
+- **GOgent-106**: Documentation updates (README, migration notes, troubleshooting)
+- **GOgent-107**: Performance regression monitoring (health check)
+- **GOgent-108**: Post-cutover validation after 48 hours
 
 **Deployment Safety**:
 
@@ -2658,6 +2725,6 @@ Week 3 Part 2 completes Phase 0 with deployment and cutover workflow:
 ---
 
 **File Status**: ✅ Complete
-**Tickets**: 8 (GOgent-048, 048b, 049-055)
+**Tickets**: 8 (GOgent-101, 048b, 049-055)
 **Detail Level**: Full implementation + complete cutover workflow
-**Phase 0 Status**: ✅ ALL TICKETS COMPLETE (GOgent-000 through GOgent-055)
+**Phase 0 Status**: ✅ ALL TICKETS COMPLETE (GOgent-000 through GOgent-108)
