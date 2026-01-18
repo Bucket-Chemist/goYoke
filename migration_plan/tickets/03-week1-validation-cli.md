@@ -1616,15 +1616,15 @@ echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
 ```
 
 **Acceptance Criteria**:
-- [ ] CLI reads JSON from STDIN with 5s timeout
-- [ ] Validates Task invocations using ValidationOrchestrator
-- [ ] Outputs decision as JSON to STDOUT
-- [ ] Passes through non-Task tools unchanged
-- [ ] Logs violations to JSONL file
-- [ ] Build script creates bin/gogent-validate
-- [ ] Installation script copies to ~/.local/bin
-- [ ] Manual test: `echo '{"tool_name":"Task","tool_input":{"model":"opus"},"session_id":"test"}' | ./bin/gogent-validate`
-- [ ] Manual test verifies opus blocking works
+- [x] CLI reads JSON from STDIN with 5s timeout
+- [x] Validates Task invocations using ValidationOrchestrator
+- [x] Outputs decision as JSON to STDOUT
+- [x] Passes through non-Task tools unchanged
+- [x] Logs violations to JSONL file
+- [x] Build script creates bin/gogent-validate
+- [x] Installation script copies to ~/.local/bin
+- [x] Manual test: `echo '{"tool_name":"Task","tool_input":{"model":"opus"},"session_id":"test"}' | ./bin/gogent-validate`
+- [x] Manual test verifies opus blocking works
 
 **Why This Matters**: CLI binary is the interface used by Claude Code hooks. Must be reliable, fast (<5ms p99), and produce correct JSON.
 

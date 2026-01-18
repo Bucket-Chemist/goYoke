@@ -1,0 +1,9 @@
+{"timestamp":"2026-01-18T21:16:10+11:00","session_id":"test","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:16:48+11:00","session_id":"test","violation_type":"subagent_type_mismatch","agent":"tech-docs-writer","reason":"Required: general-purpose, Requested: Explore","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:18:12+11:00","session_id":"test-cli-validation","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:20:06+11:00","session_id":"test","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:20:26+11:00","session_id":"test","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:20:41+11:00","session_id":"test","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:21:02+11:00","session_id":"test","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:21:02+11:00","session_id":"test","violation_type":"subagent_type_mismatch","agent":"tech-docs-writer","reason":"Required: general-purpose, Requested: Explore","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-01-18T21:21:26+11:00","session_id":"test-installed","violation_type":"blocked_task_opus","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
