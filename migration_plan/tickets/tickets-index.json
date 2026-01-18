@@ -962,7 +962,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-024",
@@ -996,7 +996,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-024b",
