@@ -64,6 +64,14 @@
 | --------------------- | -------------- | ----- | ----- | -------- | ---------- | ---------- |
 | `integration_test.go` | GOgent-002/003 | 204   | 5     | ~95%     | 2026-01-16 | ✅ Passing |
 
+### test/integration (Cross-Package Validation)
+
+**Purpose**: Integration tests validating Go metrics collection matches bash hook implementation exactly.
+
+| File                       | Ticket             | Lines | Tests | Coverage | Created    | Status     |
+| -------------------------- | ------------------ | ----- | ----- | -------- | ---------- | ---------- |
+| `metrics_parity_test.go`   | GOgent-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
+
 **Test Functions**:
 
 1. `TestEcosystem_GOgent002` - Validates schema loading pipeline (LoadSchema → Validate)
@@ -423,5 +431,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-19 (GOgent-028a completion)
-**Next Audit**: After GOgent-028b
+**Last Audit**: 2026-01-19 (GOgent-028b-parity completion)
+**Next Audit**: After next ticket completion

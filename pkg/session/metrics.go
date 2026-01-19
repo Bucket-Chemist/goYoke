@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
@@ -39,10 +38,11 @@ func CollectSessionMetrics(sessionID string) (*SessionMetrics, error) {
 	return metrics, nil
 }
 
-// countToolCalls counts total tool calls from /tmp/claude-tool-counter-* files.
-// Each file contains a count on the first line. Returns 0 if no counter files exist.
+// countToolCalls counts total tool calls from XDG-compliant counter files.
+// Each file contains tool call logs. Returns 0 if no counter files exist.
 func countToolCalls() (int, error) {
-	pattern := "/tmp/claude-tool-counter-*"
+	gogentDir := config.GetGOgentDir()
+	pattern := filepath.Join(gogentDir, "claude-tool-counter-*.log")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return 0, fmt.Errorf("glob failed for %s: %w", pattern, err)
@@ -64,9 +64,9 @@ func countToolCalls() (int, error) {
 	return total, nil
 }
 
-// countLogLines counts non-empty lines in a file.
+// countLogLines counts all lines in a file, matching bash wc -l behavior.
 // Returns 0 if file doesn't exist (not an error).
-// Ignores empty lines and lines with only whitespace.
+// Counts ALL lines including empty lines to match bash hook implementation.
 func countLogLines(path string) (int, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -80,10 +80,7 @@ func countLogLines(path string) (int, error) {
 	count := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line != "" {
-			count++
-		}
+		count++
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -94,7 +91,7 @@ func countLogLines(path string) (int, error) {
 }
 
 // getErrorLogPath returns the path to the error patterns log.
-// Currently uses /tmp location - may move to XDG-compliant location later.
+// Uses XDG-compliant location from config package.
 func getErrorLogPath() string {
-	return "/tmp/claude-error-patterns.jsonl"
+	return filepath.Join(config.GetGOgentDir(), "claude-error-patterns.jsonl")
 }

@@ -30,12 +30,12 @@ func TestCountLogLines(t *testing.T) {
 		{
 			name:     "mixed empty lines",
 			content:  "line1\n\nline2\n  \nline3\n",
-			expected: 3,
+			expected: 5, // Changed: counts ALL lines including empty ones (bash wc -l behavior)
 		},
 		{
 			name:     "only empty lines",
 			content:  "\n\n  \n\t\n",
-			expected: 0,
+			expected: 4, // Changed: counts ALL lines (bash wc -l behavior)
 		},
 		{
 			name:     "no trailing newline",
@@ -91,12 +91,21 @@ func TestCountToolCalls(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpdir)
 
-	// Save original Glob behavior by testing with real /tmp
-	// Create actual counter files in /tmp for realistic test
+	// Set XDG_RUNTIME_DIR to our temp directory
+	os.Setenv("XDG_RUNTIME_DIR", tmpdir)
+	defer os.Unsetenv("XDG_RUNTIME_DIR")
+
+	// Create gogent subdirectory
+	gogentDir := filepath.Join(tmpdir, "gogent")
+	if err := os.MkdirAll(gogentDir, 0755); err != nil {
+		t.Fatalf("Failed to create gogent dir: %v", err)
+	}
+
+	// Create counter files with .log extension (matches new behavior)
 	counterFiles := []string{
-		filepath.Join("/tmp", "claude-tool-counter-test1"),
-		filepath.Join("/tmp", "claude-tool-counter-test2"),
-		filepath.Join("/tmp", "claude-tool-counter-test3"),
+		filepath.Join(gogentDir, "claude-tool-counter-test1.log"),
+		filepath.Join(gogentDir, "claude-tool-counter-test2.log"),
+		filepath.Join(gogentDir, "claude-tool-counter-test3.log"),
 	}
 
 	// Write counter files with specific counts
@@ -109,7 +118,6 @@ func TestCountToolCalls(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 			t.Fatalf("Failed to write counter file: %v", err)
 		}
-		defer os.Remove(path)
 	}
 
 	// Test countToolCalls
@@ -119,19 +127,24 @@ func TestCountToolCalls(t *testing.T) {
 		return
 	}
 
-	// Should count at least our test files (may include others from system)
-	expectedMin := 10 // 5 + 3 + 2 from our test files
-	if got < expectedMin {
-		t.Errorf("countToolCalls() = %d, want at least %d", got, expectedMin)
+	// Should count exactly our test files
+	expected := 10 // 5 + 3 + 2 from our test files
+	if got != expected {
+		t.Errorf("countToolCalls() = %d, want %d", got, expected)
 	}
 }
 
 func TestCountToolCalls_NoCounters(t *testing.T) {
-	// Clean up any existing counter files first
-	matches, _ := filepath.Glob("/tmp/claude-tool-counter-*")
-	for _, m := range matches {
-		os.Remove(m)
+	// Create clean temp directory
+	tmpdir, err := os.MkdirTemp("", "toolcount-empty-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
 	}
+	defer os.RemoveAll(tmpdir)
+
+	// Set XDG_RUNTIME_DIR to empty temp directory
+	os.Setenv("XDG_RUNTIME_DIR", tmpdir)
+	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
 	// Test with no counter files
 	got, err := countToolCalls()
@@ -210,9 +223,13 @@ func TestCollectSessionMetrics_MissingLogs(t *testing.T) {
 }
 
 func TestGetErrorLogPath(t *testing.T) {
+	// Test that getErrorLogPath returns XDG-compliant path
 	path := getErrorLogPath()
-	expected := "/tmp/claude-error-patterns.jsonl"
-	if path != expected {
-		t.Errorf("getErrorLogPath() = %s, want %s", path, expected)
+	// Should contain gogent directory and correct filename
+	if !filepath.IsAbs(path) {
+		t.Errorf("getErrorLogPath() returned relative path: %s", path)
+	}
+	if filepath.Base(path) != "claude-error-patterns.jsonl" {
+		t.Errorf("getErrorLogPath() filename = %s, want claude-error-patterns.jsonl", filepath.Base(path))
 	}
 }
