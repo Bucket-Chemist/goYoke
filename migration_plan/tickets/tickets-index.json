@@ -2,10 +2,11 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 108,
+    "total_tickets": 69,
     "total_weeks": 5,
     "created": "2026-01-15",
-    "version": "1.4"
+    "version": "1.5",
+    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d)"
   },
   "tickets": [
     {
@@ -498,94 +499,59 @@
         "pkg/routing/overrides_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-010-overrides-xdg-paths",
+      "git_branch": "gogent-010-override-flags",
       "pr_labels": [
         "overrides",
-        "xdg",
         "week-1",
         "phase-0"
       ],
-      "acceptance_criteria_count": 6,
+      "acceptance_criteria_count": 7,
       "status": "completed"
     },
     {
       "id": "GOgent-011",
-      "title": "Violation Logging to JSONL",
-      "description": "Log routing violations to JSONL for audit trail",
+      "title": "Log Routing Violations to JSONL",
+      "description": "Append violations to routing-violations.jsonl (fixes M-5)",
       "file": "tickets/02-week1-overrides-permissions.md",
       "week": 1,
       "day": 3,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-010"
+        "GOgent-006"
       ],
       "blocks": [
-        "GOgent-012",
         "GOgent-030"
       ],
-      "priority": "high",
+      "priority": "medium",
       "tags": [
         "logging",
-        "violations"
+        "violations",
+        "bugfix-M-5"
       ],
       "files_to_create": [
         "pkg/routing/violations.go",
         "pkg/routing/violations_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-011-violation-logging",
+      "git_branch": "gogent-011-log-violations",
       "pr_labels": [
         "logging",
         "week-1",
-        "phase-0"
+        "bugfix"
       ],
       "acceptance_criteria_count": 6,
       "status": "completed"
     },
     {
-      "id": "GOgent-011a",
-      "title": "Enhance Violation Schema and Add Dual-Write",
-      "description": "Add file, tier, task context fields to Violation struct; implement dual-write to both XDG cache and .claude/memory/",
-      "file": "tickets/02-week1-overrides-permissions.md",
-      "week": 1,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-011"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "logging",
-        "violations",
-        "memory",
-        "schema"
-      ],
-      "files_to_modify": [
-        "pkg/routing/violations.go",
-        "pkg/routing/violations_test.go",
-        "pkg/config/paths.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-011a-violation-schema-dual-write",
-      "pr_labels": [
-        "logging",
-        "week-1",
-        "phase-0",
-        "enhancement"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "completed"
-    },
-    {
       "id": "GOgent-012",
-      "title": "Escape Hatch Integration Tests",
-      "description": "Test override flags and violation logging end-to-end",
+      "title": "Override Flag Integration Test",
+      "description": "Test override flags with violations logging",
       "file": "tickets/02-week1-overrides-permissions.md",
       "week": 1,
       "day": 3,
       "time_estimate": "1h",
       "dependencies": [
+        "GOgent-010",
         "GOgent-011"
       ],
       "blocks": [],
@@ -598,7 +564,7 @@
         "test/integration/overrides_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-012-escape-hatch-tests",
+      "git_branch": "gogent-012-override-integration",
       "pr_labels": [
         "testing",
         "week-1",
@@ -609,33 +575,33 @@
     },
     {
       "id": "GOgent-013",
-      "title": "Scout Metrics Loading",
-      "description": "Load scout complexity metrics from XDG paths",
+      "title": "Detect Agent from Prompt Patterns",
+      "description": "Parse 'AGENT: <agent-id>' from prompt field",
       "file": "tickets/02-week1-overrides-permissions.md",
       "week": 1,
       "day": 4,
-      "time_estimate": "2h",
+      "time_estimate": "1.5h",
       "dependencies": [
         "GOgent-003",
         "GOgent-004a"
       ],
       "blocks": [
-        "GOgent-014",
-        "GOgent-015"
+        "GOgent-020",
+        "GOgent-023"
       ],
-      "priority": "medium",
+      "priority": "high",
       "tags": [
-        "metrics",
-        "complexity"
+        "parsing",
+        "agents"
       ],
       "files_to_create": [
-        "pkg/routing/metrics.go",
-        "pkg/routing/metrics_test.go"
+        "pkg/routing/agent_detection.go",
+        "pkg/routing/agent_detection_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-013-scout-metrics",
+      "git_branch": "gogent-013-agent-detection",
       "pr_labels": [
-        "metrics",
+        "parsing",
         "week-1",
         "phase-0"
       ],
@@ -644,30 +610,31 @@
     },
     {
       "id": "GOgent-014",
-      "title": "Metrics Freshness Check",
-      "description": "Check if scout metrics are <5 minutes old",
+      "title": "Map Agent to Subagent Type",
+      "description": "Load agent_subagent_mapping from routing-schema.json",
       "file": "tickets/02-week1-overrides-permissions.md",
       "week": 1,
       "day": 4,
-      "time_estimate": "1.5h",
+      "time_estimate": "1h",
       "dependencies": [
         "GOgent-013"
       ],
       "blocks": [
-        "GOgent-015"
+        "GOgent-023"
       ],
-      "priority": "low",
+      "priority": "high",
       "tags": [
-        "metrics",
-        "validation"
+        "mapping",
+        "agents"
       ],
       "files_to_create": [
-        "pkg/routing/metrics.go (extend)"
+        "pkg/routing/agent_mapping.go",
+        "pkg/routing/agent_mapping_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-014-metrics-freshness",
+      "git_branch": "gogent-014-agent-mapping",
       "pr_labels": [
-        "metrics",
+        "mapping",
         "week-1",
         "phase-0"
       ],
@@ -676,62 +643,64 @@
     },
     {
       "id": "GOgent-015",
-      "title": "Tier Update from Complexity",
-      "description": "Update current tier based on complexity score",
-      "file": "tickets/02-week1-overrides-permissions.md",
-      "week": 1,
-      "day": 4,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-013",
-        "GOgent-014"
-      ],
-      "blocks": [
-        "GOgent-016"
-      ],
-      "priority": "medium",
-      "tags": [
-        "tier",
-        "complexity"
-      ],
-      "files_to_create": [
-        "pkg/routing/tier_update.go",
-        "pkg/routing/tier_update_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-015-tier-update",
-      "pr_labels": [
-        "tier",
-        "week-1",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-016",
-      "title": "Complexity Routing Tests",
-      "description": "Integration tests for complexity-based routing",
+      "title": "Tier Permission Check (allowed_tools)",
+      "description": "Verify tool against tier.allowed_tools list",
       "file": "tickets/02-week1-overrides-permissions.md",
       "week": 1,
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-015"
+        "GOgent-007"
       ],
-      "blocks": [],
-      "priority": "medium",
+      "blocks": [
+        "GOgent-017"
+      ],
+      "priority": "high",
       "tags": [
-        "testing",
-        "complexity"
+        "permissions",
+        "validation"
       ],
       "files_to_create": [
-        "test/integration/complexity_routing_test.go"
+        "pkg/routing/tier_permissions.go",
+        "pkg/routing/tier_permissions_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-016-complexity-tests",
+      "git_branch": "gogent-015-tier-permissions",
       "pr_labels": [
-        "testing",
+        "permissions",
+        "week-1",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-016",
+      "title": "Agent Permission Check",
+      "description": "Load agent tool restrictions from agents-index.json",
+      "file": "tickets/02-week1-overrides-permissions.md",
+      "week": 1,
+      "day": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-013"
+      ],
+      "blocks": [
+        "GOgent-017"
+      ],
+      "priority": "medium",
+      "tags": [
+        "permissions",
+        "agents"
+      ],
+      "files_to_create": [
+        "pkg/routing/agent_permissions.go",
+        "pkg/routing/agent_permissions_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-016-agent-permissions",
+      "pr_labels": [
+        "permissions",
         "week-1",
         "phase-0"
       ],
@@ -740,79 +709,48 @@
     },
     {
       "id": "GOgent-017",
-      "title": "Tool Permission Checks",
-      "description": "Implement tool permission validation logic",
-      "file": "tickets/02-week1-overrides-permissions.md",
-      "week": 1,
-      "day": 5,
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-007"
-      ],
-      "blocks": [
-        "GOgent-018",
-        "GOgent-019"
-      ],
-      "priority": "critical",
-      "tags": [
-        "permissions",
-        "validation"
-      ],
-      "files_to_create": [
-        "pkg/routing/permissions.go",
-        "pkg/routing/permissions_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-017-tool-permission-checks",
-      "pr_labels": [
-        "permissions",
-        "week-1",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-018",
-      "title": "Wildcard Tools Handling",
-      "description": "Handle wildcard '*' in tools_allowed",
-      "file": "tickets/02-week1-overrides-permissions.md",
-      "week": 1,
-      "day": 5,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-017"
-      ],
-      "blocks": [
-        "GOgent-019"
-      ],
-      "priority": "medium",
-      "tags": [
-        "permissions",
-        "wildcard"
-      ],
-      "files_to_create": [
-        "pkg/routing/permissions.go (extend)"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-018-wildcard-tools",
-      "pr_labels": [
-        "permissions",
-        "week-1",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "skipped",
-      "skipped_reason": "Redundant with GOgent-017. CheckToolPermission() already handles wildcard detection and AllowedTools field population. Proposed IsWildcardTier() and GetToolsList() are unnecessary abstractions with no callers. Type mismatches in ticket code."
-    },
-    {
-      "id": "GOgent-019",
-      "title": "Tool Permission Tests",
-      "description": "Integration tests for tool permission system",
+      "title": "Unified Permission Validator",
+      "description": "Combine tier + agent permission checks (fixes M-1)",
       "file": "tickets/02-week1-overrides-permissions.md",
       "week": 1,
       "day": 5,
       "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-015",
+        "GOgent-016",
+        "GOgent-007"
+      ],
+      "blocks": [
+        "GOgent-024b"
+      ],
+      "priority": "critical",
+      "tags": [
+        "validation",
+        "permissions",
+        "bugfix-M-1"
+      ],
+      "files_to_create": [
+        "pkg/routing/unified_validator.go",
+        "pkg/routing/unified_validator_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-017-unified-validator",
+      "pr_labels": [
+        "validation",
+        "week-1",
+        "bugfix"
+      ],
+      "acceptance_criteria_count": 8,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-018",
+      "title": "Permission Validation Integration Test",
+      "description": "End-to-end permission validation test",
+      "file": "tickets/02-week1-overrides-permissions.md",
+      "week": 1,
+      "day": 5,
+      "time_estimate": "1.5h",
       "dependencies": [
         "GOgent-017"
       ],
@@ -820,111 +758,48 @@
       "priority": "high",
       "tags": [
         "testing",
-        "permissions"
+        "integration"
       ],
       "files_to_create": [
-        "test/integration/tool_permissions_test.go"
+        "test/integration/permission_validation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-019-permission-tests",
+      "git_branch": "gogent-018-permission-integration",
       "pr_labels": [
         "testing",
         "week-1",
         "phase-0"
       ],
-      "acceptance_criteria_count": 7,
-      "status": "skipped",
-      "skipped_reason": "Verified via evidence-based audit: All 7 acceptance criteria met by existing permissions_test.go (553 lines, 96.9% coverage). Integration tests pass. Real schema validation complete. Orchestrator verification confirmed no additional tests needed. See audit: orchestrator agent aee3b5b."
-    },
-    {
-      "id": "GOgent-020",
-      "title": "Einstein/Opus Blocking",
-      "description": "Block Task(opus) invocations, require /einstein workflow",
-      "file": "tickets/03-week1-validation-cli.md",
-      "week": 1,
-      "day": 6,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-005"
-      ],
-      "blocks": [
-        "GOgent-024",
-        "GOgent-024b"
-      ],
-      "priority": "critical",
-      "tags": [
-        "blocking",
-        "opus",
-        "cost-control"
-      ],
-      "files_to_create": [
-        "pkg/routing/opus_blocking.go",
-        "pkg/routing/opus_blocking_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-020-opus-blocking",
-      "pr_labels": [
-        "blocking",
-        "week-1",
-        "phase-0"
-      ],
       "acceptance_criteria_count": 6,
       "status": "completed"
     },
     {
-      "id": "GOgent-021",
-      "title": "Model Mismatch Warnings",
-      "description": "Warn when agent requested model doesn't match routing schema",
-      "file": "tickets/03-week1-validation-cli.md",
+      "id": "GOgent-019",
+      "title": "Read Delegation Ceiling from .gogent/max_delegation",
+      "description": "Read max delegation tier with external fallback",
+      "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 6,
       "time_estimate": "1h",
-      "dependencies": [],
-      "blocks": [],
-      "priority": "low",
-      "tags": [
-        "warnings",
-        "validation"
+      "dependencies": [
+        "GOgent-006"
       ],
-      "files_to_create": [
-        "pkg/routing/model_mismatch.go",
-        "pkg/routing/model_mismatch_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-021-model-mismatch",
-      "pr_labels": [
-        "warnings",
-        "week-1",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-022",
-      "title": "Delegation Ceiling Enforcement",
-      "description": "Block Task() if agent tier exceeds delegation ceiling",
-      "file": "tickets/03-week1-validation-cli.md",
-      "week": 1,
-      "day": 6,
-      "time_estimate": "1.5h",
-      "dependencies": [],
       "blocks": [
-        "GOgent-024"
+        "GOgent-022"
       ],
-      "priority": "medium",
+      "priority": "high",
       "tags": [
-        "delegation",
-        "ceiling"
+        "config",
+        "delegation"
       ],
       "files_to_create": [
-        "pkg/routing/delegation_ceiling.go",
-        "pkg/routing/delegation_ceiling_test.go"
+        "pkg/config/delegation.go",
+        "pkg/config/delegation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-022-delegation-ceiling",
+      "git_branch": "gogent-019-delegation-ceiling",
       "pr_labels": [
-        "delegation",
+        "config",
         "week-1",
         "phase-0"
       ],
@@ -932,15 +807,16 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-023",
-      "title": "Subagent_type Validation",
-      "description": "Validate subagent_type matches agent's expected type",
-      "file": "tickets/03-week1-validation-cli.md",
+      "id": "GOgent-020",
+      "title": "Validate Model Against Agents Index",
+      "description": "Verify requested model matches agent.yaml tier",
+      "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 6,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-005"
+        "GOgent-005",
+        "GOgent-013"
       ],
       "blocks": [
         "GOgent-024"
@@ -948,7 +824,109 @@
       "priority": "high",
       "tags": [
         "validation",
-        "subagent_type"
+        "model"
+      ],
+      "files_to_create": [
+        "pkg/routing/model_validation.go",
+        "pkg/routing/model_validation_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-020-model-validation",
+      "pr_labels": [
+        "validation",
+        "week-1",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-021",
+      "title": "Validate Tool Permissions for Subagent Type",
+      "description": "Check if tool allowed for subagent_type",
+      "file": "tickets/completed/03-week1-validation-cli.md",
+      "week": 1,
+      "day": 6,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-015"
+      ],
+      "blocks": [
+        "GOgent-024"
+      ],
+      "priority": "medium",
+      "tags": [
+        "validation",
+        "permissions"
+      ],
+      "files_to_create": [
+        "pkg/routing/subagent_permissions.go",
+        "pkg/routing/subagent_permissions_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-021-subagent-permissions",
+      "pr_labels": [
+        "validation",
+        "week-1",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-022",
+      "title": "Delegation Ceiling Enforcement",
+      "description": "Block Task if requested tier exceeds max_delegation",
+      "file": "tickets/completed/03-week1-validation-cli.md",
+      "week": 1,
+      "day": 7,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-019"
+      ],
+      "blocks": [
+        "GOgent-024"
+      ],
+      "priority": "critical",
+      "tags": [
+        "delegation",
+        "enforcement"
+      ],
+      "files_to_create": [
+        "pkg/routing/delegation_enforcement.go",
+        "pkg/routing/delegation_enforcement_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-022-delegation-enforcement",
+      "pr_labels": [
+        "enforcement",
+        "week-1",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-023",
+      "title": "Subagent_type Validation",
+      "description": "Verify subagent_type matches agent_subagent_mapping (fixes M-3)",
+      "file": "tickets/completed/03-week1-validation-cli.md",
+      "week": 1,
+      "day": 7,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-005",
+        "GOgent-013",
+        "GOgent-014"
+      ],
+      "blocks": [
+        "GOgent-024"
+      ],
+      "priority": "critical",
+      "tags": [
+        "validation",
+        "subagent",
+        "bugfix-M-3"
       ],
       "files_to_create": [
         "pkg/routing/subagent_validation.go",
@@ -959,21 +937,22 @@
       "pr_labels": [
         "validation",
         "week-1",
-        "phase-0"
+        "bugfix"
       ],
-      "acceptance_criteria_count": 6,
+      "acceptance_criteria_count": 8,
       "status": "completed"
     },
     {
       "id": "GOgent-024",
       "title": "Task Validation Tests",
-      "description": "Integration tests for all Task validation logic",
-      "file": "tickets/03-week1-validation-cli.md",
+      "description": "Comprehensive Task validation test suite",
+      "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
         "GOgent-020",
+        "GOgent-021",
         "GOgent-022",
         "GOgent-023"
       ],
@@ -995,21 +974,21 @@
         "week-1",
         "phase-0"
       ],
-      "acceptance_criteria_count": 7,
+      "acceptance_criteria_count": 8,
       "status": "completed"
     },
     {
       "id": "GOgent-024b",
       "title": "Wire Validation Orchestrator",
-      "description": "Combine all validation checks into orchestrator flow",
-      "file": "tickets/03-week1-validation-cli.md",
+      "description": "Combine all validators into single orchestrator with priority ordering",
+      "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
         "GOgent-007",
         "GOgent-008a",
-        "GOgent-020",
+        "GOgent-017",
         "GOgent-024"
       ],
       "blocks": [
@@ -1031,17 +1010,17 @@
         "week-1",
         "phase-0"
       ],
-      "acceptance_criteria_count": 8,
+      "acceptance_criteria_count": 9,
       "status": "completed"
     },
     {
       "id": "GOgent-025",
       "title": "Build gogent-validate CLI",
-      "description": "Build validate-routing hook binary with STDIN timeout",
-      "file": "tickets/03-week1-validation-cli.md",
+      "description": "Build complete validation hook binary",
+      "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 7,
-      "time_estimate": "1h",
+      "time_estimate": "1.5h",
       "dependencies": [
         "GOgent-024b"
       ],
@@ -1064,13 +1043,13 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-026",
       "title": "Parse SessionEnd Event",
       "description": "Parse SessionEnd event with session_id and transcript_path",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/026.md",
       "week": 2,
       "day": 1,
       "time_estimate": "1h",
@@ -1096,13 +1075,13 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-027",
       "title": "Collect Session Metrics",
       "description": "Count tool calls, errors, violations from log files",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/027.md",
       "week": 2,
       "day": 1,
       "time_estimate": "2h",
@@ -1111,6 +1090,7 @@
         "GOgent-026"
       ],
       "blocks": [
+        "GOgent-027b",
         "GOgent-028"
       ],
       "priority": "high",
@@ -1133,10 +1113,108 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-027b",
+      "title": "Implement ParseTranscript() for Semantic Analysis",
+      "description": "Parse JSONL session transcript to extract tool events",
+      "file": "tickets/session_archive/027b.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-027"
+      ],
+      "blocks": [
+        "GOgent-027c"
+      ],
+      "priority": "high",
+      "tags": [
+        "transcript",
+        "parsing",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [
+        "pkg/session/transcript.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-027b-parse-transcript",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 9,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-027c",
+      "title": "Implement AnalyzeToolDistribution()",
+      "description": "Analyze tool usage patterns from parsed transcript to understand session characteristics",
+      "file": "tickets/session_archive/027c.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-027b"
+      ],
+      "blocks": [
+        "GOgent-027d"
+      ],
+      "priority": "high",
+      "tags": [
+        "analysis",
+        "tool-usage",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-027c-tool-distribution",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-027d",
+      "title": "Implement DetectPhases() for Session Characterization",
+      "description": "Detect session phases (discovery, implementation, debugging) using sliding window analysis of tool distribution",
+      "file": "tickets/session_archive/027d.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-027c"
+      ],
+      "blocks": [
+        "GOgent-028b"
+      ],
+      "priority": "high",
+      "tags": [
+        "phase-detection",
+        "session-analysis",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-027d-detect-phases",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 8,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-028",
       "title": "Generate Handoff Document",
       "description": "Create last-handoff.md with metrics and context",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/028.md",
       "week": 2,
       "day": 2,
       "time_estimate": "2h",
@@ -1145,6 +1223,7 @@
         "GOgent-027"
       ],
       "blocks": [
+        "GOgent-028b",
         "GOgent-032"
       ],
       "priority": "critical",
@@ -1167,15 +1246,111 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-028b",
+      "title": "Implement GenerateAdaptiveHandoff()",
+      "description": "Generate adaptive handoff document that changes format based on session characteristics",
+      "file": "tickets/session_archive/028b.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-027d",
+        "GOgent-028"
+      ],
+      "blocks": [
+        "GOgent-028c"
+      ],
+      "priority": "high",
+      "tags": [
+        "adaptive-handoff",
+        "session-context",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-028b-adaptive-handoff",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028c",
+      "title": "Implement DetectWorkInProgress()",
+      "description": "Detect if session ended mid-task by identifying the last Edit/Write operation and extracting context",
+      "file": "tickets/session_archive/028c.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-028b"
+      ],
+      "blocks": [
+        "GOgent-028d"
+      ],
+      "priority": "high",
+      "tags": [
+        "wip-detection",
+        "resume-context",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-028c-detect-wip",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028d",
+      "title": "Implement GenerateResumeGuidance()",
+      "description": "Generate actionable resume guidance based on WIP context, pending learnings, and violations",
+      "file": "tickets/session_archive/028d.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-028c"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "resume-guidance",
+        "actionable-context",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-028d-resume-guidance",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-029",
       "title": "Format Pending Learnings",
       "description": "Parse and format pending-learnings.jsonl for handoff",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/029.md",
       "week": 2,
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [],
       "blocks": [
+        "GOgent-029b",
         "GOgent-032"
       ],
       "priority": "medium",
@@ -1198,10 +1373,40 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-029b",
+      "title": "Capture Full Error Messages in Sharp Edges",
+      "description": "Extend FormatPendingLearnings() to include full error messages from failure events, not just error types",
+      "file": "tickets/session_archive/029b.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-029"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "error-context",
+        "sharp-edges",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-029b-error-messages",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-030",
       "title": "Format Violations Summary",
       "description": "Parse routing-violations.jsonl and format top 10 for handoff",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/030.md",
       "week": 2,
       "day": 2,
       "time_estimate": "1.5h",
@@ -1209,6 +1414,7 @@
         "GOgent-011"
       ],
       "blocks": [
+        "GOgent-030b",
         "GOgent-032"
       ],
       "priority": "medium",
@@ -1231,10 +1437,104 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-030b",
+      "title": "Cluster Violations by Type",
+      "description": "Group violations by type (subagent_type_mismatch, delegation_ceiling, etc.) to identify systemic patterns instead of showing flat list",
+      "file": "tickets/session_archive/030b.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-030"
+      ],
+      "blocks": [
+        "GOgent-030c"
+      ],
+      "priority": "major",
+      "tags": [
+        "violation-clustering",
+        "pattern-detection",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-030b-cluster-violations-type",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 5,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030c",
+      "title": "Cluster Violations by Agent",
+      "description": "Group violations by agent name to identify which agents have configuration issues",
+      "file": "tickets/session_archive/030c.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-030b"
+      ],
+      "blocks": [
+        "GOgent-030d"
+      ],
+      "priority": "major",
+      "tags": [
+        "agent-debugging",
+        "violation-clustering",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-030c-cluster-violations-agent",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 5,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030d",
+      "title": "Analyze Violation Temporal Trends",
+      "description": "Detect if violation rate is improving or worsening during session by analyzing timestamps",
+      "file": "tickets/session_archive/030d.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-030c"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "trend-analysis",
+        "violation-metrics",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-030d-violation-trends",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-031",
       "title": "Archive Session Files",
       "description": "Copy transcript, move learnings/violations to archive",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/031.md",
       "week": 2,
       "day": 3,
       "time_estimate": "1.5h",
@@ -1265,7 +1565,7 @@
       "id": "GOgent-032",
       "title": "Session Archive Integration Test",
       "description": "End-to-end test of session archive workflow",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/032.md",
       "week": 2,
       "day": 3,
       "time_estimate": "1.5h",
@@ -1300,7 +1600,7 @@
       "id": "GOgent-033",
       "title": "Build gogent-archive CLI",
       "description": "Build session-archive hook binary",
-      "file": "tickets/04-week2-session-archive.md",
+      "file": "tickets/session_archive/033.md",
       "week": 2,
       "day": 3,
       "time_estimate": "1h",
@@ -1332,7 +1632,7 @@
       "id": "GOgent-034",
       "title": "Parse PostToolUse Event",
       "description": "Parse PostToolUse events with tool_response",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/034.md",
       "week": 2,
       "day": 4,
       "time_estimate": "1h",
@@ -1364,7 +1664,7 @@
       "id": "GOgent-035",
       "title": "Failure Detection Logic",
       "description": "Detect failures from success flags, exit codes, error patterns",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/035.md",
       "week": 2,
       "day": 4,
       "time_estimate": "2h",
@@ -1397,7 +1697,7 @@
       "id": "GOgent-036",
       "title": "Consecutive Failure Tracking",
       "description": "Track failures per file within 5-minute sliding window",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/036.md",
       "week": 2,
       "day": 5,
       "time_estimate": "2h",
@@ -1406,6 +1706,7 @@
         "GOgent-035"
       ],
       "blocks": [
+        "GOgent-036b",
         "GOgent-037",
         "GOgent-038"
       ],
@@ -1429,10 +1730,74 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-036b",
+      "title": "Track Failures by File + Error Type",
+      "description": "Refine failure tracking to use file + error_type composite key instead of file-only, preventing false positives",
+      "file": "tickets/session_archive/036b.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-036"
+      ],
+      "blocks": [
+        "GOgent-036c"
+      ],
+      "priority": "major",
+      "tags": [
+        "composite-key",
+        "false-positive-fix",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-036b-composite-failure-key",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-036c",
+      "title": "Extract Function Name from Stack Traces (Optional)",
+      "description": "Parse stack traces to extract function context, further refining failure tracking from file+error to file+error+function",
+      "file": "tickets/session_archive/036c.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-036b"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "stack-trace-parsing",
+        "function-level-tracking",
+        "enhancement",
+        "phase-3",
+        "optional"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-036c-function-extraction",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3",
+        "optional"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-037",
       "title": "Sharp Edge Capture",
       "description": "Write sharp edges to pending-learnings.jsonl at threshold",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/037.md",
       "week": 2,
       "day": 5,
       "time_estimate": "1.5h",
@@ -1440,6 +1805,7 @@
         "GOgent-036"
       ],
       "blocks": [
+        "GOgent-037b",
         "GOgent-039"
       ],
       "priority": "high",
@@ -1462,10 +1828,72 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-037b",
+      "title": "Extract 5-Line Code Context Window",
+      "description": "Extract 5-line code context window around error location to provide visual context in sharp edges",
+      "file": "tickets/session_archive/037b.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-037"
+      ],
+      "blocks": [
+        "GOgent-037c"
+      ],
+      "priority": "high",
+      "tags": [
+        "code-context",
+        "sharp-edges",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-037b-code-context",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-037c",
+      "title": "Log Attempted Changes from Tool Input",
+      "description": "Capture what was attempted during tool failures by extracting old_string→new_string from Edit, content preview from Write, and commands from Bash",
+      "file": "tickets/session_archive/037c.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-037b"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "attempted-change-logging",
+        "sharp-edges",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-037c-log-attempts",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-038",
       "title": "Hook Response Generation",
       "description": "Generate blocking/warning/pass-through responses based on count",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/038.md",
       "week": 2,
       "day": 5,
       "time_estimate": "1.5h",
@@ -1474,6 +1902,7 @@
         "GOgent-036"
       ],
       "blocks": [
+        "GOgent-038b",
         "GOgent-039"
       ],
       "priority": "critical",
@@ -1496,10 +1925,106 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-038b",
+      "title": "Load and Index Sharp-Edges YAML",
+      "description": "Load sharp-edges.yaml files from all agent directories and build searchable index for pattern matching",
+      "file": "tickets/session_archive/038b.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-038"
+      ],
+      "blocks": [
+        "GOgent-038c"
+      ],
+      "priority": "major",
+      "tags": [
+        "pattern-matching",
+        "sharp-edges-index",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [
+        "pkg/memory/pattern_matching.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-038b-load-sharp-edges-index",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-038c",
+      "title": "Implement Pattern Similarity Matching",
+      "description": "Match current sharp edge against indexed templates using multi-signal similarity scoring",
+      "file": "tickets/session_archive/038c.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-038b"
+      ],
+      "blocks": [
+        "GOgent-038d"
+      ],
+      "priority": "major",
+      "tags": [
+        "similarity-scoring",
+        "pattern-matching",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-038c-similarity-matching",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-038d",
+      "title": "Inject Remediation Suggestions in Blocking Response",
+      "description": "Enhance GenerateBlockingResponse() to include matched patterns and remediation suggestions from sharp-edges.yaml",
+      "file": "tickets/session_archive/038d.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-038c"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "remediation-suggestions",
+        "blocking-response",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-038d-remediation-injection",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-039",
       "title": "Sharp Edge Integration Tests",
       "description": "Test complete sharp edge detection workflow",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/039.md",
       "week": 2,
       "day": 6,
       "time_estimate": "2h",
@@ -1532,7 +2057,7 @@
       "id": "GOgent-040",
       "title": "Build gogent-sharp-edge CLI",
       "description": "Build sharp-edge-detector hook binary",
-      "file": "tickets/05-week2-sharp-edge-memory.md",
+      "file": "tickets/session_archive/040.md",
       "week": 2,
       "day": 6,
       "time_estimate": "1h",
@@ -1562,1681 +2087,236 @@
     },
     {
       "id": "GOgent-094",
-      "title": "Test Harness for Corpus Replay",
-      "description": "Build harness to replay events from corpus through hooks",
+      "title": "Baseline Re-measurement (Post-Migration)",
+      "description": "Re-run baseline benchmarks to measure performance gains from Go migration",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
-      "day": 1,
+      "day": 6,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-000",
-        "GOgent-008b"
+        "GOgent-008b",
+        "GOgent-093"
       ],
       "blocks": [
-        "GOgent-095",
-        "GOgent-096",
-        "GOgent-097",
         "GOgent-100"
       ],
       "priority": "critical",
       "tags": [
-        "testing",
-        "harness"
+        "baseline",
+        "benchmark",
+        "measurement",
+        "critical-C-3"
       ],
       "files_to_create": [
-        "test/integration/harness.go",
-        "test/integration/harness_test.go"
+        "test/benchmark/post_migration_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-041-test-harness",
+      "git_branch": "gogent-094-post-migration-baseline",
       "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-095",
-      "title": "Integration Tests for validate-routing",
-      "description": "Test complete validate-routing workflow with corpus",
-      "file": "tickets/10-week5-integration-tests.md",
-      "week": 5,
-      "day": 1,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-025",
-        "GOgent-094"
-      ],
-      "blocks": [
-        "GOgent-099"
-      ],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "validation"
-      ],
-      "files_to_create": [
-        "test/integration/validate_routing_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-042-validate-routing-integration",
-      "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
+        "benchmark",
+        "week-5",
+        "critical"
       ],
       "acceptance_criteria_count": 7,
       "status": "pending"
     },
     {
-      "id": "GOgent-096",
-      "title": "Integration Tests for session-archive",
-      "description": "Test session-archive workflow: metrics, handoff, archival",
+      "id": "GOgent-095",
+      "title": "Regression: Validate Hook Integration",
+      "description": "Test validate-routing.sh can invoke gogent-validate binary",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
-      "day": 2,
+      "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-033",
-        "GOgent-094"
+        "GOgent-025"
       ],
       "blocks": [
-        "GOgent-099"
+        "GOgent-098"
       ],
-      "priority": "high",
+      "priority": "critical",
       "tags": [
-        "testing",
-        "session"
+        "regression",
+        "integration",
+        "hook"
       ],
       "files_to_create": [
-        "test/integration/session_archive_test.go"
+        "test/integration/validate_hook_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-043-session-archive-integration",
+      "git_branch": "gogent-095-validate-hook-regression",
       "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
+        "regression",
+        "week-5",
+        "critical"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-096",
+      "title": "Regression: Archive Hook Integration",
+      "description": "Test session-archive.sh can invoke gogent-archive binary",
+      "file": "tickets/10-week5-integration-tests.md",
+      "week": 5,
+      "day": 7,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-033"
+      ],
+      "blocks": [
+        "GOgent-098"
+      ],
+      "priority": "critical",
+      "tags": [
+        "regression",
+        "integration",
+        "hook"
+      ],
+      "files_to_create": [
+        "test/integration/archive_hook_test.sh"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-096-archive-hook-regression",
+      "pr_labels": [
+        "regression",
+        "week-5",
+        "critical"
       ],
       "acceptance_criteria_count": 6,
       "status": "pending"
     },
     {
       "id": "GOgent-097",
-      "title": "Integration Tests for sharp-edge-detector",
-      "description": "Test sharp edge detection: failures, counting, blocking",
+      "title": "Regression: Sharp Edge Hook Integration",
+      "description": "Test sharp-edge-detector.sh can invoke gogent-sharp-edge binary",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
-      "day": 2,
+      "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-040",
-        "GOgent-094"
+        "GOgent-040"
       ],
       "blocks": [
-        "GOgent-099"
+        "GOgent-098"
       ],
-      "priority": "high",
+      "priority": "critical",
       "tags": [
-        "testing",
-        "sharp-edge"
+        "regression",
+        "integration",
+        "hook"
       ],
       "files_to_create": [
-        "test/integration/sharp_edge_test.go"
+        "test/integration/sharp_edge_hook_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-044-sharp-edge-integration",
+      "git_branch": "gogent-097-sharp-edge-hook-regression",
       "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
+        "regression",
+        "week-5",
+        "critical"
       ],
-      "acceptance_criteria_count": 8,
+      "acceptance_criteria_count": 6,
       "status": "pending"
     },
     {
       "id": "GOgent-098",
-      "title": "Performance Benchmarks",
-      "description": "Benchmark hook latency and memory (<5ms p99, <10MB)",
+      "title": "End-to-End Production Simulation",
+      "description": "Simulate production workflow with real corpus events",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
-      "day": 2,
+      "day": 7,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-094",
         "GOgent-095",
         "GOgent-096",
         "GOgent-097"
       ],
-      "blocks": [],
-      "priority": "high",
+      "blocks": [
+        "GOgent-099"
+      ],
+      "priority": "critical",
       "tags": [
-        "performance",
-        "benchmarks"
+        "e2e",
+        "simulation",
+        "production"
       ],
       "files_to_create": [
-        "test/benchmark/hooks_bench_test.go"
+        "test/integration/e2e_production_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-045-performance-benchmarks",
+      "git_branch": "gogent-098-e2e-production-simulation",
       "pr_labels": [
-        "performance",
-        "week-3",
-        "phase-0"
+        "e2e",
+        "week-5",
+        "critical"
       ],
-      "acceptance_criteria_count": 7,
+      "acceptance_criteria_count": 8,
       "status": "pending"
     },
     {
       "id": "GOgent-099",
-      "title": "End-to-End Workflow Tests",
-      "description": "Test cross-hook workflows: validation → sharp edge → archive",
+      "title": "Deployment Readiness Checklist",
+      "description": "Final verification of migration readiness",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
-      "day": 3,
-      "time_estimate": "2h",
+      "day": 7,
+      "time_estimate": "1h",
       "dependencies": [
-        "GOgent-095",
-        "GOgent-096",
-        "GOgent-097"
+        "GOgent-098"
       ],
-      "blocks": [],
-      "priority": "high",
+      "blocks": [
+        "GOgent-100"
+      ],
+      "priority": "critical",
       "tags": [
-        "testing",
-        "e2e"
+        "deployment",
+        "verification",
+        "checklist"
       ],
       "files_to_create": [
-        "test/integration/end_to_end_test.go"
+        "DEPLOYMENT_CHECKLIST.md"
       ],
-      "tests_required": true,
-      "git_branch": "gogent-046-e2e-workflow-tests",
+      "tests_required": false,
+      "git_branch": "gogent-099-deployment-checklist",
       "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
+        "deployment",
+        "week-5",
+        "critical"
       ],
-      "acceptance_criteria_count": 6,
+      "acceptance_criteria_count": 9,
       "status": "pending"
     },
     {
       "id": "GOgent-100",
-      "title": "Regression Tests (Go vs Bash)",
-      "description": "Compare Go output vs Bash on 100+ event corpus",
+      "title": "Performance Comparison Report",
+      "description": "Generate comprehensive comparison of Python vs Go performance",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
-      "day": 3,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-000",
-        "GOgent-094"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "testing",
-        "regression"
-      ],
-      "files_to_create": [
-        "test/regression/regression_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-047-regression-tests",
-      "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-101",
-      "title": "Installation Script",
-      "description": "Automated installation with build, test, backup",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 4,
-      "time_estimate": "2h",
-      "dependencies": [],
-      "blocks": [
-        "GOgent-101b",
-        "GOgent-102",
-        "GOgent-104"
-      ],
-      "priority": "critical",
-      "tags": [
-        "deployment",
-        "installation"
-      ],
-      "files_to_create": [
-        "scripts/install.sh",
-        "test/scripts/install_test.sh"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-048-installation-script",
-      "pr_labels": [
-        "deployment",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 12,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-101b",
-      "title": "WSL2 Compatibility Testing",
-      "description": "Test hooks on WSL2 (fixes M-8)",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 4,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-101"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "testing",
-        "wsl2",
-        "bugfix-M-8"
-      ],
-      "files_to_create": [
-        "test/wsl2/wsl2_test.sh"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-048b-wsl2-testing",
-      "pr_labels": [
-        "testing",
-        "week-3",
-        "wsl2"
-      ],
-      "acceptance_criteria_count": 10,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-102",
-      "title": "Parallel Testing (24hrs)",
-      "description": "Run Go and Bash side-by-side, compare outputs",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 5,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-101"
-      ],
-      "blocks": [
-        "GOgent-103"
-      ],
-      "priority": "critical",
-      "tags": [
-        "testing",
-        "parallel"
-      ],
-      "files_to_create": [
-        "scripts/parallel-test.sh"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-049-parallel-testing",
-      "pr_labels": [
-        "testing",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 11,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-103",
-      "title": "Cutover Decision Workflow",
-      "description": "Define GO/NO-GO criteria and cutover process",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 6,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-102"
-      ],
-      "blocks": [
-        "GOgent-104"
-      ],
-      "priority": "critical",
-      "tags": [
-        "cutover",
-        "decision"
-      ],
-      "files_to_create": [
-        "docs/cutover-decision.md"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-050-cutover-decision",
-      "pr_labels": [
-        "cutover",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 9,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-104",
-      "title": "Symlink Cutover Script",
-      "description": "Atomic script to switch hooks from Bash to Go",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 6,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-101",
-        "GOgent-103"
-      ],
-      "blocks": [
-        "GOgent-105",
-        "GOgent-106",
-        "GOgent-107",
-        "GOgent-108"
-      ],
-      "priority": "critical",
-      "tags": [
-        "cutover",
-        "deployment"
-      ],
-      "files_to_create": [
-        "scripts/cutover.sh"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-051-cutover-script",
-      "pr_labels": [
-        "cutover",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 9,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-105",
-      "title": "Rollback Script & Testing",
-      "description": "Rollback to Bash hooks in <5min",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 6,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-104"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "rollback",
-        "safety"
-      ],
-      "files_to_create": [
-        "scripts/rollback.sh",
-        "test/scripts/rollback_test.sh"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-052-rollback-script",
-      "pr_labels": [
-        "rollback",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 11,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-106",
-      "title": "Documentation Updates",
-      "description": "Update README, create migration notes, troubleshooting guide",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
       "day": 7,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-104"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "documentation"
-      ],
-      "files_to_create": [
-        "README.md",
-        "docs/migration-notes.md",
-        "docs/troubleshooting.md"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-053-documentation-updates",
-      "pr_labels": [
-        "documentation",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-107",
-      "title": "Performance Regression Monitoring",
-      "description": "Health check script to monitor hook performance post-cutover",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 7,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-104"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "monitoring",
-        "performance"
-      ],
-      "files_to_create": [
-        "scripts/health-check.sh"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-054-health-check",
-      "pr_labels": [
-        "monitoring",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 10,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-108",
-      "title": "Post-Cutover Validation Checklist",
-      "description": "Validation checklist after 48hr monitoring period",
-      "file": "tickets/11-week5-deployment-cutover.md",
-      "week": 5,
-      "day": 7,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-104"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "validation",
-        "cutover"
-      ],
-      "files_to_create": [
-        "scripts/validate-cutover.sh",
-        "docs/post-cutover-checklist.md"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-055-post-cutover-validation",
-      "pr_labels": [
-        "validation",
-        "week-3",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-056",
-      "title": "Define SessionStart Event Structs",
-      "description": "Define SessionStartEvent struct with session type detection (startup vs resume)",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-002"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "session",
-        "startup"
-      ],
-      "files_to_create": [
-        "pkg/session/events.go",
-        "pkg/session/events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-056-session-start-events",
-      "pr_labels": [
-        "session",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-057",
-      "title": "Routing Schema Loading & Formatting",
-      "description": "Load routing schema from ~/.claude/routing-schema.json and format tier summary",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-004a"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "routing",
-        "schema"
-      ],
-      "files_to_create": [
-        "pkg/session/schema_loader.go",
-        "pkg/session/schema_loader_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-057-routing-schema-loading",
-      "pr_labels": [
-        "routing",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-058",
-      "title": "Handoff Document Loading",
-      "description": "Load previous session handoff document for resume sessions",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-056"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "handoff",
-        "resume"
-      ],
-      "files_to_create": [
-        "pkg/session/handoff_loader.go",
-        "pkg/session/handoff_loader_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-058-handoff-document-loading",
-      "pr_labels": [
-        "handoff",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-059",
-      "title": "Pending Learnings Detection & Git Integration",
-      "description": "Check for pending learnings and get git status for context",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "learnings",
-        "git"
-      ],
-      "files_to_create": [
-        "pkg/session/context_collectors.go",
-        "pkg/session/context_collectors_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-059-pending-learnings-git-status",
-      "pr_labels": [
-        "context",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-060",
-      "title": "Project Type Detection",
-      "description": "Auto-detect project type (Python, R, R+Shiny, JavaScript, Go) for convention loading",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "detection",
-        "project-type"
-      ],
-      "files_to_create": [
-        "pkg/session/project_detection.go",
-        "pkg/session/project_detection_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-060-project-type-detection",
-      "pr_labels": [
-        "detection",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-061",
-      "title": "Session Context Response Generation",
-      "description": "Combine all context sources and generate SessionStart hook response",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-056",
-        "GOgent-057",
-        "GOgent-058",
-        "GOgent-059",
-        "GOgent-060"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "response",
-        "context"
-      ],
-      "files_to_create": [
-        "pkg/session/response.go",
-        "pkg/session/response_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-061-session-context-response",
-      "pr_labels": [
-        "response",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-062",
-      "title": "Build gogent-load-context CLI",
-      "description": "Build CLI binary that reads SessionStart events and generates context injection",
-      "file": "tickets/06-week3-load-routing-context.md",
-      "week": 3,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-061"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-load-context/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-062-gogent-load-context-cli",
-      "pr_labels": [
-        "cli",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 12,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-063",
-      "title": "Define SubagentStop Event Structs",
-      "description": "Parse SubagentStop events and detect agent completion type",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-056"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "agent",
-        "workflow"
-      ],
-      "files_to_create": [
-        "pkg/workflow/events.go",
-        "pkg/workflow/events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-063-subagent-stop-events",
-      "pr_labels": [
-        "agent",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-064",
-      "title": "Tier-Specific Response Generation",
-      "description": "Generate appropriate follow-up responses based on agent class and tier",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-063"
+        "GOgent-008b",
+        "GOgent-094",
+        "GOgent-099"
       ],
       "blocks": [],
       "priority": "critical",
       "tags": [
-        "response",
-        "agent"
-      ],
-      "files_to_create": [
-        "pkg/workflow/responses.go",
-        "pkg/workflow/responses_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-064-tier-specific-responses",
-      "pr_labels": [
-        "response",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-065",
-      "title": "Endstate Logging & Decision Storage",
-      "description": "Store endstate decisions in JSONL format for analysis and audit trail",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-064"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "logging",
-        "decisions"
-      ],
-      "files_to_create": [
-        "pkg/workflow/logging.go",
-        "pkg/workflow/logging_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-065-endstate-logging",
-      "pr_labels": [
-        "logging",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-066",
-      "title": "Integration Tests for agent-endstate",
-      "description": "Comprehensive tests covering event parsing → response generation → logging workflow",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-065"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "pkg/workflow/integration_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-066-agent-endstate-integration",
-      "pr_labels": [
-        "testing",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-067",
-      "title": "Build gogent-agent-endstate CLI",
-      "description": "Build CLI binary that reads SubagentStop events and generates follow-up responses",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-066"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-agent-endstate/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-067-gogent-agent-endstate-cli",
-      "pr_labels": [
-        "cli",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-068",
-      "title": "Tool Counter Management",
-      "description": "Manage persistent tool call counter for attention-gate triggering",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-056"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "counter",
-        "tool"
-      ],
-      "files_to_create": [
-        "pkg/observability/counter.go",
-        "pkg/observability/counter_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-068-tool-counter-management",
-      "pr_labels": [
-        "counter",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-069",
-      "title": "Reminder & Flush Logic",
-      "description": "Generate routing compliance reminders and auto-flush pending learnings",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-068"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "reminder",
-        "flush"
-      ],
-      "files_to_create": [
-        "pkg/observability/gate.go",
-        "pkg/observability/gate_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-069-reminder-flush-logic",
-      "pr_labels": [
-        "reminder",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-070",
-      "title": "PostToolUse Event Parsing",
-      "description": "Parse PostToolUse events that trigger attention-gate",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-056"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "parsing",
-        "events"
-      ],
-      "files_to_create": [
-        "pkg/observability/events.go",
-        "pkg/observability/events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-070-post-tool-use-events",
-      "pr_labels": [
-        "parsing",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-071",
-      "title": "Integration Tests for attention-gate",
-      "description": "End-to-end tests for tool counter → reminder/flush workflow",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-070"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "pkg/observability/integration_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-071-attention-gate-integration",
-      "pr_labels": [
-        "testing",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-072",
-      "title": "Build gogent-attention-gate CLI",
-      "description": "Build CLI binary for attention-gate hook",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-071"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-attention-gate/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-072-gogent-attention-gate-cli",
-      "pr_labels": [
-        "cli",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-073",
-      "title": "Archive Generation for RAG Indexing",
-      "description": "Generate markdown summaries of attention-gate data for RAG indexing",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-072"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "archival",
-        "RAG",
-        "markdown"
-      ],
-      "files_to_create": [
-        "pkg/workflow/archive_generator.go",
-        "pkg/workflow/archive_generator_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-073-archive-generation",
-      "pr_labels": [
-        "archival",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-074",
-      "title": "Attention-Gate Edge Cases & Error Handling",
-      "description": "Handle edge cases in tool counter management and flush logic",
-      "file": "tickets/07-week3-agent-workflow-hooks.md",
-      "week": 3,
-      "day": 1,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-073"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "edge-cases",
-        "error-handling"
-      ],
-      "files_to_create": [
-        "pkg/workflow/counter_edge_cases_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-074-attention-gate-edge-cases",
-      "pr_labels": [
-        "testing",
-        "week-4",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-075",
-      "title": "SubagentStop Event Parsing for Orchestrator",
-      "description": "Parse SubagentStop events specifically for orchestrator/architect agents",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-063"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "orchestrator",
-        "enforcement"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/orchestrator_events.go",
-        "pkg/enforcement/orchestrator_events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-075-orchestrator-events",
-      "pr_labels": [
-        "orchestrator",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-076",
-      "title": "Transcript Analysis & Task Tracking",
-      "description": "Scan transcript for background task spawns and collections",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-075"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "transcript",
-        "analysis"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/transcript_analyzer.go",
-        "pkg/enforcement/transcript_analyzer_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-076-transcript-analysis",
-      "pr_labels": [
+        "performance",
+        "reporting",
         "analysis",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-077",
-      "title": "Blocking Response Generation",
-      "description": "Generate blocking response if background tasks uncollected",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-076"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "blocking",
-        "response"
+        "critical-C-3"
       ],
       "files_to_create": [
-        "pkg/enforcement/blocking_response.go",
-        "pkg/enforcement/blocking_response_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-077-blocking-response",
-      "pr_labels": [
-        "blocking",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-078",
-      "title": "Integration Tests for orchestrator-guard",
-      "description": "End-to-end tests for orchestrator-guard workflow",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-077"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/orchestrator_integration_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-078-orchestrator-integration",
-      "pr_labels": [
-        "testing",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-079",
-      "title": "Build gogent-orchestrator-guard CLI",
-      "description": "Build CLI binary for orchestrator-completion-guard hook",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-078"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-orchestrator-guard/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-079-gogent-orchestrator-guard-cli",
-      "pr_labels": [
-        "cli",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-080",
-      "title": "PreToolUse Event Parsing",
-      "description": "Parse PreToolUse events for Write/Edit on CLAUDE.md files",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-070"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "parsing",
-        "pre-tool"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/doc_events.go",
-        "pkg/enforcement/doc_events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-080-pre-tool-use-events",
-      "pr_labels": [
-        "parsing",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-081",
-      "title": "Pattern Detection for Documentation Theater",
-      "description": "Scan content for enforcement patterns that indicate documentation theater",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-080"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "pattern",
-        "detection"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/pattern_detector.go",
-        "pkg/enforcement/pattern_detector_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-081-pattern-detection",
-      "pr_labels": [
-        "pattern",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-082",
-      "title": "Integration Tests for doc-theater",
-      "description": "End-to-end tests for documentation theater detection",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-081"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/doc_theater_integration_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-082-doc-theater-integration",
-      "pr_labels": [
-        "testing",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-083",
-      "title": "Build gogent-doc-theater CLI",
-      "description": "Build CLI binary for detect-documentation-theater hook",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-082"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-doc-theater/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-083-gogent-doc-theater-cli",
-      "pr_labels": [
-        "cli",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-084",
-      "title": "Doc-Theater Response Generation",
-      "description": "Generate warning responses when documentation theater is detected",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-083"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "response",
-        "warning"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/theater_response.go",
-        "pkg/enforcement/theater_response_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-084-theater-response",
-      "pr_labels": [
-        "enforcement",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 4,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-085",
-      "title": "Doc-Theater Logging & Metrics",
-      "description": "Log detected documentation theater patterns for analysis",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-084"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "logging",
-        "metrics"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/theater_logging.go",
-        "pkg/enforcement/theater_logging_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-085-theater-logging",
-      "pr_labels": [
-        "logging",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-086",
-      "title": "Doc-Theater Configuration & Tuning",
-      "description": "Add configuration for pattern sensitivity and excluded files",
-      "file": "tickets/08-week4-advanced-enforcement.md",
-      "week": 4,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-085"
-      ],
-      "blocks": [],
-      "priority": "low",
-      "tags": [
-        "configuration",
-        "tuning"
-      ],
-      "files_to_create": [
-        "pkg/enforcement/theater_config.go",
-        "pkg/enforcement/theater_config_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-086-theater-config",
-      "pr_labels": [
-        "config",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-087",
-      "title": "PostToolUse Event for Benchmarking",
-      "description": "Parse PostToolUse events with emphasis on timing and performance metrics",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 7,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-070"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "benchmarking",
-        "metrics"
-      ],
-      "files_to_create": [
-        "pkg/observability/benchmark_events.go",
-        "pkg/observability/benchmark_events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-087-benchmark-events",
-      "pr_labels": [
-        "benchmarking",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-088",
-      "title": "Benchmark Metrics Logging",
-      "description": "Store benchmark metrics in JSONL format for analysis",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 7,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-087"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "logging",
-        "metrics"
-      ],
-      "files_to_create": [
-        "pkg/observability/benchmark_logger.go",
-        "pkg/observability/benchmark_logger_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-088-benchmark-logging",
-      "pr_labels": [
-        "logging",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-089",
-      "title": "Integration Tests for benchmark-logger",
-      "description": "End-to-end tests for benchmark logging workflow",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 7,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-088"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "pkg/observability/benchmark_integration_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-089-benchmark-integration",
-      "pr_labels": [
-        "testing",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-090",
-      "title": "Build gogent-benchmark-logger CLI",
-      "description": "Build CLI binary for benchmark-logger hook",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 7,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-089"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-benchmark-logger/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-090-gogent-benchmark-logger-cli",
-      "pr_labels": [
-        "cli",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-091",
-      "title": "Investigate stop-gate.sh Purpose",
-      "description": "Investigate the purpose and implementation of stop-gate.sh in ~/.claude/hooks/",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 1,
-      "time_estimate": "2h",
-      "dependencies": [],
-      "blocks": [
-        "GOgent-092"
-      ],
-      "priority": "medium",
-      "tags": [
-        "investigation",
-        "stop-gate"
-      ],
-      "files_to_create": [
-        "migration_plan/tickets/stop-gate-investigation.md"
+        "docs/PERFORMANCE_REPORT.md"
       ],
       "tests_required": false,
-      "git_branch": "gogent-091-stop-gate-investigation",
+      "git_branch": "gogent-100-performance-report",
       "pr_labels": [
-        "investigation",
+        "reporting",
         "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-092",
-      "title": "Stop-Gate Translation or Deprecation",
-      "description": "Based on investigation findings, either translate to Go, mark as deprecated, or defer to Phase 2",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 1,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-091"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "stop-gate",
-        "decision"
-      ],
-      "files_to_create": [],
-      "tests_required": false,
-      "git_branch": "gogent-092-stop-gate-decision",
-      "pr_labels": [
-        "stop-gate",
-        "week-5",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 3,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-093",
-      "title": "Final Documentation & Status Report",
-      "description": "Create comprehensive status report for week 4-5 completion",
-      "file": "tickets/09-week4-observability-remaining.md",
-      "week": 4,
-      "day": 1,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-092"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "documentation",
-        "status"
-      ],
-      "files_to_create": [
-        "migration_plan/tickets/WEEK-4-5-COMPLETION.md"
-      ],
-      "tests_required": false,
-      "git_branch": "gogent-093-completion-report",
-      "pr_labels": [
-        "documentation",
-        "week-5",
-        "phase-0"
+        "critical"
       ],
       "acceptance_criteria_count": 8,
       "status": "pending"
