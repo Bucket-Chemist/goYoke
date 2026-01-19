@@ -244,3 +244,129 @@ func createTempFile(t *testing.T, content string) string {
 
 	return tmpFile
 }
+
+// TestAnalyzeToolDistribution_EmptySlice tests that an empty slice returns an empty map.
+func TestAnalyzeToolDistribution_EmptySlice(t *testing.T) {
+	result := AnalyzeToolDistribution([]ToolEvent{})
+
+	if len(result) != 0 {
+		t.Errorf("Expected empty map for empty slice, got: %v", result)
+	}
+}
+
+// TestAnalyzeToolDistribution_NilSlice tests that a nil slice returns a non-nil empty map.
+func TestAnalyzeToolDistribution_NilSlice(t *testing.T) {
+	result := AnalyzeToolDistribution(nil)
+
+	if result == nil {
+		t.Error("Expected non-nil map for nil input, got nil")
+	}
+
+	if len(result) != 0 {
+		t.Errorf("Expected empty map for nil slice, got: %v", result)
+	}
+}
+
+// TestAnalyzeToolDistribution_SingleToolType tests counting with only one tool type.
+func TestAnalyzeToolDistribution_SingleToolType(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read"},
+		{ToolName: "Read"},
+		{ToolName: "Read"},
+	}
+
+	result := AnalyzeToolDistribution(events)
+
+	if result["Read"] != 3 {
+		t.Errorf("Expected Read count of 3, got: %d", result["Read"])
+	}
+
+	if len(result) != 1 {
+		t.Errorf("Expected only 1 tool type, got: %d", len(result))
+	}
+}
+
+// TestAnalyzeToolDistribution_MixedTools tests counting with multiple tool types.
+func TestAnalyzeToolDistribution_MixedTools(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read"},
+		{ToolName: "Edit"},
+		{ToolName: "Read"},
+		{ToolName: "Write"},
+		{ToolName: "Edit"},
+		{ToolName: "Read"},
+	}
+
+	result := AnalyzeToolDistribution(events)
+
+	expected := map[string]int{
+		"Read":  3,
+		"Edit":  2,
+		"Write": 1,
+	}
+
+	for tool, expectedCount := range expected {
+		if result[tool] != expectedCount {
+			t.Errorf("Expected %s count of %d, got: %d", tool, expectedCount, result[tool])
+		}
+	}
+}
+
+// TestAnalyzeToolDistribution_UnknownToolNames tests that unknown tool names are counted correctly.
+func TestAnalyzeToolDistribution_UnknownToolNames(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "CustomTool"},
+		{ToolName: "AnotherTool"},
+		{ToolName: "CustomTool"},
+	}
+
+	result := AnalyzeToolDistribution(events)
+
+	if result["CustomTool"] != 2 {
+		t.Errorf("Expected CustomTool count of 2, got: %d", result["CustomTool"])
+	}
+
+	if result["AnotherTool"] != 1 {
+		t.Errorf("Expected AnotherTool count of 1, got: %d", result["AnotherTool"])
+	}
+}
+
+// TestAnalyzeToolDistribution_AccuracyWithRealPattern tests accuracy with a realistic tool usage pattern.
+func TestAnalyzeToolDistribution_AccuracyWithRealPattern(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read"},
+		{ToolName: "Read"},
+		{ToolName: "Read"},
+		{ToolName: "Glob"},
+		{ToolName: "Glob"},
+		{ToolName: "Grep"},
+		{ToolName: "Grep"},
+		{ToolName: "Grep"},
+		{ToolName: "Edit"},
+		{ToolName: "Write"},
+		{ToolName: "Bash"},
+		{ToolName: "Task"},
+	}
+
+	result := AnalyzeToolDistribution(events)
+
+	expected := map[string]int{
+		"Read":  3,
+		"Glob":  2,
+		"Grep":  3,
+		"Edit":  1,
+		"Write": 1,
+		"Bash":  1,
+		"Task":  1,
+	}
+
+	if len(result) != len(expected) {
+		t.Errorf("Expected %d tool types, got: %d", len(expected), len(result))
+	}
+
+	for tool, expectedCount := range expected {
+		if result[tool] != expectedCount {
+			t.Errorf("Tool %s: expected count %d, got: %d", tool, expectedCount, result[tool])
+		}
+	}
+}

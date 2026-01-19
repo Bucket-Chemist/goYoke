@@ -59,3 +59,41 @@ func ParseTranscript(transcriptPath string) ([]ToolEvent, error) {
 
 	return events, nil
 }
+
+// AnalyzeToolDistribution counts tool usage across all events.
+// Returns a map of tool names to usage counts.
+//
+// Parameters:
+//   - events: slice of ToolEvent structs to analyze
+//
+// Returns:
+//   - map[string]int: tool names mapped to occurrence counts
+//
+// Edge cases:
+//   - nil slice: returns empty map (not nil)
+//   - empty slice: returns empty map
+//   - unknown tool names: counted like any other tool
+//
+// Example output:
+//
+//	map[string]int{
+//	    "Read":  30,
+//	    "Edit":  10,
+//	    "Write": 5,
+//	    "Task":  2,
+//	    "Bash":  8,
+//	}
+func AnalyzeToolDistribution(events []ToolEvent) map[string]int {
+	distribution := make(map[string]int)
+
+	// Handle nil slice gracefully
+	if events == nil {
+		return distribution
+	}
+
+	for _, event := range events {
+		distribution[event.ToolName]++
+	}
+
+	return distribution
+}

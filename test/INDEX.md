@@ -2,7 +2,7 @@
 
 **Project**: GOgent Fortress (l-a-g-GO)
 **Purpose**: Track all test files, coverage, and testing deliverables per ticket
-**Last Updated**: 2026-01-16
+**Last Updated**: 2026-01-19
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Package     | Coverage | Status       |
 | ----------- | -------- | ------------ |
-| pkg/routing | 91.0%    | ✅ Excellent |
+| pkg/routing | 86.8%    | ✅ Excellent |
 
 **Overall Target**: ≥80% coverage per package
 
@@ -27,10 +27,10 @@
 | `agents_test.go`        | GOgent-003     | 796   | 14    | ~95%     | 2026-01-16 | ✅ Passing |
 | `events_test.go`        | GOgent-006/007 | 1072  | 13    | ~85%     | 2026-01-15 | ✅ Passing |
 | `stdin_test.go`         | GOgent-006/007 | 302   | 8     | ~80%     | 2026-01-15 | ✅ Passing |
-| `transcript_test.go`    | GOgent-027b    | 272   | 6     | ~91%     | 2026-01-19 | ✅ Passing |
+| `transcript_test.go`    | GOgent-027b/c  | 372   | 12    | ~87%     | 2026-01-19 | ✅ Passing |
 
-**Total Unit Test Lines**: 2,888 lines
-**Total Test Functions**: 49 tests
+**Total Unit Test Lines**: 2,988 lines
+**Total Test Functions**: 55 tests
 
 ### corpus-logger (Development Tool)
 
@@ -409,5 +409,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-19 (GOgent-027b completion)
-**Next Audit**: After GOgent-028
+**Last Audit**: 2026-01-19 (GOgent-027c completion)
+**Next Audit**: After GOgent-027d
