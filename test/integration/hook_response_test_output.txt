@@ -29,4 +29,4 @@
         }
 --- PASS: TestHookWorkflow_RealWorldScenario (0.00s)
 PASS
-ok  	github.com/Exact-Mass/l-a-g-GO/test/integration	0.003s
+ok  	github.com/Exact-Mass/GOgent-Fortress/test/integration	0.003s

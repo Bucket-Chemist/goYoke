@@ -132,7 +132,7 @@ Claude Code Session
 ## Repository Structure
 
 ```
-l-a-g-GO/
+GOgent-Fortress/
 ├── cmd/                          # Binary entry points
 │   ├── gogent-validate/          # validate-routing.sh → Go
 │   ├── gogent-archive/           # session-archive.sh → Go

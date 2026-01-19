@@ -321,7 +321,7 @@ cat test/audit/latest/coverage-summary.txt
 
 ```bash
 # Navigate to project
-cd /home/doktersmol/Documents/l-a-g-GO
+cd /home/doktersmol/Documents/GOgent-Fortress
 
 # Check what exists
 ls -la pkg/routing/
@@ -343,7 +343,7 @@ vim test/INDEX.md
 **Current Phase**: Week 1 - Foundation & Event Parsing
 **Approach**: Following detailed ticket specs in `migration_plan/finalised/tickets/`
 **Routing Schema**: Using production `~/.claude/routing-schema.json` v2.2.0 as source of truth
-**Working Directory**: `/home/doktersmol/Documents/l-a-g-GO`
+**Working Directory**: `/home/doktersmol/Documents/GOgent-Fortress`
 **Git Branch**: `main` (pushed to origin)
 
 **Success Pattern This Session**:

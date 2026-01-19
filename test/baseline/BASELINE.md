@@ -7,29 +7,32 @@
 
 ## Latency Measurements (100 events each)
 
-| Hook | Average Latency | p99 Estimate | Notes |
-|------|----------------|--------------|-------|
-| validate-routing.sh | 43ms | ~129ms | Most complex hook (401 lines) |
-| session-archive.sh | 19ms | ~57ms | File I/O heavy (111 lines) |
-| sharp-edge-detector.sh | 36ms | ~108ms | Pattern matching (105 lines) |
+| Hook                   | Average Latency | p99 Estimate | Notes                         |
+| ---------------------- | --------------- | ------------ | ----------------------------- |
+| validate-routing.sh    | 43ms            | ~129ms       | Most complex hook (401 lines) |
+| session-archive.sh     | 19ms            | ~57ms        | File I/O heavy (111 lines)    |
+| sharp-edge-detector.sh | 36ms            | ~108ms       | Pattern matching (105 lines)  |
 
 ## Event Corpus Strategy
 
-**Corpus Logger**: Go implementation at `/home/doktersmol/Documents/l-a-g-GO/corpus-logger/`
+**Corpus Logger**: Go implementation at `/home/doktersmol/Documents/GOgent-Fortress/corpus-logger/`
 
 **Approach**: Real production event capture
+
 - Hook installed at `~/.claude/hooks/zzz-corpus-logger` (Go binary)
 - Captures to `/run/user/1000/gogent/event-corpus-raw.jsonl` (XDG_RUNTIME_DIR)
 - Pass-through design (doesn't interfere with Claude Code)
 - Schema validation: Events parsed into Go structs before capture
 
 **Why Go for corpus capture**:
+
 1. Validates our event schema before GOgent-001 implementation
 2. Same parsing logic that will process events in production
 3. Proves Go can handle real-time event capture (<1ms overhead)
 4. Output is both test fixture AND proof of correctness
 
 **Event Schema** (validated by Go structs):
+
 ```go
 type HookEvent struct {
     ToolName      string                 `json:"tool_name"`
@@ -51,14 +54,15 @@ type HookEvent struct {
 
 - **Live Capture:** `/run/user/1000/gogent/event-corpus-raw.jsonl` (growing with usage)
 - **Curated Corpus:** Will be extracted after sufficient events captured
-- **Test Fixtures:** `/home/doktersmol/Documents/l-a-g-GO/test/fixtures/event-corpus.json`
-- **Go Logger Source:** `/home/doktersmol/Documents/l-a-g-GO/corpus-logger/`
+- **Test Fixtures:** `/home/doktersmol/Documents/GOgent-Fortress/test/fixtures/event-corpus.json`
+- **Go Logger Source:** `/home/doktersmol/Documents/GOgent-Fortress/corpus-logger/`
 
 ## Corpus Collection Status
 
 **Hook Installed:** ✅ `~/.claude/hooks/zzz-corpus-logger`
 **Capturing Events:** ✅ Real production events
 **Target:** 100+ diverse events covering:
+
 - Task events (haiku, sonnet, opus)
 - Read, Write, Edit events
 - Bash events with successes and failures (for sharp-edge testing)
@@ -70,6 +74,7 @@ type HookEvent struct {
 ## Go Logger Implementation
 
 **Features**:
+
 - STDIN reading with 5-second timeout (M-6 fix)
 - XDG-compliant path resolution (M-2 fix)
 - Zero external dependencies (stdlib only)

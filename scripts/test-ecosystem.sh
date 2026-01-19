@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-ecosystem.sh - Comprehensive test wrapper for l-a-g-GO ecosystem
+# test-ecosystem.sh - Comprehensive test wrapper for GOgent-Fortress ecosystem
 #
 # This script runs all tests in the correct order with proper reporting.
 # Goal: Replace 15+ manual test invocations with a single command.
@@ -53,7 +53,7 @@ mkdir -p "$AUDIT_DIR"
 date -Iseconds > "$AUDIT_DIR/timestamp.txt"
 
 echo -e "${BLUE}========================================${RESET}"
-echo -e "${BLUE}L-A-G-GO Ecosystem Test Suite${RESET}"
+echo -e "${BLUE}GOgent-Fortress Ecosystem Test Suite${RESET}"
 echo -e "${BLUE}========================================${RESET}"
 echo -e "${BLUE}Audit Label: ${TICKET_LABEL}${RESET}"
 echo ""

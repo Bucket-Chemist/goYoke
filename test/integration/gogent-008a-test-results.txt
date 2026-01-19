@@ -70,7 +70,7 @@
     --- PASS: TestIsValidTier/whitespace_tier (0.00s)
 PASS
 coverage: 93.5% of statements
-ok  	github.com/Exact-Mass/l-a-g-GO/pkg/config	0.005s	coverage: 93.5% of statements
+ok  	github.com/Exact-Mass/GOgent-Fortress/pkg/config	0.005s	coverage: 93.5% of statements
 === RUN   TestLoadAgentIndex
     agents_test.go:26: ✓ Loaded 21 agents from agents-index.json v2.2.0
 --- PASS: TestLoadAgentIndex (0.00s)
@@ -628,7 +628,7 @@ ok  	github.com/Exact-Mass/l-a-g-GO/pkg/config	0.005s	coverage: 93.5% of stateme
     --- PASS: TestReadStdin_ErrorMessageFormat/read_error_format (0.00s)
 PASS
 coverage: 93.7% of statements
-ok  	github.com/Exact-Mass/l-a-g-GO/pkg/routing	(cached)	coverage: 93.7% of statements
+ok  	github.com/Exact-Mass/GOgent-Fortress/pkg/routing	(cached)	coverage: 93.7% of statements
 === RUN   TestHookWorkflow_FullPipeline
 === RUN   TestHookWorkflow_FullPipeline/block_task_opus
 === RUN   TestHookWorkflow_FullPipeline/warn_subagent_mismatch
@@ -661,4 +661,4 @@ ok  	github.com/Exact-Mass/l-a-g-GO/pkg/routing	(cached)	coverage: 93.7% of stat
 --- PASS: TestHookWorkflow_RealWorldScenario (0.00s)
 PASS
 coverage: [no statements]
-ok  	github.com/Exact-Mass/l-a-g-GO/test/integration	0.003s	coverage: [no statements]
+ok  	github.com/Exact-Mass/GOgent-Fortress/test/integration	0.003s	coverage: [no statements]

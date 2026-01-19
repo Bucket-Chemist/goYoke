@@ -1,5 +1,5 @@
 # Makefile for GOgent Fortress Go migration
-# Project: l-a-g-GO
+# Project: GOgent-Fortress
 # Purpose: Convenient task automation
 
 BINARY_NAME=gogent

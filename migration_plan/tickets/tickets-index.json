@@ -1243,7 +1243,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 8,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-028a",
@@ -1280,7 +1280,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 14,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-028b-parity",
