@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build clean
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive install-archive clean
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -17,6 +17,8 @@ help:
 	@echo "  make test-race       - Run race detector"
 	@echo "  make coverage        - Generate coverage report"
 	@echo "  make build           - Build binary"
+	@echo "  make build-archive   - Build gogent-archive binary"
+	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
 	@echo "  make clean           - Remove build artifacts"
 
 # Primary test target - runs full ecosystem with audit trail
@@ -50,7 +52,21 @@ coverage:
 build:
 	go build ${LDFLAGS} -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
 
+build-archive:
+	@echo "Building gogent-archive binary..."
+	go build -o bin/gogent-archive ./cmd/gogent-archive
+	@echo "✅ Binary created at bin/gogent-archive"
+
+install-archive: build-archive
+	@echo "Installing gogent-archive to ~/.local/bin/..."
+	mkdir -p ~/.local/bin
+	cp bin/gogent-archive ~/.local/bin/gogent-archive
+	chmod +x ~/.local/bin/gogent-archive
+	@echo "✅ Installed to ~/.local/bin/gogent-archive"
+	@echo "Ensure ~/.local/bin is in your PATH"
+
 clean:
 	rm -f ${BINARY_NAME}
+	rm -f bin/gogent-archive
 	rm -f coverage.out
 	rm -f *.test

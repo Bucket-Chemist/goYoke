@@ -1347,7 +1347,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 14,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-028d-deploy",
@@ -1383,7 +1383,7 @@
         "critical"
       ],
       "acceptance_criteria_count": 12,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-028e",
