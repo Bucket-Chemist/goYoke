@@ -2,11 +2,11 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 69,
+    "total_tickets": 84,
     "total_weeks": 5,
     "created": "2026-01-15",
-    "version": "1.5",
-    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d)"
+    "version": "1.7",
+    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l)"
   },
   "tickets": [
     {
@@ -1243,6 +1243,484 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 8,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028a",
+      "title": "Build gogent-archive CLI",
+      "description": "Create CLI entry point for SessionEnd hook that orchestrates handoff generation",
+      "file": "tickets/session_archive/028a.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "2.0h",
+      "dependencies": [
+        "GOgent-027",
+        "GOgent-028"
+      ],
+      "blocks": [
+        "GOgent-028b",
+        "GOgent-028c",
+        "GOgent-028d"
+      ],
+      "priority": "critical",
+      "tags": [
+        "cli",
+        "binary",
+        "integration"
+      ],
+      "files_to_create": [
+        "cmd/gogent-archive/main.go",
+        "cmd/gogent-archive/main_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028a-archive-cli",
+      "pr_labels": [
+        "cli",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 14,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028b-parity",
+      "title": "Validate Metrics Parity (Bash vs Go)",
+      "description": "Verify Go metrics collection matches bash hook implementation exactly",
+      "file": "tickets/session_archive/028b.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028a"
+      ],
+      "blocks": [
+        "GOgent-028d"
+      ],
+      "priority": "critical",
+      "tags": [
+        "testing",
+        "metrics",
+        "parity"
+      ],
+      "files_to_create": [
+        "test/integration/metrics_parity_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028b-metrics-parity",
+      "pr_labels": [
+        "testing",
+        "week-2",
+        "critical"
+      ],
+      "acceptance_criteria_count": 11,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028c-archive",
+      "title": "Implement Artifact Archival in Go",
+      "description": "Move pending learnings and violations to session-archive/ after handoff generation",
+      "file": "tickets/session_archive/028c.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-028a"
+      ],
+      "blocks": [
+        "GOgent-028d"
+      ],
+      "priority": "critical",
+      "tags": [
+        "archival",
+        "files",
+        "session"
+      ],
+      "files_to_create": [
+        "pkg/session/archive.go",
+        "pkg/session/archive_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028c-artifact-archival",
+      "pr_labels": [
+        "archival",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 14,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028d-deploy",
+      "title": "Hook Registration & Deployment",
+      "description": "Build script, hook configuration, and integration testing for gogent-archive deployment",
+      "file": "tickets/session_archive/028d.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-028a",
+        "GOgent-028b-parity",
+        "GOgent-028c-archive"
+      ],
+      "blocks": [
+        "GOgent-028e"
+      ],
+      "priority": "critical",
+      "tags": [
+        "deployment",
+        "hooks",
+        "integration"
+      ],
+      "files_to_create": [
+        "docs/deployment/hook-registration.md",
+        "test/integration/session_end_hook_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028d-hook-deployment",
+      "pr_labels": [
+        "deployment",
+        "week-2",
+        "critical"
+      ],
+      "acceptance_criteria_count": 12,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028e",
+      "title": "Installation & PATH Configuration",
+      "description": "Makefile install target and PATH configuration documentation",
+      "file": "tickets/session_archive/028e.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-028d-deploy"
+      ],
+      "blocks": [],
+      "priority": "critical",
+      "tags": [
+        "installation",
+        "makefile",
+        "documentation"
+      ],
+      "files_to_create": [],
+      "tests_required": false,
+      "git_branch": "gogent-028e-installation",
+      "pr_labels": [
+        "installation",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 8,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028f",
+      "title": "Context Loading Compatibility Test",
+      "description": "Verify load-routing-context.sh hook can parse Go-generated markdown",
+      "file": "tickets/session_archive/028f.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028a"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "compatibility",
+        "testing",
+        "hooks"
+      ],
+      "files_to_create": [
+        "test/compatibility/context_loading_test.sh",
+        "docs/compatibility/sessionstart-hook.md"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028f-context-compatibility",
+      "pr_labels": [
+        "compatibility",
+        "week-2",
+        "high"
+      ],
+      "acceptance_criteria_count": 8,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028g",
+      "title": "Sharp Edge Schema Alignment",
+      "description": "Document SharpEdge JSON schema and create validation function",
+      "file": "tickets/session_archive/028g.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-028"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "schema",
+        "validation",
+        "sharp-edges"
+      ],
+      "files_to_create": [
+        "docs/schemas/sharp-edge-v1.0.json",
+        "pkg/session/handoff_artifacts_validation_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028g-sharp-edge-schema",
+      "pr_labels": [
+        "schema",
+        "week-2",
+        "major"
+      ],
+      "acceptance_criteria_count": 9,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028h",
+      "title": "Implement Git Info Collection",
+      "description": "Replace collectGitInfo() stub with actual git command execution",
+      "file": "tickets/session_archive/028h.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028a"
+      ],
+      "blocks": [],
+      "priority": "minor",
+      "tags": [
+        "git",
+        "context",
+        "enhancement"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-028h-git-info",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "minor"
+      ],
+      "acceptance_criteria_count": 11,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028i",
+      "title": "Error Recovery & Fallback",
+      "description": "Wrapper script that falls back to bash hook if Go CLI fails",
+      "file": "tickets/session_archive/028i.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028d-deploy"
+      ],
+      "blocks": [],
+      "priority": "minor",
+      "tags": [
+        "fallback",
+        "error-recovery",
+        "wrapper"
+      ],
+      "files_to_create": [
+        "scripts/session-archive-wrapper.sh",
+        "test/integration/fallback_test.sh"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028i-error-fallback",
+      "pr_labels": [
+        "fallback",
+        "week-2",
+        "minor"
+      ],
+      "acceptance_criteria_count": 12,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028j",
+      "title": "JSONL History Querying CLI",
+      "description": "Add subcommands to gogent-archive for querying handoff history",
+      "file": "tickets/session_archive/028j.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-028"
+      ],
+      "blocks": [],
+      "priority": "minor",
+      "tags": [
+        "cli",
+        "querying",
+        "enhancement"
+      ],
+      "files_to_create": [
+        "cmd/gogent-archive/subcommands_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028j-history-querying",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "minor"
+      ],
+      "acceptance_criteria_count": 9,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028k",
+      "title": "Handoff Generation Metrics",
+      "description": "Log handoff generation performance metrics for observability",
+      "file": "tickets/session_archive/028k.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-028a"
+      ],
+      "blocks": [],
+      "priority": "minor",
+      "tags": [
+        "observability",
+        "metrics",
+        "enhancement"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-028k-handoff-metrics",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "minor"
+      ],
+      "acceptance_criteria_count": 11,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028l",
+      "title": "Handoff Schema Versioning",
+      "description": "Implement backward-compatible schema migration for handoff JSONL",
+      "file": "tickets/session_archive/028l.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028"
+      ],
+      "blocks": [],
+      "priority": "minor",
+      "tags": [
+        "schema",
+        "migration",
+        "enhancement"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-028l-schema-versioning",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "minor"
+      ],
+      "acceptance_criteria_count": 12,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028m",
+      "title": "Integration Tests for Session Handoff",
+      "description": "End-to-end integration test suite for full handoff workflow",
+      "file": "tickets/session_archive/028m.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028a",
+        "GOgent-028b-parity",
+        "GOgent-028c-archive"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "testing",
+        "integration",
+        "e2e"
+      ],
+      "files_to_create": [
+        "test/integration/session_handoff_integration_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-028m-integration-tests",
+      "pr_labels": [
+        "testing",
+        "week-2",
+        "high"
+      ],
+      "acceptance_criteria_count": 13,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028n",
+      "title": "Deployment Runbook",
+      "description": "Step-by-step deployment and rollback procedures for gogent-archive cutover",
+      "file": "tickets/session_archive/028n.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.0h",
+      "dependencies": [
+        "GOgent-028d-deploy"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "documentation",
+        "deployment",
+        "runbook"
+      ],
+      "files_to_create": [
+        "docs/deployment/gogent-archive-cutover.md"
+      ],
+      "tests_required": false,
+      "git_branch": "gogent-028n-deployment-runbook",
+      "pr_labels": [
+        "documentation",
+        "week-2",
+        "major"
+      ],
+      "acceptance_criteria_count": 10,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-028o",
+      "title": "ADR: JSONL Handoff Format",
+      "description": "Architecture Decision Record documenting rationale for dual JSONL + Markdown format",
+      "file": "tickets/session_archive/028o.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-028"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "documentation",
+        "adr",
+        "architecture"
+      ],
+      "files_to_create": [
+        "docs/decisions/ADR-028-jsonl-handoff-format.md"
+      ],
+      "tests_required": false,
+      "git_branch": "gogent-028o-adr-jsonl-format",
+      "pr_labels": [
+        "documentation",
+        "week-2",
+        "major"
+      ],
+      "acceptance_criteria_count": 7,
       "status": "pending"
     },
     {
