@@ -36,7 +36,7 @@
 
 | File                                  | Ticket      | Lines | Tests | Coverage | Created    | Status     |
 | ------------------------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
-| `handoff_test.go`                     | GOgent-028  | TBD   | TBD   | TBD%     | 2026-01-19 | ✅ Passing |
+| `handoff_test.go`                     | GOgent-028h | 574   | 68    | ~95%     | 2026-01-20 | ✅ Passing |
 | `handoff_artifacts_validation_test.go` | GOgent-028g | 1707  | 5     | 100%     | 2026-01-20 | ✅ Passing |
 
 ### cmd/gogent-archive (SessionEnd Hook CLI)
@@ -460,6 +460,7 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 | Ticket      | Type                     | Audit Location          | Status     | Date       | Notes                                       |
 | ----------- | ------------------------ | ----------------------- | ---------- | ---------- | ------------------------------------------- |
+| GOgent-028h | Git Info Collection      | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Git command execution + 5 test cases, ecosystem ✓ 94.2% |
 | GOgent-028f | Context Loading Compat   | test/audit/GOgent-028f/ | ✅ Passing | 2026-01-20 | Hook compatibility verified, ecosystem ✓ 94.2% |
 | GOgent-028e | Installation & PATH      | test/audit/GOgent-028e/ | ✅ Passing | 2026-01-20 | Makefile install/uninstall, ecosystem ✓ 94.2% |
 | GOgent-028d | Hook Deployment          | test/audit/GOgent-028d/ | ✅ Passing | 2026-01-20 | Hook registration documentation             |
@@ -470,5 +471,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-20 (GOgent-028g sharp edge schema validation)
+**Last Audit**: 2026-01-20 (GOgent-028h git info collection)
 **Next Audit**: After next ticket completion

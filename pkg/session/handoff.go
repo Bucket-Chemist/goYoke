@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -78,7 +79,7 @@ type Action struct {
 type GitInfo struct {
 	Branch      string   `json:"branch"`
 	IsDirty     bool     `json:"is_dirty"`
-	Uncommitted []string `json:"uncommitted,omitempty"`
+	Uncommitted []string `json:"uncommitted,omitempty"` // Files with uncommitted changes
 }
 
 // HandoffConfig contains paths for handoff generation
@@ -255,12 +256,73 @@ func getActiveTicket(projectDir string) string {
 	return strings.TrimSpace(string(data))
 }
 
-// collectGitInfo gathers git repository state
+// collectGitInfo gathers git repository state using git commands.
+// Returns empty GitInfo{} silently for non-git directories or on command failures.
+// Errors are logged to stderr with [git-info] prefix but do not propagate.
 func collectGitInfo(projectDir string) GitInfo {
 	info := GitInfo{}
 
-	// This is a placeholder - real implementation would use git commands
-	// For now, return empty struct to avoid external dependencies in tests
+	// Check if this is a git repository
+	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	cmd.Dir = projectDir
+	if err := cmd.Run(); err != nil {
+		// Not a git repo - return empty info silently
+		return info
+	}
+
+	// Get current branch
+	cmd = exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd.Dir = projectDir
+	if output, err := cmd.Output(); err == nil {
+		info.Branch = strings.TrimSpace(string(output))
+	} else {
+		// Log warning but continue - partial git info is acceptable
+		fmt.Fprintf(os.Stderr, "[git-info] Failed to get branch name. Command failed with exit code %v. Working directory: %s. Continuing with partial git info.\n", err, projectDir)
+	}
+
+	// Get dirty status - check if there are uncommitted changes
+	cmd = exec.Command("git", "status", "--porcelain")
+	cmd.Dir = projectDir
+	if output, err := cmd.Output(); err == nil {
+		statusOutput := strings.TrimSpace(string(output))
+		info.IsDirty = len(statusOutput) > 0
+
+		// Parse uncommitted files if dirty
+		if info.IsDirty {
+			lines := strings.Split(statusOutput, "\n")
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" {
+					continue
+				}
+				// Status format: "XY filename" where XY are status codes
+				// Extract filename (skip first 3 characters: status codes + space)
+				if len(line) > 3 {
+					filename := strings.TrimSpace(line[3:])
+					info.Uncommitted = append(info.Uncommitted, filename)
+				}
+			}
+		}
+	} else {
+		// Log warning but continue
+		fmt.Fprintf(os.Stderr, "[git-info] Failed to get working tree status. Command 'git status --porcelain' failed with exit code %v. Working directory: %s. Continuing with partial git info.\n", err, projectDir)
+	}
+
+	// Optional: Get ahead/behind count (upstream tracking)
+	// This command may fail if no upstream is configured - that's acceptable
+	cmd = exec.Command("git", "rev-list", "--left-right", "--count", "@{upstream}...HEAD")
+	cmd.Dir = projectDir
+	if output, err := cmd.Output(); err == nil {
+		// Output format: "N\tM" where N=behind, M=ahead
+		// We don't store this yet in GitInfo struct, but logging for future enhancement
+		countStr := strings.TrimSpace(string(output))
+		if countStr != "" {
+			// Future: Parse and store in GitInfo if struct is extended
+			_ = countStr
+		}
+	}
+	// Silently ignore upstream count errors - not all repos have upstreams
+
 	return info
 }
 

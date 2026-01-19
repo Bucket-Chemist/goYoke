@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -354,14 +355,228 @@ func TestGetActiveTicket_ValidFile(t *testing.T) {
 	}
 }
 
-func TestCollectGitInfo(t *testing.T) {
-	tmpDir := t.TempDir()
+func TestCollectGitInfo_NonGitDir(t *testing.T) {
+	// Create a truly isolated temp directory outside any git repo
+	tmpDir, err := os.MkdirTemp("/tmp", "non-git-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
 	info := collectGitInfo(tmpDir)
 
-	// Currently placeholder - should not error
+	// Non-git directory should return empty GitInfo
 	if info.Branch != "" {
-		t.Logf("Git info collected: %+v", info)
+		t.Errorf("Expected empty Branch for non-git directory, got: %s", info.Branch)
 	}
+
+	if info.IsDirty {
+		t.Errorf("Expected IsDirty=false for non-git directory, got: %v", info.IsDirty)
+	}
+
+	if len(info.Uncommitted) > 0 {
+		t.Errorf("Expected empty Uncommitted for non-git directory, got: %v", info.Uncommitted)
+	}
+}
+
+func TestCollectGitInfo_ValidRepo(t *testing.T) {
+	// This test requires running in a git repository
+	// Skip if not in git environment
+	cmd := exec.Command("git", "rev-parse", "--is-inside-work-tree")
+	if err := cmd.Run(); err != nil {
+		t.Skip("Not in git repo, skipping git info test")
+	}
+
+	// Use current directory (the GOgent-Fortress repo itself)
+	info := collectGitInfo(".")
+
+	// In a valid git repo, we should get a branch name
+	if info.Branch == "" {
+		t.Error("Expected non-empty branch name in git repo")
+	}
+
+	// Log the collected info for visibility
+	t.Logf("Git info collected: Branch=%s, IsDirty=%v, Uncommitted=%v", info.Branch, info.IsDirty, info.Uncommitted)
+}
+
+func TestCollectGitInfo_CleanRepo(t *testing.T) {
+	// Create a temporary git repository
+	tmpDir := t.TempDir()
+
+	// Initialize git repo
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to initialize git repo: %v", err)
+	}
+
+	// Configure git user for this repo
+	exec.Command("git", "config", "user.email", "test@example.com").Dir = tmpDir
+	exec.Command("git", "config", "user.name", "Test User").Run()
+
+	// Create and commit a file to have a branch
+	testFile := filepath.Join(tmpDir, "test.txt")
+	os.WriteFile(testFile, []byte("test content"), 0644)
+
+	cmd = exec.Command("git", "add", "test.txt")
+	cmd.Dir = tmpDir
+	cmd.Run()
+
+	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to commit: %v", err)
+	}
+
+	// Collect git info
+	info := collectGitInfo(tmpDir)
+
+	// Should have branch name (master or main depending on git version)
+	if info.Branch == "" {
+		t.Error("Expected branch name, got empty string")
+	}
+
+	// Should not be dirty (no uncommitted changes)
+	if info.IsDirty {
+		t.Errorf("Expected clean repo (IsDirty=false), got: %v", info.IsDirty)
+	}
+
+	// Should have no uncommitted files
+	if len(info.Uncommitted) > 0 {
+		t.Errorf("Expected no uncommitted files in clean repo, got: %v", info.Uncommitted)
+	}
+}
+
+func TestCollectGitInfo_DirtyRepo(t *testing.T) {
+	// Create a temporary git repository
+	tmpDir := t.TempDir()
+
+	// Initialize git repo
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to initialize git repo: %v", err)
+	}
+
+	// Configure git user
+	exec.Command("git", "config", "user.email", "test@example.com").Dir = tmpDir
+	exec.Command("git", "config", "user.name", "Test User").Run()
+
+	// Create and commit initial file
+	testFile1 := filepath.Join(tmpDir, "committed.txt")
+	os.WriteFile(testFile1, []byte("committed content"), 0644)
+
+	cmd = exec.Command("git", "add", "committed.txt")
+	cmd.Dir = tmpDir
+	cmd.Run()
+
+	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to commit: %v", err)
+	}
+
+	// Create uncommitted file
+	testFile2 := filepath.Join(tmpDir, "uncommitted.txt")
+	os.WriteFile(testFile2, []byte("uncommitted content"), 0644)
+
+	// Modify committed file
+	os.WriteFile(testFile1, []byte("modified content"), 0644)
+
+	// Collect git info
+	info := collectGitInfo(tmpDir)
+
+	// Should have branch name
+	if info.Branch == "" {
+		t.Error("Expected branch name, got empty string")
+	}
+
+	// Should be dirty
+	if !info.IsDirty {
+		t.Error("Expected dirty repo (IsDirty=true), got false")
+	}
+
+	// Should have uncommitted files
+	if len(info.Uncommitted) == 0 {
+		t.Error("Expected uncommitted files, got empty list")
+	}
+
+	// Verify we captured both files
+	hasCommittedFile := false
+	hasUncommittedFile := false
+	for _, file := range info.Uncommitted {
+		if strings.Contains(file, "committed.txt") {
+			hasCommittedFile = true
+		}
+		if strings.Contains(file, "uncommitted.txt") {
+			hasUncommittedFile = true
+		}
+	}
+
+	if !hasCommittedFile {
+		t.Errorf("Expected to find modified committed.txt in uncommitted files, got: %v", info.Uncommitted)
+	}
+
+	if !hasUncommittedFile {
+		t.Errorf("Expected to find uncommitted.txt in uncommitted files, got: %v", info.Uncommitted)
+	}
+
+	t.Logf("Dirty repo info: Branch=%s, IsDirty=%v, Uncommitted=%v", info.Branch, info.IsDirty, info.Uncommitted)
+}
+
+func TestCollectGitInfo_DetachedHead(t *testing.T) {
+	// Create a temporary git repository
+	tmpDir := t.TempDir()
+
+	// Initialize git repo
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to initialize git repo: %v", err)
+	}
+
+	// Configure git user
+	exec.Command("git", "config", "user.email", "test@example.com").Dir = tmpDir
+	exec.Command("git", "config", "user.name", "Test User").Run()
+
+	// Create and commit a file
+	testFile := filepath.Join(tmpDir, "test.txt")
+	os.WriteFile(testFile, []byte("test content"), 0644)
+
+	cmd = exec.Command("git", "add", "test.txt")
+	cmd.Dir = tmpDir
+	cmd.Run()
+
+	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd.Dir = tmpDir
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Failed to commit: %v", err)
+	}
+
+	// Get the commit hash
+	cmd = exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = tmpDir
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("Failed to get commit hash: %v", err)
+	}
+	commitHash := strings.TrimSpace(string(output))
+
+	// Checkout the commit directly to enter detached HEAD state
+	cmd = exec.Command("git", "checkout", commitHash)
+	cmd.Dir = tmpDir
+	cmd.Run() // Ignore error - some git versions handle this differently
+
+	// Collect git info
+	info := collectGitInfo(tmpDir)
+
+	// Should have branch name (will be "HEAD" in detached state)
+	if info.Branch == "" {
+		t.Error("Expected branch/HEAD name, got empty string")
+	}
+
+	// Log detached HEAD state
+	t.Logf("Detached HEAD info: Branch=%s (expected 'HEAD' or commit hash)", info.Branch)
 }
 
 func TestGenerateActions_NoArtifacts(t *testing.T) {
