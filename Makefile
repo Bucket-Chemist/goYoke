@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate install install-archive uninstall check-path clean
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate install install-archive install-wrapper uninstall check-path clean
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  make build-archive   - Build gogent-archive binary"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
+	@echo "  make install-wrapper - Install session-archive wrapper hook"
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
 	@echo "  make clean           - Remove build artifacts"
@@ -84,6 +85,17 @@ install-archive: build-archive
 	chmod +x ~/.local/bin/gogent-archive
 	@echo "✅ Installed to ~/.local/bin/gogent-archive"
 	@echo "Ensure ~/.local/bin is in your PATH"
+
+install-wrapper:
+	@echo "Installing session-archive wrapper hook..."
+	mkdir -p ~/.claude/hooks
+	mkdir -p ~/.gogent
+	cp scripts/session-archive-wrapper.sh ~/.claude/hooks/session-archive-wrapper.sh
+	chmod +x ~/.claude/hooks/session-archive-wrapper.sh
+	@echo "✅ Wrapper installed"
+	@echo ""
+	@echo "Update hook config to use:"
+	@echo "    command = \"~/.claude/hooks/session-archive-wrapper.sh\""
 
 check-path:
 	@if echo $$PATH | grep -q "/.local/bin"; then \

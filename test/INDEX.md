@@ -2,7 +2,7 @@
 
 **Project**: GOgent Fortress (GOgent-Fortress)
 **Purpose**: Track all test files, coverage, and testing deliverables per ticket
-**Last Updated**: 2026-01-19
+**Last Updated**: 2026-01-20
 
 ---
 
@@ -72,6 +72,7 @@
 | File                       | Ticket             | Lines | Tests | Coverage | Created    | Status     |
 | -------------------------- | ------------------ | ----- | ----- | -------- | ---------- | ---------- |
 | `metrics_parity_test.go`   | GOgent-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
+| `fallback_test.sh`         | GOgent-028i        | 48    | 1     | N/A      | 2026-01-20 | ✅ Passing |
 
 **Test Functions**:
 
@@ -468,8 +469,9 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 | GOgent-028b | Metrics Parity           | test/audit/GOgent-028b/ | ✅ Passing | 2026-01-19 | Bash vs Go metrics validation               |
 | GOgent-028a | Archive CLI Build        | test/audit/GOgent-028/  | ✅ Passing | 2026-01-19 | Initial gogent-archive implementation       |
 | GOgent-028g | Sharp Edge Schema        | test/audit/GOgent-028g/ | ✅ Passing | 2026-01-20 | JSON schema + validation, ecosystem ✓ 94.2% |
+| GOgent-028i | Error Recovery Wrapper   | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Go→Bash fallback wrapper, ecosystem ✓ 94.2% |
 
 ---
 
-**Last Audit**: 2026-01-20 (GOgent-028h git info collection)
+**Last Audit**: 2026-01-20 (GOgent-028i error recovery wrapper)
 **Next Audit**: After next ticket completion
