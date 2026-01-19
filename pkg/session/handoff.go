@@ -83,11 +83,12 @@ type GitInfo struct {
 
 // HandoffConfig contains paths for handoff generation
 type HandoffConfig struct {
-	ProjectDir      string
-	HandoffPath     string // .claude/memory/handoffs.jsonl
-	PendingPath     string // .claude/memory/pending-learnings.jsonl
-	ViolationsPath  string // .claude/memory/routing-violations.jsonl
+	ProjectDir        string
+	HandoffPath       string // .claude/memory/handoffs.jsonl
+	PendingPath       string // .claude/memory/pending-learnings.jsonl
+	ViolationsPath    string // .claude/memory/routing-violations.jsonl
 	ErrorPatternsPath string // /tmp/claude-error-patterns.jsonl
+	TranscriptPath    string // Optional: session transcript for archival
 }
 
 // DefaultHandoffConfig creates default paths for handoff generation

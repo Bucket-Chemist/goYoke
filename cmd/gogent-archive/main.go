@@ -68,6 +68,11 @@ func run() error {
 		return fmt.Errorf("[gogent-archive] Failed to write markdown to %s: %w", mdPath, err)
 	}
 
+	// Archive artifacts AFTER handoff generation
+	if err := session.ArchiveArtifacts(*handoffCfg, event.SessionID); err != nil {
+		return fmt.Errorf("[gogent-archive] Failed to archive artifacts: %w", err)
+	}
+
 	// Output confirmation JSON matching bash hook format
 	confirmation := map[string]interface{}{
 		"hookSpecificOutput": map[string]interface{}{
