@@ -10,7 +10,7 @@
 
 | Package     | Coverage | Status       |
 | ----------- | -------- | ------------ |
-| pkg/routing | 86.8%    | ✅ Excellent |
+| pkg/routing | 87.2%    | ✅ Excellent |
 
 **Overall Target**: ≥80% coverage per package
 
@@ -27,10 +27,10 @@
 | `agents_test.go`        | GOgent-003     | 796   | 14    | ~95%     | 2026-01-16 | ✅ Passing |
 | `events_test.go`        | GOgent-006/007 | 1072  | 13    | ~85%     | 2026-01-15 | ✅ Passing |
 | `stdin_test.go`         | GOgent-006/007 | 302   | 8     | ~80%     | 2026-01-15 | ✅ Passing |
-| `transcript_test.go`    | GOgent-027b/c  | 372   | 12    | ~87%     | 2026-01-19 | ✅ Passing |
+| `transcript_test.go`    | GOgent-027b/c/d | 839   | 30    | ~87%     | 2026-01-19 | ✅ Passing |
 
-**Total Unit Test Lines**: 2,988 lines
-**Total Test Functions**: 55 tests
+**Total Unit Test Lines**: 3,455 lines
+**Total Test Functions**: 73 tests
 
 ### corpus-logger (Development Tool)
 
@@ -409,5 +409,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-19 (GOgent-027c completion)
-**Next Audit**: After GOgent-027d
+**Last Audit**: 2026-01-19 (GOgent-027d completion)
+**Next Audit**: After GOgent-028

@@ -97,3 +97,53 @@ func AnalyzeToolDistribution(events []ToolEvent) map[string]int {
 
 	return distribution
 }
+
+// SessionPhase represents a detected work phase within a session
+type SessionPhase struct {
+	Phase     string // "discovery", "implementation", "debugging", "delegation", "mixed"
+	StartTime int64
+	Duration  int64
+	ToolCount int
+}
+
+// DetectPhases identifies session work phases based on tool usage patterns
+// Uses threshold heuristics: 70% for discovery/implementation/delegation, 50% for debugging
+func DetectPhases(events []ToolEvent) []SessionPhase {
+	if len(events) == 0 {
+		return []SessionPhase{}
+	}
+
+	// Analyze tool distribution
+	dist := AnalyzeToolDistribution(events)
+
+	total := len(events)
+	readCount := dist["Read"] + dist["Glob"] + dist["Grep"]
+	editCount := dist["Edit"] + dist["Write"]
+	taskCount := dist["Task"]
+	bashCount := dist["Bash"]
+
+	// Apply heuristics in priority order
+	var phase string
+	if float64(readCount)/float64(total) >= 0.7 {
+		phase = "discovery"
+	} else if float64(editCount)/float64(total) >= 0.7 {
+		phase = "implementation"
+	} else if float64(taskCount)/float64(total) >= 0.7 {
+		phase = "delegation"
+	} else if float64(bashCount)/float64(total) >= 0.5 {
+		phase = "debugging"
+	} else {
+		phase = "mixed"
+	}
+
+	// Calculate time range
+	startTime := events[0].CapturedAt
+	endTime := events[len(events)-1].CapturedAt
+
+	return []SessionPhase{{
+		Phase:     phase,
+		StartTime: startTime,
+		Duration:  endTime - startTime,
+		ToolCount: total,
+	}}
+}

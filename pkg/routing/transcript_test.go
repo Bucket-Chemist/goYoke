@@ -370,3 +370,470 @@ func TestAnalyzeToolDistribution_AccuracyWithRealPattern(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectPhases_EmptyEvents(t *testing.T) {
+	result := DetectPhases([]ToolEvent{})
+
+	if len(result) != 0 {
+		t.Errorf("Expected empty slice for empty events, got: %v", result)
+	}
+}
+
+func TestDetectPhases_DiscoverySession(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+		{ToolName: "Read", CapturedAt: 1200},
+		{ToolName: "Read", CapturedAt: 1300},
+		{ToolName: "Read", CapturedAt: 1400},
+		{ToolName: "Read", CapturedAt: 1500},
+		{ToolName: "Read", CapturedAt: 1600},
+		{ToolName: "Glob", CapturedAt: 1700},
+		{ToolName: "Grep", CapturedAt: 1800},
+		{ToolName: "Edit", CapturedAt: 1900}, // 10% non-discovery
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "discovery" {
+		t.Errorf("Expected discovery phase, got: %s", result[0].Phase)
+	}
+
+	if result[0].ToolCount != 10 {
+		t.Errorf("Expected tool count 10, got: %d", result[0].ToolCount)
+	}
+
+	if result[0].Duration != 900 {
+		t.Errorf("Expected duration 900, got: %d", result[0].Duration)
+	}
+}
+
+func TestDetectPhases_ImplementationSession(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Edit", CapturedAt: 1000},
+		{ToolName: "Edit", CapturedAt: 1100},
+		{ToolName: "Edit", CapturedAt: 1200},
+		{ToolName: "Edit", CapturedAt: 1300},
+		{ToolName: "Write", CapturedAt: 1400},
+		{ToolName: "Write", CapturedAt: 1500},
+		{ToolName: "Write", CapturedAt: 1600},
+		{ToolName: "Write", CapturedAt: 1700},
+		{ToolName: "Read", CapturedAt: 1800},
+		{ToolName: "Read", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "implementation" {
+		t.Errorf("Expected implementation phase, got: %s", result[0].Phase)
+	}
+}
+
+func TestDetectPhases_DebuggingSession(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Bash", CapturedAt: 1000},
+		{ToolName: "Bash", CapturedAt: 1100},
+		{ToolName: "Bash", CapturedAt: 1200},
+		{ToolName: "Bash", CapturedAt: 1300},
+		{ToolName: "Bash", CapturedAt: 1400},
+		{ToolName: "Bash", CapturedAt: 1500},
+		{ToolName: "Read", CapturedAt: 1600},
+		{ToolName: "Read", CapturedAt: 1700},
+		{ToolName: "Read", CapturedAt: 1800},
+		{ToolName: "Edit", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "debugging" {
+		t.Errorf("Expected debugging phase, got: %s", result[0].Phase)
+	}
+}
+
+func TestDetectPhases_DelegationSession(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Task", CapturedAt: 1000},
+		{ToolName: "Task", CapturedAt: 1100},
+		{ToolName: "Task", CapturedAt: 1200},
+		{ToolName: "Task", CapturedAt: 1300},
+		{ToolName: "Task", CapturedAt: 1400},
+		{ToolName: "Task", CapturedAt: 1500},
+		{ToolName: "Task", CapturedAt: 1600},
+		{ToolName: "Task", CapturedAt: 1700},
+		{ToolName: "Read", CapturedAt: 1800},
+		{ToolName: "Read", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "delegation" {
+		t.Errorf("Expected delegation phase, got: %s", result[0].Phase)
+	}
+}
+
+func TestDetectPhases_MixedSession(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+		{ToolName: "Edit", CapturedAt: 1200},
+		{ToolName: "Edit", CapturedAt: 1300},
+		{ToolName: "Bash", CapturedAt: 1400},
+		{ToolName: "Bash", CapturedAt: 1500},
+		{ToolName: "Task", CapturedAt: 1600},
+		{ToolName: "Task", CapturedAt: 1700},
+		{ToolName: "Glob", CapturedAt: 1800},
+		{ToolName: "Write", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "mixed" {
+		t.Errorf("Expected mixed phase, got: %s", result[0].Phase)
+	}
+}
+
+func TestDetectPhases_ShortSession(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].ToolCount != 2 {
+		t.Errorf("Expected tool count 2, got: %d", result[0].ToolCount)
+	}
+}
+
+func TestDetectPhases_ThresholdBoundary(t *testing.T) {
+	// Test 70% threshold exactly (7 out of 10)
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+		{ToolName: "Read", CapturedAt: 1200},
+		{ToolName: "Read", CapturedAt: 1300},
+		{ToolName: "Read", CapturedAt: 1400},
+		{ToolName: "Read", CapturedAt: 1500},
+		{ToolName: "Read", CapturedAt: 1600},
+		{ToolName: "Edit", CapturedAt: 1700},
+		{ToolName: "Edit", CapturedAt: 1800},
+		{ToolName: "Edit", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "discovery" {
+		t.Errorf("Expected discovery phase at 70%% threshold, got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_BelowThreshold69 tests that 6/10 (60%) doesn't trigger discovery
+func TestDetectPhases_BelowThreshold69(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+		{ToolName: "Read", CapturedAt: 1200},
+		{ToolName: "Read", CapturedAt: 1300},
+		{ToolName: "Read", CapturedAt: 1400},
+		{ToolName: "Read", CapturedAt: 1500},
+		{ToolName: "Edit", CapturedAt: 1600},
+		{ToolName: "Edit", CapturedAt: 1700},
+		{ToolName: "Edit", CapturedAt: 1800},
+		{ToolName: "Bash", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	// 60% read, 30% edit - neither meets 70%, no 50%+ bash
+	if result[0].Phase != "mixed" {
+		t.Errorf("Expected mixed phase below 70%% threshold, got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_DebuggingThreshold50 tests debugging triggers at 50% exactly
+func TestDetectPhases_DebuggingThreshold50(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Bash", CapturedAt: 1000},
+		{ToolName: "Bash", CapturedAt: 1100},
+		{ToolName: "Bash", CapturedAt: 1200},
+		{ToolName: "Bash", CapturedAt: 1300},
+		{ToolName: "Bash", CapturedAt: 1400},
+		{ToolName: "Read", CapturedAt: 1500},
+		{ToolName: "Read", CapturedAt: 1600},
+		{ToolName: "Edit", CapturedAt: 1700},
+		{ToolName: "Edit", CapturedAt: 1800},
+		{ToolName: "Write", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	// 50% bash should trigger debugging
+	if result[0].Phase != "debugging" {
+		t.Errorf("Expected debugging phase at 50%% threshold, got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_PriorityOrderingDiscoveryBeatsImplementation tests discovery takes precedence
+func TestDetectPhases_PriorityOrderingDiscoveryBeatsImplementation(t *testing.T) {
+	// Both discovery (70%) and implementation (70%) would qualify, but discovery has priority
+	// 7 reads + 7 edits = 14 total, both are 50% (neither triggers alone)
+	// But if we make it 8 reads + 6 edits = 14 total, reads = 57% (not triggered)
+	// Let's test: 10 reads + 4 edits = 14 total, reads = 71% → should be discovery
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+		{ToolName: "Read", CapturedAt: 1200},
+		{ToolName: "Read", CapturedAt: 1300},
+		{ToolName: "Read", CapturedAt: 1400},
+		{ToolName: "Glob", CapturedAt: 1500},
+		{ToolName: "Glob", CapturedAt: 1600},
+		{ToolName: "Glob", CapturedAt: 1700},
+		{ToolName: "Glob", CapturedAt: 1800},
+		{ToolName: "Glob", CapturedAt: 1900},
+		{ToolName: "Edit", CapturedAt: 2000},
+		{ToolName: "Edit", CapturedAt: 2100},
+		{ToolName: "Write", CapturedAt: 2200},
+		{ToolName: "Write", CapturedAt: 2300},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	// 10/14 = 71% discovery tools, 4/14 = 28% implementation tools
+	// Discovery should win due to priority
+	if result[0].Phase != "discovery" {
+		t.Errorf("Expected discovery phase (priority), got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_SingleEvent tests single-event sessions
+func TestDetectPhases_SingleEvent(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	// 1 Read = 100% discovery
+	if result[0].Phase != "discovery" {
+		t.Errorf("Expected discovery phase for single Read event, got: %s", result[0].Phase)
+	}
+
+	if result[0].ToolCount != 1 {
+		t.Errorf("Expected tool count 1, got: %d", result[0].ToolCount)
+	}
+
+	if result[0].Duration != 0 {
+		t.Errorf("Expected duration 0 for single event, got: %d", result[0].Duration)
+	}
+
+	if result[0].StartTime != 1000 {
+		t.Errorf("Expected start time 1000, got: %d", result[0].StartTime)
+	}
+}
+
+// TestDetectPhases_StartTimeAndDuration tests time calculations
+func TestDetectPhases_StartTimeAndDuration(t *testing.T) {
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 5000},
+		{ToolName: "Read", CapturedAt: 5500},
+		{ToolName: "Read", CapturedAt: 6000},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].StartTime != 5000 {
+		t.Errorf("Expected start time 5000, got: %d", result[0].StartTime)
+	}
+
+	if result[0].Duration != 1000 {
+		t.Errorf("Expected duration 1000 (6000-5000), got: %d", result[0].Duration)
+	}
+}
+
+// TestDetectPhases_Implementation70Percent tests implementation at exactly 70%
+func TestDetectPhases_Implementation70Percent(t *testing.T) {
+	// 7 implementation tools, 3 others = 10 total (70%)
+	events := []ToolEvent{
+		{ToolName: "Edit", CapturedAt: 1000},
+		{ToolName: "Edit", CapturedAt: 1100},
+		{ToolName: "Edit", CapturedAt: 1200},
+		{ToolName: "Write", CapturedAt: 1300},
+		{ToolName: "Write", CapturedAt: 1400},
+		{ToolName: "Write", CapturedAt: 1500},
+		{ToolName: "Write", CapturedAt: 1600},
+		{ToolName: "Read", CapturedAt: 1700},
+		{ToolName: "Read", CapturedAt: 1800},
+		{ToolName: "Bash", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "implementation" {
+		t.Errorf("Expected implementation phase at 70%% threshold, got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_Delegation70Percent tests delegation at exactly 70%
+func TestDetectPhases_Delegation70Percent(t *testing.T) {
+	// 7 Task tools, 3 others = 10 total (70%)
+	events := []ToolEvent{
+		{ToolName: "Task", CapturedAt: 1000},
+		{ToolName: "Task", CapturedAt: 1100},
+		{ToolName: "Task", CapturedAt: 1200},
+		{ToolName: "Task", CapturedAt: 1300},
+		{ToolName: "Task", CapturedAt: 1400},
+		{ToolName: "Task", CapturedAt: 1500},
+		{ToolName: "Task", CapturedAt: 1600},
+		{ToolName: "Read", CapturedAt: 1700},
+		{ToolName: "Read", CapturedAt: 1800},
+		{ToolName: "Edit", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "delegation" {
+		t.Errorf("Expected delegation phase at 70%% threshold, got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_MixedToolCombination tests various tool combinations that don't meet thresholds
+func TestDetectPhases_MixedToolCombination(t *testing.T) {
+	// Designed so no category reaches its threshold:
+	// 4 Read = 40%, 3 Edit = 30%, 2 Bash = 20%, 1 Task = 10%
+	events := []ToolEvent{
+		{ToolName: "Read", CapturedAt: 1000},
+		{ToolName: "Read", CapturedAt: 1100},
+		{ToolName: "Read", CapturedAt: 1200},
+		{ToolName: "Read", CapturedAt: 1300},
+		{ToolName: "Edit", CapturedAt: 1400},
+		{ToolName: "Edit", CapturedAt: 1500},
+		{ToolName: "Edit", CapturedAt: 1600},
+		{ToolName: "Bash", CapturedAt: 1700},
+		{ToolName: "Bash", CapturedAt: 1800},
+		{ToolName: "Task", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "mixed" {
+		t.Errorf("Expected mixed phase, got: %s", result[0].Phase)
+	}
+
+	if result[0].ToolCount != 10 {
+		t.Errorf("Expected tool count 10, got: %d", result[0].ToolCount)
+	}
+}
+
+// TestDetectPhases_GrepAsDiscoveryTool tests that Grep counts toward discovery
+func TestDetectPhases_GrepAsDiscoveryTool(t *testing.T) {
+	// 7 Grep tools + 3 others = 10 total (70% discovery)
+	events := []ToolEvent{
+		{ToolName: "Grep", CapturedAt: 1000},
+		{ToolName: "Grep", CapturedAt: 1100},
+		{ToolName: "Grep", CapturedAt: 1200},
+		{ToolName: "Grep", CapturedAt: 1300},
+		{ToolName: "Grep", CapturedAt: 1400},
+		{ToolName: "Grep", CapturedAt: 1500},
+		{ToolName: "Grep", CapturedAt: 1600},
+		{ToolName: "Edit", CapturedAt: 1700},
+		{ToolName: "Edit", CapturedAt: 1800},
+		{ToolName: "Bash", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "discovery" {
+		t.Errorf("Expected discovery phase (Grep counts as discovery), got: %s", result[0].Phase)
+	}
+}
+
+// TestDetectPhases_GlobAsDiscoveryTool tests that Glob counts toward discovery
+func TestDetectPhases_GlobAsDiscoveryTool(t *testing.T) {
+	// 7 Glob tools + 3 others = 10 total (70% discovery)
+	events := []ToolEvent{
+		{ToolName: "Glob", CapturedAt: 1000},
+		{ToolName: "Glob", CapturedAt: 1100},
+		{ToolName: "Glob", CapturedAt: 1200},
+		{ToolName: "Glob", CapturedAt: 1300},
+		{ToolName: "Glob", CapturedAt: 1400},
+		{ToolName: "Glob", CapturedAt: 1500},
+		{ToolName: "Glob", CapturedAt: 1600},
+		{ToolName: "Edit", CapturedAt: 1700},
+		{ToolName: "Write", CapturedAt: 1800},
+		{ToolName: "Bash", CapturedAt: 1900},
+	}
+
+	result := DetectPhases(events)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 phase, got: %d", len(result))
+	}
+
+	if result[0].Phase != "discovery" {
+		t.Errorf("Expected discovery phase (Glob counts as discovery), got: %s", result[0].Phase)
+	}
+}
