@@ -27,9 +27,10 @@
 | `agents_test.go`        | GOgent-003     | 796   | 14    | ~95%     | 2026-01-16 | ✅ Passing |
 | `events_test.go`        | GOgent-006/007 | 1072  | 13    | ~85%     | 2026-01-15 | ✅ Passing |
 | `stdin_test.go`         | GOgent-006/007 | 302   | 8     | ~80%     | 2026-01-15 | ✅ Passing |
+| `transcript_test.go`    | GOgent-027b    | 272   | 6     | ~91%     | 2026-01-19 | ✅ Passing |
 
-**Total Unit Test Lines**: 2,616 lines
-**Total Test Functions**: 43 tests
+**Total Unit Test Lines**: 2,888 lines
+**Total Test Functions**: 49 tests
 
 ### corpus-logger (Development Tool)
 
@@ -408,5 +409,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-16 (GOgent-003 completion)
-**Next Audit**: After GOgent-004a
+**Last Audit**: 2026-01-19 (GOgent-027b completion)
+**Next Audit**: After GOgent-028

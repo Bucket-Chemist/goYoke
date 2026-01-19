@@ -1110,7 +1110,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-027b",
@@ -1119,7 +1119,7 @@
       "file": "tickets/session_archive/027b.md",
       "week": 2,
       "day": 2,
-      "time_estimate": "1.5h",
+      "time_estimate": "2.0h",
       "dependencies": [
         "GOgent-027"
       ],
@@ -1134,7 +1134,7 @@
         "phase-2"
       ],
       "files_to_create": [
-        "pkg/session/transcript.go"
+        "pkg/routing/transcript.go"
       ],
       "tests_required": true,
       "git_branch": "gogent-027b-parse-transcript",
@@ -1143,7 +1143,7 @@
         "week-2",
         "phase-2"
       ],
-      "acceptance_criteria_count": 9,
+      "acceptance_criteria_count": 11,
       "status": "pending"
     },
     {
