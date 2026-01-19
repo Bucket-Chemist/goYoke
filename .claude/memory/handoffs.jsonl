@@ -1,0 +1,1 @@
+{"schema_version":"1.0","timestamp":1768849330,"session_id":"test-123","context":{"project_dir":"/home/doktersmol/Documents/GOgent-Fortress","metrics":{"tool_calls":0,"errors_logged":0,"routing_violations":0,"session_id":"test-123"},"git_info":{"branch":"","is_dirty":false}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[]},"actions":null}
