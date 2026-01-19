@@ -34,9 +34,10 @@
 
 ### pkg/session (Session Management & Handoff)
 
-| File           | Ticket     | Lines | Tests | Coverage | Created    | Status     |
-| -------------- | ---------- | ----- | ----- | -------- | ---------- | ---------- |
-| `handoff_test.go` | GOgent-028 | TBD   | TBD   | TBD%     | 2026-01-19 | ✅ Passing |
+| File                                  | Ticket      | Lines | Tests | Coverage | Created    | Status     |
+| ------------------------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
+| `handoff_test.go`                     | GOgent-028  | TBD   | TBD   | TBD%     | 2026-01-19 | ✅ Passing |
+| `handoff_artifacts_validation_test.go` | GOgent-028g | 1707  | 5     | 100%     | 2026-01-20 | ✅ Passing |
 
 ### cmd/gogent-archive (SessionEnd Hook CLI)
 
@@ -465,8 +466,9 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 | GOgent-028c | Artifact Archival        | test/audit/GOgent-028c/ | ✅ Passing | 2026-01-20 | Archive CLI implementation                  |
 | GOgent-028b | Metrics Parity           | test/audit/GOgent-028b/ | ✅ Passing | 2026-01-19 | Bash vs Go metrics validation               |
 | GOgent-028a | Archive CLI Build        | test/audit/GOgent-028/  | ✅ Passing | 2026-01-19 | Initial gogent-archive implementation       |
+| GOgent-028g | Sharp Edge Schema        | test/audit/GOgent-028g/ | ✅ Passing | 2026-01-20 | JSON schema + validation, ecosystem ✓ 94.2% |
 
 ---
 
-**Last Audit**: 2026-01-20 (GOgent-028f context loading compatibility)
+**Last Audit**: 2026-01-20 (GOgent-028g sharp edge schema validation)
 **Next Audit**: After next ticket completion

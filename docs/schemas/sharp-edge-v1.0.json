@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SharpEdge",
+  "description": "Sharp edge captured from debugging loop (3+ consecutive failures)",
+  "type": "object",
+  "required": ["file", "error_type", "failure_count", "last_occurrence"],
+  "properties": {
+    "file": {
+      "type": "string",
+      "description": "File path where failure occurred"
+    },
+    "error_type": {
+      "type": "string",
+      "description": "Error classification (parse_error, type_error, etc.)"
+    },
+    "failure_count": {
+      "type": "integer",
+      "description": "Number of consecutive failures",
+      "minimum": 3
+    },
+    "last_occurrence": {
+      "type": "integer",
+      "description": "Unix timestamp of last failure"
+    },
+    "context": {
+      "type": "string",
+      "description": "Optional code snippet or error message"
+    },
+    "remediation": {
+      "type": "string",
+      "description": "Optional suggested fix"
+    }
+  }
+}
