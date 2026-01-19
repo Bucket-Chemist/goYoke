@@ -431,5 +431,17 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-19 (GOgent-028b-parity completion)
+## Deployment & Infrastructure Tests
+
+| Ticket      | Type                     | Audit Location          | Status     | Date       | Notes                                       |
+| ----------- | ------------------------ | ----------------------- | ---------- | ---------- | ------------------------------------------- |
+| GOgent-028e | Installation & PATH      | test/audit/GOgent-028e/ | ✅ Passing | 2026-01-20 | Makefile install/uninstall, ecosystem ✓ 94.2% |
+| GOgent-028d | Hook Deployment          | test/audit/GOgent-028d/ | ✅ Passing | 2026-01-20 | Hook registration documentation             |
+| GOgent-028c | Artifact Archival        | test/audit/GOgent-028c/ | ✅ Passing | 2026-01-20 | Archive CLI implementation                  |
+| GOgent-028b | Metrics Parity           | test/audit/GOgent-028b/ | ✅ Passing | 2026-01-19 | Bash vs Go metrics validation               |
+| GOgent-028a | Archive CLI Build        | test/audit/GOgent-028/  | ✅ Passing | 2026-01-19 | Initial gogent-archive implementation       |
+
+---
+
+**Last Audit**: 2026-01-20 (GOgent-028e installation verification)
 **Next Audit**: After next ticket completion

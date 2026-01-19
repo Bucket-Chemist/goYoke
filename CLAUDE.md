@@ -55,6 +55,77 @@ Ticket system configuration is in `.ticket-config.json`:
 
 ---
 
+## Installation
+
+### Build and Install
+
+```bash
+# Build all binaries
+make build-validate build-archive
+
+# Install to ~/.local/bin (recommended)
+make install
+
+# Verify installation
+which gogent-validate gogent-archive
+```
+
+The `make install` target:
+- Builds both `gogent-validate` and `gogent-archive` binaries
+- Copies them to `~/.local/bin/` with execute permissions
+- Verifies `~/.local/bin` is in PATH
+- Provides shell configuration instructions if needed
+
+### PATH Configuration
+
+If `~/.local/bin` is not in your PATH, the install target will display instructions:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
+
+# Reload shell config
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+You can also verify PATH configuration manually:
+
+```bash
+make check-path
+```
+
+### Uninstall
+
+```bash
+make uninstall
+```
+
+Removes all installed CLIs from `~/.local/bin/`.
+
+### Hook Integration
+
+After installation, update Claude Code hook configuration to use the installed binaries:
+
+```toml
+[hooks.PreToolUse]
+command = "gogent-validate"
+
+[hooks.SessionEnd]
+command = "gogent-archive"
+```
+
+If not using PATH-based lookup, specify absolute paths:
+
+```toml
+[hooks.PreToolUse]
+command = "/home/username/.local/bin/gogent-validate"
+
+[hooks.SessionEnd]
+command = "/home/username/.local/bin/gogent-archive"
+```
+
+---
+
 ## Audit System
 
 The ticket system includes automated audit testing (Phase 7.5). After completing ticket work and verifying acceptance criteria:
@@ -202,5 +273,5 @@ For questions about:
 
 **Project**: GOgent-Fortress
 **Status**: Active Development (Ticket-Driven)
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-01-20
 **Maintained By**: System
