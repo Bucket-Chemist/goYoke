@@ -285,8 +285,12 @@ func TestGenerateHandoff_Actions(t *testing.T) {
 }
 
 func TestLoadHandoff_MissingFile(t *testing.T) {
-	handoff, err := LoadHandoff("/tmp/nonexistent-handoff.jsonl")
+	tmpDir := t.TempDir()
+	handoffPath := filepath.Join(tmpDir, "nonexistent.jsonl")
 
+	handoff, err := LoadHandoff(handoffPath)
+
+	// Missing file should return nil without error (normal case)
 	if err != nil {
 		t.Errorf("Expected no error for missing file, got: %v", err)
 	}
@@ -303,6 +307,7 @@ func TestLoadHandoff_EmptyFile(t *testing.T) {
 
 	handoff, err := LoadHandoff(handoffPath)
 
+	// Empty file should return nil without error (acceptable case)
 	if err != nil {
 		t.Errorf("Expected no error for empty file, got: %v", err)
 	}
@@ -312,22 +317,227 @@ func TestLoadHandoff_EmptyFile(t *testing.T) {
 	}
 }
 
+func TestLoadHandoff_CurrentVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	handoffPath := filepath.Join(tmpDir, "handoffs.jsonl")
+
+	// Write v1.0 handoff
+	handoff := &Handoff{
+		SessionID:     "test-v1",
+		Timestamp:     1234567890,
+		SchemaVersion: "1.0",
+		Context: SessionContext{
+			Metrics: SessionMetrics{ToolCalls: 5},
+		},
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+	os.WriteFile(handoffPath, jsonData, 0644)
+
+	loaded, err := LoadHandoff(handoffPath)
+
+	if err != nil {
+		t.Fatalf("Expected no error loading v1.0, got: %v", err)
+	}
+
+	if loaded.SchemaVersion != "1.0" {
+		t.Errorf("Expected schema version 1.0, got: %s", loaded.SchemaVersion)
+	}
+
+	if loaded.SessionID != "test-v1" {
+		t.Errorf("Expected session ID test-v1, got: %s", loaded.SessionID)
+	}
+}
+
+func TestLoadHandoff_MultipleEntries(t *testing.T) {
+	tmpDir := t.TempDir()
+	handoffPath := filepath.Join(tmpDir, "handoffs.jsonl")
+
+	// Write multiple JSONL entries
+	handoff1 := &Handoff{SessionID: "session-1", SchemaVersion: "1.0", Timestamp: 100}
+	handoff2 := &Handoff{SessionID: "session-2", SchemaVersion: "1.0", Timestamp: 200}
+	handoff3 := &Handoff{SessionID: "session-3", SchemaVersion: "1.0", Timestamp: 300}
+
+	json1, _ := json.Marshal(handoff1)
+	json2, _ := json.Marshal(handoff2)
+	json3, _ := json.Marshal(handoff3)
+
+	content := string(json1) + "\n" + string(json2) + "\n" + string(json3) + "\n"
+	os.WriteFile(handoffPath, []byte(content), 0644)
+
+	loaded, err := LoadHandoff(handoffPath)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Should load LAST entry
+	if loaded.SessionID != "session-3" {
+		t.Errorf("Expected last session (session-3), got: %s", loaded.SessionID)
+	}
+}
+
+func TestLoadHandoff_InvalidJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	handoffPath := filepath.Join(tmpDir, "handoffs.jsonl")
+
+	os.WriteFile(handoffPath, []byte("{invalid json}"), 0644)
+
+	_, err := LoadHandoff(handoffPath)
+
+	if err == nil {
+		t.Error("Expected error for invalid JSON, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "[handoff]") {
+		t.Errorf("Expected error with [handoff] prefix, got: %v", err)
+	}
+
+	if !strings.Contains(err.Error(), "Failed to parse") {
+		t.Errorf("Expected 'Failed to parse' in error, got: %v", err)
+	}
+}
+
+func TestLoadHandoff_UnsupportedVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	handoffPath := filepath.Join(tmpDir, "handoffs.jsonl")
+
+	// Write future schema version
+	futureHandoff := map[string]interface{}{
+		"schema_version": "3.5",
+		"session_id":     "future-session",
+		"timestamp":      1234567890,
+	}
+
+	jsonData, _ := json.Marshal(futureHandoff)
+	os.WriteFile(handoffPath, jsonData, 0644)
+
+	_, err := LoadHandoff(handoffPath)
+
+	if err == nil {
+		t.Error("Expected error for unsupported version 3.5, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "Unsupported schema version 3.5") {
+		t.Errorf("Expected 'Unsupported schema version 3.5' in error, got: %v", err)
+	}
+
+	if !strings.Contains(err.Error(), "Upgrade gogent-archive") {
+		t.Errorf("Expected 'Upgrade gogent-archive' guidance in error, got: %v", err)
+	}
+}
+
+func TestMigrateHandoff_V1ToV1(t *testing.T) {
+	handoff := &Handoff{
+		SessionID:     "migrate-test",
+		SchemaVersion: "1.0",
+		Timestamp:     1234567890,
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+
+	migrated, err := migrateHandoff("1.0", jsonData)
+
+	if err != nil {
+		t.Fatalf("Expected no error migrating v1.0 to v1.0, got: %v", err)
+	}
+
+	if migrated.SessionID != "migrate-test" {
+		t.Errorf("Expected session ID migrate-test, got: %s", migrated.SessionID)
+	}
+
+	if migrated.SchemaVersion != "1.0" {
+		t.Errorf("Expected schema version 1.0, got: %s", migrated.SchemaVersion)
+	}
+}
+
+func TestMigrateHandoff_FutureVersionStub(t *testing.T) {
+	// This test will fail when v2.0 is actually implemented
+	// It documents the migration path exists
+
+	futureHandoff := map[string]interface{}{
+		"schema_version": "2.0",
+		"session_id":     "future",
+	}
+
+	jsonData, _ := json.Marshal(futureHandoff)
+
+	_, err := migrateHandoff("2.0", jsonData)
+
+	if err == nil {
+		t.Error("Expected error for unimplemented v2.0 migration, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "not yet implemented") {
+		t.Errorf("Expected 'not yet implemented' in error, got: %v", err)
+	}
+}
+
+func TestMigrateHandoff_EmptyVersion(t *testing.T) {
+	// Test handling of empty schema version
+	handoff := map[string]interface{}{
+		"session_id": "no-version",
+		"timestamp":  1234567890,
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+
+	_, err := migrateHandoff("", jsonData)
+
+	if err == nil {
+		t.Error("Expected error for empty schema version, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "Unsupported schema version (empty)") {
+		t.Errorf("Expected 'Unsupported schema version (empty)' in error, got: %v", err)
+	}
+}
+
+func TestMigrateHandoff_UnknownVersion(t *testing.T) {
+	// Test handling of unknown schema version
+	handoff := map[string]interface{}{
+		"schema_version": "99.0",
+		"session_id":     "unknown-version",
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+
+	_, err := migrateHandoff("99.0", jsonData)
+
+	if err == nil {
+		t.Error("Expected error for unknown version 99.0, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "Unsupported schema version 99.0") {
+		t.Errorf("Expected 'Unsupported schema version 99.0' in error, got: %v", err)
+	}
+
+	if !strings.Contains(err.Error(), "Upgrade gogent-archive") {
+		t.Errorf("Expected 'Upgrade gogent-archive' guidance in error, got: %v", err)
+	}
+}
+
 func TestLoadHandoff_MalformedJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	handoffPath := filepath.Join(tmpDir, "malformed.jsonl")
-	os.WriteFile(handoffPath, []byte("not json\n{\"some\":\"invalid\"}"), 0644)
 
-	handoff, err := LoadHandoff(handoffPath)
+	// Write valid JSON in first line, malformed JSON in last line
+	// LoadHandoff only reads the last non-empty line
+	os.WriteFile(handoffPath, []byte("{\"session_id\":\"valid\",\"schema_version\":\"1.0\"}\n{not valid json}"), 0644)
 
-	// Should not error, just skip malformed lines
-	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
+	_, err := LoadHandoff(handoffPath)
+
+	// Should error because last line is malformed JSON
+	if err == nil {
+		t.Error("Expected error for malformed JSON, got nil")
 	}
 
-	// Second line can unmarshal to Handoff (with zero values), so we get a handoff
-	// This is expected behavior - JSON unmarshaling succeeds even with missing fields
-	if handoff == nil {
-		t.Error("Expected handoff (even with zero values), got nil")
+	if !strings.Contains(err.Error(), "[handoff]") {
+		t.Errorf("Expected error with [handoff] prefix, got: %v", err)
+	}
+
+	if !strings.Contains(err.Error(), "Failed to parse") {
+		t.Errorf("Expected 'Failed to parse' in error, got: %v", err)
 	}
 }
 

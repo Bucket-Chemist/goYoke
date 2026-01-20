@@ -189,40 +189,77 @@ func GenerateHandoff(cfg *HandoffConfig, metrics *SessionMetrics) (*Handoff, *Ha
 	return handoff, handoffMetrics, nil
 }
 
-// LoadHandoff loads the most recent handoff from JSONL file
+// LoadHandoff loads the most recent handoff from JSONL file.
+// It reads the schema_version field and migrates if needed.
 func LoadHandoff(handoffPath string) (*Handoff, error) {
-	file, err := os.Open(handoffPath)
+	data, err := os.ReadFile(handoffPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil // No handoff file is normal
 		}
-		return nil, fmt.Errorf("[handoff] Failed to open %s: %w", handoffPath, err)
+		return nil, fmt.Errorf("[handoff] Failed to read JSONL from %s: %w. Check file exists and is readable.", handoffPath, err)
 	}
-	defer file.Close()
 
-	// Read all lines and return the last one
-	var lastHandoff *Handoff
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
+	// Split into lines and find last non-empty line
+	lines := strings.Split(string(data), "\n")
+	var lastLine string
+	for i := len(lines) - 1; i >= 0; i-- {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed != "" {
+			lastLine = trimmed
+			break
 		}
+	}
 
-		var h Handoff
-		if err := json.Unmarshal([]byte(line), &h); err != nil {
-			// Skip malformed lines but continue
-			continue
+	if lastLine == "" {
+		return nil, nil // Empty file is acceptable
+	}
+
+	// Check schema version first
+	var versionCheck struct {
+		SchemaVersion string `json:"schema_version"`
+	}
+	if err := json.Unmarshal([]byte(lastLine), &versionCheck); err != nil {
+		return nil, fmt.Errorf("[handoff] Failed to parse JSONL schema version from %s: %w. File may be corrupted.", handoffPath, err)
+	}
+
+	// Migrate if needed
+	if versionCheck.SchemaVersion != HandoffSchemaVersion {
+		return migrateHandoff(versionCheck.SchemaVersion, []byte(lastLine))
+	}
+
+	// Current version - parse directly
+	var handoff Handoff
+	if err := json.Unmarshal([]byte(lastLine), &handoff); err != nil {
+		return nil, fmt.Errorf("[handoff] Failed to parse JSONL from %s: %w. Schema may have changed.", handoffPath, err)
+	}
+
+	return &handoff, nil
+}
+
+// migrateHandoff handles conversion from older schema versions to current.
+func migrateHandoff(oldVersion string, data []byte) (*Handoff, error) {
+	switch oldVersion {
+	case "1.0":
+		// Already current version - no migration needed
+		var handoff Handoff
+		if err := json.Unmarshal(data, &handoff); err != nil {
+			return nil, fmt.Errorf("[handoff] Failed to parse v1.0 handoff: %w", err)
 		}
-		lastHandoff = &h
-	}
+		return &handoff, nil
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("[handoff] Error reading handoff file: %w", err)
-	}
+	case "2.0":
+		// Future version - migration stub
+		// When v2.0 is defined, implement conversion logic here
+		return nil, fmt.Errorf("[handoff] Migration from v2.0 to v%s not yet implemented. This is a bug.", HandoffSchemaVersion)
 
-	return lastHandoff, nil
+	case "":
+		// Empty version - treat as unknown
+		return nil, fmt.Errorf("[handoff] Unsupported schema version (empty). Expected v%s or older. Upgrade gogent-archive binary.", HandoffSchemaVersion)
+
+	default:
+		return nil, fmt.Errorf("[handoff] Unsupported schema version %s. Expected v%s or older. Upgrade gogent-archive binary.", oldVersion, HandoffSchemaVersion)
+	}
 }
 
 // LoadAllHandoffs loads all handoffs from JSONL file

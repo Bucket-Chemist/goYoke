@@ -36,7 +36,7 @@
 
 | File                                  | Ticket      | Lines | Tests | Coverage | Created    | Status     |
 | ------------------------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
-| `handoff_test.go`                     | GOgent-028k | 856   | 25    | ~95%     | 2026-01-21 | ✅ Passing |
+| `handoff_test.go`                     | GOgent-028l | 1100+ | 34    | ~86%     | 2026-01-21 | ✅ Passing |
 | `handoff_artifacts_validation_test.go` | GOgent-028g | 1707  | 5     | 100%     | 2026-01-20 | ✅ Passing |
 
 ### cmd/gogent-archive (SessionEnd Hook CLI)
@@ -472,8 +472,9 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 | GOgent-028i | Error Recovery Wrapper   | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Go→Bash fallback wrapper, ecosystem ✓ 94.2% |
 | GOgent-028j | JSONL History Querying   | test/audit/GOgent-028j/ | ✅ Passing | 2026-01-20 | Subcommand CLI (list, show, stats) + 9 test functions, 58.3% coverage, ecosystem ✓ 94.2% |
 | GOgent-028k | Handoff Generation Metrics | test/audit/2026-01-21/ | ✅ Passing | 2026-01-21 | HandoffMetrics struct + countPatterns helper + 2 new tests, ecosystem ✓ 94.2% |
+| GOgent-028l | Handoff Schema Versioning | test/audit/GOgent-028l/ | ✅ Passing | 2026-01-21 | LoadHandoff version check + migrateHandoff + 9 new tests, ecosystem ✓ 94.2% |
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-028k Handoff generation metrics)
+**Last Audit**: 2026-01-21 (GOgent-028l Handoff schema versioning)
 **Next Audit**: After next ticket completion
