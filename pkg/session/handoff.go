@@ -92,6 +92,25 @@ type HandoffConfig struct {
 	TranscriptPath    string // Optional: session transcript for archival
 }
 
+// HandoffMetrics captures timing and artifact counts from handoff generation
+type HandoffMetrics struct {
+	GenerationTimeMs int64 // Time to generate handoff in milliseconds
+	SharpEdgeCount   int   // Number of sharp edges captured
+	ViolationCount   int   // Number of routing violations
+	PatternCount     int   // Number of unique violation patterns
+}
+
+// countPatterns counts unique ViolationType values in routing violations
+func countPatterns(violations []RoutingViolation) int {
+	seen := make(map[string]struct{})
+	for _, v := range violations {
+		if v.ViolationType != "" {
+			seen[v.ViolationType] = struct{}{}
+		}
+	}
+	return len(seen)
+}
+
 // DefaultHandoffConfig creates default paths for handoff generation
 func DefaultHandoffConfig(projectDir string) *HandoffConfig {
 	claudeDir := filepath.Join(projectDir, ".claude", "memory")
@@ -105,14 +124,17 @@ func DefaultHandoffConfig(projectDir string) *HandoffConfig {
 	}
 }
 
-// GenerateHandoff creates a JSONL handoff document with session context
-func GenerateHandoff(cfg *HandoffConfig, metrics *SessionMetrics) error {
+// GenerateHandoff creates a JSONL handoff document with session context.
+// Returns the generated Handoff, metrics about the generation, and any error.
+func GenerateHandoff(cfg *HandoffConfig, metrics *SessionMetrics) (*Handoff, *HandoffMetrics, error) {
+	startTime := time.Now()
+
 	if cfg == nil {
-		return fmt.Errorf("[handoff] Config nil. Cannot generate handoff without configuration. Provide valid HandoffConfig.")
+		return nil, nil, fmt.Errorf("[handoff] Config nil. Cannot generate handoff without configuration. Provide valid HandoffConfig.")
 	}
 
 	if metrics == nil {
-		return fmt.Errorf("[handoff] Metrics nil. Cannot generate handoff without session metrics. Provide valid SessionMetrics.")
+		return nil, nil, fmt.Errorf("[handoff] Metrics nil. Cannot generate handoff without session metrics. Provide valid SessionMetrics.")
 	}
 
 	// Build session context
@@ -121,14 +143,14 @@ func GenerateHandoff(cfg *HandoffConfig, metrics *SessionMetrics) error {
 	// Load artifacts
 	artifacts, err := LoadArtifacts(cfg)
 	if err != nil {
-		return fmt.Errorf("[handoff] Failed to load artifacts: %w", err)
+		return nil, nil, fmt.Errorf("[handoff] Failed to load artifacts: %w", err)
 	}
 
 	// Generate actions
 	actions := generateActions(artifacts)
 
 	// Create handoff document
-	handoff := Handoff{
+	handoff := &Handoff{
 		SchemaVersion: HandoffSchemaVersion,
 		Timestamp:     time.Now().Unix(),
 		SessionID:     metrics.SessionID,
@@ -140,23 +162,31 @@ func GenerateHandoff(cfg *HandoffConfig, metrics *SessionMetrics) error {
 	// Ensure directory exists
 	dir := filepath.Dir(cfg.HandoffPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("[handoff] Failed to create directory %s: %w. Check write permissions.", dir, err)
+		return nil, nil, fmt.Errorf("[handoff] Failed to create directory %s: %w. Check write permissions.", dir, err)
 	}
 
 	// Append to JSONL file
 	f, err := os.OpenFile(cfg.HandoffPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("[handoff] Failed to open handoff file %s: %w. Check write permissions.", cfg.HandoffPath, err)
+		return nil, nil, fmt.Errorf("[handoff] Failed to open handoff file %s: %w. Check write permissions.", cfg.HandoffPath, err)
 	}
 	defer f.Close()
 
 	// Serialize to JSON and append
 	encoder := json.NewEncoder(f)
 	if err := encoder.Encode(handoff); err != nil {
-		return fmt.Errorf("[handoff] Failed to write handoff: %w", err)
+		return nil, nil, fmt.Errorf("[handoff] Failed to write handoff: %w", err)
 	}
 
-	return nil
+	// Collect metrics after successful JSONL write
+	handoffMetrics := &HandoffMetrics{
+		GenerationTimeMs: time.Since(startTime).Milliseconds(),
+		SharpEdgeCount:   len(artifacts.SharpEdges),
+		ViolationCount:   len(artifacts.RoutingViolations),
+		PatternCount:     countPatterns(artifacts.RoutingViolations),
+	}
+
+	return handoff, handoffMetrics, nil
 }
 
 // LoadHandoff loads the most recent handoff from JSONL file

@@ -2,11 +2,11 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 84,
+    "total_tickets": 88,
     "total_weeks": 5,
     "created": "2026-01-15",
-    "version": "1.7",
-    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l)"
+    "version": "1.8",
+    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f)"
   },
   "tickets": [
     {
@@ -1537,7 +1537,7 @@
         "minor"
       ],
       "acceptance_criteria_count": 12,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-028j",
@@ -1568,7 +1568,7 @@
         "minor"
       ],
       "acceptance_criteria_count": 9,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-028k",
@@ -1597,7 +1597,7 @@
         "minor"
       ],
       "acceptance_criteria_count": 11,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-028l",
@@ -1820,64 +1820,247 @@
     },
     {
       "id": "GOgent-029",
-      "title": "Format Pending Learnings",
-      "description": "Parse and format pending-learnings.jsonl for handoff",
+      "title": "Unified Sharp Edge Schema & Query API",
+      "description": "Extend SharpEdge schema with severity, resolution tracking, and create Query API for agentic retrieval",
       "file": "tickets/session_archive/029.md",
       "week": 2,
       "day": 2,
-      "time_estimate": "1h",
+      "time_estimate": "2h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-029a",
+        "GOgent-029b",
+        "GOgent-029c",
+        "GOgent-029e",
+        "GOgent-029f",
+        "GOgent-032"
+      ],
+      "priority": "critical",
+      "tags": [
+        "schema",
+        "query-api",
+        "sharp-edges",
+        "foundation"
+      ],
+      "files_to_create": [
+        "pkg/session/query.go",
+        "pkg/session/query_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-029-unified-sharp-edge",
+      "pr_labels": [
+        "schema",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 11,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-029a",
+      "title": "User Intent Capture Schema & Storage",
+      "description": "Create UserIntent artifact type for capturing user decisions, preferences, and intent during sessions",
+      "file": "tickets/session_archive/029a.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "1.5h",
       "dependencies": [],
       "blocks": [
         "GOgent-029b",
-        "GOgent-032"
+        "GOgent-029e",
+        "GOgent-029f"
       ],
-      "priority": "medium",
+      "priority": "critical",
       "tags": [
-        "learnings",
-        "formatting"
+        "schema",
+        "user-intent",
+        "memory",
+        "foundation"
       ],
       "files_to_create": [
-        "pkg/session/learnings.go",
-        "pkg/session/learnings_test.go"
+        "pkg/session/user_intent.go",
+        "pkg/session/user_intent_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-029-format-learnings",
+      "git_branch": "gogent-029a-user-intent",
       "pr_labels": [
-        "learnings",
+        "schema",
         "week-2",
-        "phase-0"
+        "phase-2"
       ],
-      "acceptance_criteria_count": 5,
+      "acceptance_criteria_count": 10,
       "status": "pending"
     },
     {
       "id": "GOgent-029b",
-      "title": "Capture Full Error Messages in Sharp Edges",
-      "description": "Extend FormatPendingLearnings() to include full error messages from failure events, not just error types",
+      "title": "CLI Subcommands for Sharp Edges & User Intents",
+      "description": "Add sharp-edges and user-intents subcommands to gogent-archive CLI for querying learning artifacts",
       "file": "tickets/session_archive/029b.md",
       "week": 2,
-      "day": 2,
-      "time_estimate": "0.5h",
+      "day": 3,
+      "time_estimate": "2h",
       "dependencies": [
-        "GOgent-029"
+        "GOgent-029",
+        "GOgent-029a"
       ],
-      "blocks": [],
+      "blocks": [
+        "GOgent-029d"
+      ],
       "priority": "high",
       "tags": [
-        "error-context",
-        "sharp-edges",
-        "enhancement",
+        "cli",
+        "query-interface",
+        "user-experience",
         "phase-2"
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-029b-error-messages",
+      "git_branch": "gogent-029b-cli-sharp-edges",
       "pr_labels": [
-        "enhancement",
+        "cli",
         "week-2",
         "phase-2"
       ],
-      "acceptance_criteria_count": 6,
+      "acceptance_criteria_count": 12,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-029c",
+      "title": "Expand Handoff Schema for Decisions/Preferences/Performance",
+      "description": "Extend HandoffArtifacts struct to capture decisions, preferences, and performance metrics",
+      "file": "tickets/session_archive/029c.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "3h",
+      "dependencies": [
+        "GOgent-029"
+      ],
+      "blocks": [
+        "GOgent-029d",
+        "GOgent-029e",
+        "GOgent-029f"
+      ],
+      "priority": "critical",
+      "tags": [
+        "schema-extension",
+        "learning-architecture",
+        "memory-expansion",
+        "phase-2"
+      ],
+      "files_to_create": [
+        "pkg/session/decisions.go",
+        "pkg/session/preferences.go",
+        "pkg/session/performance.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-029c-expand-schema",
+      "pr_labels": [
+        "schema",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 13,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-029d",
+      "title": "CLI Query Subcommands for Extended Artifacts",
+      "description": "Extend gogent-archive CLI with decisions, preferences, performance subcommands for querying learning artifacts",
+      "file": "tickets/session_archive/029d.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-029b",
+        "GOgent-029c"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "cli-extension",
+        "query-interface",
+        "user-experience",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-029d-cli-queries",
+      "pr_labels": [
+        "cli",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 13,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-029e",
+      "title": "Go Query API for Agentic Retrieval",
+      "description": "Create programmatic Go API for Claude agents to query decisions, preferences, and performance metrics",
+      "file": "tickets/session_archive/029e.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-029",
+        "GOgent-029a",
+        "GOgent-029c"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "query-api",
+        "agent-integration",
+        "programmatic-access",
+        "phase-2"
+      ],
+      "files_to_create": [
+        "pkg/session/query.go",
+        "pkg/session/query_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-029e-query-api",
+      "pr_labels": [
+        "api",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 11,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-029f",
+      "title": "Weekly Learning Aggregation CLI",
+      "description": "Create gogent-aggregate CLI for weekly rollup of learning artifacts when files exceed size threshold",
+      "file": "tickets/session_archive/029f.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "3h",
+      "dependencies": [
+        "GOgent-029",
+        "GOgent-029a",
+        "GOgent-029c"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "aggregation",
+        "archival",
+        "maintenance",
+        "phase-2"
+      ],
+      "files_to_create": [
+        "cmd/gogent-aggregate/main.go",
+        "cmd/gogent-aggregate/main_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-029f-aggregation",
+      "pr_labels": [
+        "aggregation",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 11,
       "status": "pending"
     },
     {
