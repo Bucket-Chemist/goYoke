@@ -1854,7 +1854,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 11,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-029a",
@@ -1889,7 +1889,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 10,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-029b",

@@ -180,6 +180,61 @@ func RenderHandoffSummary(h *Handoff) string {
 	return summary
 }
 
+// truncateString truncates a string to maxLen with ellipsis
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// FormatUserIntent formats a single user intent as a markdown line
+// Uses confidence badges: explicit=💬, inferred=🤔, default=⚪
+func FormatUserIntent(intent UserIntent) string {
+	var sb strings.Builder
+
+	// Confidence badge
+	badge := map[string]string{
+		"explicit": "💬",
+		"inferred": "🤔",
+		"default":  "⚪",
+	}[intent.Confidence]
+	if badge == "" {
+		badge = "❓"
+	}
+
+	// Base format with question and answer
+	sb.WriteString(fmt.Sprintf("%s **Q:** %s\n   **A:** %s",
+		badge,
+		truncateString(intent.Question, 80),
+		truncateString(intent.Response, 100),
+	))
+
+	// Add action if present
+	if intent.ActionTaken != "" {
+		sb.WriteString(fmt.Sprintf("\n   ➡️ Action: %s", truncateString(intent.ActionTaken, 80)))
+	}
+
+	return sb.String()
+}
+
+// FormatUserIntents formats multiple user intents as a markdown section
+func FormatUserIntents(intents []UserIntent) string {
+	if len(intents) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## User Intents\n\n")
+
+	for _, intent := range intents {
+		sb.WriteString(FormatUserIntent(intent))
+		sb.WriteString("\n\n")
+	}
+
+	return sb.String()
+}
+
 // RenderAllHandoffs creates a markdown document showing all handoffs
 func RenderAllHandoffs(handoffs []Handoff) string {
 	var sb strings.Builder

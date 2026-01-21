@@ -8,6 +8,32 @@ import (
 	"strings"
 )
 
+// UserIntent captures user decision inputs and expressed preferences
+// This enables tracking of explicit user choices for cross-session memory
+type UserIntent struct {
+	Timestamp   int64  `json:"timestamp"`              // When captured
+	Question    string `json:"question"`               // What was asked
+	Response    string `json:"response"`               // User's answer
+	Confidence  string `json:"confidence"`             // "explicit", "inferred", "default"
+	Context     string `json:"context,omitempty"`      // Why this was asked
+	Source      string `json:"source"`                 // "ask_user", "hook_prompt", "manual"
+	ActionTaken string `json:"action_taken,omitempty"` // What we did with the response
+}
+
+// ValidConfidenceLevels defines valid confidence values for UserIntent
+var ValidConfidenceLevels = map[string]bool{
+	"explicit": true, // User directly answered
+	"inferred": true, // Derived from user behavior
+	"default":  true, // Used default when user skipped
+}
+
+// ValidIntentSources defines valid source values for UserIntent capture
+var ValidIntentSources = map[string]bool{
+	"ask_user":    true, // AskUserQuestion tool
+	"hook_prompt": true, // Hook-injected prompt
+	"manual":      true, // Manually recorded
+}
+
 // ValidateSharpEdge validates SharpEdge JSON against schema
 // FIXED: Field names now match struct (consecutive_failures, timestamp)
 func ValidateSharpEdge(data []byte) error {
@@ -92,12 +118,13 @@ func ValidateSharpEdge(data []byte) error {
 	return nil
 }
 
-// LoadArtifacts loads all session artifacts (sharp edges, violations, error patterns)
+// LoadArtifacts loads all session artifacts (sharp edges, violations, error patterns, user intents)
 func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 	artifacts := HandoffArtifacts{
 		SharpEdges:        []SharpEdge{},
 		RoutingViolations: []RoutingViolation{},
 		ErrorPatterns:     []ErrorPattern{},
+		UserIntents:       []UserIntent{},
 	}
 
 	// Load pending learnings (sharp edges)
@@ -120,6 +147,13 @@ func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 		return artifacts, fmt.Errorf("[handoff] Failed to load error patterns: %w", err)
 	}
 	artifacts.ErrorPatterns = patterns
+
+	// Load user intents
+	intents, err := loadUserIntents(cfg.UserIntentsPath)
+	if err != nil {
+		return artifacts, fmt.Errorf("[handoff] Failed to load user intents: %w", err)
+	}
+	artifacts.UserIntents = intents
 
 	return artifacts, nil
 }
@@ -227,4 +261,39 @@ func loadErrorPatterns(path string) ([]ErrorPattern, error) {
 	}
 
 	return patterns, nil
+}
+
+// loadUserIntents reads user intents from user-intents.jsonl
+func loadUserIntents(path string) ([]UserIntent, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []UserIntent{}, nil // Missing file is normal
+		}
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer file.Close()
+
+	var intents []UserIntent
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var intent UserIntent
+		if err := json.Unmarshal([]byte(line), &intent); err != nil {
+			// Skip malformed lines but continue
+			continue
+		}
+		intents = append(intents, intent)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", path, err)
+	}
+
+	return intents, nil
 }

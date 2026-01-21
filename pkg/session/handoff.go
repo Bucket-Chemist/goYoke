@@ -37,9 +37,10 @@ type SessionContext struct {
 
 // HandoffArtifacts contains references to session artifacts
 type HandoffArtifacts struct {
-	SharpEdges         []SharpEdge       `json:"sharp_edges"`
-	RoutingViolations  []RoutingViolation `json:"routing_violations"`
-	ErrorPatterns      []ErrorPattern     `json:"error_patterns"`
+	SharpEdges        []SharpEdge        `json:"sharp_edges"`
+	RoutingViolations []RoutingViolation `json:"routing_violations"`
+	ErrorPatterns     []ErrorPattern     `json:"error_patterns"`
+	UserIntents       []UserIntent       `json:"user_intents"`
 }
 
 // SharpEdge represents a debugging loop or gotcha discovered
@@ -100,6 +101,7 @@ type HandoffConfig struct {
 	ViolationsPath    string // .claude/memory/routing-violations.jsonl
 	ErrorPatternsPath string // /tmp/claude-error-patterns.jsonl
 	TranscriptPath    string // Optional: session transcript for archival
+	UserIntentsPath   string // .claude/memory/user-intents.jsonl
 }
 
 // HandoffMetrics captures timing and artifact counts from handoff generation
@@ -131,6 +133,7 @@ func DefaultHandoffConfig(projectDir string) *HandoffConfig {
 		PendingPath:       filepath.Join(claudeDir, "pending-learnings.jsonl"),
 		ViolationsPath:    config.GetViolationsLogPath(),
 		ErrorPatternsPath: "/tmp/claude-error-patterns.jsonl",
+		UserIntentsPath:   filepath.Join(claudeDir, "user-intents.jsonl"),
 	}
 }
 

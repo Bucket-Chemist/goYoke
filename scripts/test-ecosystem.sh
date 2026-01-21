@@ -63,7 +63,7 @@ FAILED=0
 
 # Step 1: Run unit tests
 echo -e "${YELLOW}[1/4] Running unit tests...${RESET}"
-if go test -v ./pkg/routing/... 2>&1 | tee "$AUDIT_DIR/unit-tests.log"; then
+if go test -v ./cmd/... ./pkg/... ./test/... 2>&1 | tee "$AUDIT_DIR/unit-tests.log"; then
     echo -e "${GREEN}✅ Unit tests passed${RESET}"
 else
     echo -e "${RED}❌ Unit tests failed${RESET}"
@@ -88,7 +88,7 @@ echo ""
 
 # Step 3: Run race detector
 echo -e "${YELLOW}[3/4] Running race detector...${RESET}"
-if go test -race ./pkg/routing/... 2>&1 | tee "$AUDIT_DIR/race-detector.log"; then
+if go test -race ./cmd/... ./pkg/... ./test/... 2>&1 | tee "$AUDIT_DIR/race-detector.log"; then
     echo -e "${GREEN}✅ Race detector clean${RESET}"
 else
     echo -e "${RED}❌ Race conditions detected${RESET}"
@@ -98,7 +98,7 @@ echo ""
 
 # Step 4: Generate coverage report
 echo -e "${YELLOW}[4/4] Generating coverage report...${RESET}"
-if go test -coverprofile="$AUDIT_DIR/coverage.out" ./pkg/routing/...; then
+if go test -coverprofile="$AUDIT_DIR/coverage.out" ./cmd/... ./pkg/... ./test/...; then
     COVERAGE=$(go tool cover -func="$AUDIT_DIR/coverage.out" | grep total | awk '{print $3}')
     echo -e "${GREEN}✅ Coverage: ${COVERAGE}${RESET}"
 

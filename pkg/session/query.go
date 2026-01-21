@@ -98,6 +98,81 @@ func (q *Query) QuerySharpEdges(filters SharpEdgeFilters) ([]SharpEdge, error) {
 	return edges, nil
 }
 
+// UserIntentFilters defines filter criteria for user intents
+type UserIntentFilters struct {
+	Source     *string // Filter by capture source (ask_user, hook_prompt, manual)
+	Confidence *string // Filter by confidence level (explicit, inferred, default)
+	HasAction  bool    // Only return intents with ActionTaken != ""
+	Since      *int64  // Filter by timestamp (intents after this time)
+	Limit      int     // Maximum results to return (0 = unlimited)
+}
+
+// QueryUserIntents retrieves user intents with optional filters
+// Returns all intents if no filters specified
+// Missing file returns empty slice (not error)
+//
+// Example:
+//
+//	q := NewQuery("/project/dir")
+//	source := "ask_user"
+//	intents, err := q.QueryUserIntents(UserIntentFilters{
+//	    Source:    &source,
+//	    HasAction: true,
+//	})
+func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error) {
+	intentsPath := filepath.Join(q.ProjectDir, ".claude", "memory", "user-intents.jsonl")
+
+	file, err := os.Open(intentsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []UserIntent{}, nil // Missing file is normal
+		}
+		return nil, fmt.Errorf("failed to open user intents: %w", err)
+	}
+	defer file.Close()
+
+	var intents []UserIntent
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var intent UserIntent
+		if err := json.Unmarshal([]byte(line), &intent); err != nil {
+			continue // Skip malformed lines
+		}
+
+		// Apply filters
+		if filters.Source != nil && intent.Source != *filters.Source {
+			continue
+		}
+		if filters.Confidence != nil && intent.Confidence != *filters.Confidence {
+			continue
+		}
+		if filters.HasAction && intent.ActionTaken == "" {
+			continue
+		}
+		if filters.Since != nil && intent.Timestamp < *filters.Since {
+			continue
+		}
+
+		intents = append(intents, intent)
+
+		if filters.Limit > 0 && len(intents) >= filters.Limit {
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading user intents: %w", err)
+	}
+
+	return intents, nil
+}
+
 // matchGlob performs simple glob matching (supports * wildcard)
 // Patterns:
 //   - "*" or "" matches everything

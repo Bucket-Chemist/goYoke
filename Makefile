@@ -35,7 +35,7 @@ test-ecosystem:
 # Individual test targets for granular testing
 test-unit:
 	@echo "Running unit tests..."
-	@go test -v ./pkg/routing/...
+	@go test -v ./cmd/... ./pkg/... ./test/...
 
 test-integration:
 	@echo "Running integration tests..."
@@ -43,11 +43,11 @@ test-integration:
 
 test-race:
 	@echo "Running race detector..."
-	@go test -race ./pkg/routing/...
+	@go test -race ./cmd/... ./pkg/... ./test/...
 
 coverage:
 	@echo "Generating coverage report..."
-	@go test -coverprofile=coverage.out ./pkg/routing/...
+	@go test -coverprofile=coverage.out ./cmd/... ./pkg/... ./test/...
 	@go tool cover -func=coverage.out
 	@echo ""
 	@echo "To view HTML coverage report:"

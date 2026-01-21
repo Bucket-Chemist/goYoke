@@ -1,9 +1,10 @@
-# Binaries
-gogent-validate
-gogent-archive
-gogent-sharp-edge
-gogent-daemon
-gogent
+# Binaries (at root level only)
+/gogent-validate
+/gogent-archive
+/gogent-sharp-edge
+/gogent-daemon
+/gogent
+/bin/
 
 # Test output
 *.test
