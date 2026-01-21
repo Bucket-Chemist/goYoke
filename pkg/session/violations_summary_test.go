@@ -441,6 +441,288 @@ func TestFormatViolationsSummary_MaxLinesEdgeCases(t *testing.T) {
 	}
 }
 
+// TestClusterViolationsByType tests the ClusterViolationsByType function
+func TestClusterViolationsByType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty_violations_list", func(t *testing.T) {
+		t.Parallel()
+
+		result := ClusterViolationsByType(nil)
+		if result == nil {
+			t.Error("Expected non-nil map for nil input")
+		}
+		if len(result) != 0 {
+			t.Errorf("Expected empty map, got %d entries", len(result))
+		}
+
+		// Also test with empty slice
+		result = ClusterViolationsByType([]*routing.Violation{})
+		if result == nil {
+			t.Error("Expected non-nil map for empty slice")
+		}
+		if len(result) != 0 {
+			t.Errorf("Expected empty map, got %d entries", len(result))
+		}
+	})
+
+	t.Run("single_violation_type", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Tool: "Bash", Reason: "reason1"},
+			{ViolationType: "tool_permission", Tool: "Write", Reason: "reason2"},
+		}
+
+		result := ClusterViolationsByType(violations)
+
+		if len(result) != 1 {
+			t.Fatalf("Expected 1 cluster, got %d", len(result))
+		}
+
+		cluster, exists := result["tool_permission"]
+		if !exists {
+			t.Fatal("Expected cluster for 'tool_permission'")
+		}
+
+		if cluster.Type != "tool_permission" {
+			t.Errorf("Expected Type 'tool_permission', got %q", cluster.Type)
+		}
+
+		if cluster.Count != 2 {
+			t.Errorf("Expected Count 2, got %d", cluster.Count)
+		}
+
+		if len(cluster.Samples) != 2 {
+			t.Errorf("Expected 2 samples, got %d", len(cluster.Samples))
+		}
+
+		// Verify samples are the original violations
+		if cluster.Samples[0].Tool != "Bash" {
+			t.Errorf("First sample should have Tool 'Bash', got %q", cluster.Samples[0].Tool)
+		}
+		if cluster.Samples[1].Tool != "Write" {
+			t.Errorf("Second sample should have Tool 'Write', got %q", cluster.Samples[1].Tool)
+		}
+	})
+
+	t.Run("multiple_violation_types", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Tool: "Bash", Reason: "r1"},
+			{ViolationType: "blocked_task_opus", Agent: "orchestrator", Reason: "r2"},
+			{ViolationType: "subagent_type_mismatch", Agent: "tech-docs-writer", Reason: "r3"},
+			{ViolationType: "tool_permission", Tool: "Write", Reason: "r4"},
+		}
+
+		result := ClusterViolationsByType(violations)
+
+		if len(result) != 3 {
+			t.Fatalf("Expected 3 clusters, got %d", len(result))
+		}
+
+		// Check tool_permission cluster
+		toolCluster := result["tool_permission"]
+		if toolCluster == nil {
+			t.Fatal("Missing tool_permission cluster")
+		}
+		if toolCluster.Count != 2 {
+			t.Errorf("tool_permission Count: expected 2, got %d", toolCluster.Count)
+		}
+		if len(toolCluster.Samples) != 2 {
+			t.Errorf("tool_permission Samples: expected 2, got %d", len(toolCluster.Samples))
+		}
+
+		// Check blocked_task_opus cluster
+		opusCluster := result["blocked_task_opus"]
+		if opusCluster == nil {
+			t.Fatal("Missing blocked_task_opus cluster")
+		}
+		if opusCluster.Count != 1 {
+			t.Errorf("blocked_task_opus Count: expected 1, got %d", opusCluster.Count)
+		}
+		if len(opusCluster.Samples) != 1 {
+			t.Errorf("blocked_task_opus Samples: expected 1, got %d", len(opusCluster.Samples))
+		}
+
+		// Check subagent_type_mismatch cluster
+		subagentCluster := result["subagent_type_mismatch"]
+		if subagentCluster == nil {
+			t.Fatal("Missing subagent_type_mismatch cluster")
+		}
+		if subagentCluster.Count != 1 {
+			t.Errorf("subagent_type_mismatch Count: expected 1, got %d", subagentCluster.Count)
+		}
+	})
+
+	t.Run("more_than_3_violations_same_type_sample_limit", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Tool: "Tool1", Reason: "r1"},
+			{ViolationType: "tool_permission", Tool: "Tool2", Reason: "r2"},
+			{ViolationType: "tool_permission", Tool: "Tool3", Reason: "r3"},
+			{ViolationType: "tool_permission", Tool: "Tool4", Reason: "r4"},
+			{ViolationType: "tool_permission", Tool: "Tool5", Reason: "r5"},
+		}
+
+		result := ClusterViolationsByType(violations)
+
+		cluster := result["tool_permission"]
+		if cluster == nil {
+			t.Fatal("Missing tool_permission cluster")
+		}
+
+		// Count should be all 5
+		if cluster.Count != 5 {
+			t.Errorf("Expected Count 5, got %d", cluster.Count)
+		}
+
+		// Samples should be limited to 3
+		if len(cluster.Samples) != 3 {
+			t.Errorf("Expected 3 samples (limit), got %d", len(cluster.Samples))
+		}
+
+		// Verify samples are the FIRST 3 violations
+		expectedTools := []string{"Tool1", "Tool2", "Tool3"}
+		for i, expected := range expectedTools {
+			if cluster.Samples[i].Tool != expected {
+				t.Errorf("Sample[%d] should have Tool %q, got %q", i, expected, cluster.Samples[i].Tool)
+			}
+		}
+	})
+
+	t.Run("count_accuracy_large_set", func(t *testing.T) {
+		t.Parallel()
+
+		// Create 100 violations of type A, 50 of type B, 25 of type C
+		var violations []*routing.Violation
+
+		for i := 0; i < 100; i++ {
+			violations = append(violations, &routing.Violation{
+				ViolationType: "type_a",
+				Reason:        "reason_a",
+			})
+		}
+		for i := 0; i < 50; i++ {
+			violations = append(violations, &routing.Violation{
+				ViolationType: "type_b",
+				Reason:        "reason_b",
+			})
+		}
+		for i := 0; i < 25; i++ {
+			violations = append(violations, &routing.Violation{
+				ViolationType: "type_c",
+				Reason:        "reason_c",
+			})
+		}
+
+		result := ClusterViolationsByType(violations)
+
+		if len(result) != 3 {
+			t.Fatalf("Expected 3 clusters, got %d", len(result))
+		}
+
+		// Verify counts
+		if result["type_a"].Count != 100 {
+			t.Errorf("type_a Count: expected 100, got %d", result["type_a"].Count)
+		}
+		if result["type_b"].Count != 50 {
+			t.Errorf("type_b Count: expected 50, got %d", result["type_b"].Count)
+		}
+		if result["type_c"].Count != 25 {
+			t.Errorf("type_c Count: expected 25, got %d", result["type_c"].Count)
+		}
+
+		// Verify sample limits (all should be 3)
+		for typeName, cluster := range result {
+			if len(cluster.Samples) != 3 {
+				t.Errorf("%s Samples: expected 3, got %d", typeName, len(cluster.Samples))
+			}
+		}
+	})
+
+	t.Run("nil_violations_in_slice_skipped", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "type_a", Reason: "r1"},
+			nil,
+			{ViolationType: "type_a", Reason: "r2"},
+			nil,
+			nil,
+			{ViolationType: "type_b", Reason: "r3"},
+		}
+
+		result := ClusterViolationsByType(violations)
+
+		if len(result) != 2 {
+			t.Fatalf("Expected 2 clusters, got %d", len(result))
+		}
+
+		if result["type_a"].Count != 2 {
+			t.Errorf("type_a Count: expected 2, got %d", result["type_a"].Count)
+		}
+		if result["type_b"].Count != 1 {
+			t.Errorf("type_b Count: expected 1, got %d", result["type_b"].Count)
+		}
+	})
+
+	t.Run("empty_violation_type_string", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "", Reason: "empty type 1"},
+			{ViolationType: "", Reason: "empty type 2"},
+			{ViolationType: "valid_type", Reason: "valid"},
+		}
+
+		result := ClusterViolationsByType(violations)
+
+		if len(result) != 2 {
+			t.Fatalf("Expected 2 clusters, got %d", len(result))
+		}
+
+		// Empty string is a valid key
+		emptyCluster := result[""]
+		if emptyCluster == nil {
+			t.Fatal("Missing cluster for empty string type")
+		}
+		if emptyCluster.Count != 2 {
+			t.Errorf("Empty type Count: expected 2, got %d", emptyCluster.Count)
+		}
+
+		validCluster := result["valid_type"]
+		if validCluster == nil {
+			t.Fatal("Missing cluster for valid_type")
+		}
+		if validCluster.Count != 1 {
+			t.Errorf("valid_type Count: expected 1, got %d", validCluster.Count)
+		}
+	})
+
+	t.Run("preserves_violation_references", func(t *testing.T) {
+		t.Parallel()
+
+		v1 := &routing.Violation{ViolationType: "test", Tool: "Tool1", Reason: "r1"}
+		v2 := &routing.Violation{ViolationType: "test", Tool: "Tool2", Reason: "r2"}
+
+		violations := []*routing.Violation{v1, v2}
+
+		result := ClusterViolationsByType(violations)
+		cluster := result["test"]
+
+		// Samples should be the same pointers, not copies
+		if cluster.Samples[0] != v1 {
+			t.Error("Sample[0] should be same pointer as v1")
+		}
+		if cluster.Samples[1] != v2 {
+			t.Error("Sample[1] should be same pointer as v2")
+		}
+	})
+}
+
 // containsString is a helper to check if haystack contains needle
 func containsString(haystack, needle string) bool {
 	return len(haystack) >= len(needle) && (haystack == needle || len(needle) == 0 ||

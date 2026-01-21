@@ -73,6 +73,54 @@ func FormatViolationsSummary(violationsPath string, maxLines int) ([]string, err
 	return result, nil
 }
 
+// ViolationCluster represents a group of violations of the same type.
+// Used for pattern detection in routing violations.
+type ViolationCluster struct {
+	Type    string               // ViolationType value
+	Count   int                  // Total occurrences
+	Samples []*routing.Violation // First 3 violations as representative samples
+}
+
+// ClusterViolationsByType groups violations by their ViolationType field.
+// Returns a map where keys are violation types and values are clusters
+// containing the count and first 3 samples of each type.
+//
+// Returns:
+//   - Empty map if violations is nil or empty
+//   - Map with one entry per unique ViolationType otherwise
+func ClusterViolationsByType(violations []*routing.Violation) map[string]*ViolationCluster {
+	result := make(map[string]*ViolationCluster)
+
+	if len(violations) == 0 {
+		return result
+	}
+
+	for _, v := range violations {
+		if v == nil {
+			continue
+		}
+
+		cluster, exists := result[v.ViolationType]
+		if !exists {
+			cluster = &ViolationCluster{
+				Type:    v.ViolationType,
+				Count:   0,
+				Samples: make([]*routing.Violation, 0, 3),
+			}
+			result[v.ViolationType] = cluster
+		}
+
+		cluster.Count++
+
+		// Keep first 3 violations as samples
+		if len(cluster.Samples) < 3 {
+			cluster.Samples = append(cluster.Samples, v)
+		}
+	}
+
+	return result
+}
+
 // formatViolation converts a routing.Violation into a human-readable string.
 // Format varies by violation type for clarity.
 func formatViolation(v *routing.Violation) string {
