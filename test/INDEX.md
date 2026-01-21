@@ -38,6 +38,7 @@
 | ------------------------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
 | `handoff_test.go`                     | GOgent-028l | 1100+ | 34    | ~86%     | 2026-01-21 | ✅ Passing |
 | `handoff_artifacts_validation_test.go` | GOgent-028g | 1707  | 5     | 100%     | 2026-01-20 | ✅ Passing |
+| `query_test.go`                       | GOgent-029/029a/029e | 1450+ | 70+  | ~92%     | 2026-01-21 | ✅ Passing |
 
 ### cmd/gogent-archive (SessionEnd Hook CLI)
 
@@ -481,5 +482,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-029b Sharp Edges & User Intents CLI Tests)
+**Last Audit**: 2026-01-21 (GOgent-029e Go Query API for Agentic Retrieval)
 **Next Audit**: After next ticket completion

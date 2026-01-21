@@ -1218,3 +1218,236 @@ func TestSlowThresholdMs_Value(t *testing.T) {
 		t.Errorf("Expected SlowThresholdMs to be 1000, got: %d", SlowThresholdMs)
 	}
 }
+
+// ========== ADDITIONAL COVERAGE TESTS ==========
+
+func TestQueryPreferences_MalformedLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	content := `not valid json
+{"timestamp":1,"category":"routing","key":"valid","value":"v","reason":"r","scope":"project"}
+{broken json`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	prefs, err := q.QueryPreferences(PreferenceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error (skip malformed), got: %v", err)
+	}
+
+	if len(prefs) != 1 {
+		t.Errorf("Expected 1 preference (skipped malformed), got: %d", len(prefs))
+	}
+}
+
+func TestQueryPerformance_MalformedLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `not valid json
+{"timestamp":1,"operation":"valid_op","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{broken json`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error (skip malformed), got: %v", err)
+	}
+
+	if len(metrics) != 1 {
+		t.Errorf("Expected 1 metric (skipped malformed), got: %d", len(metrics))
+	}
+}
+
+func TestQueryDecisions_CombinedFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `{"timestamp":1705000000,"category":"architecture","decision":"d1","rationale":"r1","alternatives":"","impact":"high"}
+{"timestamp":1705000001,"category":"architecture","decision":"d2","rationale":"r2","alternatives":"","impact":"low"}
+{"timestamp":1705000002,"category":"tooling","decision":"d3","rationale":"r3","alternatives":"","impact":"high"}
+{"timestamp":1705000003,"category":"architecture","decision":"d4","rationale":"r4","alternatives":"","impact":"high"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	category := "architecture"
+	impact := "high"
+	decisions, err := q.QueryDecisions(DecisionFilters{
+		Category: &category,
+		Impact:   &impact,
+		Limit:    1,
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Should match d1 and d4, but limit to 1
+	if len(decisions) != 1 {
+		t.Errorf("Expected 1 decision (limit + combined filters), got: %d", len(decisions))
+	}
+	if len(decisions) > 0 && decisions[0].Decision != "d1" {
+		t.Errorf("Expected d1, got: %s", decisions[0].Decision)
+	}
+}
+
+func TestQueryPreferences_CombinedFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	now := time.Now().Unix()
+	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
+	oldTs := now - (30 * 24 * 60 * 60)   // 30 days ago
+
+	content := `{"timestamp":` + itoa(oldTs) + `,"category":"routing","key":"k1","value":"v1","reason":"r1","scope":"project"}
+{"timestamp":` + itoa(recentTs) + `,"category":"routing","key":"k2","value":"v2","reason":"r2","scope":"project"}
+{"timestamp":` + itoa(recentTs) + `,"category":"routing","key":"k3","value":"v3","reason":"r3","scope":"global"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	category := "routing"
+	scope := "project"
+	since := now - (7 * 24 * 60 * 60) // 7 days ago
+	prefs, err := q.QueryPreferences(PreferenceFilters{
+		Category: &category,
+		Scope:    &scope,
+		Since:    &since,
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Only k2 matches all filters (routing + project + recent)
+	if len(prefs) != 1 {
+		t.Errorf("Expected 1 preference (combined filters), got: %d", len(prefs))
+	}
+	if len(prefs) > 0 && prefs[0].Key != "k2" {
+		t.Errorf("Expected k2, got: %s", prefs[0].Key)
+	}
+}
+
+func TestQueryPerformance_CombinedFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	now := time.Now().Unix()
+	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
+	oldTs := now - (30 * 24 * 60 * 60)   // 30 days ago
+
+	content := `{"timestamp":` + itoa(oldTs) + `,"operation":"handoff","duration_ms":1500,"memory_bytes":0,"success":false,"context":""}
+{"timestamp":` + itoa(recentTs) + `,"operation":"handoff","duration_ms":1500,"memory_bytes":0,"success":false,"context":""}
+{"timestamp":` + itoa(recentTs) + `,"operation":"validation","duration_ms":1500,"memory_bytes":0,"success":false,"context":""}
+{"timestamp":` + itoa(recentTs) + `,"operation":"handoff","duration_ms":500,"memory_bytes":0,"success":false,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	op := "handoff"
+	since := now - (7 * 24 * 60 * 60) // 7 days ago
+	metrics, err := q.QueryPerformance(PerformanceFilters{
+		Operation:  &op,
+		SlowOnly:   true,
+		FailedOnly: true,
+		Since:      &since,
+	})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Only second entry matches: handoff + slow (>1000ms) + failed + recent
+	if len(metrics) != 1 {
+		t.Errorf("Expected 1 metric (combined filters), got: %d", len(metrics))
+	}
+	if len(metrics) > 0 && metrics[0].Timestamp != recentTs {
+		t.Errorf("Expected recent timestamp, got old")
+	}
+}
+
+func TestQueryPerformance_EmptyLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	// Include empty lines between valid entries
+	content := `{"timestamp":1,"operation":"op1","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+
+{"timestamp":2,"operation":"op2","duration_ms":200,"memory_bytes":0,"success":true,"context":""}
+
+{"timestamp":3,"operation":"op3","duration_ms":300,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 3 {
+		t.Errorf("Expected 3 metrics (empty lines skipped), got: %d", len(metrics))
+	}
+}
+
+func TestQueryPreferences_EmptyLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	// Include empty lines between valid entries
+	content := `{"timestamp":1,"category":"a","key":"k1","value":"v1","reason":"r1","scope":"session"}
+
+{"timestamp":2,"category":"b","key":"k2","value":"v2","reason":"r2","scope":"project"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	prefs, err := q.QueryPreferences(PreferenceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(prefs) != 2 {
+		t.Errorf("Expected 2 preferences (empty lines skipped), got: %d", len(prefs))
+	}
+}
+
+func TestQueryDecisions_EmptyLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	// Include empty lines between valid entries
+	content := `{"timestamp":1,"category":"a","decision":"d1","rationale":"r","alternatives":"","impact":"high"}
+
+{"timestamp":2,"category":"b","decision":"d2","rationale":"r","alternatives":"","impact":"medium"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	decisions, err := q.QueryDecisions(DecisionFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(decisions) != 2 {
+		t.Errorf("Expected 2 decisions (empty lines skipped), got: %d", len(decisions))
+	}
+}
