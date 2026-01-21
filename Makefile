@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate install install-archive install-wrapper uninstall check-path clean
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -19,8 +19,10 @@ help:
 	@echo "  make build           - Build binary"
 	@echo "  make build-validate  - Build gogent-validate binary"
 	@echo "  make build-archive   - Build gogent-archive binary"
+	@echo "  make build-aggregate - Build gogent-aggregate binary"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
+	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
 	@echo "  make install-wrapper - Install session-archive wrapper hook"
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
@@ -67,14 +69,21 @@ build-archive:
 	go build -o bin/gogent-archive ./cmd/gogent-archive
 	@echo "✅ Binary created at bin/gogent-archive"
 
-install: build-validate build-archive check-path
+build-aggregate:
+	@echo "Building gogent-aggregate binary..."
+	go build -o bin/gogent-aggregate ./cmd/gogent-aggregate
+	@echo "✅ Binary created at bin/gogent-aggregate"
+
+install: build-validate build-archive build-aggregate check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
 	cp bin/gogent-archive ~/.local/bin/gogent-archive
+	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
-	@echo "✅ Installed gogent-validate, gogent-archive"
+	chmod +x ~/.local/bin/gogent-aggregate
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -84,6 +93,14 @@ install-archive: build-archive
 	cp bin/gogent-archive ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-archive
 	@echo "✅ Installed to ~/.local/bin/gogent-archive"
+	@echo "Ensure ~/.local/bin is in your PATH"
+
+install-aggregate: build-aggregate
+	@echo "Installing gogent-aggregate to ~/.local/bin/..."
+	mkdir -p ~/.local/bin
+	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
+	chmod +x ~/.local/bin/gogent-aggregate
+	@echo "✅ Installed to ~/.local/bin/gogent-aggregate"
 	@echo "Ensure ~/.local/bin is in your PATH"
 
 install-wrapper:
@@ -111,11 +128,18 @@ uninstall:
 	@echo "Uninstalling GOgent-Fortress CLIs from ~/.local/bin/..."
 	rm -f ~/.local/bin/gogent-validate
 	rm -f ~/.local/bin/gogent-archive
+	rm -f ~/.local/bin/gogent-aggregate
 	@echo "✅ Uninstalled all CLIs"
+
+uninstall-aggregate:
+	@echo "Removing gogent-aggregate from ~/.local/bin/..."
+	rm -f ~/.local/bin/gogent-aggregate
+	@echo "✅ gogent-aggregate removed"
 
 clean:
 	rm -f ${BINARY_NAME}
 	rm -f bin/gogent-validate
 	rm -f bin/gogent-archive
+	rm -f bin/gogent-aggregate
 	rm -f coverage.out
 	rm -f *.test

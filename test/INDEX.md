@@ -49,6 +49,14 @@
 
 **Note**: Coverage below 80% target on main_test.go due to untestable defensive error paths (main() os.Exit, filesystem permission failures). All business logic and integration points have 100% coverage.
 
+### cmd/gogent-aggregate (Weekly Learning Aggregation CLI)
+
+| File           | Ticket      | Lines | Tests | Coverage | Created    | Status     |
+| -------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
+| `main_test.go` | GOgent-029f | 700+  | 30    | 91.5%    | 2026-01-21 | ✅ Passing |
+
+**Test Coverage**: 91.5% (exceeds 90% target). All business logic functions at 100% coverage. Only untestable `main()` os.Exit code path reduces total.
+
 ### corpus-logger (Development Tool)
 
 | File           | Ticket   | Lines | Tests | Coverage | Created    | Status     |
@@ -479,8 +487,9 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 | GOgent-028m | Integration Tests Suite   | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | 16 integration tests (hook workflow + CLI subcommands), 86% coverage, ecosystem ✓ 94.2% |
 | GOgent-028n | Deployment Runbook        | test/audit/GOgent-028n/ | ✅ Passing | 2026-01-21 | Deployment runbook documentation, ecosystem ✓ 94.2% |
 | GOgent-028o | ADR: JSONL Handoff Format | test/audit/GOgent-028o/ | ✅ Passing | 2026-01-21 | Architecture Decision Record for dual format, ecosystem ✓ 94.2% |
+| GOgent-029f | Weekly Aggregation CLI    | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | gogent-aggregate (30 tests, 91.5% coverage), ecosystem ✓ 87.9% |
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-029e Go Query API for Agentic Retrieval)
+**Last Audit**: 2026-01-21 (GOgent-029f Weekly Learning Aggregation CLI)
 **Next Audit**: After next ticket completion
