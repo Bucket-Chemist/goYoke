@@ -43,12 +43,22 @@ type HandoffArtifacts struct {
 }
 
 // SharpEdge represents a debugging loop or gotcha discovered
+// NOTE: Stays on schema v1.0 - all new fields are optional (omitempty)
+// Optional fields with omitempty are backward-compatible within v1.0
+// Old readers simply ignore new fields, new readers handle missing fields as zero values
 type SharpEdge struct {
-	File               string `json:"file"`
-	ErrorType          string `json:"error_type"`
+	// Existing fields (DO NOT CHANGE order or tags)
+	File                string `json:"file"`
+	ErrorType           string `json:"error_type"`
 	ConsecutiveFailures int    `json:"consecutive_failures"`
-	Context            string `json:"context,omitempty"`
-	Timestamp          int64  `json:"timestamp"`
+	Context             string `json:"context,omitempty"`
+	Timestamp           int64  `json:"timestamp"`
+
+	// Extended fields (v1.0 compatible - all omitempty)
+	ErrorMessage string `json:"error_message,omitempty"` // Full error text
+	Severity     string `json:"severity,omitempty"`      // "high", "medium", "low"
+	Resolution   string `json:"resolution,omitempty"`    // What fixed it
+	ResolvedAt   int64  `json:"resolved_at,omitempty"`   // When resolved (0 = unresolved)
 }
 
 // RoutingViolation represents a tier/agent routing issue

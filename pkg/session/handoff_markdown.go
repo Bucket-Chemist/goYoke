@@ -104,6 +104,66 @@ func RenderHandoffMarkdown(h *Handoff) string {
 	return sb.String()
 }
 
+// FormatSharpEdge formats a single sharp edge as a markdown line
+// Includes ErrorMessage (truncated to 100 chars) and Severity badge when present
+func FormatSharpEdge(edge SharpEdge) string {
+	var sb strings.Builder
+
+	// Add severity badge if present
+	if edge.Severity != "" {
+		badge := map[string]string{
+			"high":   "🔴",
+			"medium": "🟡",
+			"low":    "🟢",
+		}[edge.Severity]
+		if badge == "" {
+			badge = "⚪"
+		}
+		sb.WriteString(badge)
+		sb.WriteString(" ")
+	}
+
+	// Base format: - **file**: error_type (N failures)
+	sb.WriteString(fmt.Sprintf("- **%s**: %s (%d failures)",
+		edge.File,
+		edge.ErrorType,
+		edge.ConsecutiveFailures,
+	))
+
+	// Add error message if present (truncated to 100 chars)
+	if edge.ErrorMessage != "" {
+		truncated := edge.ErrorMessage
+		if len(truncated) > 100 {
+			truncated = truncated[:100] + "..."
+		}
+		sb.WriteString(fmt.Sprintf("\n  Error: `%s`", truncated))
+	}
+
+	// Add resolution if present
+	if edge.Resolution != "" {
+		sb.WriteString(fmt.Sprintf("\n  ✅ Resolved: %s", edge.Resolution))
+	}
+
+	return sb.String()
+}
+
+// FormatSharpEdges formats multiple sharp edges as a markdown section
+func FormatSharpEdges(edges []SharpEdge) string {
+	if len(edges) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## Sharp Edges\n\n")
+
+	for _, edge := range edges {
+		sb.WriteString(FormatSharpEdge(edge))
+		sb.WriteString("\n\n")
+	}
+
+	return sb.String()
+}
+
 // RenderHandoffSummary creates a brief one-line summary of a handoff
 func RenderHandoffSummary(h *Handoff) string {
 	timestamp := time.Unix(h.Timestamp, 0).Format("2006-01-02 15:04")

@@ -1568,7 +1568,7 @@
         "minor"
       ],
       "acceptance_criteria_count": 9,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-028k",
@@ -1754,7 +1754,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-028c",
@@ -1786,7 +1786,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-028d",
@@ -1816,7 +1816,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-029",
@@ -1854,7 +1854,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 11,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-029a",

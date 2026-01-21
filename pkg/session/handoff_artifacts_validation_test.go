@@ -6,7 +6,7 @@ import (
 )
 
 func TestValidateSharpEdge_Valid(t *testing.T) {
-	validJSON := `{"file":"test.go","error_type":"parse_error","failure_count":3,"last_occurrence":1234567890}`
+	validJSON := `{"file":"test.go","error_type":"parse_error","consecutive_failures":3,"timestamp":1234567890}`
 
 	err := ValidateSharpEdge([]byte(validJSON))
 	if err != nil {
@@ -15,7 +15,7 @@ func TestValidateSharpEdge_Valid(t *testing.T) {
 }
 
 func TestValidateSharpEdge_WithOptionalFields(t *testing.T) {
-	validJSON := `{"file":"test.go","error_type":"type_error","failure_count":5,"last_occurrence":1234567890,"context":"line 42","remediation":"Fix type"}`
+	validJSON := `{"file":"test.go","error_type":"type_error","consecutive_failures":5,"timestamp":1234567890,"context":"line 42","error_message":"test error","severity":"high","resolution":"Fix type","resolved_at":1234567900}`
 
 	err := ValidateSharpEdge([]byte(validJSON))
 	if err != nil {
@@ -24,7 +24,7 @@ func TestValidateSharpEdge_WithOptionalFields(t *testing.T) {
 }
 
 func TestValidateSharpEdge_MissingFile(t *testing.T) {
-	invalidJSON := `{"error_type":"parse_error","failure_count":3,"last_occurrence":1234567890}`
+	invalidJSON := `{"error_type":"parse_error","consecutive_failures":3,"timestamp":1234567890}`
 
 	err := ValidateSharpEdge([]byte(invalidJSON))
 	if err == nil {
@@ -36,14 +36,14 @@ func TestValidateSharpEdge_MissingFile(t *testing.T) {
 }
 
 func TestValidateSharpEdge_InvalidFailureCount(t *testing.T) {
-	invalidJSON := `{"file":"test.go","error_type":"parse_error","failure_count":2,"last_occurrence":1234567890}`
+	invalidJSON := `{"file":"test.go","error_type":"parse_error","consecutive_failures":2,"timestamp":1234567890}`
 
 	err := ValidateSharpEdge([]byte(invalidJSON))
 	if err == nil {
-		t.Error("Expected error for failure_count < 3")
+		t.Error("Expected error for consecutive_failures < 3")
 	}
-	if !strings.Contains(err.Error(), "failure_count") {
-		t.Errorf("Error should mention invalid failure_count: %v", err)
+	if !strings.Contains(err.Error(), "consecutive_failures") {
+		t.Errorf("Error should mention invalid consecutive_failures: %v", err)
 	}
 }
 
@@ -53,5 +53,41 @@ func TestValidateSharpEdge_InvalidJSON(t *testing.T) {
 	err := ValidateSharpEdge([]byte(invalidJSON))
 	if err == nil {
 		t.Error("Expected error for malformed JSON")
+	}
+}
+
+func TestValidateSharpEdge_MissingTimestamp(t *testing.T) {
+	invalidJSON := `{"file":"test.go","error_type":"parse_error","consecutive_failures":3}`
+
+	err := ValidateSharpEdge([]byte(invalidJSON))
+	if err == nil {
+		t.Error("Expected error for missing 'timestamp' field")
+	}
+	if !strings.Contains(err.Error(), "timestamp") {
+		t.Errorf("Error should mention missing 'timestamp' field: %v", err)
+	}
+}
+
+func TestValidateSharpEdge_InvalidSeverity(t *testing.T) {
+	invalidJSON := `{"file":"test.go","error_type":"parse_error","consecutive_failures":3,"timestamp":1234567890,"severity":"critical"}`
+
+	err := ValidateSharpEdge([]byte(invalidJSON))
+	if err == nil {
+		t.Error("Expected error for invalid severity")
+	}
+	if !strings.Contains(err.Error(), "severity") {
+		t.Errorf("Error should mention invalid severity: %v", err)
+	}
+}
+
+func TestValidateSharpEdge_ValidSeverities(t *testing.T) {
+	severities := []string{"high", "medium", "low"}
+	for _, sev := range severities {
+		validJSON := `{"file":"test.go","error_type":"parse_error","consecutive_failures":3,"timestamp":1234567890,"severity":"` + sev + `"}`
+
+		err := ValidateSharpEdge([]byte(validJSON))
+		if err != nil {
+			t.Errorf("Valid severity '%s' failed validation: %v", sev, err)
+		}
 	}
 }
