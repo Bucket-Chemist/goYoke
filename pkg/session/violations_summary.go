@@ -81,6 +81,15 @@ type ViolationCluster struct {
 	Samples []*routing.Violation // First 3 violations as representative samples
 }
 
+// AgentViolationCluster represents violations grouped by agent name.
+// Enables agent-specific debugging by showing which agents have configuration issues.
+type AgentViolationCluster struct {
+	Agent      string               // Agent name (or "unknown" if empty)
+	TotalCount int                  // Total violations for this agent
+	ByType     map[string]int       // ViolationType -> count
+	Samples    []*routing.Violation // First 3 violations as representative samples
+}
+
 // ClusterViolationsByType groups violations by their ViolationType field.
 // Returns a map where keys are violation types and values are clusters
 // containing the count and first 3 samples of each type.
@@ -111,6 +120,55 @@ func ClusterViolationsByType(violations []*routing.Violation) map[string]*Violat
 		}
 
 		cluster.Count++
+
+		// Keep first 3 violations as samples
+		if len(cluster.Samples) < 3 {
+			cluster.Samples = append(cluster.Samples, v)
+		}
+	}
+
+	return result
+}
+
+// ClusterViolationsByAgent groups violations by their Agent field.
+// Returns a map where keys are agent names and values are clusters
+// containing the count, violation types breakdown, and first 3 samples.
+//
+// If the Agent field is empty, the violation is grouped under "unknown".
+//
+// Returns:
+//   - Empty map if violations is nil or empty
+//   - Map with one entry per unique Agent otherwise
+func ClusterViolationsByAgent(violations []*routing.Violation) map[string]*AgentViolationCluster {
+	result := make(map[string]*AgentViolationCluster)
+
+	if len(violations) == 0 {
+		return result
+	}
+
+	for _, v := range violations {
+		if v == nil {
+			continue
+		}
+
+		agent := v.Agent
+		if agent == "" {
+			agent = "unknown"
+		}
+
+		cluster, exists := result[agent]
+		if !exists {
+			cluster = &AgentViolationCluster{
+				Agent:      agent,
+				TotalCount: 0,
+				ByType:     make(map[string]int),
+				Samples:    make([]*routing.Violation, 0, 3),
+			}
+			result[agent] = cluster
+		}
+
+		cluster.TotalCount++
+		cluster.ByType[v.ViolationType]++
 
 		// Keep first 3 violations as samples
 		if len(cluster.Samples) < 3 {

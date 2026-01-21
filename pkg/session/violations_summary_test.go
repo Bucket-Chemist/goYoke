@@ -723,6 +723,383 @@ func TestClusterViolationsByType(t *testing.T) {
 	})
 }
 
+// TestClusterViolationsByAgent tests the ClusterViolationsByAgent function
+func TestClusterViolationsByAgent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty_violations_list", func(t *testing.T) {
+		t.Parallel()
+
+		result := ClusterViolationsByAgent(nil)
+		if result == nil {
+			t.Error("Expected non-nil map for nil input")
+		}
+		if len(result) != 0 {
+			t.Errorf("Expected empty map, got %d entries", len(result))
+		}
+
+		// Also test with empty slice
+		result = ClusterViolationsByAgent([]*routing.Violation{})
+		if result == nil {
+			t.Error("Expected non-nil map for empty slice")
+		}
+		if len(result) != 0 {
+			t.Errorf("Expected empty map, got %d entries", len(result))
+		}
+	})
+
+	t.Run("single_agent_with_violations", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Agent: "python-pro", Reason: "r1"},
+			{ViolationType: "subagent_type_mismatch", Agent: "python-pro", Reason: "r2"},
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		if len(result) != 1 {
+			t.Fatalf("Expected 1 cluster, got %d", len(result))
+		}
+
+		cluster, exists := result["python-pro"]
+		if !exists {
+			t.Fatal("Expected cluster for 'python-pro'")
+		}
+
+		if cluster.Agent != "python-pro" {
+			t.Errorf("Expected Agent 'python-pro', got %q", cluster.Agent)
+		}
+
+		if cluster.TotalCount != 2 {
+			t.Errorf("Expected TotalCount 2, got %d", cluster.TotalCount)
+		}
+
+		if len(cluster.Samples) != 2 {
+			t.Errorf("Expected 2 samples, got %d", len(cluster.Samples))
+		}
+
+		// Check ByType breakdown
+		if cluster.ByType["tool_permission"] != 1 {
+			t.Errorf("Expected 1 tool_permission, got %d", cluster.ByType["tool_permission"])
+		}
+		if cluster.ByType["subagent_type_mismatch"] != 1 {
+			t.Errorf("Expected 1 subagent_type_mismatch, got %d", cluster.ByType["subagent_type_mismatch"])
+		}
+	})
+
+	t.Run("multiple_agents", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Agent: "python-pro", Reason: "r1"},
+			{ViolationType: "subagent_type_mismatch", Agent: "tech-docs-writer", Reason: "r2"},
+			{ViolationType: "tool_permission", Agent: "scaffolder", Reason: "r3"},
+			{ViolationType: "blocked_task_opus", Agent: "python-pro", Reason: "r4"},
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		if len(result) != 3 {
+			t.Fatalf("Expected 3 clusters, got %d", len(result))
+		}
+
+		// Check python-pro cluster
+		pythonCluster := result["python-pro"]
+		if pythonCluster == nil {
+			t.Fatal("Missing python-pro cluster")
+		}
+		if pythonCluster.TotalCount != 2 {
+			t.Errorf("python-pro TotalCount: expected 2, got %d", pythonCluster.TotalCount)
+		}
+		if pythonCluster.ByType["tool_permission"] != 1 {
+			t.Errorf("python-pro tool_permission: expected 1, got %d", pythonCluster.ByType["tool_permission"])
+		}
+		if pythonCluster.ByType["blocked_task_opus"] != 1 {
+			t.Errorf("python-pro blocked_task_opus: expected 1, got %d", pythonCluster.ByType["blocked_task_opus"])
+		}
+
+		// Check tech-docs-writer cluster
+		docsCluster := result["tech-docs-writer"]
+		if docsCluster == nil {
+			t.Fatal("Missing tech-docs-writer cluster")
+		}
+		if docsCluster.TotalCount != 1 {
+			t.Errorf("tech-docs-writer TotalCount: expected 1, got %d", docsCluster.TotalCount)
+		}
+
+		// Check scaffolder cluster
+		scaffolderCluster := result["scaffolder"]
+		if scaffolderCluster == nil {
+			t.Fatal("Missing scaffolder cluster")
+		}
+		if scaffolderCluster.TotalCount != 1 {
+			t.Errorf("scaffolder TotalCount: expected 1, got %d", scaffolderCluster.TotalCount)
+		}
+	})
+
+	t.Run("multiple_violation_types_per_agent", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "subagent_type_mismatch", Agent: "python-pro", Reason: "r1"},
+			{ViolationType: "subagent_type_mismatch", Agent: "python-pro", Reason: "r2"},
+			{ViolationType: "subagent_type_mismatch", Agent: "python-pro", Reason: "r3"},
+			{ViolationType: "delegation_ceiling", Agent: "python-pro", Reason: "r4"},
+			{ViolationType: "delegation_ceiling", Agent: "python-pro", Reason: "r5"},
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		cluster := result["python-pro"]
+		if cluster == nil {
+			t.Fatal("Missing python-pro cluster")
+		}
+
+		if cluster.TotalCount != 5 {
+			t.Errorf("Expected TotalCount 5, got %d", cluster.TotalCount)
+		}
+
+		if cluster.ByType["subagent_type_mismatch"] != 3 {
+			t.Errorf("Expected 3 subagent_type_mismatch, got %d", cluster.ByType["subagent_type_mismatch"])
+		}
+		if cluster.ByType["delegation_ceiling"] != 2 {
+			t.Errorf("Expected 2 delegation_ceiling, got %d", cluster.ByType["delegation_ceiling"])
+		}
+	})
+
+	t.Run("empty_agent_grouped_as_unknown", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Agent: "", Reason: "no agent 1"},
+			{ViolationType: "tier_exceeded", Agent: "", Reason: "no agent 2"},
+			{ViolationType: "tool_permission", Agent: "go-pro", Reason: "has agent"},
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		if len(result) != 2 {
+			t.Fatalf("Expected 2 clusters, got %d", len(result))
+		}
+
+		// Check unknown cluster
+		unknownCluster := result["unknown"]
+		if unknownCluster == nil {
+			t.Fatal("Missing 'unknown' cluster for empty agent")
+		}
+		if unknownCluster.Agent != "unknown" {
+			t.Errorf("Expected Agent 'unknown', got %q", unknownCluster.Agent)
+		}
+		if unknownCluster.TotalCount != 2 {
+			t.Errorf("unknown TotalCount: expected 2, got %d", unknownCluster.TotalCount)
+		}
+
+		// Check go-pro cluster
+		goProCluster := result["go-pro"]
+		if goProCluster == nil {
+			t.Fatal("Missing go-pro cluster")
+		}
+		if goProCluster.TotalCount != 1 {
+			t.Errorf("go-pro TotalCount: expected 1, got %d", goProCluster.TotalCount)
+		}
+	})
+
+	t.Run("more_than_3_violations_sample_limit", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "type1", Agent: "test-agent", Reason: "r1"},
+			{ViolationType: "type2", Agent: "test-agent", Reason: "r2"},
+			{ViolationType: "type3", Agent: "test-agent", Reason: "r3"},
+			{ViolationType: "type4", Agent: "test-agent", Reason: "r4"},
+			{ViolationType: "type5", Agent: "test-agent", Reason: "r5"},
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		cluster := result["test-agent"]
+		if cluster == nil {
+			t.Fatal("Missing test-agent cluster")
+		}
+
+		// TotalCount should be all 5
+		if cluster.TotalCount != 5 {
+			t.Errorf("Expected TotalCount 5, got %d", cluster.TotalCount)
+		}
+
+		// Samples should be limited to 3
+		if len(cluster.Samples) != 3 {
+			t.Errorf("Expected 3 samples (limit), got %d", len(cluster.Samples))
+		}
+
+		// Verify samples are the FIRST 3 violations
+		expectedReasons := []string{"r1", "r2", "r3"}
+		for i, expected := range expectedReasons {
+			if cluster.Samples[i].Reason != expected {
+				t.Errorf("Sample[%d] should have Reason %q, got %q", i, expected, cluster.Samples[i].Reason)
+			}
+		}
+	})
+
+	t.Run("nil_violations_in_slice_skipped", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{ViolationType: "type_a", Agent: "agent1", Reason: "r1"},
+			nil,
+			{ViolationType: "type_b", Agent: "agent1", Reason: "r2"},
+			nil,
+			nil,
+			{ViolationType: "type_c", Agent: "agent2", Reason: "r3"},
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		if len(result) != 2 {
+			t.Fatalf("Expected 2 clusters, got %d", len(result))
+		}
+
+		if result["agent1"].TotalCount != 2 {
+			t.Errorf("agent1 TotalCount: expected 2, got %d", result["agent1"].TotalCount)
+		}
+		if result["agent2"].TotalCount != 1 {
+			t.Errorf("agent2 TotalCount: expected 1, got %d", result["agent2"].TotalCount)
+		}
+	})
+
+	t.Run("cross_reference_counts_match_type_clustering", func(t *testing.T) {
+		t.Parallel()
+
+		// Create violations that can be verified both ways
+		violations := []*routing.Violation{
+			{ViolationType: "tool_permission", Agent: "python-pro", Reason: "r1"},
+			{ViolationType: "tool_permission", Agent: "go-pro", Reason: "r2"},
+			{ViolationType: "subagent_type_mismatch", Agent: "python-pro", Reason: "r3"},
+			{ViolationType: "subagent_type_mismatch", Agent: "python-pro", Reason: "r4"},
+			{ViolationType: "subagent_type_mismatch", Agent: "scaffolder", Reason: "r5"},
+		}
+
+		// Get both clustering results
+		byAgent := ClusterViolationsByAgent(violations)
+		byType := ClusterViolationsByType(violations)
+
+		// Verify total counts match
+		totalByAgent := 0
+		for _, cluster := range byAgent {
+			totalByAgent += cluster.TotalCount
+		}
+		totalByType := 0
+		for _, cluster := range byType {
+			totalByType += cluster.Count
+		}
+
+		if totalByAgent != totalByType {
+			t.Errorf("Total mismatch: byAgent=%d, byType=%d", totalByAgent, totalByType)
+		}
+
+		if totalByAgent != 5 {
+			t.Errorf("Expected total 5, got %d", totalByAgent)
+		}
+
+		// Verify specific cross-reference
+		// tool_permission: 2 total (python-pro:1, go-pro:1)
+		if byType["tool_permission"].Count != 2 {
+			t.Errorf("Expected 2 tool_permission by type, got %d", byType["tool_permission"].Count)
+		}
+		if byAgent["python-pro"].ByType["tool_permission"] != 1 {
+			t.Errorf("Expected 1 tool_permission for python-pro, got %d", byAgent["python-pro"].ByType["tool_permission"])
+		}
+		if byAgent["go-pro"].ByType["tool_permission"] != 1 {
+			t.Errorf("Expected 1 tool_permission for go-pro, got %d", byAgent["go-pro"].ByType["tool_permission"])
+		}
+
+		// subagent_type_mismatch: 3 total (python-pro:2, scaffolder:1)
+		if byType["subagent_type_mismatch"].Count != 3 {
+			t.Errorf("Expected 3 subagent_type_mismatch by type, got %d", byType["subagent_type_mismatch"].Count)
+		}
+		if byAgent["python-pro"].ByType["subagent_type_mismatch"] != 2 {
+			t.Errorf("Expected 2 subagent_type_mismatch for python-pro, got %d", byAgent["python-pro"].ByType["subagent_type_mismatch"])
+		}
+		if byAgent["scaffolder"].ByType["subagent_type_mismatch"] != 1 {
+			t.Errorf("Expected 1 subagent_type_mismatch for scaffolder, got %d", byAgent["scaffolder"].ByType["subagent_type_mismatch"])
+		}
+	})
+
+	t.Run("preserves_violation_references", func(t *testing.T) {
+		t.Parallel()
+
+		v1 := &routing.Violation{ViolationType: "test", Agent: "my-agent", Reason: "r1"}
+		v2 := &routing.Violation{ViolationType: "test", Agent: "my-agent", Reason: "r2"}
+
+		violations := []*routing.Violation{v1, v2}
+
+		result := ClusterViolationsByAgent(violations)
+		cluster := result["my-agent"]
+
+		// Samples should be the same pointers, not copies
+		if cluster.Samples[0] != v1 {
+			t.Error("Sample[0] should be same pointer as v1")
+		}
+		if cluster.Samples[1] != v2 {
+			t.Error("Sample[1] should be same pointer as v2")
+		}
+	})
+
+	t.Run("count_accuracy_large_set", func(t *testing.T) {
+		t.Parallel()
+
+		// Create 100 violations for agent_a, 50 for agent_b, 25 for agent_c
+		var violations []*routing.Violation
+
+		for i := 0; i < 100; i++ {
+			violations = append(violations, &routing.Violation{
+				ViolationType: "type_x",
+				Agent:         "agent_a",
+				Reason:        "reason_a",
+			})
+		}
+		for i := 0; i < 50; i++ {
+			violations = append(violations, &routing.Violation{
+				ViolationType: "type_y",
+				Agent:         "agent_b",
+				Reason:        "reason_b",
+			})
+		}
+		for i := 0; i < 25; i++ {
+			violations = append(violations, &routing.Violation{
+				ViolationType: "type_z",
+				Agent:         "agent_c",
+				Reason:        "reason_c",
+			})
+		}
+
+		result := ClusterViolationsByAgent(violations)
+
+		if len(result) != 3 {
+			t.Fatalf("Expected 3 clusters, got %d", len(result))
+		}
+
+		// Verify counts
+		if result["agent_a"].TotalCount != 100 {
+			t.Errorf("agent_a TotalCount: expected 100, got %d", result["agent_a"].TotalCount)
+		}
+		if result["agent_b"].TotalCount != 50 {
+			t.Errorf("agent_b TotalCount: expected 50, got %d", result["agent_b"].TotalCount)
+		}
+		if result["agent_c"].TotalCount != 25 {
+			t.Errorf("agent_c TotalCount: expected 25, got %d", result["agent_c"].TotalCount)
+		}
+
+		// Verify sample limits (all should be 3)
+		for agentName, cluster := range result {
+			if len(cluster.Samples) != 3 {
+				t.Errorf("%s Samples: expected 3, got %d", agentName, len(cluster.Samples))
+			}
+		}
+	})
+}
+
 // containsString is a helper to check if haystack contains needle
 func containsString(haystack, needle string) bool {
 	return len(haystack) >= len(needle) && (haystack == needle || len(needle) == 0 ||
