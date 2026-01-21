@@ -48,12 +48,13 @@ a single message.
 
 What I Did
 
-Message 1: [11 Edit calls]  
- - Edit 028k.md (4 separate edits)  
- - Edit 028l.md (1 edit)  
- - Edit 028m.md (3 edits)  
- - Edit 028n.md (2 edits)  
- - Edit 028o.md (1 edit)
+Message 1: [11 Edit calls]
+
+- Edit 028k.md (4 separate edits)
+- Edit 028l.md (1 edit)
+- Edit 028m.md (3 edits)
+- Edit 028n.md (2 edits)
+- Edit 028o.md (1 edit)
 
 All 11 edits were independent - none needed the result of another edit to proceed.
 
@@ -81,23 +82,20 @@ If edits depend on each other:
 
 - Read file to see current content
 - Edit based on what you read  
-  (These MUST be sequential - can't edit before reading)  
-
+  (These MUST be sequential - can't edit before reading)
 
 GOOD for parallel:
 
 - Edit file A
 - Edit file B
 - Edit file C  
-  (All independent, can batch)  
-
+  (All independent, can batch)
 
 Why More Agents Don't Do This
 
 1. Harder to reason about - You need to know ALL edits upfront
 2. Error handling complexity - If one fails, you get 10 successes + 1 failure
-3. Token/context limits - Large parallel calls can hit limits  
-
+3. Token/context limits - Large parallel calls can hit limits
 
 But when it works (like this ticket update task where I knew all changes ahead of time), it's dramatically  
  faster.
@@ -110,8 +108,7 @@ This pattern works for:
 - Edit (editing multiple files independently)
 - Bash (running independent commands)
 - Task (spawning multiple agents in parallel)
-- Grep/Glob (searching multiple patterns)  
-
+- Grep/Glob (searching multiple patterns)
 
 My system instructions actually encourage this: "You can call multiple tools in a single response. When multiple
 independent pieces of information are requested and all commands are likely to succeed, run multiple tool calls

@@ -24,3 +24,10 @@ systems architect in the loop for full automation
 loops in one ticket plan is ingested, critiques, makes modifications if necessary. hands off plan with [routing suggestion] tag.
 
 /ticket next-auto # - if any critical errors arise at audit or major implementation issues flagged by architect, then stop work and summarise issue for review by user.
+
+
+/idea-whiteboard skill
+talkback einstein style session for whiteboarding a idea bubble or feature\
+
+tui 
+https://github.com/subsy/ralph-tui/tree/main/website

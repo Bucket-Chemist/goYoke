@@ -26,9 +26,11 @@ test/audit/**
 .idea/
 *.swp
 *.swo
+/.claude/
 
 # Obsidian
 .obsidian/
+/Excalidraw/
 
 # Audits
 /audit/
