@@ -15,7 +15,7 @@
 
 ## Event Corpus Strategy
 
-**Corpus Logger**: Go implementation at `/home/doktersmol/Documents/GOgent-Fortress/corpus-logger/`
+**Corpus Logger**: Go implementation at `/home/doktersmol/Documents/GOgent-Fortress/dev/tools/corpus-logger/`
 
 **Approach**: Real production event capture
 
@@ -55,7 +55,7 @@ type HookEvent struct {
 - **Live Capture:** `/run/user/1000/gogent/event-corpus-raw.jsonl` (growing with usage)
 - **Curated Corpus:** Will be extracted after sufficient events captured
 - **Test Fixtures:** `/home/doktersmol/Documents/GOgent-Fortress/test/fixtures/event-corpus.json`
-- **Go Logger Source:** `/home/doktersmol/Documents/GOgent-Fortress/corpus-logger/`
+- **Go Logger Source:** `/home/doktersmol/Documents/GOgent-Fortress/dev/tools/corpus-logger/`
 
 ## Corpus Collection Status
 
@@ -82,7 +82,7 @@ type HookEvent struct {
 - Graceful error handling (never breaks hook chain)
 - Test coverage: 50% (table-driven tests for edge cases)
 
-**Build**: `cd corpus-logger && go build -o corpus-logger main.go`
+**Build**: `cd dev/tools/corpus-logger && go build -o corpus-logger main.go`
 **Install**: `./install.sh`
 **Test**: `go test -v ./...`
 

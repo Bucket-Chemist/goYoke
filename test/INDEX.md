@@ -57,7 +57,7 @@
 
 **Test Coverage**: 91.5% (exceeds 90% target). All business logic functions at 100% coverage. Only untestable `main()` os.Exit code path reduces total.
 
-### corpus-logger (Development Tool)
+### dev/tools/corpus-logger (Development Tool)
 
 | File           | Ticket   | Lines | Tests | Coverage | Created    | Status     |
 | -------------- | -------- | ----- | ----- | -------- | ---------- | ---------- |

@@ -149,7 +149,7 @@ GOgent-Fortress/
 │   │   └── event-corpus.json    # 100-event test corpus
 │   ├── integration/             # Integration tests
 │   └── benchmark/               # Performance benchmarks
-├── corpus-logger/               # Pre-work: Real event capture
+├── dev/tools/corpus-logger/     # Pre-work: Real event capture
 │   ├── main.go                  # Event capture implementation
 │   ├── main_test.go            # Tests (50% coverage)
 │   └── install.sh              # Hook installer
