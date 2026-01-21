@@ -1659,7 +1659,7 @@
         "high"
       ],
       "acceptance_criteria_count": 13,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-028n",
@@ -1690,7 +1690,7 @@
         "major"
       ],
       "acceptance_criteria_count": 10,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-028o",

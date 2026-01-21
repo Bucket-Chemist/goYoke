@@ -475,8 +475,9 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 | GOgent-028k | Handoff Generation Metrics | test/audit/2026-01-21/ | ✅ Passing | 2026-01-21 | HandoffMetrics struct + countPatterns helper + 2 new tests, ecosystem ✓ 94.2% |
 | GOgent-028l | Handoff Schema Versioning | test/audit/GOgent-028l/ | ✅ Passing | 2026-01-21 | LoadHandoff version check + migrateHandoff + 9 new tests, ecosystem ✓ 94.2% |
 | GOgent-028m | Integration Tests Suite   | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | 16 integration tests (hook workflow + CLI subcommands), 86% coverage, ecosystem ✓ 94.2% |
+| GOgent-028n | Deployment Runbook        | test/audit/GOgent-028n/ | ✅ Passing | 2026-01-21 | Deployment runbook documentation, ecosystem ✓ 94.2% |
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-028m Integration tests for session handoff)
+**Last Audit**: 2026-01-21 (GOgent-028n Deployment runbook)
 **Next Audit**: After next ticket completion

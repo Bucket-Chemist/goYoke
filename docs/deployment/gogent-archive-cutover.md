@@ -1,57 +1,7 @@
----
-id: GOgent-028n
-title: "Deployment Runbook"
-description: "Step-by-step deployment and rollback procedures for gogent-archive cutover"
-status: pending
-dependencies: [GOgent-028d]
-time_estimate: "1.0h"
-phase: 4
-priority: MAJOR
----
-
-# GOgent-028n: Deployment Runbook
-
-**SCOPE EXPANSION (2026-01-20)**: Expanded scope per architect analysis to include CLI subcommand validation procedures. Original runbook only covered hook mode deployment. Must add smoke tests for --version, --help, error handling, and GOGENT_PROJECT_DIR behavior.
-
-## Description
-Create comprehensive deployment runbook documenting pre-cutover checklist, deployment steps, validation procedures, and rollback process for replacing bash hook with Go CLI. Includes CLI subcommand validation to catch boundary issues before production.
-
-## Implementation Intention
-Reduce deployment risk with structured process documentation.
-
-## Intended End State
-- Deployment runbook document
-- Pre-cutover checklist
-- Step-by-step deployment procedure
-- Validation steps
-- Rollback procedure
-- Troubleshooting guide
-
-## Dependencies
-- GOgent-028d: Hook registration must be documented
-
-## Acceptance Criteria
-- [x] File created: `docs/deployment/gogent-archive-cutover.md`
-- [x] Pre-cutover checklist section (15+ items)
-- [x] Deployment steps section (10+ numbered steps)
-- [x] Validation steps section (8+ verification checks)
-- [x] Rollback procedure section (5+ steps)
-- [x] Troubleshooting section (common issues + fixes)
-- [x] Success criteria defined
-- [x] Estimated deployment time documented
-- [x] Rollback time documented
-- [x] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem` shows ALL PASS
-
-## Implementation Details
-
-### Deployment Runbook
-File: `docs/deployment/gogent-archive-cutover.md`
-
-```markdown
 # gogent-archive Deployment Runbook
 
 **Version**: 1.0
-**Last Updated**: 2026-01-19
+**Last Updated**: 2026-01-21
 **Estimated Deployment Time**: 15 minutes
 **Estimated Rollback Time**: 5 minutes
 
@@ -75,11 +25,11 @@ This runbook guides the cutover from bash `session-archive.sh` hook to Go `gogen
 - [ ] Run `make build-archive` successfully
 - [ ] Binary exists at `bin/gogent-archive`
 - [ ] Binary is executable: `chmod +x bin/gogent-archive`
-- [ ] Version check: `./bin/gogent-archive --version` (if implemented)
+- [ ] Version check: `./bin/gogent-archive --version`
 
 ### Test Verification
-- [ ] All unit tests pass: `go test ./pkg/session`
-- [ ] All integration tests pass: `go test ./test/integration`
+- [ ] All unit tests pass: `go test ./pkg/session/...`
+- [ ] All integration tests pass: `go test ./test/integration/...`
 - [ ] Metrics parity test passes (GOgent-028b)
 - [ ] Ecosystem tests ALL PASS: `make test-ecosystem`
 - [ ] Context loading compatibility verified (GOgent-028f)
@@ -100,7 +50,7 @@ This runbook guides the cutover from bash `session-archive.sh` hook to Go `gogen
 - [ ] Current hook config backed up
 - [ ] Project `.claude/` directory permissions: `ls -ld .claude/memory/`
 
-### CLI Subcommand Verification (EXPANDED SCOPE)
+### CLI Subcommand Verification
 - [ ] `gogent-archive --version` returns version string
 - [ ] `gogent-archive --help` displays usage with all subcommands
 - [ ] Invalid JSON input returns actionable error: `echo "invalid" | gogent-archive`
@@ -202,6 +152,7 @@ ls -lh .claude/memory/session-archive/
 Compare last few sessions (if bash handoffs exist):
 ```bash
 # Check tool call counts match
+diff <(jq .tool_calls bash-handoff.json) <(jq .tool_calls go-handoff.json)
 ```
 
 ### 10. Monitor for Errors
@@ -262,8 +213,6 @@ After 24 hours of production use:
 ---
 
 ## Rollback Procedure
-
-**If deployment fails or bugs discovered**:
 
 ### Step 1: Restore Bash Hook
 
@@ -381,7 +330,7 @@ bash test/compatibility/context_loading_test.sh
 # If fails, fix pkg/session/handoff_markdown.go
 ```
 
-### Issue: "gogent-archive hangs on STDIN" (EXPANDED SCOPE)
+### Issue: "gogent-archive hangs on STDIN"
 
 **Cause**: STDIN timeout not configured or too long
 
@@ -398,24 +347,18 @@ timeout 1s gogent-archive < /dev/null
 # - Large session artifacts causing serialization delay
 ```
 
-### Issue: "Command not found: gogent-archive" (EXPANDED SCOPE)
+### Issue: "Exit code non-zero on success"
 
-**Cause**: Binary not in PATH or wrong working directory
+**Cause**: Error handling returning wrong exit code
 
 **Fix**:
 ```bash
-# Verify PATH
-which gogent-archive
+# Test exit codes
+echo '{"session_id":"test","timestamp":123,"hook_event_name":"SessionEnd"}' | gogent-archive
+echo $?  # Should be 0
 
-# If not found, check installation
-ls -la ~/.local/bin/gogent-archive
-
-# Verify GOGENT_PROJECT_DIR
-echo $GOGENT_PROJECT_DIR
-
-# Test from project root
-cd /path/to/project
-gogent-archive --version
+echo 'invalid' | gogent-archive
+echo $?  # Should be 1
 ```
 
 ---
@@ -423,20 +366,20 @@ gogent-archive --version
 ## Success Criteria
 
 Deployment is successful if:
-- ✅ All validation steps pass
-- ✅ No errors in logs after 24 hours
-- ✅ Session continuity maintained
-- ✅ Metrics accuracy within tolerance (±1% of bash)
-- ✅ No user-facing regressions
+- All validation steps pass
+- No errors in logs after 24 hours
+- Session continuity maintained
+- Metrics accuracy within tolerance (+/-1% of bash)
+- No user-facing regressions
 
 ## Rollback Criteria
 
 Rollback immediately if:
-- ❌ SessionEnd hook fails completely (no handoff)
-- ❌ Handoff JSONL format corrupted
-- ❌ Context loading breaks (new sessions lack context)
-- ❌ Data loss (artifacts not archived)
-- ❌ Performance degradation >100ms per session
+- SessionEnd hook fails completely (no handoff)
+- Handoff JSONL format corrupted
+- Context loading breaks (new sessions lack context)
+- Data loss (artifacts not archived)
+- Performance degradation >100ms per session
 
 ---
 
@@ -451,21 +394,6 @@ After successful deployment:
 
 ---
 
-**Deployment Contact**: [Team/Person responsible]
-**Escalation**: [Escalation path if rollback fails]
-**Last Tested**: 2026-01-19
-```
-
-### Test Deliverables (MANDATORY)
-- [x] Runbook file created: `docs/deployment/gogent-archive-cutover.md`
-- [x] All sections present (overview, checklist, steps, validation, rollback, troubleshooting)
-- [ ] Peer review completed (another developer reviews)
-- [ ] Runbook tested in staging environment (if available)
-- [x] **ECOSYSTEM TEST PASS REQUIRED**: Run `make test-ecosystem` and verify ALL PASS
-- [x] Ecosystem test output saved to: `test/audit/GOgent-028n/`
-- [x] Test audit updated: `/test/INDEX.md` row added
-
-## Why This Matters
-Production deployments without runbooks have 3x higher failure rate. This runbook reduces deployment risk, provides clear rollback path, and documents troubleshooting steps. Critical for production cutover confidence.
-
-**Risk Mitigation**: Structured process prevents ad-hoc deployment mistakes.
+**Deployment Contact**: System Owner
+**Escalation**: GitHub Issues
+**Last Tested**: 2026-01-21
