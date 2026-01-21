@@ -2189,7 +2189,190 @@
         "phase-3"
       ],
       "acceptance_criteria_count": 6,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030e",
+      "title": "AgentInvocation Schema and Logging",
+      "description": "Define AgentInvocation struct and implement LogInvocation() with dual-write pattern",
+      "file": "tickets/session_archive/030e.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-030d"
+      ],
+      "blocks": [
+        "GOgent-030f",
+        "GOgent-030h",
+        "GOgent-030j"
+      ],
+      "priority": "critical",
+      "tags": [
+        "telemetry",
+        "invocations",
+        "foundation"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/invocations.go",
+        "pkg/telemetry/invocations_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 11,
       "status": "in_progress"
+    },
+    {
+      "id": "GOgent-030f",
+      "title": "ClusterInvocationsByAgent Analysis",
+      "description": "Implement clustering and aggregation functions for agent invocations",
+      "file": "tickets/session_archive/030f.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030e"
+      ],
+      "blocks": [
+        "GOgent-030g"
+      ],
+      "priority": "critical",
+      "tags": [
+        "telemetry",
+        "clustering",
+        "analysis"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "acceptance_criteria_count": 10,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030g",
+      "title": "CostAttribution Calculation",
+      "description": "Implement cost calculation functions using tier-specific pricing",
+      "file": "tickets/session_archive/030g.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030f"
+      ],
+      "blocks": [],
+      "priority": "critical",
+      "tags": [
+        "telemetry",
+        "cost",
+        "pricing"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/cost.go",
+        "pkg/telemetry/cost_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 11,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030h",
+      "title": "EscalationEvent Schema and Logging",
+      "description": "Define EscalationEvent struct and implement LogEscalation() with dual-write pattern",
+      "file": "tickets/session_archive/030h.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030e"
+      ],
+      "blocks": [
+        "GOgent-030i"
+      ],
+      "priority": "high",
+      "tags": [
+        "telemetry",
+        "escalations",
+        "einstein"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/escalations.go",
+        "pkg/telemetry/escalations_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 10,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030i",
+      "title": "EscalationPattern Analysis",
+      "description": "Implement aggregation and pattern detection for escalation events",
+      "file": "tickets/session_archive/030i.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-030h"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "telemetry",
+        "escalations",
+        "analysis"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "acceptance_criteria_count": 9,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030j",
+      "title": "ScoutRecommendation Schema and Logging",
+      "description": "Define ScoutRecommendation struct and implement LogScoutRecommendation() with dual-write pattern",
+      "file": "tickets/session_archive/030j.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030e"
+      ],
+      "blocks": [
+        "GOgent-030k"
+      ],
+      "priority": "medium",
+      "tags": [
+        "telemetry",
+        "scout",
+        "routing"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/scout.go",
+        "pkg/telemetry/scout_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 10,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030k",
+      "title": "ScoutAccuracy Calculation",
+      "description": "Implement aggregation and accuracy analysis functions for scout recommendations",
+      "file": "tickets/session_archive/030k.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-030j"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "telemetry",
+        "scout",
+        "analysis"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "acceptance_criteria_count": 9,
+      "status": "pending"
     },
     {
       "id": "GOgent-031",
