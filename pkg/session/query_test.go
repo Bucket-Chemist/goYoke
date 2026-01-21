@@ -620,3 +620,601 @@ func itoa(n int64) string {
 	}
 	return s
 }
+
+// ========== DECISIONS QUERY TESTS ==========
+
+func TestQueryDecisions_NoFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `{"timestamp":1705000000,"category":"architecture","decision":"Use JSONL","rationale":"Append-only","alternatives":"SQLite","impact":"high"}
+{"timestamp":1705000001,"category":"tooling","decision":"Use Go test","rationale":"Standard","alternatives":"Ginkgo","impact":"medium"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	decisions, err := q.QueryDecisions(DecisionFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(decisions) != 2 {
+		t.Errorf("Expected 2 decisions, got: %d", len(decisions))
+	}
+}
+
+func TestQueryDecisions_CategoryFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `{"timestamp":1705000000,"category":"architecture","decision":"d1","rationale":"r1","alternatives":"","impact":"high"}
+{"timestamp":1705000001,"category":"tooling","decision":"d2","rationale":"r2","alternatives":"","impact":"medium"}
+{"timestamp":1705000002,"category":"architecture","decision":"d3","rationale":"r3","alternatives":"","impact":"low"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	category := "architecture"
+	decisions, err := q.QueryDecisions(DecisionFilters{Category: &category})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(decisions) != 2 {
+		t.Errorf("Expected 2 architecture decisions, got: %d", len(decisions))
+	}
+}
+
+func TestQueryDecisions_ImpactFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `{"timestamp":1705000000,"category":"a","decision":"d1","rationale":"r1","alternatives":"","impact":"high"}
+{"timestamp":1705000001,"category":"b","decision":"d2","rationale":"r2","alternatives":"","impact":"low"}
+{"timestamp":1705000002,"category":"c","decision":"d3","rationale":"r3","alternatives":"","impact":"high"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	impact := "high"
+	decisions, err := q.QueryDecisions(DecisionFilters{Impact: &impact})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(decisions) != 2 {
+		t.Errorf("Expected 2 high-impact decisions, got: %d", len(decisions))
+	}
+}
+
+func TestQueryDecisions_SinceFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	now := time.Now().Unix()
+	oldTs := now - (30 * 24 * 60 * 60) // 30 days ago
+	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `{"timestamp":` + itoa(oldTs) + `,"category":"a","decision":"old","rationale":"r","alternatives":"","impact":"high"}
+{"timestamp":` + itoa(recentTs) + `,"category":"b","decision":"recent","rationale":"r","alternatives":"","impact":"low"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	since := now - (7 * 24 * 60 * 60) // 7 days ago
+	decisions, err := q.QueryDecisions(DecisionFilters{Since: &since})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(decisions) != 1 {
+		t.Errorf("Expected 1 recent decision, got: %d", len(decisions))
+	}
+	if len(decisions) > 0 && decisions[0].Decision != "recent" {
+		t.Errorf("Expected 'recent' decision, got: %s", decisions[0].Decision)
+	}
+}
+
+func TestQueryDecisions_LimitFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `{"timestamp":1,"category":"a","decision":"d1","rationale":"r","alternatives":"","impact":"high"}
+{"timestamp":2,"category":"b","decision":"d2","rationale":"r","alternatives":"","impact":"medium"}
+{"timestamp":3,"category":"c","decision":"d3","rationale":"r","alternatives":"","impact":"low"}`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	decisions, err := q.QueryDecisions(DecisionFilters{Limit: 2})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(decisions) != 2 {
+		t.Errorf("Expected 2 decisions (limit), got: %d", len(decisions))
+	}
+}
+
+func TestQueryDecisions_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	q := NewQuery(tmpDir)
+
+	decisions, err := q.QueryDecisions(DecisionFilters{})
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+	if len(decisions) != 0 {
+		t.Errorf("Expected empty slice, got: %d", len(decisions))
+	}
+}
+
+func TestQueryDecisions_MalformedLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	content := `not valid json
+{"timestamp":1,"category":"a","decision":"valid","rationale":"r","alternatives":"","impact":"high"}
+{broken json`
+
+	os.WriteFile(decisionsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	decisions, err := q.QueryDecisions(DecisionFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error (skip malformed), got: %v", err)
+	}
+
+	if len(decisions) != 1 {
+		t.Errorf("Expected 1 decision (skipped malformed), got: %d", len(decisions))
+	}
+}
+
+// ========== PREFERENCES QUERY TESTS ==========
+
+func TestQueryPreferences_NoFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	content := `{"timestamp":1705000000,"category":"routing","key":"tier","value":"sonnet","reason":"quality","scope":"project"}
+{"timestamp":1705000001,"category":"tooling","key":"test","value":"go test","reason":"standard","scope":"global"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	prefs, err := q.QueryPreferences(PreferenceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(prefs) != 2 {
+		t.Errorf("Expected 2 preferences, got: %d", len(prefs))
+	}
+}
+
+func TestQueryPreferences_CategoryFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	content := `{"timestamp":1,"category":"routing","key":"k1","value":"v1","reason":"r1","scope":"project"}
+{"timestamp":2,"category":"tooling","key":"k2","value":"v2","reason":"r2","scope":"global"}
+{"timestamp":3,"category":"routing","key":"k3","value":"v3","reason":"r3","scope":"session"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	category := "routing"
+	prefs, err := q.QueryPreferences(PreferenceFilters{Category: &category})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(prefs) != 2 {
+		t.Errorf("Expected 2 routing preferences, got: %d", len(prefs))
+	}
+}
+
+func TestQueryPreferences_ScopeFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	content := `{"timestamp":1,"category":"a","key":"k1","value":"v1","reason":"r1","scope":"session"}
+{"timestamp":2,"category":"b","key":"k2","value":"v2","reason":"r2","scope":"project"}
+{"timestamp":3,"category":"c","key":"k3","value":"v3","reason":"r3","scope":"global"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	scope := "project"
+	prefs, err := q.QueryPreferences(PreferenceFilters{Scope: &scope})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(prefs) != 1 {
+		t.Errorf("Expected 1 project-scope preference, got: %d", len(prefs))
+	}
+	if len(prefs) > 0 && prefs[0].Key != "k2" {
+		t.Errorf("Expected k2, got: %s", prefs[0].Key)
+	}
+}
+
+func TestQueryPreferences_SinceFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	now := time.Now().Unix()
+	oldTs := now - (30 * 24 * 60 * 60) // 30 days ago
+	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	content := `{"timestamp":` + itoa(oldTs) + `,"category":"a","key":"old","value":"v","reason":"r","scope":"project"}
+{"timestamp":` + itoa(recentTs) + `,"category":"b","key":"recent","value":"v","reason":"r","scope":"global"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	since := now - (7 * 24 * 60 * 60) // 7 days ago
+	prefs, err := q.QueryPreferences(PreferenceFilters{Since: &since})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(prefs) != 1 {
+		t.Errorf("Expected 1 recent preference, got: %d", len(prefs))
+	}
+	if len(prefs) > 0 && prefs[0].Key != "recent" {
+		t.Errorf("Expected 'recent', got: %s", prefs[0].Key)
+	}
+}
+
+func TestQueryPreferences_LimitFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	content := `{"timestamp":1,"category":"a","key":"k1","value":"v1","reason":"r1","scope":"session"}
+{"timestamp":2,"category":"b","key":"k2","value":"v2","reason":"r2","scope":"project"}
+{"timestamp":3,"category":"c","key":"k3","value":"v3","reason":"r3","scope":"global"}`
+
+	os.WriteFile(prefsPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	prefs, err := q.QueryPreferences(PreferenceFilters{Limit: 2})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(prefs) != 2 {
+		t.Errorf("Expected 2 preferences (limit), got: %d", len(prefs))
+	}
+}
+
+func TestQueryPreferences_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	q := NewQuery(tmpDir)
+
+	prefs, err := q.QueryPreferences(PreferenceFilters{})
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+	if len(prefs) != 0 {
+		t.Errorf("Expected empty slice, got: %d", len(prefs))
+	}
+}
+
+// ========== PERFORMANCE QUERY TESTS ==========
+
+func TestQueryPerformance_NoFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":1705000000,"operation":"handoff","duration_ms":100,"memory_bytes":1048576,"success":true,"context":"s1"}
+{"timestamp":1705000001,"operation":"validation","duration_ms":50,"memory_bytes":524288,"success":true,"context":"s2"}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Errorf("Expected 2 metrics, got: %d", len(metrics))
+	}
+}
+
+func TestQueryPerformance_OperationFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":1,"operation":"handoff","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"validation","duration_ms":50,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":3,"operation":"handoff","duration_ms":150,"memory_bytes":0,"success":false,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	op := "handoff"
+	metrics, err := q.QueryPerformance(PerformanceFilters{Operation: &op})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Errorf("Expected 2 handoff metrics, got: %d", len(metrics))
+	}
+}
+
+func TestQueryPerformance_SlowOnlyFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	// SlowThresholdMs = 1000
+	content := `{"timestamp":1,"operation":"fast","duration_ms":500,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"slow","duration_ms":1500,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":3,"operation":"very_slow","duration_ms":3000,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{SlowOnly: true})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Errorf("Expected 2 slow metrics (>1000ms), got: %d", len(metrics))
+	}
+}
+
+func TestQueryPerformance_SuccessOnlyFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":1,"operation":"op1","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"op2","duration_ms":100,"memory_bytes":0,"success":false,"context":""}
+{"timestamp":3,"operation":"op3","duration_ms":100,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{SuccessOnly: true})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Errorf("Expected 2 success metrics, got: %d", len(metrics))
+	}
+}
+
+func TestQueryPerformance_FailedOnlyFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":1,"operation":"op1","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"op2","duration_ms":100,"memory_bytes":0,"success":false,"context":""}
+{"timestamp":3,"operation":"op3","duration_ms":100,"memory_bytes":0,"success":false,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{FailedOnly: true})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Errorf("Expected 2 failed metrics, got: %d", len(metrics))
+	}
+}
+
+func TestQueryPerformance_SinceFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	now := time.Now().Unix()
+	oldTs := now - (30 * 24 * 60 * 60) // 30 days ago
+	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":` + itoa(oldTs) + `,"operation":"old","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":` + itoa(recentTs) + `,"operation":"recent","duration_ms":100,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	since := now - (7 * 24 * 60 * 60) // 7 days ago
+	metrics, err := q.QueryPerformance(PerformanceFilters{Since: &since})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 1 {
+		t.Errorf("Expected 1 recent metric, got: %d", len(metrics))
+	}
+	if len(metrics) > 0 && metrics[0].Operation != "recent" {
+		t.Errorf("Expected 'recent', got: %s", metrics[0].Operation)
+	}
+}
+
+func TestQueryPerformance_LimitFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":1,"operation":"op1","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"op2","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":3,"operation":"op3","duration_ms":100,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	metrics, err := q.QueryPerformance(PerformanceFilters{Limit: 2})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(metrics) != 2 {
+		t.Errorf("Expected 2 metrics (limit), got: %d", len(metrics))
+	}
+}
+
+func TestQueryPerformance_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	q := NewQuery(tmpDir)
+
+	metrics, err := q.QueryPerformance(PerformanceFilters{})
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+	if len(metrics) != 0 {
+		t.Errorf("Expected empty slice, got: %d", len(metrics))
+	}
+}
+
+// ========== PERFORMANCE SUMMARY TESTS ==========
+
+func TestQueryPerformanceSummary_Basic(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	// handoff: 100, 200, 300 (avg 200, min 100, max 300)
+	// validation: 50, 150 (avg 100, min 50, max 150)
+	content := `{"timestamp":1,"operation":"handoff","duration_ms":100,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"handoff","duration_ms":200,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":3,"operation":"handoff","duration_ms":300,"memory_bytes":0,"success":false,"context":""}
+{"timestamp":4,"operation":"validation","duration_ms":50,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":5,"operation":"validation","duration_ms":150,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	summaries, err := q.QueryPerformanceSummary(PerformanceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(summaries) != 2 {
+		t.Errorf("Expected 2 summaries, got: %d", len(summaries))
+	}
+
+	// Find handoff summary
+	var handoff *PerformanceSummary
+	for i := range summaries {
+		if summaries[i].Operation == "handoff" {
+			handoff = &summaries[i]
+			break
+		}
+	}
+
+	if handoff == nil {
+		t.Fatal("Expected handoff summary")
+	}
+	if handoff.Count != 3 {
+		t.Errorf("Expected count 3, got: %d", handoff.Count)
+	}
+	if handoff.SuccessCount != 2 {
+		t.Errorf("Expected success 2, got: %d", handoff.SuccessCount)
+	}
+	if handoff.FailCount != 1 {
+		t.Errorf("Expected fail 1, got: %d", handoff.FailCount)
+	}
+	if handoff.MinMs != 100 {
+		t.Errorf("Expected min 100, got: %d", handoff.MinMs)
+	}
+	if handoff.MaxMs != 300 {
+		t.Errorf("Expected max 300, got: %d", handoff.MaxMs)
+	}
+	if handoff.AvgMs != 200.0 {
+		t.Errorf("Expected avg 200.0, got: %.1f", handoff.AvgMs)
+	}
+}
+
+func TestQueryPerformanceSummary_WithSlowFilter(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	content := `{"timestamp":1,"operation":"fast","duration_ms":500,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":2,"operation":"slow","duration_ms":1500,"memory_bytes":0,"success":true,"context":""}
+{"timestamp":3,"operation":"slow","duration_ms":2000,"memory_bytes":0,"success":true,"context":""}`
+
+	os.WriteFile(perfPath, []byte(content), 0644)
+
+	q := NewQuery(tmpDir)
+	summaries, err := q.QueryPerformanceSummary(PerformanceFilters{SlowOnly: true})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Only slow operations should be included
+	if len(summaries) != 1 {
+		t.Errorf("Expected 1 summary (slow only), got: %d", len(summaries))
+	}
+	if len(summaries) > 0 && summaries[0].Operation != "slow" {
+		t.Errorf("Expected 'slow' operation, got: %s", summaries[0].Operation)
+	}
+}
+
+func TestQueryPerformanceSummary_Empty(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(claudeDir, 0755)
+
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	os.WriteFile(perfPath, []byte(""), 0644)
+
+	q := NewQuery(tmpDir)
+	summaries, err := q.QueryPerformanceSummary(PerformanceFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(summaries) != 0 {
+		t.Errorf("Expected 0 summaries for empty file, got: %d", len(summaries))
+	}
+}
+
+func TestSlowThresholdMs_Value(t *testing.T) {
+	if SlowThresholdMs != 1000 {
+		t.Errorf("Expected SlowThresholdMs to be 1000, got: %d", SlowThresholdMs)
+	}
+}

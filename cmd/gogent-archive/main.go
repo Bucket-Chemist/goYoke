@@ -40,6 +40,15 @@ func main() {
 		case "user-intents":
 			listUserIntents()
 			return
+		case "decisions":
+			listDecisions()
+			return
+		case "preferences":
+			listPreferences()
+			return
+		case "performance":
+			showPerformance()
+			return
 		case "--help", "-h":
 			printHelp()
 			return
@@ -348,6 +357,24 @@ func printHelp() {
 	fmt.Println("  gogent-archive user-intents --has-action    Show only intents with actions taken")
 	fmt.Println("  gogent-archive user-intents --since 7d      Filter by time")
 	fmt.Println("")
+	fmt.Println("Decision Commands:")
+	fmt.Println("  gogent-archive decisions              List all decisions")
+	fmt.Println("  gogent-archive decisions --category architecture  Filter by category (architecture, tooling, pattern)")
+	fmt.Println("  gogent-archive decisions --impact high      Filter by impact level (high, medium, low)")
+	fmt.Println("  gogent-archive decisions --since 7d         Filter by time")
+	fmt.Println("")
+	fmt.Println("Preference Commands:")
+	fmt.Println("  gogent-archive preferences            List all preference overrides")
+	fmt.Println("  gogent-archive preferences --category routing  Filter by category (routing, tooling, formatting)")
+	fmt.Println("  gogent-archive preferences --scope project   Filter by scope (session, project, global)")
+	fmt.Println("  gogent-archive preferences --since 7d        Filter by time")
+	fmt.Println("")
+	fmt.Println("Performance Commands:")
+	fmt.Println("  gogent-archive performance            List all performance metrics")
+	fmt.Println("  gogent-archive performance --by-operation    Group metrics by operation (summary view)")
+	fmt.Println("  gogent-archive performance --slow-only       Show only slow operations (>1000ms)")
+	fmt.Println("  gogent-archive performance --since 7d        Filter by time")
+	fmt.Println("")
 	fmt.Println("Other Commands:")
 	fmt.Println("  gogent-archive --help                Show this help")
 	fmt.Println("  gogent-archive --version             Show version information")
@@ -355,6 +382,9 @@ func printHelp() {
 	fmt.Println("Examples:")
 	fmt.Println("  gogent-archive sharp-edges --severity high --unresolved")
 	fmt.Println("  gogent-archive user-intents --source ask_user --has-action")
+	fmt.Println("  gogent-archive decisions --category architecture --impact high")
+	fmt.Println("  gogent-archive preferences --scope project")
+	fmt.Println("  gogent-archive performance --by-operation --slow-only")
 	fmt.Println("  gogent-archive list --since 2026-01-15 --clean")
 	fmt.Println("  gogent-archive show abc123def456")
 	fmt.Println("")
@@ -588,6 +618,232 @@ func listUserIntents() {
 	}
 
 	fmt.Printf("\nTotal: %d user intent(s)\n", len(intents))
+}
+
+// listDecisions displays decisions with optional filtering
+func listDecisions() {
+	decisionsFlags := flag.NewFlagSet("decisions", flag.ExitOnError)
+	categoryFlag := decisionsFlags.String("category", "", "Filter by category (architecture, tooling, pattern)")
+	impactFlag := decisionsFlags.String("impact", "", "Filter by impact level (high, medium, low)")
+	sinceFlag := decisionsFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
+	decisionsFlags.Parse(os.Args[2:])
+
+	projectDir := getProjectDir()
+	q := session.NewQuery(projectDir)
+
+	// Build filters
+	filters := session.DecisionFilters{}
+	if *categoryFlag != "" {
+		filters.Category = categoryFlag
+	}
+	if *impactFlag != "" {
+		filters.Impact = impactFlag
+	}
+	if *sinceFlag != "" {
+		since := parseSinceFilter(*sinceFlag)
+		timestamp := since.Unix()
+		filters.Since = &timestamp
+	}
+
+	decisions, err := q.QueryDecisions(filters)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query decisions: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(decisions) == 0 {
+		fmt.Println("No decisions recorded.")
+		return
+	}
+
+	// Print table header
+	fmt.Println("Timestamp  | Category     | Impact | Decision                       | Rationale")
+	fmt.Println("-----------|--------------|--------|--------------------------------|--------------------------")
+
+	for _, d := range decisions {
+		timestamp := time.Unix(d.Timestamp, 0).Format("2006-01-02")
+		category := truncateForTable(d.Category, 12)
+		impact := truncateForTable(d.Impact, 6)
+		decision := truncateForTable(d.Decision, 30)
+		rationale := truncateForTable(d.Rationale, 24)
+		fmt.Printf("%s | %-12s | %-6s | %-30s | %s\n",
+			timestamp, category, impact, decision, rationale)
+	}
+
+	fmt.Printf("\nTotal: %d decision(s)\n", len(decisions))
+}
+
+// listPreferences displays preference overrides with optional filtering
+func listPreferences() {
+	prefsFlags := flag.NewFlagSet("preferences", flag.ExitOnError)
+	categoryFlag := prefsFlags.String("category", "", "Filter by category (routing, tooling, formatting)")
+	scopeFlag := prefsFlags.String("scope", "", "Filter by scope (session, project, global)")
+	sinceFlag := prefsFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
+	prefsFlags.Parse(os.Args[2:])
+
+	projectDir := getProjectDir()
+	q := session.NewQuery(projectDir)
+
+	// Build filters
+	filters := session.PreferenceFilters{}
+	if *categoryFlag != "" {
+		filters.Category = categoryFlag
+	}
+	if *scopeFlag != "" {
+		filters.Scope = scopeFlag
+	}
+	if *sinceFlag != "" {
+		since := parseSinceFilter(*sinceFlag)
+		timestamp := since.Unix()
+		filters.Since = &timestamp
+	}
+
+	preferences, err := q.QueryPreferences(filters)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query preferences: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(preferences) == 0 {
+		fmt.Println("No preferences recorded.")
+		return
+	}
+
+	// Print table header
+	fmt.Println("Timestamp  | Category    | Scope   | Key                  | Value                | Reason")
+	fmt.Println("-----------|-------------|---------|----------------------|----------------------|-------------------")
+
+	for _, p := range preferences {
+		timestamp := time.Unix(p.Timestamp, 0).Format("2006-01-02")
+		category := truncateForTable(p.Category, 11)
+		scope := truncateForTable(p.Scope, 7)
+		key := truncateForTable(p.Key, 20)
+		value := truncateForTable(p.Value, 20)
+		reason := truncateForTable(p.Reason, 17)
+		fmt.Printf("%s | %-11s | %-7s | %-20s | %-20s | %s\n",
+			timestamp, category, scope, key, value, reason)
+	}
+
+	fmt.Printf("\nTotal: %d preference(s)\n", len(preferences))
+}
+
+// showPerformance displays performance metrics with optional filtering
+func showPerformance() {
+	perfFlags := flag.NewFlagSet("performance", flag.ExitOnError)
+	byOperationFlag := perfFlags.Bool("by-operation", false, "Group metrics by operation type (summary view)")
+	slowOnlyFlag := perfFlags.Bool("slow-only", false, "Show only slow metrics (>1000ms)")
+	sinceFlag := perfFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
+	perfFlags.Parse(os.Args[2:])
+
+	projectDir := getProjectDir()
+	q := session.NewQuery(projectDir)
+
+	// Build filters
+	filters := session.PerformanceFilters{}
+	if *slowOnlyFlag {
+		filters.SlowOnly = true
+	}
+	if *sinceFlag != "" {
+		since := parseSinceFilter(*sinceFlag)
+		timestamp := since.Unix()
+		filters.Since = &timestamp
+	}
+
+	if *byOperationFlag {
+		// Show summary grouped by operation
+		summaries, err := q.QueryPerformanceSummary(filters)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query performance summary: %v\n", err)
+			os.Exit(1)
+		}
+
+		if len(summaries) == 0 {
+			fmt.Println("No performance metrics recorded.")
+			return
+		}
+
+		// Print summary header
+		fmt.Println("Operation                      | Count | Success | Failed | Avg (ms) | Min (ms) | Max (ms)")
+		fmt.Println("-------------------------------|-------|---------|--------|----------|----------|----------")
+
+		var totalOps int
+		var totalSuccess int
+		var totalFailed int
+
+		for _, s := range summaries {
+			operation := truncateForTable(s.Operation, 30)
+			fmt.Printf("%-30s | %5d | %7d | %6d | %8.1f | %8d | %8d\n",
+				operation, s.Count, s.SuccessCount, s.FailCount, s.AvgMs, s.MinMs, s.MaxMs)
+			totalOps += s.Count
+			totalSuccess += s.SuccessCount
+			totalFailed += s.FailCount
+		}
+
+		fmt.Printf("\nTotal: %d operation(s) (%d success, %d failed)\n", totalOps, totalSuccess, totalFailed)
+		return
+	}
+
+	// Show raw metrics table
+	metrics, err := q.QueryPerformance(filters)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query performance metrics: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(metrics) == 0 {
+		fmt.Println("No performance metrics recorded.")
+		return
+	}
+
+	// Print table header
+	fmt.Println("Timestamp  | Operation                      | Duration | Memory      | Success | Context")
+	fmt.Println("-----------|--------------------------------|----------|-------------|---------|--------------------")
+
+	for _, m := range metrics {
+		timestamp := time.Unix(m.Timestamp, 0).Format("2006-01-02")
+		operation := truncateForTable(m.Operation, 30)
+		duration := fmt.Sprintf("%dms", m.DurationMs)
+		memory := formatBytes(m.MemoryBytes)
+		success := "Yes"
+		if !m.Success {
+			success = "No"
+		}
+		context := truncateForTable(m.Context, 18)
+		fmt.Printf("%s | %-30s | %8s | %11s | %-7s | %s\n",
+			timestamp, operation, duration, memory, success, context)
+	}
+
+	fmt.Printf("\nTotal: %d metric(s)\n", len(metrics))
+
+	// Show quick stats
+	var totalMs int64
+	var successCount int
+	for _, m := range metrics {
+		totalMs += m.DurationMs
+		if m.Success {
+			successCount++
+		}
+	}
+	avgMs := float64(totalMs) / float64(len(metrics))
+	successRate := float64(successCount) / float64(len(metrics)) * 100
+	fmt.Printf("Average duration: %.1fms | Success rate: %.1f%%\n", avgMs, successRate)
+}
+
+// formatBytes formats byte count for human-readable display
+func formatBytes(bytes int64) string {
+	if bytes == 0 {
+		return "-"
+	}
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%dB", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f%cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
 // truncateForTable truncates string for table display

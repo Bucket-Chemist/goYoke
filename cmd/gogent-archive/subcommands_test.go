@@ -1125,3 +1125,1030 @@ func TestListSessions_MetricsDisplayed(t *testing.T) {
 		t.Error("Expected violations value 3")
 	}
 }
+
+// ========== DECISIONS SUBCOMMAND TESTS ==========
+
+func TestListDecisions_EmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+	if err := os.WriteFile(decisionsPath, []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "decisions"}
+	defer func() { os.Args = oldArgs }()
+
+	listDecisions()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "No decisions recorded") {
+		t.Errorf("Expected 'No decisions recorded' message, got: %s", output)
+	}
+}
+
+func TestListDecisions_MultipleDecisions(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+
+	d1 := `{"timestamp":1705000000,"category":"architecture","decision":"Use JSONL for storage","rationale":"Better for append-only logs","alternatives":"SQLite, JSON","impact":"high"}`
+	d2 := `{"timestamp":1705100000,"category":"tooling","decision":"Adopt Go test framework","rationale":"Standard library is sufficient","alternatives":"Ginkgo, Testify","impact":"medium"}`
+	d3 := `{"timestamp":1705200000,"category":"pattern","decision":"Use table-driven tests","rationale":"Better coverage, easier maintenance","alternatives":"Individual test functions","impact":"low"}`
+
+	content := d1 + "\n" + d2 + "\n" + d3 + "\n"
+	if err := os.WriteFile(decisionsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "decisions"}
+	defer func() { os.Args = oldArgs }()
+
+	listDecisions()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Verify table headers
+	if !strings.Contains(output, "Category") {
+		t.Error("Expected 'Category' header")
+	}
+	if !strings.Contains(output, "Impact") {
+		t.Error("Expected 'Impact' header")
+	}
+	if !strings.Contains(output, "Decision") {
+		t.Error("Expected 'Decision' header")
+	}
+	if !strings.Contains(output, "Rationale") {
+		t.Error("Expected 'Rationale' header")
+	}
+
+	// Verify all decisions are present
+	if !strings.Contains(output, "architecture") {
+		t.Error("Expected 'architecture' category")
+	}
+	if !strings.Contains(output, "tooling") {
+		t.Error("Expected 'tooling' category")
+	}
+	if !strings.Contains(output, "pattern") {
+		t.Error("Expected 'pattern' category")
+	}
+
+	// Verify total count
+	if !strings.Contains(output, "Total: 3 decision(s)") {
+		t.Error("Expected 'Total: 3 decision(s)'")
+	}
+}
+
+func TestListDecisions_FilterByCategory(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+
+	d1 := `{"timestamp":1705000000,"category":"architecture","decision":"Architecture decision","rationale":"Reason","alternatives":"None","impact":"high"}`
+	d2 := `{"timestamp":1705100000,"category":"tooling","decision":"Tooling decision","rationale":"Reason","alternatives":"None","impact":"medium"}`
+
+	content := d1 + "\n" + d2 + "\n"
+	if err := os.WriteFile(decisionsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "decisions", "--category", "architecture"}
+	defer func() { os.Args = oldArgs }()
+
+	listDecisions()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "architecture") {
+		t.Error("Expected 'architecture' in output")
+	}
+	if strings.Contains(output, "Tooling decision") {
+		t.Error("Did not expect tooling decision in filtered output")
+	}
+	if !strings.Contains(output, "Total: 1 decision(s)") {
+		t.Error("Expected 'Total: 1 decision(s)'")
+	}
+}
+
+func TestListDecisions_FilterByImpact(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+
+	d1 := `{"timestamp":1705000000,"category":"architecture","decision":"High impact decision","rationale":"Reason","alternatives":"None","impact":"high"}`
+	d2 := `{"timestamp":1705100000,"category":"tooling","decision":"Low impact decision","rationale":"Reason","alternatives":"None","impact":"low"}`
+
+	content := d1 + "\n" + d2 + "\n"
+	if err := os.WriteFile(decisionsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "decisions", "--impact", "high"}
+	defer func() { os.Args = oldArgs }()
+
+	listDecisions()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "High impact decision") {
+		t.Error("Expected 'High impact decision' in output")
+	}
+	if strings.Contains(output, "Low impact decision") {
+		t.Error("Did not expect low impact decision in filtered output")
+	}
+}
+
+func TestListDecisions_FilterBySince(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+
+	now := time.Now()
+	recentTs := now.AddDate(0, 0, -3).Unix()
+	oldTs := now.AddDate(0, 0, -30).Unix()
+
+	d1 := fmt.Sprintf(`{"timestamp":%d,"category":"architecture","decision":"Recent decision","rationale":"Reason","alternatives":"None","impact":"high"}`, recentTs)
+	d2 := fmt.Sprintf(`{"timestamp":%d,"category":"tooling","decision":"Old decision","rationale":"Reason","alternatives":"None","impact":"low"}`, oldTs)
+
+	content := d1 + "\n" + d2 + "\n"
+	if err := os.WriteFile(decisionsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "decisions", "--since", "7d"}
+	defer func() { os.Args = oldArgs }()
+
+	listDecisions()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "Recent decision") {
+		t.Error("Expected recent decision in output")
+	}
+	if strings.Contains(output, "Old decision") {
+		t.Error("Did not expect old decision in filtered output")
+	}
+}
+
+// ========== PREFERENCES SUBCOMMAND TESTS ==========
+
+func TestListPreferences_EmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+	if err := os.WriteFile(prefsPath, []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "preferences"}
+	defer func() { os.Args = oldArgs }()
+
+	listPreferences()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "No preferences recorded") {
+		t.Errorf("Expected 'No preferences recorded' message, got: %s", output)
+	}
+}
+
+func TestListPreferences_MultiplePreferences(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+
+	p1 := `{"timestamp":1705000000,"category":"routing","key":"default_tier","value":"sonnet","reason":"Higher quality output","scope":"project"}`
+	p2 := `{"timestamp":1705100000,"category":"tooling","key":"test_framework","value":"go_test","reason":"Standard library","scope":"global"}`
+	p3 := `{"timestamp":1705200000,"category":"formatting","key":"indent_style","value":"tabs","reason":"Team preference","scope":"session"}`
+
+	content := p1 + "\n" + p2 + "\n" + p3 + "\n"
+	if err := os.WriteFile(prefsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "preferences"}
+	defer func() { os.Args = oldArgs }()
+
+	listPreferences()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Verify table headers
+	if !strings.Contains(output, "Category") {
+		t.Error("Expected 'Category' header")
+	}
+	if !strings.Contains(output, "Scope") {
+		t.Error("Expected 'Scope' header")
+	}
+	if !strings.Contains(output, "Key") {
+		t.Error("Expected 'Key' header")
+	}
+	if !strings.Contains(output, "Value") {
+		t.Error("Expected 'Value' header")
+	}
+	if !strings.Contains(output, "Reason") {
+		t.Error("Expected 'Reason' header")
+	}
+
+	// Verify all preferences are present
+	if !strings.Contains(output, "routing") {
+		t.Error("Expected 'routing' category")
+	}
+	if !strings.Contains(output, "project") {
+		t.Error("Expected 'project' scope")
+	}
+
+	// Verify total count
+	if !strings.Contains(output, "Total: 3 preference(s)") {
+		t.Error("Expected 'Total: 3 preference(s)'")
+	}
+}
+
+func TestListPreferences_FilterByCategory(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+
+	p1 := `{"timestamp":1705000000,"category":"routing","key":"tier","value":"sonnet","reason":"Quality","scope":"project"}`
+	p2 := `{"timestamp":1705100000,"category":"tooling","key":"compiler","value":"go","reason":"Standard","scope":"global"}`
+
+	content := p1 + "\n" + p2 + "\n"
+	if err := os.WriteFile(prefsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "preferences", "--category", "routing"}
+	defer func() { os.Args = oldArgs }()
+
+	listPreferences()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "routing") {
+		t.Error("Expected 'routing' in output")
+	}
+	if strings.Contains(output, "compiler") {
+		t.Error("Did not expect tooling preference in filtered output")
+	}
+	if !strings.Contains(output, "Total: 1 preference(s)") {
+		t.Error("Expected 'Total: 1 preference(s)'")
+	}
+}
+
+func TestListPreferences_FilterByScope(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+
+	p1 := `{"timestamp":1705000000,"category":"routing","key":"tier","value":"sonnet","reason":"Quality","scope":"project"}`
+	p2 := `{"timestamp":1705100000,"category":"tooling","key":"compiler","value":"go","reason":"Standard","scope":"global"}`
+	p3 := `{"timestamp":1705200000,"category":"formatting","key":"spaces","value":"4","reason":"Readability","scope":"session"}`
+
+	content := p1 + "\n" + p2 + "\n" + p3 + "\n"
+	if err := os.WriteFile(prefsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "preferences", "--scope", "global"}
+	defer func() { os.Args = oldArgs }()
+
+	listPreferences()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "global") {
+		t.Error("Expected 'global' in output")
+	}
+	if strings.Contains(output, "project") && !strings.Contains(output, "Scope") {
+		// Allow "project" in header but not as data
+		if strings.Count(output, "project") > 1 {
+			t.Error("Did not expect project scope preference in filtered output")
+		}
+	}
+	if !strings.Contains(output, "Total: 1 preference(s)") {
+		t.Error("Expected 'Total: 1 preference(s)'")
+	}
+}
+
+// ========== PERFORMANCE SUBCOMMAND TESTS ==========
+
+func TestShowPerformance_EmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+	if err := os.WriteFile(perfPath, []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "performance"}
+	defer func() { os.Args = oldArgs }()
+
+	showPerformance()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "No performance metrics recorded") {
+		t.Errorf("Expected 'No performance metrics recorded' message, got: %s", output)
+	}
+}
+
+func TestShowPerformance_MultipleMetrics(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+
+	m1 := `{"timestamp":1705000000,"operation":"handoff_generation","duration_ms":150,"memory_bytes":1048576,"success":true,"context":"session-001"}`
+	m2 := `{"timestamp":1705100000,"operation":"validation","duration_ms":25,"memory_bytes":524288,"success":true,"context":"schema check"}`
+	m3 := `{"timestamp":1705200000,"operation":"handoff_generation","duration_ms":1500,"memory_bytes":2097152,"success":false,"context":"session-002 timeout"}`
+
+	content := m1 + "\n" + m2 + "\n" + m3 + "\n"
+	if err := os.WriteFile(perfPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "performance"}
+	defer func() { os.Args = oldArgs }()
+
+	showPerformance()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Verify table headers
+	if !strings.Contains(output, "Operation") {
+		t.Error("Expected 'Operation' header")
+	}
+	if !strings.Contains(output, "Duration") {
+		t.Error("Expected 'Duration' header")
+	}
+	if !strings.Contains(output, "Memory") {
+		t.Error("Expected 'Memory' header")
+	}
+	if !strings.Contains(output, "Success") {
+		t.Error("Expected 'Success' header")
+	}
+
+	// Verify metrics present
+	if !strings.Contains(output, "handoff_generation") {
+		t.Error("Expected 'handoff_generation' operation")
+	}
+	if !strings.Contains(output, "validation") {
+		t.Error("Expected 'validation' operation")
+	}
+
+	// Verify total and stats
+	if !strings.Contains(output, "Total: 3 metric(s)") {
+		t.Error("Expected 'Total: 3 metric(s)'")
+	}
+	if !strings.Contains(output, "Average duration:") {
+		t.Error("Expected 'Average duration:' in stats")
+	}
+	if !strings.Contains(output, "Success rate:") {
+		t.Error("Expected 'Success rate:' in stats")
+	}
+}
+
+func TestShowPerformance_ByOperation(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+
+	m1 := `{"timestamp":1705000000,"operation":"handoff_generation","duration_ms":100,"memory_bytes":1048576,"success":true,"context":"s1"}`
+	m2 := `{"timestamp":1705100000,"operation":"handoff_generation","duration_ms":200,"memory_bytes":1048576,"success":true,"context":"s2"}`
+	m3 := `{"timestamp":1705200000,"operation":"validation","duration_ms":50,"memory_bytes":524288,"success":true,"context":"v1"}`
+	m4 := `{"timestamp":1705300000,"operation":"handoff_generation","duration_ms":300,"memory_bytes":2097152,"success":false,"context":"s3"}`
+
+	content := m1 + "\n" + m2 + "\n" + m3 + "\n" + m4 + "\n"
+	if err := os.WriteFile(perfPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "performance", "--by-operation"}
+	defer func() { os.Args = oldArgs }()
+
+	showPerformance()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Verify summary headers
+	if !strings.Contains(output, "Count") {
+		t.Error("Expected 'Count' header in summary")
+	}
+	if !strings.Contains(output, "Avg (ms)") {
+		t.Error("Expected 'Avg (ms)' header in summary")
+	}
+	if !strings.Contains(output, "Min (ms)") {
+		t.Error("Expected 'Min (ms)' header in summary")
+	}
+	if !strings.Contains(output, "Max (ms)") {
+		t.Error("Expected 'Max (ms)' header in summary")
+	}
+
+	// Verify operations are summarized
+	if !strings.Contains(output, "handoff_generation") {
+		t.Error("Expected 'handoff_generation' in summary")
+	}
+	if !strings.Contains(output, "validation") {
+		t.Error("Expected 'validation' in summary")
+	}
+
+	// Verify total shows success/failed
+	if !strings.Contains(output, "success") {
+		t.Error("Expected success count in total")
+	}
+	if !strings.Contains(output, "failed") {
+		t.Error("Expected failed count in total")
+	}
+}
+
+func TestShowPerformance_SlowOnly(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+
+	// Create fast and slow metrics (threshold is 1000ms)
+	m1 := `{"timestamp":1705000000,"operation":"fast_op","duration_ms":100,"memory_bytes":1048576,"success":true,"context":"fast"}`
+	m2 := `{"timestamp":1705100000,"operation":"slow_op","duration_ms":2000,"memory_bytes":2097152,"success":true,"context":"slow"}`
+	m3 := `{"timestamp":1705200000,"operation":"very_slow_op","duration_ms":5000,"memory_bytes":4194304,"success":false,"context":"very slow"}`
+
+	content := m1 + "\n" + m2 + "\n" + m3 + "\n"
+	if err := os.WriteFile(perfPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "performance", "--slow-only"}
+	defer func() { os.Args = oldArgs }()
+
+	showPerformance()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Should show slow operations
+	if !strings.Contains(output, "slow_op") {
+		t.Error("Expected 'slow_op' in slow-only output")
+	}
+	if !strings.Contains(output, "very_slow_op") {
+		t.Error("Expected 'very_slow_op' in slow-only output")
+	}
+
+	// Should NOT show fast operation
+	if strings.Contains(output, "fast_op") {
+		t.Error("Did not expect 'fast_op' in slow-only output")
+	}
+
+	// Verify count
+	if !strings.Contains(output, "Total: 2 metric(s)") {
+		t.Error("Expected 'Total: 2 metric(s)'")
+	}
+}
+
+func TestShowPerformance_FilterBySince(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+
+	now := time.Now()
+	recentTs := now.AddDate(0, 0, -3).Unix()
+	oldTs := now.AddDate(0, 0, -30).Unix()
+
+	m1 := fmt.Sprintf(`{"timestamp":%d,"operation":"recent_op","duration_ms":150,"memory_bytes":1048576,"success":true,"context":"recent"}`, recentTs)
+	m2 := fmt.Sprintf(`{"timestamp":%d,"operation":"old_op","duration_ms":200,"memory_bytes":1048576,"success":true,"context":"old"}`, oldTs)
+
+	content := m1 + "\n" + m2 + "\n"
+	if err := os.WriteFile(perfPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	oldArgs := os.Args
+	os.Args = []string{"gogent-archive", "performance", "--since", "7d"}
+	defer func() { os.Args = oldArgs }()
+
+	showPerformance()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "recent_op") {
+		t.Error("Expected recent operation in output")
+	}
+	if strings.Contains(output, "old_op") {
+		t.Error("Did not expect old operation in filtered output")
+	}
+}
+
+// ========== FORMAT BYTES HELPER TEST ==========
+
+func TestFormatBytes(t *testing.T) {
+	tests := []struct {
+		bytes    int64
+		expected string
+	}{
+		{0, "-"},
+		{100, "100B"},
+		{1024, "1.0KB"},
+		{1536, "1.5KB"},
+		{1048576, "1.0MB"},
+		{1572864, "1.5MB"},
+		{1073741824, "1.0GB"},
+	}
+
+	for _, tc := range tests {
+		result := formatBytes(tc.bytes)
+		if result != tc.expected {
+			t.Errorf("formatBytes(%d) = %s, expected %s", tc.bytes, result, tc.expected)
+		}
+	}
+}
+
+// ========== HELP OUTPUT TESTS FOR NEW COMMANDS ==========
+
+func TestPrintHelp_IncludesNewSubcommands(t *testing.T) {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	printHelp()
+
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Verify decision commands
+	if !strings.Contains(output, "Decision Commands:") {
+		t.Error("Expected 'Decision Commands:' section in help")
+	}
+	if !strings.Contains(output, "gogent-archive decisions") {
+		t.Error("Expected 'gogent-archive decisions' in help")
+	}
+	if !strings.Contains(output, "--category architecture") {
+		t.Error("Expected decision category filter in help")
+	}
+	if !strings.Contains(output, "--impact high") {
+		t.Error("Expected decision impact filter in help")
+	}
+
+	// Verify preference commands
+	if !strings.Contains(output, "Preference Commands:") {
+		t.Error("Expected 'Preference Commands:' section in help")
+	}
+	if !strings.Contains(output, "gogent-archive preferences") {
+		t.Error("Expected 'gogent-archive preferences' in help")
+	}
+	if !strings.Contains(output, "--scope project") {
+		t.Error("Expected preference scope filter in help")
+	}
+
+	// Verify performance commands
+	if !strings.Contains(output, "Performance Commands:") {
+		t.Error("Expected 'Performance Commands:' section in help")
+	}
+	if !strings.Contains(output, "gogent-archive performance") {
+		t.Error("Expected 'gogent-archive performance' in help")
+	}
+	if !strings.Contains(output, "--by-operation") {
+		t.Error("Expected performance by-operation flag in help")
+	}
+	if !strings.Contains(output, "--slow-only") {
+		t.Error("Expected performance slow-only flag in help")
+	}
+
+	// Verify new examples
+	if !strings.Contains(output, "decisions --category architecture --impact high") {
+		t.Error("Expected decisions example in help")
+	}
+	if !strings.Contains(output, "preferences --scope project") {
+		t.Error("Expected preferences example in help")
+	}
+	if !strings.Contains(output, "performance --by-operation --slow-only") {
+		t.Error("Expected performance example in help")
+	}
+}
+
+// ========== QUERY API TESTS (pkg/session/query.go) ==========
+
+func TestQueryDecisions_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	q := session.NewQuery(tmpDir)
+
+	decisions, err := q.QueryDecisions(session.DecisionFilters{})
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+	if len(decisions) != 0 {
+		t.Errorf("Expected empty slice for missing file, got %d items", len(decisions))
+	}
+}
+
+func TestQueryDecisions_WithLimit(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
+
+	d1 := `{"timestamp":1,"category":"a","decision":"d1","rationale":"r1","alternatives":"","impact":"high"}`
+	d2 := `{"timestamp":2,"category":"b","decision":"d2","rationale":"r2","alternatives":"","impact":"medium"}`
+	d3 := `{"timestamp":3,"category":"c","decision":"d3","rationale":"r3","alternatives":"","impact":"low"}`
+
+	content := d1 + "\n" + d2 + "\n" + d3 + "\n"
+	if err := os.WriteFile(decisionsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	q := session.NewQuery(tmpDir)
+	decisions, err := q.QueryDecisions(session.DecisionFilters{Limit: 2})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(decisions) != 2 {
+		t.Errorf("Expected 2 decisions with limit, got %d", len(decisions))
+	}
+}
+
+func TestQueryPreferences_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	q := session.NewQuery(tmpDir)
+
+	prefs, err := q.QueryPreferences(session.PreferenceFilters{})
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+	if len(prefs) != 0 {
+		t.Errorf("Expected empty slice for missing file, got %d items", len(prefs))
+	}
+}
+
+func TestQueryPreferences_WithLimit(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
+
+	p1 := `{"timestamp":1,"category":"a","key":"k1","value":"v1","reason":"r1","scope":"session"}`
+	p2 := `{"timestamp":2,"category":"b","key":"k2","value":"v2","reason":"r2","scope":"project"}`
+	p3 := `{"timestamp":3,"category":"c","key":"k3","value":"v3","reason":"r3","scope":"global"}`
+
+	content := p1 + "\n" + p2 + "\n" + p3 + "\n"
+	if err := os.WriteFile(prefsPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	q := session.NewQuery(tmpDir)
+	prefs, err := q.QueryPreferences(session.PreferenceFilters{Limit: 2})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(prefs) != 2 {
+		t.Errorf("Expected 2 preferences with limit, got %d", len(prefs))
+	}
+}
+
+func TestQueryPerformance_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	q := session.NewQuery(tmpDir)
+
+	metrics, err := q.QueryPerformance(session.PerformanceFilters{})
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+	if len(metrics) != 0 {
+		t.Errorf("Expected empty slice for missing file, got %d items", len(metrics))
+	}
+}
+
+func TestQueryPerformance_WithFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+
+	m1 := `{"timestamp":1705000000,"operation":"handoff","duration_ms":500,"memory_bytes":1048576,"success":true,"context":"s1"}`
+	m2 := `{"timestamp":1705100000,"operation":"handoff","duration_ms":1500,"memory_bytes":2097152,"success":true,"context":"s2"}`
+	m3 := `{"timestamp":1705200000,"operation":"validation","duration_ms":50,"memory_bytes":524288,"success":false,"context":"s3"}`
+
+	content := m1 + "\n" + m2 + "\n" + m3 + "\n"
+	if err := os.WriteFile(perfPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	q := session.NewQuery(tmpDir)
+
+	// Test SlowOnly filter
+	slowMetrics, err := q.QueryPerformance(session.PerformanceFilters{SlowOnly: true})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(slowMetrics) != 1 {
+		t.Errorf("Expected 1 slow metric, got %d", len(slowMetrics))
+	}
+	if len(slowMetrics) > 0 && slowMetrics[0].DurationMs != 1500 {
+		t.Errorf("Expected slow metric with 1500ms, got %d", slowMetrics[0].DurationMs)
+	}
+
+	// Test SuccessOnly filter
+	successMetrics, err := q.QueryPerformance(session.PerformanceFilters{SuccessOnly: true})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(successMetrics) != 2 {
+		t.Errorf("Expected 2 success metrics, got %d", len(successMetrics))
+	}
+
+	// Test FailedOnly filter
+	failedMetrics, err := q.QueryPerformance(session.PerformanceFilters{FailedOnly: true})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(failedMetrics) != 1 {
+		t.Errorf("Expected 1 failed metric, got %d", len(failedMetrics))
+	}
+
+	// Test Operation filter
+	op := "handoff"
+	opMetrics, err := q.QueryPerformance(session.PerformanceFilters{Operation: &op})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(opMetrics) != 2 {
+		t.Errorf("Expected 2 handoff metrics, got %d", len(opMetrics))
+	}
+}
+
+func TestQueryPerformanceSummary(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	perfPath := filepath.Join(claudeDir, "performance.jsonl")
+
+	// handoff: 100, 200, 300 (avg 200, min 100, max 300)
+	// validation: 50, 150 (avg 100, min 50, max 150)
+	m1 := `{"timestamp":1,"operation":"handoff","duration_ms":100,"memory_bytes":0,"success":true,"context":""}`
+	m2 := `{"timestamp":2,"operation":"handoff","duration_ms":200,"memory_bytes":0,"success":true,"context":""}`
+	m3 := `{"timestamp":3,"operation":"handoff","duration_ms":300,"memory_bytes":0,"success":false,"context":""}`
+	m4 := `{"timestamp":4,"operation":"validation","duration_ms":50,"memory_bytes":0,"success":true,"context":""}`
+	m5 := `{"timestamp":5,"operation":"validation","duration_ms":150,"memory_bytes":0,"success":true,"context":""}`
+
+	content := m1 + "\n" + m2 + "\n" + m3 + "\n" + m4 + "\n" + m5 + "\n"
+	if err := os.WriteFile(perfPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	q := session.NewQuery(tmpDir)
+	summaries, err := q.QueryPerformanceSummary(session.PerformanceFilters{})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(summaries) != 2 {
+		t.Errorf("Expected 2 operation summaries, got %d", len(summaries))
+	}
+
+	// Find handoff summary
+	var handoffSummary *session.PerformanceSummary
+	for i := range summaries {
+		if summaries[i].Operation == "handoff" {
+			handoffSummary = &summaries[i]
+			break
+		}
+	}
+
+	if handoffSummary == nil {
+		t.Fatal("Expected handoff summary")
+	}
+	if handoffSummary.Count != 3 {
+		t.Errorf("Expected handoff count 3, got %d", handoffSummary.Count)
+	}
+	if handoffSummary.SuccessCount != 2 {
+		t.Errorf("Expected handoff success count 2, got %d", handoffSummary.SuccessCount)
+	}
+	if handoffSummary.FailCount != 1 {
+		t.Errorf("Expected handoff fail count 1, got %d", handoffSummary.FailCount)
+	}
+	if handoffSummary.MinMs != 100 {
+		t.Errorf("Expected handoff min 100, got %d", handoffSummary.MinMs)
+	}
+	if handoffSummary.MaxMs != 300 {
+		t.Errorf("Expected handoff max 300, got %d", handoffSummary.MaxMs)
+	}
+	expectedAvg := 200.0
+	if handoffSummary.AvgMs != expectedAvg {
+		t.Errorf("Expected handoff avg %.1f, got %.1f", expectedAvg, handoffSummary.AvgMs)
+	}
+}
