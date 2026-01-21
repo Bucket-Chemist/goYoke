@@ -2159,7 +2159,7 @@
         "phase-3"
       ],
       "acceptance_criteria_count": 5,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030d",
@@ -2189,7 +2189,7 @@
         "phase-3"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-031",

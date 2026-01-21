@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
@@ -1096,6 +1097,438 @@ func TestClusterViolationsByAgent(t *testing.T) {
 			if len(cluster.Samples) != 3 {
 				t.Errorf("%s Samples: expected 3, got %d", agentName, len(cluster.Samples))
 			}
+		}
+	})
+}
+
+// TestAnalyzeViolationTrend tests the AnalyzeViolationTrend function
+func TestAnalyzeViolationTrend(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil_input_returns_insufficient_data", func(t *testing.T) {
+		t.Parallel()
+
+		result := AnalyzeViolationTrend(nil)
+
+		if result == nil {
+			t.Fatal("Expected non-nil result for nil input")
+		}
+		if result.Trend != "insufficient_data" {
+			t.Errorf("Expected Trend 'insufficient_data', got %q", result.Trend)
+		}
+		if result.EarlyCount != 0 {
+			t.Errorf("Expected EarlyCount 0, got %d", result.EarlyCount)
+		}
+		if result.LateCount != 0 {
+			t.Errorf("Expected LateCount 0, got %d", result.LateCount)
+		}
+	})
+
+	t.Run("empty_slice_returns_insufficient_data", func(t *testing.T) {
+		t.Parallel()
+
+		result := AnalyzeViolationTrend([]*routing.Violation{})
+
+		if result.Trend != "insufficient_data" {
+			t.Errorf("Expected Trend 'insufficient_data', got %q", result.Trend)
+		}
+	})
+
+	t.Run("single_violation_returns_insufficient_data", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "test"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "insufficient_data" {
+			t.Errorf("Expected Trend 'insufficient_data', got %q", result.Trend)
+		}
+		if !containsString(result.Message, "1 violation") {
+			t.Errorf("Expected message to mention single violation, got %q", result.Message)
+		}
+	})
+
+	t.Run("improving_trend_more_early_fewer_late", func(t *testing.T) {
+		t.Parallel()
+
+		// 5 violations in first half, 2 in second half
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:10:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:20:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T10:25:00Z", ViolationType: "d"},
+			{Timestamp: "2024-01-15T10:30:00Z", ViolationType: "e"}, // midpoint is ~10:30
+			{Timestamp: "2024-01-15T10:50:00Z", ViolationType: "f"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "g"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "improving" {
+			t.Errorf("Expected Trend 'improving', got %q", result.Trend)
+		}
+		if result.EarlyCount <= result.LateCount {
+			t.Errorf("EarlyCount (%d) should be > LateCount (%d)", result.EarlyCount, result.LateCount)
+		}
+	})
+
+	t.Run("worsening_trend_fewer_early_more_late", func(t *testing.T) {
+		t.Parallel()
+
+		// 2 violations in first half, 5 in second half
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:10:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:35:00Z", ViolationType: "c"}, // midpoint is ~10:30
+			{Timestamp: "2024-01-15T10:40:00Z", ViolationType: "d"},
+			{Timestamp: "2024-01-15T10:50:00Z", ViolationType: "e"},
+			{Timestamp: "2024-01-15T10:55:00Z", ViolationType: "f"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "g"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "worsening" {
+			t.Errorf("Expected Trend 'worsening', got %q", result.Trend)
+		}
+		if result.LateCount <= result.EarlyCount {
+			t.Errorf("LateCount (%d) should be > EarlyCount (%d)", result.LateCount, result.EarlyCount)
+		}
+	})
+
+	t.Run("stable_trend_equal_distribution", func(t *testing.T) {
+		t.Parallel()
+
+		// 3 violations in first half, 3 in second half
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:10:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:20:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T10:40:00Z", ViolationType: "d"},
+			{Timestamp: "2024-01-15T10:50:00Z", ViolationType: "e"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "f"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "stable" {
+			t.Errorf("Expected Trend 'stable', got %q", result.Trend)
+		}
+		if result.EarlyCount != result.LateCount {
+			t.Errorf("EarlyCount (%d) should == LateCount (%d)", result.EarlyCount, result.LateCount)
+		}
+	})
+
+	t.Run("all_violations_in_first_half", func(t *testing.T) {
+		t.Parallel()
+
+		// All clustered at the start
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:01:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:02:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T10:03:00Z", ViolationType: "d"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "e"}, // Last one (far future)
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "improving" {
+			t.Errorf("Expected Trend 'improving' when most violations are early, got %q", result.Trend)
+		}
+		// 4 in first half (before ~10:30), 1 in second half
+		if result.EarlyCount < 3 {
+			t.Errorf("Expected at least 3 early violations, got %d", result.EarlyCount)
+		}
+	})
+
+	t.Run("all_violations_in_second_half", func(t *testing.T) {
+		t.Parallel()
+
+		// First one at start, rest clustered at end
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:57:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:58:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T10:59:00Z", ViolationType: "d"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "e"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "worsening" {
+			t.Errorf("Expected Trend 'worsening' when most violations are late, got %q", result.Trend)
+		}
+		// 1 in first half (before ~10:30), 4 in second half
+		if result.LateCount < 3 {
+			t.Errorf("Expected at least 3 late violations, got %d", result.LateCount)
+		}
+	})
+
+	t.Run("same_timestamp_returns_stable", func(t *testing.T) {
+		t.Parallel()
+
+		sameTime := "2024-01-15T10:30:00Z"
+		violations := []*routing.Violation{
+			{Timestamp: sameTime, ViolationType: "a"},
+			{Timestamp: sameTime, ViolationType: "b"},
+			{Timestamp: sameTime, ViolationType: "c"},
+			{Timestamp: sameTime, ViolationType: "d"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "stable" {
+			t.Errorf("Expected Trend 'stable' for same timestamps, got %q", result.Trend)
+		}
+		if result.EarlyCount != 4 {
+			t.Errorf("Expected EarlyCount 4 (all assigned to early), got %d", result.EarlyCount)
+		}
+		if result.LateCount != 0 {
+			t.Errorf("Expected LateCount 0, got %d", result.LateCount)
+		}
+		if !containsString(result.Message, "same timestamp") {
+			t.Errorf("Expected message to mention same timestamp, got %q", result.Message)
+		}
+	})
+
+	t.Run("nil_violations_in_slice_skipped", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			nil,
+			{Timestamp: "2024-01-15T10:30:00Z", ViolationType: "b"},
+			nil,
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "c"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		// Should process 3 valid violations
+		totalProcessed := result.EarlyCount + result.LateCount
+		if totalProcessed != 3 {
+			t.Errorf("Expected 3 violations processed, got %d", totalProcessed)
+		}
+	})
+
+	t.Run("invalid_timestamps_skipped", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "valid1"},
+			{Timestamp: "not-a-timestamp", ViolationType: "invalid1"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "valid2"},
+			{Timestamp: "2024/01/15", ViolationType: "invalid2"},
+			{Timestamp: "", ViolationType: "empty"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		// Should process only 2 valid violations
+		totalProcessed := result.EarlyCount + result.LateCount
+		if totalProcessed != 2 {
+			t.Errorf("Expected 2 violations processed, got %d", totalProcessed)
+		}
+		// With only 2 violations, we should get stable (1 early, 1 late)
+		if result.Trend != "stable" {
+			t.Errorf("Expected Trend 'stable' for 2 violations at start/end, got %q", result.Trend)
+		}
+	})
+
+	t.Run("unsorted_violations_sorted_correctly", func(t *testing.T) {
+		t.Parallel()
+
+		// Violations not in chronological order
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:50:00Z", ViolationType: "e"},
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "f"},
+			{Timestamp: "2024-01-15T10:10:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:20:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T10:30:00Z", ViolationType: "d"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		// Should still compute correctly
+		// Midpoint is between 10:00 and 11:00 = 10:30
+		// Early: a, b, c, d (10:00, 10:10, 10:20, 10:30)
+		// Late: e, f (10:50, 11:00)
+		if result.EarlyCount != 4 {
+			t.Errorf("Expected EarlyCount 4, got %d", result.EarlyCount)
+		}
+		if result.LateCount != 2 {
+			t.Errorf("Expected LateCount 2, got %d", result.LateCount)
+		}
+		if result.Trend != "improving" {
+			t.Errorf("Expected Trend 'improving', got %q", result.Trend)
+		}
+	})
+
+	t.Run("two_violations_exact_split", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "b"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		// Midpoint is 10:30
+		// a (10:00) is before/equal midpoint -> early
+		// b (11:00) is after midpoint -> late
+		if result.EarlyCount != 1 {
+			t.Errorf("Expected EarlyCount 1, got %d", result.EarlyCount)
+		}
+		if result.LateCount != 1 {
+			t.Errorf("Expected LateCount 1, got %d", result.LateCount)
+		}
+		if result.Trend != "stable" {
+			t.Errorf("Expected Trend 'stable', got %q", result.Trend)
+		}
+	})
+
+	t.Run("violation_at_exact_midpoint_counted_as_early", func(t *testing.T) {
+		t.Parallel()
+
+		// Midpoint = 10:30
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:30:00Z", ViolationType: "b"}, // exactly at midpoint
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "c"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		// Midpoint violation should be counted as early
+		if result.EarlyCount != 2 {
+			t.Errorf("Expected EarlyCount 2 (including midpoint), got %d", result.EarlyCount)
+		}
+		if result.LateCount != 1 {
+			t.Errorf("Expected LateCount 1, got %d", result.LateCount)
+		}
+	})
+
+	t.Run("message_format_improving", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:10:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:20:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "d"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if !containsString(result.Message, "decreased") {
+			t.Errorf("Expected improving message to contain 'decreased', got %q", result.Message)
+		}
+		if !containsString(result.Message, "early") {
+			t.Errorf("Expected message to contain 'early', got %q", result.Message)
+		}
+		if !containsString(result.Message, "late") {
+			t.Errorf("Expected message to contain 'late', got %q", result.Message)
+		}
+	})
+
+	t.Run("message_format_worsening", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:40:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:50:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "d"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if !containsString(result.Message, "increased") {
+			t.Errorf("Expected worsening message to contain 'increased', got %q", result.Message)
+		}
+	})
+
+	t.Run("large_set_count_accuracy", func(t *testing.T) {
+		t.Parallel()
+
+		// Create 100 violations: 70 in first half, 30 in second half
+		var violations []*routing.Violation
+		baseTime := "2024-01-15T10:00:00Z"
+		bt, _ := time.Parse(time.RFC3339, baseTime)
+
+		// First 70: within first 30 minutes (midpoint will be at 30 min)
+		for i := 0; i < 70; i++ {
+			t := bt.Add(time.Duration(i) * 20 * time.Second) // 0-23 minutes
+			violations = append(violations, &routing.Violation{
+				Timestamp:     t.Format(time.RFC3339),
+				ViolationType: "early",
+			})
+		}
+		// Last 30: after midpoint
+		for i := 0; i < 30; i++ {
+			t := bt.Add(35*time.Minute + time.Duration(i)*30*time.Second) // 35-50 minutes
+			violations = append(violations, &routing.Violation{
+				Timestamp:     t.Format(time.RFC3339),
+				ViolationType: "late",
+			})
+		}
+		// Add final anchor point at 60 minutes
+		violations = append(violations, &routing.Violation{
+			Timestamp:     bt.Add(60 * time.Minute).Format(time.RFC3339),
+			ViolationType: "anchor",
+		})
+
+		result := AnalyzeViolationTrend(violations)
+
+		if result.Trend != "improving" {
+			t.Errorf("Expected Trend 'improving', got %q", result.Trend)
+		}
+		totalProcessed := result.EarlyCount + result.LateCount
+		if totalProcessed != 101 {
+			t.Errorf("Expected 101 violations processed, got %d", totalProcessed)
+		}
+	})
+
+	t.Run("message_format_stable", func(t *testing.T) {
+		t.Parallel()
+
+		violations := []*routing.Violation{
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:10:00Z", ViolationType: "b"},
+			{Timestamp: "2024-01-15T10:20:00Z", ViolationType: "c"},
+			{Timestamp: "2024-01-15T10:40:00Z", ViolationType: "d"},
+			{Timestamp: "2024-01-15T10:50:00Z", ViolationType: "e"},
+			{Timestamp: "2024-01-15T11:00:00Z", ViolationType: "f"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		if !containsString(result.Message, "unchanged") {
+			t.Errorf("Expected stable message to contain 'unchanged', got %q", result.Message)
+		}
+	})
+
+	t.Run("only_valid_timestamps_after_filtering", func(t *testing.T) {
+		t.Parallel()
+
+		// All but one are invalid, leaving only one valid
+		violations := []*routing.Violation{
+			{Timestamp: "invalid1", ViolationType: "a"},
+			{Timestamp: "2024-01-15T10:00:00Z", ViolationType: "b"},
+			{Timestamp: "invalid2", ViolationType: "c"},
+		}
+
+		result := AnalyzeViolationTrend(violations)
+
+		// Should be insufficient data after filtering
+		if result.Trend != "insufficient_data" {
+			t.Errorf("Expected Trend 'insufficient_data' (only 1 valid), got %q", result.Trend)
 		}
 	})
 }

@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
@@ -88,6 +90,15 @@ type AgentViolationCluster struct {
 	TotalCount int                  // Total violations for this agent
 	ByType     map[string]int       // ViolationType -> count
 	Samples    []*routing.Violation // First 3 violations as representative samples
+}
+
+// TrendAnalysis represents the temporal trend of violations over a session.
+// Compares early vs late violations to detect improvement or degradation patterns.
+type TrendAnalysis struct {
+	EarlyCount int    // Violations in first half of session
+	LateCount  int    // Violations in second half of session
+	Trend      string // "improving", "stable", "worsening", "insufficient_data"
+	Message    string // Human-readable explanation of the trend
 }
 
 // ClusterViolationsByType groups violations by their ViolationType field.
@@ -174,6 +185,95 @@ func ClusterViolationsByAgent(violations []*routing.Violation) map[string]*Agent
 		if len(cluster.Samples) < 3 {
 			cluster.Samples = append(cluster.Samples, v)
 		}
+	}
+
+	return result
+}
+
+// AnalyzeViolationTrend analyzes the temporal distribution of violations.
+// It parses RFC3339 timestamps, finds the session midpoint, and compares
+// early vs late violation counts to determine if behavior is improving.
+//
+// Returns:
+//   - "improving" if late violations < early violations
+//   - "worsening" if late violations > early violations
+//   - "stable" if late violations == early violations
+//   - "insufficient_data" if fewer than 2 violations
+func AnalyzeViolationTrend(violations []*routing.Violation) *TrendAnalysis {
+	result := &TrendAnalysis{
+		EarlyCount: 0,
+		LateCount:  0,
+		Trend:      "insufficient_data",
+		Message:    "Not enough violations to analyze trend (need at least 2)",
+	}
+
+	// Filter out nil violations and those with invalid/empty timestamps
+	type timestampedViolation struct {
+		v *routing.Violation
+		t time.Time
+	}
+	var valid []timestampedViolation
+
+	for _, v := range violations {
+		if v == nil || v.Timestamp == "" {
+			continue
+		}
+		t, err := time.Parse(time.RFC3339, v.Timestamp)
+		if err != nil {
+			continue
+		}
+		valid = append(valid, timestampedViolation{v: v, t: t})
+	}
+
+	// Need at least 2 violations for meaningful trend analysis
+	if len(valid) < 2 {
+		if len(valid) == 1 {
+			result.Message = "Only 1 violation - insufficient data for trend analysis"
+		}
+		return result
+	}
+
+	// Sort by timestamp (ascending - oldest first)
+	sort.Slice(valid, func(i, j int) bool {
+		return valid[i].t.Before(valid[j].t)
+	})
+
+	// Calculate midpoint time
+	firstTime := valid[0].t
+	lastTime := valid[len(valid)-1].t
+
+	// Handle edge case: all violations have the same timestamp
+	if firstTime.Equal(lastTime) {
+		result.EarlyCount = len(valid)
+		result.LateCount = 0
+		result.Trend = "stable"
+		result.Message = "All violations occurred at the same timestamp"
+		return result
+	}
+
+	// Midpoint is the average of first and last timestamps
+	midpoint := firstTime.Add(lastTime.Sub(firstTime) / 2)
+
+	// Count violations in each half
+	for _, tv := range valid {
+		if tv.t.Before(midpoint) || tv.t.Equal(midpoint) {
+			result.EarlyCount++
+		} else {
+			result.LateCount++
+		}
+	}
+
+	// Determine trend
+	switch {
+	case result.LateCount < result.EarlyCount:
+		result.Trend = "improving"
+		result.Message = fmt.Sprintf("Violation rate decreased: %d early vs %d late", result.EarlyCount, result.LateCount)
+	case result.LateCount > result.EarlyCount:
+		result.Trend = "worsening"
+		result.Message = fmt.Sprintf("Violation rate increased: %d early vs %d late", result.EarlyCount, result.LateCount)
+	default:
+		result.Trend = "stable"
+		result.Message = fmt.Sprintf("Violation rate unchanged: %d early vs %d late", result.EarlyCount, result.LateCount)
 	}
 
 	return result
