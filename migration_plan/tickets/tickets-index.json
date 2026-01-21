@@ -1922,7 +1922,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 12,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-029c",
@@ -2980,6 +2980,101 @@
         "critical"
       ],
       "acceptance_criteria_count": 8,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-037d",
+      "title": "User Intent Capture Hook",
+      "description": "PostToolUse hook to capture user intents from AskUserQuestion responses",
+      "file": "tickets/session_archive/037d.md",
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-029a",
+        "GOgent-037"
+      ],
+      "blocks": [
+        "GOgent-041"
+      ],
+      "priority": "high",
+      "tags": [
+        "capture",
+        "hook",
+        "behavioral-learning"
+      ],
+      "files_to_create": [
+        "cmd/gogent-capture-intent/main.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-041",
+      "title": "Intent Classification & Keyword Extraction",
+      "description": "Automatic classification and keyword extraction for user intents",
+      "file": "tickets/session_archive/041.md",
+      "time_estimate": "3h",
+      "dependencies": [
+        "GOgent-037d"
+      ],
+      "blocks": [
+        "GOgent-041b",
+        "GOgent-041c"
+      ],
+      "priority": "medium",
+      "tags": [
+        "classification",
+        "behavioral-learning"
+      ],
+      "files_to_create": [
+        "pkg/session/intent_classifier.go",
+        "pkg/session/keyword_extractor.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-041b",
+      "title": "Weekly Intent Summary & Preference Drift Detection",
+      "description": "Integrate intent patterns into weekly aggregation with drift detection",
+      "file": "tickets/session_archive/041b.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-041",
+        "GOgent-029f"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "aggregation",
+        "weekly",
+        "behavioral-learning"
+      ],
+      "files_to_create": [
+        "pkg/session/intent_aggregation.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-041c",
+      "title": "Intent Outcome Tracking",
+      "description": "Track whether user intents were honored during session",
+      "file": "tickets/session_archive/041c.md",
+      "time_estimate": "3h",
+      "dependencies": [
+        "GOgent-041"
+      ],
+      "blocks": [],
+      "priority": "low",
+      "tags": [
+        "outcome",
+        "behavioral-learning",
+        "feedback-loop"
+      ],
+      "files_to_create": [
+        "pkg/session/intent_outcomes.go"
+      ],
+      "tests_required": true,
       "status": "pending"
     }
   ]

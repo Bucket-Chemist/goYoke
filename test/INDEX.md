@@ -41,11 +41,12 @@
 
 ### cmd/gogent-archive (SessionEnd Hook CLI)
 
-| File           | Ticket      | Lines | Tests | Coverage | Created    | Status     |
-| -------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
-| `main_test.go` | GOgent-028a | 390   | 7     | 70.3%    | 2026-01-19 | ✅ Passing |
+| File                   | Ticket      | Lines | Tests | Coverage | Created    | Status     |
+| ---------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
+| `main_test.go`         | GOgent-028a | 390   | 7     | 70.3%    | 2026-01-19 | ✅ Passing |
+| `sharp_edges_test.go`  | GOgent-029b | 400+  | 21    | 87.4%    | 2026-01-21 | ✅ Passing |
 
-**Note**: Coverage below 80% target due to untestable defensive error paths (main() os.Exit, filesystem permission failures). All business logic and integration points have 100% coverage.
+**Note**: Coverage below 80% target on main_test.go due to untestable defensive error paths (main() os.Exit, filesystem permission failures). All business logic and integration points have 100% coverage.
 
 ### corpus-logger (Development Tool)
 
@@ -480,5 +481,5 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-028o ADR Documentation)
+**Last Audit**: 2026-01-21 (GOgent-029b Sharp Edges & User Intents CLI Tests)
 **Next Audit**: After next ticket completion

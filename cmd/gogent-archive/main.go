@@ -34,6 +34,12 @@ func main() {
 		case "stats":
 			showStats()
 			return
+		case "sharp-edges":
+			listSharpEdges()
+			return
+		case "user-intents":
+			listUserIntents()
+			return
 		case "--help", "-h":
 			printHelp()
 			return
@@ -316,6 +322,8 @@ func printHelp() {
 	fmt.Println("")
 	fmt.Println("Usage:")
 	fmt.Println("  gogent-archive                       Read SessionEnd JSON from STDIN (hook mode)")
+	fmt.Println("")
+	fmt.Println("Session Commands:")
 	fmt.Println("  gogent-archive list                  List all sessions")
 	fmt.Println("  gogent-archive list --since 7d       List sessions from last 7 days")
 	fmt.Println("  gogent-archive list --between <dates> List sessions between dates (YYYY-MM-DD,YYYY-MM-DD)")
@@ -324,12 +332,30 @@ func printHelp() {
 	fmt.Println("  gogent-archive list --clean          Show only clean sessions (no errors/violations)")
 	fmt.Println("  gogent-archive show <id>             Show specific session handoff")
 	fmt.Println("  gogent-archive stats                 Show aggregate statistics with breakdowns")
+	fmt.Println("")
+	fmt.Println("Sharp Edge Commands:")
+	fmt.Println("  gogent-archive sharp-edges           List all sharp edges")
+	fmt.Println("  gogent-archive sharp-edges --severity high  Filter by severity (high, medium, low)")
+	fmt.Println("  gogent-archive sharp-edges --file 'pkg/*'   Filter by file pattern (glob)")
+	fmt.Println("  gogent-archive sharp-edges --error-type <type> Filter by error type")
+	fmt.Println("  gogent-archive sharp-edges --unresolved     Show only unresolved edges")
+	fmt.Println("  gogent-archive sharp-edges --since 7d       Filter by time")
+	fmt.Println("")
+	fmt.Println("User Intent Commands:")
+	fmt.Println("  gogent-archive user-intents          List all user intents")
+	fmt.Println("  gogent-archive user-intents --source ask_user  Filter by source (ask_user, hook_prompt, manual)")
+	fmt.Println("  gogent-archive user-intents --confidence explicit  Filter by confidence (explicit, inferred, default)")
+	fmt.Println("  gogent-archive user-intents --has-action    Show only intents with actions taken")
+	fmt.Println("  gogent-archive user-intents --since 7d      Filter by time")
+	fmt.Println("")
+	fmt.Println("Other Commands:")
 	fmt.Println("  gogent-archive --help                Show this help")
 	fmt.Println("  gogent-archive --version             Show version information")
 	fmt.Println("")
 	fmt.Println("Examples:")
-	fmt.Println("  gogent-archive list --since 2026-01-15")
-	fmt.Println("  gogent-archive list --between 2026-01-01,2026-01-15 --clean")
+	fmt.Println("  gogent-archive sharp-edges --severity high --unresolved")
+	fmt.Println("  gogent-archive user-intents --source ask_user --has-action")
+	fmt.Println("  gogent-archive list --since 2026-01-15 --clean")
 	fmt.Println("  gogent-archive show abc123def456")
 	fmt.Println("")
 	fmt.Println("For subcommand-specific help, use: gogent-archive <subcommand> --help")
@@ -439,4 +465,164 @@ func filterByArtifacts(handoffs []session.Handoff, hasSharpEdges, hasViolations,
 		filtered = append(filtered, h)
 	}
 	return filtered
+}
+
+// listSharpEdges displays sharp edges with optional filtering
+func listSharpEdges() {
+	edgesFlags := flag.NewFlagSet("sharp-edges", flag.ExitOnError)
+	severityFlag := edgesFlags.String("severity", "", "Filter by severity (high, medium, low)")
+	fileFlag := edgesFlags.String("file", "", "Filter by file pattern (glob)")
+	errorTypeFlag := edgesFlags.String("error-type", "", "Filter by error type")
+	unresolvedFlag := edgesFlags.Bool("unresolved", false, "Show only unresolved edges")
+	sinceFlag := edgesFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
+	edgesFlags.Parse(os.Args[2:])
+
+	projectDir := getProjectDir()
+	q := session.NewQuery(projectDir)
+
+	// Build filters
+	filters := session.SharpEdgeFilters{}
+	if *severityFlag != "" {
+		filters.Severity = severityFlag
+	}
+	if *fileFlag != "" {
+		filters.File = fileFlag
+	}
+	if *errorTypeFlag != "" {
+		filters.ErrorType = errorTypeFlag
+	}
+	if *unresolvedFlag {
+		filters.Unresolved = true
+	}
+	if *sinceFlag != "" {
+		since := parseSinceFilter(*sinceFlag)
+		timestamp := since.Unix()
+		filters.Since = &timestamp
+	}
+
+	edges, err := q.QuerySharpEdges(filters)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query sharp edges: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(edges) == 0 {
+		fmt.Println("No sharp edges recorded.")
+		return
+	}
+
+	// Print table header
+	fmt.Println("File                           | Error Type          | Failures | Severity | Status")
+	fmt.Println("-------------------------------|---------------------|----------|----------|--------")
+
+	for _, edge := range edges {
+		file := truncateForTable(edge.File, 30)
+		errType := truncateForTable(edge.ErrorType, 19)
+		severity := edge.Severity
+		if severity == "" {
+			severity = "-"
+		}
+		status := "Open"
+		if edge.ResolvedAt != 0 {
+			status = "Resolved"
+		}
+		fmt.Printf("%-30s | %-19s | %8d | %-8s | %s\n",
+			file, errType, edge.ConsecutiveFailures, severity, status)
+	}
+
+	fmt.Printf("\nTotal: %d sharp edge(s)\n", len(edges))
+}
+
+// listUserIntents displays user intents with optional filtering
+func listUserIntents() {
+	intentsFlags := flag.NewFlagSet("user-intents", flag.ExitOnError)
+	sourceFlag := intentsFlags.String("source", "", "Filter by source (ask_user, hook_prompt, manual)")
+	confidenceFlag := intentsFlags.String("confidence", "", "Filter by confidence (explicit, inferred, default)")
+	hasActionFlag := intentsFlags.Bool("has-action", false, "Show only intents with actions taken")
+	sinceFlag := intentsFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
+	intentsFlags.Parse(os.Args[2:])
+
+	projectDir := getProjectDir()
+	q := session.NewQuery(projectDir)
+
+	// Build filters
+	filters := session.UserIntentFilters{}
+	if *sourceFlag != "" {
+		filters.Source = sourceFlag
+	}
+	if *confidenceFlag != "" {
+		filters.Confidence = confidenceFlag
+	}
+	if *hasActionFlag {
+		filters.HasAction = true
+	}
+	if *sinceFlag != "" {
+		since := parseSinceFilter(*sinceFlag)
+		timestamp := since.Unix()
+		filters.Since = &timestamp
+	}
+
+	intents, err := q.QueryUserIntents(filters)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query user intents: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(intents) == 0 {
+		fmt.Println("No user intents recorded.")
+		return
+	}
+
+	// Print table header
+	fmt.Println("Timestamp  | Source      | Confidence | Question                     | Response")
+	fmt.Println("-----------|-------------|------------|------------------------------|---------------------------")
+
+	for _, intent := range intents {
+		timestamp := time.Unix(intent.Timestamp, 0).Format("2006-01-02")
+		source := truncateForTable(intent.Source, 11)
+		confidence := truncateForTable(intent.Confidence, 10)
+		question := truncateForTable(intent.Question, 28)
+		response := truncateForTable(intent.Response, 25)
+		fmt.Printf("%s | %-11s | %-10s | %-28s | %s\n",
+			timestamp, source, confidence, question, response)
+	}
+
+	fmt.Printf("\nTotal: %d user intent(s)\n", len(intents))
+}
+
+// truncateForTable truncates string for table display
+func truncateForTable(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// parseSinceFilter parses duration (e.g., "7d") or date (YYYY-MM-DD) into time.Time
+func parseSinceFilter(since string) time.Time {
+	now := time.Now()
+
+	// Try parsing as duration first (e.g., "7d", "30d")
+	if strings.HasSuffix(since, "d") {
+		daysStr := strings.TrimSuffix(since, "d")
+		days, err := strconv.Atoi(daysStr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since format '%s'\n", since)
+			fmt.Fprintln(os.Stderr, "  Use duration format (e.g., '7d', '30d') or date format (YYYY-MM-DD)")
+			os.Exit(1)
+		}
+		return now.AddDate(0, 0, -days)
+	}
+
+	// Try parsing as date (YYYY-MM-DD)
+	parsedDate, err := time.Parse("2006-01-02", since)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since date format '%s'\n", since)
+		fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format (e.g., '2026-01-15')")
+		os.Exit(1)
+	}
+	return parsedDate
 }
