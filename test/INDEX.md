@@ -69,10 +69,11 @@
 
 **Purpose**: Integration tests validating Go metrics collection matches bash hook implementation exactly.
 
-| File                       | Ticket             | Lines | Tests | Coverage | Created    | Status     |
-| -------------------------- | ------------------ | ----- | ----- | -------- | ---------- | ---------- |
-| `metrics_parity_test.go`   | GOgent-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
-| `fallback_test.sh`         | GOgent-028i        | 48    | 1     | N/A      | 2026-01-20 | ✅ Passing |
+| File                                  | Ticket             | Lines | Tests | Coverage | Created    | Status     |
+| ------------------------------------- | ------------------ | ----- | ----- | -------- | ---------- | ---------- |
+| `metrics_parity_test.go`              | GOgent-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
+| `fallback_test.sh`                    | GOgent-028i        | 48    | 1     | N/A      | 2026-01-20 | ✅ Passing |
+| `session_handoff_integration_test.go` | GOgent-028m        | 650+  | 16    | 86%      | 2026-01-21 | ✅ Passing |
 
 **Test Functions**:
 
@@ -473,8 +474,9 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 | GOgent-028j | JSONL History Querying   | test/audit/GOgent-028j/ | ✅ Passing | 2026-01-20 | Subcommand CLI (list, show, stats) + 9 test functions, 58.3% coverage, ecosystem ✓ 94.2% |
 | GOgent-028k | Handoff Generation Metrics | test/audit/2026-01-21/ | ✅ Passing | 2026-01-21 | HandoffMetrics struct + countPatterns helper + 2 new tests, ecosystem ✓ 94.2% |
 | GOgent-028l | Handoff Schema Versioning | test/audit/GOgent-028l/ | ✅ Passing | 2026-01-21 | LoadHandoff version check + migrateHandoff + 9 new tests, ecosystem ✓ 94.2% |
+| GOgent-028m | Integration Tests Suite   | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | 16 integration tests (hook workflow + CLI subcommands), 86% coverage, ecosystem ✓ 94.2% |
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-028l Handoff schema versioning)
+**Last Audit**: 2026-01-21 (GOgent-028m Integration tests for session handoff)
 **Next Audit**: After next ticket completion
