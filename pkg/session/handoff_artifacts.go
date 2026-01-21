@@ -34,6 +34,36 @@ var ValidIntentSources = map[string]bool{
 	"manual":      true, // Manually recorded
 }
 
+// Decision captures architectural decisions made during session
+type Decision struct {
+	Timestamp    int64  `json:"timestamp"`
+	Category     string `json:"category"`     // "architecture", "tooling", "pattern"
+	Decision     string `json:"decision"`     // What was decided
+	Rationale    string `json:"rationale"`    // Why
+	Alternatives string `json:"alternatives"` // What was considered
+	Impact       string `json:"impact"`       // "high", "medium", "low"
+}
+
+// PreferenceOverride captures user-specific workflow preferences
+type PreferenceOverride struct {
+	Timestamp int64  `json:"timestamp"`
+	Category  string `json:"category"` // "routing", "tooling", "formatting"
+	Key       string `json:"key"`      // Preference identifier
+	Value     string `json:"value"`    // Preferred value
+	Reason    string `json:"reason"`   // Why user prefers this
+	Scope     string `json:"scope"`    // "session", "project", "global"
+}
+
+// PerformanceMetric captures execution performance patterns
+type PerformanceMetric struct {
+	Timestamp   int64  `json:"timestamp"`
+	Operation   string `json:"operation"`    // "handoff_generation", "validation", etc.
+	DurationMs  int64  `json:"duration_ms"`  // Execution time
+	MemoryBytes int64  `json:"memory_bytes"` // Peak memory (if measurable)
+	Success     bool   `json:"success"`      // Operation outcome
+	Context     string `json:"context"`      // Additional context
+}
+
 // ValidateSharpEdge validates SharpEdge JSON against schema
 // FIXED: Field names now match struct (consecutive_failures, timestamp)
 func ValidateSharpEdge(data []byte) error {
@@ -118,13 +148,17 @@ func ValidateSharpEdge(data []byte) error {
 	return nil
 }
 
-// LoadArtifacts loads all session artifacts (sharp edges, violations, error patterns, user intents)
+// LoadArtifacts loads all session artifacts (sharp edges, violations, error patterns, user intents,
+// decisions, preferences, performance metrics)
 func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 	artifacts := HandoffArtifacts{
-		SharpEdges:        []SharpEdge{},
-		RoutingViolations: []RoutingViolation{},
-		ErrorPatterns:     []ErrorPattern{},
-		UserIntents:       []UserIntent{},
+		SharpEdges:          []SharpEdge{},
+		RoutingViolations:   []RoutingViolation{},
+		ErrorPatterns:       []ErrorPattern{},
+		UserIntents:         []UserIntent{},
+		Decisions:           []Decision{},
+		PreferenceOverrides: []PreferenceOverride{},
+		PerformanceMetrics:  []PerformanceMetric{},
 	}
 
 	// Load pending learnings (sharp edges)
@@ -154,6 +188,27 @@ func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 		return artifacts, fmt.Errorf("[handoff] Failed to load user intents: %w", err)
 	}
 	artifacts.UserIntents = intents
+
+	// Load decisions
+	decisions, err := loadDecisions(cfg.DecisionsPath)
+	if err != nil {
+		return artifacts, fmt.Errorf("[handoff] Failed to load decisions: %w", err)
+	}
+	artifacts.Decisions = decisions
+
+	// Load preference overrides
+	preferences, err := loadPreferences(cfg.PreferencesPath)
+	if err != nil {
+		return artifacts, fmt.Errorf("[handoff] Failed to load preferences: %w", err)
+	}
+	artifacts.PreferenceOverrides = preferences
+
+	// Load performance metrics
+	perfMetrics, err := loadPerformance(cfg.PerformancePath)
+	if err != nil {
+		return artifacts, fmt.Errorf("[handoff] Failed to load performance metrics: %w", err)
+	}
+	artifacts.PerformanceMetrics = perfMetrics
 
 	return artifacts, nil
 }
@@ -296,4 +351,109 @@ func loadUserIntents(path string) ([]UserIntent, error) {
 	}
 
 	return intents, nil
+}
+
+// loadDecisions reads decisions from decisions.jsonl
+func loadDecisions(path string) ([]Decision, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []Decision{}, nil // Missing file is normal
+		}
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer file.Close()
+
+	var decisions []Decision
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var d Decision
+		if err := json.Unmarshal([]byte(line), &d); err != nil {
+			// Skip malformed lines but continue
+			continue
+		}
+		decisions = append(decisions, d)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", path, err)
+	}
+
+	return decisions, nil
+}
+
+// loadPreferences reads preference overrides from preferences.jsonl
+func loadPreferences(path string) ([]PreferenceOverride, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []PreferenceOverride{}, nil // Missing file is normal
+		}
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer file.Close()
+
+	var preferences []PreferenceOverride
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var p PreferenceOverride
+		if err := json.Unmarshal([]byte(line), &p); err != nil {
+			// Skip malformed lines but continue
+			continue
+		}
+		preferences = append(preferences, p)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", path, err)
+	}
+
+	return preferences, nil
+}
+
+// loadPerformance reads performance metrics from performance.jsonl
+func loadPerformance(path string) ([]PerformanceMetric, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []PerformanceMetric{}, nil // Missing file is normal
+		}
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer file.Close()
+
+	var metrics []PerformanceMetric
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var m PerformanceMetric
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			// Skip malformed lines but continue
+			continue
+		}
+		metrics = append(metrics, m)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", path, err)
+	}
+
+	return metrics, nil
 }

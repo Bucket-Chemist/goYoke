@@ -321,11 +321,11 @@ func TestLoadHandoff_CurrentVersion(t *testing.T) {
 	tmpDir := t.TempDir()
 	handoffPath := filepath.Join(tmpDir, "handoffs.jsonl")
 
-	// Write v1.0 handoff
+	// Write v1.1 handoff (current version)
 	handoff := &Handoff{
 		SessionID:     "test-v1",
 		Timestamp:     1234567890,
-		SchemaVersion: "1.0",
+		SchemaVersion: "1.1",
 		Context: SessionContext{
 			Metrics: SessionMetrics{ToolCalls: 5},
 		},
@@ -337,11 +337,11 @@ func TestLoadHandoff_CurrentVersion(t *testing.T) {
 	loaded, err := LoadHandoff(handoffPath)
 
 	if err != nil {
-		t.Fatalf("Expected no error loading v1.0, got: %v", err)
+		t.Fatalf("Expected no error loading v1.1, got: %v", err)
 	}
 
-	if loaded.SchemaVersion != "1.0" {
-		t.Errorf("Expected schema version 1.0, got: %s", loaded.SchemaVersion)
+	if loaded.SchemaVersion != "1.1" {
+		t.Errorf("Expected schema version 1.1, got: %s", loaded.SchemaVersion)
 	}
 
 	if loaded.SessionID != "test-v1" {
@@ -427,7 +427,8 @@ func TestLoadHandoff_UnsupportedVersion(t *testing.T) {
 	}
 }
 
-func TestMigrateHandoff_V1ToV1(t *testing.T) {
+func TestMigrateHandoff_V10ToV11(t *testing.T) {
+	// v1.0 handoff without new fields (simulating legacy data)
 	handoff := &Handoff{
 		SessionID:     "migrate-test",
 		SchemaVersion: "1.0",
@@ -439,15 +440,61 @@ func TestMigrateHandoff_V1ToV1(t *testing.T) {
 	migrated, err := migrateHandoff("1.0", jsonData)
 
 	if err != nil {
-		t.Fatalf("Expected no error migrating v1.0 to v1.0, got: %v", err)
+		t.Fatalf("Expected no error migrating v1.0 to v1.1, got: %v", err)
 	}
 
 	if migrated.SessionID != "migrate-test" {
 		t.Errorf("Expected session ID migrate-test, got: %s", migrated.SessionID)
 	}
 
-	if migrated.SchemaVersion != "1.0" {
-		t.Errorf("Expected schema version 1.0, got: %s", migrated.SchemaVersion)
+	// v1.0 handoffs are migrated to v1.1 (current version)
+	if migrated.SchemaVersion != "1.1" {
+		t.Errorf("Expected schema version 1.1 after migration, got: %s", migrated.SchemaVersion)
+	}
+
+	// New fields should be initialized to empty slices
+	if migrated.Artifacts.Decisions == nil {
+		t.Error("Expected Decisions to be non-nil after migration")
+	}
+	if migrated.Artifacts.PreferenceOverrides == nil {
+		t.Error("Expected PreferenceOverrides to be non-nil after migration")
+	}
+	if migrated.Artifacts.PerformanceMetrics == nil {
+		t.Error("Expected PerformanceMetrics to be non-nil after migration")
+	}
+}
+
+func TestMigrateHandoff_V11Direct(t *testing.T) {
+	// v1.1 handoff with all new fields
+	handoff := &Handoff{
+		SessionID:     "v11-test",
+		SchemaVersion: "1.1",
+		Timestamp:     1234567890,
+		Artifacts: HandoffArtifacts{
+			Decisions:           []Decision{{Timestamp: 100, Category: "test"}},
+			PreferenceOverrides: []PreferenceOverride{{Timestamp: 100, Key: "test"}},
+			PerformanceMetrics:  []PerformanceMetric{{Timestamp: 100, Operation: "test"}},
+		},
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+
+	migrated, err := migrateHandoff("1.1", jsonData)
+
+	if err != nil {
+		t.Fatalf("Expected no error for v1.1 direct, got: %v", err)
+	}
+
+	if migrated.SessionID != "v11-test" {
+		t.Errorf("Expected session ID v11-test, got: %s", migrated.SessionID)
+	}
+
+	if migrated.SchemaVersion != "1.1" {
+		t.Errorf("Expected schema version 1.1, got: %s", migrated.SchemaVersion)
+	}
+
+	if len(migrated.Artifacts.Decisions) != 1 {
+		t.Errorf("Expected 1 decision, got: %d", len(migrated.Artifacts.Decisions))
 	}
 }
 
@@ -968,8 +1015,9 @@ func TestHandoffJSONSerialization(t *testing.T) {
 }
 
 func TestHandoffSchemaVersion(t *testing.T) {
-	if HandoffSchemaVersion != "1.0" {
-		t.Errorf("Expected schema version '1.0', got: %s", HandoffSchemaVersion)
+	// Schema version 1.1 adds: Decisions, PreferenceOverrides, PerformanceMetrics
+	if HandoffSchemaVersion != "1.1" {
+		t.Errorf("Expected schema version '1.1', got: %s", HandoffSchemaVersion)
 	}
 }
 

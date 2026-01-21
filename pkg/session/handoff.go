@@ -14,7 +14,7 @@ import (
 )
 
 // Schema version for handoff format evolution
-const HandoffSchemaVersion = "1.0"
+const HandoffSchemaVersion = "1.1"
 
 // Handoff represents a complete session handoff document in JSONL format
 type Handoff struct {
@@ -41,6 +41,10 @@ type HandoffArtifacts struct {
 	RoutingViolations []RoutingViolation `json:"routing_violations"`
 	ErrorPatterns     []ErrorPattern     `json:"error_patterns"`
 	UserIntents       []UserIntent       `json:"user_intents"`
+	// Extended fields (v1.1 - backward compatible via omitempty)
+	Decisions           []Decision           `json:"decisions,omitempty"`
+	PreferenceOverrides []PreferenceOverride `json:"preference_overrides,omitempty"`
+	PerformanceMetrics  []PerformanceMetric  `json:"performance_metrics,omitempty"`
 }
 
 // SharpEdge represents a debugging loop or gotcha discovered
@@ -102,6 +106,9 @@ type HandoffConfig struct {
 	ErrorPatternsPath string // /tmp/claude-error-patterns.jsonl
 	TranscriptPath    string // Optional: session transcript for archival
 	UserIntentsPath   string // .claude/memory/user-intents.jsonl
+	DecisionsPath     string // .claude/memory/decisions.jsonl
+	PreferencesPath   string // .claude/memory/preferences.jsonl
+	PerformancePath   string // .claude/memory/performance.jsonl
 }
 
 // HandoffMetrics captures timing and artifact counts from handoff generation
@@ -134,6 +141,9 @@ func DefaultHandoffConfig(projectDir string) *HandoffConfig {
 		ViolationsPath:    config.GetViolationsLogPath(),
 		ErrorPatternsPath: "/tmp/claude-error-patterns.jsonl",
 		UserIntentsPath:   filepath.Join(claudeDir, "user-intents.jsonl"),
+		DecisionsPath:     filepath.Join(claudeDir, "decisions.jsonl"),
+		PreferencesPath:   filepath.Join(claudeDir, "preferences.jsonl"),
+		PerformancePath:   filepath.Join(claudeDir, "performance.jsonl"),
 	}
 }
 
@@ -254,10 +264,31 @@ func LoadHandoff(handoffPath string) (*Handoff, error) {
 func migrateHandoff(oldVersion string, data []byte) (*Handoff, error) {
 	switch oldVersion {
 	case "1.0":
-		// Already current version - no migration needed
+		// v1.0 -> v1.1 migration: new fields have omitempty, so just parse directly
+		// Missing fields will be zero values (empty slices after initialization)
 		var handoff Handoff
 		if err := json.Unmarshal(data, &handoff); err != nil {
 			return nil, fmt.Errorf("[handoff] Failed to parse v1.0 handoff: %w", err)
+		}
+		// Initialize new slices if nil (v1.0 handoffs won't have these fields)
+		if handoff.Artifacts.Decisions == nil {
+			handoff.Artifacts.Decisions = []Decision{}
+		}
+		if handoff.Artifacts.PreferenceOverrides == nil {
+			handoff.Artifacts.PreferenceOverrides = []PreferenceOverride{}
+		}
+		if handoff.Artifacts.PerformanceMetrics == nil {
+			handoff.Artifacts.PerformanceMetrics = []PerformanceMetric{}
+		}
+		// Update schema version to current
+		handoff.SchemaVersion = HandoffSchemaVersion
+		return &handoff, nil
+
+	case "1.1":
+		// Current version - parse directly
+		var handoff Handoff
+		if err := json.Unmarshal(data, &handoff); err != nil {
+			return nil, fmt.Errorf("[handoff] Failed to parse v1.1 handoff: %w", err)
 		}
 		return &handoff, nil
 
