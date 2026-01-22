@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -269,4 +270,34 @@ func IsDebuggingLoop(file, errorType string) (bool, error) {
 		return false, err
 	}
 	return count >= getMaxFailures(), nil
+}
+
+// ExtractFunctionFromStackTrace attempts to extract the function name from error output
+// containing stack traces. Supports Python tracebacks and Go panic output.
+//
+// Returns empty string if the function name cannot be extracted (graceful degradation).
+//
+// Supported patterns:
+//   - Python: "File "path", line N, in functionName"
+//   - Go: "path.functionName(args)" or "functionName(args)"
+func ExtractFunctionFromStackTrace(errorOutput string) string {
+	// Python pattern: "  File "path", line N, in functionName"
+	pythonPattern := regexp.MustCompile(`in\s+(\w+)`)
+
+	// Go pattern: matches function name before opening parenthesis
+	// Captures word characters (letters, digits, underscore) before (
+	goPattern := regexp.MustCompile(`([a-zA-Z_]\w*)\(`)
+
+	// Try Python first
+	if matches := pythonPattern.FindStringSubmatch(errorOutput); len(matches) > 1 {
+		return matches[1]
+	}
+
+	// Try Go
+	if matches := goPattern.FindStringSubmatch(errorOutput); len(matches) > 1 {
+		return matches[1]
+	}
+
+	// Couldn't extract function name, return empty (graceful degradation)
+	return ""
 }

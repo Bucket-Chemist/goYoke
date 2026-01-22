@@ -1301,3 +1301,79 @@ func TestIntegration_TimeWindowBoundary(t *testing.T) {
 func itoa(n int64) string {
 	return strconv.FormatInt(n, 10)
 }
+
+// TestExtractFunctionFromStackTrace_PythonTraceback tests Python function extraction
+func TestExtractFunctionFromStackTrace_PythonTraceback(t *testing.T) {
+	errorOutput := `Traceback (most recent call last):
+  File "test.py", line 10, in calculateTotal
+    result = x / y
+ZeroDivisionError: division by zero`
+
+	funcName := ExtractFunctionFromStackTrace(errorOutput)
+	if funcName != "calculateTotal" {
+		t.Errorf("Expected 'calculateTotal', got '%s'", funcName)
+	}
+}
+
+// TestExtractFunctionFromStackTrace_GoPanic tests Go panic function extraction
+func TestExtractFunctionFromStackTrace_GoPanic(t *testing.T) {
+	errorOutput := `panic: runtime error: invalid memory address
+goroutine 1 [running]:
+main.processData(0xc000...)`
+
+	funcName := ExtractFunctionFromStackTrace(errorOutput)
+	if funcName != "processData" {
+		t.Errorf("Expected 'processData', got '%s'", funcName)
+	}
+}
+
+// TestExtractFunctionFromStackTrace_GenericError tests graceful degradation
+func TestExtractFunctionFromStackTrace_GenericError(t *testing.T) {
+	errorOutput := "error: operation failed"
+
+	funcName := ExtractFunctionFromStackTrace(errorOutput)
+	if funcName != "" {
+		t.Errorf("Expected empty string for generic error, got '%s'", funcName)
+	}
+}
+
+// TestExtractFunctionFromStackTrace_EmptyInput tests empty error output
+func TestExtractFunctionFromStackTrace_EmptyInput(t *testing.T) {
+	funcName := ExtractFunctionFromStackTrace("")
+	if funcName != "" {
+		t.Errorf("Expected empty string for empty input, got '%s'", funcName)
+	}
+}
+
+// TestExtractFunctionFromStackTrace_MultipleFunctions tests first match behavior
+func TestExtractFunctionFromStackTrace_MultipleFunctions(t *testing.T) {
+	// Python traceback with nested function calls
+	errorOutput := `Traceback (most recent call last):
+  File "test.py", line 15, in outerFunction
+    result = innerFunction()
+  File "test.py", line 10, in innerFunction
+    raise ValueError("test")
+ValueError: test`
+
+	funcName := ExtractFunctionFromStackTrace(errorOutput)
+	// Should match first occurrence
+	if funcName != "outerFunction" {
+		t.Errorf("Expected 'outerFunction', got '%s'", funcName)
+	}
+}
+
+// TestExtractFunctionFromStackTrace_GoNestedCalls tests Go stack with multiple functions
+func TestExtractFunctionFromStackTrace_GoNestedCalls(t *testing.T) {
+	errorOutput := `panic: test panic
+goroutine 1 [running]:
+main.helper(0x1)
+    /path/to/main.go:10 +0x20
+main.process(0x2)
+    /path/to/main.go:15 +0x30`
+
+	funcName := ExtractFunctionFromStackTrace(errorOutput)
+	// Should match first function call
+	if funcName != "helper" {
+		t.Errorf("Expected 'helper', got '%s'", funcName)
+	}
+}
