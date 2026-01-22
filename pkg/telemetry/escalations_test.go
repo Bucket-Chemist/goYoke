@@ -804,3 +804,467 @@ func TestLogEscalation_AllFields(t *testing.T) {
 		}
 	}
 }
+
+// ===== PATTERN ANALYSIS TESTS =====
+
+func TestClusterEscalationsByFromAgent(t *testing.T) {
+	tests := []struct {
+		name       string
+		escalations []EscalationEvent
+		wantCount  int
+		verify     func(t *testing.T, clusters map[string]*AgentEscalationStats)
+	}{
+		{
+			name: "multiple agents with different outcomes",
+			escalations: []EscalationEvent{
+				{FromAgent: "orchestrator", Outcome: "resolved", TriggerType: "failure_cascade"},
+				{FromAgent: "orchestrator", Outcome: "resolved", TriggerType: "complexity"},
+				{FromAgent: "python-pro", Outcome: "still_blocked", TriggerType: "failure_cascade"},
+			},
+			wantCount: 2,
+			verify: func(t *testing.T, clusters map[string]*AgentEscalationStats) {
+				orchStats := clusters["orchestrator"]
+				if orchStats.TotalCount != 2 {
+					t.Errorf("Expected orchestrator count 2, got: %d", orchStats.TotalCount)
+				}
+				if orchStats.ResolvedCount != 2 {
+					t.Errorf("Expected orchestrator resolved 2, got: %d", orchStats.ResolvedCount)
+				}
+				if orchStats.ResolutionRate != 1.0 {
+					t.Errorf("Expected orchestrator resolution rate 1.0, got: %f", orchStats.ResolutionRate)
+				}
+
+				pythonStats := clusters["python-pro"]
+				if pythonStats.ResolutionRate != 0.0 {
+					t.Errorf("Expected python-pro resolution rate 0.0, got: %f", pythonStats.ResolutionRate)
+				}
+			},
+		},
+		{
+			name:        "empty input",
+			escalations: []EscalationEvent{},
+			wantCount:   0,
+		},
+		{
+			name: "unknown agent handling",
+			escalations: []EscalationEvent{
+				{FromAgent: "", Outcome: "resolved", TriggerType: "user_request"},
+			},
+			wantCount: 1,
+			verify: func(t *testing.T, clusters map[string]*AgentEscalationStats) {
+				if _, exists := clusters["unknown"]; !exists {
+					t.Error("Expected 'unknown' cluster for empty FromAgent")
+				}
+			},
+		},
+		{
+			name: "trigger breakdown",
+			escalations: []EscalationEvent{
+				{FromAgent: "orchestrator", TriggerType: "failure_cascade"},
+				{FromAgent: "orchestrator", TriggerType: "complexity"},
+				{FromAgent: "orchestrator", TriggerType: "failure_cascade"},
+			},
+			wantCount: 1,
+			verify: func(t *testing.T, clusters map[string]*AgentEscalationStats) {
+				orchStats := clusters["orchestrator"]
+				if orchStats.TriggerBreakdown["failure_cascade"] != 2 {
+					t.Errorf("Expected 2 failure_cascade, got: %d", orchStats.TriggerBreakdown["failure_cascade"])
+				}
+				if orchStats.TriggerBreakdown["complexity"] != 1 {
+					t.Errorf("Expected 1 complexity, got: %d", orchStats.TriggerBreakdown["complexity"])
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clusters := ClusterEscalationsByFromAgent(tt.escalations)
+
+			if len(clusters) != tt.wantCount {
+				t.Errorf("Expected %d clusters, got: %d", tt.wantCount, len(clusters))
+			}
+
+			if tt.verify != nil {
+				tt.verify(t, clusters)
+			}
+		})
+	}
+}
+
+func TestClusterEscalationsByTrigger(t *testing.T) {
+	tests := []struct {
+		name       string
+		escalations []EscalationEvent
+		wantCount  int
+		verify     func(t *testing.T, clusters map[string]*TriggerEscalationStats)
+	}{
+		{
+			name: "multiple triggers with mixed outcomes",
+			escalations: []EscalationEvent{
+				{TriggerType: "failure_cascade", Outcome: "resolved"},
+				{TriggerType: "failure_cascade", Outcome: "still_blocked"},
+				{TriggerType: "user_request", Outcome: "resolved"},
+			},
+			wantCount: 2,
+			verify: func(t *testing.T, clusters map[string]*TriggerEscalationStats) {
+				cascadeStats := clusters["failure_cascade"]
+				if cascadeStats.TotalCount != 2 {
+					t.Errorf("Expected failure_cascade count 2, got: %d", cascadeStats.TotalCount)
+				}
+				// Resolution rate: 1 resolved / 2 completed = 0.5
+				if cascadeStats.ResolutionRate < 0.49 || cascadeStats.ResolutionRate > 0.51 {
+					t.Errorf("Expected resolution rate ~0.5, got: %f", cascadeStats.ResolutionRate)
+				}
+			},
+		},
+		{
+			name:        "empty input",
+			escalations: []EscalationEvent{},
+			wantCount:   0,
+		},
+		{
+			name: "unknown trigger handling",
+			escalations: []EscalationEvent{
+				{TriggerType: "", Outcome: "resolved", FromAgent: "orchestrator"},
+			},
+			wantCount: 1,
+			verify: func(t *testing.T, clusters map[string]*TriggerEscalationStats) {
+				if _, exists := clusters["unknown"]; !exists {
+					t.Error("Expected 'unknown' cluster for empty TriggerType")
+				}
+			},
+		},
+		{
+			name: "from agent breakdown",
+			escalations: []EscalationEvent{
+				{TriggerType: "failure_cascade", FromAgent: "orchestrator"},
+				{TriggerType: "failure_cascade", FromAgent: "python-pro"},
+				{TriggerType: "failure_cascade", FromAgent: "orchestrator"},
+			},
+			wantCount: 1,
+			verify: func(t *testing.T, clusters map[string]*TriggerEscalationStats) {
+				cascadeStats := clusters["failure_cascade"]
+				if cascadeStats.FromAgentBreakdown["orchestrator"] != 2 {
+					t.Errorf("Expected 2 orchestrator, got: %d", cascadeStats.FromAgentBreakdown["orchestrator"])
+				}
+				if cascadeStats.FromAgentBreakdown["python-pro"] != 1 {
+					t.Errorf("Expected 1 python-pro, got: %d", cascadeStats.FromAgentBreakdown["python-pro"])
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clusters := ClusterEscalationsByTrigger(tt.escalations)
+
+			if len(clusters) != tt.wantCount {
+				t.Errorf("Expected %d clusters, got: %d", tt.wantCount, len(clusters))
+			}
+
+			if tt.verify != nil {
+				tt.verify(t, clusters)
+			}
+		})
+	}
+}
+
+func TestCalculateEscalationROI(t *testing.T) {
+	tests := []struct {
+		name        string
+		escalations []EscalationEvent
+		verify      func(t *testing.T, roi EscalationROI)
+	}{
+		{
+			name: "mixed outcomes",
+			escalations: []EscalationEvent{
+				{Outcome: "resolved", TokensUsed: 5000},
+				{Outcome: "resolved", TokensUsed: 3000},
+				{Outcome: "still_blocked", TokensUsed: 4000},
+				{Outcome: "pending", TokensUsed: 0},
+			},
+			verify: func(t *testing.T, roi EscalationROI) {
+				if roi.TotalEscalations != 4 {
+					t.Errorf("Expected 4 total, got: %d", roi.TotalEscalations)
+				}
+				if roi.CompletedCount != 3 {
+					t.Errorf("Expected 3 completed, got: %d", roi.CompletedCount)
+				}
+				if roi.ResolvedCount != 2 {
+					t.Errorf("Expected 2 resolved, got: %d", roi.ResolvedCount)
+				}
+				// Resolution rate: 2/3 = 0.667
+				if roi.ResolutionRate < 0.66 || roi.ResolutionRate > 0.68 {
+					t.Errorf("Expected resolution rate ~0.67, got: %f", roi.ResolutionRate)
+				}
+				if roi.TotalTokensUsed != 12000 {
+					t.Errorf("Expected 12000 tokens, got: %d", roi.TotalTokensUsed)
+				}
+				if roi.AvgTokensPerEscalation != 3000 {
+					t.Errorf("Expected avg 3000 tokens, got: %d", roi.AvgTokensPerEscalation)
+				}
+			},
+		},
+		{
+			name:        "empty input",
+			escalations: []EscalationEvent{},
+			verify: func(t *testing.T, roi EscalationROI) {
+				if roi.TotalEscalations != 0 {
+					t.Errorf("Expected 0 total, got: %d", roi.TotalEscalations)
+				}
+				if roi.ResolutionRate != 0.0 {
+					t.Errorf("Expected 0.0 resolution rate, got: %f", roi.ResolutionRate)
+				}
+			},
+		},
+		{
+			name: "all resolved",
+			escalations: []EscalationEvent{
+				{Outcome: "resolved", TokensUsed: 1000},
+				{Outcome: "resolved", TokensUsed: 1000},
+			},
+			verify: func(t *testing.T, roi EscalationROI) {
+				if roi.ResolutionRate != 1.0 {
+					t.Errorf("Expected 1.0 resolution rate, got: %f", roi.ResolutionRate)
+				}
+				// 2 * 0.09 = 0.18
+				if roi.EstimatedCostSaved < 0.17 || roi.EstimatedCostSaved > 0.19 {
+					t.Errorf("Expected cost saved ~0.18, got: %f", roi.EstimatedCostSaved)
+				}
+			},
+		},
+		{
+			name: "all blocked",
+			escalations: []EscalationEvent{
+				{Outcome: "still_blocked", TokensUsed: 1000},
+				{Outcome: "still_blocked", TokensUsed: 1000},
+			},
+			verify: func(t *testing.T, roi EscalationROI) {
+				if roi.ResolutionRate != 0.0 {
+					t.Errorf("Expected 0.0 resolution rate, got: %f", roi.ResolutionRate)
+				}
+				if roi.EstimatedCostSaved != 0.0 {
+					t.Errorf("Expected 0.0 cost saved, got: %f", roi.EstimatedCostSaved)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			roi := CalculateEscalationROI(tt.escalations)
+			tt.verify(t, roi)
+		})
+	}
+}
+
+func TestAnalyzeEscalationLatency(t *testing.T) {
+	tests := []struct {
+		name        string
+		escalations []EscalationEvent
+		verify      func(t *testing.T, stats LatencyStats)
+	}{
+		{
+			name: "odd number of samples",
+			escalations: []EscalationEvent{
+				{ResolutionTimeMs: 1000},
+				{ResolutionTimeMs: 2000},
+				{ResolutionTimeMs: 3000},
+				{ResolutionTimeMs: 4000},
+				{ResolutionTimeMs: 5000},
+			},
+			verify: func(t *testing.T, stats LatencyStats) {
+				if stats.SampleCount != 5 {
+					t.Errorf("Expected 5 samples, got: %d", stats.SampleCount)
+				}
+				if stats.MinMs != 1000 {
+					t.Errorf("Expected min 1000, got: %d", stats.MinMs)
+				}
+				if stats.MaxMs != 5000 {
+					t.Errorf("Expected max 5000, got: %d", stats.MaxMs)
+				}
+				if stats.AvgMs != 3000 {
+					t.Errorf("Expected avg 3000, got: %d", stats.AvgMs)
+				}
+				if stats.MedianMs != 3000 {
+					t.Errorf("Expected median 3000, got: %d", stats.MedianMs)
+				}
+				// P90 of 5 samples = index 4 (last element)
+				if stats.P90Ms != 5000 {
+					t.Errorf("Expected P90 5000, got: %d", stats.P90Ms)
+				}
+			},
+		},
+		{
+			name: "even number of samples",
+			escalations: []EscalationEvent{
+				{ResolutionTimeMs: 1000},
+				{ResolutionTimeMs: 2000},
+				{ResolutionTimeMs: 3000},
+				{ResolutionTimeMs: 4000},
+			},
+			verify: func(t *testing.T, stats LatencyStats) {
+				if stats.SampleCount != 4 {
+					t.Errorf("Expected 4 samples, got: %d", stats.SampleCount)
+				}
+				// Median of [1000, 2000, 3000, 4000] = (2000 + 3000) / 2 = 2500
+				if stats.MedianMs != 2500 {
+					t.Errorf("Expected median 2500, got: %d", stats.MedianMs)
+				}
+			},
+		},
+		{
+			name:        "empty input",
+			escalations: []EscalationEvent{},
+			verify: func(t *testing.T, stats LatencyStats) {
+				if stats.SampleCount != 0 {
+					t.Errorf("Expected 0 samples, got: %d", stats.SampleCount)
+				}
+			},
+		},
+		{
+			name: "single sample",
+			escalations: []EscalationEvent{
+				{ResolutionTimeMs: 5000},
+			},
+			verify: func(t *testing.T, stats LatencyStats) {
+				if stats.SampleCount != 1 {
+					t.Errorf("Expected 1 sample, got: %d", stats.SampleCount)
+				}
+				if stats.MinMs != 5000 || stats.MaxMs != 5000 || stats.MedianMs != 5000 {
+					t.Errorf("Expected all stats to be 5000")
+				}
+			},
+		},
+		{
+			name: "ignores zero latencies",
+			escalations: []EscalationEvent{
+				{ResolutionTimeMs: 0},     // Ignored
+				{ResolutionTimeMs: 1000},
+				{ResolutionTimeMs: 0},     // Ignored
+				{ResolutionTimeMs: 2000},
+			},
+			verify: func(t *testing.T, stats LatencyStats) {
+				if stats.SampleCount != 2 {
+					t.Errorf("Expected 2 samples (ignoring zeros), got: %d", stats.SampleCount)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stats := AnalyzeEscalationLatency(tt.escalations)
+			tt.verify(t, stats)
+		})
+	}
+}
+
+func TestGetEscalationTrend(t *testing.T) {
+	tests := []struct {
+		name        string
+		escalations []EscalationEvent
+		verify      func(t *testing.T, trend EscalationTrend)
+	}{
+		{
+			name: "improving trend",
+			escalations: []EscalationEvent{
+				{Timestamp: "2026-01-22T10:00:00Z"},
+				{Timestamp: "2026-01-22T10:01:00Z"},
+				{Timestamp: "2026-01-22T10:02:00Z"},
+				{Timestamp: "2026-01-22T11:00:00Z"}, // Only 1 in second half
+			},
+			verify: func(t *testing.T, trend EscalationTrend) {
+				if trend.Trend != "improving" {
+					t.Errorf("Expected 'improving', got: %s", trend.Trend)
+				}
+				if trend.EarlyCount != 3 {
+					t.Errorf("Expected early count 3, got: %d", trend.EarlyCount)
+				}
+				if trend.LateCount != 1 {
+					t.Errorf("Expected late count 1, got: %d", trend.LateCount)
+				}
+				if !strings.Contains(trend.Message, "reduction") {
+					t.Errorf("Expected 'reduction' in message, got: %s", trend.Message)
+				}
+			},
+		},
+		{
+			name: "worsening trend",
+			escalations: []EscalationEvent{
+				{Timestamp: "2026-01-22T10:00:00Z"},
+				{Timestamp: "2026-01-22T10:01:00Z"},
+				{Timestamp: "2026-01-22T11:00:00Z"},
+				{Timestamp: "2026-01-22T11:01:00Z"},
+				{Timestamp: "2026-01-22T11:02:00Z"},
+			},
+			verify: func(t *testing.T, trend EscalationTrend) {
+				if trend.Trend != "worsening" {
+					t.Errorf("Expected 'worsening', got: %s", trend.Trend)
+				}
+				if !strings.Contains(trend.Message, "increase") {
+					t.Errorf("Expected 'increase' in message, got: %s", trend.Message)
+				}
+			},
+		},
+		{
+			name: "stable trend",
+			escalations: []EscalationEvent{
+				{Timestamp: "2026-01-22T10:00:00Z"},
+				{Timestamp: "2026-01-22T10:01:00Z"},
+				{Timestamp: "2026-01-22T11:00:00Z"},
+				{Timestamp: "2026-01-22T11:01:00Z"},
+			},
+			verify: func(t *testing.T, trend EscalationTrend) {
+				if trend.Trend != "stable" {
+					t.Errorf("Expected 'stable', got: %s", trend.Trend)
+				}
+				if trend.EarlyCount != 2 || trend.LateCount != 2 {
+					t.Errorf("Expected equal counts (2,2), got: (%d,%d)", trend.EarlyCount, trend.LateCount)
+				}
+			},
+		},
+		{
+			name: "insufficient data - single escalation",
+			escalations: []EscalationEvent{
+				{Timestamp: "2026-01-22T10:00:00Z"},
+			},
+			verify: func(t *testing.T, trend EscalationTrend) {
+				if trend.Trend != "insufficient_data" {
+					t.Errorf("Expected 'insufficient_data', got: %s", trend.Trend)
+				}
+			},
+		},
+		{
+			name:        "insufficient data - empty",
+			escalations: []EscalationEvent{},
+			verify: func(t *testing.T, trend EscalationTrend) {
+				if trend.Trend != "insufficient_data" {
+					t.Errorf("Expected 'insufficient_data', got: %s", trend.Trend)
+				}
+			},
+		},
+		{
+			name: "handles unsorted input",
+			escalations: []EscalationEvent{
+				{Timestamp: "2026-01-22T11:00:00Z"}, // Out of order
+				{Timestamp: "2026-01-22T10:00:00Z"},
+				{Timestamp: "2026-01-22T10:01:00Z"},
+			},
+			verify: func(t *testing.T, trend EscalationTrend) {
+				// Should still work by sorting internally
+				if trend.Trend == "" {
+					t.Error("Expected trend to be calculated despite unsorted input")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trend := GetEscalationTrend(tt.escalations)
+			tt.verify(t, trend)
+		})
+	}
+}

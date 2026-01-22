@@ -2298,7 +2298,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 10,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030i",
@@ -2321,7 +2321,7 @@
       "files_to_create": [],
       "tests_required": true,
       "acceptance_criteria_count": 9,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030j",

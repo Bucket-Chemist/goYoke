@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -239,4 +240,299 @@ func FilterEscalations(escalations []EscalationEvent, filters EscalationFilters)
 	}
 
 	return filtered
+}
+
+// ===== PATTERN ANALYSIS FUNCTIONS =====
+
+// EscalationStats aggregates metrics for escalation analysis.
+type EscalationStats struct {
+	TotalCount        int     `json:"total_count"`
+	ResolvedCount     int     `json:"resolved_count"`
+	StillBlockedCount int     `json:"still_blocked_count"`
+	PendingCount      int     `json:"pending_count"`
+	CancelledCount    int     `json:"cancelled_count"`
+	ResolutionRate    float64 `json:"resolution_rate"`    // ResolvedCount / (ResolvedCount + StillBlockedCount)
+	AvgResolutionMs   int64   `json:"avg_resolution_ms"`
+	TotalTokensUsed   int     `json:"total_tokens_used"`
+}
+
+// AgentEscalationStats aggregates escalations for a single source agent.
+type AgentEscalationStats struct {
+	FromAgent        string         `json:"from_agent"`
+	TotalCount       int            `json:"total_count"`
+	ResolvedCount    int            `json:"resolved_count"`
+	ResolutionRate   float64        `json:"resolution_rate"`
+	TriggerBreakdown map[string]int `json:"trigger_breakdown"` // TriggerType -> count
+}
+
+// TriggerEscalationStats aggregates escalations by trigger type.
+type TriggerEscalationStats struct {
+	TriggerType        string         `json:"trigger_type"`
+	TotalCount         int            `json:"total_count"`
+	ResolvedCount      int            `json:"resolved_count"`
+	ResolutionRate     float64        `json:"resolution_rate"`
+	FromAgentBreakdown map[string]int `json:"from_agent_breakdown"`
+}
+
+// EscalationROI represents return on investment for escalations.
+type EscalationROI struct {
+	TotalEscalations       int     `json:"total_escalations"`
+	CompletedCount         int     `json:"completed_count"`
+	ResolvedCount          int     `json:"resolved_count"`
+	StillBlockedCount      int     `json:"still_blocked_count"`
+	ResolutionRate         float64 `json:"resolution_rate"`           // Resolved / Completed
+	TotalTokensUsed        int     `json:"total_tokens_used"`
+	AvgTokensPerEscalation int     `json:"avg_tokens_per_escalation"`
+	EstimatedCostSaved     float64 `json:"estimated_cost_saved"` // If hadn't escalated (rough estimate)
+}
+
+// LatencyStats provides timing analysis for escalation resolution.
+type LatencyStats struct {
+	SampleCount int   `json:"sample_count"` // Escalations with resolution time
+	MinMs       int64 `json:"min_ms"`
+	MaxMs       int64 `json:"max_ms"`
+	AvgMs       int64 `json:"avg_ms"`
+	MedianMs    int64 `json:"median_ms"`
+	P90Ms       int64 `json:"p90_ms"` // 90th percentile
+}
+
+// EscalationTrend shows whether escalations are increasing or decreasing.
+type EscalationTrend struct {
+	EarlyCount    int     `json:"early_count"`
+	LateCount     int     `json:"late_count"`
+	Trend         string  `json:"trend"`           // "improving", "stable", "worsening"
+	ChangePercent float64 `json:"change_percent"`  // Percentage change
+	Message       string  `json:"message"`
+}
+
+// ClusterEscalationsByFromAgent groups escalations by source agent.
+// Identifies which agents escalate most frequently.
+func ClusterEscalationsByFromAgent(escalations []EscalationEvent) map[string]*AgentEscalationStats {
+	clusters := make(map[string]*AgentEscalationStats)
+
+	for _, esc := range escalations {
+		agent := esc.FromAgent
+		if agent == "" {
+			agent = "unknown"
+		}
+
+		stats, exists := clusters[agent]
+		if !exists {
+			stats = &AgentEscalationStats{
+				FromAgent:        agent,
+				TriggerBreakdown: make(map[string]int),
+			}
+			clusters[agent] = stats
+		}
+
+		stats.TotalCount++
+		if esc.Outcome == "resolved" {
+			stats.ResolvedCount++
+		}
+		stats.TriggerBreakdown[esc.TriggerType]++
+	}
+
+	// Calculate resolution rates
+	for _, stats := range clusters {
+		completedCount := 0
+		for _, esc := range escalations {
+			if esc.FromAgent == stats.FromAgent && (esc.Outcome == "resolved" || esc.Outcome == "still_blocked") {
+				completedCount++
+			}
+		}
+		if completedCount > 0 {
+			stats.ResolutionRate = float64(stats.ResolvedCount) / float64(completedCount)
+		}
+	}
+
+	return clusters
+}
+
+// ClusterEscalationsByTrigger groups escalations by trigger type.
+// Identifies common escalation patterns.
+func ClusterEscalationsByTrigger(escalations []EscalationEvent) map[string]*TriggerEscalationStats {
+	clusters := make(map[string]*TriggerEscalationStats)
+
+	for _, esc := range escalations {
+		trigger := esc.TriggerType
+		if trigger == "" {
+			trigger = "unknown"
+		}
+
+		stats, exists := clusters[trigger]
+		if !exists {
+			stats = &TriggerEscalationStats{
+				TriggerType:        trigger,
+				FromAgentBreakdown: make(map[string]int),
+			}
+			clusters[trigger] = stats
+		}
+
+		stats.TotalCount++
+		if esc.Outcome == "resolved" {
+			stats.ResolvedCount++
+		}
+		stats.FromAgentBreakdown[esc.FromAgent]++
+	}
+
+	// Calculate resolution rates
+	for trigger, stats := range clusters {
+		completedCount := 0
+		for _, esc := range escalations {
+			if esc.TriggerType == trigger && (esc.Outcome == "resolved" || esc.Outcome == "still_blocked") {
+				completedCount++
+			}
+		}
+		if completedCount > 0 {
+			stats.ResolutionRate = float64(stats.ResolvedCount) / float64(completedCount)
+		}
+	}
+
+	return clusters
+}
+
+// CalculateEscalationROI measures the effectiveness of escalations.
+func CalculateEscalationROI(escalations []EscalationEvent) EscalationROI {
+	roi := EscalationROI{
+		TotalEscalations: len(escalations),
+	}
+
+	for _, esc := range escalations {
+		switch esc.Outcome {
+		case "resolved":
+			roi.CompletedCount++
+			roi.ResolvedCount++
+		case "still_blocked":
+			roi.CompletedCount++
+			roi.StillBlockedCount++
+		}
+		roi.TotalTokensUsed += esc.TokensUsed
+	}
+
+	if roi.CompletedCount > 0 {
+		roi.ResolutionRate = float64(roi.ResolvedCount) / float64(roi.CompletedCount)
+	}
+
+	if roi.TotalEscalations > 0 {
+		roi.AvgTokensPerEscalation = roi.TotalTokensUsed / roi.TotalEscalations
+	}
+
+	// Rough estimate: if resolved, saved ~5 more Sonnet attempts
+	// 5 attempts * ~2000 tokens * $0.009/1K = $0.09 per resolution
+	roi.EstimatedCostSaved = float64(roi.ResolvedCount) * 0.09
+
+	return roi
+}
+
+// AnalyzeEscalationLatency calculates timing statistics for resolved escalations.
+func AnalyzeEscalationLatency(escalations []EscalationEvent) LatencyStats {
+	var latencies []int64
+
+	for _, esc := range escalations {
+		if esc.ResolutionTimeMs > 0 {
+			latencies = append(latencies, esc.ResolutionTimeMs)
+		}
+	}
+
+	stats := LatencyStats{
+		SampleCount: len(latencies),
+	}
+
+	if len(latencies) == 0 {
+		return stats
+	}
+
+	// Sort for percentile calculations
+	sort.Slice(latencies, func(i, j int) bool {
+		return latencies[i] < latencies[j]
+	})
+
+	stats.MinMs = latencies[0]
+	stats.MaxMs = latencies[len(latencies)-1]
+
+	// Calculate average
+	var total int64
+	for _, l := range latencies {
+		total += l
+	}
+	stats.AvgMs = total / int64(len(latencies))
+
+	// Calculate median
+	mid := len(latencies) / 2
+	if len(latencies)%2 == 0 {
+		stats.MedianMs = (latencies[mid-1] + latencies[mid]) / 2
+	} else {
+		stats.MedianMs = latencies[mid]
+	}
+
+	// Calculate P90
+	p90Index := int(float64(len(latencies)) * 0.9)
+	if p90Index >= len(latencies) {
+		p90Index = len(latencies) - 1
+	}
+	stats.P90Ms = latencies[p90Index]
+
+	return stats
+}
+
+// GetEscalationTrend analyzes whether escalation frequency is changing.
+// Compares first half vs second half of escalations by timestamp.
+func GetEscalationTrend(escalations []EscalationEvent) EscalationTrend {
+	if len(escalations) < 2 {
+		return EscalationTrend{
+			Trend:   "insufficient_data",
+			Message: "Not enough escalations to analyze trend",
+		}
+	}
+
+	// Sort by timestamp
+	sorted := make([]EscalationEvent, len(escalations))
+	copy(sorted, escalations)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Timestamp < sorted[j].Timestamp
+	})
+
+	// Parse timestamps and find midpoint
+	firstTime, _ := time.Parse(time.RFC3339, sorted[0].Timestamp)
+	lastTime, _ := time.Parse(time.RFC3339, sorted[len(sorted)-1].Timestamp)
+	midpoint := firstTime.Add(lastTime.Sub(firstTime) / 2)
+
+	// Count early vs late
+	earlyCount := 0
+	lateCount := 0
+	for _, esc := range sorted {
+		escTime, _ := time.Parse(time.RFC3339, esc.Timestamp)
+		if escTime.Before(midpoint) {
+			earlyCount++
+		} else {
+			lateCount++
+		}
+	}
+
+	trend := EscalationTrend{
+		EarlyCount: earlyCount,
+		LateCount:  lateCount,
+	}
+
+	if earlyCount == 0 {
+		trend.Trend = "insufficient_data"
+		trend.Message = "No early escalations for comparison"
+		return trend
+	}
+
+	trend.ChangePercent = float64(lateCount-earlyCount) / float64(earlyCount) * 100
+
+	if lateCount < earlyCount {
+		trend.Trend = "improving"
+		reduction := -trend.ChangePercent
+		trend.Message = fmt.Sprintf("Improving: %.0f%% reduction in escalations", reduction)
+	} else if lateCount > earlyCount {
+		trend.Trend = "worsening"
+		trend.Message = fmt.Sprintf("Worsening: %.0f%% increase in escalations", trend.ChangePercent)
+	} else {
+		trend.Trend = "stable"
+		trend.Message = "Stable: consistent escalation rate"
+	}
+
+	return trend
 }
