@@ -108,12 +108,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	var simulationErr error
 	if err != nil {
+		simulationErr = err
 		fmt.Fprintf(os.Stderr, "Simulation error: %v\n", err)
-		os.Exit(1)
 	}
 
-	// Generate report
+	// Generate report (even on error, for debugging)
+	os.MkdirAll(*outputDir, 0755)
 	reporter := harness.NewReporter(cfg.ReportFormat)
 	reportPath := filepath.Join(*outputDir, fmt.Sprintf("simulation-%s.%s",
 		time.Now().Format("20060102-150405"),
@@ -121,6 +123,11 @@ func main() {
 
 	if err := reporter.GenerateToFile(results, cfg, reportPath); err != nil {
 		fmt.Fprintf(os.Stderr, "Error generating report: %v\n", err)
+		// Don't exit here - continue to show summary
+	}
+
+	// Exit early if simulation had an error
+	if simulationErr != nil {
 		os.Exit(1)
 	}
 
