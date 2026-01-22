@@ -398,7 +398,7 @@
         "test/simulation/harness/generator_test.go"
       ],
       "tests_required": true,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030o",

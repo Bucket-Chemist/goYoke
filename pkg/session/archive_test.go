@@ -152,3 +152,87 @@ func TestArchiveArtifacts_ErrorFormat(t *testing.T) {
 		t.Errorf("Error missing [session-archive] component tag: %v", err)
 	}
 }
+
+func TestCleanupTempFiles(t *testing.T) {
+	// Setup: Create temp directory and set GOgentDir via XDG_CACHE_HOME
+	tmpDir := t.TempDir()
+	gogentDir := filepath.Join(tmpDir, "gogent")
+	os.MkdirAll(gogentDir, 0755)
+
+	// Override XDG environment variables for this test
+	originalRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	originalCache := os.Getenv("XDG_CACHE_HOME")
+	os.Unsetenv("XDG_RUNTIME_DIR") // Clear runtime dir to avoid priority conflict
+	os.Setenv("XDG_CACHE_HOME", tmpDir)
+	defer func() {
+		if originalRuntime != "" {
+			os.Setenv("XDG_RUNTIME_DIR", originalRuntime)
+		}
+		os.Setenv("XDG_CACHE_HOME", originalCache)
+	}()
+
+	// Create temp files that should be cleaned
+	counterLog1 := filepath.Join(gogentDir, "claude-tool-counter-12345.log")
+	counterLog2 := filepath.Join(gogentDir, "claude-tool-counter-67890.log")
+	currentTier := filepath.Join(gogentDir, "current-tier")
+	maxDelegation := filepath.Join(gogentDir, "max_delegation")
+
+	os.WriteFile(counterLog1, []byte("test counter 1"), 0644)
+	os.WriteFile(counterLog2, []byte("test counter 2"), 0644)
+	os.WriteFile(currentTier, []byte("sonnet"), 0644)
+	os.WriteFile(maxDelegation, []byte("opus"), 0644)
+
+	// Create a file that should NOT be cleaned
+	keepFile := filepath.Join(gogentDir, "routing-violations.jsonl")
+	os.WriteFile(keepFile, []byte("test violation"), 0644)
+
+	// Execute cleanup
+	err := CleanupTempFiles()
+	if err != nil {
+		t.Fatalf("CleanupTempFiles failed: %v", err)
+	}
+
+	// Verify temp files removed
+	if _, err := os.Stat(counterLog1); !os.IsNotExist(err) {
+		t.Error("claude-tool-counter-12345.log should be removed")
+	}
+	if _, err := os.Stat(counterLog2); !os.IsNotExist(err) {
+		t.Error("claude-tool-counter-67890.log should be removed")
+	}
+	if _, err := os.Stat(currentTier); !os.IsNotExist(err) {
+		t.Error("current-tier should be removed")
+	}
+	if _, err := os.Stat(maxDelegation); !os.IsNotExist(err) {
+		t.Error("max_delegation should be removed")
+	}
+
+	// Verify keep file still exists
+	if _, err := os.Stat(keepFile); os.IsNotExist(err) {
+		t.Error("routing-violations.jsonl should NOT be removed")
+	}
+}
+
+func TestCleanupTempFiles_MissingFiles(t *testing.T) {
+	// Setup: Create empty temp directory
+	tmpDir := t.TempDir()
+	gogentDir := filepath.Join(tmpDir, "gogent")
+	os.MkdirAll(gogentDir, 0755)
+
+	// Override XDG environment variables
+	originalRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	originalCache := os.Getenv("XDG_CACHE_HOME")
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	os.Setenv("XDG_CACHE_HOME", tmpDir)
+	defer func() {
+		if originalRuntime != "" {
+			os.Setenv("XDG_RUNTIME_DIR", originalRuntime)
+		}
+		os.Setenv("XDG_CACHE_HOME", originalCache)
+	}()
+
+	// No files exist - should not error
+	err := CleanupTempFiles()
+	if err != nil {
+		t.Errorf("CleanupTempFiles should gracefully handle missing files, got error: %v", err)
+	}
+}

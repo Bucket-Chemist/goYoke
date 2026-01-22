@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 // ArchiveArtifacts moves session artifacts to timestamped archive directory
@@ -84,6 +86,38 @@ func copyFile(src, dst string) error {
 
 	if err := os.WriteFile(dst, data, 0644); err != nil {
 		return fmt.Errorf("write destination: %w", err)
+	}
+
+	return nil
+}
+
+// CleanupTempFiles removes session-specific temporary files
+// Missing files are not treated as errors - only unexpected failures are reported
+func CleanupTempFiles() error {
+	gogentDir := config.GetGOgentDir()
+
+	// Clean tool counter logs (glob pattern)
+	counterPattern := filepath.Join(gogentDir, "claude-tool-counter-*.log")
+	matches, err := filepath.Glob(counterPattern)
+	if err != nil {
+		return fmt.Errorf("[session-archive] Failed to glob pattern %s: %w", counterPattern, err)
+	}
+	for _, match := range matches {
+		if err := os.Remove(match); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("[session-archive] Failed to remove %s: %w", match, err)
+		}
+	}
+
+	// Clean current-tier file
+	currentTierPath := filepath.Join(gogentDir, "current-tier")
+	if err := os.Remove(currentTierPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("[session-archive] Failed to remove %s: %w", currentTierPath, err)
+	}
+
+	// Clean max_delegation file
+	maxDelegationPath := filepath.Join(gogentDir, "max_delegation")
+	if err := os.Remove(maxDelegationPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("[session-archive] Failed to remove %s: %w", maxDelegationPath, err)
 	}
 
 	return nil
