@@ -1,0 +1,31 @@
+{
+  "setup": {
+    "create_dirs": [".claude/memory", ".claude/tmp"],
+    "files": {
+      ".claude/memory/routing-violations.jsonl": "{\"timestamp\":\"2026-01-22T10:00:00Z\",\"agent\":\"test\",\"violation\":\"test_violation\"}",
+      ".claude/memory/pending-learnings.jsonl": "{\"type\":\"sharp_edge\",\"file\":\"test.go\",\"pattern\":\"test pattern\",\"timestamp\":\"2026-01-22T10:00:00Z\"}",
+      ".claude/memory/decisions.json": "[{\"id\":\"dec-001\",\"decision\":\"Use Go for CLI\",\"rationale\":\"Performance\"}]"
+    },
+    "env": {
+      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+    }
+  },
+  "input": {
+    "session_id": "test-session-s004",
+    "hook_event_name": "SessionEnd",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "files_created": [
+      ".claude/memory/handoffs.jsonl",
+      ".claude/memory/last-handoff.md"
+    ],
+    "handoff_fields": {
+      "schema_version": "1.1",
+      "violations_count": 1,
+      "sharp_edges_count": 1,
+      "has_decisions": true
+    },
+    "exit_code": 0
+  }
+}
