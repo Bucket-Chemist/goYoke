@@ -1,49 +1,3 @@
----
-ticket_id: GOgent-030s
-title: "Fuzz Runner Implementation"
-status: pending
-dependencies: [GOgent-030n, GOgent-030o, GOgent-030r]
-estimated_hours: 3.0
-phase: 3
-priority: MEDIUM
----
-
-# GOgent-030s: Fuzz Runner Implementation
-
-## Description
-Implement randomized fuzzing with seed control, crash corpus capture, invariant checking.
-
-## Implementation Intention
-Fuzz testing generates thousands of random inputs to find edge cases that deterministic tests miss. Seed control ensures reproducibility - any crash can be replayed exactly.
-
-## Intended End State
-- FuzzRunner generates and executes random scenarios
-- 70/30 split between PreToolUse and SessionEnd
-- All invariants checked per execution
-- Crashes saved with seed for replay
-- Configurable iteration count and timeout
-
-## Dependencies
-- GOgent-030n: Generator for random input creation
-- GOgent-030o: Runner for scenario execution
-- GOgent-030r: Invariants for validation
-
-## Files to Create
-- `test/simulation/harness/fuzz.go`
-- `test/simulation/harness/fuzz_test.go`
-
-## Acceptance Criteria
-- [x] 70/30 split PreToolUse/SessionEnd
-- [x] All invariants checked per execution
-- [x] Failed inputs saved to fuzz/crashes/
-- [x] Crash filename includes seed for replay
-- [x] Reproducibility verified with same seed
-- [x] Configurable timeout and iteration count
-
-## Implementation Details
-
-### fuzz.go
-```go
 package harness
 
 import (
@@ -67,26 +21,26 @@ type FuzzRunner struct {
 
 // FuzzCrash captures a failed fuzz iteration for replay.
 type FuzzCrash struct {
-	Seed           int64               `json:"seed"`
-	Iteration      int                 `json:"iteration"`
-	Category       string              `json:"category"` // "pretooluse" or "sessionend"
-	Input          interface{}         `json:"input"`
-	Output         string              `json:"output"`
-	ExitCode       int                 `json:"exit_code"`
-	FailedInvariants []InvariantResult `json:"failed_invariants"`
-	Timestamp      time.Time           `json:"timestamp"`
+	Seed             int64               `json:"seed"`
+	Iteration        int                 `json:"iteration"`
+	Category         string              `json:"category"` // "pretooluse" or "sessionend"
+	Input            interface{}         `json:"input"`
+	Output           string              `json:"output"`
+	ExitCode         int                 `json:"exit_code"`
+	FailedInvariants []InvariantResult   `json:"failed_invariants"`
+	Timestamp        time.Time           `json:"timestamp"`
 }
 
 // FuzzSummary provides aggregate statistics for a fuzz run.
 type FuzzSummary struct {
-	TotalIterations  int           `json:"total_iterations"`
-	PreToolUseCount  int           `json:"pretooluse_count"`
-	SessionEndCount  int           `json:"sessionend_count"`
-	PassedCount      int           `json:"passed_count"`
-	CrashCount       int           `json:"crash_count"`
-	InvariantFailures int          `json:"invariant_failures"`
-	Duration         time.Duration `json:"duration"`
-	Seed             int64         `json:"seed"`
+	TotalIterations   int           `json:"total_iterations"`
+	PreToolUseCount   int           `json:"pretooluse_count"`
+	SessionEndCount   int           `json:"sessionend_count"`
+	PassedCount       int           `json:"passed_count"`
+	CrashCount        int           `json:"crash_count"`
+	InvariantFailures int           `json:"invariant_failures"`
+	Duration          time.Duration `json:"duration"`
+	Seed              int64         `json:"seed"`
 }
 
 // NewFuzzRunner creates a fuzz runner with the given configuration.
@@ -141,7 +95,7 @@ func (f *FuzzRunner) RunFuzz() ([]SimulationResult, error) {
 
 // fuzzPreToolUse runs a single PreToolUse fuzz iteration.
 func (f *FuzzRunner) fuzzPreToolUse(seed int64, iteration int) SimulationResult {
-	event := f.gen.(*DefaultGenerator).RandomToolEvent(seed)
+	event := f.gen.RandomToolEvent(seed)
 
 	scenario := Scenario{
 		ID:       fmt.Sprintf("FUZZ-P-%d", iteration),
@@ -179,7 +133,7 @@ func (f *FuzzRunner) fuzzPreToolUse(seed int64, iteration int) SimulationResult 
 
 // fuzzSessionEnd runs a single SessionEnd fuzz iteration.
 func (f *FuzzRunner) fuzzSessionEnd(seed int64, iteration int) SimulationResult {
-	event := f.gen.(*DefaultGenerator).RandomSessionEvent(seed)
+	event := f.gen.RandomSessionEvent(seed)
 
 	// Create temp directory for this iteration
 	iterDir := filepath.Join(f.config.TempDir, fmt.Sprintf("fuzz-%d", iteration))
@@ -289,7 +243,7 @@ func (f *FuzzRunner) GetSummary() FuzzSummary {
 	}
 
 	for _, r := range f.results {
-		if r.ScenarioID[:6] == "FUZZ-P" {
+		if len(r.ScenarioID) >= 6 && r.ScenarioID[:6] == "FUZZ-P" {
 			summary.PreToolUseCount++
 		} else {
 			summary.SessionEndCount++
@@ -344,166 +298,3 @@ func formatInvariantFailures(failed []InvariantResult) string {
 	}
 	return output
 }
-```
-
-### fuzz_test.go
-```go
-package harness
-
-import (
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
-)
-
-func TestFuzzRunner_Reproducibility(t *testing.T) {
-	tempDir := t.TempDir()
-
-	cfg := SimulationConfig{
-		Mode:           "fuzz",
-		FuzzIterations: 10,
-		FuzzSeed:       42,
-		FuzzTimeout:    1 * time.Minute,
-		TempDir:        tempDir,
-	}
-
-	gen := NewGenerator(filepath.Join(tempDir, "fixtures"))
-
-	// Run twice with same seed
-	runner1 := &FuzzRunner{
-		config:  cfg,
-		gen:     gen,
-		results: make([]SimulationResult, 0),
-	}
-
-	runner2 := &FuzzRunner{
-		config:  cfg,
-		gen:     gen,
-		results: make([]SimulationResult, 0),
-	}
-
-	// Compare generated inputs (not full execution)
-	rng1 := rand.New(rand.NewSource(42))
-	rng2 := rand.New(rand.NewSource(42))
-
-	for i := 0; i < 10; i++ {
-		seed1 := rng1.Int63()
-		seed2 := rng2.Int63()
-
-		if seed1 != seed2 {
-			t.Errorf("Iteration %d: seeds differ (%d vs %d)", i, seed1, seed2)
-		}
-	}
-}
-
-func TestFuzzRunner_70_30_Split(t *testing.T) {
-	tempDir := t.TempDir()
-
-	cfg := SimulationConfig{
-		Mode:           "fuzz",
-		FuzzIterations: 1000,
-		FuzzSeed:       12345,
-		FuzzTimeout:    5 * time.Minute,
-		TempDir:        tempDir,
-	}
-
-	// Just test the distribution, not actual execution
-	rng := rand.New(rand.NewSource(cfg.FuzzSeed))
-
-	preToolCount := 0
-	sessionCount := 0
-
-	for i := 0; i < cfg.FuzzIterations; i++ {
-		if rng.Float64() < 0.7 {
-			preToolCount++
-		} else {
-			sessionCount++
-		}
-	}
-
-	// Should be roughly 70/30 (allow 5% variance)
-	preToolRatio := float64(preToolCount) / float64(cfg.FuzzIterations)
-	if preToolRatio < 0.65 || preToolRatio > 0.75 {
-		t.Errorf("PreToolUse ratio should be ~70%%, got: %.2f%%", preToolRatio*100)
-	}
-}
-
-func TestFuzzRunner_CrashSaving(t *testing.T) {
-	tempDir := t.TempDir()
-	crashDir := filepath.Join(tempDir, "fuzz", "crashes")
-	os.MkdirAll(crashDir, 0755)
-
-	cfg := SimulationConfig{
-		TempDir: tempDir,
-		Verbose: false,
-	}
-
-	runner := &FuzzRunner{
-		config:  cfg,
-		crashes: make([]FuzzCrash, 0),
-	}
-
-	crash := FuzzCrash{
-		Seed:      12345,
-		Iteration: 42,
-		Category:  "pretooluse",
-		Input:     map[string]string{"test": "input"},
-		Output:    "test output",
-		Timestamp: time.Now(),
-		FailedInvariants: []InvariantResult{
-			{InvariantID: "P1", Passed: false, Message: "test failure"},
-		},
-	}
-
-	runner.saveCrash(crash)
-
-	// Verify file was created
-	expectedPath := filepath.Join(crashDir, "crash-pretooluse-42-seed12345.json")
-	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
-		t.Errorf("Crash file not created at: %s", expectedPath)
-	}
-}
-
-func TestFuzzSummary(t *testing.T) {
-	runner := &FuzzRunner{
-		config: SimulationConfig{FuzzSeed: 42},
-		results: []SimulationResult{
-			{ScenarioID: "FUZZ-P-0", Passed: true},
-			{ScenarioID: "FUZZ-P-1", Passed: true},
-			{ScenarioID: "FUZZ-S-2", Passed: false},
-		},
-		crashes: []FuzzCrash{
-			{FailedInvariants: []InvariantResult{{}, {}}},
-		},
-		startTime: time.Now().Add(-10 * time.Second),
-	}
-
-	summary := runner.GetSummary()
-
-	if summary.TotalIterations != 3 {
-		t.Errorf("Expected 3 total iterations, got: %d", summary.TotalIterations)
-	}
-	if summary.PreToolUseCount != 2 {
-		t.Errorf("Expected 2 PreToolUse, got: %d", summary.PreToolUseCount)
-	}
-	if summary.SessionEndCount != 1 {
-		t.Errorf("Expected 1 SessionEnd, got: %d", summary.SessionEndCount)
-	}
-	if summary.PassedCount != 2 {
-		t.Errorf("Expected 2 passed, got: %d", summary.PassedCount)
-	}
-	if summary.CrashCount != 1 {
-		t.Errorf("Expected 1 crash, got: %d", summary.CrashCount)
-	}
-	if summary.InvariantFailures != 2 {
-		t.Errorf("Expected 2 invariant failures, got: %d", summary.InvariantFailures)
-	}
-}
-```
-
-## Time Estimate
-3.0 hours
-
-## Why This Matters
-Fuzz testing finds edge cases that humans don't think to test. The seed-based reproducibility means any crash can be debugged deterministically - crucial for fixing rare bugs.
