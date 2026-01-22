@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "tiers": {
+    "opus": {
+      "task_invocation_blocked": true,
+      "blocked_reason": "Test: 60K+ token inheritance overhead"
+    },
+    "sonnet": {
+      "model": "sonnet"
+    },
+    "haiku": {
+      "model": "haiku"
+    }
+  },
+  "agent_subagent_mapping": {
+    "codebase-search": "Explore",
+    "haiku-scout": "Explore",
+    "code-reviewer": "Explore",
+    "librarian": "Explore",
+    "tech-docs-writer": "general-purpose",
+    "scaffolder": "general-purpose",
+    "python-pro": "general-purpose",
+    "go-pro": "general-purpose",
+    "r-pro": "general-purpose",
+    "orchestrator": "Plan",
+    "architect": "Plan"
+  },
+  "delegation_ceiling": {
+    "haiku": ["haiku"],
+    "haiku_thinking": ["haiku", "haiku_thinking"],
+    "sonnet": ["haiku", "haiku_thinking", "sonnet"]
+  }
+}

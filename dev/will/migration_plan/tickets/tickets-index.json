@@ -2,11 +2,11 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 88,
+    "total_tickets": 99,
     "total_weeks": 5,
     "created": "2026-01-15",
-    "version": "1.8",
-    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f)"
+    "version": "1.9",
+    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f) + 11 simulation test harness tickets (030l-030v)"
   },
   "tickets": [
     {
@@ -2372,7 +2372,7 @@
       "files_to_create": [],
       "tests_required": true,
       "acceptance_criteria_count": 9,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-031",
@@ -3258,6 +3258,312 @@
         "pkg/session/intent_outcomes.go"
       ],
       "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030l",
+      "title": "Directory Structure & Test Schemas",
+      "description": "Create foundational directory structure and test schemas for simulation harness",
+      "file": "tickets/session_archive/030l.md",
+      "time_estimate": "1.0h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-030m"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "infrastructure"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/.gitkeep",
+        "test/simulation/fixtures/schemas/routing-schema.json",
+        "test/simulation/fixtures/schemas/agents-index.json"
+      ],
+      "tests_required": false,
+      "status": "in_progress"
+    },
+    {
+      "id": "GOgent-030m",
+      "title": "Core Harness Interfaces",
+      "description": "Define core Go interfaces: SimulationConfig, Scenario, ExpectedOutput, SimulationResult, Runner",
+      "file": "tickets/session_archive/030m.md",
+      "time_estimate": "2.0h",
+      "dependencies": [
+        "GOgent-030l"
+      ],
+      "blocks": [
+        "GOgent-030n",
+        "GOgent-030o",
+        "GOgent-030r",
+        "GOgent-030t"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "interfaces"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/types.go",
+        "test/simulation/harness/types_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030n",
+      "title": "Generator Implementation",
+      "description": "Implement Generator interface for deterministic and randomized test inputs",
+      "file": "tickets/session_archive/030n.md",
+      "time_estimate": "3.0h",
+      "dependencies": [
+        "GOgent-030m"
+      ],
+      "blocks": [
+        "GOgent-030o",
+        "GOgent-030p",
+        "GOgent-030q",
+        "GOgent-030s"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "generator"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/generator.go",
+        "test/simulation/harness/generator_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030o",
+      "title": "Runner Implementation",
+      "description": "Implement scenario execution engine that runs CLI commands, captures output, validates results",
+      "file": "tickets/session_archive/030o.md",
+      "time_estimate": "3.5h",
+      "dependencies": [
+        "GOgent-030m",
+        "GOgent-030n"
+      ],
+      "blocks": [
+        "GOgent-030s",
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "runner"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/runner.go",
+        "test/simulation/harness/runner_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030p",
+      "title": "PreToolUse Fixtures (V001-V008)",
+      "description": "Create 8 deterministic test fixtures for gogent-validate scenarios",
+      "file": "tickets/session_archive/030p.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030l",
+        "GOgent-030n"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "fixtures",
+        "pretooluse"
+      ],
+      "files_to_create": [
+        "test/simulation/fixtures/deterministic/pretooluse/V001_passthrough.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V002_valid_task.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V003_einstein_block.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V004_subagent_mismatch.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V005_ceiling_violation.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V006_model_warning.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V007_unknown_agent.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V008_empty_prompt.json"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030q",
+      "title": "SessionEnd Fixtures (S001-S008)",
+      "description": "Create 8 deterministic test fixtures for gogent-archive scenarios",
+      "file": "tickets/session_archive/030q.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030l",
+        "GOgent-030n"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "fixtures",
+        "sessionend"
+      ],
+      "files_to_create": [
+        "test/simulation/fixtures/deterministic/sessionend/S001_clean_session.json",
+        "test/simulation/fixtures/deterministic/sessionend/S002_with_violations.json",
+        "test/simulation/fixtures/deterministic/sessionend/S003_with_sharp_edges.json",
+        "test/simulation/fixtures/deterministic/sessionend/S004_mixed_artifacts.json",
+        "test/simulation/fixtures/deterministic/sessionend/S005_git_dirty.json",
+        "test/simulation/fixtures/deterministic/sessionend/S006_no_git.json",
+        "test/simulation/fixtures/deterministic/sessionend/S007_active_ticket.json",
+        "test/simulation/fixtures/deterministic/sessionend/S008_schema_migration.json"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030r",
+      "title": "Invariant Definitions",
+      "description": "Define property-based invariants that must hold for ALL inputs",
+      "file": "tickets/session_archive/030r.md",
+      "time_estimate": "2.0h",
+      "dependencies": [
+        "GOgent-030m"
+      ],
+      "blocks": [
+        "GOgent-030s"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "invariants",
+        "property-testing"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/invariants.go",
+        "test/simulation/harness/invariants_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030s",
+      "title": "Fuzz Runner Implementation",
+      "description": "Implement randomized fuzzing with seed control, crash corpus capture, invariant checking",
+      "file": "tickets/session_archive/030s.md",
+      "time_estimate": "3.0h",
+      "dependencies": [
+        "GOgent-030n",
+        "GOgent-030o",
+        "GOgent-030r"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "fuzz",
+        "property-testing"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/fuzz.go",
+        "test/simulation/harness/fuzz_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030t",
+      "title": "Reporter Implementation",
+      "description": "Implement result aggregation and report generation (JSON, Markdown, TAP)",
+      "file": "tickets/session_archive/030t.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030m"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "reporting"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/reporter.go",
+        "test/simulation/harness/reporter_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030u",
+      "title": "CLI Entry Point",
+      "description": "Implement main.go CLI with flag parsing and orchestration",
+      "file": "tickets/session_archive/030u.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030m",
+        "GOgent-030n",
+        "GOgent-030o",
+        "GOgent-030p",
+        "GOgent-030q",
+        "GOgent-030r",
+        "GOgent-030s",
+        "GOgent-030t"
+      ],
+      "blocks": [
+        "GOgent-030v"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "cli"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/main.go"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030v",
+      "title": "CI/CD Workflow Integration",
+      "description": "Create GitHub Actions workflow for simulation tests",
+      "file": "tickets/session_archive/030v.md",
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030u"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "ci-cd",
+        "github-actions"
+      ],
+      "files_to_create": [
+        ".github/workflows/simulation.yml"
+      ],
+      "tests_required": false,
       "status": "pending"
     }
   ]

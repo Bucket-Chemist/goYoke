@@ -1,0 +1,29 @@
+{
+  "agents": {
+    "codebase-search": {
+      "model": "haiku",
+      "subagent_type": "Explore",
+      "tools": ["Glob", "Grep", "Read"]
+    },
+    "haiku-scout": {
+      "model": "haiku",
+      "subagent_type": "Explore",
+      "tools": ["Glob", "Grep", "Read"]
+    },
+    "tech-docs-writer": {
+      "model": "haiku",
+      "subagent_type": "general-purpose",
+      "tools": ["Read", "Write", "Edit"]
+    },
+    "python-pro": {
+      "model": "sonnet",
+      "subagent_type": "general-purpose",
+      "tools": ["Read", "Write", "Edit", "Bash"]
+    },
+    "orchestrator": {
+      "model": "sonnet",
+      "subagent_type": "Plan",
+      "tools": ["Read", "Task"]
+    }
+  }
+}
