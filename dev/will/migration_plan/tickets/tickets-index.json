@@ -655,7 +655,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-032",
@@ -690,7 +690,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-033",
@@ -722,168 +722,169 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-034",
-      "title": "Parse PostToolUse Event",
-      "description": "Parse PostToolUse events with tool_response",
+      "title": "Implement Failure Detection in pkg/routing",
+      "description": "Add failure detection to pkg/routing that outputs SharpEdge-compatible JSON. Detects explicit success=false, non-zero exit codes, Python errors, and generic error keywords.",
       "file": "tickets/session_archive/034.md",
       "week": 2,
       "day": 4,
-      "time_estimate": "1h",
+      "time_estimate": "2h",
       "dependencies": [],
       "blocks": [
-        "GOgent-035",
-        "GOgent-036"
+        "GOgent-035"
       ],
       "priority": "high",
       "tags": [
-        "parsing",
-        "events"
+        "detection",
+        "routing",
+        "sharp-edge"
       ],
       "files_to_create": [
-        "pkg/memory/events.go",
-        "pkg/memory/events_test.go"
+        "pkg/routing/failure.go",
+        "pkg/routing/failure_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-034-parse-post-tool-use",
+      "git_branch": "gogent-034-failure-detection",
       "pr_labels": [
-        "parsing",
+        "detection",
         "week-2",
-        "phase-0"
+        "phase-2"
       ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
+      "acceptance_criteria_count": 9,
+      "status": "completed"
     },
     {
       "id": "GOgent-035",
-      "title": "Failure Detection Logic",
-      "description": "Detect failures from success flags, exit codes, error patterns",
+      "title": "Build gogent-sharp-edge CLI with Session Archive Integration",
+      "description": "Pure Go binary for PostToolUse failure detection. Integrates pkg/routing/failure.go and pkg/memory/failure_tracking.go. Writes schema-compliant SharpEdge records to pending-learnings.jsonl.",
       "file": "tickets/session_archive/035.md",
       "week": 2,
-      "day": 4,
-      "time_estimate": "2h",
+      "day": 5,
+      "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-034"
-      ],
-      "blocks": [
+        "GOgent-034",
         "GOgent-036"
       ],
-      "priority": "critical",
+      "blocks": [],
+      "priority": "high",
       "tags": [
-        "detection",
-        "failures"
+        "cli",
+        "sharp-edge",
+        "posttooluse",
+        "integration"
       ],
       "files_to_create": [
-        "pkg/memory/detection.go",
-        "pkg/memory/detection_test.go"
+        "cmd/gogent-sharp-edge/main.go",
+        "cmd/gogent-sharp-edge/main_test.go",
+        "test/simulation/fixtures/deterministic/posttooluse/F001_single_failure.json",
+        "test/simulation/fixtures/deterministic/posttooluse/F002_threshold_reached.json",
+        "test/simulation/fixtures/deterministic/posttooluse/F003_mixed_errors.json",
+        "test/simulation/fixtures/deterministic/posttooluse/F004_schema_compliance.json"
       ],
       "tests_required": true,
-      "git_branch": "gogent-035-failure-detection",
+      "git_branch": "gogent-035-sharp-edge-cli",
       "pr_labels": [
-        "detection",
+        "cli",
         "week-2",
-        "phase-0"
+        "phase-2"
       ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
+      "acceptance_criteria_count": 14,
+      "status": "completed"
     },
     {
       "id": "GOgent-036",
-      "title": "Consecutive Failure Tracking",
-      "description": "Track failures per file within 5-minute sliding window",
+      "title": "Implement Failure Tracking in pkg/memory",
+      "description": "Create pkg/memory package with failure tracking using composite key (file+error_type). Sliding time window, configurable threshold, persistent storage in ~/.gogent/. Includes composite key support (former 036b).",
       "file": "tickets/session_archive/036.md",
       "week": 2,
-      "day": 5,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-034",
-        "GOgent-035"
-      ],
+      "day": 4,
+      "time_estimate": "2.5h",
+      "dependencies": [],
       "blocks": [
-        "GOgent-036b",
+        "GOgent-035",
+        "GOgent-036c",
         "GOgent-037",
         "GOgent-038"
       ],
-      "priority": "critical",
+      "priority": "high",
       "tags": [
         "tracking",
-        "failures"
+        "memory",
+        "composite-key",
+        "sharp-edge"
       ],
       "files_to_create": [
-        "pkg/memory/tracker.go",
-        "pkg/memory/tracker_test.go"
+        "pkg/memory/doc.go",
+        "pkg/memory/failure_tracking.go",
+        "pkg/memory/failure_tracking_test.go"
       ],
       "tests_required": true,
       "git_branch": "gogent-036-failure-tracking",
       "pr_labels": [
         "tracking",
         "week-2",
-        "phase-0"
+        "phase-2"
       ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
+      "acceptance_criteria_count": 11,
+      "status": "completed"
     },
     {
       "id": "GOgent-036b",
-      "title": "Track Failures by File + Error Type",
-      "description": "Refine failure tracking to use file + error_type composite key instead of file-only, preventing false positives",
-      "file": "tickets/session_archive/036b.md",
+      "title": "[DEPRECATED] Track Failures by File + Error Type",
+      "description": "DEPRECATED: Merged into GOgent-036. Composite key support is now included from the start.",
+      "file": "tickets/session_archive/deprecated/036b.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0h",
+      "dependencies": [],
+      "blocks": [],
+      "priority": "low",
+      "tags": [
+        "deprecated",
+        "merged-into-036"
+      ],
+      "files_to_create": [],
+      "tests_required": false,
+      "git_branch": "n/a",
+      "pr_labels": [
+        "deprecated"
+      ],
+      "acceptance_criteria_count": 0,
+      "status": "deprecated"
+    },
+    {
+      "id": "GOgent-036c",
+      "title": "Extract Function Name from Stack Traces (Optional)",
+      "description": "Parse stack traces to extract function context, further refining failure tracking from file+error to file+error+function. Optional enhancement to 036.",
+      "file": "tickets/session_archive/036c.md",
       "week": 2,
       "day": 5,
       "time_estimate": "0.5h",
       "dependencies": [
         "GOgent-036"
       ],
-      "blocks": [
-        "GOgent-036c"
-      ],
-      "priority": "major",
-      "tags": [
-        "composite-key",
-        "false-positive-fix",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-036b-composite-failure-key",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-036c",
-      "title": "Extract Function Name from Stack Traces (Optional)",
-      "description": "Parse stack traces to extract function context, further refining failure tracking from file+error to file+error+function",
-      "file": "tickets/session_archive/036c.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-036b"
-      ],
       "blocks": [],
-      "priority": "major",
+      "priority": "low",
       "tags": [
         "stack-trace-parsing",
         "function-level-tracking",
         "enhancement",
-        "phase-3",
+        "phase-2",
         "optional"
       ],
-      "files_to_create": [],
+      "files_to_create": [
+        "pkg/memory/function_extraction.go",
+        "pkg/memory/function_extraction_test.go"
+      ],
       "tests_required": true,
       "git_branch": "gogent-036c-function-extraction",
       "pr_labels": [
         "enhancement",
         "week-2",
-        "phase-3",
+        "phase-2",
         "optional"
       ],
       "acceptance_criteria_count": 6,

@@ -60,6 +60,17 @@ type ExpectedOutput struct {
 	ExitCode      int                    `json:"exit_code"`
 	StderrMatch   *regexp.Regexp         `json:"-"`
 	StderrPattern string                 `json:"stderr_pattern,omitempty"`
+
+	// PostToolUse-specific expectations (sharp-edge detection)
+	FilesNotCreated  []string            `json:"files_not_created,omitempty"`
+	StdoutContains   []string            `json:"stdout_contains,omitempty"`
+	StdoutNotContain []string            `json:"stdout_not_contains,omitempty"`
+	StdoutEquals     string              `json:"stdout_equals,omitempty"`
+	FileContains     map[string][]string `json:"file_contains,omitempty"`
+
+	// Sharp edge schema validation
+	ValidateSharpEdge bool                   `json:"validate_sharp_edge,omitempty"`
+	SharpEdgeFields   map[string]interface{} `json:"sharp_edge_fields,omitempty"`
 }
 
 // SimulationResult captures the outcome of running a scenario.

@@ -83,9 +83,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Find optional sharp-edge binary for posttooluse scenarios
+	sharpEdgePath, sharpEdgeErr := findBinary("gogent-sharp-edge")
+	if sharpEdgeErr != nil && *verbose {
+		fmt.Printf("[INFO] gogent-sharp-edge not found, posttooluse scenarios will be skipped\n")
+	}
+
 	// Initialize components
 	gen := harness.NewGenerator(fixturesDir)
 	runner := harness.NewRunner(cfg, validatePath, archivePath, gen)
+
+	// Set sharp-edge path if available
+	if sharpEdgeErr == nil {
+		runner.SetSharpEdgePath(sharpEdgePath)
+	}
 
 	// Handle replay mode
 	if *replay != "" {

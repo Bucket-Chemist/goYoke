@@ -1,0 +1,29 @@
+{
+  "id": "F003_mixed_errors",
+  "description": "Multiple different errors on same file do NOT trigger (composite key prevents false positive)",
+  "setup": {
+    "create_dirs": [".claude/memory", ".gogent"],
+    "files": {
+      ".gogent/failure-tracker.jsonl": "{\"timestamp\":1705708790,\"file\":\"main.py\",\"tool\":\"Bash\",\"error_type\":\"typeerror\"}\n{\"timestamp\":1705708795,\"file\":\"main.py\",\"tool\":\"Bash\",\"error_type\":\"valueerror\"}\n"
+    },
+    "env": {
+      "GOGENT_PROJECT_DIR": "${TEMP_DIR}",
+      "GOGENT_STORAGE_PATH": "${TEMP_DIR}/.gogent/failure-tracker.jsonl",
+      "GOGENT_MAX_FAILURES": "3",
+      "GOGENT_FAILURE_WINDOW": "999999999"
+    }
+  },
+  "input": {
+    "tool_name": "Bash",
+    "tool_input": {"command": "python main.py"},
+    "tool_response": {"exit_code": 1, "output": "SyntaxError: invalid syntax"},
+    "session_id": "test-f003",
+    "hook_event_name": "PostToolUse",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "exit_code": 0,
+    "stdout_equals": "{}",
+    "files_not_created": [".claude/memory/pending-learnings.jsonl"]
+  }
+}

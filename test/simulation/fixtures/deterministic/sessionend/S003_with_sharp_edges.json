@@ -1,8 +1,10 @@
 {
+  "id": "S003_with_sharp_edges",
+  "description": "Session with pending sharp edges - validates schema compliance",
   "setup": {
     "create_dirs": [".claude/memory"],
     "files": {
-      ".claude/memory/pending-learnings.jsonl": "{\"type\":\"sharp_edge\",\"file\":\"pkg/routing/validate.go\",\"pattern\":\"concurrent map access\",\"timestamp\":\"2026-01-22T10:00:00Z\"}\n{\"type\":\"sharp_edge\",\"file\":\"pkg/session/archive.go\",\"pattern\":\"nil pointer dereference\",\"timestamp\":\"2026-01-22T10:01:00Z\"}"
+      ".claude/memory/pending-learnings.jsonl": "{\"file\":\"pkg/routing/validate.go\",\"error_type\":\"concurrent_map_access\",\"consecutive_failures\":3,\"timestamp\":1705708800,\"context\":\"Tool: Bash\"}\n{\"file\":\"pkg/session/archive.go\",\"error_type\":\"nil_pointer\",\"consecutive_failures\":4,\"timestamp\":1705708860,\"context\":\"Tool: Edit\"}"
     },
     "env": {
       "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
@@ -11,7 +13,7 @@
   "input": {
     "session_id": "test-session-s003",
     "hook_event_name": "SessionEnd",
-    "captured_at": 1705708800
+    "captured_at": 1705708900
   },
   "expected": {
     "files_created": [
@@ -23,5 +25,6 @@
       "sharp_edges_count": 2
     },
     "exit_code": 0
-  }
+  },
+  "notes": "Schema matches pkg/session.SharpEdge: file, error_type, consecutive_failures (>=3), timestamp (Unix epoch int64)"
 }

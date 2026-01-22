@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic replay-crash clean-simulation
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse replay-crash clean-simulation
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -20,6 +20,7 @@ help:
 	@echo "  make build-validate  - Build gogent-validate binary"
 	@echo "  make build-archive   - Build gogent-archive binary"
 	@echo "  make build-aggregate - Build gogent-aggregate binary"
+	@echo "  make build-sharp-edge - Build gogent-sharp-edge binary"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
 	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
@@ -32,6 +33,7 @@ help:
 	@echo "  make test-simulation              - Run mixed simulation (deterministic + fuzz)"
 	@echo "  make test-simulation-deterministic - Run deterministic tests only"
 	@echo "  make test-simulation-fuzz         - Run fuzz tests only"
+	@echo "  make test-simulation-posttooluse  - Run posttooluse tests only (requires build-sharp-edge)"
 	@echo "  make replay-crash CRASH=<file>    - Replay a specific crash"
 	@echo "  make clean-simulation             - Clean simulation artifacts"
 
@@ -81,16 +83,23 @@ build-aggregate:
 	go build -o bin/gogent-aggregate ./cmd/gogent-aggregate
 	@echo "✅ Binary created at bin/gogent-aggregate"
 
-install: build-validate build-archive build-aggregate check-path
+build-sharp-edge:
+	@echo "Building gogent-sharp-edge binary..."
+	go build -o bin/gogent-sharp-edge ./cmd/gogent-sharp-edge
+	@echo "✅ Binary created at bin/gogent-sharp-edge"
+
+install: build-validate build-archive build-aggregate build-sharp-edge check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
 	cp bin/gogent-archive ~/.local/bin/gogent-archive
 	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
+	cp bin/gogent-sharp-edge ~/.local/bin/gogent-sharp-edge
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate"
+	chmod +x ~/.local/bin/gogent-sharp-edge
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -136,6 +145,7 @@ uninstall:
 	rm -f ~/.local/bin/gogent-validate
 	rm -f ~/.local/bin/gogent-archive
 	rm -f ~/.local/bin/gogent-aggregate
+	rm -f ~/.local/bin/gogent-sharp-edge
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -148,6 +158,7 @@ clean:
 	rm -f bin/gogent-validate
 	rm -f bin/gogent-archive
 	rm -f bin/gogent-aggregate
+	rm -f bin/gogent-sharp-edge
 	rm -f coverage.out
 	rm -f *.test
 
@@ -179,6 +190,15 @@ test-simulation-fuzz: build-validate build-archive
 	go run ./test/simulation/harness/cmd/harness \
 		-mode=fuzz \
 		-iterations=1000 \
+		-verbose
+
+# Run posttooluse tests only (sharp-edge detection)
+test-simulation-posttooluse: build-validate build-archive build-sharp-edge
+	@echo "Running posttooluse simulation tests..."
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=deterministic \
+		-filter=F \
+		-report=tap \
 		-verbose
 
 # Replay a specific crash

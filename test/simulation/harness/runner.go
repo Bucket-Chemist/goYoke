@@ -16,20 +16,30 @@ import (
 
 // DefaultRunner implements the Runner interface for CLI execution.
 type DefaultRunner struct {
-	config       SimulationConfig
-	validatePath string
-	archivePath  string
-	generator    Generator
+	config        SimulationConfig
+	validatePath  string
+	archivePath   string
+	sharpEdgePath string
+	generator     Generator
+	scenarioEnv   map[string]string // Per-scenario environment variables
 }
 
 // NewRunner creates a runner with paths to CLI binaries.
+// sharpEdgePath is optional and can be set later via SetSharpEdgePath.
 func NewRunner(cfg SimulationConfig, validatePath, archivePath string, gen Generator) *DefaultRunner {
 	return &DefaultRunner{
-		config:       cfg,
-		validatePath: validatePath,
-		archivePath:  archivePath,
-		generator:    gen,
+		config:        cfg,
+		validatePath:  validatePath,
+		archivePath:   archivePath,
+		sharpEdgePath: "", // Set via SetSharpEdgePath for posttooluse scenarios
+		generator:     gen,
 	}
+}
+
+// SetSharpEdgePath sets the path to gogent-sharp-edge binary.
+// Required for posttooluse scenario execution.
+func (r *DefaultRunner) SetSharpEdgePath(path string) {
+	r.sharpEdgePath = path
 }
 
 // SetTempDir updates the temp directory for test isolation.
@@ -82,6 +92,9 @@ func (r *DefaultRunner) RunScenario(s Scenario) SimulationResult {
 		os.RemoveAll(claudeDir)
 	}
 
+	// Clear scenario-specific env vars
+	r.scenarioEnv = make(map[string]string)
+
 	// Setup
 	if s.Setup != nil {
 		if err := s.Setup(r.config); err != nil {
@@ -131,6 +144,11 @@ func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
 		cmdPath = r.validatePath
 	case "sessionend":
 		cmdPath = r.archivePath
+	case "posttooluse":
+		if r.sharpEdgePath == "" {
+			return "", -1, fmt.Errorf("posttooluse scenario requires sharpEdgePath (gogent-sharp-edge binary)")
+		}
+		cmdPath = r.sharpEdgePath
 	default:
 		return "", -1, fmt.Errorf("unknown category: %s", s.Category)
 	}
@@ -243,10 +261,142 @@ func (r *DefaultRunner) validateOutput(expected ExpectedOutput, output string, e
 		}
 	}
 
+	// PostToolUse-specific validations
+	issues = append(issues, r.validatePostToolUseExpectations(expected, output)...)
+
 	expectedStr := strings.Join(expectedParts, ", ")
 	diffStr := strings.Join(issues, "\n")
 
 	return len(issues) == 0, expectedStr, diffStr
+}
+
+// validatePostToolUseExpectations handles posttooluse-specific validation.
+func (r *DefaultRunner) validatePostToolUseExpectations(expected ExpectedOutput, output string) []string {
+	var issues []string
+
+	// Check stdout_equals (exact match)
+	if expected.StdoutEquals != "" {
+		trimmedOutput := strings.TrimSpace(output)
+		if trimmedOutput != expected.StdoutEquals {
+			issues = append(issues, fmt.Sprintf("stdout_equals: got %q, want %q", trimmedOutput, expected.StdoutEquals))
+		}
+	}
+
+	// Check stdout_contains (substring match)
+	for _, substr := range expected.StdoutContains {
+		if !strings.Contains(output, substr) {
+			issues = append(issues, fmt.Sprintf("stdout_contains: %q not found in output", substr))
+		}
+	}
+
+	// Check stdout_not_contains (negative substring match)
+	for _, substr := range expected.StdoutNotContain {
+		if strings.Contains(output, substr) {
+			issues = append(issues, fmt.Sprintf("stdout_not_contains: %q found in output (should be absent)", substr))
+		}
+	}
+
+	// Check files_created
+	for _, relPath := range expected.FilesCreated {
+		fullPath := filepath.Join(r.config.TempDir, relPath)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			issues = append(issues, fmt.Sprintf("files_created: %s not found", relPath))
+		}
+	}
+
+	// Check files_not_created (negative file check)
+	for _, relPath := range expected.FilesNotCreated {
+		fullPath := filepath.Join(r.config.TempDir, relPath)
+		if _, err := os.Stat(fullPath); err == nil {
+			issues = append(issues, fmt.Sprintf("files_not_created: %s exists (should not)", relPath))
+		}
+	}
+
+	// Check file_contains (substring in file content)
+	for relPath, substrings := range expected.FileContains {
+		fullPath := filepath.Join(r.config.TempDir, relPath)
+		content, err := os.ReadFile(fullPath)
+		if err != nil {
+			issues = append(issues, fmt.Sprintf("file_contains: cannot read %s: %v", relPath, err))
+			continue
+		}
+		contentStr := string(content)
+		for _, substr := range substrings {
+			if !strings.Contains(contentStr, substr) {
+				issues = append(issues, fmt.Sprintf("file_contains: %q not found in %s", substr, relPath))
+			}
+		}
+	}
+
+	// Validate sharp edge schema compliance
+	if expected.ValidateSharpEdge {
+		issues = append(issues, r.validateSharpEdgeSchema(expected.SharpEdgeFields)...)
+	}
+
+	return issues
+}
+
+// validateSharpEdgeSchema validates sharp edge output against expected fields.
+func (r *DefaultRunner) validateSharpEdgeSchema(expectedFields map[string]interface{}) []string {
+	var issues []string
+
+	// Read the pending-learnings.jsonl file
+	pendingPath := filepath.Join(r.config.TempDir, ".claude", "memory", "pending-learnings.jsonl")
+	content, err := os.ReadFile(pendingPath)
+	if err != nil {
+		issues = append(issues, fmt.Sprintf("validate_sharp_edge: cannot read pending-learnings.jsonl: %v", err))
+		return issues
+	}
+
+	// Parse the last line (most recent entry)
+	lines := strings.Split(strings.TrimSpace(string(content)), "\n")
+	if len(lines) == 0 {
+		issues = append(issues, "validate_sharp_edge: pending-learnings.jsonl is empty")
+		return issues
+	}
+
+	lastLine := lines[len(lines)-1]
+	var sharpEdge map[string]interface{}
+	if err := json.Unmarshal([]byte(lastLine), &sharpEdge); err != nil {
+		issues = append(issues, fmt.Sprintf("validate_sharp_edge: invalid JSON in last entry: %v", err))
+		return issues
+	}
+
+	// Validate expected fields
+	for field, expectedValue := range expectedFields {
+		actualValue, exists := sharpEdge[field]
+		if !exists {
+			issues = append(issues, fmt.Sprintf("sharp_edge_fields: missing field %q", field))
+			continue
+		}
+
+		// Handle numeric comparison (JSON unmarshals numbers as float64)
+		switch expected := expectedValue.(type) {
+		case float64:
+			if actual, ok := actualValue.(float64); ok {
+				if actual != expected {
+					issues = append(issues, fmt.Sprintf("sharp_edge_fields: %s got %v, want %v", field, actual, expected))
+				}
+			} else {
+				issues = append(issues, fmt.Sprintf("sharp_edge_fields: %s type mismatch: got %T, want float64", field, actualValue))
+			}
+		case string:
+			if actual, ok := actualValue.(string); ok {
+				if actual != expected {
+					issues = append(issues, fmt.Sprintf("sharp_edge_fields: %s got %q, want %q", field, actual, expected))
+				}
+			} else {
+				issues = append(issues, fmt.Sprintf("sharp_edge_fields: %s type mismatch: got %T, want string", field, actualValue))
+			}
+		default:
+			// For other types, use string comparison
+			if fmt.Sprintf("%v", actualValue) != fmt.Sprintf("%v", expectedValue) {
+				issues = append(issues, fmt.Sprintf("sharp_edge_fields: %s got %v, want %v", field, actualValue, expectedValue))
+			}
+		}
+	}
+
+	return issues
 }
 
 // buildEnv creates a minimal, controlled environment for CLI execution.
@@ -276,6 +426,11 @@ func (r *DefaultRunner) buildEnv() []string {
 	}
 	if r.config.TempDir != "" {
 		env = append(env, "GOGENT_PROJECT_DIR="+r.config.TempDir)
+	}
+
+	// Add scenario-specific environment variables
+	for key, value := range r.scenarioEnv {
+		env = append(env, key+"="+value)
 	}
 
 	return env
@@ -309,6 +464,15 @@ func (r *DefaultRunner) loadScenarios() ([]Scenario, error) {
 	sessionDir := filepath.Join(r.config.FixturesDir, "deterministic", "sessionend")
 	if err := r.loadScenariosFromDir(sessionDir, "sessionend", &scenarios); err != nil {
 		return nil, err
+	}
+
+	// Load PostToolUse scenarios (sharp-edge detection)
+	// Only load if sharp-edge binary path is configured
+	if r.sharpEdgePath != "" {
+		postToolDir := filepath.Join(r.config.FixturesDir, "deterministic", "posttooluse")
+		if err := r.loadScenariosFromDir(postToolDir, "posttooluse", &scenarios); err != nil {
+			return nil, err
+		}
 	}
 
 	if r.config.Verbose {
@@ -402,7 +566,11 @@ func (r *DefaultRunner) createSetupFunc(setup *FixtureSetup) SetupFunc {
 		}
 
 		// Handle environment variables
-		// Special case: GOGENT_DELEGATION_CEILING writes to file, not env var
+		// Store env vars for buildEnv to use
+		if r.scenarioEnv == nil {
+			r.scenarioEnv = make(map[string]string)
+		}
+
 		for key, value := range setup.Env {
 			// Expand ${TEMP_DIR} in env values
 			expandedValue := strings.ReplaceAll(value, "${TEMP_DIR}", baseDir)
@@ -417,10 +585,10 @@ func (r *DefaultRunner) createSetupFunc(setup *FixtureSetup) SetupFunc {
 				if err := os.WriteFile(ceilingPath, []byte(expandedValue), 0644); err != nil {
 					return fmt.Errorf("write ceiling file: %w", err)
 				}
+			} else {
+				// Store for buildEnv to propagate to CLI
+				r.scenarioEnv[key] = expandedValue
 			}
-			// Note: Other env vars would need to be passed via buildEnv()
-			// Currently, fixture env vars other than GOGENT_DELEGATION_CEILING
-			// are not propagated to the CLI. This could be extended if needed.
 		}
 
 		return nil

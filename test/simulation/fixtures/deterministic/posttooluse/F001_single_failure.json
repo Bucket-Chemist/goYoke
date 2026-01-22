@@ -1,0 +1,25 @@
+{
+  "id": "F001_single_failure",
+  "description": "Single failure does not trigger capture",
+  "setup": {
+    "create_dirs": [".claude/memory"],
+    "env": {
+      "GOGENT_PROJECT_DIR": "${TEMP_DIR}",
+      "GOGENT_STORAGE_PATH": "${TEMP_DIR}/.gogent/failure-tracker.jsonl",
+      "GOGENT_MAX_FAILURES": "3"
+    }
+  },
+  "input": {
+    "tool_name": "Bash",
+    "tool_input": {"command": "python test.py"},
+    "tool_response": {"exit_code": 1, "output": "TypeError: expected str"},
+    "session_id": "test-f001",
+    "hook_event_name": "PostToolUse",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "exit_code": 0,
+    "files_not_created": [".claude/memory/pending-learnings.jsonl"],
+    "stdout_not_contains": ["SHARP EDGE", "block"]
+  }
+}

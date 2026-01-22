@@ -13,7 +13,7 @@
 
 ## 38b
 
-- Is .yaml the best format for these config files for agents?vscode-terminal:/9bd88a2418060bb7b26321ab55c82eed/3
+- Is .yaml the best format for these config files for agents ?vscode-terminal:/9bd88a2418060bb7b26321ab55c82eed/3
   - Is it GO-native? Is there a better format that is more machine readble?
 
 ## 38d
@@ -23,7 +23,7 @@
 
 ## 39
 
-- Might need increased scoping consdidering the refactor we did on 28.
+- Might need increased scoping consdidering the refactor we did on 028.
   - Want this to have a metric shit tonne of unit tests, integration tests, edge case tests, fallbacks, db schema tests, db look up tests. Need variety.
 
 ## 64

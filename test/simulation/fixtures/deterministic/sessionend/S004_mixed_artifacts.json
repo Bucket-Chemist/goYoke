@@ -1,9 +1,11 @@
 {
+  "id": "S004_mixed_artifacts",
+  "description": "Session with multiple artifact types - violations, sharp edges, decisions",
   "setup": {
     "create_dirs": [".claude/memory", ".claude/tmp"],
     "files": {
-      ".claude/memory/routing-violations.jsonl": "{\"timestamp\":\"2026-01-22T10:00:00Z\",\"agent\":\"test\",\"violation\":\"test_violation\"}",
-      ".claude/memory/pending-learnings.jsonl": "{\"type\":\"sharp_edge\",\"file\":\"test.go\",\"pattern\":\"test pattern\",\"timestamp\":\"2026-01-22T10:00:00Z\"}",
+      ".claude/memory/routing-violations.jsonl": "{\"timestamp\":1705708800,\"agent\":\"test-agent\",\"violation_type\":\"tier_mismatch\",\"expected_tier\":\"haiku\",\"actual_tier\":\"sonnet\"}",
+      ".claude/memory/pending-learnings.jsonl": "{\"file\":\"test.go\",\"error_type\":\"syntax_error\",\"consecutive_failures\":3,\"timestamp\":1705708800,\"context\":\"Tool: Edit\"}",
       ".claude/memory/decisions.json": "[{\"id\":\"dec-001\",\"decision\":\"Use Go for CLI\",\"rationale\":\"Performance\"}]"
     },
     "env": {
@@ -13,7 +15,7 @@
   "input": {
     "session_id": "test-session-s004",
     "hook_event_name": "SessionEnd",
-    "captured_at": 1705708800
+    "captured_at": 1705708900
   },
   "expected": {
     "files_created": [
@@ -27,5 +29,6 @@
       "has_decisions": true
     },
     "exit_code": 0
-  }
+  },
+  "notes": "Tests that gogent-archive handles multiple artifact types in a single session"
 }
