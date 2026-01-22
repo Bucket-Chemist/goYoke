@@ -151,19 +151,17 @@ func (f *FuzzRunner) fuzzSessionEnd(seed int64, iteration int) SimulationResult 
 			cfg.TempDir = iterDir
 			return nil
 		},
-		Teardown: func(cfg SimulationConfig) error {
-			os.RemoveAll(iterDir)
-			return nil
-		},
+		// Note: No Teardown here - cleanup happens after invariant check
 	}
 
-	// Temporarily update config for this iteration
+	// Temporarily update config for this iteration (both FuzzRunner and Runner)
 	origTempDir := f.config.TempDir
 	f.config.TempDir = iterDir
+	f.runner.SetTempDir(iterDir)
 
 	result := f.runner.RunScenario(scenario)
 
-	// Check invariants
+	// Check invariants (BEFORE cleanup so files still exist)
 	invariantResults := CheckInvariants(SessionEndInvariants, event, result.Output, 0, iterDir)
 
 	if !AllPassed(invariantResults) {
@@ -183,9 +181,13 @@ func (f *FuzzRunner) fuzzSessionEnd(seed int64, iteration int) SimulationResult 
 		}
 		f.crashes = append(f.crashes, crash)
 		f.saveCrash(crash)
+	} else {
+		// Only cleanup passing iterations (keep failed ones for debugging)
+		os.RemoveAll(iterDir)
 	}
 
 	f.config.TempDir = origTempDir
+	f.runner.SetTempDir(origTempDir)
 
 	return result
 }

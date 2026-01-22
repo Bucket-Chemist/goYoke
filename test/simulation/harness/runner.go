@@ -32,6 +32,12 @@ func NewRunner(cfg SimulationConfig, validatePath, archivePath string, gen Gener
 	}
 }
 
+// SetTempDir updates the temp directory for test isolation.
+// Used by fuzz runner to set per-iteration directories.
+func (r *DefaultRunner) SetTempDir(dir string) {
+	r.config.TempDir = dir
+}
+
 // Run executes all scenarios matching the configuration.
 func (r *DefaultRunner) Run(cfg SimulationConfig) ([]SimulationResult, error) {
 	r.config = cfg
