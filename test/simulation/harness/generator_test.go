@@ -64,3 +64,52 @@ func TestDefaultFuzzParams(t *testing.T) {
 		t.Errorf("Expected positive prompt length mean, got: %d", params.PromptLengthMean)
 	}
 }
+
+func TestGenerateToolEvent_DeterministicFixtures(t *testing.T) {
+	gen := NewGenerator("../fixtures")
+
+	tests := []struct {
+		scenarioID   string
+		wantToolName string
+		wantTaskTool bool
+	}{
+		{"V001_passthrough", "Read", false},
+		{"V002_valid_task", "Task", true},
+		{"V003_einstein_block", "Task", true},
+		{"V004_subagent_mismatch", "Task", true},
+		{"V005_ceiling_violation", "Task", true},
+		{"V006_model_warning", "Task", true},
+		{"V007_unknown_agent", "Task", true},
+		{"V008_empty_prompt", "Task", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.scenarioID, func(t *testing.T) {
+			event, err := gen.GenerateToolEvent(tt.scenarioID)
+			if err != nil {
+				t.Fatalf("Failed to load fixture %s: %v", tt.scenarioID, err)
+			}
+
+			if event.ToolName != tt.wantToolName {
+				t.Errorf("ToolName = %q, want %q", event.ToolName, tt.wantToolName)
+			}
+
+			if event.HookEventName != "PreToolUse" {
+				t.Errorf("HookEventName = %q, want %q", event.HookEventName, "PreToolUse")
+			}
+
+			if event.SessionID == "" {
+				t.Error("SessionID should not be empty")
+			}
+
+			if tt.wantTaskTool {
+				if _, ok := event.ToolInput["prompt"]; !ok {
+					t.Error("Task fixture should have prompt in tool_input")
+				}
+				if _, ok := event.ToolInput["subagent_type"]; !ok {
+					t.Error("Task fixture should have subagent_type in tool_input")
+				}
+			}
+		})
+	}
+}

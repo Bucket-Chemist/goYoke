@@ -1,0 +1,15 @@
+{
+  "input": {
+    "tool_name": "Read",
+    "tool_input": {
+      "file_path": "/home/user/project/main.go"
+    },
+    "session_id": "test-session-v001",
+    "hook_event_name": "PreToolUse",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "decision": null,
+    "exit_code": 0
+  }
+}

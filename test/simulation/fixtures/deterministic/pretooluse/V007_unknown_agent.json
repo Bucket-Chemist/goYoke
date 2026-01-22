@@ -1,0 +1,19 @@
+{
+  "input": {
+    "tool_name": "Task",
+    "tool_input": {
+      "description": "Unknown agent task",
+      "prompt": "AGENT: nonexistent-agent\n\nDo something",
+      "subagent_type": "general-purpose",
+      "model": "haiku"
+    },
+    "session_id": "test-session-v007",
+    "hook_event_name": "PreToolUse",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "decision": "block",
+    "reason_contains": "unknown",
+    "exit_code": 0
+  }
+}

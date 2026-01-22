@@ -1,0 +1,19 @@
+{
+  "input": {
+    "tool_name": "Task",
+    "tool_input": {
+      "description": "Search task with wrong model",
+      "prompt": "AGENT: codebase-search\n\nFind files",
+      "subagent_type": "Explore",
+      "model": "sonnet"
+    },
+    "session_id": "test-session-v006",
+    "hook_event_name": "PreToolUse",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "decision": "allow",
+    "has_warning": true,
+    "exit_code": 0
+  }
+}

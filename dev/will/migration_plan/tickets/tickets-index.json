@@ -425,7 +425,7 @@
         "test/simulation/harness/runner_test.go"
       ],
       "tests_required": true,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030p",
@@ -458,7 +458,7 @@
         "test/simulation/fixtures/deterministic/pretooluse/V008_empty_prompt.json"
       ],
       "tests_required": false,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030q",

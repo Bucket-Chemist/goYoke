@@ -1,0 +1,19 @@
+{
+  "input": {
+    "tool_name": "Task",
+    "tool_input": {
+      "description": "Deep analysis",
+      "prompt": "AGENT: einstein\n\nAnalyze this complex problem",
+      "subagent_type": "general-purpose",
+      "model": "opus"
+    },
+    "session_id": "test-session-v003",
+    "hook_event_name": "PreToolUse",
+    "captured_at": 1705708800
+  },
+  "expected": {
+    "decision": "block",
+    "reason_contains": "opus",
+    "exit_code": 0
+  }
+}
