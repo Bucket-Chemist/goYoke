@@ -517,7 +517,7 @@
         "test/simulation/harness/invariants_test.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030s",
