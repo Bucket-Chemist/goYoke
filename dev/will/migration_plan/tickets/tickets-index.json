@@ -491,7 +491,7 @@
         "test/simulation/fixtures/deterministic/sessionend/S008_schema_migration.json"
       ],
       "tests_required": false,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030r",

@@ -1,0 +1,755 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>harness: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/Bucket-Chemist/GOgent-Fortress/test/simulation/harness/generator.go (45.2%)</option>
+				
+				<option value="file1">github.com/Bucket-Chemist/GOgent-Fortress/test/simulation/harness/runner.go (83.2%)</option>
+				
+				<option value="file2">github.com/Bucket-Chemist/GOgent-Fortress/test/simulation/harness/types.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package harness
+
+import (
+        "encoding/json"
+        "fmt"
+        "math/rand"
+        "os"
+        "path/filepath"
+        "time"
+)
+
+// Generator creates test inputs for simulation.
+type Generator interface {
+        GenerateToolEvent(scenarioID string) (*ToolEvent, error)
+        GenerateSessionEvent(scenarioID string) (*SessionEvent, error)
+        RandomToolEvent(seed int64) *ToolEvent
+        RandomTaskInput(seed int64) *TaskInput
+        RandomSessionEvent(seed int64) *SessionEvent
+        RandomSessionMetrics(seed int64) *SessionMetrics
+        GenerateWithParams(params FuzzParams) interface{}
+}
+
+// ToolEvent represents a PreToolUse hook input.
+type ToolEvent struct {
+        ToolName      string                 `json:"tool_name"`
+        ToolInput     map[string]interface{} `json:"tool_input"`
+        SessionID     string                 `json:"session_id"`
+        HookEventName string                 `json:"hook_event_name"`
+        CapturedAt    int64                  `json:"captured_at"`
+}
+
+// TaskInput represents the input for a Task tool call.
+type TaskInput struct {
+        Description  string `json:"description"`
+        Prompt       string `json:"prompt"`
+        SubagentType string `json:"subagent_type"`
+        Model        string `json:"model,omitempty"`
+}
+
+// SessionEvent represents a SessionEnd hook input.
+type SessionEvent struct {
+        SessionID     string `json:"session_id"`
+        HookEventName string `json:"hook_event_name"`
+        CapturedAt    int64  `json:"captured_at"`
+}
+
+// SessionMetrics represents session statistics.
+type SessionMetrics struct {
+        ToolCalls      int           `json:"tool_calls"`
+        Duration       time.Duration `json:"duration"`
+        TokensUsed     int           `json:"tokens_used"`
+        ViolationCount int           `json:"violation_count"`
+}
+
+// FuzzParams controls random generation distributions.
+type FuzzParams struct {
+        ToolNameWeights     map[string]float64 `json:"tool_name_weights"`
+        ModelWeights        map[string]float64 `json:"model_weights"`
+        SubagentTypeWeights map[string]float64 `json:"subagent_type_weights"`
+        AgentList           []string           `json:"agent_list"`
+        PromptLengthMean    int                `json:"prompt_length_mean"`
+        PromptLengthMax     int                `json:"prompt_length_max"`
+        ErrorRate           float64            `json:"error_rate"`
+        ViolationRate       float64            `json:"violation_rate"`
+}
+
+// DefaultFuzzParams returns sensible defaults for fuzz testing.
+func DefaultFuzzParams() FuzzParams <span class="cov8" title="1">{
+        return FuzzParams{
+                ToolNameWeights: map[string]float64{
+                        "Task": 0.6,
+                        "Read": 0.2,
+                        "Bash": 0.1,
+                        "Glob": 0.1,
+                },
+                ModelWeights: map[string]float64{
+                        "haiku":  0.5,
+                        "sonnet": 0.4,
+                        "opus":   0.1,
+                },
+                SubagentTypeWeights: map[string]float64{
+                        "Explore":         0.3,
+                        "general-purpose": 0.5,
+                        "Plan":            0.2,
+                },
+                AgentList: []string{
+                        "codebase-search", "haiku-scout", "tech-docs-writer",
+                        "python-pro", "orchestrator", "architect",
+                },
+                PromptLengthMean: 200,
+                PromptLengthMax:  1000,
+                ErrorRate:        0.05,
+                ViolationRate:    0.1,
+        }
+}</span>
+
+// DefaultGenerator implements Generator with fixture loading and random generation.
+type DefaultGenerator struct {
+        fixturesDir string
+        params      FuzzParams
+}
+
+// NewGenerator creates a generator with the given fixtures directory.
+func NewGenerator(fixturesDir string) *DefaultGenerator <span class="cov8" title="1">{
+        return &amp;DefaultGenerator{
+                fixturesDir: fixturesDir,
+                params:      DefaultFuzzParams(),
+        }
+}</span>
+
+// GenerateToolEvent loads a deterministic fixture by scenario ID.
+func (g *DefaultGenerator) GenerateToolEvent(scenarioID string) (*ToolEvent, error) <span class="cov0" title="0">{
+        path := filepath.Join(g.fixturesDir, "deterministic", "pretooluse", scenarioID+".json")
+        data, err := os.ReadFile(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("load fixture %s: %w", scenarioID, err)
+        }</span>
+
+        <span class="cov0" title="0">var fixture struct {
+                Input ToolEvent `json:"input"`
+        }
+        if err := json.Unmarshal(data, &amp;fixture); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("parse fixture %s: %w", scenarioID, err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;fixture.Input, nil</span>
+}
+
+// GenerateSessionEvent loads a deterministic SessionEnd fixture.
+func (g *DefaultGenerator) GenerateSessionEvent(scenarioID string) (*SessionEvent, error) <span class="cov0" title="0">{
+        path := filepath.Join(g.fixturesDir, "deterministic", "sessionend", scenarioID+".json")
+        data, err := os.ReadFile(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("load fixture %s: %w", scenarioID, err)
+        }</span>
+
+        <span class="cov0" title="0">var fixture struct {
+                Input SessionEvent `json:"input"`
+        }
+        if err := json.Unmarshal(data, &amp;fixture); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("parse fixture %s: %w", scenarioID, err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;fixture.Input, nil</span>
+}
+
+// RandomToolEvent generates a random tool event with the given seed.
+func (g *DefaultGenerator) RandomToolEvent(seed int64) *ToolEvent <span class="cov8" title="1">{
+        rng := rand.New(rand.NewSource(seed))
+
+        toolName := weightedChoice(rng, g.params.ToolNameWeights)
+
+        event := &amp;ToolEvent{
+                ToolName:      toolName,
+                ToolInput:     make(map[string]interface{}),
+                SessionID:     fmt.Sprintf("sim-session-%d", rng.Int63()),
+                HookEventName: "PreToolUse",
+                CapturedAt:    time.Now().Unix(),
+        }
+
+        if toolName == "Task" </span><span class="cov0" title="0">{
+                taskInput := g.RandomTaskInput(rng.Int63())
+                event.ToolInput["description"] = taskInput.Description
+                event.ToolInput["prompt"] = taskInput.Prompt
+                event.ToolInput["subagent_type"] = taskInput.SubagentType
+                if taskInput.Model != "" </span><span class="cov0" title="0">{
+                        event.ToolInput["model"] = taskInput.Model
+                }</span>
+        }
+
+        <span class="cov8" title="1">return event</span>
+}
+
+// RandomTaskInput generates a random Task tool input.
+func (g *DefaultGenerator) RandomTaskInput(seed int64) *TaskInput <span class="cov8" title="1">{
+        rng := rand.New(rand.NewSource(seed))
+
+        model := weightedChoice(rng, g.params.ModelWeights)
+        subagentType := weightedChoice(rng, g.params.SubagentTypeWeights)
+        agent := g.params.AgentList[rng.Intn(len(g.params.AgentList))]
+
+        promptLen := rng.Intn(g.params.PromptLengthMax-g.params.PromptLengthMean) + g.params.PromptLengthMean
+        prompt := randomString(rng, promptLen)
+
+        return &amp;TaskInput{
+                Description:  fmt.Sprintf("Test task for %s", agent),
+                Prompt:       fmt.Sprintf("AGENT: %s\n\n%s", agent, prompt),
+                SubagentType: subagentType,
+                Model:        model,
+        }
+}</span>
+
+// RandomSessionEvent generates a random SessionEnd event.
+func (g *DefaultGenerator) RandomSessionEvent(seed int64) *SessionEvent <span class="cov0" title="0">{
+        rng := rand.New(rand.NewSource(seed))
+
+        return &amp;SessionEvent{
+                SessionID:     fmt.Sprintf("sim-session-%d", rng.Int63()),
+                HookEventName: "SessionEnd",
+                CapturedAt:    time.Now().Unix(),
+        }
+}</span>
+
+// RandomSessionMetrics generates random session metrics.
+func (g *DefaultGenerator) RandomSessionMetrics(seed int64) *SessionMetrics <span class="cov0" title="0">{
+        rng := rand.New(rand.NewSource(seed))
+
+        violationCount := 0
+        if rng.Float64() &lt; g.params.ViolationRate </span><span class="cov0" title="0">{
+                violationCount = rng.Intn(5) + 1
+        }</span>
+
+        <span class="cov0" title="0">return &amp;SessionMetrics{
+                ToolCalls:      rng.Intn(100) + 1,
+                Duration:       time.Duration(rng.Intn(3600)) * time.Second,
+                TokensUsed:     rng.Intn(100000) + 1000,
+                ViolationCount: violationCount,
+        }</span>
+}
+
+// GenerateWithParams generates input using custom parameters.
+func (g *DefaultGenerator) GenerateWithParams(params FuzzParams) interface{} <span class="cov0" title="0">{
+        g.params = params
+        return g.RandomToolEvent(time.Now().UnixNano())
+}</span>
+
+// weightedChoice selects a key based on weights.
+func weightedChoice(rng *rand.Rand, weights map[string]float64) string <span class="cov8" title="1">{
+        var total float64
+        for _, w := range weights </span><span class="cov8" title="1">{
+                total += w
+        }</span>
+
+        <span class="cov8" title="1">r := rng.Float64() * total
+        var cumulative float64
+        for k, w := range weights </span><span class="cov8" title="1">{
+                cumulative += w
+                if r &lt;= cumulative </span><span class="cov8" title="1">{
+                        return k
+                }</span>
+        }
+
+        // Fallback to first key
+        <span class="cov0" title="0">for k := range weights </span><span class="cov0" title="0">{
+                return k
+        }</span>
+        <span class="cov0" title="0">return ""</span>
+}
+
+// randomString generates a random string of given length.
+func randomString(rng *rand.Rand, length int) string <span class="cov8" title="1">{
+        const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
+        result := make([]byte, length)
+        for i := range result </span><span class="cov8" title="1">{
+                result[i] = charset[rng.Intn(len(charset))]
+        }</span>
+        <span class="cov8" title="1">return string(result)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package harness
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "os"
+        "os/exec"
+        "path/filepath"
+        "regexp"
+        "strings"
+        "time"
+)
+
+// DefaultRunner implements the Runner interface for CLI execution.
+type DefaultRunner struct {
+        config       SimulationConfig
+        validatePath string
+        archivePath  string
+        generator    Generator
+}
+
+// NewRunner creates a runner with paths to CLI binaries.
+func NewRunner(cfg SimulationConfig, validatePath, archivePath string, gen Generator) *DefaultRunner <span class="cov8" title="1">{
+        return &amp;DefaultRunner{
+                config:       cfg,
+                validatePath: validatePath,
+                archivePath:  archivePath,
+                generator:    gen,
+        }
+}</span>
+
+// Run executes all scenarios matching the configuration.
+func (r *DefaultRunner) Run(cfg SimulationConfig) ([]SimulationResult, error) <span class="cov8" title="1">{
+        r.config = cfg
+
+        scenarios, err := r.loadScenarios()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("load scenarios: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">var results []SimulationResult
+        for _, s := range scenarios </span><span class="cov8" title="1">{
+                if !r.matchesFilter(s.ID) </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">result := r.RunScenario(s)
+                results = append(results, result)
+
+                if r.config.Verbose </span><span class="cov0" title="0">{
+                        status := "PASS"
+                        if !result.Passed </span><span class="cov0" title="0">{
+                                status = "FAIL"
+                        }</span>
+                        <span class="cov0" title="0">fmt.Printf("[%s] %s (%v)\n", status, s.ID, result.Duration)</span>
+                }
+        }
+
+        <span class="cov8" title="1">return results, nil</span>
+}
+
+// RunScenario executes a single scenario and returns the result.
+func (r *DefaultRunner) RunScenario(s Scenario) SimulationResult <span class="cov8" title="1">{
+        start := time.Now()
+        result := SimulationResult{
+                ScenarioID: s.ID,
+        }
+
+        // Setup
+        if s.Setup != nil </span><span class="cov8" title="1">{
+                if err := s.Setup(r.config); err != nil </span><span class="cov8" title="1">{
+                        result.Error = fmt.Errorf("setup failed: %w", err)
+                        result.ErrorMsg = result.Error.Error()
+                        result.Duration = time.Since(start)
+                        return result
+                }</span>
+        }
+
+        // Execute
+        <span class="cov8" title="1">output, exitCode, err := r.executeScenario(s)
+        result.Duration = time.Since(start)
+        result.Output = output
+
+        if err != nil </span><span class="cov0" title="0">{
+                result.Error = err
+                result.ErrorMsg = err.Error()
+        }</span>
+
+        // Validate
+        <span class="cov8" title="1">result.Passed, result.Expected, result.Diff = r.validateOutput(s.Expected, output, exitCode)
+
+        // Serialize input for debugging
+        if inputBytes, err := json.Marshal(s.Input); err == nil </span><span class="cov8" title="1">{
+                result.Input = string(inputBytes)
+        }</span>
+
+        // Teardown
+        <span class="cov8" title="1">if s.Teardown != nil </span><span class="cov8" title="1">{
+                if err := s.Teardown(r.config); err != nil </span><span class="cov8" title="1">{
+                        // Log but don't fail test for teardown errors
+                        if r.config.Verbose </span><span class="cov0" title="0">{
+                                fmt.Printf("Warning: teardown failed for %s: %v\n", s.ID, err)
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return result</span>
+}
+
+// executeScenario runs the appropriate CLI with the scenario input.
+func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) <span class="cov8" title="1">{
+        var cmdPath string
+        switch s.Category </span>{
+        case "pretooluse":<span class="cov8" title="1">
+                cmdPath = r.validatePath</span>
+        case "sessionend":<span class="cov0" title="0">
+                cmdPath = r.archivePath</span>
+        default:<span class="cov8" title="1">
+                return "", -1, fmt.Errorf("unknown category: %s", s.Category)</span>
+        }
+
+        <span class="cov8" title="1">inputBytes, err := json.Marshal(s.Input)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", -1, fmt.Errorf("marshal input: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+
+        cmd := exec.CommandContext(ctx, cmdPath)
+        cmd.Stdin = bytes.NewReader(inputBytes)
+        cmd.Env = r.buildEnv()
+
+        var stdout, stderr bytes.Buffer
+        cmd.Stdout = &amp;stdout
+        cmd.Stderr = &amp;stderr
+
+        err = cmd.Run()
+        exitCode := 0
+        if exitErr, ok := err.(*exec.ExitError); ok </span><span class="cov0" title="0">{
+                exitCode = exitErr.ExitCode()
+                err = nil // Non-zero exit is not necessarily an error
+        }</span> else<span class="cov8" title="1"> if err != nil </span><span class="cov0" title="0">{
+                return "", -1, fmt.Errorf("execute command: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">output := stdout.String()
+        if stderr.Len() &gt; 0 </span><span class="cov0" title="0">{
+                output += "\n[STDERR]\n" + stderr.String()
+        }</span>
+
+        <span class="cov8" title="1">return output, exitCode, nil</span>
+}
+
+// validateOutput checks if output matches expectations.
+func (r *DefaultRunner) validateOutput(expected ExpectedOutput, output string, exitCode int) (bool, string, string) <span class="cov8" title="1">{
+        var expectedParts []string
+        var issues []string
+
+        // Check exit code
+        if expected.ExitCode != exitCode </span><span class="cov8" title="1">{
+                issues = append(issues, fmt.Sprintf("exit code: got %d, want %d", exitCode, expected.ExitCode))
+        }</span>
+        <span class="cov8" title="1">expectedParts = append(expectedParts, fmt.Sprintf("exit_code=%d", expected.ExitCode))
+
+        // Parse output as JSON for structured validation
+        var outputJSON map[string]interface{}
+        if err := json.Unmarshal([]byte(output), &amp;outputJSON); err == nil </span><span class="cov8" title="1">{
+                // Check decision
+                if expected.Decision != nil </span><span class="cov8" title="1">{
+                        if decision, ok := outputJSON["decision"].(string); ok </span><span class="cov8" title="1">{
+                                if decision != *expected.Decision </span><span class="cov8" title="1">{
+                                        issues = append(issues, fmt.Sprintf("decision: got %s, want %s", decision, *expected.Decision))
+                                }</span>
+                        } else<span class="cov0" title="0"> if *expected.Decision != "" </span><span class="cov0" title="0">{
+                                issues = append(issues, "decision field missing")
+                        }</span>
+                        <span class="cov8" title="1">expectedParts = append(expectedParts, fmt.Sprintf("decision=%s", *expected.Decision))</span>
+                }
+
+                // Check reason pattern
+                <span class="cov8" title="1">if expected.ReasonMatch != nil || expected.ReasonPattern != "" </span><span class="cov8" title="1">{
+                        pattern := expected.ReasonMatch
+                        if pattern == nil &amp;&amp; expected.ReasonPattern != "" </span><span class="cov8" title="1">{
+                                pattern = regexp.MustCompile(expected.ReasonPattern)
+                        }</span>
+                        <span class="cov8" title="1">if pattern != nil </span><span class="cov8" title="1">{
+                                if reason, ok := outputJSON["reason"].(string); ok </span><span class="cov8" title="1">{
+                                        if !pattern.MatchString(reason) </span><span class="cov8" title="1">{
+                                                issues = append(issues, fmt.Sprintf("reason pattern: %q not in %q", expected.ReasonPattern, reason))
+                                        }</span>
+                                }
+                        }
+                }
+        }
+
+        // Check stderr pattern
+        <span class="cov8" title="1">if expected.StderrMatch != nil || expected.StderrPattern != "" </span><span class="cov8" title="1">{
+                pattern := expected.StderrMatch
+                if pattern == nil &amp;&amp; expected.StderrPattern != "" </span><span class="cov8" title="1">{
+                        pattern = regexp.MustCompile(expected.StderrPattern)
+                }</span>
+                <span class="cov8" title="1">if pattern != nil &amp;&amp; !pattern.MatchString(output) </span><span class="cov0" title="0">{
+                        issues = append(issues, fmt.Sprintf("stderr pattern: %q not found", expected.StderrPattern))
+                }</span>
+        }
+
+        <span class="cov8" title="1">expectedStr := strings.Join(expectedParts, ", ")
+        diffStr := strings.Join(issues, "\n")
+
+        return len(issues) == 0, expectedStr, diffStr</span>
+}
+
+// buildEnv creates environment for CLI execution.
+func (r *DefaultRunner) buildEnv() []string <span class="cov8" title="1">{
+        env := os.Environ()
+
+        // Override schema paths for test isolation
+        if r.config.SchemaPath != "" </span><span class="cov8" title="1">{
+                env = append(env, "GOGENT_ROUTING_SCHEMA="+r.config.SchemaPath)
+        }</span>
+        <span class="cov8" title="1">if r.config.AgentsPath != "" </span><span class="cov8" title="1">{
+                env = append(env, "GOGENT_AGENTS_INDEX="+r.config.AgentsPath)
+        }</span>
+        <span class="cov8" title="1">if r.config.TempDir != "" </span><span class="cov8" title="1">{
+                env = append(env, "GOGENT_PROJECT_DIR="+r.config.TempDir)
+        }</span>
+
+        <span class="cov8" title="1">return env</span>
+}
+
+// matchesFilter checks if scenario ID matches any filter pattern.
+func (r *DefaultRunner) matchesFilter(id string) bool <span class="cov8" title="1">{
+        if len(r.config.ScenarioFilter) == 0 </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">for _, filter := range r.config.ScenarioFilter </span><span class="cov8" title="1">{
+                if strings.HasPrefix(id, filter) </span><span class="cov8" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov8" title="1">return false</span>
+}
+
+// loadScenarios loads all scenario definitions from fixtures.
+func (r *DefaultRunner) loadScenarios() ([]Scenario, error) <span class="cov8" title="1">{
+        var scenarios []Scenario
+
+        // Load PreToolUse scenarios
+        preToolDir := filepath.Join(r.config.TempDir, "fixtures", "deterministic", "pretooluse")
+        if err := r.loadScenariosFromDir(preToolDir, "pretooluse", &amp;scenarios); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Load SessionEnd scenarios
+        <span class="cov8" title="1">sessionDir := filepath.Join(r.config.TempDir, "fixtures", "deterministic", "sessionend")
+        if err := r.loadScenariosFromDir(sessionDir, "sessionend", &amp;scenarios); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return scenarios, nil</span>
+}
+
+// loadScenariosFromDir loads scenarios from a directory.
+func (r *DefaultRunner) loadScenariosFromDir(dir, category string, scenarios *[]Scenario) error <span class="cov8" title="1">{
+        entries, err := os.ReadDir(dir)
+        if err != nil </span><span class="cov8" title="1">{
+                if os.IsNotExist(err) </span><span class="cov8" title="1">{
+                        return nil // Directory doesn't exist yet
+                }</span>
+                <span class="cov0" title="0">return err</span>
+        }
+
+        <span class="cov8" title="1">for _, entry := range entries </span><span class="cov8" title="1">{
+                if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">path := filepath.Join(dir, entry.Name())
+                data, err := os.ReadFile(path)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("read %s: %w", path, err)
+                }</span>
+
+                <span class="cov8" title="1">var fixture struct {
+                        Input    interface{}    `json:"input"`
+                        Expected ExpectedOutput `json:"expected"`
+                }
+                if err := json.Unmarshal(data, &amp;fixture); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("parse %s: %w", path, err)
+                }</span>
+
+                <span class="cov8" title="1">id := strings.TrimSuffix(entry.Name(), ".json")
+                *scenarios = append(*scenarios, Scenario{
+                        ID:       id,
+                        Category: category,
+                        Input:    fixture.Input,
+                        Expected: fixture.Expected,
+                })</span>
+        }
+
+        <span class="cov8" title="1">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package harness
+
+import (
+        "regexp"
+        "time"
+)
+
+// SimulationConfig controls simulation execution behavior.
+type SimulationConfig struct {
+        Mode           string        `json:"mode"`            // "deterministic", "fuzz", "mixed"
+        ScenarioFilter []string      `json:"scenario_filter"`
+        FuzzIterations int           `json:"fuzz_iterations"`
+        FuzzSeed       int64         `json:"fuzz_seed"`
+        FuzzTimeout    time.Duration `json:"fuzz_timeout"`
+        SchemaPath     string        `json:"schema_path"`
+        AgentsPath     string        `json:"agents_path"`
+        TempDir        string        `json:"temp_dir"`
+        ReportFormat   string        `json:"report_format"` // "json", "markdown", "tap"
+        Verbose        bool          `json:"verbose"`
+}
+
+// SetupFunc prepares test environment before scenario execution.
+type SetupFunc func(cfg SimulationConfig) error
+
+// TeardownFunc cleans up after scenario execution.
+type TeardownFunc func(cfg SimulationConfig) error
+
+// Scenario defines a single test case for simulation.
+type Scenario struct {
+        ID          string         `json:"id"`
+        Category    string         `json:"category"`
+        Description string         `json:"description"`
+        Input       interface{}    `json:"input"`
+        Setup       SetupFunc      `json:"-"`
+        Expected    ExpectedOutput `json:"expected"`
+        Teardown    TeardownFunc   `json:"-"`
+}
+
+// ExpectedOutput defines what a scenario should produce.
+type ExpectedOutput struct {
+        Decision      *string                `json:"decision,omitempty"`
+        ReasonMatch   *regexp.Regexp         `json:"-"`
+        ReasonPattern string                 `json:"reason_pattern,omitempty"`
+        HasViolation  *string                `json:"has_violation,omitempty"`
+        HandoffFields map[string]interface{} `json:"handoff_fields,omitempty"`
+        FilesCreated  []string               `json:"files_created,omitempty"`
+        ExitCode      int                    `json:"exit_code"`
+        StderrMatch   *regexp.Regexp         `json:"-"`
+        StderrPattern string                 `json:"stderr_pattern,omitempty"`
+}
+
+// SimulationResult captures the outcome of running a scenario.
+type SimulationResult struct {
+        ScenarioID string        `json:"scenario_id"`
+        Passed     bool          `json:"passed"`
+        Duration   time.Duration `json:"duration"`
+        Input      string        `json:"input"`
+        Output     string        `json:"output"`
+        Expected   string        `json:"expected"`
+        Diff       string        `json:"diff,omitempty"`
+        Error      error         `json:"-"`
+        ErrorMsg   string        `json:"error,omitempty"`
+}
+
+// Runner executes simulation scenarios.
+type Runner interface {
+        Run(cfg SimulationConfig) ([]SimulationResult, error)
+        RunScenario(s Scenario) SimulationResult
+}
+
+// DefaultConfig returns a SimulationConfig with sensible defaults.
+func DefaultConfig() SimulationConfig <span class="cov8" title="1">{
+        return SimulationConfig{
+                Mode:           "deterministic",
+                FuzzIterations: 1000,
+                FuzzTimeout:    5 * time.Minute,
+                ReportFormat:   "json",
+                Verbose:        false,
+        }
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
