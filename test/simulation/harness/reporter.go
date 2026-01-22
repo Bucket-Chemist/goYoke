@@ -1,46 +1,3 @@
----
-ticket_id: GOgent-030t
-title: "Reporter Implementation"
-status: pending
-dependencies: [GOgent-030m]
-estimated_hours: 2.5
-phase: 3
-priority: MEDIUM
----
-
-# GOgent-030t: Reporter Implementation
-
-## Description
-Implement result aggregation and report generation (JSON, Markdown, TAP).
-
-## Implementation Intention
-Transform raw simulation results into human-readable and machine-parseable reports. Multiple formats support different use cases: JSON for CI parsing, Markdown for PRs, TAP for test tooling.
-
-## Intended End State
-- JSON report with full details
-- Markdown report with summary tables
-- TAP format for test runner integration
-- Aggregation statistics (pass/fail counts, duration)
-
-## Dependencies
-- GOgent-030m: Core types (SimulationResult, SimulationConfig)
-
-## Files to Create
-- `test/simulation/harness/reporter.go`
-- `test/simulation/harness/reporter_test.go`
-
-## Acceptance Criteria
-- [x] Reporter interface defined
-- [x] JSON report generation with full details
-- [x] Markdown report with summary tables
-- [x] TAP format output
-- [x] Aggregation statistics calculated
-- [x] Tests verify all formats
-
-## Implementation Details
-
-### reporter.go
-```go
 package harness
 
 import (
@@ -60,22 +17,22 @@ type Reporter interface {
 
 // Report represents a complete simulation report.
 type Report struct {
-	RunID                string                `json:"run_id"`
-	GeneratedAt          time.Time             `json:"generated_at"`
-	Config               SimulationConfig      `json:"config"`
-	Summary              ReportSummary         `json:"summary"`
-	DeterministicResults []ScenarioReport      `json:"deterministic_results,omitempty"`
-	FuzzResults          *FuzzReport           `json:"fuzz_results,omitempty"`
+	RunID                string           `json:"run_id"`
+	GeneratedAt          time.Time        `json:"generated_at"`
+	Config               SimulationConfig `json:"config"`
+	Summary              ReportSummary    `json:"summary"`
+	DeterministicResults []ScenarioReport `json:"deterministic_results,omitempty"`
+	FuzzResults          *FuzzReport      `json:"fuzz_results,omitempty"`
 }
 
 // ReportSummary provides aggregate statistics.
 type ReportSummary struct {
-	Total      int           `json:"total"`
-	Passed     int           `json:"passed"`
-	Failed     int           `json:"failed"`
-	Skipped    int           `json:"skipped"`
-	Duration   time.Duration `json:"duration_ms"`
-	PassRate   float64       `json:"pass_rate"`
+	Total    int           `json:"total"`
+	Passed   int           `json:"passed"`
+	Failed   int           `json:"failed"`
+	Skipped  int           `json:"skipped"`
+	Duration time.Duration `json:"duration_ms"`
+	PassRate float64       `json:"pass_rate"`
 }
 
 // ScenarioReport summarizes a single scenario result.
@@ -89,11 +46,11 @@ type ScenarioReport struct {
 
 // FuzzReport summarizes fuzz testing results.
 type FuzzReport struct {
-	Iterations        int               `json:"iterations"`
-	Seed              int64             `json:"seed"`
-	Crashes           int               `json:"crashes"`
-	InvariantFailures int               `json:"invariant_failures"`
-	Failures          []FuzzCrash       `json:"failures,omitempty"`
+	Iterations        int         `json:"iterations"`
+	Seed              int64       `json:"seed"`
+	Crashes           int         `json:"crashes"`
+	InvariantFailures int         `json:"invariant_failures"`
+	Failures          []FuzzCrash `json:"failures,omitempty"`
 }
 
 // JSONReporter generates JSON format reports.
@@ -136,8 +93,15 @@ func (r *JSONReporter) GenerateToFile(results []SimulationResult, cfg Simulation
 		return err
 	}
 
-	os.MkdirAll(filepath.Dir(path), 0755)
-	return os.WriteFile(path, []byte(output), 0644)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create report directory: %w", err)
+	}
+
+	if err := os.WriteFile(path, []byte(output), 0644); err != nil {
+		return fmt.Errorf("write report file: %w", err)
+	}
+
+	return nil
 }
 
 // Generate creates a Markdown report string.
@@ -242,15 +206,22 @@ func (r *MarkdownReporter) GenerateToFile(results []SimulationResult, cfg Simula
 		return err
 	}
 
-	os.MkdirAll(filepath.Dir(path), 0755)
-	return os.WriteFile(path, []byte(output), 0644)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create report directory: %w", err)
+	}
+
+	if err := os.WriteFile(path, []byte(output), 0644); err != nil {
+		return fmt.Errorf("write report file: %w", err)
+	}
+
+	return nil
 }
 
 // Generate creates a TAP format report string.
 func (r *TAPReporter) Generate(results []SimulationResult, cfg SimulationConfig) (string, error) {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("TAP version 13\n"))
+	sb.WriteString("TAP version 13\n")
 	sb.WriteString(fmt.Sprintf("1..%d\n", len(results)))
 
 	for i, result := range results {
@@ -259,7 +230,7 @@ func (r *TAPReporter) Generate(results []SimulationResult, cfg SimulationConfig)
 		} else {
 			sb.WriteString(fmt.Sprintf("not ok %d - %s\n", i+1, result.ScenarioID))
 			if result.ErrorMsg != "" {
-				sb.WriteString(fmt.Sprintf("  ---\n  message: %s\n  ...\n", result.ErrorMsg))
+				sb.WriteString(fmt.Sprintf("  ---\n  message: %s\n  ...\n", escapeYAML(result.ErrorMsg)))
 			}
 			if result.Diff != "" {
 				sb.WriteString(fmt.Sprintf("  ---\n  diff: |\n    %s\n  ...\n", strings.ReplaceAll(result.Diff, "\n", "\n    ")))
@@ -277,8 +248,15 @@ func (r *TAPReporter) GenerateToFile(results []SimulationResult, cfg SimulationC
 		return err
 	}
 
-	os.MkdirAll(filepath.Dir(path), 0755)
-	return os.WriteFile(path, []byte(output), 0644)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create report directory: %w", err)
+	}
+
+	if err := os.WriteFile(path, []byte(output), 0644); err != nil {
+		return fmt.Errorf("write report file: %w", err)
+	}
+
+	return nil
 }
 
 // buildReport creates a Report from simulation results.
@@ -333,186 +311,14 @@ func buildReport(results []SimulationResult, cfg SimulationConfig) Report {
 
 	return report
 }
-```
 
-### reporter_test.go
-```go
-package harness
-
-import (
-	"encoding/json"
-	"os"
-	"path/filepath"
-	"strings"
-	"testing"
-	"time"
-)
-
-func TestJSONReporter_Generate(t *testing.T) {
-	results := []SimulationResult{
-		{ScenarioID: "V001", Passed: true, Duration: 100 * time.Millisecond},
-		{ScenarioID: "V002", Passed: false, Duration: 50 * time.Millisecond, ErrorMsg: "test error"},
-	}
-
-	cfg := SimulationConfig{Mode: "deterministic"}
-
-	reporter := &JSONReporter{}
-	output, err := reporter.Generate(results, cfg)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
-
-	var report Report
-	if err := json.Unmarshal([]byte(output), &report); err != nil {
-		t.Fatalf("Output is not valid JSON: %v", err)
-	}
-
-	if report.Summary.Total != 2 {
-		t.Errorf("Expected 2 total, got: %d", report.Summary.Total)
-	}
-	if report.Summary.Passed != 1 {
-		t.Errorf("Expected 1 passed, got: %d", report.Summary.Passed)
-	}
+// escapeYAML escapes special characters for YAML strings in TAP output.
+func escapeYAML(s string) string {
+	// Replace problematic characters for YAML strings
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	return s
 }
-
-func TestMarkdownReporter_Generate(t *testing.T) {
-	results := []SimulationResult{
-		{ScenarioID: "V001", Passed: true, Duration: 100 * time.Millisecond},
-		{ScenarioID: "V002", Passed: false, Duration: 50 * time.Millisecond, Diff: "expected != actual"},
-	}
-
-	cfg := SimulationConfig{Mode: "deterministic"}
-
-	reporter := &MarkdownReporter{}
-	output, err := reporter.Generate(results, cfg)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
-
-	// Verify markdown structure
-	if !strings.Contains(output, "# Simulation Test Report") {
-		t.Error("Missing report header")
-	}
-	if !strings.Contains(output, "## Summary") {
-		t.Error("Missing summary section")
-	}
-	if !strings.Contains(output, "| V001 |") {
-		t.Error("Missing V001 in results table")
-	}
-	if !strings.Contains(output, "### Failures") {
-		t.Error("Missing failures section")
-	}
-}
-
-func TestTAPReporter_Generate(t *testing.T) {
-	results := []SimulationResult{
-		{ScenarioID: "V001", Passed: true},
-		{ScenarioID: "V002", Passed: false, ErrorMsg: "assertion failed"},
-	}
-
-	cfg := SimulationConfig{}
-
-	reporter := &TAPReporter{}
-	output, err := reporter.Generate(results, cfg)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
-
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-
-	if lines[0] != "TAP version 13" {
-		t.Errorf("Expected TAP version 13, got: %s", lines[0])
-	}
-	if lines[1] != "1..2" {
-		t.Errorf("Expected 1..2, got: %s", lines[1])
-	}
-	if !strings.HasPrefix(lines[2], "ok 1 -") {
-		t.Errorf("Expected 'ok 1 -', got: %s", lines[2])
-	}
-	if !strings.HasPrefix(lines[3], "not ok 2 -") {
-		t.Errorf("Expected 'not ok 2 -', got: %s", lines[3])
-	}
-}
-
-func TestReporter_GenerateToFile(t *testing.T) {
-	tempDir := t.TempDir()
-	path := filepath.Join(tempDir, "reports", "test-report.json")
-
-	results := []SimulationResult{
-		{ScenarioID: "V001", Passed: true},
-	}
-
-	reporter := &JSONReporter{}
-	err := reporter.GenerateToFile(results, SimulationConfig{}, path)
-	if err != nil {
-		t.Fatalf("GenerateToFile failed: %v", err)
-	}
-
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Error("Report file was not created")
-	}
-
-	data, _ := os.ReadFile(path)
-	if len(data) == 0 {
-		t.Error("Report file is empty")
-	}
-}
-
-func TestNewReporter(t *testing.T) {
-	tests := []struct {
-		format   string
-		expected string
-	}{
-		{"json", "*harness.JSONReporter"},
-		{"markdown", "*harness.MarkdownReporter"},
-		{"tap", "*harness.TAPReporter"},
-		{"unknown", "*harness.JSONReporter"}, // Default to JSON
-	}
-
-	for _, tt := range tests {
-		reporter := NewReporter(tt.format)
-		typeName := fmt.Sprintf("%T", reporter)
-		if typeName != tt.expected {
-			t.Errorf("NewReporter(%s) = %s, want %s", tt.format, typeName, tt.expected)
-		}
-	}
-}
-
-func TestBuildReport_FuzzResults(t *testing.T) {
-	results := []SimulationResult{
-		{ScenarioID: "V001", Passed: true},
-		{ScenarioID: "FUZZ-P-0", Passed: true},
-		{ScenarioID: "FUZZ-P-1", Passed: false},
-		{ScenarioID: "FUZZ-S-0", Passed: true},
-	}
-
-	cfg := SimulationConfig{
-		Mode:     "mixed",
-		FuzzSeed: 12345,
-	}
-
-	report := buildReport(results, cfg)
-
-	if len(report.DeterministicResults) != 1 {
-		t.Errorf("Expected 1 deterministic result, got: %d", len(report.DeterministicResults))
-	}
-
-	if report.FuzzResults == nil {
-		t.Fatal("Expected fuzz results to be populated")
-	}
-
-	if report.FuzzResults.Iterations != 3 {
-		t.Errorf("Expected 3 fuzz iterations, got: %d", report.FuzzResults.Iterations)
-	}
-
-	if report.FuzzResults.Crashes != 1 {
-		t.Errorf("Expected 1 crash, got: %d", report.FuzzResults.Crashes)
-	}
-}
-```
-
-## Time Estimate
-2.5 hours
-
-## Why This Matters
-Reports make simulation results actionable. JSON enables CI automation, Markdown goes in PRs for human review, TAP integrates with existing test tooling. Without reports, simulation is just noise.

@@ -517,7 +517,7 @@
         "test/simulation/harness/invariants_test.go"
       ],
       "tests_required": true,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030s",
@@ -545,7 +545,7 @@
         "test/simulation/harness/fuzz_test.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-030t",
@@ -570,7 +570,7 @@
         "test/simulation/harness/reporter_test.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030u",
