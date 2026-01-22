@@ -1,50 +1,3 @@
----
-ticket_id: GOgent-030o
-title: "Runner Implementation"
-status: pending
-dependencies: [GOgent-030m, GOgent-030n]
-estimated_hours: 3.5
-phase: 3
-priority: MEDIUM
----
-
-# GOgent-030o: Runner Implementation
-
-## Description
-Implement scenario execution engine that runs CLI commands, captures output, validates results.
-
-## Implementation Intention
-Execute real gogent-validate and gogent-archive binaries with test inputs, capture all output, compare against expectations. This is integration testing of the actual CLIs.
-
-## Intended End State
-- Runner executes CLI binaries with piped STDIN
-- Setup/Teardown lifecycle for test isolation
-- Output capture (stdout, stderr, exit code)
-- Expectation validation with diff generation
-- Timeout protection for hung processes
-
-## Dependencies
-- GOgent-030m: Core types (Scenario, SimulationResult, Runner interface)
-- GOgent-030n: Generator for input creation
-
-## Files to Create
-- `test/simulation/harness/runner.go`
-- `test/simulation/harness/runner_test.go`
-
-## Acceptance Criteria
-- [x] RunScenario() executes single scenario
-- [x] Calls Setup func before execution
-- [x] Pipes input to STDIN of CLI commands
-- [x] Captures STDOUT, STDERR, exit code
-- [x] Validates output against ExpectedOutput
-- [x] Calls Teardown func after execution
-- [x] Generates diff on validation failure
-- [x] Timeout protection for hung processes
-
-## Implementation Details
-
-### runner.go
-```go
 package harness
 
 import (
@@ -185,6 +138,12 @@ func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
 	cmd.Stderr = &stderr
 
 	err = cmd.Run()
+
+	// Check context timeout/cancellation first - this takes priority
+	if ctx.Err() != nil {
+		return "", -1, fmt.Errorf("execute command: %w", ctx.Err())
+	}
+
 	exitCode := 0
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		exitCode = exitErr.ExitCode()
@@ -351,122 +310,3 @@ func (r *DefaultRunner) loadScenariosFromDir(dir, category string, scenarios *[]
 
 	return nil
 }
-```
-
-### runner_test.go
-```go
-package harness
-
-import (
-	"testing"
-	"time"
-)
-
-func TestRunner_MatchesFilter(t *testing.T) {
-	r := &DefaultRunner{
-		config: SimulationConfig{
-			ScenarioFilter: []string{"V00", "S001"},
-		},
-	}
-
-	tests := []struct {
-		id       string
-		expected bool
-	}{
-		{"V001", true},
-		{"V002", true},
-		{"S001", true},
-		{"S002", false},
-		{"X001", false},
-	}
-
-	for _, tt := range tests {
-		if got := r.matchesFilter(tt.id); got != tt.expected {
-			t.Errorf("matchesFilter(%s) = %v, want %v", tt.id, got, tt.expected)
-		}
-	}
-}
-
-func TestRunner_ValidateOutput_Decision(t *testing.T) {
-	r := &DefaultRunner{}
-
-	decision := "block"
-	expected := ExpectedOutput{
-		Decision: &decision,
-		ExitCode: 0,
-	}
-
-	output := `{"decision": "block", "reason": "opus blocked"}`
-	passed, _, diff := r.validateOutput(expected, output, 0)
-
-	if !passed {
-		t.Errorf("Expected validation to pass, got diff: %s", diff)
-	}
-}
-
-func TestRunner_ValidateOutput_ExitCodeMismatch(t *testing.T) {
-	r := &DefaultRunner{}
-
-	expected := ExpectedOutput{
-		ExitCode: 0,
-	}
-
-	passed, _, diff := r.validateOutput(expected, "{}", 1)
-
-	if passed {
-		t.Error("Expected validation to fail on exit code mismatch")
-	}
-	if diff == "" {
-		t.Error("Expected diff to contain exit code mismatch")
-	}
-}
-
-func TestRunner_BuildEnv(t *testing.T) {
-	r := &DefaultRunner{
-		config: SimulationConfig{
-			SchemaPath: "/test/schema.json",
-			AgentsPath: "/test/agents.json",
-			TempDir:    "/tmp/sim",
-		},
-	}
-
-	env := r.buildEnv()
-
-	hasSchema := false
-	hasAgents := false
-	hasProject := false
-
-	for _, e := range env {
-		if e == "GOGENT_ROUTING_SCHEMA=/test/schema.json" {
-			hasSchema = true
-		}
-		if e == "GOGENT_AGENTS_INDEX=/test/agents.json" {
-			hasAgents = true
-		}
-		if e == "GOGENT_PROJECT_DIR=/tmp/sim" {
-			hasProject = true
-		}
-	}
-
-	if !hasSchema || !hasAgents || !hasProject {
-		t.Error("Expected all GOGENT_* environment variables to be set")
-	}
-}
-
-func TestSimulationResult_Duration(t *testing.T) {
-	result := SimulationResult{
-		ScenarioID: "test",
-		Duration:   100 * time.Millisecond,
-	}
-
-	if result.Duration < 100*time.Millisecond {
-		t.Errorf("Duration should be >= 100ms, got: %v", result.Duration)
-	}
-}
-```
-
-## Time Estimate
-3.5 hours
-
-## Why This Matters
-The runner is the execution core of the simulation system. It tests actual CLI behavior, not mocked functions - catching real-world integration issues that unit tests miss.

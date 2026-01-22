@@ -2,7 +2,7 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 99,
+    "total_tickets": 111,
     "total_weeks": 5,
     "created": "2026-01-15",
     "version": "1.9",
@@ -425,7 +425,7 @@
         "test/simulation/harness/runner_test.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030p",
@@ -624,6 +624,656 @@
         ".github/workflows/simulation.yml"
       ],
       "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-031",
+      "title": "Archive Session Files",
+      "description": "Copy transcript, move learnings/violations to archive",
+      "file": "tickets/session_archive/031.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "1.5h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-032"
+      ],
+      "priority": "high",
+      "tags": [
+        "archival",
+        "files"
+      ],
+      "files_to_create": [
+        "pkg/session/archive.go",
+        "pkg/session/archive_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-031-archive-files",
+      "pr_labels": [
+        "archival",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-032",
+      "title": "Session Archive Integration Test",
+      "description": "End-to-end test of session archive workflow",
+      "file": "tickets/session_archive/032.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-028",
+        "GOgent-029",
+        "GOgent-030",
+        "GOgent-031"
+      ],
+      "blocks": [
+        "GOgent-033"
+      ],
+      "priority": "high",
+      "tags": [
+        "testing",
+        "integration"
+      ],
+      "files_to_create": [
+        "test/integration/session_archive_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-032-session-archive-integration",
+      "pr_labels": [
+        "testing",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-033",
+      "title": "Build gogent-archive CLI",
+      "description": "Build session-archive hook binary",
+      "file": "tickets/session_archive/033.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-032"
+      ],
+      "blocks": [
+        "GOgent-096"
+      ],
+      "priority": "critical",
+      "tags": [
+        "cli",
+        "binary"
+      ],
+      "files_to_create": [
+        "cmd/gogent-archive/main.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-033-gogent-archive-cli",
+      "pr_labels": [
+        "cli",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-034",
+      "title": "Parse PostToolUse Event",
+      "description": "Parse PostToolUse events with tool_response",
+      "file": "tickets/session_archive/034.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-035",
+        "GOgent-036"
+      ],
+      "priority": "high",
+      "tags": [
+        "parsing",
+        "events"
+      ],
+      "files_to_create": [
+        "pkg/memory/events.go",
+        "pkg/memory/events_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-034-parse-post-tool-use",
+      "pr_labels": [
+        "parsing",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-035",
+      "title": "Failure Detection Logic",
+      "description": "Detect failures from success flags, exit codes, error patterns",
+      "file": "tickets/session_archive/035.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-034"
+      ],
+      "blocks": [
+        "GOgent-036"
+      ],
+      "priority": "critical",
+      "tags": [
+        "detection",
+        "failures"
+      ],
+      "files_to_create": [
+        "pkg/memory/detection.go",
+        "pkg/memory/detection_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-035-failure-detection",
+      "pr_labels": [
+        "detection",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 8,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-036",
+      "title": "Consecutive Failure Tracking",
+      "description": "Track failures per file within 5-minute sliding window",
+      "file": "tickets/session_archive/036.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-034",
+        "GOgent-035"
+      ],
+      "blocks": [
+        "GOgent-036b",
+        "GOgent-037",
+        "GOgent-038"
+      ],
+      "priority": "critical",
+      "tags": [
+        "tracking",
+        "failures"
+      ],
+      "files_to_create": [
+        "pkg/memory/tracker.go",
+        "pkg/memory/tracker_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-036-failure-tracking",
+      "pr_labels": [
+        "tracking",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-036b",
+      "title": "Track Failures by File + Error Type",
+      "description": "Refine failure tracking to use file + error_type composite key instead of file-only, preventing false positives",
+      "file": "tickets/session_archive/036b.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-036"
+      ],
+      "blocks": [
+        "GOgent-036c"
+      ],
+      "priority": "major",
+      "tags": [
+        "composite-key",
+        "false-positive-fix",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-036b-composite-failure-key",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-036c",
+      "title": "Extract Function Name from Stack Traces (Optional)",
+      "description": "Parse stack traces to extract function context, further refining failure tracking from file+error to file+error+function",
+      "file": "tickets/session_archive/036c.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-036b"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "stack-trace-parsing",
+        "function-level-tracking",
+        "enhancement",
+        "phase-3",
+        "optional"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-036c-function-extraction",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3",
+        "optional"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-037",
+      "title": "Sharp Edge Capture",
+      "description": "Write sharp edges to pending-learnings.jsonl at threshold",
+      "file": "tickets/session_archive/037.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-036"
+      ],
+      "blocks": [
+        "GOgent-037b",
+        "GOgent-039"
+      ],
+      "priority": "high",
+      "tags": [
+        "capture",
+        "learnings"
+      ],
+      "files_to_create": [
+        "pkg/memory/capture.go",
+        "pkg/memory/capture_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-037-sharp-edge-capture",
+      "pr_labels": [
+        "capture",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-037b",
+      "title": "Extract 5-Line Code Context Window",
+      "description": "Extract 5-line code context window around error location to provide visual context in sharp edges",
+      "file": "tickets/session_archive/037b.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-037"
+      ],
+      "blocks": [
+        "GOgent-037c"
+      ],
+      "priority": "high",
+      "tags": [
+        "code-context",
+        "sharp-edges",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-037b-code-context",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-037c",
+      "title": "Log Attempted Changes from Tool Input",
+      "description": "Capture what was attempted during tool failures by extracting old_string→new_string from Edit, content preview from Write, and commands from Bash",
+      "file": "tickets/session_archive/037c.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-037b"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "attempted-change-logging",
+        "sharp-edges",
+        "enhancement",
+        "phase-2"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-037c-log-attempts",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-2"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-037d",
+      "title": "User Intent Capture Hook",
+      "description": "PostToolUse hook to capture user intents from AskUserQuestion responses",
+      "file": "tickets/session_archive/037d.md",
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-029a",
+        "GOgent-037"
+      ],
+      "blocks": [
+        "GOgent-041"
+      ],
+      "priority": "high",
+      "tags": [
+        "capture",
+        "hook",
+        "behavioral-learning"
+      ],
+      "files_to_create": [
+        "cmd/gogent-capture-intent/main.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-038",
+      "title": "Hook Response Generation",
+      "description": "Generate blocking/warning/pass-through responses based on count",
+      "file": "tickets/session_archive/038.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-008a",
+        "GOgent-036"
+      ],
+      "blocks": [
+        "GOgent-038b",
+        "GOgent-039"
+      ],
+      "priority": "critical",
+      "tags": [
+        "responses",
+        "blocking"
+      ],
+      "files_to_create": [
+        "pkg/memory/responses.go",
+        "pkg/memory/responses_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-038-response-generation",
+      "pr_labels": [
+        "responses",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-038b",
+      "title": "Load and Index Sharp-Edges YAML",
+      "description": "Load sharp-edges.yaml files from all agent directories and build searchable index for pattern matching",
+      "file": "tickets/session_archive/038b.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-038"
+      ],
+      "blocks": [
+        "GOgent-038c"
+      ],
+      "priority": "major",
+      "tags": [
+        "pattern-matching",
+        "sharp-edges-index",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [
+        "pkg/memory/pattern_matching.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-038b-load-sharp-edges-index",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-038c",
+      "title": "Implement Pattern Similarity Matching",
+      "description": "Match current sharp edge against indexed templates using multi-signal similarity scoring",
+      "file": "tickets/session_archive/038c.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "0.75h",
+      "dependencies": [
+        "GOgent-038b"
+      ],
+      "blocks": [
+        "GOgent-038d"
+      ],
+      "priority": "major",
+      "tags": [
+        "similarity-scoring",
+        "pattern-matching",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-038c-similarity-matching",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-038d",
+      "title": "Inject Remediation Suggestions in Blocking Response",
+      "description": "Enhance GenerateBlockingResponse() to include matched patterns and remediation suggestions from sharp-edges.yaml",
+      "file": "tickets/session_archive/038d.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-038c"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "remediation-suggestions",
+        "blocking-response",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-038d-remediation-injection",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-039",
+      "title": "Sharp Edge Integration Tests",
+      "description": "Test complete sharp edge detection workflow",
+      "file": "tickets/session_archive/039.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-037",
+        "GOgent-038"
+      ],
+      "blocks": [
+        "GOgent-040"
+      ],
+      "priority": "high",
+      "tags": [
+        "testing",
+        "integration"
+      ],
+      "files_to_create": [
+        "test/integration/sharp_edge_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-039-sharp-edge-integration",
+      "pr_labels": [
+        "testing",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-040",
+      "title": "Build gogent-sharp-edge CLI",
+      "description": "Build sharp-edge-detector hook binary",
+      "file": "tickets/session_archive/040.md",
+      "week": 2,
+      "day": 6,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-039"
+      ],
+      "blocks": [
+        "GOgent-097"
+      ],
+      "priority": "critical",
+      "tags": [
+        "cli",
+        "binary"
+      ],
+      "files_to_create": [
+        "cmd/gogent-sharp-edge/main.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-040-gogent-sharp-edge-cli",
+      "pr_labels": [
+        "cli",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-041",
+      "title": "Intent Classification & Keyword Extraction",
+      "description": "Automatic classification and keyword extraction for user intents",
+      "file": "tickets/session_archive/041.md",
+      "time_estimate": "3h",
+      "dependencies": [
+        "GOgent-037d"
+      ],
+      "blocks": [
+        "GOgent-041b",
+        "GOgent-041c"
+      ],
+      "priority": "medium",
+      "tags": [
+        "classification",
+        "behavioral-learning"
+      ],
+      "files_to_create": [
+        "pkg/session/intent_classifier.go",
+        "pkg/session/keyword_extractor.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-041b",
+      "title": "Weekly Intent Summary & Preference Drift Detection",
+      "description": "Integrate intent patterns into weekly aggregation with drift detection",
+      "file": "tickets/session_archive/041b.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-041",
+        "GOgent-029f"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "aggregation",
+        "weekly",
+        "behavioral-learning"
+      ],
+      "files_to_create": [
+        "pkg/session/intent_aggregation.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-041c",
+      "title": "Intent Outcome Tracking",
+      "description": "Track whether user intents were honored during session",
+      "file": "tickets/session_archive/041c.md",
+      "time_estimate": "3h",
+      "dependencies": [
+        "GOgent-041"
+      ],
+      "blocks": [],
+      "priority": "low",
+      "tags": [
+        "outcome",
+        "behavioral-learning",
+        "feedback-loop"
+      ],
+      "files_to_create": [
+        "pkg/session/intent_outcomes.go"
+      ],
+      "tests_required": true,
       "status": "pending"
     },
     {
@@ -2681,561 +3331,6 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-031",
-      "title": "Archive Session Files",
-      "description": "Copy transcript, move learnings/violations to archive",
-      "file": "tickets/session_archive/031.md",
-      "week": 2,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [],
-      "blocks": [
-        "GOgent-032"
-      ],
-      "priority": "high",
-      "tags": [
-        "archival",
-        "files"
-      ],
-      "files_to_create": [
-        "pkg/session/archive.go",
-        "pkg/session/archive_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-031-archive-files",
-      "pr_labels": [
-        "archival",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-032",
-      "title": "Session Archive Integration Test",
-      "description": "End-to-end test of session archive workflow",
-      "file": "tickets/session_archive/032.md",
-      "week": 2,
-      "day": 3,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-028",
-        "GOgent-029",
-        "GOgent-030",
-        "GOgent-031"
-      ],
-      "blocks": [
-        "GOgent-033"
-      ],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "test/integration/session_archive_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-032-session-archive-integration",
-      "pr_labels": [
-        "testing",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-033",
-      "title": "Build gogent-archive CLI",
-      "description": "Build session-archive hook binary",
-      "file": "tickets/session_archive/033.md",
-      "week": 2,
-      "day": 3,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-032"
-      ],
-      "blocks": [
-        "GOgent-096"
-      ],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-archive/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-033-gogent-archive-cli",
-      "pr_labels": [
-        "cli",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-034",
-      "title": "Parse PostToolUse Event",
-      "description": "Parse PostToolUse events with tool_response",
-      "file": "tickets/session_archive/034.md",
-      "week": 2,
-      "day": 4,
-      "time_estimate": "1h",
-      "dependencies": [],
-      "blocks": [
-        "GOgent-035",
-        "GOgent-036"
-      ],
-      "priority": "high",
-      "tags": [
-        "parsing",
-        "events"
-      ],
-      "files_to_create": [
-        "pkg/memory/events.go",
-        "pkg/memory/events_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-034-parse-post-tool-use",
-      "pr_labels": [
-        "parsing",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-035",
-      "title": "Failure Detection Logic",
-      "description": "Detect failures from success flags, exit codes, error patterns",
-      "file": "tickets/session_archive/035.md",
-      "week": 2,
-      "day": 4,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-034"
-      ],
-      "blocks": [
-        "GOgent-036"
-      ],
-      "priority": "critical",
-      "tags": [
-        "detection",
-        "failures"
-      ],
-      "files_to_create": [
-        "pkg/memory/detection.go",
-        "pkg/memory/detection_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-035-failure-detection",
-      "pr_labels": [
-        "detection",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-036",
-      "title": "Consecutive Failure Tracking",
-      "description": "Track failures per file within 5-minute sliding window",
-      "file": "tickets/session_archive/036.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-034",
-        "GOgent-035"
-      ],
-      "blocks": [
-        "GOgent-036b",
-        "GOgent-037",
-        "GOgent-038"
-      ],
-      "priority": "critical",
-      "tags": [
-        "tracking",
-        "failures"
-      ],
-      "files_to_create": [
-        "pkg/memory/tracker.go",
-        "pkg/memory/tracker_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-036-failure-tracking",
-      "pr_labels": [
-        "tracking",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-036b",
-      "title": "Track Failures by File + Error Type",
-      "description": "Refine failure tracking to use file + error_type composite key instead of file-only, preventing false positives",
-      "file": "tickets/session_archive/036b.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-036"
-      ],
-      "blocks": [
-        "GOgent-036c"
-      ],
-      "priority": "major",
-      "tags": [
-        "composite-key",
-        "false-positive-fix",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-036b-composite-failure-key",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-036c",
-      "title": "Extract Function Name from Stack Traces (Optional)",
-      "description": "Parse stack traces to extract function context, further refining failure tracking from file+error to file+error+function",
-      "file": "tickets/session_archive/036c.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-036b"
-      ],
-      "blocks": [],
-      "priority": "major",
-      "tags": [
-        "stack-trace-parsing",
-        "function-level-tracking",
-        "enhancement",
-        "phase-3",
-        "optional"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-036c-function-extraction",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3",
-        "optional"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-037",
-      "title": "Sharp Edge Capture",
-      "description": "Write sharp edges to pending-learnings.jsonl at threshold",
-      "file": "tickets/session_archive/037.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-036"
-      ],
-      "blocks": [
-        "GOgent-037b",
-        "GOgent-039"
-      ],
-      "priority": "high",
-      "tags": [
-        "capture",
-        "learnings"
-      ],
-      "files_to_create": [
-        "pkg/memory/capture.go",
-        "pkg/memory/capture_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-037-sharp-edge-capture",
-      "pr_labels": [
-        "capture",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-037b",
-      "title": "Extract 5-Line Code Context Window",
-      "description": "Extract 5-line code context window around error location to provide visual context in sharp edges",
-      "file": "tickets/session_archive/037b.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-037"
-      ],
-      "blocks": [
-        "GOgent-037c"
-      ],
-      "priority": "high",
-      "tags": [
-        "code-context",
-        "sharp-edges",
-        "enhancement",
-        "phase-2"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-037b-code-context",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-2"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-037c",
-      "title": "Log Attempted Changes from Tool Input",
-      "description": "Capture what was attempted during tool failures by extracting old_string→new_string from Edit, content preview from Write, and commands from Bash",
-      "file": "tickets/session_archive/037c.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-037b"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "attempted-change-logging",
-        "sharp-edges",
-        "enhancement",
-        "phase-2"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-037c-log-attempts",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-2"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-038",
-      "title": "Hook Response Generation",
-      "description": "Generate blocking/warning/pass-through responses based on count",
-      "file": "tickets/session_archive/038.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-008a",
-        "GOgent-036"
-      ],
-      "blocks": [
-        "GOgent-038b",
-        "GOgent-039"
-      ],
-      "priority": "critical",
-      "tags": [
-        "responses",
-        "blocking"
-      ],
-      "files_to_create": [
-        "pkg/memory/responses.go",
-        "pkg/memory/responses_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-038-response-generation",
-      "pr_labels": [
-        "responses",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-038b",
-      "title": "Load and Index Sharp-Edges YAML",
-      "description": "Load sharp-edges.yaml files from all agent directories and build searchable index for pattern matching",
-      "file": "tickets/session_archive/038b.md",
-      "week": 2,
-      "day": 6,
-      "time_estimate": "0.75h",
-      "dependencies": [
-        "GOgent-038"
-      ],
-      "blocks": [
-        "GOgent-038c"
-      ],
-      "priority": "major",
-      "tags": [
-        "pattern-matching",
-        "sharp-edges-index",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [
-        "pkg/memory/pattern_matching.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-038b-load-sharp-edges-index",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-038c",
-      "title": "Implement Pattern Similarity Matching",
-      "description": "Match current sharp edge against indexed templates using multi-signal similarity scoring",
-      "file": "tickets/session_archive/038c.md",
-      "week": 2,
-      "day": 6,
-      "time_estimate": "0.75h",
-      "dependencies": [
-        "GOgent-038b"
-      ],
-      "blocks": [
-        "GOgent-038d"
-      ],
-      "priority": "major",
-      "tags": [
-        "similarity-scoring",
-        "pattern-matching",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-038c-similarity-matching",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-038d",
-      "title": "Inject Remediation Suggestions in Blocking Response",
-      "description": "Enhance GenerateBlockingResponse() to include matched patterns and remediation suggestions from sharp-edges.yaml",
-      "file": "tickets/session_archive/038d.md",
-      "week": 2,
-      "day": 6,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-038c"
-      ],
-      "blocks": [],
-      "priority": "major",
-      "tags": [
-        "remediation-suggestions",
-        "blocking-response",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-038d-remediation-injection",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-039",
-      "title": "Sharp Edge Integration Tests",
-      "description": "Test complete sharp edge detection workflow",
-      "file": "tickets/session_archive/039.md",
-      "week": 2,
-      "day": 6,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-037",
-        "GOgent-038"
-      ],
-      "blocks": [
-        "GOgent-040"
-      ],
-      "priority": "high",
-      "tags": [
-        "testing",
-        "integration"
-      ],
-      "files_to_create": [
-        "test/integration/sharp_edge_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-039-sharp-edge-integration",
-      "pr_labels": [
-        "testing",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-040",
-      "title": "Build gogent-sharp-edge CLI",
-      "description": "Build sharp-edge-detector hook binary",
-      "file": "tickets/session_archive/040.md",
-      "week": 2,
-      "day": 6,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-039"
-      ],
-      "blocks": [
-        "GOgent-097"
-      ],
-      "priority": "critical",
-      "tags": [
-        "cli",
-        "binary"
-      ],
-      "files_to_create": [
-        "cmd/gogent-sharp-edge/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-040-gogent-sharp-edge-cli",
-      "pr_labels": [
-        "cli",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
       "id": "GOgent-094",
       "title": "Baseline Re-measurement (Post-Migration)",
       "description": "Re-run baseline benchmarks to measure performance gains from Go migration",
@@ -3469,101 +3564,6 @@
         "critical"
       ],
       "acceptance_criteria_count": 8,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-037d",
-      "title": "User Intent Capture Hook",
-      "description": "PostToolUse hook to capture user intents from AskUserQuestion responses",
-      "file": "tickets/session_archive/037d.md",
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-029a",
-        "GOgent-037"
-      ],
-      "blocks": [
-        "GOgent-041"
-      ],
-      "priority": "high",
-      "tags": [
-        "capture",
-        "hook",
-        "behavioral-learning"
-      ],
-      "files_to_create": [
-        "cmd/gogent-capture-intent/main.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-041",
-      "title": "Intent Classification & Keyword Extraction",
-      "description": "Automatic classification and keyword extraction for user intents",
-      "file": "tickets/session_archive/041.md",
-      "time_estimate": "3h",
-      "dependencies": [
-        "GOgent-037d"
-      ],
-      "blocks": [
-        "GOgent-041b",
-        "GOgent-041c"
-      ],
-      "priority": "medium",
-      "tags": [
-        "classification",
-        "behavioral-learning"
-      ],
-      "files_to_create": [
-        "pkg/session/intent_classifier.go",
-        "pkg/session/keyword_extractor.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-041b",
-      "title": "Weekly Intent Summary & Preference Drift Detection",
-      "description": "Integrate intent patterns into weekly aggregation with drift detection",
-      "file": "tickets/session_archive/041b.md",
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-041",
-        "GOgent-029f"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "aggregation",
-        "weekly",
-        "behavioral-learning"
-      ],
-      "files_to_create": [
-        "pkg/session/intent_aggregation.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-041c",
-      "title": "Intent Outcome Tracking",
-      "description": "Track whether user intents were honored during session",
-      "file": "tickets/session_archive/041c.md",
-      "time_estimate": "3h",
-      "dependencies": [
-        "GOgent-041"
-      ],
-      "blocks": [],
-      "priority": "low",
-      "tags": [
-        "outcome",
-        "behavioral-learning",
-        "feedback-loop"
-      ],
-      "files_to_create": [
-        "pkg/session/intent_outcomes.go"
-      ],
-      "tests_required": true,
       "status": "pending"
     }
   ]

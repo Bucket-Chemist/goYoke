@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -225,24 +226,32 @@ func (g *DefaultGenerator) GenerateWithParams(params FuzzParams) interface{} {
 }
 
 // weightedChoice selects a key based on weights.
+// Keys are sorted for deterministic results with the same seed.
 func weightedChoice(rng *rand.Rand, weights map[string]float64) string {
+	// Sort keys for deterministic iteration order
+	keys := make([]string, 0, len(weights))
+	for k := range weights {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	var total float64
-	for _, w := range weights {
-		total += w
+	for _, k := range keys {
+		total += weights[k]
 	}
 
 	r := rng.Float64() * total
 	var cumulative float64
-	for k, w := range weights {
-		cumulative += w
+	for _, k := range keys {
+		cumulative += weights[k]
 		if r <= cumulative {
 			return k
 		}
 	}
 
-	// Fallback to first key
-	for k := range weights {
-		return k
+	// Fallback to first key (sorted)
+	if len(keys) > 0 {
+		return keys[0]
 	}
 	return ""
 }
