@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -132,6 +133,22 @@ func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
 	cmd := exec.CommandContext(ctx, cmdPath)
 	cmd.Stdin = bytes.NewReader(inputBytes)
 	cmd.Env = r.buildEnv()
+
+	// Create a new process group so we can kill the entire tree on timeout.
+	// Without this, child processes (e.g., sleep in a bash script) survive
+	// context cancellation because CommandContext only signals the direct child.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	// Cancel sends SIGKILL to the process group (negative PID).
+	// This ensures all descendants are terminated on context deadline.
+	cmd.Cancel = func() error {
+		// Kill entire process group by sending signal to negative PGID
+		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+
+	// WaitDelay gives child processes time to exit after Cancel before
+	// forcibly terminating. 100ms is sufficient for clean shutdown.
+	cmd.WaitDelay = 100 * time.Millisecond
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
