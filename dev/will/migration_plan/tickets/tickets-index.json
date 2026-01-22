@@ -3282,7 +3282,7 @@
         "test/simulation/fixtures/schemas/agents-index.json"
       ],
       "tests_required": false,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030m",
@@ -3310,7 +3310,7 @@
         "test/simulation/harness/types_test.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030n",
