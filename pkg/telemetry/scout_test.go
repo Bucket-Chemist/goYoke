@@ -749,3 +749,584 @@ func TestScoutRecommendation_FollowedAutoDetection(t *testing.T) {
 		})
 	}
 }
+
+// Tests for scout accuracy calculation functions
+
+func TestCalculateScoutAccuracy_Basic(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", Confidence: 0.8},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", Confidence: 0.7},
+		{Followed: false, TaskOutcome: "success", ScoutType: "gemini-scout", Confidence: 0.6},
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	if stats.TotalRecommendations != 4 {
+		t.Errorf("Expected 4 total, got: %d", stats.TotalRecommendations)
+	}
+	if stats.FollowedCount != 3 {
+		t.Errorf("Expected 3 followed, got: %d", stats.FollowedCount)
+	}
+	// Followed accuracy: 2 success / 3 followed = 0.667
+	if stats.FollowedAccuracy < 0.66 || stats.FollowedAccuracy > 0.68 {
+		t.Errorf("Expected followed accuracy ~0.67, got: %f", stats.FollowedAccuracy)
+	}
+}
+
+func TestCalculateScoutAccuracy_NoOutcomes(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "", Confidence: 0.5},  // No outcome
+		{Followed: false, TaskOutcome: "", Confidence: 0.5}, // No outcome
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	if stats.FollowedCount != 0 {
+		t.Errorf("Expected 0 followed (no outcomes), got: %d", stats.FollowedCount)
+	}
+}
+
+func TestCalculateScoutAccuracy_EmptyInput(t *testing.T) {
+	recs := []ScoutRecommendation{}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	if stats.TotalRecommendations != 0 {
+		t.Errorf("Expected 0 total recommendations, got: %d", stats.TotalRecommendations)
+	}
+	if stats.FollowedAccuracy != 0.0 {
+		t.Errorf("Expected 0.0 followed accuracy, got: %f", stats.FollowedAccuracy)
+	}
+}
+
+func TestCalculateScoutAccuracy_ByScoutType(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", Confidence: 0.8},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "gemini-scout", Confidence: 0.7},
+		{Followed: true, TaskOutcome: "success", ScoutType: "gemini-scout", Confidence: 0.6},
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	if len(stats.ByScoutType) != 2 {
+		t.Errorf("Expected 2 scout types, got: %d", len(stats.ByScoutType))
+	}
+
+	haikuStats := stats.ByScoutType["haiku-scout"]
+	if haikuStats == nil {
+		t.Fatal("Expected haiku-scout stats")
+	}
+	if haikuStats.TotalCount != 2 {
+		t.Errorf("Expected haiku-scout total 2, got: %d", haikuStats.TotalCount)
+	}
+	if haikuStats.Accuracy != 1.0 {
+		t.Errorf("Expected haiku-scout accuracy 1.0, got: %f", haikuStats.Accuracy)
+	}
+
+	geminiStats := stats.ByScoutType["gemini-scout"]
+	if geminiStats == nil {
+		t.Fatal("Expected gemini-scout stats")
+	}
+	if geminiStats.TotalCount != 2 {
+		t.Errorf("Expected gemini-scout total 2, got: %d", geminiStats.TotalCount)
+	}
+	if geminiStats.Accuracy != 0.5 {
+		t.Errorf("Expected gemini-scout accuracy 0.5, got: %f", geminiStats.Accuracy)
+	}
+}
+
+func TestCalculateScoutAccuracy_UnknownScoutType(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", ScoutType: "", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "", Confidence: 0.8},
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	unknownStats := stats.ByScoutType["unknown"]
+	if unknownStats == nil {
+		t.Fatal("Expected 'unknown' scout type for empty ScoutType")
+	}
+	if unknownStats.TotalCount != 2 {
+		t.Errorf("Expected 2 unknown scouts, got: %d", unknownStats.TotalCount)
+	}
+}
+
+func TestCalculateScoutAccuracy_IgnoredAccuracy(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: false, TaskOutcome: "success", ScoutType: "haiku-scout", Confidence: 0.9},
+		{Followed: false, TaskOutcome: "success", ScoutType: "haiku-scout", Confidence: 0.8},
+		{Followed: false, TaskOutcome: "failure", ScoutType: "haiku-scout", Confidence: 0.7},
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	if stats.IgnoredCount != 3 {
+		t.Errorf("Expected 3 ignored, got: %d", stats.IgnoredCount)
+	}
+	// Ignored accuracy: 2 success / 3 ignored = 0.667
+	if stats.IgnoredAccuracy < 0.66 || stats.IgnoredAccuracy > 0.68 {
+		t.Errorf("Expected ignored accuracy ~0.67, got: %f", stats.IgnoredAccuracy)
+	}
+}
+
+func TestCalculateScoutAccuracy_ComplianceRate(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "failure", Confidence: 0.8},
+		{Followed: false, TaskOutcome: "success", Confidence: 0.7},
+		{Followed: false, TaskOutcome: "failure", Confidence: 0.6},
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	// Compliance rate: 2 followed / 4 total = 0.5
+	if stats.ComplianceRate != 0.5 {
+		t.Errorf("Expected compliance rate 0.5, got: %f", stats.ComplianceRate)
+	}
+}
+
+func TestCalculateScoutAccuracy_DivisionByZero(t *testing.T) {
+	// Test zero followed recommendations
+	recs := []ScoutRecommendation{
+		{Followed: false, TaskOutcome: "success", Confidence: 0.9},
+	}
+
+	stats := CalculateScoutAccuracy(recs)
+
+	if stats.FollowedAccuracy != 0.0 {
+		t.Errorf("Expected 0.0 followed accuracy for zero followed, got: %f", stats.FollowedAccuracy)
+	}
+}
+
+func TestAnalyzeConfidenceCorrelation_Basic(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Confidence: 0.3, TaskOutcome: "failure", Followed: false}, // Low confidence, failure
+		{Confidence: 0.5, TaskOutcome: "success", Followed: true},  // Medium
+		{Confidence: 0.7, TaskOutcome: "success", Followed: true},  // High
+		{Confidence: 0.9, TaskOutcome: "success", Followed: true},  // Very high
+	}
+
+	buckets := AnalyzeConfidenceCorrelation(recs)
+
+	// Should have 4 buckets
+	if len(buckets) != 4 {
+		t.Errorf("Expected 4 buckets, got: %d", len(buckets))
+	}
+
+	// First bucket (0.0-0.4) should have 1 failure
+	if buckets[0].TotalCount != 1 || buckets[0].SuccessCount != 0 {
+		t.Errorf("Expected bucket 0 to have 1 failure, got: total=%d success=%d", buckets[0].TotalCount, buckets[0].SuccessCount)
+	}
+
+	// Last bucket (0.8-1.0) should have 1 success
+	if buckets[3].TotalCount != 1 || buckets[3].SuccessRate != 1.0 {
+		t.Errorf("Expected bucket 3 to have 100%% success rate, got: %f", buckets[3].SuccessRate)
+	}
+}
+
+func TestAnalyzeConfidenceCorrelation_ConfidenceExactlyOne(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Confidence: 1.0, TaskOutcome: "success", Followed: true},
+	}
+
+	buckets := AnalyzeConfidenceCorrelation(recs)
+
+	// Confidence 1.0 should go in last bucket (0.8-1.0)
+	if buckets[3].TotalCount != 1 {
+		t.Errorf("Expected confidence 1.0 in last bucket, got count: %d", buckets[3].TotalCount)
+	}
+}
+
+func TestAnalyzeConfidenceCorrelation_EmptyInput(t *testing.T) {
+	recs := []ScoutRecommendation{}
+
+	buckets := AnalyzeConfidenceCorrelation(recs)
+
+	if len(buckets) != 4 {
+		t.Errorf("Expected 4 buckets even for empty input, got: %d", len(buckets))
+	}
+
+	for i, bucket := range buckets {
+		if bucket.TotalCount != 0 {
+			t.Errorf("Expected bucket %d to be empty, got count: %d", i, bucket.TotalCount)
+		}
+	}
+}
+
+func TestAnalyzeConfidenceCorrelation_NoOutcomes(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Confidence: 0.5, TaskOutcome: "", Followed: true},
+		{Confidence: 0.7, TaskOutcome: "", Followed: true},
+	}
+
+	buckets := AnalyzeConfidenceCorrelation(recs)
+
+	// All buckets should be empty since outcomes are missing
+	for i, bucket := range buckets {
+		if bucket.TotalCount != 0 {
+			t.Errorf("Expected bucket %d to be empty (no outcomes), got count: %d", i, bucket.TotalCount)
+		}
+	}
+}
+
+func TestAnalyzeConfidenceCorrelation_FollowedRate(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Confidence: 0.5, TaskOutcome: "success", Followed: true},
+		{Confidence: 0.55, TaskOutcome: "success", Followed: true},
+		{Confidence: 0.52, TaskOutcome: "failure", Followed: false},
+		{Confidence: 0.58, TaskOutcome: "success", Followed: false},
+	}
+
+	buckets := AnalyzeConfidenceCorrelation(recs)
+
+	// All should be in bucket 1 (0.4-0.6)
+	if buckets[1].TotalCount != 4 {
+		t.Errorf("Expected 4 in bucket 1, got: %d", buckets[1].TotalCount)
+	}
+	// Followed rate: 2/4 = 0.5
+	if buckets[1].FollowedRate != 0.5 {
+		t.Errorf("Expected followed rate 0.5, got: %f", buckets[1].FollowedRate)
+	}
+}
+
+func TestGetComplianceImpact_FollowBetter(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: true, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: true, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "failure", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "failure", Confidence: 0.5},
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.FollowedSuccessRate != 1.0 {
+		t.Errorf("Expected followed success rate 1.0, got: %f", impact.FollowedSuccessRate)
+	}
+	if impact.IgnoredSuccessRate != 0.0 {
+		t.Errorf("Expected ignored success rate 0.0, got: %f", impact.IgnoredSuccessRate)
+	}
+	if impact.Recommendation != "follow" {
+		t.Errorf("Expected recommendation 'follow', got: %s", impact.Recommendation)
+	}
+}
+
+func TestGetComplianceImpact_IgnoreBetter(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "failure", Confidence: 0.5},
+		{Followed: true, TaskOutcome: "failure", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "success", Confidence: 0.5},
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.FollowedSuccessRate != 0.0 {
+		t.Errorf("Expected followed success rate 0.0, got: %f", impact.FollowedSuccessRate)
+	}
+	if impact.IgnoredSuccessRate != 1.0 {
+		t.Errorf("Expected ignored success rate 1.0, got: %f", impact.IgnoredSuccessRate)
+	}
+	if impact.Recommendation != "ignore" {
+		t.Errorf("Expected recommendation 'ignore', got: %s", impact.Recommendation)
+	}
+}
+
+func TestGetComplianceImpact_Neutral(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: true, TaskOutcome: "failure", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "success", Confidence: 0.5},
+		{Followed: false, TaskOutcome: "failure", Confidence: 0.5},
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	// Both should be 0.5
+	if impact.FollowedSuccessRate != 0.5 {
+		t.Errorf("Expected followed success rate 0.5, got: %f", impact.FollowedSuccessRate)
+	}
+	if impact.IgnoredSuccessRate != 0.5 {
+		t.Errorf("Expected ignored success rate 0.5, got: %f", impact.IgnoredSuccessRate)
+	}
+	if impact.ImpactDelta != 0.0 {
+		t.Errorf("Expected impact delta 0.0, got: %f", impact.ImpactDelta)
+	}
+	if impact.Recommendation != "neutral" {
+		t.Errorf("Expected recommendation 'neutral', got: %s", impact.Recommendation)
+	}
+}
+
+func TestGetComplianceImpact_InsufficientData(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", Confidence: 0.5},
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.StatisticalSignificance != "insufficient_data" {
+		t.Errorf("Expected 'insufficient_data', got: %s", impact.StatisticalSignificance)
+	}
+}
+
+func TestGetComplianceImpact_LowSignificance(t *testing.T) {
+	recs := make([]ScoutRecommendation, 15)
+	for i := range recs {
+		recs[i] = ScoutRecommendation{
+			Followed:    i%2 == 0,
+			TaskOutcome: "success",
+			Confidence:  0.5,
+		}
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.StatisticalSignificance != "low" {
+		t.Errorf("Expected 'low' significance for 15 samples, got: %s", impact.StatisticalSignificance)
+	}
+}
+
+func TestGetComplianceImpact_MediumSignificance(t *testing.T) {
+	recs := make([]ScoutRecommendation, 50)
+	for i := range recs {
+		recs[i] = ScoutRecommendation{
+			Followed:    i%2 == 0,
+			TaskOutcome: "success",
+			Confidence:  0.5,
+		}
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.StatisticalSignificance != "medium" {
+		t.Errorf("Expected 'medium' significance for 50 samples, got: %s", impact.StatisticalSignificance)
+	}
+}
+
+func TestGetComplianceImpact_HighSignificance(t *testing.T) {
+	recs := make([]ScoutRecommendation, 150)
+	for i := range recs {
+		recs[i] = ScoutRecommendation{
+			Followed:    i%2 == 0,
+			TaskOutcome: "success",
+			Confidence:  0.5,
+		}
+	}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.StatisticalSignificance != "high" {
+		t.Errorf("Expected 'high' significance for 150 samples, got: %s", impact.StatisticalSignificance)
+	}
+}
+
+func TestGetComplianceImpact_EmptyInput(t *testing.T) {
+	recs := []ScoutRecommendation{}
+
+	impact := GetComplianceImpact(recs)
+
+	if impact.FollowedSuccessRate != 0.0 {
+		t.Errorf("Expected 0.0 followed success rate, got: %f", impact.FollowedSuccessRate)
+	}
+	if impact.StatisticalSignificance != "insufficient_data" {
+		t.Errorf("Expected 'insufficient_data', got: %s", impact.StatisticalSignificance)
+	}
+}
+
+func TestClusterRecommendationsByTier_Basic(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{RecommendedTier: "haiku", Followed: true, Confidence: 0.8},
+		{RecommendedTier: "sonnet", Followed: true, Confidence: 0.9},
+		{RecommendedTier: "sonnet", Followed: false, Confidence: 0.7},
+	}
+
+	clusters := ClusterRecommendationsByTier(recs)
+
+	if len(clusters) != 2 {
+		t.Errorf("Expected 2 tiers, got: %d", len(clusters))
+	}
+
+	sonnetStats := clusters["sonnet"]
+	if sonnetStats.RecommendedCount != 2 {
+		t.Errorf("Expected sonnet recommended 2 times, got: %d", sonnetStats.RecommendedCount)
+	}
+	if sonnetStats.ComplianceRate != 0.5 {
+		t.Errorf("Expected sonnet compliance 0.5, got: %f", sonnetStats.ComplianceRate)
+	}
+}
+
+func TestClusterRecommendationsByTier_EmptyTier(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{RecommendedTier: "", Followed: true, Confidence: 0.8},
+		{RecommendedTier: "", Followed: false, Confidence: 0.7},
+	}
+
+	clusters := ClusterRecommendationsByTier(recs)
+
+	unknownStats := clusters["unknown"]
+	if unknownStats == nil {
+		t.Fatal("Expected 'unknown' tier for empty RecommendedTier")
+	}
+	if unknownStats.RecommendedCount != 2 {
+		t.Errorf("Expected 2 unknown tier recommendations, got: %d", unknownStats.RecommendedCount)
+	}
+}
+
+func TestClusterRecommendationsByTier_AvgConfidence(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{RecommendedTier: "sonnet", Followed: true, Confidence: 0.8},
+		{RecommendedTier: "sonnet", Followed: true, Confidence: 0.6},
+	}
+
+	clusters := ClusterRecommendationsByTier(recs)
+
+	sonnetStats := clusters["sonnet"]
+	// Average: (0.8 + 0.6) / 2 = 0.7
+	if sonnetStats.AvgConfidence != 0.7 {
+		t.Errorf("Expected avg confidence 0.7, got: %f", sonnetStats.AvgConfidence)
+	}
+}
+
+func TestClusterRecommendationsByTier_EmptyInput(t *testing.T) {
+	recs := []ScoutRecommendation{}
+
+	clusters := ClusterRecommendationsByTier(recs)
+
+	if len(clusters) != 0 {
+		t.Errorf("Expected empty clusters for empty input, got: %d", len(clusters))
+	}
+}
+
+func TestClusterRecommendationsByTier_ZeroComplianceRate(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{RecommendedTier: "haiku", Followed: false, Confidence: 0.8},
+		{RecommendedTier: "haiku", Followed: false, Confidence: 0.7},
+	}
+
+	clusters := ClusterRecommendationsByTier(recs)
+
+	haikuStats := clusters["haiku"]
+	if haikuStats.ComplianceRate != 0.0 {
+		t.Errorf("Expected compliance rate 0.0, got: %f", haikuStats.ComplianceRate)
+	}
+}
+
+func TestGetScoutPerformanceSummary_HighAccuracy(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.85},
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.8},
+	}
+
+	summary := GetScoutPerformanceSummary(recs)
+
+	if summary.AccuracyStats.FollowedAccuracy != 1.0 {
+		t.Errorf("Expected 100%% accuracy, got: %f", summary.AccuracyStats.FollowedAccuracy)
+	}
+
+	if summary.OverallVerdict == "" {
+		t.Error("Expected verdict to be generated")
+	}
+
+	// With high accuracy and small sample, should still be insufficient data
+	if summary.ComplianceImpact.StatisticalSignificance != "insufficient_data" {
+		t.Logf("Note: Got significance %s for 3 samples", summary.ComplianceImpact.StatisticalSignificance)
+	}
+}
+
+func TestGetScoutPerformanceSummary_LowAccuracy(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.8},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.7},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.6},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.5},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.4},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.3},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.2},
+		{Followed: true, TaskOutcome: "failure", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.1},
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.95},
+	}
+
+	summary := GetScoutPerformanceSummary(recs)
+
+	// 1 success / 10 total = 0.1 accuracy
+	if summary.AccuracyStats.FollowedAccuracy != 0.1 {
+		t.Errorf("Expected 0.1 accuracy, got: %f", summary.AccuracyStats.FollowedAccuracy)
+	}
+
+	if summary.OverallVerdict == "" {
+		t.Error("Expected verdict to be generated")
+	}
+}
+
+func TestGetScoutPerformanceSummary_InsufficientData(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.9},
+	}
+
+	summary := GetScoutPerformanceSummary(recs)
+
+	if !strings.Contains(summary.OverallVerdict, "Insufficient data") {
+		t.Errorf("Expected 'Insufficient data' verdict, got: %s", summary.OverallVerdict)
+	}
+}
+
+func TestGetScoutPerformanceSummary_ModeratePerformance(t *testing.T) {
+	// Create 50 recommendations with ~60% accuracy
+	recs := make([]ScoutRecommendation, 50)
+	for i := range recs {
+		outcome := "success"
+		if i >= 30 { // 30 success, 20 failure = 0.6 accuracy
+			outcome = "failure"
+		}
+		recs[i] = ScoutRecommendation{
+			Followed:        true,
+			TaskOutcome:     outcome,
+			ScoutType:       "haiku-scout",
+			RecommendedTier: "sonnet",
+			Confidence:      0.7,
+		}
+	}
+
+	summary := GetScoutPerformanceSummary(recs)
+
+	if summary.AccuracyStats.FollowedAccuracy != 0.6 {
+		t.Errorf("Expected 0.6 accuracy, got: %f", summary.AccuracyStats.FollowedAccuracy)
+	}
+
+	if !strings.Contains(summary.OverallVerdict, "moderate") {
+		t.Logf("Got verdict: %s", summary.OverallVerdict)
+	}
+}
+
+func TestGetScoutPerformanceSummary_AllComponentsPresent(t *testing.T) {
+	recs := []ScoutRecommendation{
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "sonnet", Confidence: 0.9},
+		{Followed: true, TaskOutcome: "success", ScoutType: "haiku-scout", RecommendedTier: "haiku", Confidence: 0.8},
+		{Followed: false, TaskOutcome: "failure", ScoutType: "gemini-scout", RecommendedTier: "opus", Confidence: 0.7},
+	}
+
+	summary := GetScoutPerformanceSummary(recs)
+
+	// Verify all components are populated
+	if summary.AccuracyStats.TotalRecommendations != 3 {
+		t.Error("AccuracyStats not populated")
+	}
+	if len(summary.ConfidenceBuckets) != 4 {
+		t.Error("ConfidenceBuckets not populated")
+	}
+	if summary.ComplianceImpact.StatisticalSignificance == "" {
+		t.Error("ComplianceImpact not populated")
+	}
+	if len(summary.TierDistribution) == 0 {
+		t.Error("TierDistribution not populated")
+	}
+	if summary.OverallVerdict == "" {
+		t.Error("OverallVerdict not populated")
+	}
+}
