@@ -181,7 +181,17 @@ func findHarnessDir() (string, error) {
 
 // findBinary locates a CLI binary.
 func findBinary(name string) (string, error) {
-	// Try ~/.local/bin first
+	// Try project bin/ directory first (for CI/local builds)
+	// Walk up from current dir to find project root with bin/
+	cwd, _ := os.Getwd()
+	for dir := cwd; dir != "/" && dir != "."; dir = filepath.Dir(dir) {
+		binPath := filepath.Join(dir, "bin", name)
+		if _, err := os.Stat(binPath); err == nil {
+			return binPath, nil
+		}
+	}
+
+	// Try ~/.local/bin (for installed binaries)
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
 		homePath := filepath.Join(homeDir, ".local", "bin", name)
