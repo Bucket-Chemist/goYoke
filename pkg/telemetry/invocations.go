@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -152,4 +153,222 @@ func appendToFile(path string, data []byte) error {
 	}
 
 	return nil
+}
+
+// AgentInvocationStats aggregates metrics for a single agent
+type AgentInvocationStats struct {
+	Agent               string            `json:"agent"`
+	TotalCount          int               `json:"total_count"`
+	SuccessCount        int               `json:"success_count"`
+	FailureCount        int               `json:"failure_count"`
+	SuccessRate         float64           `json:"success_rate"`
+	AvgDurationMs       int64             `json:"avg_duration_ms"`
+	TotalDurationMs     int64             `json:"total_duration_ms"`
+	TotalInputTokens    int               `json:"total_input_tokens"`
+	TotalOutputTokens   int               `json:"total_output_tokens"`
+	TotalThinkingTokens int               `json:"total_thinking_tokens"`
+	Samples             []AgentInvocation `json:"samples,omitempty"`
+}
+
+// TierInvocationStats aggregates metrics for a model tier
+type TierInvocationStats struct {
+	Tier              string         `json:"tier"`
+	TotalCount        int            `json:"total_count"`
+	SuccessCount      int            `json:"success_count"`
+	SuccessRate       float64        `json:"success_rate"`
+	TotalInputTokens  int            `json:"total_input_tokens"`
+	TotalOutputTokens int            `json:"total_output_tokens"`
+	AgentBreakdown    map[string]int `json:"agent_breakdown"`
+}
+
+// AgentRanking represents an agent with a sortable metric
+type AgentRanking struct {
+	Agent  string  `json:"agent"`
+	Metric float64 `json:"metric"`
+	Count  int     `json:"count"`
+}
+
+// ClusterInvocationsByAgent groups invocations by agent and computes aggregate statistics.
+// Empty agent names are normalized to "unknown".
+func ClusterInvocationsByAgent(invocations []AgentInvocation) []AgentInvocationStats {
+	agentMap := make(map[string]*AgentInvocationStats)
+
+	for _, inv := range invocations {
+		agent := inv.Agent
+		if agent == "" {
+			agent = "unknown"
+		}
+
+		if _, exists := agentMap[agent]; !exists {
+			agentMap[agent] = &AgentInvocationStats{
+				Agent:   agent,
+				Samples: []AgentInvocation{},
+			}
+		}
+
+		stats := agentMap[agent]
+		stats.TotalCount++
+		if inv.Success {
+			stats.SuccessCount++
+		} else {
+			stats.FailureCount++
+		}
+		stats.TotalDurationMs += inv.DurationMs
+		stats.TotalInputTokens += inv.InputTokens
+		stats.TotalOutputTokens += inv.OutputTokens
+		stats.TotalThinkingTokens += inv.ThinkingTokens
+
+		// Keep first 3 invocations as samples
+		if len(stats.Samples) < 3 {
+			stats.Samples = append(stats.Samples, inv)
+		}
+	}
+
+	// Calculate derived metrics
+	result := make([]AgentInvocationStats, 0, len(agentMap))
+	for _, stats := range agentMap {
+		if stats.TotalCount > 0 {
+			stats.SuccessRate = float64(stats.SuccessCount) / float64(stats.TotalCount)
+			stats.AvgDurationMs = stats.TotalDurationMs / int64(stats.TotalCount)
+		}
+		result = append(result, *stats)
+	}
+
+	// Sort by agent name for deterministic output
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Agent < result[j].Agent
+	})
+
+	return result
+}
+
+// ClusterInvocationsByTier groups invocations by model tier and computes aggregate statistics.
+// Empty tier names are normalized to "unknown".
+func ClusterInvocationsByTier(invocations []AgentInvocation) []TierInvocationStats {
+	tierMap := make(map[string]*TierInvocationStats)
+
+	for _, inv := range invocations {
+		tier := inv.Tier
+		if tier == "" {
+			tier = "unknown"
+		}
+
+		if _, exists := tierMap[tier]; !exists {
+			tierMap[tier] = &TierInvocationStats{
+				Tier:           tier,
+				AgentBreakdown: make(map[string]int),
+			}
+		}
+
+		stats := tierMap[tier]
+		stats.TotalCount++
+		if inv.Success {
+			stats.SuccessCount++
+		}
+		stats.TotalInputTokens += inv.InputTokens
+		stats.TotalOutputTokens += inv.OutputTokens
+
+		// Track agent breakdown
+		agent := inv.Agent
+		if agent == "" {
+			agent = "unknown"
+		}
+		stats.AgentBreakdown[agent]++
+	}
+
+	// Calculate derived metrics
+	result := make([]TierInvocationStats, 0, len(tierMap))
+	for _, stats := range tierMap {
+		if stats.TotalCount > 0 {
+			stats.SuccessRate = float64(stats.SuccessCount) / float64(stats.TotalCount)
+		}
+		result = append(result, *stats)
+	}
+
+	// Sort by tier name for deterministic output
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Tier < result[j].Tier
+	})
+
+	return result
+}
+
+// GetTopAgentsByUsage returns agents ranked by total invocation count.
+// Results are sorted in descending order (highest usage first).
+func GetTopAgentsByUsage(stats []AgentInvocationStats, limit int) []AgentRanking {
+	rankings := make([]AgentRanking, 0, len(stats))
+	for _, s := range stats {
+		rankings = append(rankings, AgentRanking{
+			Agent:  s.Agent,
+			Metric: float64(s.TotalCount),
+			Count:  s.TotalCount,
+		})
+	}
+
+	// Sort by metric descending
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].Metric > rankings[j].Metric
+	})
+
+	// Apply limit
+	if limit > 0 && limit < len(rankings) {
+		rankings = rankings[:limit]
+	}
+
+	return rankings
+}
+
+// GetTopAgentsByErrorRate returns agents ranked by error rate (1 - success_rate).
+// Only includes agents with at least minInvocations to avoid skew from small samples.
+// Results are sorted in descending order (highest error rate first).
+func GetTopAgentsByErrorRate(stats []AgentInvocationStats, minInvocations int, limit int) []AgentRanking {
+	rankings := make([]AgentRanking, 0, len(stats))
+	for _, s := range stats {
+		if s.TotalCount < minInvocations {
+			continue
+		}
+		errorRate := 1.0 - s.SuccessRate
+		rankings = append(rankings, AgentRanking{
+			Agent:  s.Agent,
+			Metric: errorRate,
+			Count:  s.TotalCount,
+		})
+	}
+
+	// Sort by metric descending
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].Metric > rankings[j].Metric
+	})
+
+	// Apply limit
+	if limit > 0 && limit < len(rankings) {
+		rankings = rankings[:limit]
+	}
+
+	return rankings
+}
+
+// GetTopAgentsByLatency returns agents ranked by average duration.
+// Results are sorted in descending order (highest latency first).
+func GetTopAgentsByLatency(stats []AgentInvocationStats, limit int) []AgentRanking {
+	rankings := make([]AgentRanking, 0, len(stats))
+	for _, s := range stats {
+		rankings = append(rankings, AgentRanking{
+			Agent:  s.Agent,
+			Metric: float64(s.AvgDurationMs),
+			Count:  s.TotalCount,
+		})
+	}
+
+	// Sort by metric descending
+	sort.Slice(rankings, func(i, j int) bool {
+		return rankings[i].Metric > rankings[j].Metric
+	})
+
+	// Apply limit
+	if limit > 0 && limit < len(rankings) {
+		rankings = rankings[:limit]
+	}
+
+	return rankings
 }

@@ -663,3 +663,539 @@ func TestLogInvocation_GlobalWriteFailure(t *testing.T) {
 		t.Errorf("Expected specific error message, got: %v", err)
 	}
 }
+
+// ===== ClusterInvocationsByAgent Tests =====
+
+func TestClusterInvocationsByAgent_SingleAgent(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Agent: "python-pro", Success: true, DurationMs: 1000, InputTokens: 500, OutputTokens: 250, ThinkingTokens: 100},
+		{Agent: "python-pro", Success: true, DurationMs: 2000, InputTokens: 600, OutputTokens: 300, ThinkingTokens: 150},
+		{Agent: "python-pro", Success: false, DurationMs: 500, InputTokens: 200, OutputTokens: 50, ThinkingTokens: 0},
+	}
+
+	stats := ClusterInvocationsByAgent(invocations)
+
+	if len(stats) != 1 {
+		t.Fatalf("Expected 1 agent, got %d", len(stats))
+	}
+
+	agent := stats[0]
+	if agent.Agent != "python-pro" {
+		t.Errorf("Expected agent 'python-pro', got '%s'", agent.Agent)
+	}
+	if agent.TotalCount != 3 {
+		t.Errorf("Expected TotalCount 3, got %d", agent.TotalCount)
+	}
+	if agent.SuccessCount != 2 {
+		t.Errorf("Expected SuccessCount 2, got %d", agent.SuccessCount)
+	}
+	if agent.FailureCount != 1 {
+		t.Errorf("Expected FailureCount 1, got %d", agent.FailureCount)
+	}
+	expectedSuccessRate := 2.0 / 3.0
+	if agent.SuccessRate < expectedSuccessRate-0.01 || agent.SuccessRate > expectedSuccessRate+0.01 {
+		t.Errorf("Expected SuccessRate ~%.3f, got %.3f", expectedSuccessRate, agent.SuccessRate)
+	}
+	expectedAvgDuration := int64(1166) // (1000 + 2000 + 500) / 3
+	if agent.AvgDurationMs != expectedAvgDuration {
+		t.Errorf("Expected AvgDurationMs %d, got %d", expectedAvgDuration, agent.AvgDurationMs)
+	}
+	if agent.TotalDurationMs != 3500 {
+		t.Errorf("Expected TotalDurationMs 3500, got %d", agent.TotalDurationMs)
+	}
+	if agent.TotalInputTokens != 1300 {
+		t.Errorf("Expected TotalInputTokens 1300, got %d", agent.TotalInputTokens)
+	}
+	if agent.TotalOutputTokens != 600 {
+		t.Errorf("Expected TotalOutputTokens 600, got %d", agent.TotalOutputTokens)
+	}
+	if agent.TotalThinkingTokens != 250 {
+		t.Errorf("Expected TotalThinkingTokens 250, got %d", agent.TotalThinkingTokens)
+	}
+	if len(agent.Samples) != 3 {
+		t.Errorf("Expected 3 samples, got %d", len(agent.Samples))
+	}
+}
+
+func TestClusterInvocationsByAgent_MultipleAgents(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Agent: "python-pro", Success: true, DurationMs: 1000},
+		{Agent: "orchestrator", Success: true, DurationMs: 2000},
+		{Agent: "python-pro", Success: false, DurationMs: 500},
+		{Agent: "haiku-scout", Success: true, DurationMs: 300},
+	}
+
+	stats := ClusterInvocationsByAgent(invocations)
+
+	if len(stats) != 3 {
+		t.Fatalf("Expected 3 agents, got %d", len(stats))
+	}
+
+	// Results should be sorted by agent name
+	expectedOrder := []string{"haiku-scout", "orchestrator", "python-pro"}
+	for i, expected := range expectedOrder {
+		if stats[i].Agent != expected {
+			t.Errorf("Expected agent[%d] '%s', got '%s'", i, expected, stats[i].Agent)
+		}
+	}
+
+	// Verify python-pro stats
+	pythonStats := stats[2] // "python-pro" is last alphabetically
+	if pythonStats.TotalCount != 2 {
+		t.Errorf("Expected python-pro TotalCount 2, got %d", pythonStats.TotalCount)
+	}
+	if pythonStats.SuccessCount != 1 {
+		t.Errorf("Expected python-pro SuccessCount 1, got %d", pythonStats.SuccessCount)
+	}
+	if pythonStats.FailureCount != 1 {
+		t.Errorf("Expected python-pro FailureCount 1, got %d", pythonStats.FailureCount)
+	}
+}
+
+func TestClusterInvocationsByAgent_EmptyAgent(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Agent: "", Success: true, DurationMs: 1000},
+		{Agent: "", Success: false, DurationMs: 500},
+		{Agent: "python-pro", Success: true, DurationMs: 2000},
+	}
+
+	stats := ClusterInvocationsByAgent(invocations)
+
+	if len(stats) != 2 {
+		t.Fatalf("Expected 2 agents (unknown + python-pro), got %d", len(stats))
+	}
+
+	// Find the "unknown" agent
+	var unknownStats *AgentInvocationStats
+	for i := range stats {
+		if stats[i].Agent == "unknown" {
+			unknownStats = &stats[i]
+			break
+		}
+	}
+
+	if unknownStats == nil {
+		t.Fatal("Expected 'unknown' agent not found")
+	}
+	if unknownStats.TotalCount != 2 {
+		t.Errorf("Expected unknown TotalCount 2, got %d", unknownStats.TotalCount)
+	}
+}
+
+func TestClusterInvocationsByAgent_EmptyInput(t *testing.T) {
+	stats := ClusterInvocationsByAgent([]AgentInvocation{})
+
+	if len(stats) != 0 {
+		t.Errorf("Expected empty result, got %d agents", len(stats))
+	}
+}
+
+func TestClusterInvocationsByAgent_Samples(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Agent: "test-agent", InvocationID: "inv-1", Success: true},
+		{Agent: "test-agent", InvocationID: "inv-2", Success: true},
+		{Agent: "test-agent", InvocationID: "inv-3", Success: true},
+		{Agent: "test-agent", InvocationID: "inv-4", Success: true},
+		{Agent: "test-agent", InvocationID: "inv-5", Success: true},
+	}
+
+	stats := ClusterInvocationsByAgent(invocations)
+
+	if len(stats) != 1 {
+		t.Fatalf("Expected 1 agent, got %d", len(stats))
+	}
+
+	// Should keep only first 3 samples
+	if len(stats[0].Samples) != 3 {
+		t.Errorf("Expected 3 samples, got %d", len(stats[0].Samples))
+	}
+
+	// Verify sample order (first 3)
+	expectedIDs := []string{"inv-1", "inv-2", "inv-3"}
+	for i, expected := range expectedIDs {
+		if stats[0].Samples[i].InvocationID != expected {
+			t.Errorf("Expected sample[%d] ID '%s', got '%s'", i, expected, stats[0].Samples[i].InvocationID)
+		}
+	}
+}
+
+func TestClusterInvocationsByAgent_AllSuccess(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Agent: "success-agent", Success: true, DurationMs: 1000},
+		{Agent: "success-agent", Success: true, DurationMs: 2000},
+	}
+
+	stats := ClusterInvocationsByAgent(invocations)
+
+	if len(stats) != 1 {
+		t.Fatalf("Expected 1 agent, got %d", len(stats))
+	}
+
+	if stats[0].SuccessRate != 1.0 {
+		t.Errorf("Expected SuccessRate 1.0, got %.3f", stats[0].SuccessRate)
+	}
+	if stats[0].FailureCount != 0 {
+		t.Errorf("Expected FailureCount 0, got %d", stats[0].FailureCount)
+	}
+}
+
+func TestClusterInvocationsByAgent_AllFailure(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Agent: "failure-agent", Success: false, DurationMs: 500},
+		{Agent: "failure-agent", Success: false, DurationMs: 600},
+	}
+
+	stats := ClusterInvocationsByAgent(invocations)
+
+	if len(stats) != 1 {
+		t.Fatalf("Expected 1 agent, got %d", len(stats))
+	}
+
+	if stats[0].SuccessRate != 0.0 {
+		t.Errorf("Expected SuccessRate 0.0, got %.3f", stats[0].SuccessRate)
+	}
+	if stats[0].SuccessCount != 0 {
+		t.Errorf("Expected SuccessCount 0, got %d", stats[0].SuccessCount)
+	}
+	if stats[0].FailureCount != 2 {
+		t.Errorf("Expected FailureCount 2, got %d", stats[0].FailureCount)
+	}
+}
+
+// ===== ClusterInvocationsByTier Tests =====
+
+func TestClusterInvocationsByTier_SingleTier(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Tier: "sonnet", Agent: "python-pro", Success: true, InputTokens: 500, OutputTokens: 250},
+		{Tier: "sonnet", Agent: "orchestrator", Success: true, InputTokens: 600, OutputTokens: 300},
+		{Tier: "sonnet", Agent: "python-pro", Success: false, InputTokens: 200, OutputTokens: 50},
+	}
+
+	stats := ClusterInvocationsByTier(invocations)
+
+	if len(stats) != 1 {
+		t.Fatalf("Expected 1 tier, got %d", len(stats))
+	}
+
+	tier := stats[0]
+	if tier.Tier != "sonnet" {
+		t.Errorf("Expected tier 'sonnet', got '%s'", tier.Tier)
+	}
+	if tier.TotalCount != 3 {
+		t.Errorf("Expected TotalCount 3, got %d", tier.TotalCount)
+	}
+	if tier.SuccessCount != 2 {
+		t.Errorf("Expected SuccessCount 2, got %d", tier.SuccessCount)
+	}
+	expectedSuccessRate := 2.0 / 3.0
+	if tier.SuccessRate < expectedSuccessRate-0.01 || tier.SuccessRate > expectedSuccessRate+0.01 {
+		t.Errorf("Expected SuccessRate ~%.3f, got %.3f", expectedSuccessRate, tier.SuccessRate)
+	}
+	if tier.TotalInputTokens != 1300 {
+		t.Errorf("Expected TotalInputTokens 1300, got %d", tier.TotalInputTokens)
+	}
+	if tier.TotalOutputTokens != 600 {
+		t.Errorf("Expected TotalOutputTokens 600, got %d", tier.TotalOutputTokens)
+	}
+
+	// Verify agent breakdown
+	if len(tier.AgentBreakdown) != 2 {
+		t.Errorf("Expected 2 agents in breakdown, got %d", len(tier.AgentBreakdown))
+	}
+	if tier.AgentBreakdown["python-pro"] != 2 {
+		t.Errorf("Expected python-pro count 2, got %d", tier.AgentBreakdown["python-pro"])
+	}
+	if tier.AgentBreakdown["orchestrator"] != 1 {
+		t.Errorf("Expected orchestrator count 1, got %d", tier.AgentBreakdown["orchestrator"])
+	}
+}
+
+func TestClusterInvocationsByTier_MultipleTiers(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Tier: "haiku", Agent: "haiku-scout", Success: true},
+		{Tier: "sonnet", Agent: "python-pro", Success: true},
+		{Tier: "haiku", Agent: "codebase-search", Success: true},
+		{Tier: "opus", Agent: "einstein", Success: false},
+	}
+
+	stats := ClusterInvocationsByTier(invocations)
+
+	if len(stats) != 3 {
+		t.Fatalf("Expected 3 tiers, got %d", len(stats))
+	}
+
+	// Results should be sorted by tier name
+	expectedOrder := []string{"haiku", "opus", "sonnet"}
+	for i, expected := range expectedOrder {
+		if stats[i].Tier != expected {
+			t.Errorf("Expected tier[%d] '%s', got '%s'", i, expected, stats[i].Tier)
+		}
+	}
+
+	// Verify haiku stats
+	haikuStats := stats[0]
+	if haikuStats.TotalCount != 2 {
+		t.Errorf("Expected haiku TotalCount 2, got %d", haikuStats.TotalCount)
+	}
+	if len(haikuStats.AgentBreakdown) != 2 {
+		t.Errorf("Expected haiku to have 2 agents, got %d", len(haikuStats.AgentBreakdown))
+	}
+}
+
+func TestClusterInvocationsByTier_EmptyTier(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Tier: "", Agent: "agent1", Success: true},
+		{Tier: "", Agent: "agent2", Success: false},
+		{Tier: "sonnet", Agent: "python-pro", Success: true},
+	}
+
+	stats := ClusterInvocationsByTier(invocations)
+
+	if len(stats) != 2 {
+		t.Fatalf("Expected 2 tiers (unknown + sonnet), got %d", len(stats))
+	}
+
+	// Find the "unknown" tier
+	var unknownStats *TierInvocationStats
+	for i := range stats {
+		if stats[i].Tier == "unknown" {
+			unknownStats = &stats[i]
+			break
+		}
+	}
+
+	if unknownStats == nil {
+		t.Fatal("Expected 'unknown' tier not found")
+	}
+	if unknownStats.TotalCount != 2 {
+		t.Errorf("Expected unknown TotalCount 2, got %d", unknownStats.TotalCount)
+	}
+}
+
+func TestClusterInvocationsByTier_EmptyInput(t *testing.T) {
+	stats := ClusterInvocationsByTier([]AgentInvocation{})
+
+	if len(stats) != 0 {
+		t.Errorf("Expected empty result, got %d tiers", len(stats))
+	}
+}
+
+func TestClusterInvocationsByTier_EmptyAgentInBreakdown(t *testing.T) {
+	invocations := []AgentInvocation{
+		{Tier: "sonnet", Agent: "", Success: true},
+		{Tier: "sonnet", Agent: "python-pro", Success: true},
+	}
+
+	stats := ClusterInvocationsByTier(invocations)
+
+	if len(stats) != 1 {
+		t.Fatalf("Expected 1 tier, got %d", len(stats))
+	}
+
+	// Verify empty agent is tracked as "unknown"
+	if stats[0].AgentBreakdown["unknown"] != 1 {
+		t.Errorf("Expected 'unknown' agent count 1, got %d", stats[0].AgentBreakdown["unknown"])
+	}
+	if stats[0].AgentBreakdown["python-pro"] != 1 {
+		t.Errorf("Expected 'python-pro' agent count 1, got %d", stats[0].AgentBreakdown["python-pro"])
+	}
+}
+
+// ===== GetTopAgentsByUsage Tests =====
+
+func TestGetTopAgentsByUsage_Basic(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 10},
+		{Agent: "agent-b", TotalCount: 50},
+		{Agent: "agent-c", TotalCount: 25},
+	}
+
+	rankings := GetTopAgentsByUsage(stats, 0)
+
+	if len(rankings) != 3 {
+		t.Fatalf("Expected 3 rankings, got %d", len(rankings))
+	}
+
+	// Should be sorted descending by usage
+	expectedOrder := []string{"agent-b", "agent-c", "agent-a"}
+	for i, expected := range expectedOrder {
+		if rankings[i].Agent != expected {
+			t.Errorf("Expected rank[%d] '%s', got '%s'", i, expected, rankings[i].Agent)
+		}
+	}
+
+	// Verify metrics
+	if rankings[0].Metric != 50.0 {
+		t.Errorf("Expected top metric 50.0, got %.1f", rankings[0].Metric)
+	}
+	if rankings[0].Count != 50 {
+		t.Errorf("Expected top count 50, got %d", rankings[0].Count)
+	}
+}
+
+func TestGetTopAgentsByUsage_WithLimit(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 10},
+		{Agent: "agent-b", TotalCount: 50},
+		{Agent: "agent-c", TotalCount: 25},
+	}
+
+	rankings := GetTopAgentsByUsage(stats, 2)
+
+	if len(rankings) != 2 {
+		t.Errorf("Expected 2 rankings (limit applied), got %d", len(rankings))
+	}
+
+	// Top 2 should be agent-b and agent-c
+	if rankings[0].Agent != "agent-b" {
+		t.Errorf("Expected first rank 'agent-b', got '%s'", rankings[0].Agent)
+	}
+	if rankings[1].Agent != "agent-c" {
+		t.Errorf("Expected second rank 'agent-c', got '%s'", rankings[1].Agent)
+	}
+}
+
+func TestGetTopAgentsByUsage_EmptyInput(t *testing.T) {
+	rankings := GetTopAgentsByUsage([]AgentInvocationStats{}, 0)
+
+	if len(rankings) != 0 {
+		t.Errorf("Expected empty result, got %d rankings", len(rankings))
+	}
+}
+
+// ===== GetTopAgentsByErrorRate Tests =====
+
+func TestGetTopAgentsByErrorRate_Basic(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 10, SuccessCount: 9, SuccessRate: 0.9},  // 10% error
+		{Agent: "agent-b", TotalCount: 20, SuccessCount: 15, SuccessRate: 0.75}, // 25% error
+		{Agent: "agent-c", TotalCount: 30, SuccessCount: 27, SuccessRate: 0.9},  // 10% error
+	}
+
+	rankings := GetTopAgentsByErrorRate(stats, 10, 0)
+
+	if len(rankings) != 3 {
+		t.Fatalf("Expected 3 rankings, got %d", len(rankings))
+	}
+
+	// Should be sorted descending by error rate (highest error first)
+	if rankings[0].Agent != "agent-b" {
+		t.Errorf("Expected highest error 'agent-b', got '%s'", rankings[0].Agent)
+	}
+	expectedErrorRate := 0.25
+	if rankings[0].Metric < expectedErrorRate-0.01 || rankings[0].Metric > expectedErrorRate+0.01 {
+		t.Errorf("Expected top error rate ~%.2f, got %.2f", expectedErrorRate, rankings[0].Metric)
+	}
+}
+
+func TestGetTopAgentsByErrorRate_MinInvocations(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 5, SuccessCount: 2, SuccessRate: 0.4},   // 60% error but < 10 invocations
+		{Agent: "agent-b", TotalCount: 20, SuccessCount: 15, SuccessRate: 0.75}, // 25% error
+		{Agent: "agent-c", TotalCount: 30, SuccessCount: 27, SuccessRate: 0.9},  // 10% error
+	}
+
+	rankings := GetTopAgentsByErrorRate(stats, 10, 0)
+
+	// Should exclude agent-a (TotalCount < 10)
+	if len(rankings) != 2 {
+		t.Errorf("Expected 2 rankings (agent-a filtered), got %d", len(rankings))
+	}
+
+	// Verify agent-a is not in results
+	for _, r := range rankings {
+		if r.Agent == "agent-a" {
+			t.Error("Expected agent-a to be filtered out due to minInvocations")
+		}
+	}
+}
+
+func TestGetTopAgentsByErrorRate_WithLimit(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 10, SuccessCount: 9, SuccessRate: 0.9},
+		{Agent: "agent-b", TotalCount: 20, SuccessCount: 15, SuccessRate: 0.75},
+		{Agent: "agent-c", TotalCount: 30, SuccessCount: 27, SuccessRate: 0.9},
+	}
+
+	rankings := GetTopAgentsByErrorRate(stats, 10, 1)
+
+	if len(rankings) != 1 {
+		t.Errorf("Expected 1 ranking (limit applied), got %d", len(rankings))
+	}
+
+	if rankings[0].Agent != "agent-b" {
+		t.Errorf("Expected top error agent 'agent-b', got '%s'", rankings[0].Agent)
+	}
+}
+
+func TestGetTopAgentsByErrorRate_AllFiltered(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 5, SuccessRate: 0.4},
+		{Agent: "agent-b", TotalCount: 3, SuccessRate: 0.3},
+	}
+
+	rankings := GetTopAgentsByErrorRate(stats, 10, 0)
+
+	if len(rankings) != 0 {
+		t.Errorf("Expected empty result (all filtered), got %d", len(rankings))
+	}
+}
+
+// ===== GetTopAgentsByLatency Tests =====
+
+func TestGetTopAgentsByLatency_Basic(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 10, AvgDurationMs: 1000},
+		{Agent: "agent-b", TotalCount: 20, AvgDurationMs: 5000},
+		{Agent: "agent-c", TotalCount: 30, AvgDurationMs: 2500},
+	}
+
+	rankings := GetTopAgentsByLatency(stats, 0)
+
+	if len(rankings) != 3 {
+		t.Fatalf("Expected 3 rankings, got %d", len(rankings))
+	}
+
+	// Should be sorted descending by latency
+	expectedOrder := []string{"agent-b", "agent-c", "agent-a"}
+	for i, expected := range expectedOrder {
+		if rankings[i].Agent != expected {
+			t.Errorf("Expected rank[%d] '%s', got '%s'", i, expected, rankings[i].Agent)
+		}
+	}
+
+	// Verify top metric
+	if rankings[0].Metric != 5000.0 {
+		t.Errorf("Expected top latency 5000.0, got %.1f", rankings[0].Metric)
+	}
+}
+
+func TestGetTopAgentsByLatency_WithLimit(t *testing.T) {
+	stats := []AgentInvocationStats{
+		{Agent: "agent-a", TotalCount: 10, AvgDurationMs: 1000},
+		{Agent: "agent-b", TotalCount: 20, AvgDurationMs: 5000},
+		{Agent: "agent-c", TotalCount: 30, AvgDurationMs: 2500},
+	}
+
+	rankings := GetTopAgentsByLatency(stats, 2)
+
+	if len(rankings) != 2 {
+		t.Errorf("Expected 2 rankings (limit applied), got %d", len(rankings))
+	}
+
+	// Top 2 should be agent-b and agent-c
+	if rankings[0].Agent != "agent-b" {
+		t.Errorf("Expected first rank 'agent-b', got '%s'", rankings[0].Agent)
+	}
+	if rankings[1].Agent != "agent-c" {
+		t.Errorf("Expected second rank 'agent-c', got '%s'", rankings[1].Agent)
+	}
+}
+
+func TestGetTopAgentsByLatency_EmptyInput(t *testing.T) {
+	rankings := GetTopAgentsByLatency([]AgentInvocationStats{}, 0)
+
+	if len(rankings) != 0 {
+		t.Errorf("Expected empty result, got %d rankings", len(rankings))
+	}
+}
