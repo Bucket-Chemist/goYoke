@@ -35,3 +35,6 @@ test/audit/**
 # Audits
 /audit/
 /.ticket-audits/
+/test/simulation/harness/tmp/*
+/test/simulation/tmp/
+/test/simulation/reports/

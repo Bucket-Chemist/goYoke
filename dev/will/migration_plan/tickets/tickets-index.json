@@ -624,7 +624,7 @@
         ".github/workflows/simulation.yml"
       ],
       "tests_required": false,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-031",
