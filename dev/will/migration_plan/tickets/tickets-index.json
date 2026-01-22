@@ -10,6 +10,623 @@
   },
   "tickets": [
     {
+      "id": "GOgent-030",
+      "title": "Format Violations Summary",
+      "description": "Parse routing-violations.jsonl and format top 10 for handoff",
+      "file": "tickets/session_archive/030.md",
+      "week": 2,
+      "day": 2,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-011"
+      ],
+      "blocks": [
+        "GOgent-030b",
+        "GOgent-032"
+      ],
+      "priority": "medium",
+      "tags": [
+        "violations",
+        "formatting"
+      ],
+      "files_to_create": [
+        "pkg/session/violations.go",
+        "pkg/session/violations_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-030-format-violations",
+      "pr_labels": [
+        "violations",
+        "week-2",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030b",
+      "title": "Cluster Violations by Type",
+      "description": "Group violations by type (subagent_type_mismatch, delegation_ceiling, etc.) to identify systemic patterns instead of showing flat list",
+      "file": "tickets/session_archive/030b.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-030"
+      ],
+      "blocks": [
+        "GOgent-030c"
+      ],
+      "priority": "major",
+      "tags": [
+        "violation-clustering",
+        "pattern-detection",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-030b-cluster-violations-type",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 5,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030c",
+      "title": "Cluster Violations by Agent",
+      "description": "Group violations by agent name to identify which agents have configuration issues",
+      "file": "tickets/session_archive/030c.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-030b"
+      ],
+      "blocks": [
+        "GOgent-030d"
+      ],
+      "priority": "major",
+      "tags": [
+        "agent-debugging",
+        "violation-clustering",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-030c-cluster-violations-agent",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 5,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030d",
+      "title": "Analyze Violation Temporal Trends",
+      "description": "Detect if violation rate is improving or worsening during session by analyzing timestamps",
+      "file": "tickets/session_archive/030d.md",
+      "week": 2,
+      "day": 3,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-030c"
+      ],
+      "blocks": [],
+      "priority": "major",
+      "tags": [
+        "trend-analysis",
+        "violation-metrics",
+        "enhancement",
+        "phase-3"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "git_branch": "gogent-030d-violation-trends",
+      "pr_labels": [
+        "enhancement",
+        "week-2",
+        "phase-3"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030e",
+      "title": "AgentInvocation Schema and Logging",
+      "description": "Define AgentInvocation struct and implement LogInvocation() with dual-write pattern",
+      "file": "tickets/session_archive/030e.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-030d"
+      ],
+      "blocks": [
+        "GOgent-030f",
+        "GOgent-030h",
+        "GOgent-030j"
+      ],
+      "priority": "critical",
+      "tags": [
+        "telemetry",
+        "invocations",
+        "foundation"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/invocations.go",
+        "pkg/telemetry/invocations_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 11,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030f",
+      "title": "ClusterInvocationsByAgent Analysis",
+      "description": "Implement clustering and aggregation functions for agent invocations",
+      "file": "tickets/session_archive/030f.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030e"
+      ],
+      "blocks": [
+        "GOgent-030g"
+      ],
+      "priority": "critical",
+      "tags": [
+        "telemetry",
+        "clustering",
+        "analysis"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "acceptance_criteria_count": 10,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030g",
+      "title": "CostAttribution Calculation",
+      "description": "Implement cost calculation functions using tier-specific pricing",
+      "file": "tickets/session_archive/030g.md",
+      "week": 2,
+      "day": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030f"
+      ],
+      "blocks": [],
+      "priority": "critical",
+      "tags": [
+        "telemetry",
+        "cost",
+        "pricing"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/cost.go",
+        "pkg/telemetry/cost_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 11,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030h",
+      "title": "EscalationEvent Schema and Logging",
+      "description": "Define EscalationEvent struct and implement LogEscalation() with dual-write pattern",
+      "file": "tickets/session_archive/030h.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030e"
+      ],
+      "blocks": [
+        "GOgent-030i"
+      ],
+      "priority": "high",
+      "tags": [
+        "telemetry",
+        "escalations",
+        "einstein"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/escalations.go",
+        "pkg/telemetry/escalations_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 10,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030i",
+      "title": "EscalationPattern Analysis",
+      "description": "Implement aggregation and pattern detection for escalation events",
+      "file": "tickets/session_archive/030i.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-030h"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "telemetry",
+        "escalations",
+        "analysis"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "acceptance_criteria_count": 9,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030j",
+      "title": "ScoutRecommendation Schema and Logging",
+      "description": "Define ScoutRecommendation struct and implement LogScoutRecommendation() with dual-write pattern",
+      "file": "tickets/session_archive/030j.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030e"
+      ],
+      "blocks": [
+        "GOgent-030k"
+      ],
+      "priority": "medium",
+      "tags": [
+        "telemetry",
+        "scout",
+        "routing"
+      ],
+      "files_to_create": [
+        "pkg/telemetry/scout.go",
+        "pkg/telemetry/scout_test.go"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 10,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030k",
+      "title": "ScoutAccuracy Calculation",
+      "description": "Implement aggregation and accuracy analysis functions for scout recommendations",
+      "file": "tickets/session_archive/030k.md",
+      "week": 2,
+      "day": 5,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-030j"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "telemetry",
+        "scout",
+        "analysis"
+      ],
+      "files_to_create": [],
+      "tests_required": true,
+      "acceptance_criteria_count": 9,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030l",
+      "title": "Directory Structure & Test Schemas",
+      "description": "Create foundational directory structure and test schemas for simulation harness",
+      "file": "tickets/session_archive/030l.md",
+      "time_estimate": "1.0h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-030m"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "infrastructure"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/.gitkeep",
+        "test/simulation/fixtures/schemas/routing-schema.json",
+        "test/simulation/fixtures/schemas/agents-index.json"
+      ],
+      "tests_required": false,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030m",
+      "title": "Core Harness Interfaces",
+      "description": "Define core Go interfaces: SimulationConfig, Scenario, ExpectedOutput, SimulationResult, Runner",
+      "file": "tickets/session_archive/030m.md",
+      "time_estimate": "2.0h",
+      "dependencies": [
+        "GOgent-030l"
+      ],
+      "blocks": [
+        "GOgent-030n",
+        "GOgent-030o",
+        "GOgent-030r",
+        "GOgent-030t"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "interfaces"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/types.go",
+        "test/simulation/harness/types_test.go"
+      ],
+      "tests_required": true,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-030n",
+      "title": "Generator Implementation",
+      "description": "Implement Generator interface for deterministic and randomized test inputs",
+      "file": "tickets/session_archive/030n.md",
+      "time_estimate": "3.0h",
+      "dependencies": [
+        "GOgent-030m"
+      ],
+      "blocks": [
+        "GOgent-030o",
+        "GOgent-030p",
+        "GOgent-030q",
+        "GOgent-030s"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "generator"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/generator.go",
+        "test/simulation/harness/generator_test.go"
+      ],
+      "tests_required": true,
+      "status": "in_progress"
+    },
+    {
+      "id": "GOgent-030o",
+      "title": "Runner Implementation",
+      "description": "Implement scenario execution engine that runs CLI commands, captures output, validates results",
+      "file": "tickets/session_archive/030o.md",
+      "time_estimate": "3.5h",
+      "dependencies": [
+        "GOgent-030m",
+        "GOgent-030n"
+      ],
+      "blocks": [
+        "GOgent-030s",
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "runner"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/runner.go",
+        "test/simulation/harness/runner_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030p",
+      "title": "PreToolUse Fixtures (V001-V008)",
+      "description": "Create 8 deterministic test fixtures for gogent-validate scenarios",
+      "file": "tickets/session_archive/030p.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030l",
+        "GOgent-030n"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "fixtures",
+        "pretooluse"
+      ],
+      "files_to_create": [
+        "test/simulation/fixtures/deterministic/pretooluse/V001_passthrough.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V002_valid_task.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V003_einstein_block.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V004_subagent_mismatch.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V005_ceiling_violation.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V006_model_warning.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V007_unknown_agent.json",
+        "test/simulation/fixtures/deterministic/pretooluse/V008_empty_prompt.json"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030q",
+      "title": "SessionEnd Fixtures (S001-S008)",
+      "description": "Create 8 deterministic test fixtures for gogent-archive scenarios",
+      "file": "tickets/session_archive/030q.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030l",
+        "GOgent-030n"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "fixtures",
+        "sessionend"
+      ],
+      "files_to_create": [
+        "test/simulation/fixtures/deterministic/sessionend/S001_clean_session.json",
+        "test/simulation/fixtures/deterministic/sessionend/S002_with_violations.json",
+        "test/simulation/fixtures/deterministic/sessionend/S003_with_sharp_edges.json",
+        "test/simulation/fixtures/deterministic/sessionend/S004_mixed_artifacts.json",
+        "test/simulation/fixtures/deterministic/sessionend/S005_git_dirty.json",
+        "test/simulation/fixtures/deterministic/sessionend/S006_no_git.json",
+        "test/simulation/fixtures/deterministic/sessionend/S007_active_ticket.json",
+        "test/simulation/fixtures/deterministic/sessionend/S008_schema_migration.json"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030r",
+      "title": "Invariant Definitions",
+      "description": "Define property-based invariants that must hold for ALL inputs",
+      "file": "tickets/session_archive/030r.md",
+      "time_estimate": "2.0h",
+      "dependencies": [
+        "GOgent-030m"
+      ],
+      "blocks": [
+        "GOgent-030s"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "invariants",
+        "property-testing"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/invariants.go",
+        "test/simulation/harness/invariants_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030s",
+      "title": "Fuzz Runner Implementation",
+      "description": "Implement randomized fuzzing with seed control, crash corpus capture, invariant checking",
+      "file": "tickets/session_archive/030s.md",
+      "time_estimate": "3.0h",
+      "dependencies": [
+        "GOgent-030n",
+        "GOgent-030o",
+        "GOgent-030r"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "fuzz",
+        "property-testing"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/fuzz.go",
+        "test/simulation/harness/fuzz_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030t",
+      "title": "Reporter Implementation",
+      "description": "Implement result aggregation and report generation (JSON, Markdown, TAP)",
+      "file": "tickets/session_archive/030t.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030m"
+      ],
+      "blocks": [
+        "GOgent-030u"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "reporting"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/reporter.go",
+        "test/simulation/harness/reporter_test.go"
+      ],
+      "tests_required": true,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030u",
+      "title": "CLI Entry Point",
+      "description": "Implement main.go CLI with flag parsing and orchestration",
+      "file": "tickets/session_archive/030u.md",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-030m",
+        "GOgent-030n",
+        "GOgent-030o",
+        "GOgent-030p",
+        "GOgent-030q",
+        "GOgent-030r",
+        "GOgent-030s",
+        "GOgent-030t"
+      ],
+      "blocks": [
+        "GOgent-030v"
+      ],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "cli"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/main.go"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-030v",
+      "title": "CI/CD Workflow Integration",
+      "description": "Create GitHub Actions workflow for simulation tests",
+      "file": "tickets/session_archive/030v.md",
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-030u"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "simulation",
+        "test-harness",
+        "ci-cd",
+        "github-actions"
+      ],
+      "files_to_create": [
+        ".github/workflows/simulation.yml"
+      ],
+      "tests_required": false,
+      "status": "pending"
+    },
+    {
       "id": "GOgent-000",
       "title": "Baseline Measurement & Corpus Capture",
       "description": "Establish baseline performance metrics and capture 100+ real event corpus",
@@ -2064,317 +2681,6 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030",
-      "title": "Format Violations Summary",
-      "description": "Parse routing-violations.jsonl and format top 10 for handoff",
-      "file": "tickets/session_archive/030.md",
-      "week": 2,
-      "day": 2,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-011"
-      ],
-      "blocks": [
-        "GOgent-030b",
-        "GOgent-032"
-      ],
-      "priority": "medium",
-      "tags": [
-        "violations",
-        "formatting"
-      ],
-      "files_to_create": [
-        "pkg/session/violations.go",
-        "pkg/session/violations_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-030-format-violations",
-      "pr_labels": [
-        "violations",
-        "week-2",
-        "phase-0"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030b",
-      "title": "Cluster Violations by Type",
-      "description": "Group violations by type (subagent_type_mismatch, delegation_ceiling, etc.) to identify systemic patterns instead of showing flat list",
-      "file": "tickets/session_archive/030b.md",
-      "week": 2,
-      "day": 3,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-030"
-      ],
-      "blocks": [
-        "GOgent-030c"
-      ],
-      "priority": "major",
-      "tags": [
-        "violation-clustering",
-        "pattern-detection",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-030b-cluster-violations-type",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030c",
-      "title": "Cluster Violations by Agent",
-      "description": "Group violations by agent name to identify which agents have configuration issues",
-      "file": "tickets/session_archive/030c.md",
-      "week": 2,
-      "day": 3,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-030b"
-      ],
-      "blocks": [
-        "GOgent-030d"
-      ],
-      "priority": "major",
-      "tags": [
-        "agent-debugging",
-        "violation-clustering",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-030c-cluster-violations-agent",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 5,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030d",
-      "title": "Analyze Violation Temporal Trends",
-      "description": "Detect if violation rate is improving or worsening during session by analyzing timestamps",
-      "file": "tickets/session_archive/030d.md",
-      "week": 2,
-      "day": 3,
-      "time_estimate": "0.5h",
-      "dependencies": [
-        "GOgent-030c"
-      ],
-      "blocks": [],
-      "priority": "major",
-      "tags": [
-        "trend-analysis",
-        "violation-metrics",
-        "enhancement",
-        "phase-3"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "git_branch": "gogent-030d-violation-trends",
-      "pr_labels": [
-        "enhancement",
-        "week-2",
-        "phase-3"
-      ],
-      "acceptance_criteria_count": 6,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030e",
-      "title": "AgentInvocation Schema and Logging",
-      "description": "Define AgentInvocation struct and implement LogInvocation() with dual-write pattern",
-      "file": "tickets/session_archive/030e.md",
-      "week": 2,
-      "day": 4,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-030d"
-      ],
-      "blocks": [
-        "GOgent-030f",
-        "GOgent-030h",
-        "GOgent-030j"
-      ],
-      "priority": "critical",
-      "tags": [
-        "telemetry",
-        "invocations",
-        "foundation"
-      ],
-      "files_to_create": [
-        "pkg/telemetry/invocations.go",
-        "pkg/telemetry/invocations_test.go"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 11,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030f",
-      "title": "ClusterInvocationsByAgent Analysis",
-      "description": "Implement clustering and aggregation functions for agent invocations",
-      "file": "tickets/session_archive/030f.md",
-      "week": 2,
-      "day": 4,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-030e"
-      ],
-      "blocks": [
-        "GOgent-030g"
-      ],
-      "priority": "critical",
-      "tags": [
-        "telemetry",
-        "clustering",
-        "analysis"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "acceptance_criteria_count": 10,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030g",
-      "title": "CostAttribution Calculation",
-      "description": "Implement cost calculation functions using tier-specific pricing",
-      "file": "tickets/session_archive/030g.md",
-      "week": 2,
-      "day": 4,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-030f"
-      ],
-      "blocks": [],
-      "priority": "critical",
-      "tags": [
-        "telemetry",
-        "cost",
-        "pricing"
-      ],
-      "files_to_create": [
-        "pkg/telemetry/cost.go",
-        "pkg/telemetry/cost_test.go"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 11,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030h",
-      "title": "EscalationEvent Schema and Logging",
-      "description": "Define EscalationEvent struct and implement LogEscalation() with dual-write pattern",
-      "file": "tickets/session_archive/030h.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-030e"
-      ],
-      "blocks": [
-        "GOgent-030i"
-      ],
-      "priority": "high",
-      "tags": [
-        "telemetry",
-        "escalations",
-        "einstein"
-      ],
-      "files_to_create": [
-        "pkg/telemetry/escalations.go",
-        "pkg/telemetry/escalations_test.go"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 10,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030i",
-      "title": "EscalationPattern Analysis",
-      "description": "Implement aggregation and pattern detection for escalation events",
-      "file": "tickets/session_archive/030i.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-030h"
-      ],
-      "blocks": [],
-      "priority": "high",
-      "tags": [
-        "telemetry",
-        "escalations",
-        "analysis"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "acceptance_criteria_count": 9,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030j",
-      "title": "ScoutRecommendation Schema and Logging",
-      "description": "Define ScoutRecommendation struct and implement LogScoutRecommendation() with dual-write pattern",
-      "file": "tickets/session_archive/030j.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-030e"
-      ],
-      "blocks": [
-        "GOgent-030k"
-      ],
-      "priority": "medium",
-      "tags": [
-        "telemetry",
-        "scout",
-        "routing"
-      ],
-      "files_to_create": [
-        "pkg/telemetry/scout.go",
-        "pkg/telemetry/scout_test.go"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 10,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030k",
-      "title": "ScoutAccuracy Calculation",
-      "description": "Implement aggregation and accuracy analysis functions for scout recommendations",
-      "file": "tickets/session_archive/030k.md",
-      "week": 2,
-      "day": 5,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-030j"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "telemetry",
-        "scout",
-        "analysis"
-      ],
-      "files_to_create": [],
-      "tests_required": true,
-      "acceptance_criteria_count": 9,
-      "status": "completed"
-    },
-    {
       "id": "GOgent-031",
       "title": "Archive Session Files",
       "description": "Copy transcript, move learnings/violations to archive",
@@ -3258,312 +3564,6 @@
         "pkg/session/intent_outcomes.go"
       ],
       "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030l",
-      "title": "Directory Structure & Test Schemas",
-      "description": "Create foundational directory structure and test schemas for simulation harness",
-      "file": "tickets/session_archive/030l.md",
-      "time_estimate": "1.0h",
-      "dependencies": [],
-      "blocks": [
-        "GOgent-030m"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "infrastructure"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/.gitkeep",
-        "test/simulation/fixtures/schemas/routing-schema.json",
-        "test/simulation/fixtures/schemas/agents-index.json"
-      ],
-      "tests_required": false,
-      "status": "completed"
-    },
-    {
-      "id": "GOgent-030m",
-      "title": "Core Harness Interfaces",
-      "description": "Define core Go interfaces: SimulationConfig, Scenario, ExpectedOutput, SimulationResult, Runner",
-      "file": "tickets/session_archive/030m.md",
-      "time_estimate": "2.0h",
-      "dependencies": [
-        "GOgent-030l"
-      ],
-      "blocks": [
-        "GOgent-030n",
-        "GOgent-030o",
-        "GOgent-030r",
-        "GOgent-030t"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "interfaces"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/types.go",
-        "test/simulation/harness/types_test.go"
-      ],
-      "tests_required": true,
-      "status": "in_progress"
-    },
-    {
-      "id": "GOgent-030n",
-      "title": "Generator Implementation",
-      "description": "Implement Generator interface for deterministic and randomized test inputs",
-      "file": "tickets/session_archive/030n.md",
-      "time_estimate": "3.0h",
-      "dependencies": [
-        "GOgent-030m"
-      ],
-      "blocks": [
-        "GOgent-030o",
-        "GOgent-030p",
-        "GOgent-030q",
-        "GOgent-030s"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "generator"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/generator.go",
-        "test/simulation/harness/generator_test.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030o",
-      "title": "Runner Implementation",
-      "description": "Implement scenario execution engine that runs CLI commands, captures output, validates results",
-      "file": "tickets/session_archive/030o.md",
-      "time_estimate": "3.5h",
-      "dependencies": [
-        "GOgent-030m",
-        "GOgent-030n"
-      ],
-      "blocks": [
-        "GOgent-030s",
-        "GOgent-030u"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "runner"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/runner.go",
-        "test/simulation/harness/runner_test.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030p",
-      "title": "PreToolUse Fixtures (V001-V008)",
-      "description": "Create 8 deterministic test fixtures for gogent-validate scenarios",
-      "file": "tickets/session_archive/030p.md",
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-030l",
-        "GOgent-030n"
-      ],
-      "blocks": [
-        "GOgent-030u"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "fixtures",
-        "pretooluse"
-      ],
-      "files_to_create": [
-        "test/simulation/fixtures/deterministic/pretooluse/V001_passthrough.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V002_valid_task.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V003_einstein_block.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V004_subagent_mismatch.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V005_ceiling_violation.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V006_model_warning.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V007_unknown_agent.json",
-        "test/simulation/fixtures/deterministic/pretooluse/V008_empty_prompt.json"
-      ],
-      "tests_required": false,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030q",
-      "title": "SessionEnd Fixtures (S001-S008)",
-      "description": "Create 8 deterministic test fixtures for gogent-archive scenarios",
-      "file": "tickets/session_archive/030q.md",
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-030l",
-        "GOgent-030n"
-      ],
-      "blocks": [
-        "GOgent-030u"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "fixtures",
-        "sessionend"
-      ],
-      "files_to_create": [
-        "test/simulation/fixtures/deterministic/sessionend/S001_clean_session.json",
-        "test/simulation/fixtures/deterministic/sessionend/S002_with_violations.json",
-        "test/simulation/fixtures/deterministic/sessionend/S003_with_sharp_edges.json",
-        "test/simulation/fixtures/deterministic/sessionend/S004_mixed_artifacts.json",
-        "test/simulation/fixtures/deterministic/sessionend/S005_git_dirty.json",
-        "test/simulation/fixtures/deterministic/sessionend/S006_no_git.json",
-        "test/simulation/fixtures/deterministic/sessionend/S007_active_ticket.json",
-        "test/simulation/fixtures/deterministic/sessionend/S008_schema_migration.json"
-      ],
-      "tests_required": false,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030r",
-      "title": "Invariant Definitions",
-      "description": "Define property-based invariants that must hold for ALL inputs",
-      "file": "tickets/session_archive/030r.md",
-      "time_estimate": "2.0h",
-      "dependencies": [
-        "GOgent-030m"
-      ],
-      "blocks": [
-        "GOgent-030s"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "invariants",
-        "property-testing"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/invariants.go",
-        "test/simulation/harness/invariants_test.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030s",
-      "title": "Fuzz Runner Implementation",
-      "description": "Implement randomized fuzzing with seed control, crash corpus capture, invariant checking",
-      "file": "tickets/session_archive/030s.md",
-      "time_estimate": "3.0h",
-      "dependencies": [
-        "GOgent-030n",
-        "GOgent-030o",
-        "GOgent-030r"
-      ],
-      "blocks": [
-        "GOgent-030u"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "fuzz",
-        "property-testing"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/fuzz.go",
-        "test/simulation/harness/fuzz_test.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030t",
-      "title": "Reporter Implementation",
-      "description": "Implement result aggregation and report generation (JSON, Markdown, TAP)",
-      "file": "tickets/session_archive/030t.md",
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-030m"
-      ],
-      "blocks": [
-        "GOgent-030u"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "reporting"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/reporter.go",
-        "test/simulation/harness/reporter_test.go"
-      ],
-      "tests_required": true,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030u",
-      "title": "CLI Entry Point",
-      "description": "Implement main.go CLI with flag parsing and orchestration",
-      "file": "tickets/session_archive/030u.md",
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-030m",
-        "GOgent-030n",
-        "GOgent-030o",
-        "GOgent-030p",
-        "GOgent-030q",
-        "GOgent-030r",
-        "GOgent-030s",
-        "GOgent-030t"
-      ],
-      "blocks": [
-        "GOgent-030v"
-      ],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "cli"
-      ],
-      "files_to_create": [
-        "test/simulation/harness/main.go"
-      ],
-      "tests_required": false,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-030v",
-      "title": "CI/CD Workflow Integration",
-      "description": "Create GitHub Actions workflow for simulation tests",
-      "file": "tickets/session_archive/030v.md",
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-030u"
-      ],
-      "blocks": [],
-      "priority": "medium",
-      "tags": [
-        "simulation",
-        "test-harness",
-        "ci-cd",
-        "github-actions"
-      ],
-      "files_to_create": [
-        ".github/workflows/simulation.yml"
-      ],
-      "tests_required": false,
       "status": "pending"
     }
   ]
