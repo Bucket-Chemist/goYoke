@@ -892,37 +892,28 @@
     },
     {
       "id": "GOgent-037",
-      "title": "Sharp Edge Capture",
-      "description": "Write sharp edges to pending-learnings.jsonl at threshold",
-      "file": "tickets/session_archive/037.md",
+      "title": "[DEPRECATED] Sharp Edge Capture - Absorbed by GOgent-035",
+      "description": "DEPRECATED: Functionality absorbed by GOgent-035-R which implements sharp edge capture as part of the integrated CLI. See session_archive/deprecated/037.md.",
+      "file": "tickets/session_archive/deprecated/037.md",
       "week": 2,
       "day": 5,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-036"
-      ],
-      "blocks": [
-        "GOgent-037b",
-        "GOgent-039"
-      ],
-      "priority": "high",
+      "time_estimate": "0h",
+      "dependencies": [],
+      "blocks": [],
+      "priority": "low",
       "tags": [
-        "capture",
-        "learnings"
+        "deprecated",
+        "absorbed-by-035"
       ],
-      "files_to_create": [
-        "pkg/memory/capture.go",
-        "pkg/memory/capture_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-037-sharp-edge-capture",
+      "files_to_create": [],
+      "tests_required": false,
+      "git_branch": "n/a",
       "pr_labels": [
-        "capture",
-        "week-2",
-        "phase-0"
+        "deprecated"
       ],
-      "acceptance_criteria_count": 6,
-      "status": "pending"
+      "acceptance_criteria_count": 0,
+      "status": "deprecated",
+      "deprecation_note": "2026-01-23: Redundant with GOgent-035-R. Sharp edge capture is implemented inline in the CLI."
     },
     {
       "id": "GOgent-037b",
@@ -1013,53 +1004,46 @@
     },
     {
       "id": "GOgent-038",
-      "title": "Hook Response Generation",
-      "description": "Generate blocking/warning/pass-through responses based on count",
-      "file": "tickets/session_archive/038.md",
+      "title": "[DEPRECATED] Hook Response Generation - Absorbed by GOgent-035",
+      "description": "DEPRECATED: Functionality absorbed by GOgent-035-R which implements hook response generation inline. See session_archive/deprecated/038.md.",
+      "file": "tickets/session_archive/deprecated/038.md",
       "week": 2,
       "day": 5,
-      "time_estimate": "1.5h",
-      "dependencies": [
-        "GOgent-008a",
-        "GOgent-036"
-      ],
-      "blocks": [
-        "GOgent-038b",
-        "GOgent-039"
-      ],
-      "priority": "critical",
+      "time_estimate": "0h",
+      "dependencies": [],
+      "blocks": [],
+      "priority": "low",
       "tags": [
-        "responses",
-        "blocking"
+        "deprecated",
+        "absorbed-by-035"
       ],
-      "files_to_create": [
-        "pkg/memory/responses.go",
-        "pkg/memory/responses_test.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-038-response-generation",
+      "files_to_create": [],
+      "tests_required": false,
+      "git_branch": "n/a",
       "pr_labels": [
-        "responses",
-        "week-2",
-        "phase-0"
+        "deprecated"
       ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
+      "acceptance_criteria_count": 0,
+      "status": "deprecated",
+      "deprecation_note": "2026-01-23: Redundant with GOgent-035-R. Response generation is implemented inline in the CLI."
     },
     {
       "id": "GOgent-038b",
       "title": "Load and Index Sharp-Edges YAML",
-      "description": "Load sharp-edges.yaml files from all agent directories and build searchable index for pattern matching",
+      "description": "Load sharp-edges.yaml files from all agent directories and build searchable index for pattern matching. YAML format retained for human-editability.",
       "file": "tickets/session_archive/038b.md",
       "week": 2,
       "day": 6,
-      "time_estimate": "0.75h",
+      "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-038"
+        "GOgent-035"
       ],
       "blocks": [
         "GOgent-038c"
       ],
+      "revision": "R1",
+      "revision_date": "2026-01-23",
+      "revision_note": "Dependency corrected: GOgent-038 deprecated, now depends on GOgent-035-R",
       "priority": "major",
       "tags": [
         "pattern-matching",
@@ -1143,69 +1127,71 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-039",
-      "title": "Sharp Edge Integration Tests",
-      "description": "Test complete sharp edge detection workflow",
+      "id": "GOgent-039-R",
+      "title": "Sharp Edge Detection Comprehensive Test Suite",
+      "description": "MAJOR EXPANSION: Comprehensive test suite with 65+ test cases covering unit tests (routing, memory), integration tests, schema validation, edge cases, fallback behavior, and concurrent access. 90%+ line coverage target.",
       "file": "tickets/session_archive/039.md",
-      "week": 2,
-      "day": 6,
-      "time_estimate": "2h",
+      "week": 3,
+      "day": 1,
+      "time_estimate": "6.0h",
       "dependencies": [
-        "GOgent-037",
-        "GOgent-038"
+        "GOgent-035",
+        "GOgent-036"
       ],
-      "blocks": [
-        "GOgent-040"
-      ],
-      "priority": "high",
+      "blocks": [],
+      "priority": "critical",
       "tags": [
         "testing",
-        "integration"
+        "integration",
+        "comprehensive",
+        "phase-2"
       ],
       "files_to_create": [
-        "test/integration/sharp_edge_test.go"
+        "test/integration/sharp_edge_test.go",
+        "test/integration/helpers_test.go",
+        "pkg/routing/failure_test.go",
+        "test/simulation/fixtures/deterministic/posttooluse/F005_unicode_path.json",
+        "test/simulation/fixtures/deterministic/posttooluse/F006_large_error.json",
+        "test/simulation/fixtures/deterministic/posttooluse/F007_concurrent_files.json"
       ],
       "tests_required": true,
-      "git_branch": "gogent-039-sharp-edge-integration",
+      "git_branch": "gogent-039r-comprehensive-tests",
       "pr_labels": [
         "testing",
-        "week-2",
-        "phase-0"
+        "week-3",
+        "phase-2",
+        "comprehensive"
       ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
+      "acceptance_criteria_count": 65,
+      "status": "pending",
+      "revision": "R1",
+      "revision_date": "2026-01-23",
+      "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h → 6.0h."
     },
     {
       "id": "GOgent-040",
-      "title": "Build gogent-sharp-edge CLI",
-      "description": "Build sharp-edge-detector hook binary",
-      "file": "tickets/session_archive/040.md",
+      "title": "[DEPRECATED] Build gogent-sharp-edge CLI - Duplicate of GOgent-035",
+      "description": "DEPRECATED: Duplicate of GOgent-035-R which already implements the complete CLI. See session_archive/deprecated/040.md.",
+      "file": "tickets/session_archive/deprecated/040.md",
       "week": 2,
       "day": 6,
-      "time_estimate": "1h",
-      "dependencies": [
-        "GOgent-039"
-      ],
-      "blocks": [
-        "GOgent-097"
-      ],
-      "priority": "critical",
+      "time_estimate": "0h",
+      "dependencies": [],
+      "blocks": [],
+      "priority": "low",
       "tags": [
-        "cli",
-        "binary"
+        "deprecated",
+        "duplicate-of-035"
       ],
-      "files_to_create": [
-        "cmd/gogent-sharp-edge/main.go"
-      ],
-      "tests_required": true,
-      "git_branch": "gogent-040-gogent-sharp-edge-cli",
+      "files_to_create": [],
+      "tests_required": false,
+      "git_branch": "n/a",
       "pr_labels": [
-        "cli",
-        "week-2",
-        "phase-0"
+        "deprecated"
       ],
-      "acceptance_criteria_count": 7,
-      "status": "pending"
+      "acceptance_criteria_count": 0,
+      "status": "deprecated",
+      "deprecation_note": "2026-01-23: Fully redundant with GOgent-035-R. CLI already implemented there."
     },
     {
       "id": "GOgent-041",
