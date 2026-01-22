@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic replay-crash clean-simulation
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -27,6 +27,13 @@ help:
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
 	@echo "  make clean           - Remove build artifacts"
+	@echo ""
+	@echo "Simulation testing:"
+	@echo "  make test-simulation              - Run mixed simulation (deterministic + fuzz)"
+	@echo "  make test-simulation-deterministic - Run deterministic tests only"
+	@echo "  make test-simulation-fuzz         - Run fuzz tests only"
+	@echo "  make replay-crash CRASH=<file>    - Replay a specific crash"
+	@echo "  make clean-simulation             - Clean simulation artifacts"
 
 # Primary test target - runs full ecosystem with audit trail
 test: test-ecosystem
@@ -143,3 +150,47 @@ clean:
 	rm -f bin/gogent-aggregate
 	rm -f coverage.out
 	rm -f *.test
+
+# ==============================================================================
+# Simulation Testing
+# ==============================================================================
+
+# Run mixed simulation (deterministic + fuzz)
+test-simulation: build-validate build-archive
+	@echo "Running simulation tests (mixed mode)..."
+	@mkdir -p test/simulation/reports
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=mixed \
+		-iterations=500 \
+		-report=markdown \
+		-output=test/simulation/reports
+	@echo "Report: test/simulation/reports/"
+
+# Run deterministic tests only
+test-simulation-deterministic: build-validate build-archive
+	@echo "Running deterministic simulation tests..."
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=deterministic \
+		-report=tap
+
+# Run fuzz tests only
+test-simulation-fuzz: build-validate build-archive
+	@echo "Running fuzz simulation tests..."
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=fuzz \
+		-iterations=1000 \
+		-verbose
+
+# Replay a specific crash
+# Usage: make replay-crash CRASH=path/to/crash.json
+replay-crash: build-validate build-archive
+	@if [ -z "$(CRASH)" ]; then \
+		echo "Usage: make replay-crash CRASH=path/to/crash.json"; \
+		exit 1; \
+	fi
+	go run ./test/simulation/harness/cmd/harness -replay=$(CRASH)
+
+# Clean simulation artifacts
+clean-simulation:
+	rm -rf test/simulation/reports/*
+	rm -rf test/simulation/tmp/*

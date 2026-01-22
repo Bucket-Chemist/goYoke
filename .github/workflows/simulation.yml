@@ -1,0 +1,126 @@
+name: Simulation Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly Sunday 3am UTC
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.22'
+
+jobs:
+  simulation:
+    name: Simulation Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build CLIs
+        run: make build-validate build-archive
+
+      - name: Run Deterministic Tests
+        id: deterministic
+        run: |
+          mkdir -p test/simulation/reports
+          go run ./test/simulation/harness/cmd/harness \
+            -mode=deterministic \
+            -report=json \
+            -output=test/simulation/reports || echo "det_failed=true" >> $GITHUB_ENV
+
+      - name: Run Fuzz Tests
+        id: fuzz
+        run: |
+          go run ./test/simulation/harness/cmd/harness \
+            -mode=fuzz \
+            -iterations=1000 \
+            -seed=${{ github.run_number }} \
+            -report=markdown \
+            -output=test/simulation/reports || echo "fuzz_failed=true" >> $GITHUB_ENV
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulation-reports-${{ github.run_number }}
+          path: test/simulation/reports/
+          retention-days: 30
+
+      - name: Upload Crash Corpus
+        uses: actions/upload-artifact@v4
+        if: env.fuzz_failed == 'true'
+        with:
+          name: fuzz-crashes-${{ github.run_number }}
+          path: test/simulation/tmp/fuzz/crashes/
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: Check Results
+        run: |
+          if [ "${{ env.det_failed }}" == "true" ]; then
+            echo "::error::Deterministic tests failed"
+            exit 1
+          fi
+          if [ "${{ env.fuzz_failed }}" == "true" ]; then
+            echo "::error::Fuzz tests failed"
+            exit 1
+          fi
+          echo "All simulation tests passed!"
+
+  simulation-extended:
+    name: Extended Fuzz (Weekly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build CLIs
+        run: make build-validate build-archive
+
+      - name: Extended Fuzz Run
+        run: |
+          mkdir -p test/simulation/reports
+          go run ./test/simulation/harness/cmd/harness \
+            -mode=fuzz \
+            -iterations=10000 \
+            -timeout=90m \
+            -seed=${{ github.run_number }} \
+            -report=json \
+            -output=test/simulation/reports
+
+      - name: Upload Extended Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extended-fuzz-${{ github.run_number }}
+          path: test/simulation/reports/
+          retention-days: 90
