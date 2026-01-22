@@ -570,7 +570,7 @@
         "test/simulation/harness/reporter_test.go"
       ],
       "tests_required": true,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-030u",
@@ -601,7 +601,7 @@
         "test/simulation/harness/main.go"
       ],
       "tests_required": false,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-030v",

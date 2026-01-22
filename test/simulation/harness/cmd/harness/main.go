@@ -1,80 +1,15 @@
----
-id: GOgent-030u
-title: "CLI Entry Point"
-description: "Implement main.go CLI with flag parsing and orchestration"
-status: pending
-dependencies: [GOgent-030m, GOgent-030n, GOgent-030o, GOgent-030p, GOgent-030q, GOgent-030r, GOgent-030s, GOgent-030t]
-time_estimate: "2.5h"
-phase: 3
-priority: MEDIUM
----
-
-# GOgent-030u: CLI Entry Point
-
-## Description
-Implement main.go CLI with flag parsing and orchestration.
-
-## Implementation Intention
-Provide a single entry point that orchestrates all simulation components. Users can run deterministic tests, fuzz tests, or mixed mode with a single command.
-
-## Intended End State
-- CLI with comprehensive flag support
-- Automatic component wiring
-- Replay support for debugging crashes
-- Integration with existing `make` targets
-
-## Dependencies
-- GOgent-030m: Core types
-- GOgent-030n: Generator
-- GOgent-030o: Runner
-- GOgent-030p: PreToolUse fixtures
-- GOgent-030q: SessionEnd fixtures
-- GOgent-030r: Invariants
-- GOgent-030s: Fuzz runner
-- GOgent-030t: Reporter
-
-## Files to Create
-- `test/simulation/harness/cmd/harness/main.go`
-- `test/simulation/harness/cmd/harness/main_test.go`
-
-## CLI Flags
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `-mode` | string | deterministic | Mode: deterministic, fuzz, mixed |
-| `-filter` | string | "" | Scenario ID prefix filter |
-| `-iterations` | int | 1000 | Fuzz iteration count |
-| `-seed` | int64 | time.Now().UnixNano() | Random seed for reproducibility |
-| `-timeout` | duration | 5m | Fuzz timeout |
-| `-report` | string | json | Output format: json, markdown, tap |
-| `-verbose` | bool | false | Detailed output |
-| `-replay` | string | "" | Path to crash file for replay |
-| `-schema` | string | ./fixtures/schemas/routing-schema.json | Path to routing schema |
-| `-agents` | string | ./fixtures/schemas/agents-index.json | Path to agents index |
-| `-output` | string | ./reports/ | Report output directory |
-
-## Acceptance Criteria
-- [x] All flags parsed and validated
-- [x] `-mode=deterministic` runs fixture-based tests
-- [x] `-mode=fuzz` runs randomized tests
-- [x] `-mode=mixed` runs both
-- [x] `-replay` re-executes a crash file
-- [x] Reports generated to specified output directory
-- [x] Exit code 0 on all pass, 1 on any failure
-- [x] `go build ./test/simulation/harness/cmd/harness` succeeds
-
-## Implementation Details
-
-### main.go
-```go
 package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/test/simulation/harness"
 )
 
 func main() {
@@ -113,7 +48,7 @@ func main() {
 	}
 
 	// Build configuration
-	cfg := SimulationConfig{
+	cfg := harness.SimulationConfig{
 		Mode:           *mode,
 		ScenarioFilter: parseFilter(*filter),
 		FuzzIterations: *iterations,
@@ -148,8 +83,8 @@ func main() {
 	}
 
 	// Initialize components
-	gen := NewGenerator(fixturesDir)
-	runner := NewRunner(cfg, validatePath, archivePath, gen)
+	gen := harness.NewGenerator(fixturesDir)
+	runner := harness.NewRunner(cfg, validatePath, archivePath, gen)
 
 	// Handle replay mode
 	if *replay != "" {
@@ -158,8 +93,8 @@ func main() {
 	}
 
 	// Run simulation
-	var results []SimulationResult
-	var fuzzCrashes []FuzzCrash
+	var results []harness.SimulationResult
+	var fuzzCrashes []harness.FuzzCrash
 
 	switch cfg.Mode {
 	case "deterministic":
@@ -179,7 +114,7 @@ func main() {
 	}
 
 	// Generate report
-	reporter := NewReporter(cfg.ReportFormat)
+	reporter := harness.NewReporter(cfg.ReportFormat)
 	reportPath := filepath.Join(*outputDir, fmt.Sprintf("simulation-%s.%s",
 		time.Now().Format("20060102-150405"),
 		reportExtension(cfg.ReportFormat)))
@@ -240,18 +175,15 @@ func findHarnessDir() (string, error) {
 // findBinary locates a CLI binary.
 func findBinary(name string) (string, error) {
 	// Try ~/.local/bin first
-	homePath := filepath.Join(os.Getenv("HOME"), ".local", "bin", name)
-	if _, err := os.Stat(homePath); err == nil {
-		return homePath, nil
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		homePath := filepath.Join(homeDir, ".local", "bin", name)
+		if _, err := os.Stat(homePath); err == nil {
+			return homePath, nil
+		}
 	}
 
-	// Try ./cmd/[name]/main.go (build from source)
-	cmdPath := filepath.Join("cmd", name, "main.go")
-	if _, err := os.Stat(cmdPath); err == nil {
-		return "go run " + cmdPath, nil
-	}
-
-	// Try PATH
+	// Try PATH using exec.LookPath
 	path, err := exec.LookPath(name)
 	if err == nil {
 		return path, nil
@@ -265,11 +197,20 @@ func parseFilter(filter string) []string {
 	if filter == "" {
 		return nil
 	}
-	return strings.Split(filter, ",")
+	parts := strings.Split(filter, ",")
+	// Trim whitespace from each part
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 // validateConfig checks configuration validity.
-func validateConfig(cfg SimulationConfig) error {
+func validateConfig(cfg harness.SimulationConfig) error {
 	validModes := map[string]bool{"deterministic": true, "fuzz": true, "mixed": true}
 	if !validModes[cfg.Mode] {
 		return fmt.Errorf("invalid mode: %s (must be deterministic, fuzz, or mixed)", cfg.Mode)
@@ -304,16 +245,16 @@ func reportExtension(format string) string {
 }
 
 // runDeterministic executes deterministic scenarios.
-func runDeterministic(cfg SimulationConfig, runner *DefaultRunner) ([]SimulationResult, error) {
+func runDeterministic(cfg harness.SimulationConfig, runner *harness.DefaultRunner) ([]harness.SimulationResult, error) {
 	fmt.Println("Running deterministic scenarios...")
 	return runner.Run(cfg)
 }
 
 // runFuzz executes fuzz testing.
-func runFuzz(cfg SimulationConfig, gen Generator, runner *DefaultRunner) ([]SimulationResult, []FuzzCrash, error) {
+func runFuzz(cfg harness.SimulationConfig, gen *harness.DefaultGenerator, runner *harness.DefaultRunner) ([]harness.SimulationResult, []harness.FuzzCrash, error) {
 	fmt.Printf("Running fuzz testing (%d iterations, seed: %d)...\n", cfg.FuzzIterations, cfg.FuzzSeed)
 
-	fuzzRunner := NewFuzzRunner(cfg, gen, runner)
+	fuzzRunner := harness.NewFuzzRunner(cfg, gen, runner)
 	results, err := fuzzRunner.RunFuzz()
 	if err != nil {
 		return nil, nil, err
@@ -323,8 +264,8 @@ func runFuzz(cfg SimulationConfig, gen Generator, runner *DefaultRunner) ([]Simu
 }
 
 // runMixed executes both deterministic and fuzz testing.
-func runMixed(cfg SimulationConfig, gen Generator, runner *DefaultRunner) ([]SimulationResult, []FuzzCrash, error) {
-	var allResults []SimulationResult
+func runMixed(cfg harness.SimulationConfig, gen *harness.DefaultGenerator, runner *harness.DefaultRunner) ([]harness.SimulationResult, []harness.FuzzCrash, error) {
+	var allResults []harness.SimulationResult
 
 	// Run deterministic first
 	detResults, err := runDeterministic(cfg, runner)
@@ -344,10 +285,10 @@ func runMixed(cfg SimulationConfig, gen Generator, runner *DefaultRunner) ([]Sim
 }
 
 // runReplay re-executes a crash file.
-func runReplay(crashPath string, cfg SimulationConfig, gen Generator, runner *DefaultRunner) int {
+func runReplay(crashPath string, cfg harness.SimulationConfig, gen *harness.DefaultGenerator, runner *harness.DefaultRunner) int {
 	fmt.Printf("Replaying crash: %s\n", crashPath)
 
-	fuzzRunner := NewFuzzRunner(cfg, gen, runner)
+	fuzzRunner := harness.NewFuzzRunner(cfg, gen, runner)
 	result, err := fuzzRunner.ReplayCrash(crashPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Replay error: %v\n", err)
@@ -363,32 +304,3 @@ func runReplay(crashPath string, cfg SimulationConfig, gen Generator, runner *De
 	fmt.Printf("Diff:\n%s\n", result.Diff)
 	return 1
 }
-```
-
-## Usage Examples
-
-```bash
-# Run deterministic tests only
-go run ./test/simulation/harness -mode=deterministic
-
-# Run fuzz testing with specific seed
-go run ./test/simulation/harness -mode=fuzz -iterations=1000 -seed=12345
-
-# Run mixed mode with markdown report
-go run ./test/simulation/harness -mode=mixed -report=markdown -output=./reports
-
-# Filter to specific scenarios
-go run ./test/simulation/harness -mode=deterministic -filter=V00
-
-# Replay a specific crash
-go run ./test/simulation/harness -replay=./fuzz/crashes/crash-pretooluse-42-seed12345.json
-
-# Verbose output
-go run ./test/simulation/harness -mode=fuzz -verbose
-```
-
-## Time Estimate
-2.5 hours
-
-## Why This Matters
-The CLI is the user interface to the entire simulation system. Good ergonomics (sensible defaults, clear flags, helpful output) determines whether the system gets used or ignored.
