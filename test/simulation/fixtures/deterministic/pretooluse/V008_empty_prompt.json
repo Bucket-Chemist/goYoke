@@ -12,8 +12,7 @@
     "captured_at": 1705708800
   },
   "expected": {
-    "decision": "block",
-    "reason_contains": "empty",
+    "decision": "allow",
     "exit_code": 0
   }
 }

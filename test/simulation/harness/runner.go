@@ -75,6 +75,13 @@ func (r *DefaultRunner) RunScenario(s Scenario) SimulationResult {
 		ScenarioID: s.ID,
 	}
 
+	// Clean up temp directory for test isolation
+	// Each scenario starts with a clean slate
+	if r.config.TempDir != "" {
+		claudeDir := filepath.Join(r.config.TempDir, ".claude")
+		os.RemoveAll(claudeDir)
+	}
+
 	// Setup
 	if s.Setup != nil {
 		if err := s.Setup(r.config); err != nil {
@@ -242,11 +249,25 @@ func (r *DefaultRunner) validateOutput(expected ExpectedOutput, output string, e
 	return len(issues) == 0, expectedStr, diffStr
 }
 
-// buildEnv creates environment for CLI execution.
+// buildEnv creates a minimal, controlled environment for CLI execution.
+// Instead of inheriting the full os.Environ() (which differs between CI and local),
+// we construct a minimal set of required variables for reproducible behavior.
 func (r *DefaultRunner) buildEnv() []string {
-	env := os.Environ()
+	// Start with minimal required environment variables
+	env := []string{
+		// Basic shell requirements
+		"PATH=" + os.Getenv("PATH"),
+		"HOME=" + os.Getenv("HOME"),
+		"USER=" + os.Getenv("USER"),
+		// Locale for consistent string handling
+		"LANG=C.UTF-8",
+		"LC_ALL=C.UTF-8",
+		// Disable color output for consistent parsing
+		"NO_COLOR=1",
+		"TERM=dumb",
+	}
 
-	// Override schema paths for test isolation
+	// Add test isolation paths
 	if r.config.SchemaPath != "" {
 		env = append(env, "GOGENT_ROUTING_SCHEMA="+r.config.SchemaPath)
 	}
@@ -279,15 +300,19 @@ func (r *DefaultRunner) loadScenarios() ([]Scenario, error) {
 	var scenarios []Scenario
 
 	// Load PreToolUse scenarios
-	preToolDir := filepath.Join(r.config.TempDir, "fixtures", "deterministic", "pretooluse")
+	preToolDir := filepath.Join(r.config.FixturesDir, "deterministic", "pretooluse")
 	if err := r.loadScenariosFromDir(preToolDir, "pretooluse", &scenarios); err != nil {
 		return nil, err
 	}
 
 	// Load SessionEnd scenarios
-	sessionDir := filepath.Join(r.config.TempDir, "fixtures", "deterministic", "sessionend")
+	sessionDir := filepath.Join(r.config.FixturesDir, "deterministic", "sessionend")
 	if err := r.loadScenariosFromDir(sessionDir, "sessionend", &scenarios); err != nil {
 		return nil, err
+	}
+
+	if r.config.Verbose {
+		fmt.Printf("[INFO] Loaded %d deterministic scenarios\n", len(scenarios))
 	}
 
 	return scenarios, nil
@@ -316,6 +341,7 @@ func (r *DefaultRunner) loadScenariosFromDir(dir, category string, scenarios *[]
 
 		var fixture struct {
 			Input    interface{}    `json:"input"`
+			Setup    *FixtureSetup  `json:"setup,omitempty"`
 			Expected ExpectedOutput `json:"expected"`
 		}
 		if err := json.Unmarshal(data, &fixture); err != nil {
@@ -323,13 +349,80 @@ func (r *DefaultRunner) loadScenariosFromDir(dir, category string, scenarios *[]
 		}
 
 		id := strings.TrimSuffix(entry.Name(), ".json")
-		*scenarios = append(*scenarios, Scenario{
+		scenario := Scenario{
 			ID:       id,
 			Category: category,
 			Input:    fixture.Input,
 			Expected: fixture.Expected,
-		})
+		}
+
+		// Create SetupFunc from fixture setup if present
+		if fixture.Setup != nil {
+			scenario.Setup = r.createSetupFunc(fixture.Setup)
+		}
+
+		*scenarios = append(*scenarios, scenario)
 	}
 
 	return nil
+}
+
+// createSetupFunc converts a FixtureSetup into a SetupFunc that prepares the test environment.
+func (r *DefaultRunner) createSetupFunc(setup *FixtureSetup) SetupFunc {
+	return func(cfg SimulationConfig) error {
+		baseDir := cfg.TempDir
+		if baseDir == "" {
+			return fmt.Errorf("TempDir not set in config")
+		}
+
+		// Create directories
+		for _, dir := range setup.CreateDirs {
+			fullPath := filepath.Join(baseDir, dir)
+			if err := os.MkdirAll(fullPath, 0755); err != nil {
+				return fmt.Errorf("create dir %s: %w", dir, err)
+			}
+		}
+
+		// Create files
+		for relPath, content := range setup.Files {
+			fullPath := filepath.Join(baseDir, relPath)
+
+			// Ensure parent directory exists
+			parentDir := filepath.Dir(fullPath)
+			if err := os.MkdirAll(parentDir, 0755); err != nil {
+				return fmt.Errorf("create parent dir for %s: %w", relPath, err)
+			}
+
+			// Handle ${TEMP_DIR} placeholder in content
+			expandedContent := strings.ReplaceAll(content, "${TEMP_DIR}", baseDir)
+
+			if err := os.WriteFile(fullPath, []byte(expandedContent), 0644); err != nil {
+				return fmt.Errorf("write file %s: %w", relPath, err)
+			}
+		}
+
+		// Handle environment variables
+		// Special case: GOGENT_DELEGATION_CEILING writes to file, not env var
+		for key, value := range setup.Env {
+			// Expand ${TEMP_DIR} in env values
+			expandedValue := strings.ReplaceAll(value, "${TEMP_DIR}", baseDir)
+
+			if key == "GOGENT_DELEGATION_CEILING" {
+				// Write ceiling to the file the CLI reads
+				ceilingPath := filepath.Join(baseDir, ".claude", "tmp", "max_delegation")
+				ceilingDir := filepath.Dir(ceilingPath)
+				if err := os.MkdirAll(ceilingDir, 0755); err != nil {
+					return fmt.Errorf("create ceiling dir: %w", err)
+				}
+				if err := os.WriteFile(ceilingPath, []byte(expandedValue), 0644); err != nil {
+					return fmt.Errorf("write ceiling file: %w", err)
+				}
+			}
+			// Note: Other env vars would need to be passed via buildEnv()
+			// Currently, fixture env vars other than GOGENT_DELEGATION_CEILING
+			// are not propagated to the CLI. This could be extended if needed.
+		}
+
+		return nil
+	}
 }

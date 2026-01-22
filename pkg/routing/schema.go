@@ -242,24 +242,28 @@ type DocumentationTheater struct {
 	Guidance          string   `json:"guidance"`
 }
 
-// LoadSchema loads and validates routing-schema.json from XDG config directory.
+// LoadSchema loads and validates routing-schema.json.
+// Priority: GOGENT_ROUTING_SCHEMA env var > XDG config directory default.
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadSchema() (*Schema, error) {
-	// XDG_CONFIG_HOME compliance
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		home := os.Getenv("HOME")
-		if home == "" {
-			return nil, fmt.Errorf("[routing] HOME environment variable not set")
-		}
-		configHome = home + "/.config"
-	}
+	schemaPath := os.Getenv("GOGENT_ROUTING_SCHEMA")
 
-	schemaPath := configHome + "/../.claude/routing-schema.json"
+	// Fall back to XDG default if env var not set
+	if schemaPath == "" {
+		configHome := os.Getenv("XDG_CONFIG_HOME")
+		if configHome == "" {
+			home := os.Getenv("HOME")
+			if home == "" {
+				return nil, fmt.Errorf("[routing] HOME environment variable not set")
+			}
+			configHome = home + "/.config"
+		}
+		schemaPath = configHome + "/../.claude/routing-schema.json"
+	}
 
 	data, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return nil, fmt.Errorf("[routing] Failed to read routing-schema.json: %w", err)
+		return nil, fmt.Errorf("[routing] Failed to read routing-schema.json from %s: %w", schemaPath, err)
 	}
 
 	var schema Schema

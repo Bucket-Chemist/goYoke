@@ -156,7 +156,7 @@ func (g *DefaultGenerator) RandomToolEvent(seed int64) *ToolEvent {
 		ToolInput:     make(map[string]interface{}),
 		SessionID:     fmt.Sprintf("sim-session-%d", rng.Int63()),
 		HookEventName: "PreToolUse",
-		CapturedAt:    time.Now().Unix(),
+		CapturedAt:    1700000000 + rng.Int63n(1000000), // Deterministic timestamp from seed
 	}
 
 	if toolName == "Task" {
@@ -198,7 +198,7 @@ func (g *DefaultGenerator) RandomSessionEvent(seed int64) *SessionEvent {
 	return &SessionEvent{
 		SessionID:     fmt.Sprintf("sim-session-%d", rng.Int63()),
 		HookEventName: "SessionEnd",
-		CapturedAt:    time.Now().Unix(),
+		CapturedAt:    1700000000 + rng.Int63n(1000000), // Deterministic timestamp from seed
 	}
 }
 
@@ -225,8 +225,9 @@ func (g *DefaultGenerator) GenerateWithParams(params FuzzParams) interface{} {
 	return g.RandomToolEvent(time.Now().UnixNano())
 }
 
-// weightedChoice selects a key based on weights.
+// weightedChoice selects a key based on weights using integer arithmetic.
 // Keys are sorted for deterministic results with the same seed.
+// Uses Int63 instead of Float64 to avoid platform-dependent floating-point precision.
 func weightedChoice(rng *rand.Rand, weights map[string]float64) string {
 	// Sort keys for deterministic iteration order
 	keys := make([]string, 0, len(weights))
@@ -235,23 +236,35 @@ func weightedChoice(rng *rand.Rand, weights map[string]float64) string {
 	}
 	sort.Strings(keys)
 
-	var total float64
-	for _, k := range keys {
-		total += weights[k]
+	// Convert float weights to integer milliweights (1000x) to avoid float precision issues
+	const precision = 1000
+	milliWeights := make([]int64, len(keys))
+	var total int64
+	for i, k := range keys {
+		milliWeights[i] = int64(weights[k] * precision)
+		total += milliWeights[i]
 	}
 
-	r := rng.Float64() * total
-	var cumulative float64
-	for _, k := range keys {
-		cumulative += weights[k]
-		if r <= cumulative {
+	if total == 0 {
+		if len(keys) > 0 {
+			return keys[0]
+		}
+		return ""
+	}
+
+	// Use Int63n for deterministic cross-platform selection
+	r := rng.Int63n(total)
+	var cumulative int64
+	for i, k := range keys {
+		cumulative += milliWeights[i]
+		if r < cumulative {
 			return k
 		}
 	}
 
-	// Fallback to first key (sorted)
+	// Fallback to last key (edge case when r == total-1 and rounding)
 	if len(keys) > 0 {
-		return keys[0]
+		return keys[len(keys)-1]
 	}
 	return ""
 }

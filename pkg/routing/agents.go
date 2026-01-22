@@ -144,24 +144,28 @@ type Cleanup struct {
 	Action  string `json:"action"`
 }
 
-// LoadAgentIndex loads and validates agents-index.json from XDG config directory.
+// LoadAgentIndex loads and validates agents-index.json.
+// Priority: GOGENT_AGENTS_INDEX env var > XDG config directory default.
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadAgentIndex() (*AgentIndex, error) {
-	// XDG_CONFIG_HOME compliance
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		home := os.Getenv("HOME")
-		if home == "" {
-			return nil, fmt.Errorf("[routing] HOME environment variable not set")
-		}
-		configHome = home + "/.config"
-	}
+	agentIndexPath := os.Getenv("GOGENT_AGENTS_INDEX")
 
-	agentIndexPath := configHome + "/../.claude/agents/agents-index.json"
+	// Fall back to XDG default if env var not set
+	if agentIndexPath == "" {
+		configHome := os.Getenv("XDG_CONFIG_HOME")
+		if configHome == "" {
+			home := os.Getenv("HOME")
+			if home == "" {
+				return nil, fmt.Errorf("[routing] HOME environment variable not set")
+			}
+			configHome = home + "/.config"
+		}
+		agentIndexPath = configHome + "/../.claude/agents/agents-index.json"
+	}
 
 	data, err := os.ReadFile(agentIndexPath)
 	if err != nil {
-		return nil, fmt.Errorf("[routing] Failed to read agents-index.json: %w", err)
+		return nil, fmt.Errorf("[routing] Failed to read agents-index.json from %s: %w", agentIndexPath, err)
 	}
 
 	var index AgentIndex

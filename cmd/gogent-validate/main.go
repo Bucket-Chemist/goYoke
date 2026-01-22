@@ -17,7 +17,11 @@ const (
 
 func main() {
 	// Get project directory from environment or current directory
-	projectDir := os.Getenv("CLAUDE_PROJECT_DIR")
+	// Priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > cwd
+	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	if projectDir == "" {
+		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
+	}
 	if projectDir == "" {
 		projectDir, _ = os.Getwd()
 	}
@@ -98,8 +102,10 @@ func parseEvent(r io.Reader, timeout time.Duration) (*routing.ToolEvent, error) 
 func outputResult(result *routing.ValidationResult, sessionID string) {
 	output := make(map[string]interface{})
 
+	// Always include decision for consistent parsing
+	output["decision"] = result.Decision
+
 	if result.Decision == "block" {
-		output["decision"] = "block"
 		output["reason"] = result.Reason
 		output["hookSpecificOutput"] = map[string]interface{}{
 			"hookEventName":            "PreToolUse",
@@ -109,6 +115,7 @@ func outputResult(result *routing.ValidationResult, sessionID string) {
 	} else {
 		// Allow with optional warnings
 		if result.ModelMismatch != "" {
+			output["reason"] = result.ModelMismatch
 			output["hookSpecificOutput"] = map[string]interface{}{
 				"hookEventName":     "PreToolUse",
 				"additionalContext": "⚠️ " + result.ModelMismatch,

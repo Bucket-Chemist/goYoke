@@ -15,6 +15,7 @@ type SimulationConfig struct {
 	SchemaPath     string        `json:"schema_path"`
 	AgentsPath     string        `json:"agents_path"`
 	TempDir        string        `json:"temp_dir"`
+	FixturesDir    string        `json:"fixtures_dir"` // Path to test fixtures (deterministic scenarios)
 	ReportFormat   string        `json:"report_format"` // "json", "markdown", "tap"
 	Verbose        bool          `json:"verbose"`
 }
@@ -24,6 +25,18 @@ type SetupFunc func(cfg SimulationConfig) error
 
 // TeardownFunc cleans up after scenario execution.
 type TeardownFunc func(cfg SimulationConfig) error
+
+// FixtureSetup represents the setup configuration from fixture JSON files.
+// It defines directories to create, files to write, and environment variables.
+type FixtureSetup struct {
+	// CreateDirs lists directories to create relative to TempDir
+	CreateDirs []string `json:"create_dirs,omitempty"`
+	// Files maps relative paths to file contents
+	Files map[string]string `json:"files,omitempty"`
+	// Env maps environment variable names to values.
+	// Special handling: GOGENT_DELEGATION_CEILING writes to .claude/tmp/max_delegation
+	Env map[string]string `json:"env,omitempty"`
+}
 
 // Scenario defines a single test case for simulation.
 type Scenario struct {

@@ -57,6 +57,7 @@ func main() {
 		SchemaPath:     *schemaPath,
 		AgentsPath:     *agentsPath,
 		TempDir:        filepath.Join(harnessDir, "..", "tmp"),
+		FixturesDir:    fixturesDir,
 		ReportFormat:   *reportFormat,
 		Verbose:        *verbose,
 	}
