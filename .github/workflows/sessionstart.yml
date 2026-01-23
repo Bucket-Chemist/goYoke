@@ -1,0 +1,131 @@
+# SessionStart Hook CI/CD Pipeline
+# Tests gogent-load-context in isolation for faster feedback
+
+name: SessionStart Hook
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'cmd/gogent-load-context/**'
+      - 'pkg/session/**'
+      - 'pkg/config/**'
+      - 'test/simulation/fixtures/deterministic/sessionstart/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'cmd/gogent-load-context/**'
+      - 'pkg/session/**'
+      - 'pkg/config/**'
+      - 'test/simulation/fixtures/deterministic/sessionstart/**'
+
+env:
+  GO_VERSION: '1.25'
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run Unit Tests
+        run: |
+          go test -v -race ./pkg/session/...
+          go test -v -race ./pkg/config/...
+
+      - name: Run Coverage
+        run: |
+          go test -coverprofile=coverage.out ./pkg/session/... ./pkg/config/...
+          go tool cover -func=coverage.out
+
+  simulation-tests:
+    name: Simulation Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build gogent-load-context
+        run: make build-load-context
+
+      - name: Run SessionStart Deterministic Tests
+        run: |
+          mkdir -p test/simulation/reports
+          make test-simulation-sessionstart
+
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sessionstart-simulation-${{ github.run_number }}
+          path: test/simulation/reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build gogent-load-context
+        run: make build-load-context
+
+      - name: Run Integration Tests
+        run: go test -v ./test/integration/...

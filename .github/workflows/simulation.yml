@@ -38,7 +38,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge
+        run: make build-validate build-archive build-sharp-edge build-load-context
 
       - name: Run Deterministic Tests
         id: deterministic
@@ -104,7 +104,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge
+        run: make build-validate build-archive build-sharp-edge build-load-context
 
       - name: Extended Fuzz Run
         run: |

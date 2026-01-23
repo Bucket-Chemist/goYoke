@@ -62,7 +62,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge
+        run: make build-validate build-archive build-sharp-edge build-load-context
 
       - name: Run Deterministic Tests
         run: make test-simulation-deterministic
@@ -100,7 +100,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge
+        run: make build-validate build-archive build-sharp-edge build-load-context
 
       - name: Run Session Replay Tests
         run: make test-simulation-replay
@@ -146,7 +146,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge
+        run: make build-validate build-archive build-sharp-edge build-load-context
 
       - name: Run Behavioral Tests
         run: make test-simulation-behavioral
@@ -191,7 +191,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge
+        run: make build-validate build-archive build-sharp-edge build-load-context
 
       - name: Run Chaos Tests
         env:
