@@ -2,7 +2,7 @@
 id: GOgent-060
 title: Project Type Detection
 description: Auto-detect project type (Python, R, R+Shiny, JavaScript, Go) for convention loading in CLAUDE.md Gate 1.
-status: pending
+status: completed
 time_estimate: 1.5h
 dependencies: []
 priority: MEDIUM
@@ -26,6 +26,7 @@ Auto-detect project type (Python, R, R+Shiny, JavaScript, Go) for convention loa
 **File**: `pkg/session/project_detection.go` (new file)
 
 **Implementation**:
+
 ```go
 package session
 
@@ -231,6 +232,7 @@ func FormatProjectType(result *ProjectDetectionResult) string {
 ```
 
 **Add import to file**:
+
 ```go
 import (
 	"fmt"
@@ -437,6 +439,7 @@ func TestFormatProjectType(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [x] `DetectProjectType()` detects: Go, Python, R, R+Shiny, R+Golem, JavaScript, TypeScript, Rust
 - [x] Returns generic for unrecognized projects
 - [x] Go has highest priority (this is GOgent-Fortress)
@@ -447,6 +450,7 @@ func TestFormatProjectType(t *testing.T) {
 - [x] `go test ./pkg/session/...` passes
 
 **Test Deliverables**:
+
 - [x] Test file created: `pkg/session/project_detection_test.go`
 - [x] Test file size: ~180 lines
 - [x] Number of test functions: 13
