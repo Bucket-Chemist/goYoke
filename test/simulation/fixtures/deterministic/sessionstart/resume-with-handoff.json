@@ -1,0 +1,21 @@
+{
+  "input": {
+    "type": "resume",
+    "session_id": "sim-resume-001",
+    "hook_event_name": "SessionStart"
+  },
+  "setup": {
+    "create_dirs": [".claude/memory"],
+    "files": {
+      ".claude/memory/last-handoff.md": "# Session Handoff\n\n## Last Session\nImplemented feature XYZ.\n\n## Next Steps\n- Complete testing"
+    }
+  },
+  "expected": {
+    "exit_code": 0,
+    "additional_context_contains": [
+      "SESSION INITIALIZED (resume)",
+      "PREVIOUS SESSION HANDOFF",
+      "feature XYZ"
+    ]
+  }
+}

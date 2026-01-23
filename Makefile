@@ -22,7 +22,8 @@ help:
 	@echo "  make build-aggregate - Build gogent-aggregate binary"
 	@echo "  make build-sharp-edge - Build gogent-sharp-edge binary"
 	@echo "  make build-capture-intent - Build gogent-capture-intent binary"
-	@echo "  make build-load-context - Build gogent-load-context binary"
+	@echo "  make build-load-context   - Build gogent-load-context binary"
+	@echo "  make build-all             - Build all hook binaries"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
 	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
@@ -37,6 +38,7 @@ help:
 	@echo "  make test-simulation-deterministic - Run deterministic tests only"
 	@echo "  make test-simulation-fuzz         - Run fuzz tests only"
 	@echo "  make test-simulation-posttooluse  - Run posttooluse tests only (requires build-sharp-edge)"
+	@echo "  make test-simulation-sessionstart - Run sessionstart tests only (requires build-load-context)"
 	@echo "  make test-simulation-replay       - Run session replay tests (GOgent-042)"
 	@echo "  make test-simulation-behavioral   - Run behavioral property tests (GOgent-042)"
 	@echo "  make test-simulation-chaos        - Run chaos tests (GOgent-042)"
@@ -108,8 +110,11 @@ build-capture-intent:
 
 build-load-context:
 	@echo "Building gogent-load-context..."
-	go build -o bin/gogent-load-context ./cmd/gogent-load-context
+	@go build -o bin/gogent-load-context ./cmd/gogent-load-context
 	@echo "✓ Built: bin/gogent-load-context"
+
+build-all: build-validate build-archive build-sharp-edge build-load-context
+	@echo "✓ All hook binaries built"
 
 install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
@@ -238,6 +243,15 @@ test-simulation-posttooluse: build-validate build-archive build-sharp-edge
 		-filter=F \
 		-report=tap \
 		-verbose
+
+# Run sessionstart tests only (context loading)
+test-simulation-sessionstart: build-validate build-archive build-load-context
+	@echo "Running SessionStart simulation tests..."
+	@go run ./test/simulation/harness/cmd/harness \
+		-mode=deterministic \
+		-filter=startup,resume \
+		-verbose
+	@echo "✓ SessionStart simulation tests passed"
 
 # Replay a specific crash
 # Usage: make replay-crash CRASH=path/to/crash.json

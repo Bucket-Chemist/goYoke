@@ -1,10 +1,11 @@
 ---
 id: GOgent-069
 title: Update Harness CLI for SessionStart
-description: **Task**:
+description: Update harness CLI to find and use gogent-load-context binary
 status: pending
 time_estimate: 1h
-dependencies: [\n  - GOgent-067]
+dependencies:
+  - GOgent-067
 priority: HIGH
 week: 4
 tags:
@@ -97,17 +98,17 @@ func TestFindBinary_LoadContext(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Harness CLI finds `gogent-load-context` in bin/ or PATH
-- [ ] Verbose mode logs when binary not found
-- [ ] Runner receives load-context path when available
-- [ ] `make build-all` builds all 4 hook binaries
-- [ ] `make test-simulation-sessionstart` runs SessionStart tests
-- [ ] Tests verify binary discovery
+- [x] Harness CLI finds `gogent-load-context` in bin/ or PATH
+- [x] Verbose mode logs when binary not found
+- [x] Runner receives load-context path when available
+- [x] `make build-all` builds all 4 hook binaries
+- [x] `make test-simulation-sessionstart` runs SessionStart tests
+- [x] Tests verify binary discovery
 
 **Test Deliverables**:
-- [ ] Tests added to: `cmd/harness/main_test.go`
-- [ ] Makefile targets added: `build-load-context`, `test-simulation-sessionstart`
-- [ ] Tests passing: ✅
+- [x] Tests added to: `cmd/harness/main_test.go`
+- [x] Makefile targets added: `build-load-context`, `test-simulation-sessionstart`
+- [x] Tests passing: ✅
 
 **Why This Matters**: CLI integration enables harness to execute SessionStart tests in CI/CD.
 

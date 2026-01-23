@@ -518,3 +518,30 @@ func TestReportExtensionExhaustive(t *testing.T) {
 		})
 	}
 }
+
+// TestFindBinary_LoadContext tests binary discovery for gogent-load-context.
+// This test verifies findBinary can locate gogent-load-context when it exists
+// in expected locations (bin/ or PATH).
+func TestFindBinary_LoadContext(t *testing.T) {
+	// Create temp bin directory
+	tmpDir := t.TempDir()
+	binPath := filepath.Join(tmpDir, "bin", "gogent-load-context")
+	os.MkdirAll(filepath.Dir(binPath), 0755)
+
+	// Create mock binary
+	os.WriteFile(binPath, []byte("#!/bin/bash\necho 'mock'"), 0755)
+
+	// Save and restore working directory
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(tmpDir)
+
+	path, err := findBinary("gogent-load-context")
+	if err != nil {
+		t.Fatalf("findBinary failed: %v", err)
+	}
+
+	if !strings.Contains(path, "gogent-load-context") {
+		t.Errorf("Expected path to contain binary name, got: %s", path)
+	}
+}

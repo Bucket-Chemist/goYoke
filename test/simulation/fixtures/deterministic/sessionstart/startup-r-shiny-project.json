@@ -1,0 +1,22 @@
+{
+  "input": {
+    "type": "startup",
+    "session_id": "sim-startup-004",
+    "hook_event_name": "SessionStart"
+  },
+  "setup": {
+    "files": {
+      "DESCRIPTION": "Package: myapp\nTitle: Shiny App\nVersion: 1.0.0\nImports: shiny",
+      "app.R": "library(shiny)\nshinyApp(ui, server)"
+    }
+  },
+  "expected": {
+    "exit_code": 0,
+    "project_type_equals": "r-shiny",
+    "additional_context_contains": [
+      "PROJECT TYPE: r-shiny",
+      "R.md",
+      "R-shiny.md"
+    ]
+  }
+}

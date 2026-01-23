@@ -1,0 +1,16 @@
+{
+  "input": {
+    "type": "resume",
+    "session_id": "sim-resume-002",
+    "hook_event_name": "SessionStart"
+  },
+  "expected": {
+    "exit_code": 0,
+    "additional_context_contains": [
+      "SESSION INITIALIZED (resume)"
+    ],
+    "additional_context_not_contains": [
+      "PREVIOUS SESSION HANDOFF"
+    ]
+  }
+}

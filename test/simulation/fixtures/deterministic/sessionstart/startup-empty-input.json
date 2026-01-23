@@ -1,0 +1,9 @@
+{
+  "input": {},
+  "expected": {
+    "exit_code": 0,
+    "additional_context_contains": [
+      "SESSION INITIALIZED (startup)"
+    ]
+  }
+}

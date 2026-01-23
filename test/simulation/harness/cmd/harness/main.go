@@ -106,6 +106,12 @@ func main() {
 		fmt.Printf("[INFO] gogent-sharp-edge not found, posttooluse scenarios will be skipped\n")
 	}
 
+	// Find optional load-context binary for sessionstart scenarios
+	loadContextPath, loadContextErr := findBinary("gogent-load-context")
+	if loadContextErr != nil && *verbose {
+		fmt.Printf("[INFO] gogent-load-context not found, sessionstart scenarios will be skipped\n")
+	}
+
 	// Initialize components
 	gen := harness.NewGenerator(fixturesDir)
 	runner := harness.NewRunner(cfg, validatePath, archivePath, gen)
@@ -113,6 +119,11 @@ func main() {
 	// Set sharp-edge path if available
 	if sharpEdgeErr == nil {
 		runner.SetSharpEdgePath(sharpEdgePath)
+	}
+
+	// Set load-context path if available
+	if loadContextErr == nil {
+		runner.SetLoadContextPath(loadContextPath)
 	}
 
 	// Handle replay mode
