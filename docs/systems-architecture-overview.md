@@ -2,7 +2,7 @@
 
 > **Schema Versions:** routing-schema v2.2.0 | handoff v1.2
 > **Last Updated:** 2026-01-23
-> **Status:** Implemented through Week 3 (session_archive suite)
+> **Status:** Implemented through Week 4 (session_start suite)
 
 ---
 
@@ -65,7 +65,7 @@ sequenceDiagram
 
 | Hook Event | CLI Binary | When Fired |
 |------------|------------|------------|
-| SessionStart | `gogent-load-context` | Session startup/resume (pending) |
+| SessionStart | `gogent-load-context` | Session startup/resume ✅ |
 | PreToolUse | `gogent-validate` | Before any tool executes |
 | PostToolUse | `gogent-sharp-edge` | After Bash/Edit/Write tools |
 | SessionEnd | `gogent-archive` | Session termination |
@@ -77,6 +77,7 @@ sequenceDiagram
 ```mermaid
 graph TD
     subgraph "CLI Layer (cmd/)"
+        loadcontext[gogent-load-context]
         validate[gogent-validate]
         archive[gogent-archive]
         sharpedge[gogent-sharp-edge]
@@ -97,6 +98,9 @@ graph TD
         jsonl[(JSONL Files)]
     end
 
+    loadcontext --> session
+    loadcontext --> routing
+    loadcontext --> config
     validate --> routing
     archive --> session
     archive --> config
@@ -217,6 +221,7 @@ graph LR
 
 | Binary | Hook Event | Input | Output | Lines |
 |--------|------------|-------|--------|-------|
+| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~100 |
 | `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~142 |
 | `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1111 |
 | `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | (none) | ~200 |

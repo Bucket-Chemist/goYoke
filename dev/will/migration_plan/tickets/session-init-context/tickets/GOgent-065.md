@@ -1,10 +1,11 @@
 ---
 id: GOgent-065
 title: Documentation Update
-description: **Task**:
+description: Update systems-architecture-overview.md with gogent-load-context documentation
 status: pending
 time_estimate: 1h
-dependencies: [\n  - GOgent-064]
+dependencies:
+  - GOgent-064
 priority: MEDIUM
 week: 4
 tags:
@@ -66,12 +67,12 @@ graph TD
 ```
 
 **Acceptance Criteria**:
-- [ ] Hook Entry Points table updated with gogent-load-context
-- [ ] CLI Reference table updated
-- [ ] Package Dependencies diagram updated
-- [ ] Status header updated to Week 4
-- [ ] No dead links in documentation
-- [ ] Mermaid diagrams render correctly
+- [x] Hook Entry Points table updated with gogent-load-context
+- [x] CLI Reference table updated
+- [x] Package Dependencies diagram updated
+- [x] Status header updated to Week 4
+- [x] No dead links in documentation
+- [x] Mermaid diagrams render correctly
 
 **Why This Matters**: Documentation enables other developers to understand and extend the system.
 
