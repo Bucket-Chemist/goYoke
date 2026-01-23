@@ -1261,7 +1261,7 @@
         "pkg/session/intent_outcomes.go"
       ],
       "tests_required": true,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-000",
@@ -3556,7 +3556,7 @@
     {
       "id": "GOgent-042",
       "title": "Behavioral Simulation CI/CD Pipeline",
-      "description": "End-to-end behavioral testing for the complete learning pipeline with session replay, behavioral invariants, chaos testing, and week simulation",
+      "description": "Extend the existing simulation testing infrastructure with behavioral testing that validates multi-turn session sequences, cross-session memory, and concurrent agent scenarios. Foundation for end-to-end learning pipeline validation.",
       "file": "tickets/042.md",
       "week": 3,
       "day": 1,
@@ -3591,8 +3591,8 @@
         "behavioral",
         "ci-cd"
       ],
-      "acceptance_criteria_count": 21,
-      "status": "pending",
+      "acceptance_criteria_count": 28,
+      "status": "in_progress",
       "estimated_hours": "6h",
       "revision": "R1",
       "revision_date": "2026-01-23",

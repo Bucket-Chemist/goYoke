@@ -854,6 +854,104 @@ func TestFindSimilar_CaseInsensitiveKeywords(t *testing.T) {
 	assert.Contains(t, matches[0].MatchedOn, "keyword:Assertion")
 }
 
+// TestSharpEdgeTemplate_GetID tests the GetID method
+func TestSharpEdgeTemplate_GetID(t *testing.T) {
+	tests := []struct {
+		name     string
+		template SharpEdgeTemplate
+		want     string
+	}{
+		{
+			name: "ID field present",
+			template: SharpEdgeTemplate{
+				ID:   "test-001",
+				Name: "Test Name",
+			},
+			want: "test-001",
+		},
+		{
+			name: "Only Name field present (python-pro style)",
+			template: SharpEdgeTemplate{
+				Name: "Python Error",
+			},
+			want: "Python Error",
+		},
+		{
+			name: "Both fields present - ID takes precedence",
+			template: SharpEdgeTemplate{
+				ID:   "go-001",
+				Name: "Go Error",
+			},
+			want: "go-001",
+		},
+		{
+			name: "Neither field present",
+			template: SharpEdgeTemplate{
+				ErrorType: "TestError",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.template.GetID()
+			if got != tt.want {
+				t.Errorf("GetID() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSharpEdgeTemplate_GetSolution tests the GetSolution method
+func TestSharpEdgeTemplate_GetSolution(t *testing.T) {
+	tests := []struct {
+		name     string
+		template SharpEdgeTemplate
+		want     string
+	}{
+		{
+			name: "Solution field present",
+			template: SharpEdgeTemplate{
+				Solution:   "Use direct field access",
+				Mitigation: "Alternative mitigation",
+			},
+			want: "Use direct field access",
+		},
+		{
+			name: "Only Mitigation field present (python-pro style)",
+			template: SharpEdgeTemplate{
+				Mitigation: "Check for nil pointer",
+			},
+			want: "Check for nil pointer",
+		},
+		{
+			name: "Both fields present - Solution takes precedence",
+			template: SharpEdgeTemplate{
+				Solution:   "Primary solution",
+				Mitigation: "Secondary mitigation",
+			},
+			want: "Primary solution",
+		},
+		{
+			name: "Neither field present",
+			template: SharpEdgeTemplate{
+				ErrorType: "TestError",
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.template.GetSolution()
+			if got != tt.want {
+				t.Errorf("GetSolution() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestFindSimilar_FilePatternMatching tests glob pattern matching behavior
 func TestFindSimilar_FilePatternMatching(t *testing.T) {
 	tests := []struct {

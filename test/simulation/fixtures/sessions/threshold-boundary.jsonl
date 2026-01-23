@@ -1,0 +1,4 @@
+{"session_id":"threshold-boundary","description":"Blocking happens exactly at threshold (3), not before (2)","expected":{"sharp_edges_created":1,"blocking_responses":1,"files_created":[".claude/memory/pending-learnings.jsonl"]}}
+{"ts":1705000000,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python boundary.py"},"tool_response":{"exit_code":1,"output":"AssertionError: expected True"},"success":false,"expected_decision":""}
+{"ts":1705000010,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python boundary.py"},"tool_response":{"exit_code":1,"output":"AssertionError: expected True"},"success":false,"expected_decision":""}
+{"ts":1705000020,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python boundary.py"},"tool_response":{"exit_code":1,"output":"AssertionError: expected True"},"success":false,"expected_decision":"block"}

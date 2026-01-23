@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -12,6 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// itoa converts int64 to string
+func itoa(i int64) string {
+	return strconv.FormatInt(i, 10)
+}
 
 // TestFallback_MissingProjectDir tests behavior when GOGENT_PROJECT_DIR not set
 func TestFallback_MissingProjectDir(t *testing.T) {
@@ -103,12 +109,15 @@ func TestFallback_CorruptedTrackerLog(t *testing.T) {
 	tmpDir := t.TempDir()
 	trackerPath := filepath.Join(tmpDir, "failure-tracker.jsonl")
 
+	// Use current timestamps to be within the failure window (default 300 seconds)
+	now := time.Now().Unix()
+
 	// Write corrupted JSONL (mix of valid and invalid)
-	corruptedContent := `{"file":"test1.go","error_type":"error1","timestamp":1234567890}
+	corruptedContent := `{"file":"test1.go","error_type":"error1","timestamp":` + itoa(now-10) + `}
 {this is not valid json
-{"file":"test2.go","error_type":"error2","timestamp":1234567891}
+{"file":"test2.go","error_type":"error2","timestamp":` + itoa(now-5) + `}
 invalid line here
-{"file":"test3.go","error_type":"error3","timestamp":1234567892}
+{"file":"test3.go","error_type":"error3","timestamp":` + itoa(now-2) + `}
 `
 	require.NoError(t, os.WriteFile(trackerPath, []byte(corruptedContent), 0644))
 

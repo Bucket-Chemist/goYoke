@@ -859,3 +859,144 @@ func TestDefaultHandoffConfig_NewPaths(t *testing.T) {
 		t.Errorf("Expected PerformancePath '%s', got: '%s'", expectedPerformancePath, config.PerformancePath)
 	}
 }
+
+// ===== Tests for LoadAllUserIntents (GOgent-041c) =====
+
+func TestLoadAllUserIntents_Valid(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "user-intents.jsonl")
+
+	data := `{"timestamp":1000,"question":"Fix bug?","response":"Yes","confidence":"explicit","source":"ask_user","category":"bug_fix","keywords":["bug","fix"],"honored":true,"outcome_note":"completed"}
+{"timestamp":1100,"question":"Add feature?","response":"Add X","confidence":"explicit","source":"ask_user","category":"feature_request","keywords":["feature","add"],"honored":false,"outcome_note":"in_progress"}`
+	os.WriteFile(path, []byte(data), 0644)
+
+	intents, err := LoadAllUserIntents(path)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(intents) != 2 {
+		t.Errorf("Expected 2 intents, got: %d", len(intents))
+	}
+
+	// Verify first intent
+	if intents[0].Timestamp != 1000 {
+		t.Errorf("Expected Timestamp 1000, got: %d", intents[0].Timestamp)
+	}
+	if intents[0].Question != "Fix bug?" {
+		t.Errorf("Expected Question 'Fix bug?', got: %s", intents[0].Question)
+	}
+	if intents[0].Response != "Yes" {
+		t.Errorf("Expected Response 'Yes', got: %s", intents[0].Response)
+	}
+	if intents[0].Category != "bug_fix" {
+		t.Errorf("Expected Category 'bug_fix', got: %s", intents[0].Category)
+	}
+	if len(intents[0].Keywords) != 2 {
+		t.Errorf("Expected 2 keywords, got: %d", len(intents[0].Keywords))
+	}
+	if intents[0].Keywords[0] != "bug" || intents[0].Keywords[1] != "fix" {
+		t.Errorf("Expected keywords ['bug', 'fix'], got: %v", intents[0].Keywords)
+	}
+	if intents[0].Honored == nil || !*intents[0].Honored {
+		t.Errorf("Expected Honored true, got: %v", intents[0].Honored)
+	}
+	if intents[0].OutcomeNote != "completed" {
+		t.Errorf("Expected OutcomeNote 'completed', got: %s", intents[0].OutcomeNote)
+	}
+
+	// Verify second intent
+	if intents[1].Question != "Add feature?" {
+		t.Errorf("Expected Question 'Add feature?', got: %s", intents[1].Question)
+	}
+	if intents[1].Category != "feature_request" {
+		t.Errorf("Expected Category 'feature_request', got: %s", intents[1].Category)
+	}
+	if intents[1].Honored == nil || *intents[1].Honored {
+		t.Errorf("Expected Honored false, got: %v", intents[1].Honored)
+	}
+}
+
+func TestLoadAllUserIntents_MissingFile(t *testing.T) {
+	intents, err := LoadAllUserIntents("/tmp/nonexistent-intents.jsonl")
+
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+
+	if len(intents) != 0 {
+		t.Errorf("Expected empty slice for missing file, got: %d intents", len(intents))
+	}
+}
+
+func TestLoadAllUserIntents_EmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "empty.jsonl")
+	os.WriteFile(path, []byte(""), 0644)
+
+	intents, err := LoadAllUserIntents(path)
+
+	if err != nil {
+		t.Errorf("Expected no error for empty file, got: %v", err)
+	}
+
+	if len(intents) != 0 {
+		t.Errorf("Expected empty slice for empty file, got: %d intents", len(intents))
+	}
+}
+
+func TestLoadAllUserIntents_Malformed(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "malformed.jsonl")
+	data := `not json
+{"timestamp":1000,"question":"Valid?","response":"Yes","confidence":"explicit","source":"ask_user","category":"test","keywords":["test"]}
+{incomplete json`
+	os.WriteFile(path, []byte(data), 0644)
+
+	intents, err := LoadAllUserIntents(path)
+
+	if err != nil {
+		t.Fatalf("Expected no error (skip malformed), got: %v", err)
+	}
+
+	// Should only have the valid line
+	if len(intents) != 1 {
+		t.Errorf("Expected 1 intent (skipped malformed), got: %d", len(intents))
+	}
+
+	if intents[0].Question != "Valid?" {
+		t.Errorf("Expected valid intent to be parsed, got: %s", intents[0].Question)
+	}
+}
+
+func TestLoadAllUserIntents_MinimalFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "minimal.jsonl")
+	data := `{"timestamp":1000,"question":"Minimal?","response":"Yes","confidence":"explicit","source":"ask_user"}`
+	os.WriteFile(path, []byte(data), 0644)
+
+	intents, err := LoadAllUserIntents(path)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(intents) != 1 {
+		t.Errorf("Expected 1 intent, got: %d", len(intents))
+	}
+
+	// Verify minimal fields work (category, keywords, honored, outcome_note are optional)
+	if intents[0].Question != "Minimal?" {
+		t.Errorf("Expected Question 'Minimal?', got: %s", intents[0].Question)
+	}
+	if intents[0].Category != "" {
+		t.Errorf("Expected empty Category, got: %s", intents[0].Category)
+	}
+	if intents[0].Honored != nil {
+		t.Errorf("Expected nil Honored, got: %v", intents[0].Honored)
+	}
+	if intents[0].OutcomeNote != "" {
+		t.Errorf("Expected empty OutcomeNote, got: %s", intents[0].OutcomeNote)
+	}
+}

@@ -274,17 +274,17 @@ func TestInvariant_SchemaVersionCurrent(t *testing.T) {
 		},
 		{
 			name:    "Correct version",
-			content: `{"schema_version": "1.1"}`,
+			content: `{"schema_version": "1.2"}`,
 			valid:   true,
 		},
 		{
 			name:    "Multiple lines - last version correct",
-			content: "{\"schema_version\": \"1.0\"}\n{\"schema_version\": \"1.1\"}",
+			content: "{\"schema_version\": \"1.0\"}\n{\"schema_version\": \"1.2\"}",
 			valid:   true,
 		},
 		{
 			name:    "Multiple lines - last version wrong",
-			content: "{\"schema_version\": \"1.1\"}\n{\"schema_version\": \"1.0\"}",
+			content: "{\"schema_version\": \"1.2\"}\n{\"schema_version\": \"1.0\"}",
 			valid:   false,
 		},
 	}

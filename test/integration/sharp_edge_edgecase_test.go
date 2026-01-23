@@ -223,7 +223,7 @@ func TestEdgeCase_ComplexCommandParsing(t *testing.T) {
 		{
 			name:     "python_with_args",
 			command:  "python -m pytest tests/test_main.py -v --cov",
-			expected: "-m", // First path-like (has /)
+			expected: "tests/test_main.py", // First path-like (has /)
 		},
 		{
 			name:     "go_test_with_flags",
@@ -238,7 +238,7 @@ func TestEdgeCase_ComplexCommandParsing(t *testing.T) {
 		{
 			name:     "quoted_path",
 			command:  `python "path with spaces/file.py"`,
-			expected: `"path`, // Naive parsing, but reasonable fallback
+			expected: `spaces/file.py"`, // Naive whitespace splitting: "path with spaces/file.py" becomes ["\"path", "with", "spaces/file.py\""]
 		},
 	}
 

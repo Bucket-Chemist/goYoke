@@ -523,6 +523,7 @@ func TestRunner_Run_Integration(t *testing.T) {
 	// Run simulation
 	cfg := SimulationConfig{
 		TempDir:        tmpDir,
+		FixturesDir:    filepath.Join(tmpDir, "fixtures"),
 		ScenarioFilter: []string{"V00"}, // Only V00* scenarios
 		Verbose:        false,
 	}
@@ -605,12 +606,15 @@ func TestRunner_LoadScenarios_InvalidJSON(t *testing.T) {
 	}
 
 	r := &DefaultRunner{
-		config: SimulationConfig{TempDir: tmpDir},
+		config: SimulationConfig{
+			TempDir:     tmpDir,
+			FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		},
 	}
 
 	_, err := r.loadScenarios()
 	if err == nil {
-		t.Error("Expected error for invalid JSON")
+		t.Fatal("Expected error for invalid JSON, got nil")
 	}
 	if !strings.Contains(err.Error(), "parse") {
 		t.Errorf("Expected parse error, got: %v", err)
@@ -638,7 +642,10 @@ func TestRunner_LoadScenarios_ReadError(t *testing.T) {
 	defer os.Chmod(badFile, 0644) // Clean up
 
 	r := &DefaultRunner{
-		config: SimulationConfig{TempDir: tmpDir},
+		config: SimulationConfig{
+			TempDir:     tmpDir,
+			FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		},
 	}
 
 	_, err := r.loadScenarios()
@@ -828,8 +835,9 @@ func TestRunner_Run_Verbose(t *testing.T) {
 	}
 
 	cfg := SimulationConfig{
-		TempDir: tmpDir,
-		Verbose: true, // Enable verbose output
+		TempDir:     tmpDir,
+		FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		Verbose:     true, // Enable verbose output
 	}
 
 	r := NewRunner(cfg, cliPath, cliPath, nil)
@@ -973,7 +981,10 @@ func TestRunner_LoadScenarios_SessionEnd(t *testing.T) {
 	}
 
 	r := &DefaultRunner{
-		config: SimulationConfig{TempDir: tmpDir},
+		config: SimulationConfig{
+			TempDir:     tmpDir,
+			FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		},
 	}
 
 	scenarios, err := r.loadScenarios()
@@ -1004,7 +1015,8 @@ func TestRunner_Run_LoadError(t *testing.T) {
 	}
 
 	cfg := SimulationConfig{
-		TempDir: tmpDir,
+		TempDir:     tmpDir,
+		FixturesDir: filepath.Join(tmpDir, "fixtures"),
 	}
 
 	r := NewRunner(cfg, "/bin/true", "/bin/true", nil)

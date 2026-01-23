@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
 // Test Coverage Note (70.3%):
@@ -386,5 +388,134 @@ func TestRun_WithMultipleMetrics(t *testing.T) {
 
 	if !strings.Contains(string(mdContent), "Session Handoff") {
 		t.Error("Expected markdown to contain 'Session Handoff' heading")
+	}
+}
+
+// TestBuildSessionActions tests the buildSessionActions helper function
+func TestBuildSessionActions(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a handoff with session data
+	handoffPath := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	os.MkdirAll(filepath.Dir(handoffPath), 0755)
+
+	handoffData := `{"session_id":"test-session","timestamp":1000,"version":"1.0","context":{"git_info":{"is_dirty":true,"uncommitted":["file1.go","file2.go"],"branch":"main"},"metrics":{"tool_calls":5,"errors":0,"violations":0}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[],"user_intents":[],"decisions":[],"preference_overrides":[],"performance_metrics":[]}}`
+	os.WriteFile(handoffPath, []byte(handoffData), 0644)
+
+	// Call buildSessionActions
+	actions := buildSessionActions(tmpDir, "test-session")
+
+	// Verify actions were populated
+	if len(actions.FilesEdited) != 2 {
+		t.Errorf("Expected 2 files edited, got: %d", len(actions.FilesEdited))
+	}
+
+	if actions.FilesEdited[0] != "file1.go" || actions.FilesEdited[1] != "file2.go" {
+		t.Errorf("Expected files [file1.go, file2.go], got: %v", actions.FilesEdited)
+	}
+
+	if len(actions.ToolsUsed) == 0 {
+		t.Error("Expected some tools used when tool_calls > 0")
+	}
+}
+
+func TestBuildSessionActions_NoHandoff(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// No handoff file exists
+	actions := buildSessionActions(tmpDir, "nonexistent-session")
+
+	// Should return empty actions (not error)
+	if len(actions.FilesEdited) != 0 {
+		t.Errorf("Expected empty FilesEdited, got: %v", actions.FilesEdited)
+	}
+
+	if len(actions.ToolsUsed) != 0 {
+		t.Errorf("Expected empty ToolsUsed, got: %v", actions.ToolsUsed)
+	}
+
+	if actions.ActionsStopped {
+		t.Error("Expected ActionsStopped false")
+	}
+}
+
+func TestBuildSessionActions_SessionNotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a handoff for a different session
+	handoffPath := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	os.MkdirAll(filepath.Dir(handoffPath), 0755)
+
+	handoffData := `{"session_id":"other-session","timestamp":1000,"version":"1.0","context":{"git_info":{},"metrics":{}},"artifacts":{}}`
+	os.WriteFile(handoffPath, []byte(handoffData), 0644)
+
+	// Request different session
+	actions := buildSessionActions(tmpDir, "target-session")
+
+	// Should return empty actions (session not found)
+	if len(actions.FilesEdited) != 0 {
+		t.Errorf("Expected empty FilesEdited when session not found, got: %v", actions.FilesEdited)
+	}
+}
+
+// TestUpdateIntentsWithOutcomes tests the updateIntentsWithOutcomes helper function
+func TestUpdateIntentsWithOutcomes(t *testing.T) {
+	tmpDir := t.TempDir()
+	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	os.MkdirAll(filepath.Dir(intentsPath), 0755)
+
+	// Create initial intents file
+	initialData := `{"timestamp":1000,"question":"Q1","response":"R1","confidence":"explicit","source":"ask_user"}
+{"timestamp":1100,"question":"Q2","response":"R2","confidence":"explicit","source":"ask_user"}`
+	os.WriteFile(intentsPath, []byte(initialData), 0644)
+
+	// Create analyzed intents with outcomes
+	honored := true
+	notHonored := false
+	analyzedIntents := []session.UserIntent{
+		{Timestamp: 1000, Question: "Q1", Response: "R1", Confidence: "explicit", Source: "ask_user", Honored: &honored, OutcomeNote: "completed"},
+		{Timestamp: 1100, Question: "Q2", Response: "R2", Confidence: "explicit", Source: "ask_user", Honored: &notHonored, OutcomeNote: "blocked"},
+	}
+	outcomes := []session.IntentOutcome{
+		{IntentIndex: 0, Honored: true, Note: "Task completed", Confidence: "high"},
+		{IntentIndex: 1, Honored: false, Note: "Constraint violation", Confidence: "high"},
+	}
+
+	// Call updateIntentsWithOutcomes
+	err := updateIntentsWithOutcomes(tmpDir, analyzedIntents, outcomes)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Verify file was updated
+	updatedData, err := os.ReadFile(intentsPath)
+	if err != nil {
+		t.Fatalf("Failed to read updated file: %v", err)
+	}
+
+	// Verify updated content includes honored field
+	if !strings.Contains(string(updatedData), "\"honored\":true") {
+		t.Error("Expected updated file to contain honored:true")
+	}
+
+	if !strings.Contains(string(updatedData), "\"honored\":false") {
+		t.Error("Expected updated file to contain honored:false")
+	}
+
+	if !strings.Contains(string(updatedData), "completed") {
+		t.Error("Expected updated file to contain outcome note 'completed'")
+	}
+}
+
+func TestUpdateIntentsWithOutcomes_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// No intents file exists
+	err := updateIntentsWithOutcomes(tmpDir, []session.UserIntent{}, []session.IntentOutcome{})
+
+	// Should return an error when file doesn't exist
+	if err == nil {
+		t.Error("Expected error when intents file doesn't exist, got nil")
 	}
 }

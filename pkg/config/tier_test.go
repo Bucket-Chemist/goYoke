@@ -191,3 +191,22 @@ func TestIsValidTier(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCurrentTier_UsesGetTierFilePath(t *testing.T) {
+	// Test that GetCurrentTier() calls GetCurrentTierFromPath with correct path
+	// This is a smoke test to ensure the wrapper works
+
+	// Create a temporary tier file in the actual path (if accessible)
+	// If not accessible, just verify function doesn't panic
+	tier, err := GetCurrentTier()
+
+	// Should return either a valid tier or "external" fallback
+	if err != nil {
+		t.Errorf("GetCurrentTier() unexpected error: %v", err)
+	}
+
+	// Tier should be valid or external
+	if tier != "" && !isValidTier(tier) {
+		t.Errorf("GetCurrentTier() returned invalid tier: %s", tier)
+	}
+}

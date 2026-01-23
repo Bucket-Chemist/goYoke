@@ -1,0 +1,4 @@
+{"session_id":"debugging-loop","description":"Three consecutive failures on same file/error triggers blocking and sharp edge","expected":{"sharp_edges_created":1,"blocking_responses":1,"files_created":[".claude/memory/pending-learnings.jsonl"]}}
+{"ts":1705000000,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python test.py"},"tool_response":{"exit_code":1,"output":"TypeError: invalid argument"},"success":false,"expected_decision":""}
+{"ts":1705000010,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python test.py"},"tool_response":{"exit_code":1,"output":"TypeError: invalid argument"},"success":false,"expected_decision":""}
+{"ts":1705000020,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python test.py"},"tool_response":{"exit_code":1,"output":"TypeError: invalid argument"},"success":false,"expected_decision":"block"}

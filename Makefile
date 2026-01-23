@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -35,6 +35,10 @@ help:
 	@echo "  make test-simulation-deterministic - Run deterministic tests only"
 	@echo "  make test-simulation-fuzz         - Run fuzz tests only"
 	@echo "  make test-simulation-posttooluse  - Run posttooluse tests only (requires build-sharp-edge)"
+	@echo "  make test-simulation-replay       - Run session replay tests (GOgent-042)"
+	@echo "  make test-simulation-behavioral   - Run behavioral property tests (GOgent-042)"
+	@echo "  make test-simulation-chaos        - Run chaos tests (GOgent-042)"
+	@echo "  make test-simulation-behavioral-all - Run all behavioral tests"
 	@echo "  make replay-crash CRASH=<file>    - Replay a specific crash"
 	@echo "  make clean-simulation             - Clean simulation artifacts"
 	@echo ""
@@ -261,3 +265,48 @@ test-sharp-edge-coverage:
 
 test-sharp-edge-all: test-sharp-edge-unit test-sharp-edge-integration
 	@echo "✅ All sharp edge tests passed"
+
+# ==============================================================================
+# Behavioral Simulation Testing (GOgent-042)
+# 4-level pipeline: Unit -> Session Replay -> Behavioral Properties -> Chaos
+# ==============================================================================
+
+# Session Replay Tests (Level 2)
+# Tests multi-turn session sequences against recorded fixtures
+test-simulation-replay: build-validate build-archive build-sharp-edge
+	@echo "Running session replay tests..."
+	@mkdir -p test/simulation/reports
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=replay \
+		-report=json \
+		-output=test/simulation/reports
+
+# Behavioral Property Tests (Level 3)
+# Tests system invariants B1, B4-B7 across sessions
+test-simulation-behavioral: build-validate build-archive build-sharp-edge
+	@echo "Running behavioral property tests..."
+	@mkdir -p test/simulation/reports
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=behavioral \
+		-report=json \
+		-output=test/simulation/reports
+
+# Chaos Testing (Level 4)
+# Tests concurrent agent scenarios with shared-key contention
+test-simulation-chaos: build-validate build-archive build-sharp-edge
+	@echo "Running chaos tests..."
+	@mkdir -p test/simulation/reports
+	@CHAOS_AGENTS=$${CHAOS_AGENTS:-10} \
+	CHAOS_SHARED_RATIO=$${CHAOS_SHARED_RATIO:-0.3} \
+	go run ./test/simulation/harness/cmd/harness \
+		-mode=chaos \
+		-report=json \
+		-output=test/simulation/reports
+
+# All behavioral tests (for CI/manual comprehensive testing)
+test-simulation-behavioral-all: test-simulation-deterministic test-simulation-replay test-simulation-behavioral
+	@echo "✅ All behavioral simulation tests passed"
+
+# Full simulation suite including chaos (use sparingly - takes longer)
+test-simulation-all: test-simulation-deterministic test-simulation-fuzz test-simulation-replay test-simulation-behavioral
+	@echo "✅ All simulation tests passed (excluding chaos)"

@@ -15,13 +15,47 @@ import (
 // Sharp edges are patterns of common errors or gotchas that agents encounter,
 // along with their solutions and context for pattern matching.
 type SharpEdgeTemplate struct {
-	ID          string   `yaml:"id"`
-	ErrorType   string   `yaml:"error_type"`
-	FilePattern string   `yaml:"file_pattern"`
-	Keywords    []string `yaml:"keywords"`
-	Description string   `yaml:"description"`
-	Solution    string   `yaml:"solution"`
-	Source      string   `yaml:"-"` // File path where loaded from
+	ID          string   `yaml:"id,omitempty"`
+	Name        string   `yaml:"name,omitempty"`        // Alternative to ID (python-pro style)
+	ErrorType   string   `yaml:"error_type,omitempty"`
+	FilePattern string   `yaml:"file_pattern,omitempty"`
+	Keywords    []string `yaml:"keywords,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+	Solution    string   `yaml:"solution,omitempty"`
+	Mitigation  string   `yaml:"mitigation,omitempty"`  // Alternative to Solution (python-pro style)
+	Severity    string   `yaml:"severity,omitempty"`    // e.g., "critical", "high", "medium"
+	Category    string   `yaml:"category,omitempty"`    // e.g., "concurrency", "networking"
+	Symptom     string   `yaml:"symptom,omitempty"`     // Human-readable symptom description
+	AutoInject  bool     `yaml:"auto_inject,omitempty"` // Whether to auto-inject on match
+	Source      string   `yaml:"-"`                     // File path where loaded from
+}
+
+// GetID returns the template ID, preferring ID over Name for backwards compatibility.
+func (t SharpEdgeTemplate) GetID() string {
+	if t.ID != "" {
+		return t.ID
+	}
+	return t.Name
+}
+
+// GetSolution returns the solution text, preferring Solution over Mitigation.
+func (t SharpEdgeTemplate) GetSolution() string {
+	if t.Solution != "" {
+		return t.Solution
+	}
+	return t.Mitigation
+}
+
+// SharpEdgesFile represents the YAML file structure for sharp-edges.yaml.
+// This wrapper type handles multiple versioned formats used by agent configurations:
+// - Format 1: { sharp_edges: [...] } (go-pro style)
+// - Format 2: { edges: [...] } (python-pro style)
+// - Format 3: Direct array [...] (legacy)
+type SharpEdgesFile struct {
+	Version    string              `yaml:"version,omitempty"`
+	Updated    string              `yaml:"updated,omitempty"`
+	SharpEdges []SharpEdgeTemplate `yaml:"sharp_edges,omitempty"`
+	Edges      []SharpEdgeTemplate `yaml:"edges,omitempty"` // Alternative key used by some agents
 }
 
 // SharpEdgeIndex provides fast lookup of sharp edge templates.
@@ -92,11 +126,25 @@ func LoadSharpEdgesIndex(agentDirs []string) (*SharpEdgeIndex, error) {
 		}
 
 		// Parse YAML into templates
+		// Try versioned formats first (with wrapper), then fall back to raw array
 		var templates []SharpEdgeTemplate
-		if err := yaml.Unmarshal(data, &templates); err != nil {
-			// Log warning but continue with other files
-			fmt.Fprintf(os.Stderr, "Warning: Failed to parse %s: %v\n", yamlPath, err)
-			continue
+		var fileWrapper SharpEdgesFile
+		if err := yaml.Unmarshal(data, &fileWrapper); err == nil {
+			// Check both possible keys: sharp_edges (go-pro style) and edges (python-pro style)
+			if len(fileWrapper.SharpEdges) > 0 {
+				templates = fileWrapper.SharpEdges
+			} else if len(fileWrapper.Edges) > 0 {
+				templates = fileWrapper.Edges
+			}
+		}
+		// If wrapper parsing didn't find templates, try direct array format (legacy)
+		if len(templates) == 0 {
+			if err := yaml.Unmarshal(data, &templates); err != nil {
+				// Neither format worked - skip silently (agents may have different schemas)
+				// This is not an error: agent sharp-edges.yaml files may use different schemas
+				// that are meant for documentation/reference rather than pattern matching
+				continue
+			}
 		}
 
 		// Index each template
