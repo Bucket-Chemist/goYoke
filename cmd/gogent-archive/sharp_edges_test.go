@@ -534,11 +534,11 @@ func TestListUserIntents_TableFormat(t *testing.T) {
 	if !strings.Contains(output, "Timestamp") {
 		t.Error("Expected 'Timestamp' header")
 	}
+	if !strings.Contains(output, "Category") {
+		t.Error("Expected 'Category' header")
+	}
 	if !strings.Contains(output, "Source") {
 		t.Error("Expected 'Source' header")
-	}
-	if !strings.Contains(output, "Confidence") {
-		t.Error("Expected 'Confidence' header")
 	}
 	if !strings.Contains(output, "Question") {
 		t.Error("Expected 'Question' header")
@@ -551,9 +551,7 @@ func TestListUserIntents_TableFormat(t *testing.T) {
 	if !strings.Contains(output, "ask_user") {
 		t.Error("Expected ask_user source")
 	}
-	if !strings.Contains(output, "explicit") {
-		t.Error("Expected explicit confidence")
-	}
+	// Note: Category column now shown instead of confidence in table
 }
 
 // ============================================================================

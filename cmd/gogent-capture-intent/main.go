@@ -113,7 +113,7 @@ func extractIntent(hookInput HookInput) (*session.UserIntent, error) {
 	// Use header as context if available
 	context := q.Header
 
-	return &session.UserIntent{
+	intent := &session.UserIntent{
 		Timestamp:   time.Now().Unix(),
 		Question:    q.Question,
 		Response:    response,
@@ -122,7 +122,13 @@ func extractIntent(hookInput HookInput) (*session.UserIntent, error) {
 		Source:      "ask_user",
 		SessionID:   hookInput.SessionID,
 		ToolContext: hookInput.Tool.Name,
-	}, nil
+	}
+
+	// GOgent-041: Add classification and keyword extraction
+	intent.Category = string(session.ClassifyIntent(q.Question, response))
+	intent.Keywords = session.ExtractKeywords(response)
+
+	return intent, nil
 }
 
 // appendIntent appends a UserIntent to the JSONL file

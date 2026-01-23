@@ -354,6 +354,8 @@ func printHelp() {
 	fmt.Println("  gogent-archive user-intents          List all user intents")
 	fmt.Println("  gogent-archive user-intents --source ask_user  Filter by source (ask_user, hook_prompt, manual)")
 	fmt.Println("  gogent-archive user-intents --confidence explicit  Filter by confidence (explicit, inferred, default)")
+	fmt.Println("  gogent-archive user-intents --category routing  Filter by category (routing, tooling, style, etc.)")
+	fmt.Println("  gogent-archive user-intents --keyword pytest    Filter by keyword")
 	fmt.Println("  gogent-archive user-intents --has-action    Show only intents with actions taken")
 	fmt.Println("  gogent-archive user-intents --since 7d      Filter by time")
 	fmt.Println("")
@@ -570,6 +572,8 @@ func listUserIntents() {
 	confidenceFlag := intentsFlags.String("confidence", "", "Filter by confidence (explicit, inferred, default)")
 	hasActionFlag := intentsFlags.Bool("has-action", false, "Show only intents with actions taken")
 	sinceFlag := intentsFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
+	categoryFlag := intentsFlags.String("category", "", "Filter by category (routing, tooling, style, etc.)")
+	keywordFlag := intentsFlags.String("keyword", "", "Filter by keyword")
 	intentsFlags.Parse(os.Args[2:])
 
 	projectDir := getProjectDir()
@@ -591,6 +595,13 @@ func listUserIntents() {
 		timestamp := since.Unix()
 		filters.Since = &timestamp
 	}
+	// GOgent-041: Category and keyword filters
+	if *categoryFlag != "" {
+		filters.Category = categoryFlag
+	}
+	if *keywordFlag != "" {
+		filters.Keywords = []string{*keywordFlag}
+	}
 
 	intents, err := q.QueryUserIntents(filters)
 	if err != nil {
@@ -603,18 +614,21 @@ func listUserIntents() {
 		return
 	}
 
-	// Print table header
-	fmt.Println("Timestamp  | Source      | Confidence | Question                     | Response")
-	fmt.Println("-----------|-------------|------------|------------------------------|---------------------------")
+	// Print table header (GOgent-041: Added Category column)
+	fmt.Println("Timestamp  | Category   | Source      | Question                     | Response")
+	fmt.Println("-----------|------------|-------------|------------------------------|---------------------------")
 
 	for _, intent := range intents {
 		timestamp := time.Unix(intent.Timestamp, 0).Format("2006-01-02")
+		category := truncateForTable(intent.Category, 10)
+		if category == "" {
+			category = "-"
+		}
 		source := truncateForTable(intent.Source, 11)
-		confidence := truncateForTable(intent.Confidence, 10)
 		question := truncateForTable(intent.Question, 28)
 		response := truncateForTable(intent.Response, 25)
-		fmt.Printf("%s | %-11s | %-10s | %-28s | %s\n",
-			timestamp, source, confidence, question, response)
+		fmt.Printf("%s | %-10s | %-11s | %-28s | %s\n",
+			timestamp, category, source, question, response)
 	}
 
 	fmt.Printf("\nTotal: %d user intent(s)\n", len(intents))

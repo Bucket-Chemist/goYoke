@@ -11,15 +11,17 @@ import (
 // UserIntent captures user decision inputs and expressed preferences
 // This enables tracking of explicit user choices for cross-session memory
 type UserIntent struct {
-	Timestamp   int64  `json:"timestamp"`              // When captured
-	Question    string `json:"question"`               // What was asked
-	Response    string `json:"response"`               // User's answer
-	Confidence  string `json:"confidence"`             // "explicit", "inferred", "default"
-	Context     string `json:"context,omitempty"`      // Why this was asked
-	Source      string `json:"source"`                 // "ask_user", "hook_prompt", "manual"
-	ActionTaken string `json:"action_taken,omitempty"` // What we did with the response
-	SessionID   string `json:"session_id,omitempty"`   // Session that captured this intent (GOgent-037d)
-	ToolContext string `json:"tool_context,omitempty"` // Tool invocation context (GOgent-037d)
+	Timestamp   int64    `json:"timestamp"`              // When captured
+	Question    string   `json:"question"`               // What was asked
+	Response    string   `json:"response"`               // User's answer
+	Confidence  string   `json:"confidence"`             // "explicit", "inferred", "default"
+	Context     string   `json:"context,omitempty"`      // Why this was asked
+	Source      string   `json:"source"`                 // "ask_user", "hook_prompt", "manual"
+	ActionTaken string   `json:"action_taken,omitempty"` // What we did with the response
+	SessionID   string   `json:"session_id,omitempty"`   // Session that captured this intent (GOgent-037d)
+	ToolContext string   `json:"tool_context,omitempty"` // Tool invocation context (GOgent-037d)
+	Category    string   `json:"category,omitempty"`     // Intent category from ClassifyIntent (GOgent-041)
+	Keywords    []string `json:"keywords,omitempty"`     // Extracted keywords from ExtractKeywords (GOgent-041)
 }
 
 // ValidConfidenceLevels defines valid confidence values for UserIntent

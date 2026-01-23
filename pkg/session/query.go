@@ -100,11 +100,13 @@ func (q *Query) QuerySharpEdges(filters SharpEdgeFilters) ([]SharpEdge, error) {
 
 // UserIntentFilters defines filter criteria for user intents
 type UserIntentFilters struct {
-	Source     *string // Filter by capture source (ask_user, hook_prompt, manual)
-	Confidence *string // Filter by confidence level (explicit, inferred, default)
-	HasAction  bool    // Only return intents with ActionTaken != ""
-	Since      *int64  // Filter by timestamp (intents after this time)
-	Limit      int     // Maximum results to return (0 = unlimited)
+	Source     *string  // Filter by capture source (ask_user, hook_prompt, manual)
+	Confidence *string  // Filter by confidence level (explicit, inferred, default)
+	HasAction  bool     // Only return intents with ActionTaken != ""
+	Since      *int64   // Filter by timestamp (intents after this time)
+	Limit      int      // Maximum results to return (0 = unlimited)
+	Category   *string  // Filter by category (routing, tooling, style, etc.) - GOgent-041
+	Keywords   []string // Filter by keywords (matches if ANY keyword present) - GOgent-041
 }
 
 // QueryUserIntents retrieves user intents with optional filters
@@ -157,6 +159,28 @@ func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error
 		}
 		if filters.Since != nil && intent.Timestamp < *filters.Since {
 			continue
+		}
+		// GOgent-041: Category filter
+		if filters.Category != nil && intent.Category != *filters.Category {
+			continue
+		}
+		// GOgent-041: Keywords filter (matches if ANY keyword present)
+		if len(filters.Keywords) > 0 {
+			hasKeyword := false
+			for _, kw := range filters.Keywords {
+				for _, intentKw := range intent.Keywords {
+					if strings.EqualFold(kw, intentKw) {
+						hasKeyword = true
+						break
+					}
+				}
+				if hasKeyword {
+					break
+				}
+			}
+			if !hasKeyword {
+				continue
+			}
 		}
 
 		intents = append(intents, intent)
