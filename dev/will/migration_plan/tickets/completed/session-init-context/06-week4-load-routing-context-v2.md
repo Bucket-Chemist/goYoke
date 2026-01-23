@@ -33,14 +33,14 @@ This implementation plan covers the `gogent-load-context` binary - the **Session
 
 ### Differences from Original Plan (v1)
 
-| Aspect | v1 (Original) | v2 (Revised) |
-|--------|---------------|--------------|
-| Tool counter path | `/tmp/claude-tool-counter` | XDG: `~/.cache/gogent/tool-counter` |
-| `min()` function | Duplicated | Already exists in `pkg/session/events.go:65` |
-| STDIN timeout | Reimplemented | Reuse pattern from `pkg/routing/stdin.go` |
-| Git collection | New implementation | Reuse `collectGitInfo()` from `pkg/session/handoff.go:390` |
-| Project type | New file | Add to existing `pkg/session/` with `_detection` suffix |
-| Schema summary | New file | Add method to existing `Schema` type in `pkg/routing/schema.go` |
+| Aspect            | v1 (Original)              | v2 (Revised)                                                    |
+| ----------------- | -------------------------- | --------------------------------------------------------------- |
+| Tool counter path | `/tmp/claude-tool-counter` | XDG: `~/.cache/gogent/tool-counter`                             |
+| `min()` function  | Duplicated                 | Already exists in `pkg/session/events.go:65`                    |
+| STDIN timeout     | Reimplemented              | Reuse pattern from `pkg/routing/stdin.go`                       |
+| Git collection    | New implementation         | Reuse `collectGitInfo()` from `pkg/session/handoff.go:390`      |
+| Project type      | New file                   | Add to existing `pkg/session/` with `_detection` suffix         |
+| Schema summary    | New file                   | Add method to existing `Schema` type in `pkg/routing/schema.go` |
 
 ---
 
@@ -103,6 +103,7 @@ Define `SessionStartEvent` struct and parser in existing `pkg/session/events.go`
 **File**: `pkg/session/events.go` (extend existing)
 
 **Implementation**:
+
 ```go
 // Add to existing pkg/session/events.go after SessionEvent
 
@@ -343,6 +344,7 @@ func (b *blockingReader) Read(p []byte) (n int, err error) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `SessionStartEvent` struct defined in `pkg/session/events.go`
 - [ ] `ParseSessionStartEvent()` reads STDIN with 5s timeout
 - [ ] Defaults `type` to "startup" if missing
@@ -353,6 +355,7 @@ func (b *blockingReader) Read(p []byte) (n int, err error) {
 - [ ] Race detector clean: `go test -race ./pkg/session/...`
 
 **Test Deliverables**:
+
 - [ ] Test file created: `pkg/session/session_start_test.go`
 - [ ] Test file size: ~140 lines
 - [ ] Number of test functions: 7
@@ -378,6 +381,7 @@ Add XDG-compliant tool counter path and initialization to `pkg/config/paths.go`.
 **File**: `pkg/config/paths.go` (extend existing)
 
 **Implementation**:
+
 ```go
 // Add to existing pkg/config/paths.go
 
@@ -445,6 +449,7 @@ func IncrementToolCount() (int, error) {
 ```
 
 **Add import** to `pkg/config/paths.go`:
+
 ```go
 import (
 	"fmt"
@@ -544,6 +549,7 @@ func TestGetToolCounterPath(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `GetToolCounterPath()` returns XDG-compliant path (NOT `/tmp`)
 - [ ] `InitializeToolCounter()` creates counter file with "0"
 - [ ] `GetToolCount()` returns 0 for missing file (not error)
@@ -553,6 +559,7 @@ func TestGetToolCounterPath(t *testing.T) {
 - [ ] Path uses `~/.cache/gogent/` or `$XDG_CACHE_HOME/gogent/`
 
 **Test Deliverables**:
+
 - [ ] Tests added to: `pkg/config/paths_test.go`
 - [ ] Number of new test functions: 4
 - [ ] Tests passing: ✅
@@ -574,6 +581,7 @@ Add summary formatting method to existing `Schema` type in `pkg/routing/schema.g
 **File**: `pkg/routing/schema.go` (extend existing)
 
 **Implementation**:
+
 ```go
 // Add to existing pkg/routing/schema.go
 
@@ -709,6 +717,7 @@ func TestSchema_FormatTierSummary_EmptyTiers(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `FormatTierSummary()` method added to `Schema` type
 - [ ] Limits patterns to 3, tools to 4 with "..." truncation
 - [ ] Includes delegation ceiling info
@@ -717,6 +726,7 @@ func TestSchema_FormatTierSummary_EmptyTiers(t *testing.T) {
 - [ ] `go test ./pkg/routing/...` passes
 
 **Test Deliverables**:
+
 - [ ] Tests added to: `pkg/routing/schema_test.go`
 - [ ] Number of new test functions: 2
 - [ ] Tests passing: ✅
@@ -738,6 +748,7 @@ Add handoff loading function for SessionStart resume sessions.
 **File**: `pkg/session/context_loader.go` (new file)
 
 **Implementation**:
+
 ```go
 package session
 
@@ -1018,6 +1029,7 @@ func TestFormatGitInfo_NotGitRepo(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `LoadHandoffSummary()` reads from `.claude/memory/last-handoff.md`
 - [ ] Returns first 30 lines with truncation indicator for large files
 - [ ] Handles missing handoff gracefully (returns empty string, not error)
@@ -1027,6 +1039,7 @@ func TestFormatGitInfo_NotGitRepo(t *testing.T) {
 - [ ] `go test ./pkg/session/...` passes
 
 **Test Deliverables**:
+
 - [ ] Test file created: `pkg/session/context_loader_test.go`
 - [ ] Test file size: ~180 lines
 - [ ] Number of test functions: 7
@@ -1050,6 +1063,7 @@ Auto-detect project type (Python, R, R+Shiny, JavaScript, Go) for convention loa
 **File**: `pkg/session/project_detection.go` (new file)
 
 **Implementation**:
+
 ```go
 package session
 
@@ -1255,6 +1269,7 @@ func FormatProjectType(result *ProjectDetectionResult) string {
 ```
 
 **Add import to file**:
+
 ```go
 import (
 	"fmt"
@@ -1461,6 +1476,7 @@ func TestFormatProjectType(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `DetectProjectType()` detects: Go, Python, R, R+Shiny, R+Golem, JavaScript, TypeScript, Rust
 - [ ] Returns generic for unrecognized projects
 - [ ] Go has highest priority (this is GOgent-Fortress)
@@ -1471,6 +1487,7 @@ func TestFormatProjectType(t *testing.T) {
 - [ ] `go test ./pkg/session/...` passes
 
 **Test Deliverables**:
+
 - [ ] Test file created: `pkg/session/project_detection_test.go`
 - [ ] Test file size: ~180 lines
 - [ ] Number of test functions: 13
@@ -1494,6 +1511,7 @@ Combine all context sources and generate SessionStart hook response JSON.
 **File**: `pkg/session/context_response.go` (new file)
 
 **Implementation**:
+
 ```go
 package session
 
@@ -1752,6 +1770,7 @@ func TestGenerateErrorResponse(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `ContextComponents` struct aggregates all context sources
 - [ ] `GenerateSessionStartResponse()` combines components into valid JSON
 - [ ] Includes routing summary, git info, project type for ALL sessions
@@ -1763,6 +1782,7 @@ func TestGenerateErrorResponse(t *testing.T) {
 - [ ] `go test ./pkg/session/...` passes
 
 **Test Deliverables**:
+
 - [ ] Test file created: `pkg/session/context_response_test.go`
 - [ ] Test file size: ~140 lines
 - [ ] Number of test functions: 5
@@ -1785,6 +1805,7 @@ Build CLI binary that orchestrates SessionStart workflow.
 **File**: `cmd/gogent-load-context/main.go` (new file)
 
 **Implementation**:
+
 ```go
 package main
 
@@ -2051,6 +2072,7 @@ func TestMain_ToolCounterInitialized(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] CLI reads SessionStart events from STDIN
 - [ ] Parses event with 5s timeout
 - [ ] Initializes tool counter (non-fatal if fails)
@@ -2066,6 +2088,7 @@ func TestMain_ToolCounterInitialized(t *testing.T) {
 - [ ] All tests pass
 
 **Test Deliverables**:
+
 - [ ] Test file created: `cmd/gogent-load-context/main_test.go`
 - [ ] Test file size: ~160 lines
 - [ ] Number of test functions: 4
@@ -2090,6 +2113,7 @@ Create integration test suite for full SessionStart workflow.
 **File**: `test/integration/session_start_test.go` (new file)
 
 **Implementation**:
+
 ```go
 package integration
 
@@ -2304,6 +2328,7 @@ func assertContains(t *testing.T, haystack, needle, message string) {
 ```
 
 **Acceptance Criteria**:
+
 - [ ] Integration tests cover full SessionStart workflow
 - [ ] Tests run against real binary (not unit functions)
 - [ ] Tests verify startup, resume, pending learnings scenarios
@@ -2313,6 +2338,7 @@ func assertContains(t *testing.T, haystack, needle, message string) {
 - [ ] `go test ./test/integration/...` passes
 
 **Test Deliverables**:
+
 - [ ] Test file created: `test/integration/session_start_test.go`
 - [ ] Test file size: ~200 lines
 - [ ] Number of test functions: 4
@@ -2335,6 +2361,7 @@ Update Makefile with build and install targets for gogent-load-context.
 **File**: `Makefile` (extend existing)
 
 **Implementation**:
+
 ```makefile
 # Add to existing Makefile
 
@@ -2378,6 +2405,7 @@ test-ecosystem: test-all
 ```
 
 **Acceptance Criteria**:
+
 - [ ] `make build-load-context` builds binary to bin/
 - [ ] `make install-load-context` installs to ~/.local/bin/
 - [ ] `make build-all` builds all hook binaries
@@ -2403,25 +2431,29 @@ Update systems-architecture-overview.md with gogent-load-context documentation.
 **Updates Required**:
 
 1. Update "Hook Entry Points" table:
+
 ```markdown
-| Hook Event | CLI Binary | When Fired |
-|------------|------------|------------|
-| SessionStart | `gogent-load-context` | Session startup/resume ✅ |
-| PreToolUse | `gogent-validate` | Before any tool executes |
-| PostToolUse | `gogent-sharp-edge` | After Bash/Edit/Write tools |
-| SessionEnd | `gogent-archive` | Session termination |
+| Hook Event   | CLI Binary            | When Fired                  |
+| ------------ | --------------------- | --------------------------- |
+| SessionStart | `gogent-load-context` | Session startup/resume ✅   |
+| PreToolUse   | `gogent-validate`     | Before any tool executes    |
+| PostToolUse  | `gogent-sharp-edge`   | After Bash/Edit/Write tools |
+| SessionEnd   | `gogent-archive`      | Session termination         |
 ```
 
 2. Update "CLI Reference" table:
+
 ```markdown
-| Binary | Hook Event | Input | Output | Lines |
-|--------|------------|-------|--------|-------|
-| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~100 |
-| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~142 |
+| Binary                | Hook Event   | Input                  | Output                | Lines |
+| --------------------- | ------------ | ---------------------- | --------------------- | ----- |
+| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~100  |
+| `gogent-validate`     | PreToolUse   | ToolEvent JSON         | ValidationResult JSON | ~142  |
+
 | ...
 ```
 
 3. Add to "Package Dependencies" diagram:
+
 ```mermaid
 graph TD
     subgraph "CLI Layer (cmd/)"
@@ -2436,11 +2468,13 @@ graph TD
 ```
 
 4. Update "Status" in header:
+
 ```markdown
 > **Status:** Implemented through Week 4 (session_start suite)
 ```
 
 **Acceptance Criteria**:
+
 - [ ] Hook Entry Points table updated with gogent-load-context
 - [ ] CLI Reference table updated
 - [ ] Package Dependencies diagram updated
@@ -2464,7 +2498,8 @@ Create hook configuration example for Claude Code settings.
 **File**: `docs/hook-configuration.md` (new file)
 
 **Implementation**:
-```markdown
+
+````markdown
 # Hook Configuration
 
 This document shows how to configure GOgent-Fortress hooks in Claude Code.
@@ -2492,15 +2527,16 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
   }
 }
 ```
+````
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GOGENT_PROJECT_DIR` | Override project directory | Current working directory |
-| `CLAUDE_PROJECT_DIR` | Fallback project directory | Current working directory |
+| Variable                | Description                 | Default                         |
+| ----------------------- | --------------------------- | ------------------------------- |
+| `GOGENT_PROJECT_DIR`    | Override project directory  | Current working directory       |
+| `CLAUDE_PROJECT_DIR`    | Fallback project directory  | Current working directory       |
 | `GOGENT_ROUTING_SCHEMA` | Path to routing-schema.json | `~/.claude/routing-schema.json` |
-| `XDG_CACHE_HOME` | XDG cache directory | `~/.cache` |
+| `XDG_CACHE_HOME`        | XDG cache directory         | `~/.cache`                      |
 
 ## Verifying Installation
 
@@ -2517,18 +2553,22 @@ echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' |
 ## Troubleshooting
 
 ### Hook not executing
+
 - Verify binary is in PATH: `which gogent-load-context`
 - Check permissions: `ls -la $(which gogent-load-context)`
 - Test manually with echo | pipe
 
 ### Missing routing schema
+
 - Expected at: `~/.claude/routing-schema.json`
 - Hook will warn but continue without routing summary
 
 ### Tool counter not created
+
 - Check XDG_CACHE_HOME or ~/.cache/gogent/ permissions
 - Non-fatal - session continues but attention-gate won't work
-```
+
+````
 
 **Acceptance Criteria**:
 - [ ] Configuration example is complete and accurate
@@ -2577,30 +2617,35 @@ graph TD
     GOgent-062 --> GOgent-064
     GOgent-064[GOgent-064: Makefile] --> GOgent-065
     GOgent-064 --> GOgent-066
-```
+````
 
 ---
 
 ## Implementation Order (Parallelizable)
 
 **Phase 1 (Parallel)**:
+
 - GOgent-056: SessionStart Event (no deps)
 - GOgent-058: Schema Summary (no deps)
 - GOgent-059: Handoff Loader (no deps)
 - GOgent-060: Project Detection (no deps)
 
 **Phase 2 (Serial)**:
+
 - GOgent-057: Tool Counter (depends on 056)
 - GOgent-061: Response Generator (depends on 056-060)
 
 **Phase 3 (Serial)**:
+
 - GOgent-062: CLI Binary (depends on 061)
 
 **Phase 4 (Parallel)**:
+
 - GOgent-063: Integration Tests (depends on 062)
 - GOgent-064: Makefile (depends on 062)
 
 **Phase 5 (Parallel)**:
+
 - GOgent-065: Documentation (depends on 064)
 - GOgent-066: Hook Configuration (depends on 064)
 
@@ -2633,993 +2678,6 @@ graph TD
 - [ ] Hook configuration documented
 - [ ] `make test-ecosystem` passes
 - [ ] No placeholders remain
-
----
-
-**Previous**: [05-week2-sharp-edge-memory.md](05-week2-sharp-edge-memory.md)
-**Next**: [07-week4-agent-workflow-hooks.md](07-week4-agent-workflow-hooks.md)
-
----
-
-# PART B: Simulation Harness Integration (GOgent-067 to 070)
-
-This section extends the core implementation with simulation harness integration for CI/CD testing via GitHub Actions.
-
----
-
-## Simulation Architecture Overview
-
-The existing simulation harness (`test/simulation/harness/`) provides 4 levels of testing:
-
-| Level | Name | Trigger | Purpose |
-|-------|------|---------|---------|
-| L1 | Unit Invariants | Every push | Single-event deterministic tests |
-| L2 | Session Replay | Every push | Multi-turn session sequences |
-| L3 | Behavioral Properties | PRs | Cross-session invariants |
-| L4 | Chaos Testing | Weekly | Concurrent agent stress tests |
-
-**Integration Goal**: Add `sessionstart` category to the simulation harness, enabling automated testing of `gogent-load-context` in all 4 levels.
-
-### Current Harness Categories
-
-```
-test/simulation/fixtures/deterministic/
-├── pretooluse/       # gogent-validate scenarios
-├── sessionend/       # gogent-archive scenarios
-├── posttooluse/      # gogent-sharp-edge scenarios
-└── sessionstart/     # NEW: gogent-load-context scenarios
-```
-
-### GitHub Actions Integration
-
-The existing workflows already support extensibility:
-- `.github/workflows/simulation.yml` - Deterministic + Fuzz
-- `.github/workflows/simulation-behavioral.yml` - 4-level behavioral testing
-
-We need to:
-1. Add `sessionstart` category to runner
-2. Create deterministic fixtures
-3. Add `sessionstart` mode to harness CLI
-4. Update workflows to build `gogent-load-context`
-
----
-
-## GOgent-067: Extend Runner with SessionStart Category
-
-**Time**: 1.5 hours
-**Dependencies**: GOgent-062
-**Priority**: HIGH
-
-**Task**:
-Extend `DefaultRunner` to support `sessionstart` category execution against `gogent-load-context`.
-
-**File**: `test/simulation/harness/runner.go` (modify existing)
-
-**Implementation**:
-```go
-// Add to NewRunner constructor - after sharpEdgePath
-type DefaultRunner struct {
-	// ... existing fields
-	loadContextPath string // NEW: path to gogent-load-context binary
-}
-
-// Add setter method
-// SetLoadContextPath sets the path to gogent-load-context binary.
-// Required for sessionstart scenario execution.
-func (r *DefaultRunner) SetLoadContextPath(path string) {
-	r.loadContextPath = path
-}
-
-// Modify executeScenario switch statement:
-func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
-	var cmdPath string
-	switch s.Category {
-	case "pretooluse":
-		cmdPath = r.validatePath
-	case "sessionend":
-		cmdPath = r.archivePath
-	case "posttooluse":
-		if r.sharpEdgePath == "" {
-			return "", -1, fmt.Errorf("posttooluse scenario requires sharpEdgePath (gogent-sharp-edge binary)")
-		}
-		cmdPath = r.sharpEdgePath
-	case "sessionstart":  // NEW CASE
-		if r.loadContextPath == "" {
-			return "", -1, fmt.Errorf("sessionstart scenario requires loadContextPath (gogent-load-context binary)")
-		}
-		cmdPath = r.loadContextPath
-	default:
-		return "", -1, fmt.Errorf("unknown category: %s", s.Category)
-	}
-	// ... rest of function unchanged
-}
-
-// Modify loadScenarios to include sessionstart directory:
-func (r *DefaultRunner) loadScenarios() ([]Scenario, error) {
-	var scenarios []Scenario
-
-	// Load PreToolUse scenarios
-	preToolDir := filepath.Join(r.config.FixturesDir, "deterministic", "pretooluse")
-	if err := r.loadScenariosFromDir(preToolDir, "pretooluse", &scenarios); err != nil {
-		return nil, err
-	}
-
-	// Load SessionEnd scenarios
-	sessionDir := filepath.Join(r.config.FixturesDir, "deterministic", "sessionend")
-	if err := r.loadScenariosFromDir(sessionDir, "sessionend", &scenarios); err != nil {
-		return nil, err
-	}
-
-	// Load PostToolUse scenarios
-	if r.sharpEdgePath != "" {
-		postToolDir := filepath.Join(r.config.FixturesDir, "deterministic", "posttooluse")
-		if err := r.loadScenariosFromDir(postToolDir, "posttooluse", &scenarios); err != nil {
-			return nil, err
-		}
-	}
-
-	// NEW: Load SessionStart scenarios
-	if r.loadContextPath != "" {
-		sessionStartDir := filepath.Join(r.config.FixturesDir, "deterministic", "sessionstart")
-		if err := r.loadScenariosFromDir(sessionStartDir, "sessionstart", &scenarios); err != nil {
-			return nil, err
-		}
-	}
-
-	if r.config.Verbose {
-		fmt.Printf("[INFO] Loaded %d deterministic scenarios\n", len(scenarios))
-	}
-
-	return scenarios, nil
-}
-```
-
-**Add to harness/types.go ExpectedOutput struct**:
-```go
-// SessionStart-specific expectations
-type ExpectedOutput struct {
-	// ... existing fields
-
-	// SessionStart-specific expectations
-	AdditionalContextContains    []string `json:"additional_context_contains,omitempty"`
-	AdditionalContextNotContains []string `json:"additional_context_not_contains,omitempty"`
-	ProjectTypeEquals            string   `json:"project_type_equals,omitempty"`
-	ToolCounterInitialized       bool     `json:"tool_counter_initialized,omitempty"`
-}
-```
-
-**Add validation method**:
-```go
-// validateSessionStartExpectations handles sessionstart-specific validation.
-func (r *DefaultRunner) validateSessionStartExpectations(expected ExpectedOutput, output string) []string {
-	var issues []string
-
-	// Parse output as JSON
-	var outputJSON map[string]interface{}
-	if err := json.Unmarshal([]byte(output), &outputJSON); err != nil {
-		// If output isn't JSON, check raw content
-		for _, substr := range expected.AdditionalContextContains {
-			if !strings.Contains(output, substr) {
-				issues = append(issues, fmt.Sprintf("additional_context_contains: %q not found", substr))
-			}
-		}
-		return issues
-	}
-
-	// Extract additionalContext from hookSpecificOutput
-	hookOutput, ok := outputJSON["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		issues = append(issues, "hookSpecificOutput missing from response")
-		return issues
-	}
-
-	additionalContext, ok := hookOutput["additionalContext"].(string)
-	if !ok {
-		issues = append(issues, "additionalContext missing from hookSpecificOutput")
-		return issues
-	}
-
-	// Check additional_context_contains
-	for _, substr := range expected.AdditionalContextContains {
-		if !strings.Contains(additionalContext, substr) {
-			issues = append(issues, fmt.Sprintf("additional_context_contains: %q not found in context", substr))
-		}
-	}
-
-	// Check additional_context_not_contains
-	for _, substr := range expected.AdditionalContextNotContains {
-		if strings.Contains(additionalContext, substr) {
-			issues = append(issues, fmt.Sprintf("additional_context_not_contains: %q found in context (should be absent)", substr))
-		}
-	}
-
-	// Check project type
-	if expected.ProjectTypeEquals != "" {
-		if !strings.Contains(additionalContext, "PROJECT TYPE: "+expected.ProjectTypeEquals) {
-			issues = append(issues, fmt.Sprintf("project_type_equals: expected %q in context", expected.ProjectTypeEquals))
-		}
-	}
-
-	// Check tool counter initialization
-	if expected.ToolCounterInitialized {
-		// Read tool counter from XDG path
-		counterPath := filepath.Join(r.config.TempDir, ".cache", "gogent", "tool-counter")
-		if _, err := os.Stat(counterPath); os.IsNotExist(err) {
-			// Also check XDG_CACHE_HOME location
-			xdgPath := os.Getenv("XDG_CACHE_HOME")
-			if xdgPath != "" {
-				counterPath = filepath.Join(xdgPath, "gogent", "tool-counter")
-			}
-			if _, err := os.Stat(counterPath); os.IsNotExist(err) {
-				issues = append(issues, "tool_counter_initialized: counter file not found")
-			}
-		}
-	}
-
-	return issues
-}
-```
-
-**Update validateOutput to call new method**:
-```go
-func (r *DefaultRunner) validateOutput(expected ExpectedOutput, output string, exitCode int) (bool, string, string) {
-	// ... existing code
-
-	// PostToolUse-specific validations
-	issues = append(issues, r.validatePostToolUseExpectations(expected, output)...)
-
-	// SessionStart-specific validations (NEW)
-	issues = append(issues, r.validateSessionStartExpectations(expected, output)...)
-
-	// ... rest unchanged
-}
-```
-
-**Tests**: Add to `test/simulation/harness/runner_test.go`
-
-```go
-func TestRunner_SessionStartCategory(t *testing.T) {
-	// Create temp dirs and fixtures
-	tmpDir := t.TempDir()
-	fixturesDir := filepath.Join(tmpDir, "fixtures", "deterministic", "sessionstart")
-	os.MkdirAll(fixturesDir, 0755)
-
-	// Create a simple test fixture
-	fixture := `{
-		"input": {
-			"type": "startup",
-			"session_id": "test-001",
-			"hook_event_name": "SessionStart"
-		},
-		"expected": {
-			"exit_code": 0,
-			"additional_context_contains": ["SESSION INITIALIZED"]
-		}
-	}`
-	os.WriteFile(filepath.Join(fixturesDir, "startup-basic.json"), []byte(fixture), 0644)
-
-	// Build mock binary that echoes valid response
-	// (In real tests, use actual binary)
-	mockBinary := createMockLoadContextBinary(t, tmpDir)
-
-	cfg := SimulationConfig{
-		Mode:        "deterministic",
-		FixturesDir: filepath.Join(tmpDir, "fixtures"),
-		TempDir:     tmpDir,
-		Verbose:     true,
-	}
-
-	runner := NewRunner(cfg, "", "", nil)
-	runner.SetLoadContextPath(mockBinary)
-
-	results, err := runner.Run(cfg)
-	if err != nil {
-		t.Fatalf("Runner.Run failed: %v", err)
-	}
-
-	if len(results) == 0 {
-		t.Error("Expected at least one result")
-	}
-}
-
-func TestValidateSessionStartExpectations(t *testing.T) {
-	runner := &DefaultRunner{
-		config: SimulationConfig{TempDir: t.TempDir()},
-	}
-
-	output := `{
-		"hookSpecificOutput": {
-			"hookEventName": "SessionStart",
-			"additionalContext": "🚀 SESSION INITIALIZED (startup)\n\nPROJECT TYPE: go\n\nRouting hooks are ACTIVE."
-		}
-	}`
-
-	expected := ExpectedOutput{
-		AdditionalContextContains:    []string{"SESSION INITIALIZED", "go"},
-		AdditionalContextNotContains: []string{"ERROR"},
-		ProjectTypeEquals:            "go",
-	}
-
-	issues := runner.validateSessionStartExpectations(expected, output)
-
-	if len(issues) > 0 {
-		t.Errorf("Unexpected validation issues: %v", issues)
-	}
-}
-```
-
-**Acceptance Criteria**:
-- [ ] `SetLoadContextPath()` method added to runner
-- [ ] `sessionstart` category handled in `executeScenario()`
-- [ ] `sessionstart` directory loaded in `loadScenarios()`
-- [ ] `ExpectedOutput` extended with SessionStart-specific fields
-- [ ] `validateSessionStartExpectations()` validates context content
-- [ ] Tests verify category handling and validation
-- [ ] `go test ./test/simulation/harness/...` passes
-
-**Test Deliverables**:
-- [ ] Tests added to: `test/simulation/harness/runner_test.go`
-- [ ] Number of new test functions: 2
-- [ ] Tests passing: ✅
-- [ ] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem`
-
-**Why This Matters**: Runner extension enables all downstream simulation modes to test SessionStart hook.
-
----
-
-## GOgent-068: Create SessionStart Test Fixtures
-
-**Time**: 2 hours
-**Dependencies**: GOgent-067
-**Priority**: HIGH
-
-**Task**:
-Create deterministic test fixtures for SessionStart scenarios.
-
-**Directory**: `test/simulation/fixtures/deterministic/sessionstart/`
-
-**Fixture: startup-basic.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-001",
-    "hook_event_name": "SessionStart"
-  },
-  "expected": {
-    "exit_code": 0,
-    "additional_context_contains": [
-      "SESSION INITIALIZED (startup)",
-      "hooks are ACTIVE"
-    ],
-    "additional_context_not_contains": [
-      "PREVIOUS SESSION HANDOFF",
-      "ERROR"
-    ]
-  }
-}
-```
-
-**Fixture: startup-go-project.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-002",
-    "hook_event_name": "SessionStart"
-  },
-  "setup": {
-    "files": {
-      "go.mod": "module test\n\ngo 1.21"
-    }
-  },
-  "expected": {
-    "exit_code": 0,
-    "project_type_equals": "go",
-    "additional_context_contains": [
-      "PROJECT TYPE: go",
-      "go.mod"
-    ]
-  }
-}
-```
-
-**Fixture: startup-python-project.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-003",
-    "hook_event_name": "SessionStart"
-  },
-  "setup": {
-    "files": {
-      "pyproject.toml": "[project]\nname = \"test\"\nversion = \"1.0.0\""
-    }
-  },
-  "expected": {
-    "exit_code": 0,
-    "project_type_equals": "python",
-    "additional_context_contains": [
-      "PROJECT TYPE: python",
-      "pyproject.toml"
-    ]
-  }
-}
-```
-
-**Fixture: startup-r-shiny-project.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-004",
-    "hook_event_name": "SessionStart"
-  },
-  "setup": {
-    "files": {
-      "DESCRIPTION": "Package: myapp\nTitle: Shiny App\nVersion: 1.0.0\nImports: shiny",
-      "app.R": "library(shiny)\nshinyApp(ui, server)"
-    }
-  },
-  "expected": {
-    "exit_code": 0,
-    "project_type_equals": "r-shiny",
-    "additional_context_contains": [
-      "PROJECT TYPE: r-shiny",
-      "R.md",
-      "R-shiny.md"
-    ]
-  }
-}
-```
-
-**Fixture: resume-with-handoff.json**
-```json
-{
-  "input": {
-    "type": "resume",
-    "session_id": "sim-resume-001",
-    "hook_event_name": "SessionStart"
-  },
-  "setup": {
-    "create_dirs": [".claude/memory"],
-    "files": {
-      ".claude/memory/last-handoff.md": "# Session Handoff\n\n## Last Session\nImplemented feature XYZ.\n\n## Next Steps\n- Complete testing"
-    }
-  },
-  "expected": {
-    "exit_code": 0,
-    "additional_context_contains": [
-      "SESSION INITIALIZED (resume)",
-      "PREVIOUS SESSION HANDOFF",
-      "feature XYZ"
-    ]
-  }
-}
-```
-
-**Fixture: resume-no-handoff.json**
-```json
-{
-  "input": {
-    "type": "resume",
-    "session_id": "sim-resume-002",
-    "hook_event_name": "SessionStart"
-  },
-  "expected": {
-    "exit_code": 0,
-    "additional_context_contains": [
-      "SESSION INITIALIZED (resume)"
-    ],
-    "additional_context_not_contains": [
-      "PREVIOUS SESSION HANDOFF"
-    ]
-  }
-}
-```
-
-**Fixture: startup-with-pending-learnings.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-005",
-    "hook_event_name": "SessionStart"
-  },
-  "setup": {
-    "create_dirs": [".claude/memory"],
-    "files": {
-      ".claude/memory/pending-learnings.jsonl": "{\"file\":\"test.go\",\"error_type\":\"type_mismatch\",\"consecutive_failures\":3,\"timestamp\":1705000000}\n{\"file\":\"main.go\",\"error_type\":\"nil_pointer\",\"consecutive_failures\":3,\"timestamp\":1705000010}\n"
-    }
-  },
-  "expected": {
-    "exit_code": 0,
-    "additional_context_contains": [
-      "PENDING LEARNINGS",
-      "2 sharp edge"
-    ]
-  }
-}
-```
-
-**Fixture: startup-git-repo.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-006",
-    "hook_event_name": "SessionStart"
-  },
-  "setup": {
-    "create_dirs": [".git"],
-    "files": {
-      ".git/HEAD": "ref: refs/heads/feature-branch",
-      ".git/config": "[core]\nrepositoryformatversion = 0"
-    }
-  },
-  "expected": {
-    "exit_code": 0,
-    "additional_context_contains": [
-      "GIT:"
-    ]
-  }
-}
-```
-
-**Fixture: startup-empty-input.json**
-```json
-{
-  "input": {},
-  "expected": {
-    "exit_code": 0,
-    "additional_context_contains": [
-      "SESSION INITIALIZED (startup)"
-    ]
-  }
-}
-```
-
-**Fixture: startup-tool-counter.json**
-```json
-{
-  "input": {
-    "type": "startup",
-    "session_id": "sim-startup-007",
-    "hook_event_name": "SessionStart"
-  },
-  "expected": {
-    "exit_code": 0,
-    "tool_counter_initialized": true
-  }
-}
-```
-
-**Acceptance Criteria**:
-- [ ] 10 fixture files created in `test/simulation/fixtures/deterministic/sessionstart/`
-- [ ] Fixtures cover: startup, resume, project detection, pending learnings, git status
-- [ ] Each fixture has valid JSON input and expected output
-- [ ] Setup sections create required directories and files
-- [ ] All fixtures pass when run against `gogent-load-context`
-
-**Test Deliverables**:
-- [ ] Files created: 10 JSON fixtures
-- [ ] Manual verification: `go run ./test/simulation/harness/cmd/harness -mode=deterministic -filter=sim-startup`
-- [ ] All fixtures passing: ✅
-
-**Why This Matters**: Deterministic fixtures form the foundation of L1 testing and provide reproducible regression tests.
-
----
-
-## GOgent-069: Update Harness CLI for SessionStart
-
-**Time**: 1 hour
-**Dependencies**: GOgent-067
-**Priority**: HIGH
-
-**Task**:
-Update harness CLI to find and use `gogent-load-context` binary.
-
-**File**: `test/simulation/harness/cmd/harness/main.go` (modify existing)
-
-**Implementation**:
-```go
-// Add after finding sharpEdgePath (~line 104):
-
-	// Find optional load-context binary for sessionstart scenarios
-	loadContextPath, loadContextErr := findBinary("gogent-load-context")
-	if loadContextErr != nil && *verbose {
-		fmt.Printf("[INFO] gogent-load-context not found, sessionstart scenarios will be skipped\n")
-	}
-
-// After setting sharp-edge path (~line 116):
-
-	// Set load-context path if available
-	if loadContextErr == nil {
-		runner.SetLoadContextPath(loadContextPath)
-	}
-```
-
-**Update Makefile** - add build target:
-```makefile
-# Add to existing build targets
-build-load-context:
-	@echo "Building gogent-load-context..."
-	@go build -o bin/gogent-load-context ./cmd/gogent-load-context
-	@echo "✓ Built: bin/gogent-load-context"
-
-# Update build-all to include new binary
-build-all: build-validate build-archive build-sharp-edge build-load-context
-	@echo "✓ All hook binaries built"
-
-# Add simulation target for sessionstart
-test-simulation-sessionstart:
-	@echo "Running SessionStart simulation tests..."
-	@go run ./test/simulation/harness/cmd/harness \
-		-mode=deterministic \
-		-filter=sim-startup,sim-resume \
-		-verbose
-	@echo "✓ SessionStart simulation tests passed"
-```
-
-**Tests**: Add to `test/simulation/harness/cmd/harness/main_test.go`
-
-```go
-func TestFindBinary_LoadContext(t *testing.T) {
-	// This test verifies findBinary can locate gogent-load-context
-	// when it exists in expected locations
-
-	// Create temp bin directory
-	tmpDir := t.TempDir()
-	binPath := filepath.Join(tmpDir, "bin", "gogent-load-context")
-	os.MkdirAll(filepath.Dir(binPath), 0755)
-
-	// Create mock binary
-	os.WriteFile(binPath, []byte("#!/bin/bash\necho 'mock'"), 0755)
-
-	// Save and restore working directory
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	os.Chdir(tmpDir)
-
-	path, err := findBinary("gogent-load-context")
-	if err != nil {
-		t.Fatalf("findBinary failed: %v", err)
-	}
-
-	if !strings.Contains(path, "gogent-load-context") {
-		t.Errorf("Expected path to contain binary name, got: %s", path)
-	}
-}
-```
-
-**Acceptance Criteria**:
-- [ ] Harness CLI finds `gogent-load-context` in bin/ or PATH
-- [ ] Verbose mode logs when binary not found
-- [ ] Runner receives load-context path when available
-- [ ] `make build-all` builds all 4 hook binaries
-- [ ] `make test-simulation-sessionstart` runs SessionStart tests
-- [ ] Tests verify binary discovery
-
-**Test Deliverables**:
-- [ ] Tests added to: `cmd/harness/main_test.go`
-- [ ] Makefile targets added: `build-load-context`, `test-simulation-sessionstart`
-- [ ] Tests passing: ✅
-
-**Why This Matters**: CLI integration enables harness to execute SessionStart tests in CI/CD.
-
----
-
-## GOgent-070: GitHub Actions Workflow Update
-
-**Time**: 1.5 hours
-**Dependencies**: GOgent-068, GOgent-069
-**Priority**: HIGH
-
-**Task**:
-Update GitHub Actions workflows to build and test `gogent-load-context`.
-
-**File**: `.github/workflows/simulation.yml` (modify existing)
-
-**Changes**:
-```yaml
-# Update Build CLIs step (~line 41):
-      - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge build-load-context
-
-# Add SessionStart-specific job after existing simulation job:
-  sessionstart-tests:
-    name: SessionStart Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Build CLIs
-        run: make build-load-context
-
-      - name: Run SessionStart Unit Tests
-        run: go test -v -race ./pkg/session/... ./pkg/config/...
-
-      - name: Run SessionStart Simulation Tests
-        run: make test-simulation-sessionstart
-
-      - name: Upload SessionStart Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: sessionstart-reports-${{ github.run_number }}
-          path: test/simulation/reports/
-          retention-days: 14
-          if-no-files-found: ignore
-```
-
-**File**: `.github/workflows/simulation-behavioral.yml` (modify existing)
-
-**Changes**:
-```yaml
-# Update L1 Unit Invariants Build CLIs step:
-      - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge build-load-context
-
-# Update L2 Session Replay Build CLIs step:
-      - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge build-load-context
-
-# Update L3 Behavioral Properties Build CLIs step:
-      - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge build-load-context
-
-# Update L4 Chaos Testing Build CLIs step:
-      - name: Build CLIs
-        run: make build-validate build-archive build-sharp-edge build-load-context
-
-# Add sessionstart to required jobs in simulation-status:
-  simulation-status:
-    name: Simulation Status
-    runs-on: ubuntu-latest
-    needs: [unit-invariants, session-replay]  # No change needed - sessionstart is part of unit-invariants
-    if: always()
-```
-
-**Create new file**: `.github/workflows/sessionstart.yml`
-
-```yaml
-# SessionStart Hook CI/CD Pipeline
-# Tests gogent-load-context in isolation for faster feedback
-
-name: SessionStart Hook
-
-on:
-  push:
-    branches: [master]
-    paths:
-      - 'cmd/gogent-load-context/**'
-      - 'pkg/session/**'
-      - 'pkg/config/**'
-      - 'test/simulation/fixtures/deterministic/sessionstart/**'
-  pull_request:
-    branches: [master]
-    paths:
-      - 'cmd/gogent-load-context/**'
-      - 'pkg/session/**'
-      - 'pkg/config/**'
-      - 'test/simulation/fixtures/deterministic/sessionstart/**'
-
-env:
-  GO_VERSION: '1.25'
-
-jobs:
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Run Unit Tests
-        run: |
-          go test -v -race ./pkg/session/...
-          go test -v -race ./pkg/config/...
-
-      - name: Run Coverage
-        run: |
-          go test -coverprofile=coverage.out ./pkg/session/... ./pkg/config/...
-          go tool cover -func=coverage.out
-
-  simulation-tests:
-    name: Simulation Tests
-    runs-on: ubuntu-latest
-    needs: unit-tests
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Build gogent-load-context
-        run: make build-load-context
-
-      - name: Run SessionStart Deterministic Tests
-        run: |
-          mkdir -p test/simulation/reports
-          go run ./test/simulation/harness/cmd/harness \
-            -mode=deterministic \
-            -filter=sim-startup,sim-resume \
-            -report=json \
-            -output=test/simulation/reports \
-            -verbose
-
-      - name: Upload Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: sessionstart-simulation-${{ github.run_number }}
-          path: test/simulation/reports/
-          retention-days: 14
-          if-no-files-found: ignore
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: unit-tests
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Build gogent-load-context
-        run: make build-load-context
-
-      - name: Run Integration Tests
-        run: go test -v ./test/integration/...
-```
-
-**Acceptance Criteria**:
-- [ ] `simulation.yml` builds all 4 hook binaries
-- [ ] `simulation-behavioral.yml` builds all 4 hook binaries
-- [ ] New `sessionstart.yml` workflow created with path filters
-- [ ] SessionStart tests run on push/PR to relevant paths
-- [ ] Reports uploaded as artifacts
-- [ ] All workflows pass lint validation
-
-**Test Deliverables**:
-- [ ] Workflows created/updated: 3 files
-- [ ] Workflow syntax validated: `actionlint` or GitHub Actions UI
-- [ ] Test run: Create PR touching `pkg/session/` and verify workflow triggers
-- [ ] All jobs pass: ✅
-
-**Why This Matters**: GitHub Actions integration enables automated CI/CD testing, catching regressions before merge.
-
----
-
-## PART B Ticket Summary
-
-| Ticket | Title | Time | Dependencies | Primary File |
-|--------|-------|------|--------------|--------------|
-| GOgent-067 | Extend Runner with SessionStart Category | 1.5h | GOgent-062 | harness/runner.go |
-| GOgent-068 | Create SessionStart Test Fixtures | 2h | GOgent-067 | fixtures/sessionstart/*.json |
-| GOgent-069 | Update Harness CLI for SessionStart | 1h | GOgent-067 | cmd/harness/main.go |
-| GOgent-070 | GitHub Actions Workflow Update | 1.5h | GOgent-068, GOgent-069 | .github/workflows/*.yml |
-
-**Total PART B Time**: ~6 hours
-**Total PART B Files**: 15+ (3 modified, 12+ new fixtures/workflows)
-
----
-
-## PART B Dependency Graph
-
-```mermaid
-graph TD
-    GOgent-062[GOgent-062: CLI Binary] --> GOgent-067
-    GOgent-067[GOgent-067: Runner Extension] --> GOgent-068
-    GOgent-067 --> GOgent-069
-    GOgent-068[GOgent-068: Test Fixtures] --> GOgent-070
-    GOgent-069[GOgent-069: Harness CLI] --> GOgent-070
-    GOgent-070[GOgent-070: GitHub Actions]
-```
-
----
-
-## Combined Ticket Summary (Parts A + B)
-
-| Phase | Tickets | Purpose | Time |
-|-------|---------|---------|------|
-| A: Core | GOgent-056 to 066 | Implementation + Unit Tests | ~11h |
-| B: Simulation | GOgent-067 to 070 | CI/CD Integration | ~6h |
-| **Total** | **GOgent-056 to 070** | **Complete SessionStart Suite** | **~17h** |
-
----
-
-## Final Completion Checklist
-
-### Part A (Core Implementation)
-- [ ] All 11 tickets (GOgent-056 to 066) complete
-- [ ] CLI binary builds and runs correctly
-- [ ] Unit tests pass with ≥80% coverage
-- [ ] Integration tests pass
-- [ ] Documentation updated
-
-### Part B (Simulation Integration)
-- [ ] Runner extension supports sessionstart category
-- [ ] 10+ deterministic fixtures created
-- [ ] Harness CLI finds gogent-load-context
-- [ ] GitHub Actions workflows updated
-- [ ] Dedicated sessionstart.yml workflow created
-- [ ] All simulation tests pass locally
-- [ ] All GitHub Actions workflows pass
-
-### Ecosystem Validation
-- [ ] `make build-all` builds all 4 hook binaries
-- [ ] `make test-ecosystem` passes
-- [ ] `make test-simulation-sessionstart` passes
-- [ ] GitHub Actions PR check passes
-- [ ] No regressions in existing tests
 
 ---
 
