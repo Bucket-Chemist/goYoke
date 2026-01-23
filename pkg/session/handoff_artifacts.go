@@ -357,6 +357,11 @@ func loadUserIntents(path string) ([]UserIntent, error) {
 	return intents, nil
 }
 
+// LoadAllUserIntents loads all user intents from JSONL file (exported for CLI usage)
+func LoadAllUserIntents(path string) ([]UserIntent, error) {
+	return loadUserIntents(path)
+}
+
 // loadDecisions reads decisions from decisions.jsonl
 func loadDecisions(path string) ([]Decision, error) {
 	file, err := os.Open(path)

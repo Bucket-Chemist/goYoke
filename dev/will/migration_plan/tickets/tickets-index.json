@@ -1216,7 +1216,7 @@
         "pkg/session/keyword_extractor.go"
       ],
       "tests_required": true,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-041b",
@@ -1239,7 +1239,7 @@
         "pkg/session/intent_aggregation.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-041c",

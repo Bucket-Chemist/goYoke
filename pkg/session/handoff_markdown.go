@@ -2,6 +2,7 @@ package session
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -257,6 +258,68 @@ func RenderAllHandoffs(handoffs []Handoff) string {
 	// Show full detail of most recent session
 	sb.WriteString("## Most Recent Session\n\n")
 	sb.WriteString(RenderHandoffMarkdown(&handoffs[len(handoffs)-1]))
+
+	return sb.String()
+}
+
+// FormatWeeklyIntentSummary renders the intent section for weekly report
+func FormatWeeklyIntentSummary(summary WeeklyIntentSummary) string {
+	var sb strings.Builder
+
+	sb.WriteString("## User Intents This Week\n\n")
+	sb.WriteString(fmt.Sprintf("**Total Captured:** %d intents across %d sessions\n\n",
+		summary.TotalIntents, summary.SessionCount))
+
+	// Category distribution
+	if len(summary.CategoryDistribution) > 0 {
+		sb.WriteString("**By Category:**\n")
+		// Sort by percentage descending
+		type catPct struct {
+			cat string
+			pct float64
+		}
+		var sorted []catPct
+		for cat, pct := range summary.CategoryPercentages {
+			sorted = append(sorted, catPct{cat, pct})
+		}
+		sort.Slice(sorted, func(i, j int) bool {
+			return sorted[i].pct > sorted[j].pct
+		})
+
+		for _, cp := range sorted {
+			sb.WriteString(fmt.Sprintf("- %s: %d (%.0f%%)\n",
+				cp.cat, summary.CategoryDistribution[cp.cat], cp.pct))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Recurring preferences
+	if len(summary.RecurringPreferences) > 0 {
+		sb.WriteString("**Recurring Preferences:**\n")
+		// Limit to top 5 for display
+		limit := min(5, len(summary.RecurringPreferences))
+		for i := 0; i < limit; i++ {
+			pref := summary.RecurringPreferences[i]
+			sb.WriteString(fmt.Sprintf("- %q (%d sessions, %s)\n",
+				truncate(pref.Pattern, 40), len(pref.SessionIDs), pref.Category))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Drift alerts
+	if len(summary.DriftAlerts) > 0 {
+		sb.WriteString("**Preference Changes:**\n")
+		for _, alert := range summary.DriftAlerts {
+			icon := "🆕"
+			if alert.Type == "dropped" {
+				icon = "❌"
+			} else if alert.Type == "changed" {
+				icon = "🔄"
+			}
+			sb.WriteString(fmt.Sprintf("- %s %s\n", icon, alert.Message))
+		}
+		sb.WriteString("\n")
+	}
 
 	return sb.String()
 }

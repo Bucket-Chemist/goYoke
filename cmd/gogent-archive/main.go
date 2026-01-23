@@ -49,6 +49,9 @@ func main() {
 		case "performance":
 			showPerformance()
 			return
+		case "weekly":
+			generateWeeklySummary()
+			return
 		case "--help", "-h":
 			printHelp()
 			return
@@ -341,6 +344,12 @@ func printHelp() {
 	fmt.Println("  gogent-archive list --clean          Show only clean sessions (no errors/violations)")
 	fmt.Println("  gogent-archive show <id>             Show specific session handoff")
 	fmt.Println("  gogent-archive stats                 Show aggregate statistics with breakdowns")
+	fmt.Println("")
+	fmt.Println("Weekly Analysis Commands:")
+	fmt.Println("  gogent-archive weekly                Generate weekly intent summary (last 7 days)")
+	fmt.Println("  gogent-archive weekly --since <date> Generate summary from specific start date (YYYY-MM-DD)")
+	fmt.Println("  gogent-archive weekly --intents-only Show only intent section")
+	fmt.Println("  gogent-archive weekly --drift        Show preference changes (drift alerts)")
 	fmt.Println("")
 	fmt.Println("Sharp Edge Commands:")
 	fmt.Println("  gogent-archive sharp-edges           List all sharp edges")
@@ -841,6 +850,71 @@ func showPerformance() {
 	avgMs := float64(totalMs) / float64(len(metrics))
 	successRate := float64(successCount) / float64(len(metrics)) * 100
 	fmt.Printf("Average duration: %.1fms | Success rate: %.1f%%\n", avgMs, successRate)
+}
+
+// generateWeeklySummary displays weekly intent summary with optional filters
+func generateWeeklySummary() {
+	weeklyFlags := flag.NewFlagSet("weekly", flag.ExitOnError)
+	intentsOnlyFlag := weeklyFlags.Bool("intents-only", false, "Show only intent summary section")
+	driftFlag := weeklyFlags.Bool("drift", false, "Highlight preference changes (drift alerts)")
+	sinceFlag := weeklyFlags.String("since", "", "Start date for weekly range (YYYY-MM-DD, defaults to 7 days ago)")
+	weeklyFlags.Parse(os.Args[2:])
+
+	projectDir := getProjectDir()
+
+	// Determine week range
+	var weekStart, weekEnd time.Time
+	if *sinceFlag != "" {
+		parsedDate, err := time.Parse("2006-01-02", *sinceFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since date format '%s'\n", *sinceFlag)
+			fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format (e.g., '2026-01-15')")
+			os.Exit(1)
+		}
+		weekStart = parsedDate
+		weekEnd = weekStart.AddDate(0, 0, 7)
+	} else {
+		// Default: last 7 days
+		now := time.Now()
+		weekEnd = now
+		weekStart = now.AddDate(0, 0, -7)
+	}
+
+	// Load all user intents
+	intentsPath := filepath.Join(projectDir, ".claude", "memory", "user-intents.jsonl")
+	intents, err := session.LoadAllUserIntents(intentsPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load user intents: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(intents) == 0 {
+		fmt.Println("No user intents recorded for the specified period.")
+		return
+	}
+
+	// Aggregate intents for current week
+	currentSummary := session.AggregateWeeklyIntents(intents, weekStart, weekEnd)
+
+	// If drift flag enabled, load previous week and detect drift
+	if *driftFlag {
+		prevWeekStart := weekStart.AddDate(0, 0, -7)
+		prevWeekEnd := weekStart
+		previousSummary := session.AggregateWeeklyIntents(intents, prevWeekStart, prevWeekEnd)
+		currentSummary.DriftAlerts = session.DetectPreferenceDrift(currentSummary, previousSummary)
+	}
+
+	// Render output
+	if *intentsOnlyFlag {
+		// Only show intent section
+		fmt.Print(session.FormatWeeklyIntentSummary(currentSummary))
+	} else {
+		// Show full weekly report with header
+		fmt.Printf("# Weekly Summary - %s to %s\n\n",
+			weekStart.Format("2006-01-02"),
+			weekEnd.Format("2006-01-02"))
+		fmt.Print(session.FormatWeeklyIntentSummary(currentSummary))
+	}
 }
 
 // formatBytes formats byte count for human-readable display

@@ -3,6 +3,7 @@ package session
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRenderHandoffMarkdown_Minimal(t *testing.T) {
@@ -443,6 +444,164 @@ func TestRenderHandoffMarkdown_NoArtifacts(t *testing.T) {
 	for _, section := range coreSections {
 		if !strings.Contains(markdown, section) {
 			t.Errorf("Missing core section: %s", section)
+		}
+	}
+}
+
+func TestFormatWeeklyIntentSummary(t *testing.T) {
+	summary := WeeklyIntentSummary{
+		WeekStart:    time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:      time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents: 23,
+		SessionCount: 8,
+		CategoryDistribution: map[string]int{
+			"approval": 8,
+			"domain":   6,
+			"routing":  4,
+			"workflow": 3,
+			"tooling":  2,
+		},
+		CategoryPercentages: map[string]float64{
+			"approval": 34.78,
+			"domain":   26.09,
+			"routing":  17.39,
+			"workflow": 13.04,
+			"tooling":  8.70,
+		},
+		RecurringPreferences: []RecurringPreference{
+			{Category: "domain", Pattern: "Use pytest not unittest", Frequency: 3, SessionIDs: []string{"s1", "s2", "s3"}},
+			{Category: "workflow", Pattern: "Run tests after edit", Frequency: 2, SessionIDs: []string{"s1", "s2"}},
+			{Category: "tooling", Pattern: "Prefer Edit over sed", Frequency: 2, SessionIDs: []string{"s2", "s4"}},
+		},
+		DriftAlerts: []PreferenceDriftAlert{
+			{Type: "new", Category: "workflow", NewPattern: "Always run make test-ecosystem", Message: "New workflow preference"},
+			{Type: "dropped", Category: "routing", OldPattern: "use haiku for search", Message: "Dropped routing preference"},
+		},
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Check required sections
+	requiredSections := []string{
+		"## User Intents This Week",
+		"**Total Captured:** 23 intents across 8 sessions",
+		"**By Category:**",
+		"approval: 8 (35%)", // Rounded
+		"domain: 6 (26%)",
+		"**Recurring Preferences:**",
+		"\"Use pytest not unittest\"",
+		"**Preference Changes:**",
+		"🆕 New workflow preference",
+		"❌ Dropped routing preference",
+	}
+
+	for _, section := range requiredSections {
+		if !strings.Contains(markdown, section) {
+			t.Errorf("Missing required section: %s\nFull output:\n%s", section, markdown)
+		}
+	}
+}
+
+func TestFormatWeeklyIntentSummary_Empty(t *testing.T) {
+	summary := WeeklyIntentSummary{
+		WeekStart:            time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:              time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents:         0,
+		SessionCount:         0,
+		CategoryDistribution: map[string]int{},
+		CategoryPercentages:  map[string]float64{},
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Should still have header
+	if !strings.Contains(markdown, "## User Intents This Week") {
+		t.Error("Missing header section")
+	}
+
+	// Should show zero counts
+	if !strings.Contains(markdown, "0 intents across 0 sessions") {
+		t.Error("Missing zero counts message")
+	}
+
+	// Should NOT have categories or preferences sections
+	if strings.Contains(markdown, "**By Category:**") {
+		t.Error("Should not show category section when empty")
+	}
+
+	if strings.Contains(markdown, "**Recurring Preferences:**") {
+		t.Error("Should not show preferences section when empty")
+	}
+}
+
+func TestFormatWeeklyIntentSummary_NoDrift(t *testing.T) {
+	summary := WeeklyIntentSummary{
+		WeekStart:    time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:      time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents: 5,
+		SessionCount: 2,
+		CategoryDistribution: map[string]int{
+			"test": 5,
+		},
+		CategoryPercentages: map[string]float64{
+			"test": 100.0,
+		},
+		RecurringPreferences: []RecurringPreference{
+			{Category: "test", Pattern: "Test pattern", Frequency: 2, SessionIDs: []string{"s1", "s2"}},
+		},
+		DriftAlerts: []PreferenceDriftAlert{}, // No drift
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Should NOT have drift section
+	if strings.Contains(markdown, "**Preference Changes:**") {
+		t.Error("Should not show drift section when no alerts")
+	}
+}
+
+func TestFormatWeeklyIntentSummary_LimitTop5Preferences(t *testing.T) {
+	// Create 10 recurring preferences
+	preferences := make([]RecurringPreference, 10)
+	for i := 0; i < 10; i++ {
+		preferences[i] = RecurringPreference{
+			Category:   "test",
+			Pattern:    "Pattern " + string(rune('A'+i)),
+			Frequency:  10 - i, // Descending frequency
+			SessionIDs: []string{"s1"},
+		}
+	}
+
+	summary := WeeklyIntentSummary{
+		WeekStart:            time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:              time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents:         50,
+		SessionCount:         5,
+		CategoryDistribution: map[string]int{"test": 50},
+		CategoryPercentages:  map[string]float64{"test": 100.0},
+		RecurringPreferences: preferences,
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Count how many patterns appear (should be max 5)
+	patternCount := 0
+	for i := 0; i < 10; i++ {
+		pattern := "Pattern " + string(rune('A'+i))
+		if strings.Contains(markdown, pattern) {
+			patternCount++
+		}
+	}
+
+	if patternCount > 5 {
+		t.Errorf("Expected max 5 patterns shown, found %d", patternCount)
+	}
+
+	// First 5 should be present
+	for i := 0; i < 5; i++ {
+		pattern := "Pattern " + string(rune('A'+i))
+		if !strings.Contains(markdown, pattern) {
+			t.Errorf("Expected pattern '%s' to be in top 5", pattern)
 		}
 	}
 }
