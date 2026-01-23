@@ -950,7 +950,7 @@
     {
       "id": "GOgent-037c",
       "title": "Log Attempted Changes from Tool Input",
-      "description": "Capture what was attempted during tool failures by extracting old_string\u2192new_string from Edit, content preview from Write, and commands from Bash",
+      "description": "Capture what was attempted during tool failures by extracting old_string→new_string from Edit, content preview from Write, and commands from Bash",
       "file": "tickets/session_archive/037c.md",
       "week": 2,
       "day": 5,
@@ -1166,7 +1166,7 @@
       "status": "completed",
       "revision": "R1",
       "revision_date": "2026-01-23",
-      "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h \u2192 6.0h."
+      "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h → 6.0h."
     },
     {
       "id": "GOgent-040",
@@ -3629,7 +3629,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 16,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-057",
@@ -3662,7 +3662,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 14,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-058",
@@ -3693,7 +3693,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 13,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-059",
@@ -3724,7 +3724,7 @@
         "phase-0"
       ],
       "acceptance_criteria_count": 17,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-060",
