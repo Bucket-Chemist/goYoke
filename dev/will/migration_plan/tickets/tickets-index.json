@@ -975,7 +975,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 6,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-037d",
@@ -1000,7 +1000,7 @@
         "cmd/gogent-capture-intent/main.go"
       ],
       "tests_required": true,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-038",

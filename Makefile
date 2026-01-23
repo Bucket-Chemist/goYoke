@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse replay-crash clean-simulation
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse replay-crash clean-simulation
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  make build-archive   - Build gogent-archive binary"
 	@echo "  make build-aggregate - Build gogent-aggregate binary"
 	@echo "  make build-sharp-edge - Build gogent-sharp-edge binary"
+	@echo "  make build-capture-intent - Build gogent-capture-intent binary"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
 	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
@@ -88,18 +89,25 @@ build-sharp-edge:
 	go build -o bin/gogent-sharp-edge ./cmd/gogent-sharp-edge
 	@echo "✅ Binary created at bin/gogent-sharp-edge"
 
-install: build-validate build-archive build-aggregate build-sharp-edge check-path
+build-capture-intent:
+	@echo "Building gogent-capture-intent binary..."
+	go build -o bin/gogent-capture-intent ./cmd/gogent-capture-intent
+	@echo "✅ Binary created at bin/gogent-capture-intent"
+
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
 	cp bin/gogent-archive ~/.local/bin/gogent-archive
 	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
 	cp bin/gogent-sharp-edge ~/.local/bin/gogent-sharp-edge
+	cp bin/gogent-capture-intent ~/.local/bin/gogent-capture-intent
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
 	chmod +x ~/.local/bin/gogent-sharp-edge
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge"
+	chmod +x ~/.local/bin/gogent-capture-intent
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -146,6 +154,7 @@ uninstall:
 	rm -f ~/.local/bin/gogent-archive
 	rm -f ~/.local/bin/gogent-aggregate
 	rm -f ~/.local/bin/gogent-sharp-edge
+	rm -f ~/.local/bin/gogent-capture-intent
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -159,6 +168,7 @@ clean:
 	rm -f bin/gogent-archive
 	rm -f bin/gogent-aggregate
 	rm -f bin/gogent-sharp-edge
+	rm -f bin/gogent-capture-intent
 	rm -f coverage.out
 	rm -f *.test
 

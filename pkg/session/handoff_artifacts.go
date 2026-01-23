@@ -18,6 +18,8 @@ type UserIntent struct {
 	Context     string `json:"context,omitempty"`      // Why this was asked
 	Source      string `json:"source"`                 // "ask_user", "hook_prompt", "manual"
 	ActionTaken string `json:"action_taken,omitempty"` // What we did with the response
+	SessionID   string `json:"session_id,omitempty"`   // Session that captured this intent (GOgent-037d)
+	ToolContext string `json:"tool_context,omitempty"` // Tool invocation context (GOgent-037d)
 }
 
 // ValidConfidenceLevels defines valid confidence values for UserIntent
