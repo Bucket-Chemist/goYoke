@@ -1,33 +1,3 @@
----
-id: GOgent-063
-title: Integration Tests
-description: Create integration test suite for full SessionStart workflow
-status: pending
-time_estimate: 1h
-dependencies:
-  - GOgent-062
-priority: MEDIUM
-week: 4
-tags:
-  - session-start
-  - week-4
-tests_required: true
-acceptance_criteria_count: 12
----
-
-## GOgent-063: Integration Tests
-
-**Time**: 1 hour
-**Dependencies**: GOgent-062
-**Priority**: MEDIUM
-
-**Task**:
-Create integration test suite for full SessionStart workflow.
-
-**File**: `test/integration/session_start_test.go` (new file)
-
-**Implementation**:
-```go
 package integration
 
 import (
@@ -238,24 +208,3 @@ func assertContains(t *testing.T, haystack, needle, message string) {
 		t.Errorf("%s: expected to find %q in output", message, needle)
 	}
 }
-```
-
-**Acceptance Criteria**:
-- [x] Integration tests cover full SessionStart workflow
-- [x] Tests run against real binary (not unit functions)
-- [x] Tests verify startup, resume, pending learnings scenarios
-- [x] Tests verify multi-language project detection priority
-- [x] Tests skip in short mode (`go test -short`)
-- [x] All integration tests pass
-- [x] `go test ./test/integration/...` passes
-
-**Test Deliverables**:
-- [x] Test file created: `test/integration/session_start_test.go`
-- [x] Test file size: ~200 lines (210 lines)
-- [x] Number of test functions: 4
-- [x] Tests passing: ✅
-- [x] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem` (session_start tests pass; pre-existing telemetry failure unrelated)
-
-**Why This Matters**: Integration tests verify the complete workflow, catching issues that unit tests miss (JSON marshaling, file I/O, binary execution).
-
----
