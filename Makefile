@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context install install-archive install-aggregate install-wrapper install-load-context uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -22,9 +22,11 @@ help:
 	@echo "  make build-aggregate - Build gogent-aggregate binary"
 	@echo "  make build-sharp-edge - Build gogent-sharp-edge binary"
 	@echo "  make build-capture-intent - Build gogent-capture-intent binary"
+	@echo "  make build-load-context - Build gogent-load-context binary"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
 	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
+	@echo "  make install-load-context - Install gogent-load-context to ~/.local/bin"
 	@echo "  make install-wrapper - Install session-archive wrapper hook"
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
@@ -104,7 +106,12 @@ build-capture-intent:
 	go build -o bin/gogent-capture-intent ./cmd/gogent-capture-intent
 	@echo "✅ Binary created at bin/gogent-capture-intent"
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent check-path
+build-load-context:
+	@echo "Building gogent-load-context..."
+	go build -o bin/gogent-load-context ./cmd/gogent-load-context
+	@echo "✓ Built: bin/gogent-load-context"
+
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
@@ -112,12 +119,14 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
 	cp bin/gogent-sharp-edge ~/.local/bin/gogent-sharp-edge
 	cp bin/gogent-capture-intent ~/.local/bin/gogent-capture-intent
+	cp bin/gogent-load-context ~/.local/bin/gogent-load-context
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
 	chmod +x ~/.local/bin/gogent-sharp-edge
 	chmod +x ~/.local/bin/gogent-capture-intent
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent"
+	chmod +x ~/.local/bin/gogent-load-context
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -136,6 +145,13 @@ install-aggregate: build-aggregate
 	chmod +x ~/.local/bin/gogent-aggregate
 	@echo "✅ Installed to ~/.local/bin/gogent-aggregate"
 	@echo "Ensure ~/.local/bin is in your PATH"
+
+install-load-context: build-load-context
+	@echo "Installing gogent-load-context..."
+	@mkdir -p $(HOME)/.local/bin
+	cp bin/gogent-load-context $(HOME)/.local/bin/
+	chmod +x $(HOME)/.local/bin/gogent-load-context
+	@echo "✓ Installed: $(HOME)/.local/bin/gogent-load-context"
 
 install-wrapper:
 	@echo "Installing session-archive wrapper hook..."
@@ -165,6 +181,7 @@ uninstall:
 	rm -f ~/.local/bin/gogent-aggregate
 	rm -f ~/.local/bin/gogent-sharp-edge
 	rm -f ~/.local/bin/gogent-capture-intent
+	rm -f ~/.local/bin/gogent-load-context
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -179,6 +196,7 @@ clean:
 	rm -f bin/gogent-aggregate
 	rm -f bin/gogent-sharp-edge
 	rm -f bin/gogent-capture-intent
+	rm -f bin/gogent-load-context
 	rm -f coverage.out
 	rm -f *.test
 
