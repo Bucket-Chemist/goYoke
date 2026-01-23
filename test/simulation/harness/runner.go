@@ -16,12 +16,13 @@ import (
 
 // DefaultRunner implements the Runner interface for CLI execution.
 type DefaultRunner struct {
-	config        SimulationConfig
-	validatePath  string
-	archivePath   string
-	sharpEdgePath string
-	generator     Generator
-	scenarioEnv   map[string]string // Per-scenario environment variables
+	config          SimulationConfig
+	validatePath    string
+	archivePath     string
+	sharpEdgePath   string
+	loadContextPath string // Path to gogent-load-context binary
+	generator       Generator
+	scenarioEnv     map[string]string // Per-scenario environment variables
 }
 
 // NewRunner creates a runner with paths to CLI binaries.
@@ -40,6 +41,12 @@ func NewRunner(cfg SimulationConfig, validatePath, archivePath string, gen Gener
 // Required for posttooluse scenario execution.
 func (r *DefaultRunner) SetSharpEdgePath(path string) {
 	r.sharpEdgePath = path
+}
+
+// SetLoadContextPath sets the path to gogent-load-context binary.
+// Required for sessionstart scenario execution.
+func (r *DefaultRunner) SetLoadContextPath(path string) {
+	r.loadContextPath = path
 }
 
 // SetTempDir updates the temp directory for test isolation.
@@ -149,6 +156,11 @@ func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
 			return "", -1, fmt.Errorf("posttooluse scenario requires sharpEdgePath (gogent-sharp-edge binary)")
 		}
 		cmdPath = r.sharpEdgePath
+	case "sessionstart":
+		if r.loadContextPath == "" {
+			return "", -1, fmt.Errorf("sessionstart scenario requires loadContextPath (gogent-load-context binary)")
+		}
+		cmdPath = r.loadContextPath
 	default:
 		return "", -1, fmt.Errorf("unknown category: %s", s.Category)
 	}
@@ -263,6 +275,9 @@ func (r *DefaultRunner) validateOutput(expected ExpectedOutput, output string, e
 
 	// PostToolUse-specific validations
 	issues = append(issues, r.validatePostToolUseExpectations(expected, output)...)
+
+	// SessionStart-specific validations
+	issues = append(issues, r.validateSessionStartExpectations(expected, output)...)
 
 	expectedStr := strings.Join(expectedParts, ", ")
 	diffStr := strings.Join(issues, "\n")
@@ -399,6 +414,83 @@ func (r *DefaultRunner) validateSharpEdgeSchema(expectedFields map[string]interf
 	return issues
 }
 
+// validateSessionStartExpectations handles sessionstart-specific validation.
+func (r *DefaultRunner) validateSessionStartExpectations(expected ExpectedOutput, output string) []string {
+	var issues []string
+
+	// Skip validation if no SessionStart expectations are set
+	if len(expected.AdditionalContextContains) == 0 &&
+		len(expected.AdditionalContextNotContains) == 0 &&
+		expected.ProjectTypeEquals == "" &&
+		!expected.ToolCounterInitialized {
+		return issues
+	}
+
+	// Parse output as JSON
+	var outputJSON map[string]interface{}
+	if err := json.Unmarshal([]byte(output), &outputJSON); err != nil {
+		// If output isn't JSON, check raw content
+		for _, substr := range expected.AdditionalContextContains {
+			if !strings.Contains(output, substr) {
+				issues = append(issues, fmt.Sprintf("additional_context_contains: %q not found", substr))
+			}
+		}
+		return issues
+	}
+
+	// Extract additionalContext from hookSpecificOutput
+	hookOutput, ok := outputJSON["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		issues = append(issues, "hookSpecificOutput missing from response")
+		return issues
+	}
+
+	additionalContext, ok := hookOutput["additionalContext"].(string)
+	if !ok {
+		issues = append(issues, "additionalContext missing from hookSpecificOutput")
+		return issues
+	}
+
+	// Check additional_context_contains
+	for _, substr := range expected.AdditionalContextContains {
+		if !strings.Contains(additionalContext, substr) {
+			issues = append(issues, fmt.Sprintf("additional_context_contains: %q not found in context", substr))
+		}
+	}
+
+	// Check additional_context_not_contains
+	for _, substr := range expected.AdditionalContextNotContains {
+		if strings.Contains(additionalContext, substr) {
+			issues = append(issues, fmt.Sprintf("additional_context_not_contains: %q found in context (should be absent)", substr))
+		}
+	}
+
+	// Check project type
+	if expected.ProjectTypeEquals != "" {
+		if !strings.Contains(additionalContext, "PROJECT TYPE: "+expected.ProjectTypeEquals) {
+			issues = append(issues, fmt.Sprintf("project_type_equals: expected %q in context", expected.ProjectTypeEquals))
+		}
+	}
+
+	// Check tool counter initialization
+	if expected.ToolCounterInitialized {
+		// Read tool counter from XDG path
+		counterPath := filepath.Join(r.config.TempDir, ".cache", "gogent", "tool-counter")
+		if _, err := os.Stat(counterPath); os.IsNotExist(err) {
+			// Also check XDG_CACHE_HOME location
+			xdgPath := os.Getenv("XDG_CACHE_HOME")
+			if xdgPath != "" {
+				counterPath = filepath.Join(xdgPath, "gogent", "tool-counter")
+			}
+			if _, err := os.Stat(counterPath); os.IsNotExist(err) {
+				issues = append(issues, "tool_counter_initialized: counter file not found")
+			}
+		}
+	}
+
+	return issues
+}
+
 // buildEnv creates a minimal, controlled environment for CLI execution.
 // Instead of inheriting the full os.Environ() (which differs between CI and local),
 // we construct a minimal set of required variables for reproducible behavior.
@@ -471,6 +563,15 @@ func (r *DefaultRunner) loadScenarios() ([]Scenario, error) {
 	if r.sharpEdgePath != "" {
 		postToolDir := filepath.Join(r.config.FixturesDir, "deterministic", "posttooluse")
 		if err := r.loadScenariosFromDir(postToolDir, "posttooluse", &scenarios); err != nil {
+			return nil, err
+		}
+	}
+
+	// Load SessionStart scenarios (load-context)
+	// Only load if load-context binary path is configured
+	if r.loadContextPath != "" {
+		sessionStartDir := filepath.Join(r.config.FixturesDir, "deterministic", "sessionstart")
+		if err := r.loadScenariosFromDir(sessionStartDir, "sessionstart", &scenarios); err != nil {
 			return nil, err
 		}
 	}

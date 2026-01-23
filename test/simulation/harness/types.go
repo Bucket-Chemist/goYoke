@@ -71,6 +71,12 @@ type ExpectedOutput struct {
 	// Sharp edge schema validation
 	ValidateSharpEdge bool                   `json:"validate_sharp_edge,omitempty"`
 	SharpEdgeFields   map[string]interface{} `json:"sharp_edge_fields,omitempty"`
+
+	// SessionStart-specific expectations
+	AdditionalContextContains    []string `json:"additional_context_contains,omitempty"`
+	AdditionalContextNotContains []string `json:"additional_context_not_contains,omitempty"`
+	ProjectTypeEquals            string   `json:"project_type_equals,omitempty"`
+	ToolCounterInitialized       bool     `json:"tool_counter_initialized,omitempty"`
 }
 
 // SimulationResult captures the outcome of running a scenario.

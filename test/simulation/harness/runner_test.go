@@ -1070,3 +1070,425 @@ func TestRunner_ValidateOutput_AllFields(t *testing.T) {
 		t.Errorf("Expected decision in expected string, got: %s", expectedStr)
 	}
 }
+
+// TestRunner_SessionStartCategory tests sessionstart scenario execution
+func TestRunner_SessionStartCategory(t *testing.T) {
+	// Create temp dirs and fixtures
+	tmpDir := t.TempDir()
+	fixturesDir := filepath.Join(tmpDir, "fixtures", "deterministic", "sessionstart")
+	if err := os.MkdirAll(fixturesDir, 0755); err != nil {
+		t.Fatalf("Failed to create fixtures dir: %v", err)
+	}
+
+	// Create a simple test fixture
+	fixture := map[string]interface{}{
+		"input": map[string]interface{}{
+			"type":            "startup",
+			"session_id":      "test-001",
+			"hook_event_name": "SessionStart",
+		},
+		"expected": map[string]interface{}{
+			"exit_code":                    0,
+			"additional_context_contains":  []string{"SESSION INITIALIZED"},
+		},
+	}
+	fixtureBytes, _ := json.Marshal(fixture)
+	if err := os.WriteFile(filepath.Join(fixturesDir, "startup-basic.json"), fixtureBytes, 0644); err != nil {
+		t.Fatalf("Failed to write fixture: %v", err)
+	}
+
+	// Build mock binary that echoes valid response
+	mockBinary := createMockLoadContextBinary(t, tmpDir)
+
+	cfg := SimulationConfig{
+		Mode:        "deterministic",
+		FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		TempDir:     tmpDir,
+		Verbose:     false,
+	}
+
+	runner := NewRunner(cfg, "/bin/true", "/bin/true", nil)
+	runner.SetLoadContextPath(mockBinary)
+
+	results, err := runner.Run(cfg)
+	if err != nil {
+		t.Fatalf("Runner.Run failed: %v", err)
+	}
+
+	if len(results) == 0 {
+		t.Fatal("Expected at least one result")
+	}
+
+	// Verify scenario was executed
+	result := results[0]
+	if result.ScenarioID != "startup-basic" {
+		t.Errorf("Expected scenario ID 'startup-basic', got %s", result.ScenarioID)
+	}
+	if !result.Passed {
+		t.Errorf("Expected scenario to pass, got diff: %s", result.Diff)
+	}
+}
+
+// TestRunner_SessionStartCategory_NoPath tests error when loadContextPath not set
+func TestRunner_SessionStartCategory_NoPath(t *testing.T) {
+	r := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	scenario := Scenario{
+		Category: "sessionstart",
+		Input:    map[string]string{},
+	}
+
+	_, _, err := r.executeScenario(scenario)
+	if err == nil {
+		t.Fatal("Expected error when loadContextPath not set")
+	}
+	if !strings.Contains(err.Error(), "loadContextPath") {
+		t.Errorf("Expected error to mention loadContextPath, got: %v", err)
+	}
+}
+
+// TestValidateSessionStartExpectations tests SessionStart validation logic
+func TestValidateSessionStartExpectations(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{
+		"hookSpecificOutput": {
+			"hookEventName": "SessionStart",
+			"additionalContext": "🚀 SESSION INITIALIZED (startup)\n\nPROJECT TYPE: go\n\nRouting hooks are ACTIVE."
+		}
+	}`
+
+	expected := ExpectedOutput{
+		AdditionalContextContains:    []string{"SESSION INITIALIZED", "go"},
+		AdditionalContextNotContains: []string{"ERROR"},
+		ProjectTypeEquals:            "go",
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) > 0 {
+		t.Errorf("Unexpected validation issues: %v", issues)
+	}
+}
+
+// TestValidateSessionStartExpectations_ContextContainsFails tests substring not found
+func TestValidateSessionStartExpectations_ContextContainsFails(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{
+		"hookSpecificOutput": {
+			"hookEventName": "SessionStart",
+			"additionalContext": "SESSION INITIALIZED"
+		}
+	}`
+
+	expected := ExpectedOutput{
+		AdditionalContextContains: []string{"MISSING_STRING"},
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when substring not found")
+	}
+	if !strings.Contains(issues[0], "additional_context_contains") {
+		t.Errorf("Expected issue to mention additional_context_contains, got: %s", issues[0])
+	}
+}
+
+// TestValidateSessionStartExpectations_ContextNotContainsFails tests negative check
+func TestValidateSessionStartExpectations_ContextNotContainsFails(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{
+		"hookSpecificOutput": {
+			"hookEventName": "SessionStart",
+			"additionalContext": "SESSION INITIALIZED with ERROR"
+		}
+	}`
+
+	expected := ExpectedOutput{
+		AdditionalContextNotContains: []string{"ERROR"},
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when forbidden substring found")
+	}
+	if !strings.Contains(issues[0], "additional_context_not_contains") {
+		t.Errorf("Expected issue to mention additional_context_not_contains, got: %s", issues[0])
+	}
+}
+
+// TestValidateSessionStartExpectations_ProjectTypeFails tests project type validation
+func TestValidateSessionStartExpectations_ProjectTypeFails(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{
+		"hookSpecificOutput": {
+			"hookEventName": "SessionStart",
+			"additionalContext": "PROJECT TYPE: python"
+		}
+	}`
+
+	expected := ExpectedOutput{
+		ProjectTypeEquals: "go",
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when project type doesn't match")
+	}
+	if !strings.Contains(issues[0], "project_type_equals") {
+		t.Errorf("Expected issue to mention project_type_equals, got: %s", issues[0])
+	}
+}
+
+// TestValidateSessionStartExpectations_InvalidJSON tests non-JSON output
+func TestValidateSessionStartExpectations_InvalidJSON(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := "not valid json"
+
+	expected := ExpectedOutput{
+		AdditionalContextContains: []string{"SESSION"},
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	// Should fall back to raw content check
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when substring not in raw output")
+	}
+}
+
+// TestValidateSessionStartExpectations_MissingHookOutput tests missing hookSpecificOutput
+func TestValidateSessionStartExpectations_MissingHookOutput(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{"some": "data"}`
+
+	expected := ExpectedOutput{
+		AdditionalContextContains: []string{"SESSION"},
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when hookSpecificOutput missing")
+	}
+	if !strings.Contains(issues[0], "hookSpecificOutput missing") {
+		t.Errorf("Expected issue about missing hookSpecificOutput, got: %s", issues[0])
+	}
+}
+
+// TestValidateSessionStartExpectations_MissingAdditionalContext tests missing additionalContext field
+func TestValidateSessionStartExpectations_MissingAdditionalContext(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{"hookSpecificOutput": {"hookEventName": "SessionStart"}}`
+
+	expected := ExpectedOutput{
+		AdditionalContextContains: []string{"SESSION"},
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when additionalContext missing")
+	}
+	if !strings.Contains(issues[0], "additionalContext missing") {
+		t.Errorf("Expected issue about missing additionalContext, got: %s", issues[0])
+	}
+}
+
+// TestValidateSessionStartExpectations_ToolCounterInitialized tests counter file check
+func TestValidateSessionStartExpectations_ToolCounterInitialized(t *testing.T) {
+	tmpDir := t.TempDir()
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: tmpDir},
+	}
+
+	// Create the tool counter file
+	counterPath := filepath.Join(tmpDir, ".cache", "gogent", "tool-counter")
+	if err := os.MkdirAll(filepath.Dir(counterPath), 0755); err != nil {
+		t.Fatalf("Failed to create counter dir: %v", err)
+	}
+	if err := os.WriteFile(counterPath, []byte("0"), 0644); err != nil {
+		t.Fatalf("Failed to write counter file: %v", err)
+	}
+
+	output := `{
+		"hookSpecificOutput": {
+			"hookEventName": "SessionStart",
+			"additionalContext": "SESSION INITIALIZED"
+		}
+	}`
+
+	expected := ExpectedOutput{
+		ToolCounterInitialized: true,
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) > 0 {
+		t.Errorf("Expected validation to pass when counter file exists, got: %v", issues)
+	}
+}
+
+// TestValidateSessionStartExpectations_ToolCounterMissing tests counter file missing
+func TestValidateSessionStartExpectations_ToolCounterMissing(t *testing.T) {
+	runner := &DefaultRunner{
+		config: SimulationConfig{TempDir: t.TempDir()},
+	}
+
+	output := `{
+		"hookSpecificOutput": {
+			"hookEventName": "SessionStart",
+			"additionalContext": "SESSION INITIALIZED"
+		}
+	}`
+
+	expected := ExpectedOutput{
+		ToolCounterInitialized: true,
+	}
+
+	issues := runner.validateSessionStartExpectations(expected, output)
+
+	if len(issues) == 0 {
+		t.Error("Expected validation to fail when counter file missing")
+	}
+	if !strings.Contains(issues[0], "tool_counter_initialized") {
+		t.Errorf("Expected issue about tool_counter_initialized, got: %s", issues[0])
+	}
+}
+
+// TestRunner_LoadScenarios_SessionStart tests loading sessionstart scenarios
+func TestRunner_LoadScenarios_SessionStart(t *testing.T) {
+	// Create temporary fixture directory
+	tmpDir := t.TempDir()
+	fixtureDir := filepath.Join(tmpDir, "fixtures", "deterministic", "sessionstart")
+	if err := os.MkdirAll(fixtureDir, 0755); err != nil {
+		t.Fatalf("Failed to create fixture dir: %v", err)
+	}
+
+	// Create test fixture
+	fixture := map[string]interface{}{
+		"input": map[string]interface{}{
+			"session_id": "test-session",
+		},
+		"expected": map[string]interface{}{
+			"exit_code": 0,
+		},
+	}
+	fixtureBytes, _ := json.Marshal(fixture)
+	fixturePath := filepath.Join(fixtureDir, "session-test.json")
+	if err := os.WriteFile(fixturePath, fixtureBytes, 0644); err != nil {
+		t.Fatalf("Failed to write fixture: %v", err)
+	}
+
+	// Create runner with loadContextPath set
+	mockBinary := createMockLoadContextBinary(t, tmpDir)
+
+	r := &DefaultRunner{
+		config: SimulationConfig{
+			TempDir:     tmpDir,
+			FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		},
+		loadContextPath: mockBinary,
+	}
+
+	scenarios, err := r.loadScenarios()
+	if err != nil {
+		t.Fatalf("Failed to load scenarios: %v", err)
+	}
+
+	if len(scenarios) != 1 {
+		t.Fatalf("Expected 1 scenario, got %d", len(scenarios))
+	}
+	if scenarios[0].Category != "sessionstart" {
+		t.Errorf("Expected category 'sessionstart', got %s", scenarios[0].Category)
+	}
+}
+
+// TestRunner_LoadScenarios_SessionStartNotLoaded tests scenarios not loaded when path empty
+func TestRunner_LoadScenarios_SessionStartNotLoaded(t *testing.T) {
+	// Create temporary fixture directory
+	tmpDir := t.TempDir()
+	fixtureDir := filepath.Join(tmpDir, "fixtures", "deterministic", "sessionstart")
+	if err := os.MkdirAll(fixtureDir, 0755); err != nil {
+		t.Fatalf("Failed to create fixture dir: %v", err)
+	}
+
+	// Create test fixture
+	fixture := map[string]interface{}{
+		"input": map[string]interface{}{
+			"session_id": "test-session",
+		},
+		"expected": map[string]interface{}{
+			"exit_code": 0,
+		},
+	}
+	fixtureBytes, _ := json.Marshal(fixture)
+	fixturePath := filepath.Join(fixtureDir, "session-test.json")
+	if err := os.WriteFile(fixturePath, fixtureBytes, 0644); err != nil {
+		t.Fatalf("Failed to write fixture: %v", err)
+	}
+
+	// Create runner WITHOUT loadContextPath set
+	r := &DefaultRunner{
+		config: SimulationConfig{
+			TempDir:     tmpDir,
+			FixturesDir: filepath.Join(tmpDir, "fixtures"),
+		},
+		// loadContextPath is empty string
+	}
+
+	scenarios, err := r.loadScenarios()
+	if err != nil {
+		t.Fatalf("Failed to load scenarios: %v", err)
+	}
+
+	// Should not load sessionstart scenarios when path is empty
+	if len(scenarios) != 0 {
+		t.Errorf("Expected 0 scenarios when loadContextPath empty, got %d", len(scenarios))
+	}
+}
+
+// createMockLoadContextBinary creates a mock binary for testing
+func createMockLoadContextBinary(t *testing.T, tmpDir string) string {
+	mockBinary := filepath.Join(tmpDir, "mock-load-context")
+	scriptContent := `#!/bin/bash
+cat << 'EOF'
+{
+	"hookSpecificOutput": {
+		"hookEventName": "SessionStart",
+		"additionalContext": "🚀 SESSION INITIALIZED (startup)\n\nPROJECT TYPE: go\n\nRouting hooks are ACTIVE."
+	}
+}
+EOF
+exit 0
+`
+	if err := os.WriteFile(mockBinary, []byte(scriptContent), 0755); err != nil {
+		t.Fatalf("Failed to create mock binary: %v", err)
+	}
+	return mockBinary
+}
