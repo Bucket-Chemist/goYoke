@@ -1,17 +1,18 @@
 ---
 id: GOgent-066
 title: Hook Configuration Template
-description: **Task**:
+description: Create hook configuration example for Claude Code settings
 status: pending
 time_estimate: 0.5h
-dependencies: [\n  - GOgent-064]
+dependencies:
+  - GOgent-064
 priority: LOW
 week: 4
 tags:
   - session-start
   - week-4
 tests_required: true
-acceptance_criteria_count: 18
+acceptance_criteria_count: 4
 ---
 
 ## GOgent-066: Hook Configuration Template
@@ -93,10 +94,10 @@ echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' |
 ```
 
 **Acceptance Criteria**:
-- [ ] Configuration example is complete and accurate
-- [ ] Environment variables documented
-- [ ] Verification commands work
-- [ ] Troubleshooting section covers common issues
+- [x] Configuration example is complete and accurate
+- [x] Environment variables documented
+- [x] Verification commands work
+- [x] Troubleshooting section covers common issues
 
 **Why This Matters**: Configuration documentation enables users to integrate GOgent hooks with their Claude Code setup.
 
