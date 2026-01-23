@@ -1,7 +1,7 @@
 ---
 id: GOgent-060
 title: Project Type Detection
-description: **Task**:
+description: Auto-detect project type (Python, R, R+Shiny, JavaScript, Go) for convention loading in CLAUDE.md Gate 1.
 status: pending
 time_estimate: 1.5h
 dependencies: []
@@ -437,22 +437,22 @@ func TestFormatProjectType(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `DetectProjectType()` detects: Go, Python, R, R+Shiny, R+Golem, JavaScript, TypeScript, Rust
-- [ ] Returns generic for unrecognized projects
-- [ ] Go has highest priority (this is GOgent-Fortress)
-- [ ] Shiny detection checks DESCRIPTION content AND app.R/ui.R presence
-- [ ] Golem detection checks inst/golem-config.yml AND DESCRIPTION
-- [ ] `ProjectDetectionResult` includes indicators and convention files
-- [ ] Tests verify all project types and priority
-- [ ] `go test ./pkg/session/...` passes
+- [x] `DetectProjectType()` detects: Go, Python, R, R+Shiny, R+Golem, JavaScript, TypeScript, Rust
+- [x] Returns generic for unrecognized projects
+- [x] Go has highest priority (this is GOgent-Fortress)
+- [x] Shiny detection checks DESCRIPTION content AND app.R/ui.R presence
+- [x] Golem detection checks inst/golem-config.yml AND DESCRIPTION
+- [x] `ProjectDetectionResult` includes indicators and convention files
+- [x] Tests verify all project types and priority
+- [x] `go test ./pkg/session/...` passes
 
 **Test Deliverables**:
-- [ ] Test file created: `pkg/session/project_detection_test.go`
-- [ ] Test file size: ~180 lines
-- [ ] Number of test functions: 13
-- [ ] Coverage achieved: >90%
-- [ ] Tests passing: ✅
-- [ ] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem`
+- [x] Test file created: `pkg/session/project_detection_test.go`
+- [x] Test file size: ~180 lines
+- [x] Number of test functions: 13
+- [x] Coverage achieved: >90%
+- [x] Tests passing: ✅
+- [x] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem`
 
 **Why This Matters**: Project type detection drives convention loading (python.md, R.md, go.md) in CLAUDE.md Gate 1. Accurate detection ensures correct coding standards.
 
