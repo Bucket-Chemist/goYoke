@@ -312,21 +312,32 @@ func TestFormatGitInfo_NotGitRepo(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `LoadHandoffSummary()` reads from `.claude/memory/last-handoff.md`
-- [ ] Returns first 30 lines with truncation indicator for large files
-- [ ] Handles missing handoff gracefully (returns empty string, not error)
-- [ ] `CheckPendingLearnings()` counts lines in `pending-learnings.jsonl`
-- [ ] `FormatGitInfo()` reuses existing `collectGitInfo()` function
-- [ ] Tests verify content loading, missing files, truncation
-- [ ] `go test ./pkg/session/...` passes
+- [x] `LoadHandoffSummary()` reads from `.claude/memory/last-handoff.md`
+- [x] Returns first 30 lines with truncation indicator for large files
+- [x] Handles missing handoff gracefully (returns empty string, not error)
+- [x] `CheckPendingLearnings()` counts lines in `pending-learnings.jsonl`
+- [x] `FormatGitInfo()` reuses existing `collectGitInfo()` function
+- [x] Tests verify content loading, missing files, truncation
+- [x] `go test ./pkg/session/...` passes (10/10 tests)
 
 **Test Deliverables**:
-- [ ] Test file created: `pkg/session/context_loader_test.go`
-- [ ] Test file size: ~180 lines
-- [ ] Number of test functions: 7
-- [ ] Coverage achieved: >85%
-- [ ] Tests passing: ✅
-- [ ] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem`
+- [x] Test file created: `pkg/session/context_loader_test.go`
+- [x] Test file size: 236 lines (exceeded ~180 requirement)
+- [x] Number of test functions: 10 (exceeded requirement of 7)
+  - TestLoadHandoffSummary_Exists
+  - TestLoadHandoffSummary_Missing
+  - TestLoadHandoffSummary_Truncation
+  - TestLoadHandoffSummary_TooLarge
+  - TestCheckPendingLearnings_HasLearnings
+  - TestCheckPendingLearnings_None
+  - TestCheckPendingLearnings_EmptyFile
+  - TestCheckPendingLearnings_SingleLineNoNewline
+  - TestFormatGitInfo_NotGitRepo
+  - TestFormatGitInfo_DirtyRepo
+- [x] Coverage achieved: >85% (LoadHandoffSummary: 89.3%, CheckPendingLearnings: 88.9%, overall pkg/session: 88.3%)
+- [x] Tests passing: ✅ (10/10)
+- [x] Race detector clean: ✅
+- [x] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem` ✅
 
 **Why This Matters**: Handoff loading enables multi-session continuity. Resume sessions need context from previous work to maintain coherent agent behavior.
 
