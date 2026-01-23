@@ -264,3 +264,203 @@ func TestGetProjectViolationsLogPath(t *testing.T) {
 		})
 	}
 }
+
+func TestGetToolCounterPath(t *testing.T) {
+	// Save original env
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	// Unset XDG_RUNTIME_DIR so XDG_CACHE_HOME takes priority
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	testDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", testDir)
+
+	result := GetToolCounterPath()
+	expected := filepath.Join(testDir, "gogent", "tool-counter")
+
+	if result != expected {
+		t.Errorf("Expected %s, got %s", expected, result)
+	}
+
+	// Verify filename is "tool-counter"
+	if filepath.Base(result) != "tool-counter" {
+		t.Errorf("Expected filename 'tool-counter', got %s", filepath.Base(result))
+	}
+}
+
+func TestToolCounter_Initialize(t *testing.T) {
+	// Save original env
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	// Unset XDG_RUNTIME_DIR so XDG_CACHE_HOME takes priority
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	testDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", testDir)
+
+	// Initialize counter
+	err := InitializeToolCounter()
+	if err != nil {
+		t.Fatalf("InitializeToolCounter failed: %v", err)
+	}
+
+	// Verify file was created with correct content
+	path := GetToolCounterPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read counter file: %v", err)
+	}
+
+	if string(data) != "0" {
+		t.Errorf("Expected counter to be initialized to '0', got %s", string(data))
+	}
+
+	// Verify file permissions (0644)
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("Failed to stat counter file: %v", err)
+	}
+
+	if info.Mode().Perm() != 0644 {
+		t.Errorf("Expected permissions 0644, got %o", info.Mode().Perm())
+	}
+}
+
+func TestToolCounter_GetCount_NotInitialized(t *testing.T) {
+	// Save original env
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	// Unset XDG_RUNTIME_DIR so XDG_CACHE_HOME takes priority
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	testDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", testDir)
+
+	// Get count before initialization (file doesn't exist)
+	count, err := GetToolCount()
+	if err != nil {
+		t.Fatalf("GetToolCount failed when file doesn't exist: %v", err)
+	}
+
+	// Should return 0 when file doesn't exist
+	if count != 0 {
+		t.Errorf("Expected count=0 when file doesn't exist, got %d", count)
+	}
+}
+
+func TestToolCounter_Increment(t *testing.T) {
+	// Save original env
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	// Unset XDG_RUNTIME_DIR so XDG_CACHE_HOME takes priority
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	testDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", testDir)
+
+	// Initialize counter
+	if err := InitializeToolCounter(); err != nil {
+		t.Fatalf("InitializeToolCounter failed: %v", err)
+	}
+
+	// Verify initial count
+	count, err := GetToolCount()
+	if err != nil {
+		t.Fatalf("GetToolCount failed: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("Expected initial count=0, got %d", count)
+	}
+
+	// Increment 5 times
+	for i := 1; i <= 5; i++ {
+		if err := IncrementToolCount(); err != nil {
+			t.Fatalf("IncrementToolCount failed on iteration %d: %v", i, err)
+		}
+
+		count, err := GetToolCount()
+		if err != nil {
+			t.Fatalf("GetToolCount failed after increment %d: %v", i, err)
+		}
+
+		if count != i {
+			t.Errorf("Expected count=%d after %d increments, got %d", i, i, count)
+		}
+	}
+}
+
+func TestToolCounter_ConcurrentIncrement(t *testing.T) {
+	// Save original env
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	// Unset XDG_RUNTIME_DIR so XDG_CACHE_HOME takes priority
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	testDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", testDir)
+
+	// Initialize counter
+	if err := InitializeToolCounter(); err != nil {
+		t.Fatalf("InitializeToolCounter failed: %v", err)
+	}
+
+	// Run 100 concurrent increments (10 goroutines × 10 increments)
+	const numGoroutines = 10
+	const incrementsPerGoroutine = 10
+	const expectedTotal = numGoroutines * incrementsPerGoroutine
+
+	errChan := make(chan error, numGoroutines*incrementsPerGoroutine)
+	doneChan := make(chan bool, numGoroutines)
+
+	for g := 0; g < numGoroutines; g++ {
+		go func() {
+			for i := 0; i < incrementsPerGoroutine; i++ {
+				if err := IncrementToolCount(); err != nil {
+					errChan <- err
+					return
+				}
+			}
+			doneChan <- true
+		}()
+	}
+
+	// Wait for all goroutines to complete
+	for g := 0; g < numGoroutines; g++ {
+		select {
+		case <-doneChan:
+			// Success
+		case err := <-errChan:
+			t.Fatalf("Concurrent increment failed: %v", err)
+		}
+	}
+
+	// Verify final count is exactly expectedTotal
+	finalCount, err := GetToolCount()
+	if err != nil {
+		t.Fatalf("GetToolCount failed after concurrent increments: %v", err)
+	}
+
+	if finalCount != expectedTotal {
+		t.Errorf("Expected count=%d after concurrent increments, got %d (lost updates detected)", expectedTotal, finalCount)
+	}
+}
