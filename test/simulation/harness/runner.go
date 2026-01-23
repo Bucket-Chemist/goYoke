@@ -97,6 +97,19 @@ func (r *DefaultRunner) RunScenario(s Scenario) SimulationResult {
 	if r.config.TempDir != "" {
 		claudeDir := filepath.Join(r.config.TempDir, ".claude")
 		os.RemoveAll(claudeDir)
+
+		// Clean project indicator files to prevent cross-test contamination
+		// These files affect project type detection and must be removed between tests
+		indicatorFiles := []string{
+			"go.mod", "go.sum",                              // Go
+			"pyproject.toml", "setup.py", "requirements.txt", // Python
+			"DESCRIPTION", "NAMESPACE", "renv.lock", "app.R", "ui.R", // R/Shiny
+			"package.json", "tsconfig.json",                 // JS/TS
+			"Cargo.toml",                                    // Rust
+		}
+		for _, file := range indicatorFiles {
+			os.Remove(filepath.Join(r.config.TempDir, file))
+		}
 	}
 
 	// Clear scenario-specific env vars
@@ -518,6 +531,12 @@ func (r *DefaultRunner) buildEnv() []string {
 	}
 	if r.config.TempDir != "" {
 		env = append(env, "GOGENT_PROJECT_DIR="+r.config.TempDir)
+		// Set XDG_CACHE_HOME to isolate tool counter and other cache files
+		// This ensures GetGOgentDir() resolves to TempDir/.cache/gogent
+		env = append(env, "XDG_CACHE_HOME="+filepath.Join(r.config.TempDir, ".cache"))
+		// Unset XDG_RUNTIME_DIR to prevent fallback to system runtime dir
+		// Empty value causes GetGOgentDir() to skip this check
+		env = append(env, "XDG_RUNTIME_DIR=")
 	}
 
 	// Add scenario-specific environment variables
