@@ -340,8 +340,9 @@ func TestLoadHandoff_CurrentVersion(t *testing.T) {
 		t.Fatalf("Expected no error loading v1.1, got: %v", err)
 	}
 
-	if loaded.SchemaVersion != "1.1" {
-		t.Errorf("Expected schema version 1.1, got: %s", loaded.SchemaVersion)
+	// v1.1 handoffs are migrated to current version (1.2)
+	if loaded.SchemaVersion != "1.2" {
+		t.Errorf("Expected schema version 1.2 (migrated), got: %s", loaded.SchemaVersion)
 	}
 
 	if loaded.SessionID != "test-v1" {
@@ -447,9 +448,9 @@ func TestMigrateHandoff_V10ToV11(t *testing.T) {
 		t.Errorf("Expected session ID migrate-test, got: %s", migrated.SessionID)
 	}
 
-	// v1.0 handoffs are migrated to v1.1 (current version)
-	if migrated.SchemaVersion != "1.1" {
-		t.Errorf("Expected schema version 1.1 after migration, got: %s", migrated.SchemaVersion)
+	// v1.0 handoffs are migrated to current version (1.2)
+	if migrated.SchemaVersion != "1.2" {
+		t.Errorf("Expected schema version 1.2 after migration, got: %s", migrated.SchemaVersion)
 	}
 
 	// New fields should be initialized to empty slices
@@ -489,8 +490,9 @@ func TestMigrateHandoff_V11Direct(t *testing.T) {
 		t.Errorf("Expected session ID v11-test, got: %s", migrated.SessionID)
 	}
 
-	if migrated.SchemaVersion != "1.1" {
-		t.Errorf("Expected schema version 1.1, got: %s", migrated.SchemaVersion)
+	// v1.1 handoffs are migrated to current version (1.2)
+	if migrated.SchemaVersion != "1.2" {
+		t.Errorf("Expected schema version 1.2, got: %s", migrated.SchemaVersion)
 	}
 
 	if len(migrated.Artifacts.Decisions) != 1 {
@@ -1015,9 +1017,9 @@ func TestHandoffJSONSerialization(t *testing.T) {
 }
 
 func TestHandoffSchemaVersion(t *testing.T) {
-	// Schema version 1.1 adds: Decisions, PreferenceOverrides, PerformanceMetrics
-	if HandoffSchemaVersion != "1.1" {
-		t.Errorf("Expected schema version '1.1', got: %s", HandoffSchemaVersion)
+	// Schema version 1.2 adds: Type, Tool, CodeSnippet, Status, AttemptedChange to SharpEdge
+	if HandoffSchemaVersion != "1.2" {
+		t.Errorf("Expected schema version '1.2', got: %s", HandoffSchemaVersion)
 	}
 }
 

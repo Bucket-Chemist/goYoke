@@ -2,11 +2,11 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 111,
+    "total_tickets": 112,
     "total_weeks": 5,
     "created": "2026-01-15",
-    "version": "1.9",
-    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f) + 11 simulation test harness tickets (030l-030v)"
+    "version": "2.0",
+    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f) + 11 simulation test harness tickets (030l-030v) + 1 behavioral simulation ticket (042)"
   },
   "tickets": [
     {
@@ -924,7 +924,7 @@
       "day": 5,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-037"
+        "GOgent-035"
       ],
       "blocks": [
         "GOgent-037c"
@@ -945,7 +945,7 @@
         "phase-2"
       ],
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-037c",
@@ -985,7 +985,7 @@
       "time_estimate": "2h",
       "dependencies": [
         "GOgent-029a",
-        "GOgent-037"
+        "GOgent-035"
       ],
       "blocks": [
         "GOgent-041"
@@ -1062,7 +1062,7 @@
         "phase-3"
       ],
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-038c",
@@ -3552,6 +3552,51 @@
       ],
       "acceptance_criteria_count": 8,
       "status": "pending"
+    },
+    {
+      "id": "GOgent-042",
+      "title": "Behavioral Simulation CI/CD Pipeline",
+      "description": "End-to-end behavioral testing for the complete learning pipeline with session replay, behavioral invariants, chaos testing, and week simulation",
+      "file": "tickets/042.md",
+      "week": 3,
+      "day": 1,
+      "time_estimate": "6h",
+      "dependencies": [
+        "GOgent-039-R"
+      ],
+      "blocks": [],
+      "priority": "high",
+      "tags": [
+        "simulation",
+        "ci-cd",
+        "behavioral",
+        "testing",
+        "e2e"
+      ],
+      "files_to_create": [
+        "test/simulation/harness/behavioral_invariants.go",
+        "test/simulation/harness/session_replayer.go",
+        "test/simulation/harness/chaos_runner.go",
+        ".github/workflows/simulation-behavioral.yml",
+        "test/simulation/fixtures/sessions/debugging-loop.jsonl",
+        "test/simulation/fixtures/sessions/threshold-boundary.jsonl",
+        "test/simulation/fixtures/sessions/mixed-success-failure.jsonl",
+        "test/simulation/fixtures/sessions/cross-session-memory.jsonl",
+        "test/simulation/fixtures/sessions/multi-agent-spawn.jsonl"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-042-behavioral-simulation",
+      "pr_labels": [
+        "simulation",
+        "behavioral",
+        "ci-cd"
+      ],
+      "acceptance_criteria_count": 21,
+      "status": "pending",
+      "estimated_hours": "6h",
+      "revision": "R1",
+      "revision_date": "2026-01-23",
+      "revision_note": "Staff architect review: scoped down, added shared-key chaos test"
     }
   ]
 }
