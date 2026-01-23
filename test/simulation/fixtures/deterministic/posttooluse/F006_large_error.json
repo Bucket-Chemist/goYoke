@@ -1,0 +1,20 @@
+{
+  "description": "Extremely large error message (100KB+)",
+  "event": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "python largescript.py"
+    },
+    "tool_response": {
+      "output": "TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. TypeError: Something went wrong. "
+    },
+    "session_id": "test-session",
+    "hook_event_name": "PostToolUse",
+    "captured_at": 1234567890
+  },
+  "expected": {
+    "failure_detected": true,
+    "error_type": "typeerror",
+    "handles_large_output": true
+  }
+}

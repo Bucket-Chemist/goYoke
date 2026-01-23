@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse replay-crash clean-simulation
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent install install-archive install-aggregate install-wrapper uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -37,6 +37,12 @@ help:
 	@echo "  make test-simulation-posttooluse  - Run posttooluse tests only (requires build-sharp-edge)"
 	@echo "  make replay-crash CRASH=<file>    - Replay a specific crash"
 	@echo "  make clean-simulation             - Clean simulation artifacts"
+	@echo ""
+	@echo "Sharp Edge testing:"
+	@echo "  make test-sharp-edge-unit         - Run sharp edge unit tests"
+	@echo "  make test-sharp-edge-integration  - Run sharp edge integration tests"
+	@echo "  make test-sharp-edge-coverage     - Generate coverage report for sharp edge"
+	@echo "  make test-sharp-edge-all          - Run all sharp edge tests"
 
 # Primary test target - runs full ecosystem with audit trail
 test: test-ecosystem
@@ -224,3 +230,34 @@ replay-crash: build-validate build-archive
 clean-simulation:
 	rm -rf test/simulation/reports/*
 	rm -rf test/simulation/tmp/*
+
+# ==============================================================================
+# Sharp Edge Testing
+# ==============================================================================
+
+test-sharp-edge-unit:
+	@echo "Running sharp edge unit tests..."
+	go test -v -race ./pkg/routing -run Failure
+	go test -v -race ./pkg/memory -run Failure
+
+test-sharp-edge-integration:
+	@echo "Running sharp edge integration tests..."
+	go test -v -race ./test/integration -run SharpEdge
+
+test-sharp-edge-coverage:
+	@echo "Generating sharp edge coverage reports..."
+	go test -coverprofile=coverage-routing.out ./pkg/routing
+	go test -coverprofile=coverage-memory.out ./pkg/memory
+	@echo ""
+	@echo "=== pkg/routing Coverage ==="
+	go tool cover -func=coverage-routing.out
+	@echo ""
+	@echo "=== pkg/memory Coverage ==="
+	go tool cover -func=coverage-memory.out
+	@echo ""
+	@echo "To view HTML coverage reports:"
+	@echo "  go tool cover -html=coverage-routing.out"
+	@echo "  go tool cover -html=coverage-memory.out"
+
+test-sharp-edge-all: test-sharp-edge-unit test-sharp-edge-integration
+	@echo "✅ All sharp edge tests passed"

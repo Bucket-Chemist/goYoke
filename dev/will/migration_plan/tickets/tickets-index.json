@@ -1124,7 +1124,7 @@
         "phase-3"
       ],
       "acceptance_criteria_count": 7,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-039-R",
@@ -1163,7 +1163,7 @@
         "comprehensive"
       ],
       "acceptance_criteria_count": 65,
-      "status": "pending",
+      "status": "in_progress",
       "revision": "R1",
       "revision_date": "2026-01-23",
       "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h → 6.0h."

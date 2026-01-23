@@ -465,3 +465,182 @@ func TestExtractFilePath_EmptyCommand(t *testing.T) {
 		t.Errorf("Expected 'unknown', got '%s'", path)
 	}
 }
+
+// Additional exit code tests for comprehensive coverage
+func TestDetectFailure_ExitCode2(t *testing.T) {
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "test"},
+		ToolResponse: map[string]interface{}{
+			"exit_code": 2,
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info == nil {
+		t.Fatal("Expected FailureInfo, got nil")
+	}
+
+	if info.ErrorType != "misuse" {
+		t.Errorf("Expected error_type 'misuse', got '%s'", info.ErrorType)
+	}
+
+	if info.ExitCode != 2 {
+		t.Errorf("Expected exit_code 2, got %d", info.ExitCode)
+	}
+}
+
+func TestDetectFailure_ExitCode130(t *testing.T) {
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "test"},
+		ToolResponse: map[string]interface{}{
+			"exit_code": 130,
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info == nil {
+		t.Fatal("Expected FailureInfo, got nil")
+	}
+
+	if info.ErrorType != "interrupted" {
+		t.Errorf("Expected error_type 'interrupted', got '%s'", info.ErrorType)
+	}
+
+	if info.ExitCode != 130 {
+		t.Errorf("Expected exit_code 130, got %d", info.ExitCode)
+	}
+}
+
+func TestDetectFailure_ExitCodeUnknown(t *testing.T) {
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "test"},
+		ToolResponse: map[string]interface{}{
+			"exit_code": 42,
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info == nil {
+		t.Fatal("Expected FailureInfo, got nil")
+	}
+
+	if info.ErrorType != "exit_code_42" {
+		t.Errorf("Expected error_type 'exit_code_42', got '%s'", info.ErrorType)
+	}
+
+	if info.ExitCode != 42 {
+		t.Errorf("Expected exit_code 42, got %d", info.ExitCode)
+	}
+}
+
+// Additional Python error tests
+func TestDetectFailure_SyntaxError(t *testing.T) {
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "python script.py"},
+		ToolResponse: map[string]interface{}{
+			"output": "SyntaxError: invalid syntax",
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info == nil {
+		t.Fatal("Expected FailureInfo, got nil")
+	}
+
+	if info.ErrorType != "syntaxerror" {
+		t.Errorf("Expected error_type 'syntaxerror', got '%s'", info.ErrorType)
+	}
+}
+
+func TestDetectFailure_ImportError(t *testing.T) {
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "python script.py"},
+		ToolResponse: map[string]interface{}{
+			"output": "ImportError: No module named 'foo'",
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info == nil {
+		t.Fatal("Expected FailureInfo, got nil")
+	}
+
+	if info.ErrorType != "importerror" {
+		t.Errorf("Expected error_type 'importerror', got '%s'", info.ErrorType)
+	}
+}
+
+func TestDetectFailure_GenericFailed(t *testing.T) {
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "make test"},
+		ToolResponse: map[string]interface{}{
+			"output": "Build failed with errors",
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info == nil {
+		t.Fatal("Expected FailureInfo, got nil")
+	}
+
+	if info.ErrorType != "generic_failed" {
+		t.Errorf("Expected error_type 'generic_failed', got '%s'", info.ErrorType)
+	}
+}
+
+// Edge case tests
+func TestDetectFailure_SuccessTrue(t *testing.T) {
+	// Explicit success=true should not detect failure
+	event := &PostToolEvent{
+		ToolName:   "Edit",
+		ToolInput:  map[string]interface{}{"file_path": "test.go"},
+		ToolResponse: map[string]interface{}{
+			"success": true,
+			"output":  "File updated successfully",
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info != nil {
+		t.Errorf("Expected nil for success=true, got %+v", info)
+	}
+}
+
+func TestDetectFailure_ZeroExitCode(t *testing.T) {
+	// Exit code 0 should not be treated as failure
+	event := &PostToolEvent{
+		ToolName:   "Bash",
+		ToolInput:  map[string]interface{}{"command": "echo test"},
+		ToolResponse: map[string]interface{}{
+			"exit_code": 0,
+			"output":    "test",
+		},
+		CapturedAt: time.Now().Unix(),
+	}
+
+	info := DetectFailure(event)
+
+	if info != nil {
+		t.Errorf("Expected nil for exit code 0, got %+v", info)
+	}
+}
