@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -16,21 +17,39 @@ func GetGOgentDir() string {
 	// Try XDG_RUNTIME_DIR (systemd standard, session-scoped)
 	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
 		dir := filepath.Join(xdg, "gogent")
-		os.MkdirAll(dir, 0755)
-		return dir
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create gogent dir at %s: %v. Trying fallback.\n", dir, err)
+		} else {
+			return dir
+		}
 	}
 
 	// Try XDG_CACHE_HOME (user-configurable cache directory)
 	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
 		dir := filepath.Join(xdg, "gogent")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create gogent dir at %s: %v. Trying fallback.\n", dir, err)
+		} else {
+			return dir
+		}
+	}
+
+	// Fallback: ~/.cache/gogent (XDG default when XDG_CACHE_HOME unset)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to get home directory: %v. Using /tmp fallback.\n", err)
+		dir := filepath.Join(os.TempDir(), "gogent-fallback")
 		os.MkdirAll(dir, 0755)
 		return dir
 	}
 
-	// Fallback: ~/.cache/gogent (XDG default when XDG_CACHE_HOME unset)
-	home, _ := os.UserHomeDir()
 	dir := filepath.Join(home, ".cache", "gogent")
-	os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create gogent dir at %s: %v. Using /tmp fallback.\n", dir, err)
+		dir = filepath.Join(os.TempDir(), "gogent-fallback")
+		os.MkdirAll(dir, 0755)
+		return dir
+	}
 	return dir
 }
 

@@ -2,11 +2,11 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 112,
+    "total_tickets": 127,
     "total_weeks": 5,
     "created": "2026-01-15",
     "version": "2.0",
-    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f) + 11 simulation test harness tickets (030l-030v) + 1 behavioral simulation ticket (042)"
+    "note": "Includes 15 base session archive tickets (026-040) + 17 enhancement tickets (027b-038d) + 15 Einstein integration tickets (028a-028o including 028k and 028l) + 4 learning architecture expansion tickets (029c-029f) + 11 simulation test harness tickets (030l-030v) + 1 behavioral simulation ticket (042) + 15 session-init-context tickets (056-070)"
   },
   "tickets": [
     {
@@ -950,7 +950,7 @@
     {
       "id": "GOgent-037c",
       "title": "Log Attempted Changes from Tool Input",
-      "description": "Capture what was attempted during tool failures by extracting old_string→new_string from Edit, content preview from Write, and commands from Bash",
+      "description": "Capture what was attempted during tool failures by extracting old_string\u2192new_string from Edit, content preview from Write, and commands from Bash",
       "file": "tickets/session_archive/037c.md",
       "week": 2,
       "day": 5,
@@ -1166,7 +1166,7 @@
       "status": "completed",
       "revision": "R1",
       "revision_date": "2026-01-23",
-      "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h → 6.0h."
+      "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h \u2192 6.0h."
     },
     {
       "id": "GOgent-040",
@@ -3597,6 +3597,490 @@
       "revision": "R1",
       "revision_date": "2026-01-23",
       "revision_note": "Staff architect review: scoped down, added shared-key chaos test"
+    },
+    {
+      "id": "GOgent-056",
+      "title": "SessionStart Event Struct & Parser",
+      "description": "SessionStart Event Struct & Parser",
+      "file": "session-init-context/tickets/GOgent-056.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-057",
+        "GOgent-061",
+        "GOgent-062"
+      ],
+      "priority": "high",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "pkg/session/events.go",
+        "pkg/session/session_start_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-056-sessionstart-event-struct-&-parser",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 16,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-057",
+      "title": "Tool Counter Initialization",
+      "description": "Tool Counter Initialization",
+      "file": "session-init-context/tickets/GOgent-057.md",
+      "week": 4,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-056"
+      ],
+      "blocks": [
+        "GOgent-062"
+      ],
+      "priority": "high",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "pkg/config/paths.go",
+        "pkg/config/paths_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-057-tool-counter-initialization",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 14,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-058",
+      "title": "Routing Schema Summary Formatter",
+      "description": "Routing Schema Summary Formatter",
+      "file": "session-init-context/tickets/GOgent-058.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-061"
+      ],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "pkg/routing/schema.go",
+        "pkg/routing/schema_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-058-routing-schema-summary-formatter",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 13,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-059",
+      "title": "Handoff Document Loader",
+      "description": "Handoff Document Loader",
+      "file": "session-init-context/tickets/GOgent-059.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-061"
+      ],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "pkg/session/context_loader.go",
+        "pkg/session/context_loader_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-059-handoff-document-loader",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 17,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-060",
+      "title": "Project Type Detection",
+      "description": "Project Type Detection",
+      "file": "session-init-context/tickets/GOgent-060.md",
+      "week": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [],
+      "blocks": [
+        "GOgent-061"
+      ],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "pkg/session/project_detection.go",
+        "pkg/session/project_detection_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-060-project-type-detection",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 22,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-061",
+      "title": "Session Context Response Generator",
+      "description": "Session Context Response Generator",
+      "file": "session-init-context/tickets/GOgent-061.md",
+      "week": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-056",
+        "GOgent-058",
+        "GOgent-059",
+        "GOgent-060"
+      ],
+      "blocks": [
+        "GOgent-062"
+      ],
+      "priority": "high",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "pkg/session/context_response.go",
+        "pkg/session/context_response_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-061-session-context-response-generator",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 15,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-062",
+      "title": "CLI Binary - Main Orchestrator",
+      "description": "CLI Binary - Main Orchestrator",
+      "file": "session-init-context/tickets/GOgent-062.md",
+      "week": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-056",
+        "GOgent-057",
+        "GOgent-061"
+      ],
+      "blocks": [
+        "GOgent-063",
+        "GOgent-064",
+        "GOgent-067"
+      ],
+      "priority": "high",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "cmd/gogent-load-context/main.go",
+        "cmd/gogent-load-context/main_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-062-cli-binary---main-orchestrator",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 16,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-063",
+      "title": "Integration Tests",
+      "description": "Integration Tests",
+      "file": "session-init-context/tickets/GOgent-063.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-062"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "test/integration/session_start_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-063-integration-tests",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 10,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-064",
+      "title": "Makefile Updates",
+      "description": "Makefile Updates",
+      "file": "session-init-context/tickets/GOgent-064.md",
+      "week": 4,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-062"
+      ],
+      "blocks": [
+        "GOgent-065",
+        "GOgent-066"
+      ],
+      "priority": "low",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "Makefile"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-064-makefile-updates",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 3,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-065",
+      "title": "Documentation Update",
+      "description": "Documentation Update",
+      "file": "session-init-context/tickets/GOgent-065.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-064"
+      ],
+      "blocks": [],
+      "priority": "low",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "docs/systems-architecture-overview.md"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-065-documentation-update",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 4,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-066",
+      "title": "Hook Configuration Template",
+      "description": "Hook Configuration Template",
+      "file": "session-init-context/tickets/GOgent-066.md",
+      "week": 4,
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-064"
+      ],
+      "blocks": [],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "docs/hook-configuration.md"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-066-hook-configuration-template",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 5,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-067",
+      "title": "Extend Runner with SessionStart Category",
+      "description": "Extend Runner with SessionStart Category",
+      "file": "session-init-context/tickets/GOgent-067.md",
+      "week": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-062"
+      ],
+      "blocks": [
+        "GOgent-068",
+        "GOgent-069"
+      ],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "harness/runner.go",
+        "harness/runner_test.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-067-extend-runner-with-sessionstart-category",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 13,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-068",
+      "title": "Create SessionStart Test Fixtures",
+      "description": "Create SessionStart Test Fixtures",
+      "file": "session-init-context/tickets/GOgent-068.md",
+      "week": 4,
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-067"
+      ],
+      "blocks": [
+        "GOgent-070"
+      ],
+      "priority": "medium",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "fixtures/sessionstart/*.json"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-068-create-sessionstart-test-fixtures",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 12,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-069",
+      "title": "Update Harness CLI for SessionStart",
+      "description": "Update Harness CLI for SessionStart",
+      "file": "session-init-context/tickets/GOgent-069.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-067"
+      ],
+      "blocks": [
+        "GOgent-070"
+      ],
+      "priority": "low",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        "cmd/harness/main.go"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-069-update-harness-cli-for-sessionstart",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-070",
+      "title": "GitHub Actions Workflow Update",
+      "description": "GitHub Actions Workflow Update",
+      "file": "session-init-context/tickets/GOgent-070.md",
+      "week": 4,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-068",
+        "GOgent-069"
+      ],
+      "blocks": [],
+      "priority": "low",
+      "tags": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "files_to_create": [
+        ".github/workflows/*.yml"
+      ],
+      "tests_required": true,
+      "git_branch": "gogent-070-github-actions-workflow-update",
+      "pr_labels": [
+        "session-start",
+        "week-4",
+        "phase-0"
+      ],
+      "acceptance_criteria_count": 8,
+      "status": "pending"
     }
   ]
 }
