@@ -270,6 +270,43 @@ func FormatWeeklyIntentSummary(summary WeeklyIntentSummary) string {
 	sb.WriteString(fmt.Sprintf("**Total Captured:** %d intents across %d sessions\n\n",
 		summary.TotalIntents, summary.SessionCount))
 
+	// GOgent-041c: Honor rate section
+	if summary.TotalAnalyzed > 0 {
+		sb.WriteString("**Honor Rate:**\n")
+		sb.WriteString(fmt.Sprintf("- Overall: %.0f%% (%d/%d)\n",
+			summary.HonorRatePercent, summary.TotalHonored, summary.TotalAnalyzed))
+
+		// Per-category honor rates (sorted by rate descending)
+		if len(summary.HonorRateByCategory) > 0 {
+			type catRate struct {
+				cat  string
+				rate float64
+			}
+			var sorted []catRate
+			for cat, rate := range summary.HonorRateByCategory {
+				sorted = append(sorted, catRate{cat, rate})
+			}
+			sort.Slice(sorted, func(i, j int) bool {
+				return sorted[i].rate > sorted[j].rate
+			})
+
+			for _, cr := range sorted {
+				icon := ""
+				if cr.rate < 60 {
+					icon = " ⚠️" // Low honor rate alert
+				}
+				sb.WriteString(fmt.Sprintf("- %s: %.0f%%%s\n", cr.cat, cr.rate, icon))
+			}
+		}
+
+		// Alert for low overall honor rate
+		if summary.HonorRatePercent < 70 {
+			sb.WriteString("\n**Low Honor Rate Alert:** Overall rate below 70% - review preferences\n")
+		}
+
+		sb.WriteString("\n")
+	}
+
 	// Category distribution
 	if len(summary.CategoryDistribution) > 0 {
 		sb.WriteString("**By Category:**\n")

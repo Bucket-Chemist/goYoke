@@ -107,6 +107,8 @@ type UserIntentFilters struct {
 	Limit      int      // Maximum results to return (0 = unlimited)
 	Category   *string  // Filter by category (routing, tooling, style, etc.) - GOgent-041
 	Keywords   []string // Filter by keywords (matches if ANY keyword present) - GOgent-041
+	SessionID  *string  // Filter by session ID - GOgent-041c
+	Honored    *bool    // Filter by honored status (nil = don't filter) - GOgent-041c
 }
 
 // QueryUserIntents retrieves user intents with optional filters
@@ -179,6 +181,19 @@ func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error
 				}
 			}
 			if !hasKeyword {
+				continue
+			}
+		}
+		// GOgent-041c: SessionID filter
+		if filters.SessionID != nil && intent.SessionID != *filters.SessionID {
+			continue
+		}
+		// GOgent-041c: Honored filter
+		if filters.Honored != nil {
+			if intent.Honored == nil {
+				continue // Skip unanalyzed intents
+			}
+			if *intent.Honored != *filters.Honored {
 				continue
 			}
 		}

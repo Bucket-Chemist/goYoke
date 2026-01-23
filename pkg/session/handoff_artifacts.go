@@ -22,6 +22,9 @@ type UserIntent struct {
 	ToolContext string   `json:"tool_context,omitempty"` // Tool invocation context (GOgent-037d)
 	Category    string   `json:"category,omitempty"`     // Intent category from ClassifyIntent (GOgent-041)
 	Keywords    []string `json:"keywords,omitempty"`     // Extracted keywords from ExtractKeywords (GOgent-041)
+	// GOgent-041c: Outcome Tracking
+	Honored     *bool  `json:"honored,omitempty"`      // Whether intent was followed (nil = not yet analyzed)
+	OutcomeNote string `json:"outcome_note,omitempty"` // Explanation of outcome
 }
 
 // ValidConfidenceLevels defines valid confidence values for UserIntent

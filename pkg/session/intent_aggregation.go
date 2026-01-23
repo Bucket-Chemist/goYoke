@@ -18,6 +18,11 @@ type WeeklyIntentSummary struct {
 	CategoryPercentages  map[string]float64        `json:"category_percentages"`
 	RecurringPreferences []RecurringPreference     `json:"recurring_preferences"`
 	DriftAlerts          []PreferenceDriftAlert    `json:"drift_alerts,omitempty"`
+	// GOgent-041c: Honor rate tracking
+	TotalAnalyzed        int                `json:"total_analyzed"`         // Intents with Honored != nil
+	TotalHonored         int                `json:"total_honored"`          // Intents with Honored == true
+	HonorRatePercent     float64            `json:"honor_rate_percent"`     // Overall honor rate
+	HonorRateByCategory  map[string]float64 `json:"honor_rate_by_category"` // Per-category honor rates
 }
 
 // RecurringPreference represents a response pattern that appears multiple times
@@ -70,6 +75,35 @@ func AggregateWeeklyIntents(intents []UserIntent, weekStart, weekEnd time.Time) 
 	if summary.TotalIntents > 0 {
 		for cat, count := range summary.CategoryDistribution {
 			summary.CategoryPercentages[cat] = float64(count) / float64(summary.TotalIntents) * 100
+		}
+	}
+
+	// GOgent-041c: Calculate honor rates
+	summary.HonorRateByCategory = make(map[string]float64)
+	categoryHonored := make(map[string]int)
+	categoryAnalyzed := make(map[string]int)
+
+	for _, intent := range weekIntents {
+		if intent.Honored != nil {
+			summary.TotalAnalyzed++
+			categoryAnalyzed[intent.Category]++
+			if *intent.Honored {
+				summary.TotalHonored++
+				categoryHonored[intent.Category]++
+			}
+		}
+	}
+
+	// Calculate overall honor rate
+	if summary.TotalAnalyzed > 0 {
+		summary.HonorRatePercent = float64(summary.TotalHonored) / float64(summary.TotalAnalyzed) * 100
+	}
+
+	// Calculate per-category honor rates
+	for cat, analyzed := range categoryAnalyzed {
+		if analyzed > 0 {
+			honored := categoryHonored[cat]
+			summary.HonorRateByCategory[cat] = float64(honored) / float64(analyzed) * 100
 		}
 	}
 

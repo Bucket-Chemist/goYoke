@@ -120,6 +120,12 @@ func run() error {
 		return fmt.Errorf("[gogent-archive] Failed to archive artifacts: %w", err)
 	}
 
+	// GOgent-041c: Analyze intent outcomes (non-blocking)
+	if err := analyzeAndUpdateIntentOutcomes(projectDir, event.SessionID); err != nil {
+		// Log but don't fail - non-critical
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: Failed to analyze intent outcomes: %v\n", err)
+	}
+
 	// Output confirmation JSON matching bash hook format
 	confirmation := map[string]interface{}{
 		"hookSpecificOutput": map[string]interface{}{
@@ -155,6 +161,123 @@ func outputError(message string) {
 
 	encoder := json.NewEncoder(os.Stdout)
 	_ = encoder.Encode(output) // Best effort - if this fails, nothing we can do
+}
+
+// analyzeAndUpdateIntentOutcomes analyzes intent outcomes for the session and updates user-intents.jsonl
+func analyzeAndUpdateIntentOutcomes(projectDir, sessionID string) error {
+	// Load intents for this session
+	q := session.NewQuery(projectDir)
+	filters := session.UserIntentFilters{}
+	if sessionID != "" {
+		filters.SessionID = &sessionID
+	}
+
+	intents, err := q.QueryUserIntents(filters)
+	if err != nil {
+		return err
+	}
+
+	if len(intents) == 0 {
+		return nil // No intents to analyze
+	}
+
+	// Build actions from session (MVP: simplified implementation)
+	// In full implementation, this would parse session transcript or tool logs
+	actions := buildSessionActions(projectDir, sessionID)
+
+	// Analyze outcomes
+	outcomes := session.AnalyzeIntentOutcomes(intents, actions)
+
+	// Update intents file with outcomes
+	return updateIntentsWithOutcomes(projectDir, intents, outcomes)
+}
+
+// buildSessionActions constructs SessionActions from available session data
+// MVP implementation: uses basic heuristics from metrics
+// Full implementation would parse session transcript or tool logs
+func buildSessionActions(projectDir, sessionID string) session.SessionActions {
+	actions := session.SessionActions{
+		ToolsUsed:      []string{},
+		ModelsUsed:     []string{},
+		FilesEdited:    []string{},
+		CommandsRun:    []string{},
+		ActionsStopped: false,
+	}
+
+	// Try to read handoff for this session to get some context
+	handoffPath := filepath.Join(projectDir, ".claude", "memory", "handoffs.jsonl")
+	handoffs, err := session.LoadAllHandoffs(handoffPath)
+	if err != nil {
+		return actions // Return empty on error
+	}
+
+	// Find handoff for this session
+	for _, h := range handoffs {
+		if h.SessionID == sessionID {
+			// Extract basic information from metrics
+			// In future, could parse actual tool logs
+			// For now, we can infer some patterns from artifacts
+
+			// If there were edits/writes, we know files were modified
+			if h.Context.Metrics.ToolCalls > 0 {
+				actions.ToolsUsed = append(actions.ToolsUsed, "Edit", "Write", "Read")
+			}
+
+			// Check uncommitted files for files edited
+			if h.Context.GitInfo.IsDirty {
+				actions.FilesEdited = h.Context.GitInfo.Uncommitted
+			}
+
+			break
+		}
+	}
+
+	return actions
+}
+
+// updateIntentsWithOutcomes updates user-intents.jsonl with outcome analysis
+// Reads all intents, updates matching ones, rewrites entire file
+func updateIntentsWithOutcomes(projectDir string, analyzedIntents []session.UserIntent, outcomes []session.IntentOutcome) error {
+	intentsPath := filepath.Join(projectDir, ".claude", "memory", "user-intents.jsonl")
+
+	// Load ALL intents from file
+	allIntents, err := session.LoadAllUserIntents(intentsPath)
+	if err != nil {
+		return fmt.Errorf("failed to load all intents: %w", err)
+	}
+
+	// Create a map of analyzed intents by timestamp for quick lookup
+	// (assuming timestamp is unique enough for matching)
+	outcomeMap := make(map[int64]session.IntentOutcome)
+	for i, intent := range analyzedIntents {
+		if i < len(outcomes) {
+			outcomeMap[intent.Timestamp] = outcomes[i]
+		}
+	}
+
+	// Update matching intents with outcomes
+	for i := range allIntents {
+		if outcome, found := outcomeMap[allIntents[i].Timestamp]; found {
+			allIntents[i].Honored = &outcome.Honored
+			allIntents[i].OutcomeNote = outcome.Note
+		}
+	}
+
+	// Rewrite entire file with updated intents
+	file, err := os.Create(intentsPath)
+	if err != nil {
+		return fmt.Errorf("failed to open intents file for writing: %w", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	for _, intent := range allIntents {
+		if err := encoder.Encode(intent); err != nil {
+			return fmt.Errorf("failed to write intent: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // getProjectDir determines project directory from env or cwd
@@ -366,6 +489,7 @@ func printHelp() {
 	fmt.Println("  gogent-archive user-intents --category routing  Filter by category (routing, tooling, style, etc.)")
 	fmt.Println("  gogent-archive user-intents --keyword pytest    Filter by keyword")
 	fmt.Println("  gogent-archive user-intents --has-action    Show only intents with actions taken")
+	fmt.Println("  gogent-archive user-intents --honored true  Filter by honored status (true/false)")
 	fmt.Println("  gogent-archive user-intents --since 7d      Filter by time")
 	fmt.Println("")
 	fmt.Println("Decision Commands:")
@@ -583,6 +707,7 @@ func listUserIntents() {
 	sinceFlag := intentsFlags.String("since", "", "Filter since duration (7d) or date (YYYY-MM-DD)")
 	categoryFlag := intentsFlags.String("category", "", "Filter by category (routing, tooling, style, etc.)")
 	keywordFlag := intentsFlags.String("keyword", "", "Filter by keyword")
+	honoredFlag := intentsFlags.String("honored", "", "Filter by honored status (true/false)")
 	intentsFlags.Parse(os.Args[2:])
 
 	projectDir := getProjectDir()
@@ -611,6 +736,11 @@ func listUserIntents() {
 	if *keywordFlag != "" {
 		filters.Keywords = []string{*keywordFlag}
 	}
+	// GOgent-041c: Honored filter
+	if *honoredFlag != "" {
+		honored := *honoredFlag == "true"
+		filters.Honored = &honored
+	}
 
 	intents, err := q.QueryUserIntents(filters)
 	if err != nil {
@@ -623,9 +753,9 @@ func listUserIntents() {
 		return
 	}
 
-	// Print table header (GOgent-041: Added Category column)
-	fmt.Println("Timestamp  | Category   | Source      | Question                     | Response")
-	fmt.Println("-----------|------------|-------------|------------------------------|---------------------------")
+	// Print table header (GOgent-041: Added Category column, GOgent-041c: Added Honored column)
+	fmt.Println("Timestamp  | Category   | Honored | Source      | Question                     | Response")
+	fmt.Println("-----------|------------|---------|-------------|------------------------------|---------------------------")
 
 	for _, intent := range intents {
 		timestamp := time.Unix(intent.Timestamp, 0).Format("2006-01-02")
@@ -633,11 +763,19 @@ func listUserIntents() {
 		if category == "" {
 			category = "-"
 		}
+		honored := "?"
+		if intent.Honored != nil {
+			if *intent.Honored {
+				honored = "Yes"
+			} else {
+				honored = "No"
+			}
+		}
 		source := truncateForTable(intent.Source, 11)
 		question := truncateForTable(intent.Question, 28)
 		response := truncateForTable(intent.Response, 25)
-		fmt.Printf("%s | %-10s | %-11s | %-28s | %s\n",
-			timestamp, category, source, question, response)
+		fmt.Printf("%s | %-10s | %-7s | %-11s | %-28s | %s\n",
+			timestamp, category, honored, source, question, response)
 	}
 
 	fmt.Printf("\nTotal: %d user intent(s)\n", len(intents))
