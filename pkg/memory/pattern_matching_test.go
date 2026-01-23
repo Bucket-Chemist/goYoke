@@ -3,6 +3,7 @@ package memory
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -392,4 +393,537 @@ func TestLoadSharpEdgesIndex_Coverage(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, index.All) // File couldn't be read
 	})
+}
+
+// TestFindSimilar_ExactErrorTypeMatch tests exact error type matching
+func TestFindSimilar_ExactErrorTypeMatch(t *testing.T) {
+	// Create index with one template
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"TypeError": {
+				{
+					ID:          "test-001",
+					ErrorType:   "TypeError",
+					FilePattern: "*.py",
+					Keywords:    []string{"type", "assertion"},
+					Description: "Type assertion error",
+					Solution:    "Check types before assertion",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"type": {
+				{
+					ID:          "test-001",
+					ErrorType:   "TypeError",
+					FilePattern: "*.py",
+					Keywords:    []string{"type", "assertion"},
+					Description: "Type assertion error",
+					Solution:    "Check types before assertion",
+				},
+			},
+			"assertion": {
+				{
+					ID:          "test-001",
+					ErrorType:   "TypeError",
+					FilePattern: "*.py",
+					Keywords:    []string{"type", "assertion"},
+					Description: "Type assertion error",
+					Solution:    "Check types before assertion",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError",
+		File:         "test.py",
+		ErrorMessage: "invalid type assertion",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should match with error_type (5) + file_pattern (3) + 2 keywords (4) = 12 points
+	require.Len(t, matches, 1)
+	assert.Equal(t, "test-001", matches[0].Template.ID)
+	assert.Equal(t, 12, matches[0].Score) // error_type + file_pattern + both keywords
+	assert.Contains(t, matches[0].MatchedOn, "error_type")
+	assert.Contains(t, matches[0].MatchedOn, "file_pattern")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:type")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:assertion")
+}
+
+// TestFindSimilar_ErrorTypeWithFilePattern tests error type + file pattern match
+func TestFindSimilar_ErrorTypeWithFilePattern(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"nil_pointer": {
+				{
+					ID:          "go-001",
+					ErrorType:   "nil_pointer",
+					FilePattern: "pkg/routing/*.go",
+					Keywords:    []string{"nil", "map"},
+					Description: "Nil pointer dereference",
+					Solution:    "Check for nil before access",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"nil": {
+				{
+					ID:          "go-001",
+					ErrorType:   "nil_pointer",
+					FilePattern: "pkg/routing/*.go",
+					Keywords:    []string{"nil", "map"},
+					Description: "Nil pointer dereference",
+					Solution:    "Check for nil before access",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "nil_pointer",
+		File:         "pkg/routing/task_validation.go",
+		ErrorMessage: "nil pointer dereference",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should match with error_type (5) + file_pattern (3) + keyword:nil (2) = 10 points
+	require.Len(t, matches, 1)
+	assert.Equal(t, "go-001", matches[0].Template.ID)
+	assert.Equal(t, 10, matches[0].Score) // error_type + file_pattern + 1 keyword
+	assert.Contains(t, matches[0].MatchedOn, "error_type")
+	assert.Contains(t, matches[0].MatchedOn, "file_pattern")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:nil")
+}
+
+// TestFindSimilar_ErrorTypeWithFilePatternAndKeywords tests full match (highest score)
+func TestFindSimilar_ErrorTypeWithFilePatternAndKeywords(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"TypeError": {
+				{
+					ID:          "full-match",
+					ErrorType:   "TypeError",
+					FilePattern: "pkg/routing/*.go",
+					Keywords:    []string{"type", "assertion", "bool", "interface"},
+					Description: "Type assertion on typed field",
+					Solution:    "Use direct field access",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"type": {
+				{
+					ID:          "full-match",
+					ErrorType:   "TypeError",
+					FilePattern: "pkg/routing/*.go",
+					Keywords:    []string{"type", "assertion", "bool", "interface"},
+					Description: "Type assertion on typed field",
+					Solution:    "Use direct field access",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError",
+		File:         "pkg/routing/task_validation.go",
+		ErrorMessage: "invalid type assertion: field is bool, not interface{}",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should match: error_type (5) + file_pattern (3) + 4 keywords × 2 = 16 points
+	require.Len(t, matches, 1)
+	assert.Equal(t, "full-match", matches[0].Template.ID)
+	assert.Equal(t, 16, matches[0].Score)
+	assert.Contains(t, matches[0].MatchedOn, "error_type")
+	assert.Contains(t, matches[0].MatchedOn, "file_pattern")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:type")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:assertion")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:bool")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:interface")
+}
+
+// TestFindSimilar_KeywordMatchDifferentErrorType tests keyword match with different error type
+func TestFindSimilar_KeywordMatchDifferentErrorType(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"ValueError": {
+				{
+					ID:          "value-001",
+					ErrorType:   "ValueError",
+					FilePattern: "*.py",
+					Keywords:    []string{"invalid", "format"},
+					Description: "Invalid value format",
+					Solution:    "Check value format",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"invalid": {
+				{
+					ID:          "value-001",
+					ErrorType:   "ValueError",
+					FilePattern: "*.py",
+					Keywords:    []string{"invalid", "format"},
+					Description: "Invalid value format",
+					Solution:    "Check value format",
+				},
+			},
+			"format": {
+				{
+					ID:          "value-001",
+					ErrorType:   "ValueError",
+					FilePattern: "*.py",
+					Keywords:    []string{"invalid", "format"},
+					Description: "Invalid value format",
+					Solution:    "Check value format",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError", // Different error type
+		File:         "test.py",
+		ErrorMessage: "invalid input format",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should match via keywords: keyword (2) + keyword (2) + file_pattern (3) = 7 points
+	require.Len(t, matches, 1)
+	assert.Equal(t, "value-001", matches[0].Template.ID)
+	assert.GreaterOrEqual(t, matches[0].Score, 5) // Must meet threshold
+	assert.Contains(t, matches[0].MatchedOn, "file_pattern")
+	// Should have at least one keyword match
+	hasKeywordMatch := false
+	for _, m := range matches[0].MatchedOn {
+		if strings.HasPrefix(m, "keyword:") {
+			hasKeywordMatch = true
+			break
+		}
+	}
+	assert.True(t, hasKeywordMatch, "Expected at least one keyword match")
+}
+
+// TestFindSimilar_NoMatches tests scenario with no good matches (score below threshold)
+func TestFindSimilar_NoMatches(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"ValueError": {
+				{
+					ID:          "value-001",
+					ErrorType:   "ValueError",
+					FilePattern: "*.py",
+					Keywords:    []string{"value", "format"},
+					Description: "Value error",
+					Solution:    "Fix value",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"value": {
+				{
+					ID:          "value-001",
+					ErrorType:   "ValueError",
+					FilePattern: "*.py",
+					Keywords:    []string{"value", "format"},
+					Description: "Value error",
+					Solution:    "Fix value",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "SyntaxError", // Different error type
+		File:         "test.go",      // Different file pattern
+		ErrorMessage: "unexpected token", // No matching keywords
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// No matches should be returned (all scores below threshold)
+	assert.Empty(t, matches)
+}
+
+// TestFindSimilar_MultipleMatchesTop3 tests that only top 3 matches are returned
+func TestFindSimilar_MultipleMatchesTop3(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"TypeError": {
+				{
+					ID:          "type-001",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{"type", "assertion", "bool"},
+					Description: "Type error 1",
+					Solution:    "Solution 1",
+				},
+				{
+					ID:          "type-002",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{"type", "assertion"},
+					Description: "Type error 2",
+					Solution:    "Solution 2",
+				},
+				{
+					ID:          "type-003",
+					ErrorType:   "TypeError",
+					FilePattern: "*.py",
+					Keywords:    []string{"type"},
+					Description: "Type error 3",
+					Solution:    "Solution 3",
+				},
+				{
+					ID:          "type-004",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{},
+					Description: "Type error 4",
+					Solution:    "Solution 4",
+				},
+				{
+					ID:          "type-005",
+					ErrorType:   "TypeError",
+					FilePattern: "*.js",
+					Keywords:    []string{},
+					Description: "Type error 5",
+					Solution:    "Solution 5",
+				},
+			},
+		},
+		ByKeyword: make(map[string][]SharpEdgeTemplate),
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError",
+		File:         "test.go",
+		ErrorMessage: "type assertion on bool field",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should return at most 3 matches
+	assert.LessOrEqual(t, len(matches), 3)
+	assert.GreaterOrEqual(t, len(matches), 1) // Should have at least one match
+}
+
+// TestFindSimilar_ScoreRanking tests that matches are correctly ranked by score
+func TestFindSimilar_ScoreRanking(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"TypeError": {
+				{
+					ID:          "low-score",
+					ErrorType:   "TypeError",
+					FilePattern: "*.py", // Won't match
+					Keywords:    []string{},
+					Description: "Low score",
+					Solution:    "Solution",
+				},
+				{
+					ID:          "medium-score",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go", // Matches
+					Keywords:    []string{},
+					Description: "Medium score",
+					Solution:    "Solution",
+				},
+				{
+					ID:          "high-score",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go", // Matches
+					Keywords:    []string{"type", "assertion"}, // Both match
+					Description: "High score",
+					Solution:    "Solution",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"type": {
+				{
+					ID:          "high-score",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{"type", "assertion"},
+					Description: "High score",
+					Solution:    "Solution",
+				},
+			},
+			"assertion": {
+				{
+					ID:          "high-score",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{"type", "assertion"},
+					Description: "High score",
+					Solution:    "Solution",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError",
+		File:         "test.go",
+		ErrorMessage: "type assertion failed",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Verify scores are in descending order
+	require.GreaterOrEqual(t, len(matches), 2)
+	for i := 0; i < len(matches)-1; i++ {
+		assert.GreaterOrEqual(t, matches[i].Score, matches[i+1].Score,
+			"Match %d (score=%d) should have higher or equal score than match %d (score=%d)",
+			i, matches[i].Score, i+1, matches[i+1].Score)
+	}
+
+	// High score should be first
+	assert.Equal(t, "high-score", matches[0].Template.ID)
+	assert.Equal(t, 12, matches[0].Score) // error_type(5) + file_pattern(3) + 2 keywords(4) = 12
+}
+
+// TestFindSimilar_EmptyIndex tests handling of empty index
+func TestFindSimilar_EmptyIndex(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: make(map[string][]SharpEdgeTemplate),
+		ByKeyword:   make(map[string][]SharpEdgeTemplate),
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError",
+		File:         "test.go",
+		ErrorMessage: "some error",
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should return empty slice, not nil
+	assert.NotNil(t, matches)
+	assert.Empty(t, matches)
+}
+
+// TestFindSimilar_CaseInsensitiveKeywords tests case-insensitive keyword matching
+func TestFindSimilar_CaseInsensitiveKeywords(t *testing.T) {
+	index := &SharpEdgeIndex{
+		ByErrorType: map[string][]SharpEdgeTemplate{
+			"TypeError": {
+				{
+					ID:          "case-test",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{"Type", "Assertion"}, // Mixed case
+					Description: "Case test",
+					Solution:    "Solution",
+				},
+			},
+		},
+		ByKeyword: map[string][]SharpEdgeTemplate{
+			"Type": {
+				{
+					ID:          "case-test",
+					ErrorType:   "TypeError",
+					FilePattern: "*.go",
+					Keywords:    []string{"Type", "Assertion"},
+					Description: "Case test",
+					Solution:    "Solution",
+				},
+			},
+		},
+	}
+
+	edge := &SharpEdge{
+		ErrorType:    "TypeError",
+		File:         "test.go",
+		ErrorMessage: "type assertion failed", // Lowercase
+	}
+
+	matches := FindSimilar(edge, index)
+
+	// Should match despite case differences
+	require.Len(t, matches, 1)
+	assert.Contains(t, matches[0].MatchedOn, "keyword:Type")
+	assert.Contains(t, matches[0].MatchedOn, "keyword:Assertion")
+}
+
+// TestFindSimilar_FilePatternMatching tests glob pattern matching behavior
+func TestFindSimilar_FilePatternMatching(t *testing.T) {
+	tests := []struct {
+		name            string
+		filePattern     string
+		edgeFile        string
+		shouldMatchFile bool
+	}{
+		{
+			name:            "exact extension match",
+			filePattern:     "*.go",
+			edgeFile:        "test.go",
+			shouldMatchFile: true,
+		},
+		{
+			name:            "directory glob match",
+			filePattern:     "pkg/routing/*.go",
+			edgeFile:        "pkg/routing/validator.go",
+			shouldMatchFile: true,
+		},
+		{
+			name:            "no match different extension",
+			filePattern:     "*.py",
+			edgeFile:        "test.go",
+			shouldMatchFile: false,
+		},
+		{
+			name:            "no match different directory",
+			filePattern:     "pkg/routing/*.go",
+			edgeFile:        "pkg/memory/validator.go",
+			shouldMatchFile: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			index := &SharpEdgeIndex{
+				ByErrorType: map[string][]SharpEdgeTemplate{
+					"TestError": {
+						{
+							ID:          "pattern-test",
+							ErrorType:   "TestError",
+							FilePattern: tt.filePattern,
+							Keywords:    []string{},
+							Description: "Pattern test",
+							Solution:    "Solution",
+						},
+					},
+				},
+				ByKeyword: make(map[string][]SharpEdgeTemplate),
+			}
+
+			edge := &SharpEdge{
+				ErrorType:    "TestError",
+				File:         tt.edgeFile,
+				ErrorMessage: "test error",
+			}
+
+			matches := FindSimilar(edge, index)
+
+			require.Len(t, matches, 1)
+			if tt.shouldMatchFile {
+				assert.Contains(t, matches[0].MatchedOn, "file_pattern",
+					"Expected file_pattern match for %s with pattern %s", tt.edgeFile, tt.filePattern)
+				assert.Equal(t, 8, matches[0].Score) // error_type(5) + file_pattern(3)
+			} else {
+				assert.NotContains(t, matches[0].MatchedOn, "file_pattern",
+					"Expected no file_pattern match for %s with pattern %s", tt.edgeFile, tt.filePattern)
+				assert.Equal(t, 5, matches[0].Score) // error_type(5) only
+			}
+		})
+	}
 }
