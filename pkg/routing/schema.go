@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // EXPECTED_SCHEMA_VERSION is the version this code is built for.
@@ -452,4 +453,73 @@ func (s *Schema) GetTierLevel(tierName string) (int, error) {
 	default:
 		return 0, fmt.Errorf("[routing] No tier level defined for: %s", tierName)
 	}
+}
+
+// FormatTierSummary generates a concise routing tier summary for session context.
+// Limits patterns to first 3 and tools to first 4 to prevent context bloat.
+// Format:
+//
+//	ROUTING TIERS ACTIVE:
+//	  • haiku: patterns=[...] → tools=[...]
+//	  • sonnet: patterns=[...] → tools=[...]
+//
+//	DELEGATION CEILING: Set by {SetBy}
+func (s *Schema) FormatTierSummary() string {
+	var sb strings.Builder
+	sb.WriteString("ROUTING TIERS ACTIVE:\n")
+
+	// Process tiers in order
+	tierOrder := []string{"haiku", "haiku_thinking", "sonnet", "opus", "external"}
+
+	for _, tierName := range tierOrder {
+		tier, exists := s.Tiers[tierName]
+		if !exists {
+			continue
+		}
+
+		// Truncate patterns to first 3
+		patterns := tier.Patterns
+		patternsStr := ""
+		if len(patterns) > 3 {
+			patternsStr = strings.Join(patterns[:3], ", ") + "..."
+		} else if len(patterns) > 0 {
+			patternsStr = strings.Join(patterns, ", ")
+		}
+
+		// Truncate tools to first 4
+		tools := tier.Tools
+		toolsStr := ""
+		if len(tools) > 4 {
+			toolsStr = strings.Join(tools[:4], ", ") + "..."
+		} else if len(tools) > 0 {
+			toolsStr = strings.Join(tools, ", ")
+		}
+
+		// Format tier line
+		sb.WriteString(fmt.Sprintf("  • %s: patterns=[%s] → tools=[%s]\n",
+			tierName, patternsStr, toolsStr))
+	}
+
+	// Add delegation ceiling
+	sb.WriteString(fmt.Sprintf("\nDELEGATION CEILING: Set by %s\n", s.DelegationCeiling.SetBy))
+
+	return sb.String()
+}
+
+// LoadAndFormatSchemaSummary loads routing schema and returns formatted summary.
+// Returns a friendly message if schema file is missing (not an error).
+// Returns actual errors only for JSON parsing or validation failures.
+func LoadAndFormatSchemaSummary() (string, error) {
+	schema, err := LoadSchema()
+	if err != nil {
+		// Check if error is due to missing file
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "no such file") || strings.Contains(errMsg, "not found") {
+			return "[No routing schema found - using defaults]\n", nil
+		}
+		// Return other errors (parsing, validation)
+		return "", err
+	}
+
+	return schema.FormatTierSummary(), nil
 }

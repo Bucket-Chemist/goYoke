@@ -3,6 +3,7 @@ package routing
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -373,4 +374,127 @@ func TestLoadSchema(t *testing.T) {
 	// Verify Validate() passes
 	err = schema.Validate()
 	require.NoError(t, err, "Production schema should pass validation")
+}
+
+// TestSchema_FormatTierSummary tests the tier summary formatter with truncation.
+func TestSchema_FormatTierSummary(t *testing.T) {
+	schema := Schema{
+		Tiers: map[string]TierConfig{
+			"haiku": {
+				Patterns: []string{"find files", "search codebase", "grep pattern", "extra pattern 1", "extra pattern 2"},
+				Tools:    []string{"Glob", "Grep", "Read", "WebFetch", "ExtraTool1", "ExtraTool2"},
+			},
+			"sonnet": {
+				Patterns: []string{"implement", "refactor"},
+				Tools:    []string{"Read", "Write", "Edit"},
+			},
+			"opus": {
+				Patterns: []string{"deep analysis"},
+				Tools:    []string{"Read"},
+			},
+		},
+		DelegationCeiling: DelegationCeiling{
+			SetBy: "calculate-complexity.sh",
+		},
+	}
+
+	output := schema.FormatTierSummary()
+
+	// Verify header
+	assert.Contains(t, output, "ROUTING TIERS ACTIVE:")
+
+	// Verify haiku tier with truncation (patterns: 5 → 3, tools: 6 → 4)
+	assert.Contains(t, output, "haiku:")
+	assert.Contains(t, output, "find files, search codebase, grep pattern...")
+	assert.Contains(t, output, "Glob, Grep, Read, WebFetch...")
+
+	// Verify sonnet tier without truncation (patterns: 2, tools: 3)
+	assert.Contains(t, output, "sonnet:")
+	assert.Contains(t, output, "implement, refactor")
+	assert.Contains(t, output, "Read, Write, Edit")
+	// Should NOT have ellipsis since under limit
+	assert.NotContains(t, output, "implement, refactor...")
+	assert.NotContains(t, output, "Read, Write, Edit...")
+
+	// Verify opus tier (single items, no truncation)
+	assert.Contains(t, output, "opus:")
+	assert.Contains(t, output, "deep analysis")
+	assert.Contains(t, output, "tools=[Read]")
+
+	// Verify delegation ceiling
+	assert.Contains(t, output, "DELEGATION CEILING: Set by calculate-complexity.sh")
+
+	// Verify tier ordering (haiku before sonnet before opus)
+	haikuIdx := strings.Index(output, "haiku:")
+	sonnetIdx := strings.Index(output, "sonnet:")
+	opusIdx := strings.Index(output, "opus:")
+	assert.Less(t, haikuIdx, sonnetIdx, "haiku should appear before sonnet")
+	assert.Less(t, sonnetIdx, opusIdx, "sonnet should appear before opus")
+}
+
+// TestSchema_FormatTierSummary_EmptyTiers tests formatter with empty/missing tiers.
+func TestSchema_FormatTierSummary_EmptyTiers(t *testing.T) {
+	schema := Schema{
+		Tiers: map[string]TierConfig{
+			"haiku": {
+				Patterns: []string{},
+				Tools:    []string{},
+			},
+		},
+		DelegationCeiling: DelegationCeiling{
+			SetBy: "test-setter",
+		},
+	}
+
+	output := schema.FormatTierSummary()
+
+	// Should still include header
+	assert.Contains(t, output, "ROUTING TIERS ACTIVE:")
+
+	// Should include haiku tier even if empty
+	assert.Contains(t, output, "haiku:")
+	assert.Contains(t, output, "patterns=[]")
+	assert.Contains(t, output, "tools=[]")
+
+	// Should NOT include tiers that don't exist in map
+	assert.NotContains(t, output, "sonnet:")
+	assert.NotContains(t, output, "opus:")
+
+	// Should include delegation ceiling
+	assert.Contains(t, output, "DELEGATION CEILING: Set by test-setter")
+}
+
+// TestLoadAndFormatSchemaSummary tests the convenience function with production schema.
+func TestLoadAndFormatSchemaSummary(t *testing.T) {
+	summary, err := LoadAndFormatSchemaSummary()
+	require.NoError(t, err, "LoadAndFormatSchemaSummary should succeed with production schema")
+	require.NotEmpty(t, summary)
+
+	// Verify expected content
+	assert.Contains(t, summary, "ROUTING TIERS ACTIVE:")
+	assert.Contains(t, summary, "DELEGATION CEILING:")
+
+	// Should include at least haiku and sonnet tiers
+	assert.Contains(t, summary, "haiku:")
+	assert.Contains(t, summary, "sonnet:")
+}
+
+// TestLoadAndFormatSchemaSummary_MissingFile tests graceful handling of missing schema.
+func TestLoadAndFormatSchemaSummary_MissingFile(t *testing.T) {
+	// Temporarily set env var to a non-existent path
+	originalEnv := os.Getenv("GOGENT_ROUTING_SCHEMA")
+	os.Setenv("GOGENT_ROUTING_SCHEMA", "/nonexistent/path/to/schema.json")
+	defer func() {
+		if originalEnv != "" {
+			os.Setenv("GOGENT_ROUTING_SCHEMA", originalEnv)
+		} else {
+			os.Unsetenv("GOGENT_ROUTING_SCHEMA")
+		}
+	}()
+
+	summary, err := LoadAndFormatSchemaSummary()
+
+	// Should NOT return error for missing file (graceful fallback)
+	require.NoError(t, err)
+	assert.Contains(t, summary, "[No routing schema found - using defaults]")
 }

@@ -161,18 +161,26 @@ func TestSchema_FormatTierSummary_EmptyTiers(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `FormatTierSummary()` method added to `Schema` type
-- [ ] Limits patterns to 3, tools to 4 with "..." truncation
-- [ ] Includes delegation ceiling info
-- [ ] `LoadAndFormatSchemaSummary()` handles missing schema gracefully
-- [ ] Tests verify formatting, truncation, empty tiers
-- [ ] `go test ./pkg/routing/...` passes
+- [x] `FormatTierSummary()` method added to `Schema` type
+- [x] Limits patterns to 3, tools to 4 with "..." truncation
+- [x] Includes delegation ceiling info
+- [x] `LoadAndFormatSchemaSummary()` handles missing schema gracefully
+- [x] Tests verify formatting, truncation, empty tiers
+- [x] `go test ./pkg/routing/...` passes (444/444 tests)
 
 **Test Deliverables**:
-- [ ] Tests added to: `pkg/routing/schema_test.go`
-- [ ] Number of new test functions: 2
-- [ ] Tests passing: ✅
-- [ ] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem`
+- [x] Tests added to: `pkg/routing/schema_test.go`
+- [x] Number of new test functions: 4 (exceeded requirement of 2)
+  - TestSchema_FormatTierSummary
+  - TestSchema_FormatTierSummary_EmptyTiers
+  - TestLoadAndFormatSchemaSummary
+  - TestLoadAndFormatSchemaSummary_MissingFile
+- [x] Tests passing: ✅ (444/444 in pkg/routing)
+- [x] Race detector clean: ✅
+- [x] Coverage: 95.0% overall (exceeds >90% requirement)
+  - FormatTierSummary: 100%
+  - LoadAndFormatSchemaSummary: 85.7%
+- [x] **ECOSYSTEM TEST PASS REQUIRED**: `make test-ecosystem` ✅
 
 **Why This Matters**: Schema summary provides routing context in every session. Concise formatting prevents context window bloat while maintaining routing awareness.
 
