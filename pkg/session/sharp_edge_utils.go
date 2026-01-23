@@ -2,8 +2,11 @@ package session
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 // ExtractCodeSnippet reads a file and extracts a context window around the specified line.
@@ -67,3 +70,90 @@ func ExtractCodeSnippet(filePath string, lineNumber int, window int) (string, er
 
 	return snippet, nil
 }
+
+// ExtractAttemptedChange extracts what was attempted during a tool failure.
+// Returns a formatted string showing the attempted change for different tool types.
+//
+// For Edit: Shows "old_string → new_string" transformation (truncated to 60 chars each)
+// For Write: Shows first 3 lines of content being written
+// For Bash: Shows the command being executed
+// For other tools: Returns empty string
+//
+// Parameters:
+//   - event: PostToolEvent containing tool input to analyze
+//
+// Returns:
+//   - Formatted string describing the attempted change, or empty string if not applicable
+func ExtractAttemptedChange(event *routing.PostToolEvent) string {
+	if event == nil || event.ToolInput == nil {
+		return ""
+	}
+
+	switch event.ToolName {
+	case "Edit":
+		return extractEditChange(event.ToolInput)
+	case "Write":
+		return extractWriteChange(event.ToolInput)
+	case "Bash":
+		return extractBashChange(event.ToolInput)
+	default:
+		return ""
+	}
+}
+
+// extractEditChange formats Edit tool changes as "old → new"
+func extractEditChange(toolInput map[string]interface{}) string {
+	oldStr, _ := toolInput["old_string"].(string)
+	newStr, _ := toolInput["new_string"].(string)
+
+	// Truncate for display (60 chars max per side)
+	oldStr = truncateString(oldStr, 60)
+	newStr = truncateString(newStr, 60)
+
+	// Handle empty strings
+	if oldStr == "" && newStr == "" {
+		return ""
+	}
+	if oldStr == "" {
+		return fmt.Sprintf("(empty) → %s", newStr)
+	}
+	if newStr == "" {
+		return fmt.Sprintf("%s → (empty)", oldStr)
+	}
+
+	return fmt.Sprintf("%s → %s", oldStr, newStr)
+}
+
+// extractWriteChange formats Write tool changes as first 3 lines preview
+func extractWriteChange(toolInput map[string]interface{}) string {
+	content, ok := toolInput["content"].(string)
+	if !ok || content == "" {
+		return ""
+	}
+
+	lines := strings.Split(content, "\n")
+
+	// Show first 3 lines
+	maxLines := 3
+	if len(lines) < maxLines {
+		maxLines = len(lines)
+	}
+
+	preview := strings.Join(lines[:maxLines], "\n")
+	if len(lines) > 3 {
+		preview += "\n..."
+	}
+
+	return fmt.Sprintf("Write content:\n%s", preview)
+}
+
+// extractBashChange formats Bash tool changes as the command
+func extractBashChange(toolInput map[string]interface{}) string {
+	command, ok := toolInput["command"].(string)
+	if !ok || command == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("Command: %s", command)
+}
+

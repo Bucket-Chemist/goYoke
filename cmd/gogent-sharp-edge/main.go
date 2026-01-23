@@ -54,6 +54,16 @@ func main() {
 
 	// Check threshold
 	if count >= threshold {
+		// Extract attempted change from tool input
+		attemptedChange := session.ExtractAttemptedChange(event)
+
+		// Extract code snippet around the error (if file path is valid)
+		codeSnippet := ""
+		if failure.File != "unknown" && failure.File != "" {
+			snippet, _ := session.ExtractCodeSnippet(failure.File, 0, 2)
+			codeSnippet = snippet
+		}
+
 		// Capture sharp edge
 		edge := session.SharpEdge{
 			File:                failure.File,
@@ -61,6 +71,11 @@ func main() {
 			ConsecutiveFailures: count,
 			Timestamp:           failure.Timestamp,
 			Context:             fmt.Sprintf("Tool: %s", failure.Tool),
+			Type:                "sharp_edge",
+			Tool:                failure.Tool,
+			CodeSnippet:         codeSnippet,
+			AttemptedChange:     attemptedChange,
+			Status:              "pending_review",
 		}
 
 		// Write to pending-learnings.jsonl

@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 func TestExtractCodeSnippet(t *testing.T) {
@@ -183,3 +185,345 @@ func TestExtractCodeSnippet_UnreadableFile(t *testing.T) {
 		t.Errorf("ExtractCodeSnippet() = %q, want empty string for unreadable file", got)
 	}
 }
+
+// Test ExtractAttemptedChange for Edit tool
+func TestExtractAttemptedChange_Edit(t *testing.T) {
+	tests := []struct {
+		name      string
+		event     *routing.PostToolEvent
+		want      string
+		wantEmpty bool
+	}{
+		{
+			name: "edit with short strings",
+			event: &routing.PostToolEvent{
+				ToolName: "Edit",
+				ToolInput: map[string]interface{}{
+					"old_string": "foo",
+					"new_string": "bar",
+				},
+			},
+			want: "foo → bar",
+		},
+		{
+			name: "edit with long strings (truncated)",
+			event: &routing.PostToolEvent{
+				ToolName: "Edit",
+				ToolInput: map[string]interface{}{
+					"old_string": "this is a very long string that should be truncated because it exceeds the 60 character limit",
+					"new_string": "this is another very long string that should also be truncated",
+				},
+			},
+			want: "this is a very long string that should be truncated becau... → this is another very long string that should also be trun...",
+		},
+		{
+			name: "edit with empty old_string",
+			event: &routing.PostToolEvent{
+				ToolName: "Edit",
+				ToolInput: map[string]interface{}{
+					"old_string": "",
+					"new_string": "new content",
+				},
+			},
+			want: "(empty) → new content",
+		},
+		{
+			name: "edit with empty new_string",
+			event: &routing.PostToolEvent{
+				ToolName: "Edit",
+				ToolInput: map[string]interface{}{
+					"old_string": "old content",
+					"new_string": "",
+				},
+			},
+			want: "old content → (empty)",
+		},
+		{
+			name: "edit with both empty",
+			event: &routing.PostToolEvent{
+				ToolName: "Edit",
+				ToolInput: map[string]interface{}{
+					"old_string": "",
+					"new_string": "",
+				},
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "edit with missing fields",
+			event: &routing.PostToolEvent{
+				ToolName:  "Edit",
+				ToolInput: map[string]interface{}{},
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "edit with non-string values",
+			event: &routing.PostToolEvent{
+				ToolName: "Edit",
+				ToolInput: map[string]interface{}{
+					"old_string": 123,
+					"new_string": true,
+				},
+			},
+			wantEmpty: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractAttemptedChange(tt.event)
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("ExtractAttemptedChange() = %q, want empty string", got)
+				}
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ExtractAttemptedChange() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test ExtractAttemptedChange for Write tool
+func TestExtractAttemptedChange_Write(t *testing.T) {
+	tests := []struct {
+		name      string
+		event     *routing.PostToolEvent
+		want      string
+		wantEmpty bool
+	}{
+		{
+			name: "write with single line",
+			event: &routing.PostToolEvent{
+				ToolName: "Write",
+				ToolInput: map[string]interface{}{
+					"content": "single line content",
+				},
+			},
+			want: "Write content:\nsingle line content",
+		},
+		{
+			name: "write with three lines",
+			event: &routing.PostToolEvent{
+				ToolName: "Write",
+				ToolInput: map[string]interface{}{
+					"content": "line 1\nline 2\nline 3",
+				},
+			},
+			want: "Write content:\nline 1\nline 2\nline 3",
+		},
+		{
+			name: "write with more than three lines",
+			event: &routing.PostToolEvent{
+				ToolName: "Write",
+				ToolInput: map[string]interface{}{
+					"content": "line 1\nline 2\nline 3\nline 4\nline 5",
+				},
+			},
+			want: "Write content:\nline 1\nline 2\nline 3\n...",
+		},
+		{
+			name: "write with empty content",
+			event: &routing.PostToolEvent{
+				ToolName: "Write",
+				ToolInput: map[string]interface{}{
+					"content": "",
+				},
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "write with missing content field",
+			event: &routing.PostToolEvent{
+				ToolName:  "Write",
+				ToolInput: map[string]interface{}{},
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "write with non-string content",
+			event: &routing.PostToolEvent{
+				ToolName: "Write",
+				ToolInput: map[string]interface{}{
+					"content": 12345,
+				},
+			},
+			wantEmpty: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractAttemptedChange(tt.event)
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("ExtractAttemptedChange() = %q, want empty string", got)
+				}
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ExtractAttemptedChange() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test ExtractAttemptedChange for Bash tool
+func TestExtractAttemptedChange_Bash(t *testing.T) {
+	tests := []struct {
+		name      string
+		event     *routing.PostToolEvent
+		want      string
+		wantEmpty bool
+	}{
+		{
+			name: "bash with simple command",
+			event: &routing.PostToolEvent{
+				ToolName: "Bash",
+				ToolInput: map[string]interface{}{
+					"command": "ls -la",
+				},
+			},
+			want: "Command: ls -la",
+		},
+		{
+			name: "bash with long command",
+			event: &routing.PostToolEvent{
+				ToolName: "Bash",
+				ToolInput: map[string]interface{}{
+					"command": "find /home -name '*.txt' -type f -exec grep 'pattern' {} \\;",
+				},
+			},
+			want: "Command: find /home -name '*.txt' -type f -exec grep 'pattern' {} \\;",
+		},
+		{
+			name: "bash with empty command",
+			event: &routing.PostToolEvent{
+				ToolName: "Bash",
+				ToolInput: map[string]interface{}{
+					"command": "",
+				},
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "bash with missing command field",
+			event: &routing.PostToolEvent{
+				ToolName:  "Bash",
+				ToolInput: map[string]interface{}{},
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "bash with non-string command",
+			event: &routing.PostToolEvent{
+				ToolName: "Bash",
+				ToolInput: map[string]interface{}{
+					"command": []string{"ls", "-la"},
+				},
+			},
+			wantEmpty: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractAttemptedChange(tt.event)
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("ExtractAttemptedChange() = %q, want empty string", got)
+				}
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ExtractAttemptedChange() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// Test ExtractAttemptedChange for unsupported tools
+func TestExtractAttemptedChange_UnsupportedTools(t *testing.T) {
+	tests := []struct {
+		name  string
+		event *routing.PostToolEvent
+	}{
+		{
+			name: "Task tool",
+			event: &routing.PostToolEvent{
+				ToolName: "Task",
+				ToolInput: map[string]interface{}{
+					"prompt": "some prompt",
+				},
+			},
+		},
+		{
+			name: "Read tool",
+			event: &routing.PostToolEvent{
+				ToolName: "Read",
+				ToolInput: map[string]interface{}{
+					"file_path": "/path/to/file",
+				},
+			},
+		},
+		{
+			name: "Glob tool",
+			event: &routing.PostToolEvent{
+				ToolName: "Glob",
+				ToolInput: map[string]interface{}{
+					"pattern": "*.go",
+				},
+			},
+		},
+		{
+			name: "unknown tool",
+			event: &routing.PostToolEvent{
+				ToolName: "UnknownTool",
+				ToolInput: map[string]interface{}{
+					"some_field": "some_value",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractAttemptedChange(tt.event)
+			if got != "" {
+				t.Errorf("ExtractAttemptedChange() = %q, want empty string for %s tool", got, tt.event.ToolName)
+			}
+		})
+	}
+}
+
+// Test ExtractAttemptedChange with nil/invalid inputs
+func TestExtractAttemptedChange_NilInputs(t *testing.T) {
+	tests := []struct {
+		name  string
+		event *routing.PostToolEvent
+	}{
+		{
+			name:  "nil event",
+			event: nil,
+		},
+		{
+			name: "nil tool input",
+			event: &routing.PostToolEvent{
+				ToolName:  "Edit",
+				ToolInput: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractAttemptedChange(tt.event)
+			if got != "" {
+				t.Errorf("ExtractAttemptedChange() = %q, want empty string for %s", got, tt.name)
+			}
+		})
+	}
+}
+
