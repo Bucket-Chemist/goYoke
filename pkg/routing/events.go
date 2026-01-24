@@ -24,12 +24,49 @@ type ToolEvent struct {
 // PostToolEvent represents PostToolUse events with execution results.
 // These events include both the input and the tool's response.
 type PostToolEvent struct {
+	// Core fields (DO NOT MODIFY - backward compatibility)
 	ToolName      string                 `json:"tool_name"`
 	ToolInput     map[string]interface{} `json:"tool_input"`
 	ToolResponse  map[string]interface{} `json:"tool_response"`
 	SessionID     string                 `json:"session_id"`
 	HookEventName string                 `json:"hook_event_name"`
 	CapturedAt    int64                  `json:"captured_at"`
+
+	// === ML Telemetry Fields (GOgent-086b) ===
+	// All omitempty for backward compatibility
+
+	// Performance metrics
+	DurationMs   int64 `json:"duration_ms,omitempty"`
+	InputTokens  int   `json:"input_tokens,omitempty"`
+	OutputTokens int   `json:"output_tokens,omitempty"`
+
+	// Model context
+	Model string `json:"model,omitempty"`
+	Tier  string `json:"tier,omitempty"`
+
+	// Outcome
+	Success bool `json:"success,omitempty"`
+
+	// Sequence tracking (GAP 4.2)
+	SequenceIndex    int      `json:"sequence_index,omitempty"`
+	PreviousTools    []string `json:"previous_tools,omitempty"`
+	PreviousOutcomes []bool   `json:"previous_outcomes,omitempty"`
+
+	// Task classification (GAP 4.4)
+	TaskType   string `json:"task_type,omitempty"`
+	TaskDomain string `json:"task_domain,omitempty"`
+
+	// Routing info (for Task() events)
+	SelectedTier  string `json:"selected_tier,omitempty"`
+	SelectedAgent string `json:"selected_agent,omitempty"`
+
+	// Correlation
+	EventID string `json:"event_id,omitempty"`
+
+	// Understanding context (Addendum A.4)
+	TargetSize       int64   `json:"target_size,omitempty"`
+	CoverageAchieved float64 `json:"coverage_achieved,omitempty"`
+	EntitiesFound    int     `json:"entities_found,omitempty"`
 }
 
 // VALIDATION NOTES (GOgent-006):
@@ -215,7 +252,7 @@ func ParseTaskInput(toolInput map[string]interface{}) (*TaskInput, error) {
 // Agent metadata is NOT directly available in this event - must parse transcript file.
 // Schema validated via GOgent-063a research.
 type SubagentStopEvent struct {
-	HookEventName  string `json:"hook_event_name"`  // Always "SubagentStop"
+	HookEventName  string `json:"hook_event_name"` // Always "SubagentStop"
 	SessionID      string `json:"session_id"`
 	TranscriptPath string `json:"transcript_path"` // Path to agent transcript file
 	StopHookActive bool   `json:"stop_hook_active"`
@@ -224,12 +261,12 @@ type SubagentStopEvent struct {
 // ParsedAgentMetadata contains agent information extracted from transcript file.
 // All fields are optional as transcript parsing may fail.
 type ParsedAgentMetadata struct {
-	AgentID      string `json:"agent_id,omitempty"`       // e.g., "orchestrator", "python-pro"
-	AgentModel   string `json:"agent_model,omitempty"`    // "haiku", "sonnet", "opus"
-	Tier         string `json:"tier,omitempty"`           // Derived from model
-	DurationMs   int    `json:"duration_ms,omitempty"`    // Calculated from transcript timestamps
-	OutputTokens int    `json:"output_tokens,omitempty"`  // From transcript if available
-	ExitCode     int    `json:"exit_code,omitempty"`      // 0=success, derived from completion status
+	AgentID      string `json:"agent_id,omitempty"`      // e.g., "orchestrator", "python-pro"
+	AgentModel   string `json:"agent_model,omitempty"`   // "haiku", "sonnet", "opus"
+	Tier         string `json:"tier,omitempty"`          // Derived from model
+	DurationMs   int    `json:"duration_ms,omitempty"`   // Calculated from transcript timestamps
+	OutputTokens int    `json:"output_tokens,omitempty"` // From transcript if available
+	ExitCode     int    `json:"exit_code,omitempty"`     // 0=success, derived from completion status
 }
 
 // AgentClass represents agent classification

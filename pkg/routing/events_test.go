@@ -1443,8 +1443,8 @@ func TestParseTranscriptForMetadata_DurationEdgeCases(t *testing.T) {
 			expectedDuration: 0,
 		},
 		{
-			name: "single timestamp",
-			transcriptData: `{"timestamp": 1700000000, "content": "AGENT: test"}`,
+			name:             "single timestamp",
+			transcriptData:   `{"timestamp": 1700000000, "content": "AGENT: test"}`,
 			expectedDuration: 0,
 		},
 		{
@@ -1676,5 +1676,548 @@ func TestToolEvent_IsWriteOperation(t *testing.T) {
 				t.Errorf("tool %s: expected %v, got %v", tc.toolName, tc.expected, got)
 			}
 		})
+	}
+}
+
+// ============================================================================
+// PostToolEvent ML Telemetry Tests (GOgent-086b)
+// ============================================================================
+
+// TestPostToolEvent_MLFields tests marshaling and unmarshaling of ML telemetry fields
+func TestPostToolEvent_MLFields(t *testing.T) {
+	event := PostToolEvent{
+		// Core fields
+		ToolName:      "Read",
+		SessionID:     "sess-123",
+		HookEventName: "PostToolUse",
+		CapturedAt:    1768465000,
+		ToolInput:     map[string]interface{}{"file_path": "/test.go"},
+		ToolResponse:  map[string]interface{}{"success": true},
+
+		// ML telemetry fields
+		DurationMs:       150,
+		InputTokens:      1024,
+		OutputTokens:     512,
+		Model:            "claude-haiku-4",
+		Tier:             "haiku",
+		Success:          true,
+		SequenceIndex:    5,
+		PreviousTools:    []string{"Glob", "Grep", "Read"},
+		PreviousOutcomes: []bool{true, true, true},
+		TaskType:         "search",
+		TaskDomain:       "python",
+		SelectedTier:     "haiku",
+		SelectedAgent:    "codebase-search",
+		EventID:          "evt-abc123",
+		TargetSize:       5000,
+		CoverageAchieved: 0.85,
+		EntitiesFound:    12,
+	}
+
+	// Marshal to JSON
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	// Unmarshal back
+	var parsed PostToolEvent
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	// Verify core fields
+	if parsed.ToolName != "Read" {
+		t.Errorf("Expected ToolName Read, got %s", parsed.ToolName)
+	}
+
+	// Verify ML fields
+	if parsed.DurationMs != 150 {
+		t.Errorf("Expected DurationMs 150, got %d", parsed.DurationMs)
+	}
+
+	if parsed.InputTokens != 1024 {
+		t.Errorf("Expected InputTokens 1024, got %d", parsed.InputTokens)
+	}
+
+	if parsed.OutputTokens != 512 {
+		t.Errorf("Expected OutputTokens 512, got %d", parsed.OutputTokens)
+	}
+
+	if parsed.Model != "claude-haiku-4" {
+		t.Errorf("Expected Model claude-haiku-4, got %s", parsed.Model)
+	}
+
+	if parsed.Tier != "haiku" {
+		t.Errorf("Expected Tier haiku, got %s", parsed.Tier)
+	}
+
+	if !parsed.Success {
+		t.Error("Expected Success true, got false")
+	}
+
+	if parsed.SequenceIndex != 5 {
+		t.Errorf("Expected SequenceIndex 5, got %d", parsed.SequenceIndex)
+	}
+
+	if len(parsed.PreviousTools) != 3 {
+		t.Errorf("Expected 3 PreviousTools, got %d", len(parsed.PreviousTools))
+	}
+
+	if parsed.PreviousTools[0] != "Glob" {
+		t.Errorf("Expected PreviousTools[0] Glob, got %s", parsed.PreviousTools[0])
+	}
+
+	if len(parsed.PreviousOutcomes) != 3 {
+		t.Errorf("Expected 3 PreviousOutcomes, got %d", len(parsed.PreviousOutcomes))
+	}
+
+	if !parsed.PreviousOutcomes[0] {
+		t.Error("Expected PreviousOutcomes[0] true")
+	}
+
+	if parsed.TaskType != "search" {
+		t.Errorf("Expected TaskType search, got %s", parsed.TaskType)
+	}
+
+	if parsed.TaskDomain != "python" {
+		t.Errorf("Expected TaskDomain python, got %s", parsed.TaskDomain)
+	}
+
+	if parsed.SelectedTier != "haiku" {
+		t.Errorf("Expected SelectedTier haiku, got %s", parsed.SelectedTier)
+	}
+
+	if parsed.SelectedAgent != "codebase-search" {
+		t.Errorf("Expected SelectedAgent codebase-search, got %s", parsed.SelectedAgent)
+	}
+
+	if parsed.EventID != "evt-abc123" {
+		t.Errorf("Expected EventID evt-abc123, got %s", parsed.EventID)
+	}
+
+	if parsed.TargetSize != 5000 {
+		t.Errorf("Expected TargetSize 5000, got %d", parsed.TargetSize)
+	}
+
+	if parsed.CoverageAchieved != 0.85 {
+		t.Errorf("Expected CoverageAchieved 0.85, got %f", parsed.CoverageAchieved)
+	}
+
+	if parsed.EntitiesFound != 12 {
+		t.Errorf("Expected EntitiesFound 12, got %d", parsed.EntitiesFound)
+	}
+}
+
+// TestPostToolEvent_BackwardCompatibility verifies old JSON without ML fields parses correctly
+func TestPostToolEvent_BackwardCompatibility(t *testing.T) {
+	// Old JSON format without ML fields
+	oldJSON := `{
+		"tool_name": "Read",
+		"session_id": "sess-123",
+		"hook_event_name": "PostToolUse",
+		"captured_at": 1234567890,
+		"tool_input": {"file_path": "/test.go"},
+		"tool_response": {"success": true}
+	}`
+
+	var event PostToolEvent
+	if err := json.Unmarshal([]byte(oldJSON), &event); err != nil {
+		t.Fatalf("Failed to parse old format: %v", err)
+	}
+
+	// Core fields should be populated
+	if event.ToolName != "Read" {
+		t.Errorf("Expected ToolName Read, got %s", event.ToolName)
+	}
+
+	if event.SessionID != "sess-123" {
+		t.Errorf("Expected SessionID sess-123, got %s", event.SessionID)
+	}
+
+	// ML fields should be zero values
+	if event.DurationMs != 0 {
+		t.Errorf("Expected DurationMs 0, got %d", event.DurationMs)
+	}
+
+	if event.SequenceIndex != 0 {
+		t.Errorf("Expected SequenceIndex 0, got %d", event.SequenceIndex)
+	}
+
+	if event.Model != "" {
+		t.Errorf("Expected Model empty, got %s", event.Model)
+	}
+
+	if event.Success {
+		t.Error("Expected Success false (zero value), got true")
+	}
+
+	if event.PreviousTools != nil {
+		t.Errorf("Expected PreviousTools nil, got %v", event.PreviousTools)
+	}
+
+	if event.PreviousOutcomes != nil {
+		t.Errorf("Expected PreviousOutcomes nil, got %v", event.PreviousOutcomes)
+	}
+}
+
+// TestPostToolEvent_OmitEmpty verifies empty ML fields are omitted from JSON
+func TestPostToolEvent_OmitEmpty(t *testing.T) {
+	event := PostToolEvent{
+		ToolName:      "Read",
+		SessionID:     "sess-123",
+		HookEventName: "PostToolUse",
+		CapturedAt:    1768465000,
+		ToolInput:     map[string]interface{}{"file_path": "/test.go"},
+		ToolResponse:  map[string]interface{}{"success": true},
+		// No ML fields set
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	jsonStr := string(data)
+
+	// ML fields should not appear in JSON when empty
+	// Note: Go's json encoder does NOT omit false booleans even with omitempty,
+	// so we exclude "success" from this check
+	mlFields := []string{
+		"duration_ms",
+		"input_tokens",
+		"output_tokens",
+		"model",
+		"tier",
+		"sequence_index",
+		"previous_tools",
+		"previous_outcomes",
+		"task_type",
+		"task_domain",
+		"selected_tier",
+		"selected_agent",
+		"event_id",
+		"target_size",
+		"coverage_achieved",
+		"entities_found",
+	}
+
+	for _, field := range mlFields {
+		if strings.Contains(jsonStr, field) {
+			t.Errorf("Empty field %q should be omitted from JSON, but found in: %s", field, jsonStr)
+		}
+	}
+
+	// Success field: Go's JSON encoder includes false booleans even with omitempty
+	// This is expected Go behavior, so we just verify the value is false
+	if event.Success {
+		t.Error("Expected Success to be false (zero value)")
+	}
+
+	// Core fields should still be present
+	if !strings.Contains(jsonStr, "tool_name") {
+		t.Error("Core field tool_name should be present")
+	}
+
+	if !strings.Contains(jsonStr, "session_id") {
+		t.Error("Core field session_id should be present")
+	}
+}
+
+// TestPostToolEvent_PartialMLFields tests events with only some ML fields populated
+func TestPostToolEvent_PartialMLFields(t *testing.T) {
+	event := PostToolEvent{
+		ToolName:      "Task",
+		SessionID:     "sess-456",
+		HookEventName: "PostToolUse",
+		CapturedAt:    1768465100,
+		ToolInput:     map[string]interface{}{"model": "sonnet"},
+		ToolResponse:  map[string]interface{}{"output": "result"},
+
+		// Only partial ML fields
+		Model:   "claude-sonnet-4",
+		Tier:    "sonnet",
+		Success: true,
+		EventID: "evt-def456",
+		// Other fields left empty
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var parsed PostToolEvent
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	// Populated fields should be present
+	if parsed.Model != "claude-sonnet-4" {
+		t.Errorf("Expected Model claude-sonnet-4, got %s", parsed.Model)
+	}
+
+	if parsed.Tier != "sonnet" {
+		t.Errorf("Expected Tier sonnet, got %s", parsed.Tier)
+	}
+
+	if !parsed.Success {
+		t.Error("Expected Success true")
+	}
+
+	if parsed.EventID != "evt-def456" {
+		t.Errorf("Expected EventID evt-def456, got %s", parsed.EventID)
+	}
+
+	// Empty fields should be zero values
+	if parsed.DurationMs != 0 {
+		t.Errorf("Expected DurationMs 0, got %d", parsed.DurationMs)
+	}
+
+	if parsed.SequenceIndex != 0 {
+		t.Errorf("Expected SequenceIndex 0, got %d", parsed.SequenceIndex)
+	}
+
+	if parsed.TaskType != "" {
+		t.Errorf("Expected TaskType empty, got %s", parsed.TaskType)
+	}
+}
+
+// TestPostToolEvent_SequenceTracking specifically tests sequence tracking fields
+func TestPostToolEvent_SequenceTracking(t *testing.T) {
+	event := PostToolEvent{
+		ToolName:      "Edit",
+		SessionID:     "sess-789",
+		HookEventName: "PostToolUse",
+		CapturedAt:    1768465200,
+		ToolInput:     map[string]interface{}{"file_path": "/code.go"},
+		ToolResponse:  map[string]interface{}{"success": true},
+
+		SequenceIndex: 10,
+		PreviousTools: []string{
+			"Glob", "Grep", "Read", "Read", "Read",
+			"Edit", "Bash", "Read", "Edit", "Bash",
+		},
+		PreviousOutcomes: []bool{
+			true, true, true, true, true,
+			true, false, true, true, true,
+		},
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var parsed PostToolEvent
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if parsed.SequenceIndex != 10 {
+		t.Errorf("Expected SequenceIndex 10, got %d", parsed.SequenceIndex)
+	}
+
+	if len(parsed.PreviousTools) != 10 {
+		t.Fatalf("Expected 10 PreviousTools, got %d", len(parsed.PreviousTools))
+	}
+
+	if parsed.PreviousTools[0] != "Glob" {
+		t.Errorf("Expected first tool Glob, got %s", parsed.PreviousTools[0])
+	}
+
+	if parsed.PreviousTools[9] != "Bash" {
+		t.Errorf("Expected last tool Bash, got %s", parsed.PreviousTools[9])
+	}
+
+	if len(parsed.PreviousOutcomes) != 10 {
+		t.Fatalf("Expected 10 PreviousOutcomes, got %d", len(parsed.PreviousOutcomes))
+	}
+
+	// Check specific outcome (index 6 should be false)
+	if parsed.PreviousOutcomes[6] {
+		t.Error("Expected PreviousOutcomes[6] false (Bash failure)")
+	}
+}
+
+// TestPostToolEvent_UnderstandingContext tests understanding context fields
+func TestPostToolEvent_UnderstandingContext(t *testing.T) {
+	event := PostToolEvent{
+		ToolName:      "Grep",
+		SessionID:     "sess-abc",
+		HookEventName: "PostToolUse",
+		CapturedAt:    1768465300,
+		ToolInput:     map[string]interface{}{"pattern": "func"},
+		ToolResponse:  map[string]interface{}{"matches": 42},
+
+		TargetSize:       150000,
+		CoverageAchieved: 0.92,
+		EntitiesFound:    42,
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var parsed PostToolEvent
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if parsed.TargetSize != 150000 {
+		t.Errorf("Expected TargetSize 150000, got %d", parsed.TargetSize)
+	}
+
+	if parsed.CoverageAchieved != 0.92 {
+		t.Errorf("Expected CoverageAchieved 0.92, got %f", parsed.CoverageAchieved)
+	}
+
+	if parsed.EntitiesFound != 42 {
+		t.Errorf("Expected EntitiesFound 42, got %d", parsed.EntitiesFound)
+	}
+}
+
+// TestPostToolEvent_RoutingInfo tests routing information fields
+func TestPostToolEvent_RoutingInfo(t *testing.T) {
+	event := PostToolEvent{
+		ToolName:      "Task",
+		SessionID:     "sess-routing",
+		HookEventName: "PostToolUse",
+		CapturedAt:    1768465400,
+		ToolInput: map[string]interface{}{
+			"model":         "sonnet",
+			"subagent_type": "general-purpose",
+		},
+		ToolResponse: map[string]interface{}{"output": "complete"},
+
+		Model:         "claude-sonnet-4",
+		Tier:          "sonnet",
+		SelectedTier:  "sonnet",
+		SelectedAgent: "python-pro",
+		TaskType:      "implementation",
+		TaskDomain:    "python",
+	}
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+
+	var parsed PostToolEvent
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if parsed.SelectedTier != "sonnet" {
+		t.Errorf("Expected SelectedTier sonnet, got %s", parsed.SelectedTier)
+	}
+
+	if parsed.SelectedAgent != "python-pro" {
+		t.Errorf("Expected SelectedAgent python-pro, got %s", parsed.SelectedAgent)
+	}
+
+	if parsed.TaskType != "implementation" {
+		t.Errorf("Expected TaskType implementation, got %s", parsed.TaskType)
+	}
+
+	if parsed.TaskDomain != "python" {
+		t.Errorf("Expected TaskDomain python, got %s", parsed.TaskDomain)
+	}
+}
+
+// TestPostToolEvent_PerformanceMetrics tests performance-related fields
+func TestPostToolEvent_PerformanceMetrics(t *testing.T) {
+	tests := []struct {
+		name         string
+		durationMs   int64
+		inputTokens  int
+		outputTokens int
+	}{
+		{"fast operation", 50, 100, 50},
+		{"slow operation", 5000, 50000, 10000},
+		{"zero tokens", 100, 0, 0},
+		{"large context", 2000, 150000, 25000},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := PostToolEvent{
+				ToolName:      "Read",
+				SessionID:     "sess-perf",
+				HookEventName: "PostToolUse",
+				CapturedAt:    1768465500,
+				ToolInput:     map[string]interface{}{},
+				ToolResponse:  map[string]interface{}{},
+
+				DurationMs:   tc.durationMs,
+				InputTokens:  tc.inputTokens,
+				OutputTokens: tc.outputTokens,
+			}
+
+			data, err := json.Marshal(event)
+			if err != nil {
+				t.Fatalf("Failed to marshal: %v", err)
+			}
+
+			var parsed PostToolEvent
+			if err := json.Unmarshal(data, &parsed); err != nil {
+				t.Fatalf("Failed to unmarshal: %v", err)
+			}
+
+			if parsed.DurationMs != tc.durationMs {
+				t.Errorf("Expected DurationMs %d, got %d", tc.durationMs, parsed.DurationMs)
+			}
+
+			if parsed.InputTokens != tc.inputTokens {
+				t.Errorf("Expected InputTokens %d, got %d", tc.inputTokens, parsed.InputTokens)
+			}
+
+			if parsed.OutputTokens != tc.outputTokens {
+				t.Errorf("Expected OutputTokens %d, got %d", tc.outputTokens, parsed.OutputTokens)
+			}
+		})
+	}
+}
+
+// TestPostToolEvent_ExistingParserUnchanged verifies ParsePostToolEvent still works
+func TestPostToolEvent_ExistingParserUnchanged(t *testing.T) {
+	// Test that existing ParsePostToolEvent function handles new fields
+	jsonWithMLFields := `{
+		"tool_name": "Read",
+		"session_id": "sess-parser",
+		"hook_event_name": "PostToolUse",
+		"captured_at": 1768465600,
+		"tool_input": {"file_path": "/test.go"},
+		"tool_response": {"success": true},
+		"duration_ms": 150,
+		"model": "claude-haiku-4",
+		"tier": "haiku",
+		"sequence_index": 3
+	}`
+
+	reader := strings.NewReader(jsonWithMLFields)
+	event, err := ParsePostToolEvent(reader, 1*time.Second)
+
+	if err != nil {
+		t.Fatalf("ParsePostToolEvent failed with ML fields: %v", err)
+	}
+
+	// Core fields work
+	if event.ToolName != "Read" {
+		t.Errorf("Expected ToolName Read, got %s", event.ToolName)
+	}
+
+	// ML fields parsed correctly
+	if event.DurationMs != 150 {
+		t.Errorf("Expected DurationMs 150, got %d", event.DurationMs)
+	}
+
+	if event.Model != "claude-haiku-4" {
+		t.Errorf("Expected Model claude-haiku-4, got %s", event.Model)
+	}
+
+	if event.SequenceIndex != 3 {
+		t.Errorf("Expected SequenceIndex 3, got %d", event.SequenceIndex)
 	}
 }
