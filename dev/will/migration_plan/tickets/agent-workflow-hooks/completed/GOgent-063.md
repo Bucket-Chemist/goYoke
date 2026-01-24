@@ -2,7 +2,7 @@
 id: GOgent-063
 title: Define SubagentStop Event Structs
 description: Parse SubagentStop events using ACTUAL schema and extract agent metadata from transcript files
-status: pending
+status: complete
 time_estimate: 2h
 dependencies: ["GOgent-056", "GOgent-063a"]
 priority: high
@@ -25,6 +25,7 @@ Parse SubagentStop events using ACTUAL schema and extract agent metadata from tr
 **File**: `pkg/workflow/events.go` OR `pkg/routing/events.go` (prefer extending existing)
 
 **Imports**:
+
 ```go
 package workflow
 
@@ -41,6 +42,7 @@ import (
 ```
 
 **Implementation**:
+
 ```go
 // SubagentStopEvent represents the ACTUAL Claude Code SubagentStop hook event.
 // Agent metadata is NOT directly available in this event - must parse transcript file.
@@ -385,6 +387,7 @@ func TestDeriveTierFromModel(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+
 - [x] Uses ACTUAL SubagentStop schema (session_id, transcript_path, hook_event_name, stop_hook_active)
 - [x] Implements transcript parsing for agent metadata extraction
 - [x] `ParseSubagentStopEvent()` validates required fields (session_id, transcript_path)

@@ -1,7 +1,7 @@
 ---
 id: GOgent-064
 title: Tier-Specific Response Generation
-description: **Task**:
+description: Generate appropriate follow-up responses based on agent class and tier using transcript-parsed metadata
 status: pending
 time_estimate: 2h
 dependencies: ["GOgent-063"]
@@ -381,16 +381,16 @@ func contains(slice []string, item string) bool {
 ```
 
 **Acceptance Criteria**:
-- [ ] `GenerateEndstateResponse()` accepts (event, metadata) signature (UPDATED)
-- [ ] Graceful degradation when metadata is nil (uses defaults)
-- [ ] Orchestrator: prompts for TODO updates and background task verification
-- [ ] Implementation: prompts for test verification and convention review
-- [ ] Specialist: prompts for output review and follow-up execution
-- [ ] Coordination: silent (no prompt)
-- [ ] Failed agents: always prompt with error context
-- [ ] `Marshal()` uses json.Encoder for robust output (replaces manual formatting)
-- [ ] Tests verify all agent classes, success/failure paths, AND nil metadata handling
-- [ ] `go test ./pkg/workflow` passes
+- [x] `GenerateEndstateResponse()` accepts (event, metadata) signature (UPDATED)
+- [x] Graceful degradation when metadata is nil (uses defaults)
+- [x] Orchestrator: prompts for TODO updates and background task verification
+- [x] Implementation: prompts for test verification and convention review
+- [x] Specialist: prompts for output review and follow-up execution
+- [x] Coordination: silent (no prompt)
+- [x] Failed agents: always prompt with error context
+- [x] `Marshal()` uses json.Encoder for robust output (replaces manual formatting)
+- [x] Tests verify all agent classes, success/failure paths, AND nil metadata handling
+- [x] `go test ./pkg/workflow` passes
 
 **Why This Matters**: Response generation drives user experience. Each agent class needs different follow-up prompts to enforce discipline. Graceful degradation ensures the hook never crashes even if transcript parsing fails.
 
