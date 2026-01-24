@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -307,8 +308,19 @@ func TestIntegration_FileReadError_MissingHandoff(t *testing.T) {
 
 	// Collect outputs
 	var bufOut, bufErr bytes.Buffer
-	go io.Copy(&bufOut, rOut)
-	io.Copy(&bufErr, rErr)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		io.Copy(&bufOut, rOut)
+	}()
+	go func() {
+		defer wg.Done()
+		io.Copy(&bufErr, rErr)
+	}()
+
+	wg.Wait() // Wait for both copies to complete
 
 	os.Stdout = oldStdout
 	os.Stderr = oldStderr
@@ -646,8 +658,19 @@ func TestIntegration_WithToolCounterInitialization(t *testing.T) {
 	}()
 
 	var bufOut, bufErr bytes.Buffer
-	go io.Copy(&bufOut, rOut)
-	io.Copy(&bufErr, rErr)
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		io.Copy(&bufOut, rOut)
+	}()
+	go func() {
+		defer wg.Done()
+		io.Copy(&bufErr, rErr)
+	}()
+
+	wg.Wait() // Wait for both copies to complete
 
 	os.Stdout = oldStdout
 	os.Stderr = oldStderr
