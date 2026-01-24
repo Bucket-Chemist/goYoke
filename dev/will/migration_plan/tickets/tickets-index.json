@@ -3853,7 +3853,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-080",
@@ -3872,7 +3872,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-081",
@@ -3891,7 +3891,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 8,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-082",
@@ -3910,7 +3910,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 7,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-083",
@@ -3929,7 +3929,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-087",
