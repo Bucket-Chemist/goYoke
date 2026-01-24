@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context install install-archive install-aggregate install-wrapper install-load-context uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -24,11 +24,15 @@ help:
 	@echo "  make build-capture-intent - Build gogent-capture-intent binary"
 	@echo "  make build-load-context   - Build gogent-load-context binary"
 	@echo "  make build-agent-endstate - Build gogent-agent-endstate binary"
+	@echo "  make build-orchestrator-guard - Build gogent-orchestrator-guard binary"
+	@echo "  make build-doc-theater    - Build gogent-doc-theater binary"
 	@echo "  make build-all             - Build all hook binaries"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
 	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
 	@echo "  make install-load-context - Install gogent-load-context to ~/.local/bin"
+	@echo "  make install-orchestrator-guard - Install gogent-orchestrator-guard to ~/.local/bin"
+	@echo "  make install-doc-theater - Install gogent-doc-theater to ~/.local/bin"
 	@echo "  make install-wrapper - Install session-archive wrapper hook"
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
@@ -122,10 +126,13 @@ build-agent-endstate:
 build-orchestrator-guard:
 	@scripts/build-orchestrator-guard.sh
 
-build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard
+build-doc-theater:
+	@scripts/build-doc-theater.sh
+
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater
 	@echo "✓ All hook binaries built"
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard check-path
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
@@ -136,6 +143,7 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/gogent-load-context ~/.local/bin/gogent-load-context
 	cp bin/gogent-agent-endstate ~/.local/bin/gogent-agent-endstate
 	cp bin/gogent-orchestrator-guard ~/.local/bin/gogent-orchestrator-guard
+	cp bin/gogent-doc-theater ~/.local/bin/gogent-doc-theater
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
@@ -144,7 +152,8 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	chmod +x ~/.local/bin/gogent-load-context
 	chmod +x ~/.local/bin/gogent-agent-endstate
 	chmod +x ~/.local/bin/gogent-orchestrator-guard
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard"
+	chmod +x ~/.local/bin/gogent-doc-theater
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard, gogent-doc-theater"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -178,6 +187,13 @@ install-orchestrator-guard: build-orchestrator-guard
 	@chmod +x ~/.local/bin/gogent-orchestrator-guard
 	@echo "✓ Installed: ~/.local/bin/gogent-orchestrator-guard"
 
+install-doc-theater: build-doc-theater
+	@echo "Installing gogent-doc-theater to ~/.local/bin..."
+	@mkdir -p ~/.local/bin
+	@cp bin/gogent-doc-theater ~/.local/bin/
+	@chmod +x ~/.local/bin/gogent-doc-theater
+	@echo "✓ Installed: ~/.local/bin/gogent-doc-theater"
+
 install-wrapper:
 	@echo "Installing session-archive wrapper hook..."
 	mkdir -p ~/.claude/hooks
@@ -208,6 +224,8 @@ uninstall:
 	rm -f ~/.local/bin/gogent-capture-intent
 	rm -f ~/.local/bin/gogent-load-context
 	rm -f ~/.local/bin/gogent-agent-endstate
+	rm -f ~/.local/bin/gogent-orchestrator-guard
+	rm -f ~/.local/bin/gogent-doc-theater
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -224,6 +242,8 @@ clean:
 	rm -f bin/gogent-capture-intent
 	rm -f bin/gogent-load-context
 	rm -f bin/gogent-agent-endstate
+	rm -f bin/gogent-orchestrator-guard
+	rm -f bin/gogent-doc-theater
 	rm -f coverage.out
 	rm -f *.test
 

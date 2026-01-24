@@ -1,7 +1,7 @@
 ---
 id: GOgent-083
 title: Build gogent-doc-theater CLI
-description: **Task**:
+description: "Build CLI binary for doc-theater hook using AnalyzeToolEventForDocTheater function"
 status: pending
 time_estimate: 2h
 dependencies: ["GOgent-082", "GOgent-080"]
@@ -175,14 +175,14 @@ echo "✓ Built: bin/gogent-doc-theater"
 ```
 
 **Acceptance Criteria**:
-- [ ] CLI parses STDIN once (using routing.ParseToolEvent)
-- [ ] Passes through non-CLAUDE.md operations
-- [ ] Extracts content from tool_input field (NOT re-reading STDIN)
-- [ ] Detects theater patterns using routing.PatternDetector
-- [ ] Generates warning response by default
-- [ ] Supports GOGENT_DOC_THEATER_BLOCK=true for blocking mode
-- [ ] Outputs valid hook response JSON
-- [ ] Build script creates executable
+- [x] CLI parses STDIN once (using routing.ParseToolEvent)
+- [x] Passes through non-CLAUDE.md operations
+- [x] Extracts content from tool_input field (NOT re-reading STDIN)
+- [x] Detects theater patterns using routing.PatternDetector
+- [x] Generates warning response by default
+- [x] Supports GOGENT_DOC_THEATER_BLOCK=true for blocking mode
+- [x] Outputs valid hook response JSON
+- [x] Build script creates executable
 
 **Integration Note**:
 This CLI can be used standalone OR integrated into gogent-validate. If integrating:
