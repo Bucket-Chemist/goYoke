@@ -42,9 +42,9 @@ PostToolUse ──→ gogent-sharp-edge ──→ Failure tracking
 4. Add configuration section for thresholds
 
 **Acceptance Criteria**:
-- [ ] Hook event flow diagram updated
-- [ ] Single PostToolUse handler documented
-- [ ] Counter/reminder/flush behavior explained
-- [ ] Configuration options documented
+- [x] Hook event flow diagram updated
+- [x] Single PostToolUse handler documented
+- [x] Counter/reminder/flush behavior explained
+- [x] Configuration options documented
 
 ---

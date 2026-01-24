@@ -42,14 +42,29 @@ sequenceDiagram
             CC->>Tool: Execute tool
             Tool-->>CC: Result
             CC->>PO: Tool completed
-            Note over PO: gogent-sharp-edge
+            Note over PO: gogent-sharp-edge<br/>(Merged Handler)
 
+            PO->>PO: IncrementToolCounter()
+            PO->>PO: CheckReminder(counter)
+            alt Every 10 Tools
+                PO->>PO: GenerateRoutingReminder()
+            end
+            PO->>PO: CheckFlushThreshold(counter)
+            alt Every 20+ Tools
+                PO->>PO: ArchivePendingLearnings()
+            end
+
+            PO->>PO: DetectFailure()
             alt Failure Detected
                 PO->>PO: LogFailure()
+                PO->>PO: CheckFailureCount()
                 alt 3+ Consecutive Failures
-                    PO-->>CC: Sharp edge captured
+                    PO->>PO: CaptureSharpEdge()
+                    PO-->>CC: Block + guidance
                 end
             end
+
+            PO-->>CC: Response
         end
     end
 
@@ -63,12 +78,63 @@ sequenceDiagram
 
 ### Hook Entry Points
 
-| Hook Event | CLI Binary | When Fired |
-|------------|------------|------------|
-| SessionStart | `gogent-load-context` | Session startup/resume ✅ |
-| PreToolUse | `gogent-validate` | Before any tool executes |
-| PostToolUse | `gogent-sharp-edge` | After Bash/Edit/Write tools |
-| SessionEnd | `gogent-archive` | Session termination |
+| Hook Event | CLI Binary | Responsibilities | Status |
+|------------|------------|---|---|
+| SessionStart | `gogent-load-context` | Load project context, language detection, convention injection | ✅ Implemented |
+| PreToolUse | `gogent-validate` | Validate Task() invocations, schema enforcement, blocking rules | ✅ Implemented |
+| PostToolUse | `gogent-sharp-edge` (merged) | Tool counter management, routing reminders, auto-flush learnings, sharp-edge detection, failure tracking | ✅ Implemented |
+| SessionEnd | `gogent-archive` | Collect metrics, load artifacts, generate handoff documents | ✅ Implemented |
+
+### PostToolUse Handler: Merged Behavior
+
+**GOgent-072** consolidated attention-gate functionality into the core `gogent-sharp-edge` PostToolUse handler. The binary now manages four integrated responsibilities:
+
+#### 1. Tool Counter Management
+- **Trigger**: Every tool execution (Bash, Edit, Write)
+- **Action**: Increments persistent counter in `/tmp/claude-tool-counter-{session_id}.log`
+- **Purpose**: Track tool usage frequency across session
+- **Configuration**: Counter persists across multiple tool invocations
+
+#### 2. Routing Compliance Reminders
+- **Trigger**: Every 10 tools
+- **Action**: Generates structured routing reminder injected into `additionalContext`
+- **Content**: Reminds user to check `~/.claude/routing-schema.json` for tier mappings
+- **Non-blocking**: Continues execution, reminder is advisory
+
+#### 3. Pending Learnings Auto-Flush
+- **Trigger**: Every 20+ tools (configurable threshold)
+- **Action**: Archives `pending-learnings.jsonl` to session archive
+- **Purpose**: Prevent unbounded growth of pending learnings
+- **Automatic**: No user intervention required
+
+#### 4. Sharp-Edge Detection (Original)
+- **Trigger**: 3+ consecutive failures on same file/error type
+- **Action**: Captures learning to `pending-learnings.jsonl` and blocks execution
+- **Response**: Returns blocking guidance with pattern matching from `sharp-edges.yaml`
+- **Non-blocking failures**: Logged but do not trigger capture until threshold
+
+#### Response Merging
+When multiple conditions trigger, responses merge into single hook response:
+- Sharp-edge blocking takes priority
+- Reminder message appended to `additionalContext`
+- Flush notification appended to `additionalContext`
+- Failed actions (counter, flush) emit warnings to STDERR but do not block
+
+#### Configuration
+
+| Setting | Default | Purpose | Notes |
+|---------|---------|---------|-------|
+| Reminder Threshold | Every 10 tools | Frequency of routing compliance reminders | Configured via `config.ShouldRemind()` |
+| Flush Threshold | Every 20 tools | When to archive pending learnings | Configured via `config.ShouldFlush()` |
+| Sharp-Edge Threshold | 3 failures | Trigger for sharp-edge capture and blocking | `memory.DefaultMaxFailures` |
+| Failure Window | 300 seconds | Time window for consecutive failure counting | Cross-session tracking in `~/.gogent/failure-tracker.jsonl` |
+| Counter Storage | `/tmp/claude-tool-counter-*.log` | Session-scoped tool count persistence | Recreated per session |
+
+Override via environment variables:
+- `GOGENT_REMINDER_THRESHOLD` - Set reminder frequency (default: 10)
+- `GOGENT_FLUSH_THRESHOLD` - Set flush frequency (default: 20)
+- `GOGENT_MAX_FAILURES` - Set sharp-edge threshold (default: 3)
+- `GOGENT_FAILURE_WINDOW` - Set failure window in seconds (default: 300)
 
 ---
 
@@ -219,14 +285,14 @@ graph LR
 
 ### CLI Reference
 
-| Binary | Hook Event | Input | Output | Lines |
-|--------|------------|-------|--------|-------|
-| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~250 |
-| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~142 |
-| `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1111 |
-| `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | (none) | ~200 |
-| `gogent-capture-intent` | Manual | UserIntent JSON | (none) | ~150 |
-| `gogent-aggregate` | Manual | (flags) | Summary JSON | ~100 |
+| Binary | Hook Event | Input | Output | Behaviors | Lines |
+|--------|------------|-------|--------|---|-------|
+| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | Language detection, convention loading | ~250 |
+| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | Task validation, model checking, delegation ceiling | ~142 |
+| `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | Metrics collection, artifact loading, handoff generation | ~1111 |
+| `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON (or pass-through) | Tool counting, routing reminders (every 10), auto-flush (every 20), sharp-edge detection (3+ failures) | ~370 |
+| `gogent-capture-intent` | Manual | UserIntent JSON | (none) | User intent logging | ~150 |
+| `gogent-aggregate` | Manual | (flags) | Summary JSON | Session statistics | ~100 |
 
 ### gogent-archive Subcommands
 
