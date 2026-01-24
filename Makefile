@@ -23,6 +23,7 @@ help:
 	@echo "  make build-sharp-edge - Build gogent-sharp-edge binary"
 	@echo "  make build-capture-intent - Build gogent-capture-intent binary"
 	@echo "  make build-load-context   - Build gogent-load-context binary"
+	@echo "  make build-agent-endstate - Build gogent-agent-endstate binary"
 	@echo "  make build-all             - Build all hook binaries"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
@@ -113,10 +114,15 @@ build-load-context:
 	@go build -o bin/gogent-load-context ./cmd/gogent-load-context
 	@echo "✓ Built: bin/gogent-load-context"
 
-build-all: build-validate build-archive build-sharp-edge build-load-context
+build-agent-endstate:
+	@echo "Building gogent-agent-endstate..."
+	@go build -o bin/gogent-agent-endstate ./cmd/gogent-agent-endstate
+	@echo "✓ Built: bin/gogent-agent-endstate"
+
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate
 	@echo "✓ All hook binaries built"
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context check-path
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
@@ -125,13 +131,15 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/gogent-sharp-edge ~/.local/bin/gogent-sharp-edge
 	cp bin/gogent-capture-intent ~/.local/bin/gogent-capture-intent
 	cp bin/gogent-load-context ~/.local/bin/gogent-load-context
+	cp bin/gogent-agent-endstate ~/.local/bin/gogent-agent-endstate
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
 	chmod +x ~/.local/bin/gogent-sharp-edge
 	chmod +x ~/.local/bin/gogent-capture-intent
 	chmod +x ~/.local/bin/gogent-load-context
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context"
+	chmod +x ~/.local/bin/gogent-agent-endstate
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -187,6 +195,7 @@ uninstall:
 	rm -f ~/.local/bin/gogent-sharp-edge
 	rm -f ~/.local/bin/gogent-capture-intent
 	rm -f ~/.local/bin/gogent-load-context
+	rm -f ~/.local/bin/gogent-agent-endstate
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -202,6 +211,7 @@ clean:
 	rm -f bin/gogent-sharp-edge
 	rm -f bin/gogent-capture-intent
 	rm -f bin/gogent-load-context
+	rm -f bin/gogent-agent-endstate
 	rm -f coverage.out
 	rm -f *.test
 

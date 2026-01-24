@@ -1,7 +1,7 @@
 ---
 id: GOgent-067
 title: Build gogent-agent-endstate CLI
-description: **Task**:
+description: "Build CLI binary that reads SubagentStop events, parses transcript for agent metadata, and generates follow-up responses with graceful degradation."
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-066"]
@@ -109,18 +109,18 @@ echo '{
 ```
 
 **Acceptance Criteria**:
-- [ ] CLI reads SubagentStop events from STDIN (ACTUAL schema: session_id, transcript_path)
-- [ ] Parses transcript file for agent metadata (agent_id, model, tier, etc.)
-- [ ] Handles transcript parsing failures gracefully (warning to stderr, continue with defaults)
-- [ ] Generates tier-specific responses based on parsed metadata
-- [ ] Logs decisions to XDG-compliant JSONL path
-- [ ] Outputs valid JSON response to stdout
-- [ ] Makefile target `build-agent-endstate` added
-- [ ] Makefile target `build-all` includes agent-endstate
-- [ ] Warnings logged to stderr, not stdout (non-blocking)
-- [ ] Transcript parsing errors are non-fatal (graceful degradation)
-- [ ] Manual test passes with ACTUAL SubagentStop schema
-- [ ] `go build ./cmd/gogent-agent-endstate` succeeds
+- [x] CLI reads SubagentStop events from STDIN (ACTUAL schema: session_id, transcript_path)
+- [x] Parses transcript file for agent metadata (agent_id, model, tier, etc.)
+- [x] Handles transcript parsing failures gracefully (warning to stderr, continue with defaults)
+- [x] Generates tier-specific responses based on parsed metadata
+- [x] Logs decisions to XDG-compliant JSONL path
+- [x] Outputs valid JSON response to stdout
+- [x] Makefile target `build-agent-endstate` added
+- [x] Makefile target `build-all` includes agent-endstate
+- [x] Warnings logged to stderr, not stdout (non-blocking)
+- [x] Transcript parsing errors are non-fatal (graceful degradation)
+- [x] Manual test passes with ACTUAL SubagentStop schema
+- [x] `go build ./cmd/gogent-agent-endstate` succeeds
 
 **Why This Matters**: CLI is SubagentStop hook implementation. Must generate appropriate follow-up for each agent type.
 
