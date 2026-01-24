@@ -64,6 +64,17 @@ func (r *HookResponse) AddField(key string, value interface{}) {
 	r.HookSpecificOutput[key] = value
 }
 
+// SetDecision sets the decision field of the HookResponse.
+// Use the Decision* constants for valid values.
+func (r *HookResponse) SetDecision(decision string) {
+	r.Decision = decision
+}
+
+// GetDecision retrieves the decision field from the HookResponse.
+func (r *HookResponse) GetDecision() string {
+	return r.Decision
+}
+
 // Validate checks that the HookResponse has valid decision values and required fields.
 // Returns an error if validation fails.
 func (r *HookResponse) Validate() error {

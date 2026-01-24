@@ -72,6 +72,77 @@ func TestGetProjectDir(t *testing.T) {
 	}
 }
 
+func TestGetProjectDir_Priority(t *testing.T) {
+	// Save original env
+	origGogent := os.Getenv("GOGENT_PROJECT_DIR")
+	origClaude := os.Getenv("CLAUDE_PROJECT_DIR")
+	defer func() {
+		if origGogent != "" {
+			os.Setenv("GOGENT_PROJECT_DIR", origGogent)
+		} else {
+			os.Unsetenv("GOGENT_PROJECT_DIR")
+		}
+		if origClaude != "" {
+			os.Setenv("CLAUDE_PROJECT_DIR", origClaude)
+		} else {
+			os.Unsetenv("CLAUDE_PROJECT_DIR")
+		}
+	}()
+
+	tests := []struct {
+		name           string
+		gogentDir      string
+		claudeDir      string
+		expectedResult string
+	}{
+		{
+			name:           "GOGENT_PROJECT_DIR has highest priority",
+			gogentDir:      "/gogent/path",
+			claudeDir:      "/claude/path",
+			expectedResult: "/gogent/path",
+		},
+		{
+			name:           "CLAUDE_PROJECT_DIR when GOGENT not set",
+			gogentDir:      "",
+			claudeDir:      "/claude/path",
+			expectedResult: "/claude/path",
+		},
+		{
+			name:           "Falls back to CWD when both unset",
+			gogentDir:      "",
+			claudeDir:      "",
+			expectedResult: "", // Will match CWD
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear environment
+			os.Unsetenv("GOGENT_PROJECT_DIR")
+			os.Unsetenv("CLAUDE_PROJECT_DIR")
+
+			// Set test values
+			if tt.gogentDir != "" {
+				os.Setenv("GOGENT_PROJECT_DIR", tt.gogentDir)
+			}
+			if tt.claudeDir != "" {
+				os.Setenv("CLAUDE_PROJECT_DIR", tt.claudeDir)
+			}
+
+			result := getProjectDir()
+
+			if tt.expectedResult == "" {
+				// Verify it's a valid directory path (CWD)
+				if result == "" {
+					t.Error("Expected non-empty directory path for CWD fallback")
+				}
+			} else if result != tt.expectedResult {
+				t.Errorf("getProjectDir() = %q, want %q", result, tt.expectedResult)
+			}
+		})
+	}
+}
+
 func TestWritePendingLearning(t *testing.T) {
 	// Create temp directory
 	tmpDir := t.TempDir()
@@ -118,39 +189,6 @@ func TestWritePendingLearning(t *testing.T) {
 	}
 	if readEdge.Timestamp != edge.Timestamp {
 		t.Errorf("Timestamp = %v, want %v", readEdge.Timestamp, edge.Timestamp)
-	}
-}
-
-func TestOutputJSON(t *testing.T) {
-	// Capture stdout
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	testData := map[string]string{
-		"decision": "block",
-		"reason":   "test reason",
-	}
-
-	outputJSON(testData)
-
-	w.Close()
-	os.Stdout = old
-
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	output := buf.String()
-
-	var result map[string]string
-	if err := json.Unmarshal([]byte(output), &result); err != nil {
-		t.Fatalf("outputJSON produced invalid JSON: %v", err)
-	}
-
-	if result["decision"] != "block" {
-		t.Errorf("decision = %v, want block", result["decision"])
-	}
-	if result["reason"] != "test reason" {
-		t.Errorf("reason = %v, want test reason", result["reason"])
 	}
 }
 
@@ -458,91 +496,65 @@ func TestGetAgentDirectories_Consistency(t *testing.T) {
 }
 
 // =============================================================================
-// outputWarning Tests
+// buildWarningResponse Tests
 // =============================================================================
 
-func TestOutputWarning_JSONSchema(t *testing.T) {
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	outputWarning("test.py", 2)
-	w.Close()
-	os.Stdout = oldStdout
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	var result map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-		t.Fatalf("outputWarning produced invalid JSON: %v\nOutput: %s", err, buf.String())
-	}
-	hookOutput, ok := result["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Expected hookSpecificOutput in JSON")
-	}
-	if hookOutput["hookEventName"] != "PostToolUse" {
-		t.Errorf("Expected hookEventName 'PostToolUse', got: %v", hookOutput["hookEventName"])
-	}
-	if _, ok := hookOutput["additionalContext"].(string); !ok {
-		t.Error("Expected additionalContext string in hookSpecificOutput")
-	}
-}
+func TestBuildWarningResponse_Structure(t *testing.T) {
+	resp := buildWarningResponse("test.py", 2, "", "")
 
-func TestOutputWarning_EscalationGuidance(t *testing.T) {
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-	outputWarning("main.go", 2)
-	w.Close()
-	os.Stdout = oldStdout
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	var result map[string]interface{}
-	json.Unmarshal(buf.Bytes(), &result)
-	hookOutput := result["hookSpecificOutput"].(map[string]interface{})
-	context := hookOutput["additionalContext"].(string)
-	if !strings.Contains(context, "⚠️") {
+	if resp.HookSpecificOutput == nil {
+		t.Fatal("Expected non-nil HookSpecificOutput")
+	}
+
+	hookEventName, ok := resp.HookSpecificOutput["hookEventName"].(string)
+	if !ok || hookEventName != "PostToolUse" {
+		t.Errorf("Expected hookEventName 'PostToolUse', got: %v", hookEventName)
+	}
+
+	ctx, ok := resp.HookSpecificOutput["additionalContext"].(string)
+	if !ok {
+		t.Fatal("Expected additionalContext string")
+	}
+
+	if !strings.Contains(ctx, "⚠️") {
 		t.Error("Expected warning emoji in context")
 	}
-	if !strings.Contains(context, "main.go") {
+	if !strings.Contains(ctx, "test.py") {
 		t.Error("Expected file name in context")
 	}
-	if !strings.Contains(context, "2 failures") {
+	if !strings.Contains(ctx, "2 failures") {
 		t.Error("Expected failure count in context")
 	}
-	if !strings.Contains(context, "One more failure") {
+	if !strings.Contains(ctx, "One more failure") {
 		t.Error("Expected escalation guidance in context")
 	}
 }
 
-func TestOutputWarning_AdditionalContextFormat(t *testing.T) {
-	tests := []struct {
-		name  string
-		file  string
-		count int
-	}{
-		{"Python file", "test.py", 2},
-		{"Go file", "handler.go", 2},
-		{"Long path", "pkg/internal/api/handler.go", 2},
+func TestBuildWarningResponse_WithAttentionGate(t *testing.T) {
+	reminderMsg := "⏰ ROUTING REMINDER"
+	flushMsg := "📝 LEARNINGS ARCHIVED"
+
+	resp := buildWarningResponse("handler.go", 2, reminderMsg, flushMsg)
+
+	ctx, ok := resp.HookSpecificOutput["additionalContext"].(string)
+	if !ok {
+		t.Fatal("Expected additionalContext string")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oldStdout := os.Stdout
-			r, w, _ := os.Pipe()
-			os.Stdout = w
-			outputWarning(tt.file, tt.count)
-			w.Close()
-			os.Stdout = oldStdout
-			var buf bytes.Buffer
-			buf.ReadFrom(r)
-			var result map[string]interface{}
-			if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
-				t.Fatalf("Invalid JSON for %s: %v", tt.name, err)
-			}
-			hookOutput := result["hookSpecificOutput"].(map[string]interface{})
-			context := hookOutput["additionalContext"].(string)
-			if !strings.Contains(context, tt.file) {
-				t.Errorf("Expected file '%s' in context", tt.file)
-			}
-		})
+
+	// Verify warning message
+	if !strings.Contains(ctx, "⚠️") {
+		t.Error("Expected warning in context")
+	}
+	if !strings.Contains(ctx, "handler.go") {
+		t.Error("Expected file name in context")
+	}
+
+	// Verify attention-gate messages
+	if !strings.Contains(ctx, "ROUTING REMINDER") {
+		t.Error("Expected reminder message in context")
+	}
+	if !strings.Contains(ctx, "LEARNINGS ARCHIVED") {
+		t.Error("Expected flush message in context")
 	}
 }
 
@@ -616,5 +628,134 @@ func TestMain_CompositeKeyHandling_Extended(t *testing.T) {
 		if count != 2 {
 			t.Errorf("Expected count=2 for %s, got %d (composite key not separating)", errType, count)
 		}
+	}
+}
+
+// =============================================================================
+// buildCombinedResponse Tests
+// =============================================================================
+
+func TestBuildCombinedResponse_NoFailure(t *testing.T) {
+	resp := buildCombinedResponse(nil, "", "")
+
+	// Verify response structure
+	if resp.HookSpecificOutput == nil {
+		t.Fatal("Expected non-nil HookSpecificOutput")
+	}
+
+	hookEventName, ok := resp.HookSpecificOutput["hookEventName"].(string)
+	if !ok || hookEventName != "PostToolUse" {
+		t.Errorf("Expected hookEventName 'PostToolUse', got: %v", hookEventName)
+	}
+
+	// Verify no additionalContext when no messages provided
+	if ctx, exists := resp.HookSpecificOutput["additionalContext"]; exists {
+		t.Errorf("Expected no additionalContext, got: %v", ctx)
+	}
+}
+
+func TestBuildCombinedResponse_WithReminderOnly(t *testing.T) {
+	reminderMsg := "⏰ ROUTING REMINDER (10 tools): Check tier compliance"
+
+	resp := buildCombinedResponse(nil, reminderMsg, "")
+
+	ctx, ok := resp.HookSpecificOutput["additionalContext"].(string)
+	if !ok {
+		t.Fatal("Expected additionalContext string")
+	}
+
+	if !strings.Contains(ctx, "ROUTING REMINDER") {
+		t.Errorf("Expected reminder message in context, got: %s", ctx)
+	}
+
+	if !strings.Contains(ctx, "10 tools") {
+		t.Errorf("Expected tool count in context, got: %s", ctx)
+	}
+}
+
+func TestBuildCombinedResponse_WithFlushOnly(t *testing.T) {
+	flushMsg := "📝 LEARNINGS ARCHIVED: 3 sharp edges moved to memory/learnings/"
+
+	resp := buildCombinedResponse(nil, "", flushMsg)
+
+	ctx, ok := resp.HookSpecificOutput["additionalContext"].(string)
+	if !ok {
+		t.Fatal("Expected additionalContext string")
+	}
+
+	if !strings.Contains(ctx, "LEARNINGS ARCHIVED") {
+		t.Errorf("Expected flush message in context, got: %s", ctx)
+	}
+
+	if !strings.Contains(ctx, "3 sharp edges") {
+		t.Errorf("Expected learning count in context, got: %s", ctx)
+	}
+}
+
+func TestBuildCombinedResponse_WithReminderAndFlush(t *testing.T) {
+	reminderMsg := "⏰ ROUTING REMINDER (10 tools): Check tier compliance"
+	flushMsg := "📝 LEARNINGS ARCHIVED: 3 sharp edges moved to memory/learnings/"
+
+	resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
+
+	ctx, ok := resp.HookSpecificOutput["additionalContext"].(string)
+	if !ok {
+		t.Fatal("Expected additionalContext string")
+	}
+
+	// Verify both messages present
+	if !strings.Contains(ctx, "ROUTING REMINDER") {
+		t.Errorf("Expected reminder message in context, got: %s", ctx)
+	}
+
+	if !strings.Contains(ctx, "LEARNINGS ARCHIVED") {
+		t.Errorf("Expected flush message in context, got: %s", ctx)
+	}
+
+	// Verify proper separation (double newline)
+	if !strings.Contains(ctx, "\n\n") {
+		t.Errorf("Expected double newline separator between messages, got: %s", ctx)
+	}
+}
+
+func TestBuildCombinedResponse_JSONMarshaling(t *testing.T) {
+	reminderMsg := "Test reminder"
+	flushMsg := "Test flush"
+
+	resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
+
+	// Marshal to JSON
+	var buf bytes.Buffer
+	err := resp.Marshal(&buf)
+	if err != nil {
+		t.Fatalf("Marshal error: %v", err)
+	}
+
+	// Unmarshal and verify structure
+	var result map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		t.Fatalf("Invalid JSON: %v", err)
+	}
+
+	hookOutput, ok := result["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected hookSpecificOutput object")
+	}
+
+	if hookOutput["hookEventName"] != "PostToolUse" {
+		t.Errorf("Expected hookEventName 'PostToolUse', got: %v", hookOutput["hookEventName"])
+	}
+
+	ctx, ok := hookOutput["additionalContext"].(string)
+	if !ok {
+		t.Fatal("Expected additionalContext string")
+	}
+
+	if !strings.Contains(ctx, "Test reminder") {
+		t.Errorf("Expected reminder in context, got: %s", ctx)
+	}
+
+	if !strings.Contains(ctx, "Test flush") {
+		t.Errorf("Expected flush in context, got: %s", ctx)
 	}
 }

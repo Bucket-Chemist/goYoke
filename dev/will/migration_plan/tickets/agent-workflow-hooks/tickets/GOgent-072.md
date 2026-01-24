@@ -1,7 +1,7 @@
 ---
 id: GOgent-072
 title: Merge Attention-Gate into gogent-sharp-edge
-description: **Task**:
+description: Extend existing gogent-sharp-edge CLI with counter/reminder/flush logic
 status: pending
 time_estimate: 2h
 dependencies: ["GOgent-069", "GOgent-071"]
@@ -260,23 +260,23 @@ func TestBuildCombinedResponse_WithReminderAndFlush(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Logic merged into cmd/gogent-sharp-edge/main.go (NO new CLI created)
-- [ ] Counter uses config.GetToolCountAndIncrement()
-- [ ] Event parsing uses existing routing.ParsePostToolEvent() (NOT new parser)
-- [ ] Environment variable priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > CWD
-- [ ] Single PostToolUse handler (no hook conflict)
-- [ ] Sharp-edge logic preserved (failure detection, blocking)
-- [ ] Reminder injected every 10 tools (non-blocking)
-- [ ] Flush executed every 20 tools when learnings >= threshold (non-blocking)
-- [ ] Combined response merges sharp-edge + reminder + flush
-- [ ] Counter errors are non-fatal (warning to stderr, continue)
-- [ ] Flush errors are non-fatal (warning to stderr, continue)
-- [ ] getProjectDir() implements correct env var priority
-- [ ] HookResponse has SetDecision() method
-- [ ] HookResponse has GetDecision() method
-- [ ] Tests verify env var priority
-- [ ] Tests verify combined response building
-- [ ] `go build ./cmd/gogent-sharp-edge` succeeds
+- [x] Logic merged into cmd/gogent-sharp-edge/main.go (NO new CLI created)
+- [x] Counter uses config.GetToolCountAndIncrement()
+- [x] Event parsing uses existing routing.ParsePostToolEvent() (NOT new parser)
+- [x] Environment variable priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > CWD
+- [x] Single PostToolUse handler (no hook conflict)
+- [x] Sharp-edge logic preserved (failure detection, blocking)
+- [x] Reminder injected every 10 tools (non-blocking)
+- [x] Flush executed every 20 tools when learnings >= threshold (non-blocking)
+- [x] Combined response merges sharp-edge + reminder + flush
+- [x] Counter errors are non-fatal (warning to stderr, continue)
+- [x] Flush errors are non-fatal (warning to stderr, continue)
+- [x] getProjectDir() implements correct env var priority
+- [x] HookResponse has SetDecision() method
+- [x] HookResponse has GetDecision() method
+- [x] Tests verify env var priority
+- [x] Tests verify combined response building
+- [x] `go build ./cmd/gogent-sharp-edge` succeeds
 
 **Why This Matters**: Merging into single PostToolUse handler avoids hook configuration conflicts and maintains architectural simplicity. All PostToolUse behavior is now in one place.
 

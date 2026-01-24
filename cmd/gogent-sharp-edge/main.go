@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/memory"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
@@ -86,11 +88,53 @@ func main() {
 		return
 	}
 
+	// === NEW: ATTENTION-GATE LOGIC ===
+	// Increment tool counter (non-blocking on error)
+	toolCount, counterErr := config.GetToolCountAndIncrement()
+	if counterErr != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: counter error: %v\n", counterErr)
+		toolCount = 0 // Continue with count=0 on error
+	}
+
+	// Check reminder threshold
+	var reminderMsg string
+	if config.ShouldRemind(toolCount) {
+		summary := "See ~/.claude/routing-schema.json for tier mappings"
+		reminderMsg = session.GenerateRoutingReminder(toolCount, summary)
+	}
+
+	// Check flush threshold
+	var flushMsg string
+	if config.ShouldFlush(toolCount) {
+		shouldFlush, _, flushErr := session.ShouldFlushLearnings(projectDir)
+		if flushErr != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: flush check error: %v\n", flushErr)
+		} else if shouldFlush {
+			ctx, archiveErr := session.ArchivePendingLearnings(projectDir)
+			if archiveErr != nil {
+				fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: archive error: %v\n", archiveErr)
+			} else {
+				flushMsg = session.GenerateFlushNotification(ctx)
+			}
+		}
+	}
+
+	// === EXISTING: SHARP-EDGE LOGIC ===
 	// Detect failure
 	failure := routing.DetectFailure(event)
+
+	// If no failure detected and no attention-gate messages, pass through
 	if failure == nil {
-		// No failure detected, pass through
-		fmt.Println("{}")
+		if reminderMsg == "" && flushMsg == "" {
+			fmt.Println("{}")
+			return
+		}
+		// No failure but have attention-gate messages
+		resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
+		if err := resp.Marshal(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Println("{}")
+		}
 		return
 	}
 
@@ -103,7 +147,12 @@ func main() {
 	count, err := memory.GetFailureCount(failure.File, failure.ErrorType)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: Failed to get failure count: %v\n", err)
-		fmt.Println("{}")
+		// Still output attention-gate messages if present
+		resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
+		if err := resp.Marshal(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Println("{}")
+		}
 		return
 	}
 
@@ -163,6 +212,27 @@ func main() {
 		// Generate enhanced blocking response with pattern matching
 		resp := memory.GenerateBlockingResponse(patternEdge, index, count)
 
+		// Merge attention-gate messages into blocking response
+		if reminderMsg != "" || flushMsg != "" {
+			// Get existing additionalContext
+			existingContext := ""
+			if ctx, ok := resp.HookSpecificOutput["additionalContext"].(string); ok {
+				existingContext = ctx
+			}
+
+			var parts []string
+			if existingContext != "" {
+				parts = append(parts, existingContext)
+			}
+			if reminderMsg != "" {
+				parts = append(parts, reminderMsg)
+			}
+			if flushMsg != "" {
+				parts = append(parts, flushMsg)
+			}
+			resp.AddField("additionalContext", strings.Join(parts, "\n\n"))
+		}
+
 		// Marshal and output response
 		if err := resp.Marshal(os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
@@ -174,11 +244,26 @@ func main() {
 
 	// Check warning threshold (threshold - 1)
 	if count == threshold-1 {
-		outputWarning(failure.File, count)
+		// Output warning with attention-gate messages
+		resp := buildWarningResponse(failure.File, count, reminderMsg, flushMsg)
+		if err := resp.Marshal(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Println("{}")
+		}
 		return
 	}
 
-	// Below threshold, pass through
+	// Below threshold - combine with attention-gate messages if any
+	if reminderMsg != "" || flushMsg != "" {
+		resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
+		if err := resp.Marshal(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Println("{}")
+		}
+		return
+	}
+
+	// No messages at all, pass through
 	fmt.Println("{}")
 }
 
@@ -212,33 +297,73 @@ func writePendingLearning(projectDir string, edge session.SharpEdge) error {
 }
 
 
-// outputWarning returns a warning response at threshold-1
-func outputWarning(file string, count int) {
-	response := map[string]interface{}{
-		"hookSpecificOutput": map[string]interface{}{
-			"hookEventName": "PostToolUse",
-			"additionalContext": fmt.Sprintf(
-				"⚠️ WARNING: %d failures on '%s'. One more failure triggers sharp edge capture.",
-				count, file),
-		},
+// buildCombinedResponse merges sharp-edge failure info with attention-gate messages.
+func buildCombinedResponse(failure *routing.FailureInfo, reminderMsg, flushMsg string) *routing.HookResponse {
+	response := routing.NewPassResponse("PostToolUse")
+
+	// Build context parts
+	var contextParts []string
+
+	// Note: FailureInfo doesn't have a Context field, so we only include attention-gate messages
+
+	// Add reminder message
+	if reminderMsg != "" {
+		contextParts = append(contextParts, reminderMsg)
 	}
-	outputJSON(response)
+
+	// Add flush message
+	if flushMsg != "" {
+		contextParts = append(contextParts, flushMsg)
+	}
+
+	// Combine all contexts
+	if len(contextParts) > 0 {
+		response.AddField("additionalContext", strings.Join(contextParts, "\n\n"))
+	}
+
+	return response
 }
 
-// outputJSON marshals and prints a JSON response
-func outputJSON(v interface{}) {
-	data, _ := json.Marshal(v)
-	fmt.Println(string(data))
+// buildWarningResponse creates a warning response at threshold-1, merged with attention-gate messages.
+func buildWarningResponse(file string, count int, reminderMsg, flushMsg string) *routing.HookResponse {
+	response := routing.NewPassResponse("PostToolUse")
+
+	var contextParts []string
+
+	// Add warning message
+	warningMsg := fmt.Sprintf(
+		"⚠️ WARNING: %d failures on '%s'. One more failure triggers sharp edge capture.",
+		count, file,
+	)
+	contextParts = append(contextParts, warningMsg)
+
+	// Add reminder message
+	if reminderMsg != "" {
+		contextParts = append(contextParts, reminderMsg)
+	}
+
+	// Add flush message
+	if flushMsg != "" {
+		contextParts = append(contextParts, flushMsg)
+	}
+
+	response.AddField("additionalContext", strings.Join(contextParts, "\n\n"))
+
+	return response
 }
 
-// getProjectDir returns the project directory from environment or cwd
+// getProjectDir returns the project directory from environment or cwd.
+// Priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > CWD
 func getProjectDir() string {
+	// 1. GOgent-specific override (highest priority)
 	if dir := os.Getenv("GOGENT_PROJECT_DIR"); dir != "" {
 		return dir
 	}
+	// 2. Claude Code standard
 	if dir := os.Getenv("CLAUDE_PROJECT_DIR"); dir != "" {
 		return dir
 	}
+	// 3. Current working directory (fallback)
 	dir, _ := os.Getwd()
 	return dir
 }
