@@ -605,3 +605,95 @@ func TestFormatWeeklyIntentSummary_LimitTop5Preferences(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatWeeklyIntentSummary_HonorRateDisplay(t *testing.T) {
+	summary := WeeklyIntentSummary{
+		WeekStart:    time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:      time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents: 10,
+		SessionCount: 3,
+		CategoryDistribution: map[string]int{
+			"routing": 5,
+			"tooling": 3,
+			"workflow": 2,
+		},
+		CategoryPercentages: map[string]float64{
+			"routing": 50.0,
+			"tooling": 30.0,
+			"workflow": 20.0,
+		},
+		TotalAnalyzed: 10,
+		TotalHonored:  8,
+		HonorRatePercent: 80.0,
+		HonorRateByCategory: map[string]float64{
+			"routing": 100.0,
+			"tooling": 66.7,
+			"workflow": 50.0,
+		},
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Check honor rate section
+	if !strings.Contains(markdown, "**Honor Rate:**") {
+		t.Error("Missing honor rate section")
+	}
+
+	if !strings.Contains(markdown, "Overall: 80% (8/10)") {
+		t.Error("Missing overall honor rate")
+	}
+
+	// Check per-category honor rates
+	if !strings.Contains(markdown, "routing: 100%") {
+		t.Error("Missing routing honor rate")
+	}
+	if !strings.Contains(markdown, "tooling: 67%") {
+		t.Error("Missing tooling honor rate")
+	}
+	if !strings.Contains(markdown, "workflow: 50% ⚠️") {
+		t.Error("Missing workflow honor rate with warning")
+	}
+}
+
+func TestFormatWeeklyIntentSummary_LowHonorRateAlert(t *testing.T) {
+	summary := WeeklyIntentSummary{
+		WeekStart:        time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:          time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents:     10,
+		SessionCount:     2,
+		TotalAnalyzed:    10,
+		TotalHonored:     5,
+		HonorRatePercent: 50.0,
+		CategoryDistribution: map[string]int{"test": 10},
+		CategoryPercentages:  map[string]float64{"test": 100.0},
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Check for low honor rate alert
+	if !strings.Contains(markdown, "**Low Honor Rate Alert:**") {
+		t.Error("Missing low honor rate alert for 50% rate")
+	}
+	if !strings.Contains(markdown, "below 70%") {
+		t.Error("Missing threshold mention in alert")
+	}
+}
+
+func TestFormatWeeklyIntentSummary_NoHonorRateWhenZeroAnalyzed(t *testing.T) {
+	summary := WeeklyIntentSummary{
+		WeekStart:            time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		WeekEnd:              time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC),
+		TotalIntents:         10,
+		SessionCount:         2,
+		TotalAnalyzed:        0, // No analysis done
+		CategoryDistribution: map[string]int{"general": 10},
+		CategoryPercentages:  map[string]float64{"general": 100.0},
+	}
+
+	markdown := FormatWeeklyIntentSummary(summary)
+
+	// Should NOT show honor rate section
+	if strings.Contains(markdown, "**Honor Rate:**") {
+		t.Error("Should not show honor rate section when TotalAnalyzed is 0")
+	}
+}

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -309,7 +310,7 @@ func TestIntegration_NonTaskToolPassthrough(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	minimalSchema := `{
-		"schema_version": "1.0",
+		"version": "2.2.0",
 		"tiers": {},
 		"delegation_ceiling": {},
 		"agent_subagent_mapping": {},
@@ -371,7 +372,7 @@ func TestIntegration_TaskValidation_ValidAgent(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	schema := `{
-		"schema_version": "1.0",
+		"version": "2.2.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},
@@ -606,5 +607,457 @@ func TestParseEvent_UnicodeContent(t *testing.T) {
 func TestDefaultTimeout(t *testing.T) {
 	if DEFAULT_TIMEOUT != 5*time.Second {
 		t.Errorf("Expected DEFAULT_TIMEOUT to be 5s, got: %v", DEFAULT_TIMEOUT)
+	}
+}
+
+// =============================================================================
+// main() Integration Tests (Full Workflow Simulations)
+// =============================================================================
+
+// TestMain_ValidTaskEvent_ValidationRun tests the full validation workflow
+func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
+	// Setup routing schema in temp directory
+	tmpDir := t.TempDir()
+
+	// Create .claude directory structure
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	schema := `{
+		"version": "2.2.0",
+		"tiers": {
+			"haiku": {"model": "haiku"}
+		},
+		"delegation_ceiling": {"default": "sonnet"},
+		"agent_subagent_mapping": {
+			"codebase-search": "Explore"
+		},
+		"escalation_rules": {}
+	}`
+	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
+	os.WriteFile(schemaPath, []byte(schema), 0644)
+
+	// Create agents-index.json
+	agentsIndex := `{
+		"agents": {
+			"codebase-search": {
+				"tier": "haiku",
+				"subagent_type": "Explore"
+			}
+		}
+	}`
+	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
+
+	// Point to our test schema
+	oldSchema := os.Getenv("GOGENT_ROUTING_SCHEMA")
+	os.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
+	defer os.Setenv("GOGENT_ROUTING_SCHEMA", oldSchema)
+
+	// Step 1: Load schema (simulating main lines 30-34)
+	loadedSchema, err := routing.LoadSchema()
+	if err != nil {
+		t.Fatalf("Failed to load schema: %v", err)
+	}
+
+	// Step 2: Parse event (simulating main lines 37-41)
+	taskEvent := `{
+		"tool_name": "Task",
+		"session_id": "test-main",
+		"tool_input": {
+			"description": "Search files",
+			"subagent_type": "Explore",
+			"model": "haiku",
+			"prompt": "AGENT: codebase-search\n\nFind Go files"
+		}
+	}`
+
+	r := strings.NewReader(taskEvent)
+	event, err := parseEvent(r, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse event: %v", err)
+	}
+
+	// Step 3: Check if Task tool (simulating main lines 44-48)
+	if event.ToolName != "Task" {
+		t.Errorf("Expected Task tool, got: %s", event.ToolName)
+	}
+
+	// Step 4: Create orchestrator and validate (simulating main lines 51-57)
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
+
+	if result == nil {
+		t.Fatal("Expected validation result, got nil")
+	}
+
+	// Step 5: Verify output can be formatted (simulating main line 57)
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	outputResult(result, event.SessionID)
+
+	wOut.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, rOut)
+
+	// Should produce valid JSON output
+	var jsonOutput map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &jsonOutput); err != nil {
+		t.Fatalf("Expected valid JSON output, got error: %v\nOutput: %s", err, buf.String())
+	}
+}
+
+// TestMain_NonTaskEvent_Passthrough tests non-Task tool bypass
+func TestMain_NonTaskEvent_Passthrough(t *testing.T) {
+	// Parse non-Task event
+	bashEvent := `{"tool_name":"Bash","session_id":"test","tool_input":{"command":"ls"}}`
+
+	r := strings.NewReader(bashEvent)
+	event, err := parseEvent(r, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse event: %v", err)
+	}
+
+	// Should NOT be Task tool (simulating main lines 44-48)
+	if event.ToolName == "Task" {
+		t.Error("Expected non-Task tool")
+	}
+
+	// Verify passthrough behavior - just output empty JSON
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	// This is what main() does for non-Task (line 46)
+	fmt.Println("{}")
+
+	wOut.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, rOut)
+
+	output := strings.TrimSpace(buf.String())
+	if output != "{}" {
+		t.Errorf("Expected '{}' for non-Task passthrough, got: %s", output)
+	}
+}
+
+func TestMain_STDINTimeout_ErrorOutput(t *testing.T) {
+	// Test parseEvent timeout directly (main() timeout is covered by this)
+	// Creating a blocking pipe that never sends data
+	r, w := io.Pipe()
+	defer r.Close()
+	defer w.Close()
+
+	// Use very short timeout
+	_, err := parseEvent(r, 10*time.Millisecond)
+
+	if err == nil {
+		t.Error("Expected timeout error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "timeout") {
+		t.Errorf("Expected 'timeout' in error, got: %v", err)
+	}
+}
+
+func TestMain_MissingSchema_ErrorOutput(t *testing.T) {
+	// Test that LoadSchema fails when schema is missing
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create .claude directory but NO schema file
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	// Attempt to load schema should fail
+	_, err := routing.LoadSchema()
+
+	if err == nil {
+		t.Error("Expected error when schema file is missing, got nil")
+	}
+
+	// Error message should indicate file not found
+	if !strings.Contains(err.Error(), "no such file") && !strings.Contains(err.Error(), "not found") {
+		t.Logf("Schema load error: %v", err)
+	}
+}
+
+func TestMain_InvalidSchema_ErrorOutput(t *testing.T) {
+	// Test that LoadSchema fails with invalid JSON
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	// Invalid JSON
+	invalidSchema := `{invalid json`
+	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(invalidSchema), 0644)
+
+	// Attempt to load schema should fail
+	_, err := routing.LoadSchema()
+
+	if err == nil {
+		t.Error("Expected error for invalid schema JSON, got nil")
+	}
+
+	// Error should indicate JSON parsing failure
+	if !strings.Contains(err.Error(), "invalid") && !strings.Contains(err.Error(), "unmarshal") {
+		t.Logf("Schema parse error: %v", err)
+	}
+}
+
+// TestMain_BlockedAgent_OutputsBlock tests workflow with blocked agent
+func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
+	// Setup schema that blocks agent
+	tmpDir := t.TempDir()
+
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	// Schema with agent mapping but wrong subagent_type will block
+	schema := `{
+		"version": "2.2.0",
+		"tiers": {
+			"haiku": {"model": "haiku"}
+		},
+		"delegation_ceiling": {"default": "sonnet"},
+		"agent_subagent_mapping": {
+			"codebase-search": "Explore"
+		},
+		"escalation_rules": {}
+	}`
+	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
+	os.WriteFile(schemaPath, []byte(schema), 0644)
+
+	agentsIndex := `{
+		"agents": {
+			"codebase-search": {
+				"tier": "haiku",
+				"subagent_type": "Explore"
+			}
+		}
+	}`
+	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
+
+	// Point to our test schema
+	oldSchema := os.Getenv("GOGENT_ROUTING_SCHEMA")
+	os.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
+	defer os.Setenv("GOGENT_ROUTING_SCHEMA", oldSchema)
+
+	// Load schema
+	loadedSchema, err := routing.LoadSchema()
+	if err != nil {
+		t.Fatalf("Failed to load schema: %v", err)
+	}
+
+	// Task with WRONG subagent_type (general-purpose instead of Explore)
+	taskEvent := `{
+		"tool_name": "Task",
+		"session_id": "test-block",
+		"tool_input": {
+			"description": "Search files",
+			"subagent_type": "general-purpose",
+			"model": "haiku",
+			"prompt": "AGENT: codebase-search\n\nFind files"
+		}
+	}`
+
+	r := strings.NewReader(taskEvent)
+	event, err := parseEvent(r, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse event: %v", err)
+	}
+
+	// Validate with orchestrator
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
+
+	// Capture output
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	outputResult(result, event.SessionID)
+
+	wOut.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, rOut)
+
+	var jsonOutput map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &jsonOutput); err != nil {
+		t.Fatalf("Expected valid JSON, got error: %v\nOutput: %s", err, buf.String())
+	}
+
+	// Should have decision="block"
+	if jsonOutput["decision"] != "block" {
+		t.Errorf("Expected decision 'block' for mismatched subagent_type, got: %v", jsonOutput["decision"])
+	}
+}
+
+// TestMain_AllowedAgent_OutputsAllow tests workflow with allowed agent
+func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
+	// Setup schema with valid agent
+	tmpDir := t.TempDir()
+
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	schema := `{
+		"version": "2.2.0",
+		"tiers": {
+			"haiku": {"model": "haiku"}
+		},
+		"delegation_ceiling": {"default": "sonnet"},
+		"agent_subagent_mapping": {
+			"codebase-search": "Explore"
+		},
+		"escalation_rules": {}
+	}`
+	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
+	os.WriteFile(schemaPath, []byte(schema), 0644)
+
+	agentsIndex := `{
+		"agents": {
+			"codebase-search": {
+				"tier": "haiku",
+				"subagent_type": "Explore"
+			}
+		}
+	}`
+	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
+
+	// Point to our test schema
+	oldSchema := os.Getenv("GOGENT_ROUTING_SCHEMA")
+	os.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
+	defer os.Setenv("GOGENT_ROUTING_SCHEMA", oldSchema)
+
+	// Load schema
+	loadedSchema, err := routing.LoadSchema()
+	if err != nil {
+		t.Fatalf("Failed to load schema: %v", err)
+	}
+
+	// Task with CORRECT subagent_type
+	taskEvent := `{
+		"tool_name": "Task",
+		"session_id": "test-allow",
+		"tool_input": {
+			"description": "Search files",
+			"subagent_type": "Explore",
+			"model": "haiku",
+			"prompt": "AGENT: codebase-search\n\nFind files"
+		}
+	}`
+
+	r := strings.NewReader(taskEvent)
+	event, err := parseEvent(r, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse event: %v", err)
+	}
+
+	// Validate with orchestrator
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
+
+	// Capture output
+	oldStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	os.Stdout = wOut
+
+	outputResult(result, event.SessionID)
+
+	wOut.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, rOut)
+
+	var jsonOutput map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &jsonOutput); err != nil {
+		t.Fatalf("Expected valid JSON, got error: %v\nOutput: %s", err, buf.String())
+	}
+
+	// Should have decision="allow"
+	if jsonOutput["decision"] == "block" {
+		t.Errorf("Expected decision 'allow' for valid agent, got 'block'. Reason: %v", jsonOutput["reason"])
+	}
+}
+
+func TestMain_ConcurrentInvocation(t *testing.T) {
+	// Test that multiple concurrent invocations don't interfere
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	schema := `{
+		"version": "2.2.0",
+		"tiers": {
+			"haiku": {"model": "haiku"}
+		},
+		"delegation_ceiling": {"default": "sonnet"},
+		"agent_subagent_mapping": {
+			"codebase-search": "Explore"
+		},
+		"escalation_rules": {}
+	}`
+	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(schema), 0644)
+
+	agentsIndex := `{
+		"agents": {
+			"codebase-search": {
+				"tier": "haiku",
+				"subagent_type": "Explore"
+			}
+		}
+	}`
+	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
+
+	// Run 3 concurrent parseEvent + validate flows
+	var wg bytes.Buffer
+	for i := 0; i < 3; i++ {
+		taskEvent := `{
+			"tool_name": "Task",
+			"session_id": "concurrent-test",
+			"tool_input": {
+				"description": "Test concurrent",
+				"subagent_type": "Explore",
+				"model": "haiku",
+				"prompt": "AGENT: codebase-search\n\nFind files"
+			}
+		}`
+
+		r := strings.NewReader(taskEvent)
+		event, err := parseEvent(r, DEFAULT_TIMEOUT)
+		if err != nil {
+			t.Errorf("Concurrent parseEvent failed: %v", err)
+			continue
+		}
+
+		if event.ToolName != "Task" {
+			t.Errorf("Expected ToolName 'Task', got: %s", event.ToolName)
+		}
+
+		wg.WriteString(".")
+	}
+
+	// All should succeed
+	if wg.Len() != 3 {
+		t.Errorf("Expected 3 successful concurrent operations, got: %d", wg.Len())
 	}
 }

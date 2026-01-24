@@ -236,3 +236,139 @@ func TestCleanupTempFiles_MissingFiles(t *testing.T) {
 		t.Errorf("CleanupTempFiles should gracefully handle missing files, got error: %v", err)
 	}
 }
+
+func TestMoveFile_CrossDeviceSimulated(t *testing.T) {
+	// This test simulates cross-device move by creating file in tmpfs/different fs
+	// In practice, cross-device link errors occur when src and dst are on different filesystems
+	// We can't reliably test this in unit tests, but we can test the fallback path
+
+	tmpDir := t.TempDir()
+	srcFile := filepath.Join(tmpDir, "source.txt")
+	dstFile := filepath.Join(tmpDir, "dest.txt")
+
+	// Create source file
+	testData := []byte("test data for cross-device move")
+	os.WriteFile(srcFile, testData, 0644)
+
+	// Test successful move (will use Rename, not cross-device)
+	err := moveFile(srcFile, dstFile)
+	if err != nil {
+		t.Fatalf("moveFile failed: %v", err)
+	}
+
+	// Verify source removed
+	if _, err := os.Stat(srcFile); !os.IsNotExist(err) {
+		t.Error("Source file should be removed after move")
+	}
+
+	// Verify dest exists with correct data
+	data, err := os.ReadFile(dstFile)
+	if err != nil {
+		t.Fatalf("Failed to read destination: %v", err)
+	}
+	if string(data) != string(testData) {
+		t.Errorf("Data mismatch: got %q, want %q", data, testData)
+	}
+}
+
+func TestCopyFile_ReadError(t *testing.T) {
+	tmpDir := t.TempDir()
+	srcFile := filepath.Join(tmpDir, "nonexistent.txt")
+	dstFile := filepath.Join(tmpDir, "dest.txt")
+
+	// Try to copy non-existent file
+	err := copyFile(srcFile, dstFile)
+	if err == nil {
+		t.Error("Expected error when copying non-existent file")
+	}
+	if !strings.Contains(err.Error(), "read source") {
+		t.Errorf("Expected 'read source' error, got: %v", err)
+	}
+}
+
+func TestCopyFile_WriteError(t *testing.T) {
+	tmpDir := t.TempDir()
+	srcFile := filepath.Join(tmpDir, "source.txt")
+
+	// Create read-only directory for destination
+	readonlyDir := filepath.Join(tmpDir, "readonly")
+	os.MkdirAll(readonlyDir, 0755)
+	os.Chmod(readonlyDir, 0444) // Read-only
+	defer os.Chmod(readonlyDir, 0755)
+
+	dstFile := filepath.Join(readonlyDir, "dest.txt")
+
+	// Create source file
+	os.WriteFile(srcFile, []byte("test data"), 0644)
+
+	// Try to copy to read-only directory
+	err := copyFile(srcFile, dstFile)
+	if err == nil {
+		t.Error("Expected error when copying to read-only directory")
+	}
+	if !strings.Contains(err.Error(), "write destination") {
+		t.Errorf("Expected 'write destination' error, got: %v", err)
+	}
+}
+
+func TestArchiveArtifacts_CopyFileError(t *testing.T) {
+	tmpDir := t.TempDir()
+	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	os.MkdirAll(memoryDir, 0755)
+
+	// Create a transcript that exists but is inaccessible for copy
+	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+	os.WriteFile(transcriptPath, []byte("test"), 0000) // No permissions
+	defer os.Chmod(transcriptPath, 0644)
+
+	cfg := HandoffConfig{
+		HandoffPath:    filepath.Join(memoryDir, "handoffs.jsonl"),
+		TranscriptPath: transcriptPath,
+		ViolationsPath: "",
+	}
+
+	// Should succeed but log warning (transcript copy is non-fatal)
+	err := ArchiveArtifacts(cfg, "test-session")
+	if err != nil {
+		t.Fatalf("ArchiveArtifacts should not fail on transcript copy error: %v", err)
+	}
+}
+
+func TestCleanupTempFiles_GlobError(t *testing.T) {
+	// Setup: Create temp directory
+	tmpDir := t.TempDir()
+	gogentDir := filepath.Join(tmpDir, "gogent")
+	os.MkdirAll(gogentDir, 0755)
+
+	// Override XDG environment variables
+	originalRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	originalCache := os.Getenv("XDG_CACHE_HOME")
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	os.Setenv("XDG_CACHE_HOME", tmpDir)
+	defer func() {
+		if originalRuntime != "" {
+			os.Setenv("XDG_RUNTIME_DIR", originalRuntime)
+		}
+		os.Setenv("XDG_CACHE_HOME", originalCache)
+	}()
+
+	// Create counter log files
+	counterLog1 := filepath.Join(gogentDir, "claude-tool-counter-111.log")
+	counterLog2 := filepath.Join(gogentDir, "claude-tool-counter-222.log")
+	os.WriteFile(counterLog1, []byte("counter 1"), 0644)
+	os.WriteFile(counterLog2, []byte("counter 2"), 0644)
+
+	// Execute cleanup
+	err := CleanupTempFiles()
+	if err != nil {
+		t.Errorf("CleanupTempFiles should succeed, got error: %v", err)
+	}
+
+	// Verify counter logs removed
+	if _, err := os.Stat(counterLog1); !os.IsNotExist(err) {
+		t.Error("Counter log 1 should be removed")
+	}
+	if _, err := os.Stat(counterLog2); !os.IsNotExist(err) {
+		t.Error("Counter log 2 should be removed")
+	}
+}

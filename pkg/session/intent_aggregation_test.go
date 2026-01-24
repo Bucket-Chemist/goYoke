@@ -410,3 +410,87 @@ func TestWeeklyIntentSummary_Integration(t *testing.T) {
 		}
 	}
 }
+
+func TestAggregateWeeklyIntents_WithHonorTracking(t *testing.T) {
+	weekStart := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+	weekEnd := time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC)
+
+	honoredTrue := true
+	honoredFalse := false
+
+	intents := []UserIntent{
+		{Timestamp: weekStart.Unix() + 1000, Category: "routing", Response: "Use Sonnet", Honored: &honoredTrue},
+		{Timestamp: weekStart.Unix() + 2000, Category: "routing", Response: "Use Haiku", Honored: &honoredFalse},
+		{Timestamp: weekStart.Unix() + 3000, Category: "tooling", Response: "Use Edit", Honored: &honoredTrue},
+		{Timestamp: weekStart.Unix() + 4000, Category: "tooling", Response: "Avoid sed", Honored: &honoredTrue},
+		{Timestamp: weekStart.Unix() + 5000, Category: "workflow", Response: "Run tests", Honored: &honoredFalse},
+		{Timestamp: weekStart.Unix() + 6000, Category: "general", Response: "General preference"}, // No Honored field
+	}
+
+	summary := AggregateWeeklyIntents(intents, weekStart, weekEnd)
+
+	// Verify overall honor rate
+	if summary.TotalAnalyzed != 5 {
+		t.Errorf("Expected 5 analyzed intents (those with Honored field), got: %d", summary.TotalAnalyzed)
+	}
+
+	if summary.TotalHonored != 3 {
+		t.Errorf("Expected 3 honored intents, got: %d", summary.TotalHonored)
+	}
+
+	expectedRate := 60.0 // 3/5 * 100
+	if summary.HonorRatePercent != expectedRate {
+		t.Errorf("Expected honor rate %.1f%%, got: %.1f%%", expectedRate, summary.HonorRatePercent)
+	}
+
+	// Verify per-category rates
+	// routing: 1/2 = 50%
+	if rate, ok := summary.HonorRateByCategory["routing"]; !ok {
+		t.Error("Missing routing honor rate")
+	} else if rate != 50.0 {
+		t.Errorf("Expected routing honor rate 50%%, got: %.1f%%", rate)
+	}
+
+	// tooling: 2/2 = 100%
+	if rate, ok := summary.HonorRateByCategory["tooling"]; !ok {
+		t.Error("Missing tooling honor rate")
+	} else if rate != 100.0 {
+		t.Errorf("Expected tooling honor rate 100%%, got: %.1f%%", rate)
+	}
+
+	// workflow: 0/1 = 0%
+	if rate, ok := summary.HonorRateByCategory["workflow"]; !ok {
+		t.Error("Missing workflow honor rate")
+	} else if rate != 0.0 {
+		t.Errorf("Expected workflow honor rate 0%%, got: %.1f%%", rate)
+	}
+
+	// general should not have honor rate (no Honored field)
+	if _, ok := summary.HonorRateByCategory["general"]; ok {
+		t.Error("Should not have honor rate for category with no Honored values")
+	}
+}
+
+func TestAggregateWeeklyIntents_ZeroHonorRate(t *testing.T) {
+	weekStart := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+	weekEnd := time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC)
+
+	honoredFalse := false
+
+	intents := []UserIntent{
+		{Timestamp: weekStart.Unix() + 1000, Category: "routing", Response: "Test1", Honored: &honoredFalse},
+		{Timestamp: weekStart.Unix() + 2000, Category: "routing", Response: "Test2", Honored: &honoredFalse},
+	}
+
+	summary := AggregateWeeklyIntents(intents, weekStart, weekEnd)
+
+	if summary.TotalAnalyzed != 2 {
+		t.Errorf("Expected 2 analyzed, got: %d", summary.TotalAnalyzed)
+	}
+	if summary.TotalHonored != 0 {
+		t.Errorf("Expected 0 honored, got: %d", summary.TotalHonored)
+	}
+	if summary.HonorRatePercent != 0.0 {
+		t.Errorf("Expected 0%% honor rate, got: %.1f%%", summary.HonorRatePercent)
+	}
+}

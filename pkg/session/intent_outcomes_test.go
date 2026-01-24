@@ -1,6 +1,7 @@
 package session
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -51,6 +52,62 @@ func TestAnalyzeRoutingIntent_NoModelMentioned(t *testing.T) {
 	}
 	if outcome.Confidence != "low" {
 		t.Errorf("Expected confidence=low, got %s", outcome.Confidence)
+	}
+}
+
+func TestAnalyzeRoutingIntent_Opus(t *testing.T) {
+	intent := UserIntent{
+		Category: "routing",
+		Response: "Use Opus for this complex task",
+	}
+
+	// Test: Opus was used
+	actions := SessionActions{
+		ModelsUsed: []string{"opus", "sonnet"},
+	}
+	outcome := analyzeRoutingIntent(intent, actions)
+	if !outcome.Honored {
+		t.Errorf("Expected honored=true when opus was used, got false")
+	}
+	if outcome.Confidence != "high" {
+		t.Errorf("Expected confidence=high, got %s", outcome.Confidence)
+	}
+
+	// Test: Opus was NOT used
+	actions = SessionActions{
+		ModelsUsed: []string{"sonnet", "haiku"},
+	}
+	outcome = analyzeRoutingIntent(intent, actions)
+	if outcome.Honored {
+		t.Errorf("Expected honored=false when opus was not used, got true")
+	}
+	if outcome.Confidence != "high" {
+		t.Errorf("Expected confidence=high, got %s", outcome.Confidence)
+	}
+}
+
+func TestAnalyzeRoutingIntent_Haiku(t *testing.T) {
+	intent := UserIntent{
+		Category: "routing",
+		Response: "Use haiku for simple search",
+	}
+
+	// Test: Haiku was used
+	actions := SessionActions{
+		ModelsUsed: []string{"haiku"},
+	}
+	outcome := analyzeRoutingIntent(intent, actions)
+	if !outcome.Honored {
+		t.Errorf("Expected honored=true when haiku was used, got false")
+	}
+
+	// Test: Haiku was NOT used
+	actions = SessionActions{
+		ModelsUsed: []string{"sonnet"},
+	}
+	outcome = analyzeRoutingIntent(intent, actions)
+	if outcome.Honored {
+		t.Errorf("Expected honored=false when haiku was not used, got true")
 	}
 }
 
@@ -368,5 +425,86 @@ func TestAnalyzeIntentOutcomes_IntegrationScenario(t *testing.T) {
 	}
 	if outcomes[3].Confidence != "high" {
 		t.Errorf("Approval outcome should have high confidence, got %s", outcomes[3].Confidence)
+	}
+}
+
+func TestAnalyzeOneIntent_DomainCategory(t *testing.T) {
+	intent := UserIntent{
+		Category: "domain",
+		Response: "Use pytest for testing",
+	}
+
+	actions := SessionActions{}
+
+	outcome := analyzeOneIntent(intent, actions)
+	if !outcome.Honored {
+		t.Errorf("Expected honored=true for domain category, got false")
+	}
+	if outcome.Confidence != "low" {
+		t.Errorf("Expected confidence=low for domain category, got %s", outcome.Confidence)
+	}
+	if outcome.Note != "Category not trackable for outcome" {
+		t.Errorf("Expected specific note for domain category, got: %s", outcome.Note)
+	}
+}
+
+func TestAnalyzeOneIntent_StyleCategory(t *testing.T) {
+	intent := UserIntent{
+		Category: "style",
+		Response: "Use camelCase",
+	}
+
+	actions := SessionActions{}
+
+	outcome := analyzeOneIntent(intent, actions)
+	if !outcome.Honored {
+		t.Errorf("Expected honored=true for style category, got false")
+	}
+	if outcome.Confidence != "low" {
+		t.Errorf("Expected confidence=low for style category, got %s", outcome.Confidence)
+	}
+}
+
+func TestAnalyzeToolingIntent_NoMatchingPattern(t *testing.T) {
+	intent := UserIntent{
+		Category: "tooling",
+		Response: "Some unrecognized tooling preference",
+	}
+
+	actions := SessionActions{
+		ToolsUsed: []string{"Read"},
+	}
+
+	outcome := analyzeToolingIntent(intent, actions)
+	if !outcome.Honored {
+		t.Errorf("Expected honored=true for unrecognized pattern, got false")
+	}
+	if outcome.Confidence != "low" {
+		t.Errorf("Expected confidence=low for unrecognized pattern, got %s", outcome.Confidence)
+	}
+	if !strings.Contains(outcome.Note, "pattern not matched") {
+		t.Errorf("Expected 'pattern not matched' in note, got: %s", outcome.Note)
+	}
+}
+
+func TestAnalyzeWorkflowIntent_NoMatchingPattern(t *testing.T) {
+	intent := UserIntent{
+		Category: "workflow",
+		Response: "Some unrecognized workflow preference",
+	}
+
+	actions := SessionActions{
+		CommandsRun: []string{"git status"},
+	}
+
+	outcome := analyzeWorkflowIntent(intent, actions)
+	if !outcome.Honored {
+		t.Errorf("Expected honored=true for unrecognized pattern, got false")
+	}
+	if outcome.Confidence != "low" {
+		t.Errorf("Expected confidence=low for unrecognized pattern, got %s", outcome.Confidence)
+	}
+	if !strings.Contains(outcome.Note, "pattern not matched") {
+		t.Errorf("Expected 'pattern not matched' in note, got: %s", outcome.Note)
 	}
 }

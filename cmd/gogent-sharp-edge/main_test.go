@@ -390,3 +390,231 @@ func TestSchemaCompliance(t *testing.T) {
 		t.Errorf("consecutive_failures = %v, want %v", int(cf), edge.ConsecutiveFailures)
 	}
 }
+
+// =============================================================================
+// getAgentDirectories Tests
+// =============================================================================
+
+func TestGetAgentDirectories_MultipleAgents(t *testing.T) {
+	dirs := getAgentDirectories()
+	if len(dirs) == 0 {
+		t.Fatal("Expected multiple agent directories, got empty list")
+	}
+	expectedAgents := []string{"python-pro", "go-pro", "r-pro", "codebase-search", "orchestrator", "architect"}
+	for _, agent := range expectedAgents {
+		found := false
+		for _, dir := range dirs {
+			if strings.Contains(dir, agent) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected agent '%s' in directories, but not found", agent)
+		}
+	}
+}
+
+func TestGetAgentDirectories_PathStructure(t *testing.T) {
+	dirs := getAgentDirectories()
+	for _, dir := range dirs {
+		if !strings.Contains(dir, ".claude/agents/") {
+			t.Errorf("Expected path to contain '.claude/agents/', got: %s", dir)
+		}
+	}
+}
+
+func TestGetAgentDirectories_HomeFallback(t *testing.T) {
+	oldHome := os.Getenv("HOME")
+	oldUser := os.Getenv("USER")
+	defer func() {
+		os.Setenv("HOME", oldHome)
+		os.Setenv("USER", oldUser)
+	}()
+	os.Unsetenv("HOME")
+	os.Setenv("USER", "testuser")
+	dirs := getAgentDirectories()
+	if len(dirs) == 0 {
+		t.Fatal("Expected directories even with HOME unset")
+	}
+	for _, dir := range dirs {
+		if !strings.Contains(dir, "/home/testuser/") {
+			t.Errorf("Expected fallback to /home/testuser, got: %s", dir)
+		}
+	}
+}
+
+func TestGetAgentDirectories_Consistency(t *testing.T) {
+	dirs1 := getAgentDirectories()
+	dirs2 := getAgentDirectories()
+	if len(dirs1) != len(dirs2) {
+		t.Fatalf("Expected consistent results, got different lengths: %d vs %d", len(dirs1), len(dirs2))
+	}
+	for i, dir := range dirs1 {
+		if dir != dirs2[i] {
+			t.Errorf("Inconsistent results at index %d: %s vs %s", i, dir, dirs2[i])
+		}
+	}
+}
+
+// =============================================================================
+// outputWarning Tests
+// =============================================================================
+
+func TestOutputWarning_JSONSchema(t *testing.T) {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	outputWarning("test.py", 2)
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	var result map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+		t.Fatalf("outputWarning produced invalid JSON: %v\nOutput: %s", err, buf.String())
+	}
+	hookOutput, ok := result["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected hookSpecificOutput in JSON")
+	}
+	if hookOutput["hookEventName"] != "PostToolUse" {
+		t.Errorf("Expected hookEventName 'PostToolUse', got: %v", hookOutput["hookEventName"])
+	}
+	if _, ok := hookOutput["additionalContext"].(string); !ok {
+		t.Error("Expected additionalContext string in hookSpecificOutput")
+	}
+}
+
+func TestOutputWarning_EscalationGuidance(t *testing.T) {
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	outputWarning("main.go", 2)
+	w.Close()
+	os.Stdout = oldStdout
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	var result map[string]interface{}
+	json.Unmarshal(buf.Bytes(), &result)
+	hookOutput := result["hookSpecificOutput"].(map[string]interface{})
+	context := hookOutput["additionalContext"].(string)
+	if !strings.Contains(context, "⚠️") {
+		t.Error("Expected warning emoji in context")
+	}
+	if !strings.Contains(context, "main.go") {
+		t.Error("Expected file name in context")
+	}
+	if !strings.Contains(context, "2 failures") {
+		t.Error("Expected failure count in context")
+	}
+	if !strings.Contains(context, "One more failure") {
+		t.Error("Expected escalation guidance in context")
+	}
+}
+
+func TestOutputWarning_AdditionalContextFormat(t *testing.T) {
+	tests := []struct {
+		name  string
+		file  string
+		count int
+	}{
+		{"Python file", "test.py", 2},
+		{"Go file", "handler.go", 2},
+		{"Long path", "pkg/internal/api/handler.go", 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+			outputWarning(tt.file, tt.count)
+			w.Close()
+			os.Stdout = oldStdout
+			var buf bytes.Buffer
+			buf.ReadFrom(r)
+			var result map[string]interface{}
+			if err := json.Unmarshal(buf.Bytes(), &result); err != nil {
+				t.Fatalf("Invalid JSON for %s: %v", tt.name, err)
+			}
+			hookOutput := result["hookSpecificOutput"].(map[string]interface{})
+			context := hookOutput["additionalContext"].(string)
+			if !strings.Contains(context, tt.file) {
+				t.Errorf("Expected file '%s' in context", tt.file)
+			}
+		})
+	}
+}
+
+// =============================================================================
+// main() Integration Tests
+// =============================================================================
+
+func TestMain_MultipleFailures_CorrectCount(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	defer func() {
+		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+	}()
+	now := time.Now().Unix()
+	failures := []*routing.FailureInfo{
+		{File: "a.py", ErrorType: "typeerror", Timestamp: now, Tool: "Bash"},
+		{File: "a.py", ErrorType: "typeerror", Timestamp: now, Tool: "Bash"},
+		{File: "b.py", ErrorType: "valueerror", Timestamp: now, Tool: "Edit"},
+		{File: "a.py", ErrorType: "typeerror", Timestamp: now, Tool: "Bash"},
+	}
+	for _, failure := range failures {
+		if err := memory.LogFailure(failure); err != nil {
+			t.Fatalf("LogFailure error: %v", err)
+		}
+	}
+	countA, err := memory.GetFailureCount("a.py", "typeerror")
+	if err != nil {
+		t.Fatalf("GetFailureCount error: %v", err)
+	}
+	if countA != 3 {
+		t.Errorf("Expected count=3 for a.py, got %d", countA)
+	}
+	countB, err := memory.GetFailureCount("b.py", "valueerror")
+	if err != nil {
+		t.Fatalf("GetFailureCount error: %v", err)
+	}
+	if countB != 1 {
+		t.Errorf("Expected count=1 for b.py, got %d", countB)
+	}
+}
+
+func TestMain_CompositeKeyHandling_Extended(t *testing.T) {
+	tmpDir := t.TempDir()
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	defer func() {
+		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+	}()
+	now := time.Now().Unix()
+	file := "main.go"
+	errorTypes := []string{"syntaxerror", "typeerror", "importerror"}
+	for _, errType := range errorTypes {
+		failure := &routing.FailureInfo{
+			File:      file,
+			ErrorType: errType,
+			Timestamp: now,
+			Tool:      "Bash",
+		}
+		for i := 0; i < 2; i++ {
+			if err := memory.LogFailure(failure); err != nil {
+				t.Fatalf("LogFailure error: %v", err)
+			}
+		}
+	}
+	for _, errType := range errorTypes {
+		count, err := memory.GetFailureCount(file, errType)
+		if err != nil {
+			t.Fatalf("GetFailureCount error for %s: %v", errType, err)
+		}
+		if count != 2 {
+			t.Errorf("Expected count=2 for %s, got %d (composite key not separating)", errType, count)
+		}
+	}
+}
