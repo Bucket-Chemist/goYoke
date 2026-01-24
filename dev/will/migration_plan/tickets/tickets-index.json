@@ -4372,7 +4372,7 @@
     {
       "id": "GOgent-073",
       "title": "Extend HandoffArtifacts for New Artifact Types",
-      "status": "in_progress",
+      "status": "completed",
       "time_estimate": "1h",
       "dependencies": [
         "GOgent-065",
