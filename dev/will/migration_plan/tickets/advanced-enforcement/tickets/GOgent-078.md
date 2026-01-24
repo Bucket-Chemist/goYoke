@@ -541,14 +541,14 @@ Create fixture files in `test/simulation/fixtures/deterministic/orchestrator-gua
 ```
 
 **Acceptance Criteria**:
-- [ ] All tests use realistic JSONL transcript format (not pseudo-syntax)
-- [ ] Tests use simulation harness patterns from `test/simulation/harness/`
-- [ ] Fixture files created in `test/simulation/fixtures/deterministic/orchestrator-guard/`
-- [ ] Tests cover: allow all collected, block uncollected, non-orchestrator passthrough
-- [ ] Edge cases tested: empty transcript, malformed JSONL, very long transcript, concurrent access
-- [ ] Helper functions integrated with GOgent-077 implementation
-- [ ] `go test ./pkg/enforcement` passes
-- [ ] Integration test demonstrates full event → parse → guard → response workflow
+- [x] All tests use realistic JSONL transcript format (not pseudo-syntax)
+- [x] Tests use simulation harness patterns from `test/simulation/harness/`
+- [x] Fixture files created in `test/simulation/fixtures/deterministic/orchestrator-guard/`
+- [x] Tests cover: allow all collected, block uncollected, non-orchestrator passthrough
+- [x] Edge cases tested: empty transcript, malformed JSONL, very long transcript, concurrent access
+- [x] Helper functions integrated with GOgent-077 implementation
+- [x] `go test ./pkg/enforcement` passes
+- [x] Integration test demonstrates full event → parse → guard → response workflow
 
 **Why This Matters**:
 - Ensures orchestrator-guard correctly enforces background task collection
