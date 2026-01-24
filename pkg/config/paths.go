@@ -228,3 +228,59 @@ func ShouldRemind(count int) bool {
 func ShouldFlush(count int) bool {
 	return count > 0 && count%FlushInterval == 0
 }
+
+// GetGOgentDataDir returns XDG-compliant data directory for persistent files.
+// Priority: XDG_DATA_HOME > ~/.local/share/gogent
+// Use for: ML telemetry, training datasets, long-term logs
+//
+// This differs from GetGOgentDir() which uses XDG_CACHE_HOME for non-essential cached data.
+// Per XDG Base Directory Specification:
+// - XDG_CACHE_HOME: Non-essential cached data (may be cleared)
+// - XDG_DATA_HOME: User-specific data files (should persist)
+func GetGOgentDataDir() string {
+	// Try XDG_DATA_HOME (user-configurable data directory)
+	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
+		dir := filepath.Join(xdg, "gogent")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create gogent data dir at %s: %v. Trying fallback.\n", dir, err)
+		} else {
+			return dir
+		}
+	}
+
+	// Fallback: ~/.local/share/gogent (XDG default when XDG_DATA_HOME unset)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to get home directory: %v. Using /tmp fallback.\n", err)
+		dir := filepath.Join(os.TempDir(), "gogent-data")
+		os.MkdirAll(dir, 0755)
+		return dir
+	}
+
+	dir := filepath.Join(home, ".local", "share", "gogent")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create gogent data dir at %s: %v. Using /tmp fallback.\n", dir, err)
+		dir = filepath.Join(os.TempDir(), "gogent-data")
+		os.MkdirAll(dir, 0755)
+		return dir
+	}
+	return dir
+}
+
+// GetMLToolEventsPath returns path for ML tool events log.
+// This persistent data file tracks tool usage for ML-based routing optimization.
+func GetMLToolEventsPath() string {
+	return filepath.Join(GetGOgentDataDir(), "tool-events.jsonl")
+}
+
+// GetRoutingDecisionsPath returns path for routing decisions log.
+// This persistent data file tracks routing outcomes for model training.
+func GetRoutingDecisionsPath() string {
+	return filepath.Join(GetGOgentDataDir(), "routing-decisions.jsonl")
+}
+
+// GetCollaborationsPath returns path for agent collaborations log.
+// This persistent data file tracks multi-agent workflows for pattern analysis.
+func GetCollaborationsPath() string {
+	return filepath.Join(GetGOgentDataDir(), "agent-collaborations.jsonl")
+}

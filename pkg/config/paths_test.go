@@ -963,3 +963,349 @@ func TestGetToolCountAndIncrement_EmptyInitialContent(t *testing.T) {
 		t.Errorf("Expected count 1 after incrementing empty file, got %d", count)
 	}
 }
+
+// Tests for GetGOgentDataDir() and related path helpers
+
+func TestGetGOgentDataDir_XDGSet(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	testPath := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", testPath)
+
+	dir := GetGOgentDataDir()
+	expected := filepath.Join(testPath, "gogent")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+
+	// Verify directory was created
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		t.Error("Expected GetGOgentDataDir to create directory")
+	}
+}
+
+func TestGetGOgentDataDir_Fallback(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	os.Unsetenv("XDG_DATA_HOME")
+
+	dir := GetGOgentDataDir()
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".local", "share", "gogent")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+
+	// Verify directory was created
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		t.Error("Expected GetGOgentDataDir to create directory in fallback location")
+	}
+}
+
+func TestGetGOgentDataDir_CreatesDirectory(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	testDir := t.TempDir()
+	gogentPath := filepath.Join(testDir, "gogent")
+
+	// Ensure directory doesn't exist yet
+	os.RemoveAll(gogentPath)
+
+	os.Setenv("XDG_DATA_HOME", testDir)
+
+	result := GetGOgentDataDir()
+
+	// Verify directory was created
+	info, err := os.Stat(result)
+	if os.IsNotExist(err) {
+		t.Error("GetGOgentDataDir should create directory if it doesn't exist")
+	}
+
+	// Verify it's a directory
+	if !info.IsDir() {
+		t.Error("GetGOgentDataDir should create a directory, not a file")
+	}
+
+	// Verify permissions (0755)
+	if info.Mode().Perm() != 0755 {
+		t.Errorf("Expected permissions 0755, got %o", info.Mode().Perm())
+	}
+}
+
+func TestGetGOgentDataDir_EmptyXDGVar(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	// Set to empty string (should fallback)
+	os.Setenv("XDG_DATA_HOME", "")
+
+	dir := GetGOgentDataDir()
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".local", "share", "gogent")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+}
+
+func TestGetGOgentDataDir_XDGInvalidPath(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	// Set XDG_DATA_HOME to a path that cannot be created
+	os.Setenv("XDG_DATA_HOME", "/dev/null/cannot-create-here")
+
+	dir := GetGOgentDataDir()
+	home, _ := os.UserHomeDir()
+	expected := filepath.Join(home, ".local", "share", "gogent")
+
+	if dir != expected {
+		t.Errorf("Expected fallback to ~/.local/share/gogent: %s, got %s", expected, dir)
+	}
+}
+
+func TestGetGOgentDataDir_HomeDirFails(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
+
+	// Unset XDG_DATA_HOME
+	os.Unsetenv("XDG_DATA_HOME")
+
+	// Set HOME to invalid path that will fail MkdirAll
+	os.Setenv("HOME", "/dev/null/nohome")
+
+	result := GetGOgentDataDir()
+
+	// Should fallback to /tmp/gogent-data
+	if !strings.Contains(result, "gogent-data") {
+		t.Errorf("Expected /tmp fallback containing 'gogent-data', got: %s", result)
+	}
+	if !strings.HasPrefix(result, os.TempDir()) {
+		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
+	}
+}
+
+func TestGetGOgentDataDir_AllPathsFail(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
+
+	// Set XDG_DATA_HOME to invalid path
+	os.Setenv("XDG_DATA_HOME", "/dev/null/invalid1")
+	// Set HOME to invalid path
+	os.Setenv("HOME", "/dev/null/invalid2")
+
+	result := GetGOgentDataDir()
+
+	// Should fallback to /tmp/gogent-data
+	if !strings.Contains(result, "gogent-data") {
+		t.Errorf("Expected /tmp fallback containing 'gogent-data', got: %s", result)
+	}
+	if !strings.HasPrefix(result, os.TempDir()) {
+		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
+	}
+}
+
+func TestGetGOgentDataDir_SeparateFromCache(t *testing.T) {
+	// Save original env
+	origXDGData := os.Getenv("XDG_DATA_HOME")
+	origXDGCache := os.Getenv("XDG_CACHE_HOME")
+	origXDGRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDGData)
+		os.Setenv("XDG_CACHE_HOME", origXDGCache)
+		os.Setenv("XDG_RUNTIME_DIR", origXDGRuntime)
+	}()
+
+	// Set up separate directories for data and cache
+	dataTempDir := t.TempDir()
+	cacheTempDir := t.TempDir()
+	runtimeTempDir := t.TempDir()
+
+	os.Setenv("XDG_DATA_HOME", dataTempDir)
+	os.Setenv("XDG_CACHE_HOME", cacheTempDir)
+	os.Setenv("XDG_RUNTIME_DIR", runtimeTempDir)
+
+	dataDir := GetGOgentDataDir()
+	cacheDir := GetGOgentDir()
+
+	// Verify they use different base directories
+	if strings.HasPrefix(dataDir, runtimeTempDir) || strings.HasPrefix(dataDir, cacheTempDir) {
+		t.Errorf("GetGOgentDataDir should not use cache/runtime dirs. Got: %s", dataDir)
+	}
+
+	if strings.HasPrefix(cacheDir, dataTempDir) {
+		t.Errorf("GetGOgentDir should not use data dir. Got: %s", cacheDir)
+	}
+
+	// Verify data dir uses XDG_DATA_HOME
+	expectedDataDir := filepath.Join(dataTempDir, "gogent")
+	if dataDir != expectedDataDir {
+		t.Errorf("Expected data dir %s, got %s", expectedDataDir, dataDir)
+	}
+
+	// Verify cache dir uses XDG_RUNTIME_DIR (highest priority for cache)
+	expectedCacheDir := filepath.Join(runtimeTempDir, "gogent")
+	if cacheDir != expectedCacheDir {
+		t.Errorf("Expected cache dir %s, got %s", expectedCacheDir, cacheDir)
+	}
+}
+
+func TestGetMLToolEventsPath(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	testPath := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", testPath)
+
+	path := GetMLToolEventsPath()
+
+	// Verify path ends with tool-events.jsonl
+	if !strings.HasSuffix(path, "tool-events.jsonl") {
+		t.Errorf("Path should end with tool-events.jsonl, got %s", path)
+	}
+
+	// Verify path is within data directory
+	dataDir := GetGOgentDataDir()
+	if !strings.HasPrefix(path, dataDir) {
+		t.Errorf("Expected path to be within data directory %s, got %s", dataDir, path)
+	}
+
+	// Verify exact path
+	expected := filepath.Join(testPath, "gogent", "tool-events.jsonl")
+	if path != expected {
+		t.Errorf("Expected %s, got %s", expected, path)
+	}
+}
+
+func TestGetRoutingDecisionsPath(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	testPath := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", testPath)
+
+	path := GetRoutingDecisionsPath()
+
+	// Verify path ends with routing-decisions.jsonl
+	if !strings.HasSuffix(path, "routing-decisions.jsonl") {
+		t.Errorf("Path should end with routing-decisions.jsonl, got %s", path)
+	}
+
+	// Verify path is within data directory
+	dataDir := GetGOgentDataDir()
+	if !strings.HasPrefix(path, dataDir) {
+		t.Errorf("Expected path to be within data directory %s, got %s", dataDir, path)
+	}
+
+	// Verify exact path
+	expected := filepath.Join(testPath, "gogent", "routing-decisions.jsonl")
+	if path != expected {
+		t.Errorf("Expected %s, got %s", expected, path)
+	}
+}
+
+func TestGetCollaborationsPath(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	testPath := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", testPath)
+
+	path := GetCollaborationsPath()
+
+	// Verify path ends with agent-collaborations.jsonl
+	if !strings.HasSuffix(path, "agent-collaborations.jsonl") {
+		t.Errorf("Path should end with agent-collaborations.jsonl, got %s", path)
+	}
+
+	// Verify path is within data directory
+	dataDir := GetGOgentDataDir()
+	if !strings.HasPrefix(path, dataDir) {
+		t.Errorf("Expected path to be within data directory %s, got %s", dataDir, path)
+	}
+
+	// Verify exact path
+	expected := filepath.Join(testPath, "gogent", "agent-collaborations.jsonl")
+	if path != expected {
+		t.Errorf("Expected %s, got %s", expected, path)
+	}
+}
+
+func TestMLPathHelpers_AllUseDataDir(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	testPath := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", testPath)
+
+	dataDir := GetGOgentDataDir()
+
+	// All ML path helpers should use GetGOgentDataDir(), not GetGOgentDir()
+	paths := []struct {
+		name string
+		path string
+	}{
+		{"GetMLToolEventsPath", GetMLToolEventsPath()},
+		{"GetRoutingDecisionsPath", GetRoutingDecisionsPath()},
+		{"GetCollaborationsPath", GetCollaborationsPath()},
+	}
+
+	for _, tc := range paths {
+		if !strings.HasPrefix(tc.path, dataDir) {
+			t.Errorf("%s should be within data directory %s, got %s", tc.name, dataDir, tc.path)
+		}
+	}
+}
+
+func TestMLPathHelpers_Fallback(t *testing.T) {
+	// Save original env
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origXDG)
+
+	// Unset XDG_DATA_HOME to test fallback behavior
+	os.Unsetenv("XDG_DATA_HOME")
+
+	home, _ := os.UserHomeDir()
+	expectedDataDir := filepath.Join(home, ".local", "share", "gogent")
+
+	paths := []struct {
+		name     string
+		path     string
+		filename string
+	}{
+		{"GetMLToolEventsPath", GetMLToolEventsPath(), "tool-events.jsonl"},
+		{"GetRoutingDecisionsPath", GetRoutingDecisionsPath(), "routing-decisions.jsonl"},
+		{"GetCollaborationsPath", GetCollaborationsPath(), "agent-collaborations.jsonl"},
+	}
+
+	for _, tc := range paths {
+		expected := filepath.Join(expectedDataDir, tc.filename)
+		if tc.path != expected {
+			t.Errorf("%s with fallback: expected %s, got %s", tc.name, expected, tc.path)
+		}
+	}
+}
