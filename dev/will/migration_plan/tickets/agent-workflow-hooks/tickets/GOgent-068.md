@@ -1,7 +1,7 @@
 ---
 id: GOgent-068
 title: Tool Counter Threshold Functions
-description: **Task**:
+description: "Extend existing tool counter in pkg/config/paths.go with threshold check functions for attention-gate triggering. DO NOT create new package."
 status: pending
 time_estimate: 1h
 dependencies: ["GOgent-056"]
@@ -230,17 +230,17 @@ func TestCounterAtomicity(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Functions added to pkg/config/paths.go (NOT new package pkg/observability)
-- [ ] Uses existing syscall.Flock() atomicity pattern (NOT mutex)
-- [ ] GetToolCountAndIncrement() atomically reads and increments
-- [ ] ShouldRemind() returns true every 10 tools
-- [ ] ShouldFlush() returns true every 20 tools
-- [ ] Tool counter reset on SessionStart via gogent-load-context
-- [ ] Counter reset errors are non-fatal (warning only)
-- [ ] Tests use t.TempDir() for isolation
-- [ ] Tests verify atomicity with concurrent goroutines
-- [ ] Tests added to pkg/config/paths_test.go (NOT new test file)
-- [ ] `go test ./pkg/config` passes
+- [x] Functions added to pkg/config/paths.go (NOT new package pkg/observability)
+- [x] Uses existing syscall.Flock() atomicity pattern (NOT mutex)
+- [x] GetToolCountAndIncrement() atomically reads and increments
+- [x] ShouldRemind() returns true every 10 tools
+- [x] ShouldFlush() returns true every 20 tools
+- [x] Tool counter reset on SessionStart via gogent-load-context
+- [x] Counter reset errors are non-fatal (warning only)
+- [x] Tests use t.TempDir() for isolation
+- [x] Tests verify atomicity with concurrent goroutines
+- [x] Tests added to pkg/config/paths_test.go (NOT new test file)
+- [x] `go test ./pkg/config` passes
 
 **Why This Matters**: Threshold functions trigger attention-gate behavior at correct intervals. Extending existing implementation maintains architectural consistency and avoids duplication.
 

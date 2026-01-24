@@ -3,7 +3,9 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -814,5 +816,150 @@ func TestInitializeToolCounter_ErrorPath(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "failed to initialize tool counter") {
 		t.Errorf("Expected 'failed to initialize tool counter' error, got: %v", err)
+	}
+}
+
+func TestGetToolCountAndIncrement(t *testing.T) {
+	// Use t.TempDir() for test isolation
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	// First increment
+	count, err := GetToolCountAndIncrement()
+	if err != nil {
+		t.Fatalf("GetToolCountAndIncrement failed: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected count 1, got: %d", count)
+	}
+
+	// Second increment
+	count, err = GetToolCountAndIncrement()
+	if err != nil {
+		t.Fatalf("GetToolCountAndIncrement failed: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("Expected count 2, got: %d", count)
+	}
+
+	// Third increment
+	count, err = GetToolCountAndIncrement()
+	if err != nil {
+		t.Fatalf("GetToolCountAndIncrement failed: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("Expected count 3, got: %d", count)
+	}
+}
+
+func TestShouldRemind(t *testing.T) {
+	tests := []struct {
+		count    int
+		expected bool
+	}{
+		{0, false},
+		{5, false},
+		{9, false},
+		{10, true}, // ReminderInterval = 10
+		{11, false},
+		{19, false},
+		{20, true},
+		{30, true},
+		{100, true},
+	}
+
+	for _, tc := range tests {
+		got := ShouldRemind(tc.count)
+		if got != tc.expected {
+			t.Errorf("ShouldRemind(%d) = %v, expected %v", tc.count, got, tc.expected)
+		}
+	}
+}
+
+func TestShouldFlush(t *testing.T) {
+	tests := []struct {
+		count    int
+		expected bool
+	}{
+		{0, false},
+		{10, false},
+		{19, false},
+		{20, true}, // FlushInterval = 20
+		{21, false},
+		{40, true},
+		{60, true},
+	}
+
+	for _, tc := range tests {
+		got := ShouldFlush(tc.count)
+		if got != tc.expected {
+			t.Errorf("ShouldFlush(%d) = %v, expected %v", tc.count, got, tc.expected)
+		}
+	}
+}
+
+func TestCounterAtomicity(t *testing.T) {
+	// Test concurrent increments
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	const goroutines = 10
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			_, err := GetToolCountAndIncrement()
+			if err != nil {
+				t.Errorf("Concurrent increment failed: %v", err)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify final count
+	counterPath := GetToolCounterPath()
+	data, _ := os.ReadFile(counterPath)
+	finalCount, _ := strconv.Atoi(strings.TrimSpace(string(data)))
+	if finalCount != goroutines {
+		t.Errorf("Expected final count %d, got %d (atomicity failure)", goroutines, finalCount)
+	}
+}
+
+func TestGetToolCountAndIncrement_FromNonExistent(t *testing.T) {
+	// Use t.TempDir() for test isolation
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	// Don't initialize - file doesn't exist
+	// GetToolCountAndIncrement should create file and set to 1
+	count, err := GetToolCountAndIncrement()
+	if err != nil {
+		t.Fatalf("GetToolCountAndIncrement failed on non-existent file: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected count 1 after first increment from non-existent, got %d", count)
+	}
+}
+
+func TestGetToolCountAndIncrement_EmptyInitialContent(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	// Create empty file
+	path := GetToolCounterPath()
+	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
+		t.Fatalf("Failed to write empty file: %v", err)
+	}
+
+	// GetToolCountAndIncrement should treat empty as 0 and increment to 1
+	count, err := GetToolCountAndIncrement()
+	if err != nil {
+		t.Fatalf("GetToolCountAndIncrement failed on empty file: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected count 1 after incrementing empty file, got %d", count)
 	}
 }

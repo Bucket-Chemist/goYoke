@@ -2,11 +2,17 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+)
+
+const (
+	ReminderInterval = 10 // Inject reminder every N tools
+	FlushInterval    = 20 // Flush learnings every N tools
 )
 
 // GetGOgentDir returns XDG-compliant gogent directory.
@@ -165,4 +171,60 @@ func IncrementToolCount() error {
 	}
 
 	return nil
+}
+
+// GetToolCountAndIncrement atomically reads current count and increments.
+// Returns the count AFTER incrementing.
+// Uses existing flock pattern from IncrementToolCount for atomicity.
+func GetToolCountAndIncrement() (int, error) {
+	path := GetToolCounterPath()
+
+	// Open file for read-write, create if doesn't exist
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return 0, fmt.Errorf("[config] failed to open counter file: %w", err)
+	}
+	defer file.Close()
+
+	// Acquire exclusive lock (blocks until available)
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
+		return 0, fmt.Errorf("[config] failed to lock counter file: %w", err)
+	}
+	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+
+	// Read current count
+	var count int
+	data, err := io.ReadAll(file)
+	if err == nil && len(data) > 0 {
+		content := strings.TrimSpace(string(data))
+		if content != "" {
+			count, _ = strconv.Atoi(content)
+		}
+	}
+
+	// Increment
+	count++
+
+	// Write back (truncate first)
+	if err := file.Truncate(0); err != nil {
+		return 0, fmt.Errorf("[config] failed to truncate counter: %w", err)
+	}
+	if _, err := file.Seek(0, 0); err != nil {
+		return 0, fmt.Errorf("[config] failed to seek counter: %w", err)
+	}
+	if _, err := file.WriteString(strconv.Itoa(count)); err != nil {
+		return 0, fmt.Errorf("[config] failed to write counter: %w", err)
+	}
+
+	return count, nil
+}
+
+// ShouldRemind returns true if reminder should be injected at this count.
+func ShouldRemind(count int) bool {
+	return count > 0 && count%ReminderInterval == 0
+}
+
+// ShouldFlush returns true if pending learnings should be flushed at this count.
+func ShouldFlush(count int) bool {
+	return count > 0 && count%FlushInterval == 0
 }
