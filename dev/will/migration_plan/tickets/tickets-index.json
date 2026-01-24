@@ -3618,7 +3618,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 9,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-065",
@@ -3637,7 +3637,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 13,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-066",
@@ -3656,7 +3656,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 11,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-067",
@@ -3675,7 +3675,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 12,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-068",
@@ -3694,7 +3694,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 9,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-069",
@@ -3713,7 +3713,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 10,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-070",
@@ -3738,7 +3738,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 12,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-072",
