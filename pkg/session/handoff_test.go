@@ -500,6 +500,98 @@ func TestMigrateHandoff_V11Direct(t *testing.T) {
 	}
 }
 
+func TestMigrateHandoff_V12ToV13(t *testing.T) {
+	// v1.2 handoff without AgentEndstates (simulating legacy data)
+	handoff := &Handoff{
+		SessionID:     "v12-test",
+		SchemaVersion: "1.2",
+		Timestamp:     1234567890,
+		Artifacts: HandoffArtifacts{
+			SharpEdges:          []SharpEdge{{File: "test.go", ErrorType: "test", ConsecutiveFailures: 3, Timestamp: 100}},
+			Decisions:           []Decision{{Timestamp: 100, Category: "test"}},
+			PreferenceOverrides: []PreferenceOverride{{Timestamp: 100, Key: "test"}},
+			PerformanceMetrics:  []PerformanceMetric{{Timestamp: 100, Operation: "test"}},
+		},
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+
+	migrated, err := migrateHandoff("1.2", jsonData)
+
+	if err != nil {
+		t.Fatalf("Expected no error migrating v1.2 to v1.3, got: %v", err)
+	}
+
+	if migrated.SessionID != "v12-test" {
+		t.Errorf("Expected session ID v12-test, got: %s", migrated.SessionID)
+	}
+
+	// v1.2 handoffs should be migrated to v1.3
+	if migrated.SchemaVersion != "1.3" {
+		t.Errorf("Expected schema version 1.3 after migration, got: %s", migrated.SchemaVersion)
+	}
+
+	// Existing fields should be preserved
+	if len(migrated.Artifacts.SharpEdges) != 1 {
+		t.Errorf("Expected 1 sharp edge preserved, got: %d", len(migrated.Artifacts.SharpEdges))
+	}
+	if len(migrated.Artifacts.Decisions) != 1 {
+		t.Errorf("Expected 1 decision preserved, got: %d", len(migrated.Artifacts.Decisions))
+	}
+
+	// New v1.3 field should be initialized to empty slice (not nil)
+	if migrated.Artifacts.AgentEndstates == nil {
+		t.Error("Expected AgentEndstates to be non-nil after migration from v1.2")
+	}
+	if len(migrated.Artifacts.AgentEndstates) != 0 {
+		t.Errorf("Expected 0 agent endstates for v1.2 migration, got: %d", len(migrated.Artifacts.AgentEndstates))
+	}
+}
+
+func TestMigrateHandoff_V13Direct(t *testing.T) {
+	// v1.3 handoff with AgentEndstates
+	handoff := &Handoff{
+		SessionID:     "v13-test",
+		SchemaVersion: "1.3",
+		Timestamp:     1234567890,
+		Artifacts: HandoffArtifacts{
+			Decisions: []Decision{{Timestamp: 100, Category: "test"}},
+			AgentEndstates: []EndstateLog{
+				{
+					AgentID:    "test-agent",
+					AgentClass: "implementation",
+					Tier:       "sonnet",
+				},
+			},
+		},
+	}
+
+	jsonData, _ := json.Marshal(handoff)
+
+	migrated, err := migrateHandoff("1.3", jsonData)
+
+	if err != nil {
+		t.Fatalf("Expected no error for v1.3 direct, got: %v", err)
+	}
+
+	if migrated.SessionID != "v13-test" {
+		t.Errorf("Expected session ID v13-test, got: %s", migrated.SessionID)
+	}
+
+	// v1.3 should remain v1.3
+	if migrated.SchemaVersion != "1.3" {
+		t.Errorf("Expected schema version 1.3, got: %s", migrated.SchemaVersion)
+	}
+
+	if len(migrated.Artifacts.AgentEndstates) != 1 {
+		t.Errorf("Expected 1 agent endstate, got: %d", len(migrated.Artifacts.AgentEndstates))
+	}
+
+	if migrated.Artifacts.AgentEndstates[0].AgentID != "test-agent" {
+		t.Errorf("Expected agent ID 'test-agent', got: %s", migrated.Artifacts.AgentEndstates[0].AgentID)
+	}
+}
+
 func TestMigrateHandoff_FutureVersionStub(t *testing.T) {
 	// This test will fail when v2.0 is actually implemented
 	// It documents the migration path exists

@@ -1000,3 +1000,220 @@ func TestLoadAllUserIntents_MinimalFields(t *testing.T) {
 		t.Errorf("Expected empty OutcomeNote, got: %s", intents[0].OutcomeNote)
 	}
 }
+
+// ===== Tests for loadEndstates (GOgent-073) =====
+
+func TestLoadEndstates_Valid(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "project")
+	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+
+	// Create directory structure
+	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
+
+	// Create valid endstate logs
+	data := `{"timestamp":"2026-01-24T10:00:00Z","agent_id":"python-pro","agent_class":"implementation","tier":"sonnet","exit_code":0,"duration_ms":1500,"output_tokens":500,"decision":"prompt","recommendations":["Review type hints","Consider error handling"]}
+{"timestamp":"2026-01-24T11:00:00Z","agent_id":"codebase-search","agent_class":"search","tier":"haiku","exit_code":0,"duration_ms":250,"output_tokens":100,"decision":"silent","recommendations":[]}`
+	os.WriteFile(endstatesPath, []byte(data), 0644)
+
+	endstates, err := loadEndstates(projectDir)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(endstates) != 2 {
+		t.Errorf("Expected 2 endstates, got: %d", len(endstates))
+	}
+
+	// Verify first endstate
+	if endstates[0].AgentID != "python-pro" {
+		t.Errorf("Expected AgentID 'python-pro', got: %s", endstates[0].AgentID)
+	}
+	if endstates[0].AgentClass != "implementation" {
+		t.Errorf("Expected AgentClass 'implementation', got: %s", endstates[0].AgentClass)
+	}
+	if endstates[0].Tier != "sonnet" {
+		t.Errorf("Expected Tier 'sonnet', got: %s", endstates[0].Tier)
+	}
+	if endstates[0].ExitCode != 0 {
+		t.Errorf("Expected ExitCode 0, got: %d", endstates[0].ExitCode)
+	}
+	if endstates[0].Duration != 1500 {
+		t.Errorf("Expected Duration 1500, got: %d", endstates[0].Duration)
+	}
+	if endstates[0].OutputTokens != 500 {
+		t.Errorf("Expected OutputTokens 500, got: %d", endstates[0].OutputTokens)
+	}
+	if endstates[0].Decision != "prompt" {
+		t.Errorf("Expected Decision 'prompt', got: %s", endstates[0].Decision)
+	}
+	if len(endstates[0].Recommendations) != 2 {
+		t.Errorf("Expected 2 recommendations, got: %d", len(endstates[0].Recommendations))
+	}
+	if endstates[0].Recommendations[0] != "Review type hints" {
+		t.Errorf("Expected first recommendation 'Review type hints', got: %s", endstates[0].Recommendations[0])
+	}
+
+	// Verify second endstate
+	if endstates[1].AgentID != "codebase-search" {
+		t.Errorf("Expected AgentID 'codebase-search', got: %s", endstates[1].AgentID)
+	}
+	if endstates[1].Decision != "silent" {
+		t.Errorf("Expected Decision 'silent', got: %s", endstates[1].Decision)
+	}
+	if len(endstates[1].Recommendations) != 0 {
+		t.Errorf("Expected 0 recommendations, got: %d", len(endstates[1].Recommendations))
+	}
+}
+
+func TestLoadEndstates_MissingFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "nonexistent-project")
+
+	endstates, err := loadEndstates(projectDir)
+
+	if err != nil {
+		t.Errorf("Expected no error for missing file, got: %v", err)
+	}
+
+	if len(endstates) != 0 {
+		t.Errorf("Expected empty slice for missing file, got: %d endstates", len(endstates))
+	}
+}
+
+func TestLoadEndstates_EmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "project")
+	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+
+	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
+	os.WriteFile(endstatesPath, []byte(""), 0644)
+
+	endstates, err := loadEndstates(projectDir)
+
+	if err != nil {
+		t.Errorf("Expected no error for empty file, got: %v", err)
+	}
+
+	if len(endstates) != 0 {
+		t.Errorf("Expected empty slice for empty file, got: %d endstates", len(endstates))
+	}
+}
+
+func TestLoadEndstates_Malformed(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "project")
+	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+
+	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
+
+	// Mix valid and invalid JSONL lines
+	data := `not valid json
+{"timestamp":"2026-01-24T10:00:00Z","agent_id":"valid-agent","agent_class":"test","tier":"haiku","exit_code":0,"duration_ms":100,"output_tokens":50,"decision":"silent","recommendations":[]}
+{incomplete json`
+	os.WriteFile(endstatesPath, []byte(data), 0644)
+
+	endstates, err := loadEndstates(projectDir)
+
+	if err != nil {
+		t.Fatalf("Expected no error (skip malformed), got: %v", err)
+	}
+
+	// Should only have the valid line
+	if len(endstates) != 1 {
+		t.Errorf("Expected 1 endstate (skipped malformed), got: %d", len(endstates))
+	}
+
+	if endstates[0].AgentID != "valid-agent" {
+		t.Errorf("Expected valid endstate to be parsed, got: %s", endstates[0].AgentID)
+	}
+}
+
+func TestLoadEndstates_WithBlankLines(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "project")
+	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+
+	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
+
+	// Include blank lines and whitespace
+	data := `
+{"timestamp":"2026-01-24T10:00:00Z","agent_id":"agent-1","agent_class":"test","tier":"haiku","exit_code":0,"duration_ms":100,"output_tokens":50,"decision":"silent","recommendations":[]}
+
+{"timestamp":"2026-01-24T11:00:00Z","agent_id":"agent-2","agent_class":"test","tier":"sonnet","exit_code":0,"duration_ms":200,"output_tokens":100,"decision":"prompt","recommendations":[]}
+
+`
+	os.WriteFile(endstatesPath, []byte(data), 0644)
+
+	endstates, err := loadEndstates(projectDir)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(endstates) != 2 {
+		t.Errorf("Expected 2 endstates (skipped blank lines), got: %d", len(endstates))
+	}
+}
+
+// ===== Tests for LoadArtifacts integration with AgentEndstates (GOgent-073) =====
+
+func TestLoadArtifacts_WithEndstates(t *testing.T) {
+	tmpDir := t.TempDir()
+	config := DefaultHandoffConfig(tmpDir)
+
+	// Override paths to use tmpDir
+	config.ViolationsPath = filepath.Join(tmpDir, "violations.jsonl")
+	config.ErrorPatternsPath = filepath.Join(tmpDir, "errors.jsonl")
+
+	// Create endstates file
+	endstatesPath := filepath.Join(tmpDir, ".claude", "memory", "agent-endstates.jsonl")
+	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
+	endstatesData := `{"timestamp":"2026-01-24T10:00:00Z","agent_id":"python-pro","agent_class":"implementation","tier":"sonnet","exit_code":0,"duration_ms":1500,"output_tokens":500,"decision":"prompt","recommendations":["test"]}
+{"timestamp":"2026-01-24T11:00:00Z","agent_id":"codebase-search","agent_class":"search","tier":"haiku","exit_code":0,"duration_ms":250,"output_tokens":100,"decision":"silent","recommendations":[]}`
+	os.WriteFile(endstatesPath, []byte(endstatesData), 0644)
+
+	artifacts, err := LoadArtifacts(config)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(artifacts.AgentEndstates) != 2 {
+		t.Errorf("Expected 2 AgentEndstates, got: %d", len(artifacts.AgentEndstates))
+	}
+
+	// Verify endstates loaded correctly
+	if artifacts.AgentEndstates[0].AgentID != "python-pro" {
+		t.Errorf("Expected first endstate AgentID 'python-pro', got: %s", artifacts.AgentEndstates[0].AgentID)
+	}
+	if artifacts.AgentEndstates[1].AgentID != "codebase-search" {
+		t.Errorf("Expected second endstate AgentID 'codebase-search', got: %s", artifacts.AgentEndstates[1].AgentID)
+	}
+}
+
+func TestLoadArtifacts_NoEndstates(t *testing.T) {
+	tmpDir := t.TempDir()
+	config := DefaultHandoffConfig(tmpDir)
+
+	// Override paths to use tmpDir
+	config.ViolationsPath = filepath.Join(tmpDir, "violations.jsonl")
+	config.ErrorPatternsPath = filepath.Join(tmpDir, "errors.jsonl")
+
+	// Don't create endstates file - simulate missing file
+
+	artifacts, err := LoadArtifacts(config)
+
+	if err != nil {
+		t.Fatalf("Expected no error for missing endstates, got: %v", err)
+	}
+
+	// Verify AgentEndstates is empty slice (not nil)
+	if artifacts.AgentEndstates == nil {
+		t.Errorf("Expected AgentEndstates to be non-nil empty slice")
+	}
+	if len(artifacts.AgentEndstates) != 0 {
+		t.Errorf("Expected 0 AgentEndstates for missing file, got: %d", len(artifacts.AgentEndstates))
+	}
+}

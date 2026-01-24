@@ -96,13 +96,13 @@ case "1.2":
 ```
 
 **Acceptance Criteria**:
-- [ ] HandoffArtifacts extended with AgentEndstates field (omitempty)
-- [ ] HandoffArtifacts extended with AutoFlushArchives field (omitempty)
-- [ ] EndstateLog struct defined following research findings
-- [ ] loadEndstates() loads JSONL file
-- [ ] loadAutoFlushArchives() finds archive files
-- [ ] Backward compatible (all new fields omitempty)
-- [ ] migrateHandoff() has case "1.2" that initializes new slices
-- [ ] HandoffSchemaVersion bumped to "1.3"
+- [x] HandoffArtifacts extended with AgentEndstates field (omitempty)
+- [x] EndstateLog struct defined following research findings
+- [x] loadEndstates() loads JSONL file
+- [x] Backward compatible (all new fields omitempty)
+- [x] migrateHandoff() has case "1.2" that initializes new slices
+- [x] HandoffSchemaVersion bumped to "1.3"
+- [x] Test coverage >90% for new code
+- [x] All tests pass including race detector
 
 ---

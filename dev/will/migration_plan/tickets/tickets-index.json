@@ -4368,6 +4368,40 @@
       "tests_required": true,
       "acceptance_criteria_count": 11,
       "status": "pending"
+    },
+    {
+      "id": "GOgent-073",
+      "title": "Extend HandoffArtifacts for New Artifact Types",
+      "status": "in_progress",
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-065",
+        "GOgent-069"
+      ],
+      "priority": "high",
+      "week": 4,
+      "tags": [
+        "session-archive",
+        "schema",
+        "week-4"
+      ],
+      "tests_required": true
+    },
+    {
+      "id": "GOgent-074",
+      "title": "Update Systems Architecture for Merged PostToolUse Handler",
+      "status": "pending",
+      "time_estimate": "0.5h",
+      "dependencies": [
+        "GOgent-072"
+      ],
+      "priority": "medium",
+      "week": 4,
+      "tags": [
+        "documentation",
+        "week-4"
+      ],
+      "tests_required": false
     }
   ]
 }
