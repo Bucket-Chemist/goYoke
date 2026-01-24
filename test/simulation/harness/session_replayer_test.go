@@ -208,7 +208,7 @@ func TestSessionReplayer_ValidateExpectations(t *testing.T) {
 	os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl"),
 		[]byte(`{"test":1}`), 0644)
 	os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl"),
-		[]byte(`{"schema_version":"1.2"}`), 0644)
+		[]byte(`{"schema_version":"1.3"}`), 0644)
 
 	replayer := NewSessionReplayer("", "", "", "")
 

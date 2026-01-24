@@ -127,7 +127,7 @@ func TestBehavioralInvariant_B4_SchemaVersion(t *testing.T) {
 		{
 			name: "correct version - pass",
 			handoff: map[string]interface{}{
-				"schema_version": "1.2",
+				"schema_version": "1.3",
 			},
 			wantPass: true,
 		},
@@ -360,7 +360,7 @@ func TestLoadBehavioralContext(t *testing.T) {
 		[]byte(`{"file":"a.py","error_type":"Error"}`+"\n"+`{"file":"b.py","error_type":"Error"}`+"\n"), 0644)
 
 	os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl"),
-		[]byte(`{"schema_version":"1.0"}`+"\n"+`{"schema_version":"1.2"}`+"\n"), 0644)
+		[]byte(`{"schema_version":"1.0"}`+"\n"+`{"schema_version":"1.3"}`+"\n"), 0644)
 
 	os.WriteFile(filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl"),
 		[]byte(`{"file":"a.py"}`+"\n"), 0644)
@@ -376,8 +376,8 @@ func TestLoadBehavioralContext(t *testing.T) {
 	}
 
 	// Verify handoff is last entry
-	if ctx.Handoff["schema_version"] != "1.2" {
-		t.Errorf("Handoff version: got %v, want 1.1", ctx.Handoff["schema_version"])
+	if ctx.Handoff["schema_version"] != "1.3" {
+		t.Errorf("Handoff version: got %v, want 1.3", ctx.Handoff["schema_version"])
 	}
 
 	// Verify tracker loaded
@@ -398,7 +398,7 @@ func TestCheckBehavioralInvariants(t *testing.T) {
 			},
 		},
 		Handoff: map[string]interface{}{
-			"schema_version": "1.2",
+			"schema_version": "1.3",
 		},
 		Config: DefaultBehavioralConfig(),
 	}

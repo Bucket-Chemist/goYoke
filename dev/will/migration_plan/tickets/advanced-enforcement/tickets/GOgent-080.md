@@ -1,181 +1,231 @@
 ---
 id: GOgent-080
-title: PreToolUse Event Parsing
-description: **Task**:
+title: ToolEvent Helper Functions
+description: Add helper functions to existing ToolEvent struct for doc-theater enforcement
 status: pending
-time_estimate: 1.5h
+time_estimate: 0.5h
 dependencies: ["GOgent-069"]
 priority: high
 week: 5
 tags: ["doc-theater", "week-5"]
 tests_required: true
-acceptance_criteria_count: 6
+acceptance_criteria_count: 5
 ---
 
-### GOgent-080: PreToolUse Event Parsing
+### GOgent-080: ToolEvent Helper Functions
 
-**Time**: 1.5 hours
-**Dependencies**: GOgent-069 (event parsing pattern)
+**Time**: 0.5 hours
+**Dependencies**: GOgent-069 (ToolEvent struct already exists)
 
 **Task**:
-Parse PreToolUse events for Write/Edit on CLAUDE.md files.
+Add helper methods to existing `ToolEvent` struct in `pkg/routing/events.go` to support doc-theater enforcement. These methods extract data from the `tool_input` map for Write/Edit operations.
 
-**File**: `pkg/enforcement/doc_events.go`
+**IMPORTANT**: Do NOT create new event types. The existing `ToolEvent` struct already matches Claude Code's schema. This ticket ONLY adds helper methods.
 
-**Imports**:
+**File**: `pkg/routing/events.go` (EXISTING FILE - append methods only)
+
+**Implementation** (add these methods to existing ToolEvent):
+
 ```go
-package enforcement
-
-import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"path/filepath"
-	"strings"
-	"time"
-)
-```
-
-**Implementation**:
-```go
-// PreToolUseEvent represents tool usage before execution
-type PreToolUseEvent struct {
-	Type          string `json:"type"`           // "pre-tool-use"
-	HookEventName string `json:"hook_event_name"` // "PreToolUse"
-	ToolName      string `json:"tool_name"`      // "Write", "Edit", etc.
-	FilePath      string `json:"file_path"`      // Path being modified
-	SessionID     string `json:"session_id"`
-}
-
-// IsClaude MDFile checks if file is a CLAUDE.md configuration file
-func (e *PreToolUseEvent) IsClaudeMDFile() bool {
-	filename := filepath.Base(e.FilePath)
-	// Check for CLAUDE.md or variants like CLAUDE.en.md
-	if filename == "CLAUDE.md" || strings.HasPrefix(filename, "CLAUDE.") && strings.HasSuffix(filename, ".md") {
-		return true
+// ExtractFilePath gets file_path from tool_input.
+// Returns empty string if file_path is not present or not a string.
+func (e *ToolEvent) ExtractFilePath() string {
+	if path, ok := e.ToolInput["file_path"].(string); ok {
+		return path
 	}
-	return false
+	return ""
 }
 
-// IsWriteOperation checks if this is a write/edit operation
-func (e *PreToolUseEvent) IsWriteOperation() bool {
+// ExtractWriteContent gets content for Write tool or new_string for Edit tool.
+// Returns empty string if neither field is present or not a string.
+func (e *ToolEvent) ExtractWriteContent() string {
+	// Write tool uses "content" field
+	if content, ok := e.ToolInput["content"].(string); ok {
+		return content
+	}
+	// Edit tool uses "new_string" field
+	if newStr, ok := e.ToolInput["new_string"].(string); ok {
+		return newStr
+	}
+	return ""
+}
+
+// IsClaudeMDFile checks if target is a CLAUDE.md file (or variant like CLAUDE.en.md).
+// Returns false if file_path cannot be extracted.
+func (e *ToolEvent) IsClaudeMDFile() bool {
+	path := e.ExtractFilePath()
+	if path == "" {
+		return false
+	}
+	filename := filepath.Base(path)
+	return filename == "CLAUDE.md" ||
+		(strings.HasPrefix(filename, "CLAUDE.") && strings.HasSuffix(filename, ".md"))
+}
+
+// IsWriteOperation checks if this is a Write or Edit operation.
+func (e *ToolEvent) IsWriteOperation() bool {
 	return e.ToolName == "Write" || e.ToolName == "Edit"
 }
-
-// ParsePreToolUseEvent reads PreToolUse event from STDIN
-func ParsePreToolUseEvent(r io.Reader, timeout time.Duration) (*PreToolUseEvent, error) {
-	type result struct {
-		event *PreToolUseEvent
-		err   error
-	}
-
-	ch := make(chan result, 1)
-
-	go func() {
-		data, err := io.ReadAll(r)
-		if err != nil {
-			ch <- result{nil, fmt.Errorf("[doc-theater] Failed to read STDIN: %w", err)}
-			return
-		}
-
-		var event PreToolUseEvent
-		if err := json.Unmarshal(data, &event); err != nil {
-			ch <- result{nil, fmt.Errorf("[doc-theater] Failed to parse JSON: %w", err)}
-			return
-		}
-
-		ch <- result{&event, nil}
-	}()
-
-	select {
-	case res := <-ch:
-		return res.event, res.err
-	case <-time.After(timeout):
-		return nil, fmt.Errorf("[doc-theater] STDIN read timeout after %v", timeout)
-	}
-}
 ```
 
-**Tests**: `pkg/enforcement/doc_events_test.go`
+**Add import** (if not already present):
+```go
+import (
+	"path/filepath"
+	"strings"
+)
+```
+
+**Tests**: `pkg/routing/events_test.go` (EXISTING FILE - append tests)
 
 ```go
-package enforcement
-
-import (
-	"strings"
-	"testing"
-	"time"
-)
-
-func TestParsePreToolUseEvent(t *testing.T) {
-	jsonInput := `{
-		"type": "pre-tool-use",
-		"hook_event_name": "PreToolUse",
-		"tool_name": "Edit",
-		"file_path": "/home/user/.claude/CLAUDE.md",
-		"session_id": "sess-123"
-	}`
-
-	reader := strings.NewReader(jsonInput)
-	event, err := ParsePreToolUseEvent(reader, 5*time.Second)
-
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if event.ToolName != "Edit" {
-		t.Errorf("Expected Edit, got: %s", event.ToolName)
-	}
-}
-
-func TestIsClaudeMDFile(t *testing.T) {
+func TestToolEvent_ExtractFilePath(t *testing.T) {
 	tests := []struct {
-		path      string
-		isClaude  bool
+		name      string
+		toolInput map[string]interface{}
+		expected  string
 	}{
-		{"/path/to/CLAUDE.md", true},
-		{"/path/to/CLAUDE.en.md", true},
-		{"./CLAUDE.md", true},
-		{"/path/to/other.md", false},
-		{"/path/to/CLAUDE.txt", false},
+		{
+			name:      "valid file_path",
+			toolInput: map[string]interface{}{"file_path": "/home/user/CLAUDE.md"},
+			expected:  "/home/user/CLAUDE.md",
+		},
+		{
+			name:      "missing file_path",
+			toolInput: map[string]interface{}{"other": "value"},
+			expected:  "",
+		},
+		{
+			name:      "file_path wrong type",
+			toolInput: map[string]interface{}{"file_path": 123},
+			expected:  "",
+		},
 	}
 
 	for _, tc := range tests {
-		event := &PreToolUseEvent{FilePath: tc.path}
-		if got := event.IsClaudeMDFile(); got != tc.isClaude {
-			t.Errorf("File %s: expected %v, got %v", tc.path, tc.isClaude, got)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			event := &ToolEvent{ToolInput: tc.toolInput}
+			if got := event.ExtractFilePath(); got != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, got)
+			}
+		})
 	}
 }
 
-func TestIsWriteOperation(t *testing.T) {
+func TestToolEvent_ExtractWriteContent(t *testing.T) {
 	tests := []struct {
-		tool      string
-		isWrite   bool
+		name      string
+		toolName  string
+		toolInput map[string]interface{}
+		expected  string
+	}{
+		{
+			name:      "Write with content",
+			toolName:  "Write",
+			toolInput: map[string]interface{}{"content": "file contents"},
+			expected:  "file contents",
+		},
+		{
+			name:      "Edit with new_string",
+			toolName:  "Edit",
+			toolInput: map[string]interface{}{"new_string": "replacement text"},
+			expected:  "replacement text",
+		},
+		{
+			name:      "no content fields",
+			toolName:  "Write",
+			toolInput: map[string]interface{}{"other": "value"},
+			expected:  "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := &ToolEvent{
+				ToolName:  tc.toolName,
+				ToolInput: tc.toolInput,
+			}
+			if got := event.ExtractWriteContent(); got != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, got)
+			}
+		})
+	}
+}
+
+func TestToolEvent_IsClaudeMDFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		toolInput map[string]interface{}
+		expected  bool
+	}{
+		{
+			name:      "CLAUDE.md",
+			toolInput: map[string]interface{}{"file_path": "/path/to/CLAUDE.md"},
+			expected:  true,
+		},
+		{
+			name:      "CLAUDE.en.md",
+			toolInput: map[string]interface{}{"file_path": "/path/to/CLAUDE.en.md"},
+			expected:  true,
+		},
+		{
+			name:      "other.md",
+			toolInput: map[string]interface{}{"file_path": "/path/to/other.md"},
+			expected:  false,
+		},
+		{
+			name:      "CLAUDE.txt",
+			toolInput: map[string]interface{}{"file_path": "/path/to/CLAUDE.txt"},
+			expected:  false,
+		},
+		{
+			name:      "no file_path",
+			toolInput: map[string]interface{}{},
+			expected:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := &ToolEvent{ToolInput: tc.toolInput}
+			if got := event.IsClaudeMDFile(); got != tc.expected {
+				t.Errorf("expected %v, got %v", tc.expected, got)
+			}
+		})
+	}
+}
+
+func TestToolEvent_IsWriteOperation(t *testing.T) {
+	tests := []struct {
+		toolName string
+		expected bool
 	}{
 		{"Write", true},
 		{"Edit", true},
 		{"Read", false},
 		{"Bash", false},
+		{"Task", false},
 	}
 
 	for _, tc := range tests {
-		event := &PreToolUseEvent{ToolName: tc.tool}
-		if got := event.IsWriteOperation(); got != tc.isWrite {
-			t.Errorf("Tool %s: expected %v, got %v", tc.tool, tc.isWrite, got)
-		}
+		t.Run(tc.toolName, func(t *testing.T) {
+			event := &ToolEvent{ToolName: tc.toolName}
+			if got := event.IsWriteOperation(); got != tc.expected {
+				t.Errorf("tool %s: expected %v, got %v", tc.toolName, tc.expected, got)
+			}
+		})
 	}
 }
 ```
 
 **Acceptance Criteria**:
-- [ ] `ParsePreToolUseEvent()` reads PreToolUse events
-- [ ] `IsClaudeMDFile()` detects CLAUDE.md variants
-- [ ] `IsWriteOperation()` detects Write/Edit tools
-- [ ] Implements 5s timeout
-- [ ] Tests verify parsing and detection
-- [ ] `go test ./pkg/enforcement` passes
+- [ ] `ExtractFilePath()` method added to ToolEvent
+- [ ] `ExtractWriteContent()` method added to ToolEvent
+- [ ] `IsClaudeMDFile()` method added to ToolEvent
+- [ ] `IsWriteOperation()` method added to ToolEvent
+- [ ] All tests pass: `go test -v ./pkg/routing`
 
-**Why This Matters**: Event filtering is required to target only CLAUDE.md writes.
+**Why This Matters**:
+These helper methods provide clean access to tool_input data for doc-theater enforcement. They work with the EXISTING ToolEvent struct that already matches Claude Code's schema. No new structs or files needed - just extending existing functionality.
 
 ---

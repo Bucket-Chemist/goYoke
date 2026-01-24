@@ -49,7 +49,7 @@ type BehavioralConfig struct {
 func DefaultBehavioralConfig() BehavioralConfig {
 	return BehavioralConfig{
 		MaxFailures:   3,
-		SchemaVersion: "1.2",
+		SchemaVersion: "1.3",
 	}
 }
 

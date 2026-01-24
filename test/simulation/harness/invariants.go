@@ -192,8 +192,8 @@ var SessionEndInvariants = []Invariant{
 			}
 
 			version, _ := handoff["schema_version"].(string)
-			if version != "1.2" {
-				return false, "schema_version is not 1.2, got: " + version
+			if version != "1.3" {
+				return false, "schema_version is not 1.3, got: " + version
 			}
 			return true, ""
 		},

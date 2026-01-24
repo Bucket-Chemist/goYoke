@@ -501,7 +501,7 @@ func runBehavioral(cfg harness.SimulationConfig, validatePath, archivePath, shar
 		[]byte(sharpEdgeContent+"\n"), 0644)
 
 	// Create test handoff with correct schema version
-	handoffContent := `{"schema_version":"1.2","session_id":"test","timestamp":"2026-01-23T10:00:00Z"}`
+	handoffContent := `{"schema_version":"1.3","session_id":"test","timestamp":"2026-01-23T10:00:00Z"}`
 	os.WriteFile(filepath.Join(testTempDir, ".claude", "memory", "handoffs.jsonl"),
 		[]byte(handoffContent+"\n"), 0644)
 
