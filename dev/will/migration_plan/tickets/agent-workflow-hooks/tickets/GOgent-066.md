@@ -1,7 +1,7 @@
 ---
 id: GOgent-066
 title: Integration Tests for agent-endstate
-description: **Task**:
+description: "Comprehensive tests covering event parsing → transcript parsing → response generation → logging workflow. Uses ACTUAL SubagentStop schema."
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-065"]
@@ -241,17 +241,17 @@ func TestAgentEndstateWorkflow_SimulationHarness(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Uses ACTUAL SubagentStop schema (session_id, transcript_path, hook_event_name, stop_hook_active)
-- [ ] createMockTranscript() helper creates realistic transcript files
-- [ ] Tests use t.TempDir() for isolation (no global state pollution)
-- [ ] Full workflow (event → transcript parsing → metadata → response → log) works end-to-end
-- [ ] All agent classes tested with proper model mapping
-- [ ] Success and failure paths tested via transcript metadata
-- [ ] Response JSON is valid and contains expected fields
-- [ ] Simulation harness integration test added (TestAgentEndstateWorkflow_SimulationHarness)
-- [ ] Integration tests verify multi-component interaction
-- [ ] Graceful degradation when transcript parsing fails
-- [ ] `go test ./pkg/workflow` passes
+- [x] Uses ACTUAL SubagentStop schema (session_id, transcript_path, hook_event_name, stop_hook_active)
+- [x] createMockTranscript() helper creates realistic transcript files
+- [x] Tests use t.TempDir() for isolation (no global state pollution)
+- [x] Full workflow (event → transcript parsing → metadata → response → log) works end-to-end
+- [x] All agent classes tested with proper model mapping
+- [x] Success and failure paths tested via transcript metadata
+- [x] Response JSON is valid and contains expected fields
+- [x] Simulation harness integration test added (TestAgentEndstateWorkflow_SimulationHarness)
+- [x] Integration tests verify multi-component interaction
+- [x] Graceful degradation when transcript parsing fails
+- [x] `go test ./pkg/workflow` passes
 
 **Why This Matters**: Integration tests catch workflow issues that unit tests miss.
 
