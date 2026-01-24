@@ -1,7 +1,7 @@
 ---
 id: GOgent-075
 title: SubagentStop Event Parsing for Orchestrator
-description: **Task**:
+description: Add orchestrator/architect detection logic to pkg/routing/ package using existing SubagentStop event schema and transcript parsing.
 status: pending
 time_estimate: 1h
 dependencies: ["GOgent-063"]
@@ -162,11 +162,11 @@ func TestParseOrchestratorStopEvent_InvalidJSON(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `ParseOrchestratorStopEvent()` uses existing `ParseSubagentStopEvent()` and `ParseTranscriptForMetadata()`
-- [ ] `IsOrchestratorType()` correctly identifies orchestrator/architect agents
-- [ ] Implementation reuses types from `pkg/routing/events.go` (no new event structs)
-- [ ] Tests verify parsing and type detection with actual transcript files
-- [ ] `go test ./pkg/routing` passes
+- [x] `ParseOrchestratorStopEvent()` uses existing `ParseSubagentStopEvent()` and `ParseTranscriptForMetadata()`
+- [x] `IsOrchestratorType()` correctly identifies orchestrator/architect agents
+- [x] Implementation reuses types from `pkg/routing/events.go` (no new event structs)
+- [x] Tests verify parsing and type detection with actual transcript files
+- [x] `go test ./pkg/routing` passes
 
 **Why This Matters**: Orchestrator-guard (GOgent-076) needs to detect orchestrator/architect completions to trigger follow-up actions.
 
