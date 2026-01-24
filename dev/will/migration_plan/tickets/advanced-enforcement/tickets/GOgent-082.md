@@ -343,15 +343,15 @@ func TestContentExtraction(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Event generation uses simulation harness (not pseudo-events)
-- [ ] Theater patterns detected in naked enforcement language
-- [ ] **BASELINE TEST**: Content WITH enforcement references NOT flagged
-- [ ] Legitimate workflow description not flagged
-- [ ] Non-CLAUDE.md files skipped
-- [ ] Read operations skipped
-- [ ] Content extraction works for Edit/Write operations
-- [ ] Deterministic fixtures created in test/simulation/fixtures/deterministic/doc-theater/
-- [ ] `go test ./pkg/enforcement` passes
+- [x] Event generation uses simulation harness (not pseudo-events)
+- [x] Theater patterns detected in naked enforcement language
+- [x] **BASELINE TEST**: Content WITH enforcement references NOT flagged
+- [x] Legitimate workflow description not flagged
+- [x] Non-CLAUDE.md files skipped
+- [x] Read operations skipped
+- [x] Content extraction works for Edit/Write operations
+- [x] Deterministic fixtures created in test/simulation/fixtures/deterministic/doc-theater/
+- [x] `go test ./pkg/enforcement` passes
 
 **Why This Matters**: Integration tests ensure doc-theater hook correctly distinguishes between documentation theater (naked imperatives) and legitimate enforcement references (pointing to actual programmatic enforcement).
 
