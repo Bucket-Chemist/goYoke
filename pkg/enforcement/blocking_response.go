@@ -1,7 +1,9 @@
 package enforcement
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
@@ -138,4 +140,33 @@ func formatStringArray(arr []string) string {
 	sb.WriteString("]")
 
 	return sb.String()
+}
+
+// Marshal writes the GuardResponse to the provided writer as JSON.
+// Wraps the response in the hookSpecificOutput structure expected by Claude Code.
+//
+// Parameters:
+//   - w: io.Writer to write JSON output to (typically os.Stdout)
+//
+// Returns:
+//   - error: nil on success, error with context on failure
+func (r *GuardResponse) Marshal(w io.Writer) error {
+	// Wrap in hookSpecificOutput structure
+	wrapper := map[string]interface{}{
+		"hookSpecificOutput": map[string]interface{}{
+			"hookEventName":     r.HookEventName,
+			"decision":          r.Decision,
+			"reason":            r.Reason,
+			"additionalContext": r.AdditionalContext,
+			"remediationSteps":  r.RemediationSteps,
+		},
+	}
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(wrapper); err != nil {
+		return fmt.Errorf("[orchestrator-guard] Failed to marshal JSON: %w", err)
+	}
+
+	return nil
 }

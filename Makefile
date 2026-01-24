@@ -119,10 +119,13 @@ build-agent-endstate:
 	@go build -o bin/gogent-agent-endstate ./cmd/gogent-agent-endstate
 	@echo "✓ Built: bin/gogent-agent-endstate"
 
-build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate
+build-orchestrator-guard:
+	@scripts/build-orchestrator-guard.sh
+
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard
 	@echo "✓ All hook binaries built"
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate check-path
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
@@ -132,6 +135,7 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/gogent-capture-intent ~/.local/bin/gogent-capture-intent
 	cp bin/gogent-load-context ~/.local/bin/gogent-load-context
 	cp bin/gogent-agent-endstate ~/.local/bin/gogent-agent-endstate
+	cp bin/gogent-orchestrator-guard ~/.local/bin/gogent-orchestrator-guard
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
@@ -139,7 +143,8 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	chmod +x ~/.local/bin/gogent-capture-intent
 	chmod +x ~/.local/bin/gogent-load-context
 	chmod +x ~/.local/bin/gogent-agent-endstate
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate"
+	chmod +x ~/.local/bin/gogent-orchestrator-guard
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -165,6 +170,13 @@ install-load-context: build-load-context
 	cp bin/gogent-load-context $(HOME)/.local/bin/
 	chmod +x $(HOME)/.local/bin/gogent-load-context
 	@echo "✓ Installed: $(HOME)/.local/bin/gogent-load-context"
+
+install-orchestrator-guard: build-orchestrator-guard
+	@echo "Installing gogent-orchestrator-guard to ~/.local/bin..."
+	@mkdir -p ~/.local/bin
+	@cp bin/gogent-orchestrator-guard ~/.local/bin/
+	@chmod +x ~/.local/bin/gogent-orchestrator-guard
+	@echo "✓ Installed: ~/.local/bin/gogent-orchestrator-guard"
 
 install-wrapper:
 	@echo "Installing session-archive wrapper hook..."

@@ -441,3 +441,153 @@ REQUIRED ACTIONS:
 		t.Errorf("hookSpecificOutput not found or wrong type")
 	}
 }
+
+// TestMarshal_ValidOutput verifies Marshal method produces correct JSON structure.
+func TestMarshal_ValidOutput(t *testing.T) {
+	resp := &GuardResponse{
+		HookEventName:     "SubagentStop",
+		Decision:          "block",
+		Reason:            "Test reason",
+		AdditionalContext: "Test context",
+		RemediationSteps:  []string{"step1", "step2"},
+	}
+
+	var buf strings.Builder
+	if err := resp.Marshal(&buf); err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Verify valid JSON
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+		t.Fatalf("Marshal produced invalid JSON: %v\nOutput: %s", err, output)
+	}
+
+	// Verify structure
+	hookOutput, ok := parsed["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Missing hookSpecificOutput wrapper")
+	}
+
+	// Verify fields
+	if hookEvent := hookOutput["hookEventName"].(string); hookEvent != "SubagentStop" {
+		t.Errorf("Expected hookEventName 'SubagentStop', got '%s'", hookEvent)
+	}
+
+	if decision := hookOutput["decision"].(string); decision != "block" {
+		t.Errorf("Expected decision 'block', got '%s'", decision)
+	}
+
+	if reason := hookOutput["reason"].(string); reason != "Test reason" {
+		t.Errorf("Expected reason 'Test reason', got '%s'", reason)
+	}
+
+	if context := hookOutput["additionalContext"].(string); context != "Test context" {
+		t.Errorf("Expected additionalContext 'Test context', got '%s'", context)
+	}
+
+	steps, ok := hookOutput["remediationSteps"].([]interface{})
+	if !ok || len(steps) != 2 {
+		t.Errorf("Expected 2 remediation steps, got %v", hookOutput["remediationSteps"])
+	}
+}
+
+// TestMarshal_AllowResponse verifies Marshal works correctly for allow decisions.
+func TestMarshal_AllowResponse(t *testing.T) {
+	resp := &GuardResponse{
+		HookEventName:     "SubagentStop",
+		Decision:          "allow",
+		Reason:            "All tasks collected",
+		AdditionalContext: "✅ ALLOWED",
+		RemediationSteps:  []string{}, // Empty for allow
+	}
+
+	var buf strings.Builder
+	if err := resp.Marshal(&buf); err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	output := buf.String()
+
+	// Verify valid JSON
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+		t.Fatalf("Marshal produced invalid JSON: %v\nOutput: %s", err, output)
+	}
+
+	hookOutput := parsed["hookSpecificOutput"].(map[string]interface{})
+
+	if decision := hookOutput["decision"].(string); decision != "allow" {
+		t.Errorf("Expected decision 'allow', got '%s'", decision)
+	}
+
+	steps := hookOutput["remediationSteps"].([]interface{})
+	if len(steps) != 0 {
+		t.Errorf("Expected empty remediation steps for allow, got %d items", len(steps))
+	}
+}
+
+// TestMarshal_ComplexMultilineContext verifies Marshal handles multiline text correctly.
+func TestMarshal_ComplexMultilineContext(t *testing.T) {
+	resp := &GuardResponse{
+		HookEventName: "SubagentStop",
+		Decision:      "block",
+		Reason:        "Complex\nreason",
+		AdditionalContext: `🛑 ORCHESTRATOR COMPLETION BLOCKED
+
+Agent: orchestrator (model: sonnet)
+Background Tasks: 2 spawned, 1 collected
+⚠️  Uncollected Tasks: 1
+  - bg-task-2
+
+VIOLATION: Fan-out without fan-in
+Reference: ~/.claude/rules/LLM-guidelines.md § 2.2 (Background Task Collection)
+
+REQUIRED ACTIONS:
+1. Call TaskOutput({task_id: "bg-task-2", block: true})
+2. Wait for collection to complete
+3. Verify results appear in transcript
+4. THEN synthesize/conclude orchestration`,
+		RemediationSteps: []string{
+			"identify_uncollected_task_ids",
+			"call_TaskOutput_for_each",
+			"wait_for_all_collections",
+			"verify_results_in_transcript",
+		},
+	}
+
+	var buf strings.Builder
+	if err := resp.Marshal(&buf); err != nil {
+		t.Fatalf("Marshal failed on complex context: %v", err)
+	}
+
+	output := buf.String()
+
+	// Verify valid JSON
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+		t.Fatalf("Marshal produced invalid JSON: %v\nOutput: %s", err, output)
+	}
+
+	hookOutput := parsed["hookSpecificOutput"].(map[string]interface{})
+
+	// Verify multiline context preserved
+	context := hookOutput["additionalContext"].(string)
+	if !strings.Contains(context, "ORCHESTRATOR COMPLETION BLOCKED") {
+		t.Errorf("AdditionalContext missing header")
+	}
+	if !strings.Contains(context, "bg-task-2") {
+		t.Errorf("AdditionalContext missing task ID")
+	}
+	if !strings.Contains(context, "LLM-guidelines.md") {
+		t.Errorf("AdditionalContext missing reference")
+	}
+
+	// Verify remediation steps
+	steps := hookOutput["remediationSteps"].([]interface{})
+	if len(steps) != 4 {
+		t.Errorf("Expected 4 remediation steps, got %d", len(steps))
+	}
+}
