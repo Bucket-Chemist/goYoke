@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // UserIntent captures user decision inputs and expressed preferences
@@ -69,6 +71,19 @@ type PerformanceMetric struct {
 	MemoryBytes int64  `json:"memory_bytes"` // Peak memory (if measurable)
 	Success     bool   `json:"success"`      // Operation outcome
 	Context     string `json:"context"`      // Additional context
+}
+
+// EndstateLog represents a single logged endstate decision (v1.3 - GOgent-065)
+type EndstateLog struct {
+	Timestamp       time.Time `json:"timestamp"`
+	AgentID         string    `json:"agent_id"`
+	AgentClass      string    `json:"agent_class"`
+	Tier            string    `json:"tier"`
+	ExitCode        int       `json:"exit_code"`
+	Duration        int       `json:"duration_ms"`
+	OutputTokens    int       `json:"output_tokens"`
+	Decision        string    `json:"decision"` // "prompt" or "silent"
+	Recommendations []string  `json:"recommendations"`
 }
 
 // ValidateSharpEdge validates SharpEdge JSON against schema
@@ -156,7 +171,7 @@ func ValidateSharpEdge(data []byte) error {
 }
 
 // LoadArtifacts loads all session artifacts (sharp edges, violations, error patterns, user intents,
-// decisions, preferences, performance metrics)
+// decisions, preferences, performance metrics, agent endstates)
 func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 	artifacts := HandoffArtifacts{
 		SharpEdges:          []SharpEdge{},
@@ -166,6 +181,7 @@ func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 		Decisions:           []Decision{},
 		PreferenceOverrides: []PreferenceOverride{},
 		PerformanceMetrics:  []PerformanceMetric{},
+		AgentEndstates:      []EndstateLog{},
 	}
 
 	// Load pending learnings (sharp edges)
@@ -216,6 +232,13 @@ func LoadArtifacts(cfg *HandoffConfig) (HandoffArtifacts, error) {
 		return artifacts, fmt.Errorf("[handoff] Failed to load performance metrics: %w", err)
 	}
 	artifacts.PerformanceMetrics = perfMetrics
+
+	// Load agent endstates (v1.3)
+	endstates, err := loadEndstates(cfg.ProjectDir)
+	if err != nil {
+		return artifacts, fmt.Errorf("[handoff] Failed to load agent endstates: %w", err)
+	}
+	artifacts.AgentEndstates = endstates
 
 	return artifacts, nil
 }
@@ -468,4 +491,41 @@ func loadPerformance(path string) ([]PerformanceMetric, error) {
 	}
 
 	return metrics, nil
+}
+
+// loadEndstates reads agent endstate logs from project-scoped agent-endstates.jsonl (v1.3)
+func loadEndstates(projectDir string) ([]EndstateLog, error) {
+	path := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []EndstateLog{}, nil // Missing file is normal
+		}
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer file.Close()
+
+	var endstates []EndstateLog
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+
+		var e EndstateLog
+		if err := json.Unmarshal([]byte(line), &e); err != nil {
+			// Skip malformed lines but continue
+			continue
+		}
+		endstates = append(endstates, e)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", path, err)
+	}
+
+	return endstates, nil
 }

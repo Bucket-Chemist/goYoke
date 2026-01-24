@@ -1,7 +1,7 @@
 ---
 id: GOgent-065
 title: Endstate Logging & Decision Storage
-description: **Task**:
+description: "Store endstate decisions in JSONL format for analysis and audit trail. Use XDG-compliant paths and integrate with HandoffArtifacts schema."
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-064"]
@@ -294,20 +294,20 @@ func TestGetAgentStats_Structure(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Uses XDG-compliant path via `config.GetGOgentDir()` (NOT hardcoded `/tmp/`)
-- [ ] `GetEndstateLogPath()` returns global path: `~/.cache/gogent/agent-endstates.jsonl`
-- [ ] `GetProjectEndstateLogPath()` returns project path: `.claude/memory/agent-endstates.jsonl`
-- [ ] `LogEndstate()` signature accepts metadata parameter
-- [ ] `LogEndstate()` writes to XDG-compliant path
-- [ ] Appends JSONL format (one JSON per line)
-- [ ] Creates file if missing
-- [ ] `ReadEndstateLogs()` parses all logs correctly
-- [ ] Handles missing file gracefully (returns empty list)
-- [ ] `GetAgentStats()` calculates success rate correctly
-- [ ] HandoffArtifacts extended with `AgentEndstates []EndstateLog` field (omitempty)
-- [ ] Tests use `t.Setenv()` for isolation
-- [ ] Tests verify logging, reading, statistics with mocked paths
-- [ ] `go test ./pkg/workflow` passes
+- [x] Uses XDG-compliant path via `config.GetGOgentDir()` (NOT hardcoded `/tmp/`)
+- [x] `GetEndstateLogPath()` returns global path: `~/.cache/gogent/agent-endstates.jsonl`
+- [x] `GetProjectEndstateLogPath()` returns project path: `.claude/memory/agent-endstates.jsonl`
+- [x] `LogEndstate()` signature accepts metadata parameter
+- [x] `LogEndstate()` writes to XDG-compliant path
+- [x] Appends JSONL format (one JSON per line)
+- [x] Creates file if missing
+- [x] `ReadEndstateLogs()` parses all logs correctly
+- [x] Handles missing file gracefully (returns empty list)
+- [x] `GetAgentStats()` calculates success rate correctly
+- [x] HandoffArtifacts extended with `AgentEndstates []EndstateLog` field (omitempty)
+- [x] Tests use `t.Setenv()` for isolation
+- [x] Tests verify logging, reading, statistics with mocked paths
+- [x] `go test ./pkg/workflow` passes
 
 **Why This Matters**: Logging enables post-session analysis of agent performance and patterns for memory compounding.
 

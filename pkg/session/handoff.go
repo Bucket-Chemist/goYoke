@@ -14,7 +14,7 @@ import (
 )
 
 // Schema version for handoff format evolution
-const HandoffSchemaVersion = "1.2"
+const HandoffSchemaVersion = "1.3"
 
 // Handoff represents a complete session handoff document in JSONL format
 type Handoff struct {
@@ -45,6 +45,8 @@ type HandoffArtifacts struct {
 	Decisions           []Decision           `json:"decisions,omitempty"`
 	PreferenceOverrides []PreferenceOverride `json:"preference_overrides,omitempty"`
 	PerformanceMetrics  []PerformanceMetric  `json:"performance_metrics,omitempty"`
+	// v1.3 additions (omitempty for backward compatibility)
+	AgentEndstates []EndstateLog `json:"agent_endstates,omitempty"`
 }
 
 // SharpEdge represents a debugging loop or gotcha discovered
@@ -302,10 +304,24 @@ func migrateHandoff(oldVersion string, data []byte) (*Handoff, error) {
 		return &handoff, nil
 
 	case "1.2":
-		// Current version - parse directly
+		// v1.2 -> v1.3 migration: new AgentEndstates field has omitempty, parse directly
 		var handoff Handoff
 		if err := json.Unmarshal(data, &handoff); err != nil {
 			return nil, fmt.Errorf("[handoff] Failed to parse v1.2 handoff: %w", err)
+		}
+		// Initialize new slice if nil
+		if handoff.Artifacts.AgentEndstates == nil {
+			handoff.Artifacts.AgentEndstates = []EndstateLog{}
+		}
+		// Update schema version to current
+		handoff.SchemaVersion = HandoffSchemaVersion
+		return &handoff, nil
+
+	case "1.3":
+		// Current version - parse directly
+		var handoff Handoff
+		if err := json.Unmarshal(data, &handoff); err != nil {
+			return nil, fmt.Errorf("[handoff] Failed to parse v1.3 handoff: %w", err)
 		}
 		return &handoff, nil
 
