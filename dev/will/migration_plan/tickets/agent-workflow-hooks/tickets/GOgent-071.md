@@ -1,7 +1,7 @@
 ---
 id: GOgent-071
 title: Integration Tests for attention-gate
-description: **Task**:
+description: "End-to-end tests for tool counter → reminder/flush workflow. Use t.TempDir() for test isolation and add simulation harness integration tests."
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-069"]
@@ -291,18 +291,18 @@ func TestAttentionGateWorkflow_SimulationHarness(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Tests use t.TempDir() for all file paths (no global state pollution)
-- [ ] Tests mock GetToolCounterPath() for isolation
-- [ ] Counter integration tests verify reminder at tool #10
-- [ ] Counter integration tests verify flush at tool #20
-- [ ] Session integration tests verify full flush workflow
-- [ ] Session integration tests verify no flush below threshold
-- [ ] Simulation harness test covers 30-tool workflow
-- [ ] Simulation test verifies reminder count (3 at 10, 20, 30)
-- [ ] Simulation test verifies flush execution
-- [ ] Tests follow existing patterns in pkg/config/paths_test.go
-- [ ] `go test ./pkg/config` passes
-- [ ] `go test ./pkg/session` passes
+- [x] Tests use t.TempDir() for all file paths (no global state pollution)
+- [x] Tests mock GetToolCounterPath() for isolation
+- [x] Counter integration tests verify reminder at tool #10
+- [x] Counter integration tests verify flush at tool #20
+- [x] Session integration tests verify full flush workflow
+- [x] Session integration tests verify no flush below threshold
+- [x] Simulation harness test covers 30-tool workflow
+- [x] Simulation test verifies reminder count (3 at 10, 20, 30)
+- [x] Simulation test verifies flush execution
+- [x] Tests follow existing patterns in pkg/config/paths_test.go
+- [x] `go test ./pkg/config` passes
+- [x] `go test ./pkg/session` passes
 
 **Why This Matters**: Integration tests verify multi-component workflows that unit tests cannot catch. Simulation harness tests validate real-world usage patterns.
 
