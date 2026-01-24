@@ -1,474 +1,423 @@
-# GOgent Fortress: Go Translation of Claude Code Hooks
+# GOgent Fortress
 
-**Status:** Phase 0 - Go Translation (In Progress)
-**Timeline:** 3 weeks + 1 day (pre-work complete ✅)
-**Review Status:** ✅ Staff Architect Approved
-**Version:** 3.1 FINAL
+**Programmatically Enforced Agentic Cooperation**
 
----
-
-## What is GOgent Fortress?
-
-GOgent Fortress is a phased migration project that translates the Claude Code hook system from Bash to Go, with the ultimate goal of building a production-ready daemon with persistent supervision and crash recovery.
-
-**Current State:** Claude Code hooks implemented in Bash (~400 lines), functional but reaching maintainability limits.
-
-**Destination:** Production-ready Go daemon with persistent supervision, crash recovery, and optional TUI observer.
-
-**Strategy:** 3-phase approach that decouples **translation risk** (Bash → Go) from **architectural risk** (hook model → daemon model).
+**Status:** Phase 0 Complete | Orchestrator Guard Active
+**Version:** 1.0.0
 
 ---
 
-## Why This Approach?
+## Overview
 
-| Alternative                      | Risk    | Timeline    | Outcome                            |
-| -------------------------------- | ------- | ----------- | ---------------------------------- |
-| Big Bang (Go daemon immediately) | High    | 9 weeks     | 2 simultaneous risks               |
-| Hook-Only (skip daemon)          | Low     | 6 weeks     | No crash recovery, no scaling      |
-| **This Plan (phased hybrid)**    | **Low** | **9 weeks** | **Proven patterns, safe rollback** |
+GOgent Fortress is a hook orchestration framework for Claude Code that enforces tiered routing policies, tracks debugging loops, and maintains session continuity through deterministic validation—not LLM instructions.
 
-**Key Insight:** The current Bash system WORKS. Migrating to Go removes one problem (maintainability). Migrating to daemon removes another problem (supervision). These are **orthogonal risks** that should be tackled sequentially, not simultaneously.
+**Key Insight:** Enforcement via code, not prompts. Text instructions are probabilistic suggestions; runtime hooks are deterministic rules.
+
+### What We Built
+
+A Go-based hook system that intercepts Claude Code tool events (SessionStart, PreToolUse, PostToolUse, SessionEnd) and applies programmatic validation:
+
+- **Task Validation**: Blocks invalid model/subagent_type pairings, enforces delegation ceilings
+- **Sharp-Edge Detection**: Captures debugging loops after 3+ consecutive failures
+- **Session Continuity**: Structured handoff documents preserve context across sessions
+- **Orchestrator Guard**: Prevents premature completion when background tasks are running
 
 ---
 
-## Architecture Overview
+## Architecture
 
-### Phase 0: Go Translation (Current - Weeks 1-3)
+The complete hook enforcement flow, from session initialization through tool validation to archival:
 
-**Objective:** 1:1 translation of Bash hooks to Go, zero architectural changes.
+```mermaid
+flowchart TD
+    subgraph "SessionStart Hook"
+        SS[gogent-load-context] --> LH[Load Previous Handoff]
+        LH --> DL[Detect Language]
+        DL --> LC[Load Conventions]
+        LC --> INJ[Inject Context]
+    end
 
-**What Gets Translated:**
+    subgraph "PreToolUse Hook - Task Validation"
+        PT[gogent-validate] --> CHK1{Tool == Task?}
+        CHK1 -->|No| PASS[Pass Through]
+        CHK1 -->|Yes| LOAD[Load routing-schema.json]
+        LOAD --> V1{Einstein/Opus Block?}
+        V1 -->|Yes| BLK1[BLOCK: Use /einstein]
+        V1 -->|No| V2{Model Mismatch?}
+        V2 -->|Yes| WARN[WARN: Continue]
+        V2 -->|No| V3{Delegation Ceiling?}
+        V3 -->|Exceeded| BLK2[BLOCK: Ceiling Violation]
+        V3 -->|OK| V4{Subagent Type Valid?}
+        V4 -->|No| BLK3[BLOCK: Wrong Type]
+        V4 -->|Yes| ALLOW[ALLOW]
+        BLK1 --> LOG[Log Violation]
+        BLK2 --> LOG
+        BLK3 --> LOG
+        LOG --> VFILE[(routing-violations.jsonl)]
+    end
 
+    subgraph "PostToolUse Hook - Merged Handler"
+        PO[gogent-sharp-edge] --> INC[Increment Tool Counter]
+        INC --> CHK10{Every 10 Tools?}
+        CHK10 -->|Yes| REM[Inject Routing Reminder]
+        CHK10 -->|No| CHK20{Every 20+ Tools?}
+        CHK20 -->|Yes| FLUSH[Archive Pending Learnings]
+        CHK20 -->|No| DET[Detect Failure]
+        REM --> DET
+        FLUSH --> DET
+        DET --> FAIL{Failure?}
+        FAIL -->|Yes| LOGF[Log Failure]
+        LOGF --> CNT{3+ Consecutive?}
+        CNT -->|Yes| CAP[Capture Sharp Edge]
+        CAP --> BLKS[BLOCK + Guidance]
+        CNT -->|No| CONT[Continue]
+        FAIL -->|No| CONT
+        BLKS --> PEND[(pending-learnings.jsonl)]
+        LOGF --> TRACK[(failure-tracker.jsonl)]
+    end
+
+    subgraph "SessionEnd Hook - Archive & Handoff"
+        SE[gogent-archive] --> METRICS[Collect Metrics]
+        METRICS --> ARTF[Load Artifacts]
+        ARTF --> GEN[Generate Handoff]
+        GEN --> SAVE[Save to Memory]
+        SAVE --> HAND[(handoffs.jsonl)]
+        SAVE --> LAST[(last-handoff.md)]
+    end
+
+    INJ --> |Session Active| PT
+    ALLOW --> |Tool Executes| PO
+    WARN --> |Tool Executes| PO
+    CONT --> |Continue Session| PT
+    HAND --> |Next Session| SS
+
+    style BLK1 fill:#f96,stroke:#333,stroke-width:2px
+    style BLK2 fill:#f96,stroke:#333,stroke-width:2px
+    style BLK3 fill:#f96,stroke:#333,stroke-width:2px
+    style BLKS fill:#f96,stroke:#333,stroke-width:2px
+    style ALLOW fill:#9f9,stroke:#333,stroke-width:2px
+    style WARN fill:#ff9,stroke:#333,stroke-width:2px
 ```
-Bash Hooks                    →  Go Binaries
-─────────────────────────────────────────────────
-validate-routing.sh (401 lines) → cmd/gogent-validate/main.go
-session-archive.sh  (111 lines) → cmd/gogent-archive/main.go
-sharp-edge-detector.sh (105 lines) → cmd/gogent-sharp-edge/main.go
-```
 
-**Benefits:**
+### Enforcement Guarantees
 
-- Type safety (catch errors at compile time)
-- Faster execution (<2ms vs ~40ms for validate-routing)
-- Easier to maintain and extend
-- **Zero architectural risk** (same input/output)
+| Hook                  | Responsibility     | Enforcement Mechanism                                      |
+| --------------------- | ------------------ | ---------------------------------------------------------- |
+| `gogent-load-context` | Context injection  | Reads schema + handoffs before LLM receives prompt         |
+| `gogent-validate`     | Task validation    | Blocks Tool execution via `{"decision": "block"}` response |
+| `gogent-sharp-edge`   | Failure tracking   | Tool counter + failure log → blocks after threshold        |
+| `gogent-archive`      | Session continuity | Writes structured handoff for next session's load-context  |
 
-**Rollback Plan:** Can run Go and Bash in parallel during testing, revert instantly if issues found.
-
-### Phase 1: Daemon Architecture (Weeks 4-6)
-
-**Objective:** Convert standalone hooks into supervised daemon with persistent state.
-
-**Architecture:**
-
-```
-Claude Code Session
-      ↓
-  Hook (thin shim)
-      ↓
-  Unix Socket IPC
-      ↓
-  GOgent Daemon (Go)
-  ├── Session Manager
-  ├── Violation Logger
-  ├── Health Monitor
-  └── State Persistence
-```
-
-**Benefits:**
-
-- Crash recovery (daemon restarts independently)
-- Persistent session state (survives Claude Code crashes)
-- Health monitoring and stuck detection
-- Graceful degradation
-
-### Phase 2: TUI Observer (Weeks 7-9) - Optional
-
-**Objective:** Real-time dashboard for observing Claude Code activity.
-
-**Features:**
-
-- Live session monitoring
-- Routing violation dashboard
-- Agent activity visualization
-- Performance metrics
-
-**Risk:** Low (TUI is optional observer, not controller).
+**Why this works:** Hooks run **before/after** the LLM, not inside it. Blocking decisions happen in code, not in token predictions.
 
 ---
 
-## Current Progress
+## Implementation Status
 
-### ✅ GOgent-000: Baseline Measurement (Complete)
+### Phase 0: Complete ✅
 
-**Deliverables:**
+**All hooks implemented and operational:**
 
-- Performance baseline: validate-routing (43ms), session-archive (19ms), sharp-edge-detector (36ms)
-- Go corpus logger implemented (validates event schema before Week 1)
-- 100-event synthetic test corpus
-- Real event capture running via `~/.claude/hooks/zzz-corpus-logger`
+| Hook         | CLI Binary            | Status      | Key Features                                                                      |
+| ------------ | --------------------- | ----------- | --------------------------------------------------------------------------------- |
+| SessionStart | `gogent-load-context` | ✅ Complete | Language detection, convention loading, handoff restoration                       |
+| PreToolUse   | `gogent-validate`     | ✅ Complete | Task validation, model checking, delegation ceiling enforcement                   |
+| PostToolUse  | `gogent-sharp-edge`   | ✅ Complete | Merged handler: tool counter, routing reminders, auto-flush, sharp-edge detection |
+| SessionEnd   | `gogent-archive`      | ✅ Complete | Metrics collection, artifact loading, handoff generation                          |
 
-**Performance SLA:**
+**Additional Tools:**
 
-- **Target:** Go hooks ≤ Bash average latency
-- **Acceptable:** +20% degradation if ≤10ms p99
-- **Unacceptable:** >10ms p99 latency
+- `gogent-capture-intent` - User intent logging
+- `gogent-aggregate` - Session statistics and analysis
+- `gogent-agent-endstate` - Subagent completion tracking
 
-### 🚧 Week 1: Foundation & Events (Next - 9 tickets)
+### Recent Work (GOgent-076 through GOgent-078)
 
-**Tickets:** GOgent-001 to GOgent-009
+**Orchestrator Guard Implementation:**
 
-**Goals:**
+- Transcript analysis for background Task tracking
+- Detection of uncollected TaskOutput calls
+- Blocking response generation when background tasks pending
+- Integration tests for guard enforcement
 
-- Go module initialization
-- Event schema structs (validated by corpus logger)
-- STDIN reading with timeout (M-6 fix)
-- XDG-compliant path resolution (M-2 fix)
-- Error message standards: `[component] What. Why. How to fix.`
-
----
-
-## Repository Structure
+### Package Structure
 
 ```
 GOgent-Fortress/
-├── cmd/                          # Binary entry points
-│   ├── gogent-validate/          # validate-routing.sh → Go
-│   ├── gogent-archive/           # session-archive.sh → Go
-│   └── gogent-sharp-edge/        # sharp-edge-detector.sh → Go
-├── pkg/                         # Public packages
-│   ├── routing/                 # Validation logic
-│   ├── config/                  # Schema loading
-│   ├── session/                 # Session management
-│   └── memory/                  # Sharp edge detection
-├── internal/                    # Private packages
-│   └── logger/                  # Structured logging
-├── test/
-│   ├── fixtures/
-│   │   └── event-corpus.json    # 100-event test corpus
-│   ├── integration/             # Integration tests
-│   └── benchmark/               # Performance benchmarks
-├── dev/tools/corpus-logger/     # Pre-work: Real event capture
-│   ├── main.go                  # Event capture implementation
-│   ├── main_test.go            # Tests (50% coverage)
-│   └── install.sh              # Hook installer
-└── migration_plan/
-    └── BASELINE.md              # Performance baseline documentation
+├── cmd/                          # CLI entry points
+│   ├── gogent-validate/          # PreToolUse hook
+│   ├── gogent-archive/           # SessionEnd hook
+│   ├── gogent-sharp-edge/        # PostToolUse hook (merged)
+│   ├── gogent-load-context/      # SessionStart hook
+│   ├── gogent-capture-intent/    # Manual intent logging
+│   ├── gogent-aggregate/         # Analysis CLI
+│   ├── gogent-agent-endstate/    # Subagent tracking
+│   └── ...
+├── pkg/                          # Core packages
+│   ├── routing/                  # Schema validation
+│   ├── session/                  # Handoffs, metrics, queries
+│   ├── memory/                   # Failure tracking, sharp edges
+│   ├── config/                   # Path resolution, XDG compliance
+│   ├── telemetry/               # Cost tracking, invocation metrics
+│   ├── workflow/                # Orchestrator guard logic
+│   └── enforcement/             # Validation orchestration
+└── test/
+    ├── simulation/              # Deterministic fixtures
+    └── integration/             # Full lifecycle tests
 ```
 
 ---
 
-## Building & Testing
+## Key Features
+
+### Programmatic Enforcement
+
+**Declarative → Programmatic → Reference Architecture:**
+
+1. **Declarative Rules** (`routing-schema.json`)
+   - Single source of truth for allowed/blocked behaviors
+   - Parsed by hooks at runtime
+   - Example: `"task_invocation_blocked": true` for Einstein
+
+2. **Programmatic Enforcement** (Hook CLIs)
+   - Run before/after tool execution
+   - Can block, warn, or modify behavior
+   - Example: `gogent-validate` checks schema and emits `{"decision": "block"}`
+
+3. **Reference Documentation** (`CLAUDE.md`)
+   - Points to enforcement mechanisms
+   - Provides context, not enforcement
+   - Example: "Blocked by validate-routing line 87"
+
+**Why this matters:** Text instructions ("MUST NOT", "NEVER") are probabilistic suggestions. Runtime hooks are deterministic rules.
+
+### Orchestrator Guard
+
+Recent implementation (GOgent-076 through GOgent-078) prevents orchestration failures:
+
+**Problem:** Orchestrator spawns background Task() calls, then completes without collecting results via TaskOutput().
+
+**Solution:**
+
+- Transcript analysis detects background task IDs
+- Identifies missing TaskOutput calls before completion
+- Blocks response generation with specific guidance
+- Ensures all parallel work is collected before synthesis
+
+**Enforcement Point:** `gogent-agent-endstate` hook (SubagentStop event)
+
+---
+
+## Installation & Usage
 
 ### Prerequisites
 
 - Go 1.23+
-- jq (for corpus curation)
-- Claude Code installed
+- Claude Code CLI installed
 
-### Build Commands
+### Build & Install
 
 ```bash
 # Build all binaries
-make build-all
+make build-validate build-archive
 
-# Build single binary
-go build -o bin/gogent-validate ./cmd/gogent-validate
+# Install to ~/.local/bin
+make install
 
-# Run tests
+# Verify installation
+which gogent-validate gogent-archive
+```
+
+The `make install` target:
+
+- Builds `gogent-validate`, `gogent-archive`, and supporting CLIs
+- Copies to `~/.local/bin/` with execute permissions
+- Verifies PATH configuration
+- Provides shell setup instructions if needed
+
+### Hook Configuration
+
+Update Claude Code hook configuration (`~/.config/claude/config.toml`):
+
+```toml
+[hooks.SessionStart]
+command = "gogent-load-context"
+
+[hooks.PreToolUse]
+command = "gogent-validate"
+
+[hooks.PostToolUse]
+command = "gogent-sharp-edge"
+
+[hooks.SessionEnd]
+command = "gogent-archive"
+
+[hooks.SubagentStop]
+command = "gogent-agent-endstate"
+```
+
+### Testing
+
+```bash
+# Run unit tests
 go test ./...
 
-# Run tests with coverage
+# Run with coverage
 go test ./... -cover
 
-# Run tests with race detector
+# Run with race detector
 go test -race ./...
 
-# Run benchmarks
-go test -bench=. ./test/benchmark
-```
-
-### Installation
-
-```bash
-# Phase 0: Install Go hooks (replaces Bash)
-./scripts/install.sh
-
-# Rollback to Bash hooks
-./scripts/rollback.sh
+# Run simulation suite
+./test/simulation/harness sessionstart-suite
 ```
 
 ---
 
-## Event Schema
+## Data Persistence
 
-All hooks receive events via STDIN in JSON format:
+All session data stored in JSONL (JSON Lines) format for append-only writes and streaming reads.
 
-```go
-type HookEvent struct {
-    ToolName      string                 `json:"tool_name"`
-    ToolInput     map[string]interface{} `json:"tool_input,omitempty"`
-    ToolResponse  map[string]interface{} `json:"tool_response,omitempty"`
-    SessionID     string                 `json:"session_id"`
-    HookEventName string                 `json:"hook_event_name"`
-    CapturedAt    int64                  `json:"captured_at"`
-}
+### File Locations
+
+```
+Project/
+├── .claude/
+│   ├── memory/
+│   │   ├── handoffs.jsonl          # Session history
+│   │   ├── user-intents.jsonl      # User preferences
+│   │   ├── decisions.jsonl         # Architectural decisions
+│   │   ├── preferences.jsonl       # Preference overrides
+│   │   ├── performance.jsonl       # Performance metrics
+│   │   └── pending-learnings.jsonl # Unreviewed sharp edges
+│   └── session-archive/            # Archived session data
+
+~/.gogent/
+└── failure-tracker.jsonl           # Cross-session failure tracking
+
+/tmp/
+├── claude-routing-violations.jsonl # Current session violations
+└── claude-tool-counter-*.log       # Tool call counters
 ```
 
-**PreToolUse Example:**
+### Schema Versions
 
-```json
-{
-  "tool_name": "Task",
-  "tool_input": {
-    "model": "sonnet",
-    "prompt": "AGENT: python-pro\n\nImplement function",
-    "subagent_type": "general-purpose"
-  },
-  "session_id": "abc-123",
-  "hook_event_name": "PreToolUse"
-}
-```
-
-**PostToolUse Example:**
-
-```json
-{
-  "tool_name": "Bash",
-  "tool_response": {
-    "exit_code": 1,
-    "stderr": "Error: file not found"
-  },
-  "session_id": "abc-123",
-  "hook_event_name": "PostToolUse"
-}
-```
+| Schema              | Version | Key Features                                                   |
+| ------------------- | ------- | -------------------------------------------------------------- |
+| routing-schema.json | 2.2.0   | agent_subagent_mapping, delegation_ceiling, blocked_patterns   |
+| Handoff             | 1.2     | Extended SharpEdge fields, decisions, preferences, performance |
 
 ---
 
-## Standards & Conventions
+## Testing Infrastructure
 
-### Error Message Format
+GOgent-Fortress includes comprehensive testing via deterministic fixtures, simulation harness, and CI/CD workflows.
 
-**Required:** `[component] What happened. Why it was blocked/failed. How to fix.`
+### Test Coverage
 
-**Examples:**
+| Package        | Coverage | Key Functions Tested                                      |
+| -------------- | -------- | --------------------------------------------------------- |
+| `pkg/routing`  | ~90%     | Schema loading, Task validation, violation logging        |
+| `pkg/session`  | ~85%     | Handoff generation, language detection, context injection |
+| `pkg/memory`   | ~88%     | Failure tracking, sharp-edge detection                    |
+| `pkg/workflow` | ~82%     | Transcript analysis, background task detection            |
 
-✅ **Good:**
+### Simulation Harness
 
-```
-[validate-routing] Task(opus) blocked. Einstein requires GAP document workflow for cost control. Generate GAP: .claude/tmp/einstein-gap-{timestamp}.md, then run /einstein.
-```
-
-❌ **Bad:**
-
-```
-Task blocked.
-```
-
-### File Paths (XDG Compliance)
-
-**Never use hardcoded `/tmp` paths.** Priority:
-
-1. `$XDG_RUNTIME_DIR/gogent/` (session-specific, auto-cleaned)
-2. `$XDG_CACHE_HOME/gogent/` (user-configurable)
-3. `~/.cache/gogent/` (standard fallback)
-
-**Example:**
-
-```go
-func GetGOgentDir() string {
-    if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
-        return filepath.Join(xdg, "gogent")
-    }
-    if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
-        return filepath.Join(xdg, "gogent")
-    }
-    home, _ := os.UserHomeDir()
-    return filepath.Join(home, ".cache", "gogent")
-}
-```
-
-### STDIN Timeout
-
-**All hooks MUST implement 5-second timeout on STDIN reads** (fixes M-6):
-
-```go
-func ReadStdin(timeout time.Duration) ([]byte, error) {
-    ch := make(chan []byte, 1)
-    errCh := make(chan error, 1)
-
-    go func() {
-        data, err := io.ReadAll(os.Stdin)
-        if err != nil {
-            errCh <- err
-            return
-        }
-        ch <- data
-    }()
-
-    select {
-    case data := <-ch:
-        return data, nil
-    case err := <-errCh:
-        return nil, fmt.Errorf("reading stdin: %w", err)
-    case <-time.After(timeout):
-        return nil, fmt.Errorf("stdin read timeout after %v", timeout)
-    }
-}
-```
-
-### Logging
-
-**Structured logs to `~/.gogent/hooks.log`:**
-
-```json
-{
-  "ts": "2026-01-15T14:32:15Z",
-  "level": "ERROR",
-  "component": "validate-routing",
-  "msg": "Task(opus) blocked",
-  "session_id": "abc123",
-  "details": {...}
-}
-```
-
-**Debugging:**
+**Location:** `test/simulation/harness`
 
 ```bash
-# View recent errors
-tail -n 50 ~/.gogent/hooks.log | jq 'select(.level=="ERROR")'
+# Run single fixture
+./harness sessionstart 01_home_startup.json
 
-# View session violations
-grep session-abc123 ~/.cache/gogent/routing-violations.jsonl | jq .
+# Run full suite
+./harness sessionstart-suite
+
+# Run with verbose output
+./harness sessionstart 03_go_startup.json --verbose
 ```
 
----
+**Fixtures:** 10 deterministic test fixtures per hook covering all initialization scenarios.
 
-## Testing Strategy
+### GitHub Actions
 
-### Unit Tests (Every Ticket)
+Three-tier CI/CD workflow:
 
-**Coverage Target:** ≥80% per package
+1. **Unit tests** - Fast feedback on package changes
+2. **Simulation tests** - Validates all deterministic fixtures
+3. **Integration tests** - Full Claude Code CLI lifecycle
 
-**Test Naming:** `TestFunctionName_Scenario`
-
-**Required Cases:**
-
-- Valid input (happy path)
-- Invalid input (error handling)
-- Edge cases (empty strings, nil pointers)
-- Error conditions (file not found, timeout)
-
-**Run after each ticket:**
-
-```bash
-go test ./...
-```
-
-### Integration Tests (Week 3)
-
-**100-event corpus replay:**
-
-```bash
-# Run all events through hooks, compare Go vs Bash output
-go test ./test/integration/... -v
-```
-
-**Regression tests:**
-
-```bash
-# Verify 100% match with Bash output
-go test ./test/regression/... -v
-```
-
-### Performance Benchmarks (Week 3)
-
-**Target:** Go hooks ≤ Bash average latency
-
-```bash
-go test -bench=. ./test/benchmark
-
-# Compare against baseline
-./scripts/compare-baseline.sh
-```
-
----
-
-## Rollback Plan
-
-**If Go hooks cause issues:**
-
-1. **Immediate rollback** (<5 minutes):
-
-   ```bash
-   ./scripts/rollback.sh
-   ```
-
-   Restores Bash hooks from backup.
-
-2. **Parallel testing** (24 hours):
-
-   ```bash
-   ./scripts/parallel-test.sh
-   ```
-
-   Runs Go and Bash side-by-side, compares outputs.
-
-3. **GO/NO-GO decision** (Week 3, Day 3):
-   - ✅ **GO**: 100% corpus match, performance ≤ baseline → cutover
-   - ❌ **NO-GO**: Differences found → investigate, fix, or rollback
+**Trigger paths:** Any change to `cmd/`, `pkg/`, or `test/simulation/fixtures/`
 
 ---
 
 ## Documentation
 
-### For Contributors
-
-- **Migration Plan:** `/migration_plan/gogent_migration_plan_v3_FINAL.md`
-- **Ticket Details:** `/migration_plan/finalised/tickets/`
-- **Critical Review:** `/migration_plan/finalised/CRITICAL_REVIEW.md`
-- **Baseline:** `/migration_plan/BASELINE.md`
-
-### For Users
-
-- **Installation:** (TBD - Week 3)
-- **Troubleshooting:** (TBD - Week 3)
-- **Configuration:** (TBD - Week 3)
+| Document                                | Purpose                                             |
+| --------------------------------------- | --------------------------------------------------- |
+| `docs/systems-architecture-overview.md` | Complete system architecture with sequence diagrams |
+| `CLAUDE.md`                             | Project-level Claude Code configuration             |
+| `~/.claude/routing-schema.json`         | Declarative source of truth for routing rules       |
+| `migration_plan/`                       | Implementation tickets and migration strategy       |
 
 ---
 
-## Support & Contributing
+## Debugging
 
-### Reporting Issues
+### View Hook Logs
 
-**Phase 0 bugs:**
+```bash
+# Recent errors
+tail -n 50 ~/.gogent/hooks.log | jq 'select(.level=="ERROR")'
 
-- Include: Go version, OS, full error message
-- Attach: logs from `~/.gogent/hooks.log`
-- Provide: minimal reproduction case
+# Session violations
+grep session-abc123 /tmp/claude-routing-violations.jsonl | jq .
 
-### Development Workflow
+# Failure tracking
+jq 'select(.file=="path/to/file.py")' ~/.gogent/failure-tracker.jsonl
+```
+
+### Environment Variables
+
+| Variable                    | Purpose                    | Default                         |
+| --------------------------- | -------------------------- | ------------------------------- |
+| `GOGENT_PROJECT_DIR`        | Project root               | `$PWD`                          |
+| `GOGENT_ROUTING_SCHEMA`     | Schema path override       | `~/.claude/routing-schema.json` |
+| `GOGENT_MAX_FAILURES`       | Sharp-edge threshold       | 3                               |
+| `GOGENT_REMINDER_THRESHOLD` | Routing reminder frequency | 10                              |
+| `GOGENT_FLUSH_THRESHOLD`    | Auto-flush frequency       | 20                              |
+
+---
+
+## Development Workflow
+
+### Standards
+
+- **Error Messages:** `[component] What happened. Why it was blocked/failed. How to fix.`
+- **XDG Compliance:** Use `$XDG_RUNTIME_DIR` or `$XDG_CACHE_HOME`, never hardcoded `/tmp`
+- **STDIN Timeout:** All hooks implement 5-second timeout on STDIN reads
+- **Test Coverage:** Maintain ≥80% coverage per package
+- **Commit Format:**
+
+  ```
+  GOgent-XXX: Title
+
+  - Implementation detail 1
+  - Implementation detail 2
+  - Test coverage: XX%
+
+  Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+  ```
+
+### Workflow
 
 1. Create branch: `gogent-XXX-description`
-2. Implement ticket following `TICKET-TEMPLATE.md`
-3. Run tests: `go test ./...`
-4. Commit with format:
-
-   ```
-   GOgent-XXX: Title
-
-   - Implementation detail 1
-   - Implementation detail 2
-   - Test coverage: XX%
-
-   Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-   ```
-
-5. Push and create PR
-6. Wait for review
-7. Merge to main
+2. Implement with tests: `go test ./...`
+3. Verify coverage: `go test ./... -cover`
+4. Run race detector: `go test -race ./...`
+5. Commit and push
+6. CI validates: unit tests → simulation tests → integration tests
+7. Merge to master
 
 ---
 
@@ -476,21 +425,16 @@ go test -bench=. ./test/benchmark
 
 Copyright © 2025 William Klare. All rights reserved.
 
-This software and its associated documentation, architecture, and design are proprietary.
+This software and its associated documentation, architecture, and design are proprietary. This work was done entirely on my own initiative, finances, spare time
+and without any form of compensation.
 No license is granted to use, copy, modify, or distribute any part of this codebase without
 explicit written permission from the author.
 
 ---
 
-## Acknowledgments
+## Project Status
 
-- **Claude Code Team** - Original hook system design
-- **Staff Architect** - Critical review and approval
-- **go-pro agent** - Corpus logger implementation
-
----
-
-**Current Phase:** 0 (Go Translation)
-**Current Ticket:** GOgent-000 ✅ Complete
-**Next Ticket:** GOgent-001 (Go Module Setup)
-**Timeline:** On track for 3-week Phase 0 completion
+**Phase 0:** Complete ✅
+**Current Work:** Orchestrator guard (GOgent-076 through GOgent-078)
+**Implementation Progress:** GOgent-000 through GOgent-078
+**Version:** 1.0.0
