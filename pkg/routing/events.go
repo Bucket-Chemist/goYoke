@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -45,6 +46,48 @@ type PostToolEvent struct {
 // Corpus coverage: Task, Read, Write, Edit, Bash, Glob, Grep tools.
 // Event types: PreToolUse, PostToolUse.
 // Validation date: 2026-01-16
+
+// ToolEvent Helper Methods (GOgent-080)
+
+// ExtractFilePath gets file_path from tool_input.
+// Returns empty string if file_path is not present or not a string.
+func (e *ToolEvent) ExtractFilePath() string {
+	if path, ok := e.ToolInput["file_path"].(string); ok {
+		return path
+	}
+	return ""
+}
+
+// ExtractWriteContent gets content for Write tool or new_string for Edit tool.
+// Returns empty string if neither field is present or not a string.
+func (e *ToolEvent) ExtractWriteContent() string {
+	// Write tool uses "content" field
+	if content, ok := e.ToolInput["content"].(string); ok {
+		return content
+	}
+	// Edit tool uses "new_string" field
+	if newStr, ok := e.ToolInput["new_string"].(string); ok {
+		return newStr
+	}
+	return ""
+}
+
+// IsClaudeMDFile checks if target is a CLAUDE.md file (or variant like CLAUDE.en.md).
+// Returns false if file_path cannot be extracted.
+func (e *ToolEvent) IsClaudeMDFile() bool {
+	path := e.ExtractFilePath()
+	if path == "" {
+		return false
+	}
+	filename := filepath.Base(path)
+	return filename == "CLAUDE.md" ||
+		(strings.HasPrefix(filename, "CLAUDE.") && strings.HasSuffix(filename, ".md"))
+}
+
+// IsWriteOperation checks if this is a Write or Edit operation.
+func (e *ToolEvent) IsWriteOperation() bool {
+	return e.ToolName == "Write" || e.ToolName == "Edit"
+}
 
 // TaskInput represents Task tool_input structure.
 // This is the specific structure for Task tool invocations.

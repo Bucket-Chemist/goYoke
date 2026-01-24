@@ -1536,3 +1536,145 @@ func TestParseSubagentStopEvent_StopHookActiveVariations(t *testing.T) {
 		})
 	}
 }
+
+// ============================================================================
+// ToolEvent Helper Methods Tests (GOgent-080)
+// ============================================================================
+
+func TestToolEvent_ExtractFilePath(t *testing.T) {
+	tests := []struct {
+		name      string
+		toolInput map[string]interface{}
+		expected  string
+	}{
+		{
+			name:      "valid file_path",
+			toolInput: map[string]interface{}{"file_path": "/home/user/CLAUDE.md"},
+			expected:  "/home/user/CLAUDE.md",
+		},
+		{
+			name:      "missing file_path",
+			toolInput: map[string]interface{}{"other": "value"},
+			expected:  "",
+		},
+		{
+			name:      "file_path wrong type",
+			toolInput: map[string]interface{}{"file_path": 123},
+			expected:  "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := &ToolEvent{ToolInput: tc.toolInput}
+			if got := event.ExtractFilePath(); got != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, got)
+			}
+		})
+	}
+}
+
+func TestToolEvent_ExtractWriteContent(t *testing.T) {
+	tests := []struct {
+		name      string
+		toolName  string
+		toolInput map[string]interface{}
+		expected  string
+	}{
+		{
+			name:      "Write with content",
+			toolName:  "Write",
+			toolInput: map[string]interface{}{"content": "file contents"},
+			expected:  "file contents",
+		},
+		{
+			name:      "Edit with new_string",
+			toolName:  "Edit",
+			toolInput: map[string]interface{}{"new_string": "replacement text"},
+			expected:  "replacement text",
+		},
+		{
+			name:      "no content fields",
+			toolName:  "Write",
+			toolInput: map[string]interface{}{"other": "value"},
+			expected:  "",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := &ToolEvent{
+				ToolName:  tc.toolName,
+				ToolInput: tc.toolInput,
+			}
+			if got := event.ExtractWriteContent(); got != tc.expected {
+				t.Errorf("expected %q, got %q", tc.expected, got)
+			}
+		})
+	}
+}
+
+func TestToolEvent_IsClaudeMDFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		toolInput map[string]interface{}
+		expected  bool
+	}{
+		{
+			name:      "CLAUDE.md",
+			toolInput: map[string]interface{}{"file_path": "/path/to/CLAUDE.md"},
+			expected:  true,
+		},
+		{
+			name:      "CLAUDE.en.md",
+			toolInput: map[string]interface{}{"file_path": "/path/to/CLAUDE.en.md"},
+			expected:  true,
+		},
+		{
+			name:      "other.md",
+			toolInput: map[string]interface{}{"file_path": "/path/to/other.md"},
+			expected:  false,
+		},
+		{
+			name:      "CLAUDE.txt",
+			toolInput: map[string]interface{}{"file_path": "/path/to/CLAUDE.txt"},
+			expected:  false,
+		},
+		{
+			name:      "no file_path",
+			toolInput: map[string]interface{}{},
+			expected:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			event := &ToolEvent{ToolInput: tc.toolInput}
+			if got := event.IsClaudeMDFile(); got != tc.expected {
+				t.Errorf("expected %v, got %v", tc.expected, got)
+			}
+		})
+	}
+}
+
+func TestToolEvent_IsWriteOperation(t *testing.T) {
+	tests := []struct {
+		toolName string
+		expected bool
+	}{
+		{"Write", true},
+		{"Edit", true},
+		{"Read", false},
+		{"Bash", false},
+		{"Task", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.toolName, func(t *testing.T) {
+			event := &ToolEvent{ToolName: tc.toolName}
+			if got := event.IsWriteOperation(); got != tc.expected {
+				t.Errorf("tool %s: expected %v, got %v", tc.toolName, tc.expected, got)
+			}
+		})
+	}
+}

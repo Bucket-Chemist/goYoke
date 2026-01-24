@@ -219,11 +219,11 @@ func TestToolEvent_IsWriteOperation(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `ExtractFilePath()` method added to ToolEvent
-- [ ] `ExtractWriteContent()` method added to ToolEvent
-- [ ] `IsClaudeMDFile()` method added to ToolEvent
-- [ ] `IsWriteOperation()` method added to ToolEvent
-- [ ] All tests pass: `go test -v ./pkg/routing`
+- [x] `ExtractFilePath()` method added to ToolEvent
+- [x] `ExtractWriteContent()` method added to ToolEvent
+- [x] `IsClaudeMDFile()` method added to ToolEvent
+- [x] `IsWriteOperation()` method added to ToolEvent
+- [x] All tests pass: `go test -v ./pkg/routing`
 
 **Why This Matters**:
 These helper methods provide clean access to tool_input data for doc-theater enforcement. They work with the EXISTING ToolEvent struct that already matches Claude Code's schema. No new structs or files needed - just extending existing functionality.
