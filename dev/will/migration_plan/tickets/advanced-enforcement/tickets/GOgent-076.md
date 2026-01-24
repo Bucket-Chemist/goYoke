@@ -1,7 +1,7 @@
 ---
 id: GOgent-076
 title: Transcript Analysis & Task Tracking
-description: **Task**:
+description: Extend pkg/routing/transcript.go to track background task spawns and collections using ID-based tracking. Use JSON parsing for structured tool calls with regex fallback for prose patterns.
 status: pending
 time_estimate: 2h
 dependencies: ["GOgent-075"]
@@ -449,15 +449,15 @@ TaskOutput with task_id: "prose-1"
 ```
 
 **Acceptance Criteria**:
-- [ ] `TaskTracker` uses ID-based tracking (not count-based)
-- [ ] `GetUncollected()` returns correct task IDs
-- [ ] `Analyze()` parses JSON tool calls for structured data
-- [ ] Regex fallback handles prose patterns
-- [ ] Duplicate task IDs handled idempotently
-- [ ] Malformed JSON falls back to regex without error
-- [ ] `GetSummary()` returns accurate spawn/collect/uncollected counts
-- [ ] `GetUncollectedList()` lists only uncollected task IDs
-- [ ] `go test ./pkg/routing` passes with new tests
+- [x] `TaskTracker` uses ID-based tracking (not count-based)
+- [x] `GetUncollected()` returns correct task IDs
+- [x] `Analyze()` parses JSON tool calls for structured data
+- [x] Regex fallback handles prose patterns
+- [x] Duplicate task IDs handled idempotently
+- [x] Malformed JSON falls back to regex without error
+- [x] `GetSummary()` returns accurate spawn/collect/uncollected counts
+- [x] `GetUncollectedList()` lists only uncollected task IDs
+- [x] `go test ./pkg/routing` passes with new tests
 
 **Why This Matters**: ID-based tracking prevents false positives/negatives that occur with count-based tracking. JSON parsing provides robustness for structured tool calls, while regex fallback handles prose descriptions.
 

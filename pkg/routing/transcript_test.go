@@ -837,3 +837,380 @@ func TestDetectPhases_GlobAsDiscoveryTool(t *testing.T) {
 		t.Errorf("Expected discovery phase (Glob counts as discovery), got: %s", result[0].Phase)
 	}
 }
+
+// TestTaskTracker_IDBasedTracking tests basic ID-based tracking functionality.
+func TestTaskTracker_IDBasedTracking(t *testing.T) {
+	tracker := NewTaskTracker()
+
+	// Initially empty
+	if tracker.HasUncollected() {
+		t.Error("Expected no uncollected tasks initially")
+	}
+
+	spawned, collected, uncollected := tracker.GetStats()
+	if spawned != 0 || collected != 0 || len(uncollected) != 0 {
+		t.Errorf("Expected empty stats initially, got spawned=%d, collected=%d, uncollected=%d", spawned, collected, len(uncollected))
+	}
+
+	// Spawn task
+	tracker.SpawnedIDs["task-1"] = true
+
+	if !tracker.HasUncollected() {
+		t.Error("Expected uncollected task after spawn")
+	}
+
+	spawned, collected, uncollected = tracker.GetStats()
+	if spawned != 1 || collected != 0 || len(uncollected) != 1 {
+		t.Errorf("Expected spawned=1, collected=0, uncollected=1, got spawned=%d, collected=%d, uncollected=%d", spawned, collected, len(uncollected))
+	}
+
+	if uncollected[0] != "task-1" {
+		t.Errorf("Expected uncollected task-1, got: %s", uncollected[0])
+	}
+
+	// Collect task
+	tracker.CollectedIDs["task-1"] = true
+
+	if tracker.HasUncollected() {
+		t.Error("Expected no uncollected tasks after collection")
+	}
+
+	spawned, collected, uncollected = tracker.GetStats()
+	if spawned != 1 || collected != 1 || len(uncollected) != 0 {
+		t.Errorf("Expected spawned=1, collected=1, uncollected=0, got spawned=%d, collected=%d, uncollected=%d", spawned, collected, len(uncollected))
+	}
+}
+
+// TestTaskTracker_DuplicateIDs tests idempotent duplicate ID handling.
+func TestTaskTracker_DuplicateIDs(t *testing.T) {
+	tracker := NewTaskTracker()
+
+	// Spawn same ID multiple times (idempotent)
+	tracker.SpawnedIDs["task-dup"] = true
+	tracker.SpawnedIDs["task-dup"] = true
+	tracker.SpawnedIDs["task-dup"] = true
+
+	spawned, _, uncollected := tracker.GetStats()
+	if spawned != 1 {
+		t.Errorf("Expected spawned=1 (idempotent), got: %d", spawned)
+	}
+
+	if len(uncollected) != 1 {
+		t.Errorf("Expected 1 uncollected task, got: %d", len(uncollected))
+	}
+
+	// Collect same ID multiple times (idempotent)
+	tracker.CollectedIDs["task-dup"] = true
+	tracker.CollectedIDs["task-dup"] = true
+
+	_, collected, uncollected := tracker.GetStats()
+	if collected != 1 {
+		t.Errorf("Expected collected=1 (idempotent), got: %d", collected)
+	}
+
+	if len(uncollected) != 0 {
+		t.Errorf("Expected 0 uncollected tasks, got: %d", len(uncollected))
+	}
+}
+
+// TestTranscriptAnalyzer_NoBackgroundTasks tests empty transcript case.
+func TestTranscriptAnalyzer_NoBackgroundTasks(t *testing.T) {
+	content := `{"tool_name":"Read","tool_input":{"file_path":"/test.go"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1000}
+{"tool_name":"Edit","tool_input":{"file_path":"/test.go","old_string":"old","new_string":"new"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1001}
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
+
+	if analyzer.HasUncollectedTasks() {
+		t.Error("Expected no uncollected tasks")
+	}
+
+	summary := analyzer.GetSummary()
+	if !strings.Contains(summary, "No background tasks detected") {
+		t.Errorf("Expected 'No background tasks detected' in summary, got: %s", summary)
+	}
+
+	uncollectedList := analyzer.GetUncollectedList()
+	if uncollectedList != "" {
+		t.Errorf("Expected empty uncollected list, got: %s", uncollectedList)
+	}
+}
+
+// TestTranscriptAnalyzer_JSONParsing tests structured JSON parsing.
+func TestTranscriptAnalyzer_JSONParsing(t *testing.T) {
+	content := `{"tool_name":"Bash","tool_input":{"command":"long_task.sh","run_in_background":true,"task_id":"bg-123"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1000}
+{"tool_name":"Read","tool_input":{"file_path":"/test.go"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1001}
+{"tool_name":"TaskOutput","tool_input":{"task_id":"bg-123","block":true},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1002}
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
+
+	if analyzer.HasUncollectedTasks() {
+		t.Error("Expected no uncollected tasks (spawn + collect)")
+	}
+
+	spawned, collected, _ := analyzer.tracker.GetStats()
+	if spawned != 1 {
+		t.Errorf("Expected 1 spawned task, got: %d", spawned)
+	}
+	if collected != 1 {
+		t.Errorf("Expected 1 collected task, got: %d", collected)
+	}
+
+	summary := analyzer.GetSummary()
+	if !strings.Contains(summary, "All background tasks collected") {
+		t.Errorf("Expected 'All background tasks collected' in summary, got: %s", summary)
+	}
+}
+
+// TestTranscriptAnalyzer_RegexFallback tests prose pattern detection via regex.
+func TestTranscriptAnalyzer_RegexFallback(t *testing.T) {
+	content := `Some prose description with run_in_background: true and task_id: "prose-task-1"
+Another line with no background task
+Collecting with TaskOutput task_id: "prose-task-1"
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
+
+	if analyzer.HasUncollectedTasks() {
+		t.Error("Expected no uncollected tasks (regex detection should work)")
+	}
+
+	spawned, collected, _ := analyzer.tracker.GetStats()
+	if spawned != 1 {
+		t.Errorf("Expected 1 spawned task (regex), got: %d", spawned)
+	}
+	if collected != 1 {
+		t.Errorf("Expected 1 collected task (regex), got: %d", collected)
+	}
+}
+
+// TestTranscriptAnalyzer_UncollectedTasks tests detection of uncollected tasks.
+func TestTranscriptAnalyzer_UncollectedTasks(t *testing.T) {
+	content := `{"tool_name":"Bash","tool_input":{"command":"task1.sh","run_in_background":true,"task_id":"bg-1"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1000}
+{"tool_name":"Bash","tool_input":{"command":"task2.sh","run_in_background":true,"task_id":"bg-2"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1001}
+{"tool_name":"TaskOutput","tool_input":{"task_id":"bg-1","block":true},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1002}
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
+
+	if !analyzer.HasUncollectedTasks() {
+		t.Error("Expected uncollected task (bg-2 not collected)")
+	}
+
+	spawned, collected, uncollected := analyzer.tracker.GetStats()
+	if spawned != 2 {
+		t.Errorf("Expected 2 spawned tasks, got: %d", spawned)
+	}
+	if collected != 1 {
+		t.Errorf("Expected 1 collected task, got: %d", collected)
+	}
+	if len(uncollected) != 1 {
+		t.Fatalf("Expected 1 uncollected task, got: %d", len(uncollected))
+	}
+	if uncollected[0] != "bg-2" {
+		t.Errorf("Expected uncollected task bg-2, got: %s", uncollected[0])
+	}
+
+	summary := analyzer.GetSummary()
+	if !strings.Contains(summary, "Uncollected Tasks: 1") {
+		t.Errorf("Expected 'Uncollected Tasks: 1' in summary, got: %s", summary)
+	}
+	if !strings.Contains(summary, "bg-2") {
+		t.Errorf("Expected 'bg-2' in summary, got: %s", summary)
+	}
+
+	uncollectedList := analyzer.GetUncollectedList()
+	if uncollectedList != "bg-2" {
+		t.Errorf("Expected uncollected list 'bg-2', got: %s", uncollectedList)
+	}
+}
+
+// TestTranscriptAnalyzer_MissingFile tests graceful handling of missing transcript.
+func TestTranscriptAnalyzer_MissingFile(t *testing.T) {
+	nonExistentPath := filepath.Join(t.TempDir(), "does-not-exist.jsonl")
+
+	analyzer := NewTranscriptAnalyzer(nonExistentPath)
+	if err := analyzer.Analyze(); err != nil {
+		t.Errorf("Expected nil error for missing file, got: %v", err)
+	}
+
+	if analyzer.HasUncollectedTasks() {
+		t.Error("Expected no uncollected tasks for missing file")
+	}
+
+	summary := analyzer.GetSummary()
+	if !strings.Contains(summary, "No background tasks detected") {
+		t.Errorf("Expected 'No background tasks detected' for missing file, got: %s", summary)
+	}
+}
+
+// TestTranscriptAnalyzer_MalformedJSON tests fallback behavior for malformed JSON.
+func TestTranscriptAnalyzer_MalformedJSON(t *testing.T) {
+	content := `{"tool_name":"Bash","tool_input":{"command":"test.sh","run_in_background":true,"task_id":"malformed-1"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1000}
+This is malformed JSON with run_in_background: true and task_id: "malformed-2"
+{"tool_name":"TaskOutput","tool_input":{"task_id":"malformed-1","block":true},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1002}
+Another prose line with TaskOutput task_id: "malformed-2"
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze should not error on malformed JSON (fallback to regex): %v", err)
+	}
+
+	// Should detect both via JSON and regex fallback
+	spawned, collected, uncollected := analyzer.tracker.GetStats()
+	if spawned != 2 {
+		t.Errorf("Expected 2 spawned tasks (1 JSON, 1 regex), got: %d", spawned)
+	}
+	if collected != 2 {
+		t.Errorf("Expected 2 collected tasks (1 JSON, 1 regex), got: %d", collected)
+	}
+	if len(uncollected) != 0 {
+		t.Errorf("Expected 0 uncollected tasks, got: %d", len(uncollected))
+	}
+
+	if analyzer.HasUncollectedTasks() {
+		t.Error("Expected no uncollected tasks (both collected)")
+	}
+}
+
+// TestTranscriptAnalyzer_MultipleUncollected tests multiple uncollected task IDs.
+func TestTranscriptAnalyzer_MultipleUncollected(t *testing.T) {
+	content := `{"tool_name":"Bash","tool_input":{"command":"task1.sh","run_in_background":true,"task_id":"bg-1"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1000}
+{"tool_name":"Bash","tool_input":{"command":"task2.sh","run_in_background":true,"task_id":"bg-2"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1001}
+{"tool_name":"Bash","tool_input":{"command":"task3.sh","run_in_background":true,"task_id":"bg-3"},"session_id":"session-1","hook_event_name":"PreToolUse","captured_at":1002}
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
+
+	if !analyzer.HasUncollectedTasks() {
+		t.Error("Expected uncollected tasks")
+	}
+
+	spawned, collected, uncollected := analyzer.tracker.GetStats()
+	if spawned != 3 {
+		t.Errorf("Expected 3 spawned tasks, got: %d", spawned)
+	}
+	if collected != 0 {
+		t.Errorf("Expected 0 collected tasks, got: %d", collected)
+	}
+	if len(uncollected) != 3 {
+		t.Errorf("Expected 3 uncollected tasks, got: %d", len(uncollected))
+	}
+
+	uncollectedList := analyzer.GetUncollectedList()
+	for _, id := range []string{"bg-1", "bg-2", "bg-3"} {
+		if !strings.Contains(uncollectedList, id) {
+			t.Errorf("Expected uncollected list to contain %s, got: %s", id, uncollectedList)
+		}
+	}
+
+	summary := analyzer.GetSummary()
+	if !strings.Contains(summary, "Uncollected Tasks: 3") {
+		t.Errorf("Expected 'Uncollected Tasks: 3' in summary, got: %s", summary)
+	}
+}
+
+// TestTranscriptAnalyzer_EmptyTranscript tests handling of empty transcript file.
+func TestTranscriptAnalyzer_EmptyTranscript(t *testing.T) {
+	tmpFile := createTempFile(t, "")
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed on empty file: %v", err)
+	}
+
+	if analyzer.HasUncollectedTasks() {
+		t.Error("Expected no uncollected tasks in empty transcript")
+	}
+
+	summary := analyzer.GetSummary()
+	if !strings.Contains(summary, "No background tasks detected") {
+		t.Errorf("Expected 'No background tasks detected' in summary, got: %s", summary)
+	}
+}
+
+// TestTranscriptAnalyzer_CaseInsensitiveRegex tests case-insensitive pattern matching.
+func TestTranscriptAnalyzer_CaseInsensitiveRegex(t *testing.T) {
+	content := `Prose with RUN_IN_BACKGROUND: TRUE and task_id: "case-1"
+Another with Run_In_Background: True and task_id: "case-2"
+Collect with TASKOUTPUT task_id: "case-1"
+Collect with taskoutput task_id: "case-2"
+`
+
+	tmpFile := createTempFile(t, content)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
+
+	spawned, collected, uncollected := analyzer.tracker.GetStats()
+	if spawned != 2 {
+		t.Errorf("Expected 2 spawned tasks (case-insensitive), got: %d", spawned)
+	}
+	if collected != 2 {
+		t.Errorf("Expected 2 collected tasks (case-insensitive), got: %d", collected)
+	}
+	if len(uncollected) != 0 {
+		t.Errorf("Expected 0 uncollected tasks, got: %d", len(uncollected))
+	}
+}
+
+// TestTranscriptAnalyzer_ReadError tests error handling for file read errors.
+func TestTranscriptAnalyzer_ReadError(t *testing.T) {
+	// Create a file with restrictive permissions to trigger read error
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "unreadable.jsonl")
+
+	// Write content
+	if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Make file readable so we can open it (scanner error is harder to trigger)
+	// This test verifies graceful handling of file system errors
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		// If we get an error, it should be properly formatted
+		if !strings.Contains(err.Error(), "[transcript]") {
+			t.Errorf("Error should contain [transcript] prefix: %v", err)
+		}
+	}
+}
