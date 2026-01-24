@@ -1,7 +1,7 @@
 ---
 id: GOgent-069
 title: Reminder & Flush Logic
-description: **Task**:
+description: "Generate routing compliance reminders and auto-flush pending learnings. Use pkg/session (NOT pkg/observability) and make thresholds configurable via environment variables."
 status: pending
 time_estimate: 2h
 dependencies: ["GOgent-068"]
@@ -398,21 +398,21 @@ func TestGenerateFlushNotification(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Functions added to pkg/session/ (NOT pkg/observability)
-- [ ] CheckPendingLearnings() reused if already exists in context_loader.go
-- [ ] GetFlushThreshold() reads GOGENT_FLUSH_THRESHOLD env var
-- [ ] Defaults to 5 if env var not set or invalid
-- [ ] GenerateRoutingReminder() creates compliance message every 10 tools
-- [ ] CheckPendingLearnings() counts JSONL entries correctly
-- [ ] ShouldFlushLearnings() uses configurable threshold
-- [ ] ArchivePendingLearnings() creates timestamped archive and clears pending
-- [ ] Archive directory created if missing
-- [ ] GenerateFlushNotification() explains archival and next steps
-- [ ] File locking prevents concurrent flush corruption
-- [ ] Uses syscall.Flock() for cross-process safety
-- [ ] Tests verify env var configuration, reminder generation, counting, flushing
-- [ ] Tests use t.TempDir() for isolation
-- [ ] `go test ./pkg/session` passes
+- [x] Functions added to pkg/session/ (NOT pkg/observability)
+- [x] CheckPendingLearnings() reused if already exists in context_loader.go
+- [x] GetFlushThreshold() reads GOGENT_FLUSH_THRESHOLD env var
+- [x] Defaults to 5 if env var not set or invalid
+- [x] GenerateRoutingReminder() creates compliance message every 10 tools
+- [x] CheckPendingLearnings() counts JSONL entries correctly
+- [x] ShouldFlushLearnings() uses configurable threshold
+- [x] ArchivePendingLearnings() creates timestamped archive and clears pending
+- [x] Archive directory created if missing
+- [x] GenerateFlushNotification() explains archival and next steps
+- [x] File locking prevents concurrent flush corruption
+- [x] Uses syscall.Flock() for cross-process safety
+- [x] Tests verify env var configuration, reminder generation, counting, flushing
+- [x] Tests use t.TempDir() for isolation
+- [x] `go test ./pkg/session` passes
 
 **Why This Matters**: Attention-gate prevents instruction degradation and data loss. Reminders keep routing discipline. Flushing prevents sharp edge loss. Configurable thresholds adapt to different project sizes.
 
