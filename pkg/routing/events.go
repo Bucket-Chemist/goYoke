@@ -1,9 +1,12 @@
 package routing
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -163,6 +166,172 @@ func ParseTaskInput(toolInput map[string]interface{}) (*TaskInput, error) {
 	}
 
 	return &taskInput, nil
+}
+
+// SubagentStopEvent represents the ACTUAL Claude Code SubagentStop hook event.
+// Agent metadata is NOT directly available in this event - must parse transcript file.
+// Schema validated via GOgent-063a research.
+type SubagentStopEvent struct {
+	HookEventName  string `json:"hook_event_name"`  // Always "SubagentStop"
+	SessionID      string `json:"session_id"`
+	TranscriptPath string `json:"transcript_path"` // Path to agent transcript file
+	StopHookActive bool   `json:"stop_hook_active"`
+}
+
+// ParsedAgentMetadata contains agent information extracted from transcript file.
+// All fields are optional as transcript parsing may fail.
+type ParsedAgentMetadata struct {
+	AgentID      string `json:"agent_id,omitempty"`       // e.g., "orchestrator", "python-pro"
+	AgentModel   string `json:"agent_model,omitempty"`    // "haiku", "sonnet", "opus"
+	Tier         string `json:"tier,omitempty"`           // Derived from model
+	DurationMs   int    `json:"duration_ms,omitempty"`    // Calculated from transcript timestamps
+	OutputTokens int    `json:"output_tokens,omitempty"`  // From transcript if available
+	ExitCode     int    `json:"exit_code,omitempty"`      // 0=success, derived from completion status
+}
+
+// AgentClass represents agent classification
+type AgentClass string
+
+const (
+	ClassOrchestrator   AgentClass = "orchestrator"
+	ClassImplementation AgentClass = "implementation"
+	ClassSpecialist     AgentClass = "specialist"
+	ClassCoordination   AgentClass = "coordination"
+	ClassReview         AgentClass = "review"
+	ClassUnknown        AgentClass = "unknown"
+)
+
+// GetAgentClass returns the class of agent based on agent_id
+func GetAgentClass(agentID string) AgentClass {
+	switch agentID {
+	case "orchestrator", "architect", "einstein":
+		return ClassOrchestrator
+	case "python-pro", "python-ux", "go-pro", "r-pro", "r-shiny-pro":
+		return ClassImplementation
+	case "code-reviewer", "librarian", "tech-docs-writer", "scaffolder":
+		return ClassSpecialist
+	case "codebase-search", "haiku-scout":
+		return ClassCoordination
+	default:
+		return ClassUnknown
+	}
+}
+
+// ParseSubagentStopEvent reads SubagentStop event from STDIN using ACTUAL schema
+func ParseSubagentStopEvent(r io.Reader, timeout time.Duration) (*SubagentStopEvent, error) {
+	data, err := ReadStdin(r, timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	var event SubagentStopEvent
+	if err := json.Unmarshal(data, &event); err != nil {
+		return nil, fmt.Errorf("[agent-endstate] Failed to parse JSON: %w. Input: %s", err, truncate(data, 100))
+	}
+
+	// Validate required fields (ACTUAL schema)
+	if event.SessionID == "" {
+		return nil, fmt.Errorf("[agent-endstate] Missing required field: session_id")
+	}
+	if event.TranscriptPath == "" {
+		return nil, fmt.Errorf("[agent-endstate] Missing required field: transcript_path")
+	}
+	if event.HookEventName != "SubagentStop" {
+		return nil, fmt.Errorf("[agent-endstate] Invalid hook_event_name: %s (expected SubagentStop)", event.HookEventName)
+	}
+
+	return &event, nil
+}
+
+// ParseTranscriptForMetadata reads transcript file and extracts agent metadata.
+// Returns partial metadata on parsing errors rather than failing completely (graceful degradation).
+func ParseTranscriptForMetadata(transcriptPath string) (*ParsedAgentMetadata, error) {
+	metadata := &ParsedAgentMetadata{
+		ExitCode: 0, // Default to success
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(transcriptPath); os.IsNotExist(err) {
+		return metadata, fmt.Errorf("[agent-endstate] Transcript file not found: %s", transcriptPath)
+	}
+
+	file, err := os.Open(transcriptPath)
+	if err != nil {
+		return metadata, fmt.Errorf("[agent-endstate] Failed to open transcript: %w", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var firstTimestamp, lastTimestamp int64
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Parse JSONL line
+		var entry map[string]interface{}
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			continue // Skip malformed lines
+		}
+
+		// Extract agent_id from AGENT: prefix or task delegation
+		if content, ok := entry["content"].(string); ok {
+			if strings.HasPrefix(content, "AGENT: ") {
+				metadata.AgentID = strings.TrimSpace(strings.TrimPrefix(content, "AGENT: "))
+			}
+		}
+
+		// Extract model from task delegation
+		if model, ok := entry["model"].(string); ok {
+			metadata.AgentModel = model
+			metadata.Tier = deriveTierFromModel(model)
+		}
+
+		// Track timestamps for duration calculation
+		if ts, ok := entry["timestamp"].(float64); ok {
+			if firstTimestamp == 0 {
+				firstTimestamp = int64(ts)
+			}
+			lastTimestamp = int64(ts)
+		}
+
+		// Check for errors or failures
+		if role, ok := entry["role"].(string); ok {
+			if role == "error" {
+				metadata.ExitCode = 1
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return metadata, fmt.Errorf("[agent-endstate] Error reading transcript: %w", err)
+	}
+
+	// Calculate duration
+	if firstTimestamp > 0 && lastTimestamp > firstTimestamp {
+		metadata.DurationMs = int(lastTimestamp - firstTimestamp)
+	}
+
+	return metadata, nil
+}
+
+// deriveTierFromModel maps model names to tiers
+func deriveTierFromModel(model string) string {
+	model = strings.ToLower(model)
+	if strings.Contains(model, "haiku") {
+		return "haiku"
+	}
+	if strings.Contains(model, "sonnet") {
+		return "sonnet"
+	}
+	if strings.Contains(model, "opus") {
+		return "opus"
+	}
+	return "unknown"
+}
+
+// IsSuccess returns true if agent completed successfully (derived from metadata)
+func (m *ParsedAgentMetadata) IsSuccess() bool {
+	return m.ExitCode == 0
 }
 
 // truncate limits data to maxLen for error messages.

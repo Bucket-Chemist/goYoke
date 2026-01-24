@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1069,4 +1070,469 @@ func TestParseTaskInput_FromCorpus(t *testing.T) {
 	}
 
 	t.Logf("✓ Successfully parsed %d Task inputs from corpus", taskCount)
+}
+
+// ============================================================================
+// SubagentStop Event Tests (GOgent-063)
+// ============================================================================
+
+// Test ParseSubagentStopEvent with valid ACTUAL schema
+func TestParseSubagentStopEvent_Success(t *testing.T) {
+	// ACTUAL schema from GOgent-063a validation
+	jsonInput := `{
+		"hook_event_name": "SubagentStop",
+		"session_id": "test-session-12345",
+		"transcript_path": "/tmp/test-transcript.jsonl",
+		"stop_hook_active": true
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if event.SessionID != "test-session-12345" {
+		t.Errorf("Expected session ID test-session-12345, got: %s", event.SessionID)
+	}
+
+	if event.TranscriptPath != "/tmp/test-transcript.jsonl" {
+		t.Errorf("Expected transcript path /tmp/test-transcript.jsonl, got: %s", event.TranscriptPath)
+	}
+
+	if event.HookEventName != "SubagentStop" {
+		t.Errorf("Expected hook_event_name SubagentStop, got: %s", event.HookEventName)
+	}
+
+	if !event.StopHookActive {
+		t.Error("Expected StopHookActive to be true")
+	}
+}
+
+// Test ParseSubagentStopEvent with missing session_id
+func TestParseSubagentStopEvent_MissingSessionID(t *testing.T) {
+	jsonInput := `{
+		"hook_event_name": "SubagentStop",
+		"transcript_path": "/tmp/test.jsonl"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	_, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err == nil {
+		t.Fatal("Expected error for missing session_id")
+	}
+
+	if !strings.Contains(err.Error(), "session_id") {
+		t.Errorf("Error should mention session_id, got: %v", err)
+	}
+}
+
+// Test ParseSubagentStopEvent with missing transcript_path
+func TestParseSubagentStopEvent_MissingTranscriptPath(t *testing.T) {
+	jsonInput := `{
+		"hook_event_name": "SubagentStop",
+		"session_id": "test-session-123"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	_, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err == nil {
+		t.Fatal("Expected error for missing transcript_path")
+	}
+
+	if !strings.Contains(err.Error(), "transcript_path") {
+		t.Errorf("Error should mention transcript_path, got: %v", err)
+	}
+}
+
+// Test ParseSubagentStopEvent with invalid hook_event_name
+func TestParseSubagentStopEvent_InvalidHookEventName(t *testing.T) {
+	jsonInput := `{
+		"hook_event_name": "PreToolUse",
+		"session_id": "test-session-123",
+		"transcript_path": "/tmp/test.jsonl"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	_, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err == nil {
+		t.Fatal("Expected error for invalid hook_event_name")
+	}
+
+	if !strings.Contains(err.Error(), "expected SubagentStop") {
+		t.Errorf("Error should mention expected SubagentStop, got: %v", err)
+	}
+}
+
+// Test ParseSubagentStopEvent with malformed JSON
+func TestParseSubagentStopEvent_MalformedJSON(t *testing.T) {
+	jsonInput := `{"hook_event_name": malformed`
+
+	reader := strings.NewReader(jsonInput)
+	_, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err == nil {
+		t.Fatal("Expected error for malformed JSON")
+	}
+
+	if !strings.Contains(err.Error(), "Failed to parse JSON") {
+		t.Errorf("Error should mention JSON parsing failure, got: %v", err)
+	}
+}
+
+// Test ParseSubagentStopEvent with timeout
+func TestParseSubagentStopEvent_Timeout(t *testing.T) {
+	reader := &slowReader{
+		delay: 2 * time.Second,
+		data:  `{"hook_event_name":"SubagentStop"}`,
+	}
+
+	_, err := ParseSubagentStopEvent(reader, 100*time.Millisecond)
+
+	if err == nil {
+		t.Fatal("Expected timeout error")
+	}
+
+	if !strings.Contains(err.Error(), "timeout") {
+		t.Errorf("Error should mention timeout, got: %v", err)
+	}
+}
+
+// Test ParseTranscriptForMetadata with valid transcript
+func TestParseTranscriptForMetadata_Success(t *testing.T) {
+	// Create mock transcript file
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+
+	transcriptData := `{"timestamp": 1700000000, "content": "AGENT: orchestrator", "role": "system"}
+{"timestamp": 1700000100, "model": "claude-sonnet-4", "role": "assistant"}
+{"timestamp": 1700005000, "content": "Task complete", "role": "assistant"}`
+
+	if err := os.WriteFile(transcriptPath, []byte(transcriptData), 0644); err != nil {
+		t.Fatalf("Failed to write mock transcript: %v", err)
+	}
+
+	metadata, err := ParseTranscriptForMetadata(transcriptPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if metadata.AgentID != "orchestrator" {
+		t.Errorf("Expected agent_id orchestrator, got: %s", metadata.AgentID)
+	}
+
+	if metadata.AgentModel != "claude-sonnet-4" {
+		t.Errorf("Expected model claude-sonnet-4, got: %s", metadata.AgentModel)
+	}
+
+	if metadata.Tier != "sonnet" {
+		t.Errorf("Expected tier sonnet, got: %s", metadata.Tier)
+	}
+
+	if metadata.DurationMs != 5000 {
+		t.Errorf("Expected duration 5000ms, got: %d", metadata.DurationMs)
+	}
+
+	if !metadata.IsSuccess() {
+		t.Error("Expected success (exit_code=0)")
+	}
+}
+
+// Test ParseTranscriptForMetadata with non-existent file
+func TestParseTranscriptForMetadata_NonExistentFile(t *testing.T) {
+	metadata, err := ParseTranscriptForMetadata("/nonexistent/path/transcript.jsonl")
+
+	if err == nil {
+		t.Fatal("Expected error for non-existent file")
+	}
+
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Expected 'not found' error, got: %v", err)
+	}
+
+	// Should return partial metadata on error
+	if metadata == nil {
+		t.Fatal("Expected partial metadata, got nil")
+	}
+
+	if metadata.ExitCode != 0 {
+		t.Errorf("Expected default ExitCode 0, got: %d", metadata.ExitCode)
+	}
+}
+
+// Test ParseTranscriptForMetadata with malformed JSONL (graceful degradation)
+func TestParseTranscriptForMetadata_MalformedJSONL(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "malformed.jsonl")
+
+	transcriptData := `{"timestamp": 1700000000, "content": "AGENT: python-pro"}
+{this is not valid json}
+{"timestamp": 1700005000, "model": "claude-haiku-4"}`
+
+	if err := os.WriteFile(transcriptPath, []byte(transcriptData), 0644); err != nil {
+		t.Fatalf("Failed to write mock transcript: %v", err)
+	}
+
+	metadata, err := ParseTranscriptForMetadata(transcriptPath)
+	if err != nil {
+		t.Fatalf("Expected graceful degradation, got error: %v", err)
+	}
+
+	// Should extract what it can
+	if metadata.AgentID != "python-pro" {
+		t.Errorf("Expected agent_id python-pro despite malformed lines, got: %s", metadata.AgentID)
+	}
+
+	if metadata.Tier != "haiku" {
+		t.Errorf("Expected tier haiku, got: %s", metadata.Tier)
+	}
+}
+
+// Test ParseTranscriptForMetadata with error markers
+func TestParseTranscriptForMetadata_WithErrors(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "error-transcript.jsonl")
+
+	transcriptData := `{"timestamp": 1700000000, "content": "AGENT: go-pro"}
+{"timestamp": 1700001000, "role": "error", "content": "Something failed"}
+{"timestamp": 1700002000, "content": "Attempt recovery"}`
+
+	if err := os.WriteFile(transcriptPath, []byte(transcriptData), 0644); err != nil {
+		t.Fatalf("Failed to write mock transcript: %v", err)
+	}
+
+	metadata, err := ParseTranscriptForMetadata(transcriptPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if metadata.ExitCode != 1 {
+		t.Errorf("Expected exit_code 1 when error role present, got: %d", metadata.ExitCode)
+	}
+
+	if metadata.IsSuccess() {
+		t.Error("Expected IsSuccess() to return false when exit_code=1")
+	}
+}
+
+// Test ParseTranscriptForMetadata with empty file
+func TestParseTranscriptForMetadata_EmptyFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "empty.jsonl")
+
+	if err := os.WriteFile(transcriptPath, []byte(""), 0644); err != nil {
+		t.Fatalf("Failed to write empty transcript: %v", err)
+	}
+
+	metadata, err := ParseTranscriptForMetadata(transcriptPath)
+	if err != nil {
+		t.Fatalf("Expected no error for empty file, got: %v", err)
+	}
+
+	// Should return default metadata
+	if metadata.ExitCode != 0 {
+		t.Errorf("Expected default ExitCode 0, got: %d", metadata.ExitCode)
+	}
+
+	if metadata.AgentID != "" {
+		t.Errorf("Expected empty AgentID, got: %s", metadata.AgentID)
+	}
+}
+
+// Test GetAgentClass with all agent types
+func TestGetAgentClass_All(t *testing.T) {
+	tests := []struct {
+		agentID       string
+		expectedClass AgentClass
+	}{
+		{"orchestrator", ClassOrchestrator},
+		{"architect", ClassOrchestrator},
+		{"einstein", ClassOrchestrator},
+		{"python-pro", ClassImplementation},
+		{"python-ux", ClassImplementation},
+		{"go-pro", ClassImplementation},
+		{"r-pro", ClassImplementation},
+		{"r-shiny-pro", ClassImplementation},
+		{"code-reviewer", ClassSpecialist},
+		{"librarian", ClassSpecialist},
+		{"tech-docs-writer", ClassSpecialist},
+		{"scaffolder", ClassSpecialist},
+		{"codebase-search", ClassCoordination},
+		{"haiku-scout", ClassCoordination},
+		{"unknown-agent", ClassUnknown},
+		{"", ClassUnknown},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.agentID, func(t *testing.T) {
+			got := GetAgentClass(tc.agentID)
+			if got != tc.expectedClass {
+				t.Errorf("AgentID %q: expected %s, got %s", tc.agentID, tc.expectedClass, got)
+			}
+		})
+	}
+}
+
+// Test deriveTierFromModel with various model names
+func TestDeriveTierFromModel(t *testing.T) {
+	tests := []struct {
+		model        string
+		expectedTier string
+	}{
+		{"claude-haiku-4", "haiku"},
+		{"claude-haiku-3.5", "haiku"},
+		{"CLAUDE-HAIKU-4", "haiku"}, // Case insensitive
+		{"claude-sonnet-4", "sonnet"},
+		{"claude-sonnet-3.5", "sonnet"},
+		{"claude-opus-4", "opus"},
+		{"claude-opus-3", "opus"},
+		{"unknown-model", "unknown"},
+		{"gpt-4", "unknown"},
+		{"", "unknown"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.model, func(t *testing.T) {
+			got := deriveTierFromModel(tc.model)
+			if got != tc.expectedTier {
+				t.Errorf("Model %q: expected tier %q, got %q", tc.model, tc.expectedTier, got)
+			}
+		})
+	}
+}
+
+// Test ParsedAgentMetadata.IsSuccess()
+func TestParsedAgentMetadata_IsSuccess(t *testing.T) {
+	tests := []struct {
+		name     string
+		exitCode int
+		expected bool
+	}{
+		{"success", 0, true},
+		{"failure", 1, false},
+		{"error code 2", 2, false},
+		{"negative exit code", -1, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			metadata := &ParsedAgentMetadata{ExitCode: tc.exitCode}
+			got := metadata.IsSuccess()
+			if got != tc.expected {
+				t.Errorf("ExitCode %d: expected IsSuccess()=%v, got %v", tc.exitCode, tc.expected, got)
+			}
+		})
+	}
+}
+
+// Test ParseTranscriptForMetadata duration calculation edge cases
+func TestParseTranscriptForMetadata_DurationEdgeCases(t *testing.T) {
+	tests := []struct {
+		name             string
+		transcriptData   string
+		expectedDuration int
+	}{
+		{
+			name: "no timestamps",
+			transcriptData: `{"content": "AGENT: test"}
+{"model": "claude-haiku-4"}`,
+			expectedDuration: 0,
+		},
+		{
+			name: "single timestamp",
+			transcriptData: `{"timestamp": 1700000000, "content": "AGENT: test"}`,
+			expectedDuration: 0,
+		},
+		{
+			name: "same timestamps",
+			transcriptData: `{"timestamp": 1700000000, "content": "start"}
+{"timestamp": 1700000000, "content": "end"}`,
+			expectedDuration: 0,
+		},
+		{
+			name: "multiple timestamps",
+			transcriptData: `{"timestamp": 1700000000}
+{"timestamp": 1700001000}
+{"timestamp": 1700002500}`,
+			expectedDuration: 2500,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+
+			if err := os.WriteFile(transcriptPath, []byte(tc.transcriptData), 0644); err != nil {
+				t.Fatalf("Failed to write transcript: %v", err)
+			}
+
+			metadata, err := ParseTranscriptForMetadata(transcriptPath)
+			if err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
+
+			if metadata.DurationMs != tc.expectedDuration {
+				t.Errorf("Expected duration %dms, got %dms", tc.expectedDuration, metadata.DurationMs)
+			}
+		})
+	}
+}
+
+// Test SubagentStopEvent with stop_hook_active variations
+func TestParseSubagentStopEvent_StopHookActiveVariations(t *testing.T) {
+	tests := []struct {
+		name     string
+		json     string
+		expected bool
+	}{
+		{
+			name: "stop_hook_active true",
+			json: `{
+				"hook_event_name": "SubagentStop",
+				"session_id": "test",
+				"transcript_path": "/tmp/test.jsonl",
+				"stop_hook_active": true
+			}`,
+			expected: true,
+		},
+		{
+			name: "stop_hook_active false",
+			json: `{
+				"hook_event_name": "SubagentStop",
+				"session_id": "test",
+				"transcript_path": "/tmp/test.jsonl",
+				"stop_hook_active": false
+			}`,
+			expected: false,
+		},
+		{
+			name: "stop_hook_active missing (defaults to false)",
+			json: `{
+				"hook_event_name": "SubagentStop",
+				"session_id": "test",
+				"transcript_path": "/tmp/test.jsonl"
+			}`,
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := strings.NewReader(tc.json)
+			event, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+			if err != nil {
+				t.Fatalf("Expected no error, got: %v", err)
+			}
+
+			if event.StopHookActive != tc.expected {
+				t.Errorf("Expected StopHookActive=%v, got %v", tc.expected, event.StopHookActive)
+			}
+		})
+	}
 }
