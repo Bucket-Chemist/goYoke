@@ -1,7 +1,7 @@
 ---
 id: GOgent-077
 title: Blocking Response Generation
-description: **Task**:
+description: Generate blocking response if background tasks uncollected using TranscriptAnalyzer from GOgent-076 and orchestrator detection from GOgent-075.
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-076"]
@@ -229,13 +229,13 @@ func TestFormatResponseJSON_Valid(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `GenerateGuardResponse()` allows if no uncollected tasks
-- [ ] Blocks if uncollected tasks detected
-- [ ] Block response includes remediation steps
-- [ ] References LLM-guidelines.md fan-out/fan-in pattern
-- [ ] `FormatResponseJSON()` outputs valid JSON
-- [ ] Tests verify allow and block paths
-- [ ] `go test ./pkg/enforcement` passes
+- [x] `GenerateGuardResponse()` allows if no uncollected tasks
+- [x] Blocks if uncollected tasks detected
+- [x] Block response includes remediation steps
+- [x] References LLM-guidelines.md fan-out/fan-in pattern
+- [x] `FormatResponseJSON()` outputs valid JSON
+- [x] Tests verify allow and block paths
+- [x] `go test ./pkg/enforcement` passes
 
 **Why This Matters**: Blocking response enforces fan-out/fan-in discipline programmatically.
 
