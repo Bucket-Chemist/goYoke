@@ -1,6 +1,7 @@
 ---
 id: GOgent-087e
 title: Integrate routing decision logging into gogent-validate
+description: Log routing decisions when Task() tool is invoked via PreToolUse
 type: implementation
 status: pending
 time_estimate: 1h
@@ -118,13 +119,13 @@ func TestRoutingDecision_GeneratesUUID(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] LogRoutingDecision() called on every Task() PreToolUse
-- [ ] DecisionID generated (UUID)
-- [ ] TaskDescription extracted from tool_input.prompt
-- [ ] SelectedTier extracted from tool_input.model
-- [ ] SelectedAgent extracted from AGENT: prefix in prompt
-- [ ] Non-blocking (errors logged, hook continues)
-- [ ] ≥80% coverage
+- [x] LogRoutingDecision() called on every Task() PreToolUse
+- [x] DecisionID generated (UUID)
+- [x] TaskDescription extracted from tool_input.prompt
+- [x] SelectedTier extracted from tool_input.model
+- [x] SelectedAgent extracted from AGENT: prefix in prompt
+- [x] Non-blocking (errors logged, hook continues)
+- [x] ≥80% coverage (100% of testable functions)
 
 **Why This Matters**: Routing decisions are the primary training signal for ML optimization - knowing which agent was selected for which task description enables supervised learning.
 

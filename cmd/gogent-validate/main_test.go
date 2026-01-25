@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 )
 
 // =============================================================================
@@ -1060,4 +1061,396 @@ func TestMain_ConcurrentInvocation(t *testing.T) {
 	if wg.Len() != 3 {
 		t.Errorf("Expected 3 successful concurrent operations, got: %d", wg.Len())
 	}
+}
+
+// =============================================================================
+// Routing Decision Logging Tests (GOgent-087e)
+// =============================================================================
+
+// TestExtractAgentFromPrompt tests the agent extraction helper function
+func TestExtractAgentFromPrompt(t *testing.T) {
+	tests := []struct {
+		name     string
+		prompt   string
+		expected string
+	}{
+		{
+			name:     "Agent on first line",
+			prompt:   "AGENT: codebase-search\n\nFind files",
+			expected: "codebase-search",
+		},
+		{
+			name:     "Agent with extra whitespace",
+			prompt:   "  AGENT:   python-pro  \n\n1. TASK: Implement",
+			expected: "python-pro",
+		},
+		{
+			name:     "Agent after empty lines",
+			prompt:   "\n\nAGENT: go-pro\n\nImplement auth",
+			expected: "go-pro",
+		},
+		{
+			name:     "No agent prefix",
+			prompt:   "No agent prefix here\nJust instructions",
+			expected: "unknown",
+		},
+		{
+			name:     "Empty prompt",
+			prompt:   "",
+			expected: "unknown",
+		},
+		{
+			name:     "Agent prefix with no name",
+			prompt:   "AGENT:\n\nSome text",
+			expected: "unknown",
+		},
+		{
+			name:     "Multiple colons in line",
+			prompt:   "AGENT: orchestrator: extra: text\n\nTask",
+			expected: "orchestrator: extra: text",
+		},
+		{
+			name:     "Mixed case agent",
+			prompt:   "AGENT: Python-Pro\n\nImplement",
+			expected: "Python-Pro",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := extractAgentFromPrompt(tc.prompt)
+			if result != tc.expected {
+				t.Errorf("Expected %q, got %q for prompt: %q", tc.expected, result, tc.prompt[:min(50, len(tc.prompt))])
+			}
+		})
+	}
+}
+
+// TestRoutingDecisionLogging tests the full routing decision logging workflow
+func TestRoutingDecisionLogging(t *testing.T) {
+	// Setup temporary XDG directory
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	// Create a task input
+	taskInput := map[string]interface{}{
+		"prompt":        "AGENT: codebase-search\n\nFind all Go files",
+		"model":         "haiku",
+		"subagent_type": "Explore",
+		"description":   "Search for files",
+	}
+
+	// Parse task input
+	parsed, err := routing.ParseTaskInput(taskInput)
+	if err != nil {
+		t.Fatalf("Failed to parse task input: %v", err)
+	}
+
+	// Create routing decision
+	decision := telemetry.NewRoutingDecision(
+		"test-session-123",
+		parsed.Prompt,
+		parsed.Model,
+		extractAgentFromPrompt(parsed.Prompt),
+	)
+
+	// Log the decision
+	err = telemetry.LogRoutingDecision(decision)
+	if err != nil {
+		t.Fatalf("Failed to log routing decision: %v", err)
+	}
+
+	// Verify file created
+	logPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		t.Error("Expected routing-decisions.jsonl to be created")
+	}
+
+	// Read and verify content
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "test-session-123") {
+		t.Error("Expected session ID in log file")
+	}
+	if !strings.Contains(content, "codebase-search") {
+		t.Error("Expected agent name in log file")
+	}
+	if !strings.Contains(content, "haiku") {
+		t.Error("Expected tier in log file")
+	}
+}
+
+// TestRoutingDecision_GeneratesUUID tests that DecisionID is a valid UUID
+func TestRoutingDecision_GeneratesUUID(t *testing.T) {
+	decision := telemetry.NewRoutingDecision(
+		"session-123",
+		"AGENT: python-pro\n\nImplement feature",
+		"sonnet",
+		"python-pro",
+	)
+
+	if decision.DecisionID == "" {
+		t.Error("Expected DecisionID to be generated")
+	}
+
+	// Verify UUID format (8-4-4-4-12 with hyphens = 36 chars total)
+	if len(decision.DecisionID) != 36 {
+		t.Errorf("Expected DecisionID to be UUID format (36 chars), got length %d: %s", len(decision.DecisionID), decision.DecisionID)
+	}
+
+	// Verify contains hyphens in correct positions
+	if decision.DecisionID[8] != '-' || decision.DecisionID[13] != '-' || decision.DecisionID[18] != '-' || decision.DecisionID[23] != '-' {
+		t.Errorf("DecisionID doesn't match UUID format: %s", decision.DecisionID)
+	}
+}
+
+// TestRoutingDecisionLogging_ErrorHandling tests non-blocking error handling
+func TestRoutingDecisionLogging_ErrorHandling(t *testing.T) {
+	// Setup: Make logging fail by setting XDG_DATA_HOME to a read-only directory
+	tmpDir := t.TempDir()
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	os.MkdirAll(readOnlyDir, 0555) // Read-only directory
+	defer os.Chmod(readOnlyDir, 0755)
+
+	t.Setenv("XDG_DATA_HOME", readOnlyDir)
+
+	// Create task input
+	taskInput := map[string]interface{}{
+		"prompt":        "AGENT: python-pro\n\nImplement auth",
+		"model":         "sonnet",
+		"subagent_type": "general-purpose",
+		"description":   "Python implementation",
+	}
+
+	// Parse task input
+	parsed, err := routing.ParseTaskInput(taskInput)
+	if err != nil {
+		t.Fatalf("Failed to parse task input: %v", err)
+	}
+
+	// Create routing decision
+	decision := telemetry.NewRoutingDecision(
+		"test-session",
+		parsed.Prompt,
+		parsed.Model,
+		extractAgentFromPrompt(parsed.Prompt),
+	)
+
+	// Log should fail but return error (non-blocking)
+	err = telemetry.LogRoutingDecision(decision)
+	if err == nil {
+		t.Error("Expected error when logging to read-only directory")
+	}
+
+	// Error should be descriptive
+	if !strings.Contains(err.Error(), "[routing-decision]") {
+		t.Errorf("Expected error to include '[routing-decision]' prefix, got: %v", err)
+	}
+}
+
+// TestRoutingDecisionLogging_ParseFailure tests handling of parse failures
+func TestRoutingDecisionLogging_ParseFailure(t *testing.T) {
+	// Invalid task input (missing required prompt field)
+	invalidInput := map[string]interface{}{
+		"model":         "haiku",
+		"subagent_type": "Explore",
+		// Missing prompt field
+	}
+
+	// Parse should fail
+	_, err := routing.ParseTaskInput(invalidInput)
+	if err == nil {
+		t.Error("Expected error when parsing task input without prompt")
+	}
+
+	// Error should mention missing field
+	if !strings.Contains(err.Error(), "prompt") {
+		t.Errorf("Expected error to mention 'prompt' field, got: %v", err)
+	}
+}
+
+// TestRoutingDecisionLogging_MultipleDecisions tests appending multiple decisions
+func TestRoutingDecisionLogging_MultipleDecisions(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	// Log first decision
+	decision1 := telemetry.NewRoutingDecision(
+		"session-1",
+		"AGENT: codebase-search\n\nFind files",
+		"haiku",
+		"codebase-search",
+	)
+	if err := telemetry.LogRoutingDecision(decision1); err != nil {
+		t.Fatalf("Failed to log first decision: %v", err)
+	}
+
+	// Log second decision
+	decision2 := telemetry.NewRoutingDecision(
+		"session-1",
+		"AGENT: python-pro\n\nImplement feature",
+		"sonnet",
+		"python-pro",
+	)
+	if err := telemetry.LogRoutingDecision(decision2); err != nil {
+		t.Fatalf("Failed to log second decision: %v", err)
+	}
+
+	// Verify both are in file
+	logPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "codebase-search") {
+		t.Error("Expected first decision in log file")
+	}
+	if !strings.Contains(content, "python-pro") {
+		t.Error("Expected second decision in log file")
+	}
+
+	// Verify JSONL format (two lines)
+	lines := strings.Split(strings.TrimSpace(content), "\n")
+	if len(lines) != 2 {
+		t.Errorf("Expected 2 lines in JSONL file, got %d", len(lines))
+	}
+}
+
+// TestRoutingDecisionLogging_Integration tests full integration with main flow
+func TestRoutingDecisionLogging_Integration(t *testing.T) {
+	// Setup routing schema and XDG directory
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	schema := `{
+		"version": "2.2.0",
+		"tiers": {
+			"haiku": {"model": "haiku"}
+		},
+		"delegation_ceiling": {"default": "sonnet"},
+		"agent_subagent_mapping": {
+			"codebase-search": "Explore"
+		},
+		"escalation_rules": {}
+	}`
+	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
+	os.WriteFile(schemaPath, []byte(schema), 0644)
+
+	agentsIndex := `{
+		"agents": {
+			"codebase-search": {
+				"tier": "haiku",
+				"subagent_type": "Explore"
+			}
+		}
+	}`
+	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
+
+	t.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
+
+	// Load schema
+	loadedSchema, err := routing.LoadSchema()
+	if err != nil {
+		t.Fatalf("Failed to load schema: %v", err)
+	}
+
+	// Parse task event
+	taskEvent := `{
+		"tool_name": "Task",
+		"session_id": "integration-test",
+		"tool_input": {
+			"description": "Search files",
+			"subagent_type": "Explore",
+			"model": "haiku",
+			"prompt": "AGENT: codebase-search\n\nFind all Go files in project"
+		}
+	}`
+
+	r := strings.NewReader(taskEvent)
+	event, err := parseEvent(r, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse event: %v", err)
+	}
+
+	// Log routing decision (this simulates the main.go flow)
+	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
+		decision := telemetry.NewRoutingDecision(
+			event.SessionID,
+			taskInput.Prompt,
+			taskInput.Model,
+			extractAgentFromPrompt(taskInput.Prompt),
+		)
+		if err := telemetry.LogRoutingDecision(decision); err != nil {
+			t.Fatalf("Failed to log routing decision: %v", err)
+		}
+	} else {
+		t.Fatalf("Failed to parse task input: %v", err)
+	}
+
+	// Run validation
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
+
+	if result.Decision == "block" {
+		t.Errorf("Expected validation to pass, got blocked: %s", result.Reason)
+	}
+
+	// Verify routing decision was logged
+	logPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		t.Error("Expected routing-decisions.jsonl to be created during integration test")
+	}
+
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "integration-test") {
+		t.Error("Expected session ID in logged decision")
+	}
+	if !strings.Contains(content, "codebase-search") {
+		t.Error("Expected agent name in logged decision")
+	}
+	if !strings.Contains(content, "haiku") {
+		t.Error("Expected tier in logged decision")
+	}
+
+	// Verify decision structure
+	var decision map[string]interface{}
+	if err := json.Unmarshal(data, &decision); err != nil {
+		t.Fatalf("Failed to parse logged decision: %v", err)
+	}
+
+	// Check required fields
+	if decision["decision_id"] == "" {
+		t.Error("Expected decision_id in logged decision")
+	}
+	if decision["session_id"] != "integration-test" {
+		t.Errorf("Expected session_id 'integration-test', got: %v", decision["session_id"])
+	}
+	if decision["selected_tier"] != "haiku" {
+		t.Errorf("Expected selected_tier 'haiku', got: %v", decision["selected_tier"])
+	}
+	if decision["selected_agent"] != "codebase-search" {
+		t.Errorf("Expected selected_agent 'codebase-search', got: %v", decision["selected_agent"])
+	}
+}
+
+// min is a helper function for minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

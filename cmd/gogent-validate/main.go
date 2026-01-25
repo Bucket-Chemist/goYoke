@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 )
 
 const (
@@ -45,6 +47,23 @@ func main() {
 		// Pass through for non-Task tools
 		fmt.Println("{}")
 		return
+	}
+
+	// Log routing decision for Task() calls (GOgent-087e)
+	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
+		decision := telemetry.NewRoutingDecision(
+			event.SessionID,
+			taskInput.Prompt,
+			taskInput.Model,
+			extractAgentFromPrompt(taskInput.Prompt),
+		)
+		if logErr := telemetry.LogRoutingDecision(decision); logErr != nil {
+			// Non-blocking: log warning but continue execution
+			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log routing decision: %v\n", logErr)
+		}
+	} else {
+		// Failed to parse task input - log warning but continue
+		fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to parse Task input for routing decision: %v\n", err)
 	}
 
 	// Create validation orchestrator
@@ -99,15 +118,15 @@ func parseEvent(r io.Reader, timeout time.Duration) (*routing.ToolEvent, error) 
 }
 
 // outputResult writes validation result as JSON to STDOUT
-func outputResult(result *routing.ValidationResult, sessionID string) {
-	output := make(map[string]interface{})
+func outputResult(result *routing.ValidationResult, _ string) {
+	output := make(map[string]any)
 
 	// Always include decision for consistent parsing
 	output["decision"] = result.Decision
 
 	if result.Decision == "block" {
 		output["reason"] = result.Reason
-		output["hookSpecificOutput"] = map[string]interface{}{
+		output["hookSpecificOutput"] = map[string]any{
 			"hookEventName":            "PreToolUse",
 			"permissionDecision":       "deny",
 			"permissionDecisionReason": result.Reason,
@@ -116,7 +135,7 @@ func outputResult(result *routing.ValidationResult, sessionID string) {
 		// Allow with optional warnings
 		if result.ModelMismatch != "" {
 			output["reason"] = result.ModelMismatch
-			output["hookSpecificOutput"] = map[string]interface{}{
+			output["hookSpecificOutput"] = map[string]any{
 				"hookEventName":     "PreToolUse",
 				"additionalContext": "⚠️ " + result.ModelMismatch,
 			}
@@ -129,8 +148,8 @@ func outputResult(result *routing.ValidationResult, sessionID string) {
 
 // outputError writes error message in hook format
 func outputError(message string) {
-	output := map[string]interface{}{
-		"hookSpecificOutput": map[string]interface{}{
+	output := map[string]any{
+		"hookSpecificOutput": map[string]any{
 			"hookEventName":     "PreToolUse",
 			"additionalContext": "🔴 " + message,
 		},
@@ -138,4 +157,21 @@ func outputError(message string) {
 
 	data, _ := json.MarshalIndent(output, "", "  ")
 	fmt.Println(string(data))
+}
+
+// extractAgentFromPrompt extracts agent ID from "AGENT: agent-name" prefix.
+// Returns "unknown" if the AGENT: prefix is not found.
+// This parses the delegation prompt structure where agents are identified
+// by an "AGENT: agent-id" line at the start of the prompt.
+func extractAgentFromPrompt(prompt string) string {
+	for line := range strings.SplitSeq(prompt, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if agent, found := strings.CutPrefix(trimmed, "AGENT:"); found {
+			agent = strings.TrimSpace(agent)
+			if agent != "" {
+				return agent
+			}
+		}
+	}
+	return "unknown"
 }
