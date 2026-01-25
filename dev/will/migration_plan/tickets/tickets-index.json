@@ -236,26 +236,6 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-004c",
-      "title": "Config Circular Dependency Tests",
-      "description": "Test circular dependency detection in config loading (deferred from Week 1)",
-      "file": "integration-tests/tickets/GOgent-004c.md",
-      "week": 5,
-      "time_estimate": "2h",
-      "dependencies": [
-        "GOgent-004"
-      ],
-      "priority": "high",
-      "tags": [
-        "config-tests",
-        "week-5",
-        "deferred"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
       "id": "GOgent-030",
       "title": "Format Violations Summary",
       "description": "Parse routing-violations.jsonl and format top 10 for handoff",
@@ -4263,7 +4243,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 8,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-096",
@@ -4282,7 +4262,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 8,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-097",
@@ -4301,7 +4281,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 8,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-098",
@@ -4311,7 +4291,8 @@
       "week": 5,
       "time_estimate": "3h",
       "dependencies": [
-        "GOgent-090"
+        "GOgent-094",
+        "GOgent-095"
       ],
       "priority": "high",
       "tags": [
@@ -4320,7 +4301,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 10,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-099",
@@ -4341,7 +4322,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 9,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-100",
@@ -4360,7 +4341,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 10,
-      "status": "pending"
+      "status": "completed"
     },
     {
       "id": "GOgent-101",
