@@ -446,15 +446,15 @@ func TestChainDepthTracking(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `AgentCollaboration` struct implemented with all GAP 4.3 fields
-- [ ] Swarm coordination fields included (Addendum A.3)
-- [ ] `NewAgentCollaboration()` creates records with UUID and timestamp
-- [ ] `LogCollaboration()` writes to XDG-compliant global path
-- [ ] Chain depth tracking works correctly
-- [ ] Parent-child success correlation captured
-- [ ] `ReadCollaborationLogs()` parses logs correctly
-- [ ] Thread-safe update pattern implemented (append-only or file locking)
-- [ ] `go test ./pkg/telemetry` passes
+- [x] `AgentCollaboration` struct implemented with all GAP 4.3 fields
+- [x] Swarm coordination fields included (Addendum A.3)
+- [x] `NewAgentCollaboration()` creates records with UUID and timestamp
+- [x] `LogCollaboration()` writes to XDG-compliant global path
+- [x] Chain depth tracking works correctly
+- [x] Parent-child success correlation captured
+- [x] `ReadCollaborationLogs()` parses logs correctly
+- [x] Thread-safe update pattern implemented (append-only or file locking)
+- [x] `go test ./pkg/telemetry` passes
 
 **Thread Safety Note**: If collaboration outcomes need updates after initial logging, follow the append-only pattern from GOgent-087b to avoid race conditions under parallel agent execution.
 

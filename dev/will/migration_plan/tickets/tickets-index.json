@@ -4036,7 +4036,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 6,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-087e",
@@ -4062,7 +4062,7 @@
       "id": "GOgent-088b",
       "title": "Agent Collaboration Tracking",
       "file": "observability-remaining/tickets/GOgent-088b.md",
-      "status": "pending",
+      "status": "in_progress",
       "priority": "high",
       "time_estimate": "2h",
       "dependencies": [
