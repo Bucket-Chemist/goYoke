@@ -21,6 +21,7 @@
 9. [Production Cutover](#9-production-cutover)
 10. [Rollback Procedure](#10-rollback-procedure)
 11. [Troubleshooting](#11-troubleshooting)
+12. [Running as `claudeGO` Command](#12-running-as-claudego-command)
 
 ---
 
@@ -772,10 +773,427 @@ cp ~/.claude/settings.json.backup-* ~/.claude/settings.json
 
 ---
 
+## 12. Running as `claudeGO` Command
+
+This section explains how to run Claude with GOgent-Fortress hooks using the command `claudeGO`, while keeping your production `claude` command unchanged.
+
+### 12.1 How It Works
+
+```
+claude     → Uses ~/.claude/ (your production bash-based config)
+claudeGO   → Uses ~/.claude-gogent/ (GOgent-Fortress Go binaries)
+```
+
+Both commands run the same Claude Code CLI, but with different configuration directories.
+
+### 12.2 Prerequisites
+
+Before proceeding, ensure:
+- [ ] You completed sections 1-4 (binaries built and installed)
+- [ ] You completed section 5-6 (test environment created at `~/.claude-test/`)
+- [ ] You validated the installation (section 8)
+
+### 12.3 Create Permanent GOgent Config Directory
+
+Move your test config to a permanent location:
+
+```bash
+# If you still have ~/.claude-test from earlier testing
+mv ~/.claude-test ~/.claude-gogent
+
+# OR if starting fresh, create it now
+mkdir -p ~/.claude-gogent/{hooks,memory,tmp,session-archive}
+cp ~/.claude/CLAUDE.md ~/.claude-gogent/
+cp ~/.claude/routing-schema.json ~/.claude-gogent/
+cp -r ~/.claude/agents ~/.claude-gogent/
+cp -r ~/.claude/conventions ~/.claude-gogent/
+cp -r ~/.claude/rules ~/.claude-gogent/
+cp -r ~/.claude/skills ~/.claude-gogent/
+cp -r ~/.claude/docs ~/.claude-gogent/ 2>/dev/null || true
+```
+
+### 12.4 Create the Wrapper Script
+
+Create the `claudeGO` wrapper script:
+
+```bash
+cat > ~/.local/bin/claudeGO << 'WRAPPER_EOF'
+#!/bin/bash
+#
+# claudeGO - Run Claude Code with GOgent-Fortress hooks
+#
+# This wrapper temporarily swaps ~/.claude with ~/.claude-gogent,
+# runs Claude, then restores the original config on exit.
+#
+# Usage: claudeGO [claude arguments...]
+#
+
+set -e
+
+# Configuration
+PRODUCTION_CONFIG="$HOME/.claude"
+GOGENT_CONFIG="$HOME/.claude-gogent"
+BACKUP_CONFIG="$HOME/.claude-production-tmp"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Cleanup function - ALWAYS restore production config
+cleanup() {
+    local exit_code=$?
+
+    echo ""
+    echo -e "${YELLOW}[claudeGO]${NC} Restoring production config..."
+
+    # Restore production config
+    if [[ -d "$BACKUP_CONFIG" ]]; then
+        # Move GOgent config back
+        if [[ -d "$PRODUCTION_CONFIG" ]]; then
+            rm -rf "$GOGENT_CONFIG"
+            mv "$PRODUCTION_CONFIG" "$GOGENT_CONFIG"
+        fi
+
+        # Restore production
+        mv "$BACKUP_CONFIG" "$PRODUCTION_CONFIG"
+        echo -e "${GREEN}[claudeGO]${NC} Production config restored."
+    else
+        echo -e "${RED}[claudeGO]${NC} WARNING: Backup not found. Config may be in inconsistent state."
+        echo -e "${RED}[claudeGO]${NC} Check ~/.claude and ~/.claude-gogent manually."
+    fi
+
+    exit $exit_code
+}
+
+# Register cleanup on ANY exit (normal, error, interrupt)
+trap cleanup EXIT INT TERM
+
+# Preflight checks
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}  GOgent-Fortress - Go Hook Orchestration Framework${NC}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+# Check GOgent config exists
+if [[ ! -d "$GOGENT_CONFIG" ]]; then
+    echo -e "${RED}[claudeGO]${NC} ERROR: GOgent config not found at $GOGENT_CONFIG"
+    echo -e "${RED}[claudeGO]${NC} Run the installation steps first. See INSTALL-GUIDE.md section 12.3"
+    exit 1
+fi
+
+# Check settings.json exists in GOgent config
+if [[ ! -f "$GOGENT_CONFIG/settings.json" ]]; then
+    echo -e "${RED}[claudeGO]${NC} ERROR: settings.json not found in $GOGENT_CONFIG"
+    echo -e "${RED}[claudeGO]${NC} Create settings.json per INSTALL-GUIDE.md section 6.1"
+    exit 1
+fi
+
+# Check production config exists
+if [[ ! -d "$PRODUCTION_CONFIG" ]]; then
+    echo -e "${RED}[claudeGO]${NC} ERROR: Production config not found at $PRODUCTION_CONFIG"
+    echo -e "${RED}[claudeGO]${NC} This is unusual. Is Claude Code installed?"
+    exit 1
+fi
+
+# Check no backup already exists (previous run crashed?)
+if [[ -d "$BACKUP_CONFIG" ]]; then
+    echo -e "${YELLOW}[claudeGO]${NC} WARNING: Found stale backup at $BACKUP_CONFIG"
+    echo -e "${YELLOW}[claudeGO]${NC} A previous claudeGO session may have crashed."
+    echo ""
+    echo -e "${YELLOW}[claudeGO]${NC} Options:"
+    echo -e "  1. Restore production: mv $BACKUP_CONFIG $PRODUCTION_CONFIG"
+    echo -e "  2. Delete stale backup: rm -rf $BACKUP_CONFIG"
+    echo ""
+    read -p "Delete stale backup and continue? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm -rf "$BACKUP_CONFIG"
+        echo -e "${GREEN}[claudeGO]${NC} Stale backup removed."
+    else
+        echo -e "${RED}[claudeGO]${NC} Aborting. Resolve manually."
+        exit 1
+    fi
+fi
+
+# Check binaries are installed
+REQUIRED_BINARIES=(
+    "gogent-validate"
+    "gogent-load-context"
+    "gogent-sharp-edge"
+    "gogent-archive"
+    "gogent-agent-endstate"
+    "gogent-orchestrator-guard"
+)
+
+MISSING_BINARIES=()
+for bin in "${REQUIRED_BINARIES[@]}"; do
+    if ! command -v "$bin" &> /dev/null; then
+        MISSING_BINARIES+=("$bin")
+    fi
+done
+
+if [[ ${#MISSING_BINARIES[@]} -gt 0 ]]; then
+    echo -e "${RED}[claudeGO]${NC} ERROR: Missing binaries:"
+    for bin in "${MISSING_BINARIES[@]}"; do
+        echo -e "  - $bin"
+    done
+    echo ""
+    echo -e "${RED}[claudeGO]${NC} Run: cd ~/Documents/GOgent-Fortress && make install"
+    exit 1
+fi
+
+echo -e "${GREEN}[claudeGO]${NC} Preflight checks passed."
+echo ""
+
+# Swap configurations
+echo -e "${YELLOW}[claudeGO]${NC} Activating GOgent-Fortress config..."
+
+# Step 1: Move production to backup
+mv "$PRODUCTION_CONFIG" "$BACKUP_CONFIG"
+
+# Step 2: Move GOgent to production location
+mv "$GOGENT_CONFIG" "$PRODUCTION_CONFIG"
+
+echo -e "${GREEN}[claudeGO]${NC} GOgent-Fortress active."
+echo -e "${GREEN}[claudeGO]${NC} Starting Claude..."
+echo ""
+
+# Run Claude with any passed arguments
+claude "$@"
+
+# cleanup() runs automatically on exit via trap
+WRAPPER_EOF
+```
+
+### 12.5 Make the Script Executable
+
+```bash
+chmod +x ~/.local/bin/claudeGO
+```
+
+### 12.6 Verify the Script Exists
+
+```bash
+which claudeGO
+```
+
+**Expected output:**
+```
+/home/YOUR_USERNAME/.local/bin/claudeGO
+```
+
+### 12.7 Ensure settings.json Exists in GOgent Config
+
+If you haven't already created `~/.claude-gogent/settings.json`, do it now:
+
+```bash
+cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(stat:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(make:*)"
+    ],
+    "deny": [
+      "Write(.env*)",
+      "Write(**/secrets/**)",
+      "Bash(*rm -rf*)",
+      "Bash(*> /dev/*)",
+      "Bash(*sudo*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-load-context",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-validate",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-sharp-edge",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-agent-endstate",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "gogent-orchestrator-guard",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-archive",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
+  "trustedDirectories": [
+    "/home/doktersmol",
+    "/home/doktersmol/Documents"
+  ]
+}
+SETTINGS_EOF
+```
+
+### 12.8 Test the claudeGO Command
+
+```bash
+claudeGO
+```
+
+**Expected behavior:**
+1. You see the GOgent-Fortress banner
+2. Preflight checks pass
+3. "GOgent-Fortress active" message appears
+4. Claude starts normally
+5. Session Init shows with language detection
+6. When you exit (Ctrl+D), production config is automatically restored
+
+### 12.9 Verify Restoration After Exit
+
+After exiting claudeGO, verify your production config is restored:
+
+```bash
+# Check production config is back
+ls ~/.claude/settings.json
+
+# Check GOgent config is back in its place
+ls ~/.claude-gogent/settings.json
+
+# Both should exist
+```
+
+### 12.10 Usage Examples
+
+```bash
+# Start claudeGO in current directory
+claudeGO
+
+# Start claudeGO with a specific prompt
+claudeGO -p "Explain this codebase"
+
+# Start claudeGO in a specific directory
+cd ~/my-project && claudeGO
+
+# Continue a previous session (if Claude supports it)
+claudeGO --continue
+```
+
+### 12.11 What Happens If claudeGO Crashes?
+
+The wrapper has a cleanup trap that runs on ANY exit, including:
+- Normal exit (Ctrl+D, typing "exit")
+- Error exit (Claude crashes)
+- Interrupt (Ctrl+C)
+- Kill signal
+
+If the cleanup somehow fails, you'll see a warning next time you run `claudeGO`. Follow the prompts to resolve.
+
+**Manual recovery if needed:**
+```bash
+# Check current state
+ls -la ~/.claude ~/.claude-gogent ~/.claude-production-tmp
+
+# If ~/.claude-production-tmp exists, production config is there
+mv ~/.claude ~/.claude-gogent
+mv ~/.claude-production-tmp ~/.claude
+```
+
+### 12.12 Updating GOgent-Fortress
+
+When you update the Go binaries, both `claude` (if using Go) and `claudeGO` will use the new versions:
+
+```bash
+cd ~/Documents/GOgent-Fortress
+git pull
+make build-all
+make install
+```
+
+The `~/.claude-gogent/` config directory remains unchanged; only the binaries in `~/.local/bin/` are updated.
+
+### 12.13 Quick Reference
+
+| Command | Config Used | Hooks |
+|---------|-------------|-------|
+| `claude` | `~/.claude/` | Your production config (bash or Go) |
+| `claudeGO` | `~/.claude-gogent/` (swapped to `~/.claude/`) | GOgent-Fortress Go binaries |
+
+### 12.14 Alternative: Shell Alias (Simpler but Less Safe)
+
+If you prefer a simpler approach without the safety features, you can use an alias:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias claudeGO='mv ~/.claude ~/.claude-bak && mv ~/.claude-gogent ~/.claude && claude; mv ~/.claude ~/.claude-gogent && mv ~/.claude-bak ~/.claude'
+```
+
+**WARNING:** This alias has no error handling. If Claude crashes, your config will be in the wrong state. The wrapper script (section 12.4) is strongly recommended.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1.0 | 2026-01-25 | Added claudeGO command (section 12) |
 | 1.0.0 | 2026-01-25 | Initial release |
 
 ---

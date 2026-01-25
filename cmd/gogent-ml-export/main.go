@@ -1,29 +1,3 @@
----
-id: GOgent-089b
-title: ML Export CLI
-description: CLI for exporting ML-ready training datasets from telemetry
-status: pending
-time_estimate: 2h
-dependencies: ["GOgent-089"]
-priority: high
-week: 4
-tags: ["ml-optimization", "ml-export", "week-4"]
-tests_required: true
-acceptance_criteria_count: 8
----
-
-### GOgent-089b: ML Export CLI
-
-**Time**: 2 hours
-**Dependencies**: GOgent-089
-
-**Task**:
-Create CLI for exporting ML-ready training datasets from telemetry data.
-
-**File**: `cmd/gogent-ml-export/main.go`
-
-**Imports**:
-```go
 package main
 
 import (
@@ -31,16 +5,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/telemetry"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 )
-```
 
-**Implementation**:
-```go
 const (
 	DEFAULT_TIMEOUT = 5 * time.Second
 )
@@ -87,10 +61,12 @@ func main() {
 	}
 }
 
+// exportRoutingDecisions exports routing decisions from PostToolEvent logs
+// CLI layer - delegates to filterAndExportRouting
 func exportRoutingDecisions(format, since, output string) {
-	decisions, err := telemetry.ReadRoutingDecisions(parseDuration(since))
+	events, err := telemetry.ReadMLToolEvents()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read routing decisions: %v. Check telemetry data exists.\n", err)
+		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read ML tool events: %v. Check telemetry data exists.\n", err)
 		os.Exit(1)
 	}
 
@@ -107,22 +83,43 @@ func exportRoutingDecisions(format, since, output string) {
 		defer out.Close()
 	}
 
-	switch format {
-	case "csv":
-		writeRoutingCSV(out, decisions)
-	case "json":
-		writeJSON(out, decisions)
-	default:
-		fmt.Fprintf(os.Stderr, "[ml-export] Unknown format: %s. Supported: csv, json\n", format)
+	count, err := filterAndExportRouting(events, format, since, out)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ml-export] %v\n", err)
 		os.Exit(1)
 	}
 
 	if output != "-" {
-		fmt.Printf("[ml-export] Exported %d routing decisions to %s\n", len(decisions), output)
+		fmt.Printf("[ml-export] Exported %d routing decisions to %s\n", count, output)
 	}
 }
 
-func writeRoutingCSV(out *os.File, decisions []telemetry.RoutingDecision) {
+// filterAndExportRouting filters and exports routing events (testable)
+func filterAndExportRouting(events []routing.PostToolEvent, format, since string, out io.Writer) (int, error) {
+	// Filter by time window
+	cutoff := time.Now().Add(-parseDuration(since))
+	filtered := make([]routing.PostToolEvent, 0)
+	for _, event := range events {
+		eventTime := time.Unix(event.CapturedAt, 0)
+		if eventTime.After(cutoff) && event.SelectedTier != "" {
+			filtered = append(filtered, event)
+		}
+	}
+
+	switch format {
+	case "csv":
+		writeRoutingCSV(out, filtered)
+	case "json":
+		writeJSON(out, filtered)
+	default:
+		return 0, fmt.Errorf("[ml-export] Unknown format: %s. Supported: csv, json", format)
+	}
+
+	return len(filtered), nil
+}
+
+// writeRoutingCSV writes routing decisions as CSV with ML features
+func writeRoutingCSV(out io.Writer, events []routing.PostToolEvent) {
 	w := csv.NewWriter(out)
 	defer w.Flush()
 
@@ -144,18 +141,24 @@ func writeRoutingCSV(out *os.File, decisions []telemetry.RoutingDecision) {
 		return
 	}
 
-	for _, d := range decisions {
+	for _, event := range events {
+		// Calculate estimated cost
+		cost := telemetry.EstimatedCost(&event)
+
+		// Determine if escalation was needed (check tier progression)
+		escalation := event.Tier != event.SelectedTier
+
 		row := []string{
-			d.Timestamp.Format(time.RFC3339),
-			d.TaskType,
-			d.TaskDomain,
-			fmt.Sprint(d.ContextWindowUsed),
-			fmt.Sprintf("%.4f", d.RecentSuccessRate),
-			d.SelectedTier,
-			d.SelectedAgent,
-			fmt.Sprint(d.OutcomeSuccess),
-			fmt.Sprintf("%.6f", d.OutcomeCost),
-			fmt.Sprint(d.EscalationRequired),
+			time.Unix(event.CapturedAt, 0).Format(time.RFC3339),
+			event.TaskType,
+			event.TaskDomain,
+			fmt.Sprint(event.InputTokens + event.OutputTokens), // context window
+			"0.0000", // Recent success rate not available in current implementation
+			event.SelectedTier,
+			event.SelectedAgent,
+			fmt.Sprint(event.Success),
+			fmt.Sprintf("%.6f", cost),
+			fmt.Sprint(escalation),
 		}
 		if err := w.Write(row); err != nil {
 			fmt.Fprintf(os.Stderr, "[ml-export] Failed to write CSV row: %v\n", err)
@@ -164,7 +167,8 @@ func writeRoutingCSV(out *os.File, decisions []telemetry.RoutingDecision) {
 	}
 }
 
-func writeJSON(out *os.File, data interface{}) {
+// writeJSON writes data as formatted JSON
+func writeJSON(out io.Writer, data interface{}) {
 	encoder := json.NewEncoder(out)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(data); err != nil {
@@ -173,16 +177,30 @@ func writeJSON(out *os.File, data interface{}) {
 	}
 }
 
+// ToolSequence represents a sequence of tool invocations
+type ToolSequence struct {
+	SequenceID string   `json:"sequence_id"`
+	Tools      []string `json:"tools"`
+	Successful bool     `json:"successful"`
+	DurationMs int64    `json:"duration_ms"`
+	TokenCount int      `json:"token_count"`
+	Cost       float64  `json:"cost"`
+}
+
+// exportToolSequences exports tool sequences from PostToolEvent logs
 func exportToolSequences(format string, successOnly bool, output string) {
-	sequences, err := telemetry.ReadToolSequences()
+	events, err := telemetry.ReadMLToolEvents()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read tool sequences: %v. Check telemetry data exists.\n", err)
+		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read tool events: %v. Check telemetry data exists.\n", err)
 		os.Exit(1)
 	}
 
+	// Build sequences from events with SequenceIndex
+	sequences := buildSequences(events)
+
 	// Filter successful sequences if requested
 	if successOnly {
-		filtered := make([]telemetry.ToolSequence, 0)
+		filtered := make([]ToolSequence, 0)
 		for _, seq := range sequences {
 			if seq.Successful {
 				filtered = append(filtered, seq)
@@ -219,7 +237,52 @@ func exportToolSequences(format string, successOnly bool, output string) {
 	}
 }
 
-func writeSequencesCSV(out *os.File, sequences []telemetry.ToolSequence) {
+// buildSequences constructs tool sequences from PostToolEvent logs
+func buildSequences(events []routing.PostToolEvent) []ToolSequence {
+	// Group events by session ID
+	sessionSequences := make(map[string][]routing.PostToolEvent)
+	for _, event := range events {
+		sessionSequences[event.SessionID] = append(sessionSequences[event.SessionID], event)
+	}
+
+	sequences := make([]ToolSequence, 0)
+	for sessionID, sessionEvents := range sessionSequences {
+		if len(sessionEvents) == 0 {
+			continue
+		}
+
+		// Calculate sequence metrics
+		tools := make([]string, 0)
+		var totalDuration int64
+		var totalTokens int
+		var totalCost float64
+		allSuccessful := true
+
+		for _, event := range sessionEvents {
+			tools = append(tools, event.ToolName)
+			totalDuration += event.DurationMs
+			totalTokens += event.InputTokens + event.OutputTokens
+			totalCost += telemetry.EstimatedCost(&event)
+			if !event.Success {
+				allSuccessful = false
+			}
+		}
+
+		sequences = append(sequences, ToolSequence{
+			SequenceID: sessionID,
+			Tools:      tools,
+			Successful: allSuccessful,
+			DurationMs: totalDuration,
+			TokenCount: totalTokens,
+			Cost:       totalCost,
+		})
+	}
+
+	return sequences
+}
+
+// writeSequencesCSV writes tool sequences as CSV
+func writeSequencesCSV(out io.Writer, sequences []ToolSequence) {
 	w := csv.NewWriter(out)
 	defer w.Flush()
 
@@ -239,7 +302,7 @@ func writeSequencesCSV(out *os.File, sequences []telemetry.ToolSequence) {
 	for _, seq := range sequences {
 		row := []string{
 			seq.SequenceID,
-			seq.ToolChain,
+			strings.Join(seq.Tools, " → "),
 			fmt.Sprint(seq.Successful),
 			fmt.Sprint(seq.DurationMs),
 			fmt.Sprint(seq.TokenCount),
@@ -252,12 +315,25 @@ func writeSequencesCSV(out *os.File, sequences []telemetry.ToolSequence) {
 	}
 }
 
+// CollaborationEdge represents aggregated collaboration between two agents
+type CollaborationEdge struct {
+	SourceAgent      string  `json:"source_agent"`
+	TargetAgent      string  `json:"target_agent"`
+	InteractionCount int     `json:"interaction_count"`
+	SuccessRate      float64 `json:"success_rate"`
+	AvgCost          float64 `json:"avg_cost"`
+}
+
+// exportCollaborations exports agent collaboration data
 func exportCollaborations(format string, output string) {
-	collabs, err := telemetry.ReadCollaborations()
+	collabs, err := telemetry.ReadCollaborationLogs()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read collaborations: %v. Check telemetry data exists.\n", err)
 		os.Exit(1)
 	}
+
+	// Aggregate collaborations into edges
+	edges := aggregateCollaborations(collabs)
 
 	var out *os.File
 	if output == "-" {
@@ -274,20 +350,59 @@ func exportCollaborations(format string, output string) {
 
 	switch format {
 	case "json":
-		writeJSON(out, collabs)
+		writeJSON(out, edges)
 	case "csv":
-		writeCollaborationsCSV(out, collabs)
+		writeCollaborationsCSV(out, edges)
 	default:
 		fmt.Fprintf(os.Stderr, "[ml-export] Unknown format: %s. Supported: json, csv\n", format)
 		os.Exit(1)
 	}
 
 	if output != "-" {
-		fmt.Printf("[ml-export] Exported %d collaboration edges to %s\n", len(collabs), output)
+		fmt.Printf("[ml-export] Exported %d collaboration edges to %s\n", len(edges), output)
 	}
 }
 
-func writeCollaborationsCSV(out *os.File, collabs []telemetry.Collaboration) {
+// aggregateCollaborations converts individual collaboration logs into aggregated edges
+func aggregateCollaborations(collabs []telemetry.AgentCollaboration) []CollaborationEdge {
+	edgeMap := make(map[string]*CollaborationEdge)
+
+	for _, c := range collabs {
+		key := c.ParentAgent + " → " + c.ChildAgent
+		edge, exists := edgeMap[key]
+
+		if !exists {
+			edge = &CollaborationEdge{
+				SourceAgent:      c.ParentAgent,
+				TargetAgent:      c.ChildAgent,
+				InteractionCount: 0,
+				SuccessRate:      0.0,
+				AvgCost:          0.0,
+			}
+			edgeMap[key] = edge
+		}
+
+		edge.InteractionCount++
+		if c.ChildSuccess {
+			edge.SuccessRate += 1.0
+		}
+		// Note: Cost not available in AgentCollaboration struct currently
+	}
+
+	// Calculate final success rates
+	edges := make([]CollaborationEdge, 0, len(edgeMap))
+	for _, edge := range edgeMap {
+		if edge.InteractionCount > 0 {
+			edge.SuccessRate = edge.SuccessRate / float64(edge.InteractionCount)
+		}
+		edges = append(edges, *edge)
+	}
+
+	return edges
+}
+
+// writeCollaborationsCSV writes collaboration edges as CSV
+func writeCollaborationsCSV(out io.Writer, edges []CollaborationEdge) {
 	w := csv.NewWriter(out)
 	defer w.Flush()
 
@@ -303,13 +418,13 @@ func writeCollaborationsCSV(out *os.File, collabs []telemetry.Collaboration) {
 		return
 	}
 
-	for _, c := range collabs {
+	for _, edge := range edges {
 		row := []string{
-			c.SourceAgent,
-			c.TargetAgent,
-			fmt.Sprint(c.InteractionCount),
-			fmt.Sprintf("%.4f", c.SuccessRate),
-			fmt.Sprintf("%.6f", c.AvgCost),
+			edge.SourceAgent,
+			edge.TargetAgent,
+			fmt.Sprint(edge.InteractionCount),
+			fmt.Sprintf("%.4f", edge.SuccessRate),
+			fmt.Sprintf("%.6f", edge.AvgCost),
 		}
 		if err := w.Write(row); err != nil {
 			fmt.Fprintf(os.Stderr, "[ml-export] Failed to write CSV row: %v\n", err)
@@ -318,13 +433,14 @@ func writeCollaborationsCSV(out *os.File, collabs []telemetry.Collaboration) {
 	}
 }
 
+// exportTrainingDataset exports complete ML training dataset to directory
 func exportTrainingDataset(outputDir string) {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "[ml-export] Failed to create output directory %s: %v. Check permissions.\n", outputDir, err)
 		os.Exit(1)
 	}
 
-	// Export routing decisions
+	// Export routing decisions (30 days of data)
 	fmt.Println("[ml-export] Exporting routing decisions...")
 	exportRoutingDecisions("csv", "30d", filepath.Join(outputDir, "routing.csv"))
 
@@ -340,6 +456,7 @@ func exportTrainingDataset(outputDir string) {
 	fmt.Printf("[ml-export] Files: routing.csv, sequences.json, collaborations.json\n")
 }
 
+// parseDuration converts time string to duration
 func parseDuration(since string) time.Duration {
 	switch since {
 	case "1d":
@@ -353,6 +470,7 @@ func parseDuration(since string) time.Duration {
 	}
 }
 
+// printUsage prints CLI usage information
 func printUsage() {
 	fmt.Println(`Usage: gogent-ml-export <command> [options]
 
@@ -385,149 +503,3 @@ Examples:
   gogent-ml-export collaborations --format json
   gogent-ml-export training-dataset --output ./ml-data/`)
 }
-```
-
-**Build Script**: `scripts/build-ml-export.sh`
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-echo "Building gogent-ml-export..."
-
-cd "$(dirname "$0")/.."
-
-go build -o bin/gogent-ml-export ./cmd/gogent-ml-export
-
-echo "✓ Built: bin/gogent-ml-export"
-```
-
-**Tests**: `cmd/gogent-ml-export/main_test.go`
-
-```go
-package main
-
-import (
-	"bytes"
-	"fmt"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
-)
-
-func TestExportRoutingDecisions_ValidInput(t *testing.T) {
-	// Create temporary output file
-	tmpFile := filepath.Join(t.TempDir(), "routing.csv")
-
-	// Mock telemetry data would be used here
-	// This test verifies CSV structure is correct
-	buf := &bytes.Buffer{}
-
-	// Verify CSV header is written
-	header := "timestamp,task_type,task_domain,context_window,recent_success_rate,selected_tier,selected_agent,outcome_success,outcome_cost,escalation_required\n"
-	if !bytes.Contains(buf.Bytes(), []byte(header)) {
-		t.Errorf("Expected CSV header to be written")
-	}
-}
-
-func TestExportToolSequences_SuccessfulOnly(t *testing.T) {
-	tmpFile := filepath.Join(t.TempDir(), "sequences.json")
-
-	// Test successful-only filtering
-	if !fileExists(tmpFile) {
-		t.Logf("Output file: %s", tmpFile)
-	}
-}
-
-func TestExportCollaborations_JSONFormat(t *testing.T) {
-	tmpFile := filepath.Join(t.TempDir(), "collabs.json")
-
-	// Test JSON output format
-	if !fileExists(tmpFile) {
-		t.Logf("Output file: %s", tmpFile)
-	}
-}
-
-func TestExportTrainingDataset_CreatesDirectory(t *testing.T) {
-	tmpDir := filepath.Join(t.TempDir(), "ml-data")
-
-	// Test directory creation
-	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		t.Fatalf("Failed to create directory: %v", err)
-	}
-
-	if !fileExists(tmpDir) {
-		t.Errorf("Expected directory to be created: %s", tmpDir)
-	}
-}
-
-func TestParseDuration_ValidInputs(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected time.Duration
-	}{
-		{"1d", 24 * time.Hour},
-		{"7d", 7 * 24 * time.Hour},
-		{"30d", 30 * 24 * time.Hour},
-		{"invalid", 7 * 24 * time.Hour}, // default
-	}
-
-	for _, test := range tests {
-		t.Run(fmt.Sprintf("ParseDuration_%s", test.input), func(t *testing.T) {
-			result := parseDuration(test.input)
-			if result != test.expected {
-				t.Errorf("Expected %v, got %v", test.expected, result)
-			}
-		})
-	}
-}
-
-func TestExportRoutingDecisions_InvalidFormat(t *testing.T) {
-	// Test error handling for unknown format
-	tmpFile := filepath.Join(t.TempDir(), "output")
-
-	// Verify error message follows format: [component] What. Why. How.
-	expectedError := "[ml-export] Unknown format"
-	if !bytes.Contains([]byte(expectedError), []byte("[ml-export]")) {
-		t.Error("Error message must include component tag [ml-export]")
-	}
-}
-
-func TestExportCollaborations_OutputPermissions(t *testing.T) {
-	tmpDir := t.TempDir()
-	tmpFile := filepath.Join(tmpDir, "collabs.json")
-
-	// Verify file is created with correct permissions
-	f, err := os.Create(tmpFile)
-	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-	defer f.Close()
-
-	info, _ := os.Stat(tmpFile)
-	if info.Mode()&0600 != 0600 {
-		t.Errorf("Expected file to be readable/writable by owner")
-	}
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-```
-
-**Acceptance Criteria**:
-- [x] `gogent-ml-export` binary builds without errors
-- [x] `routing` subcommand exports CSV with ML features (task_type, domain, context_window, success_rate, tier, agent, outcome, cost, escalation)
-- [x] `sequences` subcommand exports JSON and optionally filters for successful-only sequences
-- [x] `collaborations` subcommand exports agent interaction edges with interaction count, success rate, avg cost
-- [x] `training-dataset` creates output directory and exports routing.csv, sequences.json, collaborations.json in one operation
-- [x] Time filtering with `--since 1d|7d|30d` works correctly (default 7d)
-- [x] All output files use XDG-compliant paths; no hardcoded `/tmp` usage
-- [x] `go test ./cmd/gogent-ml-export` passes with 66.8% coverage (100% on business logic, main() untestable due to os.Exit)
-
-**Why This Matters**: ML Export CLI enables periodic extraction of training data for routing optimization models. CSV export of routing decisions allows direct ingestion by ML pipelines (feature: task context → target: selected tier/agent). This closes GAP Section 5.3 requirement for aggregating ML-ready data for policy optimization training.
-
----
-
