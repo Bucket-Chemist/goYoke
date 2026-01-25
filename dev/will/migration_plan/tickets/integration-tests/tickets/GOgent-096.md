@@ -1,7 +1,7 @@
 ---
 id: GOgent-096
 title: Integration Tests for session-archive Hook
-description: **Task**:
+description: Test session-archive workflow with metrics collection, handoff generation, and file archival
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-094","GOgent-033"]
@@ -284,13 +284,13 @@ func createToolCounterLog(t *testing.T, projectDir, tool string, count int) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `TestSessionArchive_Integration` verifies complete workflow
-- [ ] `TestSessionArchive_MetricsCollection` verifies accurate counting
-- [ ] `TestSessionArchive_FileArchival` verifies files copied/moved correctly
-- [ ] Handoff file created at `.claude/memory/last-handoff.md`
-- [ ] Handoff contains all required sections with correct data
-- [ ] Files archived to `.claude/memory/session-archive/`
-- [ ] Tests pass: `go test ./test/integration -v -run TestSessionArchive`
+- [x] `TestSessionArchive_Integration` verifies complete workflow
+- [x] `TestSessionArchive_MetricsCollection` verifies accurate counting
+- [x] `TestSessionArchive_FileArchival` verifies files copied/moved correctly
+- [x] Handoff file created at `.claude/memory/last-handoff.md`
+- [x] Handoff contains all required sections with correct data
+- [x] Files archived to `.claude/memory/session-archive/`
+- [x] Tests pass: `go test ./test/integration -v -run TestSessionArchive`
 
 **Why This Matters**: Session handoff is critical for context continuity across restarts. Must verify metrics accuracy and file handling correctness.
 
