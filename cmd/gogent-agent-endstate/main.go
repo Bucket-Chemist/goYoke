@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/workflow"
 )
 
@@ -21,11 +22,27 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Process event (testable logic extracted)
+	response, err := processEvent(event)
+	if err != nil {
+		outputError(fmt.Sprintf("Processing failed: %v", err))
+		os.Exit(1)
+	}
+
+	// Output response as JSON to stdout
+	if err := response.Marshal(os.Stdout); err != nil {
+		outputError(fmt.Sprintf("Failed to marshal response: %v", err))
+		os.Exit(1)
+	}
+}
+
+// processEvent handles SubagentStop event processing (testable)
+func processEvent(event *routing.SubagentStopEvent) (*workflow.EndstateResponse, error) {
 	// Parse transcript for agent metadata (CRITICAL: metadata not in event directly)
 	metadata, parseErr := routing.ParseTranscriptForMetadata(event.TranscriptPath)
 	if parseErr != nil {
 		// Non-fatal: transcript parsing failure
-		// Continue with nil metadata - GenerateEndstateResponse will use defaults
+		// Continue with empty metadata - GenerateEndstateResponse will use defaults
 		fmt.Fprintf(os.Stderr, "Warning: Failed to parse transcript: %v\n", parseErr)
 		fmt.Fprintf(os.Stderr, "Continuing with default agent metadata...\n")
 	}
@@ -50,11 +67,34 @@ func main() {
 		// Don't exit - logging failure is non-fatal
 	}
 
-	// Output response as JSON to stdout
-	if err := response.Marshal(os.Stdout); err != nil {
-		outputError(fmt.Sprintf("Failed to marshal response: %v", err))
-		os.Exit(1)
+	// Log collaboration (GOgent-088c - non-blocking)
+	// This captures agent delegation patterns for ML optimization
+	if err := logCollaboration(event, metadata); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to log collaboration: %v\n", err)
+		// Don't exit - logging failure is non-fatal
 	}
+
+	return response, nil
+}
+
+// logCollaboration records agent delegation patterns for ML analysis.
+// Non-blocking: errors are logged to stderr but execution continues.
+func logCollaboration(event *routing.SubagentStopEvent, metadata *routing.ParsedAgentMetadata) error {
+	// Create collaboration record
+	collab := telemetry.NewAgentCollaboration(
+		event.SessionID,
+		"terminal",        // Parent is always terminal in SubagentStop context
+		metadata.AgentID,  // Child agent from transcript metadata
+		"spawn",           // DelegationType
+	)
+
+	// Set outcome from metadata
+	collab.ChildSuccess = metadata.IsSuccess()
+	collab.ChildDurationMs = int64(metadata.DurationMs)
+	collab.ChainDepth = 1 // SubagentStop always represents root-level delegation
+
+	// Log to persistent storage
+	return telemetry.LogCollaboration(collab)
 }
 
 func outputError(message string) {

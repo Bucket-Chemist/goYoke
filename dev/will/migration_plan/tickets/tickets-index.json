@@ -4062,7 +4062,7 @@
       "id": "GOgent-088b",
       "title": "Agent Collaboration Tracking",
       "file": "observability-remaining/tickets/GOgent-088b.md",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high",
       "time_estimate": "2h",
       "dependencies": [
@@ -4092,7 +4092,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 6,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-089b",
@@ -4173,7 +4173,7 @@
       "id": "GOgent-091",
       "title": "Investigate stop-gate.sh Purpose",
       "description": "Analyze stop-gate.sh hook to determine purpose and usage",
-      "file": "observability-remaining/tickets/GOgent-091.md",
+      "file": "observability-remaining/deprecated/GOgent-091.md",
       "week": 4,
       "time_estimate": "1h",
       "dependencies": [],
@@ -4184,13 +4184,15 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 4,
-      "status": "pending"
+      "status": "deprecated",
+      "deprecation_date": "2026-01-25",
+      "deprecation_reason": "stop-gate.sh hook determined to be redundant with session-archive.sh"
     },
     {
       "id": "GOgent-092",
       "title": "Stop-Gate Translation or Deprecation",
       "description": "Either translate stop-gate or document deprecation",
-      "file": "observability-remaining/tickets/GOgent-092.md",
+      "file": "observability-remaining/deprecated/GOgent-092.md",
       "week": 4,
       "time_estimate": "0.5h",
       "dependencies": [
@@ -4203,7 +4205,9 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 3,
-      "status": "pending"
+      "status": "deprecated",
+      "deprecation_date": "2026-01-25",
+      "deprecation_reason": "stop-gate.sh hook determined to be redundant with session-archive.sh"
     },
     {
       "id": "GOgent-093",

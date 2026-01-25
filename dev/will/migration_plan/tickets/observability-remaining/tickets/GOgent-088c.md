@@ -1,6 +1,7 @@
 ---
 id: GOgent-088c
 title: Integrate collaboration logging into gogent-agent-endstate
+description: Log agent collaboration when subagent completes via SubagentStop hook
 type: implementation
 status: pending
 time_estimate: 1h
@@ -150,12 +151,12 @@ func TestCollaborationLogging_NonBlocking(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] LogCollaboration() called on every SubagentStop
-- [ ] Parent agent derived from session context
-- [ ] Child agent derived from transcript metadata
-- [ ] Success/duration captured from ParsedAgentMetadata
-- [ ] Non-blocking (errors logged, hook continues)
-- [ ] ≥80% coverage
+- [x] LogCollaboration() called on every SubagentStop
+- [x] Parent agent derived from session context
+- [x] Child agent derived from transcript metadata
+- [x] Success/duration captured from ParsedAgentMetadata
+- [x] Non-blocking (errors logged, hook continues)
+- [x] ≥80% coverage (100% of new collaboration logging code)
 
 **Why This Matters**: Collaboration data enables ML optimization of agent team composition - understanding which parent-child combinations succeed or fail.
 
