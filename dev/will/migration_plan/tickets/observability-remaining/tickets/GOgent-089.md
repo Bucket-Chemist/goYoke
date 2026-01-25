@@ -1,7 +1,7 @@
 ---
 id: GOgent-089
 title: Integration Tests for ToolEvent ML Pipeline
-description: **Task**:
+description: End-to-end tests for benchmark logging workflow
 status: pending
 time_estimate: 1h
 dependencies: ["GOgent-088"]
@@ -290,21 +290,21 @@ func TestUnderstandingContext_Integration(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] Full workflow (event → log → read → analyze) works
-- [ ] Multiple events logged and retrieved correctly
-- [ ] Statistics aggregation correct
-- [ ] Cost calculation verified across tiers
-- [ ] JSON JSONL format valid
-- [ ] `go test ./pkg/telemetry` passes
-- [ ] Sequence tracking integration tested
-- [ ] Task classification accuracy validated (>85%)
-- [ ] Dual-write verified in tests
-- [ ] Understanding context fields tested
-- [ ] XDG path resolution tested
-- [ ] Tests use telemetry package functions (not observability)
-- [ ] Tests use routing.PostToolEvent (not observability.ToolEvent)
-- [ ] Tests use config.GetMLToolEventsPath() for paths
-- [ ] All references to pkg/observability removed
+- [x] Full workflow (event → log → read → analyze) works
+- [x] Multiple events logged and retrieved correctly
+- [x] Statistics aggregation correct
+- [x] Cost calculation verified across tiers
+- [x] JSON JSONL format valid
+- [x] `go test ./pkg/telemetry` passes
+- [x] Sequence tracking integration tested
+- [x] Task classification accuracy validated (>85%)
+- [x] Dual-write verified in tests
+- [x] Understanding context fields tested
+- [x] XDG path resolution tested
+- [x] Tests use telemetry package functions (not observability)
+- [x] Tests use routing.PostToolEvent (not observability.ToolEvent)
+- [x] Tests use config.GetMLToolEventsPath() for paths
+- [x] All references to pkg/observability removed
 
 **Success Metrics** (from GAP Section 10):
 - Task classification accuracy > 85%
