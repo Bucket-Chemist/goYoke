@@ -2,7 +2,7 @@
   "metadata": {
     "project": "gogent-fortress",
     "phase": "Phase 0 - Go Translation",
-    "total_tickets": 154,
+    "total_tickets": 159,
     "total_weeks": 5,
     "created": "2026-01-15",
     "version": "2.0",
@@ -3932,6 +3932,43 @@
       "status": "completed"
     },
     {
+      "id": "GOgent-086a",
+      "title": "Add config.GetGOgentDataDir() for XDG_DATA_HOME",
+      "description": "Add XDG-compliant data directory helper for persistent ML telemetry files",
+      "file": "observability-remaining/tickets/GOgent-086a.md",
+      "week": 4,
+      "time_estimate": "30m",
+      "dependencies": [],
+      "priority": "high",
+      "tags": [
+        "config",
+        "xdg",
+        "ml-optimization",
+        "week-4"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 7,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-086b",
+      "title": "Extend routing.PostToolEvent with ML telemetry fields",
+      "description": "Add ML fields to PostToolEvent using omitempty for backward compatibility",
+      "file": "observability-remaining/tickets/GOgent-086b.md",
+      "week": 4,
+      "time_estimate": "45m",
+      "dependencies": [],
+      "priority": "high",
+      "tags": [
+        "routing",
+        "ml-optimization",
+        "week-4"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 7,
+      "status": "completed"
+    },
+    {
       "id": "GOgent-087",
       "title": "PostToolUse Event for Benchmarking",
       "description": "Parse PostToolUse events to capture tool metrics",
@@ -3939,7 +3976,8 @@
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-070"
+        "GOgent-086b",
+        "GOgent-087c"
       ],
       "priority": "high",
       "tags": [
@@ -3951,6 +3989,128 @@
       "status": "pending"
     },
     {
+      "id": "GOgent-087b",
+      "title": "Routing Decision Capture",
+      "file": "observability-remaining/tickets/GOgent-087b.md",
+      "status": "in_progress",
+      "priority": "high",
+      "time_estimate": "2.5h",
+      "dependencies": [
+        "GOgent-087"
+      ],
+      "week": 4,
+      "tags": [
+        "ml-optimization",
+        "routing-decision"
+      ]
+    },
+    {
+      "id": "GOgent-087c",
+      "title": "Task Classifier Implementation",
+      "file": "observability-remaining/tickets/GOgent-087c.md",
+      "status": "completed",
+      "priority": "high",
+      "time_estimate": "1h",
+      "dependencies": [],
+      "week": 4,
+      "tags": [
+        "ml-optimization",
+        "task-classification"
+      ]
+    },
+    {
+      "id": "GOgent-087d",
+      "title": "Integrate ML tool event logging into gogent-sharp-edge",
+      "description": "Add ML logging to existing PostToolUse handler (replaces GOgent-090)",
+      "file": "observability-remaining/tickets/GOgent-087d.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-088"
+      ],
+      "priority": "high",
+      "tags": [
+        "hook-integration",
+        "ml-optimization",
+        "week-4"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-087e",
+      "title": "Integrate routing decision logging into gogent-validate",
+      "description": "Log routing decisions when Task() tool invoked via PreToolUse",
+      "file": "observability-remaining/tickets/GOgent-087e.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-087b"
+      ],
+      "priority": "high",
+      "tags": [
+        "hook-integration",
+        "ml-optimization",
+        "week-4"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 7,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-088b",
+      "title": "Agent Collaboration Tracking",
+      "file": "observability-remaining/tickets/GOgent-088b.md",
+      "status": "pending",
+      "priority": "high",
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-088"
+      ],
+      "week": 4,
+      "tags": [
+        "ml-optimization",
+        "collaboration-tracking"
+      ]
+    },
+    {
+      "id": "GOgent-088c",
+      "title": "Integrate collaboration logging into gogent-agent-endstate",
+      "description": "Log agent collaboration when subagent completes via SubagentStop",
+      "file": "observability-remaining/tickets/GOgent-088c.md",
+      "week": 4,
+      "time_estimate": "1h",
+      "dependencies": [
+        "GOgent-088b"
+      ],
+      "priority": "high",
+      "tags": [
+        "hook-integration",
+        "ml-optimization",
+        "week-4"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 6,
+      "status": "pending"
+    },
+    {
+      "id": "GOgent-089b",
+      "title": "ML Export CLI",
+      "file": "observability-remaining/tickets/GOgent-089b.md",
+      "status": "pending",
+      "priority": "high",
+      "time_estimate": "2h",
+      "dependencies": [
+        "GOgent-089"
+      ],
+      "week": 4,
+      "tags": [
+        "ml-optimization",
+        "ml-export"
+      ]
+    },
+    {
       "id": "GOgent-088",
       "title": "Benchmark Metrics Logging",
       "description": "Log tool usage metrics for performance analysis",
@@ -3958,7 +4118,8 @@
       "week": 4,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-087"
+        "GOgent-087",
+        "GOgent-086a"
       ],
       "priority": "high",
       "tags": [
@@ -4005,7 +4166,8 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 5,
-      "status": "pending"
+      "status": "cancelled",
+      "deprecation_note": "Merged into GOgent-087d (ML Optimization)"
     },
     {
       "id": "GOgent-091",
@@ -4051,8 +4213,8 @@
       "week": 4,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-090",
-        "GOgent-092"
+        "GOgent-092",
+        "GOgent-089b"
       ],
       "priority": "high",
       "tags": [

@@ -180,8 +180,8 @@ func TestSessionHandoffIntegration_FullWorkflow(t *testing.T) {
 	if handoff["session_id"] != sessionID {
 		t.Errorf("Expected session_id=%s, got %v", sessionID, handoff["session_id"])
 	}
-	if handoff["schema_version"] != "1.2" {
-		t.Errorf("Expected schema_version=1.2, got %v", handoff["schema_version"])
+	if handoff["schema_version"] != "1.3" {
+		t.Errorf("Expected schema_version=1.3, got %v", handoff["schema_version"])
 	}
 
 	// Verify last-handoff.md created with expected sections
