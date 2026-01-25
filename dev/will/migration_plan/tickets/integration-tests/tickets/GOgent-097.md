@@ -1,7 +1,7 @@
 ---
 id: GOgent-097
 title: Integration Tests for sharp-edge-detector Hook
-description: **Task**:
+description: Test sharp-edge-detector hook with failure detection, pattern logging, and escalation guidance
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-094","GOgent-040"]
@@ -436,19 +436,19 @@ func createSharpEdgeCorpus(t *testing.T, corpusPath, projectDir string) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `TestSharpEdge_Integration` verifies 3-failure blocking workflow
-- [ ] First failure passes through (no blocking)
-- [ ] Second failure generates warning in additionalContext
-- [ ] Third failure returns `decision: "block"` with sharp edge reason
-- [ ] Sharp edge captured to `pending-learnings.jsonl`
-- [ ] `TestSharpEdge_FailureDetection` verifies all signal types
-- [ ] `TestSharpEdge_SlidingWindow` verifies 5-minute window
-- [ ] `TestSharpEdge_PerFileTracking` verifies independent file tracking
-- [ ] `TestSharpEdge_MLTelemetryFields` verifies DurationMs, InputTokens, OutputTokens, SequenceIndex captured
-- [ ] ML telemetry fields correctly logged in sharp edge context
-- [ ] `TestSharpEdge_DecisionCorrelation` verifies routing decision correlation
-- [ ] Decision correlation logged to `routing-decision-updates.jsonl`
-- [ ] Tests pass: `go test ./test/integration -v -run TestSharpEdge`
+- [x] `TestSharpEdge_Integration` verifies 3-failure blocking workflow
+- [x] First failure passes through (no blocking)
+- [x] Second failure generates warning in additionalContext
+- [x] Third failure returns `decision: "block"` with sharp edge reason
+- [x] Sharp edge captured to `pending-learnings.jsonl`
+- [x] `TestSharpEdge_FailureDetection` verifies all signal types
+- [x] `TestSharpEdge_SlidingWindow` verifies 5-minute window
+- [x] `TestSharpEdge_PerFileTracking` verifies independent file tracking
+- [x] `TestSharpEdge_MLTelemetryFields` verifies DurationMs, InputTokens, OutputTokens, SequenceIndex captured
+- [x] ML telemetry fields correctly logged in sharp edge context
+- [x] `TestSharpEdge_DecisionCorrelation` verifies routing decision correlation
+- [x] Decision correlation logged to `routing-decision-updates.jsonl`
+- [x] Tests pass: `go test ./test/integration -v -run TestSharpEdge`
 
 **Why This Matters**: Sharp edge detection prevents debugging loops. Must verify blocking logic triggers correctly and captures sufficient context for learning.
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -119,6 +120,8 @@ func (h *TestHarness) RunHook(binaryPath string, event *EventEntry) *HookResult 
 	cmd := exec.Command(binaryPath)
 	cmd.Env = append(os.Environ(),
 		"CLAUDE_PROJECT_DIR="+h.ProjectDir,
+		"GOGENT_PROJECT_DIR="+h.ProjectDir,
+		"GOGENT_STORAGE_PATH="+filepath.Join(h.ProjectDir, ".gogent", "failure-tracker.jsonl"),
 		"GOgent_TEST_MODE=1", // Signal test mode for hooks
 	)
 
