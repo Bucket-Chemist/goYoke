@@ -81,6 +81,7 @@
 
 | File                                  | Ticket             | Lines | Tests | Coverage | Created    | Status     |
 | ------------------------------------- | ------------------ | ----- | ----- | -------- | ---------- | ---------- |
+| `harness.go`                          | GOgent-094         | 303   | N/A   | N/A      | 2026-01-25 | ✅ Library |
 | `metrics_parity_test.go`              | GOgent-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
 | `fallback_test.sh`                    | GOgent-028i        | 48    | 1     | N/A      | 2026-01-20 | ✅ Passing |
 | `session_handoff_integration_test.go` | GOgent-028m        | 650+  | 16    | 86%      | 2026-01-21 | ✅ Passing |
@@ -105,6 +106,47 @@
 
 - **Unit tests** (`schema_test.go`, `agents_test.go`): Test individual functions in isolation
 - **Integration tests** (`integration_test.go`): Test that multiple components work correctly together (schema + agents)
+
+### test/regression (Go vs Bash Regression Tests)
+
+**Purpose**: Corpus-driven regression tests comparing Go hook implementations against original Bash scripts.
+
+**Corpus**: Requires `GOgent_CORPUS_PATH` environment variable pointing to event corpus from GOgent-000.
+
+| File                 | Ticket      | Lines | Tests | Coverage | Created    | Status       |
+| -------------------- | ----------- | ----- | ----- | -------- | ---------- | ------------ |
+| `regression_test.go` | GOgent-100  | 638   | 6     | N/A      | 2026-01-25 | ✅ Skippable |
+
+**Test Functions**:
+
+1. `TestRegression_ValidateRouting` - Compares PreToolUse events (validate-routing hook)
+2. `TestRegression_SessionArchive` - Compares SessionEnd events (session-archive hook)
+3. `TestRegression_SharpEdgeDetector` - Compares PostToolUse events (sharp-edge-detector hook)
+4. `TestRegression_LoadContext` - Compares SessionStart events (load-routing-context hook)
+5. `TestRegression_AgentEndstate` - Compares SubagentStop events (agent-endstate hook)
+6. `TestRegression_MLTelemetry` - Validates corpus structure and event coverage
+
+**Key Features**:
+
+- Corpus-driven: Replays real events from production usage
+- Graceful skipping: All tests skip when corpus not available
+- Binary comparison: Tests both Go binaries and Bash scripts
+- Timestamp normalization: Ignores timestamp differences in output
+- ≥95% match requirement: Enforces strict behavioral equivalence
+- Detailed reporting: Shows first 5 differences on failure
+
+**Usage**:
+
+```bash
+# Set corpus path (from GOgent-000)
+export GOgent_CORPUS_PATH=/path/to/corpus.jsonl
+
+# Run all regression tests
+go test ./test/regression -v
+
+# Run specific regression test
+go test ./test/regression -v -run TestRegression_ValidateRouting
+```
 
 ### Wrapper Script
 

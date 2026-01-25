@@ -110,6 +110,11 @@ func (h *TestHarness) FilterEvents(hookEventName string) []*EventEntry {
 	return filtered
 }
 
+// AllEvents returns all events in the corpus
+func (h *TestHarness) AllEvents() []*EventEntry {
+	return h.Events
+}
+
 // RunHook executes a hook binary with the given event JSON as STDIN
 func (h *TestHarness) RunHook(binaryPath string, event *EventEntry) *HookResult {
 	result := &HookResult{

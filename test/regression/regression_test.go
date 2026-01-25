@@ -1,34 +1,6 @@
----
-id: GOgent-100
-title: Regression Tests (Go vs Bash Comparison)
-description: Regression testing to ensure Go hooks match Bash behavior exactly
-status: pending
-time_estimate: 2h
-dependencies: ["GOgent-099"]
-priority: high
-week: 5
-tags: ["regression-tests", "week-5"]
-tests_required: true
-acceptance_criteria_count: 10
----
-
-### GOgent-100: Regression Tests (Go vs Bash Comparison)
-
-**Time**: 2 hours
-**Dependencies**: GOgent-000 (corpus), GOgent-094 (harness), all hook binaries
-
-**Task**:
-Run 100-event corpus through both Go and Bash implementations, verify identical output (except timestamps).
-
-**File**: `test/regression/regression_test.go`
-
-**Implementation**:
-
-```go
 package regression
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -38,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/test/integration"
+	"github.com/Bucket-Chemist/GOgent-Fortress/test/integration"
 )
 
 // TestRegression_ValidateRouting compares Go vs Bash validate-routing output
@@ -166,13 +138,13 @@ func TestRegression_SessionArchive(t *testing.T) {
 		// Run Go implementation
 		goHandoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff-go.md")
 		os.Setenv("GOgent_HANDOFF_PATH", goHandoffPath)
-		goResult := harness.RunHook(goBinary, event)
+		_ = harness.RunHook(goBinary, event)
 		os.Unsetenv("GOgent_HANDOFF_PATH")
 
 		// Run Bash implementation
 		bashHandoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff-bash.md")
 		os.Setenv("GOgent_HANDOFF_PATH", bashHandoffPath)
-		bashResult := runBashHook(t, bashScript, event, projectDir)
+		_ = runBashHook(t, bashScript, event, projectDir)
 		os.Unsetenv("GOgent_HANDOFF_PATH")
 
 		// Compare handoff files (ignore timestamps)
@@ -187,7 +159,7 @@ func TestRegression_SessionArchive(t *testing.T) {
 		}
 
 		goHandoff, _ := os.ReadFile(goHandoffPath)
-		bashHandoff, _ := os.ReadFile(bashHandoff)
+		bashHandoff, _ := os.ReadFile(bashHandoffPath)
 
 		// Strip timestamps for comparison
 		goContent := stripTimestamps(string(goHandoff))
@@ -475,37 +447,25 @@ func TestRegression_MLTelemetry(t *testing.T) {
 	subagentStopCount := 0
 
 	for _, event := range allEvents {
-		eventTypes[event.EventType]++
+		eventTypes[event.HookEventName]++
 
 		// Track critical hook events
-		if event.EventType == "SessionStart" {
+		if event.HookEventName == "SessionStart" {
 			sessionStartCount++
-			// Verify routing context loaded
-			if _, hasRoutingSchema := event.Context["routing_schema"]; !hasRoutingSchema {
-				t.Logf("Warning: SessionStart event missing routing_schema context")
-			}
 		}
 
-		if event.EventType == "SessionEnd" {
+		if event.HookEventName == "SessionEnd" {
 			sessionEndCount++
-			// Verify handoff content
-			if _, hasHandoff := event.Context["handoff_content"]; !hasHandoff {
-				t.Logf("Warning: SessionEnd event missing handoff_content context")
-			}
 		}
 
-		if event.EventType == "SubagentStop" {
+		if event.HookEventName == "SubagentStop" {
 			subagentStopCount++
-			// Verify agent endstate data
-			if _, hasEndstate := event.Context["agent_endstate"]; !hasEndstate {
-				t.Logf("Warning: SubagentStop event missing agent_endstate context")
-			}
 		}
 
 		// Count events requiring corpus
-		if event.EventType == "PreToolUse" || event.EventType == "PostToolUse" ||
-			event.EventType == "SessionStart" || event.EventType == "SessionEnd" ||
-			event.EventType == "SubagentStop" {
+		if event.HookEventName == "PreToolUse" || event.HookEventName == "PostToolUse" ||
+			event.HookEventName == "SessionStart" || event.HookEventName == "SessionEnd" ||
+			event.HookEventName == "SubagentStop" {
 			requiresCorpus++
 		}
 	}
@@ -676,56 +636,3 @@ func showFirstDifference(t *testing.T, a, b string) {
 		}
 	}
 }
-```
-
-**Run regression tests**:
-```bash
-export GOgent_CORPUS_PATH=/path/to/corpus/from/gogent-000.jsonl
-go test ./test/regression -v
-```
-
-**Acceptance Criteria**:
-- [x] `TestRegression_ValidateRouting` compares all PreToolUse events
-- [x] `TestRegression_SessionArchive` compares all SessionEnd events
-- [x] `TestRegression_SharpEdgeDetector` compares all PostToolUse events
-- [x] `TestRegression_LoadContext` compares all SessionStart events (routing context loading)
-- [x] `TestRegression_AgentEndstate` compares all SubagentStop events (agent endstate processing)
-- [x] `TestRegression_MLTelemetry` validates corpus structure with SessionStart/SessionEnd/SubagentStop coverage
-- [x] ≥95% of events produce identical output (Go vs Bash) - enforced via test error reporting
-- [x] Differences limited to timestamp formatting - stripTimestamps helper removes timestamp lines
-- [x] Test report shows pass/fail counts and first 5 differences for each regression test
-- [x] Corpus includes at least 1 SessionStart event for hook load-context testing - verified by MLTelemetry test
-- [x] Corpus includes at least 1 SubagentStop event for agent-endstate testing - verified by MLTelemetry test
-- [x] Regression tests pass: `go test ./test/regression -v` - all tests skip gracefully when corpus not available
-- [x] Results documented in regression-report.md with SessionStart/SubagentStop coverage metrics - test output logs provide complete metrics
-
-**Why This Matters**: Regression tests are the final quality gate. Must verify Go implementations are drop-in replacements for Bash with no behavior changes.
-
----
-
-## Summary
-
-Week 3 Part 1 completes the Phase 0 testing suite with:
-
-- **GOgent-004c**: Config circular dependency tests (deferred from Week 1)
-- **GOgent-094**: Test harness for corpus replay (foundation for all tests)
-- **GOgent-095**: Integration tests for validate-routing hook
-- **GOgent-096**: Integration tests for session-archive hook
-- **GOgent-097**: Integration tests for sharp-edge-detector hook
-- **GOgent-098**: Performance benchmarks (<5ms p99, <10MB memory targets)
-- **GOgent-099**: End-to-end workflow integration tests
-- **GOgent-100**: Regression tests comparing Go vs Bash output
-
-**Quality Gates**:
-- Integration tests verify complete hook workflows
-- Performance benchmarks enforce latency and memory targets
-- Regression tests ensure Go output matches Bash exactly
-- End-to-end tests validate cross-hook pipelines
-
-**Next**: [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) - Installation, parallel testing, and GO/NO-GO cutover decision (GOgent-101 to 055)
-
----
-
-**File Status**: ✅ Complete
-**Tickets**: 7 (GOgent-004c, 094-100)
-**Detail Level**: Full implementation + comprehensive tests
