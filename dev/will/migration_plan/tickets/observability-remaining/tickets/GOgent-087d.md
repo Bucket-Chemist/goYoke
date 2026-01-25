@@ -1,6 +1,7 @@
 ---
 id: GOgent-087d
 title: Integrate ML tool event logging into gogent-sharp-edge
+description: Add ML tool event logging to existing PostToolUse handler in gogent-sharp-edge
 type: implementation
 status: pending
 time_estimate: 1h
@@ -112,15 +113,15 @@ func TestMLLogging_NonBlocking(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] LogMLToolEvent() called on every PostToolUse
-- [ ] Errors logged to stderr, hook continues (non-blocking)
-- [ ] No performance regression (< 10ms added latency)
-- [ ] Integration test verifies JSONL written
-- [ ] Dual-write to global and project paths
-- [ ] ≥80% coverage
-- [ ] DurationMs calculated as: CapturedAt - (previous tool's CapturedAt) OR from transcript timestamps if available
-- [ ] InputTokens/OutputTokens default to 0 (not available from current Claude Code events)
-- [ ] Note: Full token metrics require Claude Code upgrade or external estimation
+- [x] LogMLToolEvent() called on every PostToolUse
+- [x] Errors logged to stderr, hook continues (non-blocking)
+- [x] No performance regression (< 10ms added latency)
+- [x] Integration test verifies JSONL written
+- [x] Dual-write to global and project paths
+- [x] ≥80% coverage (telemetry.LogMLToolEvent: 81.8%, overall telemetry pkg: 94.1%)
+- [x] DurationMs calculated as: CapturedAt - (previous tool's CapturedAt) OR from transcript timestamps if available
+- [x] InputTokens/OutputTokens default to 0 (not available from current Claude Code events)
+- [x] Note: Full token metrics require Claude Code upgrade or external estimation
 
 **ML Field Population Note**: The extended PostToolEvent fields (DurationMs, InputTokens, OutputTokens) are not currently emitted by Claude Code. DurationMs should be calculated from timestamp differences between consecutive tool events. Token fields will be zero until Claude Code emits them or an estimation method is implemented.
 

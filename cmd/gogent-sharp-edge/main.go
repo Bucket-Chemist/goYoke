@@ -12,6 +12,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/memory"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 )
 
 const (
@@ -86,6 +87,13 @@ func main() {
 		// Non-fatal: might be non-JSON or timeout, just pass through
 		fmt.Println("{}")
 		return
+	}
+
+	// === NEW: ML TOOL EVENT LOGGING (GOgent-087d) ===
+	// Log to global and project-scoped paths (non-blocking)
+	if mlErr := telemetry.LogMLToolEvent(event, projectDir); mlErr != nil {
+		// Log error but don't fail hook - ML logging is non-critical
+		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] ML logging warning: %v\n", mlErr)
 	}
 
 	// === NEW: ATTENTION-GATE LOGIC ===

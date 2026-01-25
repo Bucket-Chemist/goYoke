@@ -13,6 +13,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/memory"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 )
 
 func TestGetProjectDir(t *testing.T) {
@@ -757,5 +758,387 @@ func TestBuildCombinedResponse_JSONMarshaling(t *testing.T) {
 
 	if !strings.Contains(ctx, "Test flush") {
 		t.Errorf("Expected flush in context, got: %s", ctx)
+	}
+}
+
+// =============================================================================
+// ML Tool Event Logging Integration Tests (GOgent-087d)
+// =============================================================================
+
+func TestMLLogging_Integration(t *testing.T) {
+	// Setup temp directory for XDG_DATA_HOME
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	// Create test event
+	now := time.Now().Unix()
+	event := &routing.PostToolEvent{
+		ToolName:      "Read",
+		SessionID:     "test-session-123",
+		CapturedAt:    now,
+		HookEventName: "PostToolUse",
+		ToolInput: map[string]interface{}{
+			"file_path": "/test/file.go",
+		},
+		ToolResponse: map[string]interface{}{
+			"success": true,
+		},
+	}
+
+	// Call logging function directly
+	err := telemetry.LogMLToolEvent(event, "")
+	if err != nil {
+		t.Fatalf("LogMLToolEvent() failed: %v", err)
+	}
+
+	// Verify global log file created (using config.GetMLToolEventsPath naming)
+	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	if _, err := os.Stat(globalLogPath); os.IsNotExist(err) {
+		t.Errorf("Global log file should exist at %s", globalLogPath)
+	}
+
+	// Read and verify content
+	data, err := os.ReadFile(globalLogPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	// Parse JSONL line
+	var loggedEvent routing.PostToolEvent
+	if err := json.Unmarshal(bytes.TrimSpace(data), &loggedEvent); err != nil {
+		t.Fatalf("Failed to unmarshal logged event: %v", err)
+	}
+
+	// Verify critical fields
+	if loggedEvent.ToolName != "Read" {
+		t.Errorf("ToolName = %v, want Read", loggedEvent.ToolName)
+	}
+	if loggedEvent.SessionID != "test-session-123" {
+		t.Errorf("SessionID = %v, want test-session-123", loggedEvent.SessionID)
+	}
+	if loggedEvent.CapturedAt != now {
+		t.Errorf("CapturedAt = %v, want %v", loggedEvent.CapturedAt, now)
+	}
+}
+
+func TestMLLogging_NonBlocking(t *testing.T) {
+	// Use invalid/readonly path to force error
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", "/nonexistent/readonly/path")
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	event := &routing.PostToolEvent{
+		ToolName:   "Bash",
+		SessionID:  "test-nonblocking",
+		CapturedAt: time.Now().Unix(),
+	}
+
+	// Function should return error but not panic
+	err := telemetry.LogMLToolEvent(event, "")
+	if err == nil {
+		t.Log("Warning: Expected error with invalid path, got nil (permissions may allow creation)")
+	}
+	// The important thing is we don't panic - hook continues execution
+}
+
+func TestMLLogging_DualWrite(t *testing.T) {
+	// Setup temp directories for both global and project
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "project")
+
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	// Create project .claude/memory directory
+	projectMemoryDir := filepath.Join(projectDir, ".claude", "memory")
+	if err := os.MkdirAll(projectMemoryDir, 0755); err != nil {
+		t.Fatalf("Failed to create project memory dir: %v", err)
+	}
+
+	// Create test event
+	event := &routing.PostToolEvent{
+		ToolName:   "Edit",
+		SessionID:  "dual-write-test",
+		CapturedAt: time.Now().Unix(),
+	}
+
+	// Call with projectDir
+	err := telemetry.LogMLToolEvent(event, projectDir)
+	if err != nil {
+		t.Fatalf("LogMLToolEvent() failed: %v", err)
+	}
+
+	// Verify global log (using config.GetMLToolEventsPath naming: tool-events.jsonl)
+	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	if _, err := os.Stat(globalLogPath); os.IsNotExist(err) {
+		t.Error("Global log file should exist")
+	}
+
+	// Verify project log
+	projectLogPath := filepath.Join(projectMemoryDir, "ml-tool-events.jsonl")
+	if _, err := os.Stat(projectLogPath); os.IsNotExist(err) {
+		t.Error("Project log file should exist")
+	}
+
+	// Verify both files contain valid JSON
+	for _, path := range []string{globalLogPath, projectLogPath} {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("Failed to read %s: %v", path, err)
+			continue
+		}
+
+		var event routing.PostToolEvent
+		if err := json.Unmarshal(bytes.TrimSpace(data), &event); err != nil {
+			t.Errorf("Invalid JSON in %s: %v", path, err)
+		}
+	}
+}
+
+func TestMLLogging_PerformanceRegression(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	event := &routing.PostToolEvent{
+		ToolName:   "Read",
+		SessionID:  "perf-test",
+		CapturedAt: time.Now().Unix(),
+	}
+
+	// Measure execution time
+	start := time.Now()
+	err := telemetry.LogMLToolEvent(event, "")
+	duration := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("LogMLToolEvent() failed: %v", err)
+	}
+
+	// Verify latency < 10ms (acceptance criteria)
+	if duration > 10*time.Millisecond {
+		t.Errorf("ML logging took %v, exceeds 10ms threshold", duration)
+	}
+}
+
+func TestMLLogging_MultipleEvents(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	// Log multiple events
+	tools := []string{"Read", "Edit", "Bash", "Grep"}
+	for i, tool := range tools {
+		event := &routing.PostToolEvent{
+			ToolName:   tool,
+			SessionID:  "multi-event-test",
+			CapturedAt: time.Now().Unix() + int64(i),
+		}
+
+		if err := telemetry.LogMLToolEvent(event, ""); err != nil {
+			t.Fatalf("LogMLToolEvent() failed for %s: %v", tool, err)
+		}
+	}
+
+	// Read log file (using config.GetMLToolEventsPath naming: tool-events.jsonl)
+	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	data, err := os.ReadFile(globalLogPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	// Split into lines
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != len(tools) {
+		t.Errorf("Expected %d lines, got %d", len(tools), len(lines))
+	}
+
+	// Verify each line is valid JSON with correct tool name
+	for i, line := range lines {
+		var event routing.PostToolEvent
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			t.Errorf("Line %d invalid JSON: %v", i, err)
+			continue
+		}
+
+		if event.ToolName != tools[i] {
+			t.Errorf("Line %d: ToolName = %v, want %v", i, event.ToolName, tools[i])
+		}
+	}
+}
+
+func TestMLLogging_ExtendedFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	// Create event with extended ML fields
+	event := &routing.PostToolEvent{
+		ToolName:   "Read",
+		SessionID:  "extended-fields-test",
+		CapturedAt: time.Now().Unix(),
+		// Extended fields (currently not populated by Claude Code)
+		DurationMs:   0, // Will be 0 until Claude Code emits it
+		InputTokens:  0, // Will be 0 until Claude Code emits it
+		OutputTokens: 0, // Will be 0 until Claude Code emits it
+		Model:        "", // Empty until available
+		Tier:         "", // Empty until available
+	}
+
+	err := telemetry.LogMLToolEvent(event, "")
+	if err != nil {
+		t.Fatalf("LogMLToolEvent() failed: %v", err)
+	}
+
+	// Read and verify fields are preserved (even if zero/empty)
+	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	data, err := os.ReadFile(globalLogPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	var loggedEvent map[string]interface{}
+	if err := json.Unmarshal(bytes.TrimSpace(data), &loggedEvent); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	// Verify core fields exist
+	requiredFields := []string{"tool_name", "session_id", "captured_at"}
+	for _, field := range requiredFields {
+		if _, exists := loggedEvent[field]; !exists {
+			t.Errorf("Required field %s missing", field)
+		}
+	}
+
+	// Note: Extended fields with zero values won't appear in JSON (omitempty)
+	// This is expected behavior per routing.PostToolEvent struct tags
+}
+
+func TestMLLogging_ErrorHandlingNonBlocking(t *testing.T) {
+	// Test that ML logging errors don't prevent hook execution
+	tmpDir := t.TempDir()
+
+	// Set XDG to valid path but project dir to invalid path
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	// Create an event
+	event := &routing.PostToolEvent{
+		ToolName:   "Edit",
+		SessionID:  "error-handling-test",
+		CapturedAt: time.Now().Unix(),
+	}
+
+	// This should succeed for global write
+	err := telemetry.LogMLToolEvent(event, "/nonexistent/project/dir")
+	if err != nil {
+		t.Fatalf("LogMLToolEvent() should succeed for global write even with invalid project dir: %v", err)
+	}
+
+	// Verify global log exists
+	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	if _, err := os.Stat(globalLogPath); os.IsNotExist(err) {
+		t.Error("Global log should exist even when project dir write fails")
+	}
+
+	// Verify project log doesn't exist (project dir doesn't exist)
+	projectLogPath := filepath.Join("/nonexistent/project/dir", ".claude", "memory", "ml-tool-events.jsonl")
+	if _, err := os.Stat(projectLogPath); !os.IsNotExist(err) {
+		t.Error("Project log should not exist for nonexistent directory")
+	}
+}
+
+func TestMLLogging_ConcurrentWrites(t *testing.T) {
+	// Verify ML logging is safe for concurrent use (hook may be called in parallel)
+	tmpDir := t.TempDir()
+	oldXDG := os.Getenv("XDG_DATA_HOME")
+	os.Setenv("XDG_DATA_HOME", tmpDir)
+	defer func() {
+		if oldXDG != "" {
+			os.Setenv("XDG_DATA_HOME", oldXDG)
+		} else {
+			os.Unsetenv("XDG_DATA_HOME")
+		}
+	}()
+
+	// Launch 10 concurrent writes
+	done := make(chan error, 10)
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			event := &routing.PostToolEvent{
+				ToolName:   fmt.Sprintf("Tool%d", id),
+				SessionID:  "concurrent-test",
+				CapturedAt: time.Now().Unix(),
+			}
+			done <- telemetry.LogMLToolEvent(event, "")
+		}(i)
+	}
+
+	// Collect results
+	for i := 0; i < 10; i++ {
+		if err := <-done; err != nil {
+			t.Errorf("Concurrent write %d failed: %v", i, err)
+		}
+	}
+
+	// Verify all 10 events were written
+	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	data, err := os.ReadFile(globalLogPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 10 {
+		t.Errorf("Expected 10 JSONL lines, got %d", len(lines))
 	}
 }
