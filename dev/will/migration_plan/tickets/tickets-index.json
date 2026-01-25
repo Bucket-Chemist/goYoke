@@ -4056,7 +4056,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 7,
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "id": "GOgent-088b",
@@ -4128,7 +4128,7 @@
       ],
       "tests_required": true,
       "acceptance_criteria_count": 8,
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "id": "GOgent-089",

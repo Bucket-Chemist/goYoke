@@ -1,7 +1,7 @@
 ---
 id: GOgent-088
 title: Tool Event Logging with Dual-Write & XDG Compliance
-description: **Task**:
+description: Log ML tool events in JSONL format with dual-write to global and project-scoped paths
 status: pending
 time_estimate: 1.5h
 dependencies: ["GOgent-086a", "GOgent-087"]
@@ -339,22 +339,22 @@ func TestDualWrite(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] NO pkg/observability created
-- [ ] `LogMLToolEvent()` writes to path from config.GetMLToolEventsPath() (global)
-- [ ] `LogMLToolEvent()` writes to `.claude/memory/ml-tool-events.jsonl` (project) when directory exists
-- [ ] Uses config.GetGOgentDataDir() for global path resolution
-- [ ] Dual-write architecture implemented per GAP 5.2
-- [ ] Creates directories if missing (os.MkdirAll with 0755)
-- [ ] Function signature: `LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error`
-- [ ] `ReadMLToolEvents()` parses all logs correctly from global path
-- [ ] `ReadMLToolEvents()` returns `[]routing.PostToolEvent` directly (no custom struct)
-- [ ] Handles missing file gracefully (returns empty slice, no error)
-- [ ] `CalculateMLSessionStats()` aggregates metrics correctly
-- [ ] Tests verify global path creation and writing
-- [ ] Tests verify project path writing when directory exists
-- [ ] Tests verify dual-write architecture
-- [ ] Imports include `gogent/internal/config` and `gogent/pkg/routing`
-- [ ] `go test ./pkg/telemetry` passes
+- [x] NO pkg/observability created
+- [x] `LogMLToolEvent()` writes to path from config.GetMLToolEventsPath() (global)
+- [x] `LogMLToolEvent()` writes to `.claude/memory/ml-tool-events.jsonl` (project) when directory exists
+- [x] Uses config.GetGOgentDataDir() for global path resolution
+- [x] Dual-write architecture implemented per GAP 5.2
+- [x] Creates directories if missing (os.MkdirAll with 0755)
+- [x] Function signature: `LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error`
+- [x] `ReadMLToolEvents()` parses all logs correctly from global path
+- [x] `ReadMLToolEvents()` returns `[]routing.PostToolEvent` directly (no custom struct)
+- [x] Handles missing file gracefully (returns empty slice, no error)
+- [x] `CalculateMLSessionStats()` aggregates metrics correctly
+- [x] Tests verify global path creation and writing
+- [x] Tests verify project path writing when directory exists
+- [x] Tests verify dual-write architecture
+- [x] Imports include `gogent/internal/config` and `gogent/pkg/routing`
+- [x] `go test ./pkg/telemetry` passes
 
 **Why This Matters**: ML event logging enables performance analysis, routing efficiency verification, and cost optimization via centralized config path helpers.
 
