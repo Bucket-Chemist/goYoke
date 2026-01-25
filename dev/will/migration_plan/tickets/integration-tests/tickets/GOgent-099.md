@@ -1,15 +1,15 @@
 ---
 id: GOgent-099
 title: End-to-End Workflow Integration Tests
-description: **Task**:
+description: Full workflow integration tests across all hooks with realistic scenarios
 status: pending
 time_estimate: 2h
-dependencies: ["GOgent-095"]
+dependencies: ["GOgent-095","GOgent-096","GOgent-097"]
 priority: high
 week: 5
-tags: ["performance", "week-5"]
+tags: ["integration-tests", "week-5"]
 tests_required: true
-acceptance_criteria_count: 7
+acceptance_criteria_count: 9
 ---
 
 ### GOgent-099: End-to-End Workflow Integration Tests
@@ -761,22 +761,22 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `TestEndToEnd_FullMLPipeline` verifies complete lifecycle: SessionStart → validate → sharp edge → SubagentStop → archive
-- [ ] ML reconciliation fields logged in PostToolUse events and exported to JSON
-- [ ] SessionStart hook injects routing context from previous handoff
-- [ ] PreToolUse routing decisions logged to routing-decisions.jsonl with decision, tier, reason
-- [ ] SubagentStop triggers agent-endstate hook and logs collaboration metrics
-- [ ] SessionEnd archive includes ML reconciliation with valid training data export
-- [ ] `TestEndToEnd_SessionStartToValidate` verifies context injection at session boundaries
-- [ ] `TestEndToEnd_SubagentStopToArchive` verifies collaboration tracking through archival
-- [ ] `TestEndToEnd_ValidationToSharpEdge` verifies validation → sharp edge pipeline
-- [ ] `TestEndToEnd_SessionArchivalWorkflow` verifies complete session lifecycle
-- [ ] Violations from validation appear in session handoff
-- [ ] Pending learnings from sharp edge appear in session handoff
-- [ ] Files archived correctly at session end
-- [ ] `TestEndToEnd_MultiSessionHandoff` verifies continuity across sessions
-- [ ] All end-to-end tests pass: `go test ./test/integration -v -run TestEndToEnd`
-- [ ] ML export directory created with reconciliation data for training pipeline
+- [x] `TestEndToEnd_FullMLPipeline` verifies complete lifecycle: SessionStart → validate → sharp edge → SubagentStop → archive
+- [x] ML reconciliation fields logged in PostToolUse events and exported to JSON
+- [x] SessionStart hook injects routing context from previous handoff
+- [x] PreToolUse routing decisions logged to routing-decisions.jsonl with decision, tier, reason
+- [x] SubagentStop triggers agent-endstate hook and logs collaboration metrics
+- [x] SessionEnd archive includes ML reconciliation with valid training data export
+- [x] `TestEndToEnd_SessionStartToValidate` verifies context injection at session boundaries
+- [x] `TestEndToEnd_SubagentStopToArchive` verifies collaboration tracking through archival
+- [x] `TestEndToEnd_ValidationToSharpEdge` verifies validation → sharp edge pipeline
+- [x] `TestEndToEnd_SessionArchivalWorkflow` verifies complete session lifecycle
+- [x] Violations from validation appear in session handoff
+- [x] Pending learnings from sharp edge appear in session handoff
+- [x] Files archived correctly at session end
+- [x] `TestEndToEnd_MultiSessionHandoff` verifies continuity across sessions
+- [x] All end-to-end tests pass: `go test ./test/integration -v -run TestEndToEnd`
+- [x] ML export directory created with reconciliation data for training pipeline
 
 **Why This Matters**: Individual hooks may work in isolation but fail when chained. Full ML pipeline tests verify: (1) end-to-end workflows match production usage, (2) routing decisions are properly tracked and reconciled, (3) collaboration data flows from SubagentStop through archival, (4) training data export is valid for downstream ML models.
 
