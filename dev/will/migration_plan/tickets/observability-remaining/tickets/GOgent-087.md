@@ -1,10 +1,10 @@
 ---
 id: GOgent-087
 title: ToolEvent Helper Functions for Sequence Tracking and Task Classification
-description: **Task**:
+description: Implement helper functions for PostToolUse events with ML sequence tracking and task classification
 status: pending
 time_estimate: 2h
-dependencies: ["GOgent-069", "GOgent-086b"]
+dependencies: ["GOgent-086b", "GOgent-087c"]
 priority: high
 week: 4
 tags: ["benchmark-logger", "ml-optimization", "week-4"]
@@ -210,20 +210,20 @@ func TestPostToolEventWithSequenceTracking(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
-- [ ] File created at `pkg/telemetry/ml_tool_event.go` (NOT pkg/observability)
-- [ ] Package declaration: `package telemetry`
-- [ ] Import: `github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing`
-- [ ] `TotalTokens()` sums input and output tokens from *routing.PostToolEvent
-- [ ] `EstimatedCost()` calculates cost by model tier
-- [ ] `EnrichWithSequence()` sets SequenceIndex, PreviousTools, PreviousOutcomes
-- [ ] `EnrichWithClassification()` function signature present (uses SelectedTier, SelectedAgent)
-- [ ] Tests in `pkg/telemetry/ml_tool_event_test.go`
-- [ ] All test cases pass: TotalTokens, EstimatedCost, EnrichWithSequence
-- [ ] Tests verify operations on routing.PostToolEvent directly
-- [ ] NO pkg/observability created or referenced
-- [ ] `go test ./pkg/telemetry` passes
-- [ ] Dependency on GOgent-086b in frontmatter
-- [ ] PR title includes "ml_tool_event" (new file name)
+- [x] File created at `pkg/telemetry/ml_tool_event.go` (NOT pkg/observability)
+- [x] Package declaration: `package telemetry`
+- [x] Import: `github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing`
+- [x] `TotalTokens()` sums input and output tokens from *routing.PostToolEvent
+- [x] `EstimatedCost()` calculates cost by model tier
+- [x] `EnrichWithSequence()` sets SequenceIndex, PreviousTools, PreviousOutcomes
+- [x] `EnrichWithClassification()` function signature present (uses SelectedTier, SelectedAgent)
+- [x] Tests in `pkg/telemetry/ml_tool_event_test.go`
+- [x] All test cases pass: TotalTokens, EstimatedCost, EnrichWithSequence
+- [x] Tests verify operations on routing.PostToolEvent directly
+- [x] NO pkg/observability created or referenced
+- [x] `go test ./pkg/telemetry` passes
+- [x] Dependency on GOgent-086b in frontmatter
+- [x] PR title includes "ml_tool_event" (new file name)
 
 **Why This Matters**: Metrics capture with ML sequence tracking and task classification enables ML-based routing optimization, agent performance benchmarking, and identification of optimal tool sequences. This data forms the foundation for supervised learning systems to improve routing decisions over time.
 
