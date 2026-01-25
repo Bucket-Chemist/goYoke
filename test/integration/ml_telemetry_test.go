@@ -1,29 +1,3 @@
----
-id: GOgent-101
-title: ML Telemetry Integration Tests
-description: End-to-end testing for ML telemetry pipeline including routing decisions, collaborations, and export reconciliation
-status: pending
-time_estimate: 2h
-dependencies: ["GOgent-089b", "GOgent-094", "GOgent-097"]
-priority: high
-week: 5
-tags: ["integration-tests", "ml-telemetry", "week-5"]
-tests_required: true
-acceptance_criteria_count: 15
----
-
-### GOgent-101: ML Telemetry Integration Tests
-
-**Time**: 2 hours
-**Dependencies**: GOgent-089b (ML Export CLI), GOgent-094 (test harness), GOgent-097 (sharp-edge tests)
-
-**Task**:
-Test ML telemetry pipeline end-to-end: routing decision capture, append-only logs, concurrent writes, collaboration tracking, and export reconciliation. Verify no race conditions corrupt training data.
-
-**File**: `test/integration/ml_telemetry_test.go`
-
-**Imports**:
-```go
 package integration
 
 import (
@@ -34,19 +8,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/yourusername/gogent-fortress/pkg/telemetry"
 )
-```
 
-**Implementation**:
-
-```go
 // TestMLTelemetry_RoutingDecisionCapture verifies routing-decisions.jsonl is created and populated
 func TestMLTelemetry_RoutingDecisionCapture(t *testing.T) {
 	projectDir := t.TempDir()
@@ -66,7 +33,7 @@ func TestMLTelemetry_RoutingDecisionCapture(t *testing.T) {
 	}
 
 	// Run events through telemetry system
-	results, err := harness.RunHookBatch("gogent-validate", "PreToolUse")
+	results, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -142,7 +109,7 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 	}
 
 	// First batch
-	results1, err := harness.RunHookBatch("gogent-validate", "PreToolUse")
+	results1, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("First batch failed: %v", err)
 	}
@@ -150,17 +117,23 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 	// Read updates after first batch
 	updatesPath := filepath.Join(projectDir, ".gogent", "routing-decision-updates.jsonl")
 	data1, _ := os.ReadFile(updatesPath)
-	initialLineCount := len(strings.Split(strings.TrimSpace(string(data1)), "\n"))
+	initialLineCount := 0
+	if len(data1) > 0 {
+		initialLineCount = len(strings.Split(strings.TrimSpace(string(data1)), "\n"))
+	}
 
 	// Run second batch
-	results2, err := harness.RunHookBatch("gogent-validate", "PreToolUse")
+	results2, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Second batch failed: %v", err)
 	}
 
 	// Read updates after second batch
 	data2, _ := os.ReadFile(updatesPath)
-	finalLineCount := len(strings.Split(strings.TrimSpace(string(data2)), "\n"))
+	finalLineCount := 0
+	if len(data2) > 0 {
+		finalLineCount = len(strings.Split(strings.TrimSpace(string(data2)), "\n"))
+	}
 
 	// Verify append-only: final >= initial
 	if finalLineCount < initialLineCount {
@@ -198,7 +171,7 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 		}
 	}
 
-	if len(results1) + len(results2) == 0 {
+	if len(results1)+len(results2) == 0 {
 		t.Error("No results from batches")
 	}
 }
@@ -231,7 +204,7 @@ func TestMLTelemetry_ConcurrentWrites(t *testing.T) {
 				return
 			}
 
-			_, err = harness.RunHookBatch("gogent-validate", "PreToolUse")
+			_, err = harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 			if err != nil {
 				errors <- fmt.Errorf("hook batch failed for agent %d: %v", agentID, err)
 				return
@@ -303,7 +276,7 @@ func TestMLTelemetry_CollaborationTracking(t *testing.T) {
 	}
 
 	// Run events
-	_, err = harness.RunHookBatch("gogent-validate", "PreToolUse")
+	_, err = harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -376,7 +349,7 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 	}
 
 	// Populate telemetry files
-	if _, err := harness.RunHookBatch("gogent-validate", "PreToolUse"); err != nil {
+	if _, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse"); err != nil {
 		t.Fatalf("Failed to populate telemetry: %v", err)
 	}
 
@@ -488,7 +461,7 @@ func TestMLTelemetry_RaceConditionDetection(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = harness.RunHookBatch("gogent-validate", "PreToolUse")
+			_, _ = harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 		}()
 	}
 
@@ -515,36 +488,38 @@ func TestMLTelemetry_SequenceIntegrity(t *testing.T) {
 		t.Fatalf("Failed to load corpus: %v", err)
 	}
 
-	results, err := harness.RunHookBatch("gogent-validate", "PreToolUse")
+	results, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
 
-	// Verify all results include ML telemetry fields
+	// Verify all results include ML telemetry fields from events
 	for i, result := range results {
-		if result.MLTelemetry == nil {
-			t.Errorf("Result %d missing MLTelemetry", i)
-		} else {
-			if result.MLTelemetry.DurationMs <= 0 {
-				t.Errorf("Result %d invalid DurationMs: %d", i, result.MLTelemetry.DurationMs)
-			}
-			if result.MLTelemetry.InputTokens <= 0 {
-				t.Errorf("Result %d invalid InputTokens: %d", i, result.MLTelemetry.InputTokens)
-			}
-			if result.MLTelemetry.SequenceIndex <= 0 {
-				t.Errorf("Result %d invalid SequenceIndex: %d", i, result.MLTelemetry.SequenceIndex)
-			}
+		if result.Event == nil {
+			t.Errorf("Result %d missing Event", i)
+			continue
+		}
+
+		// CORRECTED: Access telemetry fields from Event, not a non-existent MLTelemetry struct
+		if result.Event.DurationMs <= 0 {
+			t.Errorf("Result %d invalid DurationMs: %d", i, result.Event.DurationMs)
+		}
+		if result.Event.InputTokens <= 0 {
+			t.Errorf("Result %d invalid InputTokens: %d", i, result.Event.InputTokens)
+		}
+		if result.Event.SequenceIndex <= 0 {
+			t.Errorf("Result %d invalid SequenceIndex: %d", i, result.Event.SequenceIndex)
 		}
 	}
 
 	// Verify sequence indices are monotonically increasing
 	var lastSeq int64
 	for _, result := range results {
-		if result.MLTelemetry != nil {
-			if result.MLTelemetry.SequenceIndex <= lastSeq {
-				t.Errorf("Non-monotonic sequence: %d <= %d", result.MLTelemetry.SequenceIndex, lastSeq)
+		if result.Event != nil {
+			if result.Event.SequenceIndex <= lastSeq {
+				t.Errorf("Non-monotonic sequence: %d <= %d", result.Event.SequenceIndex, lastSeq)
 			}
-			lastSeq = result.MLTelemetry.SequenceIndex
+			lastSeq = result.Event.SequenceIndex
 		}
 	}
 }
@@ -578,14 +553,12 @@ func createMLTelemetryCorpus(t *testing.T, corpusPath, projectDir string, eventC
 			"tool_response": map[string]interface{}{
 				"success": true,
 			},
-			"session_id": fmt.Sprintf("test-session-%d", i/3),
-			"ml_telemetry": map[string]interface{}{
-				"duration_ms":    int64(100 + i*10),
-				"input_tokens":   int64(500 + i*50),
-				"output_tokens":  int64(250 + i*25),
-				"sequence_index": int64(i + 1),
-			},
-			"timestamp": time.Now().Add(time.Duration(i)*time.Second).Unix(),
+			"session_id":     fmt.Sprintf("test-session-%d", i/3),
+			"duration_ms":    int64(100 + i*10),
+			"input_tokens":   int64(500 + i*50),
+			"output_tokens":  int64(250 + i*25),
+			"sequence_index": int64(i + 1),
+			"timestamp":      time.Now().Add(time.Duration(i) * time.Second).Unix(),
 		}
 
 		data, _ := json.Marshal(event)
@@ -598,9 +571,9 @@ func createMLTelemetryCorpus(t *testing.T, corpusPath, projectDir string, eventC
 // Helper: Create collaboration test corpus
 func createCollaborationCorpus(t *testing.T, corpusPath, projectDir string) {
 	events := []string{
-		`{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"test.go"},"tool_response":{"success":true},"agent_name":"python-pro","action":"delegated","session_id":"col-1"}`,
-		`{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"go test ./..."},"tool_response":{"success":true},"agent_name":"orchestrator","action":"coordinated","session_id":"col-1"}`,
-		`{"hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"main.go"},"tool_response":{"success":true},"agent_name":"python-pro","action":"completed","session_id":"col-1"}`,
+		`{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"test.go"},"tool_response":{"success":true},"agent_name":"python-pro","action":"delegated","session_id":"col-1","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()) + `}`,
+		`{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"go test ./..."},"tool_response":{"success":true},"agent_name":"orchestrator","action":"coordinated","session_id":"col-1","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+1) + `}`,
+		`{"hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"main.go"},"tool_response":{"success":true},"agent_name":"python-pro","action":"completed","session_id":"col-1","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+2) + `}`,
 	}
 
 	os.WriteFile(corpusPath, []byte(strings.Join(events, "\n")+"\n"), 0644)
@@ -620,14 +593,12 @@ func createSequenceCorpus(t *testing.T, corpusPath, projectDir string) {
 			"tool_response": map[string]interface{}{
 				"success": true,
 			},
-			"session_id": "sequence-test",
-			"ml_telemetry": map[string]interface{}{
-				"duration_ms":    int64(150 + i*20),
-				"input_tokens":   int64(1000),
-				"output_tokens":  int64(500),
-				"sequence_index": int64(i + 1),
-			},
-			"timestamp": time.Now().Add(time.Duration(i)*time.Second).Unix(),
+			"session_id":     "sequence-test",
+			"duration_ms":    int64(150 + i*20),
+			"input_tokens":   int64(1000),
+			"output_tokens":  int64(500),
+			"sequence_index": int64(i + 1),
+			"timestamp":      time.Now().Add(time.Duration(i) * time.Second).Unix(),
 		}
 
 		data, _ := json.Marshal(event)
@@ -636,40 +607,3 @@ func createSequenceCorpus(t *testing.T, corpusPath, projectDir string) {
 
 	os.WriteFile(corpusPath, []byte(strings.Join(events, "\n")+"\n"), 0644)
 }
-```
-
-**Acceptance Criteria**:
-- [x] `TestMLTelemetry_RoutingDecisionCapture` verifies routing-decisions.jsonl created with valid JSON lines
-- [x] Routing decision file contains required fields: timestamp, routing_decision, tool_name
-- [x] `TestMLTelemetry_DecisionUpdates` verifies routing-decision-updates.jsonl is append-only
-- [x] Decision updates preserve monotonically increasing timestamps
-- [x] `TestMLTelemetry_ConcurrentWrites` spawns 5 parallel agents writing telemetry
-- [x] All 15 decisions (5 agents × 3 decisions) recorded without corruption
-- [x] No invalid JSON lines detected after concurrent writes
-- [x] `TestMLTelemetry_CollaborationTracking` verifies agent-collaborations.jsonl created
-- [x] Collaboration records include: agent_name, action, timestamp
-- [x] `TestMLTelemetry_ExportReconciliation` runs gogent-ml-export successfully
-- [x] Export generates: routing-decisions.csv, tool-sequences.json, agent-collaborations.csv, metadata.json
-- [x] CSV files have proper headers and data rows
-- [x] metadata.json contains: export_timestamp, decision_count, collaboration_count
-- [x] `TestMLTelemetry_RaceConditionDetection` passes with `go test -race`
-- [x] `TestMLTelemetry_SequenceIntegrity` verifies ml_telemetry fields propagate correctly
-- [ ] All tests pass: `go test ./test/integration -v -run TestMLTelemetry` (BLOCKED: awaiting ML capture implementation)
-- [x] Race detector clean: `go test -race ./test/integration -run TestMLTelemetry` (3/7 tests pass cleanly)
-- [ ] Code coverage ≥85% (BLOCKED: cannot measure until ML capture implemented)
-
-**Test Deliverables**:
-- [x] Test file created: `test/integration/ml_telemetry_test.go`
-- [x] Test file size: ~500 lines (609 lines)
-- [x] Number of test functions: 7
-- [ ] Coverage achieved: ≥85% (BLOCKED: awaiting prerequisites, see IMPLEMENTATION-MISSING.md)
-- [ ] Tests passing: ✅ (BLOCKED: 3/7 pass, 4 fail due to missing ML capture - see IMPLEMENTATION-MISSING.md)
-- [x] Race detector clean: ✅ (zero data races detected in passing tests)
-- [ ] **ECOSYSTEM TEST PASS REQUIRED**: Run `make test-ecosystem` and verify ALL PASS (BLOCKED: see IMPLEMENTATION-MISSING.md)
-- [ ] Ecosystem test output saved to: `test/audit/GOgent-101/` (BLOCKED)
-- [ ] Test audit updated: `/test/INDEX.md` row added (BLOCKED)
-
-**Why This Matters**:
-ML telemetry is the foundation for agent performance optimization. Without end-to-end testing, race conditions could silently corrupt training data, rendering ML export unusable. Concurrent write safety is non-negotiable for a system with 5+ parallel agents. This ticket closes the critical gap: production-ready tests verify the entire ML pipeline (capture → append-only → concurrent safety → export reconciliation) works correctly under realistic loads.
-
----
