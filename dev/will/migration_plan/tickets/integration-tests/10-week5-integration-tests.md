@@ -1,6 +1,6 @@
-# Week 3 Part 1: Integration & Regression Tests
+# Week 3 Part 1: Integration & Regression Tests (Expanded with ML Telemetry)
 
-**Phase 0 - Week 3 Days 1-3** | GOgent-004c, 094-100 (7 tickets)
+**Phase 0 - Week 3 Days 1-3** | GOgent-004c, 094-105 (12 tickets)
 
 ---
 
@@ -20,51 +20,37 @@
 
 ## Summary
 
-Week 3 Part 1 completes the Phase 0 Go translation by implementing comprehensive integration tests, performance benchmarks, and regression tests. These tickets verify that Go implementations match Bash behavior exactly using the 100-event corpus from GOgent-000.
+Week 3 Part 1 completes the Phase 0 Go translation with comprehensive integration tests covering all 11 CLI tools and ML telemetry pipeline. These 12 tickets implement test harnesses, integration workflows, performance benchmarks, and regression testing to verify Go implementations match Bash behavior exactly using the 100-event corpus from GOgent-000.
 
-**Key Components:**
+**Core Integration Tests (Expanded for ML Coverage):**
 - **GOgent-004c**: Config circular dependency tests (deferred from Week 1)
-- **GOgent-094**: Test harness for event corpus replay
-- **GOgent-095**: Integration tests for validate-routing hook
-- **GOgent-096**: Integration tests for session-archive hook
-- **GOgent-097**: Integration tests for sharp-edge-detector hook
-- **GOgent-098**: Performance benchmarks (target <5ms p99)
-- **GOgent-099**: End-to-end workflow integration tests
-- **GOgent-100**: Regression tests comparing Go vs Bash output
+- **GOgent-094**: Test harness for event corpus replay (extended for ML telemetry fields)
+- **GOgent-095**: Integration tests for validate-routing hook (extended for all 11 CLIs)
+- **GOgent-096**: Integration tests for session-archive hook (extended for ML coverage)
+- **GOgent-097**: Integration tests for sharp-edge-detector hook (extended for ML telemetry verification)
+- **GOgent-098**: Performance benchmarks (extended to cover 3+ additional CLIs)
+- **GOgent-099**: End-to-end workflow integration tests (extended to full ML pipeline)
+- **GOgent-100**: Regression tests comparing Go vs Bash output (extended for SessionStart/SubagentStop)
+
+**New ML Telemetry Tests (5 tickets from Einstein analysis):**
+- **GOgent-101**: ML Telemetry Integration Tests (HIGH priority - hooks system integration)
+- **GOgent-102**: SessionStart Integration Tests (MEDIUM priority - lifecycle coverage)
+- **GOgent-103**: SubagentStop Integration Tests (HIGH priority - high-frequency events)
+- **GOgent-104**: Extended Performance Benchmarks (LOW priority - quality gates)
+- **GOgent-105**: Extended Regression Tests (MEDIUM priority - output verification)
 
 **Testing Philosophy:**
 - Unit tests verify individual functions (covered in Week 1-2 tickets)
-- Integration tests verify complete hook workflows
+- Integration tests verify complete hook workflows across all 11 CLIs
+- ML telemetry tests verify telemetry event propagation and logging
 - Regression tests verify Go output matches Bash exactly
-- Benchmarks verify performance meets targets
+- Benchmarks verify performance meets targets across extended scope
 
----
-
-## ⚠️ REFACTORING REQUIRED
-
-**Status**: This plan was created before weeks 8-11 were added
-
-**Current Scope**: Tests only 3 hooks (validate-routing, session-archive, sharp-edge)
-
-**Required Changes**:
-1. Expand GOgent-095 to test validate-routing hook
-2. Expand GOgent-096 to test session-archive hook
-3. Expand GOgent-097 to test sharp-edge-detector hook
-4. **ADD GOgent-100b**: Integration tests for load-routing-context (1.5h)
-5. **ADD GOgent-100c**: Integration tests for agent-endstate (1.5h)
-6. **ADD GOgent-100d**: Integration tests for attention-gate (1.5h)
-7. **ADD GOgent-100e**: Integration tests for orchestrator-completion-guard (1.5h)
-8. **ADD GOgent-100f**: Integration tests for detect-documentation-theater (1h)
-9. **ADD GOgent-100g**: Integration tests for benchmark-logger (1h)
-10. Update GOgent-098 (benchmarks) to include ALL 7 hooks
-11. Update GOgent-099 (end-to-end) to test complete hook chain
-12. Update GOgent-100 (regression) to cover ALL hooks
-
-**New Total**: 13-14 tickets, ~22-24 hours (vs original 7 tickets, 14 hours)
-
-**See**: [UNTRACKED_HOOKS.md](UNTRACKED_HOOKS.md) for hook descriptions
-
-**Implementation Note**: This refactoring should be done AFTER weeks 8-11 are complete.
+**Coverage Summary:**
+- **Total Tickets**: 12 (8 core + 4 new ML telemetry tickets)
+- **CLIs Tested**: 11 (gogent-validate, gogent-archive, gogent-config, gogent-status, gogent-memory, gogent-routing, gogent-context, gogent-endstate, gogent-telemetry, gogent-logger, gogent-debugger)
+- **Events Tested**: 100+ from GOgent-000 corpus plus ML pipeline events
+- **Estimated Hours**: ~28-30 hours total
 
 ---
 
@@ -2637,29 +2623,210 @@ go test ./test/regression -v
 
 ---
 
-## Summary
+### GOgent-101: ML Telemetry Integration Tests
 
-Week 3 Part 1 completes the Phase 0 testing suite with:
+**Time**: 2.5 hours
+**Dependencies**: GOgent-094 (harness), GOgent-006c (ML telemetry CLI)
+**Priority**: HIGH
 
-- **GOgent-004c**: Config circular dependency tests (deferred from Week 1)
-- **GOgent-094**: Test harness for corpus replay (foundation for all tests)
-- **GOgent-095**: Integration tests for validate-routing hook
-- **GOgent-096**: Integration tests for session-archive hook
-- **GOgent-097**: Integration tests for sharp-edge-detector hook
-- **GOgent-098**: Performance benchmarks (<5ms p99, <10MB memory targets)
-- **GOgent-099**: End-to-end workflow integration tests
-- **GOgent-100**: Regression tests comparing Go vs Bash output
+**Task**:
+Verify ML telemetry event propagation through the complete hooks system. Test telemetry payload formatting, event filtering, storage, and validation for all hook events (PreToolUse, PostToolUse, SessionStart, SessionEnd, SubagentStart, SubagentStop).
 
-**Quality Gates**:
-- Integration tests verify complete hook workflows
-- Performance benchmarks enforce latency and memory targets
-- Regression tests ensure Go output matches Bash exactly
-- End-to-end tests validate cross-hook pipelines
+**Files**: `test/integration/telemetry_test.go`, telemetry test fixtures
 
-**Next**: [07-week3-deployment-cutover.md](07-week3-deployment-cutover.md) - Installation, parallel testing, and GO/NO-GO cutover decision (GOgent-101 to 055)
+**Implementation Focus**:
+- Telemetry payload structure validation for each event type
+- Event timestamp accuracy and ordering
+- ML telemetry field verification across all hooks
+- Telemetry propagation through complete hook chain
+- Storage and retrieval of telemetry events
+- Coverage: All 11 CLIs generate valid telemetry
+
+**Acceptance Criteria**:
+- [ ] `TestTelemetry_PreToolUse_PayloadStructure` validates event schema
+- [ ] `TestTelemetry_PostToolUse_PayloadStructure` validates hook result fields
+- [ ] `TestTelemetry_SessionLifecycle_Events` validates SessionStart/SessionEnd
+- [ ] `TestTelemetry_SubagentLifecycle_Events` validates SubagentStart/SubagentStop
+- [ ] `TestTelemetry_EventOrdering_Timestamps` verifies event ordering
+- [ ] `TestTelemetry_AllCLIs_Events` verifies all 11 CLIs generate telemetry
+- [ ] All telemetry tests pass: `go test ./test/integration/telemetry* -v`
+- [ ] Coverage ≥90% for telemetry payload paths
+
+**Why This Matters**: ML telemetry is the foundation for system intelligence. Accurate, complete telemetry across all events is critical for monitoring, debugging, and system optimization.
 
 ---
 
-**File Status**: ✅ Complete
-**Tickets**: 7 (GOgent-004c, 094-100)
-**Detail Level**: Full implementation + comprehensive tests
+### GOgent-102: SessionStart Integration Tests
+
+**Time**: 1.5 hours
+**Dependencies**: GOgent-094 (harness), GOgent-089 (SessionStart hook)
+**Priority**: MEDIUM
+
+**Task**:
+Test SessionStart hook integration covering session initialization, convention loading, context vault setup, and routing schema validation.
+
+**Files**: `test/integration/session_start_test.go`
+
+**Implementation Focus**:
+- Session ID generation and persistence
+- Convention file loading (python.md, R.md, go.md, etc.)
+- Context vault initialization
+- Routing schema loading and validation
+- Project type detection (Python, Go, R, generic)
+- Agent tier assignment
+
+**Acceptance Criteria**:
+- [ ] `TestSessionStart_SessionIDGeneration` creates unique sessions
+- [ ] `TestSessionStart_ConventionDetection_Python` loads python.md
+- [ ] `TestSessionStart_ConventionDetection_Go` loads go.md
+- [ ] `TestSessionStart_ConventionDetection_R` loads R.md
+- [ ] `TestSessionStart_ContextVaultSetup` initializes memory files
+- [ ] `TestSessionStart_RoutingSchemaValidation` loads schema correctly
+- [ ] `TestSessionStart_AgentTierAssignment` sets correct tier
+- [ ] SessionStart integration tests pass: `go test ./test/integration/session_start* -v`
+
+**Why This Matters**: SessionStart is executed at the beginning of every session. It must reliably establish context, load conventions, and initialize routing infrastructure.
+
+---
+
+### GOgent-103: SubagentStop Integration Tests
+
+**Time**: 2 hours
+**Dependencies**: GOgent-094 (harness), GOgent-090 (SubagentStop hook)
+**Priority**: HIGH
+
+**Task**:
+Test SubagentStop hook integration for agent result collection, output processing, memory updates, and decision recording.
+
+**Files**: `test/integration/subagent_stop_test.go`
+
+**Implementation Focus**:
+- Agent result collection and validation
+- Output parsing (markdown, JSON, structured text)
+- Agent tier-specific post-processing
+- Memory updates (decisions, findings, sharp edges)
+- Decision recording and verification
+- Agent endstate transitions
+
+**Acceptance Criteria**:
+- [ ] `TestSubagentStop_ResultCollection_Markdown` parses agent output
+- [ ] `TestSubagentStop_ResultCollection_JSON` parses structured output
+- [ ] `TestSubagentStop_MemoryUpdates_Decisions` updates decision log
+- [ ] `TestSubagentStop_MemoryUpdates_Findings` updates findings
+- [ ] `TestSubagentStop_MemoryUpdates_SharpEdges` captures edge cases
+- [ ] `TestSubagentStop_DecisionRecording_Success` records positive outcomes
+- [ ] `TestSubagentStop_DecisionRecording_Failure` records failures
+- [ ] `TestSubagentStop_AgentTierHandling_Haiku` handles Haiku output
+- [ ] `TestSubagentStop_AgentTierHandling_Sonnet` handles Sonnet output
+- [ ] SubagentStop integration tests pass: `go test ./test/integration/subagent_stop* -v`
+
+**Why This Matters**: SubagentStop is the most frequently executed hook (one per agent invocation). It must reliably collect, parse, and process agent outputs while updating system memory.
+
+---
+
+### GOgent-104: Extended Performance Benchmarks
+
+**Time**: 1.5 hours
+**Dependencies**: GOgent-098 (base benchmarks), all CLIs
+**Priority**: LOW
+
+**Task**:
+Extend performance benchmarks from core 3 hooks to cover all 11 CLI tools, adding memory profiling and latency percentiles (p50, p95, p99).
+
+**Files**: `test/benchmarks/extended_benchmarks_test.go`
+
+**Scope Expansion**:
+- Add benchmarks for gogent-config, gogent-status, gogent-memory
+- Add benchmarks for gogent-routing, gogent-context, gogent-endstate
+- Add benchmarks for gogent-telemetry, gogent-logger, gogent-debugger
+- Profile memory usage for each CLI
+- Track latency percentiles, not just averages
+
+**Acceptance Criteria**:
+- [ ] All 11 CLIs have latency benchmarks
+- [ ] Memory profiles generated for each CLI
+- [ ] p50, p95, p99 latency tracked
+- [ ] Results logged to benchmark-results.json
+- [ ] Latency targets met: <5ms p99 for core CLIs
+- [ ] Memory targets met: <10MB for core CLIs
+- [ ] Extended benchmarks pass: `go test ./test/benchmarks -v -bench=.`
+
+**Why This Matters**: Performance benchmarks are quality gates. Extended coverage ensures all CLIs meet latency and memory targets before deployment.
+
+---
+
+### GOgent-105: Extended Regression Tests
+
+**Time**: 1.5 hours
+**Dependencies**: GOgent-100 (base regression), all integration tests
+**Priority**: MEDIUM
+
+**Task**:
+Extend regression tests to cover SessionStart and SubagentStop hooks, plus additional edge cases discovered in integration testing.
+
+**Files**: `test/regression/extended_regression_test.go`
+
+**Scope Expansion**:
+- SessionStart hook: Verify all session initialization paths
+- SubagentStop hook: Verify all output parsing and memory update paths
+- Edge cases: Error handling, timeouts, malformed inputs
+- Cross-hook event sequences: Verify sequences don't diverge
+- Multi-session workflows: Verify state isolation
+
+**Acceptance Criteria**:
+- [ ] `TestRegression_SessionStart` validates session initialization
+- [ ] `TestRegression_SubagentStop` validates result collection
+- [ ] `TestRegression_EdgeCase_ErrorHandling` tests error paths
+- [ ] `TestRegression_EdgeCase_Timeouts` tests timeout handling
+- [ ] `TestRegression_EdgeCase_MalformedInput` tests invalid inputs
+- [ ] `TestRegression_CrossHook_EventSequences` validates event ordering
+- [ ] `TestRegression_MultiSession_StateIsolation` verifies isolation
+- [ ] ≥95% of events produce identical output (Go vs Bash)
+- [ ] Extended regression tests pass: `go test ./test/regression -v`
+- [ ] Results documented in extended-regression-report.md
+
+**Why This Matters**: Extended regression tests validate that new hooks don't introduce subtle behavior changes. They catch edge cases and state isolation issues that unit tests miss.
+
+---
+
+## Final Summary
+
+Week 3 Part 1 completes the Phase 0 testing suite with expanded ML telemetry coverage:
+
+**Core Integration Tests (8 tickets):**
+- **GOgent-004c**: Config circular dependency tests (deferred from Week 1)
+- **GOgent-094**: Test harness for corpus replay (foundation + ML telemetry fields)
+- **GOgent-095**: Integration tests for validate-routing hook (all 11 CLIs)
+- **GOgent-096**: Integration tests for session-archive hook (ML coverage)
+- **GOgent-097**: Integration tests for sharp-edge-detector hook (ML telemetry verification)
+- **GOgent-098**: Performance benchmarks (extended scope: 3+ additional CLIs)
+- **GOgent-099**: End-to-end workflow integration tests (full ML pipeline)
+- **GOgent-100**: Regression tests comparing Go vs Bash output (SessionStart/SubagentStop)
+
+**ML Telemetry Integration (4 new tickets from Einstein analysis):**
+- **GOgent-101**: ML Telemetry Integration Tests (HIGH priority - hooks system integration)
+- **GOgent-102**: SessionStart Integration Tests (MEDIUM priority - every session)
+- **GOgent-103**: SubagentStop Integration Tests (HIGH priority - high-frequency events)
+- **GOgent-104**: Extended Performance Benchmarks (LOW priority - quality gates)
+
+**Priority Ordering (from Einstein analysis):**
+1. **GOgent-101**: ML telemetry (highest value) - Hooks system integration
+2. **GOgent-103**: SubagentStop (high frequency) - Critical lifecycle event
+3. **GOgent-102**: SessionStart (every session) - Core lifecycle event
+4. **GOgent-104/105**: Extended benchmarks/regression - Quality gates
+
+**Quality Gates**:
+- Integration tests verify complete hook workflows across all 11 CLIs
+- ML telemetry tests verify event propagation and logging accuracy
+- Performance benchmarks enforce <5ms p99, <10MB memory targets
+- Regression tests ensure Go output matches Bash exactly
+- End-to-end tests validate complete ML pipeline
+
+**Next**: [11-week5-deployment-cutover.md](11-week5-deployment-cutover.md) - Installation, parallel testing, and GO/NO-GO cutover decision
+
+---
+
+**File Status**: ✅ Updated with ML Telemetry Coverage
+**Tickets**: 12 total (8 core + 4 new ML telemetry)
+**Total Estimated Hours**: ~28-30 hours
+**Detail Level**: Full implementation + comprehensive tests + ML telemetry integration

@@ -9,7 +9,7 @@ priority: high
 week: 5
 tags: ["performance", "week-5"]
 tests_required: true
-acceptance_criteria_count: 8
+acceptance_criteria_count: 11
 ---
 
 ### GOgent-098: Performance Benchmarks
@@ -180,6 +180,147 @@ func BenchmarkSharpEdgeDetector(b *testing.B) {
 	}
 }
 
+// BenchmarkLoadContext benchmarks gogent-load-context hook
+func BenchmarkLoadContext(b *testing.B) {
+	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	if _, err := os.Stat(binaryPath); err != nil {
+		b.Skip("gogent-load-context binary not found")
+	}
+
+	projectDir := setupBenchmarkProject(b)
+
+	eventJSON := fmt.Sprintf(`{
+		"hook_event_name": "SessionStart",
+		"session_id": "bench-load-context",
+		"project_dir": "%s"
+	}`, projectDir)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	latencies := make([]time.Duration, b.N)
+	for i := 0; i < b.N; i++ {
+		start := time.Now()
+
+		cmd := exec.Command(binaryPath)
+		cmd.Env = append(os.Environ(), "CLAUDE_PROJECT_DIR="+projectDir)
+		cmd.Stdin = bytes.NewReader([]byte(eventJSON))
+
+		var stdout bytes.Buffer
+		cmd.Stdout = &stdout
+
+		if err := cmd.Run(); err != nil {
+			b.Fatalf("Hook failed: %v", err)
+		}
+
+		latencies[i] = time.Since(start)
+	}
+
+	// Calculate p99 latency
+	p99 := percentile(latencies, 99)
+	b.ReportMetric(float64(p99.Milliseconds()), "p99-ms")
+
+	// Verify <5ms p99 target
+	if p99 > 5*time.Millisecond {
+		b.Errorf("p99 latency exceeds 5ms target: %v", p99)
+	}
+}
+
+// BenchmarkAgentEndstate benchmarks gogent-agent-endstate hook
+func BenchmarkAgentEndstate(b *testing.B) {
+	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	if _, err := os.Stat(binaryPath); err != nil {
+		b.Skip("gogent-agent-endstate binary not found")
+	}
+
+	projectDir := setupBenchmarkProject(b)
+
+	eventJSON := fmt.Sprintf(`{
+		"hook_event_name": "SubagentStop",
+		"subagent_type": "Explore",
+		"agent_name": "codebase-search",
+		"execution_time_ms": 1234,
+		"project_dir": "%s"
+	}`, projectDir)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	latencies := make([]time.Duration, b.N)
+	for i := 0; i < b.N; i++ {
+		start := time.Now()
+
+		cmd := exec.Command(binaryPath)
+		cmd.Env = append(os.Environ(), "CLAUDE_PROJECT_DIR="+projectDir)
+		cmd.Stdin = bytes.NewReader([]byte(eventJSON))
+
+		var stdout bytes.Buffer
+		cmd.Stdout = &stdout
+
+		if err := cmd.Run(); err != nil {
+			b.Fatalf("Hook failed: %v", err)
+		}
+
+		latencies[i] = time.Since(start)
+	}
+
+	// Calculate p99 latency
+	p99 := percentile(latencies, 99)
+	b.ReportMetric(float64(p99.Milliseconds()), "p99-ms")
+
+	// Verify <2ms p99 target
+	if p99 > 2*time.Millisecond {
+		b.Errorf("p99 latency exceeds 2ms target: %v", p99)
+	}
+}
+
+// BenchmarkMLExport benchmarks gogent-ml-export with large dataset
+func BenchmarkMLExport(b *testing.B) {
+	binaryPath := "../../cmd/gogent-ml-export/gogent-ml-export"
+	if _, err := os.Stat(binaryPath); err != nil {
+		b.Skip("gogent-ml-export binary not found")
+	}
+
+	projectDir := setupBenchmarkProject(b)
+	setupLargeMLDataset(b, projectDir)
+
+	eventJSON := fmt.Sprintf(`{
+		"hook_event_name": "SessionEnd",
+		"session_id": "bench-ml-export",
+		"transcript_path": "%s"
+	}`, filepath.Join(projectDir, "transcript-large.jsonl"))
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	latencies := make([]time.Duration, b.N)
+	for i := 0; i < b.N; i++ {
+		start := time.Now()
+
+		cmd := exec.Command(binaryPath)
+		cmd.Env = append(os.Environ(), "CLAUDE_PROJECT_DIR="+projectDir)
+		cmd.Stdin = bytes.NewReader([]byte(eventJSON))
+
+		var stdout bytes.Buffer
+		cmd.Stdout = &stdout
+
+		if err := cmd.Run(); err != nil {
+			// ML export may fail on minimal input - that's OK for benchmark
+		}
+
+		latencies[i] = time.Since(start)
+	}
+
+	// Calculate latency stats
+	p50 := percentile(latencies, 50)
+	p95 := percentile(latencies, 95)
+	p99 := percentile(latencies, 99)
+
+	b.ReportMetric(float64(p50.Milliseconds()), "p50-ms")
+	b.ReportMetric(float64(p95.Milliseconds()), "p95-ms")
+	b.ReportMetric(float64(p99.Milliseconds()), "p99-ms")
+}
+
 // BenchmarkMemoryUsage measures peak memory usage of hooks
 func BenchmarkMemoryUsage(b *testing.B) {
 	hooks := []struct {
@@ -201,6 +342,21 @@ func BenchmarkMemoryUsage(b *testing.B) {
 			name: "sharp-edge-detector",
 			path: "../../cmd/gogent-sharp-edge/gogent-sharp-edge",
 			event: `{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_response":{"success":false}}`,
+		},
+		{
+			name: "load-context",
+			path: "../../cmd/gogent-load-context/gogent-load-context",
+			event: `{"hook_event_name":"SessionStart","session_id":"mem-load-context"}`,
+		},
+		{
+			name: "agent-endstate",
+			path: "../../cmd/gogent-agent-endstate/gogent-agent-endstate",
+			event: `{"hook_event_name":"SubagentStop","agent_name":"codebase-search"}`,
+		},
+		{
+			name: "ml-export",
+			path: "../../cmd/gogent-ml-export/gogent-ml-export",
+			event: `{"hook_event_name":"SessionEnd","session_id":"mem-ml-export"}`,
 		},
 	}
 
@@ -344,6 +500,21 @@ func setupSessionMetricsFiles(b *testing.B, projectDir string) {
 	os.WriteFile(transcriptPath, []byte(""), 0644)
 }
 
+// Helper: Setup large ML dataset for export benchmarking
+func setupLargeMLDataset(b *testing.B, projectDir string) {
+	transcriptPath := filepath.Join(projectDir, "transcript-large.jsonl")
+
+	// Create 1000 event records for ML export testing
+	var buf bytes.Buffer
+	for i := 0; i < 1000; i++ {
+		event := fmt.Sprintf(`{"event_id":"evt-%d","timestamp":"2026-01-25T10:00:00Z","tool":"Read","duration_ms":%d,"success":true}`, i, 10+(i%50))
+		buf.WriteString(event)
+		buf.WriteString("\n")
+	}
+
+	os.WriteFile(transcriptPath, buf.Bytes(), 0644)
+}
+
 // Helper: Calculate percentile from sorted durations
 func percentile(durations []time.Duration, p int) time.Duration {
 	// Sort durations
@@ -374,7 +545,10 @@ go test -bench=. ./test/benchmark -benchmem -benchtime=10s
 - [ ] `BenchmarkValidateRouting_Block` measures block path latency
 - [ ] `BenchmarkSessionArchive` measures session-archive latency
 - [ ] `BenchmarkSharpEdgeDetector` measures sharp-edge latency
-- [ ] `BenchmarkMemoryUsage` verifies <10MB memory per hook
+- [ ] `BenchmarkLoadContext` benchmarks gogent-load-context with <5ms p99 target
+- [ ] `BenchmarkAgentEndstate` benchmarks gogent-agent-endstate with <2ms p99 target
+- [ ] `BenchmarkMLExport` benchmarks gogent-ml-export with large dataset (1000 events)
+- [ ] `BenchmarkMemoryUsage` verifies <10MB memory for all 6 hooks (validate-routing, session-archive, sharp-edge, load-context, agent-endstate, ml-export)
 - [ ] `BenchmarkLatency_Percentiles` verifies <5ms p99 latency
 - [ ] All benchmarks pass performance targets
 - [ ] Benchmark report saved: `go test -bench=. ./test/benchmark | tee benchmark-results.txt`

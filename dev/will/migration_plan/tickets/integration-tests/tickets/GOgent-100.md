@@ -272,6 +272,276 @@ func TestRegression_SharpEdgeDetector(t *testing.T) {
 	}
 }
 
+// TestRegression_LoadContext compares Go vs Bash context loading for SessionStart
+func TestRegression_LoadContext(t *testing.T) {
+	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	if corpusPath == "" {
+		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+	}
+
+	goBinary := "../../cmd/gogent-load-context/gogent-load-context"
+	bashScript := os.Getenv("HOME") + "/.claude/hooks/load-routing-context.sh"
+
+	if _, err := os.Stat(goBinary); err != nil {
+		t.Skip("Go binary not found")
+	}
+	if _, err := os.Stat(bashScript); err != nil {
+		t.Skip("Bash script not found")
+	}
+
+	projectDir := t.TempDir()
+	setupRegressionProject(t, projectDir)
+
+	// Setup previous handoff for context loading
+	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	os.MkdirAll(memoryDir, 0755)
+	handoffPath := filepath.Join(memoryDir, "last-handoff.md")
+	os.WriteFile(handoffPath, []byte("# Previous Session\nRouting decisions: ...\n"), 0644)
+
+	harness, err := integration.NewTestHarness(corpusPath, projectDir)
+	if err != nil {
+		t.Fatalf("Failed to create harness: %v", err)
+	}
+
+	if err := harness.LoadCorpus(); err != nil {
+		t.Fatalf("Failed to load corpus: %v", err)
+	}
+
+	// Filter SessionStart events
+	events := harness.FilterEvents("SessionStart")
+
+	if len(events) == 0 {
+		t.Skip("No SessionStart events in corpus")
+	}
+
+	t.Logf("Running regression test on %d SessionStart events", len(events))
+
+	passed := 0
+	failed := 0
+	differences := []string{}
+
+	for i, event := range events {
+		goResult := harness.RunHook(goBinary, event)
+		bashResult := runBashHook(t, bashScript, event, projectDir)
+
+		diffs := integration.CompareResults(goResult, bashResult)
+
+		if len(diffs) == 0 {
+			passed++
+		} else {
+			failed++
+			diffMsg := fmt.Sprintf("Event %d (session=%s): %s", i, event.SessionID, strings.Join(diffs, "; "))
+			differences = append(differences, diffMsg)
+
+			if failed <= 5 {
+				t.Logf("DIFF: %s", diffMsg)
+				t.Logf("  Go output:   %s", goResult.Stdout)
+				t.Logf("  Bash output: %s", bashResult.Stdout)
+			}
+		}
+	}
+
+	t.Logf("\n=== Load Context Regression Results ===")
+	t.Logf("Total:  %d", len(events))
+	t.Logf("Passed: %d", passed)
+	t.Logf("Failed: %d", failed)
+
+	if failed > 0 {
+		t.Logf("\nFirst 5 differences:")
+		for i, diff := range differences {
+			if i >= 5 {
+				break
+			}
+			t.Logf("  %s", diff)
+		}
+
+		t.Errorf("Load context regression failed: %d/%d events differ between Go and Bash", failed, len(events))
+	}
+}
+
+// TestRegression_AgentEndstate compares Go vs Bash agent endstate processing for SubagentStop
+func TestRegression_AgentEndstate(t *testing.T) {
+	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	if corpusPath == "" {
+		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+	}
+
+	goBinary := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	bashScript := os.Getenv("HOME") + "/.claude/hooks/agent-endstate.sh"
+
+	if _, err := os.Stat(goBinary); err != nil {
+		t.Skip("Go binary not found")
+	}
+	if _, err := os.Stat(bashScript); err != nil {
+		t.Skip("Bash script not found")
+	}
+
+	projectDir := t.TempDir()
+	setupRegressionProject(t, projectDir)
+
+	harness, err := integration.NewTestHarness(corpusPath, projectDir)
+	if err != nil {
+		t.Fatalf("Failed to create harness: %v", err)
+	}
+
+	if err := harness.LoadCorpus(); err != nil {
+		t.Fatalf("Failed to load corpus: %v", err)
+	}
+
+	// Filter SubagentStop events
+	events := harness.FilterEvents("SubagentStop")
+
+	if len(events) == 0 {
+		t.Skip("No SubagentStop events in corpus")
+	}
+
+	t.Logf("Running regression test on %d SubagentStop events", len(events))
+
+	passed := 0
+	failed := 0
+	differences := []string{}
+
+	for i, event := range events {
+		goResult := harness.RunHook(goBinary, event)
+		bashResult := runBashHook(t, bashScript, event, projectDir)
+
+		diffs := integration.CompareResults(goResult, bashResult)
+
+		if len(diffs) == 0 {
+			passed++
+		} else {
+			failed++
+			diffMsg := fmt.Sprintf("Event %d (agent=%s): %s", i, event.AgentID, strings.Join(diffs, "; "))
+			differences = append(differences, diffMsg)
+
+			if failed <= 5 {
+				t.Logf("DIFF: %s", diffMsg)
+				t.Logf("  Go output:   %s", goResult.Stdout)
+				t.Logf("  Bash output: %s", bashResult.Stdout)
+			}
+		}
+	}
+
+	t.Logf("\n=== Agent Endstate Regression Results ===")
+	t.Logf("Total:  %d", len(events))
+	t.Logf("Passed: %d", passed)
+	t.Logf("Failed: %d", failed)
+
+	if failed > 0 {
+		t.Logf("\nFirst 5 differences:")
+		for i, diff := range differences {
+			if i >= 5 {
+				break
+			}
+			t.Logf("  %s", diff)
+		}
+
+		t.Errorf("Agent endstate regression failed: %d/%d events differ between Go and Bash", failed, len(events))
+	}
+}
+
+// TestRegression_MLTelemetry validates ML telemetry export consistency for hook tracing
+func TestRegression_MLTelemetry(t *testing.T) {
+	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	if corpusPath == "" {
+		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+	}
+
+	projectDir := t.TempDir()
+	setupRegressionProject(t, projectDir)
+
+	harness, err := integration.NewTestHarness(corpusPath, projectDir)
+	if err != nil {
+		t.Fatalf("Failed to create harness: %v", err)
+	}
+
+	if err := harness.LoadCorpus(); err != nil {
+		t.Fatalf("Failed to load corpus: %v", err)
+	}
+
+	// Collect all events for ML telemetry validation
+	allEvents := harness.AllEvents()
+	if len(allEvents) == 0 {
+		t.Skip("No events in corpus")
+	}
+
+	t.Logf("Validating ML telemetry on %d events", len(allEvents))
+
+	// Validate event structure consistency for ML pipeline
+	eventTypes := make(map[string]int)
+	requiresCorpus := 0
+	sessionStartCount := 0
+	sessionEndCount := 0
+	subagentStopCount := 0
+
+	for _, event := range allEvents {
+		eventTypes[event.EventType]++
+
+		// Track critical hook events
+		if event.EventType == "SessionStart" {
+			sessionStartCount++
+			// Verify routing context loaded
+			if _, hasRoutingSchema := event.Context["routing_schema"]; !hasRoutingSchema {
+				t.Logf("Warning: SessionStart event missing routing_schema context")
+			}
+		}
+
+		if event.EventType == "SessionEnd" {
+			sessionEndCount++
+			// Verify handoff content
+			if _, hasHandoff := event.Context["handoff_content"]; !hasHandoff {
+				t.Logf("Warning: SessionEnd event missing handoff_content context")
+			}
+		}
+
+		if event.EventType == "SubagentStop" {
+			subagentStopCount++
+			// Verify agent endstate data
+			if _, hasEndstate := event.Context["agent_endstate"]; !hasEndstate {
+				t.Logf("Warning: SubagentStop event missing agent_endstate context")
+			}
+		}
+
+		// Count events requiring corpus
+		if event.EventType == "PreToolUse" || event.EventType == "PostToolUse" ||
+			event.EventType == "SessionStart" || event.EventType == "SessionEnd" ||
+			event.EventType == "SubagentStop" {
+			requiresCorpus++
+		}
+	}
+
+	// Log telemetry distribution
+	t.Logf("\n=== ML Telemetry Summary ===")
+	t.Logf("Total events: %d", len(allEvents))
+	t.Logf("SessionStart: %d", sessionStartCount)
+	t.Logf("SessionEnd: %d", sessionEndCount)
+	t.Logf("SubagentStop: %d", subagentStopCount)
+	t.Logf("Events for ML pipeline: %d", requiresCorpus)
+
+	t.Logf("\nEvent distribution:")
+	for eventType, count := range eventTypes {
+		t.Logf("  %s: %d", eventType, count)
+	}
+
+	// Verify critical event types present
+	if sessionStartCount == 0 {
+		t.Errorf("No SessionStart events found in corpus (required for hook testing)")
+	}
+	if sessionEndCount == 0 {
+		t.Errorf("No SessionEnd events found in corpus (required for hook testing)")
+	}
+	if subagentStopCount == 0 {
+		t.Errorf("No SubagentStop events found in corpus (required for agent endstate testing)")
+	}
+
+	// Corpus should have min 1 of each critical event
+	minRequiredEvents := 3
+	if requiresCorpus < minRequiredEvents {
+		t.Errorf("Insufficient events for ML pipeline validation: got %d, need at least %d",
+			requiresCorpus, minRequiredEvents)
+	}
+}
+
 // Helper: Run Bash hook with event
 func runBashHook(t *testing.T, scriptPath string, event *integration.EventEntry, projectDir string) *integration.HookResult {
 	result := &integration.HookResult{
@@ -418,11 +688,16 @@ go test ./test/regression -v
 - [ ] `TestRegression_ValidateRouting` compares all PreToolUse events
 - [ ] `TestRegression_SessionArchive` compares all SessionEnd events
 - [ ] `TestRegression_SharpEdgeDetector` compares all PostToolUse events
+- [ ] `TestRegression_LoadContext` compares all SessionStart events (routing context loading)
+- [ ] `TestRegression_AgentEndstate` compares all SubagentStop events (agent endstate processing)
+- [ ] `TestRegression_MLTelemetry` validates corpus structure with SessionStart/SessionEnd/SubagentStop coverage
 - [ ] ≥95% of events produce identical output (Go vs Bash)
 - [ ] Differences limited to timestamp formatting
-- [ ] Test report shows pass/fail counts and first 5 differences
+- [ ] Test report shows pass/fail counts and first 5 differences for each regression test
+- [ ] Corpus includes at least 1 SessionStart event for hook load-context testing
+- [ ] Corpus includes at least 1 SubagentStop event for agent-endstate testing
 - [ ] Regression tests pass: `go test ./test/regression -v`
-- [ ] Results documented in regression-report.md
+- [ ] Results documented in regression-report.md with SessionStart/SubagentStop coverage metrics
 
 **Why This Matters**: Regression tests are the final quality gate. Must verify Go implementations are drop-in replacements for Bash with no behavior changes.
 

@@ -9,7 +9,7 @@ priority: high
 week: 5
 tags: ["integration-tests", "week-5"]
 tests_required: true
-acceptance_criteria_count: 9
+acceptance_criteria_count: 13
 ---
 
 ### GOgent-097: Integration Tests for sharp-edge-detector Hook
@@ -296,6 +296,131 @@ func TestSharpEdge_PerFileTracking(t *testing.T) {
 	}
 }
 
+func TestSharpEdge_MLTelemetryFields(t *testing.T) {
+	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	if _, err := os.Stat(binaryPath); err != nil {
+		t.Skip("gogent-sharp-edge binary not found")
+	}
+
+	projectDir := t.TempDir()
+
+	// Create failure events with ML telemetry fields
+	events := []string{
+		`{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"ml_telemetry":{"duration_ms":245,"input_tokens":1024,"output_tokens":512,"sequence_index":1},"session_id":"test-1"}`,
+		`{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"ml_telemetry":{"duration_ms":312,"input_tokens":1024,"output_tokens":512,"sequence_index":2},"session_id":"test-2"}`,
+		`{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"ml_telemetry":{"duration_ms":189,"input_tokens":1024,"output_tokens":512,"sequence_index":3},"session_id":"test-3"}`,
+	}
+
+	tmpCorpus := filepath.Join(t.TempDir(), "ml-telemetry-corpus.jsonl")
+	os.WriteFile(tmpCorpus, []byte(strings.Join(events, "\n")+"\n"), 0644)
+
+	harness, _ := NewTestHarness(tmpCorpus, projectDir)
+	harness.LoadCorpus()
+
+	results, err := harness.RunHookBatch(binaryPath, "PostToolUse")
+	if err != nil {
+		t.Fatalf("Failed to run batch: %v", err)
+	}
+
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 results, got: %d", len(results))
+	}
+
+	// Verify third failure (blocking) includes ML telemetry in sharp edge capture
+	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	if _, err := os.Stat(learningsPath); err != nil {
+		t.Errorf("Pending learnings file not created: %v", err)
+	} else {
+		data, _ := os.ReadFile(learningsPath)
+		var edge map[string]interface{}
+		if err := json.Unmarshal(data, &edge); err != nil {
+			t.Errorf("Failed to parse sharp edge: %v", err)
+		}
+
+		// Verify ML telemetry fields are captured in edge context
+		mlTelemetry, ok := edge["ml_telemetry"].(map[string]interface{})
+		if !ok {
+			t.Error("ML telemetry should be present in sharp edge context")
+		} else {
+			// Check specific fields
+			if durationMs, ok := mlTelemetry["duration_ms"].(float64); !ok || durationMs <= 0 {
+				t.Errorf("Expected valid duration_ms in ml_telemetry, got: %v", durationMs)
+			}
+			if inputTokens, ok := mlTelemetry["input_tokens"].(float64); !ok || inputTokens <= 0 {
+				t.Errorf("Expected valid input_tokens in ml_telemetry, got: %v", inputTokens)
+			}
+			if outputTokens, ok := mlTelemetry["output_tokens"].(float64); !ok || outputTokens <= 0 {
+				t.Errorf("Expected valid output_tokens in ml_telemetry, got: %v", outputTokens)
+			}
+			if seqIndex, ok := mlTelemetry["sequence_index"].(float64); !ok || seqIndex <= 0 {
+				t.Errorf("Expected valid sequence_index in ml_telemetry, got: %v", seqIndex)
+			}
+		}
+	}
+}
+
+func TestSharpEdge_DecisionCorrelation(t *testing.T) {
+	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	if _, err := os.Stat(binaryPath); err != nil {
+		t.Skip("gogent-sharp-edge binary not found")
+	}
+
+	projectDir := t.TempDir()
+
+	// Create failure events with routing decision correlation
+	events := []string{
+		`{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"routing_decision":"direct","session_id":"test-1"}`,
+		`{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"routing_decision":"direct","session_id":"test-2"}`,
+		`{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"routing_decision":"direct","session_id":"test-3"}`,
+	}
+
+	tmpCorpus := filepath.Join(t.TempDir(), "decision-corpus.jsonl")
+	os.WriteFile(tmpCorpus, []byte(strings.Join(events, "\n")+"\n"), 0644)
+
+	harness, _ := NewTestHarness(tmpCorpus, projectDir)
+	harness.LoadCorpus()
+
+	results, err := harness.RunHookBatch(binaryPath, "PostToolUse")
+	if err != nil {
+		t.Fatalf("Failed to run batch: %v", err)
+	}
+
+	if len(results) != 3 {
+		t.Fatalf("Expected 3 results, got: %d", len(results))
+	}
+
+	// Third failure should block
+	decision, ok := results[2].ParsedJSON["decision"].(string)
+	if !ok || decision != "block" {
+		t.Errorf("Third failure should block, got decision: %v", decision)
+	}
+
+	// Verify routing decision correlation is logged
+	decisionLogPath := filepath.Join(projectDir, ".gogent", "routing-decision-updates.jsonl")
+	if _, err := os.Stat(decisionLogPath); err != nil {
+		t.Errorf("Routing decision log not created: %v", err)
+	} else {
+		data, _ := os.ReadFile(decisionLogPath)
+		if len(data) == 0 {
+			t.Error("Routing decision log is empty")
+		} else {
+			var decisionRecord map[string]interface{}
+			if err := json.Unmarshal(data, &decisionRecord); err != nil {
+				t.Errorf("Failed to parse routing decision: %v", err)
+			}
+
+			// Verify correlation between failures and routing decision
+			if correlatedDecision, ok := decisionRecord["correlated_decision"].(string); !ok || correlatedDecision != "direct" {
+				t.Errorf("Expected correlated_decision=direct in routing-decision-updates, got: %v", correlatedDecision)
+			}
+
+			if failureCount, ok := decisionRecord["failure_count"].(float64); !ok || failureCount != 3 {
+				t.Errorf("Expected failure_count=3 in routing-decision-updates, got: %v", failureCount)
+			}
+		}
+	}
+}
+
 // Helper: Create corpus with 3 consecutive failures on same file
 func createSharpEdgeCorpus(t *testing.T, corpusPath, projectDir string) {
 	events := []string{
@@ -319,6 +444,10 @@ func createSharpEdgeCorpus(t *testing.T, corpusPath, projectDir string) {
 - [ ] `TestSharpEdge_FailureDetection` verifies all signal types
 - [ ] `TestSharpEdge_SlidingWindow` verifies 5-minute window
 - [ ] `TestSharpEdge_PerFileTracking` verifies independent file tracking
+- [ ] `TestSharpEdge_MLTelemetryFields` verifies DurationMs, InputTokens, OutputTokens, SequenceIndex captured
+- [ ] ML telemetry fields correctly logged in sharp edge context
+- [ ] `TestSharpEdge_DecisionCorrelation` verifies routing decision correlation
+- [ ] Decision correlation logged to `routing-decision-updates.jsonl`
 - [ ] Tests pass: `go test ./test/integration -v -run TestSharpEdge`
 
 **Why This Matters**: Sharp edge detection prevents debugging loops. Must verify blocking logic triggers correctly and captures sufficient context for learning.

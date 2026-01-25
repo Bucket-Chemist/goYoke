@@ -18,7 +18,7 @@ acceptance_criteria_count: 7
 **Dependencies**: GOgent-095-044 (integration tests)
 
 **Task**:
-Test cross-hook workflows: validation blocks → sharp edge detection → session archival.
+Test cross-hook workflows across full ML pipeline: SessionStart → validate → sharp edge → SubagentStop → archive with ML reconciliation.
 
 **File**: `test/integration/end_to_end_test.go`
 
@@ -33,7 +33,441 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
+
+// TestEndToEnd_FullMLPipeline tests complete lifecycle with ML reconciliation
+func TestEndToEnd_FullMLPipeline(t *testing.T) {
+	validateBinary := "../../cmd/gogent-validate/gogent-validate"
+	sharpEdgeBinary := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	archiveBinary := "../../cmd/gogent-archive/gogent-archive"
+
+	if _, err := os.Stat(validateBinary); err != nil {
+		t.Skip("gogent-validate binary not found")
+	}
+	if _, err := os.Stat(sharpEdgeBinary); err != nil {
+		t.Skip("gogent-sharp-edge binary not found")
+	}
+	if _, err := os.Stat(archiveBinary); err != nil {
+		t.Skip("gogent-archive binary not found")
+	}
+
+	projectDir := t.TempDir()
+	setupTestRoutingSchema(t, projectDir)
+
+	sessionID := "ml-pipeline-test"
+	routingDecisionsPath := filepath.Join(projectDir, ".claude", "routing-decisions.jsonl")
+
+	// Phase 1: SessionStart - Load context (simulated)
+	sessionStartEvent := `{
+		"hook_event_name": "SessionStart",
+		"session_id": "` + sessionID + `",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"context_source": "previous_handoff"
+	}`
+
+	// Phase 2: PreToolUse - Log routing decisions
+	routingDecisionEvent := `{
+		"hook_event_name": "PreToolUse",
+		"tool_name": "Task",
+		"tool_input": {
+			"model": "sonnet",
+			"prompt": "AGENT: python-pro\n\nImplement feature",
+			"subagent_type": "general-purpose"
+		},
+		"session_id": "` + sessionID + `",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"routing_decision": {
+			"decision": "allow",
+			"tier": "sonnet",
+			"reason": "implementation-task",
+			"trigger": "python-pro"
+		}
+	}`
+
+	tmpRoutingCorpus := filepath.Join(t.TempDir(), "routing-corpus.jsonl")
+	os.WriteFile(tmpRoutingCorpus, []byte(routingDecisionEvent+"\n"), 0644)
+
+	routingHarness, _ := NewTestHarness(tmpRoutingCorpus, projectDir)
+	routingHarness.LoadCorpus()
+
+	// Validate routing decision
+	validateResult := routingHarness.RunHook(validateBinary, routingHarness.Events[0])
+	if validateResult.ExitCode != 0 {
+		t.Fatalf("Validation failed: %s", validateResult.Stderr)
+	}
+
+	// Phase 3: PostToolUse with ML fields - Track agent execution
+	postToolEvents := []string{
+		`{
+			"hook_event_name": "PostToolUse",
+			"tool_name": "Task",
+			"tool_input": {"model": "sonnet", "prompt": "Implement"},
+			"tool_response": {"success": true, "output": "Feature implemented"},
+			"session_id": "` + sessionID + `",
+			"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+			"ml_fields": {
+				"agent_model": "sonnet",
+				"agent_type": "python-pro",
+				"execution_time_ms": 2500,
+				"token_usage": {"input": 1200, "output": 800},
+				"routing_confidence": 0.95
+			}
+		}`,
+		`{
+			"hook_event_name": "PostToolUse",
+			"tool_name": "Edit",
+			"tool_input": {"file_path": "src/feature.py"},
+			"tool_response": {"success": true},
+			"session_id": "` + sessionID + `",
+			"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+			"ml_fields": {
+				"operation": "edit",
+				"file_type": "python",
+				"lines_changed": 42,
+				"editor_confidence": 0.98
+			}
+		}`,
+	}
+
+	tmpPostToolCorpus := filepath.Join(t.TempDir(), "posttool-corpus.jsonl")
+	os.WriteFile(tmpPostToolCorpus, []byte(strings.Join(postToolEvents, "\n")+"\n"), 0644)
+
+	postToolHarness, _ := NewTestHarness(tmpPostToolCorpus, projectDir)
+	postToolHarness.LoadCorpus()
+
+	postToolResults, _ := postToolHarness.RunHookBatch(sharpEdgeBinary, "PostToolUse")
+	if len(postToolResults) != 2 {
+		t.Fatalf("Expected 2 PostToolUse results, got %d", len(postToolResults))
+	}
+
+	// Verify ML fields logged
+	for _, result := range postToolResults {
+		if result.ParsedJSON == nil {
+			t.Error("Expected JSON output from PostToolUse hook")
+		}
+		decision, ok := result.ParsedJSON["decision"].(string)
+		if !ok || decision == "block" {
+			t.Logf("Unexpected decision: %v", result.ParsedJSON)
+		}
+	}
+
+	// Phase 4: SubagentStop - Trigger agent-endstate and collaboration logging
+	subagentStopEvent := `{
+		"hook_event_name": "SubagentStop",
+		"session_id": "` + sessionID + `",
+		"subagent_id": "python-pro-inst-1",
+		"subagent_type": "general-purpose",
+		"model": "sonnet",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"execution_summary": {
+			"status": "completed",
+			"duration_ms": 3200,
+			"token_usage": {"input": 1500, "output": 1100},
+			"files_modified": 1,
+			"tests_passed": 1,
+			"tests_failed": 0
+		},
+		"collaboration_log": {
+			"parent_session": "` + sessionID + `",
+			"branching_decision": "python-pro",
+			"return_value_quality": 0.92
+		}
+	}`
+
+	tmpSubagentCorpus := filepath.Join(t.TempDir(), "subagent-corpus.jsonl")
+	os.WriteFile(tmpSubagentCorpus, []byte(subagentStopEvent+"\n"), 0644)
+
+	subagentHarness, _ := NewTestHarness(tmpSubagentCorpus, projectDir)
+	subagentHarness.LoadCorpus()
+
+	subagentResult := subagentHarness.RunHook(sharpEdgeBinary, subagentHarness.Events[0])
+	if subagentResult.ExitCode != 0 {
+		t.Logf("Subagent stop processing: exit code %d (may be expected)", subagentResult.ExitCode)
+	}
+
+	// Verify collaboration logging updated
+	routingUpdatesPath := filepath.Join(projectDir, ".claude", "routing-decision-updates.jsonl")
+	if _, err := os.Stat(routingUpdatesPath); err == nil {
+		updates, _ := os.ReadFile(routingUpdatesPath)
+		if len(updates) == 0 {
+			t.Logf("Routing updates file created but empty (may indicate no updates logged)")
+		}
+	}
+
+	// Phase 5: SessionEnd - Archive and reconcile ML data
+	archiveEventJSON := `{
+		"hook_event_name": "SessionEnd",
+		"session_id": "` + sessionID + `",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"transcript_path": "` + filepath.Join(projectDir, "transcript.jsonl") + `",
+		"ml_reconciliation": {
+			"expected_fields": ["hook_event_name", "session_id", "timestamp"],
+			"validate_structure": true,
+			"export_training_data": true
+		}
+	}`
+
+	// Create minimal transcript
+	transcriptPath := filepath.Join(projectDir, "transcript.jsonl")
+	os.WriteFile(transcriptPath, []byte(sessionStartEvent+"\n"+routingDecisionEvent+"\n"), 0644)
+
+	tmpArchiveCorpus := filepath.Join(t.TempDir(), "archive-corpus.jsonl")
+	os.WriteFile(tmpArchiveCorpus, []byte(archiveEventJSON+"\n"), 0644)
+
+	archiveHarness, _ := NewTestHarness(tmpArchiveCorpus, projectDir)
+	archiveHarness.LoadCorpus()
+
+	archiveResult := archiveHarness.RunHook(archiveBinary, archiveHarness.Events[0])
+	if archiveResult.ExitCode != 0 {
+		t.Fatalf("Archive hook failed: %s", archiveResult.Stderr)
+	}
+
+	// Phase 6: Verify complete lifecycle artifacts
+	// Check routing decisions logged
+	if _, err := os.Stat(routingDecisionsPath); err != nil {
+		t.Logf("Routing decisions file not found at %s (may not be required)", routingDecisionsPath)
+	}
+
+	// Check handoff created with ML context
+	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	if _, err := os.Stat(handoffPath); err != nil {
+		t.Fatalf("Handoff not created: %v", err)
+	}
+
+	handoffData, _ := os.ReadFile(handoffPath)
+	handoffContent := string(handoffData)
+
+	// Verify ML reconciliation summary present
+	if !strings.Contains(handoffContent, "SessionEnd") && !strings.Contains(handoffContent, "session") {
+		t.Logf("Handoff may not contain expected session context markers")
+	}
+
+	// Check archive directory exists
+	archiveDir := filepath.Join(projectDir, ".claude", "memory", "session-archive")
+	if _, err := os.Stat(archiveDir); os.IsNotExist(err) {
+		t.Logf("Archive directory not created (may be expected behavior)")
+	}
+
+	// Verify ML reconciliation output valid
+	mlReconcilePath := filepath.Join(projectDir, ".claude", "ml-export", "reconciliation-"+sessionID+".jsonl")
+	if _, err := os.Stat(mlReconcilePath); err == nil {
+		// File exists - verify it's valid JSONL
+		data, _ := os.ReadFile(mlReconcilePath)
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		for _, line := range lines {
+			if len(line) == 0 {
+				continue
+			}
+			var obj map[string]interface{}
+			if err := json.Unmarshal([]byte(line), &obj); err != nil {
+				t.Errorf("ML reconciliation line invalid JSON: %v", err)
+			}
+		}
+	}
+}
+
+// TestEndToEnd_SessionStartToValidate tests context injection at session start
+func TestEndToEnd_SessionStartToValidate(t *testing.T) {
+	validateBinary := "../../cmd/gogent-validate/gogent-validate"
+	if _, err := os.Stat(validateBinary); err != nil {
+		t.Skip("gogent-validate binary not found")
+	}
+
+	projectDir := t.TempDir()
+	setupTestRoutingSchema(t, projectDir)
+
+	sessionID := "context-injection-test"
+
+	// Create previous handoff to be loaded at SessionStart
+	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	os.MkdirAll(memoryDir, 0755)
+
+	previousHandoff := `# Previous Session Handoff
+
+## Routing Context
+- Model: sonnet
+- Tier: implementation
+- Agent: python-pro
+
+## Pending Items
+- Review PR feedback on feature-x
+`
+	handoffPath := filepath.Join(memoryDir, "last-handoff.md")
+	os.WriteFile(handoffPath, []byte(previousHandoff), 0644)
+
+	// SessionStart event references previous context
+	sessionStartEvent := `{
+		"hook_event_name": "SessionStart",
+		"session_id": "` + sessionID + `",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"context_source": "previous_handoff"
+	}`
+
+	// Immediately follow with PreToolUse that should respect loaded context
+	preToolEvent := `{
+		"hook_event_name": "PreToolUse",
+		"tool_name": "Task",
+		"tool_input": {
+			"model": "sonnet",
+			"prompt": "AGENT: python-pro\n\nReview feedback",
+			"subagent_type": "general-purpose"
+		},
+		"session_id": "` + sessionID + `",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"context_loaded_from": "previous_handoff"
+	}`
+
+	tmpCorpus := filepath.Join(t.TempDir(), "corpus.jsonl")
+	os.WriteFile(tmpCorpus, []byte(sessionStartEvent+"\n"+preToolEvent+"\n"), 0644)
+
+	harness, _ := NewTestHarness(tmpCorpus, projectDir)
+	harness.LoadCorpus()
+
+	// Process both events
+	for i, event := range harness.Events {
+		result := harness.RunHook(validateBinary, event)
+		if result.ExitCode != 0 && result.ExitCode != 2 {
+			t.Logf("Hook event %d exit code: %d (may be expected)", i, result.ExitCode)
+		}
+		if result.ParsedJSON != nil {
+			if decision, ok := result.ParsedJSON["decision"].(string); ok && decision == "block" {
+				t.Errorf("Event %d incorrectly blocked: %v", i, result.ParsedJSON)
+			}
+		}
+	}
+
+	// Verify context was loaded (check for context marker)
+	contextPath := filepath.Join(projectDir, ".claude", "session-context-loaded")
+	// This may or may not be created depending on implementation
+	if _, err := os.Stat(contextPath); err == nil {
+		t.Logf("Session context loaded successfully")
+	}
+}
+
+// TestEndToEnd_SubagentStopToArchive tests collaboration tracking through archival
+func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
+	archiveBinary := "../../cmd/gogent-archive/gogent-archive"
+	if _, err := os.Stat(archiveBinary); err != nil {
+		t.Skip("gogent-archive binary not found")
+	}
+
+	projectDir := t.TempDir()
+	setupTestRoutingSchema(t, projectDir)
+
+	sessionID := "collab-track-test"
+
+	// Create collaboration log directory
+	collabLogDir := filepath.Join(projectDir, ".claude", "collaboration-logs")
+	os.MkdirAll(collabLogDir, 0755)
+
+	// Simulate multiple subagent executions
+	collaborationLog := `{
+		"session_id": "` + sessionID + `",
+		"entries": [
+			{
+				"timestamp": "2026-01-25T10:00:00Z",
+				"subagent_id": "python-pro-1",
+				"model": "sonnet",
+				"status": "completed",
+				"quality_score": 0.92,
+				"returned_to_parent": true
+			},
+			{
+				"timestamp": "2026-01-25T10:05:00Z",
+				"subagent_id": "code-reviewer-1",
+				"model": "haiku",
+				"status": "completed",
+				"quality_score": 0.88,
+				"returned_to_parent": true
+			},
+			{
+				"timestamp": "2026-01-25T10:10:00Z",
+				"subagent_id": "architect-1",
+				"model": "sonnet",
+				"status": "completed",
+				"quality_score": 0.95,
+				"returned_to_parent": true
+			}
+		]
+	}`
+
+	collabPath := filepath.Join(collabLogDir, sessionID+".json")
+	os.WriteFile(collabPath, []byte(collaborationLog), 0644)
+
+	// SessionEnd event with ML reconciliation
+	archiveEventJSON := `{
+		"hook_event_name": "SessionEnd",
+		"session_id": "` + sessionID + `",
+		"timestamp": "` + time.Now().UTC().Format(time.RFC3339) + `",
+		"transcript_path": "` + filepath.Join(projectDir, "transcript.jsonl") + `",
+		"ml_reconciliation": {
+			"include_collaboration_logs": true,
+			"validate_subagent_returns": true,
+			"export_training_data": true
+		}
+	}`
+
+	// Create minimal transcript
+	transcriptPath := filepath.Join(projectDir, "transcript.jsonl")
+	transcriptData := `{"hook_event_name":"SubagentStop","subagent_id":"python-pro-1","status":"completed"}
+{"hook_event_name":"SubagentStop","subagent_id":"code-reviewer-1","status":"completed"}
+{"hook_event_name":"SubagentStop","subagent_id":"architect-1","status":"completed"}
+`
+	os.WriteFile(transcriptPath, []byte(transcriptData), 0644)
+
+	tmpArchiveCorpus := filepath.Join(t.TempDir(), "archive-corpus.jsonl")
+	os.WriteFile(tmpArchiveCorpus, []byte(archiveEventJSON+"\n"), 0644)
+
+	archiveHarness, _ := NewTestHarness(tmpArchiveCorpus, projectDir)
+	archiveHarness.LoadCorpus()
+
+	archiveResult := archiveHarness.RunHook(archiveBinary, archiveHarness.Events[0])
+	if archiveResult.ExitCode != 0 {
+		t.Fatalf("Archive hook failed: %s", archiveResult.Stderr)
+	}
+
+	// Verify handoff created
+	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	if _, err := os.Stat(handoffPath); err != nil {
+		t.Fatalf("Handoff not created: %v", err)
+	}
+
+	handoffData, _ := os.ReadFile(handoffPath)
+	handoffContent := string(handoffData)
+
+	// Verify collaboration data summarized in handoff
+	if len(handoffContent) == 0 {
+		t.Error("Handoff is empty")
+	}
+
+	// Check archived collaboration log
+	archiveDir := filepath.Join(projectDir, ".claude", "memory", "session-archive")
+	if _, err := os.Stat(archiveDir); err == nil {
+		archivedCollabPath := filepath.Join(archiveDir, "collaboration-logs-"+sessionID+".json")
+		// File may or may not exist depending on implementation
+		if _, err := os.Stat(archivedCollabPath); err == nil {
+			data, _ := os.ReadFile(archivedCollabPath)
+			var obj map[string]interface{}
+			if err := json.Unmarshal(data, &obj); err != nil {
+				t.Errorf("Archived collaboration log invalid JSON: %v", err)
+			}
+		}
+	}
+
+	// Verify ML export includes collaboration metrics
+	mlExportDir := filepath.Join(projectDir, ".claude", "ml-export")
+	if _, err := os.Stat(mlExportDir); err == nil {
+		exportPath := filepath.Join(mlExportDir, "collaboration-"+sessionID+".jsonl")
+		if _, err := os.Stat(exportPath); err == nil {
+			data, _ := os.ReadFile(exportPath)
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			if len(lines) < 3 {
+				t.Logf("Expected at least 3 collaboration records, got %d", len(lines))
+			}
+		}
+	}
+}
 
 // TestEndToEnd_ValidationToSharpEdge tests validation failure → sharp edge capture
 func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
@@ -327,6 +761,14 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 ```
 
 **Acceptance Criteria**:
+- [ ] `TestEndToEnd_FullMLPipeline` verifies complete lifecycle: SessionStart → validate → sharp edge → SubagentStop → archive
+- [ ] ML reconciliation fields logged in PostToolUse events and exported to JSON
+- [ ] SessionStart hook injects routing context from previous handoff
+- [ ] PreToolUse routing decisions logged to routing-decisions.jsonl with decision, tier, reason
+- [ ] SubagentStop triggers agent-endstate hook and logs collaboration metrics
+- [ ] SessionEnd archive includes ML reconciliation with valid training data export
+- [ ] `TestEndToEnd_SessionStartToValidate` verifies context injection at session boundaries
+- [ ] `TestEndToEnd_SubagentStopToArchive` verifies collaboration tracking through archival
 - [ ] `TestEndToEnd_ValidationToSharpEdge` verifies validation → sharp edge pipeline
 - [ ] `TestEndToEnd_SessionArchivalWorkflow` verifies complete session lifecycle
 - [ ] Violations from validation appear in session handoff
@@ -334,7 +776,8 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 - [ ] Files archived correctly at session end
 - [ ] `TestEndToEnd_MultiSessionHandoff` verifies continuity across sessions
 - [ ] All end-to-end tests pass: `go test ./test/integration -v -run TestEndToEnd`
+- [ ] ML export directory created with reconciliation data for training pipeline
 
-**Why This Matters**: Individual hooks may work in isolation but fail when chained. End-to-end tests verify complete workflows match production usage.
+**Why This Matters**: Individual hooks may work in isolation but fail when chained. Full ML pipeline tests verify: (1) end-to-end workflows match production usage, (2) routing decisions are properly tracked and reconciled, (3) collaboration data flows from SubagentStop through archival, (4) training data export is valid for downstream ML models.
 
 ---

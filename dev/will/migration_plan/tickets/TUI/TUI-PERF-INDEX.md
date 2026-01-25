@@ -1,8 +1,249 @@
-# TUI Performance Submenu - Ticket Index
+# TUI Development - Complete Ticket Index
 
-> **Status:** Pending (depends on GOgent-030e through GOgent-030k)
-> **Estimated Total Hours:** 8-12 hours
-> **Purpose:** First integration test of agent performance telemetry
+> **Status:** Ready for Implementation
+> **Estimated Total Hours:** 29 hours
+> **Purpose:** GOgent-Fortress Terminal User Interface
+> **Last Updated:** 2026-01-25
+> **Related GAPs:** GAP-TUI-001 (Telemetry Expansion), GAP-TUI-002 (CLI Embedding)
+
+---
+
+## Quick Navigation
+
+| Section | Tickets | Hours |
+|---------|---------|-------|
+| [Prerequisites](#prerequisites) | TUI-PREREQ-01 | 1.0 |
+| [CLI Embedding](#cli-embedding-tickets) | TUI-CLI-01..05 | 12.0 |
+| [Performance Views](#tui-performance-views) | TUI-PERF-01..10 | 16.0 |
+| **Total** | | **29.0** |
+
+---
+
+## Critical Path
+
+```
+TUI-PREREQ-01 (Wire Telemetry) ← BLOCKING
+        │
+        ├──────────────────────────────────────┐
+        │                                      │
+TUI-PERF-10 (Data Status)              TUI-CLI-01 (Subprocess)
+        │                                      │
+TUI-PERF-01 (Dashboard Shell)          TUI-CLI-02 (Event Types)
+        │                                      │
+        ├──────────────────────────────────────┤
+        │                                      │
+   (PERF-02..09)                        TUI-CLI-03 (Claude Panel)
+        │                                      │
+        └──────────────────────────────────────┤
+                                               │
+                                        TUI-CLI-04 (Layout Integration)
+                                               │
+                                        TUI-CLI-05 (Session Mgmt)
+```
+
+---
+
+## Prerequisites
+
+### TUI-PREREQ-01: Wire Telemetry Logging to Hooks
+
+**Estimated Hours:** 1.0
+**Priority:** P0 - BLOCKING
+**Status:** Pending
+
+**Description:**
+The telemetry logging functions exist but aren't called from hook binaries. Wire them up.
+
+**Tasks:**
+| Hook Binary | Function to Add | Location |
+|-------------|-----------------|----------|
+| `cmd/gogent-sharp-edge/main.go` | `telemetry.LogMLToolEvent()` | After successful PostToolUse |
+| `cmd/gogent-validate/main.go` | `telemetry.LogRoutingDecision()` | After Task validation |
+| `cmd/gogent-agent-endstate/main.go` | `telemetry.LogCollaboration()` | On SubagentStop |
+
+**Acceptance Criteria:**
+- [ ] After `claudeGO` session, `~/.local/share/gogent/tool-events.jsonl` has entries
+- [ ] After `claudeGO` session, `~/.local/share/gogent/routing-decisions.jsonl` has entries
+- [ ] After `claudeGO` session, `~/.local/share/gogent/agent-collaborations.jsonl` has entries
+
+**Verification:**
+```bash
+wc -l ~/.local/share/gogent/*.jsonl
+# Expected: Non-zero counts for all three files
+```
+
+---
+
+## CLI Embedding Tickets
+
+These tickets enable embedding Claude CLI directly in the TUI for bidirectional interaction.
+
+### TUI-CLI-01: Claude Subprocess Manager
+
+**Estimated Hours:** 3.0
+**Dependencies:** None
+**Priority:** P0 - Foundation
+
+**Description:**
+Implement Go subprocess manager for Claude CLI with stream-json I/O.
+
+**Key Flags Used:**
+```bash
+claude --print --verbose \
+       --input-format stream-json \
+       --output-format stream-json \
+       --include-partial-messages \
+       --session-id <uuid>
+```
+
+**Files:**
+- `internal/cli/subprocess.go`
+- `internal/cli/streams.go`
+- `internal/cli/subprocess_test.go`
+
+**Acceptance Criteria:**
+- [ ] Process starts with correct flags
+- [ ] Events parsed from stdout correctly
+- [ ] Messages sent via stdin work
+- [ ] Session ID preserved across restarts
+- [ ] Process cleanup on exit
+
+---
+
+### TUI-CLI-02: Event Type Definitions
+
+**Estimated Hours:** 1.5
+**Dependencies:** TUI-CLI-01
+**Priority:** P0 - Foundation
+
+**Description:**
+Define Go structs for all Claude CLI stream-json event types.
+
+**Event Types:**
+| Type | Subtype | Purpose |
+|------|---------|---------|
+| `system` | `init` | Session initialization |
+| `system` | `hook_started` | Hook execution begins |
+| `system` | `hook_response` | Hook output |
+| `assistant` | - | Model response |
+| `result` | `success`/`error` | Final result |
+
+**Files:**
+- `internal/cli/events.go`
+- `internal/cli/events_test.go`
+
+**Acceptance Criteria:**
+- [ ] All event types unmarshal correctly
+- [ ] Unknown event types don't panic
+- [ ] Partial messages handled
+- [ ] Content blocks extracted
+
+---
+
+### TUI-CLI-03: Claude Interface Panel
+
+**Estimated Hours:** 4.0
+**Dependencies:** TUI-CLI-01, TUI-CLI-02, TUI-PERF-01
+**Priority:** P1 - Core Feature
+
+**Description:**
+Bubble Tea component for Claude CLI interaction in TUI.
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Claude Code - Session: abc123           Cost: $0.23    │
+├─────────────────────────────────────────────────────────┤
+│  You: Explain this function                            │
+│                                                         │
+│  Claude: This function implements a binary search...   │
+│  [streaming...]                                         │
+│  ─────────────────────────────────────────────────────  │
+│  │ Hook: gogent-validate ✅ │ Tool: Read ✅          │ │
+├─────────────────────────────────────────────────────────┤
+│ > Type your message here...                    [Enter] │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Files:**
+- `internal/tui/claude/panel.go`
+- `internal/tui/claude/input.go`
+- `internal/tui/claude/output.go`
+- `internal/tui/claude/events.go`
+
+**Acceptance Criteria:**
+- [ ] Text streams character-by-character
+- [ ] Input submits on Enter
+- [ ] Hook events display in sidebar
+- [ ] Cost updates after each response
+- [ ] Scroll works in viewport
+- [ ] Session ID displayed
+
+---
+
+### TUI-CLI-04: Main Layout Integration
+
+**Estimated Hours:** 2.0
+**Dependencies:** TUI-CLI-03, TUI-PERF-01
+**Priority:** P1 - Integration
+
+**Description:**
+Integrate Claude panel with performance dashboard in split layout.
+
+**Layout:**
+```
+┌────────────────────────────────────┬────────────────────┐
+│        Claude Interface            │   Performance      │
+│        (TUI-CLI-03)                │   Dashboard        │
+│                                    │   (TUI-PERF-*)     │
+│  ┌──────────────────────────────┐  │                    │
+│  │ Conversation viewport        │  │  [1] Violations   │
+│  │                              │  │  [2] Agents       │
+│  │                              │  │  [3] Cost         │
+│  │                              │  │  [4] Collab       │
+│  └──────────────────────────────┘  │  [5] Routing      │
+│  ┌──────────────────────────────┐  │  [0] Data Status  │
+│  │ > Input...                   │  │                    │
+│  └──────────────────────────────┘  │                    │
+└────────────────────────────────────┴────────────────────┘
+```
+
+**Files:**
+- `internal/tui/main/model.go`
+- `internal/tui/main/layout.go`
+- `internal/tui/main/keymap.go`
+
+**Acceptance Criteria:**
+- [ ] Split layout renders correctly
+- [ ] Tab switches performance views
+- [ ] Focus moves between panels (Tab key)
+- [ ] Resize terminal updates layout
+- [ ] Keyboard shortcuts documented
+
+---
+
+### TUI-CLI-05: Session Management
+
+**Estimated Hours:** 1.5
+**Dependencies:** TUI-CLI-01
+**Priority:** P2 - Enhancement
+
+**Description:**
+Session picker, history, and continuation support.
+
+**Files:**
+- `internal/cli/session.go`
+- `internal/tui/session/picker.go`
+
+**Acceptance Criteria:**
+- [ ] Sessions listed by recency
+- [ ] Resume continues context
+- [ ] Fork creates new ID
+- [ ] Delete removes session data
+
+---
+
+## TUI Performance Views
 
 ---
 
@@ -307,23 +548,221 @@ Shared detail view component for drill-down from any summary.
 
 ---
 
+### TUI-PERF-08: Agent Collaboration Network
+
+**Estimated Hours:** 2.0
+**Dependencies:** TUI-PREREQ-01, TUI-PERF-01
+**Data Source:** `agent-collaborations.jsonl`
+**Priority:** P1 (unique feature)
+
+**Description:**
+Visualize parent→child delegation patterns, chain depths, and handoff friction.
+
+**Key Features:**
+- Top agent pairings by frequency
+- Chain depth analysis (max, average)
+- Handoff friction breakdown (context_loss, misunderstanding, none)
+- Delegation success rate
+- Swarm coordination metrics (if applicable)
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Agent Collaboration Network (14 delegations)            │
+├─────────────────────────────────────────────────────────┤
+│ Top Pairings:              │ Chain Analysis:            │
+│ orchestrator → python-pro 5│ Max Depth: 3               │
+│ orchestrator → architect  3│ Avg Depth: 1.8             │
+│ architect → go-pro        2│ Success Rate: 87%          │
+│                            │                            │
+├─────────────────────────────────────────────────────────┤
+│ Handoff Friction:                                       │
+│ ████████████████░░░░ none (79%)                        │
+│ ███░░░░░░░░░░░░░░░░░ context_loss (14%)                │
+│ █░░░░░░░░░░░░░░░░░░░ misunderstanding (7%)             │
+├─────────────────────────────────────────────────────────┤
+│ By Delegation Type:                                     │
+│ spawn: 10  │  escalate: 3  │  parallel: 1              │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Files:**
+- `internal/tui/performance/collaborations.go`
+
+**Acceptance Criteria:**
+- [ ] Pairing frequency table renders
+- [ ] Chain depth stats calculate correctly
+- [ ] Friction breakdown shows percentages
+- [ ] Delegation type breakdown displays
+- [ ] Enter drills down to collaboration details
+
+---
+
+### TUI-PERF-09: Routing Decision Analysis
+
+**Estimated Hours:** 2.0
+**Dependencies:** TUI-PREREQ-01, TUI-PERF-01
+**Data Source:** `routing-decisions.jsonl`, `routing-decision-updates.jsonl`
+**Priority:** P1
+
+**Description:**
+Analyze routing tier selections, task classification accuracy, and override patterns.
+
+**Key Features:**
+- Task type breakdown (implementation, search, documentation, debug)
+- Task domain breakdown (python, go, r, infrastructure)
+- Override analysis (user-initiated vs auto-escalated)
+- Confidence → Success correlation
+- Understanding quality metrics (if populated)
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Routing Decisions (23 total)                 Session ▼  │
+├─────────────────────────────────────────────────────────┤
+│ By Task Type:              │ By Domain:                 │
+│ ████████████░░ impl (52%)  │ ████████░░░░ python (39%)  │
+│ █████░░░░░░░░ search (22%) │ ███████░░░░░ go (35%)      │
+│ ████░░░░░░░░░ docs (17%)   │ ██████░░░░░░ infra (26%)   │
+│ ██░░░░░░░░░░░ debug (9%)   │                            │
+├─────────────────────────────────────────────────────────┤
+│ Tier Selection:                                         │
+│ haiku: 8 (35%)  │  sonnet: 14 (61%)  │  opus: 1 (4%)   │
+├─────────────────────────────────────────────────────────┤
+│ Override Analysis:                                      │
+│ Total overrides: 3 (13%)                               │
+│ ├─ User-initiated: 2                                   │
+│ └─ Auto-escalated: 1                                   │
+│                                                         │
+│ Confidence → Success: r=0.82 ✅ Strong correlation     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Files:**
+- `internal/tui/performance/routing.go`
+
+**Acceptance Criteria:**
+- [ ] Task type breakdown renders with bars
+- [ ] Domain breakdown renders
+- [ ] Tier selection summary displays
+- [ ] Override count and breakdown shows
+- [ ] Confidence correlation calculates (requires outcome updates)
+- [ ] Join with updates file works correctly
+
+---
+
+### TUI-PERF-10: Data Collection Status (Diagnostic)
+
+**Estimated Hours:** 1.0
+**Dependencies:** TUI-PERF-01
+**Data Source:** File system checks
+**Priority:** P0 - Diagnostic (DO FIRST)
+
+**Description:**
+Diagnostic dashboard showing status of all telemetry log files. This is the FIRST view to implement as it validates the logging infrastructure.
+
+**Key Features:**
+- File existence check for all JSONL logs
+- Line count for each file
+- Status indicator (active, empty, missing)
+- Last modified timestamp
+- Actionable guidance for empty/missing files
+- Export and reset controls
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ ML Data Collection Status                    [R]efresh  │
+├─────────────────────────────────────────────────────────┤
+│ Global Logs (~/.local/share/gogent/)                    │
+│ ─────────────────────────────────────────────────────── │
+│ tool-events.jsonl          │ 0 entries   ⚠️ NOT LOGGING │
+│ routing-decisions.jsonl    │ 0 entries   ⚠️ NOT LOGGING │
+│ agent-collaborations.jsonl │ 0 entries   ⚠️ NOT LOGGING │
+├─────────────────────────────────────────────────────────┤
+│ Runtime Logs (~/.gogent/)                               │
+│ ─────────────────────────────────────────────────────── │
+│ failure-tracker.jsonl      │ 3 entries   ✅ Active      │
+├─────────────────────────────────────────────────────────┤
+│ Project Logs (.claude/memory/)                          │
+│ ─────────────────────────────────────────────────────── │
+│ pending-learnings.jsonl    │ 5 entries   ✅ Active      │
+│ handoffs.jsonl             │ 12 entries  ✅ Active      │
+│ agent-endstates.jsonl      │ 8 entries   ✅ Active      │
+│ user-intents.jsonl         │ 0 entries   ⚠️ Empty       │
+├─────────────────────────────────────────────────────────┤
+│ ⚠️ 3 files not logging. Run TUI-PREREQ-01 first.       │
+│                                                         │
+│ [E]xport all  [V]alidate schemas  [?] Help              │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Files:**
+- `internal/tui/performance/datacheck.go`
+
+**Acceptance Criteria:**
+- [ ] All log file paths checked correctly
+- [ ] Line counts accurate
+- [ ] Status icons display (✅/⚠️/❌)
+- [ ] Refresh updates counts
+- [ ] Actionable message shows when files empty
+- [ ] Export functionality works
+
+---
+
 ## Dependency Graph
 
 ```
-030e ─┬─→ 030f ─┬─→ 030g ──────────────────────┐
-      │         │                              │
-030h ─┴─→ 030i  │                              │
-                │                              ↓
-030j ─────→ 030k ────→ TUI-PERF-01 ──────→ TUI-PERF-02
-                              │               │
-                              ├─→ TUI-PERF-03 ─┤
-                              ├─→ TUI-PERF-04 ─┤
-                              ├─→ TUI-PERF-05 ─┤
-                              └─→ TUI-PERF-06 ─┘
-                                      │
-                                      ↓
-                               TUI-PERF-07
+                    TUI-PREREQ-01 ←────────────────────────────────────┐
+                  (Wire Telemetry)                                     │
+                         │ BLOCKING                                    │
+                         │                                             │
+        ┌────────────────┼────────────────┐                            │
+        │                │                │                            │
+        ↓                ↓                ↓                            │
+  TUI-PERF-10      TUI-PERF-08      TUI-PERF-09                       │
+  (Data Status)    (Collaborations) (Routing)                         │
+  [DO FIRST]            │                │                            │
+        │               │                │                            │
+        ↓               │                │                            │
+  TUI-PERF-01 ←─────────┴────────────────┘                            │
+  (Dashboard)                                                          │
+        │                                                              │
+        ├──────────┬──────────┬──────────┬──────────┐                 │
+        │          │          │          │          │                 │
+        ↓          ↓          ↓          ↓          ↓                 │
+  TUI-PERF-02 TUI-PERF-03 TUI-PERF-04 TUI-PERF-05 TUI-PERF-06        │
+  (Violations) (Agents)  (Cost)     (Escalations) (Scout)            │
+        │          │          │          │          │                 │
+        └──────────┴──────────┴──────────┴──────────┘                 │
+                         │                                             │
+                         ↓                                             │
+                   TUI-PERF-07                                         │
+                 (Drill-Down Detail)                                   │
+                                                                       │
+                                                                       │
+  TUI-CLI-01 ──→ TUI-CLI-02 ──→ TUI-CLI-03 ──────────────────────────┘
+  (Subprocess)   (Events)        (Claude Panel)
+                                       │
+                                       ↓
+                                 TUI-CLI-04
+                               (Layout Integration)
+                                       │
+                                       ↓
+                                 TUI-CLI-05
+                               (Session Management)
 ```
+
+### Execution Order (Recommended)
+
+1. **TUI-PREREQ-01** - Wire telemetry (BLOCKING for PERF-08, 09, 10)
+2. **TUI-PERF-10** - Validate logging works before building views
+3. **TUI-CLI-01** - Start subprocess work in parallel
+4. **TUI-PERF-01** - Dashboard shell
+5. **TUI-PERF-08, 09** - New telemetry views (unique features)
+6. **TUI-PERF-02-06** - Existing views (parallel)
+7. **TUI-CLI-02-05** - Complete CLI integration
+8. **TUI-PERF-07** - Drill-down (depends on all views)
 
 ---
 
@@ -402,7 +841,9 @@ This is the "eat your own dog food" approach - the TUI is both the test and the 
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 2.0
 **Created:** 2026-01-22
-**Last Updated:** 2026-01-22
-**Related GAP:** einstein-gap-030-telemetry-expansion.md
+**Last Updated:** 2026-01-25
+**Related GAPs:**
+- `GAP-TUI-TELEMETRY-EXPANSION.md` (telemetry wiring, new views)
+- `GAP-TUI-CLI-EMBEDDING.md` (Claude CLI bidirectional relay)
