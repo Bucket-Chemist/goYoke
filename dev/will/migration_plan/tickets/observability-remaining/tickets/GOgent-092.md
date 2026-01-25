@@ -9,7 +9,7 @@ priority: high
 week: 4
 tags: ["stop-gate", "week-4"]
 tests_required: true
-acceptance_criteria_count: 4
+acceptance_criteria_count: 5
 ---
 
 ### GOgent-092: Stop-Gate Translation or Deprecation
@@ -30,6 +30,7 @@ If active:
 - Create similar structure to other hooks
 - Implement in Go
 - Comprehensive tests
+- Integrate with ToolEvent logging (GOgent-087)
 
 If deprecated:
 - Document in DEPRECATION.md
@@ -46,6 +47,7 @@ Depends on GOgent-091 findings:
 - [ ] If deprecate: Documentation and routing schema updates
 - [ ] If defer: Phase 2 planning document
 - [ ] Clear status recorded
+- [ ] If translated: ToolEvent hooks integrated
 
 **Why This Matters**: Prevents orphaned code and ensures clear project status.
 

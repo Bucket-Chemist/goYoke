@@ -3992,7 +3992,7 @@
       "id": "GOgent-087b",
       "title": "Routing Decision Capture",
       "file": "observability-remaining/tickets/GOgent-087b.md",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high",
       "time_estimate": "2.5h",
       "dependencies": [
