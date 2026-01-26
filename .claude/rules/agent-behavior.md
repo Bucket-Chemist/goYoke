@@ -33,6 +33,18 @@ Before using ANY tool, verify:
 | Novel/complex/security | Any | Opus (einstein) | **Generate GAP doc** (see 3.4) |
 | >10 files or >50K tokens | Large | External (Gemini) | Pipe to gemini-slave first |
 
+### 1.2.1 Go Implementation Agents (Sonnet Tier)
+
+| Trigger Patterns | Agent | Use For |
+|------------------|-------|---------|
+| implement, struct, interface, go build | `go-pro` | Core Go implementation |
+| Cobra, CLI, subcommand, flags | `go-cli` | CLI applications |
+| Bubbletea, TUI, lipgloss, tea.Model | `go-tui` | Terminal interfaces |
+| HTTP client, API, rate limit, retry | `go-api` | HTTP clients/servers |
+| goroutine, errgroup, channel, mutex | `go-concurrent` | Concurrent patterns |
+
+These agents understand Go idioms: explicit error handling, small interfaces, composition over inheritance, table-driven tests.
+
 ### 1.3 Scout Before Commit
 
 **When scope is unknown:**
@@ -56,6 +68,8 @@ Then wait for scout results before selecting tier. This prevents $0.50 Opus call
 
 ### 2.2 MANDATORY: Background Task Collection
 
+**Enforcement:** `gogent-orchestrator-guard` (SubagentStop hook) blocks orchestrator completion when background tasks remain uncollected.
+
 **If you spawn background tasks, you MUST:**
 
 1. Track every task_id returned
@@ -66,12 +80,12 @@ Then wait for scout results before selecting tier. This prevents $0.50 Opus call
    ```
 3. NEVER conclude orchestration with uncollected background tasks
 
-**Violation Pattern (FORBIDDEN):**
+**Violation Pattern (BLOCKED by hook):**
 ```javascript
 Bash({..., run_in_background: true})  // Spawned
 Bash({..., run_in_background: true})  // Spawned
 // ... do other work ...
-// Output synthesis WITHOUT calling TaskOutput → VIOLATION
+// Output synthesis WITHOUT calling TaskOutput → BLOCKED by gogent-orchestrator-guard
 ```
 
 ### 2.3 Fan-Out, Fan-In Pattern
@@ -139,7 +153,7 @@ When a debugging loop is detected:
 
 ### 3.4 Escalate to Einstein Protocol
 
-**Enforcement:** `validate-routing.sh` hook **blocks** `Task(model: "opus")` calls. Must use `/einstein` slash command.
+**Enforcement:** `gogent-validate` (Go binary, PreToolUse hook) **blocks** `Task(model: "opus")` calls. Must use `/einstein` slash command.
 
 #### Trigger Conditions
 
@@ -197,14 +211,16 @@ Before writing the GAP document, verify:
 
 ### 4.1 Active Hooks
 
-The following hooks inject context automatically:
+The following Go binaries run as hooks and inject context automatically:
 
-| Hook | When | What You'll See |
-|------|------|-----------------|
-| `load-routing-context` | Session start | Routing schema, previous handoff |
-| `attention-gate` | Every 10 tool calls | Routing compliance reminder |
-| `sharp-edge-detector` | After Bash/Edit/Write failures | Escalation guidance |
-| `agent-endstate` | Subagent completion | Tier-specific follow-up prompts |
+| Binary | Event | What You'll See |
+|--------|-------|-----------------|
+| `gogent-load-context` | SessionStart | Routing schema, previous handoff, git context |
+| `gogent-validate` | PreToolUse (Task) | Block/allow decision, subagent_type enforcement |
+| `gogent-sharp-edge` | PostToolUse | Tool counter, routing reminders (every 10), failure tracking |
+| `gogent-agent-endstate` | SubagentStop | Decision outcomes, tier-specific follow-up prompts |
+| `gogent-orchestrator-guard` | SubagentStop | Background task collection enforcement |
+| `gogent-archive` | SessionEnd | Handoff generation, metrics capture |
 
 ### 4.2 Responding to Hook Injections
 
@@ -230,7 +246,7 @@ When you discover something worth remembering:
 At session end:
 - Pending learnings are archived automatically
 - Handoff document generated at `memory/last-handoff.md`
-- Next session receives this context via `load-routing-context` hook
+- Next session receives this context via `gogent-load-context` hook
 
 ### 5.3 Evolution Cycle
 

@@ -76,9 +76,17 @@ type ErrorEvent struct {
 	Code    string `json:"code,omitempty"`
 }
 
-// UserMessage is the format for sending messages to Claude
+// UserMessage is the format for sending messages to Claude via stream-json input.
+// Format: {"type":"user","message":{"role":"user","content":"..."}}
 type UserMessage struct {
-	Content string `json:"content"`
+	Type    string      `json:"type"`
+	Message UserContent `json:"message"`
+}
+
+// UserContent is the nested message content for user messages
+type UserContent struct {
+	Role    string         `json:"role"`
+	Content []ContentBlock `json:"content"` // Array of content blocks (required by Claude CLI)
 }
 
 // ParseEvent parses raw JSON into the base Event type.

@@ -49,6 +49,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-direct-impl-check",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -94,6 +104,5 @@
   "trustedDirectories": [
     "/home/doktersmol",
     "/home/doktersmol/Documents"
-  ],
-  "model": "sonnet"
+  ]
 }

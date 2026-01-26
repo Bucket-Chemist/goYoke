@@ -383,14 +383,24 @@ func TestEvent_RoundTrip(t *testing.T) {
 }
 
 func TestUserMessage_Marshaling(t *testing.T) {
-	msg := UserMessage{Content: "Test message"}
+	msg := UserMessage{
+		Type: "user",
+		Message: UserContent{
+			Role: "user",
+			Content: []ContentBlock{
+				{Type: "text", Text: "Test message"},
+			},
+		},
+	}
 	data, err := json.Marshal(msg)
 	require.NoError(t, err)
 
 	var decoded UserMessage
 	err = json.Unmarshal(data, &decoded)
 	require.NoError(t, err)
-	assert.Equal(t, "Test message", decoded.Content)
+	assert.Equal(t, "user", decoded.Type)
+	assert.Equal(t, "user", decoded.Message.Role)
+	assert.Equal(t, []ContentBlock{{Type: "text", Text: "Test message"}}, decoded.Message.Content)
 }
 
 func TestAssistantMessage_MultipleContentBlocks(t *testing.T) {

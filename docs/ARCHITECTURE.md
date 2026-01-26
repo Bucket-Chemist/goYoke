@@ -1,8 +1,9 @@
-# GOgent-Fortress Systems Architecture v1.0
+# GOgent-Fortress Systems Architecture v1.1
 
 > **Schema Versions:** routing-schema v2.2.0 | handoff v1.3 | ML telemetry v1.0
 > **Last Updated:** 2026-01-26
-> **Status:** Production Ready - Complete Implementation
+> **Status:** Production Ready - Complete Implementation (Hooks + TUI)
+> **TUI Implementation:** GOgent-109 through GOgent-121 (13 tickets)
 
 ---
 
@@ -100,45 +101,49 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │                                                                                                                      │
 │  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐   │
 │  │                                                                                                               │   │
-│  │                                    🖥️  TUI ENDPOINT (Future Integration)                                      │   │
+│  │                                    🖥️  TUI SYSTEM (GOgent-109 to GOgent-121)                                  │   │
 │  │                                                                                                               │   │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │   │
-│  │  │                                           Available Data Streams                                         │ │   │
+│  │  │                                      Implemented Components                                              │ │   │
 │  │  ├─────────────────────────────────────────────────────────────────────────────────────────────────────────┤ │   │
 │  │  │                                                                                                          │ │   │
-│  │  │   📊 Real-Time Metrics              📈 Session Analytics            🎯 Routing Intelligence              │ │   │
-│  │  │   ─────────────────────             ──────────────────────          ────────────────────────              │ │   │
-│  │  │   • Tool counter (live)             • Total tool calls              • Agent usage patterns               │ │   │
-│  │  │   • Current tier                    • Error rate                    • Tier distribution                  │ │   │
-│  │  │   • Active agent                    • Session duration              • Scout accuracy                     │ │   │
-│  │  │   • Token consumption               • Cost accumulation             • Escalation frequency               │ │   │
+│  │  │   📦 internal/cli                    📦 internal/tui/agents          📦 internal/tui/claude              │ │   │
+│  │  │   ─────────────────                  ──────────────────────          ─────────────────────               │ │   │
+│  │  │   • ClaudeProcess subprocess         • AgentTree data model          • PanelModel (conversation)        │ │   │
+│  │  │   • NDJSON reader/writer             • TreeModel (view component)    • Streaming output display         │ │   │
+│  │  │   • Event type parsing               • DetailModel (sidebar)         • Hook event sidebar               │ │   │
+│  │  │   • Auto-restart on panic            • Status icons (⏳⟳✓✗)          • User input handling              │ │   │
+│  │  │   • SessionManager                   • Expand/collapse navigation    • Cost tracking                    │ │   │
 │  │  │                                                                                                          │ │   │
-│  │  │   🔴 Failure Tracking               📋 Handoff State                💡 ML Telemetry                      │ │   │
-│  │  │   ────────────────────              ─────────────────               ─────────────────                     │ │   │
-│  │  │   • Consecutive failures            • Sharp edges pending           • Routing decisions/s               │ │   │
-│  │  │   • Sharp-edge captures             • Last handoff summary          • Decision outcomes                  │ │   │
-│  │  │   • Debug loop detection            • Actions queue                 • Collaboration chains               │ │   │
-│  │  │   • Pattern matching                • Git dirty status              • Confidence metrics                 │ │   │
-│  │  │                                                                                                          │ │   │
-│  │  │   ⚠️ Violations & Blocks           🔄 Agent Lifecycle               📉 Cost Tracking                     │ │   │
-│  │  │   ─────────────────────             ──────────────────              ─────────────────                     │ │   │
-│  │  │   • Routing violations              • Spawned agents                • Cost by tier                       │ │   │
-│  │  │   • Ceiling breaches                • Active subagents              • Cost by agent                      │ │   │
-│  │  │   • Blocked Task() calls            • Delegation chains             • Token efficiency                   │ │   │
-│  │  │   • Subagent mismatches             • Endstate captures             • Projected session cost             │ │   │
+│  │  │   📦 internal/tui/layout             📦 internal/tui/session         📦 pkg/telemetry (file watchers)   │ │   │
+│  │  │   ──────────────────────             ──────────────────────          ─────────────────────────────       │ │   │
+│  │  │   • 70/30 split layout               • PickerModel (modal)           • TelemetryWatcher (fsnotify)      │ │   │
+│  │  │   • Focus management (Tab)           • Session list by recency       • Agent lifecycle events           │ │   │
+│  │  │   • BannerModel (nav tabs)           • Resume/delete operations      • Real-time JSONL streaming        │ │   │
+│  │  │   • Number keys (1-4)                • Age formatting                • Async event dispatch             │ │   │
+│  │  │   • Session info display             • Keyboard navigation           • File watching infra              │ │   │
 │  │  │                                                                                                          │ │   │
 │  │  └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │   │
 │  │                                                                                                               │   │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │   │
-│  │  │                                        Data Access Methods                                               │ │   │
+│  │  │                                           TUI Architecture                                               │ │   │
 │  │  ├─────────────────────────────────────────────────────────────────────────────────────────────────────────┤ │   │
 │  │  │                                                                                                          │ │   │
-│  │  │   File Watchers (JSONL tailing)          CLI Queries                    Programmatic API                 │ │   │
-│  │  │   ─────────────────────────────          ───────────────                ─────────────────                 │ │   │
-│  │  │   • tail -f routing-decisions.jsonl     • gogent-archive stats         • pkg/telemetry.Load*()          │ │   │
-│  │  │   • inotify on handoffs.jsonl           • gogent-archive sharp-edges   • pkg/session.Query*()           │ │   │
-│  │  │   • fsnotify for Go integration         • gogent-ml-export stats       • pkg/routing.LoadSchema()       │ │   │
-│  │  │                                         • gogent-aggregate             • pkg/memory.GetFailureCount()   │ │   │
+│  │  │   +--------------------------------------------------------------------------+                           │ │   │
+│  │  │   | [1] Claude  [2] Agents  [3] Stats  [4] Query   Session: abc | Cost: $0.34|  ← BannerModel           │ │   │
+│  │  │   +----------------------------------------------+---------------------------+                           │ │   │
+│  │  │   |                                              |                           |                           │ │   │
+│  │  │   |  Claude Conversation Panel (70%)             |  Agent Tree (30% top)     |  ← TreeModel             │ │   │
+│  │  │   |  ─────────────────────────────               |  > terminal               |                           │ │   │
+│  │  │   |  You: Explain this function                  |    +-- orchestrator [✓]   |                           │ │   │
+│  │  │   |                                              |    +-- go-tui [⟳]         |                           │ │   │
+│  │  │   |  Claude: This function implements...         +---------------------------+                           │ │   │
+│  │  │   |  [streaming...]                              |  Agent Detail (30% bot)   |  ← DetailModel           │ │   │
+│  │  │   |                                              |  Selected: go-tui         |                           │ │   │
+│  │  │   |  [Hook: validate ✓] [Tool: Read ✓]           |  Tier: sonnet             |                           │ │   │
+│  │  │   +----------------------------------------------+  Duration: 4.2s...        |                           │ │   │
+│  │  │   | > Type your message here...          [Enter] |  [Enter] Expand           |                           │ │   │
+│  │  │   +----------------------------------------------+---------------------------+                           │ │   │
 │  │  │                                                                                                          │ │   │
 │  │  └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │   │
 │  │                                                                                                               │   │
@@ -957,42 +962,144 @@ $XDG_DATA_HOME/gogent-fortress/
 
 ---
 
-## 15. TUI Integration Guide
+## 15. TUI System Architecture (GOgent-109 to GOgent-121)
 
-The following data streams are available for TUI integration:
+The TUI system provides a complete terminal interface for Claude Code interaction with real-time telemetry visualization.
 
-### 15.1 Real-Time Data (File Watching)
+### 15.1 Package Structure
 
-| Data Source | Update Frequency | Access Pattern |
-|-------------|------------------|----------------|
-| Tool counter | Every tool | `tail -f /tmp/claude-tool-counter-*.log` |
-| Routing decisions | Every tool | `tail -f $XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl` |
-| Violations | On violation | `tail -f /tmp/claude-routing-violations.jsonl` |
-| Pending learnings | On sharp edge | `tail -f .claude/memory/pending-learnings.jsonl` |
+```
+internal/
+├── cli/                          # Claude CLI subprocess management
+│   ├── subprocess.go             # ClaudeProcess lifecycle, NDJSON I/O
+│   ├── events.go                 # Event types: system, assistant, result, error
+│   ├── streams.go                # NDJSONReader, NDJSONWriter
+│   ├── restart.go                # RestartPolicy, exponential backoff
+│   └── session.go                # SessionManager, Session struct
+│
+└── tui/                          # Bubbletea components
+    ├── agents/                   # Agent tree visualization
+    │   ├── model.go              # AgentTree, AgentNode, AgentStatus
+    │   ├── view.go               # TreeModel (tea.Model), styles
+    │   └── detail.go             # DetailModel, status indicators
+    │
+    ├── claude/                   # Claude conversation panel
+    │   ├── panel.go              # PanelModel, viewport, textarea
+    │   ├── input.go              # handleInput(), sendMessage()
+    │   ├── output.go             # updateViewport(), appendStreamingText()
+    │   └── events.go             # handleEvent(), renderHookSidebar()
+    │
+    ├── layout/                   # Main layout
+    │   ├── layout.go             # 70/30 split, focus management
+    │   └── banner.go             # BannerModel, navigation tabs
+    │
+    ├── session/                  # Session picker
+    │   └── picker.go             # PickerModel, list/resume/delete
+    │
+    └── dashboard/                # Performance dashboard shell
+```
 
-### 15.2 Aggregated Data (CLI Queries)
+### 15.2 Component Dependencies
 
-| Metric | CLI Command | Package Function |
-|--------|-------------|------------------|
-| Session stats | `gogent-archive stats` | `session.CollectMetrics()` |
-| Cost breakdown | `gogent-ml-export stats` | `telemetry.CalculateSessionCostSummary()` |
-| Agent usage | `gogent-aggregate` | `telemetry.ClusterInvocationsByAgent()` |
-| Escalation ROI | (programmatic) | `telemetry.CalculateEscalationROI()` |
-| Scout accuracy | (programmatic) | `telemetry.GetScoutPerformanceSummary()` |
+```mermaid
+graph TD
+    subgraph "CLI Layer"
+        CP[ClaudeProcess] --> EV[Events]
+        CP --> ST[Streams]
+        CP --> RS[RestartPolicy]
+        SM[SessionManager] --> CP
+    end
 
-### 15.3 Recommended TUI Panels
+    subgraph "TUI Layer"
+        LO[Layout Model] --> CL[Claude Panel]
+        LO --> AG[Agent Tree]
+        LO --> DE[Agent Detail]
+        LO --> BN[Banner]
+        CL --> CP
+        AG --> TW[TelemetryWatcher]
+        SP[Session Picker] --> SM
+    end
 
-1. **Status Bar**: Current tier, active agent, tool counter
-2. **Cost Tracker**: Session cost, cost by tier, projected total
-3. **Agent Panel**: Active agents, delegation chain, success rates
-4. **Failure Monitor**: Consecutive failures, sharp edges, debug loops
-5. **ML Telemetry**: Decisions/sec, outcome rates, collaboration patterns
-6. **Handoff Preview**: Pending actions, sharp edges, violations
+    subgraph "Data Sources"
+        TW --> |fsnotify| AL[agent-lifecycle.jsonl]
+        TW --> |fsnotify| RD[routing-decisions.jsonl]
+    end
+```
+
+### 15.3 Implemented Tickets
+
+| Ticket | Component | Status | Test Coverage |
+|--------|-----------|--------|---------------|
+| GOgent-109 | Agent Lifecycle Telemetry | ✅ Complete | ~85% |
+| GOgent-110 | CLI Subprocess Management | ✅ Complete | ~85% |
+| GOgent-111 | Performance Dashboard Shell | ✅ Complete | ~80% |
+| GOgent-112 | Auto-Restart on Panic | ✅ Complete | ~88% |
+| GOgent-113 | File Watchers for Telemetry | ✅ Complete | ~82% |
+| GOgent-114 | Event System Integration | ✅ Complete | ~90% |
+| GOgent-115 | Agent Tree Model | ✅ Complete | ~92% |
+| GOgent-116 | Tree View Component | ✅ Complete | ~88% |
+| GOgent-117 | Agent Detail Sidebar | ✅ Complete | ~85% |
+| GOgent-118 | Claude Conversation Panel | ✅ Complete | ~90% |
+| GOgent-119 | 70/30 Layout Integration | ✅ Complete | ~88% |
+| GOgent-120 | Persistent Banner | ✅ Complete | ~85% |
+| GOgent-121 | Session Management | ✅ Complete | ~85% |
+
+### 15.4 Key Interfaces
+
+```go
+// internal/cli/subprocess.go
+type ClaudeProcess struct { ... }
+func (cp *ClaudeProcess) Start() error
+func (cp *ClaudeProcess) Stop() error
+func (cp *ClaudeProcess) Send(message string) error
+func (cp *ClaudeProcess) Events() <-chan Event
+func (cp *ClaudeProcess) SessionID() string
+func (cp *ClaudeProcess) IsRunning() bool
+
+// internal/tui/agents/model.go
+type AgentTree struct { ... }
+func (at *AgentTree) ProcessSpawn(event *telemetry.AgentLifecycleEvent) error
+func (at *AgentTree) ProcessComplete(event *telemetry.AgentLifecycleEvent) error
+func (at *AgentTree) GetNode(agentID string) (*AgentNode, bool)
+func (at *AgentTree) WalkTree(fn func(*AgentNode) bool)
+
+// internal/tui/layout/layout.go
+type Model struct { ... }
+func NewModel(claudePanel, agentTree, sessionID) Model
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd)
+func (m Model) View() string
+```
+
+### 15.5 Data Flow
+
+```
+Claude CLI (subprocess)
+    │
+    ├─── STDOUT (NDJSON) ──► NDJSONReader ──► Events() chan
+    │                                              │
+    │                                              ▼
+    │                                         Claude Panel
+    │                                         (streaming text)
+    │
+    └─── STDIN (NDJSON) ◄── NDJSONWriter ◄── Send()
+                                              │
+                                              ▲
+                                         User Input
+
+Telemetry Files (fsnotify)
+    │
+    ├─── agent-lifecycle.jsonl ──► TelemetryWatcher ──► AgentTree
+    │                                                      │
+    │                                                      ▼
+    └─── routing-decisions.jsonl                      Tree View
+                                                     Detail View
+```
 
 ---
 
 *This document is designed for incremental updates. When adding new components, update the relevant section and diagram rather than rewriting prose.*
 
-**Version:** 1.0
+**Version:** 1.1
 **Generated:** 2026-01-26
 **Maintainer:** GOgent-Fortress Development Team
+**TUI Complete:** GOgent-109 through GOgent-121 (13 tickets, all tests passing)

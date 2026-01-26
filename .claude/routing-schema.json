@@ -323,6 +323,16 @@
     ]
   },
 
+  "direct_impl_check": {
+    "description": "Detects when router writes implementation code directly instead of delegating",
+    "enabled": true,
+    "write_threshold_lines": 50,
+    "edit_threshold_lines": 30,
+    "implementation_extensions": [".go", ".py", ".r", ".ts", ".js"],
+    "implementation_paths": ["internal/", "pkg/", "cmd/", "lib/", "src/"],
+    "excluded_patterns": ["*_test.go", "testdata/*", "*.gen.go", "*_generated.go"]
+  },
+
   "meta_rules": {
     "documentation_theater": {
       "description": "Enforcement belongs in hooks, not documentation",

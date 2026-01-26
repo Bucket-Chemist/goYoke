@@ -41,6 +41,8 @@ test/audit/**
 .claude/memory/pending-learnings.jsonl
 .claude/tmp/*.md
 .claude/settings.local.json
+.claude/tmp/*
+.claude/statsig/*
 
 # Obsidian
 .obsidian/

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
 )
 
@@ -642,5 +643,303 @@ func TestStatusTransitions(t *testing.T) {
 
 	if !strings.Contains(view, "✓") {
 		t.Error("Should show completed icon")
+	}
+}
+
+// TestNewWithManager verifies model initialization with SubagentManager
+func TestNewWithManager(t *testing.T) {
+	tree := NewAgentTree("test-session")
+
+	// Create a mock manager (nil is acceptable for testing)
+	model := NewWithManager(tree, nil)
+
+	if model.tree != tree {
+		t.Error("Tree not set correctly")
+	}
+
+	if model.expanded == nil {
+		t.Error("Expanded map not initialized")
+	}
+
+	if model.queryInput.Value() != "" {
+		t.Error("Query input should be empty")
+	}
+}
+
+// TestShowPickerKey verifies 's' key shows picker when manager is set
+func TestShowPickerKey(t *testing.T) {
+	tree := NewAgentTree("test-session")
+
+	// Create mock SubagentManager with test agents
+	baseCfg := cli.Config{Model: "sonnet"}
+	mgr := cli.NewSubagentManager(baseCfg)
+	mgr.Register(cli.SubagentConfig{
+		Name:        "test-agent",
+		Description: "Test agent",
+		Tier:        "sonnet",
+	})
+
+	model := NewWithManager(tree, mgr)
+	model.SetFocused(true)
+	model.width = 80
+	model.height = 40
+
+	// Press 's' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}
+	updatedModel, _ := model.handleKey(msg)
+	m := updatedModel.(Model)
+
+	if !m.showPicker {
+		t.Error("Picker should be shown after 's' key")
+	}
+
+	if m.picker == nil {
+		t.Error("Picker should be initialized")
+	}
+}
+
+// TestShowPickerNoManager verifies 's' key does nothing without manager
+func TestShowPickerNoManager(t *testing.T) {
+	tree := NewAgentTree("test-session")
+	model := New(tree)
+	model.SetFocused(true)
+
+	// Press 's' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}
+	updatedModel, _ := model.handleKey(msg)
+	m := updatedModel.(Model)
+
+	if m.showPicker {
+		t.Error("Picker should not be shown without manager")
+	}
+}
+
+// TestQueryModeEnter verifies 'q' key enters query mode for running agent
+func TestQueryModeEnter(t *testing.T) {
+	t.Skip("Requires mock ClaudeProcess - implementation test, not unit test")
+
+	// This test would require spawning a real Claude process or creating
+	// a mock implementation. The logic is covered by integration tests.
+}
+
+// TestQueryModeIgnoreNonRunning verifies 'q' key does nothing for non-running agent
+func TestQueryModeIgnoreNonRunning(t *testing.T) {
+	tree := NewAgentTree("test-session")
+
+	// Spawn agent but don't mark it running
+	event := &telemetry.AgentLifecycleEvent{
+		AgentID:   "stopped-agent",
+		SessionID: "test-session",
+		Tier:      "sonnet",
+		Timestamp: time.Now().Unix(),
+	}
+	tree.ProcessSpawn(event)
+
+	baseCfg := cli.Config{Model: "sonnet"}
+	mgr := cli.NewSubagentManager(baseCfg)
+
+	model := NewWithManager(tree, mgr)
+	model.SetFocused(true)
+	model.selectedID = "stopped-agent"
+	(&model).rebuildVisibleNodes()
+
+	// Press 'q' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}
+	updatedModel, _ := model.handleKey(msg)
+	m := updatedModel.(Model)
+
+	if m.queryMode {
+		t.Error("Query mode should not activate for non-running agent")
+	}
+}
+
+// TestStopAgentKey verifies 'x' key triggers stop command
+func TestStopAgentKey(t *testing.T) {
+	tree := NewAgentTree("test-session")
+
+	event := &telemetry.AgentLifecycleEvent{
+		AgentID:   "test-agent",
+		SessionID: "test-session",
+		Tier:      "sonnet",
+		Timestamp: time.Now().Unix(),
+	}
+	tree.ProcessSpawn(event)
+
+	baseCfg := cli.Config{Model: "sonnet"}
+	mgr := cli.NewSubagentManager(baseCfg)
+
+	model := NewWithManager(tree, mgr)
+	model.SetFocused(true)
+	model.selectedID = "test-agent"
+	(&model).rebuildVisibleNodes()
+
+	// Press 'x' key
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")}
+	updatedModel, cmd := model.handleKey(msg)
+
+	// Should return a command to stop agent
+	if cmd == nil {
+		t.Error("Expected command to stop agent")
+	}
+
+	m := updatedModel.(Model)
+	if m.selectedID != "test-agent" {
+		t.Error("Selected ID should not change")
+	}
+}
+
+// TestPickerCancelMsg verifies PickerCancelMsg closes picker
+func TestPickerCancelMsg(t *testing.T) {
+	tree := NewAgentTree("test-session")
+	model := New(tree)
+
+	// Simulate picker being shown
+	model.showPicker = true
+	picker := NewPickerModel([]cli.SubagentConfig{})
+	model.picker = &picker
+
+	// Send cancel message
+	msg := PickerCancelMsg{}
+	updatedModel, _ := model.Update(msg)
+	m := updatedModel.(Model)
+
+	if m.showPicker {
+		t.Error("Picker should be hidden after cancel")
+	}
+
+	if m.picker != nil {
+		t.Error("Picker reference should be cleared")
+	}
+}
+
+// TestSpawnAgentMsg verifies SpawnAgentMsg triggers spawn
+func TestSpawnAgentMsg(t *testing.T) {
+	tree := NewAgentTree("test-session")
+
+	baseCfg := cli.Config{Model: "sonnet"}
+	mgr := cli.NewSubagentManager(baseCfg)
+	mgr.Register(cli.SubagentConfig{
+		Name:        "test-agent",
+		Description: "Test agent",
+		Tier:        "sonnet",
+	})
+
+	model := NewWithManager(tree, mgr)
+	model.showPicker = true
+
+	// Send spawn message
+	msg := SpawnAgentMsg{AgentName: "test-agent"}
+	updatedModel, cmd := model.Update(msg)
+
+	if cmd == nil {
+		t.Error("Expected spawn command")
+	}
+
+	m := updatedModel.(Model)
+	if m.showPicker {
+		t.Error("Picker should be hidden after spawn")
+	}
+}
+
+// TestQueryInputSendOnEnter verifies query sends on enter
+func TestQueryInputSendOnEnter(t *testing.T) {
+	tree := NewAgentTree("test-session")
+
+	baseCfg := cli.Config{Model: "sonnet"}
+	mgr := cli.NewSubagentManager(baseCfg)
+
+	model := NewWithManager(tree, mgr)
+	model.SetFocused(true)
+	model.queryMode = true
+	model.queryAgent = "test-agent"
+	model.queryInput.SetValue("test query")
+
+	// Press enter
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	updatedModel, cmd := model.handleQueryInput(msg)
+
+	// Should generate send command
+	if cmd == nil {
+		t.Error("Expected query send command")
+	}
+
+	m := updatedModel.(Model)
+	if m.queryMode {
+		t.Error("Query mode should exit after send")
+	}
+
+	if m.queryInput.Value() != "" {
+		t.Error("Query input should be cleared")
+	}
+}
+
+// TestQueryInputCancelOnEsc verifies query cancels on esc
+func TestQueryInputCancelOnEsc(t *testing.T) {
+	tree := NewAgentTree("test-session")
+	model := New(tree)
+	model.SetFocused(true)
+	model.queryMode = true
+	model.queryAgent = "test-agent"
+	model.queryInput.SetValue("partial query")
+
+	// Press esc
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	updatedModel, _ := model.handleQueryInput(msg)
+
+	m := updatedModel.(Model)
+	if m.queryMode {
+		t.Error("Query mode should exit on esc")
+	}
+
+	if m.queryAgent != "" {
+		t.Error("Query agent should be cleared")
+	}
+
+	if m.queryInput.Value() != "" {
+		t.Error("Query input should be cleared")
+	}
+}
+
+// TestViewRendersPickerOverlay verifies View renders picker when shown
+func TestViewRendersPickerOverlay(t *testing.T) {
+	tree := NewAgentTree("test-session")
+	model := New(tree)
+	model.width = 80
+	model.height = 40
+
+	// Show picker
+	model.showPicker = true
+	picker := NewPickerModel([]cli.SubagentConfig{
+		{Name: "test-agent", Description: "Test", Tier: "sonnet"},
+	})
+	picker.SetSize(76, 36)
+	model.picker = &picker
+
+	view := model.View()
+
+	// Should contain picker content
+	if !strings.Contains(view, "Select Agent to Spawn") {
+		t.Error("View should contain picker title when picker is shown")
+	}
+}
+
+// TestViewRendersQueryInput verifies View renders query input when in query mode
+func TestViewRendersQueryInput(t *testing.T) {
+	tree := NewAgentTree("test-session")
+	model := New(tree)
+	model.width = 80
+	model.height = 40
+	model.queryMode = true
+	model.queryAgent = "test-agent"
+
+	view := model.View()
+
+	// Should contain query prompt
+	if !strings.Contains(view, "Query agent") {
+		t.Error("View should contain query prompt")
+	}
+
+	if !strings.Contains(view, "test-agent") {
+		t.Error("View should show agent being queried")
 	}
 }

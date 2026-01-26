@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,9 +37,46 @@ type Config struct {
 	// IncludePartial enables partial message streaming (--include-partial-messages)
 	IncludePartial bool
 
+	// NoHooks disables Claude Code hooks for testing.
+	// When true, adds --no-hooks to CLI arguments.
+	// Useful for testing TUI without GOgent hook interference.
+	NoHooks bool
+
 	// Restart defines auto-restart behavior for the subprocess.
 	// If not set, DefaultRestartPolicy() is used.
 	Restart RestartPolicy
+
+	// Timeout configures event timeout behavior.
+	// If not set, DefaultTimeoutConfig() is used.
+	Timeout TimeoutConfig
+
+	// SystemPrompt overrides the default system prompt.
+	// If set, passed as --system-prompt flag.
+	// Cannot be used with AppendPrompt.
+	SystemPrompt string
+
+	// AppendPrompt appends to the default system prompt.
+	// If set, passed as --append-prompt flag.
+	// Cannot be used with SystemPrompt.
+	AppendPrompt string
+
+	// AllowedTools is the whitelist of permitted tools.
+	// If set, each tool is passed as --allowed-tools flag.
+	// Supports patterns like "Bash(git *)".
+	AllowedTools []string
+
+	// DisallowedTools is the blacklist of forbidden tools.
+	// If set, each tool is passed as --disallowed-tools flag.
+	DisallowedTools []string
+
+	// MaxTurns limits the number of agentic turns.
+	// If > 0, passed as --max-turns flag.
+	MaxTurns int
+
+	// Model overrides the default model.
+	// Accepts: "claude-3-opus", "claude-3-sonnet", "claude-3-haiku" or aliases "opus", "sonnet", "haiku".
+	// If set, passed as --model flag.
+	Model string
 }
 
 // ClaudeProcess manages the lifecycle of a claude subprocess.
@@ -61,6 +99,12 @@ type ClaudeProcess struct {
 	running       bool
 	explicitStop  bool // Set to true when Stop() is called
 	restartState  RestartState
+	closeOnce     sync.Once      // Ensures channels are closed only once
+	readWg        sync.WaitGroup // Coordinates pipe reads before Wait() (Fix 3)
+	generation    uint64         // Process generation for restart isolation (Fix 5)
+	genMu         sync.RWMutex   // Protects generation field
+	stderrBuf     strings.Builder // Captures stderr for error classification
+	stderrMu      sync.Mutex      // Protects stderrBuf
 }
 
 // NewClaudeProcess creates a ClaudeProcess with the given config.
@@ -88,16 +132,25 @@ func NewClaudeProcess(cfg Config) (*ClaudeProcess, error) {
 	}
 	// Otherwise user has configured something, use their values
 
+	// Use default timeout config if not configured.
+	if cfg.Timeout.InactivityTimeout == 0 {
+		cfg.Timeout = DefaultTimeoutConfig()
+	}
+
 	// Build command arguments
+	// NOTE: --verbose is REQUIRED when using --print with --output-format=stream-json
 	args := []string{
 		"--print",
+		"--verbose",           // Required for stream-json output
+		"--debug-to-stderr",   // Keeps stdout clean for JSON (Fix 2)
 		"--input-format", "stream-json",
 		"--output-format", "stream-json",
 		"--session-id", sessionID,
 	}
 
-	if cfg.Verbose {
-		args = append(args, "--verbose")
+	// Add --no-hooks if configured (for testing without GOgent hooks)
+	if cfg.NoHooks {
+		args = append(args, "--no-hooks")
 	}
 
 	if cfg.IncludePartial {
@@ -106,6 +159,31 @@ func NewClaudeProcess(cfg Config) (*ClaudeProcess, error) {
 
 	if cfg.SettingsPath != "" {
 		args = append(args, "--settings", cfg.SettingsPath)
+	}
+
+	// Add system prompt (mutually exclusive with append)
+	if cfg.SystemPrompt != "" {
+		args = append(args, "--system-prompt", cfg.SystemPrompt)
+	} else if cfg.AppendPrompt != "" {
+		args = append(args, "--append-prompt", cfg.AppendPrompt)
+	}
+
+	// Add tool restrictions
+	for _, tool := range cfg.AllowedTools {
+		args = append(args, "--allowed-tools", tool)
+	}
+	for _, tool := range cfg.DisallowedTools {
+		args = append(args, "--disallowed-tools", tool)
+	}
+
+	// Add max turns limit
+	if cfg.MaxTurns > 0 {
+		args = append(args, "--max-turns", fmt.Sprintf("%d", cfg.MaxTurns))
+	}
+
+	// Add model override
+	if cfg.Model != "" {
+		args = append(args, "--model", cfg.Model)
 	}
 
 	cmd := exec.Command(cfg.ClaudePath, args...)
@@ -137,6 +215,9 @@ func (cp *ClaudeProcess) Start() error {
 		return fmt.Errorf("process already running")
 	}
 
+	// Initialize stderr buffer
+	cp.stderrBuf.Reset()
+
 	// Set up pipes
 	stdin, err := cp.cmd.StdinPipe()
 	if err != nil {
@@ -166,9 +247,16 @@ func (cp *ClaudeProcess) Start() error {
 	cp.explicitStop = false
 	cp.restartState.RecordSuccess()
 
-	// Start reading events in background
-	go cp.readEvents()
-	go cp.readStderr()
+	// Start reading events in background with WaitGroup coordination (Fix 3)
+	cp.readWg.Add(2) // For readEvents and readStderr
+	go func() {
+		defer cp.readWg.Done()
+		cp.readEvents()
+	}()
+	go func() {
+		defer cp.readWg.Done()
+		cp.readStderr()
+	}()
 
 	// Always start restart monitor to handle process exit
 	// It will honor the Enabled flag for restart behavior
@@ -182,6 +270,7 @@ func (cp *ClaudeProcess) Start() error {
 // then sends SIGKILL if process hasn't terminated.
 // Safe to call multiple times - returns nil if already stopped.
 // Prevents auto-restart when called explicitly.
+// Closes events and errors channels exactly once via sync.Once.
 func (cp *ClaudeProcess) Stop() error {
 	cp.mu.Lock()
 
@@ -204,12 +293,12 @@ func (cp *ClaudeProcess) Stop() error {
 
 	// Wait for process exit via exitChan (populated by monitorRestart)
 	// Don't call cmd.Wait() here - monitorRestart already does that
+	var exitErr error
 	select {
-	case err := <-cp.exitChan:
+	case exitErr = <-cp.exitChan:
 		cp.mu.Lock()
 		cp.running = false
 		cp.mu.Unlock()
-		return err
 	case <-time.After(5 * time.Second):
 		// Force kill after timeout
 		if cp.cmd.Process != nil {
@@ -223,15 +312,31 @@ func (cp *ClaudeProcess) Stop() error {
 		cp.mu.Lock()
 		cp.running = false
 		cp.mu.Unlock()
-		return fmt.Errorf("process killed after timeout")
+		exitErr = fmt.Errorf("process killed after timeout")
 	}
+
+	// Close channels exactly once
+	cp.closeOnce.Do(func() {
+		close(cp.events)
+		close(cp.errors)
+	})
+
+	return exitErr
 }
 
 // Send sends a text message to the claude process.
 // Thread-safe - can be called from multiple goroutines.
 // Returns error if write fails or process is not running.
 func (cp *ClaudeProcess) Send(message string) error {
-	return cp.SendJSON(UserMessage{Content: message})
+	return cp.SendJSON(UserMessage{
+		Type: "user",
+		Message: UserContent{
+			Role: "user",
+			Content: []ContentBlock{
+				{Type: "text", Text: message},
+			},
+		},
+	})
 }
 
 // SendJSON sends a structured message to the claude process.
@@ -283,13 +388,32 @@ func (cp *ClaudeProcess) SessionID() string {
 	return cp.sessionID
 }
 
+// currentGeneration returns the current process generation.
+// Used to detect stale goroutines after restart (Fix 5).
+func (cp *ClaudeProcess) currentGeneration() uint64 {
+	cp.genMu.RLock()
+	defer cp.genMu.RUnlock()
+	return cp.generation
+}
+
+// incrementGeneration increments and returns the new generation number.
+// Called during restart to invalidate old goroutines (Fix 5).
+func (cp *ClaudeProcess) incrementGeneration() uint64 {
+	cp.genMu.Lock()
+	defer cp.genMu.Unlock()
+	cp.generation++
+	return cp.generation
+}
+
 // readEvents reads NDJSON events from stdout in a loop.
 // Runs in a background goroutine started by Start().
-// Respects done channel for shutdown and closes event channel on exit.
+// Respects done channel for shutdown.
+// NOTE: Does NOT close cp.events - channel closure is handled by Stop().
 func (cp *ClaudeProcess) readEvents() {
-	defer close(cp.events)
-
+	// Capture generation at start to detect stale goroutines (Fix 5)
+	myGen := cp.currentGeneration()
 	reader := NewNDJSONReader(cp.stdout)
+	lastEventTime := time.Now()
 
 	for {
 		// Check for shutdown signal
@@ -297,6 +421,21 @@ func (cp *ClaudeProcess) readEvents() {
 		case <-cp.done:
 			return
 		default:
+		}
+
+		// Check if this is a stale goroutine from previous generation (Fix 5)
+		if cp.currentGeneration() != myGen {
+			return
+		}
+
+		// Check inactivity timeout
+		if cp.config.Timeout.InactivityTimeout > 0 {
+			if time.Since(lastEventTime) > cp.config.Timeout.InactivityTimeout {
+				if cp.currentGeneration() == myGen {
+					cp.errors <- fmt.Errorf("timeout: no events for %v", cp.config.Timeout.InactivityTimeout)
+				}
+				return
+			}
 		}
 
 		// Read next line with context
@@ -323,21 +462,32 @@ func (cp *ClaudeProcess) readEvents() {
 		case readErr = <-errChan:
 			cancel()
 			if readErr != nil && readErr != io.EOF {
-				cp.errors <- fmt.Errorf("read error: %w", readErr)
+				// Only send error if still current generation
+				if cp.currentGeneration() == myGen {
+					cp.errors <- fmt.Errorf("read error: %w", readErr)
+				}
 			}
 			return
 		case data = <-dataChan:
 			cancel()
+			// Update lastEventTime on successful read
+			lastEventTime = time.Now()
 		}
 
 		// Parse event
 		event, err := parseEvent(data)
 		if err != nil {
-			cp.errors <- fmt.Errorf("parse error: %w", err)
+			// Only send error if still current generation
+			if cp.currentGeneration() == myGen {
+				cp.errors <- fmt.Errorf("parse error: %w", err)
+			}
 			continue
 		}
 
-		// Send event (non-blocking due to buffer)
+		// Send event only if still current generation (non-blocking due to buffer)
+		if cp.currentGeneration() != myGen {
+			return
+		}
 		select {
 		case cp.events <- event:
 		case <-cp.done:
@@ -348,9 +498,10 @@ func (cp *ClaudeProcess) readEvents() {
 
 // readStderr reads stderr output and forwards to errors channel.
 // Runs in a background goroutine started by Start().
+// NOTE: Does NOT close cp.errors - channel closure is handled by Stop().
 func (cp *ClaudeProcess) readStderr() {
-	defer close(cp.errors)
-
+	// Capture generation at start to detect stale goroutines (Fix 5)
+	myGen := cp.currentGeneration()
 	reader := NewNDJSONReader(cp.stderr)
 	for {
 		select {
@@ -359,16 +510,30 @@ func (cp *ClaudeProcess) readStderr() {
 		default:
 		}
 
+		// Check if this is a stale goroutine from previous generation (Fix 5)
+		if cp.currentGeneration() != myGen {
+			return
+		}
+
 		data, err := reader.Read()
 		if err != nil {
-			if err != io.EOF {
+			if err != io.EOF && cp.currentGeneration() == myGen {
 				cp.errors <- fmt.Errorf("stderr read error: %w", err)
 			}
 			return
 		}
 
-		// Forward stderr as error
-		cp.errors <- fmt.Errorf("stderr: %s", string(data))
+		// Buffer stderr for error classification
+		cp.stderrMu.Lock()
+		cp.stderrBuf.Write(data)
+		cp.stderrBuf.WriteByte('\n')
+		cp.stderrMu.Unlock()
+
+		// Parse and send ClaudeError only if still current generation
+		if cp.currentGeneration() == myGen {
+			claudeErr := ParseError(string(data), 0)
+			cp.errors <- claudeErr
+		}
 	}
 }
 
@@ -385,6 +550,23 @@ func (cp *ClaudeProcess) monitorRestart() {
 	// Wait for process to exit - this is the single Wait() call
 	err := cp.cmd.Wait()
 
+	// Get exit code and stderr for error classification
+	var exitCode int
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		exitCode = exitErr.ExitCode()
+	}
+
+	cp.stderrMu.Lock()
+	stderrContent := cp.stderrBuf.String()
+	cp.stderrMu.Unlock()
+
+	// Classify the error
+	var claudeErr *ClaudeError
+	if err != nil {
+		claudeErr = ParseError(stderrContent, exitCode)
+		claudeErr.Original = err
+	}
+
 	// Send exit notification to exitChan for Stop() to consume if needed
 	select {
 	case cp.exitChan <- err:
@@ -400,13 +582,22 @@ func (cp *ClaudeProcess) monitorRestart() {
 
 	// If this was an explicit stop or we're not running, don't restart
 	if explicitStop || !running {
-		cp.sendExitEvent(err, false)
+		cp.sendExitEvent(claudeErr, false)
 		return
 	}
 
 	// If restart is disabled, just exit
 	if !restartEnabled {
-		cp.sendExitEvent(err, false)
+		cp.sendExitEvent(claudeErr, false)
+		cp.mu.Lock()
+		cp.running = false
+		cp.mu.Unlock()
+		return
+	}
+
+	// DON'T RESTART on authentication errors - they won't self-heal
+	if claudeErr != nil && claudeErr.Type == ErrorAuthentication {
+		cp.sendExitEvent(claudeErr, false)
 		cp.mu.Lock()
 		cp.running = false
 		cp.mu.Unlock()
@@ -416,7 +607,7 @@ func (cp *ClaudeProcess) monitorRestart() {
 	// Check if we should restart based on policy
 	if !cp.restartState.ShouldRestart(cp.config.Restart) {
 		// Max restarts exceeded
-		cp.sendMaxRestartsEvent(err)
+		cp.sendMaxRestartsEvent(claudeErr)
 		return
 	}
 
@@ -425,7 +616,7 @@ func (cp *ClaudeProcess) monitorRestart() {
 	cp.restartState.RecordAttempt()
 
 	// Send restart event
-	cp.sendRestartEvent(err, delay)
+	cp.sendRestartEvent(claudeErr, delay)
 
 	// Wait for backoff period
 	select {
@@ -447,7 +638,49 @@ func (cp *ClaudeProcess) monitorRestart() {
 }
 
 // restart recreates and starts the subprocess with the same or new session ID.
+// Creates fresh channels for the new process instead of reusing potentially-closed channels.
 func (cp *ClaudeProcess) restart() error {
+	// Signal old goroutines to stop by closing done channel
+	cp.mu.Lock()
+	oldDone := cp.done
+	cp.mu.Unlock()
+
+	select {
+	case <-oldDone:
+		// Already closed
+	default:
+		close(oldDone)
+	}
+
+	// Wait for previous generation's goroutines to complete pipe reading.
+	// Use timeout to prevent indefinite blocking.
+	waitDone := make(chan struct{})
+	go func() {
+		cp.readWg.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case <-waitDone:
+		// Old goroutines finished draining pipes
+	case <-time.After(5 * time.Second):
+		// Timeout - log warning but continue with restart
+		// This prevents indefinite blocking if goroutines hang
+		select {
+		case cp.errors <- fmt.Errorf("warning: restart timeout waiting for pipe readers, continuing anyway"):
+		default:
+			// Errors channel may be full, continue anyway
+		}
+	}
+
+	// NOW safe to increment generation - old goroutines are done
+	cp.incrementGeneration()
+
+	// Clear stderr buffer for new process
+	cp.stderrMu.Lock()
+	cp.stderrBuf.Reset()
+	cp.stderrMu.Unlock()
+
 	cp.mu.Lock()
 
 	// Determine session ID for restart
@@ -462,19 +695,19 @@ func (cp *ClaudeProcess) restart() error {
 
 	cp.mu.Unlock()
 
-	// Create new command
+	// Create new command with fresh channels
 	newProc, err := NewClaudeProcess(cfg)
 	if err != nil {
 		return fmt.Errorf("create new process: %w", err)
 	}
 
-	// Transfer restart state
+	// Transfer restart state and restartEvents channel (not event/error channels)
 	cp.mu.Lock()
 	newProc.restartState = cp.restartState
 	newProc.restartEvents = cp.restartEvents
-	newProc.events = cp.events
-	newProc.errors = cp.errors
+	// DO NOT transfer events/errors - newProc has fresh channels
 	newProc.done = make(chan struct{}) // New done channel
+	newProc.readWg = sync.WaitGroup{}  // Fresh WaitGroup for new generation
 	cp.mu.Unlock()
 
 	// Start new process
@@ -482,7 +715,7 @@ func (cp *ClaudeProcess) restart() error {
 		return fmt.Errorf("start new process: %w", err)
 	}
 
-	// Update self with new process state
+	// Update self with new process state and FRESH channels
 	cp.mu.Lock()
 	cp.cmd = newProc.cmd
 	cp.stdin = newProc.stdin
@@ -491,6 +724,10 @@ func (cp *ClaudeProcess) restart() error {
 	cp.writer = newProc.writer
 	cp.sessionID = sessionID
 	cp.done = newProc.done
+	cp.readWg = newProc.readWg        // Use fresh WaitGroup
+	cp.events = newProc.events        // Use fresh channel
+	cp.errors = newProc.errors        // Use fresh channel
+	cp.closeOnce = sync.Once{}        // Reset close guard
 	cp.running = true
 	cp.mu.Unlock()
 
@@ -500,6 +737,9 @@ func (cp *ClaudeProcess) restart() error {
 // startProcess starts the subprocess without creating a new ClaudeProcess.
 // Used internally by restart logic.
 func (cp *ClaudeProcess) startProcess() error {
+	// Initialize stderr buffer
+	cp.stderrBuf.Reset()
+
 	// Set up pipes
 	stdin, err := cp.cmd.StdinPipe()
 	if err != nil {
@@ -528,9 +768,16 @@ func (cp *ClaudeProcess) startProcess() error {
 	cp.running = true
 	cp.restartState.RecordSuccess()
 
-	// Start reading events in background
-	go cp.readEvents()
-	go cp.readStderr()
+	// Start reading events in background with WaitGroup coordination
+	cp.readWg.Add(2) // For readEvents and readStderr
+	go func() {
+		defer cp.readWg.Done()
+		cp.readEvents()
+	}()
+	go func() {
+		defer cp.readWg.Done()
+		cp.readStderr()
+	}()
 
 	// Always start restart monitor to handle process exit
 	// It will honor the Enabled flag for restart behavior
@@ -540,16 +787,19 @@ func (cp *ClaudeProcess) startProcess() error {
 }
 
 // sendRestartEvent sends a RestartEvent indicating a restart is about to happen.
-func (cp *ClaudeProcess) sendRestartEvent(err error, delay time.Duration) {
+func (cp *ClaudeProcess) sendRestartEvent(claudeErr *ClaudeError, delay time.Duration) {
 	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		}
+	reason := "unknown"
+
+	if claudeErr != nil {
+		exitCode = claudeErr.Code
+		reason = claudeErr.Type.String()
+	} else {
+		reason = "normal_exit"
 	}
 
 	event := RestartEvent{
-		Reason:     classifyExitReason(err),
+		Reason:     reason,
 		AttemptNum: cp.restartState.Attempts + 1,
 		SessionID:  cp.sessionID,
 		WillResume: cp.config.Restart.PreserveSession,
@@ -566,12 +816,10 @@ func (cp *ClaudeProcess) sendRestartEvent(err error, delay time.Duration) {
 }
 
 // sendMaxRestartsEvent sends a RestartEvent indicating max restarts exceeded.
-func (cp *ClaudeProcess) sendMaxRestartsEvent(err error) {
+func (cp *ClaudeProcess) sendMaxRestartsEvent(claudeErr *ClaudeError) {
 	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		}
+	if claudeErr != nil {
+		exitCode = claudeErr.Code
 	}
 
 	event := RestartEvent{
@@ -596,12 +844,10 @@ func (cp *ClaudeProcess) sendMaxRestartsEvent(err error) {
 }
 
 // sendExitEvent sends a RestartEvent for explicit stop.
-func (cp *ClaudeProcess) sendExitEvent(err error, willRestart bool) {
+func (cp *ClaudeProcess) sendExitEvent(claudeErr *ClaudeError, willRestart bool) {
 	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		}
+	if claudeErr != nil {
+		exitCode = claudeErr.Code
 	}
 
 	event := RestartEvent{
@@ -618,20 +864,4 @@ func (cp *ClaudeProcess) sendExitEvent(err error, willRestart bool) {
 	case cp.restartEvents <- event:
 	default:
 	}
-}
-
-// classifyExitReason determines the reason for process exit based on error.
-func classifyExitReason(err error) string {
-	if err == nil {
-		return "normal_exit"
-	}
-
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		if exitErr.ExitCode() == -1 {
-			return "signal"
-		}
-		return "crash"
-	}
-
-	return "error"
 }

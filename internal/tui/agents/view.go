@@ -1,12 +1,16 @@
 package agents
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 )
 
 // Model is the tree view component for the agent delegation tree
@@ -29,6 +33,14 @@ type Model struct {
 
 	// Focus state
 	focused bool
+
+	// Agent management
+	subagentMgr *cli.SubagentManager // Manager for spawning/querying agents
+	picker      *PickerModel         // Picker overlay (nil when not shown)
+	showPicker  bool                 // Whether picker is visible
+	queryMode   bool                 // Whether query input is active
+	queryAgent  string               // Agent being queried
+	queryInput  textarea.Model       // Input for query text
 }
 
 // Styles contains all lipgloss styles for the tree view
@@ -85,10 +97,24 @@ func DefaultStyles() Styles {
 
 // New creates a new tree view model
 func New(tree *AgentTree) Model {
+	return NewWithManager(tree, nil)
+}
+
+// NewWithManager creates a new tree view model with agent manager
+func NewWithManager(tree *AgentTree, mgr *cli.SubagentManager) Model {
+	// Create query input textarea
+	ta := textarea.New()
+	ta.Placeholder = "Enter your query..."
+	ta.CharLimit = 2000
+	ta.SetHeight(3)
+	ta.ShowLineNumbers = false
+
 	return Model{
-		tree:     tree,
-		expanded: make(map[string]bool),
-		styles:   DefaultStyles(),
+		tree:        tree,
+		expanded:    make(map[string]bool),
+		styles:      DefaultStyles(),
+		subagentMgr: mgr,
+		queryInput:  ta,
 	}
 }
 
@@ -106,6 +132,26 @@ type AgentUpdateMsg struct {
 type SelectionMsg struct {
 	AgentID string
 }
+
+// QuerySentMsg is emitted when a query is sent to an agent
+type QuerySentMsg struct {
+	AgentName string
+	Events    <-chan cli.Event
+}
+
+// AgentSpawnedMsg is emitted when an agent is spawned
+type AgentSpawnedMsg struct {
+	AgentName string
+	Process   *cli.ClaudeProcess
+}
+
+// AgentStoppedMsg is emitted when an agent is stopped
+type AgentStoppedMsg struct {
+	AgentName string
+}
+
+// errMsg wraps errors for Bubbletea
+type errMsg struct{ error }
 
 // Update handles messages and updates the model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -125,6 +171,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tree = msg.Tree
 		m.rebuildVisibleNodes()
 		return m, nil
+
+	case SpawnAgentMsg:
+		// Spawn the selected agent
+		m.showPicker = false
+		m.picker = nil
+		return m, m.spawnAgent(msg.AgentName)
+
+	case PickerCancelMsg:
+		// Close picker
+		m.showPicker = false
+		m.picker = nil
+		return m, nil
+
+	case AgentSpawnedMsg:
+		// Agent was spawned - could update tree or show notification
+		return m, nil
+
+	case AgentStoppedMsg:
+		// Agent was stopped
+		return m, nil
+
+	case QuerySentMsg:
+		// Query was sent - could show notification
+		return m, nil
+
+	case errMsg:
+		// Error occurred - could show error state
+		return m, nil
 	}
 
 	return m, nil
@@ -132,6 +206,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKey processes keyboard input
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If picker is shown, forward to picker
+	if m.showPicker {
+		return m.handlePickerInput(msg)
+	}
+
+	// If query mode, forward to query input
+	if m.queryMode {
+		return m.handleQueryInput(msg)
+	}
+
 	switch msg.String() {
 	case "up", "k":
 		if m.cursorPos > 0 {
@@ -180,6 +264,35 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case "s":
+		// Show agent picker
+		if m.subagentMgr != nil {
+			agents := m.subagentMgr.List()
+			picker := NewPickerModel(agents)
+			picker.SetSize(m.width-4, m.height-4)
+			m.picker = &picker
+			m.showPicker = true
+		}
+		return m, nil
+
+	case "q":
+		// Query selected agent (if it's running)
+		if m.selectedID != "" && m.subagentMgr != nil {
+			if m.subagentMgr.IsRunning(m.selectedID) {
+				m.queryMode = true
+				m.queryAgent = m.selectedID
+				m.queryInput.Focus()
+			}
+		}
+		return m, nil
+
+	case "x":
+		// Stop selected agent
+		if m.selectedID != "" && m.subagentMgr != nil {
+			return m, m.stopAgent(m.selectedID)
+		}
+		return m, nil
+
 	case "r":
 		return m, m.refresh()
 	}
@@ -187,8 +300,102 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handlePickerInput forwards input to the picker overlay
+func (m Model) handlePickerInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.picker == nil {
+		return m, nil
+	}
+
+	updatedPicker, cmd := m.picker.Update(msg)
+	picker := updatedPicker.(PickerModel)
+	m.picker = &picker
+
+	return m, cmd
+}
+
+// handleQueryInput handles input for querying an agent
+func (m Model) handleQueryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.queryMode = false
+		m.queryAgent = ""
+		m.queryInput.Blur()
+		m.queryInput.Reset()
+		return m, nil
+
+	case "enter":
+		if m.queryInput.Value() != "" {
+			query := m.queryInput.Value()
+			agent := m.queryAgent
+			m.queryMode = false
+			m.queryAgent = ""
+			m.queryInput.Reset()
+			return m, m.sendQuery(agent, query)
+		}
+		return m, nil
+	}
+
+	// Forward to textarea
+	var cmd tea.Cmd
+	m.queryInput, cmd = m.queryInput.Update(msg)
+	return m, cmd
+}
+
+// sendQuery sends a query to the specified agent
+func (m Model) sendQuery(agentName, query string) tea.Cmd {
+	return func() tea.Msg {
+		if m.subagentMgr == nil {
+			return nil
+		}
+		events, err := m.subagentMgr.Query(agentName, query)
+		if err != nil {
+			return errMsg{err}
+		}
+		return QuerySentMsg{AgentName: agentName, Events: events}
+	}
+}
+
+// spawnAgent spawns a new agent
+func (m Model) spawnAgent(agentName string) tea.Cmd {
+	return func() tea.Msg {
+		if m.subagentMgr == nil {
+			return nil
+		}
+		proc, err := m.subagentMgr.Spawn(context.Background(), agentName)
+		if err != nil {
+			return errMsg{err}
+		}
+		return AgentSpawnedMsg{AgentName: agentName, Process: proc}
+	}
+}
+
+// stopAgent stops a running agent
+func (m Model) stopAgent(agentName string) tea.Cmd {
+	return func() tea.Msg {
+		if m.subagentMgr == nil {
+			return nil
+		}
+		err := m.subagentMgr.Stop(agentName)
+		if err != nil {
+			return errMsg{err}
+		}
+		return AgentStoppedMsg{AgentName: agentName}
+	}
+}
+
 // View renders the tree view
 func (m Model) View() string {
+	// If picker is shown, render it as overlay
+	if m.showPicker && m.picker != nil {
+		return m.renderWithOverlay(m.picker.View())
+	}
+
+	// If query mode, show query input
+	if m.queryMode {
+		return m.renderWithQueryInput()
+	}
+
+	// Normal tree view
 	if m.tree == nil || m.tree.Root == nil {
 		empty := m.styles.Empty.Render("No agents running")
 		return m.styles.Border.
@@ -580,4 +787,82 @@ func (m *Model) ExpandAll() {
 func (m *Model) CollapseAll() {
 	m.expanded = make(map[string]bool)
 	m.rebuildVisibleNodes()
+}
+
+// renderWithOverlay renders tree view dimmed with picker overlay centered
+func (m Model) renderWithOverlay(overlay string) string {
+	// Render tree view dimmed
+	var content strings.Builder
+	title := m.styles.Title.Render("Agent Tree")
+	stats := m.renderStats()
+	content.WriteString(title)
+	content.WriteString(" ")
+	content.WriteString(stats)
+	content.WriteString("\n")
+	content.WriteString(strings.Repeat("─", m.width-6))
+	content.WriteString("\n")
+
+	tree := m.renderTree()
+	content.WriteString(tree)
+
+	treeView := m.styles.Border.
+		Width(m.width - 4).
+		Height(m.height - 4).
+		Render(content.String())
+
+	// Dim the tree view
+	dimmedTree := m.styles.Normal.Faint(true).Render(treeView)
+
+	// Center the overlay
+	overlayStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("205")).
+		Padding(1)
+
+	centered := lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		overlayStyle.Render(overlay),
+	)
+
+	// Layer them
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Left,
+		lipgloss.Top,
+		dimmedTree+"\n"+centered,
+	)
+}
+
+// renderWithQueryInput renders query input overlay
+func (m Model) renderWithQueryInput() string {
+	var b strings.Builder
+
+	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+
+	b.WriteString(m.styles.Title.Render(fmt.Sprintf("Query agent: %s", m.queryAgent)))
+	b.WriteString("\n\n")
+	b.WriteString(m.queryInput.View())
+	b.WriteString("\n\n")
+	b.WriteString(helpStyle.Render("enter send • esc cancel"))
+
+	// Center it
+	queryStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("205")).
+		Padding(1).
+		Width(m.width - 10)
+
+	centered := lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		queryStyle.Render(b.String()),
+	)
+
+	return centered
 }

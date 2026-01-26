@@ -87,8 +87,8 @@ Use the `Task` tool with multiple agents when:
 - Gathering context from multiple codebases
 
 ```
-Example: "Launch parallel agents to research PyTorch DataLoader best practices
-and TensorFlow tf.data patterns, then synthesize recommendations"
+Example: "Launch parallel agents to research Bubbletea tea.Model patterns
+and lipgloss styling conventions, then synthesize recommendations"
 ```
 
 ### Todo Tracking for Complex Tasks
@@ -188,6 +188,62 @@ DEVICE: [CPU, CUDA, TPU considerations]
 - Shared state requirements
 - Progress tracking needs
 
+### Go Development (Primary Language)
+
+**Code Structure Specification:**
+```
+PACKAGE: [package name and responsibility]
+IMPORTS: [expected dependencies]
+TYPES: [structs, interfaces to define]
+FUNCTIONS: [public API with signatures]
+ERROR HANDLING: [error types, wrapping strategy]
+TESTS: [table-driven test expectations]
+```
+
+**Interface Design:**
+- Keep interfaces small (1-3 methods)
+- Define interfaces at the point of use, not implementation
+- Accept interfaces, return concrete types
+- Example: `io.Reader` over custom `DataSource`
+
+**Error Handling Patterns:**
+- Always handle errors explicitly (no `_` for errors)
+- Wrap errors with context: `fmt.Errorf("loading config: %w", err)`
+- Define sentinel errors for expected conditions
+- Use error types for errors that need inspection
+
+**Concurrency Specification:**
+```
+PATTERN: [fan-out/fan-in, worker pool, pipeline]
+GOROUTINES: [number and responsibility]
+SYNCHRONIZATION: [channels, mutex, errgroup]
+CANCELLATION: [context.Context usage]
+ERROR PROPAGATION: [how errors surface]
+```
+
+**Common Go Agents:**
+| Agent | Use For | Key Patterns |
+|-------|---------|--------------|
+| `go-pro` | Core implementation | Idiomatic Go, error handling |
+| `go-cli` | CLI apps (Cobra) | Flags, subcommands, help text |
+| `go-tui` | TUI apps (Bubbletea) | tea.Model, tea.Cmd, lipgloss |
+| `go-api` | HTTP clients/servers | Context, retry, rate limiting |
+| `go-concurrent` | Concurrency | errgroup, channels, context |
+
+**Testing Patterns:**
+- Table-driven tests for multiple cases
+- Subtests with `t.Run()` for organization
+- Test helpers with `t.Helper()` marking
+- `testdata/` directory for fixtures
+- Example: `TestParseConfig/valid_json`, `TestParseConfig/missing_field`
+
+**GOgent-Fortress Specific:**
+- All hook binaries read JSON from STDIN with 5s timeout
+- Output JSON to STDOUT for Claude Code consumption
+- Use `pkg/routing` for schema validation
+- Use `pkg/session` for handoff operations
+- JSONL files are append-only (never rewrite)
+
 ---
 
 ## Anti-Patterns to Avoid
@@ -270,9 +326,9 @@ DEVICE: [CPU, CUDA, TPU considerations]
 - History → key decisions and constraints
 
 ### What to Reference
-- Rule files by name: "per R.md conventions"
+- Rule files by name: "per go.md conventions"
 - Previous conversation context: "as discussed above"
-- External docs: use WebFetch or Context7 tools
+- External docs: use WebFetch tool or MCP-provided fetch tools
 
 ---
 
@@ -293,10 +349,12 @@ Use `Task(model: "haiku")` or `Task(model: "sonnet")` to delegate work to cheape
 | Conflict judgment | Opus | Requires nuanced assessment |
 | MCP API calls | Opus | Direct API, delegation overhead exceeds savings |
 | **SONNET (Reasoning, Familiar)** | | |
+| Go implementation (go-pro, go-tui, go-cli) | Sonnet | Needs reasoning, follows Go idioms |
 | Code understanding | Sonnet | Needs reasoning but standard patterns |
 | Core implementation | Sonnet | Following established patterns |
 | Single-domain analysis | Sonnet | Focused analysis, not cross-cutting |
 | Documentation generation | Sonnet | Structured output with reasoning |
+| Concurrency design (go-concurrent) | Sonnet | Channel patterns, error propagation |
 | **HAIKU (Mechanical Work)** | | |
 | File discovery (glob, find, ls) | Haiku | Pure file operations |
 | Pattern extraction (grep, regex) | Haiku | Mechanical matching |
@@ -305,6 +363,7 @@ Use `Task(model: "haiku")` or `Task(model: "sonnet")` to delegate work to cheape
 | Skill/index loading | Haiku | File reading |
 | Boilerplate generation | Haiku | Template following |
 | Sharp edge detection | Haiku | Pattern matching against known list |
+| Code review (style only) | Haiku | Convention checking, no design judgment |
 
 ### Routing Enforcement
 
@@ -331,6 +390,13 @@ For complex research tasks, launch multiple Haiku scouts in parallel:
 - Haiku Scout 3: Code snippet extraction
 → Sonnet Analyst: Synthesize findings
 → Opus Main: Make architectural decisions
+```
+
+For Go implementation tasks, consider:
+```
+- Haiku Scout: Find existing patterns (grep for similar interfaces)
+- go-pro (Sonnet): Implement core logic
+- code-reviewer (Haiku): Verify conventions
 ```
 
 ---
@@ -389,14 +455,14 @@ Use:
    - Parsed by hooks at runtime
    - Example: `"task_invocation_blocked": true`
 
-2. **Programmatic Enforcement** (`validate-routing.sh` or dedicated hook)
+2. **Programmatic Enforcement** (Go hook binary, e.g., `gogent-validate`)
    - Actually runs before/after tool use
    - Can block, warn, or modify behavior
-   - Example: Check schema rule, emit error, set `"decision": "block"`
+   - Example: Check schema rule, return `routing.BlockResponse()` with reason
 
 3. **Reference Documentation** (`CLAUDE.md`)
    - Points to enforcement, doesn't replace it
-   - Example: "Blocked by validate-routing.sh line 42"
+   - Example: "Blocked by gogent-validate (PreToolUse hook)"
    - Provides context for WHY, not enforcement of WHAT
 
 ### Decision Tree: Where Does This Go?
@@ -409,7 +475,7 @@ Is this enforcement of a behavior?
 │   ├─ YES: What kind of enforcement?
 │   │   │
 │   │   ├─ Block action → routing-schema.json rule
-│   │   │                 + validate-routing.sh check
+│   │   │                 + gogent-validate check (Go binary)
 │   │   │                 + CLAUDE.md reference
 │   │   │
 │   │   ├─ Require action → Hook injects reminder at trigger
@@ -435,7 +501,7 @@ Is this enforcement of a behavior?
 
 | Need | ❌ Wrong | ✅ Right |
 |------|----------|----------|
-| Block a tool pattern | "You MUST NOT use X" in CLAUDE.md | `routing-schema.json` rule + hook enforcement + CLAUDE.md reference |
+| Block a tool pattern | "You MUST NOT use X" in CLAUDE.md | `routing-schema.json` rule + `gogent-validate` enforcement + CLAUDE.md reference |
 | Require pre-check | "ALWAYS check Y first" in CLAUDE.md | Hook injects reminder at trigger point |
 | Prevent anti-pattern | "NEVER do Z" in CLAUDE.md | This section in LLM-guidelines.md + warning hook |
 | Document workflow | Gates 1-5 in CLAUDE.md | ✅ Appropriate (this IS documentation) |
@@ -490,19 +556,20 @@ If any answer is wrong, implement programmatic enforcement first.
 }
 ```
 
-2. `validate-routing.sh`:
-```bash
-if [[ "$task_model" == "opus" ]]; then
-    echo '{"decision": "block", "reason": "Task(opus) blocked. Use /einstein"}'
-    exit 0
-fi
+2. `cmd/gogent-validate/main.go`:
+```go
+if event.Task != nil && event.Task.Model == "opus" {
+    return routing.BlockResponse(
+        "Task(opus) blocked by gogent-validate. Use /einstein instead.",
+    )
+}
 ```
 
 3. `CLAUDE.md`:
 ```markdown
 ## Gate 6: Einstein Escalation
 
-Einstein invocation via Task tool is blocked by `validate-routing.sh` (line 87).
+Einstein invocation via Task tool is blocked by `gogent-validate` (PreToolUse hook).
 See `routing-schema.json` → `opus.task_invocation_blocked`.
 
 When Einstein triggers fire, use `escalate_to_einstein` protocol instead.

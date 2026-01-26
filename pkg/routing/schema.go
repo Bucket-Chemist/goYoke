@@ -29,6 +29,7 @@ type Schema struct {
 	DelegationRules      DelegationRules       `json:"delegation_rules"`
 	AgentSubagentMapping AgentSubagentMapping  `json:"agent_subagent_mapping"`
 	BlockedPatterns      BlockedPatternsConfig `json:"blocked_patterns"`
+	DirectImplCheck      DirectImplCheckConfig `json:"direct_impl_check"`
 	MetaRules            MetaRules             `json:"meta_rules"`
 }
 
@@ -227,6 +228,17 @@ type BlockedPattern struct {
 	Reason      string `json:"reason"`
 	Alternative string `json:"alternative"`
 	CostImpact  string `json:"cost_impact"`
+}
+
+// DirectImplCheckConfig configures detection of direct implementation instead of delegation.
+type DirectImplCheckConfig struct {
+	Description              string   `json:"description"`
+	Enabled                  bool     `json:"enabled"`
+	WriteThresholdLines      int      `json:"write_threshold_lines"`
+	EditThresholdLines       int      `json:"edit_threshold_lines"`
+	ImplementationExtensions []string `json:"implementation_extensions"`
+	ImplementationPaths      []string `json:"implementation_paths"`
+	ExcludedPatterns         []string `json:"excluded_patterns"`
 }
 
 // MetaRules defines meta-enforcement rules.

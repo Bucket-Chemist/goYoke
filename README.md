@@ -175,6 +175,19 @@ GOgent-Fortress/
 │   ├── config/                   # Path resolution, XDG compliance
 │   ├── workflow/                 # Orchestrator guard logic
 │   └── enforcement/              # Validation orchestration
+├── internal/                     # Internal packages (TUI)
+│   ├── cli/                      # Claude CLI subprocess management
+│   │   ├── subprocess.go         # Process lifecycle, NDJSON streams
+│   │   ├── events.go             # Claude event type parsing
+│   │   ├── streams.go            # NDJSON reader/writer
+│   │   ├── restart.go            # Auto-restart on panic
+│   │   └── session.go            # Session management
+│   └── tui/                      # Bubbletea TUI components
+│       ├── agents/               # Agent tree visualization
+│       ├── claude/               # Claude conversation panel
+│       ├── layout/               # 70/30 split layout + banner
+│       ├── session/              # Session picker modal
+│       └── dashboard/            # Performance dashboard
 ├── .claude/                      # Claude Code configuration
 │   ├── CLAUDE.md                 # Router instructions
 │   ├── routing-schema.json       # Source of truth
@@ -474,11 +487,77 @@ Three-tier CI/CD workflow:
 
 ---
 
+## TUI System (GOgent-109 to GOgent-121)
+
+A complete Bubbletea-based terminal interface for Claude Code with real-time telemetry visualization.
+
+### Components
+
+| Package | Component | Purpose |
+|---------|-----------|---------|
+| `internal/cli` | ClaudeProcess | Subprocess management with NDJSON streams |
+| `internal/cli` | Events | Claude CLI event type parsing (system, assistant, result) |
+| `internal/cli` | RestartPolicy | Auto-restart on panic with exponential backoff |
+| `internal/cli` | SessionManager | Session list, resume, delete operations |
+| `internal/tui/agents` | AgentTree | Hierarchical model tracking agent delegation |
+| `internal/tui/agents` | TreeModel | Bubbletea tree view with expand/collapse |
+| `internal/tui/agents` | DetailModel | Agent detail sidebar with status indicators |
+| `internal/tui/claude` | PanelModel | Claude conversation with streaming output |
+| `internal/tui/claude` | HookSidebar | Real-time hook event display |
+| `internal/tui/layout` | Model | 70/30 split layout with focus management |
+| `internal/tui/layout` | BannerModel | Navigation tabs with session info |
+| `internal/tui/session` | PickerModel | Session list modal for resume/delete |
+
+### Architecture
+
+```
++-----------------------------------------------------------------------------+
+| [1] Claude  [2] Agents  [3] Stats  [4] Query    Session: abc12345 | Cost: $0.34 |
++-----------------------------------------------------------------------------+
+|                              |                                              |
+|   Claude Conversation        |   Agent Tree                                 |
+|   Panel (70%)                |   (30% top)                                  |
+|                              |   > terminal                                 |
+|   You: Explain this function |     +-- orchestrator [✓]                    |
+|                              |     +-- go-tui [⟳]                          |
+|   Claude: This function...   |                                              |
+|   [streaming...]             +----------------------------------------------+
+|                              |   Agent Detail                               |
+|   [Hooks: validate ✓]        |   (30% bottom)                               |
+|                              |   Selected: go-tui                           |
+|                              |   Tier: sonnet                               |
++------------------------------+   Duration: 4.2s...                          |
+| > Type message here...       |   [Enter] Expand  [q] Query                  |
++-----------------------------------------------------------------------------+
+```
+
+### Key Features
+
+- **Real-time streaming**: Character-by-character Claude output display
+- **Agent visualization**: Live delegation tree with status icons (⏳⟳✓✗)
+- **Hook tracking**: Sidebar showing recent hook executions
+- **Session management**: List, resume, and delete sessions
+- **Auto-restart**: Resilient to Claude process crashes
+- **Cost tracking**: Running session cost in header
+- **File watching**: fsnotify-based telemetry updates
+
+### Test Coverage
+
+| Package | Coverage | Tests |
+|---------|----------|-------|
+| `internal/cli` | ~85% | Subprocess, events, streams, restart, session |
+| `internal/tui/agents` | ~90% | Model, view, detail |
+| `internal/tui/claude` | ~90% | Panel, input, output, events |
+| `internal/tui/layout` | ~88% | Layout, banner |
+| `internal/tui/session` | ~85% | Picker |
+
+---
+
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Complete system architecture with diagrams |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Complete system architecture with diagrams |
 | [INSTALL-GUIDE.md](INSTALL-GUIDE.md) | Step-by-step installation instructions |
 | `.claude/CLAUDE.md` | Router instructions for Claude |
 | `.claude/routing-schema.json` | Source of truth for routing rules |
@@ -530,7 +609,8 @@ This software and its associated documentation, architecture, and design are pro
 ## Project Status
 
 **Status:** Production Ready
-**Version:** 1.0.0
-**Implementation:** GOgent-000 through GOgent-112+
+**Version:** 1.1.0
+**Implementation:** GOgent-000 through GOgent-121
 **All hooks:** Complete and operational
 **ML Telemetry:** Implemented with append-only pattern
+**TUI:** Complete with agent tree, Claude panel, session management
