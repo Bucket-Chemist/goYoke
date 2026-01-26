@@ -74,6 +74,12 @@ func processEvent(event *routing.SubagentStopEvent) (*workflow.EndstateResponse,
 		// Don't exit - logging failure is non-fatal
 	}
 
+	// Emit lifecycle complete event for TUI real-time tracking (GOgent-109)
+	if err := logLifecycleComplete(event, metadata); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to log lifecycle complete: %v\n", err)
+		// Don't exit - logging failure is non-fatal
+	}
+
 	return response, nil
 }
 
@@ -95,6 +101,30 @@ func logCollaboration(event *routing.SubagentStopEvent, metadata *routing.Parsed
 
 	// Log to persistent storage
 	return telemetry.LogCollaboration(collab)
+}
+
+// logLifecycleComplete records agent completion for TUI real-time tracking.
+// Non-blocking: errors are logged to stderr but execution continues.
+func logLifecycleComplete(event *routing.SubagentStopEvent, metadata *routing.ParsedAgentMetadata) error {
+	// Create lifecycle complete event
+	lifecycle := telemetry.NewAgentLifecycleEvent(
+		event.SessionID,
+		"complete",
+		metadata.AgentID,
+		"terminal", // Parent is always terminal in SubagentStop context
+		metadata.Tier,
+		"", // No description on completion
+		"", // TODO: Correlate with spawn DecisionID (requires passing through metadata)
+	)
+
+	// Set outcome from metadata
+	success := metadata.IsSuccess()
+	duration := int64(metadata.DurationMs)
+	lifecycle.Success = &success
+	lifecycle.DurationMs = &duration
+
+	// Log to persistent storage
+	return telemetry.LogAgentLifecycle(lifecycle)
 }
 
 func outputError(message string) {

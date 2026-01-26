@@ -1,0 +1,145 @@
+{
+  "metadata": {
+    "generated": "2026-01-26",
+    "total_tickets": 13,
+    "id_range": "GOgent-109 through GOgent-121",
+    "source": "TUI/*.md tickets",
+    "execution_order": "Week 1 → Week 2 → Week 3"
+  },
+  "id_mapping": {
+    "TUI-INFRA-01": "GOgent-109",
+    "TUI-CLI-01": "GOgent-110",
+    "TUI-PERF-01": "GOgent-111",
+    "TUI-CLI-01a": "GOgent-112",
+    "TUI-TELEM-01": "GOgent-113",
+    "TUI-CLI-02": "GOgent-114",
+    "TUI-AGENT-01": "GOgent-115",
+    "TUI-AGENT-02": "GOgent-116",
+    "TUI-AGENT-03": "GOgent-117",
+    "TUI-CLI-03": "GOgent-118",
+    "TUI-CLI-04": "GOgent-119",
+    "TUI-MAIN-01": "GOgent-120",
+    "TUI-CLI-05": "GOgent-121"
+  },
+  "translated_dependencies": [
+    {
+      "id": "GOgent-109",
+      "tui_id": "TUI-INFRA-01",
+      "title": "Agent Lifecycle Telemetry",
+      "dependencies": [],
+      "blocks": ["GOgent-113", "GOgent-115"]
+    },
+    {
+      "id": "GOgent-110",
+      "tui_id": "TUI-CLI-01",
+      "title": "CLI Subprocess Management",
+      "dependencies": [],
+      "blocks": ["GOgent-112", "GOgent-114"]
+    },
+    {
+      "id": "GOgent-111",
+      "tui_id": "TUI-PERF-01",
+      "title": "Performance Dashboard Shell",
+      "dependencies": [],
+      "blocks": ["GOgent-116"]
+    },
+    {
+      "id": "GOgent-112",
+      "tui_id": "TUI-CLI-01a",
+      "title": "Auto-Restart on Panic",
+      "dependencies": ["GOgent-110"],
+      "blocks": ["GOgent-121"]
+    },
+    {
+      "id": "GOgent-113",
+      "tui_id": "TUI-TELEM-01",
+      "title": "File Watchers for Telemetry",
+      "dependencies": ["GOgent-109"],
+      "blocks": ["GOgent-115"]
+    },
+    {
+      "id": "GOgent-114",
+      "tui_id": "TUI-CLI-02",
+      "title": "Event System Integration",
+      "dependencies": ["GOgent-110"],
+      "blocks": ["GOgent-118"]
+    },
+    {
+      "id": "GOgent-115",
+      "tui_id": "TUI-AGENT-01",
+      "title": "Agent Tree Model",
+      "dependencies": ["GOgent-109", "GOgent-113"],
+      "blocks": ["GOgent-116"]
+    },
+    {
+      "id": "GOgent-116",
+      "tui_id": "TUI-AGENT-02",
+      "title": "Tree View Component",
+      "dependencies": ["GOgent-115", "GOgent-111"],
+      "blocks": ["GOgent-117", "GOgent-119"]
+    },
+    {
+      "id": "GOgent-117",
+      "tui_id": "TUI-AGENT-03",
+      "title": "Agent Detail Sidebar",
+      "dependencies": ["GOgent-116"],
+      "blocks": ["GOgent-119"]
+    },
+    {
+      "id": "GOgent-118",
+      "tui_id": "TUI-CLI-03",
+      "title": "Claude Conversation Panel",
+      "dependencies": ["GOgent-114"],
+      "blocks": ["GOgent-119"]
+    },
+    {
+      "id": "GOgent-119",
+      "tui_id": "TUI-CLI-04",
+      "title": "70/30 Layout Integration",
+      "dependencies": ["GOgent-118", "GOgent-116"],
+      "blocks": ["GOgent-120"]
+    },
+    {
+      "id": "GOgent-120",
+      "tui_id": "TUI-MAIN-01",
+      "title": "Persistent Banner",
+      "dependencies": ["GOgent-119"],
+      "blocks": ["GOgent-121"]
+    },
+    {
+      "id": "GOgent-121",
+      "tui_id": "TUI-CLI-05",
+      "title": "Session Management",
+      "dependencies": ["GOgent-112"],
+      "blocks": []
+    }
+  ],
+  "dependency_summary": {
+    "no_dependencies": ["GOgent-109", "GOgent-110", "GOgent-111"],
+    "most_blocking": {
+      "id": "GOgent-109",
+      "tui_id": "TUI-INFRA-01",
+      "blocks_count": 2,
+      "blocks": ["GOgent-113", "GOgent-115"]
+    },
+    "longest_chain": {
+      "path": ["GOgent-110", "GOgent-114", "GOgent-118", "GOgent-119", "GOgent-120", "GOgent-121"],
+      "length": 6,
+      "description": "CLI-01 → CLI-02 → CLI-03 → CLI-04 → MAIN-01 → CLI-05"
+    },
+    "parallel_start_opportunities": [
+      {
+        "week": "Week 1",
+        "tickets": ["GOgent-109", "GOgent-110", "GOgent-111"],
+        "reason": "No dependencies, can start simultaneously"
+      }
+    ]
+  },
+  "validation": {
+    "all_dependencies_valid": true,
+    "circular_dependencies": false,
+    "total_dependency_edges": 15,
+    "total_blocks_edges": 15,
+    "dependency_blocks_reciprocal": true
+  }
+}

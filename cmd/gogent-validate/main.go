@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,6 +17,49 @@ import (
 const (
 	DEFAULT_TIMEOUT = 5 * time.Second
 )
+
+// getLogPath returns the path for validation logs.
+// Uses XDG_DATA_HOME/gogent-fortress/validate.log or falls back to ~/.local/share/
+func getLogPath() string {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, _ := os.UserHomeDir()
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	return filepath.Join(dataHome, "gogent-fortress", "validate.log")
+}
+
+// logValidation writes a validation event to the log file for visibility.
+func logValidation(sessionID, agent, model, decision, reason string) {
+	logPath := getLogPath()
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		return // Silent fail - don't block validation
+	}
+
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return // Silent fail
+	}
+	defer f.Close()
+
+	timestamp := time.Now().Format("2006-01-02T15:04:05")
+	shortSession := sessionID
+	if len(sessionID) > 8 {
+		shortSession = sessionID[:8]
+	}
+
+	// Format: [timestamp] session=xxx decision=allow/block agent=name model=tier reason=...
+	entry := fmt.Sprintf("[%s] session=%s decision=%-5s agent=%-20s model=%-6s",
+		timestamp, shortSession, decision, agent, model)
+	if reason != "" {
+		entry += fmt.Sprintf(" reason=%s", reason)
+	}
+	entry += "\n"
+
+	f.WriteString(entry)
+}
 
 func main() {
 	// Get project directory from environment or current directory
@@ -50,6 +94,7 @@ func main() {
 	}
 
 	// Log routing decision for Task() calls (GOgent-087e)
+	var decisionID string
 	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
 		decision := telemetry.NewRoutingDecision(
 			event.SessionID,
@@ -57,9 +102,24 @@ func main() {
 			taskInput.Model,
 			extractAgentFromPrompt(taskInput.Prompt),
 		)
+		decisionID = decision.DecisionID // Capture for lifecycle correlation
 		if logErr := telemetry.LogRoutingDecision(decision); logErr != nil {
 			// Non-blocking: log warning but continue execution
 			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log routing decision: %v\n", logErr)
+		}
+
+		// Emit lifecycle spawn event for TUI real-time tracking (GOgent-109)
+		lifecycle := telemetry.NewAgentLifecycleEvent(
+			event.SessionID,
+			"spawn",
+			extractAgentFromPrompt(taskInput.Prompt),
+			"terminal", // Parent is terminal for direct spawns
+			taskInput.Model,
+			taskInput.Prompt,
+			decisionID,
+		)
+		if logErr := telemetry.LogAgentLifecycle(lifecycle); logErr != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log lifecycle spawn: %v\n", logErr)
 		}
 	} else {
 		// Failed to parse task input - log warning but continue
@@ -71,6 +131,20 @@ func main() {
 
 	// Validate task
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
+
+	// Extract agent and model for logging
+	agent := "unknown"
+	model := "unknown"
+	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
+		agent = extractAgentFromPrompt(taskInput.Prompt)
+		model = taskInput.Model
+		if model == "" {
+			model = "default"
+		}
+	}
+
+	// Log validation for visibility (Option 2: explicit file logging)
+	logValidation(event.SessionID, agent, model, result.Decision, result.Reason)
 
 	// Output result
 	outputResult(result, event.SessionID)

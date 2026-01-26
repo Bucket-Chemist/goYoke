@@ -336,3 +336,16 @@ func GetMLToolEventsPathWithProjectDir() string {
 	}
 	return GetMLToolEventsPath()
 }
+
+// GetAgentLifecyclePathWithProjectDir returns agent lifecycle path, checking GOGENT_PROJECT_DIR first.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/agent-lifecycle.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetAgentLifecyclePathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "agent-lifecycle.jsonl")
+	}
+	return filepath.Join(GetGOgentDataDir(), "agent-lifecycle.jsonl")
+}

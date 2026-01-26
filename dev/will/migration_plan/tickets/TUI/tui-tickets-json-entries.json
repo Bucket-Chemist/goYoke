@@ -1,0 +1,500 @@
+[
+  {
+    "id": "GOgent-109",
+    "title": "Agent Lifecycle Telemetry",
+    "description": "Create a new telemetry subsystem that tracks agent spawn and completion events in real-time. This enables the TUI to display live agent delegation status.",
+    "file": "tickets/TUI/TUI-INFRA-01.md",
+    "week": 6,
+    "day": null,
+    "time_estimate": "2h",
+    "dependencies": [],
+    "blocks": [
+      "GOgent-113",
+      "GOgent-115"
+    ],
+    "priority": "critical",
+    "tags": [
+      "tui",
+      "infrastructure",
+      "telemetry",
+      "week-6",
+      "phase-0-infrastructure"
+    ],
+    "files_to_create": [
+      "pkg/telemetry/agent_lifecycle.go",
+      "pkg/telemetry/agent_lifecycle_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-109-agent-lifecycle-telemetry",
+    "pr_labels": [
+      "tui",
+      "infrastructure",
+      "telemetry",
+      "phase-0"
+    ],
+    "acceptance_criteria_count": 8,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-110",
+    "title": "CLI Subprocess Management",
+    "description": "Implement a Go subprocess manager for embedding Claude CLI directly in the TUI. The subprocess communicates via NDJSON streams on stdin/stdout using Claude's --input-format stream-json and --output-format stream-json flags.",
+    "file": "tickets/TUI/TUI-CLI-01.md",
+    "week": 6,
+    "day": null,
+    "time_estimate": "3h",
+    "dependencies": [],
+    "blocks": [
+      "GOgent-112",
+      "GOgent-114"
+    ],
+    "priority": "critical",
+    "tags": [
+      "tui",
+      "foundation",
+      "subprocess",
+      "cli",
+      "week-6",
+      "phase-1-foundation"
+    ],
+    "files_to_create": [
+      "internal/cli/subprocess.go",
+      "internal/cli/streams.go",
+      "internal/cli/subprocess_test.go",
+      "internal/cli/streams_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-110-cli-subprocess-management",
+    "pr_labels": [
+      "tui",
+      "foundation",
+      "cli",
+      "phase-1"
+    ],
+    "acceptance_criteria_count": 10,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-111",
+    "title": "Performance Dashboard Shell",
+    "description": "Create the main dashboard shell component that provides navigation structure and layout management for all TUI views. This is the container that hosts Claude panel, agent tree, and performance views.",
+    "file": "tickets/TUI/TUI-PERF-01.md",
+    "week": 6,
+    "day": null,
+    "time_estimate": "2h",
+    "dependencies": [],
+    "blocks": [
+      "GOgent-116"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "foundation",
+      "dashboard",
+      "layout",
+      "week-6",
+      "phase-1-foundation"
+    ],
+    "files_to_create": [
+      "internal/tui/performance/dashboard.go",
+      "internal/tui/performance/styles.go",
+      "internal/tui/performance/dashboard_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-111-performance-dashboard-shell",
+    "pr_labels": [
+      "tui",
+      "foundation",
+      "dashboard",
+      "phase-1"
+    ],
+    "acceptance_criteria_count": 9,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-112",
+    "title": "Auto-Restart on Panic",
+    "description": "Implement automatic restart behavior for the Claude subprocess when it crashes or exits unexpectedly. The TUI should seamlessly resume the session without user intervention.",
+    "file": "tickets/TUI/TUI-CLI-01a.md",
+    "week": 6,
+    "day": null,
+    "time_estimate": "1h",
+    "dependencies": [
+      "GOgent-110"
+    ],
+    "blocks": [
+      "GOgent-121"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "robustness",
+      "subprocess",
+      "error-handling",
+      "week-6",
+      "phase-1-foundation"
+    ],
+    "files_to_create": [
+      "internal/cli/restart.go",
+      "internal/cli/restart_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-112-auto-restart-on-panic",
+    "pr_labels": [
+      "tui",
+      "robustness",
+      "error-handling",
+      "phase-1"
+    ],
+    "acceptance_criteria_count": 9,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-113",
+    "title": "File Watchers for Telemetry",
+    "description": "Implement file watching infrastructure to enable real-time updates in the TUI. The TUI needs to react to changes in telemetry JSONL files as hooks write to them.",
+    "file": "tickets/TUI/TUI-TELEM-01.md",
+    "week": 6,
+    "day": null,
+    "time_estimate": "2h",
+    "dependencies": [
+      "GOgent-109"
+    ],
+    "blocks": [
+      "GOgent-115"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "foundation",
+      "telemetry",
+      "file-watching",
+      "week-6",
+      "phase-1-foundation"
+    ],
+    "files_to_create": [
+      "internal/tui/telemetry/watcher.go",
+      "internal/tui/telemetry/jsonl_watcher.go",
+      "internal/tui/telemetry/aggregator.go",
+      "internal/tui/telemetry/watcher_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-113-file-watchers-for-telemetry",
+    "pr_labels": [
+      "tui",
+      "foundation",
+      "telemetry",
+      "phase-1"
+    ],
+    "acceptance_criteria_count": 8,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-114",
+    "title": "Event System Integration",
+    "description": "Define Go structs for all Claude CLI stream-json event types received from the subprocess.",
+    "file": "tickets/TUI/TUI-CLI-02.md",
+    "week": 7,
+    "day": null,
+    "time_estimate": "1.5h",
+    "dependencies": [
+      "GOgent-110"
+    ],
+    "blocks": [
+      "GOgent-118"
+    ],
+    "priority": "critical",
+    "tags": [
+      "tui",
+      "event-system",
+      "cli",
+      "parsing",
+      "week-7",
+      "phase-2-event-system"
+    ],
+    "files_to_create": [
+      "internal/cli/events.go",
+      "internal/cli/events_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-114-event-system-integration",
+    "pr_labels": [
+      "tui",
+      "event-system",
+      "cli",
+      "phase-2"
+    ],
+    "acceptance_criteria_count": 6,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-115",
+    "title": "Agent Tree Model",
+    "description": "Create the data model for tracking agent delegation tree with spawn/complete correlation.",
+    "file": "tickets/TUI/TUI-AGENT-01.md",
+    "week": 7,
+    "day": null,
+    "time_estimate": "2h",
+    "dependencies": [
+      "GOgent-109",
+      "GOgent-113"
+    ],
+    "blocks": [
+      "GOgent-116"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "agent-tree",
+      "data-model",
+      "week-7",
+      "phase-3-agent-tree"
+    ],
+    "files_to_create": [
+      "internal/tui/agents/model.go",
+      "internal/tui/agents/model_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-115-agent-tree-model",
+    "pr_labels": [
+      "tui",
+      "agent-tree",
+      "data-model",
+      "phase-3"
+    ],
+    "acceptance_criteria_count": 7,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-116",
+    "title": "Tree View Component",
+    "description": "Bubble Tea component that renders the agent delegation tree with status indicators and selection.",
+    "file": "tickets/TUI/TUI-AGENT-02.md",
+    "week": 7,
+    "day": null,
+    "time_estimate": "3h",
+    "dependencies": [
+      "GOgent-115",
+      "GOgent-111"
+    ],
+    "blocks": [
+      "GOgent-117",
+      "GOgent-119"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "agent-tree",
+      "bubbletea",
+      "ui-component",
+      "week-7",
+      "phase-3-agent-tree"
+    ],
+    "files_to_create": [
+      "internal/tui/agents/view.go",
+      "internal/tui/agents/view_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-116-tree-view-component",
+    "pr_labels": [
+      "tui",
+      "agent-tree",
+      "bubbletea",
+      "phase-3"
+    ],
+    "acceptance_criteria_count": 8,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-117",
+    "title": "Agent Detail Sidebar",
+    "description": "Detail panel showing full information about the selected agent.",
+    "file": "tickets/TUI/TUI-AGENT-03.md",
+    "week": 7,
+    "day": null,
+    "time_estimate": "1.5h",
+    "dependencies": [
+      "GOgent-116"
+    ],
+    "blocks": [
+      "GOgent-119"
+    ],
+    "priority": "medium",
+    "tags": [
+      "tui",
+      "agent-tree",
+      "ui-component",
+      "enhancement",
+      "week-7",
+      "phase-3-agent-tree"
+    ],
+    "files_to_create": [
+      "internal/tui/agents/detail.go",
+      "internal/tui/agents/detail_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-117-agent-detail-sidebar",
+    "pr_labels": [
+      "tui",
+      "agent-tree",
+      "enhancement",
+      "phase-3"
+    ],
+    "acceptance_criteria_count": 6,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-118",
+    "title": "Claude Conversation Panel",
+    "description": "Bubble Tea component for Claude CLI interaction with streaming output display.",
+    "file": "tickets/TUI/TUI-CLI-03.md",
+    "week": 8,
+    "day": null,
+    "time_estimate": "4h",
+    "dependencies": [
+      "GOgent-114"
+    ],
+    "blocks": [
+      "GOgent-119"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "core-feature",
+      "bubbletea",
+      "streaming",
+      "week-8",
+      "phase-4-integration"
+    ],
+    "files_to_create": [
+      "internal/tui/claude/panel.go",
+      "internal/tui/claude/input.go",
+      "internal/tui/claude/output.go",
+      "internal/tui/claude/events.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-118-claude-conversation-panel",
+    "pr_labels": [
+      "tui",
+      "core-feature",
+      "bubbletea",
+      "phase-4"
+    ],
+    "acceptance_criteria_count": 8,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-119",
+    "title": "70/30 Layout Integration",
+    "description": "Integrate Claude panel with agent tree in 70/30 split layout.",
+    "file": "tickets/TUI/TUI-CLI-04.md",
+    "week": 8,
+    "day": null,
+    "time_estimate": "2h",
+    "dependencies": [
+      "GOgent-118",
+      "GOgent-116"
+    ],
+    "blocks": [
+      "GOgent-120"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "integration",
+      "layout",
+      "bubbletea",
+      "week-8",
+      "phase-4-integration"
+    ],
+    "files_to_create": [
+      "internal/tui/main/layout.go",
+      "internal/tui/main/layout_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-119-70-30-layout-integration",
+    "pr_labels": [
+      "tui",
+      "integration",
+      "layout",
+      "phase-4"
+    ],
+    "acceptance_criteria_count": 6,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-120",
+    "title": "Persistent Banner",
+    "description": "Persistent vim-style top banner with navigation tabs and session info.",
+    "file": "tickets/TUI/TUI-MAIN-01.md",
+    "week": 8,
+    "day": null,
+    "time_estimate": "1.5h",
+    "dependencies": [
+      "GOgent-119"
+    ],
+    "blocks": [
+      "GOgent-121"
+    ],
+    "priority": "high",
+    "tags": [
+      "tui",
+      "polish",
+      "navigation",
+      "ui-component",
+      "week-8",
+      "phase-4-integration"
+    ],
+    "files_to_create": [
+      "internal/tui/main/banner.go",
+      "internal/tui/main/banner_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-120-persistent-banner",
+    "pr_labels": [
+      "tui",
+      "polish",
+      "navigation",
+      "phase-4"
+    ],
+    "acceptance_criteria_count": 6,
+    "status": "pending"
+  },
+  {
+    "id": "GOgent-121",
+    "title": "Session Management",
+    "description": "Session picker, history, and continuation support.",
+    "file": "tickets/TUI/TUI-CLI-05.md",
+    "week": 8,
+    "day": null,
+    "time_estimate": "1.5h",
+    "dependencies": [
+      "GOgent-112"
+    ],
+    "blocks": [],
+    "priority": "medium",
+    "tags": [
+      "tui",
+      "enhancement",
+      "session-management",
+      "week-8",
+      "phase-5-session"
+    ],
+    "files_to_create": [
+      "internal/cli/session.go",
+      "internal/cli/session_test.go",
+      "internal/tui/session/picker.go",
+      "internal/tui/session/picker_test.go"
+    ],
+    "tests_required": true,
+    "git_branch": "gogent-121-session-management",
+    "pr_labels": [
+      "tui",
+      "enhancement",
+      "session-management",
+      "phase-5"
+    ],
+    "acceptance_criteria_count": 7,
+    "status": "pending"
+  }
+]
