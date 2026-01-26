@@ -126,41 +126,23 @@ func run() error {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: Failed to analyze intent outcomes: %v\n", err)
 	}
 
-	// Output confirmation JSON matching bash hook format
-	confirmation := map[string]interface{}{
-		"hookSpecificOutput": map[string]interface{}{
-			"hookEventName":     "SessionEnd",
-			"additionalContext": fmt.Sprintf("📦 SESSION ARCHIVED: Handoff saved to %s. JSONL history at %s.", mdPath, handoffCfg.HandoffPath),
-			"handoff_jsonl":     handoffCfg.HandoffPath,
-			"handoff_md":        mdPath,
-			"session_id":        event.SessionID,
-			"metrics": map[string]int{
-				"tool_calls": metrics.ToolCalls,
-				"errors":     metrics.ErrorsLogged,
-				"violations": metrics.RoutingViolations,
-			},
-		},
-	}
+	// SessionEnd hooks don't support hookSpecificOutput per Claude Code schema.
+	// Output empty JSON for success, log details to stderr for debugging.
+	fmt.Fprintf(os.Stderr, "[gogent-archive] 📦 SESSION ARCHIVED: %s (tools=%d, errors=%d, violations=%d)\n",
+		event.SessionID, metrics.ToolCalls, metrics.ErrorsLogged, metrics.RoutingViolations)
 
-	encoder := json.NewEncoder(os.Stdout)
-	if err := encoder.Encode(confirmation); err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to encode confirmation JSON: %w. Check stdout is writable.", err)
-	}
+	// Empty JSON signals success without triggering schema validation errors
+	fmt.Println("{}")
 
 	return nil
 }
 
-// outputError writes error message in hook-compatible JSON format
+// outputError writes error message to stderr and outputs empty JSON.
+// SessionEnd hooks don't support hookSpecificOutput, so we log to stderr
+// and exit with code 0 + empty JSON (errors are non-blocking for SessionEnd).
 func outputError(message string) {
-	output := map[string]interface{}{
-		"hookSpecificOutput": map[string]interface{}{
-			"hookEventName":     "SessionEnd",
-			"additionalContext": "🔴 " + message,
-		},
-	}
-
-	encoder := json.NewEncoder(os.Stdout)
-	_ = encoder.Encode(output) // Best effort - if this fails, nothing we can do
+	fmt.Fprintf(os.Stderr, "[gogent-archive] 🔴 %s\n", message)
+	fmt.Println("{}")
 }
 
 // analyzeAndUpdateIntentOutcomes analyzes intent outcomes for the session and updates user-intents.jsonl

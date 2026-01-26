@@ -36,12 +36,6 @@ func TestRun_ValidSessionEnd(t *testing.T) {
 	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
-	// Create temp files for metrics
-	os.MkdirAll("/tmp", 0755)
-	counterFile := filepath.Join("/tmp", "claude-tool-counter-test.log")
-	os.WriteFile(counterFile, []byte("line1\nline2\n"), 0644)
-	defer os.Remove(counterFile)
-
 	// Mock SessionEnd JSON on STDIN
 	sessionJSON := `{"session_id":"test-session-123","timestamp":1234567890,"hook_event_name":"SessionEnd"}`
 
@@ -73,19 +67,11 @@ func TestRun_ValidSessionEnd(t *testing.T) {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify JSON confirmation output
-	var confirmation map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &confirmation); err != nil {
-		t.Fatalf("Failed to parse confirmation JSON: %v\nOutput: %s", err, buf.String())
-	}
-
-	hookOutput, ok := confirmation["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Missing hookSpecificOutput in confirmation")
-	}
-
-	if hookOutput["session_id"] != "test-session-123" {
-		t.Errorf("Expected session_id test-session-123, got: %v", hookOutput["session_id"])
+	// SessionEnd hooks output empty JSON per Claude Code schema
+	// (SessionEnd doesn't support hookSpecificOutput)
+	output := strings.TrimSpace(buf.String())
+	if output != "{}" {
+		t.Errorf("Expected empty JSON '{}', got: %s", output)
 	}
 
 	// Verify handoff files created
@@ -219,71 +205,75 @@ func TestMain_ErrorPath(t *testing.T) {
 	rOut, wOut, _ := os.Pipe()
 	os.Stdout = wOut
 
+	// Capture stderr to verify error message is logged
+	oldStderr := os.Stderr
+	rErr, wErr, _ := os.Pipe()
+	os.Stderr = wErr
+
 	// Call main() which should trigger outputError
-	// We can't test os.Exit directly, but we can test the error output path
 	err := run()
 	if err != nil {
 		outputError(err.Error())
 	}
 
 	wOut.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(rOut)
+	wErr.Close()
+	var bufOut bytes.Buffer
+	var bufErr bytes.Buffer
+	bufOut.ReadFrom(rOut)
+	bufErr.ReadFrom(rErr)
 	os.Stdout = oldStdout
+	os.Stderr = oldStderr
 
-	// Verify error output was written
-	output := buf.String()
-	if !strings.Contains(output, "hookSpecificOutput") {
-		t.Errorf("Expected hookSpecificOutput in error output, got: %s", output)
+	// SessionEnd outputs empty JSON on stdout (per Claude Code schema)
+	output := strings.TrimSpace(bufOut.String())
+	if output != "{}" {
+		t.Errorf("Expected empty JSON '{}' on stdout, got: %s", output)
 	}
 
-	if !strings.Contains(output, "🔴") {
-		t.Errorf("Expected error emoji in output, got: %s", output)
-	}
-
-	// Verify it's valid JSON
-	var errOutput map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &errOutput); err != nil {
-		t.Fatalf("Error output is not valid JSON: %v\nOutput: %s", err, output)
+	// Error message with emoji should be on stderr
+	stderrOutput := bufErr.String()
+	if !strings.Contains(stderrOutput, "🔴") {
+		t.Errorf("Expected error emoji on stderr, got: %s", stderrOutput)
 	}
 }
 
 func TestOutputError(t *testing.T) {
-	// Capture stdout
+	// Capture stdout and stderr
 	oldStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
 	os.Stdout = wOut
+
+	oldStderr := os.Stderr
+	rErr, wErr, _ := os.Pipe()
+	os.Stderr = wErr
 
 	testError := "[gogent-archive] Test error message"
 	outputError(testError)
 
 	wOut.Close()
-	var buf bytes.Buffer
-	buf.ReadFrom(rOut)
+	wErr.Close()
+	var bufOut bytes.Buffer
+	var bufErr bytes.Buffer
+	bufOut.ReadFrom(rOut)
+	bufErr.ReadFrom(rErr)
 	os.Stdout = oldStdout
+	os.Stderr = oldStderr
 
-	// Verify error output structure
-	var output map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &output); err != nil {
-		t.Fatalf("Failed to parse error JSON: %v\nOutput: %s", err, buf.String())
+	// Stdout should be empty JSON (SessionEnd schema compliance)
+	output := strings.TrimSpace(bufOut.String())
+	if output != "{}" {
+		t.Errorf("Expected empty JSON '{}' on stdout, got: %s", output)
 	}
 
-	hookOutput, ok := output["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Missing hookSpecificOutput")
+	// Stderr should contain error emoji and message
+	stderrOutput := bufErr.String()
+	if !strings.Contains(stderrOutput, "🔴") {
+		t.Error("Expected error emoji on stderr")
 	}
 
-	if hookOutput["hookEventName"] != "SessionEnd" {
-		t.Errorf("Expected hookEventName SessionEnd, got: %v", hookOutput["hookEventName"])
-	}
-
-	context := hookOutput["additionalContext"].(string)
-	if !strings.Contains(context, "🔴") {
-		t.Error("Expected error emoji in additionalContext")
-	}
-
-	if !strings.Contains(context, testError) {
-		t.Errorf("Expected error message in context, got: %s", context)
+	if !strings.Contains(stderrOutput, testError) {
+		t.Errorf("Expected error message on stderr, got: %s", stderrOutput)
 	}
 }
 
@@ -292,27 +282,6 @@ func TestRun_WithMultipleMetrics(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
-
-	// Create multiple temp files for comprehensive metrics
-	os.MkdirAll("/tmp", 0755)
-
-	// Tool counter
-	counterFile := filepath.Join("/tmp", "claude-tool-counter-multi.log")
-	os.WriteFile(counterFile, []byte("call1\ncall2\ncall3\ncall4\ncall5\n"), 0644)
-	defer os.Remove(counterFile)
-
-	// Error log
-	errorLog := "/tmp/claude-error-patterns.jsonl"
-	os.WriteFile(errorLog, []byte(`{"error":"test1"}
-{"error":"test2"}
-`), 0644)
-	defer os.Remove(errorLog)
-
-	// Routing violations log
-	violationsLog := "/tmp/claude-routing-violations.jsonl"
-	os.WriteFile(violationsLog, []byte(`{"violation":"test1"}
-`), 0644)
-	defer os.Remove(violationsLog)
 
 	// Mock SessionEnd JSON
 	sessionJSON := `{"session_id":"test-multi-metrics","timestamp":1234567890,"hook_event_name":"SessionEnd"}`
@@ -344,35 +313,19 @@ func TestRun_WithMultipleMetrics(t *testing.T) {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Verify JSON output contains all metrics
-	var confirmation map[string]interface{}
-	if err := json.Unmarshal(buf.Bytes(), &confirmation); err != nil {
-		t.Fatalf("Failed to parse confirmation JSON: %v", err)
-	}
-
-	hookOutput := confirmation["hookSpecificOutput"].(map[string]interface{})
-	metricsMap := hookOutput["metrics"].(map[string]interface{})
-
-	// Verify metrics were collected
-	if toolCalls, ok := metricsMap["tool_calls"].(float64); !ok || toolCalls < 0 {
-		t.Errorf("Expected tool_calls >= 0, got: %v", metricsMap["tool_calls"])
-	}
-
-	if errors, ok := metricsMap["errors"].(float64); !ok || errors < 0 {
-		t.Errorf("Expected errors >= 0, got: %v", metricsMap["errors"])
-	}
-
-	if violations, ok := metricsMap["violations"].(float64); !ok || violations < 0 {
-		t.Errorf("Expected violations >= 0, got: %v", metricsMap["violations"])
+	// SessionEnd outputs empty JSON per Claude Code schema
+	output := strings.TrimSpace(buf.String())
+	if output != "{}" {
+		t.Errorf("Expected empty JSON '{}', got: %s", output)
 	}
 
 	// Verify handoff files were created
-	handoffJSONL := hookOutput["handoff_jsonl"].(string)
+	handoffJSONL := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
 	if _, err := os.Stat(handoffJSONL); os.IsNotExist(err) {
 		t.Errorf("Expected handoff JSONL at %s, but it doesn't exist", handoffJSONL)
 	}
 
-	handoffMD := hookOutput["handoff_md"].(string)
+	handoffMD := filepath.Join(tmpDir, ".claude", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffMD); os.IsNotExist(err) {
 		t.Errorf("Expected handoff MD at %s, but it doesn't exist", handoffMD)
 	}

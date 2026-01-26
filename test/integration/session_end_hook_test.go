@@ -29,9 +29,9 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 	gogentDir := filepath.Join(runtimeDir, "gogent")
 	os.MkdirAll(gogentDir, 0755)
 
-	// Tool counter
-	counterFile := filepath.Join(gogentDir, "claude-tool-counter-test.log")
-	os.WriteFile(counterFile, []byte("line1\nline2\nline3\n"), 0644)
+	// Tool counter (new format: single file with count)
+	counterFile := filepath.Join(gogentDir, "tool-counter")
+	os.WriteFile(counterFile, []byte("3"), 0644)
 
 	// Error log
 	errorLog := filepath.Join(gogentDir, "claude-error-patterns.jsonl")
@@ -65,20 +65,16 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 		t.Fatalf("gogent-archive execution failed: %v\nStderr: %s", err, stderr.String())
 	}
 
-	// Parse output JSON
-	var confirmation map[string]interface{}
-	if err := json.Unmarshal(stdout.Bytes(), &confirmation); err != nil {
-		t.Fatalf("Failed to parse confirmation JSON: %v\nOutput: %s", err, stdout.String())
+	// SessionEnd hooks output empty JSON per Claude Code schema
+	// (SessionEnd doesn't support hookSpecificOutput)
+	output := bytes.TrimSpace(stdout.Bytes())
+	if string(output) != "{}" {
+		t.Errorf("Expected empty JSON '{}' on stdout, got: %s", output)
 	}
 
-	// Verify hookSpecificOutput exists
-	hookOutput, ok := confirmation["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Missing hookSpecificOutput in confirmation")
-	}
-
-	if hookOutput["session_id"] != "integration-test-session" {
-		t.Errorf("Expected session_id in output, got: %v", hookOutput)
+	// Informational message should be on stderr
+	if !bytes.Contains(stderr.Bytes(), []byte("SESSION ARCHIVED")) {
+		t.Errorf("Expected SESSION ARCHIVED message on stderr, got: %s", stderr.String())
 	}
 
 	// Verify handoff files created
@@ -114,33 +110,29 @@ func TestSessionEndHook_ErrorHandling(t *testing.T) {
 	cmd := exec.Command(binaryPath)
 	cmd.Stdin = bytes.NewReader([]byte("{invalid json"))
 
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 	if err == nil {
 		t.Error("Expected error for invalid JSON input")
 	}
 
-	// Error is written to stdout as JSON with component tag in message
-	var errorOutput map[string]interface{}
-	if err := json.Unmarshal(stdout.Bytes(), &errorOutput); err != nil {
-		t.Fatalf("Failed to parse error output as JSON: %v\nOutput: %s", err, stdout.String())
+	// SessionEnd outputs empty JSON on stdout even on error (schema compliance)
+	output := bytes.TrimSpace(stdout.Bytes())
+	if string(output) != "{}" {
+		t.Errorf("Expected empty JSON '{}' on stdout, got: %s", output)
 	}
 
-	// Check for hookSpecificOutput with error message containing component tag
-	hookOutput, ok := errorOutput["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Missing hookSpecificOutput in error output")
+	// Error message should be on stderr with component tag
+	stderrOutput := stderr.String()
+	if !bytes.Contains(stderr.Bytes(), []byte("[gogent-archive]")) {
+		t.Errorf("Error message should contain [gogent-archive] component tag on stderr: %s", stderrOutput)
 	}
 
-	additionalContext, ok := hookOutput["additionalContext"].(string)
-	if !ok || additionalContext == "" {
-		t.Fatal("Missing or empty additionalContext in error output")
-	}
-
-	// Error message should contain component tag
-	if !bytes.Contains([]byte(additionalContext), []byte("[gogent-archive]")) {
-		t.Errorf("Error message should contain [gogent-archive] component tag: %s", additionalContext)
+	// Error emoji should be present
+	if !bytes.Contains(stderr.Bytes(), []byte("🔴")) {
+		t.Errorf("Error message should contain error emoji on stderr: %s", stderrOutput)
 	}
 }

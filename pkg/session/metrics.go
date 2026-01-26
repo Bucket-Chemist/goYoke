@@ -38,30 +38,11 @@ func CollectSessionMetrics(sessionID string) (*SessionMetrics, error) {
 	return metrics, nil
 }
 
-// countToolCalls counts total tool calls from XDG-compliant counter files.
-// Each file contains tool call logs. Returns 0 if no counter files exist.
+// countToolCalls reads the tool counter from the XDG-compliant counter file.
+// The counter is atomically incremented by gogent-sharp-edge on each PostToolUse event.
+// Returns 0 if the counter file doesn't exist (normal for first session).
 func countToolCalls() (int, error) {
-	gogentDir := config.GetGOgentDir()
-	pattern := filepath.Join(gogentDir, "claude-tool-counter-*.log")
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return 0, fmt.Errorf("glob failed for %s: %w", pattern, err)
-	}
-
-	if len(matches) == 0 {
-		return 0, nil // No counter files is normal
-	}
-
-	total := 0
-	for _, path := range matches {
-		count, err := countLogLines(path)
-		if err == nil {
-			total += count
-		}
-		// Ignore errors reading individual counter files
-	}
-
-	return total, nil
+	return config.GetToolCount()
 }
 
 // countLogLines counts all lines in a file, matching bash wc -l behavior.

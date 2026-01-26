@@ -219,31 +219,16 @@ func TestSessionHandoffIntegration_FullWorkflow(t *testing.T) {
 		t.Error("pending-learnings.jsonl should have been moved to archive")
 	}
 
-	// Parse and validate confirmation JSON output
-	var confirmation map[string]interface{}
-	if err := json.Unmarshal(stdout.Bytes(), &confirmation); err != nil {
-		t.Fatalf("Failed to parse confirmation JSON: %v\nOutput: %s", err, stdout.String())
+	// SessionEnd hooks output empty JSON per Claude Code schema
+	// (SessionEnd doesn't support hookSpecificOutput)
+	output := bytes.TrimSpace(stdout.Bytes())
+	if string(output) != "{}" {
+		t.Errorf("Expected empty JSON '{}' on stdout, got: %s", output)
 	}
 
-	hookOutput, ok := confirmation["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Missing hookSpecificOutput in confirmation")
-	}
-
-	if hookOutput["hookEventName"] != "SessionEnd" {
-		t.Errorf("Expected hookEventName=SessionEnd, got %v", hookOutput["hookEventName"])
-	}
-	if hookOutput["session_id"] != sessionID {
-		t.Errorf("Expected session_id=%s in output, got %v", sessionID, hookOutput["session_id"])
-	}
-
-	// Verify metrics in output
-	metrics, ok := hookOutput["metrics"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Missing metrics in hookSpecificOutput")
-	}
-	if metrics["tool_calls"].(float64) != 5 {
-		t.Errorf("Expected tool_calls=5, got %v", metrics["tool_calls"])
+	// Informational message should be on stderr
+	if !bytes.Contains(stderr.Bytes(), []byte("SESSION ARCHIVED")) {
+		t.Errorf("Expected SESSION ARCHIVED message on stderr, got: %s", stderr.String())
 	}
 }
 
@@ -529,17 +514,15 @@ func TestCLI_InvalidJSONInput(t *testing.T) {
 				t.Error("Expected failure for invalid input, got success")
 			}
 
-			// For errors, verify output is valid JSON with helpful message
+			// For errors, verify stdout is empty JSON and stderr has error message
 			if tc.wantExit == 1 {
-				var output map[string]interface{}
-				if json.Unmarshal(stdout.Bytes(), &output) == nil {
-					hookOutput, ok := output["hookSpecificOutput"].(map[string]interface{})
-					if ok {
-						ctx, _ := hookOutput["additionalContext"].(string)
-						if !strings.Contains(ctx, "[gogent-archive]") {
-							t.Error("Error message should contain [gogent-archive] component tag")
-						}
-					}
+				output := bytes.TrimSpace(stdout.Bytes())
+				if string(output) != "{}" {
+					t.Errorf("Expected empty JSON '{}' on stdout for error, got: %s", output)
+				}
+				// Error message with component tag should be on stderr
+				if !strings.Contains(stderr.String(), "[gogent-archive]") {
+					t.Error("Error message should contain [gogent-archive] component tag on stderr")
 				}
 			}
 		})
@@ -591,16 +574,10 @@ func TestCLI_StdinTimeout(t *testing.T) {
 		if err == nil {
 			t.Error("Expected timeout error, got success")
 		}
-		// Check output contains timeout message
-		var output map[string]interface{}
-		if json.Unmarshal(stdout.Bytes(), &output) == nil {
-			hookOutput, ok := output["hookSpecificOutput"].(map[string]interface{})
-			if ok {
-				ctx, _ := hookOutput["additionalContext"].(string)
-				if !strings.Contains(strings.ToLower(ctx), "timeout") {
-					t.Logf("Expected timeout mention in error: %s", ctx)
-				}
-			}
+		// SessionEnd outputs empty JSON even on timeout (schema compliance)
+		output := bytes.TrimSpace(stdout.Bytes())
+		if string(output) != "{}" {
+			t.Logf("Expected empty JSON '{}' on stdout, got: %s", output)
 		}
 	case <-ctx.Done():
 		cmd.Process.Kill()
@@ -735,8 +712,8 @@ func TestCLI_ConfirmationJSONSchema(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 	projectDir, memoryDir, _, gogentDir := setupTempProject(t)
 
-	// Create minimal metrics
-	os.WriteFile(filepath.Join(gogentDir, "claude-tool-counter-test.log"), []byte("call1\n"), 0644)
+	// Create minimal metrics (new format: single counter file)
+	os.WriteFile(filepath.Join(gogentDir, "tool-counter"), []byte("1"), 0644)
 
 	sessionID := "schema-test-session"
 	eventJSON := createSessionEventJSON(sessionID)
@@ -745,63 +722,24 @@ func TestCLI_ConfirmationJSONSchema(t *testing.T) {
 	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
-	var stdout bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Execution failed: %v", err)
 	}
 
-	// Parse confirmation JSON
-	var confirmation map[string]interface{}
-	if err := json.Unmarshal(stdout.Bytes(), &confirmation); err != nil {
-		t.Fatalf("Failed to parse confirmation JSON: %v\nOutput: %s", err, stdout.String())
+	// SessionEnd hooks output empty JSON per Claude Code hook spec
+	// (SessionEnd doesn't support hookSpecificOutput - it's fire-and-forget)
+	output := bytes.TrimSpace(stdout.Bytes())
+	if string(output) != "{}" {
+		t.Errorf("Claude Code hook spec requires empty JSON '{}' for SessionEnd, got: %s", output)
 	}
 
-	// Validate required top-level field per Claude Code hook spec
-	hookOutput, ok := confirmation["hookSpecificOutput"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Claude Code hook spec requires 'hookSpecificOutput' field")
-	}
-
-	// Validate required hookSpecificOutput fields
-	requiredFields := []string{"hookEventName", "additionalContext", "session_id"}
-	for _, field := range requiredFields {
-		if _, ok := hookOutput[field]; !ok {
-			t.Errorf("Missing required field in hookSpecificOutput: %s", field)
-		}
-	}
-
-	// Validate hookEventName value
-	if hookOutput["hookEventName"] != "SessionEnd" {
-		t.Errorf("hookEventName should be 'SessionEnd', got: %v", hookOutput["hookEventName"])
-	}
-
-	// Validate additionalContext is a string with content
-	ctx, ok := hookOutput["additionalContext"].(string)
-	if !ok || ctx == "" {
-		t.Error("additionalContext should be non-empty string")
-	}
-
-	// Validate paths are present
-	if _, ok := hookOutput["handoff_jsonl"]; !ok {
-		t.Error("Missing handoff_jsonl path in output")
-	}
-	if _, ok := hookOutput["handoff_md"]; !ok {
-		t.Error("Missing handoff_md path in output")
-	}
-
-	// Validate metrics structure
-	metrics, ok := hookOutput["metrics"].(map[string]interface{})
-	if !ok {
-		t.Error("Missing metrics object in hookSpecificOutput")
-	} else {
-		metricsFields := []string{"tool_calls", "errors", "violations"}
-		for _, field := range metricsFields {
-			if _, ok := metrics[field]; !ok {
-				t.Errorf("Missing metrics.%s field", field)
-			}
-		}
+	// Informational message should be on stderr
+	if !bytes.Contains(stderr.Bytes(), []byte("SESSION ARCHIVED")) {
+		t.Errorf("Expected SESSION ARCHIVED message on stderr, got: %s", stderr.String())
 	}
 
 	// Verify handoffs.jsonl was created

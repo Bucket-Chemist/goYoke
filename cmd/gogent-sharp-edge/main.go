@@ -81,27 +81,29 @@ func main() {
 		index = &memory.SharpEdgeIndex{} // Empty index
 	}
 
-	// Parse PostToolUse event from STDIN
-	event, err := routing.ParsePostToolEvent(os.Stdin, DEFAULT_TIMEOUT)
-	if err != nil {
-		// Non-fatal: might be non-JSON or timeout, just pass through
-		fmt.Println("{}")
-		return
-	}
-
-	// === NEW: ML TOOL EVENT LOGGING (GOgent-087d) ===
-	// Log to global and project-scoped paths (non-blocking)
-	if mlErr := telemetry.LogMLToolEvent(event, projectDir); mlErr != nil {
-		// Log error but don't fail hook - ML logging is non-critical
-		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] ML logging warning: %v\n", mlErr)
-	}
-
-	// === NEW: ATTENTION-GATE LOGIC ===
-	// Increment tool counter (non-blocking on error)
+	// === ATTENTION-GATE LOGIC ===
+	// Increment tool counter FIRST - we want to count ALL tool calls regardless of parse success
+	// This ensures handoff metrics are accurate even when event parsing fails
 	toolCount, counterErr := config.GetToolCountAndIncrement()
 	if counterErr != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: counter error: %v\n", counterErr)
 		toolCount = 0 // Continue with count=0 on error
+	}
+
+	// Parse PostToolUse event from STDIN
+	event, err := routing.ParsePostToolEvent(os.Stdin, DEFAULT_TIMEOUT)
+	if err != nil {
+		// Non-fatal: might be non-JSON or timeout, just pass through
+		// Counter already incremented above, so handoff will still be accurate
+		fmt.Println("{}")
+		return
+	}
+
+	// === ML TOOL EVENT LOGGING (GOgent-087d) ===
+	// Log to global and project-scoped paths (non-blocking)
+	if mlErr := telemetry.LogMLToolEvent(event, projectDir); mlErr != nil {
+		// Log error but don't fail hook - ML logging is non-critical
+		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] ML logging warning: %v\n", mlErr)
 	}
 
 	// Check reminder threshold

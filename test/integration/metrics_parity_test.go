@@ -11,21 +11,19 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
-// TestMetricsParity_ToolCalls verifies Go tool call counting matches bash behavior.
-// Bash uses: wc -l < /tmp/claude-tool-counter-* which counts ALL lines.
+// TestMetricsParity_ToolCalls verifies Go tool call counting reads from the counter file.
+// New format: single tool-counter file containing integer count (atomically incremented).
 func TestMetricsParity_ToolCalls(t *testing.T) {
-	// Setup temp counter files
+	// Setup temp counter file
 	tmpDir := t.TempDir()
 	os.Setenv("XDG_RUNTIME_DIR", tmpDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	// Create sample tool counter files
-	counterFile1 := filepath.Join(tmpDir, "gogent", "claude-tool-counter-session1.log")
-	os.MkdirAll(filepath.Dir(counterFile1), 0755)
-	os.WriteFile(counterFile1, []byte("line1\nline2\nline3\n"), 0644)
-
-	counterFile2 := filepath.Join(tmpDir, "gogent", "claude-tool-counter-session2.log")
-	os.WriteFile(counterFile2, []byte("line1\nline2\n"), 0644)
+	// Create tool counter with new format (single integer value)
+	gogentDir := filepath.Join(tmpDir, "gogent")
+	os.MkdirAll(gogentDir, 0755)
+	counterFile := filepath.Join(gogentDir, "tool-counter")
+	os.WriteFile(counterFile, []byte("42"), 0644)
 
 	// Collect via Go
 	goMetrics, err := session.CollectSessionMetrics("test-session")
@@ -33,14 +31,12 @@ func TestMetricsParity_ToolCalls(t *testing.T) {
 		t.Fatalf("Go metrics collection failed: %v", err)
 	}
 
-	// Collect via bash (simulate)
-	bashToolCount := countToolCallsBash(t, tmpDir)
-
-	// Compare - must match exactly
-	if goMetrics.ToolCalls != bashToolCount {
-		t.Errorf("Tool call count mismatch: Go=%d, Bash=%d", goMetrics.ToolCalls, bashToolCount)
+	// Compare - must match the counter value
+	expectedCount := 42
+	if goMetrics.ToolCalls != expectedCount {
+		t.Errorf("Tool call count mismatch: Go=%d, Expected=%d", goMetrics.ToolCalls, expectedCount)
 	} else {
-		t.Logf("✅ Tool call count exact match: %d", goMetrics.ToolCalls)
+		t.Logf("✅ Tool call count correct: %d", goMetrics.ToolCalls)
 	}
 }
 
@@ -124,20 +120,16 @@ func TestMetricsParity_Violations(t *testing.T) {
 	}
 }
 
-// countToolCallsBash simulates bash tool call counting behavior.
-// Bash command: wc -l < /tmp/claude-tool-counter-* | head -1
-// This counts all lines across all matching files.
+// countToolCallsBash reads the tool counter file (new format: single integer).
+// This replaces the old glob-based line counting approach.
 func countToolCallsBash(t *testing.T, runtimeDir string) int {
 	t.Helper()
-	globPattern := filepath.Join(runtimeDir, "gogent", "claude-tool-counter-*.log")
+	counterFile := filepath.Join(runtimeDir, "gogent", "tool-counter")
 
-	// Use shell glob via wc -l (mimics bash hook behavior)
-	// The 2>/dev/null suppresses "no such file" errors
-	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf("cat %s 2>/dev/null | wc -l", globPattern))
+	cmd := exec.Command("cat", counterFile)
 	output, err := cmd.Output()
 	if err != nil {
-		return 0 // No files found
+		return 0 // No file found
 	}
 
 	var count int

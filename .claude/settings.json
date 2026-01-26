@@ -53,7 +53,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|Edit|Write|Task",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
@@ -94,5 +94,6 @@
   "trustedDirectories": [
     "/home/doktersmol",
     "/home/doktersmol/Documents"
-  ]
+  ],
+  "model": "sonnet"
 }
