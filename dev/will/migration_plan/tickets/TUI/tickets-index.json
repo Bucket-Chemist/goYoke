@@ -63,7 +63,7 @@
       "title": "File Watchers for Telemetry",
       "description": "Implement file watching infrastructure to enable real-time updates in the TUI. The TUI needs to react to changes in telemetry JSONL files as hooks write to them.",
       "file": "TUI-TELEM-01.md",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "time_estimate": "2h",
       "dependencies": ["GOgent-109"],
