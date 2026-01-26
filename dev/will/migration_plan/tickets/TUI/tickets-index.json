@@ -24,7 +24,7 @@
       "title": "CLI Subprocess Management",
       "description": "Implement a Go subprocess manager for embedding Claude CLI directly in the TUI. The subprocess communicates via NDJSON streams on stdin/stdout using Claude's --input-format stream-json and --output-format stream-json flags.",
       "file": "TUI-CLI-01.md",
-      "status": "pending",
+      "status": "completed",
       "priority": "critical",
       "time_estimate": "3h",
       "dependencies": [],
