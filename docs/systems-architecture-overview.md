@@ -1,22 +1,157 @@
-# GOgent-Fortress Systems Architecture
+# GOgent-Fortress Systems Architecture v1.0
 
-> **Schema Versions:** routing-schema v2.2.0 | handoff v1.2 | ML telemetry v1.0
-> **Last Updated:** 2026-01-25
-> **Status:** Implemented through Week 5 (ML Telemetry with append-only reconciliation)
+> **Schema Versions:** routing-schema v2.2.0 | handoff v1.3 | ML telemetry v1.0
+> **Last Updated:** 2026-01-26
+> **Status:** Production Ready - Complete Implementation
 
 ---
 
 ## Overview
 
-GOgent-Fortress is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, and maintains session continuity through structured handoff documents.
+GOgent-Fortress is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, manages ML telemetry, and maintains session continuity through structured handoff documents.
 
-The system intercepts Claude Code hook events (PreToolUse, PostToolUse, SessionStart, SessionEnd) and applies validation, failure tracking, and archival logic defined in `routing-schema.json`.
+The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToolUse, SubagentStop, SessionEnd) and applies validation, failure tracking, telemetry capture, and archival logic defined in `routing-schema.json`.
 
 ---
 
-## 1. Hook Event Flow
+## 1. System Architecture Diagram
 
-The following diagram shows the complete lifecycle of a Claude Code session from the perspective of GOgent hooks.
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                           GOgent-Fortress Architecture                                               │
+│                                              (Production v1.0)                                                       │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                                      │
+│  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │                                    CLAUDE CODE CLI PROCESS                                                    │   │
+│  │                                                                                                               │   │
+│  │    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐               │   │
+│  │    │ SessionStart│───▶│ PreToolUse  │───▶│    Tool     │───▶│ PostToolUse │───▶│ SubagentStop│               │   │
+│  │    │   Event     │    │   Event     │    │  Execution  │    │   Event     │    │   Event     │               │   │
+│  │    └──────┬──────┘    └──────┬──────┘    └─────────────┘    └──────┬──────┘    └──────┬──────┘               │   │
+│  │           │                  │                                     │                  │                       │   │
+│  └───────────┼──────────────────┼─────────────────────────────────────┼──────────────────┼───────────────────────┘   │
+│              │                  │                                     │                  │                           │
+│              │ STDIN/JSON       │ STDIN/JSON                          │ STDIN/JSON       │ STDIN/JSON                │
+│              ▼                  ▼                                     ▼                  ▼                           │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐    │
+│  │                                           HOOK BINARIES (Go)                                                 │    │
+│  │                                                                                                              │    │
+│  │  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐             │    │
+│  │  │  gogent-load-      │  │   gogent-validate  │  │  gogent-sharp-edge │  │ gogent-agent-      │             │    │
+│  │  │  context           │  │                    │  │                    │  │ endstate           │             │    │
+│  │  │                    │  │                    │  │                    │  │                    │             │    │
+│  │  │ • Language detect  │  │ • Schema validation│  │ • Tool counting    │  │ • Decision outcomes│             │    │
+│  │  │ • Convention load  │  │ • Task() checks    │  │ • Failure tracking │  │ • Collab tracking  │             │    │
+│  │  │ • Handoff restore  │  │ • Tier enforcement │  │ • ML telemetry     │  │ • ML updates       │             │    │
+│  │  │ • Git context      │  │ • Ceiling check    │  │ • Sharp-edge cap   │  │ • Session metrics  │             │    │
+│  │  └─────────┬──────────┘  └─────────┬──────────┘  └─────────┬──────────┘  └─────────┬──────────┘             │    │
+│  │            │                       │                       │                       │                         │    │
+│  └────────────┼───────────────────────┼───────────────────────┼───────────────────────┼─────────────────────────┘    │
+│               │                       │                       │                       │                              │
+│               ▼                       ▼                       ▼                       ▼                              │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐    │
+│  │                                         GO PACKAGES (pkg/)                                                   │    │
+│  │                                                                                                              │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │    │
+│  │  │ pkg/routing  │  │ pkg/session  │  │  pkg/memory  │  │pkg/telemetry │  │  pkg/config  │  │ pkg/workflow │ │    │
+│  │  │              │  │              │  │              │  │              │  │              │  │              │ │    │
+│  │  │ •Schema      │  │ •Handoff     │  │ •Failure     │  │ •Invocations │  │ •Paths       │  │ •Responses   │ │    │
+│  │  │ •Validation  │  │ •Events      │  │  Tracking    │  │ •Cost        │  │ •Tier        │  │ •Logging     │ │    │
+│  │  │ •Violations  │  │ •Metrics     │  │ •Pattern     │  │ •Escalations │  │ •Environment │  │ •Integration │ │    │
+│  │  │ •Orchestrator│  │ •Artifacts   │  │  Matching    │  │ •Scout       │  │              │  │              │ │    │
+│  │  │ •Agents      │  │ •UserIntent  │  │ •Responses   │  │              │  │              │  │              │ │    │
+│  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘ │    │
+│  │         │                 │                 │                 │                 │                 │          │    │
+│  └─────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┼──────────┘    │
+│            │                 │                 │                 │                 │                 │               │
+│            └────────────────┬┴────────────────┬┴────────────────┬┴────────────────┬┴─────────────────┘               │
+│                             │                 │                 │                                                    │
+│                             ▼                 ▼                 ▼                                                    │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐    │
+│  │                                        DATA PERSISTENCE LAYER                                                │    │
+│  │                                                                                                              │    │
+│  │  ┌────────────────────────────────┐  ┌────────────────────────────────┐  ┌────────────────────────────────┐ │    │
+│  │  │     SESSION SCOPE (/tmp/)      │  │   PROJECT SCOPE (.claude/)    │  │   ML SCOPE (XDG_DATA_HOME/)    │ │    │
+│  │  │                                │  │                                │  │                                │ │    │
+│  │  │ • routing-violations.jsonl     │  │ • memory/handoffs.jsonl       │  │ • routing-decisions.jsonl     │ │    │
+│  │  │ • tool-counter-{id}.log        │  │ • memory/user-intents.jsonl   │  │ • routing-decision-updates    │ │    │
+│  │  │ • error-patterns.jsonl         │  │ • memory/decisions.jsonl      │  │   .jsonl                      │ │    │
+│  │  │                                │  │ • memory/pending-learnings    │  │ • agent-collaborations.jsonl  │ │    │
+│  │  │                                │  │   .jsonl                      │  │ • agent-collaboration-updates │ │    │
+│  │  │                                │  │ • memory/last-handoff.md      │  │   .jsonl                      │ │    │
+│  │  │                                │  │ • session-archive/            │  │                                │ │    │
+│  │  └────────────────────────────────┘  └────────────────────────────────┘  └────────────────────────────────┘ │    │
+│  │                                                                                                              │    │
+│  │  ┌────────────────────────────────┐                                                                          │    │
+│  │  │     GLOBAL SCOPE (~/.gogent/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
+│  │  │                                │  │                  CONFIGURATION (~/.claude/)                        │ │    │
+│  │  │ • failure-tracker.jsonl        │  │                                                                    │ │    │
+│  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.2.0)    • agents/*.yaml                │ │    │
+│  │  │ • escalations.jsonl            │  │  • conventions/*.md                 • skills/*/SKILL.md           │ │    │
+│  │  │ • scout-recommendations.jsonl  │  │  • CLAUDE.md                        • rules/*.md                   │ │    │
+│  │  │                                │  │                                                                    │ │    │
+│  │  └────────────────────────────────┘  └────────────────────────────────────────────────────────────────────┘ │    │
+│  │                                                                                                              │    │
+│  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                                                      │
+│                                                                                                                      │
+├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                                      │
+│  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐   │
+│  │                                                                                                               │   │
+│  │                                    🖥️  TUI ENDPOINT (Future Integration)                                      │   │
+│  │                                                                                                               │   │
+│  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │   │
+│  │  │                                           Available Data Streams                                         │ │   │
+│  │  ├─────────────────────────────────────────────────────────────────────────────────────────────────────────┤ │   │
+│  │  │                                                                                                          │ │   │
+│  │  │   📊 Real-Time Metrics              📈 Session Analytics            🎯 Routing Intelligence              │ │   │
+│  │  │   ─────────────────────             ──────────────────────          ────────────────────────              │ │   │
+│  │  │   • Tool counter (live)             • Total tool calls              • Agent usage patterns               │ │   │
+│  │  │   • Current tier                    • Error rate                    • Tier distribution                  │ │   │
+│  │  │   • Active agent                    • Session duration              • Scout accuracy                     │ │   │
+│  │  │   • Token consumption               • Cost accumulation             • Escalation frequency               │ │   │
+│  │  │                                                                                                          │ │   │
+│  │  │   🔴 Failure Tracking               📋 Handoff State                💡 ML Telemetry                      │ │   │
+│  │  │   ────────────────────              ─────────────────               ─────────────────                     │ │   │
+│  │  │   • Consecutive failures            • Sharp edges pending           • Routing decisions/s               │ │   │
+│  │  │   • Sharp-edge captures             • Last handoff summary          • Decision outcomes                  │ │   │
+│  │  │   • Debug loop detection            • Actions queue                 • Collaboration chains               │ │   │
+│  │  │   • Pattern matching                • Git dirty status              • Confidence metrics                 │ │   │
+│  │  │                                                                                                          │ │   │
+│  │  │   ⚠️ Violations & Blocks           🔄 Agent Lifecycle               📉 Cost Tracking                     │ │   │
+│  │  │   ─────────────────────             ──────────────────              ─────────────────                     │ │   │
+│  │  │   • Routing violations              • Spawned agents                • Cost by tier                       │ │   │
+│  │  │   • Ceiling breaches                • Active subagents              • Cost by agent                      │ │   │
+│  │  │   • Blocked Task() calls            • Delegation chains             • Token efficiency                   │ │   │
+│  │  │   • Subagent mismatches             • Endstate captures             • Projected session cost             │ │   │
+│  │  │                                                                                                          │ │   │
+│  │  └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │   │
+│  │                                                                                                               │   │
+│  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │   │
+│  │  │                                        Data Access Methods                                               │ │   │
+│  │  ├─────────────────────────────────────────────────────────────────────────────────────────────────────────┤ │   │
+│  │  │                                                                                                          │ │   │
+│  │  │   File Watchers (JSONL tailing)          CLI Queries                    Programmatic API                 │ │   │
+│  │  │   ─────────────────────────────          ───────────────                ─────────────────                 │ │   │
+│  │  │   • tail -f routing-decisions.jsonl     • gogent-archive stats         • pkg/telemetry.Load*()          │ │   │
+│  │  │   • inotify on handoffs.jsonl           • gogent-archive sharp-edges   • pkg/session.Query*()           │ │   │
+│  │  │   • fsnotify for Go integration         • gogent-ml-export stats       • pkg/routing.LoadSchema()       │ │   │
+│  │  │                                         • gogent-aggregate             • pkg/memory.GetFailureCount()   │ │   │
+│  │  │                                                                                                          │ │   │
+│  │  └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │   │
+│  │                                                                                                               │   │
+│  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Hook Event Flow
+
+The following sequence diagram shows the complete lifecycle of a Claude Code session from the perspective of GOgent hooks.
 
 ```mermaid
 sequenceDiagram
@@ -25,522 +160,345 @@ sequenceDiagram
     participant PT as PreToolUse
     participant Tool as Tool Execution
     participant PO as PostToolUse
+    participant SA as SubagentStop
     participant SE as SessionEnd
 
     CC->>SS: Session begins
-    Note over SS: gogent-load-context<br/>(✅ Implemented)
-    SS-->>CC: Context injection
+    Note over SS: gogent-load-context
+    SS->>SS: DetectLanguage()
+    SS->>SS: LoadConventions()
+    SS->>SS: LoadHandoff()
+    SS->>SS: CollectGitInfo()
+    SS-->>CC: Context injection (additionalContext)
 
     loop Tool Usage
         CC->>PT: Task() invocation
         Note over PT: gogent-validate
+        PT->>PT: LoadSchema()
+        PT->>PT: ValidateTask()
+        PT->>PT: CheckDelegationCeiling()
+        PT->>PT: CheckSubagentType()
 
         alt Validation Fails
+            PT->>PT: LogViolation()
             PT-->>CC: Block + reason
         else Validation Passes
             PT-->>CC: Allow
             CC->>Tool: Execute tool
             Tool-->>CC: Result
-            CC->>PO: Tool completed
-            Note over PO: gogent-sharp-edge<br/>(Merged Handler)
 
+            CC->>PO: Tool completed
+            Note over PO: gogent-sharp-edge
             PO->>PO: IncrementToolCounter()
-            PO->>PO: CheckReminder(counter)
+            PO->>PO: LogRoutingDecision()
+            PO->>PO: DetectFailure()
+
             alt Every 10 Tools
                 PO->>PO: GenerateRoutingReminder()
             end
-            PO->>PO: CheckFlushThreshold(counter)
+
             alt Every 20+ Tools
                 PO->>PO: ArchivePendingLearnings()
             end
 
-            PO->>PO: DetectFailure()
-            alt Failure Detected
-                PO->>PO: LogFailure()
-                PO->>PO: CheckFailureCount()
-                alt 3+ Consecutive Failures
-                    PO->>PO: CaptureSharpEdge()
-                    PO-->>CC: Block + guidance
-                end
+            alt 3+ Consecutive Failures
+                PO->>PO: CaptureSharpEdge()
+                PO-->>CC: Block + guidance
+            else Normal
+                PO-->>CC: Pass-through
             end
-
-            PO-->>CC: Response
         end
+    end
+
+    opt Agent Delegation
+        CC->>SA: Subagent completes
+        Note over SA: gogent-agent-endstate
+        SA->>SA: UpdateDecisionOutcome()
+        SA->>SA: LogAgentCollaboration()
+        SA->>SA: UpdateCollaborationOutcome()
+        SA-->>CC: Tier-specific follow-up
     end
 
     CC->>SE: Session ends
     Note over SE: gogent-archive
-    SE->>SE: Collect metrics
-    SE->>SE: Load artifacts
-    SE->>SE: Generate handoff
+    SE->>SE: CollectMetrics()
+    SE->>SE: LoadArtifacts()
+    SE->>SE: GenerateHandoff()
+    SE->>SE: GenerateMarkdown()
     SE-->>CC: Archive confirmation
 ```
 
-### Hook Entry Points
+### 2.1 Hook Entry Points
 
-| Hook Event | CLI Binary | Responsibilities | Status |
-|------------|------------|---|---|
-| SessionStart | `gogent-load-context` | Load project context, language detection, convention injection | ✅ Implemented |
-| PreToolUse | `gogent-validate` | Validate Task() invocations, schema enforcement, blocking rules | ✅ Implemented |
-| PostToolUse | `gogent-sharp-edge` (merged) | Tool counter management, routing reminders, auto-flush learnings, sharp-edge detection, failure tracking | ✅ Implemented |
-| SessionEnd | `gogent-archive` | Collect metrics, load artifacts, generate handoff documents | ✅ Implemented |
+| Hook Event | CLI Binary | Primary Responsibilities | Trigger |
+|------------|------------|--------------------------|---------|
+| SessionStart | `gogent-load-context` | Language detection, convention loading, handoff restoration, git context | Session initialization |
+| PreToolUse | `gogent-validate` | Schema validation, Task() checks, tier enforcement, ceiling verification | Every tool call |
+| PostToolUse | `gogent-sharp-edge` | Tool counting, failure tracking, ML telemetry, sharp-edge detection, routing reminders | After tool execution |
+| SubagentStop | `gogent-agent-endstate` | Decision outcomes, collaboration tracking, ML updates, session metrics | Agent completion |
+| SessionEnd | `gogent-archive` | Metrics collection, artifact loading, handoff generation, markdown export | Session termination |
 
-### PostToolUse Handler: Merged Behavior
+### 2.2 PostToolUse Handler: Merged Responsibilities
 
-**GOgent-072** consolidated attention-gate functionality into the core `gogent-sharp-edge` PostToolUse handler. The binary now manages four integrated responsibilities:
+The `gogent-sharp-edge` PostToolUse handler consolidates five integrated responsibilities:
 
 #### 1. Tool Counter Management
-- **Trigger**: Every tool execution (Bash, Edit, Write)
+- **Trigger**: Every tool execution (Bash, Edit, Write, Read, Glob, Grep)
 - **Action**: Increments persistent counter in `/tmp/claude-tool-counter-{session_id}.log`
-- **Purpose**: Track tool usage frequency across session
-- **Configuration**: Counter persists across multiple tool invocations
+- **Purpose**: Track tool usage frequency for routing reminders and auto-flush
 
 #### 2. Routing Compliance Reminders
-- **Trigger**: Every 10 tools
-- **Action**: Generates structured routing reminder injected into `additionalContext`
-- **Content**: Reminds user to check `~/.claude/routing-schema.json` for tier mappings
-- **Non-blocking**: Continues execution, reminder is advisory
+- **Trigger**: Every 10 tools (configurable via `GOGENT_REMINDER_THRESHOLD`)
+- **Action**: Generates structured reminder injected into `additionalContext`
+- **Content**: Reminds agent to verify routing compliance with `routing-schema.json`
 
 #### 3. Pending Learnings Auto-Flush
-- **Trigger**: Every 20+ tools (configurable threshold)
-- **Action**: Archives `pending-learnings.jsonl` to session archive
-- **Purpose**: Prevent unbounded growth of pending learnings
-- **Automatic**: No user intervention required
+- **Trigger**: Every 20+ tools (configurable via `GOGENT_FLUSH_THRESHOLD`)
+- **Action**: Archives `pending-learnings.jsonl` to `session-archive/`
+- **Purpose**: Prevent unbounded growth of pending learnings file
 
-#### 4. ML Tool Event Logging (New - GOgent-087d)
-- **Trigger**: Every tool execution (integrated into PostToolUse flow)
-- **Action**: Logs ML telemetry events to `routing-decisions.jsonl` for routing optimization training
-- **Fields Captured**: Tool name, duration, input tokens, output tokens, sequence index, model
-- **Thread Safety**: Append-only pattern prevents data loss under concurrent agent execution
-- **Integration**: Dual-file reconciliation with `routing-decision-updates.jsonl` on ML export
+#### 4. ML Tool Event Logging (GOgent-087d)
+- **Trigger**: Every tool execution
+- **Action**: Logs RoutingDecision to `routing-decisions.jsonl`
+- **Fields**: Tool name, duration, input/output tokens, sequence index, model, tier
+- **Thread Safety**: Append-only pattern with dual-file reconciliation
 
-#### 5. Sharp-Edge Detection (Original)
+#### 5. Sharp-Edge Detection
 - **Trigger**: 3+ consecutive failures on same file/error type
-- **Action**: Captures learning to `pending-learnings.jsonl` and blocks execution
+- **Action**: Captures learning to `pending-learnings.jsonl`, blocks execution
 - **Response**: Returns blocking guidance with pattern matching from `sharp-edges.yaml`
-- **Non-blocking failures**: Logged but do not trigger capture until threshold
-
-#### Response Merging
-When multiple conditions trigger, responses merge into single hook response:
-- Sharp-edge blocking takes priority
-- Reminder message appended to `additionalContext`
-- Flush notification appended to `additionalContext`
-- Failed actions (counter, flush) emit warnings to STDERR but do not block
-
-#### Configuration
-
-| Setting | Default | Purpose | Notes |
-|---------|---------|---------|-------|
-| Reminder Threshold | Every 10 tools | Frequency of routing compliance reminders | Configured via `config.ShouldRemind()` |
-| Flush Threshold | Every 20 tools | When to archive pending learnings | Configured via `config.ShouldFlush()` |
-| Sharp-Edge Threshold | 3 failures | Trigger for sharp-edge capture and blocking | `memory.DefaultMaxFailures` |
-| Failure Window | 300 seconds | Time window for consecutive failure counting | Cross-session tracking in `~/.gogent/failure-tracker.jsonl` |
-| Counter Storage | `/tmp/claude-tool-counter-*.log` | Session-scoped tool count persistence | Recreated per session |
-
-Override via environment variables:
-- `GOGENT_REMINDER_THRESHOLD` - Set reminder frequency (default: 10)
-- `GOGENT_FLUSH_THRESHOLD` - Set flush frequency (default: 20)
-- `GOGENT_MAX_FAILURES` - Set sharp-edge threshold (default: 3)
-- `GOGENT_FAILURE_WINDOW` - Set failure window in seconds (default: 300)
 
 ---
 
-## 2. Package Dependencies
+## 3. Package Architecture
 
 ```mermaid
 graph TD
     subgraph "CLI Layer (cmd/)"
-        loadcontext[gogent-load-context]
-        validate[gogent-validate]
-        archive[gogent-archive]
-        sharpedge[gogent-sharp-edge]
-        intent[gogent-capture-intent]
-        aggregate[gogent-aggregate]
-        mlexport[gogent-ml-export]
+        loadcontext[gogent-load-context<br/>SessionStart]
+        validate[gogent-validate<br/>PreToolUse]
+        sharpedge[gogent-sharp-edge<br/>PostToolUse]
+        endstate[gogent-agent-endstate<br/>SubagentStop]
+        archive[gogent-archive<br/>SessionEnd]
+        intent[gogent-capture-intent<br/>Manual]
+        aggregate[gogent-aggregate<br/>Analysis]
+        mlexport[gogent-ml-export<br/>ML Pipeline]
+        orchguard[gogent-orchestrator-guard<br/>Enforcement]
+        doctheater[gogent-doc-theater<br/>Detection]
     end
 
     subgraph "Core Packages (pkg/)"
-        routing[pkg/routing]
-        session[pkg/session]
-        memory[pkg/memory]
-        telemetry[pkg/telemetry]
-        config[pkg/config]
-        mltelemetry["pkg/telemetry<br/>(ML Components)"]
+        routing[pkg/routing<br/>Schema · Validation · Violations]
+        session[pkg/session<br/>Handoff · Events · Metrics · Intents]
+        memory[pkg/memory<br/>Failure Tracking · Patterns · Responses]
+        telemetry[pkg/telemetry<br/>Invocations · Cost · Escalations · Scout]
+        config[pkg/config<br/>Paths · Tier · Environment]
+        workflow[pkg/workflow<br/>Responses · Logging · Integration]
+        enforcement[pkg/enforcement<br/>Blocking · Patterns · DocTheater]
     end
 
-    subgraph "External"
+    subgraph "External Dependencies"
         schema[(routing-schema.json)]
         jsonl[(JSONL Files)]
+        conventions[(conventions/*.md)]
     end
 
+    %% CLI to Package mappings
     loadcontext --> session
     loadcontext --> routing
     loadcontext --> config
+
     validate --> routing
-    archive --> session
-    archive --> config
+    validate --> config
+
     sharpedge --> memory
     sharpedge --> routing
-    sharpedge --> mltelemetry
+    sharpedge --> telemetry
+    sharpedge --> session
+
+    endstate --> telemetry
+    endstate --> session
+    endstate --> config
+
+    archive --> session
+    archive --> config
+    archive --> telemetry
+
     intent --> session
+
     aggregate --> telemetry
-    mlexport --> mltelemetry
+    aggregate --> session
+
+    mlexport --> telemetry
     mlexport --> config
 
-    session --> config
-    memory --> routing
+    orchguard --> enforcement
+    orchguard --> routing
+
+    doctheater --> enforcement
+    doctheater --> routing
+
+    %% Package to Data mappings
     routing --> schema
     session --> jsonl
     memory --> jsonl
-    mltelemetry --> jsonl
+    telemetry --> jsonl
+    config --> conventions
 ```
 
-### Package Responsibilities
+### 3.1 Package Responsibilities
 
 | Package | Primary Responsibility | Key Types |
 |---------|------------------------|-----------|
-| `pkg/routing` | Schema loading, Task validation, violation logging | `Schema`, `ValidationOrchestrator`, `Violation` |
-| `pkg/session` | Handoffs, events, metrics, intents, queries | `Handoff`, `SessionMetrics`, `UserIntent`, `Query` |
-| `pkg/memory` | Failure tracking, debugging loop detection | `FailureInfo`, `LogFailure()`, `GetFailureCount()` |
-| `pkg/telemetry` | Invocation tracking, cost calculation, ML telemetry | `AgentInvocation`, `TierPricing`, `SessionCostSummary`, `RoutingDecision`, `TaskClassifier`, `AgentCollaboration` |
-| `pkg/config` | Path resolution, tier configuration, ML data paths | `GetGOgentDir()`, `GetViolationsLogPath()`, `GetMLToolEventsPath()` |
+| `pkg/routing` | Schema loading, Task validation, violation logging, tier management | `Schema`, `TierConfig`, `Violation`, `AgentSubagentMapping` |
+| `pkg/session` | Handoffs, events, metrics, intents, artifact loading, markdown export | `Handoff`, `SessionMetrics`, `UserIntent`, `SharpEdge`, `Action` |
+| `pkg/memory` | Failure tracking, debugging loop detection, pattern matching | `FailureInfo`, `LogFailure()`, `GetFailureCount()`, `PatternMatch` |
+| `pkg/telemetry` | Invocation tracking, cost calculation, escalations, scout recommendations | `AgentInvocation`, `TierPricing`, `EscalationEvent`, `ScoutRecommendation` |
+| `pkg/config` | Path resolution, tier configuration, environment detection | `GetGOgentDir()`, `GetViolationsLogPath()`, `GetCurrentTier()` |
+| `pkg/workflow` | Response formatting, logging utilities, integration helpers | `HookResponse`, `BlockResponse`, `PassthroughResponse` |
+| `pkg/enforcement` | Blocking responses, pattern detection, documentation theater checks | `BlockingResponse`, `PatternDetector`, `DocTheater` |
 
 ---
 
-## 3. Data Persistence Layer
+## 4. ML Telemetry System
 
-All persistence uses JSONL (JSON Lines) format for append-only writes and streaming reads.
+The ML telemetry system provides comprehensive observability for routing optimization and agent collaboration learning. All writes use append-only JSONL pattern for thread-safe concurrent execution.
 
-```mermaid
-flowchart TB
-    subgraph "Session Scope"
-        violations[/violations.jsonl/]
-        counter[/tool-counter.log/]
-    end
-
-    subgraph "Project Scope (.claude/memory/)"
-        handoffs[/handoffs.jsonl/]
-        intents[/user-intents.jsonl/]
-        decisions[/decisions.jsonl/]
-        prefs[/preferences.jsonl/]
-        perf[/performance.jsonl/]
-        pending[/pending-learnings.jsonl/]
-    end
-
-    subgraph "ML Telemetry Scope (XDG_DATA_HOME/gogent-fortress/)"
-        routingdec[/routing-decisions.jsonl/]
-        routingupdates[/routing-decision-updates.jsonl/]
-        collaborations[/agent-collaborations.jsonl/]
-        collabupd[/agent-collaboration-updates.jsonl/]
-    end
-
-    subgraph "Global Scope (~/.gogent/)"
-        failures[/failure-tracker.jsonl/]
-    end
-
-    subgraph "Archive (session-archive/)"
-        archived[/learnings-{ts}.jsonl/]
-        sessions[/session-{id}.jsonl/]
-    end
-
-    validate([gogent-validate]) --> violations
-    sharpedge([gogent-sharp-edge]) --> failures
-    sharpedge --> pending
-    sharpedge --> routingdec
-    sharpedge --> collaborations
-    archive([gogent-archive]) --> handoffs
-    archive --> archived
-    intent([gogent-capture-intent]) --> intents
-    mlexport([gogent-ml-export]) --> routingupdates
-    mlexport --> collabupd
-```
-
-### File Reference
-
-| File | Scope | Written By | Schema |
-|------|-------|------------|--------|
-| `handoffs.jsonl` | Project | gogent-archive | Handoff v1.2 |
-| `user-intents.jsonl` | Project | gogent-capture-intent | UserIntent |
-| `decisions.jsonl` | Project | gogent-archive | Decision |
-| `preferences.jsonl` | Project | gogent-archive | PreferenceOverride |
-| `performance.jsonl` | Project | gogent-archive | PerformanceMetric |
-| `pending-learnings.jsonl` | Project | gogent-sharp-edge | SharpEdge |
-| `failure-tracker.jsonl` | Global | gogent-sharp-edge | FailureInfo |
-| `routing-violations.jsonl` | Temp | gogent-validate | Violation |
-| `routing-decisions.jsonl` | ML Telemetry | gogent-sharp-edge (087d) | RoutingDecision |
-| `routing-decision-updates.jsonl` | ML Telemetry | gogent-agent-endstate (088c) | DecisionOutcomeUpdate |
-| `agent-collaborations.jsonl` | ML Telemetry | gogent-agent-endstate (088b) | AgentCollaboration |
-| `agent-collaboration-updates.jsonl` | ML Telemetry | gogent-agent-endstate (088b) | CollaborationUpdate |
-
----
-
-## 4. CLI Entry Points
-
-```mermaid
-graph LR
-    subgraph "Hook Binaries"
-        V[gogent-validate<br/>PreToolUse]
-        A[gogent-archive<br/>SessionEnd]
-        S[gogent-sharp-edge<br/>PostToolUse]
-        I[gogent-capture-intent<br/>Manual]
-        G[gogent-aggregate<br/>Analysis]
-    end
-
-    subgraph "Input"
-        stdin((STDIN<br/>JSON))
-        env((ENV vars))
-    end
-
-    subgraph "Output"
-        stdout((STDOUT<br/>Hook JSON))
-        files((JSONL Files))
-    end
-
-    stdin --> V
-    stdin --> A
-    stdin --> S
-    env --> V
-    env --> A
-
-    V --> stdout
-    V --> files
-    A --> stdout
-    A --> files
-    S --> files
-    I --> files
-    G --> stdout
-```
-
-### CLI Reference
-
-| Binary | Hook Event | Input | Output | Behaviors | Lines |
-|--------|------------|-------|--------|---|-------|
-| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | Language detection, convention loading | ~250 |
-| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | Task validation, model checking, delegation ceiling | ~142 |
-| `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | Metrics collection, artifact loading, handoff generation | ~1111 |
-| `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON (or pass-through) | Tool counting, routing reminders (every 10), auto-flush (every 20), sharp-edge detection (3+ failures), ML telemetry logging | ~420 |
-| `gogent-capture-intent` | Manual | UserIntent JSON | (none) | User intent logging | ~150 |
-| `gogent-aggregate` | Manual | (flags) | Summary JSON | Session statistics | ~100 |
-| `gogent-ml-export` | Manual | (flags) | JSONL training data | Extract ML telemetry, reconcile dual-file append-only schemas, export training datasets | ~200 |
-
-### gogent-archive Subcommands
-
-The archive CLI includes query subcommands for inspecting session history:
-
-| Subcommand | Purpose |
-|------------|---------|
-| `list` | List sessions with filters (--since, --has-sharp-edges) |
-| `show <id>` | Display specific session handoff |
-| `stats` | Aggregate statistics across sessions |
-| `sharp-edges` | Query sharp edges with filters |
-| `user-intents` | Query user intents with filters |
-| `decisions` | Query architectural decisions |
-| `preferences` | Query preference overrides |
-| `performance` | Query performance metrics |
-| `weekly` | Generate weekly intent summary |
-
----
-
-## 5. Validation Pipeline
-
-The `gogent-validate` binary orchestrates multiple validation checks for Task tool invocations.
-
-```mermaid
-flowchart TD
-    input[Task Invocation] --> parse[Parse ToolEvent]
-    parse --> check1{Tool == Task?}
-
-    check1 -->|No| pass1[Pass through]
-    check1 -->|Yes| load[Load Schema]
-
-    load --> v1[Check 1: Einstein/Opus Blocking]
-    v1 -->|Blocked| block1[BLOCK: Use /einstein]
-    v1 -->|OK| v2[Check 2: Model Mismatch]
-
-    v2 -->|Mismatch| warn[WARN: Continue with warning]
-    v2 -->|OK| v3[Check 3: Delegation Ceiling]
-
-    v3 -->|Exceeded| block2[BLOCK: Ceiling violation]
-    v3 -->|OK| v4[Check 4: Subagent Type]
-
-    v4 -->|Invalid| block3[BLOCK: Wrong subagent_type]
-    v4 -->|OK| allow[ALLOW]
-
-    block1 --> log[Log Violation]
-    block2 --> log
-    block3 --> log
-    warn --> allow
-```
-
-### Validation Checks
-
-| Check | Blocking | Logged | Purpose |
-|-------|----------|--------|---------|
-| Einstein/Opus | Yes | Yes | Prevent Task(opus) - use /einstein instead |
-| Model Mismatch | No | No | Warn if requested model differs from agents-index |
-| Delegation Ceiling | Yes | Yes | Enforce max tier from calculate-complexity |
-| Subagent Type | Yes | Yes | Ensure agent-subagent_type pairing matches schema |
-
----
-
-## 6. ML Telemetry System (Weeks 4-5)
-
-The ML telemetry system provides comprehensive observability for routing optimization and agent collaboration learning. Implemented with append-only JSONL pattern for thread-safe concurrent writes.
-
-### 6.1 Architecture Overview
-
-The ML telemetry system consists of four integrated components:
+### 4.1 Architecture Overview
 
 ```mermaid
 graph TD
-    PostToolUse[PostToolUse Hook<br/>gogent-sharp-edge] -->|Logs| RoutingDec["RoutingDecision<br/>(GOgent-087b)"]
-    PostToolUse -->|Captures| TaskClass["TaskClassifier<br/>(GOgent-087c)"]
-    PostToolUse -->|Integrates ML fields| PostToolExt["PostToolEvent Extension<br/>(GOgent-086b)"]
+    subgraph "Data Capture Hooks"
+        PostToolUse[PostToolUse<br/>gogent-sharp-edge]
+        SubagentStop[SubagentStop<br/>gogent-agent-endstate]
+    end
 
-    SubagentStop[SubagentStop Hook<br/>gogent-agent-endstate] -->|Tracks| AgentCollab["AgentCollaboration<br/>(GOgent-088b)"]
+    subgraph "Initial Records (Append-Only)"
+        RoutingDec["routing-decisions.jsonl<br/>(RoutingDecision)"]
+        AgentCollab["agent-collaborations.jsonl<br/>(AgentCollaboration)"]
+    end
 
-    RoutingDec -->|Appends| RoutingDecFile["routing-decisions.jsonl<br/>(Initial records)"]
+    subgraph "Outcome Records (Append-Only)"
+        RoutingUpd["routing-decision-updates.jsonl<br/>(DecisionOutcomeUpdate)"]
+        CollabUpd["agent-collaboration-updates.jsonl<br/>(CollaborationUpdate)"]
+    end
 
-    OutcomeUpdate["Decision Outcomes<br/>(GOgent-088c)"] -->|Appends| RoutingUpdateFile["routing-decision-updates.jsonl<br/>(Outcome records)"]
+    subgraph "ML Pipeline"
+        MLExport["gogent-ml-export<br/>Reconciliation + Export"]
+        Training["ML Training Pipeline"]
+    end
 
-    AgentCollab -->|Appends| CollabFile["agent-collaborations.jsonl<br/>(Initial records)"]
+    PostToolUse -->|Logs| RoutingDec
+    PostToolUse -->|Captures| AgentCollab
 
-    CollabOutcome["Collaboration Outcomes"] -->|Appends| CollabUpdateFile["agent-collaboration-updates.jsonl<br/>(Outcome records)"]
+    SubagentStop -->|Updates| RoutingUpd
+    SubagentStop -->|Updates| CollabUpd
 
-    RoutingDecFile -->|Read-time<br/>Reconciliation| MLExport["gogent-ml-export<br/>(GOgent-089b)"]
-    RoutingUpdateFile -->|Join on ID| MLExport
-    CollabFile -->|Read-time<br/>Reconciliation| MLExport
-    CollabUpdateFile -->|Join on ID| MLExport
+    RoutingDec -->|Read-time join| MLExport
+    RoutingUpd -->|on DecisionID| MLExport
+    AgentCollab -->|Read-time join| MLExport
+    CollabUpd -->|on CollaborationID| MLExport
 
-    MLExport -->|Training Datasets| MLModel["ML Training Pipeline"]
+    MLExport -->|Training data| Training
 
     style RoutingDec fill:#e1f5ff
-    style TaskClass fill:#e1f5ff
     style AgentCollab fill:#e1f5ff
-    style MLExport fill:#fff3e0
+    style RoutingUpd fill:#fff3e0
+    style CollabUpd fill:#fff3e0
+    style MLExport fill:#e8f5e9
 ```
 
-### 6.2 Append-Only Pattern (Thread Safety)
+### 4.2 Append-Only Pattern (Thread Safety)
 
-Original design used O(n) file rewrites to update decision outcomes, causing race conditions under concurrent agent execution. Current design uses append-only pattern for atomic writes:
+The original design used O(n) file rewrites to update decision outcomes, causing race conditions under concurrent agent execution. The current design uses append-only writes with read-time reconciliation:
 
-**Decision Outcomes Example:**
+**Initial Records** (written immediately):
+```jsonl
+{"decision_id": "d1", "timestamp": 1704067200, "task_id": "t1", "classified_as": "routing", "selected_agent": "python-pro", ...}
+{"decision_id": "d2", "timestamp": 1704067205, "task_id": "t2", "classified_as": "planning", "selected_agent": "architect", ...}
 ```
-routing-decisions.jsonl (Initial):
-{"decision_id": "d1", "timestamp": 1704067200, "task_id": "t1", "classified_as": "routing", ...}
-{"decision_id": "d2", "timestamp": 1704067205, "task_id": "t2", "classified_as": "planning", ...}
 
-routing-decision-updates.jsonl (Appended outcomes - no file rewrites):
+**Outcome Records** (appended on completion - no file rewrites):
+```jsonl
 {"decision_id": "d1", "outcome_success": true, "outcome_duration_ms": 150, "outcome_cost": 0.045, "update_timestamp": 1704067350}
 {"decision_id": "d2", "outcome_success": false, "outcome_escalation": true, "update_timestamp": 1704067410}
 ```
 
-**ML Export Reconciliation (Read-Time):**
+**ML Export Reconciliation:**
 ```go
 // Read both files
-decisions := readJSONL("routing-decisions.jsonl")    // Initial records
-updates := readJSONL("routing-decision-updates.jsonl") // Outcome updates
+decisions := readJSONL("routing-decisions.jsonl")
+updates := readJSONL("routing-decision-updates.jsonl")
 
 // Join and apply latest update per decision
 for _, update := range updates {
     if dec, ok := decisions[update.DecisionID]; ok {
-        dec.Outcome = update  // Apply latest update
+        dec.Outcome = update  // Apply latest
     }
 }
 
-// Export enriched decisions with outcomes
+// Export enriched training data
 exportTrainingData(decisions)
 ```
 
 **Benefits:**
-- ✅ Thread-safe: Append-only writes never overwrite existing data
-- ✅ Atomic: Each record is complete upon write
-- ✅ Fast: Single-pass appends, no file rewrites
-- ✅ Reconciliation: Simple join operation on read
+- Thread-safe: Append-only writes never overwrite existing data
+- Atomic: Each record is complete upon write
+- Fast: Single-pass appends, no file rewrites
+- Recoverable: Partial writes don't corrupt existing data
 
-**Cost:** JSONL files grow indefinitely. Mitigation via `gogent-ml-export --prune-after-export` flag.
+### 4.3 Telemetry Data Types
 
-### 6.3 Routing Decision Capture (GOgent-087b)
-
-Captures every routing decision made by the system for ML training.
-
-**Trigger:** PostToolUse hook - every tool execution
-
-**Captured Fields:**
+#### RoutingDecision (pkg/telemetry)
 ```go
 type RoutingDecision struct {
-    DecisionID         string    // UUID for join operations
-    SessionID          string    // Cross-session aggregation
-    Timestamp          int64     // Unix timestamp
-    TaskID             string    // Link to original task
-    ClassifiedAs       string    // Task type: "routing", "planning", "implementation", etc.
-    SelectedAgent      string    // Which agent was routed to
-    SelectedTier       string    // "haiku", "sonnet", "opus"
-    InputTokens        int       // From PostToolEvent extension (GOgent-086b)
-    OutputTokens       int       // Currently zero-valued (Claude Code doesn't emit)
-    DurationMs         int64     // Calculated from timestamps
-    SequenceIndex      int       // Position in session sequence
-    Model              string    // Model used: "haiku", "sonnet", "opus"
+    DecisionID      string   // UUID for join operations
+    SessionID       string   // Cross-session aggregation
+    Timestamp       int64    // Unix timestamp
+    TaskID          string   // Link to original task
+    ClassifiedAs    string   // Task type classification
+    SelectedAgent   string   // Which agent was routed to
+    SelectedTier    string   // "haiku", "sonnet", "opus"
+    InputTokens     int      // From PostToolEvent extension
+    OutputTokens    int      // Currently zero-valued
+    DurationMs      int64    // Calculated from timestamps
+    SequenceIndex   int      // Position in session sequence
+    Model           string   // Model used
 }
 ```
 
-**Storage:** `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl`
-
-### 6.4 Task Classification (GOgent-087c)
-
-Applies domain/type labeling to captured routing decisions for feature engineering.
-
-**Classification Categories:**
+#### Task Classification Categories
 - **routing**: Tier selection, model validation, schema checks
 - **planning**: Architecture, design, multi-file coordination
 - **implementation**: Code generation, bug fixes, refactoring
 - **research**: Library docs, best practices, external APIs
 - **review**: Code review, feedback, analysis
 - **testing**: Unit tests, integration tests, verification
-- **documentation**: README, guides, system-guide, API docs
+- **documentation**: README, guides, API docs
 - **observability**: Logging, metrics, telemetry
 
-**Integration:** Applied by `ClassifyTask()` function in gogent-sharp-edge during PostToolUse event logging.
-
-### 6.5 Agent Collaboration Tracking (GOgent-088b)
-
-Captures which agents were involved in multi-agent workflows for team composition optimization.
-
-**Captured Fields:**
+#### AgentCollaboration (pkg/telemetry)
 ```go
 type AgentCollaboration struct {
-    CollaborationID    string      // UUID for join operations
-    SessionID          string      // Cross-session aggregation
-    Timestamp          int64       // Unix timestamp
-    PrimaryAgent       string      // Entry-point agent
-    DelegatedAgents    []string    // Secondary agents spawned
-    AgentCount         int         // Total agents in collaboration
-    CollaborationType  string      // "sequential", "parallel", "fallback"
-    SequenceIndex      int         // Position in session sequence
+    CollaborationID    string    // UUID for join operations
+    SessionID          string    // Cross-session aggregation
+    Timestamp          int64     // Unix timestamp
+    PrimaryAgent       string    // Entry-point agent
+    DelegatedAgents    []string  // Secondary agents spawned
+    AgentCount         int       // Total agents in collaboration
+    CollaborationType  string    // "sequential", "parallel", "fallback"
+    SequenceIndex      int       // Position in session sequence
 }
 ```
 
-**Append-Only Updates:**
-```
-agent-collaboration-updates.jsonl:
-{"collaboration_id": "c1", "success": true, "primary_duration_ms": 5200, "total_cost": 0.25, "update_timestamp": 1704067450}
-```
+### 4.4 ML Export CLI
 
-**Storage:**
-- Initial: `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl`
-- Updates: `$XDG_DATA_HOME/gogent-fortress/agent-collaboration-updates.jsonl`
-
-### 6.6 ML Export CLI (GOgent-089b)
-
-Provides controlled extraction and reconciliation of training datasets.
-
-**Subcommands:**
 ```bash
 # Export routing decisions with reconciled outcomes
-gogent-ml-export routing-decisions --output=decisions.jsonl [--since=YYYY-MM-DD] [--until=YYYY-MM-DD]
+gogent-ml-export routing-decisions --output=decisions.jsonl [--since=YYYY-MM-DD]
 
-# Export agent collaborations with reconciled outcomes
-gogent-ml-export agent-collaborations --output=collabs.jsonl [--since=YYYY-MM-DD]
+# Export agent collaborations with outcomes
+gogent-ml-export agent-collaborations --output=collabs.jsonl
 
 # Export with automatic pruning after export
 gogent-ml-export routing-decisions --output=decisions.jsonl --prune-after-export
@@ -552,34 +510,189 @@ gogent-ml-export validate --check=orphaned-updates --check=missing-outcomes
 gogent-ml-export stats
 ```
 
-**Reconciliation Process:**
-1. Load routing-decisions.jsonl (primary records)
-2. Load routing-decision-updates.jsonl (outcome updates)
-3. Join on DecisionID, take latest update per ID
-4. Validate no orphaned updates exist
-5. Export enriched training data
-6. Optionally prune source files (archive mode)
+---
 
-### 6.7 Integration Points
+## 5. Data Persistence Layer
 
-**GOgent-087d: gogent-sharp-edge Integration**
-- Adds RoutingDecision logging to PostToolUse handler
-- Captures ML telemetry fields from extended PostToolEvent
-- Records to routing-decisions.jsonl
+All persistence uses JSONL (JSON Lines) format for append-only writes and streaming reads.
 
-**GOgent-087e: gogent-validate Integration**
-- Logs validation decisions as RoutingDecision records
-- Tracks which checks passed/failed
-- Links to violations for analysis
+```mermaid
+flowchart TB
+    subgraph "Session Scope (/tmp/)"
+        violations[/routing-violations.jsonl/]
+        counter[/tool-counter-{id}.log/]
+        patterns[/error-patterns.jsonl/]
+    end
 
-**GOgent-088c: gogent-agent-endstate Integration**
-- Logs decision outcomes on SubagentStop
-- Records to routing-decision-updates.jsonl
-- Links collaboration outcomes to agent-collaboration-updates.jsonl
+    subgraph "Project Scope (.claude/memory/)"
+        handoffs[/handoffs.jsonl/]
+        intents[/user-intents.jsonl/]
+        decisions[/decisions.jsonl/]
+        prefs[/preferences.jsonl/]
+        pending[/pending-learnings.jsonl/]
+        lasthandoff[/last-handoff.md/]
+    end
+
+    subgraph "ML Scope ($XDG_DATA_HOME/gogent-fortress/)"
+        routingdec[/routing-decisions.jsonl/]
+        routingupdates[/routing-decision-updates.jsonl/]
+        collaborations[/agent-collaborations.jsonl/]
+        collabupd[/agent-collaboration-updates.jsonl/]
+    end
+
+    subgraph "Global Scope (~/.gogent/)"
+        failures[/failure-tracker.jsonl/]
+        invocations[/agent-invocations.jsonl/]
+        escalations[/escalations.jsonl/]
+        scoutrecs[/scout-recommendations.jsonl/]
+    end
+
+    subgraph "Archive (session-archive/)"
+        archived[/learnings-{ts}.jsonl/]
+        sessions[/session-{id}.jsonl/]
+    end
+
+    validate([gogent-validate]) --> violations
+    sharpedge([gogent-sharp-edge]) --> failures
+    sharpedge --> pending
+    sharpedge --> routingdec
+    endstate([gogent-agent-endstate]) --> routingupdates
+    endstate --> collaborations
+    endstate --> collabupd
+    archive([gogent-archive]) --> handoffs
+    archive --> lasthandoff
+    archive --> archived
+    intent([gogent-capture-intent]) --> intents
+    mlexport([gogent-ml-export]) -.->|reads| routingdec
+    mlexport -.->|reads| routingupdates
+```
+
+### 5.1 File Reference
+
+| File | Scope | Written By | Schema | Purpose |
+|------|-------|------------|--------|---------|
+| `handoffs.jsonl` | Project | gogent-archive | Handoff v1.3 | Session continuity |
+| `user-intents.jsonl` | Project | gogent-capture-intent | UserIntent | User preference tracking |
+| `decisions.jsonl` | Project | gogent-archive | Decision | Architectural decisions |
+| `preferences.jsonl` | Project | gogent-archive | PreferenceOverride | User overrides |
+| `pending-learnings.jsonl` | Project | gogent-sharp-edge | SharpEdge | Unreviewed learnings |
+| `last-handoff.md` | Project | gogent-archive | Markdown | Human-readable summary |
+| `failure-tracker.jsonl` | Global | gogent-sharp-edge | FailureInfo | Cross-session tracking |
+| `agent-invocations.jsonl` | Global | gogent-* | AgentInvocation | Invocation telemetry |
+| `escalations.jsonl` | Global | gogent-agent-endstate | EscalationEvent | Tier escalation tracking |
+| `scout-recommendations.jsonl` | Global | gogent-validate | ScoutRecommendation | Scout accuracy |
+| `routing-violations.jsonl` | Temp | gogent-validate | Violation | Session violations |
+| `routing-decisions.jsonl` | ML | gogent-sharp-edge | RoutingDecision | ML training data |
+| `routing-decision-updates.jsonl` | ML | gogent-agent-endstate | DecisionOutcome | Outcome updates |
+| `agent-collaborations.jsonl` | ML | gogent-agent-endstate | AgentCollaboration | Team patterns |
+| `agent-collaboration-updates.jsonl` | ML | gogent-agent-endstate | CollabOutcome | Outcome updates |
 
 ---
 
-## 7. Handoff Schema
+## 6. Validation Pipeline
+
+The `gogent-validate` binary orchestrates multiple validation checks for Task tool invocations.
+
+```mermaid
+flowchart TD
+    input[Task Invocation] --> parse[Parse ToolEvent]
+    parse --> check1{Tool == Task?}
+
+    check1 -->|No| pass1[Pass through]
+    check1 -->|Yes| load[Load Schema v2.2.0]
+
+    load --> v1[Check 1: Einstein/Opus Blocking]
+    v1 -->|task_invocation_blocked| block1[BLOCK: Use /einstein instead]
+    v1 -->|OK| v2[Check 2: Delegation Ceiling]
+
+    v2 -->|Tier exceeds ceiling| block2[BLOCK: Ceiling violation]
+    v2 -->|OK| v3[Check 3: Subagent Type Mapping]
+
+    v3 -->|Invalid mapping| block3[BLOCK: Wrong subagent_type]
+    v3 -->|OK| v4[Check 4: Model Mismatch Warning]
+
+    v4 -->|Mismatch| warn[WARN: Continue with warning]
+    v4 -->|OK| allow[ALLOW]
+
+    block1 --> log[Log Violation to JSONL]
+    block2 --> log
+    block3 --> log
+    warn --> allow
+```
+
+### 6.1 Validation Checks
+
+| Check | Blocking | Logged | Purpose |
+|-------|----------|--------|---------|
+| Einstein/Opus | Yes | Yes | Prevent Task(opus) - use /einstein instead |
+| Delegation Ceiling | Yes | Yes | Enforce max tier from calculate-complexity |
+| Subagent Type | Yes | Yes | Ensure agent-subagent_type pairing matches schema |
+| Model Mismatch | No | No | Warn if requested model differs from agents-index |
+
+### 6.2 Agent-Subagent Mapping (routing-schema v2.2.0)
+
+| Agent | Required subagent_type | Rationale |
+|-------|------------------------|-----------|
+| codebase-search | Explore | Read-only reconnaissance |
+| haiku-scout | Explore | Scope assessment |
+| code-reviewer | Explore | Non-destructive analysis |
+| librarian | Explore | Research tasks |
+| tech-docs-writer | general-purpose | Write permissions for docs |
+| scaffolder | general-purpose | Create new files |
+| python-pro | general-purpose | Implementation work |
+| go-pro | general-purpose | Implementation work |
+| orchestrator | Plan | Planning mode coordination |
+| architect | Plan | Design and planning |
+| gemini-slave | Bash | External shell piping |
+
+---
+
+## 7. Cost Tracking & Tier Pricing
+
+The system tracks costs per tier using pricing from `routing-schema.json`:
+
+| Tier | Model | Cost/1K Tokens | Thinking Budget | Use Cases |
+|------|-------|----------------|-----------------|-----------|
+| haiku | haiku | $0.0005 | 0 | File search, counting, formatting |
+| haiku_thinking | haiku | $0.001 | 6K | Scaffolding, documentation, review |
+| sonnet | sonnet | $0.009 | 16K | Implementation, refactoring, debugging |
+| opus | opus | $0.045 | 32K | Deep analysis (via /einstein only) |
+| external | gemini-2.0 | $0.0001 | 0 | Large context (1M+ tokens) |
+
+### 7.1 Cost Calculation
+
+```go
+// From pkg/telemetry/cost.go
+func CalculateInvocationCost(inv AgentInvocation, pricing TierPricing) InvocationCost {
+    totalTokens := inv.InputTokens + inv.OutputTokens + inv.ThinkingTokens
+    rate := pricing.GetTierCostRate(inv.Tier)
+    cost := float64(totalTokens) * rate / 1000.0
+
+    return InvocationCost{
+        Agent:       inv.Agent,
+        Tier:        inv.Tier,
+        TotalTokens: totalTokens,
+        TotalCost:   cost,
+    }
+}
+```
+
+### 7.2 Session Cost Summary
+
+```go
+type SessionCostSummary struct {
+    SessionID       string                      `json:"session_id"`
+    TotalCost       float64                     `json:"total_cost"`
+    TotalTokens     int                         `json:"total_tokens"`
+    InvocationCount int                         `json:"invocation_count"`
+    ByAgent         map[string]*AgentCostSummary `json:"by_agent"`
+    ByTier          map[string]*TierCostSummary  `json:"by_tier"`
+}
+```
+
+---
+
+## 8. Handoff Schema v1.3
 
 The handoff document captures session state for cross-session continuity.
 
@@ -610,6 +723,7 @@ classDiagram
         +Decision[] decisions
         +PreferenceOverride[] preference_overrides
         +PerformanceMetric[] performance_metrics
+        +EndstateLog[] agent_endstates
     }
 
     class SessionMetrics {
@@ -619,246 +733,266 @@ classDiagram
         +string session_id
     }
 
+    class SharpEdge {
+        +string file
+        +string error_type
+        +int consecutive_failures
+        +string context
+        +int64 timestamp
+        +string type
+        +string tool
+        +string code_snippet
+        +string status
+    }
+
     Handoff --> SessionContext
     Handoff --> HandoffArtifacts
     SessionContext --> SessionMetrics
+    HandoffArtifacts --> SharpEdge
 ```
 
----
-
-## 8. How to Extend
-
-### Adding a New CLI
-
-1. Create `cmd/gogent-<name>/main.go`
-2. Implement STDIN parsing with timeout (see `pkg/routing/stdin.go`)
-3. Output hook-compatible JSON to STDOUT
-4. Add to `Makefile` build targets
-5. Document in this file under "CLI Entry Points"
-
-### Adding a New Package
-
-1. Create `pkg/<name>/` with `doc.go`
-2. Define types in dedicated files (one primary type per file)
-3. Add `_test.go` files (target 80%+ coverage)
-4. Update dependency diagram above
-5. Document in "Package Responsibilities" table
-
-### Adding a New Artifact Type
-
-1. Define struct in `pkg/session/` (e.g., `handoff_artifacts.go`)
-2. Add to `HandoffArtifacts` struct with `omitempty` tag
-3. Update `LoadArtifacts()` in `pkg/session/handoff.go`
-4. Add query method to `pkg/session/query.go`
-5. Add CLI subcommand to `gogent-archive` if user-queryable
-6. Update handoff schema version if breaking change
-
-### Adding a New Validation Check
-
-1. Create validator in `pkg/routing/` (e.g., `new_validation.go`)
-2. Add check to `ValidationOrchestrator.ValidateTask()`
-3. Define violation type constant
-4. Add to violation logging
-5. Update "Validation Checks" table above
-
----
-
-## 9. Testing Infrastructure
-
-The GOgent-Fortress testing infrastructure provides comprehensive coverage for all hook implementations through deterministic test fixtures, simulation harness integration, and automated CI/CD workflows.
-
-### 9.1 Test Fixtures
-
-**Location:** `test/simulation/fixtures/deterministic/sessionstart/`
-
-The SessionStart hook includes 10 deterministic test fixtures covering all initialization scenarios:
-
-| Fixture | Scenario | Purpose |
-|---------|----------|---------|
-| `01_home_startup.json` | Home directory, no project | Verify generic session initialization |
-| `02_python_startup.json` | Python project detection | Test pyproject.toml + language detection |
-| `03_go_startup.json` | Go project detection | Test go.mod + language detection |
-| `04_r_startup.json` | R project detection | Test DESCRIPTION + language detection |
-| `05_resume_with_handoff.json` | Session resume | Test handoff loading on continue |
-| `06_git_branch_context.json` | Git branch awareness | Test .git detection + branch context |
-| `07_ticket_in_progress.json` | Active ticket workflow | Test ticket detection + status loading |
-| `08_pending_learnings_load.json` | Memory restoration | Test pending-learnings.jsonl loading |
-| `09_multi_project.json` | Multi-language project | Test R + Shiny detection |
-| `10_error_recovery.json` | Missing schema graceful failure | Test error handling + fallback behavior |
-
-**Fixture Structure:**
-```json
-{
-  "event": "SessionStart",
-  "input": {
-    "project_dir": "/path/to/project",
-    "session_id": "test-session-id"
-  },
-  "expected_output": {
-    "context": {
-      "language": "Python",
-      "conventions": ["python.md"],
-      "agent": "python-pro"
-    }
-  }
-}
-```
-
-### 9.2 Harness Integration
-
-**CLI:** `test/simulation/harness`
-
-The simulation harness integrates with the installed `gogent-load-context` binary:
-
-```bash
-# Run single fixture
-./harness sessionstart 01_home_startup.json
-
-# Run full suite
-./harness sessionstart-suite
-
-# Run with verbose output
-./harness sessionstart 03_go_startup.json --verbose
-```
-
-**Features:**
-- STDIN piping of fixture JSON
-- STDOUT parsing of hook responses
-- Exit code validation
-- Diff-based assertion checking
-- Isolated environment execution
-
-### 9.3 GitHub Actions Workflows
-
-**Primary Workflow:** `.github/workflows/sessionstart.yml`
-
-The SessionStart workflow provides three-tier testing:
-
-```yaml
-jobs:
-  unit-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - Run Go unit tests for pkg/session
-      - Run coverage analysis
-      - Upload coverage reports
-
-  simulation-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - Build gogent-load-context
-      - Run harness with all 10 fixtures
-      - Validate outputs against expected
-
-  integration-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - Install Claude Code CLI
-      - Configure SessionStart hook
-      - Run full session lifecycle test
-```
-
-**Trigger Paths:**
-- `cmd/gogent-load-context/**`
-- `pkg/session/**`
-- `pkg/config/**`
-- `test/simulation/fixtures/deterministic/sessionstart/**`
-- `.github/workflows/sessionstart.yml`
-
-**Integration with Suite Workflows:**
-
-Both `simulation.yml` and `simulation-behavioral.yml` now include SessionStart fixture execution as part of the full system test suite.
-
-### 9.4 Coverage Metrics
-
-Current test coverage for SessionStart implementation:
-
-| Package | Coverage | Key Functions Tested |
-|---------|----------|---------------------|
-| `pkg/session` | ~85% | LoadHandoff, DetectLanguage, GenerateContext |
-| `pkg/config` | ~90% | GetProjectDir, GetRoutingSchemaPath |
-| `cmd/gogent-load-context` | ~75% | main, parseEvent, generateOutput |
-
-### 9.5 Continuous Integration
-
-All SessionStart changes trigger:
-1. **Unit tests** - Fast feedback on pkg/session changes
-2. **Simulation tests** - Validates all 10 deterministic fixtures
-3. **Integration tests** - Full Claude Code CLI lifecycle
-4. **Suite tests** - Cross-hook compatibility check
-
-**Failure Policy:** Any test failure blocks merge to master.
-
----
-
-## 10. Schema Version History
-
-### routing-schema.json
+### 8.1 Schema Version History
 
 | Version | Changes |
 |---------|---------|
-| 2.2.0 | Current - Added agent_subagent_mapping, blocked_patterns |
-| 2.1.0 | Added delegation_ceiling, tier_levels |
-| 2.0.0 | Complete restructure for tiered architecture |
-
-### handoff (pkg/session)
-
-| Version | Changes |
-|---------|---------|
-| 1.2 | Added SharpEdge extended fields (type, tool, code_snippet, status) |
+| 1.3 | Added AgentEndstates field for SubagentStop tracking |
+| 1.2 | Extended SharpEdge with type, tool, code_snippet, status |
 | 1.1 | Added decisions, preference_overrides, performance_metrics |
 | 1.0 | Initial schema with sharp_edges, routing_violations, error_patterns |
 
 ---
 
-## 11. Quick Reference
+## 9. CLI Reference
 
-### Environment Variables
+### 9.1 Hook Binaries
+
+| Binary | Hook Event | Input | Output | Lines |
+|--------|------------|-------|--------|-------|
+| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~350 |
+| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~200 |
+| `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON | ~500 |
+| `gogent-agent-endstate` | SubagentStop | SubagentEvent JSON | HookResponse JSON | ~400 |
+| `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1200 |
+
+### 9.2 Utility Binaries
+
+| Binary | Purpose | Subcommands |
+|--------|---------|-------------|
+| `gogent-capture-intent` | Manual user intent logging | (stdin) |
+| `gogent-aggregate` | Session statistics | (flags) |
+| `gogent-ml-export` | ML training data export | routing-decisions, agent-collaborations, validate, stats |
+| `gogent-orchestrator-guard` | Completion enforcement | (integration) |
+| `gogent-doc-theater` | Documentation theater detection | (integration) |
+
+### 9.3 Archive Query Subcommands
+
+```bash
+gogent-archive list [--since=DATE] [--has-sharp-edges]
+gogent-archive show <session_id>
+gogent-archive stats
+gogent-archive sharp-edges [--file=PATTERN] [--status=pending]
+gogent-archive user-intents [--category=CATEGORY]
+gogent-archive decisions [--since=DATE]
+gogent-archive preferences
+gogent-archive performance
+gogent-archive weekly
+```
+
+---
+
+## 10. Testing Infrastructure
+
+### 10.1 Test Fixtures
+
+**Location:** `test/simulation/fixtures/deterministic/`
+
+| Hook | Fixtures | Purpose |
+|------|----------|---------|
+| SessionStart | 10 | Language detection, handoff loading, git context |
+| PreToolUse | 8 | Validation, blocking, ceiling checks |
+| PostToolUse | 6 | Tool counting, failure tracking, ML logging |
+| SubagentStop | 5 | Outcome updates, collaboration tracking |
+
+### 10.2 Coverage Metrics
+
+| Package | Coverage | Key Functions |
+|---------|----------|---------------|
+| `pkg/routing` | ~88% | LoadSchema, ValidateTask, LogViolation |
+| `pkg/session` | ~85% | GenerateHandoff, LoadArtifacts, DetectLanguage |
+| `pkg/memory` | ~82% | LogFailure, GetFailureCount, PatternMatch |
+| `pkg/telemetry` | ~80% | LogInvocation, CalculateCost, ClusterByAgent |
+| `pkg/config` | ~90% | GetGOgentDir, GetCurrentTier |
+
+### 10.3 CI/CD Workflows
+
+```yaml
+# Primary workflows
+sessionstart.yml:      # SessionStart hook tests
+pretooluse.yml:        # PreToolUse validation tests
+posttooluse.yml:       # PostToolUse handler tests
+subagent.yml:          # SubagentStop integration tests
+ml-telemetry.yml:      # ML pipeline validation
+
+# Integration
+simulation.yml:        # Full simulation harness
+benchmark.yml:         # Performance regression
+coverage.yml:          # Coverage reporting
+```
+
+---
+
+## 11. Environment Variables
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `GOGENT_PROJECT_DIR` | Project root | `$PWD` |
+| `GOGENT_PROJECT_DIR` | Project root override | `$PWD` |
 | `GOGENT_ROUTING_SCHEMA` | Schema path override | `~/.claude/routing-schema.json` |
 | `GOGENT_STORAGE_PATH` | Failure tracker path | `~/.gogent/failure-tracker.jsonl` |
 | `GOGENT_MAX_FAILURES` | Debugging loop threshold | 3 |
 | `GOGENT_FAILURE_WINDOW` | Failure window (seconds) | 300 |
+| `GOGENT_REMINDER_THRESHOLD` | Routing reminder frequency | 10 |
+| `GOGENT_FLUSH_THRESHOLD` | Auto-flush threshold | 20 |
+| `XDG_DATA_HOME` | ML telemetry base path | `~/.local/share` |
 
-### Key File Paths
+---
+
+## 12. Key File Paths
 
 ```
 Project/
 ├── .claude/
 │   ├── memory/
-│   │   ├── handoffs.jsonl        # Session history
-│   │   ├── user-intents.jsonl    # User preferences
-│   │   ├── decisions.jsonl       # Architectural decisions
-│   │   ├── preferences.jsonl     # Preference overrides
-│   │   ├── performance.jsonl     # Performance metrics
+│   │   ├── handoffs.jsonl           # Session history
+│   │   ├── user-intents.jsonl       # User preferences
+│   │   ├── decisions.jsonl          # Architectural decisions
+│   │   ├── preferences.jsonl        # Preference overrides
 │   │   ├── pending-learnings.jsonl  # Unreviewed sharp edges
-│   │   └── last-handoff.md       # Human-readable handoff
+│   │   └── last-handoff.md          # Human-readable handoff
 │   ├── tmp/
-│   │   └── einstein-gap-*.md     # Escalation documents
-│   └── session-archive/          # Archived session data
+│   │   └── einstein-gap-*.md        # Escalation documents
+│   └── session-archive/             # Archived session data
 │
 ~/.gogent/
-└── failure-tracker.jsonl         # Cross-session failure tracking
-
+├── failure-tracker.jsonl            # Cross-session failures
+├── agent-invocations.jsonl          # Invocation telemetry
+├── escalations.jsonl                # Tier escalations
+└── scout-recommendations.jsonl      # Scout accuracy data
+│
+$XDG_DATA_HOME/gogent-fortress/
+├── routing-decisions.jsonl          # ML training (initial)
+├── routing-decision-updates.jsonl   # ML training (outcomes)
+├── agent-collaborations.jsonl       # Team patterns (initial)
+└── agent-collaboration-updates.jsonl # Team patterns (outcomes)
+│
 /tmp/
 ├── claude-routing-violations.jsonl  # Current session violations
-└── claude-tool-counter-*.log        # Tool call counters
+├── claude-tool-counter-*.log        # Tool call counters
+└── claude-error-patterns.jsonl      # Session error patterns
+│
+~/.claude/
+├── routing-schema.json              # v2.2.0 - Source of truth
+├── CLAUDE.md                        # Global configuration
+├── conventions/                     # Language conventions
+│   ├── python.md
+│   ├── go.md
+│   └── R.md
+├── agents/                          # Agent definitions
+│   └── */agent.yaml
+├── skills/                          # Skill definitions
+│   └── */SKILL.md
+└── rules/                           # Behavioral rules
+    ├── LLM-guidelines.md
+    └── agent-behavior.md
 ```
 
 ---
 
-## 12. Related Documentation
+## 13. How to Extend
+
+### 13.1 Adding a New CLI
+
+1. Create `cmd/gogent-<name>/main.go`
+2. Implement STDIN parsing with timeout (see `pkg/routing/stdin.go`)
+3. Output hook-compatible JSON to STDOUT
+4. Add to `Makefile` build targets
+5. Document in CLI Reference section
+
+### 13.2 Adding a New Package
+
+1. Create `pkg/<name>/` with `doc.go`
+2. Define types in dedicated files (one primary type per file)
+3. Add `_test.go` files (target 80%+ coverage)
+4. Update Package Architecture diagram
+5. Document in Package Responsibilities table
+
+### 13.3 Adding a New Artifact Type
+
+1. Define struct in `pkg/session/handoff_artifacts.go`
+2. Add to `HandoffArtifacts` struct with `omitempty` tag
+3. Update `LoadArtifacts()` in `pkg/session/handoff.go`
+4. Add query method to `pkg/session/query.go`
+5. Add CLI subcommand if user-queryable
+6. Bump handoff schema version if breaking change
+
+### 13.4 Adding ML Telemetry Fields
+
+1. Add field to `RoutingDecision` or `AgentCollaboration`
+2. Update logging in appropriate hook handler
+3. Update `gogent-ml-export` reconciliation logic
+4. Add migration code for existing JSONL files
+5. Update training pipeline documentation
+
+---
+
+## 14. Related Documentation
 
 | Document | Purpose |
 |----------|---------|
-| `CLAUDE.md` | Project-level Claude configuration |
+| `CLAUDE.md` (project) | Project-level Claude configuration |
 | `~/.claude/CLAUDE.md` | Global Claude configuration with routing gates |
 | `~/.claude/routing-schema.json` | Source of truth for tier definitions |
+| `~/.claude/docs/agent-reference-table.md` | Complete agent reference |
+| `~/.claude/rules/LLM-guidelines.md` | Behavioral guidelines |
 | `dev/will/migration_plan/tickets/` | Implementation tickets |
 
 ---
 
+## 15. TUI Integration Guide
+
+The following data streams are available for TUI integration:
+
+### 15.1 Real-Time Data (File Watching)
+
+| Data Source | Update Frequency | Access Pattern |
+|-------------|------------------|----------------|
+| Tool counter | Every tool | `tail -f /tmp/claude-tool-counter-*.log` |
+| Routing decisions | Every tool | `tail -f $XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl` |
+| Violations | On violation | `tail -f /tmp/claude-routing-violations.jsonl` |
+| Pending learnings | On sharp edge | `tail -f .claude/memory/pending-learnings.jsonl` |
+
+### 15.2 Aggregated Data (CLI Queries)
+
+| Metric | CLI Command | Package Function |
+|--------|-------------|------------------|
+| Session stats | `gogent-archive stats` | `session.CollectMetrics()` |
+| Cost breakdown | `gogent-ml-export stats` | `telemetry.CalculateSessionCostSummary()` |
+| Agent usage | `gogent-aggregate` | `telemetry.ClusterInvocationsByAgent()` |
+| Escalation ROI | (programmatic) | `telemetry.CalculateEscalationROI()` |
+| Scout accuracy | (programmatic) | `telemetry.GetScoutPerformanceSummary()` |
+
+### 15.3 Recommended TUI Panels
+
+1. **Status Bar**: Current tier, active agent, tool counter
+2. **Cost Tracker**: Session cost, cost by tier, projected total
+3. **Agent Panel**: Active agents, delegation chain, success rates
+4. **Failure Monitor**: Consecutive failures, sharp edges, debug loops
+5. **ML Telemetry**: Decisions/sec, outcome rates, collaboration patterns
+6. **Handoff Preview**: Pending actions, sharp edges, violations
+
+---
+
 *This document is designed for incremental updates. When adding new components, update the relevant section and diagram rather than rewriting prose.*
+
+**Version:** 1.0
+**Generated:** 2026-01-26
+**Maintainer:** GOgent-Fortress Development Team

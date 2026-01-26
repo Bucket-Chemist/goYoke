@@ -1,0 +1,2 @@
+PASS
+ok  	github.com/Bucket-Chemist/GOgent-Fortress/test/benchmark/test/benchmark	0.013s
