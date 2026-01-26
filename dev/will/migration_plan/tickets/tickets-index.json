@@ -4345,22 +4345,25 @@
     },
     {
       "id": "GOgent-101",
-      "title": "Installation Script",
-      "description": "Create install.sh to automate CLI installation to ~/.local/bin",
-      "file": "deployment-cutover/tickets/GOgent-101.md",
+      "title": "ML Telemetry Integration Tests",
+      "description": "End-to-end testing for ML telemetry pipeline including routing decisions, collaborations, and export reconciliation",
+      "file": "integration-tests/tickets/GOgent-101.md",
       "week": 5,
-      "time_estimate": "3h",
+      "time_estimate": "2h",
       "dependencies": [
-        "GOgent-100"
+        "GOgent-089b",
+        "GOgent-094",
+        "GOgent-097"
       ],
       "priority": "high",
       "tags": [
-        "installation",
+        "integration-tests",
+        "ml-telemetry",
         "week-5"
       ],
       "tests_required": true,
-      "acceptance_criteria_count": 10,
-      "status": "in_progress"
+      "acceptance_criteria_count": 15,
+      "status": "completed"
     },
     {
       "id": "GOgent-101b",
@@ -4383,79 +4386,83 @@
     },
     {
       "id": "GOgent-102",
-      "title": "Parallel Testing Script",
-      "description": "Create script to test all hooks in parallel",
-      "file": "deployment-cutover/tickets/GOgent-102.md",
+      "title": "SessionStart Integration Tests",
+      "description": "Integration tests for gogent-load-context hook",
+      "file": "integration-tests/tickets/GOgent-102.md",
       "week": 5,
-      "time_estimate": "2h",
+      "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-101"
+        "GOgent-094"
       ],
-      "priority": "high",
+      "priority": "medium",
       "tags": [
-        "testing",
-        "week-5"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 7,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-103",
-      "title": "Cutover Decision Workflow",
-      "description": "Decision framework and checklist for Go cutover",
-      "file": "deployment-cutover/tickets/GOgent-103.md",
-      "week": 5,
-      "time_estimate": "3h",
-      "dependencies": [
-        "GOgent-102",
-        "GOgent-098"
-      ],
-      "priority": "high",
-      "tags": [
-        "cutover",
-        "week-5"
+        "integration-tests",
+        "week-5",
+        "session-start"
       ],
       "tests_required": true,
       "acceptance_criteria_count": 9,
-      "status": "pending"
+      "status": "completed"
     },
     {
-      "id": "GOgent-104",
-      "title": "Symlink Cutover Script",
-      "description": "Script to atomically switch hooks from Bash to Go",
-      "file": "deployment-cutover/tickets/GOgent-104.md",
+      "id": "GOgent-103",
+      "title": "SubagentStop Integration Tests",
+      "description": "Comprehensive integration tests for SubagentStop hook covering ML outcome logging, collaboration updates, decision correlation, parallel agent completion, and tier-specific prompts",
+      "file": "integration-tests/tickets/GOgent-103.md",
       "week": 5,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-103"
+        "GOgent-088b",
+        "GOgent-094"
       ],
       "priority": "high",
       "tags": [
-        "cutover",
-        "week-5"
-      ],
-      "tests_required": true,
-      "acceptance_criteria_count": 6,
-      "status": "pending"
-    },
-    {
-      "id": "GOgent-105",
-      "title": "Rollback Script and Testing",
-      "description": "Rollback mechanism to revert to Bash hooks if issues arise",
-      "file": "deployment-cutover/tickets/GOgent-105.md",
-      "week": 5,
-      "time_estimate": "2.5h",
-      "dependencies": [
-        "GOgent-104"
-      ],
-      "priority": "high",
-      "tags": [
-        "cutover",
-        "week-5"
+        "integration-tests",
+        "week-5",
+        "hooks"
       ],
       "tests_required": true,
       "acceptance_criteria_count": 8,
+      "status": "completed"
+    },
+    {
+      "id": "GOgent-104",
+      "title": "Extended Performance Benchmarks",
+      "description": "Extended benchmark tests for high-frequency hooks",
+      "file": "integration-tests/tickets/GOgent-104.md",
+      "week": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-098"
+      ],
+      "priority": "low",
+      "tags": [
+        "performance",
+        "week-5",
+        "benchmarks"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 13,
+      "status": "in_progress"
+    },
+    {
+      "id": "GOgent-105",
+      "title": "Extended Regression Tests (SessionStart, SubagentStop, ML Telemetry)",
+      "description": "Advanced regression tests for hook behavior drift detection in SessionStart, SubagentStop, and ML field population",
+      "file": "integration-tests/tickets/GOgent-105.md",
+      "week": 5,
+      "time_estimate": "1.5h",
+      "dependencies": [
+        "GOgent-100"
+      ],
+      "priority": "medium",
+      "tags": [
+        "regression",
+        "quality-gate",
+        "week-5"
+      ],
+      "tests_required": true,
+      "acceptance_criteria_count": 12,
       "status": "pending"
     },
     {

@@ -1,29 +1,3 @@
----
-id: GOgent-104
-title: Extended Performance Benchmarks
-description: Extended benchmark tests for high-frequency hooks
-status: pending
-time_estimate: 1.5h
-dependencies: ["GOgent-098"]
-priority: low
-week: 5
-tags: ["performance", "week-5", "benchmarks"]
-tests_required: true
-acceptance_criteria_count: 13
----
-
-### GOgent-104: Extended Performance Benchmarks
-
-**Time**: 1.5 hours
-**Dependencies**: GOgent-098 (initial benchmarks)
-
-**Task**:
-Benchmark extended hook performance across diverse dataset sizes and hook lifecycles. Target: LanguageDetection <2ms, HandoffInjection <3ms per 10KB, OutcomeLogging <1ms, CollaborationUpdate <2ms, MLExport scaling verified.
-
-**File**: `test/benchmark/extended_bench_test.go`
-
-**Imports**:
-```go
 package benchmark
 
 import (
@@ -34,26 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sort"
-	"testing"
-	"time"
-)
-```
-
-**Implementation**:
-
-```go
-package benchmark
-
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"sort"
 	"testing"
 	"time"
 )
@@ -537,25 +491,6 @@ func setupMLDataset(b *testing.B, projectDir string, eventCount int, filename st
 	os.WriteFile(transcriptPath, buf.Bytes(), 0644)
 }
 
-// Helper: Calculate percentile from durations
-func percentile(durations []time.Duration, p int) time.Duration {
-	if len(durations) == 0 {
-		return 0
-	}
-
-	// Sort durations
-	sorted := make([]time.Duration, len(durations))
-	copy(sorted, durations)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
-
-	index := (p * len(sorted)) / 100
-	if index >= len(sorted) {
-		index = len(sorted) - 1
-	}
-
-	return sorted[index]
-}
-
 // Helper: Calculate average duration
 func averageDuration(durations []time.Duration) time.Duration {
 	if len(durations) == 0 {
@@ -599,73 +534,3 @@ func averageUint64(values []uint64) uint64 {
 
 	return total / uint64(len(values))
 }
-
-// Helper: Setup benchmark project directory
-func setupBenchmarkProject(b *testing.B) string {
-	projectDir := b.TempDir()
-
-	// Create routing schema
-	schemaPath := filepath.Join(projectDir, ".claude", "routing-schema.json")
-	os.MkdirAll(filepath.Dir(schemaPath), 0755)
-
-	schema := `{
-		"tiers": {
-			"haiku": {"tools_allowed": ["Read", "Glob", "Grep"]},
-			"sonnet": {"tools_allowed": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Task"]},
-			"opus": {"tools_allowed": ["*"], "task_invocation_blocked": true}
-		},
-		"agent_subagent_mapping": {
-			"codebase-search": "Explore",
-			"einstein": "general-purpose"
-		}
-	}`
-
-	os.WriteFile(schemaPath, []byte(schema), 0644)
-
-	// Set tier to haiku
-	tierPath := filepath.Join(projectDir, ".gogent", "current-tier")
-	os.MkdirAll(filepath.Dir(tierPath), 0755)
-	os.WriteFile(tierPath, []byte("haiku\n"), 0644)
-
-	return projectDir
-}
-```
-
-**Run benchmarks**:
-```bash
-go test -bench=. ./test/benchmark -benchmem -benchtime=10s -run=BenchmarkLoadContext_LanguageDetection -run=BenchmarkLoadContext_HandoffInjection -run=BenchmarkAgentEndstate_OutcomeLogging -run=BenchmarkAgentEndstate_CollaborationUpdate -run=BenchmarkMLExport_SmallDataset -run=BenchmarkMLExport_MediumDataset -run=BenchmarkMLExport_LargeDataset -run=BenchmarkLatency_AllHooks_Percentiles
-```
-
-Or run all extended benchmarks:
-```bash
-go test -bench=Extended ./test/benchmark -benchmem -benchtime=30s
-```
-
-**Acceptance Criteria**:
-- [x] `BenchmarkLoadContext_LanguageDetection` completes and reports latency <2ms
-- [x] `BenchmarkLoadContext_HandoffInjection` handles 10KB payload with latency <3ms
-- [x] `BenchmarkAgentEndstate_OutcomeLogging` benchmarks outcome logging with <1ms target
-- [x] `BenchmarkAgentEndstate_CollaborationUpdate` benchmarks collaboration logging with <2ms target
-- [x] `BenchmarkMLExport_SmallDataset` benchmarks 1K event dataset export
-- [x] `BenchmarkMLExport_MediumDataset` benchmarks 10K event dataset export
-- [x] `BenchmarkMLExport_LargeDataset` benchmarks 100K event dataset with <5s latency and <100MB memory
-- [x] `BenchmarkLatency_AllHooks_Percentiles` measures p50/p95/p99 across all 6 hooks
-- [x] All benchmark functions use production-ready error handling
-- [x] Benchmark results show all performance targets met
-- [x] Benchmark report saved: `go test -bench=. ./test/benchmark -benchmem | tee extended-benchmark-results.txt`
-- [x] All tests pass: `go test ./test/benchmark`
-- [x] Race detector clean: `go test -race ./test/benchmark`
-
-**Test Deliverables** (MANDATORY):
-- [x] Test file created: `test/benchmark/extended_bench_test.go`
-- [x] Test file size: ~450 lines
-- [x] Number of benchmark functions: 8
-- [x] Tests passing: ✅ (output: `go test ./test/benchmark`)
-- [x] Race detector clean: ✅ (output: `go test -race ./test/benchmark`)
-- [x] **ECOSYSTEM TEST PASS REQUIRED**: Run `make test-ecosystem` and verify ALL PASS
-- [x] Ecosystem test output saved to: `test/audit/GOgent-104/`
-- [x] Test audit updated: `/test/INDEX.md` row added
-
-**Why This Matters**: High-frequency hooks (load-context, agent-endstate, sharp-edge-detector) run on every session start/end and subagent lifecycle event. Extended performance benchmarks verify that hooks at scale (large datasets, multiple files, heavy collaboration logging) don't introduce latency regressions. Ensures hooks remain transparent to Claude's reasoning workflow.
-
----
