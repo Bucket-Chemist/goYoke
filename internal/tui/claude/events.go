@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,12 +14,25 @@ import (
 func (m PanelModel) handleEvent(event cli.Event) PanelModel {
 	switch event.Type {
 	case "assistant":
-		// Handle assistant message (streaming text)
+		// Handle assistant message (streaming text and tool use)
 		if ae, err := event.AsAssistant(); err == nil {
-			// Extract text from content blocks
+			// Extract content from all block types
 			for _, block := range ae.Message.Content {
-				if block.Type == "text" && block.Text != "" {
-					m.appendStreamingText(block.Text)
+				switch block.Type {
+				case "text":
+					if block.Text != "" {
+						m.appendStreamingText(block.Text)
+					}
+				case "tool_use":
+					// Show tool invocation with details
+					toolInfo := formatToolUse(block.Name, block.Input)
+					m.appendStreamingText(toolInfo)
+				case "thinking":
+					// Show thinking content if present
+					if block.Text != "" {
+						thinkInfo := fmt.Sprintf("\n💭 %s\n", truncateText(block.Text, 200))
+						m.appendStreamingText(thinkInfo)
+					}
 				}
 			}
 		}
@@ -47,6 +61,18 @@ func (m PanelModel) handleEvent(event cli.Event) PanelModel {
 			// Add error as assistant message
 			errorText := fmt.Sprintf("[Error: %s]", ee.Error)
 			m.appendStreamingText(errorText)
+		}
+
+	default:
+		// Log unknown event types for debugging
+		// This helps identify what else Claude CLI sends
+		if event.Type != "" {
+			debugInfo := fmt.Sprintf("\n[Event: %s", event.Type)
+			if event.Subtype != "" {
+				debugInfo += "/" + event.Subtype
+			}
+			debugInfo += "]\n"
+			m.appendStreamingText(debugInfo)
 		}
 	}
 
@@ -137,4 +163,107 @@ var (
 			Foreground(lipgloss.Color("240")).
 			Italic(true).
 			Padding(0, 1)
+
+	toolStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("magenta")).
+			Bold(true)
+
+	toolDetailStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("240"))
 )
+
+// formatToolUse formats a tool invocation for display.
+// Shows tool name and a summary of the input.
+func formatToolUse(name string, input map[string]interface{}) string {
+	var b strings.Builder
+
+	b.WriteString("\n")
+	b.WriteString(toolStyle.Render(fmt.Sprintf("🔧 [%s]", name)))
+
+	// Format key details based on tool type
+	if input != nil {
+		switch name {
+		case "Bash":
+			if cmd, ok := input["command"].(string); ok {
+				b.WriteString("\n")
+				b.WriteString(toolDetailStyle.Render("  $ " + truncateText(cmd, 100)))
+			}
+		case "Read":
+			if path, ok := input["file_path"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" %s", path)))
+			}
+		case "Write", "Edit":
+			if path, ok := input["file_path"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" %s", path)))
+			}
+		case "Glob":
+			if pattern, ok := input["pattern"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" %s", pattern)))
+			}
+		case "Grep":
+			if pattern, ok := input["pattern"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" /%s/", pattern)))
+			}
+		case "Task":
+			if desc, ok := input["description"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" %s", desc)))
+			}
+		case "WebFetch", "WebSearch":
+			if url, ok := input["url"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" %s", truncateText(url, 60))))
+			} else if query, ok := input["query"].(string); ok {
+				b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" \"%s\"", query)))
+			}
+		default:
+			// For unknown tools, show first key-value pair
+			for k, v := range input {
+				if str, ok := v.(string); ok {
+					b.WriteString(toolDetailStyle.Render(fmt.Sprintf(" %s=%s", k, truncateText(str, 50))))
+					break
+				}
+			}
+		}
+	}
+
+	b.WriteString("\n")
+	return b.String()
+}
+
+// truncateText truncates text to maxLen, adding ellipsis if needed.
+func truncateText(text string, maxLen int) string {
+	// Remove newlines for single-line display
+	text = strings.ReplaceAll(text, "\n", " ")
+	text = strings.ReplaceAll(text, "\r", "")
+
+	if len(text) <= maxLen {
+		return text
+	}
+	if maxLen <= 3 {
+		return "..."
+	}
+	return text[:maxLen-3] + "..."
+}
+
+// formatEventDetails formats raw event JSON for debugging.
+func formatEventDetails(event cli.Event) string {
+	if event.Raw == nil {
+		return ""
+	}
+
+	// Pretty print with indentation, but limit size
+	var prettyJSON map[string]interface{}
+	if err := json.Unmarshal(event.Raw, &prettyJSON); err != nil {
+		return string(event.Raw)
+	}
+
+	formatted, err := json.MarshalIndent(prettyJSON, "  ", "  ")
+	if err != nil {
+		return string(event.Raw)
+	}
+
+	result := string(formatted)
+	if len(result) > 500 {
+		result = result[:500] + "\n  ..."
+	}
+	return result
+}

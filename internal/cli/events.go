@@ -46,10 +46,11 @@ type AssistantMessage struct {
 
 // ContentBlock represents a single content element in a message
 type ContentBlock struct {
-	Type string `json:"type"` // "text", "tool_use", "thinking", etc.
-	Text string `json:"text,omitempty"`
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	Type  string                 `json:"type"` // "text", "tool_use", "thinking", etc.
+	Text  string                 `json:"text,omitempty"`
+	ID    string                 `json:"id,omitempty"`
+	Name  string                 `json:"name,omitempty"`
+	Input map[string]interface{} `json:"input,omitempty"` // Tool arguments for tool_use blocks
 }
 
 // Usage tracks token consumption for a message
