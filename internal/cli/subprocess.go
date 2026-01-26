@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -12,19 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Event represents a parsed event from Claude CLI stdout.
-// This is a placeholder type - full event parsing is implemented in GOgent-114.
-// For now, we store the raw JSON and basic type field.
-type Event struct {
-	Type    string                 `json:"type"`
-	RawData map[string]interface{} `json:"-"`
-}
-
-// UserMessage represents a message to send to Claude.
-// This is a placeholder type - full message structure is in GOgent-114.
-type UserMessage struct {
-	Content string `json:"content"`
-}
+// Event types are now defined in events.go (GOgent-114).
+// This file uses the Event type from events.go for full event parsing.
 
 // Config holds configuration for starting a Claude subprocess.
 type Config struct {
@@ -339,22 +327,7 @@ func (cp *ClaudeProcess) readStderr() {
 }
 
 // parseEvent parses raw JSON bytes into an Event struct.
-// This is a placeholder implementation - full parsing is in GOgent-114.
-// For now, we extract the type field and store raw data.
+// Uses the full event parsing implementation from events.go (GOgent-114).
 func parseEvent(data []byte) (Event, error) {
-	var rawData map[string]interface{}
-	if err := json.Unmarshal(data, &rawData); err != nil {
-		return Event{}, fmt.Errorf("unmarshal failed: %w", err)
-	}
-
-	event := Event{
-		RawData: rawData,
-	}
-
-	// Extract type if present
-	if eventType, ok := rawData["type"].(string); ok {
-		event.Type = eventType
-	}
-
-	return event, nil
+	return ParseEvent(data)
 }
