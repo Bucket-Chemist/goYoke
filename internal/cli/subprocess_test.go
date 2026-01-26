@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -284,3 +285,183 @@ func TestClaudeProcess_ChannelsClosed(t *testing.T) {
 
 // parseEvent tests are now in events_test.go (GOgent-114).
 // This file tests subprocess integration with events.
+
+func TestClaudeProcess_RestartDisabled(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+		Restart: RestartPolicy{
+			Enabled:      false,
+			MaxRestarts:  1, // Set non-zero to prevent defaults
+			RestartDelay: 1 * time.Second,
+		},
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	err = proc.Start()
+	if err != nil {
+		t.Skipf("Mock claude binary not available: %v", err)
+	}
+	defer proc.Stop()
+
+	// Verify restart is disabled
+	assert.False(t, proc.config.Restart.Enabled)
+}
+
+func TestClaudeProcess_RestartDefaultPolicy(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	// Should have default restart policy
+	assert.True(t, proc.config.Restart.Enabled)
+	assert.Equal(t, 3, proc.config.Restart.MaxRestarts)
+	assert.Equal(t, 1*time.Second, proc.config.Restart.RestartDelay)
+	assert.Equal(t, 30*time.Second, proc.config.Restart.MaxDelay)
+	assert.Equal(t, 2.0, proc.config.Restart.BackoffFactor)
+	assert.Equal(t, 60*time.Second, proc.config.Restart.ResetAfter)
+	assert.True(t, proc.config.Restart.PreserveSession)
+}
+
+func TestClaudeProcess_RestartEventsChannel(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	// RestartEvents channel should be accessible
+	restartChan := proc.RestartEvents()
+	assert.NotNil(t, restartChan)
+}
+
+func TestClaudeProcess_ExplicitStopPreventsRestart(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+		Restart: RestartPolicy{
+			Enabled:      true,
+			MaxRestarts:  3,
+			RestartDelay: 100 * time.Millisecond,
+		},
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	err = proc.Start()
+	if err != nil {
+		t.Skipf("Mock claude binary not available: %v", err)
+	}
+
+	// Explicitly stop
+	err = proc.Stop()
+	assert.NoError(t, err)
+
+	// Wait a bit to ensure no restart happens
+	time.Sleep(300 * time.Millisecond)
+
+	// Should still be stopped
+	assert.False(t, proc.IsRunning())
+
+	// Check for explicit stop event
+	select {
+	case event := <-proc.RestartEvents():
+		assert.Equal(t, "explicit_stop", event.Reason)
+		assert.False(t, event.WillResume)
+	case <-time.After(100 * time.Millisecond):
+		// No event is also acceptable
+	}
+}
+
+func TestClaudeProcess_SessionIDPreserved(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+		SessionID:  "test-session-preserve",
+		Restart: RestartPolicy{
+			Enabled:         true,
+			PreserveSession: true,
+		},
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	originalSession := proc.SessionID()
+	assert.Equal(t, "test-session-preserve", originalSession)
+	assert.True(t, proc.config.Restart.PreserveSession)
+}
+
+func TestClaudeProcess_ClassifyExitReason(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected string
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: "normal_exit",
+		},
+		{
+			name:     "non-exit error",
+			err:      fmt.Errorf("some error"),
+			expected: "error",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			reason := classifyExitReason(tc.err)
+			assert.Equal(t, tc.expected, reason)
+		})
+	}
+}
+
+func TestClaudeProcess_RestartStateInitialized(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	// Restart state should be initialized to zero values
+	assert.Equal(t, 0, proc.restartState.Attempts)
+	assert.True(t, proc.restartState.LastAttempt.IsZero())
+	assert.True(t, proc.restartState.LastSuccess.IsZero())
+	assert.Equal(t, time.Duration(0), proc.restartState.CurrentDelay)
+}
+
+func TestClaudeProcess_RestartConfigCustom(t *testing.T) {
+	cfg := Config{
+		ClaudePath: "./testdata/mock-claude",
+		Restart: RestartPolicy{
+			Enabled:         true,
+			MaxRestarts:     5,
+			RestartDelay:    500 * time.Millisecond,
+			MaxDelay:        1 * time.Minute,
+			BackoffFactor:   1.5,
+			ResetAfter:      2 * time.Minute,
+			PreserveSession: false,
+		},
+	}
+
+	proc, err := NewClaudeProcess(cfg)
+	require.NoError(t, err)
+
+	assert.Equal(t, 5, proc.config.Restart.MaxRestarts)
+	assert.Equal(t, 500*time.Millisecond, proc.config.Restart.RestartDelay)
+	assert.Equal(t, 1*time.Minute, proc.config.Restart.MaxDelay)
+	assert.Equal(t, 1.5, proc.config.Restart.BackoffFactor)
+	assert.Equal(t, 2*time.Minute, proc.config.Restart.ResetAfter)
+	assert.False(t, proc.config.Restart.PreserveSession)
+}
+
+// Note: Integration tests that actually crash and restart the process
+// would require a mock-claude-crasher binary. These tests verify the
+// infrastructure is in place and configured correctly.

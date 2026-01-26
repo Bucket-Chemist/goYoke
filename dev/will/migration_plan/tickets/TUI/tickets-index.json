@@ -50,7 +50,7 @@
       "title": "Auto-Restart on Panic",
       "description": "Implement automatic restart behavior for the Claude subprocess when it crashes or exits unexpectedly. The TUI should seamlessly resume the session without user intervention.",
       "file": "TUI-CLI-01a.md",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "time_estimate": "1h",
       "dependencies": ["GOgent-110"],
