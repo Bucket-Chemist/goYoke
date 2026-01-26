@@ -1,0 +1,12 @@
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "my-python-project",
+  "audit_config": {
+    "enabled": true,
+    "test_commands": {
+      "python": {
+        "pytest": "uv run pytest tests/ -xvs --cov=src --cov-branch --cov-report=term-missing"
+      }
+    }
+  }
+}

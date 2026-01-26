@@ -1,0 +1,12 @@
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "my-javascript-project",
+  "audit_config": {
+    "enabled": true,
+    "test_commands": {
+      "javascript": {
+        "test": "npm run test:coverage"
+      }
+    }
+  }
+}

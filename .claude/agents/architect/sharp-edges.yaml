@@ -1,0 +1,33 @@
+edges:
+  - name: circular_dependencies
+    severity: critical
+    description: >
+      Designing modules A and B such that A imports B and B imports A, 
+      causing runtime failures.
+    mitigation: >
+      Draw the dependency graph (mentally or in scratchpad). Ensure it is a DAG 
+      (Directed Acyclic Graph). Use dependency injection or interfaces if needed.
+
+  - name: over_engineering
+    severity: high
+    description: >
+      Designing a microservices architecture with Kafka for a simple CLI tool.
+    mitigation: >
+      Check the "Project State" (Greenfield, Legacy, etc.). Match the 
+      complexity of the solution to the problem size. YAGNI (You Ain't Gonna Need It).
+
+  - name: implementation_black_holes
+    severity: high
+    description: >
+      Creating a plan step called "Implement the core logic" without defining 
+      WHAT that logic is.
+    mitigation: >
+      Break "core logic" down into inputs, outputs, algorithms, and state changes. 
+      Don't leave the hard part vague.
+
+  - name: ignoring_data_migration
+    severity: high
+    description: >
+      Changing a data model without planning how to migrate existing data.
+    mitigation: >
+      If persistence is involved (DB, files), always add a "Migration" phase to the plan.

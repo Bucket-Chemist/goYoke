@@ -1,0 +1,539 @@
+---
+name: ticket
+description: Ticket-driven workflow for structured implementation. Finds next ticket, validates readiness, spawns architect if needed, tracks progress.
+---
+
+# Ticket Skill v1.1
+
+## Purpose
+
+Turn ticket specifications into completed work through systematic workflow execution.
+
+**What this skill does:**
+1. **Discover** — Find ticket system in current project
+2. **Select** — Choose next actionable ticket (dependencies met)
+3. **Validate** — Check ticket structure and completeness
+4. **Plan** — Delegate to architect if ticket needs implementation planning
+5. **Track** — Monitor progress with TodoWrite and acceptance criteria
+6. **Verify** — Ensure all acceptance criteria met before completion
+7. **Audit** — Optionally run automated tests and generate documentation
+8. **Complete** — Update status, generate commit, mark done
+
+**What this skill does NOT do:**
+- Implement code (delegates to language agents: go-pro, python-pro, etc.)
+- Enforce routing rules (handled by validate-routing.sh hook)
+- Create tickets (use project planning workflows)
+
+---
+
+## Invocation
+
+- `/ticket` or `/ticket next` — Find and start next available ticket
+- `/ticket status` — Show current ticket progress
+- `/ticket verify` — Check if acceptance criteria met
+- `/ticket complete` — Mark ticket done and update status
+
+---
+
+## Prerequisites
+
+**Required tools:**
+- `jq` (JSON manipulation)
+- `python3` with `python-frontmatter` library
+- `git` (for commit workflow)
+
+**Install dependencies:**
+```bash
+pip install python-frontmatter
+```
+
+**Project setup:**
+Either create `.ticket-config.json` at project root:
+```json
+{
+  "tickets_dir": "implementation_plan/tickets",
+  "project_name": "my-project"
+}
+```
+
+Or use standard directory structure:
+- `./implementation_plan/tickets/tickets-index.json`
+- `./migration_plan/finalised/tickets/tickets-index.json`
+- `./tickets/tickets-index.json`
+
+---
+
+## Workflow
+
+### Phase 1: Project Discovery
+
+Locate the ticket directory for this project:
+
+```bash
+tickets_dir=$(~/.claude/skills/ticket/scripts/discover-project.sh)
+if [[ $? -ne 0 ]]; then
+    echo "[ticket] ERROR: No ticket directory found."
+    echo "[ticket] Create .ticket-config.json or tickets/ directory."
+    exit 1
+fi
+
+echo "[ticket] Found tickets at: $tickets_dir"
+```
+
+**Discovery logic:**
+1. Search for `.ticket-config.json` in current directory and ancestors
+2. Fallback to git root + standard paths (implementation_plan/tickets/, migration_plan/finalised/tickets/, tickets/)
+3. Error if nothing found
+
+---
+
+### Phase 2: Ticket Selection
+
+Find the next actionable ticket (status=pending, dependencies met):
+
+```bash
+tickets_index="$tickets_dir/tickets-index.json"
+
+if [[ ! -f "$tickets_index" ]]; then
+    echo "[ticket] ERROR: tickets-index.json not found at $tickets_dir"
+    exit 1
+fi
+
+ticket_id=$(~/.claude/skills/ticket/scripts/find-next-ticket.sh "$tickets_index")
+
+if [[ -z "$ticket_id" ]]; then
+    echo "[ticket] No actionable tickets found."
+    echo "[ticket] Check if all dependencies are completed."
+    exit 0
+fi
+
+echo "[ticket] Selected: $ticket_id"
+```
+
+**Selection logic:**
+- Filter to `status == "pending"`
+- Check all dependencies have `status == "completed"`
+- Return first match (respects ticket order in JSON)
+
+---
+
+### Phase 3: Schema Validation
+
+Validate ticket structure before proceeding:
+
+```bash
+# Find ticket file (check both .md in tickets_dir and subdirectories)
+ticket_file=""
+if [[ -f "$tickets_dir/$ticket_id.md" ]]; then
+    ticket_file="$tickets_dir/$ticket_id.md"
+elif [[ -f "$tickets_dir"/*"$ticket_id"*.md ]]; then
+    ticket_file=$(find "$tickets_dir" -name "*$ticket_id*.md" | head -1)
+else
+    echo "[ticket] ERROR: Ticket file not found for $ticket_id"
+    exit 1
+fi
+
+# Run validation
+validation_result=$(~/.claude/skills/ticket/scripts/validate-ticket-schema.py \
+    "$ticket_file" \
+    "$tickets_index" 2>&1)
+
+if [[ $? -ne 0 ]]; then
+    echo "[ticket] Schema validation FAILED:"
+    echo "$validation_result" | jq -r '.errors[]' 2>/dev/null || echo "$validation_result"
+    exit 1
+fi
+
+# Show warnings if any
+warnings=$(echo "$validation_result" | jq -r '.warnings[]' 2>/dev/null)
+if [[ -n "$warnings" ]]; then
+    echo "[ticket] Warnings:"
+    echo "$warnings"
+fi
+
+echo "[ticket] Schema validation: PASS"
+```
+
+**Validates:**
+- Required frontmatter fields (id, title, description, status, time_estimate, dependencies)
+- Status enum values
+- Acceptance criteria presence
+- Dependency references (if provided)
+
+---
+
+### Phase 4: Planning Decision
+
+Determine if ticket needs architect planning:
+
+```bash
+planning_check=$(~/.claude/skills/ticket/scripts/check-planning-needed.py "$ticket_file")
+needs_planning=$(echo "$planning_check" | jq -r '.needs_planning')
+reason=$(echo "$planning_check" | jq -r '.reason')
+confidence=$(echo "$planning_check" | jq -r '.confidence')
+
+echo "[ticket] Planning needed: $needs_planning"
+echo "[ticket] Reason: $reason"
+echo "[ticket] Confidence: $confidence"
+```
+
+**Decision logic (priority order):**
+1. Explicit `needs_planning` field in frontmatter
+2. "planning" tag presence
+3. Complexity heuristic (files>3, time>2h, deps>2, multi-package)
+4. Default: false (safe default)
+
+---
+
+### Phase 5: Planning Phase (Conditional)
+
+If `needs_planning == true`, delegate to architect:
+
+Use the Task tool to spawn architect agent:
+
+**Task Invocation:**
+```
+Tool: Task
+Description: Create implementation plan for {ticket_id}
+Subagent Type: Plan
+Model: sonnet
+Prompt:
+  AGENT: architect
+
+  1. TASK: Review ticket {ticket_id} and create detailed implementation plan
+
+  2. EXPECTED OUTCOME:
+     - File-by-file implementation specifications
+     - Dependency analysis
+     - Risk assessment
+     - Testing strategy
+
+  3. REQUIRED SKILLS: System architecture, domain patterns
+
+  4. REQUIRED TOOLS: Read, Write
+
+  5. MUST DO:
+     - Read ticket file: {ticket_file}
+     - Read tickets-index.json for context
+     - Create plan document
+     - Identify blockers and dependencies
+
+  6. MUST NOT DO:
+     - Implement code (planning only)
+     - Skip risk analysis
+
+  7. CONTEXT:
+     Ticket: {ticket_id}
+     File: {ticket_file}
+     Project: {project_name from config}
+```
+
+After architect completes:
+```
+[ticket] Plan created.
+Review and approve before proceeding.
+```
+
+If `needs_planning == false`, skip to Phase 6.
+
+---
+
+### Phase 6: Implementation Tracking
+
+Update ticket status and create TodoWrite for tracking:
+
+```bash
+# Update status to in_progress
+~/.claude/skills/ticket/scripts/update-ticket-status.sh \
+    "$tickets_index" \
+    "$ticket_id" \
+    "in_progress"
+
+echo "[ticket] Status updated: in_progress"
+
+# Save current ticket to state file
+echo "$ticket_id" > "$tickets_dir/.current-ticket"
+```
+
+**Create TodoWrite from acceptance criteria:**
+
+Parse the ticket file and extract acceptance criteria checkboxes, then create todos.
+
+Example:
+```
+TodoWrite with items:
+- Implement function X
+- Write tests for Y
+- Update documentation
+```
+
+---
+
+### Phase 7: Completion Verification
+
+After implementation work, verify acceptance criteria:
+
+```bash
+acceptance=$(~/.claude/skills/ticket/scripts/verify-acceptance.py "$ticket_file")
+all_complete=$(echo "$acceptance" | jq -r '.all_complete')
+completed=$(echo "$acceptance" | jq -r '.completed')
+total=$(echo "$acceptance" | jq -r '.total')
+
+echo "[ticket] Acceptance criteria: $completed/$total complete"
+
+if [[ "$all_complete" != "true" ]]; then
+    pending=$(echo "$acceptance" | jq -r '.pending[]')
+    echo "[ticket] Pending criteria:"
+    echo "$pending" | sed 's/^/  - /'
+    echo ""
+    echo "[ticket] Continue working or mark complete anyway?"
+    exit 0
+fi
+
+echo "[ticket] All acceptance criteria met ✓"
+```
+
+---
+
+### Phase 7.5: Audit Documentation (Optional)
+
+After acceptance criteria verification, optionally run automated audit tests and documentation:
+
+```bash
+# Check if audit is enabled in config
+config_file=$(find . -name ".ticket-config.json" -maxdepth 3 | head -1)
+audit_enabled="false"
+
+if [[ -f "$config_file" ]]; then
+    audit_enabled=$(jq -r '.audit_config.enabled // false' "$config_file")
+fi
+
+if [[ "$audit_enabled" == "true" ]]; then
+    echo "[ticket] Running audit documentation..."
+    if ~/.claude/skills/ticket/scripts/run-audit.sh --ticket-id="$ticket_id"; then
+        echo "[ticket] ✓ Audit complete"
+    else
+        echo "[ticket] ⚠️ Audit failed (non-blocking, continuing)"
+    fi
+fi
+```
+
+**What the audit does:**
+- Executes language-specific test suites (unit, integration, race detection)
+- Generates coverage reports
+- Creates implementation summary document
+- Logs all results to `.ticket-audits/{ticket_id}/`
+
+**Output artifacts:**
+- `unit-tests.log` — Unit test execution results
+- `coverage.out` — Coverage data (Go projects)
+- `coverage-report.txt` — Coverage analysis
+- `coverage-summary.txt` — Total coverage percentage
+- `implementation-summary.md` — Human-readable summary with test results and metadata
+
+**Behavior notes:**
+- **Non-blocking**: Audit failures do NOT prevent ticket completion
+- **Backward compatible**: If `.ticket-config.json` missing or `audit_config.enabled` is false, audit is silently skipped
+- **Language-agnostic**: Automatically detects project language (Go, Python, R, JavaScript/TypeScript)
+- **Configurable**: Test commands can be customized in `.ticket-config.json` under `audit_config.test_commands`
+
+**Example audit configuration:**
+```json
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "GOgent-Fortress",
+  "audit_config": {
+    "enabled": true,
+    "test_commands": {
+      "go": {
+        "unit": "go test -v ./...",
+        "race": "go test -race ./...",
+        "coverage": "go test -coverprofile={audit_dir}/coverage.out ./..."
+      }
+    }
+  }
+}
+```
+
+**When to enable audit:**
+- Projects with established test suites
+- Tickets requiring coverage verification
+- Teams wanting automated documentation of implementation quality
+
+**When to skip audit:**
+- Prototyping or spike work
+- Documentation-only changes
+- Projects without test infrastructure
+
+---
+
+### Phase 8: Completion Workflow
+
+After acceptance criteria and optional audit verification, mark ticket complete and generate commit:
+
+```bash
+# Generate commit message
+commit_msg=$(~/.claude/skills/ticket/scripts/generate-commit-msg.sh "$ticket_file")
+
+# Show commit message preview
+echo "[ticket] Generated commit message:"
+echo "---"
+echo "$commit_msg"
+echo "---"
+
+# Git operations (user confirms first)
+echo "Commit and complete ticket? (y/n)"
+# Await user confirmation, then:
+
+git add .
+git commit -m "$commit_msg"
+
+# Update status to completed
+~/.claude/skills/ticket/scripts/update-ticket-status.sh \
+    "$tickets_index" \
+    "$ticket_id" \
+    "completed"
+
+# Clear current ticket state
+rm -f "$tickets_dir/.current-ticket"
+
+echo "[ticket] ✓ Ticket $ticket_id completed"
+
+# Show next available tickets
+echo ""
+echo "[ticket] Next available tickets:"
+~/.claude/skills/ticket/scripts/find-next-ticket.sh "$tickets_index" | head -3
+```
+
+---
+
+## State Files
+
+| File | Purpose | Format |
+|------|---------|--------|
+| `.ticket-config.json` | Project configuration | JSON with tickets_dir, project_name, audit_config |
+| `tickets-index.json` | Ticket registry and status | JSON with metadata and tickets array |
+| `.current-ticket` | Current ticket ID | Plain text (e.g., "LISAN-002") |
+| `plans/{ticket-id}-plan.md` | Implementation plans | Markdown from architect |
+| `.ticket-audits/{ticket-id}/` | Audit artifacts | Directory with test logs, coverage data, summary |
+
+---
+
+## Cost Model
+
+| Phase | Model | Est. Tokens | Cost |
+|-------|-------|-------------|------|
+| Discovery | Bash | 0 | $0.000 |
+| Selection | Bash | 0 | $0.000 |
+| Validation | Python | 0 | $0.000 |
+| Planning (if needed) | Sonnet | 10-15K | $0.09-$0.14 |
+| Tracking | TodoWrite | 0 | $0.000 |
+| Verification | Python | 0 | $0.000 |
+| Audit (if enabled) | Bash | 0 | $0.000 |
+| Completion | Bash | 0 | $0.000 |
+| **Total per ticket** | | 10-15K | **$0.09-$0.14** |
+
+**Cost savings vs manual workflow:** ~40% (automated discovery, validation, status management, audit documentation)
+
+---
+
+## Memory Integration
+
+The /ticket skill automatically updates project state:
+- Current ticket tracked in `.current-ticket`
+- Status updates in `tickets-index.json`
+- Plans archived in `plans/` directory
+
+On session resume, the skill reads `.current-ticket` to restore context.
+
+---
+
+## Troubleshooting
+
+**"No ticket directory found"**
+- Create `.ticket-config.json` at project root
+- Or ensure `tickets/tickets-index.json` exists
+
+**"Schema validation FAILED"**
+- Check ticket has required frontmatter fields
+- Verify acceptance criteria exist (markdown checkboxes)
+- Run validation manually: `validate-ticket-schema.py ticket.md`
+
+**"No actionable tickets found"**
+- Check if dependencies are marked as "completed" in tickets-index.json
+- Verify `status == "pending"` for expected tickets
+
+**"Planning needed but no architect available"**
+- Architect requires Plan subagent_type
+- Ensure routing-schema.json includes architect → Plan mapping
+
+**"Audit failed (non-blocking)"**
+- Check test logs in `.ticket-audits/{ticket-id}/unit-tests.log`
+- Review configuration in `.ticket-config.json` under `audit_config.test_commands`
+- Verify test infrastructure is set up (go.mod, pyproject.toml, etc.)
+- Run audit manually: `~/.claude/skills/ticket/scripts/run-audit.sh --ticket-id={ticket-id}`
+- Note: Audit failures do NOT prevent ticket completion
+
+**"Audit disabled/skipped"**
+- Enable in `.ticket-config.json`: `"audit_config": { "enabled": true }`
+- If missing, audit is skipped by default (backward compatible behavior)
+
+---
+
+## Example Session
+
+```bash
+$ cd ~/my-project
+$ /ticket next
+
+[ticket] Found tickets at: /home/user/my-project/implementation_plan/tickets
+[ticket] Selected: FEAT-001
+[ticket] Schema validation: PASS
+[ticket] Planning needed: true
+[ticket] Reason: High complexity (4 files, 3h estimate)
+[ROUTING] → architect (implementation planning for FEAT-001)
+
+[architect returns plan]
+
+[ticket] Status updated: in_progress
+[ticket] Created TodoWrite with 8 acceptance criteria
+
+[... implementation work happens ...]
+
+$ /ticket verify
+[ticket] Acceptance criteria: 8/8 complete ✓
+[ticket] Running audit documentation...
+[INFO] Starting audit for ticket: FEAT-001
+[INFO] Detected language: go
+[INFO] Phase 2: Executing tests...
+[PASS] Unit tests passed
+[PASS] Race detector passed
+[INFO] Total coverage: 87.3%
+[INFO] Phase 3: Generating implementation summary...
+[ticket] ✓ Audit complete
+
+$ /ticket complete
+[ticket] Generated commit message:
+---
+feat: FEAT-001 - Add user authentication
+
+Implement JWT-based authentication system with refresh tokens
+
+Ticket-Id: FEAT-001
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+---
+Commit and complete ticket? (y/n) y
+
+[ticket] ✓ Ticket FEAT-001 completed
+
+[ticket] Next available tickets:
+FEAT-002
+FEAT-003
+```
+
+---
+
+**Skill Version**: 1.1
+**Last Updated**: 2026-01-18
+**Maintained By**: System

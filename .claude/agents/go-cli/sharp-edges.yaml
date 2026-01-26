@@ -1,0 +1,78 @@
+# Sharp Edges for GO CLI Agent (Cobra)
+# Common Cobra/Viper pitfalls
+
+version: "1.0"
+updated: "2026-01-15"
+
+sharp_edges:
+  - id: flag-binding-timing
+    severity: critical
+    category: configuration
+    description: "Flag binding in RunE is too late"
+    symptom: "Viper returns default values, ignores config file"
+    solution: |
+      WRONG: Binding in RunE (too late, viper already initialized)
+      RunE: func(cmd *cobra.Command, args []string) error {
+          viper.BindPFlag("port", cmd.Flags().Lookup("port"))  // TOO LATE
+      }
+      
+      CORRECT: Binding in init() or NewCommand()
+      func NewCommand() *cobra.Command {
+          cmd := &cobra.Command{...}
+          cmd.Flags().Int("port", 8080, "port")
+          viper.BindPFlag("port", cmd.Flags().Lookup("port"))  // CORRECT
+          return cmd
+      }
+    auto_inject: true
+
+  - id: flag-vs-viper
+    severity: critical
+    category: configuration
+    description: "Reading flag directly ignores config file"
+    symptom: "Config file values never used"
+    solution: |
+      WRONG: Only gets flag default, ignores config file
+      port, _ := cmd.Flags().GetInt("port")
+      
+      CORRECT: Returns flag > env var > config file > default
+      port := viper.GetInt("port")
+    auto_inject: true
+
+  - id: silence-usage
+    severity: high
+    category: ux
+    description: "Usage shown on runtime errors"
+    symptom: "Help text floods stderr on errors"
+    solution: |
+      Set SilenceUsage = true at START of RunE:
+      RunE: func(cmd *cobra.Command, args []string) error {
+          cmd.SilenceUsage = true  // FIRST LINE
+          // ... rest of function
+      }
+    auto_inject: true
+
+  - id: run-vs-rune
+    severity: high
+    category: error-handling
+    description: "Run swallows errors, RunE propagates them"
+    symptom: "Errors not reported to parent command"
+    solution: |
+      WRONG: Using Run with os.Exit (skips cleanup)
+      Run: func(...) { os.Exit(1) }
+      
+      CORRECT: Using RunE for proper error propagation
+      RunE: func(...) error { return err }
+    auto_inject: true
+
+  - id: persistent-vs-local-flags
+    severity: medium
+    category: structure
+    description: "Persistent flags available to all subcommands"
+    symptom: "Flag not available in subcommand"
+    solution: |
+      Persistent: Available to this command AND all subcommands
+      rootCmd.PersistentFlags().Bool("verbose", false, "verbose")
+      
+      Local: Only available to THIS command
+      serveCmd.Flags().Int("port", 8080, "port")
+    auto_inject: true

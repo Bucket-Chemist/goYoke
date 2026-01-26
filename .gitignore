@@ -26,7 +26,21 @@ test/audit/**
 .idea/
 *.swp
 *.swo
-/.claude/
+# Claude Config - Track structure, ignore ephemeral/sensitive
+.claude/.credentials.json
+.claude/history.jsonl
+.claude/file-history/
+.claude/debug/
+.claude/paste-cache/
+.claude/cache/
+.claude/ide/
+.claude/plugins/
+.claude/plans/
+.claude/projects/
+.claude/session-archive/*.jsonl
+.claude/memory/pending-learnings.jsonl
+.claude/tmp/*.md
+.claude/settings.local.json
 
 # Obsidian
 .obsidian/

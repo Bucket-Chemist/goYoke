@@ -1,0 +1,101 @@
+# Sharp Edges for GO TUI Agent (Bubbletea)
+# Common Bubbletea/Lipgloss pitfalls
+
+version: "1.0"
+updated: "2026-01-15"
+
+sharp_edges:
+  - id: goroutine-state-modification
+    severity: critical
+    category: architecture
+    description: "Model state modified outside Update"
+    symptom: "Race conditions, undefined behavior, UI glitches"
+    solution: |
+      WRONG: Modifying model in goroutine
+      go func() {
+          data := fetchData()
+          m.data = data  // BUG!
+      }()
+      
+      CORRECT: Return command, let Bubbletea manage
+      return m, fetchDataCmd
+      
+      func fetchDataCmd() tea.Msg {
+          data := fetchData()
+          return dataLoadedMsg{data}
+      }
+    auto_inject: true
+
+  - id: view-io
+    severity: critical
+    category: architecture
+    description: "I/O in View() function"
+    symptom: "UI freezes, slow rendering"
+    solution: |
+      WRONG: I/O in View
+      func (m Model) View() string {
+          data, _ := os.ReadFile("data.txt")  // BUG!
+          return string(data)
+      }
+      
+      CORRECT: Load data via commands, render from state
+      func (m Model) View() string {
+          return m.data  // Already loaded in state
+      }
+    auto_inject: true
+
+  - id: lost-commands
+    severity: high
+    category: architecture
+    description: "Commands lost when not using tea.Batch"
+    symptom: "Some updates don't happen, commands ignored"
+    solution: |
+      WRONG: Lost command
+      m.spinner, cmd1 = m.spinner.Update(msg)
+      m.list, cmd2 = m.list.Update(msg)
+      return m, cmd1  // cmd2 lost!
+      
+      CORRECT: Batch all commands
+      var cmds []tea.Cmd
+      m.spinner, cmd = m.spinner.Update(msg)
+      cmds = append(cmds, cmd)
+      m.list, cmd = m.list.Update(msg)
+      cmds = append(cmds, cmd)
+      return m, tea.Batch(cmds...)
+    auto_inject: true
+
+  - id: window-size-on-startup
+    severity: medium
+    category: lifecycle
+    description: "First message is often WindowSizeMsg"
+    symptom: "Rendering before dimensions known causes layout issues"
+    solution: |
+      func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+          switch msg := msg.(type) {
+          case tea.WindowSizeMsg:
+              m.width = msg.Width
+              m.height = msg.Height
+              m.ready = true  // Now safe to render
+          }
+      }
+      
+      func (m Model) View() string {
+          if !m.ready {
+              return "Initializing..."
+          }
+          // ...
+      }
+    auto_inject: true
+
+  - id: alt-screen-cleanup
+    severity: medium
+    category: lifecycle
+    description: "Terminal state not restored on exit"
+    symptom: "Terminal left in bad state after crash"
+    solution: |
+      Use alt screen to preserve terminal history:
+      p := tea.NewProgram(model, tea.WithAltScreen())
+      
+      Exit cleanly - let Run() return normally
+      Don't use os.Exit() - it skips cleanup
+    auto_inject: true

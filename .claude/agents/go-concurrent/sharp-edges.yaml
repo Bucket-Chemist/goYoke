@@ -1,0 +1,139 @@
+# Sharp Edges for GO Concurrent Agent
+# Common concurrency pitfalls
+
+version: "1.0"
+updated: "2026-01-15"
+
+sharp_edges:
+  - id: loop-variable-capture
+    severity: critical
+    category: goroutines
+    description: "Loop variable captured by reference in goroutine"
+    symptom: "All goroutines see final value of loop variable"
+    solution: |
+      WRONG: All goroutines see same value
+      for _, item := range items {
+          go func() {
+              process(item)  // BUG!
+          }()
+      }
+      
+      CORRECT: Shadow the variable
+      for _, item := range items {
+          item := item  // CRITICAL
+          go func() {
+              process(item)
+          }()
+      }
+    auto_inject: true
+
+  - id: goroutine-leak
+    severity: critical
+    category: resource-management
+    description: "Goroutine never exits"
+    symptom: "Memory grows, CPU usage increases over time"
+    solution: |
+      ALWAYS provide cancellation path via context:
+      
+      func worker(ctx context.Context, jobs <-chan Job) {
+          for {
+              select {
+              case <-ctx.Done():
+                  return  // Exit when cancelled
+              case job, ok := <-jobs:
+                  if !ok {
+                      return  // Exit when channel closed
+                  }
+                  process(job)
+              }
+          }
+      }
+    auto_inject: true
+
+  - id: channel-sender-closes
+    severity: high
+    category: channels
+    description: "Receiver closes channel, sender panics"
+    symptom: "Panic: send on closed channel"
+    solution: |
+      ONLY the sender should close the channel.
+      Never close from receiver side.
+      
+      // Sender
+      func producer(ch chan<- int) {
+          defer close(ch)  // Sender closes
+          for i := 0; i < 10; i++ {
+              ch <- i
+          }
+      }
+      
+      // Receiver never closes
+      func consumer(ch <-chan int) {
+          for n := range ch {
+              process(n)
+          }
+      }
+    auto_inject: true
+
+  - id: close-twice-panic
+    severity: high
+    category: channels
+    description: "Closing channel twice causes panic"
+    symptom: "Panic: close of closed channel"
+    solution: |
+      Use sync.Once for single close:
+      
+      type SafeChannel struct {
+          ch     chan int
+          closer sync.Once
+      }
+      
+      func (sc *SafeChannel) Close() {
+          sc.closer.Do(func() {
+              close(sc.ch)
+          })
+      }
+    auto_inject: true
+
+  - id: context-not-checked
+    severity: high
+    category: cancellation
+    description: "Context cancellation not checked in long operations"
+    symptom: "Cancellation has no effect, work continues"
+    solution: |
+      Check context periodically in long-running operations:
+      
+      for _, item := range largeList {
+          select {
+          case <-ctx.Done():
+              return ctx.Err()
+          default:
+          }
+          processSlowly(item)
+      }
+    auto_inject: true
+
+  - id: race-with-shared-map
+    severity: critical
+    category: data-race
+    description: "Concurrent map access without synchronization"
+    symptom: "Fatal error: concurrent map read and map write"
+    solution: |
+      Use sync.Map or mutex:
+      
+      // Option 1: sync.Map
+      var m sync.Map
+      m.Store("key", value)
+      v, ok := m.Load("key")
+      
+      // Option 2: Mutex
+      type SafeMap struct {
+          mu sync.RWMutex
+          m  map[string]int
+      }
+      func (sm *SafeMap) Get(k string) int {
+          sm.mu.RLock()
+          defer sm.mu.RUnlock()
+          return sm.m[k]
+      }
+    auto_inject: true

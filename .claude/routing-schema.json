@@ -1,0 +1,343 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2.2.0",
+  "description": "Routing schema for Claude Code tiered agent architecture - v2.2: Added GO agents",
+  "updated": "2026-01-15",
+  
+  "tiers": {
+    "haiku": {
+      "description": "Mechanical work - fast, cheap, no reasoning required",
+      "model": "haiku",
+      "thinking": false,
+      "max_thinking_budget": 0,
+      "cost_per_1k_tokens": 0.0005,
+      "patterns": [
+        "count", "list", "find", "search", "glob", "grep", 
+        "format", "lint", "locate", "where is", "which files",
+        "look for", "find all", "how many"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Bash"],
+      "thresholds": {
+        "max_files": 5,
+        "max_lines": 500,
+        "max_tokens_estimate": 10000
+      },
+      "agents": ["codebase-search", "haiku-scout"]
+    },
+    
+    "haiku_thinking": {
+      "description": "Structured reasoning - Haiku with thinking for templated tasks",
+      "model": "haiku",
+      "thinking": true,
+      "max_thinking_budget": 6000,
+      "cost_per_1k_tokens": 0.001,
+      "patterns": [
+        "scaffold", "boilerplate", "template", "stub",
+        "document", "readme", "docstring",
+        "review", "check", "spot check", "quick review",
+        "research", "library", "best practice", "how to use"
+      ],
+      "tools": ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch"],
+      "thresholds": {
+        "max_files": 10,
+        "max_lines": 1000,
+        "max_tokens_estimate": 25000
+      },
+      "agents": ["scaffolder", "tech-docs-writer", "code-reviewer", "librarian", "memory-archivist"]
+    },
+    
+    "sonnet": {
+      "description": "Reasoning work - implementation, refactoring, debugging",
+      "model": "sonnet",
+      "thinking": true,
+      "max_thinking_budget": 16000,
+      "cost_per_1k_tokens": 0.009,
+      "patterns": [
+        "implement", "refactor", "debug", "test", "fix",
+        "create class", "add function", "write test",
+        "optimize", "async", "type hints",
+        "analyze", "architect", "synthesize", "plan",
+        "ambiguous", "cross-module", "design decision",
+        "golang", "go build", "cobra", "bubbletea", "tui",
+        "goroutine", "errgroup", "http client", "api client"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Task"],
+      "thresholds": {
+        "max_files": 20,
+        "max_lines": 5000,
+        "max_tokens_estimate": 50000
+      },
+      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "architect", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "staff-architect-critical-review"]
+    },
+    
+    "opus": {
+      "description": "Deep analysis - SLASH COMMAND ONLY, not Task-invocable",
+      "model": "opus",
+      "thinking": true,
+      "max_thinking_budget": 32000,
+      "cost_per_1k_tokens": 0.045,
+      "patterns": [
+        "einstein", "deep analysis", "security audit",
+        "architectural decision", "complex tradeoff",
+        "synthesize findings", "cross-domain",
+        "novel problem", "nuclear option"
+      ],
+      "tools": ["*"],
+      "invocation": "/einstein (NOT Task tool)",
+      "task_invocation_blocked": true,
+      "escalation_protocol": "escalate_to_einstein",
+      "thresholds": {
+        "max_files": null,
+        "max_lines": null,
+        "max_tokens_estimate": null
+      },
+      "agents": ["einstein"]
+    },
+    
+    "external": {
+      "description": "External context engine - Gemini for 1M+ token windows and fast scouting",
+      "model": "gemini-2.0-flash",
+      "thinking": false,
+      "cost_per_1k_tokens": 0.0001,
+      "patterns": [
+        "large context", "entire codebase", "full module",
+        "10+ files", "cross-module trace", "architectural review",
+        "map the codebase", "trace through", "assess scope"
+      ],
+      "tools": ["Bash"],
+      "invocation": "cat [files] | gemini-slave [protocol] \"[instruction]\"",
+      "protocols": {
+        "scout": {"model": "gemini-2.0-flash", "output": "json"},
+        "mapper": {"model": "gemini-2.0-pro", "output": "json"},
+        "debugger": {"model": "gemini-2.0-pro", "output": "markdown"},
+        "architect": {"model": "gemini-2.0-pro", "output": "markdown"},
+        "memory-audit": {"model": "gemini-2.0-pro", "output": "json"},
+        "benchmark-audit": {"model": "gemini-2.0-pro", "output": "json"}
+      },
+      "thresholds": {
+        "min_files": 10,
+        "min_lines": 2000,
+        "min_tokens_estimate": 50000
+      },
+      "agents": ["gemini-slave"]
+    }
+  },
+
+  "tier_levels": {
+    "description": "Numeric levels for tier comparison in delegation ceiling",
+    "haiku": 1,
+    "haiku_thinking": 2,
+    "sonnet": 3,
+    "opus": 4,
+    "external": 0
+  },
+
+  "delegation_ceiling": {
+    "description": "Controls which agents can be spawned via Task(), independent of analysis context",
+    "file": ".claude/tmp/max_delegation",
+    "set_by": "calculate-complexity.sh",
+    "enforced_by": "validate-routing.sh",
+    "values": ["haiku", "haiku_thinking", "sonnet"],
+    "note": "opus never allowed via Task() regardless of ceiling",
+    "override": "--force-delegation=<tier>",
+    "calculation": {
+      "haiku": "Simple queries, no reasoning required",
+      "haiku_thinking": "Structured tasks, documentation, review (default)",
+      "sonnet": "Implementation, multi-file edits, security-sensitive"
+    }
+  },
+
+  "scout_protocol": {
+    "description": "Pre-routing reconnaissance to assess scope before committing resources",
+    "primary": "gemini-slave scout",
+    "fallback": "haiku-scout",
+    "selection_logic": {
+      "haiku_scout": {
+        "max_files": 3,
+        "max_tokens": 5000,
+        "reason": "Lower latency for very small scopes, preserves context hygiene for anything larger"
+      },
+      "gemini_scout": {
+        "min_files": 4,
+        "min_tokens": 5001,
+        "reason": "Aggressive offloading: massive context window, higher rate limits, lower cost, zero context pollution"
+      }
+    },
+    "cost_per_call_estimate": 0.001,
+    "invocation": "find [target] -type f \\( -name \"*.py\" -o -name \"*.md\" \\) | gemini-slave scout \"[task]\"",
+    "output_schema": {
+      "scope_metrics": ["total_files", "total_lines", "estimated_tokens"],
+      "complexity_signals": ["import_density", "cross_file_dependencies"],
+      "routing_recommendation": ["recommended_tier", "confidence", "clarification_needed"]
+    },
+    "when_to_use": [
+      "Unknown scope (refactor X, improve Y)",
+      "Task mentions modules or systems",
+      "Could involve 5+ files"
+    ],
+    "when_to_skip": [
+      "User specified exact files",
+      "Single file operation",
+      "Trivial task (typo, config change)"
+    ]
+  },
+  
+  "escalation_rules": {
+    "haiku_to_haiku_thinking": [
+      "reasoning required but simple domain",
+      "structured output needed",
+      "template-following task"
+    ],
+    "haiku_to_sonnet": [
+      "multi-file edit required",
+      "complex reasoning needed",
+      "error after 2 attempts",
+      "implementation task detected"
+    ],
+    "sonnet_to_opus": {
+      "triggers": [
+        "architectural decision required",
+        "security concern detected",
+        "3+ file dependencies with complex interaction",
+        "3 consecutive failures on same task",
+        "user explicitly requests deep analysis"
+      ],
+      "action": "DO NOT use Task(opus). Generate GAP document instead.",
+      "protocol": "escalate_to_einstein",
+      "output_path": ".claude/tmp/einstein-gap-{timestamp}.md",
+      "notification": "🚨 Run /einstein to process this escalation"
+    },
+    "any_to_external": [
+      "context exceeds 50K tokens",
+      "10+ files need simultaneous analysis",
+      "cross-module debugging required",
+      "full codebase understanding needed"
+    ]
+  },
+  
+  "compound_triggers": {
+    "description": "When 2+ patterns from different tiers fire, escalate to orchestrator",
+    "examples": [
+      ["large context", "synthesize"],
+      ["implement", "architectural review"],
+      ["debug", "cross-module"]
+    ],
+    "action": "Route to orchestrator for coordination"
+  },
+  
+  "cost_thresholds": {
+    "scout_max_cost": 0.01,
+    "exploration_max_cost": 0.20,
+    "description": "Cost ceilings for pre-execution phases"
+  },
+  
+  "override": {
+    "flag": "--force-tier=<tier>",
+    "description": "User escape hatch when routing produces false positives",
+    "valid_tiers": ["haiku", "haiku_thinking", "sonnet", "opus", "external"],
+    "audit_log": "/tmp/claude-routing-violations.jsonl"
+  },
+
+  "subagent_types": {
+    "description": "Defines tool capabilities for each subagent_type used in Task invocations",
+    "Explore": {
+      "description": "Read-only codebase exploration and analysis",
+      "tools": ["Read", "Glob", "Grep", "Bash"],
+      "allows_write": false,
+      "respects_agent_yaml": false,
+      "use_for": ["codebase-search", "haiku-scout", "code-reviewer", "librarian"],
+      "rationale": "Exploration tasks should be non-destructive reconnaissance"
+    },
+    "general-purpose": {
+      "description": "Full tool access following agent.yaml definitions",
+      "tools": ["*"],
+      "allows_write": true,
+      "respects_agent_yaml": true,
+      "use_for": ["scaffolder", "tech-docs-writer", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "memory-archivist", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent"],
+      "rationale": "Implementation and documentation agents need write permissions"
+    },
+    "Bash": {
+      "description": "Command execution specialist for external processes",
+      "tools": ["Bash", "Read"],
+      "allows_write": false,
+      "respects_agent_yaml": false,
+      "use_for": ["gemini-slave"],
+      "rationale": "External context engines use shell piping, not file modification"
+    },
+    "Plan": {
+      "description": "Architecture and planning mode with controlled write access",
+      "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion"],
+      "allows_write": true,
+      "respects_agent_yaml": false,
+      "use_for": ["orchestrator", "architect"],
+      "rationale": "Planning agents need to write plans and spawn other agents"
+    }
+  },
+
+  "delegation_rules": {
+    "description": "Task() is always allowed regardless of session tier. It's delegation, not direct work.",
+    "task_always_allowed": true,
+    "tier_restrictions_apply_to": [
+      "Read", "Write", "Edit", "Bash", "Glob", "Grep", "WebFetch", "WebSearch"
+    ],
+    "tier_restrictions_do_not_apply_to": [
+      "Task"
+    ],
+    "rationale": "Session tier indicates what MODEL to use for direct analysis. It does not restrict which agents can be spawned. Spawned agents operate at their own tier."
+  },
+
+  "agent_subagent_mapping": {
+    "description": "Maps each agent to its required subagent_type (enforced by validate-routing.sh)",
+    "codebase-search": "Explore",
+    "haiku-scout": "Explore",
+    "code-reviewer": "Explore",
+    "librarian": "Explore",
+    "tech-docs-writer": "general-purpose",
+    "scaffolder": "general-purpose",
+    "memory-archivist": "general-purpose",
+    "python-pro": "general-purpose",
+    "python-ux": "general-purpose",
+    "r-pro": "general-purpose",
+    "r-shiny-pro": "general-purpose",
+    "go-pro": "general-purpose",
+    "go-cli": "general-purpose",
+    "go-tui": "general-purpose",
+    "go-api": "general-purpose",
+    "go-concurrent": "general-purpose",
+    "orchestrator": "Plan",
+    "architect": "Plan",
+    "einstein": "general-purpose",
+    "gemini-slave": "Bash",
+    "staff-architect-critical-review": "Explore"
+  },
+
+  "blocked_patterns": {
+    "description": "Patterns that should NEVER be used",
+    "patterns": [
+      {
+        "pattern": "Task.*model.*opus",
+        "reason": "Opus invocation via Task tool causes 60K+ token inheritance",
+        "alternative": "Use escalate_to_einstein protocol → /einstein slash command",
+        "cost_impact": "$2.38 wasted per call (72% overhead)"
+      }
+    ]
+  },
+
+  "meta_rules": {
+    "documentation_theater": {
+      "description": "Enforcement belongs in hooks, not documentation",
+      "detection_patterns": [
+        "MUST NOT",
+        "NEVER use",
+        "is BLOCKED",
+        "SHALL NOT",
+        "ALWAYS .* instead",
+        "FORBIDDEN",
+        "PROHIBITED"
+      ],
+      "target_files": ["**/CLAUDE.md", "**/agent.md"],
+      "enforcement": "detect-documentation-theater.sh",
+      "guidance": "~/.claude/rules/LLM-guidelines.md §Enforcement Architecture"
+    }
+  }
+}

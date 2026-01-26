@@ -1,0 +1,15 @@
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "my-go-project",
+  "audit_config": {
+    "enabled": true,
+    "test_commands": {
+      "go": {
+        "unit": "go test -v ./...",
+        "integration": "go test -v -tags=integration ./tests/integration",
+        "race": "go test -race ./...",
+        "coverage": "go test -coverprofile={audit_dir}/coverage.out ./..."
+      }
+    }
+  }
+}

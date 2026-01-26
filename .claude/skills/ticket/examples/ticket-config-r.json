@@ -1,0 +1,13 @@
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "my-r-package",
+  "audit_config": {
+    "enabled": true,
+    "test_commands": {
+      "r": {
+        "testthat": "Rscript -e \"devtools::test()\"",
+        "coverage": "Rscript -e \"covr::report(covr::package_coverage())\""
+      }
+    }
+  }
+}

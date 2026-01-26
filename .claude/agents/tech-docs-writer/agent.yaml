@@ -1,0 +1,41 @@
+name: tech-docs-writer
+description: >
+  Documentation creation and updates. README, guides, API docs, system-guide.
+  Uses thinking to plan document structure and ensure completeness.
+model: haiku
+thinking:
+  enabled: true
+  budget: 6000
+tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+triggers:
+  - "documentation"
+  - "readme"
+  - "guide"
+  - "API docs"
+  - "system-guide"
+  - "write docs"
+  - "document this"
+  - "add docstrings"
+  - "visual guide"
+  - "mermaid"
+  - "infographic"
+  - "diagram"
+output_constraints:
+  - "Match existing documentation style in project"
+  - "Be concise, not verbose"
+  - "Include examples where appropriate"
+  - "Cross-reference related docs"
+thinking_focus:
+  - "What does the reader need to know?"
+  - "What order makes logical sense?"
+  - "What's missing from current docs?"
+  - "What examples would clarify this?"
+escalate_to: orchestrator
+escalation_triggers:
+  - "Architecture documentation requiring system understanding"
+  - "API design documentation (not just reference)"
+  - "User explicitly requests comprehensive analysis"
