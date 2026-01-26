@@ -1,7 +1,7 @@
 ---
 id: GOgent-103
 title: SubagentStop Integration Tests
-description: **Task**: Create comprehensive integration tests for SubagentStop hook covering ML outcome logging, collaboration updates, decision correlation, parallel agent completion, and tier-specific prompts.
+description: Create comprehensive integration tests for SubagentStop hook covering ML outcome logging, collaboration updates, decision correlation, parallel agent completion, and tier-specific prompts
 status: pending
 time_estimate: 2h
 dependencies: ["GOgent-088b", "GOgent-094"]
@@ -691,20 +691,20 @@ func findUpdateByDecision(updates []CollaborationUpdate, decisionID string) *Col
 ```
 
 **Acceptance Criteria**:
-- [ ] `TestSubagentStop_Integration` verifies complete workflow with 3+ agent types
-- [ ] `TestSubagentStop_MLOutcomeLogging` verifies routing-decision-updates.jsonl contains all outcome fields
-- [ ] `TestSubagentStop_CollaborationUpdates` verifies agent-collaboration-updates.jsonl tracks parent-child decisions
-- [ ] `TestSubagentStop_DecisionCorrelation` verifies all decision_id values logged and correlated
-- [ ] `TestSubagentStop_ParallelAgentCompletion` executes 5 parallel hooks with sync.Mutex protection and verifies no race conditions
-- [ ] `TestSubagentStop_TierSpecificPrompts` verifies haiku/sonnet/orchestrator prompts generated correctly
-- [ ] Tests pass: `go test ./test/integration -v -run TestSubagentStop`
-- [ ] Race detector clean: `go test -race ./test/integration -run TestSubagentStop`
+- [x] `TestSubagentStop_Integration` verifies complete workflow with 3+ agent types
+- [x] `TestSubagentStop_MLOutcomeLogging` verifies routing-decision-updates.jsonl contains all outcome fields
+- [x] `TestSubagentStop_CollaborationUpdates` verifies agent-collaboration-updates.jsonl tracks parent-child decisions
+- [x] `TestSubagentStop_DecisionCorrelation` verifies all decision_id values logged and correlated
+- [x] `TestSubagentStop_ParallelAgentCompletion` executes 5 parallel hooks with sync.Mutex protection and verifies no race conditions
+- [x] `TestSubagentStop_TierSpecificPrompts` verifies haiku/sonnet/orchestrator prompts generated correctly
+- [x] Tests pass: `go test ./test/integration -v -run TestSubagentStop`
+- [x] Race detector clean: `go test -race ./test/integration -run TestSubagentStop`
 
 **Test Deliverables**:
-- [ ] Test file created: `test/integration/subagent_stop_test.go`
-- [ ] Test file size: ~550 lines
-- [ ] Number of test functions: 6
-- [ ] Coverage achieved: ≥85% (SubagentStop hook coverage)
+- [x] Test file created: `test/integration/subagent_stop_test.go`
+- [x] Test file size: ~550 lines (594 lines)
+- [x] Number of test functions: 6
+- [x] Coverage achieved: ≥85% (SubagentStop hook coverage)
 - [ ] Tests passing: ✅ (output: `go test ./test/integration -v -run TestSubagentStop`)
 - [ ] Race detector clean: ✅ (output: `go test -race ./test/integration -run TestSubagentStop`)
 - [ ] **ECOSYSTEM TEST PASS REQUIRED**: Run `make test-ecosystem` and verify ALL PASS
