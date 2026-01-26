@@ -1,6 +1,8 @@
 package claude
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -13,14 +15,19 @@ func (m PanelModel) handleInput(msg tea.KeyMsg) (PanelModel, tea.Cmd) {
 		if !m.streaming && m.textarea.Value() != "" {
 			content := m.textarea.Value()
 
+			// Clear textarea
+			m.textarea.Reset()
+
+			// Check for native command before sending to Claude
+			if strings.HasPrefix(content, "/") && IsNativeCommand(content) {
+				return m.executeNativeCommand(content)
+			}
+
 			// Add user message to history
 			m.messages = append(m.messages, Message{
 				Role:    "user",
 				Content: content,
 			})
-
-			// Clear textarea
-			m.textarea.Reset()
 
 			// Mark as streaming
 			m.streaming = true
@@ -62,4 +69,43 @@ func (m PanelModel) sendMessage(content string) tea.Cmd {
 		}
 		return nil
 	}
+}
+
+// executeNativeCommand processes a native TUI command (e.g., /model, /context).
+// Returns updated model and any commands to execute.
+func (m PanelModel) executeNativeCommand(input string) (PanelModel, tea.Cmd) {
+	ctx := CommandContext{
+		SessionID:    m.sessionID,
+		CurrentModel: m.currentModel,
+		MessageCount: len(m.messages),
+		TotalCost:    m.cost,
+	}
+
+	result := ExecuteCommand(input, ctx)
+
+	// Show result message in chat
+	if result.Message != "" {
+		m.messages = append(m.messages, Message{
+			Role:    "system",
+			Content: result.Message,
+		})
+		m.updateViewport()
+	}
+
+	// Handle errors
+	if result.Error != nil {
+		m.messages = append(m.messages, Message{
+			Role:    "system",
+			Content: "Error: " + result.Error.Error(),
+		})
+		m.updateViewport()
+		return m, nil
+	}
+
+	// Handle model change restart
+	if result.RequiresRestart {
+		return m, m.requestModelChange(result.NewModel)
+	}
+
+	return m, nil
 }

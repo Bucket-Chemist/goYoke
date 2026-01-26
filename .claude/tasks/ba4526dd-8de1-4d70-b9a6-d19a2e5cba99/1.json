@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "Verify Claude CLI streaming hypothesis manually",
+  "description": "Test Claude CLI manually to confirm that --print flag is causing the stdin stream-json input to be ignored. Run: claude --verbose --input-format stream-json --output-format stream-json --session-id test123 and send JSON input to verify streaming works without --print.",
+  "activeForm": "Verifying Claude CLI streaming",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

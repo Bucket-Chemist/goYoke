@@ -20,6 +20,9 @@ func (m *PanelModel) updateViewport() {
 		case "assistant":
 			b.WriteString(assistantStyle.Render("Claude: "))
 			b.WriteString(msg.Content)
+		case "system":
+			b.WriteString(systemStyle.Render("System: "))
+			b.WriteString(msg.Content)
 		}
 		b.WriteString("\n\n")
 	}
@@ -62,6 +65,10 @@ var (
 	assistantStyle = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("green"))
+
+	systemStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("yellow"))
 
 	streamingStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("240")).

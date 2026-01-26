@@ -92,6 +92,8 @@ type PanelModel struct {
 	restartInfo    *cli.RestartEvent // Current restart state (nil if not restarting)
 	restartMessage string            // Message to display during restart
 	state          ProcessState      // Current process state
+	currentModel   string            // Current model name (opus/sonnet/haiku)
+	config         cli.Config        // Original config for restart
 }
 
 // Message represents a single message in the conversation history.
@@ -111,9 +113,10 @@ const (
 	maxSidebarWidth = 30
 )
 
-// NewPanelModel creates a new PanelModel with the given Claude process.
+// NewPanelModel creates a new PanelModel with the given Claude process and config.
 // The model is initialized with default dimensions and empty state.
-func NewPanelModel(process ClaudeProcessInterface) PanelModel {
+// The config is stored for potential restart operations.
+func NewPanelModel(process ClaudeProcessInterface, config cli.Config) PanelModel {
 	ta := textarea.New()
 	ta.Placeholder = "Type your message here..."
 	ta.Focus()
@@ -124,23 +127,42 @@ func NewPanelModel(process ClaudeProcessInterface) PanelModel {
 
 	vp := viewport.New(80, 20)
 
+	// Extract current model from config, default to "sonnet" if not set
+	currentModel := config.Model
+	if currentModel == "" {
+		currentModel = "sonnet"
+	}
+
 	return PanelModel{
-		process:   process,
-		viewport:  vp,
-		textarea:  ta,
-		messages:  make([]Message, 0),
-		hooks:     make([]HookEvent, 0),
-		sessionID: process.SessionID(),
-		width:     80,
-		height:    25,
-		focused:   true,
-		streaming: false,
-		state:     StateConnecting, // Start in connecting state
+		process:      process,
+		viewport:     vp,
+		textarea:     ta,
+		messages:     make([]Message, 0),
+		hooks:        make([]HookEvent, 0),
+		sessionID:    process.SessionID(),
+		width:        80,
+		height:       25,
+		focused:      true,
+		streaming:    false,
+		state:        StateConnecting, // Start in connecting state
+		currentModel: currentModel,
+		config:       config,
 	}
 }
 
 // processStoppedMsg is sent when the Claude process event channel closes.
 type processStoppedMsg struct{}
+
+// modelChangedMsg indicates model was successfully changed
+type modelChangedMsg struct {
+	model   string
+	process *cli.ClaudeProcess
+}
+
+// processErrorMsg wraps errors from process operations
+type processErrorMsg struct {
+	err error
+}
 
 // Init implements tea.Model.Init.
 func (m PanelModel) Init() tea.Cmd {
@@ -251,6 +273,35 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case errMsg:
 		// Handle error - stop streaming
+		m.state = StateError
+		m.streaming = false
+
+	case modelChangedMsg:
+		// Update model name
+		m.currentModel = msg.model
+		// Update process reference
+		m.process = msg.process
+		// Update config
+		m.config.Model = msg.model
+		// Add system message
+		m.messages = append(m.messages, Message{
+			Role:    "system",
+			Content: fmt.Sprintf("Model changed to %s (session resumed)", msg.model),
+		})
+		m.updateViewport()
+		// Re-subscribe to new process events
+		return m, tea.Batch(
+			waitForEvent(m.process.Events()),
+			waitForRestartEvent(m.process.RestartEvents()),
+		)
+
+	case processErrorMsg:
+		// Handle process error
+		m.messages = append(m.messages, Message{
+			Role:    "system",
+			Content: fmt.Sprintf("Error: %v", msg.err),
+		})
+		m.updateViewport()
 		m.state = StateError
 		m.streaming = false
 	}
@@ -380,6 +431,53 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+// CurrentModel returns the current model name.
+func (m PanelModel) CurrentModel() string {
+	return m.currentModel
+}
+
+// requestModelChange returns a command that restarts the process with a new model.
+// This method stops the current process, updates the config with the new model,
+// creates a new process, and starts it. If successful, returns modelChangedMsg
+// with the new process. On error, returns processErrorMsg.
+func (m PanelModel) requestModelChange(model string) tea.Cmd {
+	return func() tea.Msg {
+		// Cast to concrete type to access Stop method
+		proc, ok := m.process.(*cli.ClaudeProcess)
+		if !ok {
+			return processErrorMsg{err: fmt.Errorf("cannot restart: process is not a ClaudeProcess")}
+		}
+
+		// Stop current process
+		if err := proc.Stop(); err != nil {
+			return processErrorMsg{err: fmt.Errorf("stop process: %w", err)}
+		}
+
+		// Update config with new model
+		newConfig := m.config
+		newConfig.Model = model
+		// Preserve session ID for continuity
+		newConfig.SessionID = m.sessionID
+
+		// Create new process
+		newProc, err := cli.NewClaudeProcess(newConfig)
+		if err != nil {
+			return processErrorMsg{err: fmt.Errorf("create new process: %w", err)}
+		}
+
+		// Start new process
+		if err := newProc.Start(); err != nil {
+			return processErrorMsg{err: fmt.Errorf("start new process: %w", err)}
+		}
+
+		// Return success with new process
+		return modelChangedMsg{
+			model:   model,
+			process: newProc,
+		}
+	}
 }
 
 // Styles for rendering

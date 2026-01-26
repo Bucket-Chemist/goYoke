@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os/exec"
@@ -99,8 +98,8 @@ type ClaudeProcess struct {
 	running       bool
 	explicitStop  bool // Set to true when Stop() is called
 	restartState  RestartState
-	closeOnce     sync.Once      // Ensures channels are closed only once
-	readWg        sync.WaitGroup // Coordinates pipe reads before Wait() (Fix 3)
+	closeOnce     sync.Once       // Ensures channels are closed only once
+	readWg        *sync.WaitGroup // Coordinates pipe reads before Wait() (Fix 3)
 	generation    uint64         // Process generation for restart isolation (Fix 5)
 	genMu         sync.RWMutex   // Protects generation field
 	stderrBuf     strings.Builder // Captures stderr for error classification
@@ -200,6 +199,7 @@ func NewClaudeProcess(cfg Config) (*ClaudeProcess, error) {
 		restartEvents: make(chan RestartEvent, 10),  // Buffered for restart events
 		done:          make(chan struct{}),
 		exitChan:      make(chan error, 1),          // Buffered for process exit
+		readWg:        &sync.WaitGroup{},            // Pointer to avoid copy issues
 		explicitStop:  false,
 	}, nil
 }
@@ -413,84 +413,113 @@ func (cp *ClaudeProcess) readEvents() {
 	// Capture generation at start to detect stale goroutines (Fix 5)
 	myGen := cp.currentGeneration()
 	reader := NewNDJSONReader(cp.stdout)
-	lastEventTime := time.Now()
+
+	// Single persistent reader goroutine with shared channels
+	dataChan := make(chan []byte, 1)
+	errChan := make(chan error, 1)
+	readerDone := make(chan struct{})
+
+	// Spawn ONE reader goroutine that persists for the entire lifecycle
+	go func() {
+		defer close(readerDone)
+		for {
+			data, err := reader.Read()
+			if err != nil {
+				select {
+				case errChan <- err:
+				case <-cp.done:
+				}
+				return
+			}
+			select {
+			case dataChan <- data:
+			case <-cp.done:
+				return
+			}
+		}
+	}()
+
+	// Create inactivity timer
+	inactivityTimer := time.NewTimer(cp.config.Timeout.InactivityTimeout)
+	if cp.config.Timeout.InactivityTimeout == 0 {
+		// Disable timer if no timeout configured
+		if !inactivityTimer.Stop() {
+			<-inactivityTimer.C
+		}
+	}
+	defer inactivityTimer.Stop()
 
 	for {
-		// Check for shutdown signal
-		select {
-		case <-cp.done:
-			return
-		default:
-		}
-
 		// Check if this is a stale goroutine from previous generation (Fix 5)
 		if cp.currentGeneration() != myGen {
 			return
 		}
 
-		// Check inactivity timeout
-		if cp.config.Timeout.InactivityTimeout > 0 {
-			if time.Since(lastEventTime) > cp.config.Timeout.InactivityTimeout {
-				if cp.currentGeneration() == myGen {
-					cp.errors <- fmt.Errorf("timeout: no events for %v", cp.config.Timeout.InactivityTimeout)
-				}
-				return
-			}
-		}
-
-		// Read next line with context
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		dataChan := make(chan []byte, 1)
-		errChan := make(chan error, 1)
-
-		go func() {
-			data, err := reader.Read()
-			if err != nil {
-				errChan <- err
-			} else {
-				dataChan <- data
-			}
-		}()
-
-		var data []byte
-		var readErr error
-
 		select {
-		case <-ctx.Done():
-			cancel()
-			continue
-		case readErr = <-errChan:
-			cancel()
+		case <-cp.done:
+			return
+
+		case <-readerDone:
+			// Reader goroutine exited (likely EOF or error already sent)
+			return
+
+		case readErr := <-errChan:
 			if readErr != nil && readErr != io.EOF {
 				// Only send error if still current generation
 				if cp.currentGeneration() == myGen {
-					cp.errors <- fmt.Errorf("read error: %w", readErr)
+					select {
+					case cp.errors <- fmt.Errorf("read error: %w", readErr):
+					case <-cp.done:
+					}
 				}
 			}
 			return
-		case data = <-dataChan:
-			cancel()
-			// Update lastEventTime on successful read
-			lastEventTime = time.Now()
-		}
 
-		// Parse event
-		event, err := parseEvent(data)
-		if err != nil {
-			// Only send error if still current generation
-			if cp.currentGeneration() == myGen {
-				cp.errors <- fmt.Errorf("parse error: %w", err)
+		case data := <-dataChan:
+			// Reset inactivity timer on successful read
+			if cp.config.Timeout.InactivityTimeout > 0 {
+				if !inactivityTimer.Stop() {
+					select {
+					case <-inactivityTimer.C:
+					default:
+					}
+				}
+				inactivityTimer.Reset(cp.config.Timeout.InactivityTimeout)
 			}
-			continue
-		}
 
-		// Send event only if still current generation (non-blocking due to buffer)
-		if cp.currentGeneration() != myGen {
-			return
-		}
-		select {
-		case cp.events <- event:
-		case <-cp.done:
+			// Parse event
+			event, err := parseEvent(data)
+			if err != nil {
+				// Only send error if still current generation
+				if cp.currentGeneration() == myGen {
+					select {
+					case cp.errors <- fmt.Errorf("parse error: %w", err):
+					case <-cp.done:
+					}
+				}
+				continue
+			}
+
+			// Send event only if still current generation (non-blocking due to buffer)
+			if cp.currentGeneration() != myGen {
+				return
+			}
+			select {
+			case cp.events <- event:
+			case <-cp.done:
+				return
+			}
+
+		case <-inactivityTimer.C:
+			// Inactivity timeout fired
+			if cp.config.Timeout.InactivityTimeout > 0 {
+				if cp.currentGeneration() == myGen {
+					select {
+					case cp.errors <- fmt.Errorf("timeout: no events for %v", cp.config.Timeout.InactivityTimeout):
+					case <-cp.done:
+					}
+				}
+			}
 			return
 		}
 	}
@@ -503,36 +532,70 @@ func (cp *ClaudeProcess) readStderr() {
 	// Capture generation at start to detect stale goroutines (Fix 5)
 	myGen := cp.currentGeneration()
 	reader := NewNDJSONReader(cp.stderr)
-	for {
-		select {
-		case <-cp.done:
-			return
-		default:
-		}
 
+	// Single persistent reader goroutine with shared channels
+	dataChan := make(chan []byte, 1)
+	errChan := make(chan error, 1)
+	readerDone := make(chan struct{})
+
+	// Spawn ONE reader goroutine that persists for the entire lifecycle
+	go func() {
+		defer close(readerDone)
+		for {
+			data, err := reader.Read()
+			if err != nil {
+				select {
+				case errChan <- err:
+				case <-cp.done:
+				}
+				return
+			}
+			select {
+			case dataChan <- data:
+			case <-cp.done:
+				return
+			}
+		}
+	}()
+
+	for {
 		// Check if this is a stale goroutine from previous generation (Fix 5)
 		if cp.currentGeneration() != myGen {
 			return
 		}
 
-		data, err := reader.Read()
-		if err != nil {
-			if err != io.EOF && cp.currentGeneration() == myGen {
-				cp.errors <- fmt.Errorf("stderr read error: %w", err)
+		select {
+		case <-cp.done:
+			return
+
+		case <-readerDone:
+			// Reader goroutine exited (likely EOF or error already sent)
+			return
+
+		case readErr := <-errChan:
+			if readErr != nil && readErr != io.EOF && cp.currentGeneration() == myGen {
+				select {
+				case cp.errors <- fmt.Errorf("stderr read error: %w", readErr):
+				case <-cp.done:
+				}
 			}
 			return
-		}
 
-		// Buffer stderr for error classification
-		cp.stderrMu.Lock()
-		cp.stderrBuf.Write(data)
-		cp.stderrBuf.WriteByte('\n')
-		cp.stderrMu.Unlock()
+		case data := <-dataChan:
+			// Buffer stderr for error classification
+			cp.stderrMu.Lock()
+			cp.stderrBuf.Write(data)
+			cp.stderrBuf.WriteByte('\n')
+			cp.stderrMu.Unlock()
 
-		// Parse and send ClaudeError only if still current generation
-		if cp.currentGeneration() == myGen {
-			claudeErr := ParseError(string(data), 0)
-			cp.errors <- claudeErr
+			// Parse and send ClaudeError only if still current generation
+			if cp.currentGeneration() == myGen {
+				claudeErr := ParseError(string(data), 0)
+				select {
+				case cp.errors <- claudeErr:
+				case <-cp.done:
+				}
+			}
 		}
 	}
 }
@@ -638,7 +701,8 @@ func (cp *ClaudeProcess) monitorRestart() {
 }
 
 // restart recreates and starts the subprocess with the same or new session ID.
-// Creates fresh channels for the new process instead of reusing potentially-closed channels.
+// Preserves the original events/errors channels so TUI consumers continue receiving
+// events after restart without needing to re-subscribe.
 func (cp *ClaudeProcess) restart() error {
 	// Signal old goroutines to stop by closing done channel
 	cp.mu.Lock()
@@ -705,9 +769,13 @@ func (cp *ClaudeProcess) restart() error {
 	cp.mu.Lock()
 	newProc.restartState = cp.restartState
 	newProc.restartEvents = cp.restartEvents
-	// DO NOT transfer events/errors - newProc has fresh channels
+	// CRITICAL: Transfer the ORIGINAL event/error channels so TUI consumers
+	// still receive events after restart. The new reader goroutines will
+	// write to these same channels. (Fix for channel replacement bug)
+	newProc.events = cp.events
+	newProc.errors = cp.errors
 	newProc.done = make(chan struct{}) // New done channel
-	newProc.readWg = sync.WaitGroup{}  // Fresh WaitGroup for new generation
+	newProc.readWg = &sync.WaitGroup{} // Fresh WaitGroup for new generation
 	cp.mu.Unlock()
 
 	// Start new process
@@ -715,7 +783,9 @@ func (cp *ClaudeProcess) restart() error {
 		return fmt.Errorf("start new process: %w", err)
 	}
 
-	// Update self with new process state and FRESH channels
+	// Update self with new process state
+	// CRITICAL: Do NOT replace events/errors channels - keep original channels
+	// so TUI consumers continue receiving events after restart.
 	cp.mu.Lock()
 	cp.cmd = newProc.cmd
 	cp.stdin = newProc.stdin
@@ -725,8 +795,7 @@ func (cp *ClaudeProcess) restart() error {
 	cp.sessionID = sessionID
 	cp.done = newProc.done
 	cp.readWg = newProc.readWg        // Use fresh WaitGroup
-	cp.events = newProc.events        // Use fresh channel
-	cp.errors = newProc.errors        // Use fresh channel
+	// events/errors channels are NOT replaced - newProc already uses cp's channels
 	cp.closeOnce = sync.Once{}        // Reset close guard
 	cp.running = true
 	cp.mu.Unlock()

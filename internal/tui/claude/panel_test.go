@@ -74,7 +74,7 @@ func TestPanelModel_NewPanelModel(t *testing.T) {
 	process := NewMockClaudeProcess("test-session-123")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	assert.Equal(t, "test-session-123", panel.sessionID)
 	assert.Equal(t, 0, len(panel.messages))
@@ -91,7 +91,7 @@ func TestPanelModel_HandleInput_Enter(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.textarea.SetValue("Hello Claude")
 
 	t.Run("sends message on Enter", func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestPanelModel_HandleInput_Esc(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.textarea.SetValue("Some text")
 
 	msg := tea.KeyMsg{Type: tea.KeyEsc}
@@ -154,7 +154,7 @@ func TestPanelModel_HandleInput_CtrlL(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.messages = []Message{
 		{Role: "user", Content: "Message 1"},
 		{Role: "assistant", Content: "Response 1"},
@@ -173,7 +173,7 @@ func TestPanelModel_AppendStreamingText(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("creates new assistant message when empty", func(t *testing.T) {
 		panel.appendStreamingText("Hello")
@@ -209,7 +209,7 @@ func TestPanelModel_HandleEvent_Assistant(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("processes assistant event with text content", func(t *testing.T) {
 		// Create assistant event JSON
@@ -247,7 +247,7 @@ func TestPanelModel_HandleEvent_Assistant(t *testing.T) {
 		event, err := cli.ParseEvent([]byte(eventJSON))
 		require.NoError(t, err)
 
-		panel2 := NewPanelModel(process)
+		panel2 := NewPanelModel(process, cli.Config{})
 		updatedPanel := panel2.handleEvent(event)
 
 		require.Len(t, updatedPanel.messages, 1)
@@ -268,7 +268,7 @@ func TestPanelModel_HandleEvent_Assistant(t *testing.T) {
 		event, err := cli.ParseEvent([]byte(eventJSON))
 		require.NoError(t, err)
 
-		panel3 := NewPanelModel(process)
+		panel3 := NewPanelModel(process, cli.Config{})
 		updatedPanel := panel3.handleEvent(event)
 
 		require.Len(t, updatedPanel.messages, 1)
@@ -281,7 +281,7 @@ func TestPanelModel_HandleEvent_Result(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.streaming = true
 
 	eventJSON := `{
@@ -307,7 +307,7 @@ func TestPanelModel_HandleEvent_System(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("processes hook_response with success", func(t *testing.T) {
 		eventJSON := `{
@@ -338,7 +338,7 @@ func TestPanelModel_HandleEvent_System(t *testing.T) {
 		event, err := cli.ParseEvent([]byte(eventJSON))
 		require.NoError(t, err)
 
-		panel2 := NewPanelModel(process)
+		panel2 := NewPanelModel(process, cli.Config{})
 		updatedPanel := panel2.handleEvent(event)
 
 		require.Len(t, updatedPanel.hooks, 1)
@@ -352,7 +352,7 @@ func TestPanelModel_HandleEvent_Error(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.streaming = true
 
 	eventJSON := `{
@@ -379,7 +379,7 @@ func TestPanelModel_RenderHookSidebar(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("renders empty state", func(t *testing.T) {
 		output := panel.renderHookSidebar(20)
@@ -401,7 +401,7 @@ func TestPanelModel_RenderHookSidebar(t *testing.T) {
 	})
 
 	t.Run("shows only last 5 hooks", func(t *testing.T) {
-		panel2 := NewPanelModel(process)
+		panel2 := NewPanelModel(process, cli.Config{})
 		for i := 0; i < 10; i++ {
 			panel2.hooks = append(panel2.hooks, HookEvent{
 				Name:    "hook",
@@ -426,7 +426,7 @@ func TestPanelModel_UpdateViewport(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("renders user and assistant messages", func(t *testing.T) {
 		panel.messages = []Message{
@@ -442,7 +442,7 @@ func TestPanelModel_UpdateViewport(t *testing.T) {
 	})
 
 	t.Run("shows streaming indicator when streaming", func(t *testing.T) {
-		panel2 := NewPanelModel(process)
+		panel2 := NewPanelModel(process, cli.Config{})
 		panel2.streaming = true
 		panel2.messages = []Message{
 			{Role: "assistant", Content: "Partial"},
@@ -460,7 +460,7 @@ func TestPanelModel_SetSize(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.SetSize(100, 50)
 
 	assert.Equal(t, 100, panel.width)
@@ -476,7 +476,7 @@ func TestPanelModel_FocusBlur(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// Initially focused
 	assert.True(t, panel.focused)
@@ -493,7 +493,7 @@ func TestPanelModel_ClearConversation(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.messages = []Message{
 		{Role: "user", Content: "Test"},
 		{Role: "assistant", Content: "Response"},
@@ -509,7 +509,7 @@ func TestPanelModel_StreamingWorkflow(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// User sends message
 	panel.textarea.SetValue("Tell me a story")
@@ -559,7 +559,7 @@ func TestPanelModel_HookTracking(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	hooks := []struct {
 		name    string
@@ -600,7 +600,7 @@ func TestPanelModel_Update(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("handles WindowSizeMsg", func(t *testing.T) {
 		msg := tea.WindowSizeMsg{Width: 120, Height: 40}
@@ -640,7 +640,7 @@ func TestPanelModel_View(t *testing.T) {
 	process := NewMockClaudeProcess("test-session-abc")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.cost = 1.23
 	panel.hooks = []HookEvent{
 		{Name: "hook-1", Success: true},
@@ -684,7 +684,7 @@ func BenchmarkAppendStreamingText(b *testing.B) {
 	process := NewMockClaudeProcess("bench-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -697,7 +697,7 @@ func BenchmarkHandleEvent(b *testing.B) {
 	process := NewMockClaudeProcess("bench-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	eventJSON := `{
 		"type": "assistant",
@@ -718,7 +718,7 @@ func TestPanelModel_Init_SubscribesToRestartEvents(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	cmd := panel.Init()
 
 	// Init should return a batch command
@@ -736,7 +736,7 @@ func TestPanelModel_HandleRestartEvent_Crash(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	restartEvent := cli.RestartEvent{
 		Reason:     "crash",
@@ -769,7 +769,7 @@ func TestPanelModel_HandleRestartEvent_MaxExceeded(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.streaming = true
 
 	restartEvent := cli.RestartEvent{
@@ -805,7 +805,7 @@ func TestPanelModel_ClearRestartInfo_OnRecovery(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// Set restart info
 	restartEvent := cli.RestartEvent{
@@ -844,7 +844,7 @@ func TestPanelModel_View_ShowsRestartIndicator(t *testing.T) {
 	process := NewMockClaudeProcess("test-session-xyz")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("shows restarting indicator", func(t *testing.T) {
 		restartEvent := cli.RestartEvent{
@@ -867,7 +867,7 @@ func TestPanelModel_View_ShowsRestartIndicator(t *testing.T) {
 	})
 
 	t.Run("shows error indicator for max restarts", func(t *testing.T) {
-		panel2 := NewPanelModel(process)
+		panel2 := NewPanelModel(process, cli.Config{})
 		restartEvent := cli.RestartEvent{
 			Reason:     "max_restarts_exceeded",
 			AttemptNum: 5,
@@ -888,7 +888,7 @@ func TestPanelModel_View_ShowsRestartIndicator(t *testing.T) {
 	})
 
 	t.Run("clears indicator after recovery", func(t *testing.T) {
-		panel3 := NewPanelModel(process)
+		panel3 := NewPanelModel(process, cli.Config{})
 
 		// Set restart state
 		restartEvent := cli.RestartEvent{
@@ -925,7 +925,7 @@ func TestPanelModel_RestartEvent_ReSubscription(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// Send first restart event
 	restartEvent1 := cli.RestartEvent{
@@ -970,7 +970,7 @@ func TestPanelModel_RestartEvent_Integration(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// 1. Process is running normally
 	assert.Nil(t, panel.restartInfo)
@@ -1016,7 +1016,7 @@ func TestPanelModel_Getters(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	t.Run("IsStreaming", func(t *testing.T) {
 		assert.False(t, panel.IsStreaming())
@@ -1054,7 +1054,7 @@ func TestPanelModel_GetSidebarWidth(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	tests := []struct {
 		name          string
@@ -1124,7 +1124,7 @@ func TestPanelModel_InitialState(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	assert.Equal(t, StateConnecting, panel.GetState())
 }
@@ -1134,7 +1134,7 @@ func TestPanelModel_StateTransition_FirstEvent(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	assert.Equal(t, StateConnecting, panel.GetState())
 
 	// Send first event
@@ -1157,7 +1157,7 @@ func TestPanelModel_StateTransition_MessageSend(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.state = StateReady // Set to ready first
 	panel.textarea.SetValue("Hello")
 
@@ -1174,7 +1174,7 @@ func TestPanelModel_StateTransition_Result(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.state = StateStreaming
 	panel.streaming = true
 
@@ -1198,7 +1198,7 @@ func TestPanelModel_StateTransition_Restart(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.state = StateReady
 
 	restartEvent := cli.RestartEvent{
@@ -1223,7 +1223,7 @@ func TestPanelModel_StateTransition_MaxRestartsExceeded(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.state = StateRestarting
 
 	restartEvent := cli.RestartEvent{
@@ -1249,7 +1249,7 @@ func TestPanelModel_StateTransition_ProcessStopped(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.state = StateReady
 
 	updatedModel, _ := panel.Update(processStoppedMsg{})
@@ -1265,7 +1265,7 @@ func TestPanelModel_StateTransition_Error(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 	panel.state = StateStreaming
 	panel.streaming = true
 
@@ -1297,7 +1297,7 @@ func TestPanelModel_View_IncludesStateIcon(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			panel := NewPanelModel(process)
+			panel := NewPanelModel(process, cli.Config{})
 			panel.state = tc.state
 
 			view := panel.View()
@@ -1313,7 +1313,7 @@ func TestPanelModel_StateTransition_RecoveryFromRestart(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// Set restart state
 	restartEvent := cli.RestartEvent{
@@ -1353,7 +1353,7 @@ func TestPanelModel_FullStateWorkflow(t *testing.T) {
 	process := NewMockClaudeProcess("test-session")
 	defer process.Close()
 
-	panel := NewPanelModel(process)
+	panel := NewPanelModel(process, cli.Config{})
 
 	// 1. Initial: Connecting
 	assert.Equal(t, StateConnecting, panel.GetState())

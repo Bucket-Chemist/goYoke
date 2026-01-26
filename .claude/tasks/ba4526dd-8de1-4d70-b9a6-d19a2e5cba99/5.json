@@ -1,0 +1,9 @@
+{
+  "id": "5",
+  "subject": "Add restart channel subscription tests",
+  "description": "Add tests verifying that event consumers properly receive events after process restart. Test the channel handoff mechanism.",
+  "activeForm": "Adding restart channel tests",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

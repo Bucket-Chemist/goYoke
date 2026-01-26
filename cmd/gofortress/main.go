@@ -71,6 +71,7 @@ func main() {
 
 	// Create or resume Claude process
 	var process *cli.ClaudeProcess
+	var cfg cli.Config
 
 	if sessionToResume != "" {
 		// Resume existing session
@@ -80,9 +81,17 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error resuming session: %v\n", err)
 			os.Exit(1)
 		}
+		// Create a config for resumed session (we don't have the original config)
+		// This is needed for potential model changes
+		cfg = cli.Config{
+			ClaudePath:  "claude",
+			SessionID:   sessionToResume,
+			WorkingDir:  workDir,
+			Verbose:     *verbose,
+		}
 	} else {
 		// Create new session
-		cfg := cli.Config{
+		cfg = cli.Config{
 			ClaudePath:  "claude",
 			SessionID:   "", // Will be generated
 			WorkingDir:  workDir,
@@ -114,7 +123,7 @@ func main() {
 	tree := agents.NewAgentTree(process.SessionID())
 
 	// Create TUI components
-	claudePanel := claude.NewPanelModel(process)
+	claudePanel := claude.NewPanelModel(process, cfg)
 	agentTreeView := agents.New(tree)
 	layoutModel := layout.NewModel(claudePanel, agentTreeView, process.SessionID())
 

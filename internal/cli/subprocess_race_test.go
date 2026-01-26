@@ -175,7 +175,11 @@ func TestClaudeProcess_RestartTimeout(t *testing.T) {
 }
 
 // TestClaudeProcess_RestartChannelIsolation verifies fresh channels are used
-func TestClaudeProcess_RestartChannelIsolation(t *testing.T) {
+// TestClaudeProcess_RestartChannelPersistence verifies that channels persist across restarts.
+// This is CRITICAL: TUI consumers hold references to the original channels from Events().
+// If we replace channels on restart, consumers will never receive new events.
+// See GOgent-Fortress TUI restart bug fix (channel replacement bug).
+func TestClaudeProcess_RestartChannelPersistence(t *testing.T) {
 	cfg := Config{
 		ClaudePath: "./testdata/mock-claude",
 		Restart: RestartPolicy{
@@ -195,32 +199,36 @@ func TestClaudeProcess_RestartChannelIsolation(t *testing.T) {
 	}
 	defer proc.Stop()
 
-	// Get reference to original channels
+	// Get reference to original channels (simulating TUI capturing channel reference)
 	eventsChan1 := proc.Events()
+	errorsChan1 := proc.Errors()
 
 	// Trigger restart
 	err = proc.restart()
 	assert.NoError(t, err)
 
-	// Get reference to new channels
+	// Get reference to channels after restart
 	eventsChan2 := proc.Events()
+	errorsChan2 := proc.Errors()
 
-	// Channels should be different (fresh channels created)
-	// Note: This comparison checks pointer equality
-	assert.NotEqual(t, fmt.Sprintf("%p", eventsChan1), fmt.Sprintf("%p", eventsChan2),
-		"Expected fresh channels after restart")
+	// Channels MUST be the SAME (preserved across restart)
+	// This ensures TUI consumers continue receiving events without re-subscribing
+	assert.Equal(t, fmt.Sprintf("%p", eventsChan1), fmt.Sprintf("%p", eventsChan2),
+		"Events channel must persist across restart (TUI holds reference)")
+	assert.Equal(t, fmt.Sprintf("%p", errorsChan1), fmt.Sprintf("%p", errorsChan2),
+		"Errors channel must persist across restart (TUI holds reference)")
 
-	// Both channels should be functional
-	// Send message to new process
+	// Channel should be functional after restart
+	// Send message to restarted process
 	err = proc.Send("test message")
 	assert.NoError(t, err)
 
-	// Should receive event on new channel
+	// Should receive event on ORIGINAL channel reference (that TUI still holds)
 	select {
-	case event := <-eventsChan2:
+	case event := <-eventsChan1:
 		assert.NotEmpty(t, event.Type)
 	case <-time.After(2 * time.Second):
-		t.Log("Timeout waiting for event on new channel (may be expected depending on mock)")
+		t.Log("Timeout waiting for event on original channel (may be expected depending on mock)")
 	}
 }
 

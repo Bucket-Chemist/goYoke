@@ -1,0 +1,3 @@
+{"agent":"test-agent","violation_type":"wrong_tier","timestamp":1200}
+{"agent":"other-agent","violation_type":"wrong_tier","timestamp":1300}
+{"agent":"third-agent","violation_type":"missing_delegation","timestamp":1400}

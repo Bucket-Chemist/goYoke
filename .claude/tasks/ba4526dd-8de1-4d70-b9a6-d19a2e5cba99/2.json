@@ -1,0 +1,9 @@
+{
+  "id": "2",
+  "subject": "Investigate TUI event subscription race condition",
+  "description": "The stream-json format works correctly. The issue is likely a race condition or synchronization problem between TUI initialization and event subscription. Need to investigate the Init() → waitForEvent() → Update() flow.",
+  "activeForm": "Fixing subprocess args",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

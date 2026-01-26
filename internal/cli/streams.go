@@ -77,3 +77,30 @@ func (nw *NDJSONWriter) Write(data interface{}) error {
 	_, err = nw.writer.Write(jsonData)
 	return err
 }
+
+// Sync flushes the underlying writer if it supports flushing.
+// Thread-safe for concurrent use.
+// Returns nil if the writer doesn't support flushing.
+func (nw *NDJSONWriter) Sync() error {
+	nw.mu.Lock()
+	defer nw.mu.Unlock()
+
+	// Check for *bufio.Writer or similar with Flush() method
+	type flusher interface {
+		Flush() error
+	}
+	if f, ok := nw.writer.(flusher); ok {
+		return f.Flush()
+	}
+
+	// Check for *os.File or similar with Sync() method
+	type syncer interface {
+		Sync() error
+	}
+	if s, ok := nw.writer.(syncer); ok {
+		return s.Sync()
+	}
+
+	// Writer doesn't support flushing - no-op
+	return nil
+}

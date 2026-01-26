@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -271,6 +273,119 @@ func TestConfig_CustomValues(t *testing.T) {
 
 	// Verify working directory
 	assert.Equal(t, "/custom/workdir", proc.cmd.Dir)
+}
+
+// Tests for Sync() method (GOgent-119)
+
+func TestNDJSONWriter_Sync_FlushableWriter(t *testing.T) {
+	// Create a bufio.Writer which implements Flush()
+	var buf bytes.Buffer
+	bufWriter := bufio.NewWriter(&buf)
+	writer := NewNDJSONWriter(bufWriter)
+
+	// Write some data
+	err := writer.Write(map[string]string{"test": "data"})
+	require.NoError(t, err)
+
+	// Before Sync, buffer might not be flushed
+	// (depends on buffer size, but often not flushed immediately)
+
+	// Sync should flush the buffer
+	err = writer.Sync()
+	require.NoError(t, err)
+
+	// Now the data should be in the underlying buffer
+	assert.Contains(t, buf.String(), `{"test":"data"}`)
+}
+
+func TestNDJSONWriter_Sync_NonFlushableWriter(t *testing.T) {
+	// bytes.Buffer doesn't implement Flush() or Sync()
+	var buf bytes.Buffer
+	writer := NewNDJSONWriter(&buf)
+
+	// Write some data
+	err := writer.Write(map[string]string{"test": "data"})
+	require.NoError(t, err)
+
+	// Sync should return nil (no-op) for non-flushable writer
+	err = writer.Sync()
+	assert.NoError(t, err)
+
+	// Data should still be written (just not flushed)
+	assert.Contains(t, buf.String(), `{"test":"data"}`)
+}
+
+func TestNDJSONWriter_Sync_ThreadSafe(t *testing.T) {
+	var buf bytes.Buffer
+	bufWriter := bufio.NewWriter(&buf)
+	writer := NewNDJSONWriter(bufWriter)
+
+	// Launch multiple goroutines calling Sync concurrently
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(_ int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				err := writer.Sync()
+				assert.NoError(t, err)
+			}
+		}(i)
+	}
+
+	// Also write concurrently
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 5; j++ {
+				writer.Write(map[string]int{"id": id, "seq": j})
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	// Test should not panic - verifies mutex protection
+}
+
+// mockFile implements io.Writer with Sync() method
+type mockFile struct {
+	buf       bytes.Buffer
+	syncCount int
+	mu        sync.Mutex
+}
+
+func (m *mockFile) Write(p []byte) (n int, err error) {
+	return m.buf.Write(p)
+}
+
+func (m *mockFile) Sync() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.syncCount++
+	return nil
+}
+
+func TestNDJSONWriter_Sync_FileLikeWriter(t *testing.T) {
+	// Test with a writer that has Sync() method (like os.File)
+	mock := &mockFile{}
+	writer := NewNDJSONWriter(mock)
+
+	// Write and sync
+	err := writer.Write(map[string]string{"type": "test"})
+	require.NoError(t, err)
+
+	err = writer.Sync()
+	require.NoError(t, err)
+
+	// Verify Sync was called on the underlying writer
+	mock.mu.Lock()
+	syncCount := mock.syncCount
+	mock.mu.Unlock()
+	assert.Equal(t, 1, syncCount, "Sync should have been called once")
+
+	// Verify data was written
+	assert.Contains(t, mock.buf.String(), `{"type":"test"}`)
 }
 
 // Helper function to unmarshal JSON

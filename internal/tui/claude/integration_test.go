@@ -26,7 +26,7 @@ func TestPanelModel_WithRealClaudeProcess(t *testing.T) {
 	defer mockProc.Close()
 
 	// Create panel with mock
-	panel := NewPanelModel(mockProc)
+	panel := NewPanelModel(mockProc, cli.Config{})
 
 	// Verify basic initialization
 	assert.NotNil(t, panel)

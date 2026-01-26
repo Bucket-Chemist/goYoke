@@ -1,0 +1,9 @@
+{
+  "id": "4",
+  "subject": "Fix channel replacement issue in restart logic",
+  "description": "Address the channel starvation bug where restart() replaces cp.events with fresh channels but TUI's waitForEvent is still blocked on old channel. Consider adding channel change notification mechanism.",
+  "activeForm": "Fixing restart channel logic",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}
