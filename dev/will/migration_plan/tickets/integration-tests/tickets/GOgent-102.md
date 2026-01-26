@@ -595,15 +595,15 @@ func setupTestSessionStartEnvironment(t *testing.T, projectDir string) {
 ```
 
 **Acceptance Criteria**:
-- [ ] `TestSessionStart_Integration` runs all SessionStart events from corpus and verifies JSON output with status and context_loaded fields
-- [ ] `TestSessionStart_LanguageDetection` verifies Python/Go/R detection and returns correct detected_language field
-- [ ] `TestSessionStart_ConventionLoading` verifies conventions are loaded and injected into context for Go projects
-- [ ] `TestSessionStart_HandoffInjection` verifies last-handoff.md content is injected when present
-- [ ] `TestSessionStart_RoutingSchemaLoad` verifies routing schema is parsed and schema_version/tiers_available fields returned
-- [ ] `TestSessionStart_ErrorRecovery` gracefully handles missing directories, invalid JSON, and empty convention directories
-- [ ] All hooks return valid JSON with status field
-- [ ] Integration tests pass: `go test ./test/integration -v -run TestSessionStart`
-- [ ] Test coverage ≥80% for SessionStart workflow
+- [x] `TestSessionStart_Integration` runs all SessionStart events from corpus and verifies JSON output with status and context_loaded fields
+- [x] `TestSessionStart_LanguageDetection` verifies Python/Go/R detection and returns correct detected_language field
+- [x] `TestSessionStart_ConventionLoading` verifies conventions are loaded and injected into context for Go projects
+- [x] `TestSessionStart_HandoffInjection` verifies last-handoff.md content is injected when present
+- [x] `TestSessionStart_RoutingSchemaLoad` verifies routing schema is parsed and schema_version/tiers_available fields returned
+- [x] `TestSessionStart_ErrorRecovery` gracefully handles missing directories, invalid JSON, and empty convention directories
+- [x] All hooks return valid JSON with status field
+- [x] Integration tests pass: `go test ./test/integration -v -run TestSessionStart`
+- [x] Test coverage ≥80% for SessionStart workflow
 
 **Why This Matters**: SessionStart hook is entry point for every agent session. Untested at integration level, this ticket verifies language detection, convention loading, routing schema injection, and error recovery work correctly with real corpus events and multi-language project detection. Critical for session initialization reliability.
 
