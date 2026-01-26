@@ -102,7 +102,7 @@
       "title": "Tree View Component",
       "description": "Bubble Tea component that renders the agent delegation tree with status indicators and selection.",
       "file": "TUI-AGENT-02.md",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "time_estimate": "3h",
       "dependencies": ["GOgent-115", "GOgent-111"],
