@@ -1,0 +1,17 @@
+=== RUN   TestMLTelemetry_RoutingDecisionCapture
+--- PASS: TestMLTelemetry_RoutingDecisionCapture (0.02s)
+=== RUN   TestMLTelemetry_DecisionUpdates
+--- PASS: TestMLTelemetry_DecisionUpdates (0.02s)
+=== RUN   TestMLTelemetry_ConcurrentWrites
+--- PASS: TestMLTelemetry_ConcurrentWrites (0.01s)
+=== RUN   TestMLTelemetry_CollaborationTracking
+--- PASS: TestMLTelemetry_CollaborationTracking (0.01s)
+=== RUN   TestMLTelemetry_ExportReconciliation
+--- PASS: TestMLTelemetry_ExportReconciliation (0.28s)
+=== RUN   TestMLTelemetry_RaceConditionDetection
+    ml_telemetry_test.go:514: No data races detected in concurrent telemetry writes
+--- PASS: TestMLTelemetry_RaceConditionDetection (0.06s)
+=== RUN   TestMLTelemetry_SequenceIntegrity
+--- PASS: TestMLTelemetry_SequenceIntegrity (0.03s)
+PASS
+ok  	github.com/Bucket-Chemist/GOgent-Fortress/test/integration	(cached)

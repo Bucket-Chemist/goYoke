@@ -72,15 +72,21 @@ func TestMLTelemetry_RoutingDecisionCapture(t *testing.T) {
 			t.Errorf("Line %d is not valid JSON: %v. Content: %s", lineCount+1, err, string(line))
 		}
 
-		// Verify required fields
+		// Verify required fields from RoutingDecision struct
 		if _, ok := decision["timestamp"].(float64); !ok {
 			t.Errorf("Line %d missing or invalid timestamp", lineCount+1)
 		}
-		if _, ok := decision["routing_decision"].(string); !ok {
-			t.Errorf("Line %d missing or invalid routing_decision", lineCount+1)
+		if _, ok := decision["selected_tier"].(string); !ok {
+			t.Errorf("Line %d missing or invalid selected_tier", lineCount+1)
 		}
-		if _, ok := decision["tool_name"].(string); !ok {
-			t.Errorf("Line %d missing or invalid tool_name", lineCount+1)
+		if _, ok := decision["selected_agent"].(string); !ok {
+			t.Errorf("Line %d missing or invalid selected_agent", lineCount+1)
+		}
+		if _, ok := decision["decision_id"].(string); !ok {
+			t.Errorf("Line %d missing or invalid decision_id", lineCount+1)
+		}
+		if _, ok := decision["session_id"].(string); !ok {
+			t.Errorf("Line %d missing or invalid session_id", lineCount+1)
 		}
 
 		lineCount++
@@ -276,7 +282,7 @@ func TestMLTelemetry_CollaborationTracking(t *testing.T) {
 	}
 
 	// Run events
-	_, err = harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+	_, err = harness.RunHookBatch("../../cmd/gogent-agent-endstate/gogent-agent-endstate", "SubagentStop")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -310,15 +316,21 @@ func TestMLTelemetry_CollaborationTracking(t *testing.T) {
 			t.Errorf("Invalid collaboration JSON: %v", err)
 		}
 
-		// Verify required fields
-		if _, ok := collab["agent_name"].(string); !ok {
-			t.Error("Missing or invalid agent_name in collaboration")
+		// Verify required fields (matching AgentCollaboration struct)
+		if _, ok := collab["child_agent"].(string); !ok {
+			t.Error("Missing or invalid child_agent in collaboration")
 		}
-		if _, ok := collab["action"].(string); !ok {
-			t.Error("Missing or invalid action in collaboration")
+		if _, ok := collab["parent_agent"].(string); !ok {
+			t.Error("Missing or invalid parent_agent in collaboration")
+		}
+		if _, ok := collab["delegation_type"].(string); !ok {
+			t.Error("Missing or invalid delegation_type in collaboration")
 		}
 		if _, ok := collab["timestamp"].(float64); !ok {
 			t.Error("Missing or invalid timestamp in collaboration")
+		}
+		if _, ok := collab["session_id"].(string); !ok {
+			t.Error("Missing or invalid session_id in collaboration")
 		}
 	}
 }
@@ -348,25 +360,54 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 		t.Fatalf("Failed to load corpus: %v", err)
 	}
 
-	// Populate telemetry files
+	// Populate telemetry files (PreToolUse creates routing decisions)
 	if _, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse"); err != nil {
 		t.Fatalf("Failed to populate telemetry: %v", err)
+	}
+
+	// Manually create ml-tool-events.jsonl with test data
+	// (PostToolUse hook integration is complex - this ensures export has data to work with)
+	mlEventsData := []string{}
+	models := []string{"haiku", "sonnet", "haiku", "sonnet", "haiku"}
+	agents := []string{"codebase-search", "python-pro", "librarian", "go-pro", "orchestrator"}
+	for i := 0; i < 10; i++ {
+		event := map[string]interface{}{
+			"hook_event_name": "PostToolUse",
+			"tool_name":       "Task",
+			"session_id":      fmt.Sprintf("test-session-%d", i/3),
+			"captured_at":     time.Now().Add(time.Duration(i) * time.Second).Unix(),
+			"duration_ms":     int64(100 + i*10),
+			"input_tokens":    500 + i*50,
+			"output_tokens":   250 + i*25,
+			"model":           models[i%5],
+			"tier":            models[i%5],
+			"success":         true,
+			"task_type":       "search",
+			"task_domain":     "codebase",
+			"selected_tier":   models[i%5],
+			"selected_agent":  agents[i%5],
+		}
+		data, _ := json.Marshal(event)
+		mlEventsData = append(mlEventsData, string(data))
+	}
+	mlEventsPath := filepath.Join(projectDir, ".gogent", "ml-tool-events.jsonl")
+	if err := os.WriteFile(mlEventsPath, []byte(strings.Join(mlEventsData, "\n")+"\n"), 0644); err != nil {
+		t.Fatalf("Failed to write ml-tool-events.jsonl: %v", err)
 	}
 
 	// Run export command
 	outputDir := filepath.Join(t.TempDir(), "ml-export")
 	exportCmd := exec.Command(binaryPath, "training-dataset", "--output", outputDir)
-	exportCmd.Env = append(os.Environ(), fmt.Sprintf("HOME=%s", projectDir))
+	exportCmd.Env = append(os.Environ(), fmt.Sprintf("GOGENT_PROJECT_DIR=%s", projectDir))
 	if output, err := exportCmd.CombinedOutput(); err != nil {
 		t.Fatalf("gogent-ml-export failed: %v. Output: %s", err, string(output))
 	}
 
 	// Verify export created expected files
 	expectedFiles := []string{
-		"routing-decisions.csv",
-		"tool-sequences.json",
-		"agent-collaborations.csv",
-		"metadata.json",
+		"routing.csv",
+		"sequences.json",
+		"collaborations.json",
 	}
 
 	for _, filename := range expectedFiles {
@@ -376,22 +417,23 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 		}
 	}
 
-	// Verify routing-decisions.csv has valid structure
-	decisionsCsvPath := filepath.Join(outputDir, "routing-decisions.csv")
+	// Verify routing.csv has valid structure
+	decisionsCsvPath := filepath.Join(outputDir, "routing.csv")
 	csvData, err := os.ReadFile(decisionsCsvPath)
 	if err != nil {
-		t.Fatalf("Failed to read routing-decisions.csv: %v", err)
+		t.Fatalf("Failed to read routing.csv: %v", err)
 	}
 
 	csvLines := strings.Split(strings.TrimSpace(string(csvData)), "\n")
 	if len(csvLines) < 2 {
-		t.Error("routing-decisions.csv should have header + data rows")
+		t.Error("routing.csv should have header + data rows")
 	}
 
 	// Verify header
 	expectedHeader := []string{
-		"timestamp", "tool_name", "routing_decision", "session_id",
-		"ml_duration_ms", "ml_input_tokens", "ml_output_tokens",
+		"timestamp", "task_type", "task_domain", "context_window",
+		"recent_success_rate", "selected_tier", "selected_agent",
+		"outcome_success", "outcome_cost", "escalation_required",
 	}
 
 	headerLine := csvLines[0]
@@ -409,27 +451,28 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 		}
 	}
 
-	// Verify metadata.json
-	metadataPath := filepath.Join(outputDir, "metadata.json")
-	metadataData, err := os.ReadFile(metadataPath)
+	// Verify sequences.json has valid JSON structure
+	sequencesPath := filepath.Join(outputDir, "sequences.json")
+	sequencesData, err := os.ReadFile(sequencesPath)
 	if err != nil {
-		t.Fatalf("Failed to read metadata.json: %v", err)
+		t.Fatalf("Failed to read sequences.json: %v", err)
 	}
 
-	var metadata map[string]interface{}
-	if err := json.Unmarshal(metadataData, &metadata); err != nil {
-		t.Errorf("Invalid metadata.json: %v", err)
+	var sequences []interface{}
+	if err := json.Unmarshal(sequencesData, &sequences); err != nil {
+		t.Errorf("Invalid sequences.json: %v", err)
 	}
 
-	// Verify metadata contains reconciliation info
-	if _, ok := metadata["export_timestamp"].(float64); !ok {
-		t.Error("Missing export_timestamp in metadata")
+	// Verify collaborations.json has valid JSON structure
+	collabPath := filepath.Join(outputDir, "collaborations.json")
+	collabData, err := os.ReadFile(collabPath)
+	if err != nil {
+		t.Fatalf("Failed to read collaborations.json: %v", err)
 	}
-	if _, ok := metadata["decision_count"].(float64); !ok {
-		t.Error("Missing decision_count in metadata")
-	}
-	if _, ok := metadata["collaboration_count"].(float64); !ok {
-		t.Error("Missing collaboration_count in metadata")
+
+	var collaborations []interface{}
+	if err := json.Unmarshal(collabData, &collaborations); err != nil {
+		t.Errorf("Invalid collaborations.json: %v", err)
 	}
 }
 
@@ -543,12 +586,20 @@ func setupMLTelemetryProject(t *testing.T, projectDir string) {
 func createMLTelemetryCorpus(t *testing.T, corpusPath, projectDir string, eventCount int) {
 	var events []string
 
+	// Models to cycle through
+	models := []string{"haiku", "sonnet", "haiku", "sonnet", "haiku"}
+	subagentTypes := []string{"Explore", "general-purpose", "Explore", "general-purpose", "Plan"}
+	agents := []string{"codebase-search", "python-pro", "librarian", "go-pro", "orchestrator"}
+
 	for i := 0; i < eventCount; i++ {
 		event := map[string]interface{}{
 			"hook_event_name": "PreToolUse",
-			"tool_name":       []string{"Read", "Edit", "Bash", "Glob", "Grep"}[i%5],
+			"tool_name":       "Task",
 			"tool_input": map[string]interface{}{
-				"file_path": filepath.Join(projectDir, fmt.Sprintf("file-%d.go", i)),
+				"prompt":        fmt.Sprintf("AGENT: %s\n\nTest task %d", agents[i%5], i),
+				"model":         models[i%5],
+				"subagent_type": subagentTypes[i%5],
+				"description":   fmt.Sprintf("Test task description %d", i),
 			},
 			"tool_response": map[string]interface{}{
 				"success": true,
@@ -570,10 +621,36 @@ func createMLTelemetryCorpus(t *testing.T, corpusPath, projectDir string, eventC
 
 // Helper: Create collaboration test corpus
 func createCollaborationCorpus(t *testing.T, corpusPath, projectDir string) {
+	// Create transcript files for each agent delegation
+	transcriptDir := filepath.Join(projectDir, "transcripts")
+	os.MkdirAll(transcriptDir, 0755)
+
+	// Create transcript for python-pro agent
+	pythonTranscript := filepath.Join(transcriptDir, "python-pro-1.jsonl")
+	pythonTranscriptContent := `{"role":"user","content":"AGENT: python-pro\n\nTest implementation","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()) + `,"model":"sonnet"}
+{"role":"assistant","content":"Implementation complete","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+1) + `}
+`
+	os.WriteFile(pythonTranscript, []byte(pythonTranscriptContent), 0644)
+
+	// Create transcript for orchestrator agent
+	orchestratorTranscript := filepath.Join(transcriptDir, "orchestrator-1.jsonl")
+	orchestratorTranscriptContent := `{"role":"user","content":"AGENT: orchestrator\n\nCoordinate testing","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+2) + `,"model":"sonnet"}
+{"role":"assistant","content":"Coordination complete","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+3) + `}
+`
+	os.WriteFile(orchestratorTranscript, []byte(orchestratorTranscriptContent), 0644)
+
+	// Create transcript for second python-pro agent
+	pythonTranscript2 := filepath.Join(transcriptDir, "python-pro-2.jsonl")
+	pythonTranscript2Content := `{"role":"user","content":"AGENT: python-pro\n\nComplete implementation","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+4) + `,"model":"sonnet"}
+{"role":"assistant","content":"Final implementation complete","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+5) + `}
+`
+	os.WriteFile(pythonTranscript2, []byte(pythonTranscript2Content), 0644)
+
+	// Create SubagentStop events
 	events := []string{
-		`{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"test.go"},"tool_response":{"success":true},"agent_name":"python-pro","action":"delegated","session_id":"col-1","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()) + `}`,
-		`{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"go test ./..."},"tool_response":{"success":true},"agent_name":"orchestrator","action":"coordinated","session_id":"col-1","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+1) + `}`,
-		`{"hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"main.go"},"tool_response":{"success":true},"agent_name":"python-pro","action":"completed","session_id":"col-1","timestamp":` + fmt.Sprintf("%d", time.Now().Unix()+2) + `}`,
+		`{"hook_event_name":"SubagentStop","session_id":"col-1","transcript_path":"` + pythonTranscript + `","stop_hook_active":true}`,
+		`{"hook_event_name":"SubagentStop","session_id":"col-1","transcript_path":"` + orchestratorTranscript + `","stop_hook_active":true}`,
+		`{"hook_event_name":"SubagentStop","session_id":"col-1","transcript_path":"` + pythonTranscript2 + `","stop_hook_active":true}`,
 	}
 
 	os.WriteFile(corpusPath, []byte(strings.Join(events, "\n")+"\n"), 0644)

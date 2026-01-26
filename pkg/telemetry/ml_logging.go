@@ -11,7 +11,8 @@ import (
 )
 
 // LogMLToolEvent writes ML routing tool event metrics to JSONL files (dual-write: global + project)
-// Uses routing.PostToolEvent and config.GetMLToolEventsPath() for XDG compliance
+// Uses routing.PostToolEvent and config.GetMLToolEventsPathWithProjectDir() for XDG compliance
+// with GOGENT_PROJECT_DIR override support for test isolation
 func LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error {
 	// Marshal PostToolEvent directly to JSON
 	data, err := json.Marshal(event)
@@ -22,16 +23,19 @@ func LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error {
 	// Add newline for JSONL format
 	jsonlLine := append(data, '\n')
 
-	// Write to global path using config helper
-	globalPath := config.GetMLToolEventsPath()
+	// Write to global path using config helper (respects GOGENT_PROJECT_DIR)
+	globalPath := config.GetMLToolEventsPathWithProjectDir()
 	if err := appendMLToolEvent(globalPath, jsonlLine); err != nil {
 		return err
 	}
 
-	// Write to project-scoped path (if directory exists)
-	projectPath := filepath.Join(projectDir, ".claude", "memory", "ml-tool-events.jsonl")
-	if dirExists(filepath.Dir(projectPath)) {
-		appendMLToolEvent(projectPath, jsonlLine) // Ignore errors for project-scoped writes
+	// Write to project-scoped path (if directory exists and not already covered by GOGENT_PROJECT_DIR)
+	// Skip project-scoped write if GOGENT_PROJECT_DIR is set to avoid duplicate writes
+	if os.Getenv("GOGENT_PROJECT_DIR") == "" {
+		projectPath := filepath.Join(projectDir, ".claude", "memory", "ml-tool-events.jsonl")
+		if dirExists(filepath.Dir(projectPath)) {
+			appendMLToolEvent(projectPath, jsonlLine) // Ignore errors for project-scoped writes
+		}
 	}
 
 	return nil
@@ -66,8 +70,9 @@ func appendMLToolEvent(path string, data []byte) error {
 
 // ReadMLToolEvents reads all ML tool events from the global path
 // Returns routing.PostToolEvent slice directly
+// Respects GOGENT_PROJECT_DIR for test isolation
 func ReadMLToolEvents() ([]routing.PostToolEvent, error) {
-	logPath := config.GetMLToolEventsPath()
+	logPath := config.GetMLToolEventsPathWithProjectDir()
 
 	data, err := os.ReadFile(logPath)
 	if os.IsNotExist(err) {

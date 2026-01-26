@@ -284,3 +284,55 @@ func GetRoutingDecisionsPath() string {
 func GetCollaborationsPath() string {
 	return filepath.Join(GetGOgentDataDir(), "agent-collaborations.jsonl")
 }
+
+// GetRoutingDecisionsPathWithProjectDir returns routing decisions path, checking GOGENT_PROJECT_DIR first.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/routing-decisions.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetRoutingDecisionsPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "routing-decisions.jsonl")
+	}
+	return GetRoutingDecisionsPath()
+}
+
+// GetRoutingDecisionUpdatesPathWithProjectDir returns routing decision updates path, checking GOGENT_PROJECT_DIR first.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/routing-decision-updates.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetRoutingDecisionUpdatesPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "routing-decision-updates.jsonl")
+	}
+	return filepath.Join(GetGOgentDataDir(), "routing-decision-updates.jsonl")
+}
+
+// GetCollaborationsPathWithProjectDir returns collaborations path, checking GOGENT_PROJECT_DIR first.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/agent-collaborations.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetCollaborationsPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "agent-collaborations.jsonl")
+	}
+	return GetCollaborationsPath()
+}
+
+// GetMLToolEventsPathWithProjectDir returns ML tool events path, checking GOGENT_PROJECT_DIR first.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/ml-tool-events.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetMLToolEventsPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "ml-tool-events.jsonl")
+	}
+	return GetMLToolEventsPath()
+}

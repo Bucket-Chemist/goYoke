@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/google/uuid"
 )
 
@@ -154,22 +155,11 @@ func appendDecisionUpdate(update DecisionOutcomeUpdate) error {
 }
 
 func getRoutingDecisionPath() string {
-	// XDG Base Directory specification
-	xdgData := os.Getenv("XDG_DATA_HOME")
-	if xdgData == "" {
-		home, _ := os.UserHomeDir()
-		xdgData = filepath.Join(home, ".local", "share")
-	}
-	return filepath.Join(xdgData, "gogent", "routing-decisions.jsonl")
+	return config.GetRoutingDecisionsPathWithProjectDir()
 }
 
 func getRoutingDecisionUpdatesPath() string {
-	xdgData := os.Getenv("XDG_DATA_HOME")
-	if xdgData == "" {
-		home, _ := os.UserHomeDir()
-		xdgData = filepath.Join(home, ".local", "share")
-	}
-	return filepath.Join(xdgData, "gogent", "routing-decision-updates.jsonl")
+	return config.GetRoutingDecisionUpdatesPathWithProjectDir()
 }
 
 func truncateDescription(s string, maxLen int) string {
