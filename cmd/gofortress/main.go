@@ -92,10 +92,15 @@ func main() {
 	} else {
 		// Create new session
 		cfg = cli.Config{
-			ClaudePath:  "claude",
-			SessionID:   "", // Will be generated
-			WorkingDir:  workDir,
-			Verbose:     *verbose,
+			ClaudePath:   "claude",
+			SessionID:    "", // Will be generated
+			WorkingDir:   workDir,
+			Verbose:      *verbose,
+			// Pre-approve common tools to avoid permission dialogs.
+			// Based on testing, permission-mode flags don't enable interactive permissions in stream-json mode.
+			// The "delegate" mode still sends error events, not request events.
+			// Solution: Pre-approve tools via AllowedTools.
+			AllowedTools: []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", "TaskOutput"},
 		}
 
 		process, err = cli.NewClaudeProcess(cfg)

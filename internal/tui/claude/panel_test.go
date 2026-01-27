@@ -254,7 +254,7 @@ func TestPanelModel_HandleEvent_Assistant(t *testing.T) {
 		assert.Equal(t, "Part 1 Part 2", updatedPanel.messages[0].Content)
 	})
 
-	t.Run("ignores non-text content blocks", func(t *testing.T) {
+	t.Run("displays thinking and text content blocks", func(t *testing.T) {
 		eventJSON := `{
 			"type": "assistant",
 			"message": {
@@ -272,7 +272,7 @@ func TestPanelModel_HandleEvent_Assistant(t *testing.T) {
 		updatedPanel := panel3.handleEvent(event)
 
 		require.Len(t, updatedPanel.messages, 1)
-		assert.Equal(t, "Response", updatedPanel.messages[0].Content)
+		assert.Equal(t, "\n💭 Thinking...\nResponse", updatedPanel.messages[0].Content)
 	})
 }
 

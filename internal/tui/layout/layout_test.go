@@ -62,7 +62,7 @@ func createTestModel() Model {
 	}
 	tree.Root = rootNode
 
-	claudePanel := claude.NewPanelModel(newMockClaudeProcess())
+	claudePanel := claude.NewPanelModel(newMockClaudeProcess(), cli.Config{})
 	agentTreeView := agents.New(tree)
 
 	return NewModel(claudePanel, agentTreeView, "test-session")

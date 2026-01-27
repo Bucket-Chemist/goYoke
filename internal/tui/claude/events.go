@@ -3,7 +3,9 @@ package claude
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 	"github.com/charmbracelet/lipgloss"
@@ -61,6 +63,21 @@ func (m PanelModel) handleEvent(event cli.Event) PanelModel {
 			// Add error as assistant message
 			errorText := fmt.Sprintf("[Error: %s]", ee.Error)
 			m.appendStreamingText(errorText)
+		}
+
+	case "user":
+		// TEMPORARY: Capture raw event for schema discovery
+		// This will be replaced with proper permission handling once we understand the schema
+		debugPath := fmt.Sprintf("/tmp/user-event-%d.json", time.Now().Unix())
+		if err := os.WriteFile(debugPath, event.Raw, 0644); err != nil {
+			// Log error but don't block - this is just instrumentation
+			m.appendStreamingText(fmt.Sprintf("\n[Warning: Failed to save debug event: %v]\n", err))
+		} else {
+			m.messages = append(m.messages, Message{
+				Role:    "system",
+				Content: fmt.Sprintf("🔍 Permission event detected. Raw data saved to: %s", debugPath),
+			})
+			m.updateViewport()
 		}
 
 	default:
