@@ -1,0 +1,14 @@
+{
+  "id": "13",
+  "subject": "Implementation: State management (panel.go)",
+  "description": "Implement state management for interactive prompts in PanelModel.\n\nDependencies: Task 6 complete (state machine designed)\n\nFiles: internal/tui/claude/panel.go\n\nImplementation:\n1. Add state fields to PanelModel (awaitingType, currentPrompt, etc.)\n2. Implement state transitions\n3. Add timeout timers\n4. Add prompt history tracking\n5. Add helper methods (IsAwaitingResponse(), ClearPrompt(), etc.)\n\nState fields:\n```go\ntype PanelModel struct {\n    // ... existing fields ...\n    \n    // Interactive prompt state\n    awaitingPromptType string // \"ask_user_question\", \"plan_approval\", etc.\n    currentPrompt      interface{} // Current prompt data\n    promptTimeout      *time.Timer\n    promptHistory      []PromptRecord // For debugging/logging\n}\n```\n\nDeliverable:\n- State management system\n- State transition logic\n- Timeout mechanism\n- History tracking\n\nAcceptance:\n- [ ] State transitions work correctly\n- [ ] Timeouts fire and handle gracefully\n- [ ] History tracked for all prompts\n- [ ] No state leaks between prompts\n- [ ] Thread-safe (if needed)",
+  "activeForm": "Implementing state management",
+  "status": "pending",
+  "blocks": [
+    "16",
+    "17"
+  ],
+  "blockedBy": [
+    "6"
+  ]
+}

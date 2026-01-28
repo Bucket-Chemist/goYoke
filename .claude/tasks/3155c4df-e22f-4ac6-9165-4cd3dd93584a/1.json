@@ -1,0 +1,11 @@
+{
+  "id": "1",
+  "subject": "Discovery: Test AskUserQuestion event structure",
+  "description": "Discovery: Test AskUserQuestion event structure\n\nRESULT: **AskUserQuestion is NOT a tool in Claude Code CLI**\n\nEvidence:\n- Attempted to invoke AskUserQuestion twice\n- Both attempts returned: \"Error: Answer questions?\"\n- Error persists even with AskUserQuestion in AllowedTools\n- Tool not listed in `claude --help` or tool documentation\n- Error structure shows Claude CLI rejecting unknown tool\n\nCONCLUSION: Interactive prompts via AskUserQuestion tool are NOT POSSIBLE in Claude Code CLI stream-json mode. AskUserQuestion may only exist in web interface (claude.ai) or not at all in CLI.\n\nFiles captured:\n- /tmp/user-event-1769475801.json - AskUserQuestion error\n- /tmp/user-event-1769475862.json - AskUserQuestion error\n\n**Next step:** Test plan mode approval (Task #2) to see if THAT has interactive features.",
+  "activeForm": "Testing AskUserQuestion events",
+  "status": "completed",
+  "blocks": [
+    "4"
+  ],
+  "blockedBy": []
+}

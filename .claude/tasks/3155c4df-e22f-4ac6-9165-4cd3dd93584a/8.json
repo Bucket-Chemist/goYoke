@@ -1,0 +1,9 @@
+{
+  "id": "8",
+  "subject": "Feature: Permission mode toggle in TUI",
+  "description": "Add toggle command to switch between AllowedTools (automated) and interactive modes.\n\nREQUIREMENT: User wants ability to enable \"allow all\" mode for automated sessions, but use interactive mode normally.\n\nDesign:\n- New command: `/permissions auto` or `/permissions interactive`\n- Show current mode in status bar\n- Mode persists for session (or until toggled)\n- In auto mode: AllowedTools set, no prompts\n- In interactive mode: AllowedTools empty, handle prompts\n\nFiles:\n- internal/tui/claude/commands.go (new command)\n- internal/tui/claude/panel.go (state tracking)\n- cmd/gofortress/main.go (read initial mode from flag or config)\n\nDeliverable:\n- `/permissions` command implementation\n- Status bar indicator\n- Mode switching logic\n- Config file support (optional)\n\nAcceptance:\n- [ ] `/permissions auto` enables AllowedTools mode\n- [ ] `/permissions interactive` disables AllowedTools\n- [ ] Current mode shown in status bar or help\n- [ ] Mode can be set via CLI flag on startup\n- [ ] Mode switching works without restart",
+  "activeForm": "Implementing permission toggle",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,13 +1,13 @@
-# Session Handoff - 2026-01-27 07:36:55
+# Session Handoff - 2026-01-27 14:57:15
 
 ## Session Context
 
-- **Session ID**: 24bcabbc-66b4-4a95-a216-8062ac0030fc
+- **Session ID**: cf99d06c-be61-4fa1-b891-7422bb69cc53
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 1
+- **Tool Calls**: 0
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -19,29 +19,42 @@
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
   - claude/memory/ml-tool-events.jsonl
-  - claude/settings.json
-  - claude/shell-snapshots/snapshot-bash-1769430454638-puc9y8.sh
+  - claude/memory/routing-violations.jsonl
+  - claude/shell-snapshots/snapshot-bash-1769473346898-poyc8q.sh
   - claude/statsig/statsig.cached.evaluations.0c58c3bdeb
   - claude/statsig/statsig.last_modified_time.evaluations
   - claude/statsig/statsig.session_id.2656274335
   - claude/tmp/unleash-backup-codeium-extension.json
   - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
   - md/gofortress/main.go
-  - nternal/cli/subprocess.go
-  - nternal/tui/claude/events.go
-  - nternal/tui/claude/panel_test.go
-  - nternal/tui/layout/layout_test.go
-  - .claude/shell-snapshots/snapshot-bash-1769473346898-poyc8q.sh
-  - .claude/shell-snapshots/snapshot-bash-1769473507256-9fyol8.sh
-  - .claude/stats-cache.json
-  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/
-  - .claude/todos/24bcabbc-66b4-4a95-a216-8062ac0030fc-agent-24bcabbc-66b4-4a95-a216-8062ac0030fc.json
-  - .claude/todos/3155c4df-e22f-4ac6-9165-4cd3dd93584a-agent-3155c4df-e22f-4ac6-9165-4cd3dd93584a.json
-  - .claude/todos/ba75a90a-e268-42e5-b278-bdddc9e0b96c-agent-ba75a90a-e268-42e5-b278-bdddc9e0b96c.json
-  - .claude/todos/c7772a70-0674-46ce-ad6c-0c743ede0f0c-agent-c7772a70-0674-46ce-ad6c-0c743ede0f0c.json
-  - .claude/todos/ca5d4fd0-b77a-4c6e-a4ff-519133a3e10b-agent-ca5d4fd0-b77a-4c6e-a4ff-519133a3e10b.json
-  - .claude/todos/e8de9816-6bb0-4b79-ae7c-793e5cb07983-agent-e8de9816-6bb0-4b79-ae7c-793e5cb07983.json
-  - dev/will/migration_plan/tickets/TUI/TUI-CLI-04-SCHEMA-DISCOVERY.md
-  - dev/will/migration_plan/tickets/TUI/expected-user-event-schema.md
-  - dev/will/migration_plan/tickets/TUI/schema-discovery-test.md
+  - .claude/mcp/
+  - .claude/memory/session-archive/violations-1769475961.jsonl
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/1.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/10.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/11.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/12.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/13.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/14.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/15.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/16.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/17.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/18.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/19.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/2.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/3.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/4.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/5.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/6.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/7.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/8.json
+  - .claude/tasks/3155c4df-e22f-4ac6-9165-4cd3dd93584a/9.json
+  - .claude/tickets/
+  - .claude/todos/0fbbc163-b6b8-4e8c-a557-af0298ef3962-agent-0fbbc163-b6b8-4e8c-a557-af0298ef3962.json
+  - .claude/todos/347b7611-3d35-4f84-a4a2-4d9fa7ed1b6e-agent-347b7611-3d35-4f84-a4a2-4d9fa7ed1b6e.json
+  - .claude/todos/3bd5ab2a-914b-4d74-853a-4d478fb2526a-agent-3bd5ab2a-914b-4d74-853a-4d478fb2526a.json
+  - .claude/todos/3e3d6529-5870-4a01-8125-a2241591936b-agent-3e3d6529-5870-4a01-8125-a2241591936b.json
+  - .claude/todos/b77d819a-535f-49dc-a0f8-7207ab95402f-agent-b77d819a-535f-49dc-a0f8-7207ab95402f.json
+  - scripts/generate-mcp-tickets.py
+  - scripts/generate-mcp-tickets.sh
+  - tickets/
 

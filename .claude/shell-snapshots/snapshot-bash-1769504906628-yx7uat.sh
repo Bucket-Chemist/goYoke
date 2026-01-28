@@ -88,6 +88,6 @@ shopt -s expand_aliases
 # Aliases
 # Check for rg availability
 if ! (unalias rg 2>/dev/null; command -v rg) >/dev/null 2>&1; then
-  alias rg='/home/doktersmol/.local/share/claude/versions/2.1.19 --ripgrep'
+  alias rg='/home/doktersmol/.local/share/claude/versions/2.1.20 --ripgrep'
 fi
-export PATH=/home/doktersmol/.bun/bin\:/home/doktersmol/.local/bin\:/home/doktersmol/.cache/cloud-code/m2c/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.local/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/micromamba/condabin\:/home/doktersmol/.local/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/usr/local/sbin\:/usr/local/bin\:/usr/bin\:/usr/lib/jvm/default/bin\:/usr/bin/site_perl\:/usr/bin/vendor_perl\:/usr/bin/core_perl\:/home/doktersmol/.antigravity/extensions/ms-python.debugpy-2025.18.0-linux-x64/bundled/scripts/noConfigScripts
+export PATH=/home/doktersmol/.bun/bin\:/home/doktersmol/.local/bin\:/home/doktersmol/.cache/cloud-code/m2c/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.local/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/micromamba/condabin\:/home/doktersmol/.local/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/home/doktersmol/.bun/bin\:/usr/local/sbin\:/usr/local/bin\:/usr/bin\:/usr/lib/jvm/default/bin\:/usr/bin/site_perl\:/usr/bin/vendor_perl\:/usr/bin/core_perl

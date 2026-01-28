@@ -1,0 +1,14 @@
+{
+  "id": "12",
+  "subject": "Implementation: Prompt rendering (output.go)",
+  "description": "Implement TUI rendering for interactive prompts based on Task 7 design.\n\nDependencies: Task 7 complete (UI patterns designed)\n\nFiles: internal/tui/claude/output.go\n\nImplementation:\n1. Add rendering functions for each prompt type\n2. Apply lipgloss styling\n3. Show keyboard shortcuts\n4. Add awaiting indicators\n5. Handle multi-line prompts\n\nCode pattern:\n```go\nfunc (m PanelModel) renderAskUserQuestion(q AskUserQuestion) string {\n    style := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(1)\n    \n    content := fmt.Sprintf(\"❓ %s\\n\\n\", q.Question)\n    for i, opt := range q.Options {\n        content += fmt.Sprintf(\"[%d] %s\\n\", i+1, opt.Label)\n    }\n    content += \"\\nPress 1-4 to select, ESC to cancel\"\n    \n    return style.Render(content)\n}\n```\n\nDeliverable:\n- Rendering functions for all prompt types\n- Lipgloss styling\n- Keyboard hint display\n- Visual indicators (spinners, borders)\n\nAcceptance:\n- [ ] Prompts render clearly and attractively\n- [ ] Keyboard shortcuts shown\n- [ ] Awaiting state visually indicated\n- [ ] No overlap with chat content\n- [ ] Follows Bubbletea patterns",
+  "activeForm": "Implementing prompt rendering",
+  "status": "pending",
+  "blocks": [
+    "16",
+    "17"
+  ],
+  "blockedBy": [
+    "7"
+  ]
+}

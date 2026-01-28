@@ -1,0 +1,17 @@
+{
+  "id": "4",
+  "subject": "Analysis: Synthesize discovery findings",
+  "description": "Analyze all captured events and determine implementation strategy based on findings.\n\nDependencies: Tasks 1-3 complete\n\nInput: All captured event JSONs and documentation from discovery phase\n\nAnalysis questions:\n1. Which interactive features work in stream-json?\n2. What are the common event patterns?\n3. What's the unified response protocol?\n4. What state management is needed?\n5. How to distinguish event types reliably?\n\nDeliverable:\n- Event taxonomy (tool denial vs requests vs prompts)\n- Response protocol specification\n- State machine design (awaiting types, transitions)\n- Implementation architecture document\n- Decision: GO/NO-GO for each feature\n\nAcceptance:\n- [ ] All event types classified\n- [ ] Response protocols documented\n- [ ] State machine diagram created\n- [ ] Architecture doc written (DESIGN.md)\n- [ ] Clear GO/NO-GO decisions made",
+  "activeForm": "Analyzing discovery findings",
+  "status": "pending",
+  "blocks": [
+    "5",
+    "6",
+    "7"
+  ],
+  "blockedBy": [
+    "1",
+    "2",
+    "3"
+  ]
+}

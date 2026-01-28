@@ -100,7 +100,7 @@ func main() {
 			// Based on testing, permission-mode flags don't enable interactive permissions in stream-json mode.
 			// The "delegate" mode still sends error events, not request events.
 			// Solution: Pre-approve tools via AllowedTools.
-			AllowedTools: []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", "TaskOutput"},
+			AllowedTools: []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", "TaskOutput", "EnterPlanMode", "ExitPlanMode"},
 		}
 
 		process, err = cli.NewClaudeProcess(cfg)

@@ -1,0 +1,11 @@
+{
+  "id": "14",
+  "subject": "Testing: Unit tests for event parsers",
+  "description": "Write comprehensive unit tests for event parsing logic.\n\nDependencies: Task 9 complete (parsers implemented)\n\nFiles: internal/cli/events_test.go\n\nTest coverage:\n1. Valid events for each type\n2. Malformed JSON\n3. Missing required fields\n4. Invalid field values\n5. Edge cases (empty arrays, null values)\n6. Type discrimination (tool denial vs AskUserQuestion)\n\nPattern: Table-driven tests with subtests\n\nDeliverable:\n- Test suite with >80% coverage for events.go\n- Fixtures in testdata/ directory\n- Benchmarks for parser performance (optional)\n\nAcceptance:\n- [ ] All event types have parser tests\n- [ ] Edge cases covered\n- [ ] go test -cover shows >80%\n- [ ] Tests follow go.md conventions (t.Helper(), table-driven)\n- [ ] No flaky tests",
+  "activeForm": "Writing event parser tests",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": [
+    "9"
+  ]
+}

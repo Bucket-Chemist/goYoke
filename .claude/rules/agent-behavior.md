@@ -11,9 +11,96 @@ alwaysApply: true
 
 ---
 
-## 1. Routing Discipline
+## 1. Coding Discipline
 
-### 1.1 Always Check Before Acting
+These principles apply to all coding work, before routing considerations.
+
+### 1.1 Surface Assumptions Before Committing
+
+Before implementing non-trivial code:
+
+**State what you're assuming.** If the request could reasonably be interpreted
+multiple ways, name them. Don't silently pick one and hope it's right.
+
+**Push back when warranted.** If a simpler approach exists, say so. If the
+requested approach has significant tradeoffs, surface them. Technical honesty
+serves the user better than compliance.
+
+**Stop when genuinely confused.** Name what's unclear. One targeted question
+beats three attempts that miss the mark.
+
+This doesn't mean interrogating the user on every detail. Use judgment:
+- Obvious intent → proceed
+- Ambiguous with reasonable default → state assumption, proceed
+- Ambiguous with no clear default → ask
+
+### 1.2 Solve the Actual Problem
+
+Write code that addresses what was asked. Resist the pull toward:
+
+- **Speculative features** - functionality nobody requested
+- **Premature abstraction** - generalizing one-off code "for later"
+- **Defensive overkill** - error handling for scenarios that can't occur
+
+That said, use judgment. Sometimes a small abstraction genuinely clarifies.
+Sometimes adjacent error handling prevents real bugs. The test isn't "was
+this explicitly requested?" but "does this serve the user's actual goal?"
+
+**The checks:**
+
+1. If you wrote 200 lines and it could be 50, rewrite it.
+
+2. Ask yourself: "Would a senior engineer say this is overcomplicated?"
+   If yes, simplify.
+
+3. If you added code beyond what was asked, ask why. "Might be useful
+   someday" → reconsider. "Genuinely makes this clearer or more correct"
+   → proceed.
+
+### 1.3 Parallelize Independent Operations
+
+When executing a task, identify operations that don't depend on each other
+and execute them in a single message with multiple tool calls.
+
+**How to parallelize:** Include multiple tool invocations in the same response.
+The runtime executes them concurrently and returns all results together.
+
+**Parallelize (no dependencies between calls):**
+```javascript
+// GOOD: Single message, multiple independent reads
+Read({file_path: "/src/auth/handler.go"})
+Read({file_path: "/src/auth/middleware.go"})
+Read({file_path: "/src/auth/types.go"})
+// All three execute concurrently, results return together
+```
+
+**Don't parallelize (output informs next input):**
+```javascript
+// These MUST be sequential - each depends on the previous
+Read({file_path: "/src/config.go"})        // Need content first
+// ...wait for result...
+Edit({file_path: "/src/config.go", ...})   // Edit depends on read
+// ...wait for result...
+Bash({command: "go build ./..."})          // Build depends on edit
+```
+
+**Common parallelizable patterns:**
+
+| Scenario | Parallel Calls |
+|----------|----------------|
+| Understanding a module | Read 3-5 related files |
+| Finding patterns | Multiple Grep/Glob searches |
+| Validating changes | Bash(go vet) + Bash(go test) + Bash(golangci-lint) |
+| Exploring structure | Glob for *.go + Glob for *_test.go + Read go.mod |
+
+**The check:** Before making a tool call, ask: "Do I need the result of a
+previous call to determine this call's parameters?" If no → batch it.
+
+---
+
+## 2. Routing Discipline
+
+### 2.1 Always Check Before Acting
 
 Before using ANY tool, verify:
 1. Does this task match a Key Trigger in CLAUDE.md?
@@ -22,7 +109,7 @@ Before using ANY tool, verify:
 
 **Reference:** `~/.claude/routing-schema.json` is the source of truth for tier thresholds.
 
-### 1.2 Tier Selection Matrix
+### 2.2 Tier Selection Matrix
 
 | Task Complexity | Context Size | Tier | Action |
 |-----------------|--------------|------|--------|
@@ -30,10 +117,10 @@ Before using ANY tool, verify:
 | Structured output (docs, scaffold) | <1000 lines | Haiku+Thinking | Delegate to specialist |
 | Reasoning required | <5000 tokens | Sonnet | Delegate to implementation agent |
 | Multi-source synthesis | Any | Sonnet (orchestrator) | Coordinate multiple agents |
-| Novel/complex/security | Any | Opus (einstein) | **Generate GAP doc** (see 3.4) |
+| Novel/complex/security | Any | Opus (einstein) | **Generate GAP doc** (see 4.4) |
 | >10 files or >50K tokens | Large | External (Gemini) | Pipe to gemini-slave first |
 
-### 1.2.1 Go Implementation Agents (Sonnet Tier)
+### 2.2.1 Go Implementation Agents (Sonnet Tier)
 
 | Trigger Patterns | Agent | Use For |
 |------------------|-------|---------|
@@ -45,7 +132,7 @@ Before using ANY tool, verify:
 
 These agents understand Go idioms: explicit error handling, small interfaces, composition over inheritance, table-driven tests.
 
-### 1.3 Scout Before Commit
+### 2.3 Scout Before Commit
 
 **When scope is unknown:**
 ```
@@ -56,9 +143,9 @@ Then wait for scout results before selecting tier. This prevents $0.50 Opus call
 
 ---
 
-## 2. Parallel Agent Management
+## 3. Parallel Agent Management
 
-### 2.1 Background vs Foreground
+### 3.1 Background vs Foreground
 
 | Pattern | Use When | Mechanism |
 |---------|----------|-----------|
@@ -66,7 +153,7 @@ Then wait for scout results before selecting tier. This prevents $0.50 Opus call
 | **Background** | Independent work, will collect later | `Bash({..., run_in_background: true})` |
 | **Parallel foreground** | Multiple independent, need all before continuing | Multiple `Task()` in same message |
 
-### 2.2 MANDATORY: Background Task Collection
+### 3.2 MANDATORY: Background Task Collection
 
 **Enforcement:** `gogent-orchestrator-guard` (SubagentStop hook) blocks orchestrator completion when background tasks remain uncollected.
 
@@ -88,7 +175,7 @@ Bash({..., run_in_background: true})  // Spawned
 // Output synthesis WITHOUT calling TaskOutput → BLOCKED by gogent-orchestrator-guard
 ```
 
-### 2.3 Fan-Out, Fan-In Pattern
+### 3.3 Fan-Out, Fan-In Pattern
 
 For parallel information gathering:
 
@@ -109,9 +196,9 @@ const result3 = TaskOutput({task_id: task3, block: true})
 
 ---
 
-## 3. Failure Handling
+## 4. Failure Handling
 
-### 3.1 Automatic Escalation Triggers
+### 4.1 Automatic Escalation Triggers
 
 | Condition | Action |
 |-----------|--------|
@@ -120,7 +207,7 @@ const result3 = TaskOutput({task_id: task3, block: true})
 | Agent returns error | Retry with modified approach ONCE |
 | Retry also fails | Escalate to next tier |
 
-### 3.2 Retry with Modification
+### 4.2 Retry with Modification
 
 When an approach fails, do NOT retry identically. Modify:
 - Different tool selection
@@ -141,7 +228,7 @@ When an approach fails, do NOT retry identically. Modify:
 [Attempt 2] Read file X first, then Edit with correct types
 ```
 
-### 3.3 Sharp Edge Protocol
+### 4.3 Sharp Edge Protocol
 
 When a debugging loop is detected:
 1. STOP current approach
@@ -151,7 +238,7 @@ When a debugging loop is detected:
    - Fix assumption and retry differently, OR
    - Escalate to higher tier with context
 
-### 3.4 Escalate to Einstein Protocol
+### 4.4 Escalate to Einstein Protocol
 
 **Enforcement:** `gogent-validate` (Go binary, PreToolUse hook) **blocks** `Task(model: "opus")` calls. Must use `/einstein` slash command.
 
@@ -207,9 +294,9 @@ Before writing the GAP document, verify:
 
 ---
 
-## 4. Hook Awareness
+## 5. Hook Awareness
 
-### 4.1 Active Hooks
+### 5.1 Active Hooks
 
 The following Go binaries run as hooks and inject context automatically:
 
@@ -222,7 +309,7 @@ The following Go binaries run as hooks and inject context automatically:
 | `gogent-orchestrator-guard` | SubagentStop | Background task collection enforcement |
 | `gogent-archive` | SessionEnd | Handoff generation, metrics capture |
 
-### 4.2 Responding to Hook Injections
+### 5.2 Responding to Hook Injections
 
 When you see `additionalContext` in a hook response:
 - READ the injected guidance
@@ -231,9 +318,9 @@ When you see `additionalContext` in a hook response:
 
 ---
 
-## 5. Memory & Learning
+## 6. Memory & Learning
 
-### 5.1 Knowledge Compounding
+### 6.1 Knowledge Compounding
 
 When you discover something worth remembering:
 
@@ -241,14 +328,14 @@ When you discover something worth remembering:
 2. **Decisions** (architectural choices): Document in `memory/decisions/`
 3. **Patterns** (successful approaches): Propose addition to conventions
 
-### 5.2 Session Handoff
+### 6.2 Session Handoff
 
 At session end:
 - Pending learnings are archived automatically
 - Handoff document generated at `memory/last-handoff.md`
 - Next session receives this context via `gogent-load-context` hook
 
-### 5.3 Evolution Cycle
+### 6.3 Evolution Cycle
 
 ```
 Work → Detect patterns → Capture to memory → 
@@ -258,9 +345,9 @@ Benchmark test → If improved: commit
 
 ---
 
-## 6. Cost Optimization
+## 7. Cost Optimization
 
-### 6.1 Token Budget Awareness
+### 7.1 Token Budget Awareness
 
 | Tier | Thinking Budget | Cost/1K tokens |
 |------|-----------------|----------------|
@@ -269,22 +356,22 @@ Benchmark test → If improved: commit
 | Sonnet | 10-16K | $0.009 |
 | Opus | 16-32K | $0.045 |
 
-### 6.2 Cost-Saving Patterns
+### 7.2 Cost-Saving Patterns
 
 1. **Scout before expensive work**: $0.02 scout can prevent $0.50 mis-routing
 2. **Haiku for mechanical**: Never use Sonnet for grep/find/count
 3. **Gemini for large context**: Cheaper than Sonnet for >50K tokens
 4. **Batch similar operations**: One agent call with multiple files > multiple calls
 
-### 6.3 Delegation Overhead Threshold
+### 7.3 Delegation Overhead Threshold
 
 If task is <$0.01 of work, do it directly rather than delegating. Delegation itself costs tokens.
 
 ---
 
-## 7. Output Quality
+## 8. Output Quality
 
-### 7.1 Self-Verification
+### 8.1 Self-Verification
 
 Before returning output to user:
 1. Does it answer the actual question?
@@ -292,7 +379,7 @@ Before returning output to user:
 3. Are there obvious errors?
 4. Would a quick code-reviewer pass help?
 
-### 7.2 Critic Pattern (Optional)
+### 8.2 Critic Pattern (Optional)
 
 For important outputs, invoke quick review:
 ```javascript
@@ -306,9 +393,9 @@ Cost: ~$0.005. Worth it for user-facing deliverables.
 
 ---
 
-## 8. Anti-Patterns
+## 9. Anti-Patterns
 
-### 8.1 FORBIDDEN Behaviors
+### 9.1 FORBIDDEN Behaviors
 
 | Anti-Pattern | Why Bad | Correct Approach |
 |--------------|---------|------------------|
@@ -319,7 +406,7 @@ Cost: ~$0.005. Worth it for user-facing deliverables.
 | Skipping scout on unknown scope | Potential mis-routing | Scout first |
 | Large context without Gemini | Context overflow | Pipe to gemini-slave |
 
-### 8.2 WARNING Behaviors
+### 9.2 WARNING Behaviors
 
 | Behavior | Risk | Mitigation |
 |----------|------|------------|
@@ -329,7 +416,7 @@ Cost: ~$0.005. Worth it for user-facing deliverables.
 
 ---
 
-## 9. Checklist: Before Completing Task
+## 10. Checklist: Before Completing Task
 
 - [ ] All background tasks collected?
 - [ ] Routing tier was appropriate?
@@ -340,4 +427,4 @@ Cost: ~$0.005. Worth it for user-facing deliverables.
 
 ---
 
-**Remember:** Your effectiveness is bounded by routing discipline. Wrong tier = wasted tokens + suboptimal output.
+**Remember:** Your effectiveness is bounded by coding discipline and routing discipline. Overcomplicated code or wrong tier = wasted effort + suboptimal output.

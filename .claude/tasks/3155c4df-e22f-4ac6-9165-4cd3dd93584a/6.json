@@ -1,0 +1,14 @@
+{
+  "id": "6",
+  "subject": "Design: Response protocol and state management",
+  "description": "Design response protocol for sending user selections back to Claude CLI.\n\nDependencies: Task 4 complete (analysis done)\n\nDesign components:\n1. Response message structures (JSON format)\n2. State machine for awaiting responses\n3. Timeout handling (what if user doesn't respond?)\n4. Response validation\n5. State transitions (idle → awaiting → resolved)\n\nDeliverable:\n- Response message specifications\n- State machine diagram with transitions\n- Timeout/cancellation strategy\n- Error recovery design\n\nAcceptance:\n- [ ] Response JSON format specified for each event type\n- [ ] State machine designed with all transitions\n- [ ] Timeout strategy defined\n- [ ] Error handling designed\n- [ ] Cancellation mechanism specified",
+  "activeForm": "Designing response protocol",
+  "status": "pending",
+  "blocks": [
+    "11",
+    "13"
+  ],
+  "blockedBy": [
+    "4"
+  ]
+}

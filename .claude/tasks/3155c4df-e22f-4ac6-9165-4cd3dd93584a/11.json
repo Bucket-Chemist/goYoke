@@ -1,0 +1,16 @@
+{
+  "id": "11",
+  "subject": "Implementation: Response sender (input.go)",
+  "description": "Implement user input handlers to send responses back to Claude CLI.\n\nDependencies: Task 6 complete (response protocol designed), Task 10 complete (event handlers ready)\n\nFiles: internal/tui/claude/input.go\n\nImplementation:\n1. Add keyboard handlers for prompt responses\n2. Implement response message builders\n3. Send via m.process.Send() or SendJSON()\n4. Handle timeout/cancellation\n5. Clear awaiting state after response\n\nCode pattern:\n```go\nif m.awaitingAskUserQuestion {\n    switch msg.String() {\n    case \"1\", \"2\", \"3\", \"4\":\n        return m, m.sendUserChoice(parseOption(msg.String()))\n    case \"esc\":\n        return m, m.cancelPrompt()\n    }\n}\n```\n\nDeliverable:\n- Input handlers for all response types\n- Response message builders\n- Timeout handling\n- Cancellation support\n\nAcceptance:\n- [ ] User can respond to prompts via keyboard\n- [ ] Responses sent in correct JSON format\n- [ ] Claude CLI acknowledges responses\n- [ ] Timeout handled gracefully\n- [ ] Cancellation works (ESC key)",
+  "activeForm": "Implementing response sender",
+  "status": "pending",
+  "blocks": [
+    "15",
+    "16",
+    "17"
+  ],
+  "blockedBy": [
+    "6",
+    "10"
+  ]
+}
