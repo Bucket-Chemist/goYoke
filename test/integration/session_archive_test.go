@@ -185,17 +185,9 @@ func TestSessionArchive_FileArchival(t *testing.T) {
 
 	projectDir := t.TempDir()
 
-	// Setup runtime directory for violations
-	runtimeDir := t.TempDir()
-	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
-	defer os.Unsetenv("XDG_RUNTIME_DIR")
-
-	gogentDir := filepath.Join(runtimeDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
-
-	// Create files to archive
+	// Create files to archive (both in .claude/memory)
 	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
-	violationsPath := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsPath := filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
 
 	os.MkdirAll(filepath.Dir(learningsPath), 0755)
 
@@ -241,10 +233,10 @@ func TestSessionArchive_FileArchival(t *testing.T) {
 
 	var hasLearnings, hasViolations bool
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), "learnings-") {
+		if strings.HasPrefix(entry.Name(), "pending-learnings-") {
 			hasLearnings = true
 		}
-		if strings.HasPrefix(entry.Name(), "violations-") {
+		if strings.HasPrefix(entry.Name(), "routing-violations-") {
 			hasViolations = true
 		}
 	}
@@ -279,13 +271,19 @@ func setupTestSessionFiles(t *testing.T, projectDir string) {
 	os.MkdirAll(claudeDir, 0755)
 }
 
-// Helper: Create tool counter log
+// Helper: Create tool counter log (new single-file format)
 func createToolCounterLog(t *testing.T, gogentDir, tool string, count int) {
-	counterPath := filepath.Join(gogentDir, fmt.Sprintf("claude-tool-counter-%s.log", tool))
+	counterPath := filepath.Join(gogentDir, "tool-counter")
 
-	// Write count lines
-	content := strings.Repeat("x\n", count)
-	if err := os.WriteFile(counterPath, []byte(content), 0644); err != nil {
+	// Read existing count if file exists
+	var existingCount int
+	if data, err := os.ReadFile(counterPath); err == nil {
+		fmt.Sscanf(string(data), "%d", &existingCount)
+	}
+
+	// Write cumulative count (new format: single integer)
+	newCount := existingCount + count
+	if err := os.WriteFile(counterPath, []byte(fmt.Sprintf("%d", newCount)), 0644); err != nil {
 		t.Fatalf("Failed to create tool counter: %v", err)
 	}
 }

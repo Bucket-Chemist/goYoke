@@ -38,11 +38,16 @@ func CollectSessionMetrics(sessionID string) (*SessionMetrics, error) {
 	return metrics, nil
 }
 
-// countToolCalls reads the tool counter from the XDG-compliant counter file.
-// The counter is atomically incremented by gogent-sharp-edge on each PostToolUse event.
-// Returns 0 if the counter file doesn't exist (normal for first session).
+// countToolCalls reads the single tool-counter file containing the integer count.
+// New format: single integer value (atomically incremented by config.IncrementToolCount).
+// Returns 0 if counter file doesn't exist (normal for first session).
 func countToolCalls() (int, error) {
-	return config.GetToolCount()
+	// Use config package's GetToolCount which handles the single-file format
+	count, err := config.GetToolCount()
+	if err != nil {
+		return 0, fmt.Errorf("failed to read tool count: %w", err)
+	}
+	return count, nil
 }
 
 // countLogLines counts all lines in a file, matching bash wc -l behavior.

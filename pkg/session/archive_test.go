@@ -61,10 +61,10 @@ func TestArchiveArtifacts_Success(t *testing.T) {
 	hasViolations := false
 	for _, entry := range entries {
 		if filepath.Ext(entry.Name()) == ".jsonl" {
-			if len(entry.Name()) > 9 && entry.Name()[:9] == "learnings" {
+			if strings.HasPrefix(entry.Name(), "pending-learnings-") {
 				hasLearnings = true
 			}
-			if len(entry.Name()) > 10 && entry.Name()[:10] == "violations" {
+			if strings.HasPrefix(entry.Name(), "routing-violations-") {
 				hasViolations = true
 			}
 		}

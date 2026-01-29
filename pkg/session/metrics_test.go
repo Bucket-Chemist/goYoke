@@ -84,7 +84,7 @@ func TestCountLogLines_MissingFile(t *testing.T) {
 }
 
 func TestCountToolCalls(t *testing.T) {
-	// Create temp directory for test counters
+	// Create temp directory for test counter
 	tmpdir, err := os.MkdirTemp("", "toolcount-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -101,23 +101,10 @@ func TestCountToolCalls(t *testing.T) {
 		t.Fatalf("Failed to create gogent dir: %v", err)
 	}
 
-	// Create counter files with .log extension (matches new behavior)
-	counterFiles := []string{
-		filepath.Join(gogentDir, "claude-tool-counter-test1.log"),
-		filepath.Join(gogentDir, "claude-tool-counter-test2.log"),
-		filepath.Join(gogentDir, "claude-tool-counter-test3.log"),
-	}
-
-	// Write counter files with specific counts
-	counts := []int{5, 3, 2}
-	for i, path := range counterFiles {
-		content := ""
-		for j := 0; j < counts[i]; j++ {
-			content += "tool call\n"
-		}
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-			t.Fatalf("Failed to write counter file: %v", err)
-		}
+	// Create single tool-counter file with integer value (new format)
+	counterFile := filepath.Join(gogentDir, "tool-counter")
+	if err := os.WriteFile(counterFile, []byte("42"), 0644); err != nil {
+		t.Fatalf("Failed to write counter file: %v", err)
 	}
 
 	// Test countToolCalls
@@ -127,8 +114,8 @@ func TestCountToolCalls(t *testing.T) {
 		return
 	}
 
-	// Should count exactly our test files
-	expected := 10 // 5 + 3 + 2 from our test files
+	// Should read the integer value from the counter file
+	expected := 42
 	if got != expected {
 		t.Errorf("countToolCalls() = %d, want %d", got, expected)
 	}

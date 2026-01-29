@@ -4,36 +4,33 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
-// ArchiveArtifacts moves session artifacts to timestamped archive directory
+// ArchiveArtifacts moves session artifacts to session-ID-named archive files
 func ArchiveArtifacts(cfg HandoffConfig, sessionID string) error {
-	timestamp := time.Now().Unix()
-
 	// Ensure archive directory exists
 	archiveDir := filepath.Join(filepath.Dir(cfg.HandoffPath), "session-archive")
 	if err := os.MkdirAll(archiveDir, 0755); err != nil {
 		return fmt.Errorf("[session-archive] Failed to create archive directory %s: %w. Check write permissions.", archiveDir, err)
 	}
 
-	// Move pending learnings
+	// Move pending learnings with session-ID-based naming
 	learningsPath := filepath.Join(filepath.Dir(cfg.HandoffPath), "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err == nil {
-		destPath := filepath.Join(archiveDir, fmt.Sprintf("learnings-%d.jsonl", timestamp))
+		destPath := filepath.Join(archiveDir, fmt.Sprintf("pending-learnings-%s.jsonl", sessionID))
 		if err := moveFile(learningsPath, destPath); err != nil {
 			return fmt.Errorf("[session-archive] Failed to move learnings to %s: %w. File may be locked.", destPath, err)
 		}
 	}
 	// Not fatal if missing - learnings may be empty
 
-	// Move routing violations
+	// Move routing violations with session-ID-based naming
 	violationsPath := cfg.ViolationsPath
 	if violationsPath != "" {
 		if _, err := os.Stat(violationsPath); err == nil {
-			destPath := filepath.Join(archiveDir, fmt.Sprintf("violations-%d.jsonl", timestamp))
+			destPath := filepath.Join(archiveDir, fmt.Sprintf("routing-violations-%s.jsonl", sessionID))
 			if err := moveFile(violationsPath, destPath); err != nil {
 				return fmt.Errorf("[session-archive] Failed to move violations to %s: %w. File may be locked.", destPath, err)
 			}

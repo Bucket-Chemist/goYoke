@@ -535,6 +535,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 	}
 
 	// Step 2: Simulate repeated failures
+	currentTime := time.Now().Unix()
 	sharpEdgeEvents := []map[string]interface{}{
 		{
 			"hook_event_name": "PostToolUse",
@@ -542,6 +543,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 			"tool_input":      map[string]interface{}{"model": "opus"},
 			"tool_response":   map[string]interface{}{"success": false, "error": "blocked"},
 			"session_id":      "e2e-test",
+			"captured_at":     currentTime,
 		},
 		{
 			"hook_event_name": "PostToolUse",
@@ -549,6 +551,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 			"tool_input":      map[string]interface{}{"model": "opus"},
 			"tool_response":   map[string]interface{}{"success": false, "error": "blocked"},
 			"session_id":      "e2e-test",
+			"captured_at":     currentTime,
 		},
 		{
 			"hook_event_name": "PostToolUse",
@@ -556,6 +559,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 			"tool_input":      map[string]interface{}{"model": "opus"},
 			"tool_response":   map[string]interface{}{"success": false, "error": "blocked"},
 			"session_id":      "e2e-test",
+			"captured_at":     currentTime,
 		},
 	}
 
@@ -675,6 +679,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	}
 
 	// Step 2: Run sharp edge detection creating pending learnings
+	currentTime := time.Now().Unix()
 	sharpEdgeEvents := []map[string]interface{}{
 		{
 			"hook_event_name": "PostToolUse",
@@ -682,6 +687,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 			"tool_input":      map[string]interface{}{"file_path": "/tmp/test.go"},
 			"tool_response":   map[string]interface{}{"success": false},
 			"session_id":      "archive-test",
+			"captured_at":     currentTime,
 		},
 		{
 			"hook_event_name": "PostToolUse",
@@ -689,6 +695,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 			"tool_input":      map[string]interface{}{"file_path": "/tmp/test.go"},
 			"tool_response":   map[string]interface{}{"success": false},
 			"session_id":      "archive-test",
+			"captured_at":     currentTime,
 		},
 		{
 			"hook_event_name": "PostToolUse",
@@ -696,6 +703,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 			"tool_input":      map[string]interface{}{"file_path": "/tmp/test.go"},
 			"tool_response":   map[string]interface{}{"success": false},
 			"session_id":      "archive-test",
+			"captured_at":     currentTime,
 		},
 	}
 
@@ -766,16 +774,17 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 		t.Error("Handoff missing violations section")
 	}
 
-	// Verify pending learnings section present
-	if !strings.Contains(handoffContent, "## Pending Learnings") {
-		t.Error("Handoff missing pending learnings section")
+	// Verify sharp edges section present (pending learnings are rendered as sharp edges)
+	if !strings.Contains(handoffContent, "## Sharp Edges") {
+		t.Error("Handoff missing sharp edges section")
 	}
 
 	// Step 5: Verify files archived
 	archiveDir := filepath.Join(projectDir, ".claude", "memory", "session-archive")
 
-	// Violations should be moved
-	if _, err := os.Stat(violationsPath); !os.IsNotExist(err) {
+	// Violations should be moved (from project dir, not runtime dir)
+	projectViolationsPath := filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
+	if _, err := os.Stat(projectViolationsPath); !os.IsNotExist(err) {
 		t.Error("Violations file should be removed after archival")
 	}
 

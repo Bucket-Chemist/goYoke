@@ -283,8 +283,13 @@ func (cp *ClaudeProcess) Stop() error {
 	cp.explicitStop = true
 	cp.mu.Unlock()
 
-	// Signal goroutines to stop
-	close(cp.done)
+	// Signal goroutines to stop - safe to call multiple times
+	select {
+	case <-cp.done:
+		// Already closed
+	default:
+		close(cp.done)
+	}
 
 	// Close stdin to signal EOF to claude
 	if cp.stdin != nil {
@@ -315,7 +320,22 @@ func (cp *ClaudeProcess) Stop() error {
 		exitErr = fmt.Errorf("process killed after timeout")
 	}
 
-	// Close channels exactly once
+	// Wait for read goroutines to finish before closing channels
+	// This prevents "send on closed channel" panics
+	waitDone := make(chan struct{})
+	go func() {
+		cp.readWg.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case <-waitDone:
+		// Goroutines finished
+	case <-time.After(1 * time.Second):
+		// Timeout - continue anyway to prevent deadlock
+	}
+
+	// Close channels exactly once, after read goroutines are done
 	cp.closeOnce.Do(func() {
 		close(cp.events)
 		close(cp.errors)
@@ -410,6 +430,14 @@ func (cp *ClaudeProcess) incrementGeneration() uint64 {
 // Respects done channel for shutdown.
 // NOTE: Does NOT close cp.events - channel closure is handled by Stop().
 func (cp *ClaudeProcess) readEvents() {
+	// Recover from send on closed channel panic (can happen during Stop race)
+	defer func() {
+		if r := recover(); r != nil {
+			// Ignore "send on closed channel" panic during shutdown
+			// This is expected when Stop() closes channels while goroutine is sending
+		}
+	}()
+
 	// Capture generation at start to detect stale goroutines (Fix 5)
 	myGen := cp.currentGeneration()
 	reader := NewNDJSONReader(cp.stdout)
@@ -529,6 +557,14 @@ func (cp *ClaudeProcess) readEvents() {
 // Runs in a background goroutine started by Start().
 // NOTE: Does NOT close cp.errors - channel closure is handled by Stop().
 func (cp *ClaudeProcess) readStderr() {
+	// Recover from send on closed channel panic (can happen during Stop race)
+	defer func() {
+		if r := recover(); r != nil {
+			// Ignore "send on closed channel" panic during shutdown
+			// This is expected when Stop() closes channels while goroutine is sending
+		}
+	}()
+
 	// Capture generation at start to detect stale goroutines (Fix 5)
 	myGen := cp.currentGeneration()
 	reader := NewNDJSONReader(cp.stderr)
@@ -796,7 +832,7 @@ func (cp *ClaudeProcess) restart() error {
 	cp.done = newProc.done
 	cp.readWg = newProc.readWg        // Use fresh WaitGroup
 	// events/errors channels are NOT replaced - newProc already uses cp's channels
-	cp.closeOnce = sync.Once{}        // Reset close guard
+	// closeOnce is NOT reset - channels should only be closed once at final Stop()
 	cp.running = true
 	cp.mu.Unlock()
 

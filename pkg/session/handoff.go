@@ -77,11 +77,47 @@ type SharpEdge struct {
 
 // RoutingViolation represents a tier/agent routing issue
 type RoutingViolation struct {
-	Agent          string `json:"agent"`
-	ViolationType  string `json:"violation_type"`
-	ExpectedTier   string `json:"expected_tier,omitempty"`
-	ActualTier     string `json:"actual_tier,omitempty"`
-	Timestamp      int64  `json:"timestamp"`
+	Agent         string `json:"agent"`
+	ViolationType string `json:"violation_type"`
+	ExpectedTier  string `json:"expected_tier,omitempty"`
+	ActualTier    string `json:"actual_tier,omitempty"`
+	Timestamp     string `json:"timestamp"` // RFC3339 format to match routing.Violation
+}
+
+// UnmarshalJSON implements custom unmarshaling to handle both int64 (legacy) and string (RFC3339) timestamps
+func (rv *RoutingViolation) UnmarshalJSON(data []byte) error {
+	// First try to unmarshal as a raw map to check timestamp type
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	// Use an alias to avoid infinite recursion during final unmarshal
+	type Alias RoutingViolation
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(rv),
+	}
+
+	// Check if timestamp is present and what type it is
+	if ts, ok := raw["timestamp"]; ok {
+		switch v := ts.(type) {
+		case float64:
+			// JSON numbers are float64, convert to int64 Unix timestamp
+			raw["timestamp"] = time.Unix(int64(v), 0).Format(time.RFC3339)
+		case string:
+			// Already a string, leave as is
+		}
+	}
+
+	// Re-marshal the modified map and unmarshal into the alias
+	modified, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(modified, aux)
 }
 
 // ErrorPattern represents a recurring error pattern
@@ -147,7 +183,7 @@ func DefaultHandoffConfig(projectDir string) *HandoffConfig {
 		ProjectDir:        projectDir,
 		HandoffPath:       filepath.Join(claudeDir, "handoffs.jsonl"),
 		PendingPath:       filepath.Join(claudeDir, "pending-learnings.jsonl"),
-		ViolationsPath:    config.GetViolationsLogPath(),
+		ViolationsPath:    config.GetProjectViolationsLogPath(projectDir),
 		ErrorPatternsPath: "/tmp/claude-error-patterns.jsonl",
 		UserIntentsPath:   filepath.Join(claudeDir, "user-intents.jsonl"),
 		DecisionsPath:     filepath.Join(claudeDir, "decisions.jsonl"),

@@ -1208,9 +1208,10 @@ func TestRoutingDecision_GeneratesUUID(t *testing.T) {
 	}
 }
 
-// TestRoutingDecisionLogging_ErrorHandling tests non-blocking error handling
+// TestRoutingDecisionLogging_ErrorHandling tests graceful fallback behavior
 func TestRoutingDecisionLogging_ErrorHandling(t *testing.T) {
 	// Setup: Make logging fail by setting XDG_DATA_HOME to a read-only directory
+	// The code should fall back to /tmp instead of failing
 	tmpDir := t.TempDir()
 	readOnlyDir := filepath.Join(tmpDir, "readonly")
 	os.MkdirAll(readOnlyDir, 0555) // Read-only directory
@@ -1240,15 +1241,11 @@ func TestRoutingDecisionLogging_ErrorHandling(t *testing.T) {
 		extractAgentFromPrompt(parsed.Prompt),
 	)
 
-	// Log should fail but return error (non-blocking)
+	// Log should succeed using fallback directory (non-blocking behavior)
+	// The config package prints a warning to stderr but doesn't return an error
 	err = telemetry.LogRoutingDecision(decision)
-	if err == nil {
-		t.Error("Expected error when logging to read-only directory")
-	}
-
-	// Error should be descriptive
-	if !strings.Contains(err.Error(), "[routing-decision]") {
-		t.Errorf("Expected error to include '[routing-decision]' prefix, got: %v", err)
+	if err != nil {
+		t.Errorf("Expected logging to succeed with fallback, got error: %v", err)
 	}
 }
 
