@@ -1,5 +1,5 @@
 {
-  "tickets_dir": "dev/will/migration_plan/tickets",
+  "tickets_dir": "tickets/mcp",
   "project_name": "gogent-fortress",
   "audit_config": {
     "enabled": true,
