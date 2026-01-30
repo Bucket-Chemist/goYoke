@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-004
 title: "MCP Config Generator"
-time: "2 hours"
+description: "Generate ephemeral MCP configuration JSON that points Claude to the gofortress-mcp-server binary with the correct socket path."
+time_estimate: "2h"
 priority: HIGH
-dependencies: "GOgent-MCP-003"
+dependencies: ["GOgent-MCP-003"]
 status: pending
 ---
 
@@ -157,11 +158,11 @@ func TestGenerateConfig(t *testing.T) {
 ```
 
 **Acceptance Criteria:**
-- [ ] Config file created at /tmp/gofortress-mcp-{pid}.json
-- [ ] File has 0600 permissions
-- [ ] JSON is valid and parseable
-- [ ] Server binary path resolved correctly
-- [ ] Cleanup removes file
+- [x] Config file created at /tmp/gofortress-mcp-{pid}.json
+- [x] File has 0600 permissions
+- [x] JSON is valid and parseable
+- [x] Server binary path resolved correctly
+- [x] Cleanup removes file
 
 **Why This Matters:**
 This config file is what tells Claude CLI where to find the MCP server. It must be ephemeral (per-instance) to avoid polluting global Claude configuration.
