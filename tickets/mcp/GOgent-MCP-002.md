@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-002
 title: "Callback Client Library"
-time: "2 hours"
+description: "Implement an HTTP client that the MCP server uses to communicate with the TUI's Unix socket server."
+time_estimate: "2h"
 priority: HIGH
-dependencies: "GOgent-MCP-001"
+dependencies: ["GOgent-MCP-001"]
 status: pending
 ---
 
@@ -203,16 +204,16 @@ func TestClient_MissingSocket(t *testing.T) {
 ```
 
 **Acceptance Criteria:**
-- [ ] Client created from GOFORTRESS_SOCKET env var
-- [ ] Health check returns nil on healthy server
-- [ ] SendPrompt returns user response
-- [ ] Proper error messages with context
-- [ ] Connection timeout handling
+- [x] Client created from GOFORTRESS_SOCKET env var
+- [x] Health check returns nil on healthy server
+- [x] SendPrompt returns user response
+- [x] Proper error messages with context
+- [x] Connection timeout handling
 
 **Test Deliverables:**
-- [ ] Test file created: `internal/callback/client_test.go`
-- [ ] Coverage achieved: >85%
-- [ ] Tests passing
+- [x] Test file created: `internal/callback/client_test.go`
+- [x] Coverage achieved: >85% (86.0% achieved)
+- [x] Tests passing (25 tests, 11 client + 14 server)
 
 **Why This Matters:**
 The client library is used by the MCP server binary to call back to the TUI. Clean abstraction here makes the MCP server implementation straightforward.
