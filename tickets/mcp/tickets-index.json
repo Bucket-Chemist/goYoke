@@ -44,7 +44,7 @@
       "id": "GOgent-MCP-004",
       "title": "MCP Config Generator",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "time_estimate": "2 hours",
       "dependencies": [
         "GOgent-MCP-003"
