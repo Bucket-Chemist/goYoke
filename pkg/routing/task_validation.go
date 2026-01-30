@@ -36,24 +36,8 @@ func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, se
 		return result // Blocking not enabled, allow
 	}
 
-	// Block 1: Model is opus (regardless of target agent)
-	if model == "opus" {
-		result.Allowed = false
-		result.BlockReason = "Task(model: opus) causes 60K token inheritance ($3.30 cost). Use /einstein slash command instead ($0.92 cost)."
-		result.Recommendation = "Generate GAP document to .claude/tmp/einstein-gap-{timestamp}.md, then notify user to run /einstein. See GAP-003b for rationale."
-
-		result.Violation = &Violation{
-			SessionID:     sessionID,
-			ViolationType: "blocked_task_opus",
-			Model:         "opus",
-			Agent:         targetAgent,
-			Reason:        "model_is_opus",
-		}
-
-		return result
-	}
-
-	// Block 2: Target agent is einstein (regardless of model specified)
+	// Block 1: Target agent is einstein (always blocked, must use /einstein skill)
+	// This check comes FIRST because einstein is never allowed via Task(), even if in allowlist
 	if targetAgent == "einstein" {
 		result.Allowed = false
 		result.BlockReason = fmt.Sprintf("Einstein must be invoked via /einstein slash command, not Task tool (even with model: %s). Task tool causes 60K token inheritance.", model)
@@ -70,7 +54,44 @@ func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, se
 		return result
 	}
 
+	// Check 2: If model is opus, check if agent is in the allowlist
+	if model == "opus" {
+		// Allow if agent is in the allowlist (e.g., planner, architect, staff-architect-critical-review)
+		if isInAllowlist(targetAgent, opusConfig.TaskInvocationAllowlist) {
+			return result // Allowed via allowlist
+		}
+
+		// Block: opus model requested but agent not in allowlist
+		result.Allowed = false
+		result.BlockReason = fmt.Sprintf("Task(model: opus) blocked for agent '%s'. Agent not in allowlist. Allowlisted agents: %v. For standalone deep analysis, use /einstein.", targetAgent, opusConfig.TaskInvocationAllowlist)
+		result.Recommendation = "Either use an allowlisted agent (planner, architect, staff-architect-critical-review) or generate GAP document and run /einstein."
+
+		result.Violation = &Violation{
+			SessionID:     sessionID,
+			ViolationType: "blocked_task_opus",
+			Model:         "opus",
+			Agent:         targetAgent,
+			Reason:        "model_is_opus_agent_not_allowlisted",
+		}
+
+		return result
+	}
+
 	return result
+}
+
+// isInAllowlist checks if an agent is in the opus Task invocation allowlist.
+// Returns false if agent is empty or allowlist is empty/nil.
+func isInAllowlist(agent string, allowlist []string) bool {
+	if agent == "" || len(allowlist) == 0 {
+		return false
+	}
+	for _, allowed := range allowlist {
+		if agent == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // extractAgentFromPrompt finds "AGENT: agent-id" pattern in prompt

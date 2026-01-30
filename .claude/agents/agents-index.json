@@ -453,11 +453,11 @@
       "id": "architect",
       "parallelization_template": "E",
       "name": "Architect",
-      "model": "sonnet",
+      "model": "opus",
       "thinking": true,
-      "thinking_budget": 16000,
-      "thinking_budget_complex": 24000,
-      "tier": 2,
+      "thinking_budget": 32000,
+      "thinking_budget_complex": 48000,
+      "tier": 3,
       "category": "architecture",
       "path": "architect",
       "triggers": [
@@ -469,7 +469,8 @@
         "architectural review",
         "refactor strategy",
         "dependency map",
-        "from scout report"
+        "from scout report",
+        "from strategy"
       ],
       "tools": ["Read", "Write", "Glob", "Grep"],
       "auto_activate": null,
@@ -477,8 +478,37 @@
         "required": ["specs.md", "write_todos"],
         "specs_location": ".claude/tmp/specs.md"
       },
+      "input_sources": [".claude/tmp/scout_metrics.json", ".claude/tmp/strategy.md"],
+      "description": "Implementation planner (opus tier). Produces specs.md + write_todos. Reads scout reports and strategy documents for context."
+    },
+    {
+      "id": "planner",
+      "parallelization_template": "E",
+      "name": "Planner",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "architecture",
+      "path": "planner",
+      "triggers": [
+        "plan",
+        "strategy",
+        "requirements",
+        "what should we build",
+        "how should we approach",
+        "strategic planning",
+        "comprehensive plan"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Write", "AskUserQuestion"],
+      "auto_activate": null,
+      "output_artifacts": {
+        "required": ["strategy.md"],
+        "strategy_location": ".claude/tmp/strategy.md"
+      },
       "input_sources": [".claude/tmp/scout_metrics.json"],
-      "description": "Implementation planner. Produces specs.md + write_todos. Reads scout reports for context."
+      "max_clarifying_questions": 2,
+      "description": "Strategic planner (opus tier). Transforms goals into requirements, risks, and high-level approach. Produces strategy.md for architect."
     },
     {
       "id": "einstein",
@@ -538,10 +568,10 @@
       "id": "staff-architect-critical-review",
       "parallelization_template": "C",
       "name": "Staff Architect Critical Review",
-      "model": "sonnet",
+      "model": "opus",
       "thinking": true,
-      "thinking_budget": 16000,
-      "tier": 2,
+      "thinking_budget": 32000,
+      "tier": 3,
       "category": "review",
       "path": "staff-architect-critical-review",
       "triggers": [
@@ -555,8 +585,8 @@
       "inputs": [".claude/tmp/specs.md"],
       "outputs": [".claude/tmp/review-critique.md", ".claude/tmp/review-metadata.json"],
       "sharp_edges_count": 6,
-      "cost_per_invocation": "0.15-0.17",
-      "description": "Critical review of implementation plans using 7-layer framework (assumptions, dependencies, failure modes, cost-benefit, testing, architecture smells, contractor readiness). Manual invocation only via /review-plan command."
+      "cost_per_invocation": "0.60-0.90",
+      "description": "Critical review of implementation plans using 7-layer framework (opus tier). Invoked via /review-plan command or automatically in /plan workflow."
     },
     {
       "id": "haiku-scout",
@@ -640,8 +670,8 @@
     },
     "model_tiers": {
       "haiku": ["codebase-search", "scaffolder", "librarian", "tech-docs-writer", "code-reviewer", "haiku-scout", "memory-archivist"],
-      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "architect", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent"],
-      "opus": ["einstein"],
+      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent"],
+      "opus": ["einstein", "planner", "architect", "staff-architect-critical-review"],
       "external": ["gemini-slave"]
     }
   },

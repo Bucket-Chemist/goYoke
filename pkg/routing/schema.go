@@ -8,7 +8,7 @@ import (
 )
 
 // EXPECTED_SCHEMA_VERSION is the version this code is built for.
-const EXPECTED_SCHEMA_VERSION = "2.2.0"
+const EXPECTED_SCHEMA_VERSION = "2.3.0"
 
 // Schema represents the complete routing-schema.json v2.2.0 structure.
 // This defines the tiered agent architecture for Claude Code.
@@ -35,19 +35,20 @@ type Schema struct {
 
 // TierConfig defines configuration for each routing tier (haiku, sonnet, opus, etc.).
 type TierConfig struct {
-	Description           string              `json:"description"`
-	Model                 string              `json:"model"`
-	Thinking              bool                `json:"thinking"`
-	MaxThinkingBudget     int                 `json:"max_thinking_budget"`
-	CostPer1KTokens       float64             `json:"cost_per_1k_tokens"`
-	Patterns              []string            `json:"patterns"`
-	Tools                 []string            `json:"tools"`
-	Invocation            string              `json:"invocation,omitempty"`
-	TaskInvocationBlocked bool                `json:"task_invocation_blocked,omitempty"`
-	EscalationProtocol    string              `json:"escalation_protocol,omitempty"`
-	Thresholds            TierThresholds      `json:"thresholds"`
-	Agents                []string            `json:"agents"`
-	Protocols             map[string]Protocol `json:"protocols,omitempty"`
+	Description               string              `json:"description"`
+	Model                     string              `json:"model"`
+	Thinking                  bool                `json:"thinking"`
+	MaxThinkingBudget         int                 `json:"max_thinking_budget"`
+	CostPer1KTokens           float64             `json:"cost_per_1k_tokens"`
+	Patterns                  []string            `json:"patterns"`
+	Tools                     []string            `json:"tools"`
+	Invocation                string              `json:"invocation,omitempty"`
+	TaskInvocationBlocked     bool                `json:"task_invocation_blocked,omitempty"`
+	TaskInvocationAllowlist   []string            `json:"task_invocation_allowlist,omitempty"`
+	EscalationProtocol        string              `json:"escalation_protocol,omitempty"`
+	Thresholds                TierThresholds      `json:"thresholds"`
+	Agents                    []string            `json:"agents"`
+	Protocols                 map[string]Protocol `json:"protocols,omitempty"`
 }
 
 // TierThresholds defines limits for each tier.
@@ -211,6 +212,7 @@ type AgentSubagentMapping struct {
 	GoConcurrent                 string `json:"go-concurrent"`
 	Orchestrator                 string `json:"orchestrator"`
 	Architect                    string `json:"architect"`
+	Planner                      string `json:"planner"`
 	Einstein                     string `json:"einstein"`
 	GeminiSlave                  string `json:"gemini-slave"`
 	StaffArchitectCriticalReview string `json:"staff-architect-critical-review"`
@@ -350,6 +352,7 @@ func (s *Schema) Validate() error {
 		s.AgentSubagentMapping.GoConcurrent,
 		s.AgentSubagentMapping.Orchestrator,
 		s.AgentSubagentMapping.Architect,
+		s.AgentSubagentMapping.Planner,
 		s.AgentSubagentMapping.Einstein,
 		s.AgentSubagentMapping.GeminiSlave,
 		s.AgentSubagentMapping.StaffArchitectCriticalReview,
@@ -399,6 +402,7 @@ func (s *Schema) GetSubagentTypeForAgent(agentName string) (string, error) {
 		"go-concurrent":                   s.AgentSubagentMapping.GoConcurrent,
 		"orchestrator":                    s.AgentSubagentMapping.Orchestrator,
 		"architect":                       s.AgentSubagentMapping.Architect,
+		"planner":                         s.AgentSubagentMapping.Planner,
 		"einstein":                        s.AgentSubagentMapping.Einstein,
 		"gemini-slave":                    s.AgentSubagentMapping.GeminiSlave,
 		"staff-architect-critical-review": s.AgentSubagentMapping.StaffArchitectCriticalReview,

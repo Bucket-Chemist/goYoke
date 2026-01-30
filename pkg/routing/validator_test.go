@@ -142,6 +142,88 @@ func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
 	}
 }
 
+func TestValidationOrchestrator_OpusAllowlistBypassesCeiling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create delegation ceiling file set to haiku (very restrictive)
+	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	os.MkdirAll(ceilingDir, 0755)
+	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("haiku"), 0644)
+
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "staff-architect-critical-review"},
+			},
+		},
+		TierLevels: TierLevels{
+			Haiku: 1, HaikuThinking: 2, Sonnet: 3, Opus: 4,
+		},
+		AgentSubagentMapping: AgentSubagentMapping{
+			Planner: "Plan",
+		},
+	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+
+	taskInput := map[string]interface{}{
+		"model":         "opus",
+		"prompt":        "AGENT: planner\n\nCreate strategic plan",
+		"subagent_type": "Plan",
+	}
+
+	result := orchestrator.ValidateTask(taskInput, "test-session")
+
+	if result.Decision != "allow" {
+		t.Errorf("Allowlisted opus agent should bypass delegation ceiling. Got: %s, Reason: %s", result.Decision, result.Reason)
+	}
+
+	if result.CeilingViolation != "" {
+		t.Errorf("Should not have ceiling violation for allowlisted agent: %s", result.CeilingViolation)
+	}
+}
+
+func TestValidationOrchestrator_NonAllowlistedOpusStillBlockedByCeiling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create delegation ceiling file set to sonnet
+	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	os.MkdirAll(ceilingDir, 0755)
+	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("sonnet"), 0644)
+
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect"}, // python-pro NOT in list
+			},
+		},
+		TierLevels: TierLevels{
+			Haiku: 1, HaikuThinking: 2, Sonnet: 3, Opus: 4,
+		},
+	}
+
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+
+	// Try opus with non-allowlisted agent - should be blocked by opus check, not ceiling
+	taskInput := map[string]interface{}{
+		"model":  "opus",
+		"prompt": "AGENT: python-pro\n\nImplement feature",
+	}
+
+	result := orchestrator.ValidateTask(taskInput, "test-session")
+
+	if result.Decision != "block" {
+		t.Error("Non-allowlisted opus agent should still be blocked")
+	}
+
+	// Should be blocked by opus check (EinsteinBlocked), not ceiling
+	if result.EinsteinBlocked == nil {
+		t.Error("Should be blocked by opus/allowlist check, not ceiling")
+	}
+}
+
 func TestValidationResult_ToJSON(t *testing.T) {
 	result := &ValidationResult{
 		Decision: "block",

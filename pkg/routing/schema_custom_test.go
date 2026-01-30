@@ -11,7 +11,7 @@ import (
 func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	// 1. Setup a schema that mimics the expected structure for the new agent
 	schema := Schema{
-		Version: "2.2.0",
+		Version: "2.3.0",
 		Tiers: map[string]TierConfig{
 			"haiku":  {},
 			"sonnet": {},
@@ -25,10 +25,10 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 			External: 0,
 		},
 		SubagentTypesConfig: SubagentTypesConfig{
-			Explore: SubagentType{}, // The expected type for this agent
+			Plan: SubagentType{}, // The expected type for this agent (changed from Explore in v2.3.0)
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			StaffArchitectCriticalReview: "Explore",
+			StaffArchitectCriticalReview: "Plan",
 		},
 	}
 
@@ -36,7 +36,7 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	t.Run("GetSubagentTypeForAgent", func(t *testing.T) {
 		subagentType, err := schema.GetSubagentTypeForAgent("staff-architect-critical-review")
 		require.NoError(t, err, "Should find staff-architect-critical-review agent")
-		assert.Equal(t, "Explore", subagentType, "Should map to Explore subagent type")
+		assert.Equal(t, "Plan", subagentType, "Should map to Plan subagent type")
 	})
 
 	// 3. Test Validate (ensure the agent is included in the internal iteration list)
@@ -59,7 +59,7 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	// 4. Test ValidateAgentSubagentPair
 	t.Run("ValidateAgentSubagentPair", func(t *testing.T) {
 		// Valid pair
-		err := schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Explore")
+		err := schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Plan")
 		require.NoError(t, err, "Should accept valid pairing")
 
 		// Invalid pair

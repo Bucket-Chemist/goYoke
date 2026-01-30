@@ -11,7 +11,7 @@ import (
 )
 
 // TestUnmarshalProductionSchema tests unmarshaling the actual routing-schema.json.
-// This verifies that all v2.2.0 fields are correctly mapped to Go structs.
+// This verifies that all v2.3.0 fields are correctly mapped to Go structs.
 func TestUnmarshalProductionSchema(t *testing.T) {
 	// Load production schema from ~/.claude/routing-schema.json
 	configHome := os.Getenv("XDG_CONFIG_HOME")
@@ -30,7 +30,7 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 	require.NoError(t, err, "Failed to unmarshal production schema")
 
 	// Verify version
-	assert.Equal(t, "2.2.0", schema.Version, "Schema version mismatch")
+	assert.Equal(t, "2.3.0", schema.Version, "Schema version mismatch")
 
 	// Verify all tiers exist
 	assert.Contains(t, schema.Tiers, "haiku")
@@ -46,7 +46,7 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 	assert.Equal(t, 4, schema.TierLevels.Opus)
 	assert.Equal(t, 0, schema.TierLevels.External)
 
-	// Verify critical SubagentType fields (v2.2.0 additions)
+	// Verify critical SubagentType fields (v2.3.0 additions)
 	t.Run("SubagentTypeFields", func(t *testing.T) {
 		explore := schema.SubagentTypesConfig.Explore
 		assert.False(t, explore.AllowsWrite, "Explore should not allow write")
@@ -67,7 +67,7 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		assert.Contains(t, plan.UseFor, "orchestrator")
 	})
 
-	// Verify DelegationCeiling fields (v2.2.0 critical metadata)
+	// Verify DelegationCeiling fields (v2.3.0 critical metadata)
 	t.Run("DelegationCeilingFields", func(t *testing.T) {
 		dc := schema.DelegationCeiling
 		assert.NotEmpty(t, dc.Description)
@@ -160,7 +160,7 @@ func TestSchemaValidate(t *testing.T) {
 		{
 			name: "valid schema",
 			schema: Schema{
-				Version: "2.2.0",
+				Version: "2.3.0",
 				Tiers: map[string]TierConfig{
 					"haiku":  {},
 					"sonnet": {},
@@ -189,7 +189,7 @@ func TestSchemaValidate(t *testing.T) {
 		{
 			name: "invalid tier name",
 			schema: Schema{
-				Version: "2.2.0",
+				Version: "2.3.0",
 				Tiers: map[string]TierConfig{
 					"invalid-tier": {},
 				},
@@ -200,7 +200,7 @@ func TestSchemaValidate(t *testing.T) {
 		{
 			name: "undefined subagent_type reference",
 			schema: Schema{
-				Version: "2.2.0",
+				Version: "2.3.0",
 				Tiers: map[string]TierConfig{
 					"haiku": {},
 				},

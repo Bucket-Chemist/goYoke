@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Routing schema for Claude Code tiered agent architecture - v2.2: Added GO agents",
   "updated": "2026-01-15",
   
@@ -67,11 +67,11 @@
         "max_lines": 5000,
         "max_tokens_estimate": 50000
       },
-      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "architect", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "staff-architect-critical-review"]
+      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent"]
     },
     
     "opus": {
-      "description": "Deep analysis - SLASH COMMAND ONLY, not Task-invocable",
+      "description": "Deep analysis - restricted invocation, allowlist for planning agents",
       "model": "opus",
       "thinking": true,
       "max_thinking_budget": 32000,
@@ -80,18 +80,20 @@
         "einstein", "deep analysis", "security audit",
         "architectural decision", "complex tradeoff",
         "synthesize findings", "cross-domain",
-        "novel problem", "nuclear option"
+        "novel problem", "nuclear option",
+        "plan", "strategy", "comprehensive planning"
       ],
       "tools": ["*"],
-      "invocation": "/einstein (NOT Task tool)",
+      "invocation": "/einstein for standalone, Task() for allowlisted planning agents",
       "task_invocation_blocked": true,
+      "task_invocation_allowlist": ["planner", "architect", "staff-architect-critical-review"],
       "escalation_protocol": "escalate_to_einstein",
       "thresholds": {
         "max_files": null,
         "max_lines": null,
         "max_tokens_estimate": null
       },
-      "agents": ["einstein"]
+      "agents": ["einstein", "planner", "architect", "staff-architect-critical-review"]
     },
     
     "external": {
@@ -269,7 +271,7 @@
       "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion"],
       "allows_write": true,
       "respects_agent_yaml": false,
-      "use_for": ["orchestrator", "architect"],
+      "use_for": ["orchestrator", "architect", "planner"],
       "rationale": "Planning agents need to write plans and spawn other agents"
     }
   },
@@ -306,9 +308,10 @@
     "go-concurrent": "general-purpose",
     "orchestrator": "Plan",
     "architect": "Plan",
+    "planner": "Plan",
     "einstein": "general-purpose",
     "gemini-slave": "Bash",
-    "staff-architect-critical-review": "Explore"
+    "staff-architect-critical-review": "Plan"
   },
 
   "blocked_patterns": {

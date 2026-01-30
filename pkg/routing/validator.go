@@ -44,7 +44,7 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 	subagentType, _ := taskInput["subagent_type"].(string)
 	targetAgent := extractAgentFromPrompt(prompt)
 
-	// Check 1: Einstein/Opus blocking
+	// Check 1: Einstein/Opus blocking (with allowlist)
 	einsteinCheck := ValidateTaskInvocation(v.Schema, taskInput, sessionID)
 	if !einsteinCheck.Allowed {
 		result.Decision = "block"
@@ -54,6 +54,12 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 			result.Violations = append(result.Violations, einsteinCheck.Violation)
 		}
 		return result // Hard block, no further checks
+	}
+
+	// Determine if agent is in opus allowlist (for ceiling bypass)
+	opusAllowlisted := false
+	if opusConfig, exists := v.Schema.Tiers["opus"]; exists {
+		opusAllowlisted = isInAllowlist(targetAgent, opusConfig.TaskInvocationAllowlist)
 	}
 
 	// Check 2: Model mismatch (warning only, not blocking)
@@ -68,24 +74,27 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 	}
 
 	// Check 3: Delegation ceiling
-	ceiling, err := LoadDelegationCeiling(v.ProjectDir)
-	if err == nil && ceiling != nil {
-		allowed, ceilingMsg := CheckDelegationCeiling(v.Schema, ceiling, model)
-		if !allowed {
-			result.Decision = "block"
-			result.Reason = ceilingMsg
-			result.CeilingViolation = ceilingMsg
+	// SKIP ceiling check if agent is in opus allowlist - the allowlist explicitly permits opus usage
+	if !opusAllowlisted {
+		ceiling, err := LoadDelegationCeiling(v.ProjectDir)
+		if err == nil && ceiling != nil {
+			allowed, ceilingMsg := CheckDelegationCeiling(v.Schema, ceiling, model)
+			if !allowed {
+				result.Decision = "block"
+				result.Reason = ceilingMsg
+				result.CeilingViolation = ceilingMsg
 
-			// Log violation
-			violation := &Violation{
-				SessionID:     sessionID,
-				ViolationType: "delegation_ceiling",
-				Model:         model,
-				Agent:         targetAgent,
-				Reason:        fmt.Sprintf("Ceiling: %s, Requested: %s", ceiling.MaxTier, model),
+				// Log violation
+				violation := &Violation{
+					SessionID:     sessionID,
+					ViolationType: "delegation_ceiling",
+					Model:         model,
+					Agent:         targetAgent,
+					Reason:        fmt.Sprintf("Ceiling: %s, Requested: %s", ceiling.MaxTier, model),
+				}
+				result.Violations = append(result.Violations, violation)
+				return result // Hard block
 			}
-			result.Violations = append(result.Violations, violation)
-			return result // Hard block
 		}
 	}
 
