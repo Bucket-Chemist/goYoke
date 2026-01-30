@@ -16,7 +16,7 @@
       "id": "GOgent-MCP-001",
       "title": "Unix Socket HTTP Server",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "time_estimate": "4 hours",
       "dependencies": []
     },

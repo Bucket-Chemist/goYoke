@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-001
 title: "Unix Socket HTTP Server"
-time: "4 hours"
+description: "Implement an HTTP server that listens on a Unix socket for receiving prompt requests from the MCP server."
+time_estimate: "4h"
 priority: HIGH
-dependencies: "None"
+dependencies: []
 status: pending
 ---
 
@@ -371,20 +372,20 @@ func TestServer_PromptRoundTrip(t *testing.T) {
 ```
 
 **Acceptance Criteria:**
-- [ ] Server starts and listens on Unix socket
-- [ ] Socket has 0600 permissions (owner only)
-- [ ] Health endpoint returns 200 OK
-- [ ] Prompt endpoint blocks until response sent
-- [ ] SendResponse delivers to correct pending channel
-- [ ] Graceful shutdown closes connections
-- [ ] Cleanup removes socket file
+- [x] Server starts and listens on Unix socket
+- [x] Socket has 0600 permissions (owner only)
+- [x] Health endpoint returns 200 OK
+- [x] Prompt endpoint blocks until response sent
+- [x] SendResponse delivers to correct pending channel
+- [x] Graceful shutdown closes connections
+- [x] Cleanup removes socket file
 
 **Test Deliverables:**
-- [ ] Test file created: `internal/callback/server_test.go`
-- [ ] Number of test functions: 3+
-- [ ] Coverage achieved: >85%
-- [ ] Tests passing: `go test ./internal/callback/...`
-- [ ] Race detector clean: `go test -race ./internal/callback/...`
+- [x] Test file created: `internal/callback/server_test.go`
+- [x] Number of test functions: 3+ (14 implemented)
+- [x] Coverage achieved: >85% (85.5% achieved)
+- [x] Tests passing: `go test ./internal/callback/...`
+- [x] Race detector clean: `go test -race ./internal/callback/...`
 
 **Why This Matters:**
 This is the IPC backbone that enables the three-process architecture. Without reliable socket communication, the MCP server cannot call back to the TUI for user prompts.
