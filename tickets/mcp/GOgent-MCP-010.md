@@ -1,10 +1,11 @@
 ---
 id: GOgent-MCP-010
 title: "Session Isolation Verification"
-time: "2 hours"
+description: "Verify that gofortress MCP integration has zero impact on regular goclaude/claude CLI usage"
+time_estimate: "2h"
 priority: HIGH
-dependencies: "GOgent-MCP-009"
-status: pending
+dependencies: ["GOgent-MCP-009"]
+status: completed
 ---
 
 # GOgent-MCP-010: Session Isolation Verification
@@ -77,9 +78,9 @@ func TestSessionIsolation_ConfigIsEphemeral(t *testing.T) {
 ```
 
 **Acceptance Criteria:**
-- [ ] `claude mcp list` shows no gofortress server
-- [ ] Config file is in /tmp, not ~/.claude/
-- [ ] Config file removed after gofortress exits
-- [ ] Multiple gofortress instances don't conflict
+- [x] `claude mcp list` shows no gofortress server
+- [x] Config file is in /tmp, not ~/.claude/
+- [x] Config file removed after gofortress exits
+- [x] Multiple gofortress instances don't conflict
 
 
