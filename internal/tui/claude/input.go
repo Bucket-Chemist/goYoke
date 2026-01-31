@@ -9,6 +9,11 @@ import (
 // handleInput processes keyboard input from the user.
 // Returns updated model and any commands to execute.
 func (m PanelModel) handleInput(msg tea.KeyMsg) (PanelModel, tea.Cmd) {
+	// If modal is active, delegate to modal input handler
+	if m.modal.Active {
+		return m.HandleModalInput(msg)
+	}
+
 	switch msg.String() {
 	case "enter":
 		// Send message if not currently streaming and textarea has content
@@ -107,5 +112,65 @@ func (m PanelModel) executeNativeCommand(input string) (PanelModel, tea.Cmd) {
 		return m, m.requestModelChange(result.NewModel)
 	}
 
+	return m, nil
+}
+
+// HandleModalInput processes key presses when modal is active.
+// Returns updated model and any commands to execute.
+func (m PanelModel) HandleModalInput(msg tea.KeyMsg) (PanelModel, tea.Cmd) {
+	if !m.modal.Active {
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "enter":
+		return m.submitModalResponse()
+
+	case "esc":
+		m.modal.SendResponse("", true)
+		return m, nil
+
+	case "y", "Y":
+		if m.modal.Type == ConfirmModal {
+			m.modal.SendResponse("yes", false)
+			return m, nil
+		}
+
+	case "n", "N":
+		if m.modal.Type == ConfirmModal {
+			m.modal.SendResponse("no", false)
+			return m, nil
+		}
+	}
+
+	// Delegate to component
+	var cmd tea.Cmd
+	switch m.modal.Type {
+	case TextInputModal:
+		m.modal.TextInput, cmd = m.modal.TextInput.Update(msg)
+	case SelectionModal:
+		m.modal.SelectList, cmd = m.modal.SelectList.Update(msg)
+	}
+
+	return m, cmd
+}
+
+// submitModalResponse extracts the current value from the modal and sends the response.
+// Returns updated model and nil command.
+func (m PanelModel) submitModalResponse() (PanelModel, tea.Cmd) {
+	var value string
+
+	switch m.modal.Type {
+	case ConfirmModal:
+		value = "yes"
+	case TextInputModal:
+		value = m.modal.TextInput.Value()
+	case SelectionModal:
+		if item, ok := m.modal.SelectList.SelectedItem().(listItem); ok {
+			value = item.title
+		}
+	}
+
+	m.modal.SendResponse(value, false)
 	return m, nil
 }

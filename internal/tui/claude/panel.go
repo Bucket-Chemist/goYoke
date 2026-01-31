@@ -94,6 +94,7 @@ type PanelModel struct {
 	state          ProcessState      // Current process state
 	currentModel   string            // Current model name (opus/sonnet/haiku)
 	config         cli.Config        // Original config for restart
+	modal          ModalState        // Modal state for MCP prompts
 }
 
 // Message represents a single message in the conversation history.
@@ -147,6 +148,7 @@ func NewPanelModel(process ClaudeProcessInterface, config cli.Config) PanelModel
 		state:        StateConnecting, // Start in connecting state
 		currentModel: currentModel,
 		config:       config,
+		modal:        NewModalState(),
 	}
 }
 
