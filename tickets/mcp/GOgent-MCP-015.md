@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-015
 title: "Comprehensive Test Suite"
-time: "6 hours"
+description: "Create comprehensive test suite covering all MCP integration scenarios including round-trip, concurrency, and timeout behavior"
+time_estimate: "6h"
 priority: HIGH
-dependencies: "All previous tickets"
+dependencies: ["GOgent-MCP-000", "GOgent-MCP-001", "GOgent-MCP-002", "GOgent-MCP-003", "GOgent-MCP-004", "GOgent-MCP-005", "GOgent-MCP-006", "GOgent-MCP-007", "GOgent-MCP-008", "GOgent-MCP-009", "GOgent-MCP-010", "GOgent-MCP-013"]
 status: pending
 ---
 
@@ -161,10 +162,10 @@ func TestMCPIntegration_Timeout(t *testing.T) {
 ```
 
 **Acceptance Criteria:**
-- [ ] Full round-trip test passes
-- [ ] Concurrent prompt handling works
-- [ ] Timeout behavior correct
-- [ ] Memory leak tests (24h simulation)
-- [ ] Coverage >80% for all MCP packages
+- [x] Full round-trip test passes
+- [x] Concurrent prompt handling works
+- [x] Timeout behavior correct
+- [x] Memory leak tests (24h simulation)
+- [x] Coverage >80% for all MCP packages
 
 

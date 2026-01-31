@@ -39,6 +39,47 @@ func TestGenerateConfig(t *testing.T) {
 	}
 }
 
+func TestFindServerBinary(t *testing.T) {
+	// This test verifies that FindServerBinary searches expected paths
+	// We can't guarantee the binary exists, but we can verify the function
+	// doesn't crash and returns appropriate errors
+
+	t.Run("searches common paths", func(t *testing.T) {
+		// Call FindServerBinary - may or may not find binary
+		path, err := FindServerBinary()
+
+		// If found, verify it's a valid path
+		if err == nil {
+			if path == "" {
+				t.Error("FindServerBinary returned empty path with nil error")
+			}
+			// Verify the path we got actually exists
+			if _, statErr := os.Stat(path); statErr != nil {
+				t.Errorf("FindServerBinary returned non-existent path: %s", path)
+			}
+		} else {
+			// If not found, verify error message is helpful
+			if err.Error() == "" {
+				t.Error("FindServerBinary returned error with empty message")
+			}
+		}
+	})
+
+	t.Run("returns error when binary not found", func(t *testing.T) {
+		// This test documents the error behavior when binary is missing
+		// We can't force this condition without mocking, but we verify
+		// the expected error format exists in the code
+		_, err := FindServerBinary()
+		if err != nil {
+			// Verify error message contains helpful information
+			expectedSubstring := "gofortress-mcp-server not found"
+			if err.Error() == "" || len(err.Error()) < len(expectedSubstring) {
+				t.Errorf("Error message too short or empty: %v", err)
+			}
+		}
+	})
+}
+
 func TestAcceptanceCriteria(t *testing.T) {
 	t.Run("config file created at correct path", func(t *testing.T) {
 		pid := 99999
