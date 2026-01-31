@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-006
 title: "Prompt Rendering"
-time: "3 hours"
+description: "Render modal prompts with lipgloss styling, overlaid on conversation view, with ANSI sanitization for security"
+time_estimate: "3h"
 priority: MEDIUM
-dependencies: "GOgent-MCP-005"
+dependencies: ["GOgent-MCP-005"]
 status: pending
 ---
 
@@ -154,12 +155,12 @@ func max(a, b int) int {
 ```
 
 **Acceptance Criteria:**
-- [ ] Modal renders with border and padding
-- [ ] Centered over background content
-- [ ] Different styles for destructive actions
-- [ ] Help text shows available keys
-- [ ] **SECURITY:** ANSI escape sequences stripped from all MCP prompts
-- [ ] **SECURITY:** Selection options also sanitized
+- [x] Modal renders with border and padding
+- [x] Centered over background content
+- [x] Different styles for destructive actions
+- [x] Help text shows available keys
+- [x] **SECURITY:** ANSI escape sequences stripped from all MCP prompts
+- [x] **SECURITY:** Selection options also sanitized
 
 **Security Test:**
 ```go

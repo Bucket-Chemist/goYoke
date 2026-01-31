@@ -54,7 +54,7 @@
       "id": "GOgent-MCP-005",
       "title": "Modal State Management",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "time_estimate": "4 hours",
       "dependencies": [
         "GOgent-MCP-001"
@@ -64,7 +64,7 @@
       "id": "GOgent-MCP-006",
       "title": "Prompt Rendering",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "time_estimate": "3 hours",
       "dependencies": [
         "GOgent-MCP-005"
