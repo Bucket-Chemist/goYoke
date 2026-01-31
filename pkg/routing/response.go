@@ -7,17 +7,22 @@ import (
 )
 
 // Decision values for hook responses
+// Claude Code expects: "approve" | "block" (optional)
 const (
-	DecisionBlock = "block"
-	DecisionWarn  = "warn"
-	DecisionPass  = "pass"
+	DecisionApprove = "approve" // Allow the tool to proceed
+	DecisionBlock   = "block"   // Block the tool from executing
+
+	// Legacy aliases (deprecated - use DecisionApprove/DecisionBlock)
+	DecisionWarn = "approve" // Mapped to approve (warn not supported by Claude Code)
+	DecisionPass = "approve" // Mapped to approve (pass not supported by Claude Code)
 )
 
 // HookResponse represents the JSON response structure for hooks.
 // This is the canonical response format that all hooks must emit.
+// Empty Decision/Reason fields are omitted from JSON output to avoid schema violations.
 type HookResponse struct {
-	Decision           string                 `json:"decision"`
-	Reason             string                 `json:"reason"`
+	Decision           string                 `json:"decision,omitempty"`
+	Reason             string                 `json:"reason,omitempty"`
 	HookSpecificOutput map[string]interface{} `json:"hookSpecificOutput"`
 }
 
@@ -79,14 +84,14 @@ func (r *HookResponse) GetDecision() string {
 // Returns an error if validation fails.
 func (r *HookResponse) Validate() error {
 	// Validate decision if present
+	// Claude Code expects: "approve" | "block" (optional)
 	if r.Decision != "" {
-		if r.Decision != DecisionBlock && r.Decision != DecisionWarn && r.Decision != DecisionPass {
+		if r.Decision != DecisionApprove && r.Decision != DecisionBlock {
 			return fmt.Errorf(
-				"[hook-response] Invalid decision value %q. Must be %q, %q, or %q. Use decision constants.",
+				"[hook-response] Invalid decision value %q. Must be %q or %q (Claude Code schema). Use DecisionApprove or DecisionBlock constants.",
 				r.Decision,
+				DecisionApprove,
 				DecisionBlock,
-				DecisionWarn,
-				DecisionPass,
 			)
 		}
 	}
