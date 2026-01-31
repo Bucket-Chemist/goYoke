@@ -112,7 +112,7 @@
       "id": "GOgent-MCP-010",
       "title": "Session Isolation Verification",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "time_estimate": "2 hours",
       "dependencies": [
         "GOgent-MCP-009"
@@ -122,7 +122,7 @@
       "id": "GOgent-MCP-013",
       "title": "Error Handling and Recovery",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "time_estimate": "4 hours",
       "dependencies": [
         "GOgent-MCP-009"
