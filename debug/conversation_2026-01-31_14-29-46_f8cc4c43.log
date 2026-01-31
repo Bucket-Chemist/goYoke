@@ -1,0 +1,49 @@
+=== GOfortress Conversation Log ===
+Session: f8cc4c43-8b93-4a81-8378-c5d71a5e7ab4
+Started: 2026-01-31T14:29:46+07:00
+=====================================
+
+[14:29:47.819] EVENT: type=system subtype=hook_started
+[14:29:47.848] EVENT: type=system subtype=hook_response
+[14:29:50.457] user:
+hello
+
+[14:29:50.462] SEND_TO_CLAUDE: hello
+[14:29:50.483] EVENT: type=system subtype=init
+[14:29:53.272] EVENT: type=assistant subtype=
+[14:29:53.425] EVENT: type=result subtype=success
+[14:29:53] assistant:
+[Session Init] Go. go.md. Router ready.
+
+Hello! How can I help you today?
+
+[14:29:59.131] system:
+Already using model: sonnet
+
+[14:30:02.282] system:
+Model change requested: sonnet → opus
+
+Restart required. Press Ctrl+C to exit, then restart with:
+  claude-cli --model=opus
+
+[14:30:03.312] MODEL_CHANGE: sonnet -> opus, new process started
+[14:30:03.315] system:
+Model changed to opus (session resumed)
+
+[14:30:03.317] SUBSCRIBED: waiting for events from new process
+[14:30:07.945] user:
+hello
+
+[14:30:07.948] SEND_TO_CLAUDE: hello
+[14:30:14.963] user:
+hello
+
+[14:30:14.966] SEND_TO_CLAUDE: hello
+[14:30:22.980] user:
+uh
+
+[14:30:22.983] SEND_TO_CLAUDE: uh
+[14:30:24.299] user:
+wtf
+
+[14:30:24.302] SEND_TO_CLAUDE: wtf

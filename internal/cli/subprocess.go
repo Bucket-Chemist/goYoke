@@ -5,8 +5,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -110,6 +112,7 @@ type ClaudeProcess struct {
 	genMu         sync.RWMutex   // Protects generation field
 	stderrBuf     strings.Builder // Captures stderr for error classification
 	stderrMu      sync.Mutex      // Protects stderrBuf
+	debugLog      *os.File        // Debug log file (when GOFORTRESS_DEBUG_SUBPROCESS is set)
 }
 
 // NewClaudeProcess creates a ClaudeProcess with the given config.
@@ -201,6 +204,11 @@ func NewClaudeProcess(cfg Config) (*ClaudeProcess, error) {
 		cmd.Dir = cfg.WorkingDir
 	}
 
+	// Ensure child process dies when parent exits (Linux-specific)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGTERM,
+	}
+
 	return &ClaudeProcess{
 		cmd:           cmd,
 		config:        cfg,
@@ -250,13 +258,35 @@ func (cp *ClaudeProcess) Start() error {
 	cp.stderr = stderr
 
 	// Start the process
+	// DEBUG: Log command being executed
+	subprocessDebugLog("Starting: %s %v\n", cp.cmd.Path, cp.cmd.Args)
 	if err := cp.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start claude process: %w", err)
 	}
+	subprocessDebugLog("Process started, PID: %d\n", cp.cmd.Process.Pid)
 
 	cp.running = true
 	cp.explicitStop = false
 	cp.restartState.RecordSuccess()
+
+	// Initialize debug log file if debugging enabled
+	if debugSubprocess {
+		debugDir := "debug"
+		if err := os.MkdirAll(debugDir, 0755); err == nil {
+			timestamp := time.Now().Format("2006-01-02_15-04-05")
+			logPath := filepath.Join(debugDir, fmt.Sprintf("subprocess_%s_%s.log", timestamp, cp.sessionID[:8]))
+			if f, err := os.Create(logPath); err == nil {
+				cp.debugLog = f
+				fmt.Fprintf(f, "=== GOfortress Subprocess Debug Log ===\n")
+				fmt.Fprintf(f, "Session: %s\n", cp.sessionID)
+				fmt.Fprintf(f, "Command: %s %v\n", cp.cmd.Path, cp.cmd.Args)
+				fmt.Fprintf(f, "Started: %s\n", time.Now().Format(time.RFC3339))
+				fmt.Fprintf(f, "========================================\n\n")
+				f.Sync()
+				subprocessDebugLog("Debug log file created: %s\n", logPath)
+			}
+		}
+	}
 
 	// Start reading events in background with WaitGroup coordination (Fix 3)
 	cp.readWg.Add(2) // For readEvents and readStderr
@@ -329,6 +359,12 @@ func (cp *ClaudeProcess) Stop() error {
 		cp.running = false
 		cp.mu.Unlock()
 		exitErr = fmt.Errorf("process killed after timeout")
+	}
+
+	// Close debug log file if open
+	if cp.debugLog != nil {
+		cp.debugLog.Close()
+		cp.debugLog = nil
 	}
 
 	// Wait for read goroutines to finish before closing channels
@@ -419,6 +455,18 @@ func (cp *ClaudeProcess) SessionID() string {
 	return cp.sessionID
 }
 
+// logDebug writes to both stderr (if enabled) and debug file (if open).
+// Thread-safe - uses mutex to protect file writes.
+func (cp *ClaudeProcess) logDebug(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	subprocessDebugLog("%s", msg) // To stderr if enabled
+	if cp.debugLog != nil {
+		timestamp := time.Now().Format("15:04:05.000")
+		fmt.Fprintf(cp.debugLog, "[%s] %s", timestamp, msg)
+		cp.debugLog.Sync()
+	}
+}
+
 // GetProcess returns the underlying os.Process for the Claude subprocess.
 // Returns nil if the process has not been started or has been stopped.
 // Used for signal propagation in lifecycle management.
@@ -463,6 +511,7 @@ func (cp *ClaudeProcess) readEvents() {
 
 	// Capture generation at start to detect stale goroutines (Fix 5)
 	myGen := cp.currentGeneration()
+	subprocessDebugLog("readEvents started, generation=%d\n", myGen)
 	reader := NewNDJSONReader(cp.stdout)
 
 	// Single persistent reader goroutine with shared channels
@@ -473,15 +522,18 @@ func (cp *ClaudeProcess) readEvents() {
 	// Spawn ONE reader goroutine that persists for the entire lifecycle
 	go func() {
 		defer close(readerDone)
+		subprocessDebugLog("Stdout reader goroutine started\n")
 		for {
 			data, err := reader.Read()
 			if err != nil {
+				subprocessDebugLog("Stdout reader error: %v\n", err)
 				select {
 				case errChan <- err:
 				case <-cp.done:
 				}
 				return
 			}
+			subprocessDebugLog("Got stdout data: %d bytes\n", len(data))
 			select {
 			case dataChan <- data:
 			case <-cp.done:

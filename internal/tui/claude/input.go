@@ -29,10 +29,7 @@ func (m PanelModel) handleInput(msg tea.KeyMsg) (PanelModel, tea.Cmd) {
 			}
 
 			// Add user message to history
-			m.messages = append(m.messages, Message{
-				Role:    "user",
-				Content: content,
-			})
+			m.addMessage("user", content)
 
 			// Mark as streaming
 			m.streaming = true
@@ -41,7 +38,8 @@ func (m PanelModel) handleInput(msg tea.KeyMsg) (PanelModel, tea.Cmd) {
 			// Update viewport to show user message
 			m.updateViewport()
 
-			// Send to Claude process
+			// Log and send to Claude process
+			m.logSend(content)
 			return m, m.sendMessage(content)
 		}
 		// Don't pass empty enter to textarea
@@ -90,19 +88,13 @@ func (m PanelModel) executeNativeCommand(input string) (PanelModel, tea.Cmd) {
 
 	// Show result message in chat
 	if result.Message != "" {
-		m.messages = append(m.messages, Message{
-			Role:    "system",
-			Content: result.Message,
-		})
+		m.addMessage("system", result.Message)
 		m.updateViewport()
 	}
 
 	// Handle errors
 	if result.Error != nil {
-		m.messages = append(m.messages, Message{
-			Role:    "system",
-			Content: "Error: " + result.Error.Error(),
-		})
+		m.addMessage("system", "Error: "+result.Error.Error())
 		m.updateViewport()
 		return m, nil
 	}

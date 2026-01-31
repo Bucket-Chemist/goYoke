@@ -20,8 +20,8 @@ func TestNewModalState(t *testing.T) {
 		t.Errorf("NewModalState() Type = %v, want %v", m.Type, NoModal)
 	}
 
-	if m.ResponseChan != nil {
-		t.Error("NewModalState() ResponseChan should be nil")
+	if m.Server != nil {
+		t.Error("NewModalState() Server should be nil")
 	}
 
 	// Verify TextInput is properly initialized
@@ -185,9 +185,9 @@ func TestHandlePrompt(t *testing.T) {
 			t.Helper()
 
 			m := NewModalState()
-			respChan := make(chan callback.PromptResponse, 1)
+			server, _ := setupModalTest(tt.prompt.ID)
 
-			cmd := m.HandlePrompt(tt.prompt, respChan)
+			cmd := m.HandlePrompt(tt.prompt, server)
 
 			// Verify Active state
 			if m.Active != tt.wantActive {
@@ -204,9 +204,9 @@ func TestHandlePrompt(t *testing.T) {
 				t.Errorf("Prompt.ID = %q, want %q", m.Prompt.ID, tt.prompt.ID)
 			}
 
-			// Verify response channel was stored
-			if m.ResponseChan != respChan {
-				t.Error("ResponseChan not properly assigned")
+			// Verify server was stored
+			if m.Server == nil {
+				t.Error("Server not properly assigned")
 			}
 
 			// Verify command return
@@ -233,7 +233,6 @@ func TestHandlePrompt_TextInputReset(t *testing.T) {
 	t.Helper()
 
 	m := NewModalState()
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// First prompt with value
 	m.TextInput.SetValue("old value")
@@ -244,8 +243,9 @@ func TestHandlePrompt_TextInputReset(t *testing.T) {
 		Type:    "input",
 		Message: "New prompt",
 	}
+	server, _ := setupModalTest(prompt.ID)
 
-	m.HandlePrompt(prompt, respChan)
+	m.HandlePrompt(prompt, server)
 
 	if m.TextInput.Value() != "" {
 		t.Errorf("TextInput not reset, got value: %q", m.TextInput.Value())
@@ -287,12 +287,12 @@ func TestSendResponse(t *testing.T) {
 			t.Helper()
 
 			m := NewModalState()
-			respChan := make(chan callback.PromptResponse, 1)
+			server, respChan := setupModalTest(tt.promptID)
 
 			// Setup modal state
 			m.Active = true
 			m.Prompt = callback.PromptRequest{ID: tt.promptID}
-			m.ResponseChan = respChan
+			m.Server = server
 
 			// Send response
 			m.SendResponse(tt.value, tt.cancelled)
@@ -318,8 +318,8 @@ func TestSendResponse(t *testing.T) {
 				t.Error("Active should be false after SendResponse")
 			}
 
-			if m.ResponseChan != nil {
-				t.Error("ResponseChan should be nil after SendResponse")
+			if m.Server != nil {
+				t.Error("Server should be nil after SendResponse")
 			}
 		})
 	}
@@ -331,8 +331,8 @@ func TestSendResponse_NilChannel(t *testing.T) {
 
 	m := NewModalState()
 
-	// Ensure ResponseChan is nil
-	m.ResponseChan = nil
+	// Ensure Server is nil
+	m.Server = nil
 	m.Active = true
 
 	// Should not panic
@@ -340,7 +340,7 @@ func TestSendResponse_NilChannel(t *testing.T) {
 
 	// State should remain unchanged
 	if !m.Active {
-		t.Error("Active should remain true when ResponseChan is nil")
+		t.Error("Active should remain true when Server is nil")
 	}
 }
 

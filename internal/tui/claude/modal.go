@@ -20,12 +20,12 @@ const (
 
 // ModalState holds the current modal's state
 type ModalState struct {
-	Active       bool
-	Type         ModalType
-	Prompt       callback.PromptRequest
-	TextInput    textinput.Model
-	SelectList   list.Model
-	ResponseChan chan<- callback.PromptResponse
+	Active     bool
+	Type       ModalType
+	Prompt     callback.PromptRequest
+	TextInput  textinput.Model
+	SelectList list.Model
+	Server     *callback.Server
 }
 
 // NewModalState creates an empty modal state
@@ -42,8 +42,8 @@ func NewModalState() ModalState {
 
 // MCPPromptMsg is sent when a prompt request arrives
 type MCPPromptMsg struct {
-	Request      callback.PromptRequest
-	ResponseChan chan<- callback.PromptResponse
+	Request callback.PromptRequest
+	Server  *callback.Server
 }
 
 // MCPResponseSentMsg is sent after response is delivered
@@ -52,10 +52,10 @@ type MCPResponseSentMsg struct {
 }
 
 // HandlePrompt activates a modal for the given prompt
-func (m *ModalState) HandlePrompt(prompt callback.PromptRequest, respChan chan<- callback.PromptResponse) tea.Cmd {
+func (m *ModalState) HandlePrompt(prompt callback.PromptRequest, server *callback.Server) tea.Cmd {
 	m.Active = true
 	m.Prompt = prompt
-	m.ResponseChan = respChan
+	m.Server = server
 
 	switch prompt.Type {
 	case "confirm":
@@ -90,18 +90,19 @@ func (m *ModalState) HandlePrompt(prompt callback.PromptRequest, respChan chan<-
 
 // SendResponse sends the response and closes the modal
 func (m *ModalState) SendResponse(value string, cancelled bool) {
-	if m.ResponseChan == nil {
+	if m.Server == nil {
 		return
 	}
 
-	m.ResponseChan <- callback.PromptResponse{
+	// Use server's SendResponse which finds the correct channel
+	m.Server.SendResponse(callback.PromptResponse{
 		ID:        m.Prompt.ID,
 		Value:     value,
 		Cancelled: cancelled,
-	}
+	})
 
 	m.Active = false
-	m.ResponseChan = nil
+	m.Server = nil
 }
 
 // listItem implements list.Item for selection
@@ -121,8 +122,12 @@ func createSelectList(options []string) list.Model {
 
 	delegate := list.NewDefaultDelegate()
 	delegate.SetHeight(1)
+	// Truncate long items to prevent overflow
+	delegate.Styles.NormalTitle = delegate.Styles.NormalTitle.MaxWidth(38)
+	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.MaxWidth(38)
 
-	l := list.New(items, delegate, 40, min(len(options)+4, 12))
+	// Width reduced to 42 to fit within modal (50 width - 4 padding - margin for list styling)
+	l := list.New(items, delegate, 42, min(len(options)+4, 12))
 	l.SetShowTitle(false)
 	l.SetShowStatusBar(false)
 	l.SetShowHelp(false)

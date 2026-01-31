@@ -26,7 +26,6 @@
       "Bash(*sudo*)"
     ]
   },
-  "model": "sonnet",
   "hooks": {
     "SessionStart": [
       {
@@ -102,10 +101,11 @@
       }
     ]
   },
+  "autoUpdatesChannel": "stable",
+  "minimumVersion": "2.1.25",
   "trustedDirectories": [
     "/home/doktersmol",
     "/home/doktersmol/Documents"
   ],
-  "autoUpdatesChannel": "stable",
-  "minimumVersion": "2.1.25"
+  "model": "sonnet"
 }

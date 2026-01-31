@@ -1494,7 +1494,7 @@ func TestListenForPrompts_PromptDelivery(t *testing.T) {
 		assert.Equal(t, "test-prompt-1", promptMsg.Request.ID)
 		assert.Equal(t, "confirm", promptMsg.Request.Type)
 		assert.Equal(t, "Allow access?", promptMsg.Request.Message)
-		assert.NotNil(t, promptMsg.ResponseChan)
+		assert.NotNil(t, promptMsg.Server)
 	case <-time.After(2 * time.Second):
 		t.Fatal("Timeout waiting for prompt delivery")
 	}
@@ -1586,8 +1586,8 @@ func TestPanelModel_ModalOverlay(t *testing.T) {
 			Type:    "confirm",
 			Message: "Delete file?",
 		}
-		respChan := make(chan callback.PromptResponse, 1)
-		panel.modal.HandlePrompt(testPrompt, respChan)
+		server, _ := setupModalTest(testPrompt.ID)
+		panel.modal.HandlePrompt(testPrompt, server)
 
 		view := panel.View()
 		// Should contain both main content and modal

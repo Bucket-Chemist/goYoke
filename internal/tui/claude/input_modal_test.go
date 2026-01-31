@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"os"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,6 +10,14 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 )
 
+// setupModalTest creates a server with registered response channel for testing
+func setupModalTest(promptID string) (*callback.Server, chan callback.PromptResponse) {
+	server := callback.NewServer(os.Getpid())
+	respChan := make(chan callback.PromptResponse, 1)
+	server.RegisterPending(promptID, respChan)
+	return server, respChan
+}
+
 // TestHandleInput_ModalRouting verifies that handleInput delegates to HandleModalInput when modal is active
 func TestHandleInput_ModalRouting(t *testing.T) {
 	t.Helper()
@@ -16,7 +25,6 @@ func TestHandleInput_ModalRouting(t *testing.T) {
 	// Create a panel with active modal
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate a confirm modal
 	prompt := callback.PromptRequest{
@@ -24,7 +32,8 @@ func TestHandleInput_ModalRouting(t *testing.T) {
 		Type:    "confirm",
 		Message: "Are you sure?",
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 
 	// Send 'y' key
 	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
@@ -89,32 +98,35 @@ func TestHandleModalInput_EnterKey(t *testing.T) {
 	tests := []struct {
 		name          string
 		modalType     ModalType
-		setupModal    func(m *PanelModel, respChan chan callback.PromptResponse)
+		promptID      string
+		setupModal    func(m *PanelModel, server *callback.Server)
 		expectedValue string
 	}{
 		{
 			name:      "ConfirmModal Enter submits yes",
 			modalType: ConfirmModal,
-			setupModal: func(m *PanelModel, respChan chan callback.PromptResponse) {
+			promptID:  "confirm-enter",
+			setupModal: func(m *PanelModel, server *callback.Server) {
 				prompt := callback.PromptRequest{
 					ID:      "confirm-enter",
 					Type:    "confirm",
 					Message: "Confirm?",
 				}
-				m.modal.HandlePrompt(prompt, respChan)
+				m.modal.HandlePrompt(prompt, server)
 			},
 			expectedValue: "yes",
 		},
 		{
 			name:      "TextInputModal Enter submits text value",
 			modalType: TextInputModal,
-			setupModal: func(m *PanelModel, respChan chan callback.PromptResponse) {
+			promptID:  "input-enter",
+			setupModal: func(m *PanelModel, server *callback.Server) {
 				prompt := callback.PromptRequest{
 					ID:      "input-enter",
 					Type:    "input",
 					Message: "Enter name:",
 				}
-				m.modal.HandlePrompt(prompt, respChan)
+				m.modal.HandlePrompt(prompt, server)
 				m.modal.TextInput.SetValue("Alice")
 			},
 			expectedValue: "Alice",
@@ -122,14 +134,15 @@ func TestHandleModalInput_EnterKey(t *testing.T) {
 		{
 			name:      "SelectionModal Enter submits selected item",
 			modalType: SelectionModal,
-			setupModal: func(m *PanelModel, respChan chan callback.PromptResponse) {
+			promptID:  "select-enter",
+			setupModal: func(m *PanelModel, server *callback.Server) {
 				prompt := callback.PromptRequest{
 					ID:      "select-enter",
 					Type:    "select",
 					Message: "Pick option:",
 					Options: []string{"option1", "option2", "option3"},
 				}
-				m.modal.HandlePrompt(prompt, respChan)
+				m.modal.HandlePrompt(prompt, server)
 				// Default is first item
 			},
 			expectedValue: "option1",
@@ -142,10 +155,10 @@ func TestHandleModalInput_EnterKey(t *testing.T) {
 
 			process := NewMockClaudeProcess("test-session")
 			m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-			respChan := make(chan callback.PromptResponse, 1)
+			server, respChan := setupModalTest(tt.promptID)
 
 			// Setup modal
-			tt.setupModal(&m, respChan)
+			tt.setupModal(&m, server)
 
 			// Press Enter
 			keyMsg := tea.KeyMsg{Type: tea.KeyEnter}
@@ -178,7 +191,6 @@ func TestHandleModalInput_EscKey(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate a text input modal
 	prompt := callback.PromptRequest{
@@ -186,7 +198,8 @@ func TestHandleModalInput_EscKey(t *testing.T) {
 		Type:    "input",
 		Message: "Enter something:",
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 	m.modal.TextInput.SetValue("partial input")
 
 	// Press Esc
@@ -233,7 +246,6 @@ func TestHandleModalInput_YNKeys(t *testing.T) {
 
 			process := NewMockClaudeProcess("test-session")
 			m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-			respChan := make(chan callback.PromptResponse, 1)
 
 			// Activate confirm modal
 			prompt := callback.PromptRequest{
@@ -241,7 +253,8 @@ func TestHandleModalInput_YNKeys(t *testing.T) {
 				Type:    "confirm",
 				Message: "Proceed?",
 			}
-			m.modal.HandlePrompt(prompt, respChan)
+			server, respChan := setupModalTest(prompt.ID)
+			m.modal.HandlePrompt(prompt, server)
 
 			// Press key
 			keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)}
@@ -274,7 +287,6 @@ func TestHandleModalInput_YNKeysIgnoredForNonConfirm(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate text input modal
 	prompt := callback.PromptRequest{
@@ -282,7 +294,8 @@ func TestHandleModalInput_YNKeysIgnoredForNonConfirm(t *testing.T) {
 		Type:    "input",
 		Message: "Enter text:",
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 
 	// Press 'y' - should be treated as regular text input
 	keyMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
@@ -313,7 +326,6 @@ func TestHandleModalInput_ArrowKeys(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate selection modal
 	prompt := callback.PromptRequest{
@@ -322,7 +334,8 @@ func TestHandleModalInput_ArrowKeys(t *testing.T) {
 		Message: "Choose:",
 		Options: []string{"first", "second", "third"},
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 
 	// Initially first item is selected
 	if item, ok := m.modal.SelectList.SelectedItem().(listItem); ok {
@@ -366,7 +379,6 @@ func TestHandleModalInput_TextInputTyping(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate text input modal
 	prompt := callback.PromptRequest{
@@ -374,7 +386,8 @@ func TestHandleModalInput_TextInputTyping(t *testing.T) {
 		Type:    "input",
 		Message: "Enter text:",
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 
 	// Type some characters
 	chars := []rune{'h', 'e', 'l', 'l', 'o'}
@@ -435,7 +448,6 @@ func TestSubmitModalResponse_ConfirmModal(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate confirm modal
 	prompt := callback.PromptRequest{
@@ -443,7 +455,8 @@ func TestSubmitModalResponse_ConfirmModal(t *testing.T) {
 		Type:    "confirm",
 		Message: "Confirm?",
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 
 	// Submit response
 	m, cmd := m.submitModalResponse()
@@ -478,7 +491,6 @@ func TestSubmitModalResponse_TextInputModal(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate text input modal
 	prompt := callback.PromptRequest{
@@ -486,7 +498,8 @@ func TestSubmitModalResponse_TextInputModal(t *testing.T) {
 		Type:    "input",
 		Message: "Enter value:",
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 	m.modal.TextInput.SetValue("test value")
 
 	// Submit response
@@ -517,7 +530,6 @@ func TestSubmitModalResponse_SelectionModal(t *testing.T) {
 
 	process := NewMockClaudeProcess("test-session")
 	m := NewPanelModel(process, cli.Config{Model: "sonnet"})
-	respChan := make(chan callback.PromptResponse, 1)
 
 	// Activate selection modal
 	prompt := callback.PromptRequest{
@@ -526,7 +538,8 @@ func TestSubmitModalResponse_SelectionModal(t *testing.T) {
 		Message: "Choose option:",
 		Options: []string{"alpha", "beta", "gamma"},
 	}
-	m.modal.HandlePrompt(prompt, respChan)
+	server, respChan := setupModalTest(prompt.ID)
+	m.modal.HandlePrompt(prompt, server)
 
 	// Default selection is first item
 	// Submit response

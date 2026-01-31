@@ -14,6 +14,13 @@ import (
 // handleEvent processes events from the Claude CLI process.
 // Updates state based on event type (assistant, result, system).
 func (m PanelModel) handleEvent(event cli.Event) PanelModel {
+	// Log all events to debug file
+	if m.logFile != nil {
+		timestamp := time.Now().Format("15:04:05.000")
+		fmt.Fprintf(m.logFile, "[%s] EVENT: type=%s subtype=%s\n", timestamp, event.Type, event.Subtype)
+		m.logFile.Sync()
+	}
+
 	switch event.Type {
 	case "assistant":
 		// Handle assistant message (streaming text and tool use)
@@ -46,6 +53,16 @@ func (m PanelModel) handleEvent(event cli.Event) PanelModel {
 			m.streaming = false
 			m.state = StateReady // Back to ready after result
 			m.updateViewport()   // Remove streaming indicator
+
+			// Log complete assistant response to debug file
+			if m.logFile != nil && len(m.messages) > 0 {
+				lastMsg := m.messages[len(m.messages)-1]
+				if lastMsg.Role == "assistant" {
+					timestamp := time.Now().Format("15:04:05")
+					fmt.Fprintf(m.logFile, "[%s] assistant:\n%s\n\n", timestamp, lastMsg.Content)
+					m.logFile.Sync()
+				}
+			}
 		}
 
 	case "system":
@@ -73,10 +90,7 @@ func (m PanelModel) handleEvent(event cli.Event) PanelModel {
 			// Log error but don't block - this is just instrumentation
 			m.appendStreamingText(fmt.Sprintf("\n[Warning: Failed to save debug event: %v]\n", err))
 		} else {
-			m.messages = append(m.messages, Message{
-				Role:    "system",
-				Content: fmt.Sprintf("🔍 Permission event detected. Raw data saved to: %s", debugPath),
-			})
+			m.addMessage("system", fmt.Sprintf("🔍 Permission event detected. Raw data saved to: %s", debugPath))
 			m.updateViewport()
 		}
 

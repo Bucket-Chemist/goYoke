@@ -7,6 +7,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/claude"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/debug"
 )
 
 // Layout constants define the proportional split and minimum dimensions
@@ -31,6 +32,7 @@ type Model struct {
 	claudePanel claude.PanelModel
 	agentTree   agents.Model
 	agentDetail agents.DetailModel
+	debugPanel  debug.PanelModel
 	width       int
 	height      int
 	focused     FocusedPanel
@@ -39,11 +41,15 @@ type Model struct {
 
 // NewModel creates a new main layout model
 func NewModel(claudePanel claude.PanelModel, agentTree agents.Model, sessionID string) Model {
+	dp := debug.NewPanelModel()
+	dp.AddEntry("system", "Debug panel initialized")
+	dp.AddEntry("system", "Session: "+sessionID[:8])
 	return Model{
 		banner:      NewBannerModel(sessionID),
 		claudePanel: claudePanel,
 		agentTree:   agentTree,
 		agentDetail: agents.NewDetailModel(),
+		debugPanel:  dp,
 		focused:     FocusLeft,
 		activeView:  ViewClaude,
 	}
@@ -57,6 +63,30 @@ func (m Model) Init() tea.Cmd {
 // Update implements tea.Model.Update
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+
+	// Handle mouse clicks for panel focus switching
+	if mouseMsg, ok := msg.(tea.MouseMsg); ok {
+		if mouseMsg.Action == tea.MouseActionPress && mouseMsg.Button == tea.MouseButtonLeft {
+			leftWidth, _ := m.calculateLayout()
+
+			if mouseMsg.X < leftWidth {
+				// Clicked left panel
+				if m.focused != FocusLeft {
+					m.focused = FocusLeft
+					m.claudePanel.Focus()
+					m.agentTree.SetFocused(false)
+				}
+			} else {
+				// Clicked right panel
+				if m.focused != FocusRight {
+					m.focused = FocusRight
+					m.claudePanel.Blur()
+					m.agentTree.SetFocused(true)
+				}
+			}
+		}
+		// Continue to forward mouse event to focused panel via existing logic
+	}
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -87,6 +117,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.banner.SetActiveView(ViewQuery)
 			return m, nil
 
+		case "ctrl+d":
+			m.debugPanel.Toggle()
+			return m, nil
+
 		case "tab":
 			// Toggle focus between panels
 			if m.focused == FocusLeft {
@@ -100,8 +134,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 
-		case "q", "ctrl+c":
+		case "ctrl+c":
 			return m, tea.Quit
+
+		case "q":
+			// Only quit if right panel focused (not typing in textarea)
+			if m.focused == FocusRight {
+				return m, tea.Quit
+			}
+			// Fall through to let textarea handle 'q'
 		}
 
 	case agents.SelectionMsg:
@@ -111,12 +152,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case cli.Event:
+		// Add to debug panel
+		eventInfo := msg.Type
+		if msg.Subtype != "" {
+			eventInfo += "/" + msg.Subtype
+		}
+		m.debugPanel.AddEntry("event", eventInfo)
+
 		// Forward CLI events to claude panel even when not focused
 		// (to keep cost and conversation history in sync)
 		var cmd tea.Cmd
 		var model tea.Model
 		model, cmd = m.claudePanel.Update(msg)
-		m.claudePanel = model.(claude.PanelModel)
+		if panel, ok := model.(claude.PanelModel); ok {
+			m.claudePanel = panel
+		}
 		cmds = append(cmds, cmd)
 
 		// Update banner cost from claude panel
@@ -129,7 +179,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		var model tea.Model
 		model, cmd = m.claudePanel.Update(msg)
-		m.claudePanel = model.(claude.PanelModel)
+		if panel, ok := model.(claude.PanelModel); ok {
+			m.claudePanel = panel
+		}
 		cmds = append(cmds, cmd)
 
 		// Update banner cost from claude panel
@@ -138,7 +190,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		var model tea.Model
 		model, cmd = m.agentTree.Update(msg)
-		m.agentTree = model.(agents.Model)
+		if tree, ok := model.(agents.Model); ok {
+			m.agentTree = tree
+		}
 		cmds = append(cmds, cmd)
 
 		// Update detail panel with currently selected agent
@@ -209,11 +263,19 @@ func (m Model) View() string {
 	)
 
 	// Join banner and main content vertically
-	return lipgloss.JoinVertical(
+	fullView := lipgloss.JoinVertical(
 		lipgloss.Left,
 		bannerView,
 		mainContent,
 	)
+
+	// Overlay debug panel if visible
+	if m.debugPanel.IsVisible() {
+		debugView := m.debugPanel.View()
+		return claude.OverlayModal(fullView, debugView, m.width, m.height)
+	}
+
+	return fullView
 }
 
 // calculateLayout computes left and right panel widths enforcing minimums
@@ -273,6 +335,11 @@ func (m *Model) updateSizes() {
 
 	m.agentTree.SetSize(rightWidth, treeHeight)
 	m.agentDetail.SetSize(rightWidth, detailHeight)
+
+	// Update debug panel to use 60% of screen width, 50% of height
+	debugWidth := int(float64(m.width) * 0.6)
+	debugHeight := int(float64(contentHeight) * 0.5)
+	m.debugPanel.SetSize(debugWidth, debugHeight)
 }
 
 // Styles for layout rendering

@@ -211,9 +211,10 @@ func main() {
 	layoutModel := layout.NewModel(claudePanel, agentTreeView, process.SessionID())
 
 	// Run TUI
+	// Note: Alt screen removed to allow terminal text selection (copy/paste)
+	// Without alt screen, terminal scrollback and selection work normally
 	p := tea.NewProgram(
 		layoutModel,
-		tea.WithAltScreen(),
 		tea.WithMouseCellMotion(),
 	)
 

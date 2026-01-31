@@ -1,0 +1,43 @@
+=== GOfortress Conversation Log ===
+Session: d15b324a-5345-45c0-ba59-f8a4fe762edf
+Started: 2026-01-31T14:18:34+07:00
+=====================================
+
+[14:18:39] system:
+Model change requested: sonnet → opus
+
+Restart required. Press Ctrl+C to exit, then restart with:
+  claude-cli --model=opus
+
+[14:18:40] system:
+Model changed to opus (session resumed)
+
+[14:18:44] user:
+testing
+
+[14:18:47] assistant:
+[Session Init] Go. go.md. Router ready.
+
+Test acknowledged. System is operational. How can I help you?
+
+[14:18:50] system:
+Model change requested: opus → haiku
+
+Restart required. Press Ctrl+C to exit, then restart with:
+  claude-cli --model=haiku
+
+[14:18:51] system:
+Model changed to haiku (session resumed)
+
+[14:18:53] user:
+testing
+
+[14:19:02] user:
+hello?
+
+[14:19:04] user:
+it has stalled
+
+[14:19:09] user:
+stuck at [streaming...]
+

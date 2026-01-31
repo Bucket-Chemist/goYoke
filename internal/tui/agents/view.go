@@ -167,6 +167,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		if !m.focused {
+			return m, nil
+		}
+		return m.handleMouse(msg)
+
 	case AgentUpdateMsg:
 		m.tree = msg.Tree
 		m.rebuildVisibleNodes()
@@ -339,6 +345,44 @@ func (m Model) handleQueryInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.queryInput, cmd = m.queryInput.Update(msg)
 	return m, cmd
+}
+
+// handleMouse processes mouse input
+func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	// If picker is shown, ignore mouse events (picker handles its own)
+	if m.showPicker {
+		return m, nil
+	}
+
+	// If query mode, ignore mouse events (textarea handles its own)
+	if m.queryMode {
+		return m, nil
+	}
+
+	// Only handle left click press
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+		return m, nil
+	}
+
+	// Calculate which line was clicked
+	// Account for border (1), title line (1), separator (1), border padding
+	headerLines := 3
+	clickedLine := msg.Y - headerLines
+
+	// Adjust for scroll offset
+	clickedIndex := clickedLine + m.scrollOffset
+
+	// Validate bounds
+	if clickedIndex < 0 || clickedIndex >= len(m.visibleNodes) {
+		return m, nil
+	}
+
+	// Update cursor position and selected ID
+	m.cursorPos = clickedIndex
+	m.selectedID = m.visibleNodes[m.cursorPos]
+
+	// Return selection command (same as Enter key)
+	return m, m.selectNode()
 }
 
 // sendQuery sends a query to the specified agent

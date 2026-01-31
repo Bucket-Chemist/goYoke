@@ -3,6 +3,8 @@ package claude
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -99,6 +101,7 @@ type PanelModel struct {
 	modal          ModalState        // Modal state for MCP prompts
 	callbackServer *callback.Server  // Callback server for MCP prompts
 	ctx            context.Context   // Context for cancellation
+	logFile        *os.File          // Debug conversation log
 }
 
 // Message represents a single message in the conversation history.
@@ -138,6 +141,21 @@ func NewPanelModel(process ClaudeProcessInterface, config cli.Config) PanelModel
 		currentModel = "sonnet"
 	}
 
+	// Create debug log file for conversation
+	var logFile *os.File
+	debugDir := "debug"
+	if err := os.MkdirAll(debugDir, 0755); err == nil {
+		timestamp := time.Now().Format("2006-01-02_15-04-05")
+		logPath := filepath.Join(debugDir, fmt.Sprintf("conversation_%s_%s.log", timestamp, process.SessionID()[:8]))
+		if f, err := os.Create(logPath); err == nil {
+			logFile = f
+			fmt.Fprintf(f, "=== GOfortress Conversation Log ===\n")
+			fmt.Fprintf(f, "Session: %s\n", process.SessionID())
+			fmt.Fprintf(f, "Started: %s\n", time.Now().Format(time.RFC3339))
+			fmt.Fprintf(f, "=====================================\n\n")
+		}
+	}
+
 	return PanelModel{
 		process:      process,
 		viewport:     vp,
@@ -153,6 +171,7 @@ func NewPanelModel(process ClaudeProcessInterface, config cli.Config) PanelModel
 		currentModel: currentModel,
 		config:       config,
 		modal:        NewModalState(),
+		logFile:      logFile,
 	}
 }
 
@@ -201,13 +220,11 @@ func (m PanelModel) ListenForPrompts() tea.Cmd {
 		// FIXED: Use select with context.Done() to avoid blocking forever on shutdown
 		select {
 		case req := <-m.callbackServer.PromptChan:
-			// Create response channel for this prompt
-			respChan := make(chan callback.PromptResponse, 1)
-			// Register with server
-			m.callbackServer.RegisterPending(req.ID, respChan)
+			// Don't create channel - server already has one
+			// Don't call RegisterPending - would overwrite server's channel
 			return MCPPromptMsg{
-				Request:      req,
-				ResponseChan: respChan,
+				Request: req,
+				Server:  m.callbackServer,
 			}
 		case <-m.ctx.Done():
 			// TUI is shutting down, return nil to stop listening
@@ -252,7 +269,7 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case MCPPromptMsg:
 		// Handle incoming prompt from MCP server
-		cmd := m.modal.HandlePrompt(msg.Request, msg.ResponseChan)
+		cmd := m.modal.HandlePrompt(msg.Request, msg.Server)
 		// Re-subscribe to listen for next prompt
 		return m, tea.Batch(cmd, m.ListenForPrompts())
 
@@ -308,6 +325,10 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.textarea.SetWidth(msg.Width - 2)
 
 	case tea.MouseMsg:
+		// Block mouse events when modal is active
+		if m.modal.Active {
+			return m, nil
+		}
 		if m.focused {
 			// Forward mouse events to textarea for click-to-focus
 			var taCmd tea.Cmd
@@ -326,6 +347,12 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.streaming = false
 
 	case modelChangedMsg:
+		// Log model change
+		if m.logFile != nil {
+			timestamp := time.Now().Format("15:04:05.000")
+			fmt.Fprintf(m.logFile, "[%s] MODEL_CHANGE: %s -> %s, new process started\n", timestamp, m.currentModel, msg.model)
+			m.logFile.Sync()
+		}
 		// Update model name
 		m.currentModel = msg.model
 		// Update process reference
@@ -333,12 +360,13 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update config
 		m.config.Model = msg.model
 		// Add system message
-		m.messages = append(m.messages, Message{
-			Role:    "system",
-			Content: fmt.Sprintf("Model changed to %s (session resumed)", msg.model),
-		})
+		m.addMessage("system", fmt.Sprintf("Model changed to %s (session resumed)", msg.model))
 		m.updateViewport()
 		// Re-subscribe to new process events
+		if m.logFile != nil {
+			fmt.Fprintf(m.logFile, "[%s] SUBSCRIBED: waiting for events from new process\n", time.Now().Format("15:04:05.000"))
+			m.logFile.Sync()
+		}
 		return m, tea.Batch(
 			waitForEvent(m.process.Events()),
 			waitForRestartEvent(m.process.RestartEvents()),
@@ -346,19 +374,11 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case processErrorMsg:
 		// Handle process error
-		m.messages = append(m.messages, Message{
-			Role:    "system",
-			Content: fmt.Sprintf("Error: %v", msg.err),
-		})
+		m.addMessage("system", fmt.Sprintf("Error: %v", msg.err))
 		m.updateViewport()
 		m.state = StateError
 		m.streaming = false
 	}
-
-	// Update viewport
-	var vpCmd tea.Cmd
-	m.viewport, vpCmd = m.viewport.Update(msg)
-	cmds = append(cmds, vpCmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -465,6 +485,25 @@ func (m *PanelModel) ClearConversation() {
 	m.updateViewport()
 }
 
+// addMessage appends a message to the conversation and logs it to the debug file.
+func (m *PanelModel) addMessage(role, content string) {
+	m.messages = append(m.messages, Message{Role: role, Content: content})
+	if m.logFile != nil {
+		timestamp := time.Now().Format("15:04:05.000")
+		fmt.Fprintf(m.logFile, "[%s] %s:\n%s\n\n", timestamp, role, content)
+		m.logFile.Sync() // Flush to disk immediately
+	}
+}
+
+// logSend logs when a message is being sent to Claude.
+func (m *PanelModel) logSend(content string) {
+	if m.logFile != nil {
+		timestamp := time.Now().Format("15:04:05.000")
+		fmt.Fprintf(m.logFile, "[%s] SEND_TO_CLAUDE: %s\n", timestamp, truncate(content, 100))
+		m.logFile.Sync()
+	}
+}
+
 // getSidebarWidth calculates the sidebar width based on terminal width.
 // Allocates 20% to sidebar, clamped between minSidebarWidth and maxSidebarWidth.
 func (m *PanelModel) getSidebarWidth() int {
@@ -514,8 +553,9 @@ func (m PanelModel) requestModelChange(model string) tea.Cmd {
 		// Update config with new model
 		newConfig := m.config
 		newConfig.Model = model
-		// Preserve session ID for continuity
-		newConfig.SessionID = m.sessionID
+		// Use fresh session ID - reusing with --session-id flag causes hang
+		// TODO: Implement --resume flag support for true session continuity
+		newConfig.SessionID = ""
 
 		// Create new process
 		newProc, err := cli.NewClaudeProcess(newConfig)
