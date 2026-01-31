@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -9,7 +10,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/callback"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/lifecycle"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/mcp"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/claude"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/layout"
@@ -62,6 +66,54 @@ func main() {
 		os.Exit(0)
 	}
 
+	// CRITICAL: Clean up stale sockets from previous crashed sessions
+	// Must run BEFORE creating new socket to prevent "address in use" errors
+	if err := lifecycle.CleanupStaleSockets(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: stale socket cleanup failed: %v\n", err)
+	}
+
+	// Start callback server for MCP integration
+	pid := os.Getpid()
+	callbackServer := callback.NewServer(pid)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// CRITICAL: Set up process lifecycle manager for signal handling
+	processManager := lifecycle.NewProcessManager(callbackServer.SocketPath())
+	processManager.StartSignalHandler(ctx, func() {
+		cancel() // Cancel context to unblock listeners
+		callbackServer.Shutdown(context.Background())
+	})
+
+	var mcpConfigPath string
+	var mcpEnabled bool
+
+	if err := callbackServer.Start(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: MCP callback server failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "         Interactive prompts will be disabled.\n")
+	} else {
+		mcpEnabled = true
+		defer callbackServer.Cleanup()
+		defer callbackServer.Shutdown(ctx)
+
+		// Find MCP server binary
+		serverBinary, err := mcp.FindServerBinary()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+			fmt.Fprintf(os.Stderr, "         Interactive prompts will be disabled.\n")
+			mcpEnabled = false
+		} else {
+			// Generate MCP config
+			mcpConfigPath, err = mcp.GenerateConfig(pid, callbackServer.SocketPath(), serverBinary)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+				mcpEnabled = false
+			} else {
+				defer mcp.Cleanup(mcpConfigPath)
+			}
+		}
+	}
+
 	// Create session manager
 	sessionMgr, err := cli.NewSessionManager()
 	if err != nil {
@@ -72,6 +124,17 @@ func main() {
 	// Create or resume Claude process
 	var process *cli.ClaudeProcess
 	var cfg cli.Config
+
+	// Build base config with MCP if enabled
+	baseAllowedTools := []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", "TaskOutput", "EnterPlanMode", "ExitPlanMode"}
+	if mcpEnabled {
+		baseAllowedTools = append(baseAllowedTools,
+			"mcp__gofortress__ask_user",
+			"mcp__gofortress__confirm_action",
+			"mcp__gofortress__request_input",
+			"mcp__gofortress__select_option",
+		)
+	}
 
 	if sessionToResume != "" {
 		// Resume existing session
@@ -84,10 +147,12 @@ func main() {
 		// Create a config for resumed session (we don't have the original config)
 		// This is needed for potential model changes
 		cfg = cli.Config{
-			ClaudePath:  "claude",
-			SessionID:   sessionToResume,
-			WorkingDir:  workDir,
-			Verbose:     *verbose,
+			ClaudePath:    "claude",
+			SessionID:     sessionToResume,
+			WorkingDir:    workDir,
+			Verbose:       *verbose,
+			AllowedTools:  baseAllowedTools,
+			MCPConfigPath: mcpConfigPath,
 		}
 	} else {
 		// Create new session
@@ -100,7 +165,8 @@ func main() {
 			// Based on testing, permission-mode flags don't enable interactive permissions in stream-json mode.
 			// The "delegate" mode still sends error events, not request events.
 			// Solution: Pre-approve tools via AllowedTools.
-			AllowedTools: []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", "TaskOutput", "EnterPlanMode", "ExitPlanMode"},
+			AllowedTools:  baseAllowedTools,
+			MCPConfigPath: mcpConfigPath,
 		}
 
 		process, err = cli.NewClaudeProcess(cfg)
@@ -127,8 +193,20 @@ func main() {
 	// Create agent tree for the session
 	tree := agents.NewAgentTree(process.SessionID())
 
-	// Create TUI components
-	claudePanel := claude.NewPanelModel(process, cfg)
+	// Create TUI components with callback server if enabled
+	var claudePanel claude.PanelModel
+	if mcpEnabled {
+		claudePanel = claude.NewPanelModelWithCallback(ctx, process, cfg, callbackServer)
+	} else {
+		claudePanel = claude.NewPanelModel(process, cfg)
+	}
+
+	// CRITICAL: Register Claude process with lifecycle manager for signal propagation
+	// This ensures SIGTERM is forwarded to Claude if gofortress is killed
+	if claudeProcess := process.GetProcess(); claudeProcess != nil {
+		processManager.SetChildProcess(claudeProcess)
+	}
+
 	agentTreeView := agents.New(tree)
 	layoutModel := layout.NewModel(claudePanel, agentTreeView, process.SessionID())
 

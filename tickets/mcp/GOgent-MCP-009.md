@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-009
 title: "Main Orchestration"
-time: "4 hours"
+description: "Update gofortress main.go to start callback server, generate MCP config, and wire everything together with lifecycle management"
+time_estimate: "4h"
 priority: HIGH
-dependencies: "Phase 1 + Phase 2 + GOgent-MCP-000 (lifecycle)"
+dependencies: ["GOgent-MCP-000", "GOgent-MCP-001", "GOgent-MCP-002", "GOgent-MCP-005", "GOgent-MCP-006", "GOgent-MCP-007", "GOgent-MCP-008"]
 status: pending
 ---
 
@@ -127,13 +128,13 @@ func main() {
 ```
 
 **Acceptance Criteria:**
-- [ ] Callback server starts before Claude process
-- [ ] MCP config generated with correct paths
-- [ ] MCP tools added to AllowedTools
-- [ ] Graceful degradation if MCP setup fails
-- [ ] Cleanup on exit (socket, config file)
-- [ ] **CRITICAL:** Stale sockets cleaned at startup
-- [ ] **CRITICAL:** SIGTERM propagated to Claude child process
-- [ ] **CRITICAL:** Context cancelled to unblock listeners on shutdown
+- [x] Callback server starts before Claude process
+- [x] MCP config generated with correct paths
+- [x] MCP tools added to AllowedTools
+- [x] Graceful degradation if MCP setup fails
+- [x] Cleanup on exit (socket, config file)
+- [x] **CRITICAL:** Stale sockets cleaned at startup
+- [x] **CRITICAL:** SIGTERM propagated to Claude child process
+- [x] **CRITICAL:** Context cancelled to unblock listeners on shutdown
 
 

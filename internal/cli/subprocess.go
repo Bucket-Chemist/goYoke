@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -76,6 +77,11 @@ type Config struct {
 	// Accepts: "claude-3-opus", "claude-3-sonnet", "claude-3-haiku" or aliases "opus", "sonnet", "haiku".
 	// If set, passed as --model flag.
 	Model string
+
+	// MCPConfigPath is the path to MCP server configuration.
+	// If set, passed as --mcp-config flag.
+	// Used for interactive prompts via gofortress-mcp-server.
+	MCPConfigPath string
 }
 
 // ClaudeProcess manages the lifecycle of a claude subprocess.
@@ -183,6 +189,11 @@ func NewClaudeProcess(cfg Config) (*ClaudeProcess, error) {
 	// Add model override
 	if cfg.Model != "" {
 		args = append(args, "--model", cfg.Model)
+	}
+
+	// Add MCP config
+	if cfg.MCPConfigPath != "" {
+		args = append(args, "--mcp-config", cfg.MCPConfigPath)
 	}
 
 	cmd := exec.Command(cfg.ClaudePath, args...)
@@ -406,6 +417,18 @@ func (cp *ClaudeProcess) IsRunning() bool {
 // SessionID returns the session ID for this process.
 func (cp *ClaudeProcess) SessionID() string {
 	return cp.sessionID
+}
+
+// GetProcess returns the underlying os.Process for the Claude subprocess.
+// Returns nil if the process has not been started or has been stopped.
+// Used for signal propagation in lifecycle management.
+func (cp *ClaudeProcess) GetProcess() *os.Process {
+	cp.mu.Lock()
+	defer cp.mu.Unlock()
+	if cp.cmd == nil {
+		return nil
+	}
+	return cp.cmd.Process
 }
 
 // currentGeneration returns the current process generation.
