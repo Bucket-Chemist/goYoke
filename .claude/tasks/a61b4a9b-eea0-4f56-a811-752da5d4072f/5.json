@@ -1,0 +1,9 @@
+{
+  "id": "5",
+  "subject": "Add sharp_edges_count to new agents in agents-index.json",
+  "description": "**Priority**: HIGH\n**Agent**: go-pro (or direct edit)\n**File**: .claude/agents/agents-index.json\n\nNew agents are missing `sharp_edges_count` field, inconsistent with existing agents.\n\n**Requirements**:\n1. Add `sharp_edges_count` to each new agent entry:\n\n```json\n\"typescript-pro\": {\n  ... existing fields ...\n  \"sharp_edges_count\": 10\n}\n\n\"react-pro\": {\n  ... existing fields ...\n  \"sharp_edges_count\": 11\n}\n\n\"backend-reviewer\": {\n  ... existing fields ...\n  \"sharp_edges_count\": 10\n}\n\n\"frontend-reviewer\": {\n  ... existing fields ...\n  \"sharp_edges_count\": 10\n}\n\n\"standards-reviewer\": {\n  ... existing fields ...\n  \"sharp_edges_count\": 10\n}\n```\n\n2. Note: review-orchestrator doesn't have sharp-edges.yaml (orchestrators coordinate, don't implement), so no count needed.\n\n3. Verify counts match actual sharp-edges.yaml files:\n   - typescript-pro: Count entries in sharp-edges.yaml\n   - react-pro: Count entries\n   - backend-reviewer: Count entries\n   - frontend-reviewer: Count entries\n   - standards-reviewer: Count entries\n\n**Pattern**: Match existing agents like python-pro, go-pro which include this field.",
+  "activeForm": "Adding sharp_edges_count to agents-index.json",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

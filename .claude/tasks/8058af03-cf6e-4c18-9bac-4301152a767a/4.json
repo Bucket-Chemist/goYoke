@@ -1,0 +1,9 @@
+{
+  "id": "4",
+  "subject": "Create react-pro agent",
+  "description": "Create full agent structure at ~/.claude/agents/react-pro/ with: agent.md (React 18+ expertise, hooks, state, Ink patterns), agent.yaml (model: sonnet, triggers, tools, conventions_required: [typescript.md, react.md]), sharp-edges.yaml (stale closures, dependency arrays, render loops, etc), CLAUDE.md. Include Ink-specific guidance for terminal React.",
+  "activeForm": "Creating react-pro agent",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

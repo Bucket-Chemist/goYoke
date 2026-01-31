@@ -1,0 +1,11 @@
+{
+  "id": "14",
+  "subject": "Update /ticket Phase 7.6 to log review outcomes",
+  "description": "**Priority**: HIGH\n**Agent**: go-pro (or direct edit)\n**File**: .claude/skills/ticket/SKILL.md\n\nTrack review outcome when ticket completes after code review.\n\n**Requirements**:\n1. Update Phase 7.6 to store review finding IDs:\n\n```bash\n# After review completes, store finding IDs for outcome tracking\nfinding_ids=$(jq -r '.finding_ids[]' .claude/tmp/review-telemetry.json 2>/dev/null)\nif [[ -n \"$finding_ids\" ]]; then\n    echo \"$finding_ids\" > \"$tickets_dir/.review-findings-$ticket_id\"\nfi\n```\n\n2. Update Phase 8 (Completion) to log outcomes:\n\n```bash\n# If code review was run and ticket is completing, mark findings as fixed\nif [[ -f \"$tickets_dir/.review-findings-$ticket_id\" ]]; then\n    commit_hash=$(git rev-parse HEAD)\n    while read finding_id; do\n        gogent-update-review-outcome \\\n            --finding-id=\"$finding_id\" \\\n            --resolution=\"fixed\" \\\n            --ticket-id=\"$ticket_id\" \\\n            --commit=\"$commit_hash\"\n    done < \"$tickets_dir/.review-findings-$ticket_id\"\n    rm \"$tickets_dir/.review-findings-$ticket_id\"\nfi\n```\n\n3. This requires a new binary: `gogent-update-review-outcome` (see separate task)\n\n**Purpose**: Links review findings to their resolution, enabling measurement of fix rates and resolution times.",
+  "activeForm": "Updating /ticket for outcome tracking",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": [
+    "15"
+  ]
+}

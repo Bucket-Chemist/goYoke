@@ -1,0 +1,43 @@
+name: frontend-reviewer
+description: >
+  Frontend/UI code quality reviewer. Specializes in React components,
+  hooks patterns, state management, accessibility, and performance
+  optimization for web and CLI interfaces.
+
+model: haiku
+thinking:
+  enabled: true
+  budget: 6000
+
+tier: 1.5
+category: review
+subagent_type: Explore
+
+triggers:
+  - "review frontend"
+  - "component review"
+  - "ui review"
+  - "react review"
+  - "hooks review"
+  - "accessibility review"
+  - "a11y review"
+  - "performance review"
+
+tools:
+  - Read
+  - Glob
+  - Grep
+
+focus_areas:
+  - Component patterns (composition, props, children)
+  - Hooks usage (dependencies, cleanup, custom hooks)
+  - State management (lifting, context, external stores)
+  - Accessibility (semantic HTML, ARIA, keyboard nav)
+  - Performance (memoization, re-renders, bundle size)
+  - Error boundaries and loading states
+  - UX patterns (feedback, optimistic updates)
+  - Memory leaks (listeners, timers, subscriptions)
+
+failure_tracking:
+  max_attempts: 2
+  on_max_reached: "report_incomplete"

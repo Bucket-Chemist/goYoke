@@ -1,0 +1,9 @@
+{
+  "id": "6",
+  "subject": "Add conventions_required to backend-reviewer agent.yaml",
+  "description": "**Priority**: HIGH\n**Agent**: go-pro (or direct edit)\n**File**: .claude/agents/backend-reviewer/agent.yaml\n\nBackend reviewer lacks convention references, preventing language-specific standards enforcement.\n\n**Requirements**:\n1. Add `conventions_required` field to agent.yaml:\n\n```yaml\nconventions_required:\n  - go.md\n  - python.md\n  - typescript.md\n```\n\n2. The backend reviewer is multi-language (Go, Python, R, TypeScript), so it needs access to all relevant conventions.\n\n3. Update the agent.md to reference that conventions are loaded:\n   - Add note in \"Multi-Language Support\" section about convention loading\n\n4. Verify conventions exist at ~/.claude/conventions/:\n   - go.md ✓\n   - python.md ✓\n   - typescript.md ✓\n\n**Note**: R.md convention may also be needed if R backend code is being reviewed. Check if it exists and add if so.",
+  "activeForm": "Adding conventions to backend-reviewer",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

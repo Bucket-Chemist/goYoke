@@ -1,0 +1,9 @@
+{
+  "id": "10",
+  "subject": "Update agents-index.json with new agents",
+  "description": "Add 6 new agents to ~/.claude/agents/agents-index.json: typescript-pro, react-pro, backend-reviewer, frontend-reviewer, standards-reviewer, review-orchestrator. Include proper triggers, tools, tiers, and model specifications. Update version to 2.3.0.",
+  "activeForm": "Updating agents-index.json",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,55 @@
+name: typescript-pro
+description: >
+  Expert TypeScript development with strict type safety. Auto-activated for TypeScript projects.
+  Uses conventions from ~/.claude/conventions/typescript.md. Specializes in clean,
+  type-safe, production-ready TypeScript with zero any types.
+
+model: sonnet
+thinking:
+  enabled: true
+  budget: 10000
+  budget_refactor: 14000
+  budget_debug: 18000
+
+auto_activate:
+  languages:
+    - TypeScript
+  file_patterns:
+    - "*.ts"
+    - "*.tsx"
+    - "tsconfig.json"
+
+triggers:
+  - "typescript"
+  - "ts code"
+  - "type system"
+  - "implement"
+  - "refactor"
+  - "strict types"
+  - "generics"
+  - "type safety"
+  - "interface"
+  - "add type"
+
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+
+conventions_required:
+  - typescript.md
+
+focus_areas:
+  - Type system (strict mode, no any)
+  - Generics and type constraints
+  - Error handling (Result types, custom errors)
+  - Async/await patterns
+  - Module system (ESM, barrel exports)
+  - Testing (type-safe tests)
+
+failure_tracking:
+  max_attempts: 3
+  on_max_reached: "escalate_to_orchestrator"

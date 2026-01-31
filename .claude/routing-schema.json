@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "2.3.0",
-  "description": "Routing schema for Claude Code tiered agent architecture - v2.2: Added GO agents",
-  "updated": "2026-01-15",
+  "version": "2.4.0",
+  "description": "Routing schema for Claude Code tiered agent architecture - v2.4: Added TypeScript/React agents and review specialists",
+  "updated": "2026-02-01",
   
   "tiers": {
     "haiku": {
@@ -43,7 +43,7 @@
         "max_lines": 1000,
         "max_tokens_estimate": 25000
       },
-      "agents": ["scaffolder", "tech-docs-writer", "code-reviewer", "librarian", "memory-archivist"]
+      "agents": ["scaffolder", "tech-docs-writer", "code-reviewer", "librarian", "memory-archivist", "backend-reviewer", "frontend-reviewer", "standards-reviewer"]
     },
     
     "sonnet": {
@@ -67,7 +67,7 @@
         "max_lines": 5000,
         "max_tokens_estimate": 50000
       },
-      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent"]
+      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "staff-architect-critical-review"]
     },
     
     "opus": {
@@ -93,9 +93,9 @@
         "max_lines": null,
         "max_tokens_estimate": null
       },
-      "agents": ["einstein", "planner", "architect", "staff-architect-critical-review"]
+      "agents": ["einstein", "planner", "architect"]
     },
-    
+
     "external": {
       "description": "External context engine - Gemini for 1M+ token windows and fast scouting",
       "model": "gemini-2.0-flash",
@@ -247,7 +247,7 @@
       "tools": ["Read", "Glob", "Grep", "Bash"],
       "allows_write": false,
       "respects_agent_yaml": false,
-      "use_for": ["codebase-search", "haiku-scout", "code-reviewer", "librarian"],
+      "use_for": ["codebase-search", "haiku-scout", "code-reviewer", "librarian", "backend-reviewer", "frontend-reviewer", "standards-reviewer"],
       "rationale": "Exploration tasks should be non-destructive reconnaissance"
     },
     "general-purpose": {
@@ -255,7 +255,7 @@
       "tools": ["*"],
       "allows_write": true,
       "respects_agent_yaml": true,
-      "use_for": ["scaffolder", "tech-docs-writer", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "memory-archivist", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent"],
+      "use_for": ["scaffolder", "tech-docs-writer", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "memory-archivist", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro"],
       "rationale": "Implementation and documentation agents need write permissions"
     },
     "Bash": {
@@ -271,7 +271,7 @@
       "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion"],
       "allows_write": true,
       "respects_agent_yaml": false,
-      "use_for": ["orchestrator", "architect", "planner"],
+      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator"],
       "rationale": "Planning agents need to write plans and spawn other agents"
     }
   },
@@ -306,6 +306,12 @@
     "go-tui": "general-purpose",
     "go-api": "general-purpose",
     "go-concurrent": "general-purpose",
+    "typescript-pro": "general-purpose",
+    "react-pro": "general-purpose",
+    "backend-reviewer": "Explore",
+    "frontend-reviewer": "Explore",
+    "standards-reviewer": "Explore",
+    "review-orchestrator": "Plan",
     "orchestrator": "Plan",
     "architect": "Plan",
     "planner": "Plan",

@@ -1,0 +1,9 @@
+{
+  "id": "17",
+  "subject": "Add reviewer accuracy feedback mechanism",
+  "description": "**Priority**: MEDIUM (Nice to Have)\n**Agent**: go-pro\n**Files**: \n- pkg/telemetry/review_finding.go (extend)\n- cmd/gogent-review-feedback/main.go (NEW)\n\nAllow users to provide feedback on review findings for accuracy measurement.\n\n**Requirements**:\n1. Extend ReviewOutcomeUpdate struct:\n```go\ntype ReviewOutcomeUpdate struct {\n    // ... existing fields ...\n    UserFeedback    string `json:\"user_feedback,omitempty\"`    // \"helpful\", \"not_helpful\", \"partially_helpful\"\n    FeedbackComment string `json:\"feedback_comment,omitempty\"` // Optional explanation\n}\n```\n\n2. Create `gogent-review-feedback` CLI:\n```bash\ngogent-review-feedback --finding-id=abc123 --feedback=not_helpful --comment=\"False positive\"\n```\n\n3. Add `CalculateReviewerAccuracy()` function:\n   - Group feedback by reviewer\n   - Calculate helpful rate per reviewer\n   - Identify reviewers with high false positive rates\n\n4. Consider: Interactive feedback prompt in /review skill output:\n```\nFinding #3: Was this helpful? [y/n/skip]\n```\n\n**Purpose**: Enables measuring reviewer quality and identifying which reviewers produce false positives.",
+  "activeForm": "Adding reviewer accuracy feedback",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

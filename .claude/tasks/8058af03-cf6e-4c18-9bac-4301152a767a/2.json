@@ -1,0 +1,9 @@
+{
+  "id": "2",
+  "subject": "Create React conventions file",
+  "description": "Create ~/.claude/conventions/react.md with React 18+ conventions including: functional components with TypeScript, hooks patterns (useState, useEffect, useCallback, useMemo, custom hooks), state management (Zustand), component composition, error boundaries, performance optimization (memo, lazy), accessibility basics, testing with vitest/testing-library. Include Ink-specific patterns for terminal React.",
+  "activeForm": "Creating React conventions",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

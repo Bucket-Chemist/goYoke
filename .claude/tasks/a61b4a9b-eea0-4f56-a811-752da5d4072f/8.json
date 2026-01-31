@@ -1,0 +1,9 @@
+{
+  "id": "8",
+  "subject": "Add conventions_required to standards-reviewer agent.yaml",
+  "description": "**Priority**: HIGH\n**Agent**: go-pro (or direct edit)\n**File**: .claude/agents/standards-reviewer/agent.yaml\n\nStandards reviewer is language-agnostic but should reference all conventions for naming/style checks.\n\n**Requirements**:\n1. Add `conventions_required` field to agent.yaml:\n\n```yaml\n# Standards reviewer is language-agnostic, but references conventions\n# for language-specific naming and style rules\nconventions_required: []  # Empty - standards are universal\n```\n\nOR alternatively, if you want it to have access to all conventions for reference:\n\n```yaml\nconventions_required:\n  - go.md\n  - python.md\n  - typescript.md\n  - react.md\n```\n\n2. Update agent.md \"Language-Specific Adaptations\" section to note that conventions are available when checking language-specific naming rules.\n\n**Decision point**: The standards reviewer checks universal principles (DRY, KISS, YAGNI). It may or may not need language conventions. If it checks naming conventions (camelCase vs snake_case), it needs them. Make the decision based on the agent's actual responsibilities.",
+  "activeForm": "Adding conventions to standards-reviewer",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

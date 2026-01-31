@@ -1,0 +1,9 @@
+{
+  "id": "7",
+  "subject": "Create standards-reviewer agent",
+  "description": "Create ~/.claude/agents/standards-reviewer/ with: agent.md (universal code quality, naming, structure, DRY, KISS, documentation), agent.yaml (model: haiku, thinking: true, tier: 1.5, subagent_type: Explore), sharp-edges.yaml (magic numbers, dead code, inconsistent naming, etc), CLAUDE.md. Language-agnostic patterns.",
+  "activeForm": "Creating standards-reviewer agent",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

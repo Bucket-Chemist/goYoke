@@ -1,0 +1,9 @@
+{
+  "id": "9",
+  "subject": "Create /review skill",
+  "description": "Create ~/.claude/skills/review/ with SKILL.md defining the /review slash command. Features: detect languages in changed/staged files, spawn appropriate domain reviewers in parallel, collect results, generate unified report with severity levels (Critical/Warning/Suggestion). Support flags: --scope=<glob>, --staged, --all.",
+  "activeForm": "Creating /review skill",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

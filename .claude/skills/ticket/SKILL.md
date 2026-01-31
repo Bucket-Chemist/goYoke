@@ -367,9 +367,111 @@ fi
 
 ---
 
+### Phase 7.6: Code Review (Blocking)
+
+After audit, run code review if enabled:
+
+```bash
+# Check if code review is enabled
+config_file=$(find . -name ".ticket-config.json" -maxdepth 3 | head -1)
+review_enabled="false"
+
+if [[ -f "$config_file" ]]; then
+    review_enabled=$(jq -r '.audit_config.code_review.enabled // false' "$config_file")
+fi
+
+if [[ "$review_enabled" == "true" ]]; then
+    echo "[ticket] Running code review..."
+
+    # Get changed files for this ticket
+    changed_files=$(git diff --name-only HEAD~1)
+
+    # Write changed files to temp file for review-orchestrator
+    echo "$changed_files" > .claude/tmp/review-scope.txt
+
+    # Invoke review-orchestrator via Task
+    # Task invocation with review-orchestrator agent
+    # The orchestrator will:
+    # 1. Read files from review-scope.txt
+    # 2. Classify languages and select reviewers
+    # 3. Spawn reviewers in parallel
+    # 4. Synthesize findings to .claude/tmp/review-result.json
+
+    # Wait for review to complete and read results
+    review_status=$(jq -r '.status' .claude/tmp/review-result.json)
+    critical_count=$(jq -r '.summary.critical' .claude/tmp/review-result.json)
+    warning_count=$(jq -r '.summary.warnings' .claude/tmp/review-result.json)
+
+    if [[ "$review_status" == "BLOCKED" ]]; then
+        echo "[ticket] ❌ Code review FAILED - critical issues found"
+        echo "[ticket] Critical issues: $critical_count"
+
+        # Display critical findings
+        jq -r '.findings[] | select(.severity == "critical") |
+               "  [\(.file):\(.line)] \(.message)\n    → \(.recommendation)"' \
+               .claude/tmp/review-result.json
+
+        echo "[ticket] Fix issues before completing ticket"
+        exit 1
+    elif [[ "$review_status" == "WARNING" ]]; then
+        echo "[ticket] ⚠️ Code review passed with warnings"
+        echo "[ticket] Warnings: $warning_count"
+
+        # Display warnings but continue
+        jq -r '.findings[] | select(.severity == "warning") |
+               "  [\(.file):\(.line)] \(.message)"' \
+               .claude/tmp/review-result.json
+    else
+        echo "[ticket] ✓ Code review passed (APPROVED)"
+    fi
+fi
+```
+
+**Code review behavior:**
+- **Fully blocking**: Critical issues prevent ticket completion (exit 1)
+- **Warnings allowed**: Warnings are displayed but don't block
+- **Controlled by**: `audit_config.code_review.enabled` in `.ticket-config.json`
+- **Reviewers selected**: Based on file types (backend-reviewer, frontend-reviewer, standards-reviewer)
+- **Output**: Findings written to `.claude/tmp/review-result.json`
+
+**Example configuration with code review:**
+```json
+{
+  "tickets_dir": "migration_plan/tickets",
+  "project_name": "GOgent-Fortress",
+  "audit_config": {
+    "enabled": true,
+    "code_review": {
+      "enabled": true,
+      "block_on_critical": true
+    },
+    "test_commands": {
+      "go": {
+        "unit": "go test -v ./...",
+        "race": "go test -race ./...",
+        "coverage": "go test -coverprofile={audit_dir}/coverage.out ./..."
+      }
+    }
+  }
+}
+```
+
+**When to enable code review:**
+- Projects requiring consistent code quality
+- Team environments with coding standards
+- Security-sensitive codebases
+- Large refactoring efforts
+
+**When to disable code review:**
+- Solo prototyping
+- Emergency hotfixes
+- Documentation-only tickets
+
+---
+
 ### Phase 8: Completion Workflow
 
-After acceptance criteria and optional audit verification, mark ticket complete and generate commit:
+After acceptance criteria, optional audit, and optional code review verification, mark ticket complete and generate commit:
 
 ```bash
 # Generate commit message

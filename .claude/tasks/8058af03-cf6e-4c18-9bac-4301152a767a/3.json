@@ -1,0 +1,9 @@
+{
+  "id": "3",
+  "subject": "Create typescript-pro agent",
+  "description": "Create full agent structure at ~/.claude/agents/typescript-pro/ with: agent.md (expertise, patterns, output requirements), agent.yaml (model: sonnet, triggers, tools, conventions_required), sharp-edges.yaml (type coercion, any escapes, module resolution, etc), CLAUDE.md. Follow existing go-pro structure exactly.",
+  "activeForm": "Creating typescript-pro agent",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

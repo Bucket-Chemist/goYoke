@@ -1,0 +1,136 @@
+# Sharp Edges for TypeScript Pro Agent
+# These are common pitfalls and learned gotchas
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: any-escape-hatch
+    severity: critical
+    category: type-safety
+    description: "Using any defeats the type system"
+    symptom: "Runtime errors that TypeScript should have caught"
+    solution: |
+      NEVER use any - alternatives:
+      - unknown (for truly unknown types)
+      - Generic <T> (for flexible but type-safe code)
+      - Union types (for known possibilities)
+      - Type guards (to narrow unknown)
+    auto_inject: true
+
+  - id: type-assertion-abuse
+    severity: high
+    category: type-safety
+    description: "Unsafe type assertions bypass type checking"
+    symptom: "Runtime type mismatches, crashes"
+    solution: |
+      Avoid 'as' assertions - prefer:
+      - Type guards: if (isUser(data)) { ... }
+      - Validation: validateUser(data)
+      - Type predicates: function isUser(x: unknown): x is User
+      Only use 'as' when you have runtime guarantees
+    auto_inject: true
+
+  - id: implicit-any
+    severity: high
+    category: type-safety
+    description: "Implicit any from missing types"
+    symptom: "No type checking on function parameters or returns"
+    solution: |
+      Always enable noImplicitAny in tsconfig.json
+      Explicitly type all:
+      - Function parameters
+      - Function return types
+      - Catch clause variables
+    auto_inject: true
+
+  - id: nullable-confusion
+    severity: medium
+    category: type-safety
+    description: "Not handling null/undefined correctly"
+    symptom: "Cannot read property of null/undefined at runtime"
+    solution: |
+      Enable strictNullChecks in tsconfig.json
+      Use optional chaining: user?.name
+      Use nullish coalescing: user.name ?? 'Unknown'
+      Narrow types with type guards
+    auto_inject: true
+
+  - id: module-resolution
+    severity: medium
+    category: build
+    description: "Module resolution mismatches between tsc and runtime"
+    symptom: "Import errors, cannot find module"
+    solution: |
+      Use "moduleResolution": "bundler" for modern tools
+      Use "moduleResolution": "node16" for Node.js
+      Match "module" setting to your target runtime
+      Use .js extensions in imports for ESM
+    auto_inject: true
+
+  - id: enum-pitfalls
+    severity: medium
+    category: type-safety
+    description: "Enums have runtime behavior and reverse mapping"
+    symptom: "Unexpected enum values at runtime"
+    solution: |
+      Prefer const enums or union types:
+      type Status = 'pending' | 'active' | 'done';
+      const Status = {
+        PENDING: 'pending',
+        ACTIVE: 'active',
+        DONE: 'done'
+      } as const;
+    auto_inject: true
+
+  - id: this-binding
+    severity: high
+    category: behavior
+    description: "this context lost in callbacks"
+    symptom: "Cannot read property of undefined (this)"
+    solution: |
+      Use arrow functions to preserve this:
+      class C {
+        value = 42;
+        method = () => { console.log(this.value); }
+      }
+      Or bind explicitly: this.method.bind(this)
+    auto_inject: true
+
+  - id: promise-handling
+    severity: high
+    category: async
+    description: "Unhandled promise rejections"
+    symptom: "Silent failures, uncaught errors in async code"
+    solution: |
+      Always handle promise rejection:
+      - Use try/catch with async/await
+      - Use .catch() with .then() chains
+      - Type catch blocks: catch (error: unknown)
+      - Return Result<T, E> types for explicit error handling
+    auto_inject: true
+
+  - id: array-mutation
+    severity: medium
+    category: immutability
+    description: "Mutating arrays when immutability expected"
+    symptom: "Unexpected side effects, React re-render issues"
+    solution: |
+      Use immutable operations:
+      - [...array, newItem] instead of push
+      - array.filter(x => x !== removed) instead of splice
+      - array.map(transform) instead of forEach + mutation
+      Mark readonly: readonly T[]
+    auto_inject: true
+
+  - id: declaration-merging
+    severity: medium
+    category: type-system
+    description: "Accidental interface/namespace merging"
+    symptom: "Unexpected type properties, namespace pollution"
+    solution: |
+      Prefer type aliases for simple types:
+      type User = { ... }  // Can't be merged
+      Reserve interfaces for extensible contracts
+      Use const enum to prevent merging
+    auto_inject: true

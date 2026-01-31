@@ -1,0 +1,43 @@
+name: standards-reviewer
+description: >
+  Universal code quality reviewer for language-agnostic standards.
+  Focuses on naming, structure, complexity, DRY/KISS/YAGNI principles,
+  and maintainability across all programming languages.
+
+model: haiku
+thinking:
+  enabled: true
+  budget: 6000
+
+tier: 1.5
+category: review
+subagent_type: Explore
+
+triggers:
+  - "review standards"
+  - "code quality"
+  - "naming review"
+  - "style review"
+  - "complexity review"
+  - "maintainability review"
+  - "dry review"
+  - "clean code review"
+
+tools:
+  - Read
+  - Glob
+  - Grep
+
+focus_areas:
+  - Naming conventions (variables, functions, classes)
+  - Code structure (function length, nesting, complexity)
+  - Design principles (DRY, KISS, YAGNI, SRP)
+  - Documentation (docstrings, comments, README)
+  - Magic numbers and hardcoded values
+  - Dead code (unused imports, variables, functions)
+  - Cyclomatic complexity
+  - Code duplication
+
+failure_tracking:
+  max_attempts: 2
+  on_max_reached: "report_incomplete"

@@ -1,0 +1,15 @@
+{
+  "id": "3",
+  "subject": "Create SharpEdgeHit telemetry for correlation tracking",
+  "description": "**Priority**: CRITICAL\n**Agent**: go-pro\n**File**: pkg/telemetry/sharp_edge_hit.go (NEW)\n\nTrack when reviewers catch issues that match known sharp edge patterns.\n\n**Requirements**:\n1. Create `SharpEdgeHit` struct with fields:\n   - HitID (string, UUID)\n   - Timestamp (int64)\n   - SessionID (string)\n   - SharpEdgeID (string - from sharp-edges.yaml, e.g., \"sql-injection\")\n   - AgentID (string - which agent's sharp edge)\n   - ReviewerID (string - which reviewer caught it)\n   - FindingID (string - links to ReviewFinding)\n   - File (string)\n   - Line (int, optional)\n   - MatchConfidence (float64 - how closely it matched pattern)\n   - WasActioned (bool - did user fix it)\n\n2. Create `LogSharpEdgeHit(hit *SharpEdgeHit) error` function\n\n3. Create `CalculateSharpEdgeRecall()` function that:\n   - Groups hits by SharpEdgeID\n   - Calculates which sharp edges are most frequently caught\n   - Identifies sharp edges with 0 hits (potentially unused)\n\n4. Add path helper: `GetSharpEdgeHitsPathWithProjectDir()` in pkg/config\n\n**Purpose**: This enables measuring which sharp edges are valuable and which need updating.",
+  "activeForm": "Creating SharpEdgeHit telemetry",
+  "status": "pending",
+  "blocks": [
+    "12",
+    "16",
+    "19"
+  ],
+  "blockedBy": [
+    "11"
+  ]
+}

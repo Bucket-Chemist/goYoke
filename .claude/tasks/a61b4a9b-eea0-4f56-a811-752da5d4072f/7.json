@@ -1,0 +1,9 @@
+{
+  "id": "7",
+  "subject": "Add conventions_required to frontend-reviewer agent.yaml",
+  "description": "**Priority**: HIGH\n**Agent**: go-pro (or direct edit)\n**File**: .claude/agents/frontend-reviewer/agent.yaml\n\nFrontend reviewer lacks convention references for React and TypeScript patterns.\n\n**Requirements**:\n1. Add `conventions_required` field to agent.yaml:\n\n```yaml\nconventions_required:\n  - react.md\n  - typescript.md\n```\n\n2. Update agent.md to reference convention loading in the \"Technology Focus\" section\n\n3. Verify conventions exist at ~/.claude/conventions/:\n   - react.md ✓ (created as part of this implementation)\n   - typescript.md ✓ (created as part of this implementation)\n\n**Rationale**: Frontend reviewer covers React/Ink components and hooks, which are documented in react.md. TypeScript patterns are documented in typescript.md.",
+  "activeForm": "Adding conventions to frontend-reviewer",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "Create TypeScript conventions file",
+  "description": "Create ~/.claude/conventions/typescript.md with comprehensive TypeScript 5.0+ conventions including: strict mode patterns, type system mastery (conditional types, mapped types, template literals, discriminated unions), modern import/export patterns, error handling, async patterns, naming conventions, tooling config (tsconfig, eslint), and sharp edges. Style should match existing go.md and python.md.",
+  "activeForm": "Creating TypeScript conventions",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

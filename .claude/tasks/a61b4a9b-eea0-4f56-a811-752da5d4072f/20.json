@@ -1,0 +1,9 @@
+{
+  "id": "20",
+  "subject": "Update CLAUDE.md routing tables with new agents",
+  "description": "**Priority**: MEDIUM\n**Agent**: go-pro (or direct edit)\n**File**: .claude/CLAUDE.md\n\nEnsure the main CLAUDE.md routing documentation includes new agents.\n\n**Requirements**:\n1. Verify \"Agent Dispatch Table\" section includes:\n\nUnder \"Tier 1.5: Haiku + Thinking\":\n```markdown\n| review backend, api review, security review | `backend-reviewer` | Explore |\n| review frontend, component review, ui review | `frontend-reviewer` | Explore |\n| review standards, code quality, naming review | `standards-reviewer` | Explore |\n```\n\nUnder \"Tier 2: Sonnet (Implementation)\":\n```markdown\n| typescript, ts code, type system, generics | `typescript-pro` | general-purpose |\n| react, component, hook, useState, useEffect, ink | `react-pro` | general-purpose |\n| code review, full review, review changes | `review-orchestrator` | Plan |\n```\n\n2. Add `/review` to Slash Commands table if not present:\n```markdown\n| `/review` | Multi-domain code review with severity-grouped findings |\n```\n\n3. Verify consistency with agents-index.json triggers\n\n**Purpose**: Ensures routing documentation is accurate and complete for all new capabilities.",
+  "activeForm": "Updating CLAUDE.md routing tables",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

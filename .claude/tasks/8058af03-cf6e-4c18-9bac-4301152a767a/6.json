@@ -1,0 +1,9 @@
+{
+  "id": "6",
+  "subject": "Create frontend-reviewer agent",
+  "description": "Create ~/.claude/agents/frontend-reviewer/ with: agent.md (component patterns, state management, UX, accessibility, performance), agent.yaml (model: haiku, thinking: true, tier: 1.5, subagent_type: Explore), sharp-edges.yaml (memory leaks, render loops, a11y violations, etc), CLAUDE.md. React/Ink focused.",
+  "activeForm": "Creating frontend-reviewer agent",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

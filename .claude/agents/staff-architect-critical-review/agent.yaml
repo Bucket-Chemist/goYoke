@@ -5,7 +5,7 @@ thinking: true
 thinking_budget: 16000
 tier: 2
 category: review
-subagent_type: Explore
+subagent_type: Plan
 
 triggers:
   - review plan
