@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/callback"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 )
 
@@ -95,6 +97,8 @@ type PanelModel struct {
 	currentModel   string            // Current model name (opus/sonnet/haiku)
 	config         cli.Config        // Original config for restart
 	modal          ModalState        // Modal state for MCP prompts
+	callbackServer *callback.Server  // Callback server for MCP prompts
+	ctx            context.Context   // Context for cancellation
 }
 
 // Message represents a single message in the conversation history.
@@ -152,6 +156,15 @@ func NewPanelModel(process ClaudeProcessInterface, config cli.Config) PanelModel
 	}
 }
 
+// NewPanelModelWithCallback creates a panel with callback server integration.
+// The context is used for cancellation of background operations.
+func NewPanelModelWithCallback(ctx context.Context, process ClaudeProcessInterface, cfg cli.Config, server *callback.Server) PanelModel {
+	m := NewPanelModel(process, cfg)
+	m.callbackServer = server
+	m.ctx = ctx
+	return m
+}
+
 // processStoppedMsg is sent when the Claude process event channel closes.
 type processStoppedMsg struct{}
 
@@ -172,7 +185,35 @@ func (m PanelModel) Init() tea.Cmd {
 		textarea.Blink,
 		waitForEvent(m.process.Events()),
 		waitForRestartEvent(m.process.RestartEvents()),
+		m.ListenForPrompts(),
 	)
+}
+
+// ListenForPrompts creates a command that waits for the next prompt from the callback server.
+// CRITICAL: Uses select with context to prevent goroutine leak on shutdown.
+// Returns nil if no callback server is configured or if context is cancelled.
+func (m PanelModel) ListenForPrompts() tea.Cmd {
+	if m.callbackServer == nil {
+		return nil
+	}
+
+	return func() tea.Msg {
+		// FIXED: Use select with context.Done() to avoid blocking forever on shutdown
+		select {
+		case req := <-m.callbackServer.PromptChan:
+			// Create response channel for this prompt
+			respChan := make(chan callback.PromptResponse, 1)
+			// Register with server
+			m.callbackServer.RegisterPending(req.ID, respChan)
+			return MCPPromptMsg{
+				Request:      req,
+				ResponseChan: respChan,
+			}
+		case <-m.ctx.Done():
+			// TUI is shutting down, return nil to stop listening
+			return nil
+		}
+	}
 }
 
 // waitForEvent creates a tea.Cmd that blocks on the events channel.
@@ -209,6 +250,12 @@ func (m PanelModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
+	case MCPPromptMsg:
+		// Handle incoming prompt from MCP server
+		cmd := m.modal.HandlePrompt(msg.Request, msg.ResponseChan)
+		// Re-subscribe to listen for next prompt
+		return m, tea.Batch(cmd, m.ListenForPrompts())
+
 	case tea.KeyMsg:
 		if m.focused {
 			var cmd tea.Cmd
@@ -351,12 +398,19 @@ func (m PanelModel) View() string {
 	input := m.textarea.View()
 
 	// Combine all sections
-	return lipgloss.JoinVertical(
+	main := lipgloss.JoinVertical(
 		lipgloss.Left,
 		header,
 		content,
 		input,
 	)
+
+	// Overlay modal if active
+	if m.modal.Active {
+		return OverlayModal(main, m.modal.RenderModal(), m.width, m.height)
+	}
+
+	return main
 }
 
 // SetSize updates the panel dimensions.

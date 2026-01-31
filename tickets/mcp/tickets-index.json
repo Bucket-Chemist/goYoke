@@ -74,7 +74,7 @@
       "id": "GOgent-MCP-007",
       "title": "Modal Input Handling",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "time_estimate": "3 hours",
       "dependencies": [
         "GOgent-MCP-005",
@@ -85,7 +85,7 @@
       "id": "GOgent-MCP-008",
       "title": "External Event Integration",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "time_estimate": "4 hours",
       "dependencies": [
         "GOgent-MCP-001",

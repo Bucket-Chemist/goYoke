@@ -1,10 +1,13 @@
 package claude
 
 import (
+	"context"
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/callback"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/cli"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
@@ -1397,4 +1400,199 @@ func TestPanelModel_FullStateWorkflow(t *testing.T) {
 	updatedModel, _ = panel.Update(recoveryEvent)
 	panel = updatedModel.(PanelModel)
 	assert.Equal(t, StateReady, panel.GetState())
+}
+
+// TestListenForPrompts_ContextCancellation verifies clean shutdown without goroutine leaks
+func TestListenForPrompts_ContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	server := callback.NewServer(os.Getpid())
+	err := server.Start(ctx)
+	require.NoError(t, err)
+	defer server.Cleanup()
+
+	process := NewMockClaudeProcess("test-session")
+	defer process.Close()
+
+	panel := NewPanelModelWithCallback(ctx, process, cli.Config{}, server)
+
+	// Start listening command
+	cmd := panel.ListenForPrompts()
+	require.NotNil(t, cmd, "ListenForPrompts should return a command")
+
+	// Cancel context immediately
+	cancel()
+
+	// Command should return nil quickly, not block
+	done := make(chan struct{})
+	var result tea.Msg
+	go func() {
+		result = cmd()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Good - command exited
+		assert.Nil(t, result, "Expected nil on cancellation")
+	case <-time.After(time.Second):
+		t.Fatal("ListenForPrompts blocked after context cancellation - goroutine leak detected")
+	}
+}
+
+// TestListenForPrompts_NoServer verifies nil is returned when no server is configured
+func TestListenForPrompts_NoServer(t *testing.T) {
+	process := NewMockClaudeProcess("test-session")
+	defer process.Close()
+
+	panel := NewPanelModel(process, cli.Config{})
+
+	cmd := panel.ListenForPrompts()
+	assert.Nil(t, cmd, "ListenForPrompts should return nil when no callback server")
+}
+
+// TestListenForPrompts_PromptDelivery verifies prompt messages are delivered
+func TestListenForPrompts_PromptDelivery(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := callback.NewServer(os.Getpid())
+	err := server.Start(ctx)
+	require.NoError(t, err)
+	defer server.Cleanup()
+
+	process := NewMockClaudeProcess("test-session")
+	defer process.Close()
+
+	panel := NewPanelModelWithCallback(ctx, process, cli.Config{}, server)
+
+	// Start listening
+	cmd := panel.ListenForPrompts()
+	require.NotNil(t, cmd)
+
+	// Send a prompt to the server channel
+	testPrompt := callback.PromptRequest{
+		ID:      "test-prompt-1",
+		Type:    "confirm",
+		Message: "Allow access?",
+	}
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		server.PromptChan <- testPrompt
+	}()
+
+	// Execute command - should receive the prompt
+	done := make(chan tea.Msg, 1)
+	go func() {
+		done <- cmd()
+	}()
+
+	select {
+	case msg := <-done:
+		promptMsg, ok := msg.(MCPPromptMsg)
+		require.True(t, ok, "Expected MCPPromptMsg")
+		assert.Equal(t, "test-prompt-1", promptMsg.Request.ID)
+		assert.Equal(t, "confirm", promptMsg.Request.Type)
+		assert.Equal(t, "Allow access?", promptMsg.Request.Message)
+		assert.NotNil(t, promptMsg.ResponseChan)
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for prompt delivery")
+	}
+}
+
+// TestMCPPromptFlow_EndToEnd verifies complete prompt handling flow
+func TestMCPPromptFlow_EndToEnd(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := callback.NewServer(os.Getpid())
+	err := server.Start(ctx)
+	require.NoError(t, err)
+	defer server.Cleanup()
+
+	process := NewMockClaudeProcess("test-session")
+	defer process.Close()
+
+	panel := NewPanelModelWithCallback(ctx, process, cli.Config{}, server)
+
+	// 1. Start listening for prompts
+	listenCmd := panel.ListenForPrompts()
+	require.NotNil(t, listenCmd)
+
+	// 2. Send a prompt to the server
+	testPrompt := callback.PromptRequest{
+		ID:      "test-prompt-e2e",
+		Type:    "input",
+		Message: "Enter your name:",
+		Default: "John",
+	}
+
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		server.PromptChan <- testPrompt
+	}()
+
+	// 3. Receive the prompt message
+	msg := listenCmd()
+	promptMsg, ok := msg.(MCPPromptMsg)
+	require.True(t, ok, "Expected MCPPromptMsg")
+	assert.Equal(t, "test-prompt-e2e", promptMsg.Request.ID)
+
+	// 4. Panel Update handles the prompt - activates modal
+	updatedModel, cmd := panel.Update(promptMsg)
+	updatedPanel := updatedModel.(PanelModel)
+
+	// 5. Verify modal is active
+	assert.True(t, updatedPanel.modal.Active)
+	assert.Equal(t, TextInputModal, updatedPanel.modal.Type)
+	assert.Equal(t, "John", updatedPanel.modal.TextInput.Value())
+
+	// 6. Verify command returned includes ListenForPrompts for re-subscription
+	assert.NotNil(t, cmd)
+
+	// 7. User submits response
+	updatedPanel.modal.TextInput.SetValue("Jane Doe")
+	finalPanel, _ := updatedPanel.submitModalResponse()
+
+	// 8. Verify modal is closed
+	assert.False(t, finalPanel.modal.Active)
+}
+
+// TestPanelModel_ModalOverlay verifies View renders modal overlay
+func TestPanelModel_ModalOverlay(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server := callback.NewServer(os.Getpid())
+	err := server.Start(ctx)
+	require.NoError(t, err)
+	defer server.Cleanup()
+
+	process := NewMockClaudeProcess("test-session")
+	defer process.Close()
+
+	panel := NewPanelModelWithCallback(ctx, process, cli.Config{}, server)
+	panel.SetSize(100, 30)
+
+	t.Run("no modal - normal view", func(t *testing.T) {
+		view := panel.View()
+		assert.Contains(t, view, "Claude Code")
+		assert.NotContains(t, view, "[Y]es")
+	})
+
+	t.Run("modal active - overlay rendered", func(t *testing.T) {
+		testPrompt := callback.PromptRequest{
+			ID:      "test-overlay",
+			Type:    "confirm",
+			Message: "Delete file?",
+		}
+		respChan := make(chan callback.PromptResponse, 1)
+		panel.modal.HandlePrompt(testPrompt, respChan)
+
+		view := panel.View()
+		// Should contain both main content and modal
+		assert.Contains(t, view, "Claude Code")
+		assert.Contains(t, view, "Delete file?")
+		assert.Contains(t, view, "[Y]es")
+	})
 }

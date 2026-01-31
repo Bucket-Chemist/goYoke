@@ -177,6 +177,14 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
+// RegisterPending registers a response channel for a prompt ID.
+// This allows the TUI to register channels for prompts it will handle.
+func (s *Server) RegisterPending(id string, ch chan PromptResponse) {
+	s.pendingMu.Lock()
+	s.pending[id] = ch
+	s.pendingMu.Unlock()
+}
+
 // SendResponse sends a response for a pending prompt
 func (s *Server) SendResponse(resp PromptResponse) error {
 	s.pendingMu.RLock()

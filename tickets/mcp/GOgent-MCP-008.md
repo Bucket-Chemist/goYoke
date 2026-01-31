@@ -1,9 +1,10 @@
 ---
 id: GOgent-MCP-008
 title: "External Event Integration"
-time: "4 hours"
+description: "Integrate callback server's prompt channel with Bubbletea event loop using tea.Cmd with context cancellation to prevent goroutine leaks"
+time_estimate: "4h"
 priority: HIGH
-dependencies: "GOgent-MCP-001, GOgent-MCP-007"
+dependencies: ["GOgent-MCP-001", "GOgent-MCP-007"]
 status: pending
 ---
 
@@ -98,13 +99,13 @@ func (m PanelModel) View() string {
 ```
 
 **Acceptance Criteria:**
-- [ ] Panel listens for prompts via tea.Cmd
-- [ ] MCPPromptMsg triggers modal display
-- [ ] Response delivered back to callback server
-- [ ] Listens for next prompt after response
-- [ ] Modal overlays conversation view
-- [ ] **CRITICAL:** Goroutine exits cleanly on context cancellation
-- [ ] **CRITICAL:** No goroutine leaks on TUI shutdown
+- [x] Panel listens for prompts via tea.Cmd
+- [x] MCPPromptMsg triggers modal display
+- [x] Response delivered back to callback server
+- [x] Listens for next prompt after response
+- [x] Modal overlays conversation view
+- [x] **CRITICAL:** Goroutine exits cleanly on context cancellation
+- [x] **CRITICAL:** No goroutine leaks on TUI shutdown
 
 **Shutdown Test:**
 ```go
