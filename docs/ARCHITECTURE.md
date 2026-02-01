@@ -1,6 +1,6 @@
 # GOgent-Fortress Systems Architecture v1.2
 
-> **Schema Versions:** routing-schema v2.4.0 | handoff v1.3 | ML telemetry v1.1 (review)
+> **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
 > **Last Updated:** 2026-02-01
 > **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
 > **TUI Implementation:** GOgent-109 through GOgent-121 (13 tickets)
@@ -796,6 +796,8 @@ flowchart TB
 | `review-findings.jsonl` | ML | gogent-log-review | ReviewFinding | Code review findings |
 | `review-outcomes.jsonl` | ML | gogent-update-review-outcome | ReviewOutcomeUpdate | Finding resolutions |
 | `sharp-edge-hits.jsonl` | ML | gogent-log-review | SharpEdgeHit | Sharp edge correlations |
+| `impl-progress.json` | Project | impl-manager | ImplProgress | Task progress tracking |
+| `impl-violations.jsonl` | Project | impl-manager | ImplViolation | Convention violations during implementation |
 
 ---
 
@@ -867,6 +869,13 @@ flowchart TD
 | frontend-reviewer | Explore | Read-only UI/component review |
 | standards-reviewer | Explore | Read-only code quality review |
 | review-orchestrator | Plan | Multi-domain review coordination |
+| staff-architect-critical-review | Plan | Critical architectural review (Opus tier) |
+
+#### Implementation Coordination (Added in v2.5.0)
+
+| Agent | Required subagent_type | Rationale |
+|-------|------------------------|-----------|
+| impl-manager | Plan | Implementation coordination and planning |
 
 ---
 
@@ -998,6 +1007,9 @@ classDiagram
 | `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1200 |
 | **`gogent-log-review`** | **PreToolUse** | **ReviewFinding JSON** | **HookResponse JSON** | **~250** |
 | **`gogent-update-review-outcome`** | **Manual** | **ReviewOutcomeUpdate JSON** | **Confirmation JSON** | **~150** |
+| **`gogent-orchestrator-guard`** | **SubagentStop** | **Agent lifecycle** | **Enforcement** | **~300** |
+
+**Note:** `gogent-orchestrator-guard` recognizes `impl-manager` as an orchestrating agent (alongside `orchestrator` and `review-orchestrator`) for background task collection enforcement.
 
 ### 9.2 Utility Binaries
 
@@ -1247,6 +1259,7 @@ graph TD
     subgraph "Data Sources"
         TW --> |fsnotify| AL[agent-lifecycle.jsonl]
         TW --> |fsnotify| RD[routing-decisions.jsonl]
+        TW --> |fsnotify| IP[impl-progress.json]
     end
 ```
 
