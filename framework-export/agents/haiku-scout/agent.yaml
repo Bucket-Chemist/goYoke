@@ -1,0 +1,48 @@
+name: Haiku Scout
+description: >
+  Fallback reconnaissance agent when Gemini is unavailable. Gathers scope metrics
+  (LoC, file count, complexity signals) to inform tier selection. Writes output to
+  .claude/tmp/scout_metrics.json for downstream processing by calculate-complexity.sh.
+model: haiku
+thinking:
+  enabled: true
+  budget: 2000
+tier: 1
+category: reconnaissance
+triggers:
+  - assess scope
+  - count lines
+  - estimate complexity
+  - pre-route
+  - scout
+  - how big is
+  - how many files
+tools:
+  - Read
+  - Glob
+  - Grep
+  - Bash
+permissions:
+  read_only: false
+  allowed_writes:
+    - .claude/tmp/scout_metrics.json
+auto_activate: null
+parallel_safe: true
+swarm_compatible: true
+output:
+  format: json
+  schema: scout_report
+  file: .claude/tmp/scout_metrics.json
+max_files: 50
+max_tokens_per_file: 500
+cost_ceiling_usd: 0.02
+fallback_for: gemini-slave scout
+failure_tracking:
+  max_attempts: 2
+  on_max_reached: report_and_exit
+integration:
+  calculate_complexity:
+    description: "After scout writes output, calculate-complexity.sh processes it"
+    trigger: "automatic via explore workflow or manual"
+    input: .claude/tmp/scout_metrics.json
+    output: .claude/tmp/complexity_score

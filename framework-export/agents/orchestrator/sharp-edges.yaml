@@ -1,0 +1,72 @@
+edges:
+  - name: delegation_loops
+    severity: critical
+    description: >
+      Assigning a task to an agent, getting a failure, and re-assigning the EXACT same 
+      task without changing instructions or context.
+    mitigation: >
+      Check history. If a task failed, analyze WHY. Change the prompt, add more context, 
+      or switch strategies. Count attempts (max 3).
+
+  - name: losing_state
+    severity: high
+    description: >
+      Forgetting the original user goal after 5 steps of a plan, leading to 
+      "drift" where you solve a different problem.
+    mitigation: >
+      Re-read the original user request at the start of every major phase. 
+      Keep a "Plan Status" summary in your context.
+
+  - name: micromanagement
+    severity: medium
+    description: >
+      Breaking tasks down too small (e.g., "Write line 1", "Write line 2"), 
+      wasting tokens on overhead.
+    mitigation: >
+      Delegate atomic units of value (e.g., "Implement the user class", 
+      "Write the authentication module"). Trust agents to handle details.
+
+  - name: ignoring_errors
+    severity: high
+    description: >
+      Receiving an error output from a tool/agent and proceeding to the next step anyway.
+    mitigation: >
+      Treat every tool output as a gate. If it contains "Error" or "Fail",
+      stop and triage. Do not assume "it probably worked".
+
+  - name: wrong_tier_analysis
+    severity: high
+    description: >
+      Attempting analysis that exceeds your context/capability tier. Orchestrator
+      is Tier 2 (Sonnet + 16K thinking budget). Analyzing massive diffs or
+      codebase-wide patterns directly will fail or produce shallow results.
+    mitigation: >
+      Before analyzing directly, check thresholds:
+      - Git diffs >2000 lines → MUST use gemini-slave
+      - Multi-file patterns >5 files → MUST use gemini-slave
+      - Codebase-wide (>10 files) → MUST use gemini-slave
+      - Single file >1000 lines → Delegate to architect
+      When in doubt, delegate up.
+
+  - name: unspecified_gemini_protocol
+    severity: medium
+    description: >
+      Invoking gemini-slave without specifying protocol (mapper, debugger, architect).
+      Each protocol produces different output structure and analytical focus. Without
+      protocol, gemini produces generic output that wastes its large context capability.
+    mitigation: >
+      Always specify: gemini-slave [protocol] "[question]"
+      - mapper: For reducing many files to critical few (JSON output)
+      - debugger: For cross-module error tracing (Root Cause analysis)
+      - architect: For pattern/architecture identification (Design analysis)
+
+  - name: vague_delegation_prompt
+    severity: medium
+    description: >
+      Receiving a delegation prompt from Main that says "use appropriate agents" or
+      "gather information as needed" without specific routing guidance, then making
+      arbitrary decisions about which agents to use.
+    mitigation: >
+      If the delegating agent did not specify routing, apply the Information Routing
+      Table from agent.md yourself. Classify each information source by type, size,
+      and complexity. Use deterministic thresholds, not subjective judgment.

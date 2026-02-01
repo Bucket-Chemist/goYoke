@@ -1,0 +1,53 @@
+edges:
+  - name: overwrite_without_backup
+    severity: critical
+    description: >
+      Scaffolding blindly over existing files destroys work.
+    mitigation: >
+      Always check if files exist using Read/Glob before writing. 
+      Refuse to overwrite non-empty files unless explicitly instructed.
+    example:
+      wrong: |
+        # User says "scaffold user model"
+        Write({ file_path: "src/user_model.py", content: "..." }) 
+        # Oops, src/user_model.py already had 500 lines of code
+      right: |
+        # Check first
+        content = Read({ file_path: "src/user_model.py" })
+        if (content) {
+            Stop("File exists. Ask user for confirmation or new name.")
+        }
+
+  - name: convention_drift
+    severity: high
+    description: >
+      Generating code that doesn't match the project's specific style (tabs vs spaces, 
+      naming conventions) makes the scaffold useless.
+    mitigation: >
+      Read at least one existing file of the same type to infer style 
+      BEFORE generating the new scaffold.
+    example:
+      wrong: |
+        # Project uses snake_case, scaffold uses camelCase
+        class userModel: ...
+      right: |
+        # Read existing model
+        Read({ file_path: "src/auth_model.py" })
+        # Detect snake_case
+        class UserModel: ...
+
+  - name: missing_imports
+    severity: medium
+    description: >
+      Scaffolding code that references libraries without importing them, 
+      or importing libraries not installed in the project.
+    mitigation: >
+      Check pyproject.toml/package.json for available dependencies. 
+      Add imports for standard library or known project dependencies only.
+
+  - name: phantom_directories
+    severity: medium
+    description: >
+      Writing a file to a non-existent directory path will fail.
+    mitigation: >
+      Use Bash `mkdir -p` before writing files to deep paths.

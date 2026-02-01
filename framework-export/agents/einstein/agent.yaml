@@ -1,0 +1,46 @@
+name: Einstein
+description: >
+  Last-resort escalation for issues unresolvable by orchestrator.
+  Invoked via /einstein slash command, NOT Task tool.
+  Receives GAP documents for isolated context analysis.
+model: opus
+invocation_method: slash_command
+escalation_protocol: escalate_to_einstein
+thinking:
+  enabled: true
+  budget: 32000
+  budget_deep: 64000
+  budget_max: 128000
+triggers:
+  - einstein
+  - call einstein
+  - orchestrator fails 3x same task
+trigger_action: generate_gap_document
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+conventions_required: []
+sharp_edges_count: 0
+context_protocol:
+  phase_1_diagnosis:
+    description: "Minimal context, diagnostic only"
+    receive:
+      - original_user_request
+      - orchestrator_interpretation
+      - attempts_summary
+      - specific_error
+      - file_list
+  phase_2_targeted:
+    description: "Requested files only"
+    receive:
+      - phase_1_context
+      - requested_file_contents
+  phase_3_takeover:
+    description: "Full context, direct execution"
+    receive:
+      - full_relevant_context
+      - execution_authority

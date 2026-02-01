@@ -18,8 +18,8 @@ func TestEcosystem_GOgent002(t *testing.T) {
 	err = schema.Validate()
 	require.NoError(t, err, "Schema validation failed - GOgent-002 regression")
 
-	// Verify critical v2.3.0 fields are present
-	assert.Equal(t, "2.3.0", schema.Version)
+	// Verify critical v2.4.0 fields are present
+	assert.Equal(t, "2.4.0", schema.Version)
 	assert.NotEmpty(t, schema.Tiers, "Tiers map should be populated")
 	assert.NotEmpty(t, schema.SubagentTypesConfig.Explore.Tools, "SubagentTypes config incomplete")
 	assert.NotEmpty(t, schema.AgentSubagentMapping.CodebaseSearch, "AgentSubagentMapping incomplete")

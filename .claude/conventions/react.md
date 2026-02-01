@@ -2,7 +2,7 @@
 
 ## System Constraints (CRITICAL)
 
-**This system targets React 18+ with functional components and TypeScript.**
+**This system targets React 18+/19 with functional components and TypeScript.**
 
 All React code must:
 1. Use functional components exclusively - no class components
@@ -270,6 +270,95 @@ function useErrorHandler(): {
   const resetError = useCallback(() => setError(null), []);
 
   return { error, resetError };
+}
+```
+
+## React 19+ Features
+
+### React Compiler
+When React Compiler is enabled, manual memoization is largely unnecessary:
+- The compiler automatically optimizes re-renders at build time
+- Remove new useMemo/useCallback calls in new code (keep existing ones)
+- Components MUST follow Rules of React (pure rendering, no prop mutation, side effects outside render)
+
+**React Compiler Note:** For projects WITHOUT the compiler, continue using useMemo/useCallback as documented above.
+
+### Server Components (Default in React 19)
+Components without 'use client' are Server Components by default:
+- Can access databases, file systems, API credentials directly
+- Cannot use hooks (useState, useEffect) or event handlers
+- Use 'use client' at the top of files needing interactivity
+
+```typescript
+// Server Component (default) - no directive needed
+async function UserProfile({ userId }: { userId: string }) {
+  const user = await db.users.findById(userId); // Direct DB access
+  return <div>{user.name}</div>;
+}
+
+// Client Component - requires directive
+'use client'
+function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
+}
+```
+
+### Server Actions
+```typescript
+'use server'
+async function createUser(formData: FormData) {
+  const name = formData.get('name') as string;
+  await db.users.insert({ name });
+  revalidatePath('/users');
+}
+```
+
+### Form Handling with useActionState
+```typescript
+'use client'
+import { useActionState } from 'react';
+
+function CreateUserForm() {
+  const [state, formAction, isPending] = useActionState(createUser, null);
+
+  return (
+    <form action={formAction}>
+      <input name="name" required />
+      <SubmitButton /> {/* useFormStatus MUST be in child component */}
+    </form>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return <button disabled={pending}>{pending ? 'Saving...' : 'Submit'}</button>;
+}
+```
+
+### The use() Hook
+Reads promises and context during render with Suspense support. Uniquely, can be called conditionally.
+
+```typescript
+function UserData({ userPromise }: { userPromise: Promise<User> }) {
+  const user = use(userPromise); // Suspends until resolved
+  return <div>{user.name}</div>;
+}
+```
+
+**Critical:** Promise must be stable (not created during render).
+
+### Native Metadata
+React 19 automatically hoists metadata to `<head>`:
+```typescript
+function BlogPost({ post }: { post: Post }) {
+  return (
+    <>
+      <title>{post.title}</title>
+      <meta name="description" content={post.excerpt} />
+      <article>{post.content}</article>
+    </>
+  );
 }
 ```
 
@@ -708,6 +797,15 @@ function LoginForm(): JSX.Element {
 ```
 
 ## State Management
+
+### State Management Decision Tree
+
+| State Type | Recommended Tool | Notes |
+|------------|------------------|-------|
+| Server/async data | TanStack Query | Caching, refetching, optimistic updates |
+| Global client state | Zustand | Simple, lightweight (~3KB) |
+| Local component state | useState | Built-in, no overhead |
+| Form state | React Hook Form or useActionState | React 19: prefer useActionState |
 
 ### Zustand Patterns
 

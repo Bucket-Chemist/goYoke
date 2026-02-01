@@ -127,6 +127,7 @@ Request arrives
 |---------|--------------|
 | `/explore` | Structured codebase exploration with scout → architect flow |
 | `/einstein` | Deep analysis with Opus (bypasses Task blocking) |
+| `/review` | Multi-domain code review with severity-grouped findings |
 | `/review-plan` | Critical 7-layer review of implementation plans |
 | `/ticket` | Ticket-driven implementation workflow |
 | `/init-auto` | Initialize project with CLAUDE.md scaffold |
@@ -156,6 +157,9 @@ Request arrives
 | scaffold, boilerplate, new class, template | `scaffolder` | general-purpose |
 | readme, document, API docs, mermaid, diagram | `tech-docs-writer` | general-purpose |
 | review this, code review, spot check | `code-reviewer` | Explore |
+| review backend, api review, security review | `backend-reviewer` | Explore |
+| review frontend, component review, ui review | `frontend-reviewer` | Explore |
+| review standards, code quality, naming review | `standards-reviewer` | Explore |
 | how to use, library, best practice, docs | `librarian` | Explore |
 | archive session, wrap up, save memory | `memory-archivist` | general-purpose |
 
@@ -172,6 +176,9 @@ Request arrives
 | Concurrency, goroutine, errgroup, channel | `go-concurrent` | general-purpose |
 | R: implement, S4, tidyverse, dplyr | `r-pro` | general-purpose |
 | Shiny, reactive, module | `r-shiny-pro` | general-purpose |
+| typescript, ts code, type system, generics | `typescript-pro` | general-purpose |
+| react, component, hook, useState, ink | `react-pro` | general-purpose |
+| code review, full review, review changes | `review-orchestrator` | Plan |
 | Ambiguous scope, synthesize, think through | `orchestrator` | Plan |
 | Create plan, break down, dependency analysis | `architect` | Plan |
 | Review plan, critical review | `staff-architect-critical-review` | Explore |
@@ -187,6 +194,34 @@ Request arrives
 | Trigger Patterns | Handler | Notes |
 |------------------|---------|-------|
 | full codebase, cross-module, large context | `gemini-slave` | Via Bash, not Task() |
+
+---
+
+### Trigger Resolution Priority
+
+When multiple agents match a request, resolution follows this order:
+
+1. **File-type auto-activation** takes precedence over generic triggers
+   - `.tsx` files → react-pro
+   - `.go` files → go-pro
+   - `.R` files → r-pro
+
+2. **Language-qualified triggers** take precedence over generic
+   - "Go implement" → go-pro (not python-pro)
+   - "React component" → react-pro (not typescript-pro)
+
+3. **More specific triggers** win over generic ones
+   - "Bubbletea TUI" → go-tui (not go-pro)
+   - "Shiny module" → r-shiny-pro (not r-pro)
+
+4. **Ambiguous generic triggers** → Ask ONE clarifying question
+
+| Generic Trigger | Resolution Strategy |
+|-----------------|---------------------|
+| "implement" | Check file context → route to language-specific pro agent |
+| "refactor" | Check file context → route to language-specific pro agent |
+| "test" | Check file context → route to language-specific pro agent |
+| "review" | Ask: code review, backend, frontend, or standards? |
 
 ---
 

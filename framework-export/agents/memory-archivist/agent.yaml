@@ -1,0 +1,168 @@
+name: memory-archivist
+description: >
+  The Historian. Invoked at the end of sessions or after architect planning to synthesize
+  key learnings into structured, queryable artifacts. Ensures "Hive Mind" growth by
+  preventing data loss. Writes to ~/.claude/memory/ to serve both file-based search
+  and semantic search (if claude-mem MCP available).
+model: haiku
+thinking:
+  enabled: true
+  budget: 4000
+tier: 1.5
+category: memory
+triggers:
+  - "task complete"
+  - "end session"
+  - "wrap up"
+  - "archive session"
+  - "capture learnings"
+  - "save memory"
+  - "archive specs"
+  - "save plan"
+tools:
+  - Read
+  - Write
+  - Glob
+  - save_memory  # Native tool (if available)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INPUT SOURCES
+# ═══════════════════════════════════════════════════════════════════════════════
+inputs:
+  # Specs from architect planning
+  specs_file:
+    path: .claude/tmp/specs.md
+    action: archive_to_decisions
+    output_dir: .claude/memory/decisions/
+    naming: "{date}-{title-slug}.md"
+    
+  # Pending sharp edges from debugging
+  pending_learnings:
+    path: .claude/memory/pending-learnings.jsonl
+    action: process_and_archive
+    output_dir: .claude/memory/sharp-edges/
+    
+  # Session context (if available)
+  session_context:
+    source: conversation_history
+    action: extract_learnings
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROCESSING PROTOCOL
+# ═══════════════════════════════════════════════════════════════════════════════
+protocol:
+  step_1_check_inputs:
+    description: "Check for specs.md and pending-learnings.jsonl"
+    actions:
+      - "Read .claude/tmp/specs.md if exists"
+      - "Read .claude/memory/pending-learnings.jsonl if exists"
+      - "Note which inputs are available"
+      
+  step_2_process_specs:
+    description: "Convert specs.md to decision record"
+    condition: "specs.md exists"
+    actions:
+      - "Extract title from # heading"
+      - "Preserve Context, Decisions, Phases, Risks sections"
+      - "Add frontmatter with type: decision"
+      - "Write to .claude/memory/decisions/{date}-{slug}.md"
+      - "Delete .claude/tmp/specs.md after archiving"
+    template: |
+      ---
+      type: decision
+      title: {extracted_title}
+      date: {YYYY-MM-DD}
+      source: architect
+      status: active
+      tags: [planning, {goal_keywords}]
+      ---
+      
+      {specs_content}
+      
+      ---
+      *Archived by memory-archivist from architect output*
+
+  step_3_process_pending:
+    description: "Convert pending learnings to sharp edge records"
+    condition: "pending-learnings.jsonl exists and has entries"
+    actions:
+      - "Group by file/error_type"
+      - "Create one .md file per unique sharp edge"
+      - "Add frontmatter with type: sharp-edge"
+      - "Clear pending-learnings.jsonl after processing"
+    template: |
+      ---
+      type: sharp-edge
+      file: {file_path}
+      error_type: {error_type}
+      date: {YYYY-MM-DD}
+      occurrences: {count}
+      status: active
+      tags: [debugging, {tool}, {error_type}]
+      ---
+      
+      # Sharp Edge: {error_type} in {file}
+      
+      ## Pattern
+      {description of what went wrong}
+      
+      ## Resolution
+      {how it was fixed, if known}
+      
+      ## Prevention
+      {what to check before hitting this again}
+
+  step_4_review_session:
+    description: "Scan conversation for additional learnings"
+    focus:
+      - "Architectural Decisions (ADRs): Why did we choose X over Y?"
+      - "Sharp Edges: What broke? How did we fix it?"
+      - "Project Facts: New patterns established? Stack details?"
+      - "User Preferences: Did the user correct our style?"
+    filter:
+      - "Do NOT archive trivial steps (e.g., 'fixed typo')"
+      - "Do NOT duplicate existing memories (check Glob first)"
+
+  step_5_persist:
+    description: "Save all extracted learnings"
+    locations:
+      decisions: .claude/memory/decisions/
+      sharp_edges: .claude/memory/sharp-edges/
+      facts: .claude/memory/facts/
+      preferences: .claude/memory/preferences/
+    naming_convention: "YYYY-MM-DD-kebab-case-slug.md"
+    
+  step_6_cleanup:
+    description: "Clean up temporary files"
+    actions:
+      - "Delete .claude/tmp/specs.md after successful archive"
+      - "Delete .claude/tmp/scout_metrics.json if older than 1 hour"
+      - "Delete .claude/tmp/complexity_score if older than 1 hour"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OUTPUT REQUIREMENTS
+# ═══════════════════════════════════════════════════════════════════════════════
+output_constraints:
+  - "ALWAYS add frontmatter with type, date, tags, status"
+  - "ALWAYS use kebab-case file names"
+  - "Do NOT archive trivial steps"
+  - "Do NOT duplicate existing memories (check Glob first)"
+  - "Output a summary of what was archived"
+  - "If save_memory MCP tool works, use it IN ADDITION to file writing"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INTEGRATION
+# ═══════════════════════════════════════════════════════════════════════════════
+integration:
+  memory_audit:
+    description: "After archiving, memory-audit can detect drift"
+    trigger: "Run memory-audit if > 5 new entries archived"
+    
+  rag_indexing:
+    description: "Files in .claude/memory/ are searchable via Glob/Grep"
+    query_patterns:
+      - "grep -r 'type: decision' .claude/memory/"
+      - "grep -r 'tags:.*{keyword}' .claude/memory/"
+      - "find .claude/memory -name '*{slug}*'"
+
+auto_activate: null

@@ -55,6 +55,23 @@ func main() {
 		trainingCmd.Parse(os.Args[2:])
 		exportTrainingDataset(*outDir)
 
+	case "review-findings":
+		reviewCmd := flag.NewFlagSet("review-findings", flag.ExitOnError)
+		output := reviewCmd.String("output", "-", "Output file (- for stdout)")
+		reviewCmd.Parse(os.Args[2:])
+		exportReviewFindings(*output)
+
+	case "review-stats":
+		statsCmd := flag.NewFlagSet("review-stats", flag.ExitOnError)
+		statsCmd.Parse(os.Args[2:])
+		exportReviewStats()
+
+	case "sharp-edge-hits":
+		hitsCmd := flag.NewFlagSet("sharp-edge-hits", flag.ExitOnError)
+		output := hitsCmd.String("output", "-", "Output file (- for stdout)")
+		hitsCmd.Parse(os.Args[2:])
+		exportSharpEdgeHits(*output)
+
 	default:
 		printUsage()
 		os.Exit(1)
@@ -456,6 +473,74 @@ func exportTrainingDataset(outputDir string) {
 	fmt.Printf("[ml-export] Files: routing.csv, sequences.json, collaborations.json\n")
 }
 
+// exportReviewFindings exports all review findings
+func exportReviewFindings(output string) {
+	findings, err := telemetry.ReadReviewFindings()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read review findings: %v\n", err)
+		os.Exit(1)
+	}
+
+	var out *os.File
+	if output == "-" {
+		out = os.Stdout
+	} else {
+		var err error
+		out, err = os.Create(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ml-export] Failed to create output file %s: %v\n", output, err)
+			os.Exit(1)
+		}
+		defer out.Close()
+	}
+
+	writeJSON(out, findings)
+
+	if output != "-" {
+		fmt.Printf("[ml-export] Exported %d review findings to %s\n", len(findings), output)
+	}
+}
+
+// exportReviewStats shows aggregate review statistics
+func exportReviewStats() {
+	findings, err := telemetry.ReadReviewFindings()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read review findings: %v\n", err)
+		os.Exit(1)
+	}
+
+	stats := telemetry.CalculateReviewStats(findings)
+	writeJSON(os.Stdout, stats)
+}
+
+// exportSharpEdgeHits exports sharp edge correlations
+func exportSharpEdgeHits(output string) {
+	hits, err := telemetry.ReadSharpEdgeHits()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ml-export] Failed to read sharp edge hits: %v\n", err)
+		os.Exit(1)
+	}
+
+	var out *os.File
+	if output == "-" {
+		out = os.Stdout
+	} else {
+		var err error
+		out, err = os.Create(output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[ml-export] Failed to create output file %s: %v\n", output, err)
+			os.Exit(1)
+		}
+		defer out.Close()
+	}
+
+	writeJSON(out, hits)
+
+	if output != "-" {
+		fmt.Printf("[ml-export] Exported %d sharp edge hits to %s\n", len(hits), output)
+	}
+}
+
 // parseDuration converts time string to duration
 func parseDuration(since string) time.Duration {
 	switch since {
@@ -479,6 +564,9 @@ Commands:
   sequences        Export tool sequences as JSON/CSV
   collaborations   Export agent collaboration data as JSON/CSV
   training-dataset Export complete ML training dataset to directory
+  review-findings  Export all review findings as JSON
+  review-stats     Show aggregate review statistics
+  sharp-edge-hits  Export sharp edge correlations as JSON
 
 Routing options:
   --format string      Output format: csv, json (default "csv")
@@ -497,9 +585,18 @@ Collaborations options:
 Training-dataset options:
   --output string      Output directory (default "ml-data/")
 
+Review-findings options:
+  --output string      Output file (default "-" for stdout)
+
+Sharp-edge-hits options:
+  --output string      Output file (default "-" for stdout)
+
 Examples:
   gogent-ml-export routing --format csv --since 7d --output routing.csv
   gogent-ml-export sequences --successful-only --output sequences.json
   gogent-ml-export collaborations --format json
-  gogent-ml-export training-dataset --output ./ml-data/`)
+  gogent-ml-export training-dataset --output ./ml-data/
+  gogent-ml-export review-findings --output findings.json
+  gogent-ml-export review-stats
+  gogent-ml-export sharp-edge-hits --output hits.json`)
 }

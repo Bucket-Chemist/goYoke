@@ -349,3 +349,42 @@ func GetAgentLifecyclePathWithProjectDir() string {
 	}
 	return filepath.Join(GetGOgentDataDir(), "agent-lifecycle.jsonl")
 }
+
+// GetReviewFindingsPathWithProjectDir returns path for review findings log.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/review-findings.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetReviewFindingsPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "review-findings.jsonl")
+	}
+	return filepath.Join(GetGOgentDataDir(), "review-findings.jsonl")
+}
+
+// GetReviewOutcomesPathWithProjectDir returns path for review outcome updates.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/review-outcomes.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetReviewOutcomesPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "review-outcomes.jsonl")
+	}
+	return filepath.Join(GetGOgentDataDir(), "review-outcomes.jsonl")
+}
+
+// GetSharpEdgeHitsPathWithProjectDir returns path for sharp edge correlation log.
+// Priority:
+//  1. If GOGENT_PROJECT_DIR is set: $GOGENT_PROJECT_DIR/.gogent/sharp-edge-hits.jsonl
+//  2. Otherwise: XDG data directory (GetGOgentDataDir())
+//
+// This enables test isolation while maintaining production XDG compliance.
+func GetSharpEdgeHitsPathWithProjectDir() string {
+	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		return filepath.Join(projectDir, ".gogent", "sharp-edge-hits.jsonl")
+	}
+	return filepath.Join(GetGOgentDataDir(), "sharp-edge-hits.jsonl")
+}

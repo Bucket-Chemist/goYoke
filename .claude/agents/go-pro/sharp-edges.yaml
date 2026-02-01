@@ -6,14 +6,21 @@ updated: "2026-01-15"
 
 sharp_edges:
   - id: loop-variable-capture
-    severity: critical
+    severity: medium
     category: concurrency
-    description: "Loop variable capture in goroutines"
-    symptom: "All goroutines see the same value"
+    description: "Loop variable capture in goroutines (Go <1.22)"
+    symptom: "All goroutines see the same value (pre-1.22 only)"
     solution: |
-      Always capture the loop variable:
+      Go 1.22+ FIXED this issue - each iteration creates new variables.
+
+      Go 1.22+: Works correctly without manual capture
       for _, item := range items {
-          item := item  // CRITICAL
+          go func() { process(item) }()  // Now works!
+      }
+
+      Pre-1.22 or for explicit clarity:
+      for _, item := range items {
+          item := item  // Still valid for backwards compatibility
           go func() { process(item) }()
       }
     auto_inject: true
@@ -85,3 +92,35 @@ sharp_edges:
       fmt.Errorf("context: %w", err)  // Wrappable
       fmt.Errorf("context: %v", err)  // Not wrappable (breaks chain)
     auto_inject: true
+
+  - id: enhanced-http-routing
+    severity: low
+    category: http
+    description: "Go 1.22 enhanced routing patterns"
+    symptom: "Using third-party router for simple method matching"
+    solution: |
+      Go 1.22+ net/http supports method and wildcard routing:
+
+      mux.HandleFunc("GET /users/{id}", getUser)
+      mux.HandleFunc("POST /users", createUser)
+      mux.HandleFunc("/files/{path...}", serveFiles)
+
+      Access path values with r.PathValue("id").
+      Consider if third-party router is still needed.
+    auto_inject: false
+
+  - id: slog-structured-logging
+    severity: low
+    category: logging
+    description: "Use slog for structured logging (Go 1.21+)"
+    symptom: "Using log package or third-party logger for new code"
+    solution: |
+      Prefer stdlib slog for structured logging:
+
+      logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+      logger.Info("request",
+          "method", r.Method,
+          "path", r.URL.Path,
+          "duration_ms", elapsed.Milliseconds(),
+      )
+    auto_inject: false

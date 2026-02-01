@@ -134,3 +134,32 @@ sharp_edges:
       Reserve interfaces for extensible contracts
       Use const enum to prevent merging
     auto_inject: true
+
+  - id: inferred-type-predicates
+    severity: low
+    category: type-inference
+    description: "TypeScript 5.5 infers type predicates automatically"
+    symptom: "Writing explicit type predicates for simple guards"
+    solution: |
+      TS 5.5 infers predicates automatically:
+
+      // No longer need explicit predicate for simple checks
+      const numbers = items.filter(x => x !== undefined);
+      // Type: T[] (not (T | undefined)[] anymore)
+
+      Note: Truthiness checks (!!x) do NOT infer predicates for primitives
+      because 0 is falsy but valid. Use explicit !== undefined checks.
+    auto_inject: false
+
+  - id: isolated-declarations
+    severity: medium
+    category: build
+    description: "Enable isolated declarations for monorepo builds"
+    symptom: "Slow builds in monorepo, parallel type checking blocked"
+    solution: |
+      Enable in tsconfig for libraries/monorepos:
+      { "compilerOptions": { "isolatedDeclarations": true } }
+
+      Requires explicit return types on all exports.
+      Enables 3x faster builds with esbuild/swc.
+    auto_inject: false

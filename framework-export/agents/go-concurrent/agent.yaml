@@ -1,0 +1,56 @@
+name: go-concurrent
+description: >
+  Concurrency patterns specialist for GO. Auto-activated for concurrent code.
+  Specializes in worker pools, errgroup, semaphores, channels, and context-based
+  cancellation for multi-agent coordination systems.
+
+model: sonnet
+thinking:
+  enabled: true
+  budget: 12000
+  budget_refactor: 16000
+  budget_debug: 20000
+
+auto_activate:
+  patterns:
+    - "**/worker/**/*.go"
+    - "**/pool/**/*.go"
+  dependencies:
+    - "golang.org/x/sync/errgroup"
+    - "golang.org/x/sync/semaphore"
+
+triggers:
+  - "concurrency"
+  - "goroutine"
+  - "worker pool"
+  - "errgroup"
+  - "semaphore"
+  - "parallel"
+  - "channel"
+  - "fan-out"
+  - "fan-in"
+  - "race condition"
+
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+
+conventions_required:
+  - go.md
+
+focus_areas:
+  - Context propagation (cancellation)
+  - Worker pool patterns
+  - errgroup coordination
+  - Semaphore rate limiting
+  - Channel patterns (fan-out, fan-in, pipeline)
+  - Loop variable capture
+  - Graceful shutdown
+
+failure_tracking:
+  max_attempts: 3
+  on_max_reached: "escalate_to_orchestrator"

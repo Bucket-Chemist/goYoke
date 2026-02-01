@@ -2,7 +2,7 @@
 
 ## System Constraints (CRITICAL)
 
-**This system targets TypeScript 5.0+ with strict mode ALWAYS enabled.**
+**This system targets TypeScript 5.5+ with strict mode ALWAYS enabled.**
 
 All TypeScript code must:
 1. Pass `tsc --noEmit` with zero errors under strict configuration
@@ -267,6 +267,69 @@ type Nullable<T> = T | null;
 type ValueOf<T> = T[keyof T];
 type UserValue = ValueOf<User>;  // string | Date
 ```
+
+## TypeScript 5.5+ Features
+
+### Inferred Type Predicates (5.5)
+TypeScript now automatically infers type predicates from function bodies:
+
+```typescript
+// Before 5.5: Required explicit type predicate
+function isString(x: unknown): x is string {
+  return typeof x === 'string';
+}
+
+// After 5.5: TypeScript infers automatically
+const isString = (x: unknown) => typeof x === 'string';
+// Inferred: (x: unknown) => x is string
+
+// .filter() now narrows correctly!
+const items: (string | undefined)[] = ['a', undefined, 'b'];
+const strings = items.filter(x => x !== undefined);
+// Type: string[] (not (string | undefined)[] anymore)
+```
+
+**Note:** Truthiness checks (`!!x` or `Boolean(x)`) do NOT infer predicates for primitives because `0` and `''` are falsy but valid. Use explicit `!== undefined` checks.
+
+### NoInfer Utility Type (5.4)
+Prevents inference from specific type positions:
+
+```typescript
+function createConfig<T extends string>(
+  options: T[],
+  defaultOption?: NoInfer<T>  // Won't influence T inference
+) {}
+
+createConfig(['red', 'green', 'blue'], 'purple');
+// Error! 'purple' not in 'red' | 'green' | 'blue'
+```
+
+### Isolated Declarations Mode (5.5)
+Enable for faster parallel builds in monorepos:
+
+```json
+{ "compilerOptions": { "isolatedDeclarations": true } }
+```
+
+Requires explicit return types on all exported functions. Enables tools like esbuild and swc to generate `.d.ts` files without full type-checking, achieving up to 3x faster builds.
+
+### Resource Management with using (5.2)
+Explicit resource management similar to C#'s using:
+
+```typescript
+function readFile(path: string) {
+  using file = openFile(path);  // Disposed when scope exits
+  return file.read();
+}
+
+// Async version
+async function fetchData(url: string) {
+  await using connection = await connect(url);
+  return connection.fetch();
+}
+```
+
+Requires objects to implement `Symbol.dispose` or `Symbol.asyncDispose`.
 
 ## Modern Patterns
 
@@ -848,10 +911,22 @@ type HTTP = "http" | "https";
     "allowUnreachableCode": false,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": false,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}
+```
+
+**For monorepos/libraries**, also consider:
+```json
+{
+  "compilerOptions": {
+    "isolatedDeclarations": true,
+    "declaration": true,
+    "declarationMap": true
+  }
 }
 ```
 

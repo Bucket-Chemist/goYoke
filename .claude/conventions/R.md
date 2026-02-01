@@ -101,6 +101,88 @@ renv::restore()         # Restore from lockfile
 
 **Default to base R** (`df[[col]]`) for simple extraction—no tidy eval complexity.
 
+---
+
+## dplyr 1.1+ Features
+
+### .by Argument (Preferred over group_by)
+
+The `.by` argument provides inline grouping without needing `ungroup()`:
+
+```r
+# PREFERRED (dplyr 1.1+)
+df |> summarise(total = sum(value), .by = category)
+
+# LEGACY (still works but more verbose)
+df |> group_by(category) |> summarise(total = sum(value)) |> ungroup()
+
+# Multiple grouping variables
+df |> summarise(mean_val = mean(value), .by = c(region, year))
+```
+
+### reframe() for Multi-Row Results
+
+Use `reframe()` when your summary returns multiple rows per group:
+
+```r
+# summarise() now warns for multi-row results; use reframe()
+df |> reframe(quantile_df(height), .by = species)
+
+# Example: returning multiple quantiles
+calculate_quantiles <- function(x) {
+    tibble(
+        quantile = c(0.25, 0.50, 0.75)
+        , value = quantile(x, c(0.25, 0.50, 0.75))
+    )
+}
+
+df |> reframe(calculate_quantiles(value), .by = group)
+```
+
+### pick() for Column Selection in Mutate/Summarise
+
+Use `pick()` to select columns inside data-masking functions:
+
+```r
+# Select columns by pattern
+df |> mutate(row_sum = rowSums(pick(starts_with("x"))))
+
+# Multiple tidyselect patterns
+df |> summarise(across(pick(where(is.numeric)), mean), .by = category)
+```
+
+### join_by() for Flexible Joins
+
+Enhanced join syntax with non-equi joins:
+
+```r
+# Equi-join (standard)
+transactions |> inner_join(customers, join_by(customer_id))
+
+# Non-equi join (range conditions)
+events |> inner_join(
+    periods
+    , join_by(date >= start_date, date <= end_date)
+)
+
+# Closest match join
+df |> inner_join(reference, join_by(closest(timestamp >= ref_time)))
+```
+
+### R 4.4+ Features
+
+#### Null Coalescing Operator (%||%)
+
+```r
+# Returns right side if left is NULL
+config$port %||% 8080
+
+# Equivalent to:
+if (is.null(config$port)) 8080 else config$port
+```
+
+---
+
 ### S4 Method Calls (CRITICAL)
 
 **MUST** verify parameter names in `R/allGenerics.R` before calling S4 methods. Common traps:
@@ -379,6 +461,77 @@ if (!methods::is(my_object, "S4")) {  # BUG! "S4" is not a class
 - `inherits(x, "ClassName")` - Also checks class inheritance (works for S3 and S4)
 
 The string `"S4"` is not a class that objects inherit from—it's a type system designation. S4 objects inherit from their specific classes (e.g., `"ProteomicsData"`, `"SummarizedExperiment"`), not from `"S4"`.
+
+---
+
+## S7 OOP System (PREFERRED for New Code)
+
+S7 is the R Consortium's new OOP system, designed to supersede S3/S4/R6 for new code.
+**Use S7 for all new OOP code in R 4.3+.**
+
+### Defining Classes
+
+```r
+library(S7)
+
+# Simple class with typed properties
+Person <- new_class("Person",
+    properties = list(
+        name = class_character,
+        age = class_integer
+    )
+)
+
+# With validation
+PositiveNumber <- new_class("PositiveNumber",
+    properties = list(
+        value = class_double
+    ),
+    validator = function(self) {
+        if (self@value <= 0) "value must be positive"
+    }
+)
+
+# With inheritance
+Employee <- new_class("Employee",
+    parent = Person,
+    properties = list(
+        employee_id = class_character,
+        department = class_character
+    )
+)
+```
+
+### Property Access
+
+```r
+person <- Person(name = "Alice", age = 30L)
+person@name         # "Alice" (getter)
+person@age <- 31L   # Setter
+```
+
+### Methods
+
+```r
+# Define generic
+greet <- new_generic("greet", "x")
+
+# Implement method
+method(greet, Person) <- function(x) {
+    paste0("Hello, ", x@name, "!")
+}
+
+greet(person)  # "Hello, Alice!"
+```
+
+### When to Use Which OOP System
+
+| System | Use For | Key Characteristic |
+|--------|---------|-------------------|
+| **S7** | All new OOP code (preferred) | Modern, typed properties, validators |
+| S4 | Bioconductor packages requiring S4 | Formal, complex dispatch |
+| R6 | Reference semantics, mutable state | Pass-by-reference |
+| S3 | Simple method dispatch only | Minimal, no type checking |
 
 ---
 

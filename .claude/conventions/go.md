@@ -264,23 +264,141 @@ import "golang.org/x/sync/semaphore"
 func ProcessWithLimit(ctx context.Context, tasks []Task, maxConcurrent int64) error {
     sem := semaphore.NewWeighted(maxConcurrent)
     g, ctx := errgroup.WithContext(ctx)
-    
+
     for _, task := range tasks {
         task := task  // Capture
-        
+
         if err := sem.Acquire(ctx, 1); err != nil {
             return fmt.Errorf("acquire semaphore: %w", err)
         }
-        
+
         g.Go(func() error {
             defer sem.Release(1)
             return processTask(ctx, task)
         })
     }
-    
+
     return g.Wait()
 }
 ```
+
+## Go 1.21+ Features
+
+### Structured Logging with slog
+
+The `slog` package provides structured, leveled logging in the standard library:
+
+```go
+import "log/slog"
+
+// JSON handler for production
+logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+// Text handler for development
+logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+// Structured logging with attributes
+logger.Info("request processed",
+    "method", r.Method,
+    "path", r.URL.Path,
+    "status", status,
+    "duration_ms", elapsed.Milliseconds(),
+)
+
+// With context
+logger.InfoContext(ctx, "operation completed",
+    slog.String("user_id", userID),
+    slog.Int("items", count),
+)
+```
+
+### errgroup.SetLimit
+
+Limit concurrent goroutines in an errgroup:
+
+```go
+g, ctx := errgroup.WithContext(ctx)
+g.SetLimit(10)  // Max 10 concurrent goroutines
+
+for _, url := range urls {
+    g.Go(func() error {
+        return fetch(ctx, url)
+    })
+}
+
+if err := g.Wait(); err != nil {
+    return err
+}
+```
+
+## Go 1.22+ Features
+
+### Range Over Integers
+
+Simplified counting loops:
+
+```go
+// PREFERRED (Go 1.22+)
+for i := range 10 {
+    fmt.Println(i)  // Prints 0-9
+}
+
+// LEGACY
+for i := 0; i < 10; i++ {
+    fmt.Println(i)
+}
+
+// With start value
+for i := range 5 {
+    fmt.Println(i + 5)  // Prints 5-9
+}
+```
+
+### Enhanced HTTP Routing
+
+Method matching and wildcards in `net/http` without third-party routers:
+
+```go
+mux := http.NewServeMux()
+
+// Method-specific routing
+mux.HandleFunc("GET /users", listUsers)
+mux.HandleFunc("POST /users", createUser)
+mux.HandleFunc("GET /users/{id}", getUser)
+mux.HandleFunc("DELETE /users/{id}", deleteUser)
+
+// Wildcard path segments
+mux.HandleFunc("/files/{path...}", serveFiles)
+
+// Access path parameters
+func getUser(w http.ResponseWriter, r *http.Request) {
+    id := r.PathValue("id")
+    // ...
+}
+```
+
+### Loop Variable Fix
+
+**Go 1.22 fixed the loop variable capture bug.** Each iteration now creates new variables automatically.
+
+```go
+// Go 1.22+: Works correctly without manual capture
+for _, item := range items {
+    go func() {
+        process(item)  // Now works correctly!
+    }()
+}
+
+// Manual capture still valid for clarity or pre-1.22 compatibility
+for _, item := range items {
+    item := item  // Still works, optional in 1.22+
+    go func() {
+        process(item)
+    }()
+}
+```
+
+**Note:** Manual capture remains valid and may improve code clarity. Required when targeting Go <1.22 compatibility.
 
 ## HTTP Clients
 
@@ -529,22 +647,28 @@ lint:
 ### Common Gotchas
 
 1. **Loop variable capture in goroutines**
+
+   **Go 1.22+ Fixed This!** Each iteration creates new variables automatically.
+
    ```go
-   // WRONG: All goroutines see same value
+   // Go 1.22+: Works correctly without manual capture
    for _, item := range items {
        go func() {
-           process(item)  // BUG: item changes
+           process(item)  // Now works correctly
        }()
    }
-   
-   // CORRECT: Capture variable
+
+   // Pre-1.22 or for explicit clarity: Manual capture
    for _, item := range items {
-       item := item  // Capture
+       item := item  // Still valid, required for Go <1.22
        go func() {
            process(item)
        }()
    }
    ```
+
+   **Note:** Manual capture remains valid and may improve clarity.
+   Required when targeting Go <1.22 compatibility.
 
 2. **Nil slice vs empty slice**
    ```go

@@ -1,0 +1,40 @@
+name: Orchestrator
+description: >
+  Handles ambiguous scope, cross-module planning, user interviews,
+  design tradeoffs, and debugging loops. Invoked when terminal
+  cannot route confidently.
+model: sonnet
+thinking:
+  enabled: true
+  budget: 16000
+  budget_complex: 24000
+triggers:
+  - ambiguous scope
+  - cross-module planning
+  - user interview
+  - design decision
+  - debugging loop
+  - think through
+  - analyze
+  - architect
+  - synthesize
+  - synthesis
+  - review findings
+  - triage
+  - interpret results
+tools:
+  - Read
+  - Glob
+  - Grep
+  - Task
+conventions_required: []
+sharp_edges_count: 0
+escalate_to: einstein
+escalation_triggers:
+  - "3 consecutive failures on same task"
+  - "Scope spans 4+ modules with integration"
+  - "Novel problem with no clear pattern"
+  - "User requests deep analysis"
+failure_tracking:
+  max_attempts: 3
+  on_max_reached: "escalate_to_einstein"

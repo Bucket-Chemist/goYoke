@@ -26,6 +26,8 @@ help:
 	@echo "  make build-agent-endstate - Build gogent-agent-endstate binary"
 	@echo "  make build-orchestrator-guard - Build gogent-orchestrator-guard binary"
 	@echo "  make build-doc-theater    - Build gogent-doc-theater binary"
+	@echo "  make build-update-review-outcome - Build gogent-update-review-outcome binary"
+	@echo "  make build-log-review     - Build gogent-log-review binary"
 	@echo "  make build-all             - Build all hook binaries"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
 	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
@@ -33,6 +35,8 @@ help:
 	@echo "  make install-load-context - Install gogent-load-context to ~/.local/bin"
 	@echo "  make install-orchestrator-guard - Install gogent-orchestrator-guard to ~/.local/bin"
 	@echo "  make install-doc-theater - Install gogent-doc-theater to ~/.local/bin"
+	@echo "  make install-update-review-outcome - Install gogent-update-review-outcome to ~/.local/bin"
+	@echo "  make install-log-review - Install gogent-log-review to ~/.local/bin"
 	@echo "  make install-wrapper - Install session-archive wrapper hook"
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
@@ -129,10 +133,20 @@ build-orchestrator-guard:
 build-doc-theater:
 	@scripts/build-doc-theater.sh
 
-build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater
+build-update-review-outcome:
+	@echo "Building gogent-update-review-outcome..."
+	@go build -o bin/gogent-update-review-outcome ./cmd/gogent-update-review-outcome
+	@echo "✓ Built: bin/gogent-update-review-outcome"
+
+build-log-review:
+	@echo "Building gogent-log-review..."
+	@go build -o bin/gogent-log-review ./cmd/gogent-log-review
+	@echo "✓ Built: bin/gogent-log-review"
+
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review
 	@echo "✓ All hook binaries built"
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater check-path
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review check-path
 	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/gogent-validate ~/.local/bin/gogent-validate
@@ -144,6 +158,8 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/gogent-agent-endstate ~/.local/bin/gogent-agent-endstate
 	cp bin/gogent-orchestrator-guard ~/.local/bin/gogent-orchestrator-guard
 	cp bin/gogent-doc-theater ~/.local/bin/gogent-doc-theater
+	cp bin/gogent-update-review-outcome ~/.local/bin/gogent-update-review-outcome
+	cp bin/gogent-log-review ~/.local/bin/gogent-log-review
 	chmod +x ~/.local/bin/gogent-validate
 	chmod +x ~/.local/bin/gogent-archive
 	chmod +x ~/.local/bin/gogent-aggregate
@@ -153,7 +169,9 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	chmod +x ~/.local/bin/gogent-agent-endstate
 	chmod +x ~/.local/bin/gogent-orchestrator-guard
 	chmod +x ~/.local/bin/gogent-doc-theater
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard, gogent-doc-theater"
+	chmod +x ~/.local/bin/gogent-update-review-outcome
+	chmod +x ~/.local/bin/gogent-log-review
+	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard, gogent-doc-theater, gogent-update-review-outcome, gogent-log-review"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -194,6 +212,20 @@ install-doc-theater: build-doc-theater
 	@chmod +x ~/.local/bin/gogent-doc-theater
 	@echo "✓ Installed: ~/.local/bin/gogent-doc-theater"
 
+install-update-review-outcome: build-update-review-outcome
+	@echo "Installing gogent-update-review-outcome to ~/.local/bin..."
+	@mkdir -p ~/.local/bin
+	@cp bin/gogent-update-review-outcome ~/.local/bin/
+	@chmod +x ~/.local/bin/gogent-update-review-outcome
+	@echo "✓ Installed: ~/.local/bin/gogent-update-review-outcome"
+
+install-log-review: build-log-review
+	@echo "Installing gogent-log-review to ~/.local/bin..."
+	@mkdir -p ~/.local/bin
+	@cp bin/gogent-log-review ~/.local/bin/
+	@chmod +x ~/.local/bin/gogent-log-review
+	@echo "✓ Installed: ~/.local/bin/gogent-log-review"
+
 install-wrapper:
 	@echo "Installing session-archive wrapper hook..."
 	mkdir -p ~/.claude/hooks
@@ -226,6 +258,8 @@ uninstall:
 	rm -f ~/.local/bin/gogent-agent-endstate
 	rm -f ~/.local/bin/gogent-orchestrator-guard
 	rm -f ~/.local/bin/gogent-doc-theater
+	rm -f ~/.local/bin/gogent-update-review-outcome
+	rm -f ~/.local/bin/gogent-log-review
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -244,6 +278,8 @@ clean:
 	rm -f bin/gogent-agent-endstate
 	rm -f bin/gogent-orchestrator-guard
 	rm -f bin/gogent-doc-theater
+	rm -f bin/gogent-update-review-outcome
+	rm -f bin/gogent-log-review
 	rm -f coverage.out
 	rm -f *.test
 

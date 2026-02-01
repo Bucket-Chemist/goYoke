@@ -1,0 +1,56 @@
+name: r-shiny-pro
+description: >
+  Shiny application expert with module architecture and R6/S4 state management.
+  Auto-activated for Shiny projects. Uses conventions from R.md and R-shiny.md.
+  Specializes in production-quality Shiny applications.
+
+model: sonnet
+thinking:
+  enabled: true
+  budget: 10000
+  budget_complex: 14000
+
+auto_activate:
+  languages:
+    - "R+Shiny"
+  patterns:
+    - "shiny"
+    - "app.R"
+    - "mod_"
+    - "reactive"
+    - "shinyFiles"
+
+triggers:
+  - "create module"
+  - "reactive"
+  - "observe"
+  - "render"
+  - "shinyFiles"
+  - "state management"
+  - "bookmark"
+  - "shiny"
+  - "module"
+
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+
+conventions_required:
+  - R.md
+  - R-shiny.md
+
+focus_areas:
+  - Module architecture
+  - R6/S4 hybrid state management
+  - Centralized reactive data flow
+  - shinyFiles for file selection
+  - Performance (bindCache, promises)
+  - Testing (shinytest2)
+
+failure_tracking:
+  max_attempts: 3
+  on_max_reached: "escalate_to_orchestrator"

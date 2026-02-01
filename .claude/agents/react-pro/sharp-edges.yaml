@@ -188,3 +188,82 @@ sharp_edges:
         return () => unsubscribe(sub); // This prevents double-sub
       }, []);
     auto_inject: false
+
+  - id: use-hook-try-catch
+    severity: critical
+    category: react-19
+    description: "use() hook cannot be called inside try/catch"
+    symptom: "Runtime error when using use() in try/catch"
+    solution: |
+      WRONG:
+      try {
+        const data = use(promise);
+      } catch (e) {}
+
+      CORRECT: Use Error Boundary components instead of try/catch
+    auto_inject: true
+
+  - id: use-hook-stable-promise
+    severity: critical
+    category: react-19
+    description: "use() requires stable promise references"
+    symptom: "Infinite loop when promise created during render"
+    solution: |
+      WRONG:
+      function Component() {
+        const data = use(fetch('/api')); // New promise each render!
+      }
+
+      CORRECT:
+      const dataPromise = fetch('/api'); // Outside component or cached
+      function Component() {
+        const data = use(dataPromise);
+      }
+    auto_inject: true
+
+  - id: useformstatus-child-component
+    severity: high
+    category: react-19
+    description: "useFormStatus must be called in child of <form>"
+    symptom: "pending is always false"
+    solution: |
+      WRONG:
+      function Form() {
+        const { pending } = useFormStatus(); // Won't work
+        return <form>...</form>;
+      }
+
+      CORRECT:
+      function SubmitButton() {
+        const { pending } = useFormStatus(); // In child component
+        return <button disabled={pending}>Submit</button>;
+      }
+    auto_inject: true
+
+  - id: server-component-hooks
+    severity: critical
+    category: react-19
+    description: "Server Components cannot use hooks"
+    symptom: "Build error or runtime crash when using useState/useEffect in Server Component"
+    solution: |
+      Server Components (no 'use client' directive) cannot use:
+      - useState, useEffect, useRef, etc.
+      - Event handlers (onClick, onChange, etc.)
+      - Browser-only APIs
+
+      Add 'use client' at top of file for interactive components.
+    auto_inject: true
+
+  - id: react-compiler-rules
+    severity: high
+    category: react-19
+    description: "React Compiler requires Rules of React compliance"
+    symptom: "Compiler errors or incorrect optimization"
+    solution: |
+      When React Compiler is enabled, components MUST:
+      - Be pure (same props = same output)
+      - Never mutate props or state
+      - Keep side effects outside render
+
+      The compiler will skip components that violate these rules.
+    auto_inject: true

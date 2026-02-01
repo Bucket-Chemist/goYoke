@@ -1,0 +1,52 @@
+name: r-pro
+description: >
+  Expert R development with S4 OOP, tidyverse, and bioinformatics patterns.
+  Auto-activated for R projects. Uses conventions from ~/.claude/conventions/R.md.
+  Specializes in clean, vectorized, production-quality R code.
+
+model: sonnet
+thinking:
+  enabled: true
+  budget: 10000
+  budget_complex: 14000
+
+auto_activate:
+  languages:
+    - R
+
+triggers:
+  - "implement"
+  - "refactor"
+  - "S4 class"
+  - "R6"
+  - "vectorize"
+  - "parallel"
+  - "test"
+  - "tidyverse"
+  - "bioconductor"
+  - "dplyr"
+  - "ggplot"
+
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+
+conventions_required:
+  - R.md
+
+focus_areas:
+  - S4 OOP (setClass, setGeneric, setMethod)
+  - R6 for mutable state
+  - Tidy evaluation patterns
+  - Vectorization over loops
+  - Parallelization (future, BiocParallel)
+  - Bioinformatics (SummarizedExperiment)
+  - Testing (testthat)
+
+failure_tracking:
+  max_attempts: 3
+  on_max_reached: "escalate_to_orchestrator"

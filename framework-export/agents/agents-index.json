@@ -1,0 +1,862 @@
+{
+  "version": "2.3.0",
+  "generated_at": "2026-02-01T00:00:00Z",
+  "description": "Agent index for Intent Gate routing and auto-activation. v2.3: Added TypeScript/React agents and code review specialists.",
+  "agents": [
+    {
+      "id": "memory-archivist",
+      "parallelization_template": "E",
+      "name": "Memory Archivist",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 4000,
+      "tier": 1.5,
+      "category": "memory",
+      "path": "memory-archivist",
+      "triggers": [
+        "task complete",
+        "end session",
+        "wrap up",
+        "archive session",
+        "capture learnings",
+        "save memory",
+        "archive specs",
+        "save plan"
+      ],
+      "tools": ["Read", "Write", "Glob", "save_memory"],
+      "auto_activate": null,
+      "inputs": [".claude/tmp/specs.md", ".claude/memory/pending-learnings.jsonl"],
+      "outputs": [".claude/memory/decisions/", ".claude/memory/sharp-edges/"],
+      "description": "The Historian. Archives specs.md and session learnings to structured memory for RAG queries."
+    },
+    {
+      "id": "codebase-search",
+      "parallelization_template": "A",
+      "name": "Codebase Search",
+      "model": "haiku",
+      "thinking": false,
+      "tier": 1,
+      "category": "task",
+      "path": "codebase-search",
+      "triggers": [
+        "where is",
+        "find the",
+        "which files",
+        "locate",
+        "search for",
+        "find all",
+        "grep for",
+        "look for"
+      ],
+      "tools": ["Glob", "Grep", "Read"],
+      "auto_activate": null,
+      "description": "Fast file and code discovery. Haiku-tier for mechanical extraction."
+    },
+    {
+      "id": "librarian",
+      "parallelization_template": "A",
+      "name": "Librarian",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 4000,
+      "tier": 1.5,
+      "category": "task",
+      "path": "librarian",
+      "triggers": [
+        "how do I use",
+        "best practice",
+        "library",
+        "documentation",
+        "example of",
+        "what's the",
+        "official docs",
+        "how does this library"
+      ],
+      "tools": ["WebFetch", "WebSearch", "Bash", "Read", "Grep"],
+      "auto_activate": null,
+      "auto_fire": ["External library mentioned", "Unfamiliar package"],
+      "sharp_edges_count": 4,
+      "description": "External research with GitHub permalinks and documentation fetching."
+    },
+    {
+      "id": "scaffolder",
+      "parallelization_template": "B",
+      "name": "Scaffolder",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 4000,
+      "tier": 1.5,
+      "category": "task",
+      "path": "scaffolder",
+      "triggers": [
+        "create skeleton",
+        "scaffold",
+        "boilerplate",
+        "new class",
+        "new module",
+        "new test file",
+        "generate template",
+        "stub out"
+      ],
+      "tools": ["Read", "Write", "Glob"],
+      "auto_activate": null,
+      "description": "Generate boilerplate code following conventions. Haiku-tier for fast scaffolding."
+    },
+    {
+      "id": "tech-docs-writer",
+      "parallelization_template": "C",
+      "name": "Tech Docs Writer",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 6000,
+      "tier": 1.5,
+      "category": "documentation",
+      "path": "tech-docs-writer",
+      "triggers": [
+        "write readme",
+        "document",
+        "API docs",
+        "add docstrings",
+        "create documentation",
+        "update docs",
+        "architecture guide",
+        "visual guide",
+        "mermaid",
+        "infographic",
+        "diagram"
+      ],
+      "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+      "auto_activate": null,
+      "description": "Technical documentation specialist. README, API docs, architecture guides."
+    },
+    {
+      "id": "code-reviewer",
+      "parallelization_template": "C",
+      "name": "Code Reviewer",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 6000,
+      "tier": 1.5,
+      "category": "review",
+      "path": "code-reviewer",
+      "triggers": [
+        "review this",
+        "check this code",
+        "any issues with",
+        "code review",
+        "quick review",
+        "spot check"
+      ],
+      "tools": ["Read", "Glob", "Grep"],
+      "auto_activate": null,
+      "description": "Routine code review for style, simple bugs, and obvious improvements."
+    },
+    {
+      "id": "python-pro",
+      "parallelization_template": "D",
+      "name": "Python Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "python-pro",
+      "triggers": [
+        "implement",
+        "refactor",
+        "optimize",
+        "create class",
+        "add function",
+        "write test",
+        "async",
+        "type hints",
+        "python"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "languages": ["Python"]
+      },
+      "conventions_required": ["python.md"],
+      "sharp_edges_count": 6,
+      "description": "Expert Python development with modern patterns. Auto-activated for Python projects."
+    },
+    {
+      "id": "python-ux",
+      "parallelization_template": "D",
+      "name": "Python UX (PySide6)",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "python-ux",
+      "triggers": [
+        "create widget",
+        "add dialog",
+        "signal slot",
+        "QML",
+        "model view",
+        "Qt",
+        "PySide",
+        "PySide6",
+        "GUI",
+        "desktop app",
+        "QThread"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "patterns": ["PySide6", "PyQt", "QWidget", "QMainWindow", "Qt"]
+      },
+      "conventions_required": ["python.md"],
+      "sharp_edges_count": 7,
+      "description": "PySide6/Qt6 GUI development expert. Desktop application UI specialist."
+    },
+    {
+      "id": "r-pro",
+      "parallelization_template": "D",
+      "name": "R Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "r-pro",
+      "triggers": [
+        "implement",
+        "refactor",
+        "S4 class",
+        "R6",
+        "vectorize",
+        "parallel",
+        "test",
+        "tidyverse",
+        "bioconductor",
+        "dplyr",
+        "ggplot"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "languages": ["R"]
+      },
+      "conventions_required": ["R.md"],
+      "sharp_edges_count": 6,
+      "description": "Expert R development with S4 OOP, tidyverse, and bioinformatics patterns."
+    },
+    {
+      "id": "r-shiny-pro",
+      "parallelization_template": "D",
+      "name": "R Shiny Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "r-shiny-pro",
+      "triggers": [
+        "create module",
+        "reactive",
+        "observe",
+        "render",
+        "shinyFiles",
+        "state management",
+        "bookmark",
+        "shiny",
+        "module"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "languages": ["R+Shiny"],
+        "patterns": ["shiny", "app.R", "mod_", "reactive", "shinyFiles"]
+      },
+      "conventions_required": ["R.md", "R-shiny.md"],
+      "sharp_edges_count": 6,
+      "description": "Shiny application expert with module architecture and R6/S4 state management."
+    },
+    {
+      "id": "go-pro",
+      "parallelization_template": "D",
+      "name": "GO Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "go-pro",
+      "triggers": [
+        "implement",
+        "refactor",
+        "optimize",
+        "create struct",
+        "add function",
+        "write test",
+        "golang",
+        "go code",
+        "go module",
+        "go build"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "languages": ["Go"],
+        "file_patterns": ["go.mod", "*.go"]
+      },
+      "conventions_required": ["go.md"],
+      "sharp_edges_count": 8,
+      "description": "Expert GO development. Auto-activated for GO projects. Single-binary desktop distribution focus."
+    },
+    {
+      "id": "go-cli",
+      "parallelization_template": "D",
+      "name": "GO CLI (Cobra)",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "go-cli",
+      "triggers": [
+        "cli command",
+        "cobra",
+        "subcommand",
+        "command line",
+        "flags",
+        "shell completion",
+        "viper config",
+        "add command",
+        "cli application"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "patterns": ["**/cmd/**/main.go", "**/cli/**/*.go"]
+      },
+      "conventions_required": ["go.md", "go-cobra.md"],
+      "sharp_edges_count": 5,
+      "description": "Cobra CLI specialist. Factory pattern, Viper config, shell completion."
+    },
+    {
+      "id": "go-tui",
+      "parallelization_template": "D",
+      "name": "GO TUI (Bubbletea)",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 12000,
+      "tier": 2,
+      "category": "language",
+      "path": "go-tui",
+      "triggers": [
+        "tui",
+        "bubbletea",
+        "terminal ui",
+        "lipgloss",
+        "bubbles",
+        "tea.Model",
+        "dashboard",
+        "status display"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "patterns": ["**/tui/**/*.go", "**/ui/**/*.go"]
+      },
+      "conventions_required": ["go.md", "go-bubbletea.md"],
+      "sharp_edges_count": 6,
+      "description": "Bubbletea TUI specialist. MVU architecture, Lipgloss styling, component composition."
+    },
+    {
+      "id": "go-api",
+      "parallelization_template": "D",
+      "name": "GO API (HTTP Client)",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "go-api",
+      "triggers": [
+        "http client",
+        "api client",
+        "api integration",
+        "rate limit",
+        "retry logic",
+        "backoff",
+        "sse streaming",
+        "llm api",
+        "rest client"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "patterns": ["**/api/**/*.go", "**/client/**/*.go"]
+      },
+      "conventions_required": ["go.md"],
+      "sharp_edges_count": 5,
+      "description": "HTTP client specialist. Timeouts, retries, rate limiting, SSE streaming."
+    },
+    {
+      "id": "go-concurrent",
+      "parallelization_template": "D",
+      "name": "GO Concurrent",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 12000,
+      "tier": 2,
+      "category": "language",
+      "path": "go-concurrent",
+      "triggers": [
+        "concurrency",
+        "goroutine",
+        "worker pool",
+        "errgroup",
+        "semaphore",
+        "parallel",
+        "channel",
+        "fan-out",
+        "fan-in",
+        "race condition"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "patterns": ["**/worker/**/*.go", "**/pool/**/*.go"]
+      },
+      "conventions_required": ["go.md"],
+      "sharp_edges_count": 7,
+      "description": "Concurrency specialist. Worker pools, errgroup, semaphores, channels, graceful shutdown."
+    },
+    {
+      "id": "orchestrator",
+      "parallelization_template": "E",
+      "name": "Orchestrator",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 16000,
+      "tier": 2,
+      "category": "architecture",
+      "path": "orchestrator",
+      "triggers": [
+        "ambiguous scope",
+        "cross-module planning",
+        "user interview",
+        "design decision",
+        "debugging loop",
+        "think through",
+        "analyze",
+        "architect",
+        "synthesize",
+        "synthesis",
+        "review findings",
+        "triage",
+        "interpret results"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Task", "Bash"],
+      "auto_activate": null,
+      "scout_first": true,
+      "description": "Handles ambiguous scope, cross-module planning, user interviews, design tradeoffs, and debugging loops. Uses Scout-First Protocol."
+    },
+    {
+      "id": "architect",
+      "parallelization_template": "E",
+      "name": "Architect",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "thinking_budget_complex": 48000,
+      "tier": 3,
+      "category": "architecture",
+      "path": "architect",
+      "triggers": [
+        "create a plan",
+        "implementation plan",
+        "break this down",
+        "what order should",
+        "dependency analysis",
+        "architectural review",
+        "refactor strategy",
+        "dependency map",
+        "from scout report",
+        "from strategy"
+      ],
+      "tools": ["Read", "Write", "Glob", "Grep"],
+      "auto_activate": null,
+      "output_artifacts": {
+        "required": ["specs.md", "write_todos"],
+        "specs_location": ".claude/tmp/specs.md"
+      },
+      "input_sources": [".claude/tmp/scout_metrics.json", ".claude/tmp/strategy.md"],
+      "description": "Implementation planner (opus tier). Produces specs.md + write_todos. Reads scout reports and strategy documents for context."
+    },
+    {
+      "id": "planner",
+      "parallelization_template": "E",
+      "name": "Planner",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "architecture",
+      "path": "planner",
+      "triggers": [
+        "plan",
+        "strategy",
+        "requirements",
+        "what should we build",
+        "how should we approach",
+        "strategic planning",
+        "comprehensive plan"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Write", "AskUserQuestion"],
+      "auto_activate": null,
+      "output_artifacts": {
+        "required": ["strategy.md"],
+        "strategy_location": ".claude/tmp/strategy.md"
+      },
+      "input_sources": [".claude/tmp/scout_metrics.json"],
+      "max_clarifying_questions": 2,
+      "description": "Strategic planner (opus tier). Transforms goals into requirements, risks, and high-level approach. Produces strategy.md for architect."
+    },
+    {
+      "id": "einstein",
+      "parallelization_template": "F",
+      "name": "Einstein",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "analysis",
+      "path": "einstein",
+      "triggers": [
+        "einstein",
+        "call einstein",
+        "orchestrator fails 3x same task",
+        "deep analysis"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "auto_activate": null,
+      "description": "Last-resort escalation for issues unresolvable by orchestrator. Receives full diagnostic context."
+    },
+    {
+      "id": "gemini-slave",
+      "parallelization_template": null,
+      "name": "Gemini Slave",
+      "model": "external",
+      "tier": "external",
+      "category": "context",
+      "path": "gemini-slave",
+      "triggers": [
+        "analyze entire",
+        "trace through",
+        "full codebase",
+        "all files in",
+        "deep dive",
+        "root cause across",
+        "architectural review",
+        "map the codebase",
+        "multiple files",
+        "entire module",
+        "large context",
+        "cross-module",
+        "assess scope",
+        "scout"
+      ],
+      "tools": ["Bash"],
+      "auto_activate": null,
+      "invocation": "Bash (gemini-slave wrapper), NOT Task tool",
+      "protocols": ["mapper", "debugger", "architect", "benchmark-audit", "memory-audit", "scout"],
+      "state_files": {
+        "scout_output": ".claude/tmp/scout_metrics.json",
+        "complexity_score": ".claude/tmp/complexity_score"
+      },
+      "description": "Large-context analysis subagent with 1M+ token window. Includes scout protocol for pre-routing reconnaissance."
+    },
+    {
+      "id": "staff-architect-critical-review",
+      "parallelization_template": "C",
+      "name": "Staff Architect Critical Review",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 16000,
+      "tier": 2,
+      "category": "review",
+      "path": "staff-architect-critical-review",
+      "triggers": [
+        "review plan",
+        "critical review",
+        "review implementation plan",
+        "validate specs"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Task", "Write"],
+      "auto_activate": null,
+      "inputs": [".claude/tmp/specs.md"],
+      "outputs": [".claude/tmp/review-critique.md", ".claude/tmp/review-metadata.json"],
+      "sharp_edges_count": 6,
+      "cost_per_invocation": "0.15-0.25",
+      "description": "Critical review of implementation plans using 7-layer framework. Invoked via /review-plan command or automatically in /plan workflow."
+    },
+    {
+      "id": "haiku-scout",
+      "parallelization_template": "A",
+      "name": "Haiku Scout",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 2000,
+      "tier": 1,
+      "category": "reconnaissance",
+      "path": "haiku-scout",
+      "triggers": [
+        "assess scope",
+        "count lines",
+        "estimate complexity",
+        "pre-route",
+        "scout",
+        "how big is",
+        "how many files"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Bash"],
+      "auto_activate": null,
+      "parallel_safe": true,
+      "swarm_compatible": true,
+      "output_format": "json",
+      "output_file": ".claude/tmp/scout_metrics.json",
+      "cost_ceiling_usd": 0.02,
+      "fallback_for": "gemini-slave scout",
+      "description": "Fallback scout when Gemini unavailable. Writes to .claude/tmp/scout_metrics.json for complexity calculation."
+    },
+    {
+      "id": "typescript-pro",
+      "parallelization_template": "D",
+      "name": "TypeScript Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "typescript-pro",
+      "triggers": [
+        "typescript",
+        "ts code",
+        "type system",
+        "implement",
+        "refactor",
+        "strict types",
+        "generics",
+        "interface",
+        "enum",
+        "type guard"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "languages": ["TypeScript"],
+        "file_patterns": ["*.ts", "*.tsx"]
+      },
+      "conventions_required": ["typescript.md"],
+      "sharp_edges_count": 10,
+      "description": "Expert TypeScript development with strict types and modern patterns. Auto-activated for TypeScript projects."
+    },
+    {
+      "id": "react-pro",
+      "parallelization_template": "D",
+      "name": "React Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "language",
+      "path": "react-pro",
+      "triggers": [
+        "react",
+        "component",
+        "hook",
+        "useState",
+        "useEffect",
+        "ink",
+        "tui component",
+        "zustand",
+        "context",
+        "memo",
+        "callback"
+      ],
+      "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "auto_activate": {
+        "patterns": ["*.tsx", "use*.ts"]
+      },
+      "conventions_required": ["typescript.md", "react.md"],
+      "sharp_edges_count": 11,
+      "description": "React specialist with hooks, Ink TUI components, and state management. Auto-activated for React patterns."
+    },
+    {
+      "id": "backend-reviewer",
+      "parallelization_template": "C",
+      "name": "Backend Reviewer",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 6000,
+      "tier": 1.5,
+      "category": "review",
+      "path": "backend-reviewer",
+      "triggers": [
+        "review backend",
+        "api review",
+        "backend patterns",
+        "data layer review",
+        "review api"
+      ],
+      "tools": ["Read", "Glob", "Grep"],
+      "auto_activate": null,
+      "conventions_required": ["go.md", "python.md", "R.md", "typescript.md"],
+      "sharp_edges_count": 10,
+      "description": "Backend code review specialist. API design, data patterns, error handling, concurrency."
+    },
+    {
+      "id": "frontend-reviewer",
+      "parallelization_template": "C",
+      "name": "Frontend Reviewer",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 6000,
+      "tier": 1.5,
+      "category": "review",
+      "path": "frontend-reviewer",
+      "triggers": [
+        "review frontend",
+        "component review",
+        "ui review",
+        "react review",
+        "ink review"
+      ],
+      "tools": ["Read", "Glob", "Grep"],
+      "auto_activate": null,
+      "conventions_required": ["typescript.md", "react.md"],
+      "sharp_edges_count": 10,
+      "description": "Frontend code review specialist. Component architecture, state management, hooks, performance."
+    },
+    {
+      "id": "standards-reviewer",
+      "parallelization_template": "C",
+      "name": "Standards Reviewer",
+      "model": "haiku",
+      "thinking": true,
+      "thinking_budget": 6000,
+      "tier": 1.5,
+      "category": "review",
+      "path": "standards-reviewer",
+      "triggers": [
+        "review standards",
+        "code quality",
+        "naming review",
+        "style review",
+        "convention review"
+      ],
+      "tools": ["Read", "Glob", "Grep"],
+      "auto_activate": null,
+      "sharp_edges_count": 10,
+      "description": "Code standards review specialist. Naming, organization, documentation, consistency."
+    },
+    {
+      "id": "review-orchestrator",
+      "parallelization_template": "E",
+      "name": "Review Orchestrator",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 12000,
+      "tier": 2,
+      "category": "review",
+      "path": "review-orchestrator",
+      "triggers": [
+        "code review",
+        "review changes",
+        "full review",
+        "/review",
+        "orchestrate review"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Task", "Write"],
+      "auto_activate": null,
+      "sharp_edges_count": 0,
+      "description": "Coordinates multi-domain code review. Spawns specialized reviewers, synthesizes findings."
+    }
+  ],
+  "routing_rules": {
+    "intent_gate": {
+      "description": "Pre-classify every message before routing",
+      "types": [
+        {"type": "trivial", "signal": "Single file, known location", "action": "Direct tools only"},
+        {"type": "explicit", "signal": "Specific file/line, clear command", "action": "Execute directly"},
+        {"type": "exploratory", "signal": "How does X work?", "action": "Fire codebase-search + librarian"},
+        {"type": "open-ended", "signal": "Improve, Refactor", "action": "Scout first, then route"},
+        {"type": "ambiguous", "signal": "Unclear scope", "action": "Scout first, clarify if needed"}
+      ]
+    },
+    "scout_first_protocol": {
+      "description": "Spawn scout before committing expensive resources",
+      "triggers": [
+        "unknown scope",
+        "mentions module/system/architecture",
+        "refactor/implement/add feature",
+        "could involve 5+ files"
+      ],
+      "skip_when": [
+        "user specified exact files",
+        "single file operation",
+        "trivial task (typo, config)"
+      ],
+      "primary": "gemini-slave scout",
+      "fallback": "haiku-scout",
+      "output": ".claude/tmp/scout_metrics.json"
+    },
+    "complexity_routing": {
+      "description": "Code-enforced tier selection based on complexity score",
+      "calculator": ".claude/scripts/calculate-complexity.sh",
+      "thresholds": {
+        "haiku": {"max_score": 2},
+        "sonnet": {"min_score": 2, "max_score": 10},
+        "external": {"min_score": 10}
+      },
+      "force_external_if": "tokens > 50000"
+    },
+    "auto_fire": {
+      "external_library_mentioned": "librarian",
+      "multiple_modules_involved": "codebase-search",
+      "implementation_python": "python-pro",
+      "implementation_r": "r-pro",
+      "implementation_shiny": "r-shiny-pro",
+      "implementation_go": "go-pro",
+      "implementation_go_cli": "go-cli",
+      "implementation_go_tui": "go-tui",
+      "pyside6_detected": "python-ux",
+      "high_context_detected": "gemini-slave"
+    },
+    "model_tiers": {
+      "haiku": ["codebase-search", "scaffolder", "librarian", "tech-docs-writer", "code-reviewer", "haiku-scout", "memory-archivist"],
+      "haiku_thinking": ["backend-reviewer", "frontend-reviewer", "standards-reviewer"],
+      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator"],
+      "opus": ["einstein", "planner", "architect", "staff-architect-critical-review"],
+      "external": ["gemini-slave"]
+    }
+  },
+  "state_management": {
+    "description": "File-based state passing between agents",
+    "tmp_directory": ".claude/tmp/",
+    "files": {
+      "scout_metrics.json": {
+        "written_by": ["gemini-slave scout", "haiku-scout"],
+        "read_by": ["calculate-complexity.sh", "architect"],
+        "ttl_minutes": 60
+      },
+      "complexity_score": {
+        "written_by": ["calculate-complexity.sh"],
+        "read_by": ["validate-routing.sh"],
+        "ttl_minutes": 60
+      },
+      "recommended_tier": {
+        "written_by": ["calculate-complexity.sh"],
+        "read_by": ["validate-routing.sh"],
+        "ttl_minutes": 60
+      },
+      "specs.md": {
+        "written_by": ["architect"],
+        "read_by": ["memory-archivist"],
+        "ttl_minutes": null,
+        "archived_to": ".claude/memory/decisions/"
+      }
+    },
+    "cleanup": {
+      "trigger": "memory-archivist or session end",
+      "action": "delete files older than ttl"
+    }
+  }
+}

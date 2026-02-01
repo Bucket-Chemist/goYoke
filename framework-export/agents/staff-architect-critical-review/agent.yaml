@@ -1,0 +1,50 @@
+id: staff-architect-critical-review
+name: Staff Architect Critical Review
+model: sonnet
+thinking: true
+thinking_budget: 16000
+tier: 2
+category: review
+subagent_type: Plan
+
+triggers:
+  - review plan
+  - critical review
+  - review implementation plan
+  - validate specs
+
+tools:
+  - Read
+  - Glob
+  - Grep
+  - Task
+  - Write
+
+auto_activate: null  # Manual invocation only
+
+inputs:
+  - .claude/tmp/specs.md (default)
+  - Any .md plan file (custom)
+  - .claude/tmp/scout_metrics.json (optional)
+
+outputs:
+  - .claude/tmp/review-critique.md
+  - .claude/tmp/review-metadata.json
+
+cost_ceiling: 0.20  # Review + 2 scouts max
+
+delegation:
+  can_spawn:
+    - haiku-scout
+    - codebase-search
+  cannot_spawn:
+    - architect (prevents circular)
+    - any sonnet tier (budget constraint)
+  max_scouts: 2
+
+description: >
+  Staff solutions architect performing critical review of implementation plans.
+  Manual invocation via /review-plan command. Applies 7-layer review framework
+  (assumptions, dependencies, failure modes, cost-benefit, testing, architecture
+  smells, contractor readiness). Spawns scouts for verification. Outputs
+  structured critique with severity ratings.

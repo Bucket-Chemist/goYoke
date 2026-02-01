@@ -1,0 +1,226 @@
+# Sharp Edges for GO TUI Agent (Bubbletea)
+# Common Bubbletea/Lipgloss pitfalls
+
+version: "1.1"
+updated: "2026-01-26"
+
+sharp_edges:
+  - id: goroutine-state-modification
+    severity: critical
+    category: architecture
+    description: "Model state modified outside Update"
+    symptom: "Race conditions, undefined behavior, UI glitches"
+    solution: |
+      WRONG: Modifying model in goroutine
+      go func() {
+          data := fetchData()
+          m.data = data  // BUG!
+      }()
+      
+      CORRECT: Return command, let Bubbletea manage
+      return m, fetchDataCmd
+      
+      func fetchDataCmd() tea.Msg {
+          data := fetchData()
+          return dataLoadedMsg{data}
+      }
+    auto_inject: true
+
+  - id: view-io
+    severity: critical
+    category: architecture
+    description: "I/O in View() function"
+    symptom: "UI freezes, slow rendering"
+    solution: |
+      WRONG: I/O in View
+      func (m Model) View() string {
+          data, _ := os.ReadFile("data.txt")  // BUG!
+          return string(data)
+      }
+      
+      CORRECT: Load data via commands, render from state
+      func (m Model) View() string {
+          return m.data  // Already loaded in state
+      }
+    auto_inject: true
+
+  - id: lost-commands
+    severity: high
+    category: architecture
+    description: "Commands lost when not using tea.Batch"
+    symptom: "Some updates don't happen, commands ignored"
+    solution: |
+      WRONG: Lost command
+      m.spinner, cmd1 = m.spinner.Update(msg)
+      m.list, cmd2 = m.list.Update(msg)
+      return m, cmd1  // cmd2 lost!
+      
+      CORRECT: Batch all commands
+      var cmds []tea.Cmd
+      m.spinner, cmd = m.spinner.Update(msg)
+      cmds = append(cmds, cmd)
+      m.list, cmd = m.list.Update(msg)
+      cmds = append(cmds, cmd)
+      return m, tea.Batch(cmds...)
+    auto_inject: true
+
+  - id: window-size-on-startup
+    severity: medium
+    category: lifecycle
+    description: "First message is often WindowSizeMsg"
+    symptom: "Rendering before dimensions known causes layout issues"
+    solution: |
+      func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+          switch msg := msg.(type) {
+          case tea.WindowSizeMsg:
+              m.width = msg.Width
+              m.height = msg.Height
+              m.ready = true  // Now safe to render
+          }
+      }
+      
+      func (m Model) View() string {
+          if !m.ready {
+              return "Initializing..."
+          }
+          // ...
+      }
+    auto_inject: true
+
+  - id: alt-screen-cleanup
+    severity: medium
+    category: lifecycle
+    description: "Terminal state not restored on exit"
+    symptom: "Terminal left in bad state after crash"
+    solution: |
+      Use alt screen to preserve terminal history:
+      p := tea.NewProgram(model, tea.WithAltScreen())
+
+      Exit cleanly - let Run() return normally
+      Don't use os.Exit() - it skips cleanup
+    auto_inject: true
+
+  - id: missing-role-render
+    severity: high
+    category: view
+    description: "Message role not handled in View switch drops content"
+    symptom: "Messages added to state but never appear in UI"
+    learned_from: "GOgent-Fortress TUI /model command fix (2026-01-26)"
+    solution: |
+      WRONG: Missing case silently drops messages
+      for _, msg := range m.messages {
+          switch msg.Role {
+          case "user":
+              b.WriteString("You: " + msg.Content)
+          case "assistant":
+              b.WriteString("Claude: " + msg.Content)
+          // "system" role SILENTLY DROPPED!
+          }
+      }
+
+      CORRECT: Handle all roles explicitly
+      for _, msg := range m.messages {
+          switch msg.Role {
+          case "user":
+              b.WriteString(userStyle.Render("You: "))
+              b.WriteString(msg.Content)
+          case "assistant":
+              b.WriteString(assistantStyle.Render("Claude: "))
+              b.WriteString(msg.Content)
+          case "system":
+              b.WriteString(systemStyle.Render("System: "))
+              b.WriteString(msg.Content)
+          default:
+              // Log unknown role for debugging
+              b.WriteString(fmt.Sprintf("[%s]: %s", msg.Role, msg.Content))
+          }
+      }
+    auto_inject: true
+
+  - id: channel-resubscribe-restart
+    severity: critical
+    category: lifecycle
+    description: "After subprocess restart, must re-subscribe to channels"
+    symptom: "Events stop arriving after process restart or model change"
+    learned_from: "GOgent-Fortress TUI model change fix (2026-01-26)"
+    solution: |
+      When process restarts (e.g., model change), the TUI must
+      re-subscribe to the new process's event channels.
+
+      WRONG: Old channel reference becomes stale
+      case modelChangedMsg:
+          m.process = msg.newProcess
+          m.currentModel = msg.model
+          return m, nil  // NOT RE-SUBSCRIBED!
+
+      CORRECT: Re-subscribe to new channels
+      case modelChangedMsg:
+          m.process = msg.newProcess
+          m.currentModel = msg.model
+          return m, tea.Batch(
+              waitForEvent(m.process.Events()),
+              waitForRestartEvent(m.process.RestartEvents()),
+          )
+
+      Alternative: Preserve original channels across restart
+      (subprocess keeps same channel, forwards new events to it)
+    auto_inject: true
+
+  - id: subprocess-channel-guards
+    severity: high
+    category: integration
+    description: "Subprocess channel sends need closure guards"
+    symptom: "Panic on send to closed channel during shutdown"
+    learned_from: "GOgent-Fortress subprocess panic fix (2026-01-26)"
+    solution: |
+      When TUI triggers subprocess Stop() (e.g., model change),
+      background goroutines may still try to send to channels.
+
+      WRONG: Unguarded send in subprocess
+      if shouldSend {
+          cp.events <- event  // PANIC if Stop() closed channel!
+      }
+
+      CORRECT: Guard with done channel
+      if shouldSend {
+          select {
+          case cp.events <- event:
+          case <-cp.done:
+              return  // Shutting down, exit gracefully
+          }
+      }
+
+      This applies to ALL channel sends in subprocess:
+      - cp.events <- event
+      - cp.errors <- err
+      - cp.restartEvents <- restartEvent
+    auto_inject: true
+
+  - id: native-command-interception
+    severity: medium
+    category: input
+    description: "Native TUI commands must be intercepted before subprocess"
+    symptom: "Commands like /model sent to Claude instead of handled locally"
+    learned_from: "GOgent-Fortress TUI slash commands (2026-01-26)"
+    solution: |
+      Some commands need TUI handling (e.g., /model requires restart).
+      Intercept before sending to subprocess.
+
+      func (m Model) handleInput(msg tea.KeyMsg) (Model, tea.Cmd) {
+          if msg.String() == "enter" {
+              content := m.textarea.Value()
+
+              // Check for native command FIRST
+              if strings.HasPrefix(content, "/") && IsNativeCommand(content) {
+                  m.textarea.Reset()
+                  return m.executeNativeCommand(content)
+              }
+
+              // Otherwise send to subprocess
+              return m, m.sendMessage(content)
+          }
+      }
+
+      Native commands: /model, /context, /clear, /quit
+      Pass-through: /explore, /einstein (handled by Claude)
+    auto_inject: true
