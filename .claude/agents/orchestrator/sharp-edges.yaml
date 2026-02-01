@@ -1,29 +1,89 @@
-edges:
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: scout-skip
+    severity: high
+    category: routing
+    description: "Skipping scout for unknown-scope tasks"
+    symptom: "Expensive agent spawned for simple task, wasted budget"
+    solution: |
+      ALWAYS run scout first when scope is unknown:
+      1. Check if task mentions "module", "system", "refactor"
+      2. If yes, spawn haiku-scout or gemini-slave scout
+      3. Read scout_metrics.json before routing
+    auto_inject: true
+
+  - id: circular-escalation
+    severity: critical
+    category: coordination
+    description: "Orchestrator spawns orchestrator (infinite loop)"
+    symptom: "Stack overflow, runaway costs"
+    solution: |
+      NEVER spawn orchestrator from orchestrator.
+      If sub-task needs coordination, break into atomic tasks
+      and spawn implementation agents directly.
+    auto_inject: true
+
+  - id: background-task-orphan
+    severity: high
+    category: coordination
+    description: "Background tasks not collected before synthesis"
+    symptom: "Incomplete analysis, missing findings"
+    solution: |
+      ALWAYS call TaskOutput for every background task before
+      generating final output. Track task_ids explicitly.
+    auto_inject: true
+
+  - id: compound-trigger-miss
+    severity: medium
+    category: routing
+    description: "Not detecting compound triggers"
+    symptom: "Wrong agent selected for multi-domain task"
+    solution: |
+      When 2+ tier patterns fire, route to orchestrator for
+      coordination rather than picking one arbitrarily.
+    auto_inject: true
+
+  - id: escalation-loop
+    severity: high
+    category: failure-handling
+    description: "Retrying failed approach without modification"
+    symptom: "3 identical failures, sharp edge captured"
+    solution: |
+      After failure, MUST modify approach:
+      - Different tool selection
+      - Smaller scope
+      - More context
+      - Different agent
+      Never retry identically.
+    auto_inject: true
+
   - name: delegation_loops
     severity: critical
     description: >
-      Assigning a task to an agent, getting a failure, and re-assigning the EXACT same 
+      Assigning a task to an agent, getting a failure, and re-assigning the EXACT same
       task without changing instructions or context.
     mitigation: >
-      Check history. If a task failed, analyze WHY. Change the prompt, add more context, 
+      Check history. If a task failed, analyze WHY. Change the prompt, add more context,
       or switch strategies. Count attempts (max 3).
 
   - name: losing_state
     severity: high
     description: >
-      Forgetting the original user goal after 5 steps of a plan, leading to 
+      Forgetting the original user goal after 5 steps of a plan, leading to
       "drift" where you solve a different problem.
     mitigation: >
-      Re-read the original user request at the start of every major phase. 
+      Re-read the original user request at the start of every major phase.
       Keep a "Plan Status" summary in your context.
 
   - name: micromanagement
     severity: medium
     description: >
-      Breaking tasks down too small (e.g., "Write line 1", "Write line 2"), 
+      Breaking tasks down too small (e.g., "Write line 1", "Write line 2"),
       wasting tokens on overhead.
     mitigation: >
-      Delegate atomic units of value (e.g., "Implement the user class", 
+      Delegate atomic units of value (e.g., "Implement the user class",
       "Write the authentication module"). Trust agents to handle details.
 
   - name: ignoring_errors
