@@ -210,6 +210,13 @@ type AgentSubagentMapping struct {
 	GoTUI                        string `json:"go-tui"`
 	GoAPI                        string `json:"go-api"`
 	GoConcurrent                 string `json:"go-concurrent"`
+	TypescriptPro                string `json:"typescript-pro"`
+	ReactPro                     string `json:"react-pro"`
+	BackendReviewer              string `json:"backend-reviewer"`
+	FrontendReviewer             string `json:"frontend-reviewer"`
+	StandardsReviewer            string `json:"standards-reviewer"`
+	ReviewOrchestrator           string `json:"review-orchestrator"`
+	ImplManager                  string `json:"impl-manager"`
 	Orchestrator                 string `json:"orchestrator"`
 	Architect                    string `json:"architect"`
 	Planner                      string `json:"planner"`
@@ -350,6 +357,13 @@ func (s *Schema) Validate() error {
 		s.AgentSubagentMapping.GoTUI,
 		s.AgentSubagentMapping.GoAPI,
 		s.AgentSubagentMapping.GoConcurrent,
+		s.AgentSubagentMapping.TypescriptPro,
+		s.AgentSubagentMapping.ReactPro,
+		s.AgentSubagentMapping.BackendReviewer,
+		s.AgentSubagentMapping.FrontendReviewer,
+		s.AgentSubagentMapping.StandardsReviewer,
+		s.AgentSubagentMapping.ReviewOrchestrator,
+		s.AgentSubagentMapping.ImplManager,
 		s.AgentSubagentMapping.Orchestrator,
 		s.AgentSubagentMapping.Architect,
 		s.AgentSubagentMapping.Planner,
@@ -400,6 +414,13 @@ func (s *Schema) GetSubagentTypeForAgent(agentName string) (string, error) {
 		"go-tui":                          s.AgentSubagentMapping.GoTUI,
 		"go-api":                          s.AgentSubagentMapping.GoAPI,
 		"go-concurrent":                   s.AgentSubagentMapping.GoConcurrent,
+		"typescript-pro":                  s.AgentSubagentMapping.TypescriptPro,
+		"react-pro":                       s.AgentSubagentMapping.ReactPro,
+		"backend-reviewer":                s.AgentSubagentMapping.BackendReviewer,
+		"frontend-reviewer":               s.AgentSubagentMapping.FrontendReviewer,
+		"standards-reviewer":              s.AgentSubagentMapping.StandardsReviewer,
+		"review-orchestrator":             s.AgentSubagentMapping.ReviewOrchestrator,
+		"impl-manager":                    s.AgentSubagentMapping.ImplManager,
 		"orchestrator":                    s.AgentSubagentMapping.Orchestrator,
 		"architect":                       s.AgentSubagentMapping.Architect,
 		"planner":                         s.AgentSubagentMapping.Planner,
