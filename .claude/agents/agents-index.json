@@ -768,6 +768,33 @@
       "auto_activate": null,
       "sharp_edges_count": 0,
       "description": "Coordinates multi-domain code review. Spawns specialized reviewers, synthesizes findings."
+    },
+    {
+      "id": "impl-manager",
+      "parallelization_template": "E",
+      "name": "Implementation Manager",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 14000,
+      "tier": 2,
+      "category": "coordination",
+      "path": "impl-manager",
+      "triggers": [
+        "implement from specs",
+        "execute todos",
+        "implement plan",
+        "run implementation",
+        "execute tasks",
+        "implement with validation",
+        "managed implementation"
+      ],
+      "tools": ["Read", "Glob", "Grep", "Task", "Write", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet"],
+      "auto_activate": null,
+      "inputs": [".claude/tmp/specs.md", "conventions/*.md"],
+      "outputs": [".claude/tmp/impl-progress.json", ".claude/tmp/impl-violations.jsonl"],
+      "sharp_edges_count": 7,
+      "cost_per_invocation": "0.50-1.50",
+      "description": "Implementation coordinator. Enforces specs.md adherence, injects conventions, validates task completion, runs mid-flight reviews."
     }
   ],
   "routing_rules": {

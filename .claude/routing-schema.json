@@ -67,7 +67,7 @@
         "max_lines": 5000,
         "max_tokens_estimate": 50000
       },
-      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator"]
+      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "impl-manager"]
     },
     
     "opus": {
@@ -271,7 +271,7 @@
       "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion"],
       "allows_write": true,
       "respects_agent_yaml": false,
-      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator"],
+      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager"],
       "rationale": "Planning agents need to write plans and spawn other agents"
     }
   },
@@ -312,6 +312,7 @@
     "frontend-reviewer": "Explore",
     "standards-reviewer": "Explore",
     "review-orchestrator": "Plan",
+    "impl-manager": "Plan",
     "orchestrator": "Plan",
     "architect": "Plan",
     "planner": "Plan",
