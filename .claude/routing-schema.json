@@ -67,7 +67,7 @@
         "max_lines": 5000,
         "max_tokens_estimate": 50000
       },
-      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "staff-architect-critical-review"]
+      "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator"]
     },
     
     "opus": {
@@ -93,7 +93,7 @@
         "max_lines": null,
         "max_tokens_estimate": null
       },
-      "agents": ["einstein", "planner", "architect"]
+      "agents": ["einstein", "planner", "architect", "staff-architect-critical-review"]
     },
 
     "external": {
