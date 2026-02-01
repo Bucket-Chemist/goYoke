@@ -2,9 +2,9 @@
 
 **Generated**: 2026-02-01
 **Author**: Einstein Analysis (Opus)
-**Revised**: 2026-02-01 (Einstein Critical Review)
+**Revised**: 2026-02-01 (Einstein Critical Review v2.1 - Post Schema v2.5.0)
 **Status**: Ready for Implementation
-**Estimated Tasks**: 24
+**Estimated Tasks**: 26
 
 ---
 
@@ -12,13 +12,16 @@
 
 The Multi-Domain Code Review System implementation is architecturally complete but lacks ML telemetry integration. This plan addresses all gaps to enable downstream actionability of review findings.
 
-**Revision Notes**: This plan has been critically reviewed and updated to address:
+**Revision Notes (v2.1)**: This plan has been critically reviewed and updated to address:
 - Concurrency safety for JSONL writes (new Task 2.0)
 - Schema validation before modification (new Task 0.1)
 - Sharp edge ID registry for validation (new Task 2.3)
 - Dependency graph correction (Task 5.2 moved to Phase 3)
 - Feature flag for rollback capability
 - Accurate resolution time tracking
+- **NEW (v2.1)**: impl-manager agent integration (added in schema v2.5.0)
+- **NEW (v2.1)**: Updated sharp_edges_count values from actual files
+- **NEW (v2.1)**: impl-violations.jsonl ↔ review-findings.jsonl relationship documented
 
 ---
 
@@ -29,8 +32,13 @@ The Multi-Domain Code Review System implementation is architecturally complete b
 **File**: `.claude/agents/agents-index.json`
 **Priority**: CRITICAL (blocks Task 1.3)
 **Agent**: haiku-scout
+**Status**: ✅ COMPLETE (validated during schema v2.5.0 upgrade)
 
 **Purpose**: Confirm the JSON structure before assuming we can add `sharp_edges_count` fields.
+
+> **v2.1 Note**: This task was completed during the schema v2.5.0 upgrade. The schema is
+> confirmed to be a flat array of agent objects that can accept additional fields.
+> Version is now 2.5.0, structure validated.
 
 **Actions**:
 1. Read `agents-index.json`
@@ -129,13 +137,15 @@ agents := []string{
     "code-reviewer",
     "orchestrator",
     "architect",
-    // NEW AGENTS:
+    // NEW AGENTS (added in schema v2.4.0):
     "typescript-pro",
     "react-pro",
     "backend-reviewer",
     "frontend-reviewer",
     "standards-reviewer",
     "review-orchestrator",
+    // NEW AGENT (added in schema v2.5.0):
+    "impl-manager",
 }
 ```
 
@@ -152,39 +162,73 @@ agents := []string{
 
 **Changes** (add `sharp_edges_count` field to each entry):
 
+**Agents from v2.4.0** (verify counts from actual sharp-edges.yaml files):
 ```json
 {
   "id": "typescript-pro",
-  ...
-  "sharp_edges_count": 10
+  "sharp_edges_count": 10  // Verify from .claude/agents/typescript-pro/sharp-edges.yaml
 }
 
 {
   "id": "react-pro",
-  ...
-  "sharp_edges_count": 10
+  "sharp_edges_count": 10  // Verify from .claude/agents/react-pro/sharp-edges.yaml
 }
 
 {
   "id": "backend-reviewer",
-  ...
-  "sharp_edges_count": 10
+  "sharp_edges_count": 10  // Verify from .claude/agents/backend-reviewer/sharp-edges.yaml
 }
 
 {
   "id": "frontend-reviewer",
-  ...
-  "sharp_edges_count": 10
+  "sharp_edges_count": 10  // Verify from .claude/agents/frontend-reviewer/sharp-edges.yaml
 }
 
 {
   "id": "standards-reviewer",
-  ...
-  "sharp_edges_count": 10
+  "sharp_edges_count": 10  // Verify from .claude/agents/standards-reviewer/sharp-edges.yaml
 }
 ```
 
-**Note**: Count actual entries in each sharp-edges.yaml to verify numbers.
+**Agents with sharp-edges created in v2.5.0** (actual counts):
+```json
+{
+  "id": "orchestrator",
+  "sharp_edges_count": 12  // 7 existing + 5 new (scout-skip, circular-escalation, background-task-orphan, compound-trigger-miss, escalation-loop)
+}
+
+{
+  "id": "planner",
+  "sharp_edges_count": 4  // scope-creep, missing-constraints, dependency-blindness, strategy-without-risks
+}
+
+{
+  "id": "review-orchestrator",
+  "sharp_edges_count": 4  // reviewer-timeout, finding-duplication, severity-inflation, missing-telemetry
+}
+
+{
+  "id": "gemini-slave",
+  "sharp_edges_count": 4  // rate-limit-hit, context-overflow, json-parse-failure, protocol-mismatch
+}
+
+{
+  "id": "memory-archivist",
+  "sharp_edges_count": 3  // incomplete-archive, duplicate-entries, stale-specs
+}
+
+{
+  "id": "haiku-scout",
+  "sharp_edges_count": 2  // scope-underestimate, output-format-mismatch
+}
+
+{
+  "id": "impl-manager",
+  "sharp_edges_count": 7  // specs-drift, convention-bypass, test-gap, scope-creep, orphan-task, missing-acceptance-criteria, parallel-conflict
+}
+```
+
+**Note**: Counts verified from actual sharp-edges.yaml files created in schema v2.5.0 upgrade.
 
 ---
 
@@ -291,11 +335,56 @@ For each finding that matches a sharp edge:
 | typescript, ts code, type system, generics | `typescript-pro` | general-purpose |
 | react, component, hook, useState, ink | `react-pro` | general-purpose |
 | code review, full review, review changes | `review-orchestrator` | Plan |
+| implement from specs, execute todos, implement plan | `impl-manager` | Plan |
 ```
 
 **Add to "Slash Commands" table**:
 ```markdown
 | `/review` | Multi-domain code review with severity-grouped findings |
+```
+
+---
+
+### Task 1.9: Document impl-manager Telemetry Relationship (NEW in v2.1)
+
+**File**: `.claude/agents/impl-manager/CLAUDE.md`
+**Priority**: MEDIUM
+**Added**: Post schema v2.5.0 upgrade
+
+**Purpose**: Document the relationship between impl-manager's real-time violations and review-orchestrator's post-hoc findings.
+
+**Add section to impl-manager CLAUDE.md**:
+
+```markdown
+## Telemetry Relationship
+
+impl-manager produces `impl-violations.jsonl` during implementation, which is conceptually related to but distinct from `review-findings.jsonl`:
+
+| Telemetry File | Written By | Phase | Purpose |
+|----------------|------------|-------|---------|
+| `impl-violations.jsonl` | impl-manager | During implementation | Real-time convention enforcement, blocking if critical |
+| `review-findings.jsonl` | review-orchestrator | Post-implementation | Code review feedback, advisory |
+
+**Key Differences:**
+- **impl-violations**: Caught DURING implementation, can block task completion
+- **review-findings**: Caught AFTER implementation, advisory only
+
+**Unified Schema (Future v2.6.0 consideration)**:
+Both could share a common finding schema:
+```json
+{
+  "finding_id": "uuid",
+  "source": "impl-manager" | "review-orchestrator",
+  "phase": "implementation" | "review",
+  "file": "path",
+  "line": 42,
+  "severity": "critical" | "warning" | "info",
+  "message": "description",
+  "convention_ref": "go.md#error-handling"
+}
+```
+
+For v2.5.0, files remain separate. Unification deferred to v2.6.0.
 ```
 
 ---
@@ -1284,15 +1373,16 @@ gogent-review-feedback --finding-id=abc123 --feedback=helpful
 
 ```
 Phase 0 (Pre-Flight - Validation):
-└── Task 0.1: Validate agents-index.json schema [CRITICAL]
+└── Task 0.1: Validate agents-index.json schema [CRITICAL] ✅ DONE (v2.5.0)
 
 Phase 1 (Parallel - After 0.1 for 1.3):
 ├── Task 1.1: Path helpers [CRITICAL]
-├── Task 1.2: Update agent list [CRITICAL]
-├── Task 1.3: sharp_edges_count (blocked by 0.1) [HIGH]
+├── Task 1.2: Update agent list [CRITICAL] (includes impl-manager from v2.5.0)
+├── Task 1.3: sharp_edges_count (blocked by 0.1) [HIGH] (actual counts from v2.5.0)
 ├── Task 1.4-1.6: conventions_required [HIGH]
 ├── Task 1.7: Sharp edge matching [HIGH]
-└── Task 1.8: CLAUDE.md updates [MEDIUM]
+├── Task 1.8: CLAUDE.md updates [MEDIUM] (includes impl-manager routing)
+└── Task 1.9: impl-manager telemetry docs [MEDIUM] ← NEW in v2.1
 
 Phase 2 (After 1.1, 1.7):
 ├── Task 2.0: JSONL file locking [CRITICAL] ← NEW
@@ -1335,6 +1425,9 @@ After implementation, verify:
 - [ ] `gogent-ml-export review-stats` shows metrics
 - [ ] Sharp edge correlations logged to sharp-edge-hits.jsonl
 - [ ] New agents appear in gogent-sharp-edge index
+- [ ] `impl-manager` appears in gogent-sharp-edge agent list (v2.5.0)
+- [ ] `impl-manager` has `sharp_edges_count: 7` in agents-index.json (v2.5.0)
+- [ ] impl-violations.jsonl schema documented in ARCHITECTURE.md (v2.5.0)
 
 ### Data Integrity
 - [ ] JSONL files parseable after concurrent writes (100+ goroutine test)
