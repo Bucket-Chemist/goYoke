@@ -153,3 +153,33 @@ Escalate to orchestrator when:
 | Marking task complete without tests | Verify test existence |
 | Ignoring specs.md | Every task traces to specs section |
 | Scope creep acceptance | Stop, ask user to update specs |
+
+## Telemetry Relationship
+
+impl-manager produces `impl-violations.jsonl` during implementation, which is conceptually related to but distinct from `review-findings.jsonl`:
+
+| Telemetry File | Written By | Phase | Purpose |
+|----------------|------------|-------|---------|
+| `impl-violations.jsonl` | impl-manager | During implementation | Real-time convention enforcement, blocking if critical |
+| `review-findings.jsonl` | review-orchestrator | Post-implementation | Code review feedback, advisory |
+
+**Key Differences:**
+- **impl-violations**: Caught DURING implementation, can block task completion
+- **review-findings**: Caught AFTER implementation, advisory only
+
+**Unified Schema (Future v2.6.0 consideration)**:
+Both could share a common finding schema:
+```json
+{
+  "finding_id": "uuid",
+  "source": "impl-manager" | "review-orchestrator",
+  "phase": "implementation" | "review",
+  "file": "path",
+  "line": 42,
+  "severity": "critical" | "warning" | "info",
+  "message": "description",
+  "convention_ref": "go.md#error-handling"
+}
+```
+
+For v2.5.0, files remain separate. Unification deferred to v2.6.0.

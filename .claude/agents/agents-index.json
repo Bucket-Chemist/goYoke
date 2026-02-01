@@ -27,6 +27,7 @@
       "auto_activate": null,
       "inputs": [".claude/tmp/specs.md", ".claude/memory/pending-learnings.jsonl"],
       "outputs": [".claude/memory/decisions/", ".claude/memory/sharp-edges/"],
+      "sharp_edges_count": 3,
       "description": "The Historian. Archives specs.md and session learnings to structured memory for RAG queries."
     },
     {
@@ -447,6 +448,7 @@
       "tools": ["Read", "Glob", "Grep", "Task", "Bash"],
       "auto_activate": null,
       "scout_first": true,
+      "sharp_edges_count": 12,
       "description": "Handles ambiguous scope, cross-module planning, user interviews, design tradeoffs, and debugging loops. Uses Scout-First Protocol."
     },
     {
@@ -508,6 +510,7 @@
       },
       "input_sources": [".claude/tmp/scout_metrics.json"],
       "max_clarifying_questions": 2,
+      "sharp_edges_count": 4,
       "description": "Strategic planner (opus tier). Transforms goals into requirements, risks, and high-level approach. Produces strategy.md for architect."
     },
     {
@@ -562,6 +565,7 @@
         "scout_output": ".claude/tmp/scout_metrics.json",
         "complexity_score": ".claude/tmp/complexity_score"
       },
+      "sharp_edges_count": 4,
       "description": "Large-context analysis subagent with 1M+ token window. Includes scout protocol for pre-routing reconnaissance."
     },
     {
@@ -615,6 +619,7 @@
       "output_file": ".claude/tmp/scout_metrics.json",
       "cost_ceiling_usd": 0.02,
       "fallback_for": "gemini-slave scout",
+      "sharp_edges_count": 2,
       "description": "Fallback scout when Gemini unavailable. Writes to .claude/tmp/scout_metrics.json for complexity calculation."
     },
     {
@@ -766,7 +771,7 @@
       ],
       "tools": ["Read", "Glob", "Grep", "Task", "Write"],
       "auto_activate": null,
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 4,
       "description": "Coordinates multi-domain code review. Spawns specialized reviewers, synthesizes findings."
     },
     {

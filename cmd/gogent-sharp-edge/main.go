@@ -57,13 +57,15 @@ func getAgentDirectories() []string {
 		"code-reviewer",
 		"orchestrator",
 		"architect",
-		// NEW AGENTS:
+		// NEW AGENTS (added in schema v2.4.0):
 		"typescript-pro",
 		"react-pro",
 		"backend-reviewer",
 		"frontend-reviewer",
 		"standards-reviewer",
 		"review-orchestrator",
+		// NEW AGENT (added in schema v2.5.0):
+		"impl-manager",
 	}
 
 	dirs := make([]string, 0, len(agents))
