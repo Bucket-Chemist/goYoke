@@ -27,3 +27,5 @@ output_requirements:
   - Find complete matches, not partial results
   - Address underlying needs, not just literal requests
   - "If results exceed 20 files or show ambiguous patterns, recommend: 'Route to Orchestrator for triage.'"
+
+cost_ceiling: 0.02

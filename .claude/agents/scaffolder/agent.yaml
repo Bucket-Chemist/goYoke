@@ -33,3 +33,4 @@ escalation_triggers:
   - "Complex inheritance hierarchy"
   - "Multi-module scaffold with dependencies"
   - "User requests architectural guidance"
+cost_ceiling: 0.05

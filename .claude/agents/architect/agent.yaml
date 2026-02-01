@@ -23,6 +23,27 @@ tools:
   - Write
   - Glob
   - Grep
+
+delegation:
+  cannot_spawn:
+    - architect
+    - planner
+    - orchestrator
+    - einstein
+    - python-pro
+    - python-ux
+    - r-pro
+    - r-shiny-pro
+    - go-pro
+    - go-cli
+    - go-tui
+    - go-api
+    - go-concurrent
+    - typescript-pro
+    - react-pro
+  max_parallel: 2
+  cost_ceiling: 0.50
+
 output_artifacts:
   required:
     - specs.md

@@ -39,3 +39,4 @@ escalation_triggers:
   - "Architecture documentation requiring system understanding"
   - "API design documentation (not just reference)"
   - "User explicitly requests comprehensive analysis"
+cost_ceiling: 0.05

@@ -1,0 +1,55 @@
+id: planner
+name: Strategic Planner
+model: opus
+thinking: true
+thinking_budget: 32000
+tier: 3
+category: architecture
+subagent_type: Plan
+
+triggers:
+  - strategic planning
+  - create strategy
+  - plan approach
+  - define requirements
+  - risk analysis
+
+tools:
+  - Read
+  - Write
+  - Glob
+  - Grep
+  - Task
+
+delegation:
+  cannot_spawn:
+    - planner
+    - architect
+    - orchestrator
+    - einstein
+    - python-pro
+    - python-ux
+    - r-pro
+    - r-shiny-pro
+    - go-pro
+    - go-cli
+    - go-tui
+    - go-api
+    - go-concurrent
+    - typescript-pro
+    - react-pro
+  max_parallel: 2
+  cost_ceiling: 0.50
+
+inputs:
+  - User goal
+  - .claude/tmp/scout_metrics.json (optional)
+  - Project context
+
+outputs:
+  - .claude/tmp/strategy.md
+
+description: >
+  Strategic planning specialist. Transforms vague goals into clear, actionable
+  strategies with explicit requirements, risks, and success criteria. First
+  stage of comprehensive /plan workflow.

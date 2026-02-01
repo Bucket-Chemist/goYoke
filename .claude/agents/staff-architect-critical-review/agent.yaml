@@ -31,16 +31,26 @@ outputs:
   - .claude/tmp/review-critique.md
   - .claude/tmp/review-metadata.json
 
-cost_ceiling: 0.20  # Review + 2 scouts max
-
 delegation:
-  can_spawn:
-    - haiku-scout
-    - codebase-search
   cannot_spawn:
-    - architect (prevents circular)
-    - any sonnet tier (budget constraint)
-  max_scouts: 2
+    - staff-architect-critical-review
+    - architect
+    - planner
+    - einstein
+    - orchestrator
+    - python-pro
+    - python-ux
+    - r-pro
+    - r-shiny-pro
+    - go-pro
+    - go-cli
+    - go-tui
+    - go-api
+    - go-concurrent
+    - typescript-pro
+    - react-pro
+  max_parallel: 2
+  cost_ceiling: 0.60
 
 description: >
   Staff solutions architect performing critical review of implementation plans.

@@ -44,3 +44,4 @@ escalation_triggers:
   - "Security-sensitive code (auth, crypto, etc.)"
   - "Performance-critical sections"
   - "Scope exceeds limits"
+cost_ceiling: 0.05

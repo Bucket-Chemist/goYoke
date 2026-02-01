@@ -28,6 +28,16 @@ tools:
   - Task
   - Write
 
+delegation:
+  cannot_spawn:
+    - review-orchestrator
+    - orchestrator
+    - einstein
+    - architect
+    - planner
+  max_parallel: 4
+  cost_ceiling: 0.75
+
 focus_areas:
   - Domain detection (backend vs frontend vs both)
   - Parallel reviewer coordination

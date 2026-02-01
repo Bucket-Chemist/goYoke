@@ -79,3 +79,4 @@ context_threshold:
   description: "Consider gemini-slave when task involves multiple files, cross-module analysis, or context exceeding Claude's window"
 
 routing_guidance: "On complex findings, explicitly recommend delegating to [Orchestrator] for synthesis or [Architect] for planning in your output."
+cost_ceiling: 0.01

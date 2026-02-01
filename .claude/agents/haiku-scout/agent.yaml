@@ -46,3 +46,5 @@ integration:
     trigger: "automatic via explore workflow or manual"
     input: .claude/tmp/scout_metrics.json
     output: .claude/tmp/complexity_score
+
+cost_ceiling: 0.02

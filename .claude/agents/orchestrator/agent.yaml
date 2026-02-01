@@ -27,6 +27,16 @@ tools:
   - Glob
   - Grep
   - Task
+
+delegation:
+  cannot_spawn:
+    - orchestrator
+    - einstein
+    - planner
+    - architect
+  max_parallel: 6
+  cost_ceiling: 2.00
+
 conventions_required: []
 sharp_edges_count: 0
 escalate_to: einstein

@@ -44,3 +44,4 @@ context_protocol:
     receive:
       - full_relevant_context
       - execution_authority
+cost_ceiling: 1.00

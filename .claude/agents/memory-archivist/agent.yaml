@@ -166,3 +166,5 @@ integration:
       - "find .claude/memory -name '*{slug}*'"
 
 auto_activate: null
+
+cost_ceiling: 0.05

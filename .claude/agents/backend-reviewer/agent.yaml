@@ -46,3 +46,5 @@ focus_areas:
 failure_tracking:
   max_attempts: 2
   on_max_reached: "report_incomplete"
+
+cost_ceiling: 0.05

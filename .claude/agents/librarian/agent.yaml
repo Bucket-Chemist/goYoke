@@ -34,3 +34,5 @@ escalation_triggers:
   - "Multiple conflicting best practices"
   - "Complex integration pattern spanning multiple libraries"
   - "Architecture-level decision required"
+
+cost_ceiling: 0.05
