@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "2.4.0",
-  "description": "Routing schema for Claude Code tiered agent architecture - v2.4: Added TypeScript/React agents and review specialists",
+  "version": "2.5.0",
+  "description": "Routing schema for Claude Code tiered agent architecture - v2.5: Staff architect moved to opus tier, added impl-manager",
   "updated": "2026-02-01",
   
   "tiers": {

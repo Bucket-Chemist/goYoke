@@ -14,12 +14,18 @@
 2. [P1: Staff Architect Tier Correction](#p1-staff-architect-tier-correction)
 3. [P1: Version Description Cleanup](#p1-version-description-cleanup)
 4. [P2: Parallelization Template Resolution](#p2-parallelization-template-resolution)
-5. [P3: Missing Sharp Edges](#p3-missing-sharp-edges)
+5. [P3: Missing Sharp Edges (Create or Merge)](#p3-missing-sharp-edges-create-or-merge)
 6. [P3: New Agent - Implementation Manager](#p3-new-agent---implementation-manager)
 7. [P4: Agent Dependency Graph Standardization](#p4-agent-dependency-graph-standardization)
 8. [P4: Cost Budget Standardization](#p4-cost-budget-standardization)
 9. [P4: Thinking Budget Standardization](#p4-thinking-budget-standardization)
-10. [Validation Checklist](#validation-checklist)
+10. [P5: Test File Updates](#p5-test-file-updates)
+11. [P5: Hook Binary Rebuild](#p5-hook-binary-rebuild)
+12. [P5: Missing Sharp Edges (Lower Priority)](#p5-missing-sharp-edges-lower-priority)
+13. [P5: Agent CLAUDE.md Updates](#p5-agent-claudemd-updates)
+14. [P6: ARCHITECTURE.md Updates](#p6-architecturemd-updates)
+15. [Validation Checklist](#validation-checklist)
+16. [Implementation Order](#implementation-order)
 
 ---
 
@@ -135,6 +141,18 @@ tier: 2                 # WRONG (tier 2 = sonnet)
 thinking_budget: 16000  # Too low for Opus work
 ```
 
+### Contradiction in routing-schema.json
+
+The agent appears in CONFLICTING locations:
+
+| File | Line | Location | Value |
+|------|------|----------|-------|
+| `routing-schema.json` | 70 | `tiers.sonnet.agents` array | **Included (WRONG)** |
+| `routing-schema.json` | 827 | `routing_rules.model_tiers.opus` | Included (correct) |
+| `routing-schema.json` | 89 | `task_invocation_allowlist` | Included (correct) |
+
+**The agent is listed in BOTH sonnet AND opus tiers simultaneously.**
+
 **File**: `.claude/agents/agents-index.json`
 ```json
 {
@@ -190,15 +208,17 @@ Find the `staff-architect-critical-review` entry and update:
 
 #### File: `.claude/routing-schema.json`
 
-##### 1. Move agent from sonnet tier to opus tier
+##### 1. REMOVE from sonnet tier agents array (line 70)
 
-In `tiers.sonnet.agents` array, REMOVE:
+In `tiers.sonnet.agents`, REMOVE `"staff-architect-critical-review"`:
 ```json
 "sonnet": {
-  "agents": ["python-pro", "python-ux", ..., "staff-architect-critical-review"]
-                                              // ^^^ REMOVE THIS
+  "agents": ["python-pro", "python-ux", ..., "review-orchestrator"]
+  // staff-architect-critical-review REMOVED from here
 }
 ```
+
+##### 2. Move agent from sonnet tier to opus tier
 
 In `tiers.opus.agents` array, ADD:
 ```json
@@ -208,7 +228,7 @@ In `tiers.opus.agents` array, ADD:
 }
 ```
 
-##### 2. Verify task_invocation_allowlist
+##### 3. Verify task_invocation_allowlist
 
 The `opus.task_invocation_allowlist` already includes this agent (correct):
 ```json
@@ -217,7 +237,7 @@ The `opus.task_invocation_allowlist` already includes this agent (correct):
 
 This is correct because this agent CAN be invoked via Task() despite the general Opus blocking rule. It's an allowlisted planning agent.
 
-##### 3. Update model_tiers in routing_rules
+##### 4. Update model_tiers in routing_rules
 
 ```json
 "model_tiers": {
@@ -376,7 +396,7 @@ This affects all 26 agents in the index.
 
 ---
 
-## P3: Missing Sharp Edges
+## P3: Missing Sharp Edges (Create or Merge)
 
 ### Problem
 
@@ -392,6 +412,27 @@ Several agents lack `sharp-edges.yaml` files documenting known pitfalls.
 | `memory-archivist` | Medium | Data integrity, archive failures |
 | `haiku-scout` | Low | Simple agent, few edge cases |
 | `gemini-slave` | Medium | External API, rate limits, failures |
+
+### Pre-Implementation Check
+
+Before creating sharp-edges.yaml files, verify if they already exist:
+
+```bash
+# Check for existing files
+for agent in orchestrator planner review-orchestrator gemini-slave memory-archivist haiku-scout; do
+  if [[ -f ".claude/agents/$agent/sharp-edges.yaml" ]]; then
+    echo "EXISTS: $agent - MERGE required"
+  else
+    echo "MISSING: $agent - CREATE"
+  fi
+done
+```
+
+**Merge Strategy:**
+- If file exists: Append new `sharp_edges` entries, preserving existing ones
+- Update `version` and `updated` fields
+- Avoid duplicate `id` values - check existing IDs first
+- Keep existing `auto_inject` settings
 
 ### Required Files
 
@@ -1127,6 +1168,80 @@ Done
 
 **No new telemetry code required** - existing hooks handle all tracking.
 
+### Relationship to Review Telemetry System
+
+The `impl-violations.jsonl` output is distinct from but related to the existing `review-findings.jsonl`:
+
+| Telemetry File | Written By | When | Purpose |
+|----------------|------------|------|---------|
+| `impl-violations.jsonl` | impl-manager | During implementation | Real-time convention enforcement |
+| `review-findings.jsonl` | review-orchestrator | Post-implementation review | Code review feedback |
+
+**Key Differences:**
+- **impl-violations**: Caught DURING implementation, blocking if critical
+- **review-findings**: Caught AFTER implementation, advisory
+
+**Shared Schema Consideration:**
+Both track code quality issues. Future enhancement could unify schema:
+```json
+{
+  "finding_id": "uuid",
+  "source": "impl-manager" | "review-orchestrator",
+  "phase": "implementation" | "review",
+  "file": "path",
+  "line": 42,
+  "severity": "critical" | "warning" | "info",
+  "message": "description",
+  "convention_ref": "go.md#error-handling"
+}
+```
+
+For v2.5.0, keep separate files. Consider unification in v2.6.0.
+
+### TUI Integration
+
+The impl-manager outputs `impl-progress.json` which can be visualized in the TUI system.
+
+#### File Watcher Addition
+
+Add to `pkg/telemetry/watcher.go` watched files:
+
+```go
+watchedFiles := []string{
+    "agent-lifecycle.jsonl",
+    "routing-decisions.jsonl",
+    "impl-progress.json",  // NEW
+}
+```
+
+#### Agent Tree Visualization
+
+impl-manager appears in agent tree as orchestrating agent:
+
+```
+> terminal
+  +-- orchestrator [✓]
+  +-- impl-manager [⟳]        <- Shows as coordinator
+      +-- go-pro [⟳]          <- Child implementation agent
+      +-- code-reviewer [✓]   <- Mid-flight review
+```
+
+#### Progress Display
+
+The DetailModel sidebar shows impl-manager progress:
+
+```
+Selected: impl-manager
+Status: in_progress
+Tasks: 3/5 complete
+Violations: 2 warnings
+Current: Implementing auth handler
+```
+
+#### ARCHITECTURE.md Section 15 Update Required
+
+Add `impl-progress.json` to TelemetryWatcher file list in Section 15.2 component dependencies.
+
 ### Test Coverage
 
 Add to `pkg/routing/schema_test.go`:
@@ -1154,6 +1269,91 @@ func TestValidateAgentSubagentPair_ImplManager(t *testing.T) {
 }
 ```
 
+### Additional Test Coverage Required
+
+#### Staff-Architect Tier Change Tests
+
+Add to `pkg/routing/schema_test.go`:
+
+```go
+func TestStaffArchitectTierChange(t *testing.T) {
+    schema, err := LoadSchema()
+    require.NoError(t, err)
+
+    // Verify staff-architect is in opus tier
+    opusTier, err := schema.GetTier("opus")
+    require.NoError(t, err)
+    assert.Contains(t, opusTier.Agents, "staff-architect-critical-review")
+
+    // Verify NOT in sonnet tier
+    sonnetTier, err := schema.GetTier("sonnet")
+    require.NoError(t, err)
+    assert.NotContains(t, sonnetTier.Agents, "staff-architect-critical-review")
+
+    // Verify subagent_type is Plan
+    subagentType, err := schema.GetSubagentTypeForAgent("staff-architect-critical-review")
+    require.NoError(t, err)
+    assert.Equal(t, "Plan", subagentType)
+}
+```
+
+#### New Agent Routing Tests
+
+```go
+func TestNewAgentRouting(t *testing.T) {
+    schema, err := LoadSchema()
+    require.NoError(t, err)
+
+    newAgents := []struct {
+        agent       string
+        tier        string
+        subagentType string
+    }{
+        {"typescript-pro", "sonnet", "general-purpose"},
+        {"react-pro", "sonnet", "general-purpose"},
+        {"backend-reviewer", "haiku_thinking", "Explore"},
+        {"frontend-reviewer", "haiku_thinking", "Explore"},
+        {"standards-reviewer", "haiku_thinking", "Explore"},
+        {"review-orchestrator", "sonnet", "Plan"},
+        {"impl-manager", "sonnet", "Plan"},
+    }
+
+    for _, tc := range newAgents {
+        t.Run(tc.agent, func(t *testing.T) {
+            // Verify agent in correct tier
+            tier, err := schema.GetTier(tc.tier)
+            require.NoError(t, err)
+            assert.Contains(t, tier.Agents, tc.agent)
+
+            // Verify subagent_type mapping
+            st, err := schema.GetSubagentTypeForAgent(tc.agent)
+            require.NoError(t, err)
+            assert.Equal(t, tc.subagentType, st)
+        })
+    }
+}
+```
+
+#### Cost Ceiling Enforcement Tests
+
+```go
+func TestCostCeilingEnforcement(t *testing.T) {
+    // Test that cost ceilings are loaded from agent.yaml
+    // Verify orchestrating agents have higher ceilings
+    // Verify cost ceiling validation logic
+}
+```
+
+#### Delegation Pattern Tests
+
+```go
+func TestDelegationPatternValidation(t *testing.T) {
+    // Test cannot_spawn validation
+    // Test circular dependency detection
+    // Test cost ceiling propagation
+}
+```
+
 ---
 
 ## P4: Agent Dependency Graph Standardization
@@ -1172,6 +1372,48 @@ Only `staff-architect-critical-review` has explicit delegation constraints. Othe
 | `max_spawns` hard limit | Arbitrary, prevents thorough analysis of large tasks |
 | `cannot_spawn` blocklist | Future-proof, clear intent, only blocks what's forbidden |
 | `cost_ceiling` | The REAL constraint - spending, not count |
+
+### Migration from Hybrid Pattern
+
+**Current State:** `staff-architect-critical-review` uses BOTH allowlist and blocklist:
+
+```yaml
+# Current (hybrid approach)
+delegation:
+  can_spawn:
+    - haiku-scout
+    - codebase-search
+  cannot_spawn:
+    - architect
+```
+
+**Target State:** Pure blocklist (per design philosophy):
+
+```yaml
+# Target (blocklist only)
+delegation:
+  cannot_spawn:
+    - staff-architect-critical-review  # self
+    - architect
+    - planner
+    - orchestrator
+    - einstein
+    # Implementation agents blocked (review is analysis only)
+    - python-pro
+    - go-pro
+    # ... etc
+
+  # can_spawn removed - anything not blocked is allowed
+  max_parallel: 2
+  cost_ceiling: 0.60
+```
+
+**Migration Strategy:**
+1. Remove `can_spawn` field entirely
+2. Expand `cannot_spawn` to explicitly list all blocked agents
+3. Implicit allowlist becomes: "anything not in cannot_spawn"
+
+**Rationale:** Blocklist is future-proof. New agents are automatically allowed unless explicitly blocked. Allowlist requires updates when adding agents.
 
 **Orchestrating agents should spawn as many agents as needed to complete the task.** The constraints are:
 1. **Circular prevention** - Cannot spawn self
@@ -1525,6 +1767,27 @@ thinking:
 - `typescript-pro`
 - `react-pro`
 
+### Haiku+Thinking Tier Agents
+
+Current thinking budgets for tier 1.5 agents:
+
+| Agent | Current Budget | Standard Budget | Action |
+|-------|----------------|-----------------|--------|
+| `backend-reviewer` | 6000 | 6000 | ✓ No change |
+| `frontend-reviewer` | 6000 | 6000 | ✓ No change |
+| `standards-reviewer` | 6000 | 6000 | ✓ No change |
+| `code-reviewer` | 6000 | 6000 | ✓ No change |
+| `tech-docs-writer` | 6000 | 6000 | ✓ No change |
+| `scaffolder` | 4000 | 4000 | ✓ No change |
+| `librarian` | 4000 | 4000 | ✓ No change |
+| `memory-archivist` | 4000 | 4000 | ✓ No change |
+
+**Assessment:** Haiku+Thinking budgets are already consistent. No changes required.
+
+**Rationale for split:**
+- Review agents (6000): Need reasoning for code analysis
+- Utility agents (4000): Template-following, less reasoning
+
 ---
 
 ## Validation Checklist
@@ -1544,6 +1807,41 @@ thinking:
 - [ ] `impl-manager` added to agents-index.json
 - [ ] `impl-manager` added to routing-schema.json (sonnet tier, Plan subagent_type)
 - [ ] `gogent-orchestrator-guard` updated to recognize impl-manager
+
+### Cache Invalidation
+
+Hooks may cache schema at startup. After schema updates:
+
+1. **Rebuild hook binaries:**
+   ```bash
+   make install-hooks
+   # OR manually:
+   go build -o ~/.local/bin/gogent-validate ./cmd/gogent-validate
+   go build -o ~/.local/bin/gogent-load-context ./cmd/gogent-load-context
+   go build -o ~/.local/bin/gogent-sharp-edge ./cmd/gogent-sharp-edge
+   go build -o ~/.local/bin/gogent-agent-endstate ./cmd/gogent-agent-endstate
+   go build -o ~/.local/bin/gogent-archive ./cmd/gogent-archive
+   ```
+
+2. **Restart running Claude Code sessions:**
+   - Exit any active `claude` CLI sessions
+   - Schema is loaded fresh on SessionStart
+   - Continuing an existing session uses stale cached schema
+
+3. **Verify schema version loaded:**
+   ```bash
+   # Check that hooks load correct version
+   echo '{}' | gogent-validate 2>&1 | grep -i version
+   ```
+
+4. **Clear temporary state files:**
+   ```bash
+   rm -f .claude/tmp/scout_metrics.json
+   rm -f .claude/tmp/complexity_score
+   rm -f .claude/tmp/recommended_tier
+   ```
+
+**Add to Implementation Order:** After Phase 7 (hook rebuilds), add explicit session restart step.
 
 ### Files Modified
 
@@ -1574,6 +1872,64 @@ thinking:
 Each phase should be a separate commit for clean rollback if needed.
 
 ---
+
+## P6: ARCHITECTURE.md Updates
+
+### Problem
+
+The spec creates new agent (`impl-manager`), new telemetry files, and modifies existing agent tiers. ARCHITECTURE.md must be updated to reflect these changes.
+
+### Required Updates
+
+#### 1. Update Version Header (Line 3)
+
+Change:
+```
+> **Schema Versions:** routing-schema v2.4.0 | handoff v1.3 | ML telemetry v1.1 (review)
+```
+
+To:
+```
+> **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
+```
+
+#### 2. Update Section 6.2 Agent-Subagent Mapping Table
+
+Add to the table after `review-orchestrator`:
+
+| Agent | Required subagent_type | Rationale |
+|-------|------------------------|-----------|
+| `impl-manager` | Plan | Implementation coordination and planning |
+
+Update `staff-architect-critical-review` entry to show Opus tier (if not already).
+
+#### 3. Update Section 5 Data Persistence Layer
+
+Add to "ML Scope" files list:
+- `impl-progress.json` - Implementation manager progress tracking
+- `impl-violations.jsonl` - Convention violations during implementation
+
+Add to File Reference table (Section 5.1):
+
+| File | Scope | Written By | Schema | Purpose |
+|------|-------|------------|--------|---------|
+| `impl-progress.json` | Project (.claude/tmp/) | impl-manager | ImplProgress | Task progress tracking |
+| `impl-violations.jsonl` | Project (.claude/tmp/) | impl-manager | ImplViolation | Convention violations |
+
+#### 4. Update Section 9.1 Hook Binaries Table
+
+Add note that `gogent-orchestrator-guard` recognizes `impl-manager` as an orchestrating agent.
+
+#### 5. Update Section 15 TUI System (if applicable)
+
+Add `impl-progress.json` to file watchers if real-time progress visualization is desired.
+
+### Verification
+
+- [ ] Version header shows v2.5.0
+- [ ] impl-manager in agent mapping table
+- [ ] New telemetry files documented
+- [ ] Hook behavior documented
 
 ---
 
@@ -1796,18 +2152,79 @@ These can be populated incrementally as agents are used and patterns emerge.
 
 ---
 
-## Updated Implementation Order
+## Implementation Order
 
-1. **Phase 1 (P0)**: Go struct synchronization - unblocks validation (includes impl-manager)
-2. **Phase 2 (P1)**: Staff architect tier fix + version cleanup
-3. **Phase 3 (P2)**: Parallelization template removal
-4. **Phase 4 (P3)**: Sharp edges creation (all 6 files)
-5. **Phase 5 (P3)**: impl-manager agent creation (agent.yaml, CLAUDE.md, sharp-edges.yaml)
-6. **Phase 6 (P4)**: Delegation graphs + cost budgets + thinking budgets
-7. **Phase 7 (P5)**: Test updates + hook rebuilds (includes gogent-orchestrator-guard update)
-8. **Phase 8 (P5)**: Agent CLAUDE.md population (ongoing)
+### Phase Sequence
 
-Each phase should be a separate commit for clean rollback if needed.
+| Phase | Priority | Description | Dependency |
+|-------|----------|-------------|------------|
+| 1 | P0 | Go struct synchronization | None |
+| 2 | P1 | Staff architect tier fix | Phase 1 |
+| 3 | P1 | Version cleanup (all files to 2.5.0) | Phase 2 |
+| 4 | P2 | Parallelization template removal | Phase 3 |
+| 5 | P3 | Sharp edges creation/merge | Phase 3 |
+| 6 | P3 | impl-manager agent creation | Phase 3 |
+| 7 | P4 | Delegation graphs + cost budgets | Phase 6 |
+| 8 | P5 | Test updates | Phase 7 |
+| 9 | P5 | Hook binary rebuilds | Phase 8 |
+| 10 | P6 | ARCHITECTURE.md updates | Phase 9 |
+| 11 | - | Cache invalidation + session restart | Phase 10 |
+
+### Detailed Phase Instructions
+
+**Phase 1 (P0):** Update `pkg/routing/schema.go`:
+- Add 7 new fields to `AgentSubagentMapping` struct
+- Add 7 new entries to `GetSubagentTypeForAgent()` mapping
+- Add 7 new entries to `Validate()` mappings slice
+- Run `go build ./...` and `go test ./pkg/routing/...`
+
+**Phase 2 (P1):** Fix staff-architect tier:
+- Remove from `tiers.sonnet.agents` in routing-schema.json
+- Add to `tiers.opus.agents` in routing-schema.json
+- Update agent.yaml: model→opus, tier→3, thinking_budget→32000
+- Update agents-index.json to match
+
+**Phase 3 (P1):** Version cleanup:
+- Update `routing-schema.json` version to "2.5.0"
+- Update `agents-index.json` version to "2.5.0"
+- Update `pkg/routing/schema.go` EXPECTED_SCHEMA_VERSION to "2.5.0"
+- Remove inline version from description fields
+
+**Phase 4 (P2):** Remove parallelization_template from all agents (optional, can defer)
+
+**Phase 5 (P3):** Create/merge sharp-edges.yaml for 6 agents
+
+**Phase 6 (P3):** Create impl-manager agent (agent.yaml, CLAUDE.md, sharp-edges.yaml)
+
+**Phase 7 (P4):** Add delegation blocks to orchestrating agents, cost ceilings, thinking budgets
+
+**Phase 8 (P5):** Add all new tests to `pkg/routing/schema_test.go`
+
+**Phase 9 (P5):** Rebuild and install all hook binaries
+
+**Phase 10 (P6):** Update ARCHITECTURE.md to v2.5.0 with all new documentation
+
+**Phase 11 (Cache Invalidation):**
+- Restart any running Claude Code sessions
+- Verify hooks load schema v2.5.0
+- Clear temporary state files
+
+### Commit Strategy
+
+Each phase should be a separate commit for clean rollback:
+
+```
+feat(schema): P0 - Add 7 new agents to Go struct
+feat(schema): P1 - Move staff-architect to opus tier
+feat(schema): P1 - Bump all versions to 2.5.0
+feat(schema): P2 - Remove parallelization_template (optional)
+feat(schema): P3 - Add sharp-edges.yaml files
+feat(schema): P3 - Add impl-manager agent
+feat(schema): P4 - Add delegation and cost standardization
+test(schema): P5 - Add comprehensive test coverage
+build(hooks): P5 - Rebuild hook binaries
+docs(arch): P6 - Update ARCHITECTURE.md to v2.5.0
+```
 
 ---
 

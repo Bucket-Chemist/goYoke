@@ -11,7 +11,7 @@ import (
 func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	// 1. Setup a schema that mimics the expected structure for the new agent
 	schema := Schema{
-		Version: "2.4.0",
+		Version: "2.5.0",
 		Tiers: map[string]TierConfig{
 			"haiku":  {},
 			"sonnet": {},

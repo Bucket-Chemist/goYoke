@@ -8,7 +8,7 @@ import (
 )
 
 // EXPECTED_SCHEMA_VERSION is the version this code is built for.
-const EXPECTED_SCHEMA_VERSION = "2.4.0"
+const EXPECTED_SCHEMA_VERSION = "2.5.0"
 
 // Schema represents the complete routing-schema.json v2.2.0 structure.
 // This defines the tiered agent architecture for Claude Code.
