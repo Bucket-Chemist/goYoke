@@ -1020,8 +1020,61 @@ classDiagram
 | `gogent-ml-export` | ML training data export | routing-decisions, agent-collaborations, **review-findings, review-stats, sharp-edge-hits**, validate, stats |
 | `gogent-orchestrator-guard` | Completion enforcement | (integration) |
 | `gogent-doc-theater` | Documentation theater detection | (integration) |
+| **`gogent-scout`** | **Unified pre-routing reconnaissance** | **(standalone)** |
 
-### 9.3 Archive Query Subcommands
+### 9.3 Scout Utilities
+
+The `gogent-scout` binary provides unified pre-routing reconnaissance with smart backend selection.
+
+| Aspect | Detail |
+|--------|--------|
+| **Purpose** | Assess scope before committing expensive resources |
+| **Backends** | Native Go (score < 40), Gemini 3 Flash (score ≥ 40), Synthetic fallback |
+| **Output** | JSON to stdout + `.claude/tmp/scout_metrics.json` |
+| **Latency** | Native: < 100ms (p50), Gemini: 1-3s |
+
+**Usage:**
+```bash
+# Basic usage
+gogent-scout <target-directory> "<instruction>"
+
+# Examples
+gogent-scout ./pkg/routing "Assess scope for refactoring"
+gogent-scout ./cmd "How many files in cmd?"
+
+# Environment overrides
+SCOUT_BACKEND=native gogent-scout ./large-module "Force native"
+SCOUT_THRESHOLD=60 gogent-scout ./module "Higher threshold"
+```
+
+**Backend Selection (Multi-Factor Score):**
+- File count: 40% weight (20 files = 100 points)
+- Line count: 30% weight (5000 lines = 100 points)
+- Max file size: 20% weight (1000 lines = 100 points)
+- Language count: 10% weight (4 languages = 100 points)
+- **Threshold:** Score < 40 → Native, ≥ 40 → Gemini
+
+**Fallback Chain:**
+1. Primary backend (based on score)
+2. Opposite backend (if primary fails)
+3. Synthetic report (if both fail - always returns valid JSON)
+
+**Output Schema (v1.0):**
+```json
+{
+  "schema_version": "1.0",
+  "backend": "native|gemini|native_fallback|synthetic_fallback",
+  "scope_metrics": { "total_files", "total_lines", "estimated_tokens", ... },
+  "complexity_signals": { "available", "import_density", ... },
+  "routing_recommendation": { "recommended_tier", "confidence", "reasoning" },
+  "key_files": [...],
+  "warnings": [...]
+}
+```
+
+**Integration:** Used by `/explore`, `/plan`, `/review` skills and `orchestrator` agent for pre-routing reconnaissance.
+
+### 9.4 Archive Query Subcommands
 
 ```bash
 gogent-archive list [--since=DATE] [--has-sharp-edges]
@@ -1343,13 +1396,14 @@ Telemetry Files (fsnotify)
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3 | 2026-02-02 | Added `gogent-scout` unified scout binary (Section 9.3): smart backend routing (native Go / Gemini 3 Flash), multi-factor scoring, fallback chain, updated routing-schema.json scout_protocol |
 | 1.2 | 2026-02-01 | Added Review Skill ML Telemetry System (v2.4.0): Section 4.5-4.7, 6 new agents, gogent-log-review/gogent-update-review-outcome binaries, review-findings.jsonl/review-outcomes.jsonl/sharp-edge-hits.jsonl telemetry files |
 | 1.1 | 2026-01-26 | Complete TUI implementation (GOgent-109 through GOgent-121), Section 15 added |
 | 1.0 | 2026-01-20 | Initial architecture documentation |
 
 ---
 
-**Version:** 1.2
+**Version:** 1.3
 **Generated:** 2026-02-01
 **Maintainer:** GOgent-Fortress Development Team
 **TUI Complete:** GOgent-109 through GOgent-121 (13 tickets, all tests passing)

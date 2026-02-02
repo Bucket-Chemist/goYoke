@@ -5,7 +5,10 @@ description: >
   Invoked via Bash (gemini-slave wrapper), NOT via Task tool.
   Use for tasks requiring multiple files, deep call-stack tracing, or full-module analysis.
 
-model: external # Not a Claude model - uses gemini-3-pro via CLI
+model: external # Not Claude - uses Gemini 3 via CLI
+model_routing:
+  flash: ["scout", "mapper"]           # gemini-3-flash-preview
+  pro: ["architect", "debugger", "memory-audit", "benchmark-audit"]  # gemini-3-pro-preview
 
 triggers:
   - "analyze entire"

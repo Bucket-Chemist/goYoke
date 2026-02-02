@@ -97,8 +97,8 @@
     },
 
     "external": {
-      "description": "External context engine - Gemini for 1M+ token windows and fast scouting",
-      "model": "gemini-2.0-flash",
+      "description": "External context engine - Gemini 3 for 1M+ token windows",
+      "model": "gemini-3-flash-preview",
       "thinking": false,
       "cost_per_1k_tokens": 0.0001,
       "patterns": [
@@ -109,12 +109,12 @@
       "tools": ["Bash"],
       "invocation": "cat [files] | gemini-slave [protocol] \"[instruction]\"",
       "protocols": {
-        "scout": {"model": "gemini-2.0-flash", "output": "json"},
-        "mapper": {"model": "gemini-2.0-pro", "output": "json"},
-        "debugger": {"model": "gemini-2.0-pro", "output": "markdown"},
-        "architect": {"model": "gemini-2.0-pro", "output": "markdown"},
-        "memory-audit": {"model": "gemini-2.0-pro", "output": "json"},
-        "benchmark-audit": {"model": "gemini-2.0-pro", "output": "json"}
+        "scout": {"model": "gemini-3-flash-preview", "output": "json"},
+        "mapper": {"model": "gemini-3-flash-preview", "output": "json"},
+        "debugger": {"model": "gemini-3-pro-preview", "output": "markdown"},
+        "architect": {"model": "gemini-3-pro-preview", "output": "markdown"},
+        "memory-audit": {"model": "gemini-3-pro-preview", "output": "json"},
+        "benchmark-audit": {"model": "gemini-3-pro-preview", "output": "json"}
       },
       "thresholds": {
         "min_files": 10,
@@ -150,27 +150,29 @@
   },
 
   "scout_protocol": {
-    "description": "Pre-routing reconnaissance to assess scope before committing resources",
-    "primary": "gemini-slave scout",
-    "fallback": "haiku-scout",
-    "selection_logic": {
-      "haiku_scout": {
-        "max_files": 3,
-        "max_tokens": 5000,
-        "reason": "Lower latency for very small scopes, preserves context hygiene for anything larger"
+    "description": "Pre-routing reconnaissance via unified gogent-scout binary",
+    "primary": "gogent-scout",
+    "backends": {
+      "native": {
+        "threshold_score": 40,
+        "capabilities": ["file_count", "line_count", "language_detection", "test_detection"],
+        "latency_target_ms": 100
       },
-      "gemini_scout": {
-        "min_files": 4,
-        "min_tokens": 5001,
-        "reason": "Aggressive offloading: massive context window, higher rate limits, lower cost, zero context pollution"
+      "gemini": {
+        "min_score": 40,
+        "capabilities": ["import_analysis", "dependency_graph", "semantic_complexity"],
+        "model": "gemini-3-flash-preview"
       }
     },
+    "fallback_chain": ["primary", "opposite", "synthetic"],
     "cost_per_call_estimate": 0.001,
-    "invocation": "find [target] -type f \\( -name \"*.py\" -o -name \"*.md\" \\) | gemini-slave scout \"[task]\"",
+    "invocation": "gogent-scout <target> \"<instruction>\"",
+    "output_file": ".claude/tmp/scout_metrics.json",
     "output_schema": {
-      "scope_metrics": ["total_files", "total_lines", "estimated_tokens"],
-      "complexity_signals": ["import_density", "cross_file_dependencies"],
-      "routing_recommendation": ["recommended_tier", "confidence", "clarification_needed"]
+      "schema_version": "1.0",
+      "scope_metrics": ["total_files", "total_lines", "estimated_tokens", "languages", "file_types"],
+      "complexity_signals": ["available", "import_density", "cross_file_dependencies", "test_coverage_present"],
+      "routing_recommendation": ["recommended_tier", "confidence", "reasoning", "clarification_needed"]
     },
     "when_to_use": [
       "Unknown scope (refactor X, improve Y)",
@@ -181,7 +183,8 @@
       "User specified exact files",
       "Single file operation",
       "Trivial task (typo, config change)"
-    ]
+    ],
+    "deprecated": "Direct gemini-slave scout calls (use gogent-scout instead)"
   },
   
   "escalation_paths": {

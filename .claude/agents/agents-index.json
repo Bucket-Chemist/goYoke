@@ -659,9 +659,39 @@
       "output_format": "json",
       "output_file": ".claude/tmp/scout_metrics.json",
       "cost_ceiling_usd": 0.02,
-      "fallback_for": "gemini-slave scout",
+      "fallback_for": "gogent-scout native backend",
       "sharp_edges_count": 2,
-      "description": "Fallback scout when Gemini unavailable. Writes to .claude/tmp/scout_metrics.json for complexity calculation."
+      "description": "Legacy fallback scout. Prefer gogent-scout which auto-routes between native and Gemini backends."
+    },
+    {
+      "id": "gogent-scout",
+      "parallelization_template": "A",
+      "name": "GOgent Smart Scout",
+      "model": "hybrid",
+      "tier": "hybrid",
+      "category": "reconnaissance",
+      "path": "cmd/gogent-scout",
+      "triggers": [
+        "assess scope",
+        "scout",
+        "how big is",
+        "estimate complexity",
+        "pre-route",
+        "check size",
+        "count files"
+      ],
+      "tools": ["Bash"],
+      "invocation": "Bash: gogent-scout <target> \"<instruction>\"",
+      "backends": {
+        "native": "score < 40 (fast, basic metrics)",
+        "gemini": "score >= 40 (Gemini 3 Flash, semantic analysis)"
+      },
+      "state_files": {
+        "scout_output": ".claude/tmp/scout_metrics.json"
+      },
+      "fallback_chain": ["native", "gemini", "synthetic"],
+      "cost_ceiling_usd": 0.01,
+      "description": "Unified scout with smart backend routing. Native Go for small scopes (<40 score), Gemini 3 Flash for large. Always returns valid JSON."
     },
     {
       "id": "typescript-pro",
