@@ -5,7 +5,7 @@ import pymupdf4llm
 import pathlib
 
 # Convert the PDF to a list of page chunks
-md_text_chunks = pymupdf4llm.to_markdown("lisan-al-gaib-architecture-guide-v1.0.pdf", page_chunks=True)
+md_text_chunks = pymupdf4llm.to_markdown("GoGent-architecture-guide-v1.0.pdf", page_chunks=True)
 
 output_dir = pathlib.Path("markdown_pages")
 output_dir.mkdir(exist_ok=True)

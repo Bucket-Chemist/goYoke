@@ -6,19 +6,20 @@ The GO agent suite provides specialized agents for building production-grade GO 
 
 ## Agent Roster
 
-| Agent | Specialty | Triggers | Auto-Activate |
-|-------|-----------|----------|---------------|
-| **go-pro** | General GO | implement, refactor, go build | `go.mod` present |
-| **go-cli** | Cobra CLI | cobra, subcommand, viper | `cmd/*/main.go` + cobra dep |
-| **go-tui** | Bubbletea TUI | tui, bubbletea, lipgloss | `internal/tui/` + bubbletea dep |
-| **go-api** | HTTP Client | http client, rate limit, backoff | `api/` or `client/` dirs |
-| **go-concurrent** | Concurrency | goroutine, errgroup, worker pool | `worker/` or `pool/` dirs |
+| Agent             | Specialty     | Triggers                         | Auto-Activate                   |
+| ----------------- | ------------- | -------------------------------- | ------------------------------- |
+| **go-pro**        | General GO    | implement, refactor, go build    | `go.mod` present                |
+| **go-cli**        | Cobra CLI     | cobra, subcommand, viper         | `cmd/*/main.go` + cobra dep     |
+| **go-tui**        | Bubbletea TUI | tui, bubbletea, lipgloss         | `internal/tui/` + bubbletea dep |
+| **go-api**        | HTTP Client   | http client, rate limit, backoff | `api/` or `client/` dirs        |
+| **go-concurrent** | Concurrency   | goroutine, errgroup, worker pool | `worker/` or `pool/` dirs       |
 
 ## Agent Details
 
 ### go-pro (General GO)
 
 **When to Use:**
+
 - New GO module setup
 - General implementation tasks
 - Cross-compilation concerns
@@ -27,6 +28,7 @@ The GO agent suite provides specialized agents for building production-grade GO 
 **Conventions Loaded:** `go.md`
 
 **Example Triggers:**
+
 - "create a new go module"
 - "implement the config loader"
 - "refactor this function"
@@ -35,6 +37,7 @@ The GO agent suite provides specialized agents for building production-grade GO 
 ### go-cli (Cobra CLI)
 
 **When to Use:**
+
 - Building CLI applications
 - Adding subcommands
 - Viper configuration
@@ -44,12 +47,14 @@ The GO agent suite provides specialized agents for building production-grade GO 
 **Conventions Loaded:** `go.md`, `go-cobra.md`
 
 **Example Triggers:**
+
 - "add a serve command"
 - "implement viper config loading"
 - "add shell completion support"
 - "create a new cobra subcommand"
 
 **Sharp Edges Pre-loaded:**
+
 - Viper binding timing (bind in init(), not RunE)
 - Use `viper.Get*()` not `cmd.Flags().Get*()`
 - SilenceUsage pattern for runtime errors
@@ -57,6 +62,7 @@ The GO agent suite provides specialized agents for building production-grade GO 
 ### go-tui (Bubbletea TUI)
 
 **When to Use:**
+
 - Terminal UI development
 - Status dashboards
 - Interactive CLI tools
@@ -65,12 +71,14 @@ The GO agent suite provides specialized agents for building production-grade GO 
 **Conventions Loaded:** `go.md`, `go-bubbletea.md`
 
 **Example Triggers:**
+
 - "create a status dashboard"
 - "add a progress bar component"
 - "implement keyboard navigation"
 - "build a list view with selection"
 
 **Sharp Edges Pre-loaded:**
+
 - NEVER modify model in goroutines
 - View must be fast (no I/O)
 - tea.Batch for multiple commands
@@ -79,6 +87,7 @@ The GO agent suite provides specialized agents for building production-grade GO 
 ### go-api (HTTP Client)
 
 **When to Use:**
+
 - API client development
 - Rate limiting
 - Retry logic with backoff
@@ -88,12 +97,14 @@ The GO agent suite provides specialized agents for building production-grade GO 
 **Conventions Loaded:** `go.md`
 
 **Example Triggers:**
+
 - "implement the API client"
 - "add rate limiting"
 - "implement exponential backoff"
 - "handle SSE streaming"
 
 **Sharp Edges Pre-loaded:**
+
 - Never use default http.Client
 - Configure all timeout types
 - Jitter in exponential backoff
@@ -102,6 +113,7 @@ The GO agent suite provides specialized agents for building production-grade GO 
 ### go-concurrent (Concurrency)
 
 **When to Use:**
+
 - Worker pool patterns
 - Parallel processing
 - errgroup coordination
@@ -111,12 +123,14 @@ The GO agent suite provides specialized agents for building production-grade GO 
 **Conventions Loaded:** `go.md`
 
 **Example Triggers:**
+
 - "implement a worker pool"
 - "add parallel processing"
 - "coordinate goroutines with errgroup"
 - "implement graceful shutdown"
 
 **Sharp Edges Pre-loaded:**
+
 - Loop variable capture in goroutines
 - Context cancellation patterns
 - Channel closing (only sender closes)
@@ -137,7 +151,8 @@ go-cli:
 
 go-tui:
   patterns: ["**/tui/**/*.go", "**/ui/**/*.go"]
-  dependencies: ["github.com/charmbracelet/bubbletea", "github.com/charmbracelet/lipgloss"]
+  dependencies:
+    ["github.com/charmbracelet/bubbletea", "github.com/charmbracelet/lipgloss"]
 
 go-api:
   patterns: ["**/api/**/*.go", "**/client/**/*.go"]
@@ -166,7 +181,7 @@ User: Create a new CLI tool for managing agents
 [ROUTING] → go-cli (detected: "cli tool" trigger)
 
 go-cli: I'll create a Cobra-based CLI structure:
-1. cmd/lisan/main.go - Entry point
+1. cmd/GoGent/main.go - Entry point
 2. internal/cli/root.go - Root command
 3. internal/cli/serve/command.go - Subcommand example
 ...
@@ -278,6 +293,7 @@ cat ~/.claude/agents/go-concurrent/sharp-edges.yaml
 ### Agent Not Activating
 
 Check file patterns:
+
 ```bash
 ls go.mod           # go-pro should activate
 ls cmd/*/main.go    # go-cli should activate if cobra in go.mod
@@ -287,6 +303,7 @@ ls internal/tui/    # go-tui should activate if bubbletea in go.mod
 ### Wrong Agent Selected
 
 Use explicit routing:
+
 ```
 User: [go-tui] Add a spinner to the status component
 ```
@@ -294,6 +311,7 @@ User: [go-tui] Add a spinner to the status component
 ### Missing Conventions
 
 Verify conventions exist:
+
 ```bash
 ls ~/.claude/conventions/go*.md
 # Should show: go.md, go-cobra.md, go-bubbletea.md

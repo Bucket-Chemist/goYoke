@@ -38,6 +38,8 @@ tools:
   - Bash
   - Grep
   - Glob
+  - TaskUpdate
+  - TaskGet
 
 conventions_required:
   - go.md

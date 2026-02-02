@@ -28,6 +28,8 @@ tools:
   - Glob
   - Grep
   - Task
+  - TaskList
+  - TaskGet
 
 delegation:
   cannot_spawn:

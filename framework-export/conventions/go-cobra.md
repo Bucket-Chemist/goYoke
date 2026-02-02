@@ -1,4 +1,4 @@
-# GO Cobra CLI Conventions - Lisan al-Gaib
+# GO Cobra CLI Conventions - GoGent
 
 ## Overview
 
@@ -56,7 +56,7 @@ import (
     "fmt"
     "os"
     "path/filepath"
-    
+
     "github.com/spf13/cobra"
     "github.com/spf13/viper"
 )
@@ -72,7 +72,7 @@ var rootCmd = &cobra.Command{
     Long: `MyApp - A comprehensive tool for X.
 
 Complete documentation at https://myapp.example.com`,
-    
+
     // PersistentPreRunE runs before ANY subcommand
     PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
         return initConfig()
@@ -87,10 +87,10 @@ func init() {
     // Global flags (available to all subcommands)
     rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.myapp/config.toml)")
     rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-    
+
     // Bind to viper
     viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
-    
+
     // Add subcommands
     rootCmd.AddCommand(serve.NewCommand())
     rootCmd.AddCommand(config.NewCommand())
@@ -105,24 +105,24 @@ func initConfig() error {
         if err != nil {
             return fmt.Errorf("find home directory: %w", err)
         }
-        
+
         configDir := filepath.Join(home, ".myapp")
         viper.AddConfigPath(configDir)
         viper.SetConfigName("config")
         viper.SetConfigType("toml")
     }
-    
+
     // Environment variables
     viper.SetEnvPrefix("MYAPP")
     viper.AutomaticEnv()
-    
+
     // Read config (ignore if not found)
     if err := viper.ReadInConfig(); err != nil {
         if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
             return fmt.Errorf("read config: %w", err)
         }
     }
-    
+
     return nil
 }
 ```
@@ -141,7 +141,7 @@ import (
     "os"
     "os/signal"
     "syscall"
-    
+
     "github.com/spf13/cobra"
     "github.com/spf13/viper"
 )
@@ -153,42 +153,42 @@ func NewCommand() *cobra.Command {
         Long:  `Start the HTTP server on the specified port.`,
         Example: `  myapp serve --port 8080
   myapp serve --config /path/to/config.toml`,
-        
+
         RunE: runServe,
     }
-    
+
     // Local flags (only for this command)
     cmd.Flags().IntP("port", "p", 8080, "port to listen on")
     cmd.Flags().String("host", "localhost", "host to bind to")
-    
+
     // Bind local flags to viper
     viper.BindPFlag("server.port", cmd.Flags().Lookup("port"))
     viper.BindPFlag("server.host", cmd.Flags().Lookup("host"))
-    
+
     return cmd
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
     // CRITICAL: Silence usage on runtime errors
     cmd.SilenceUsage = true
-    
+
     // Get values from viper (respects flag > env > config > default)
     port := viper.GetInt("server.port")
     host := viper.GetString("server.host")
-    
+
     // Setup graceful shutdown
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
-    
+
     sigCh := make(chan os.Signal, 1)
     signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-    
+
     go func() {
         <-sigCh
         fmt.Println("\nShutting down...")
         cancel()
     }()
-    
+
     // Start server
     return startServer(ctx, host, port)
 }
@@ -251,7 +251,7 @@ format = "json"
 // CORRECT: Use RunE for proper error propagation
 RunE: func(cmd *cobra.Command, args []string) error {
     cmd.SilenceUsage = true  // Don't show usage on runtime errors
-    
+
     if err := doWork(); err != nil {
         return fmt.Errorf("work failed: %w", err)
     }
@@ -273,14 +273,14 @@ Run: func(cmd *cobra.Command, args []string) {
 RunE: func(cmd *cobra.Command, args []string) error {
     // Set this FIRST - prevents usage output on runtime errors
     cmd.SilenceUsage = true
-    
+
     // Now do work...
     result, err := process(args)
     if err != nil {
         // Error shown, but NOT usage help
         return err
     }
-    
+
     fmt.Println(result)
     return nil
 },
@@ -315,11 +315,11 @@ cmd := &cobra.Command{
         if len(args) != 1 {
             return fmt.Errorf("requires exactly one file argument")
         }
-        
+
         if _, err := os.Stat(args[0]); os.IsNotExist(err) {
             return fmt.Errorf("file %q does not exist", args[0])
         }
-        
+
         return nil
     },
     RunE: runProcess,
@@ -383,7 +383,7 @@ cmd := &cobra.Command{
         if len(args) != 0 {
             return nil, cobra.ShellCompDirectiveNoFileComp
         }
-        
+
         // Return dynamic suggestions
         items := []string{"alpha", "beta", "gamma"}
         return items, cobra.ShellCompDirectiveNoFileComp
@@ -440,7 +440,7 @@ func executeCommand(root *cobra.Command, args ...string) (output string, err err
     root.SetOut(buf)
     root.SetErr(buf)
     root.SetArgs(args)
-    
+
     err = root.Execute()
     return buf.String(), err
 }

@@ -34,6 +34,8 @@ tools:
   - Bash
   - Grep
   - Glob
+  - TaskUpdate
+  - TaskGet
 
 conventions_required:
   - python.md

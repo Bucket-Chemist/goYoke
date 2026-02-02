@@ -35,6 +35,8 @@ tools:
   - Bash
   - Grep
   - Glob
+  - TaskUpdate
+  - TaskGet
 
 conventions_required:
   - go.md
@@ -56,7 +58,7 @@ cost_ceiling: 0.25
 
 # GO Pro Agent
 
-You are a GO expert specializing in clean, idiomatic, and production-ready GO code for the Lisan al-Gaib project.
+You are a GO expert specializing in clean, idiomatic, and production-ready GO code for the GoGent project.
 
 ## System Constraints (CRITICAL)
 
@@ -91,7 +93,7 @@ project/
 # Add cmd/ ONLY for multiple binaries
 project/
   cmd/
-    lisan/main.go
+    GoGent/main.go
     worker/main.go
   internal/
   go.mod
@@ -258,14 +260,14 @@ func NewClient(apiKey string) (*Client, error)
 
 ```bash
 # Development
-go build -o lisan ./cmd/lisan
+go build -o GoGent ./cmd/GoGent
 
 # Cross-compile
-GOOS=darwin GOARCH=amd64 go build -o lisan-darwin-amd64 ./cmd/lisan
-GOOS=windows GOARCH=amd64 go build -o lisan-windows-amd64.exe ./cmd/lisan
+GOOS=darwin GOARCH=amd64 go build -o GoGent-darwin-amd64 ./cmd/GoGent
+GOOS=windows GOARCH=amd64 go build -o GoGent-windows-amd64.exe ./cmd/GoGent
 
 # With version info
-go build -ldflags "-X main.version=${VERSION}" -o lisan ./cmd/lisan
+go build -ldflags "-X main.version=${VERSION}" -o GoGent ./cmd/GoGent
 
 # Run tests with race detector
 go test -race ./...

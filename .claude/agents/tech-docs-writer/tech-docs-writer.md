@@ -12,6 +12,8 @@ tools:
   - Write
   - Edit
   - Glob
+  - TaskUpdate
+  - TaskGet
 triggers:
   - "documentation"
   - "readme"

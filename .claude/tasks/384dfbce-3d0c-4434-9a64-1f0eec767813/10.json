@@ -1,9 +1,0 @@
-{
-  "id": "10",
-  "subject": "Add TaskUpdate+TaskGet to Python implementation agents",
-  "description": "Add TaskUpdate and TaskGet to frontmatter tools for:\n- python-pro/agent.md (also needs frontmatter created)\n- python-ux/agent.md (also needs frontmatter created)",
-  "activeForm": "Updating Python agents",
-  "status": "in_progress",
-  "blocks": [],
-  "blockedBy": []
-}

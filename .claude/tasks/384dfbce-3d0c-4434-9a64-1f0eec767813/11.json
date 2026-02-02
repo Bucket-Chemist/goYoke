@@ -1,9 +1,0 @@
-{
-  "id": "11",
-  "subject": "Add TaskUpdate+TaskGet to R, React, TypeScript agents",
-  "description": "Add TaskUpdate and TaskGet to frontmatter tools for:\n- r-pro/r-pro.md\n- r-shiny-pro/r-shiny-pro.md\n- react-pro/react-pro.md\n- typescript-pro/typescript-pro.md",
-  "activeForm": "Updating R/React/TS agents",
-  "status": "in_progress",
-  "blocks": [],
-  "blockedBy": []
-}

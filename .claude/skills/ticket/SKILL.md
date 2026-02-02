@@ -10,6 +10,7 @@ description: Ticket-driven workflow for structured implementation. Finds next ti
 Turn ticket specifications into completed work through systematic workflow execution.
 
 **What this skill does:**
+
 1. **Discover** — Find ticket system in current project
 2. **Select** — Choose next actionable ticket (dependencies met)
 3. **Validate** — Check ticket structure and completeness
@@ -20,6 +21,7 @@ Turn ticket specifications into completed work through systematic workflow execu
 8. **Complete** — Update status, generate commit, mark done
 
 **What this skill does NOT do:**
+
 - Implement code (delegates to language agents: go-pro, python-pro, etc.)
 - Enforce routing rules (handled by validate-routing.sh hook)
 - Create tickets (use project planning workflows)
@@ -38,17 +40,20 @@ Turn ticket specifications into completed work through systematic workflow execu
 ## Prerequisites
 
 **Required tools:**
+
 - `jq` (JSON manipulation)
 - `python3` with `python-frontmatter` library
 - `git` (for commit workflow)
 
 **Install dependencies:**
+
 ```bash
 pip install python-frontmatter
 ```
 
 **Project setup:**
 Either create `.ticket-config.json` at project root:
+
 ```json
 {
   "tickets_dir": "implementation_plan/tickets",
@@ -57,6 +62,7 @@ Either create `.ticket-config.json` at project root:
 ```
 
 Or use standard directory structure:
+
 - `./implementation_plan/tickets/tickets-index.json`
 - `./migration_plan/finalised/tickets/tickets-index.json`
 - `./tickets/tickets-index.json`
@@ -81,6 +87,7 @@ echo "[ticket] Found tickets at: $tickets_dir"
 ```
 
 **Discovery logic:**
+
 1. Search for `.ticket-config.json` in current directory and ancestors
 2. Fallback to git root + standard paths (implementation_plan/tickets/, migration_plan/finalised/tickets/, tickets/)
 3. Error if nothing found
@@ -111,6 +118,7 @@ echo "[ticket] Selected: $ticket_id"
 ```
 
 **Selection logic:**
+
 - Filter to `status == "pending"`
 - Check all dependencies have `status == "completed"`
 - Return first match (respects ticket order in JSON)
@@ -155,6 +163,7 @@ echo "[ticket] Schema validation: PASS"
 ```
 
 **Validates:**
+
 - Required frontmatter fields (id, title, description, status, time_estimate, dependencies)
 - Status enum values
 - Acceptance criteria presence
@@ -178,6 +187,7 @@ echo "[ticket] Confidence: $confidence"
 ```
 
 **Decision logic (priority order):**
+
 1. Explicit `needs_planning` field in frontmatter
 2. "planning" tag presence
 3. Complexity heuristic (files>3, time>2h, deps>2, multi-package)
@@ -192,6 +202,7 @@ If `needs_planning == true`, delegate to architect:
 Use the Task tool to spawn architect agent:
 
 **Task Invocation:**
+
 ```
 Tool: Task
 Description: Create implementation plan for {ticket_id}
@@ -229,6 +240,7 @@ Prompt:
 ```
 
 After architect completes:
+
 ```
 [ticket] Plan created.
 Review and approve before proceeding.
@@ -260,15 +272,17 @@ echo "$ticket_id" > "$tickets_dir/.current-ticket"
 Parse the ticket file and extract acceptance criteria checkboxes, then create tasks.
 
 For each criterion, use TaskCreate:
+
 ```javascript
 TaskCreate({
   subject: "[Criterion text]",
   description: "From ticket {ticket_id}: [full criterion details]",
-  activeForm: "Working on [criterion]..."
-})
+  activeForm: "Working on [criterion]...",
+});
 ```
 
 Example output:
+
 ```
 [ticket] Created 3 tasks from acceptance criteria:
   - Task #1: Implement function X
@@ -328,12 +342,14 @@ fi
 ```
 
 **What the audit does:**
+
 - Executes language-specific test suites (unit, integration, race detection)
 - Generates coverage reports
 - Creates implementation summary document
 - Logs all results to `.ticket-audits/{ticket_id}/`
 
 **Output artifacts:**
+
 - `unit-tests.log` — Unit test execution results
 - `coverage.out` — Coverage data (Go projects)
 - `coverage-report.txt` — Coverage analysis
@@ -341,12 +357,14 @@ fi
 - `implementation-summary.md` — Human-readable summary with test results and metadata
 
 **Behavior notes:**
+
 - **Non-blocking**: Audit failures do NOT prevent ticket completion
 - **Backward compatible**: If `.ticket-config.json` missing or `audit_config.enabled` is false, audit is silently skipped
 - **Language-agnostic**: Automatically detects project language (Go, Python, R, JavaScript/TypeScript)
 - **Configurable**: Test commands can be customized in `.ticket-config.json` under `audit_config.test_commands`
 
 **Example audit configuration:**
+
 ```json
 {
   "tickets_dir": "migration_plan/tickets",
@@ -365,11 +383,13 @@ fi
 ```
 
 **When to enable audit:**
+
 - Projects with established test suites
 - Tickets requiring coverage verification
 - Teams wanting automated documentation of implementation quality
 
 **When to skip audit:**
+
 - Prototyping or spike work
 - Documentation-only changes
 - Projects without test infrastructure
@@ -442,6 +462,7 @@ fi
 ```
 
 **Code review behavior:**
+
 - **Fully blocking**: Critical issues prevent ticket completion (exit 1)
 - **Warnings allowed**: Warnings are displayed but don't block
 - **Controlled by**: `audit_config.code_review.enabled` in `.ticket-config.json`
@@ -449,6 +470,7 @@ fi
 - **Output**: Findings written to `.claude/tmp/review-result.json`
 
 **Example configuration with code review:**
+
 ```json
 {
   "tickets_dir": "migration_plan/tickets",
@@ -471,12 +493,14 @@ fi
 ```
 
 **When to enable code review:**
+
 - Projects requiring consistent code quality
 - Team environments with coding standards
 - Security-sensitive codebases
 - Large refactoring efforts
 
 **When to disable code review:**
+
 - Solo prototyping
 - Emergency hotfixes
 - Documentation-only tickets
@@ -538,29 +562,29 @@ echo "[ticket] Next available tickets:"
 
 ## State Files
 
-| File | Purpose | Format |
-|------|---------|--------|
-| `.ticket-config.json` | Project configuration | JSON with tickets_dir, project_name, audit_config |
-| `tickets-index.json` | Ticket registry and status | JSON with metadata and tickets array |
-| `.current-ticket` | Current ticket ID | Plain text (e.g., "LISAN-002") |
-| `plans/{ticket-id}-plan.md` | Implementation plans | Markdown from architect |
-| `.ticket-audits/{ticket-id}/` | Audit artifacts | Directory with test logs, coverage data, summary |
+| File                          | Purpose                    | Format                                            |
+| ----------------------------- | -------------------------- | ------------------------------------------------- |
+| `.ticket-config.json`         | Project configuration      | JSON with tickets_dir, project_name, audit_config |
+| `tickets-index.json`          | Ticket registry and status | JSON with metadata and tickets array              |
+| `.current-ticket`             | Current ticket ID          | Plain text (e.g., "GoGent-002")                   |
+| `plans/{ticket-id}-plan.md`   | Implementation plans       | Markdown from architect                           |
+| `.ticket-audits/{ticket-id}/` | Audit artifacts            | Directory with test logs, coverage data, summary  |
 
 ---
 
 ## Cost Model
 
-| Phase | Model | Est. Tokens | Cost |
-|-------|-------|-------------|------|
-| Discovery | Bash | 0 | $0.000 |
-| Selection | Bash | 0 | $0.000 |
-| Validation | Python | 0 | $0.000 |
-| Planning (if needed) | Sonnet | 10-15K | $0.09-$0.14 |
-| Tracking | TaskCreate | 0 | $0.000 |
-| Verification | Python | 0 | $0.000 |
-| Audit (if enabled) | Bash | 0 | $0.000 |
-| Completion | Bash | 0 | $0.000 |
-| **Total per ticket** | | 10-15K | **$0.09-$0.14** |
+| Phase                | Model      | Est. Tokens | Cost            |
+| -------------------- | ---------- | ----------- | --------------- |
+| Discovery            | Bash       | 0           | $0.000          |
+| Selection            | Bash       | 0           | $0.000          |
+| Validation           | Python     | 0           | $0.000          |
+| Planning (if needed) | Sonnet     | 10-15K      | $0.09-$0.14     |
+| Tracking             | TaskCreate | 0           | $0.000          |
+| Verification         | Python     | 0           | $0.000          |
+| Audit (if enabled)   | Bash       | 0           | $0.000          |
+| Completion           | Bash       | 0           | $0.000          |
+| **Total per ticket** |            | 10-15K      | **$0.09-$0.14** |
 
 **Cost savings vs manual workflow:** ~40% (automated discovery, validation, status management, audit documentation)
 
@@ -569,6 +593,7 @@ echo "[ticket] Next available tickets:"
 ## Memory Integration
 
 The /ticket skill automatically updates project state:
+
 - Current ticket tracked in `.current-ticket`
 - Status updates in `tickets-index.json`
 - Plans archived in `plans/` directory
@@ -580,23 +605,28 @@ On session resume, the skill reads `.current-ticket` to restore context.
 ## Troubleshooting
 
 **"No ticket directory found"**
+
 - Create `.ticket-config.json` at project root
 - Or ensure `tickets/tickets-index.json` exists
 
 **"Schema validation FAILED"**
+
 - Check ticket has required frontmatter fields
 - Verify acceptance criteria exist (markdown checkboxes)
 - Run validation manually: `validate-ticket-schema.py ticket.md`
 
 **"No actionable tickets found"**
+
 - Check if dependencies are marked as "completed" in tickets-index.json
 - Verify `status == "pending"` for expected tickets
 
 **"Planning needed but no architect available"**
+
 - Architect requires Plan subagent_type
 - Ensure routing-schema.json includes architect → Plan mapping
 
 **"Audit failed (non-blocking)"**
+
 - Check test logs in `.ticket-audits/{ticket-id}/unit-tests.log`
 - Review configuration in `.ticket-config.json` under `audit_config.test_commands`
 - Verify test infrastructure is set up (go.mod, pyproject.toml, etc.)
@@ -604,6 +634,7 @@ On session resume, the skill reads `.current-ticket` to restore context.
 - Note: Audit failures do NOT prevent ticket completion
 
 **"Audit disabled/skipped"**
+
 - Enable in `.ticket-config.json`: `"audit_config": { "enabled": true }`
 - If missing, audit is skipped by default (backward compatible behavior)
 

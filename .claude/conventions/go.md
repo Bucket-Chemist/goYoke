@@ -1,8 +1,9 @@
-# GO Conventions - Lisan al-Gaib
+# GO Conventions - GoGent
 
 ## System Constraints (CRITICAL)
 
 **This system targets desktop distribution. All GO code must:**
+
 1. Compile to single binary with zero runtime dependencies
 2. Cross-compile for darwin/amd64, darwin/arm64, windows/amd64, linux/amd64
 3. Embed all static assets using `go:embed`
@@ -39,6 +40,7 @@ myproject/
 ```
 
 **Rules:**
+
 - `internal/` - Private packages, cannot be imported externally
 - `pkg/` - ONLY if explicitly sharing code as library (rarely needed)
 - `cmd/` - ONLY for multiple binaries
@@ -155,13 +157,13 @@ func (s *Service) ProcessTask(ctx context.Context, task Task) error {
         return ctx.Err()
     default:
     }
-    
+
     // Pass context to all downstream calls
     result, err := s.api.Fetch(ctx, task.URL)
     if err != nil {
         return fmt.Errorf("fetch: %w", err)
     }
-    
+
     return s.store.Save(ctx, result)
 }
 
@@ -236,7 +238,7 @@ import "golang.org/x/sync/errgroup"
 func FetchAll(ctx context.Context, urls []string) ([]Result, error) {
     g, ctx := errgroup.WithContext(ctx)
     results := make([]Result, len(urls))
-    
+
     for i, url := range urls {
         i, url := i, url  // CRITICAL: Capture loop variables
         g.Go(func() error {
@@ -248,7 +250,7 @@ func FetchAll(ctx context.Context, urls []string) ([]Result, error) {
             return nil
         })
     }
-    
+
     if err := g.Wait(); err != nil {
         return nil, err
     }
@@ -448,7 +450,7 @@ func RetryWithBackoff(ctx context.Context, maxAttempts int, fn func() error) err
         } else {
             lastErr = err
         }
-        
+
         backoff := CalculateBackoff(attempt, 100*time.Millisecond, 30*time.Second)
         select {
         case <-ctx.Done():
@@ -514,7 +516,7 @@ func TestConcurrent(t *testing.T) {
         {"case1", 1},
         {"case2", 2},
     }
-    
+
     for _, tc := range tests {
         tc := tc  // CRITICAL: Capture range variable
         t.Run(tc.name, func(t *testing.T) {
@@ -537,15 +539,15 @@ go test -race -count=1 ./...
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Package | lowercase, single word | `http`, `config`, `agent` |
-| Exported | PascalCase | `Client`, `NewServer`, `Config` |
-| Unexported | camelCase | `config`, `parseInput`, `client` |
-| Receiver | 1-2 letter abbreviation | `func (c *Client) Do()` |
-| Interface | -er suffix for single method | `Reader`, `Writer`, `Stringer` |
-| Getters | No "Get" prefix | `func (u *User) Name() string` |
-| Initialisms | Consistent case | `userID`, `httpClient`, `apiURL` |
+| Element     | Convention                   | Example                          |
+| ----------- | ---------------------------- | -------------------------------- |
+| Package     | lowercase, single word       | `http`, `config`, `agent`        |
+| Exported    | PascalCase                   | `Client`, `NewServer`, `Config`  |
+| Unexported  | camelCase                    | `config`, `parseInput`, `client` |
+| Receiver    | 1-2 letter abbreviation      | `func (c *Client) Do()`          |
+| Interface   | -er suffix for single method | `Reader`, `Writer`, `Stringer`   |
+| Getters     | No "Get" prefix              | `func (u *User) Name() string`   |
+| Initialisms | Consistent case              | `userID`, `httpClient`, `apiURL` |
 
 ### Avoid Stuttering
 
@@ -570,7 +572,7 @@ type Client struct {
     // APIKey is the authentication key for the API.
     // Required.
     APIKey string
-    
+
     // Timeout specifies a time limit for requests.
     // Zero means no timeout.
     Timeout time.Duration
@@ -588,15 +590,15 @@ func NewClient(apiKey string) (*Client, error)
 ```yaml
 linters:
   enable:
-    - errcheck       # Check error returns
-    - govet          # Go vet checks
-    - staticcheck    # Comprehensive static analysis
-    - gosimple       # Simplification suggestions
-    - ineffassign    # Detect ineffectual assignments
-    - bodyclose      # HTTP response body closure
-    - gosec          # Security issues
-    - gofmt          # Format checking
-    - goimports      # Import organization
+    - errcheck # Check error returns
+    - govet # Go vet checks
+    - staticcheck # Comprehensive static analysis
+    - gosimple # Simplification suggestions
+    - ineffassign # Detect ineffectual assignments
+    - bodyclose # HTTP response body closure
+    - gosec # Security issues
+    - gofmt # Format checking
+    - goimports # Import organization
 
 linters-settings:
   errcheck:
@@ -616,7 +618,7 @@ issues:
 ### Makefile Template
 
 ```makefile
-BINARY_NAME=lisan
+BINARY_NAME=GoGent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
@@ -671,6 +673,7 @@ lint:
    Required when targeting Go <1.22 compatibility.
 
 2. **Nil slice vs empty slice**
+
    ```go
    var s []int        // nil slice, json: null
    s := []int{}       // empty slice, json: []
@@ -678,13 +681,14 @@ lint:
    ```
 
 3. **defer in loops**
+
    ```go
    // WRONG: Defers accumulate until function returns
    for _, file := range files {
        f, _ := os.Open(file)
        defer f.Close()  // Won't close until function ends
    }
-   
+
    // CORRECT: Use anonymous function
    for _, file := range files {
        func() {
@@ -696,6 +700,7 @@ lint:
    ```
 
 4. **Channel closing**
+
    ```go
    // Only sender should close channels
    // Never close from receiver side

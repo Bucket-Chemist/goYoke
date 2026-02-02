@@ -1,4 +1,4 @@
-# GO Bubbletea TUI Conventions - Lisan al-Gaib
+# GO Bubbletea TUI Conventions - GoGent
 
 ## Overview
 
@@ -49,21 +49,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.width = msg.Width
         m.height = msg.Height
         return m, nil
-        
+
     case tea.KeyMsg:
         return m.handleKey(msg)
-        
+
     case itemsLoadedMsg:
         m.items = msg.items
         m.loading = false
         return m, nil
-        
+
     case errMsg:
         m.err = msg.err
         m.loading = false
         return m, nil
     }
-    
+
     return m, nil
 }
 
@@ -178,7 +178,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
     case "ctrl+c", "q":
         return m, tea.Quit
     }
-    
+
     // Mode-specific keys
     switch m.mode {
     case modeNormal:
@@ -188,7 +188,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
     case modeHelp:
         return m.handleHelpKey(msg)
     }
-    
+
     return m, nil
 }
 
@@ -249,7 +249,7 @@ func (l ListComponent) Update(msg tea.Msg) (ListComponent, tea.Cmd) {
     if !l.focused {
         return l, nil
     }
-    
+
     switch msg := msg.(type) {
     case tea.KeyMsg:
         switch msg.String() {
@@ -292,7 +292,7 @@ type Model struct {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     var cmds []tea.Cmd
-    
+
     // Handle component-specific messages
     switch msg := msg.(type) {
     case itemSelectedMsg:
@@ -313,7 +313,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             return m, nil
         }
     }
-    
+
     // Update focused component
     var cmd tea.Cmd
     if m.focus == "list" {
@@ -323,7 +323,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.detail, cmd = m.detail.Update(msg)
         cmds = append(cmds, cmd)
     }
-    
+
     return m, tea.Batch(cmds...)
 }
 ```
@@ -338,29 +338,29 @@ var (
     subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
     highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
     special   = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
-    
+
     // Styles
     titleStyle = lipgloss.NewStyle().
         Bold(true).
         Foreground(lipgloss.Color("#FAFAFA")).
         Background(highlight).
         Padding(0, 1)
-    
+
     itemStyle = lipgloss.NewStyle().
         PaddingLeft(2)
-    
+
     selectedItemStyle = lipgloss.NewStyle().
         PaddingLeft(2).
         Foreground(special).
         Bold(true)
-    
+
     statusBarStyle = lipgloss.NewStyle().
         Foreground(subtle).
         Padding(0, 1)
-    
+
     helpStyle = lipgloss.NewStyle().
         Foreground(lipgloss.Color("#626262"))
-    
+
     // Box styles
     boxStyle = lipgloss.NewStyle().
         Border(lipgloss.RoundedBorder()).
@@ -376,17 +376,17 @@ func (m Model) View() string {
     // Calculate available space
     contentWidth := m.width - 4  // Account for borders
     contentHeight := m.height - 6  // Account for header/footer
-    
+
     // Build components with dynamic sizing
     header := titleStyle.Width(m.width).Render("My App")
-    
+
     content := boxStyle.
         Width(contentWidth).
         Height(contentHeight).
         Render(m.renderContent())
-    
+
     footer := statusBarStyle.Width(m.width).Render(m.status)
-    
+
     return lipgloss.JoinVertical(lipgloss.Left, header, content, footer)
 }
 ```
@@ -529,7 +529,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.input.Blur()
         }
     }
-    
+
     var cmd tea.Cmd
     m.input, cmd = m.input.Update(msg)
     return m, cmd
@@ -576,7 +576,7 @@ func main() {
         tea.WithAltScreen(),        // Use alternate screen buffer
         tea.WithMouseCellMotion(),  // Enable mouse support
     )
-    
+
     if _, err := p.Run(); err != nil {
         fmt.Printf("Error: %v\n", err)
         os.Exit(1)
@@ -589,13 +589,13 @@ func main() {
 ```go
 func main() {
     p := tea.NewProgram(NewModel())
-    
+
     // Send message from another goroutine
     go func() {
         time.Sleep(5 * time.Second)
         p.Send(externalUpdateMsg{data: "new data"})
     }()
-    
+
     p.Run()
 }
 ```
@@ -605,11 +605,11 @@ func main() {
 ```go
 func TestModelUpdate(t *testing.T) {
     m := NewModel()
-    
+
     // Simulate key press
     newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
     updatedM := newModel.(Model)
-    
+
     assert.Equal(t, 1, updatedM.cursor)
 }
 
@@ -618,7 +618,7 @@ func TestModelView(t *testing.T) {
         items:  []string{"a", "b", "c"},
         cursor: 0,
     }
-    
+
     view := m.View()
     assert.Contains(t, view, "â–¸ a")  // Selected indicator
     assert.Contains(t, view, "  b")  // Non-selected
@@ -656,14 +656,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // CORRECT: Batch all commands
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     var cmds []tea.Cmd
-    
+
     var cmd tea.Cmd
     m.spinner, cmd = m.spinner.Update(msg)
     cmds = append(cmds, cmd)
-    
+
     m.list, cmd = m.list.Update(msg)
     cmds = append(cmds, cmd)
-    
+
     return m, tea.Batch(cmds...)
 }
 ```

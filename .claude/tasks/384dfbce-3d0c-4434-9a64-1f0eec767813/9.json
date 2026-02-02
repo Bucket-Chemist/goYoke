@@ -1,9 +1,0 @@
-{
-  "id": "9",
-  "subject": "Add TaskUpdate+TaskGet to all Go implementation agents",
-  "description": "Add TaskUpdate and TaskGet to frontmatter tools for:\n- go-pro/agent.md (also needs frontmatter created)\n- go-cli/agent.md\n- go-tui/agent.md\n- go-api/agent.md\n- go-concurrent/agent.md",
-  "activeForm": "Updating Go agents",
-  "status": "in_progress",
-  "blocks": [],
-  "blockedBy": []
-}

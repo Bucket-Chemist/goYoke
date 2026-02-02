@@ -9,6 +9,7 @@
 ## Overview
 
 The `/ticket` skill provides a systematic workflow for ticket-driven development:
+
 - Auto-discovery of ticket systems in projects
 - Dependency-aware ticket selection
 - Schema validation (for properly formatted tickets)
@@ -97,14 +98,16 @@ The l-a-g-GO project uses **grouped tickets** (multiple tickets per .md file):
 ```markdown
 # Week 1: Foundation & Event Parsing
 
-### LISAN-001: Initialize Go Module
+### GoGent-001: Initialize Go Module
+
 **Time**: 1h
-**Dependencies**: LISAN-000
+**Dependencies**: GoGent-000
 ...
 
-### LISAN-002: Define routing.Schema Struct
+### GoGent-002: Define routing.Schema Struct
+
 **Time**: 2h
-**Dependencies**: LISAN-001
+**Dependencies**: GoGent-001
 ...
 ```
 
@@ -115,6 +118,7 @@ The l-a-g-GO project uses **grouped tickets** (multiple tickets per .md file):
 ⚠️ **Planning heuristics limited** - Complexity signals harder to extract
 
 **For grouped tickets:**
+
 - `tickets-index.json` becomes single source of truth
 - Schema validation skipped (assume index is correct)
 - Planning decisions rely on explicit `planning_required` field in index
@@ -188,7 +192,7 @@ ls migration_plan/finalised/tickets/tickets-index.json
 cat > .ticket-config.json << 'EOF'
 {
   "tickets_dir": "migration_plan/finalised/tickets",
-  "project_name": "lisan-al-gaib"
+  "project_name": "GoGent"
 }
 EOF
 
@@ -203,6 +207,7 @@ EOF
 ### Converting Grouped Tickets → Individual Files
 
 **Future task**: Create a migration script that:
+
 1. Parses grouped ticket files (01-week1-foundation-events.md, etc.)
 2. Extracts each ticket section
 3. Generates individual .md files with frontmatter
@@ -215,15 +220,15 @@ EOF
 ```
 # Before (grouped)
 01-week1-foundation-events.md
-├── LISAN-001
-├── LISAN-002
-└── LISAN-003
+├── GoGent-001
+├── GoGent-002
+└── GoGent-003
 
 # After (individual)
 tickets/
-├── LISAN-001.md (with frontmatter)
-├── LISAN-002.md (with frontmatter)
-└── LISAN-003.md (with frontmatter)
+├── GoGent-001.md (with frontmatter)
+├── GoGent-002.md (with frontmatter)
+└── GoGent-003.md (with frontmatter)
 ```
 
 ---
@@ -231,12 +236,14 @@ tickets/
 ## Dependencies
 
 **System requirements:**
+
 - `bash` ≥4.0
 - `jq` (JSON query tool)
 - `python3` ≥3.7
 - `git` (for commit workflow)
 
 **Python packages:**
+
 - `python-frontmatter` (required for schema validation)
 
 **Installation (Arch Linux with externally-managed Python):**
@@ -305,15 +312,20 @@ cd ~/my-project
 ## Script Details
 
 ### discover-project.sh
+
 Locates ticket directory using:
+
 1. `.ticket-config.json` in current dir or ancestors
 2. Git root + standard paths (implementation_plan/tickets/, migration_plan/finalised/tickets/, tickets/)
 
 ### find-next-ticket.sh
+
 Queries tickets-index.json for first pending ticket with all dependencies completed.
 
 ### check-planning-needed.py
+
 Determines if architect planning required via:
+
 1. Explicit `needs_planning` frontmatter field
 2. "planning" tag presence
 3. Complexity heuristic (files>3, time>2h, deps>2, multi-package)
@@ -322,7 +334,9 @@ Determines if architect planning required via:
 **Requires**: Individual ticket files with frontmatter
 
 ### validate-ticket-schema.py
+
 Validates ticket structure:
+
 - Required frontmatter fields (id, title, description, status, time_estimate, dependencies)
 - Status enum values (pending|in_progress|completed|blocked)
 - Acceptance criteria presence
@@ -331,7 +345,9 @@ Validates ticket structure:
 **Requires**: Individual ticket files with frontmatter
 
 ### verify-acceptance.py
+
 Parses markdown checkboxes to determine completion:
+
 - Counts total criteria
 - Counts completed (- [x])
 - Lists pending criteria
@@ -339,9 +355,11 @@ Parses markdown checkboxes to determine completion:
 **Works with**: Both individual and grouped ticket formats
 
 ### update-ticket-status.sh
+
 Atomically updates ticket status in tickets-index.json using jq.
 
 ### generate-commit-msg.sh
+
 Creates conventional commit message from ticket metadata.
 
 **Requires**: Individual ticket files with frontmatter
@@ -385,20 +403,24 @@ Creates conventional commit message from ticket metadata.
 ## Troubleshooting
 
 **"python-frontmatter not installed"**
+
 ```bash
 ~/.generic-python/bin/pip install python-frontmatter
 ```
 
 **"Schema validation FAILED" on grouped tickets**
+
 - Expected for l-a-g-GO format
 - Skip validation, rely on tickets-index.json
 - Consider migrating to individual ticket files
 
 **"No actionable tickets found"**
+
 - Check dependencies are marked "completed" in tickets-index.json
 - Verify tickets have `status: "pending"`
 
 **Python script fails to execute**
+
 - Check shebang points to correct Python installation
 - Verify python-frontmatter is installed in that environment
 
@@ -407,6 +429,7 @@ Creates conventional commit message from ticket metadata.
 ## Contributing
 
 When updating the skill:
+
 1. Maintain backward compatibility with grouped ticket format
 2. Document breaking changes in this README
 3. Update SKILL.md if workflow changes

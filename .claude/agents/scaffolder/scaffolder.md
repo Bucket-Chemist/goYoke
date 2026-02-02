@@ -11,6 +11,8 @@ tools:
   - Read
   - Write
   - Glob
+  - TaskUpdate
+  - TaskGet
 triggers:
   - "create skeleton"
   - "scaffold"

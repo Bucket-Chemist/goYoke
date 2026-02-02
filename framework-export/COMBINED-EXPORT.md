@@ -7,10 +7,11 @@ This file contains all framework configuration for deep research review.
 ## Core Configuration
 
 ### CLAUDE.md (Router Identity)
+
 ```markdown
 # Claude Code - GOgent-Fortress Configuration
-
 ```
+
                    ⚡  GOgent Fortress  ⚡
                     ___________________
                    /\  ╔══════════╗  /\
@@ -26,6 +27,7 @@ This file contains all framework configuration for deep research review.
     |█████████████████████████████████████████████|
 
     ⚡ You are a ROUTER, not an implementer ⚡
+
 ```
 
 ---
@@ -50,7 +52,9 @@ This file contains all framework configuration for deep research review.
 **On first response of every session, output:**
 
 ```
+
 [Session Init] {language}. {conventions}. Router ready.
+
 ```
 
 **Examples:**
@@ -106,28 +110,32 @@ These Go binaries run automatically. You cannot bypass them.
 ## Routing Decision Flow
 
 ```
+
 Request arrives
-    │
-    ├─► Is it a slash command (/explore, /einstein, etc.)?
-    │       YES → Execute the skill
-    │
-    ├─► Does it match an agent trigger? (see Agent Dispatch Table)
-    │       YES → Route to that agent via Task()
-    │
-    ├─► Is it exploration/research with unknown scope?
-    │       YES → Use Task(subagent_type: "Explore")
-    │
-    ├─► Is it trivial (typo, config tweak, single line)?
-    │       YES → Handle directly
-    │
-    └─► Ambiguous?
-            → Ask ONE clarifying question, then route
+│
+├─► Is it a slash command (/explore, /einstein, etc.)?
+│ YES → Execute the skill
+│
+├─► Does it match an agent trigger? (see Agent Dispatch Table)
+│ YES → Route to that agent via Task()
+│
+├─► Is it exploration/research with unknown scope?
+│ YES → Use Task(subagent_type: "Explore")
+│
+├─► Is it trivial (typo, config tweak, single line)?
+│ YES → Handle directly
+│
+└─► Ambiguous?
+→ Ask ONE clarifying question, then route
+
 ```
 
 **Output format when routing:**
 ```
+
 [ROUTING] → agent-name (reason)
-```
+
+````
 
 ---
 
@@ -221,9 +229,10 @@ CONTEXT: [relevant files, patterns]
 EXPECTED OUTPUT: [deliverable]
 CONSTRAINTS: [what not to do]`
 })
-```
+````
 
 **If gogent-validate blocks your Task():**
+
 - Check the error message - it tells you the correct subagent_type
 - Fix and retry
 
@@ -238,12 +247,12 @@ Uses Bash, NOT Task():
 cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependencies"
 ```
 
-| Protocol | Output | Use When |
-|----------|--------|----------|
-| `mapper` | JSON structure | Reduce files to critical paths |
-| `debugger` | Root cause analysis | Cross-module error tracing |
-| `architect` | Patterns/anti-patterns | Module review |
-| `scout` | Scope metrics | Pre-routing assessment |
+| Protocol    | Output                 | Use When                       |
+| ----------- | ---------------------- | ------------------------------ |
+| `mapper`    | JSON structure         | Reduce files to critical paths |
+| `debugger`  | Root cause analysis    | Cross-module error tracing     |
+| `architect` | Patterns/anti-patterns | Module review                  |
+| `scout`     | Scope metrics          | Pre-routing assessment         |
 
 ---
 
@@ -252,6 +261,7 @@ cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependenci
 ### Pattern 1: Scout → Route → Execute
 
 For unknown scope:
+
 ```
 1. [SCOUTING] Spawn haiku-scout or gemini-slave scout
 2. Read .claude/tmp/scout_metrics.json
@@ -262,6 +272,7 @@ For unknown scope:
 ### Pattern 2: Gemini → Orchestrator → Architect
 
 For large-context analysis:
+
 ```
 1. gemini-slave (Bash) → produces report
 2. orchestrator (Task) → synthesizes findings
@@ -271,6 +282,7 @@ For large-context analysis:
 ### Pattern 3: Einstein Escalation
 
 When orchestrator fails 3x or problem is intractable:
+
 ```
 1. Generate GAP document to .claude/tmp/einstein-gap-{timestamp}.md
 2. Output: "🚨 Run /einstein to process"
@@ -283,13 +295,14 @@ When orchestrator fails 3x or problem is intractable:
 
 gogent-sharp-edge logs every routing decision:
 
-| Data Point | Location |
-|------------|----------|
-| Routing decisions | `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl` |
-| Decision outcomes | `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl` |
-| Agent collaborations | `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl` |
+| Data Point           | Location                                                        |
+| -------------------- | --------------------------------------------------------------- |
+| Routing decisions    | `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl`        |
+| Decision outcomes    | `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl` |
+| Agent collaborations | `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl`     |
 
 **Export for analysis:**
+
 ```bash
 gogent-ml-export routing-decisions --output=decisions.jsonl
 gogent-ml-export stats
@@ -299,42 +312,45 @@ gogent-ml-export stats
 
 ## GOgent Utilities
 
-| Command | Purpose |
-|---------|---------|
-| `gogent-archive list` | List archived sessions |
-| `gogent-archive stats` | Session statistics |
+| Command                      | Purpose                   |
+| ---------------------------- | ------------------------- |
+| `gogent-archive list`        | List archived sessions    |
+| `gogent-archive stats`       | Session statistics        |
 | `gogent-archive sharp-edges` | View captured sharp edges |
-| `gogent-aggregate` | Cross-session analysis |
-| `gogent-ml-export stats` | ML telemetry summary |
+| `gogent-aggregate`           | Cross-session analysis    |
+| `gogent-ml-export stats`     | ML telemetry summary      |
 
 ---
 
 ## Environment Variables
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `GOGENT_MAX_FAILURES` | 3 | Failures before sharp edge capture |
-| `GOGENT_REMINDER_THRESHOLD` | 10 | Tools between routing reminders |
-| `GOGENT_FLUSH_THRESHOLD` | 20 | Tools between auto-flush |
-| `XDG_DATA_HOME` | `~/.local/share` | ML telemetry location |
+| Variable                    | Default          | Purpose                            |
+| --------------------------- | ---------------- | ---------------------------------- |
+| `GOGENT_MAX_FAILURES`       | 3                | Failures before sharp edge capture |
+| `GOGENT_REMINDER_THRESHOLD` | 10               | Tools between routing reminders    |
+| `GOGENT_FLUSH_THRESHOLD`    | 20               | Tools between auto-flush           |
+| `XDG_DATA_HOME`             | `~/.local/share` | ML telemetry location              |
 
 ---
 
 ## Session Lifecycle
 
 ### Start (Automatic via gogent-load-context)
+
 - Detects project language
 - Loads conventions (`~/.claude/conventions/`)
 - Restores handoff from previous session
 - Injects git context
 
 ### During Session
+
 - Every tool: ML telemetry logged
 - Every 10 tools: Routing reminder injected
 - Every 20+ tools: Pending learnings auto-flushed
 - On failures: Sharp edge tracking
 
 ### End (Automatic via gogent-archive)
+
 - Handoff generated to `memory/handoffs.jsonl`
 - Human-readable summary to `memory/last-handoff.md`
 - Metrics captured
@@ -346,6 +362,7 @@ gogent-ml-export stats
 ### Scout Before Committing Resources
 
 When scope is unknown (mentions "module", "refactor", "all files"):
+
 ```
 [SCOUTING] Assessing scope before routing...
 ```
@@ -353,6 +370,7 @@ When scope is unknown (mentions "module", "refactor", "all files"):
 ### Verify After Delegation
 
 After agent returns:
+
 ```
 [Verifying] Checking result meets requirements...
 ✓ Output received
@@ -363,6 +381,7 @@ After agent returns:
 ### Compound Triggers → Orchestrator
 
 When 2+ agent triggers fire:
+
 ```
 [Compound Triggers] synthesis + implementation + documentation
 [ROUTING] → orchestrator (multi-domain coordination)
@@ -372,26 +391,26 @@ When 2+ agent triggers fire:
 
 ## Escape Hatches
 
-| Situation | Action |
-|-----------|--------|
-| User says "do it directly" | Skip routing, execute |
-| Single-line fix | Execute directly |
-| Hook blocks incorrectly | User can override (rare) |
-| No agent fits | Handle as general exploration |
-| Urgent/time-sensitive | Note deviation, proceed |
+| Situation                  | Action                        |
+| -------------------------- | ----------------------------- |
+| User says "do it directly" | Skip routing, execute         |
+| Single-line fix            | Execute directly              |
+| Hook blocks incorrectly    | User can override (rare)      |
+| No agent fits              | Handle as general exploration |
+| Urgent/time-sensitive      | Note deviation, proceed       |
 
 ---
 
 ## Reference Documents
 
-| Document | Purpose |
-|----------|---------|
-| `routing-schema.json` | Source of truth for tiers, agents, thresholds |
-| `agents-index.json` | Complete agent definitions with triggers |
-| `conventions/*.md` | Language-specific coding conventions |
-| `rules/LLM-guidelines.md` | Multi-model strategy, anti-patterns |
-| `rules/agent-behavior.md` | Behavioral guidelines for all agents |
-| `ARCHITECTURE.md` | Full system architecture (in repo root) |
+| Document                  | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| `routing-schema.json`     | Source of truth for tiers, agents, thresholds |
+| `agents-index.json`       | Complete agent definitions with triggers      |
+| `conventions/*.md`        | Language-specific coding conventions          |
+| `rules/LLM-guidelines.md` | Multi-model strategy, anti-patterns           |
+| `rules/agent-behavior.md` | Behavioral guidelines for all agents          |
+| `ARCHITECTURE.md`         | Full system architecture (in repo root)       |
 
 ---
 
@@ -417,7 +436,8 @@ OUTPUT FORMATS:
 [SCOUTING] Assessing scope...
 [Verifying] Checking result...
 ```
-```
+
+````
 
 ### routing-schema.json
 ```json
@@ -426,7 +446,7 @@ OUTPUT FORMATS:
   "version": "2.4.0",
   "description": "Routing schema for Claude Code tiered agent architecture - v2.4: Added TypeScript/React agents and review specialists",
   "updated": "2026-02-01",
-  
+
   "tiers": {
     "haiku": {
       "description": "Mechanical work - fast, cheap, no reasoning required",
@@ -435,7 +455,7 @@ OUTPUT FORMATS:
       "max_thinking_budget": 0,
       "cost_per_1k_tokens": 0.0005,
       "patterns": [
-        "count", "list", "find", "search", "glob", "grep", 
+        "count", "list", "find", "search", "glob", "grep",
         "format", "lint", "locate", "where is", "which files",
         "look for", "find all", "how many"
       ],
@@ -447,7 +467,7 @@ OUTPUT FORMATS:
       },
       "agents": ["codebase-search", "haiku-scout"]
     },
-    
+
     "haiku_thinking": {
       "description": "Structured reasoning - Haiku with thinking for templated tasks",
       "model": "haiku",
@@ -468,7 +488,7 @@ OUTPUT FORMATS:
       },
       "agents": ["scaffolder", "tech-docs-writer", "code-reviewer", "librarian", "memory-archivist", "backend-reviewer", "frontend-reviewer", "standards-reviewer"]
     },
-    
+
     "sonnet": {
       "description": "Reasoning work - implementation, refactoring, debugging",
       "model": "sonnet",
@@ -492,7 +512,7 @@ OUTPUT FORMATS:
       },
       "agents": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "staff-architect-critical-review"]
     },
-    
+
     "opus": {
       "description": "Deep analysis - restricted invocation, allowlist for planning agents",
       "model": "opus",
@@ -606,7 +626,7 @@ OUTPUT FORMATS:
       "Trivial task (typo, config change)"
     ]
   },
-  
+
   "escalation_rules": {
     "haiku_to_haiku_thinking": [
       "reasoning required but simple domain",
@@ -639,7 +659,7 @@ OUTPUT FORMATS:
       "full codebase understanding needed"
     ]
   },
-  
+
   "compound_triggers": {
     "description": "When 2+ patterns from different tiers fire, escalate to orchestrator",
     "examples": [
@@ -649,13 +669,13 @@ OUTPUT FORMATS:
     ],
     "action": "Route to orchestrator for coordination"
   },
-  
+
   "cost_thresholds": {
     "scout_max_cost": 0.01,
     "exploration_max_cost": 0.20,
     "description": "Cost ceilings for pre-execution phases"
   },
-  
+
   "override": {
     "flag": "--force-tier=<tier>",
     "description": "User escape hatch when routing produces false positives",
@@ -783,9 +803,10 @@ OUTPUT FORMATS:
     }
   }
 }
-```
+````
 
 ## Agents Index
+
 ```json
 {
   "version": "2.3.0",
@@ -814,7 +835,10 @@ OUTPUT FORMATS:
       ],
       "tools": ["Read", "Write", "Glob", "save_memory"],
       "auto_activate": null,
-      "inputs": [".claude/tmp/specs.md", ".claude/memory/pending-learnings.jsonl"],
+      "inputs": [
+        ".claude/tmp/specs.md",
+        ".claude/memory/pending-learnings.jsonl"
+      ],
       "outputs": [".claude/memory/decisions/", ".claude/memory/sharp-edges/"],
       "description": "The Historian. Archives specs.md and session learnings to structured memory for RAG queries."
     },
@@ -1267,7 +1291,10 @@ OUTPUT FORMATS:
         "required": ["specs.md", "write_todos"],
         "specs_location": ".claude/tmp/specs.md"
       },
-      "input_sources": [".claude/tmp/scout_metrics.json", ".claude/tmp/strategy.md"],
+      "input_sources": [
+        ".claude/tmp/scout_metrics.json",
+        ".claude/tmp/strategy.md"
+      ],
       "description": "Implementation planner (opus tier). Produces specs.md + write_todos. Reads scout reports and strategy documents for context."
     },
     {
@@ -1346,7 +1373,14 @@ OUTPUT FORMATS:
       "tools": ["Bash"],
       "auto_activate": null,
       "invocation": "Bash (gemini-slave wrapper), NOT Task tool",
-      "protocols": ["mapper", "debugger", "architect", "benchmark-audit", "memory-audit", "scout"],
+      "protocols": [
+        "mapper",
+        "debugger",
+        "architect",
+        "benchmark-audit",
+        "memory-audit",
+        "scout"
+      ],
       "state_files": {
         "scout_output": ".claude/tmp/scout_metrics.json",
         "complexity_score": ".claude/tmp/complexity_score"
@@ -1372,7 +1406,10 @@ OUTPUT FORMATS:
       "tools": ["Read", "Glob", "Grep", "Task", "Write"],
       "auto_activate": null,
       "inputs": [".claude/tmp/specs.md"],
-      "outputs": [".claude/tmp/review-critique.md", ".claude/tmp/review-metadata.json"],
+      "outputs": [
+        ".claude/tmp/review-critique.md",
+        ".claude/tmp/review-metadata.json"
+      ],
       "sharp_edges_count": 6,
       "cost_per_invocation": "0.15-0.25",
       "description": "Critical review of implementation plans using 7-layer framework. Invoked via /review-plan command or automatically in /plan workflow."
@@ -1563,11 +1600,31 @@ OUTPUT FORMATS:
     "intent_gate": {
       "description": "Pre-classify every message before routing",
       "types": [
-        {"type": "trivial", "signal": "Single file, known location", "action": "Direct tools only"},
-        {"type": "explicit", "signal": "Specific file/line, clear command", "action": "Execute directly"},
-        {"type": "exploratory", "signal": "How does X work?", "action": "Fire codebase-search + librarian"},
-        {"type": "open-ended", "signal": "Improve, Refactor", "action": "Scout first, then route"},
-        {"type": "ambiguous", "signal": "Unclear scope", "action": "Scout first, clarify if needed"}
+        {
+          "type": "trivial",
+          "signal": "Single file, known location",
+          "action": "Direct tools only"
+        },
+        {
+          "type": "explicit",
+          "signal": "Specific file/line, clear command",
+          "action": "Execute directly"
+        },
+        {
+          "type": "exploratory",
+          "signal": "How does X work?",
+          "action": "Fire codebase-search + librarian"
+        },
+        {
+          "type": "open-ended",
+          "signal": "Improve, Refactor",
+          "action": "Scout first, then route"
+        },
+        {
+          "type": "ambiguous",
+          "signal": "Unclear scope",
+          "action": "Scout first, clarify if needed"
+        }
       ]
     },
     "scout_first_protocol": {
@@ -1591,9 +1648,9 @@ OUTPUT FORMATS:
       "description": "Code-enforced tier selection based on complexity score",
       "calculator": ".claude/scripts/calculate-complexity.sh",
       "thresholds": {
-        "haiku": {"max_score": 2},
-        "sonnet": {"min_score": 2, "max_score": 10},
-        "external": {"min_score": 10}
+        "haiku": { "max_score": 2 },
+        "sonnet": { "min_score": 2, "max_score": 10 },
+        "external": { "min_score": 10 }
       },
       "force_external_if": "tokens > 50000"
     },
@@ -1610,10 +1667,41 @@ OUTPUT FORMATS:
       "high_context_detected": "gemini-slave"
     },
     "model_tiers": {
-      "haiku": ["codebase-search", "scaffolder", "librarian", "tech-docs-writer", "code-reviewer", "haiku-scout", "memory-archivist"],
-      "haiku_thinking": ["backend-reviewer", "frontend-reviewer", "standards-reviewer"],
-      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator"],
-      "opus": ["einstein", "planner", "architect", "staff-architect-critical-review"],
+      "haiku": [
+        "codebase-search",
+        "scaffolder",
+        "librarian",
+        "tech-docs-writer",
+        "code-reviewer",
+        "haiku-scout",
+        "memory-archivist"
+      ],
+      "haiku_thinking": [
+        "backend-reviewer",
+        "frontend-reviewer",
+        "standards-reviewer"
+      ],
+      "sonnet": [
+        "python-pro",
+        "python-ux",
+        "r-pro",
+        "r-shiny-pro",
+        "orchestrator",
+        "go-pro",
+        "go-cli",
+        "go-tui",
+        "go-api",
+        "go-concurrent",
+        "typescript-pro",
+        "react-pro",
+        "review-orchestrator"
+      ],
+      "opus": [
+        "einstein",
+        "planner",
+        "architect",
+        "staff-architect-critical-review"
+      ],
       "external": ["gemini-slave"]
     }
   },
@@ -1652,8 +1740,10 @@ OUTPUT FORMATS:
 ```
 
 ## Rules
+
 ### agent-behavior.md
-```markdown
+
+````markdown
 ---
 paths:
   - "**/*"
@@ -1686,6 +1776,7 @@ serves the user better than compliance.
 beats three attempts that miss the mark.
 
 This doesn't mean interrogating the user on every detail. Use judgment:
+
 - Obvious intent → proceed
 - Ambiguous with reasonable default → state assumption, proceed
 - Ambiguous with no clear default → ask
@@ -1722,15 +1813,18 @@ and execute them in a single message with multiple tool calls.
 The runtime executes them concurrently and returns all results together.
 
 **Parallelize (no dependencies between calls):**
+
 ```javascript
 // GOOD: Single message, multiple independent reads
-Read({file_path: "/src/auth/handler.go"})
-Read({file_path: "/src/auth/middleware.go"})
-Read({file_path: "/src/auth/types.go"})
+Read({ file_path: "/src/auth/handler.go" });
+Read({ file_path: "/src/auth/middleware.go" });
+Read({ file_path: "/src/auth/types.go" });
 // All three execute concurrently, results return together
 ```
+````
 
 **Don't parallelize (output informs next input):**
+
 ```javascript
 // These MUST be sequential - each depends on the previous
 Read({file_path: "/src/config.go"})        // Need content first
@@ -1742,12 +1836,12 @@ Bash({command: "go build ./..."})          // Build depends on edit
 
 **Common parallelizable patterns:**
 
-| Scenario | Parallel Calls |
-|----------|----------------|
-| Understanding a module | Read 3-5 related files |
-| Finding patterns | Multiple Grep/Glob searches |
-| Validating changes | Bash(go vet) + Bash(go test) + Bash(golangci-lint) |
-| Exploring structure | Glob for *.go + Glob for *_test.go + Read go.mod |
+| Scenario               | Parallel Calls                                     |
+| ---------------------- | -------------------------------------------------- |
+| Understanding a module | Read 3-5 related files                             |
+| Finding patterns       | Multiple Grep/Glob searches                        |
+| Validating changes     | Bash(go vet) + Bash(go test) + Bash(golangci-lint) |
+| Exploring structure    | Glob for _.go + Glob for _\_test.go + Read go.mod  |
 
 **The check:** Before making a tool call, ask: "Do I need the result of a
 previous call to determine this call's parameters?" If no → batch it.
@@ -1759,6 +1853,7 @@ previous call to determine this call's parameters?" If no → batch it.
 ### 2.1 Always Check Before Acting
 
 Before using ANY tool, verify:
+
 1. Does this task match a Key Trigger in CLAUDE.md?
 2. Is the current tier appropriate for this work?
 3. Should I scout first to assess scope?
@@ -1767,30 +1862,31 @@ Before using ANY tool, verify:
 
 ### 2.2 Tier Selection Matrix
 
-| Task Complexity | Context Size | Tier | Action |
-|-----------------|--------------|------|--------|
-| Mechanical (count, find, grep) | Any | Haiku | Direct or codebase-search |
-| Structured output (docs, scaffold) | <1000 lines | Haiku+Thinking | Delegate to specialist |
-| Reasoning required | <5000 tokens | Sonnet | Delegate to implementation agent |
-| Multi-source synthesis | Any | Sonnet (orchestrator) | Coordinate multiple agents |
-| Novel/complex/security | Any | Opus (einstein) | **Generate GAP doc** (see 4.4) |
-| >10 files or >50K tokens | Large | External (Gemini) | Pipe to gemini-slave first |
+| Task Complexity                    | Context Size | Tier                  | Action                           |
+| ---------------------------------- | ------------ | --------------------- | -------------------------------- |
+| Mechanical (count, find, grep)     | Any          | Haiku                 | Direct or codebase-search        |
+| Structured output (docs, scaffold) | <1000 lines  | Haiku+Thinking        | Delegate to specialist           |
+| Reasoning required                 | <5000 tokens | Sonnet                | Delegate to implementation agent |
+| Multi-source synthesis             | Any          | Sonnet (orchestrator) | Coordinate multiple agents       |
+| Novel/complex/security             | Any          | Opus (einstein)       | **Generate GAP doc** (see 4.4)   |
+| >10 files or >50K tokens           | Large        | External (Gemini)     | Pipe to gemini-slave first       |
 
 ### 2.2.1 Go Implementation Agents (Sonnet Tier)
 
-| Trigger Patterns | Agent | Use For |
-|------------------|-------|---------|
-| implement, struct, interface, go build | `go-pro` | Core Go implementation |
-| Cobra, CLI, subcommand, flags | `go-cli` | CLI applications |
-| Bubbletea, TUI, lipgloss, tea.Model | `go-tui` | Terminal interfaces |
-| HTTP client, API, rate limit, retry | `go-api` | HTTP clients/servers |
-| goroutine, errgroup, channel, mutex | `go-concurrent` | Concurrent patterns |
+| Trigger Patterns                       | Agent           | Use For                |
+| -------------------------------------- | --------------- | ---------------------- |
+| implement, struct, interface, go build | `go-pro`        | Core Go implementation |
+| Cobra, CLI, subcommand, flags          | `go-cli`        | CLI applications       |
+| Bubbletea, TUI, lipgloss, tea.Model    | `go-tui`        | Terminal interfaces    |
+| HTTP client, API, rate limit, retry    | `go-api`        | HTTP clients/servers   |
+| goroutine, errgroup, channel, mutex    | `go-concurrent` | Concurrent patterns    |
 
 These agents understand Go idioms: explicit error handling, small interfaces, composition over inheritance, table-driven tests.
 
 ### 2.3 Scout Before Commit
 
 **When scope is unknown:**
+
 ```
 [SCOUTING] Unknown scope detected. Spawning haiku-scout...
 ```
@@ -1803,11 +1899,11 @@ Then wait for scout results before selecting tier. This prevents $0.50 Opus call
 
 ### 3.1 Background vs Foreground
 
-| Pattern | Use When | Mechanism |
-|---------|----------|-----------|
-| **Foreground (default)** | Next step depends on this output | `Task({...})` |
-| **Background** | Independent work, will collect later | `Bash({..., run_in_background: true})` |
-| **Parallel foreground** | Multiple independent, need all before continuing | Multiple `Task()` in same message |
+| Pattern                  | Use When                                         | Mechanism                              |
+| ------------------------ | ------------------------------------------------ | -------------------------------------- |
+| **Foreground (default)** | Next step depends on this output                 | `Task({...})`                          |
+| **Background**           | Independent work, will collect later             | `Bash({..., run_in_background: true})` |
+| **Parallel foreground**  | Multiple independent, need all before continuing | Multiple `Task()` in same message      |
 
 ### 3.2 MANDATORY: Background Task Collection
 
@@ -1818,12 +1914,13 @@ Then wait for scout results before selecting tier. This prevents $0.50 Opus call
 1. Track every task_id returned
 2. Before ANY final output or synthesis:
    ```javascript
-   TaskOutput({task_id: "bg-task-1", block: true})
-   TaskOutput({task_id: "bg-task-2", block: true})
+   TaskOutput({ task_id: "bg-task-1", block: true });
+   TaskOutput({ task_id: "bg-task-2", block: true });
    ```
 3. NEVER conclude orchestration with uncollected background tasks
 
 **Violation Pattern (BLOCKED by hook):**
+
 ```javascript
 Bash({..., run_in_background: true})  // Spawned
 Bash({..., run_in_background: true})  // Spawned
@@ -1838,7 +1935,7 @@ For parallel information gathering:
 ```javascript
 // 1. FAN-OUT: Spawn all tasks
 const task1 = Task({...})  // Returns task_id
-const task2 = Task({...})  // Returns task_id  
+const task2 = Task({...})  // Returns task_id
 const task3 = Task({...})  // Returns task_id
 
 // 2. FAN-IN: Collect all results (MANDATORY)
@@ -1856,28 +1953,31 @@ const result3 = TaskOutput({task_id: task3, block: true})
 
 ### 4.1 Automatic Escalation Triggers
 
-| Condition | Action |
-|-----------|--------|
-| 2 failures on same file | Warning injected (via hook) |
+| Condition               | Action                                   |
+| ----------------------- | ---------------------------------------- |
+| 2 failures on same file | Warning injected (via hook)              |
 | 3 failures on same file | Sharp edge captured, escalation prompted |
-| Agent returns error | Retry with modified approach ONCE |
-| Retry also fails | Escalate to next tier |
+| Agent returns error     | Retry with modified approach ONCE        |
+| Retry also fails        | Escalate to next tier                    |
 
 ### 4.2 Retry with Modification
 
 When an approach fails, do NOT retry identically. Modify:
+
 - Different tool selection
 - Smaller scope
 - More context provided
 - Different agent
 
 **Bad:**
+
 ```
 [Attempt 1] Edit file X → Error
 [Attempt 2] Edit file X → Same error  // WRONG: identical retry
 ```
 
 **Good:**
+
 ```
 [Attempt 1] Edit file X → Error
 [Analysis] Error suggests type mismatch
@@ -1887,6 +1987,7 @@ When an approach fails, do NOT retry identically. Modify:
 ### 4.3 Sharp Edge Protocol
 
 When a debugging loop is detected:
+
 1. STOP current approach
 2. Document the pattern (auto-logged by hook)
 3. Consider: What assumption was wrong?
@@ -1902,13 +2003,13 @@ When a debugging loop is detected:
 
 Escalate to Einstein when:
 
-| Condition | Detection |
-|-----------|-----------|
-| **3+ consecutive failures** | Same file/function, same error class |
+| Condition                           | Detection                                |
+| ----------------------------------- | ---------------------------------------- |
+| **3+ consecutive failures**         | Same file/function, same error class     |
 | **Architectural decision required** | Solution requires cross-module tradeoffs |
-| **Complexity exceeds Sonnet tier** | Scout returns `recommended_tier: opus` |
-| **User explicitly requests** | "call einstein", "deep analysis needed" |
-| **Novel problem** | No pattern in sharp-edges.yaml applies |
+| **Complexity exceeds Sonnet tier**  | Scout returns `recommended_tier: opus`   |
+| **User explicitly requests**        | "call einstein", "deep analysis needed"  |
+| **Novel problem**                   | No pattern in sharp-edges.yaml applies   |
 
 #### Escalation Procedure
 
@@ -1916,6 +2017,7 @@ Escalate to Einstein when:
 2. **Generate GAP document** using template at `~/.claude/schemas/einstein-gap.md`
 3. **Write** to `.claude/tmp/einstein-gap-{timestamp}.md`
 4. **Output notification**:
+
    ```
    [ESCALATED] GAP document ready: .claude/tmp/einstein-gap-{timestamp}.md
 
@@ -1926,6 +2028,7 @@ Escalate to Einstein when:
    - Attempts: {attempt_count}
    - Blocker: {primary_blocker}
    ```
+
 5. **WAIT** for user to run `/einstein`
 
 #### What NOT to Do
@@ -1956,18 +2059,19 @@ Before writing the GAP document, verify:
 
 The following Go binaries run as hooks and inject context automatically:
 
-| Binary | Event | What You'll See |
-|--------|-------|-----------------|
-| `gogent-load-context` | SessionStart | Routing schema, previous handoff, git context |
-| `gogent-validate` | PreToolUse (Task) | Block/allow decision, subagent_type enforcement |
-| `gogent-sharp-edge` | PostToolUse | Tool counter, routing reminders (every 10), failure tracking |
-| `gogent-agent-endstate` | SubagentStop | Decision outcomes, tier-specific follow-up prompts |
-| `gogent-orchestrator-guard` | SubagentStop | Background task collection enforcement |
-| `gogent-archive` | SessionEnd | Handoff generation, metrics capture |
+| Binary                      | Event             | What You'll See                                              |
+| --------------------------- | ----------------- | ------------------------------------------------------------ |
+| `gogent-load-context`       | SessionStart      | Routing schema, previous handoff, git context                |
+| `gogent-validate`           | PreToolUse (Task) | Block/allow decision, subagent_type enforcement              |
+| `gogent-sharp-edge`         | PostToolUse       | Tool counter, routing reminders (every 10), failure tracking |
+| `gogent-agent-endstate`     | SubagentStop      | Decision outcomes, tier-specific follow-up prompts           |
+| `gogent-orchestrator-guard` | SubagentStop      | Background task collection enforcement                       |
+| `gogent-archive`            | SessionEnd        | Handoff generation, metrics capture                          |
 
 ### 5.2 Responding to Hook Injections
 
 When you see `additionalContext` in a hook response:
+
 - READ the injected guidance
 - FOLLOW the recommendations
 - Do NOT ignore or dismiss
@@ -1987,6 +2091,7 @@ When you discover something worth remembering:
 ### 6.2 Session Handoff
 
 At session end:
+
 - Pending learnings are archived automatically
 - Handoff document generated at `memory/last-handoff.md`
 - Next session receives this context via `gogent-load-context` hook
@@ -1994,8 +2099,8 @@ At session end:
 ### 6.3 Evolution Cycle
 
 ```
-Work → Detect patterns → Capture to memory → 
-Weekly audit (Gemini) → Propose config updates → 
+Work → Detect patterns → Capture to memory →
+Weekly audit (Gemini) → Propose config updates →
 Benchmark test → If improved: commit
 ```
 
@@ -2005,12 +2110,12 @@ Benchmark test → If improved: commit
 
 ### 7.1 Token Budget Awareness
 
-| Tier | Thinking Budget | Cost/1K tokens |
-|------|-----------------|----------------|
-| Haiku | 0 or 2-4K | $0.0005 |
-| Haiku+Thinking | 4-6K | $0.001 |
-| Sonnet | 10-16K | $0.009 |
-| Opus | 16-32K | $0.045 |
+| Tier           | Thinking Budget | Cost/1K tokens |
+| -------------- | --------------- | -------------- |
+| Haiku          | 0 or 2-4K       | $0.0005        |
+| Haiku+Thinking | 4-6K            | $0.001         |
+| Sonnet         | 10-16K          | $0.009         |
+| Opus           | 16-32K          | $0.045         |
 
 ### 7.2 Cost-Saving Patterns
 
@@ -2030,6 +2135,7 @@ If task is <$0.01 of work, do it directly rather than delegating. Delegation its
 ### 8.1 Self-Verification
 
 Before returning output to user:
+
 1. Does it answer the actual question?
 2. Does it follow relevant conventions?
 3. Are there obvious errors?
@@ -2038,11 +2144,12 @@ Before returning output to user:
 ### 8.2 Critic Pattern (Optional)
 
 For important outputs, invoke quick review:
+
 ```javascript
 Task({
   model: "haiku",
-  prompt: "Review this output for obvious errors: [output]"
-})
+  prompt: "Review this output for obvious errors: [output]",
+});
 ```
 
 Cost: ~$0.005. Worth it for user-facing deliverables.
@@ -2053,22 +2160,22 @@ Cost: ~$0.005. Worth it for user-facing deliverables.
 
 ### 9.1 FORBIDDEN Behaviors
 
-| Anti-Pattern | Why Bad | Correct Approach |
-|--------------|---------|------------------|
-| Retrying identically after failure | Wastes tokens, won't help | Modify approach |
-| Using Sonnet for file search | 50x cost waste | Use Haiku/codebase-search |
-| Spawning background tasks without collecting | Orphaned work | Always call TaskOutput |
-| Ignoring hook injections | Misses guidance | Read and follow |
-| Skipping scout on unknown scope | Potential mis-routing | Scout first |
-| Large context without Gemini | Context overflow | Pipe to gemini-slave |
+| Anti-Pattern                                 | Why Bad                   | Correct Approach          |
+| -------------------------------------------- | ------------------------- | ------------------------- |
+| Retrying identically after failure           | Wastes tokens, won't help | Modify approach           |
+| Using Sonnet for file search                 | 50x cost waste            | Use Haiku/codebase-search |
+| Spawning background tasks without collecting | Orphaned work             | Always call TaskOutput    |
+| Ignoring hook injections                     | Misses guidance           | Read and follow           |
+| Skipping scout on unknown scope              | Potential mis-routing     | Scout first               |
+| Large context without Gemini                 | Context overflow          | Pipe to gemini-slave      |
 
 ### 9.2 WARNING Behaviors
 
-| Behavior | Risk | Mitigation |
-|----------|------|------------|
-| >3 agents in one task | Coordination complexity | Consider orchestrator |
-| Opus for routine work | Cost | Verify Opus triggers present |
-| Direct file editing without reading | Context gaps | Read first |
+| Behavior                            | Risk                    | Mitigation                   |
+| ----------------------------------- | ----------------------- | ---------------------------- |
+| >3 agents in one task               | Coordination complexity | Consider orchestrator        |
+| Opus for routine work               | Cost                    | Verify Opus triggers present |
+| Direct file editing without reading | Context gaps            | Read first                   |
 
 ---
 
@@ -2084,7 +2191,8 @@ Cost: ~$0.005. Worth it for user-facing deliverables.
 ---
 
 **Remember:** Your effectiveness is bounded by coding discipline and routing discipline. Overcomplicated code or wrong tier = wasted effort + suboptimal output.
-```
+
+````
 
 ### LLM-guidelines.md
 ```markdown
@@ -2129,7 +2237,8 @@ Complex tasks benefit from staged approaches:
 
 ### The Complete Specification Pattern
 For non-trivial functions, provide:
-```
+````
+
 TASK: [What to build]
 INPUTS: [Types, shapes, constraints]
 OUTPUTS: [Expected return type/structure]
@@ -2137,23 +2246,28 @@ EDGE CASES: [What to handle]
 INTEGRATES WITH: [Existing code/classes]
 CONSTRAINTS: [Performance, memory, compatibility]
 EXAMPLE: [Representative input → expected output]
+
 ```
 
 ### The Debugging Pattern
 When asking Claude to debug:
 ```
+
 OBSERVED: [What happened - include full error]
 EXPECTED: [What should happen]
 CONTEXT: [Relevant code, recent changes]
 ATTEMPTED: [What you already tried]
+
 ```
 
 ### The Review Pattern
 When requesting code review:
 ```
+
 REVIEW AGAINST: [Specific rules/criteria]
 FOCUS AREAS: [Performance, security, style, etc.]
 CONSTRAINTS: [What cannot change]
+
 ```
 
 ---
@@ -2177,8 +2291,10 @@ Use the `Task` tool with multiple agents when:
 - Gathering context from multiple codebases
 
 ```
+
 Example: "Launch parallel agents to research Bubbletea tea.Model patterns
 and lipgloss styling conventions, then synthesize recommendations"
+
 ```
 
 ### Todo Tracking for Complex Tasks
@@ -2220,12 +2336,14 @@ Ask Claude to explain complex generated code:
 
 **Model Architecture Specification:**
 ```
+
 ARCHITECTURE: [Model type - CNN, Transformer, etc.]
 INPUT SHAPE: [Batch, channels, height, width] or [Batch, seq_len, features]
 OUTPUT SHAPE: [Expected output dimensions]
 LAYERS: [Key layer specifications]
 LOSS: [Loss function and any weighting]
 DEVICE: [CPU, CUDA, TPU considerations]
+
 ```
 
 **Training Loop Requests:**
@@ -2282,12 +2400,14 @@ DEVICE: [CPU, CUDA, TPU considerations]
 
 **Code Structure Specification:**
 ```
+
 PACKAGE: [package name and responsibility]
 IMPORTS: [expected dependencies]
 TYPES: [structs, interfaces to define]
 FUNCTIONS: [public API with signatures]
 ERROR HANDLING: [error types, wrapping strategy]
 TESTS: [table-driven test expectations]
+
 ```
 
 **Interface Design:**
@@ -2304,11 +2424,13 @@ TESTS: [table-driven test expectations]
 
 **Concurrency Specification:**
 ```
+
 PATTERN: [fan-out/fan-in, worker pool, pipeline]
 GOROUTINES: [number and responsibility]
 SYNCHRONIZATION: [channels, mutex, errgroup]
 CANCELLATION: [context.Context usage]
 ERROR PROPAGATION: [how errors surface]
+
 ```
 
 **Common Go Agents:**
@@ -2475,18 +2597,22 @@ Aggressive tiered routing saves ~70% on exploration workflows:
 
 For complex research tasks, launch multiple Haiku scouts in parallel:
 ```
+
 - Haiku Scout 1: File discovery (glob patterns)
 - Haiku Scout 2: Pattern extraction (grep)
 - Haiku Scout 3: Code snippet extraction
-→ Sonnet Analyst: Synthesize findings
-→ Opus Main: Make architectural decisions
+  → Sonnet Analyst: Synthesize findings
+  → Opus Main: Make architectural decisions
+
 ```
 
 For Go implementation tasks, consider:
 ```
+
 - Haiku Scout: Find existing patterns (grep for similar interfaces)
 - go-pro (Sonnet): Implement core logic
 - code-reviewer (Haiku): Verify conventions
+
 ```
 
 ---
@@ -2558,34 +2684,36 @@ Use:
 ### Decision Tree: Where Does This Go?
 
 ```
+
 Is this enforcement of a behavior?
 │
 ├─ YES: Can it be detected programmatically?
-│   │
-│   ├─ YES: What kind of enforcement?
-│   │   │
-│   │   ├─ Block action → routing-schema.json rule
-│   │   │                 + gogent-validate check (Go binary)
-│   │   │                 + CLAUDE.md reference
-│   │   │
-│   │   ├─ Require action → Hook injects reminder at trigger
-│   │   │                   + CLAUDE.md documents workflow
-│   │   │
-│   │   └─ Warn on pattern → PreToolUse hook with warning
-│   │                        + CLAUDE.md notes the check
-│   │
-│   └─ NO: Is it methodology guidance?
-│       │
-│       ├─ YES → LLM-guidelines.md (this file)
-│       │
-│       └─ NO → agent-behavior.md or conventions/*.md
+│ │
+│ ├─ YES: What kind of enforcement?
+│ │ │
+│ │ ├─ Block action → routing-schema.json rule
+│ │ │ + gogent-validate check (Go binary)
+│ │ │ + CLAUDE.md reference
+│ │ │
+│ │ ├─ Require action → Hook injects reminder at trigger
+│ │ │ + CLAUDE.md documents workflow
+│ │ │
+│ │ └─ Warn on pattern → PreToolUse hook with warning
+│ │ + CLAUDE.md notes the check
+│ │
+│ └─ NO: Is it methodology guidance?
+│ │
+│ ├─ YES → LLM-guidelines.md (this file)
+│ │
+│ └─ NO → agent-behavior.md or conventions/\*.md
 │
 └─ NO: Is this describing existing system behavior?
-    │
-    ├─ YES → CLAUDE.md (gates, workflows, triggers)
-    │
-    └─ NO → Probably doesn't need to be written
-```
+│
+├─ YES → CLAUDE.md (gates, workflows, triggers)
+│
+└─ NO → Probably doesn't need to be written
+
+````
 
 ### What Goes Where: Quick Reference
 
@@ -2634,11 +2762,12 @@ If any answer is wrong, implement programmatic enforcement first.
 
 **You MUST NOT invoke Einstein via Task tool.**
 **This is BLOCKED. Use /einstein slash command instead.**
-```
+````
 
 ✅ **Correct (layered enforcement):**
 
 1. `routing-schema.json`:
+
 ```json
 "opus": {
   "task_invocation_blocked": true,
@@ -2647,6 +2776,7 @@ If any answer is wrong, implement programmatic enforcement first.
 ```
 
 2. `cmd/gogent-validate/main.go`:
+
 ```go
 if event.Task != nil && event.Task.Model == "opus" {
     return routing.BlockResponse(
@@ -2656,6 +2786,7 @@ if event.Task != nil && event.Task.Model == "opus" {
 ```
 
 3. `CLAUDE.md`:
+
 ```markdown
 ## Gate 6: Einstein Escalation
 
@@ -2671,12 +2802,13 @@ The CLAUDE.md version describes and references; it doesn't pretend to enforce.
 ---
 
 **Remember:** Claude's output quality is bounded by input quality. Invest in context.
-```
+
+````
 
 ## Conventions
 ### go-bubbletea.md
 ```markdown
-# GO Bubbletea TUI Conventions - Lisan al-Gaib
+# GO Bubbletea TUI Conventions - GoGent
 
 ## Overview
 
@@ -2727,21 +2859,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.width = msg.Width
         m.height = msg.Height
         return m, nil
-        
+
     case tea.KeyMsg:
         return m.handleKey(msg)
-        
+
     case itemsLoadedMsg:
         m.items = msg.items
         m.loading = false
         return m, nil
-        
+
     case errMsg:
         m.err = msg.err
         m.loading = false
         return m, nil
     }
-    
+
     return m, nil
 }
 
@@ -2755,7 +2887,7 @@ func (m Model) View() string {
     }
     return m.renderList()
 }
-```
+````
 
 ## Messages and Commands
 
@@ -2856,7 +2988,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
     case "ctrl+c", "q":
         return m, tea.Quit
     }
-    
+
     // Mode-specific keys
     switch m.mode {
     case modeNormal:
@@ -2866,7 +2998,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
     case modeHelp:
         return m.handleHelpKey(msg)
     }
-    
+
     return m, nil
 }
 
@@ -2927,7 +3059,7 @@ func (l ListComponent) Update(msg tea.Msg) (ListComponent, tea.Cmd) {
     if !l.focused {
         return l, nil
     }
-    
+
     switch msg := msg.(type) {
     case tea.KeyMsg:
         switch msg.String() {
@@ -2970,7 +3102,7 @@ type Model struct {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     var cmds []tea.Cmd
-    
+
     // Handle component-specific messages
     switch msg := msg.(type) {
     case itemSelectedMsg:
@@ -2991,7 +3123,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             return m, nil
         }
     }
-    
+
     // Update focused component
     var cmd tea.Cmd
     if m.focus == "list" {
@@ -3001,7 +3133,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         m.detail, cmd = m.detail.Update(msg)
         cmds = append(cmds, cmd)
     }
-    
+
     return m, tea.Batch(cmds...)
 }
 ```
@@ -3016,29 +3148,29 @@ var (
     subtle    = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
     highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
     special   = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
-    
+
     // Styles
     titleStyle = lipgloss.NewStyle().
         Bold(true).
         Foreground(lipgloss.Color("#FAFAFA")).
         Background(highlight).
         Padding(0, 1)
-    
+
     itemStyle = lipgloss.NewStyle().
         PaddingLeft(2)
-    
+
     selectedItemStyle = lipgloss.NewStyle().
         PaddingLeft(2).
         Foreground(special).
         Bold(true)
-    
+
     statusBarStyle = lipgloss.NewStyle().
         Foreground(subtle).
         Padding(0, 1)
-    
+
     helpStyle = lipgloss.NewStyle().
         Foreground(lipgloss.Color("#626262"))
-    
+
     // Box styles
     boxStyle = lipgloss.NewStyle().
         Border(lipgloss.RoundedBorder()).
@@ -3054,17 +3186,17 @@ func (m Model) View() string {
     // Calculate available space
     contentWidth := m.width - 4  // Account for borders
     contentHeight := m.height - 6  // Account for header/footer
-    
+
     // Build components with dynamic sizing
     header := titleStyle.Width(m.width).Render("My App")
-    
+
     content := boxStyle.
         Width(contentWidth).
         Height(contentHeight).
         Render(m.renderContent())
-    
+
     footer := statusBarStyle.Width(m.width).Render(m.status)
-    
+
     return lipgloss.JoinVertical(lipgloss.Left, header, content, footer)
 }
 ```
@@ -3207,7 +3339,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
             m.input.Blur()
         }
     }
-    
+
     var cmd tea.Cmd
     m.input, cmd = m.input.Update(msg)
     return m, cmd
@@ -3254,7 +3386,7 @@ func main() {
         tea.WithAltScreen(),        // Use alternate screen buffer
         tea.WithMouseCellMotion(),  // Enable mouse support
     )
-    
+
     if _, err := p.Run(); err != nil {
         fmt.Printf("Error: %v\n", err)
         os.Exit(1)
@@ -3267,13 +3399,13 @@ func main() {
 ```go
 func main() {
     p := tea.NewProgram(NewModel())
-    
+
     // Send message from another goroutine
     go func() {
         time.Sleep(5 * time.Second)
         p.Send(externalUpdateMsg{data: "new data"})
     }()
-    
+
     p.Run()
 }
 ```
@@ -3283,11 +3415,11 @@ func main() {
 ```go
 func TestModelUpdate(t *testing.T) {
     m := NewModel()
-    
+
     // Simulate key press
     newModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
     updatedM := newModel.(Model)
-    
+
     assert.Equal(t, 1, updatedM.cursor)
 }
 
@@ -3296,7 +3428,7 @@ func TestModelView(t *testing.T) {
         items:  []string{"a", "b", "c"},
         cursor: 0,
     }
-    
+
     view := m.View()
     assert.Contains(t, view, "â–¸ a")  // Selected indicator
     assert.Contains(t, view, "  b")  // Non-selected
@@ -3334,14 +3466,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // CORRECT: Batch all commands
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     var cmds []tea.Cmd
-    
+
     var cmd tea.Cmd
     m.spinner, cmd = m.spinner.Update(msg)
     cmds = append(cmds, cmd)
-    
+
     m.list, cmd = m.list.Update(msg)
     cmds = append(cmds, cmd)
-    
+
     return m, tea.Batch(cmds...)
 }
 ```
@@ -3377,11 +3509,12 @@ p := tea.NewProgram(model, tea.WithAltScreen())
 // Exit cleanly restores original screen
 // Don't use os.Exit() - let Run() return normally
 ```
-```
+
+````
 
 ### go-cobra.md
 ```markdown
-# GO Cobra CLI Conventions - Lisan al-Gaib
+# GO Cobra CLI Conventions - GoGent
 
 ## Overview
 
@@ -3389,23 +3522,25 @@ Cobra is the standard CLI framework for GO. These conventions ensure professiona
 
 ## Project Structure
 
-```
+````
+
 myapp/
 ├── cmd/
-│   └── myapp/
-│       └── main.go           # Minimal entrypoint
+│ └── myapp/
+│ └── main.go # Minimal entrypoint
 ├── internal/
-│   └── cli/
-│       ├── root.go           # Root command + global config
-│       ├── serve/
-│       │   └── command.go    # Subcommand factory
-│       ├── config/
-│       │   └── command.go
-│       └── version/
-│           └── command.go
+│ └── cli/
+│ ├── root.go # Root command + global config
+│ ├── serve/
+│ │ └── command.go # Subcommand factory
+│ ├── config/
+│ │ └── command.go
+│ └── version/
+│ └── command.go
 ├── go.mod
 └── go.sum
-```
+
+````
 
 ## Main Entry Point
 
@@ -3425,7 +3560,7 @@ func main() {
         os.Exit(1)
     }
 }
-```
+````
 
 ## Root Command
 
@@ -3439,7 +3574,7 @@ import (
     "fmt"
     "os"
     "path/filepath"
-    
+
     "github.com/spf13/cobra"
     "github.com/spf13/viper"
 )
@@ -3455,7 +3590,7 @@ var rootCmd = &cobra.Command{
     Long: `MyApp - A comprehensive tool for X.
 
 Complete documentation at https://myapp.example.com`,
-    
+
     // PersistentPreRunE runs before ANY subcommand
     PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
         return initConfig()
@@ -3470,10 +3605,10 @@ func init() {
     // Global flags (available to all subcommands)
     rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.myapp/config.toml)")
     rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-    
+
     // Bind to viper
     viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
-    
+
     // Add subcommands
     rootCmd.AddCommand(serve.NewCommand())
     rootCmd.AddCommand(config.NewCommand())
@@ -3488,24 +3623,24 @@ func initConfig() error {
         if err != nil {
             return fmt.Errorf("find home directory: %w", err)
         }
-        
+
         configDir := filepath.Join(home, ".myapp")
         viper.AddConfigPath(configDir)
         viper.SetConfigName("config")
         viper.SetConfigType("toml")
     }
-    
+
     // Environment variables
     viper.SetEnvPrefix("MYAPP")
     viper.AutomaticEnv()
-    
+
     // Read config (ignore if not found)
     if err := viper.ReadInConfig(); err != nil {
         if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
             return fmt.Errorf("read config: %w", err)
         }
     }
-    
+
     return nil
 }
 ```
@@ -3524,7 +3659,7 @@ import (
     "os"
     "os/signal"
     "syscall"
-    
+
     "github.com/spf13/cobra"
     "github.com/spf13/viper"
 )
@@ -3536,42 +3671,42 @@ func NewCommand() *cobra.Command {
         Long:  `Start the HTTP server on the specified port.`,
         Example: `  myapp serve --port 8080
   myapp serve --config /path/to/config.toml`,
-        
+
         RunE: runServe,
     }
-    
+
     // Local flags (only for this command)
     cmd.Flags().IntP("port", "p", 8080, "port to listen on")
     cmd.Flags().String("host", "localhost", "host to bind to")
-    
+
     // Bind local flags to viper
     viper.BindPFlag("server.port", cmd.Flags().Lookup("port"))
     viper.BindPFlag("server.host", cmd.Flags().Lookup("host"))
-    
+
     return cmd
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
     // CRITICAL: Silence usage on runtime errors
     cmd.SilenceUsage = true
-    
+
     // Get values from viper (respects flag > env > config > default)
     port := viper.GetInt("server.port")
     host := viper.GetString("server.host")
-    
+
     // Setup graceful shutdown
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
-    
+
     sigCh := make(chan os.Signal, 1)
     signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-    
+
     go func() {
         <-sigCh
         fmt.Println("\nShutting down...")
         cancel()
     }()
-    
+
     // Start server
     return startServer(ctx, host, port)
 }
@@ -3634,7 +3769,7 @@ format = "json"
 // CORRECT: Use RunE for proper error propagation
 RunE: func(cmd *cobra.Command, args []string) error {
     cmd.SilenceUsage = true  // Don't show usage on runtime errors
-    
+
     if err := doWork(); err != nil {
         return fmt.Errorf("work failed: %w", err)
     }
@@ -3656,14 +3791,14 @@ Run: func(cmd *cobra.Command, args []string) {
 RunE: func(cmd *cobra.Command, args []string) error {
     // Set this FIRST - prevents usage output on runtime errors
     cmd.SilenceUsage = true
-    
+
     // Now do work...
     result, err := process(args)
     if err != nil {
         // Error shown, but NOT usage help
         return err
     }
-    
+
     fmt.Println(result)
     return nil
 },
@@ -3698,11 +3833,11 @@ cmd := &cobra.Command{
         if len(args) != 1 {
             return fmt.Errorf("requires exactly one file argument")
         }
-        
+
         if _, err := os.Stat(args[0]); os.IsNotExist(err) {
             return fmt.Errorf("file %q does not exist", args[0])
         }
-        
+
         return nil
     },
     RunE: runProcess,
@@ -3766,7 +3901,7 @@ cmd := &cobra.Command{
         if len(args) != 0 {
             return nil, cobra.ShellCompDirectiveNoFileComp
         }
-        
+
         // Return dynamic suggestions
         items := []string{"alpha", "beta", "gamma"}
         return items, cobra.ShellCompDirectiveNoFileComp
@@ -3823,7 +3958,7 @@ func executeCommand(root *cobra.Command, args ...string) (output string, err err
     root.SetOut(buf)
     root.SetErr(buf)
     root.SetArgs(args)
-    
+
     err = root.Execute()
     return buf.String(), err
 }
@@ -3917,11 +4052,12 @@ debugCmd := &cobra.Command{
     ...
 }
 ```
-```
+
+````
 
 ### go.md
 ```markdown
-# GO Conventions - Lisan al-Gaib
+# GO Conventions - GoGent
 
 ## System Constraints (CRITICAL)
 
@@ -3935,31 +4071,36 @@ debugCmd := &cobra.Command{
 
 ### Start Simple, Add Complexity Only When Needed
 
-```
+````
+
 # Minimum viable (single binary)
+
 myproject/
-  go.mod
-  main.go
+go.mod
+main.go
 
 # Add internal/ for private packages (compiler-enforced)
+
 myproject/
-  main.go
-  internal/
-    config/config.go
-    handlers/handlers.go
-  go.mod
+main.go
+internal/
+config/config.go
+handlers/handlers.go
+go.mod
 
 # Add cmd/ only for multiple binaries
+
 myproject/
-  cmd/
-    api/main.go
-    worker/main.go
-  internal/
-    shared/
-    api/
-    worker/
-  go.mod
-```
+cmd/
+api/main.go
+worker/main.go
+internal/
+shared/
+api/
+worker/
+go.mod
+
+````
 
 **Rules:**
 - `internal/` - Private packages, cannot be imported externally
@@ -3984,7 +4125,7 @@ func loadTemplates() {
 }
 
 // PREFER: //go:embed dirname over //go:embed dirname/* (latter includes dotfiles)
-```
+````
 
 ## Error Handling
 
@@ -4078,13 +4219,13 @@ func (s *Service) ProcessTask(ctx context.Context, task Task) error {
         return ctx.Err()
     default:
     }
-    
+
     // Pass context to all downstream calls
     result, err := s.api.Fetch(ctx, task.URL)
     if err != nil {
         return fmt.Errorf("fetch: %w", err)
     }
-    
+
     return s.store.Save(ctx, result)
 }
 
@@ -4159,7 +4300,7 @@ import "golang.org/x/sync/errgroup"
 func FetchAll(ctx context.Context, urls []string) ([]Result, error) {
     g, ctx := errgroup.WithContext(ctx)
     results := make([]Result, len(urls))
-    
+
     for i, url := range urls {
         i, url := i, url  // CRITICAL: Capture loop variables
         g.Go(func() error {
@@ -4171,7 +4312,7 @@ func FetchAll(ctx context.Context, urls []string) ([]Result, error) {
             return nil
         })
     }
-    
+
     if err := g.Wait(); err != nil {
         return nil, err
     }
@@ -4187,20 +4328,20 @@ import "golang.org/x/sync/semaphore"
 func ProcessWithLimit(ctx context.Context, tasks []Task, maxConcurrent int64) error {
     sem := semaphore.NewWeighted(maxConcurrent)
     g, ctx := errgroup.WithContext(ctx)
-    
+
     for _, task := range tasks {
         task := task  // Capture
-        
+
         if err := sem.Acquire(ctx, 1); err != nil {
             return fmt.Errorf("acquire semaphore: %w", err)
         }
-        
+
         g.Go(func() error {
             defer sem.Release(1)
             return processTask(ctx, task)
         })
     }
-    
+
     return g.Wait()
 }
 ```
@@ -4253,7 +4394,7 @@ func RetryWithBackoff(ctx context.Context, maxAttempts int, fn func() error) err
         } else {
             lastErr = err
         }
-        
+
         backoff := CalculateBackoff(attempt, 100*time.Millisecond, 30*time.Second)
         select {
         case <-ctx.Done():
@@ -4319,7 +4460,7 @@ func TestConcurrent(t *testing.T) {
         {"case1", 1},
         {"case2", 2},
     }
-    
+
     for _, tc := range tests {
         tc := tc  // CRITICAL: Capture range variable
         t.Run(tc.name, func(t *testing.T) {
@@ -4342,15 +4483,15 @@ go test -race -count=1 ./...
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Package | lowercase, single word | `http`, `config`, `agent` |
-| Exported | PascalCase | `Client`, `NewServer`, `Config` |
-| Unexported | camelCase | `config`, `parseInput`, `client` |
-| Receiver | 1-2 letter abbreviation | `func (c *Client) Do()` |
-| Interface | -er suffix for single method | `Reader`, `Writer`, `Stringer` |
-| Getters | No "Get" prefix | `func (u *User) Name() string` |
-| Initialisms | Consistent case | `userID`, `httpClient`, `apiURL` |
+| Element     | Convention                   | Example                          |
+| ----------- | ---------------------------- | -------------------------------- |
+| Package     | lowercase, single word       | `http`, `config`, `agent`        |
+| Exported    | PascalCase                   | `Client`, `NewServer`, `Config`  |
+| Unexported  | camelCase                    | `config`, `parseInput`, `client` |
+| Receiver    | 1-2 letter abbreviation      | `func (c *Client) Do()`          |
+| Interface   | -er suffix for single method | `Reader`, `Writer`, `Stringer`   |
+| Getters     | No "Get" prefix              | `func (u *User) Name() string`   |
+| Initialisms | Consistent case              | `userID`, `httpClient`, `apiURL` |
 
 ### Avoid Stuttering
 
@@ -4375,7 +4516,7 @@ type Client struct {
     // APIKey is the authentication key for the API.
     // Required.
     APIKey string
-    
+
     // Timeout specifies a time limit for requests.
     // Zero means no timeout.
     Timeout time.Duration
@@ -4393,15 +4534,15 @@ func NewClient(apiKey string) (*Client, error)
 ```yaml
 linters:
   enable:
-    - errcheck       # Check error returns
-    - govet          # Go vet checks
-    - staticcheck    # Comprehensive static analysis
-    - gosimple       # Simplification suggestions
-    - ineffassign    # Detect ineffectual assignments
-    - bodyclose      # HTTP response body closure
-    - gosec          # Security issues
-    - gofmt          # Format checking
-    - goimports      # Import organization
+    - errcheck # Check error returns
+    - govet # Go vet checks
+    - staticcheck # Comprehensive static analysis
+    - gosimple # Simplification suggestions
+    - ineffassign # Detect ineffectual assignments
+    - bodyclose # HTTP response body closure
+    - gosec # Security issues
+    - gofmt # Format checking
+    - goimports # Import organization
 
 linters-settings:
   errcheck:
@@ -4421,7 +4562,7 @@ issues:
 ### Makefile Template
 
 ```makefile
-BINARY_NAME=lisan
+BINARY_NAME=GoGent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
@@ -4452,6 +4593,7 @@ lint:
 ### Common Gotchas
 
 1. **Loop variable capture in goroutines**
+
    ```go
    // WRONG: All goroutines see same value
    for _, item := range items {
@@ -4459,7 +4601,7 @@ lint:
            process(item)  // BUG: item changes
        }()
    }
-   
+
    // CORRECT: Capture variable
    for _, item := range items {
        item := item  // Capture
@@ -4470,6 +4612,7 @@ lint:
    ```
 
 2. **Nil slice vs empty slice**
+
    ```go
    var s []int        // nil slice, json: null
    s := []int{}       // empty slice, json: []
@@ -4477,13 +4620,14 @@ lint:
    ```
 
 3. **defer in loops**
+
    ```go
    // WRONG: Defers accumulate until function returns
    for _, file := range files {
        f, _ := os.Open(file)
        defer f.Close()  // Won't close until function ends
    }
-   
+
    // CORRECT: Use anonymous function
    for _, file := range files {
        func() {
@@ -4495,6 +4639,7 @@ lint:
    ```
 
 4. **Channel closing**
+
    ```go
    // Only sender should close channels
    // Never close from receiver side
@@ -4510,7 +4655,8 @@ lint:
    default:
    }
    ```
-```
+
+````
 
 ### python.md
 ```markdown
@@ -4570,17 +4716,19 @@ class Builder[T]:
 
 # Type alias
 type JSON = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
-```
+````
 
 ---
 
 ## Preferred Tools
 
 ### Package Management
+
 - **MUST** use `uv` for Python package management and virtual environments
 - **MUST** commit `uv.lock` to version control for reproducibility
 - **MUST** use `uv run` to execute Python commands in the virtual environment
 - **MUST** add dependencies with `uv add` and `uv add --dev` for dev dependencies
+
 ```bash
 uv init --package myproject  # Create project with src layout
 uv add requests polars       # Add dependencies
@@ -4590,13 +4738,16 @@ uv run pytest                 # Run commands in venv
 ```
 
 ### Environment: Arch Linux / CachyOS (CRITICAL)
+
 On this system, **pip is incompatible with the system Python** due to Arch's externally-managed Python policy.
 
 **Running Python:**
+
 - **MUST** use a virtual environment for all Python execution
 - **NEVER** run `pip install` or bare `python` on system Python—it will fail
 
 **General-purpose venv:** `~/.generic-python/`
+
 ```bash
 # Direct invocation (preferred for scripts)
 ~/.generic-python/bin/python script.py
@@ -4615,6 +4766,7 @@ python                   # Then run interactively
 | Installing packages | `uv add package` (in project) |
 
 ### Development Tools
+
 - **Ruff** for linting and formatting (replaces Black, isort, flake8)
 - **mypy** (or **Pyright**) for static type checking
 - **pytest** for testing with **pytest-xdist** for parallel execution
@@ -4624,6 +4776,7 @@ python                   # Then run interactively
 - Use `logger.error` instead of `print` for error reporting
 
 ### Data Science Tools
+
 - **ALWAYS** use `polars` instead of `pandas` for data frame manipulation
 - Use **lazy evaluation** (`pl.scan_csv()`) for files >50MB
 - **NEVER** print DataFrame row count or schema alongside the DataFrame (redundant)
@@ -4631,6 +4784,7 @@ python                   # Then run interactively
 - For pandas (when required): enable `dtype_backend="pyarrow"` and `copy_on_write`
 
 **Example - Polars Lazy Evaluation:**
+
 ```python
 import polars as pl
 
@@ -4648,6 +4802,7 @@ result = lazy_df.collect(streaming=True)
 ```
 
 ### Database Guidelines
+
 - Do not denormalize unless explicitly prompted
 - Use appropriate datatypes: `DATETIME/TIMESTAMP` for dates, `ARRAY` for nested fields
 - **NEVER** save arrays as `TEXT/STRING`
@@ -4668,12 +4823,14 @@ result = lazy_df.collect(streaming=True)
 ## Type Hints
 
 ### Requirements
+
 - **MUST** use type hints for all function signatures (parameters and return values)
 - **MUST** run mypy with `--strict` and resolve all type errors
 - **NEVER** use `Any` type unless absolutely necessary—prefer `object` or union types
 - **MUST** include `# type: ignore[error-code]` with specific codes, never bare ignores
 
 ### Modern Type Hint Patterns
+
 ```python
 from typing import Self, TypedDict, Protocol, Literal, Final, TypeIs
 from collections.abc import Sequence, Mapping
@@ -4705,6 +4862,7 @@ def process(items: Sequence[str], config: Mapping[str, int]) -> list[str]:
 ```
 
 ### Type Hints to Avoid
+
 - **NEVER** use `typing.List`, `typing.Dict`—use built-in `list`, `dict`
 - **NEVER** use `Optional[X]`—use `X | None`
 - **NEVER** use `Union[X, Y]`—use `X | Y`
@@ -4718,6 +4876,7 @@ def process(items: Sequence[str], config: Mapping[str, int]) -> list[str]:
 - **MUST** document function parameters, return values, and exceptions raised
 - Keep comments up-to-date with code changes
 - Include examples in docstrings for complex functions
+
 ```python
 def calculate_total(items: list[dict], tax_rate: float = 0.0) -> float:
     """Calculate the total cost of items including tax.
@@ -4749,7 +4908,9 @@ def calculate_total(items: list[dict], tax_rate: float = 0.0) -> float:
 - Provide meaningful error messages
 
 ### Exception Groups (Python 3.11+)
+
 Use `ExceptionGroup` and `except*` for concurrent operations:
+
 ```python
 import asyncio
 
@@ -4787,6 +4948,7 @@ async def fetch_all(urls: list[str]) -> list[str]:
 - Prefer composition over inheritance
 - Use `@property` for computed attributes
 - Use `@override` decorator when overriding parent methods (Python 3.12+)
+
 ```python
 from dataclasses import dataclass
 from typing import override
@@ -4811,10 +4973,12 @@ class Dog(Animal):
 ## Concurrency and Parallelization
 
 ### asyncio (I/O-bound tasks)
+
 - **MUST** use `asyncio.TaskGroup` instead of `asyncio.gather()` for structured concurrency
 - **MUST** use `asyncio.timeout()` for bounded async operations
 - **MUST** let `CancelledError` propagate—do not swallow it
 - **MUST** use `asyncio.to_thread()` for blocking operations in async code
+
 ```python
 import asyncio
 
@@ -4826,10 +4990,12 @@ async def fetch_with_timeout(urls: list[str]) -> list[str]:
 ```
 
 ### Multiprocessing (CPU-bound tasks)
+
 - **MUST** use `ProcessPoolExecutor` for CPU-bound work
 - **MUST** use context managers for executor lifecycle
 - **MUST** use `if __name__ == "__main__":` guard
 - **MUST** check `future.result()` to surface errors
+
 ```python
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -4846,30 +5012,35 @@ def parallel_process(items: list) -> list:
 ```
 
 ### Concurrency Selection Guide
-| Workload | Solution |
-|----------|----------|
+
+| Workload                   | Solution                                    |
+| -------------------------- | ------------------------------------------- |
 | I/O-bound (network, files) | `asyncio.TaskGroup` or `ThreadPoolExecutor` |
-| CPU-bound (computation) | `ProcessPoolExecutor` |
-| ML data preprocessing | `joblib` with loky backend |
-| Large datasets | `Polars` (parallel by default) or `Dask` |
+| CPU-bound (computation)    | `ProcessPoolExecutor`                       |
+| ML data preprocessing      | `joblib` with loky backend                  |
+| Large datasets             | `Polars` (parallel by default) or `Dask`    |
 
 ---
 
 ## Testing
 
 ### pytest Configuration
+
 - **MUST** use pytest as the testing framework
 - **MUST** use `pytest-xdist` for parallel test execution (`pytest -n auto`)
 - **MUST** use `pytest-cov` with branch coverage (`--cov-branch`)
 - **MUST** mock external dependencies (APIs, databases, file systems)
 - **NEVER** run tests without saving them as discrete files first
 - **NEVER** delete files created as part of testing
+
 ```bash
 pytest -n auto --cov=src --cov-branch --cov-fail-under=80
 ```
 
 ### Property-Based Testing with Hypothesis
+
 Use Hypothesis for testing invariants and discovering edge cases:
+
 ```python
 from hypothesis import given, strategies as st
 
@@ -4885,6 +5056,7 @@ def test_string_concatenation_length(s1: str, s2: str) -> None:
 ```
 
 ### Testing Best Practices
+
 - Follow the Arrange-Act-Assert pattern
 - Use `pytest.raises` for exception testing
 - Use `pytest.mark.parametrize` for multiple inputs
@@ -4896,10 +5068,12 @@ def test_string_concatenation_length(s1: str, s2: str) -> None:
 ## Performance Optimization
 
 ### Profiling First
+
 - **MUST** profile before optimizing—never optimize without data
 - Use `cProfile` for function-level profiling
 - Use `py-spy` for production profiling (zero code changes)
 - Use `scalene` for combined CPU/memory/GPU profiling
+
 ```bash
 # Generate flamegraph
 py-spy record -o flame.svg -- python script.py
@@ -4909,6 +5083,7 @@ scalene script.py
 ```
 
 ### Optimization Techniques
+
 - Use NumPy/Polars vectorization over Python loops
 - Use `@functools.cache` or `@lru_cache` for pure functions with repeated calls
 - Use `__slots__` for classes with many instances
@@ -4916,6 +5091,7 @@ scalene script.py
 - **NEVER** concatenate strings in loops—use `"".join()` or `io.StringIO`
 
 ### Memory Management
+
 - Use generators instead of list comprehensions for large datasets
 - Use `__slots__` for memory-constrained classes
 - Process large files in chunks
@@ -4926,6 +5102,7 @@ scalene script.py
 ## Security
 
 ### Secrets Management
+
 - **NEVER** store secrets, API keys, or passwords in code
 - **MUST** use environment variables via `python-dotenv` or `pydantic-settings`
 - **MUST** add `.env` to `.gitignore`
@@ -4933,6 +5110,7 @@ scalene script.py
 - **NEVER** log sensitive information (passwords, tokens, PII)
 
 ### Input Validation
+
 - **MUST** validate all external inputs with Pydantic
 - **MUST** use parameterized queries for all database operations
 - **MUST** use `os.path.basename()` for user-provided filenames
@@ -4941,9 +5119,11 @@ scalene script.py
 - **NEVER** use `eval()`, `exec()`, or `subprocess` with `shell=True` on user input
 
 ### Dependency Security
+
 - **MUST** run `pip-audit` in CI pipeline
 - **MUST** run `bandit` for static security analysis
 - **MUST** use pre-commit hooks for secret scanning (detect-secrets, gitleaks)
+
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -4963,6 +5143,7 @@ repos:
 ## Project Structure
 
 Use the **src layout** for all packages:
+
 ```
 myproject/
 ├── src/
@@ -4983,6 +5164,7 @@ myproject/
 ---
 
 ## Configuration (pyproject.toml)
+
 ```toml
 [build-system]
 requires = ["hatchling"]
@@ -5074,7 +5256,8 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
 ---
 
 **Remember:** Prioritize clarity and maintainability over cleverness.
-```
+
+````
 
 ### react.md
 ```markdown
@@ -5130,7 +5313,7 @@ function UserCard({ user, onEdit }) {  // Implicit any
 function UserCard(props: { user: User; onEdit: Function }) {
   // Don't use Function type - too broad
 }
-```
+````
 
 ### Props Best Practices
 
@@ -5368,15 +5551,15 @@ const [data, setData] = useState(() => {
 });
 
 // CORRECT: Functional updates for state based on previous state
-const incrementCount = () => setCount(prev => prev + 1);
+const incrementCount = () => setCount((prev) => prev + 1);
 
 // WRONG: Mutating state
 const [items, setItems] = useState<string[]>([]);
-items.push("new");  // NEVER mutate state
+items.push("new"); // NEVER mutate state
 setItems(items);
 
 // CORRECT: Immutable state updates
-setItems(prev => [...prev, "new"]);
+setItems((prev) => [...prev, "new"]);
 
 // CORRECT: Object state updates
 interface FormState {
@@ -5387,7 +5570,7 @@ interface FormState {
 const [form, setForm] = useState<FormState>({ name: "", email: "" });
 
 const updateField = (field: keyof FormState, value: string): void => {
-  setForm(prev => ({ ...prev, [field]: value }));
+  setForm((prev) => ({ ...prev, [field]: value }));
 };
 
 // WRONG: Multiple related state values
@@ -5415,7 +5598,7 @@ const [form, setForm] = useState<UserForm>({
 // CORRECT: Effect with dependencies
 useEffect(() => {
   fetchUser(userId);
-}, [userId]);  // Re-run when userId changes
+}, [userId]); // Re-run when userId changes
 
 // CORRECT: Cleanup function
 useEffect(() => {
@@ -5439,12 +5622,12 @@ useEffect(() => {
 
 // WRONG: Missing dependencies
 useEffect(() => {
-  fetchUser(userId);  // userId used but not in deps
-}, []);  // ESLint error
+  fetchUser(userId); // userId used but not in deps
+}, []); // ESLint error
 
 // WRONG: Infinite loop
 useEffect(() => {
-  setCount(count + 1);  // Updates count, triggers effect again
+  setCount(count + 1); // Updates count, triggers effect again
 }, [count]);
 
 // CORRECT: Conditional effect execution
@@ -5465,7 +5648,7 @@ useEffect(() => {
       setData(data);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        return;  // Ignore abort errors
+        return; // Ignore abort errors
       }
       setError(error);
     }
@@ -6454,7 +6637,8 @@ function List({ items }: { items: Item[] }): JSX.Element {
   );
 }
 ```
-```
+
+````
 
 ### R-golem.md
 ```markdown
@@ -6480,31 +6664,33 @@ The application MUST be structured as an R package.
 
 ### Directory Structure
 
-```
+````
+
 myapp/
-├── DESCRIPTION           # Package metadata (REQUIRED)
-├── NAMESPACE             # Generated by roxygen2
-├── R/                    # ALL functional R code (FLAT - no subdirs!)
-│   ├── app_config.R      # App configuration
-│   ├── app_server.R      # Main server
-│   ├── app_ui.R          # Main UI + golem_add_external_resources()
-│   ├── run_app.R         # App launcher
-│   ├── mod_*.R           # Modules
-│   ├── fct_*.R           # Business logic functions
-│   └── utils_*.R         # Utility functions
+├── DESCRIPTION # Package metadata (REQUIRED)
+├── NAMESPACE # Generated by roxygen2
+├── R/ # ALL functional R code (FLAT - no subdirs!)
+│ ├── app*config.R # App configuration
+│ ├── app_server.R # Main server
+│ ├── app_ui.R # Main UI + golem_add_external_resources()
+│ ├── run_app.R # App launcher
+│ ├── mod*\_.R # Modules
+│ ├── fct\_\_.R # Business logic functions
+│ └── utils\__.R # Utility functions
 ├── inst/
-│   ├── app/www/          # Static assets (CSS, JS, images)
-│   └── golem-config.yml  # Environment configuration
-├── dev/                  # Development scripts
-│   ├── 01_start.R        # Initial setup
-│   ├── 02_dev.R          # Development utilities
-│   ├── 03_deploy.R       # Deployment scripts
-│   └── run_dev.R         # Development runner
+│ ├── app/www/ # Static assets (CSS, JS, images)
+│ └── golem-config.yml # Environment configuration
+├── dev/ # Development scripts
+│ ├── 01_start.R # Initial setup
+│ ├── 02_dev.R # Development utilities
+│ ├── 03_deploy.R # Deployment scripts
+│ └── run_dev.R # Development runner
 ├── tests/
-│   └── testthat/
-├── man/                  # Generated documentation
-└── *.Rproj
-```
+│ └── testthat/
+├── man/ # Generated documentation
+└── _.Rproj
+
+````
 
 ### CRITICAL: Flat R/ Directory
 
@@ -6538,9 +6724,10 @@ myapp/
 ```r
 # In dev/02_dev.R or console
 golem::add_module(name = "data_upload", with_test = TRUE)
-```
+````
 
 This creates:
+
 - `R/mod_data_upload.R` with UI and Server functions
 - `tests/testthat/test-mod_data_upload.R`
 
@@ -6954,15 +7141,15 @@ golem::add_dockerfile_with_renv()
 
 ## 8. Adaptation Reference
 
-| Traditional Shiny | Golem Implementation |
-|-------------------|---------------------|
-| `R/shiny/modules/{type}/` | `R/mod_{type}_{name}.R` (flat structure) |
-| `workflow_data` global | Passed as argument: `mod_server(id, workflow_data)` |
-| Local CSV/assets | Move to `inst/extdata/` or `inst/app/www/` |
-| `source("file.R")` | Remove. Functions auto-loaded by package namespace. |
-| `library(pkg)` in code | Use `pkg::function()` or `@importFrom` |
-| Relative file paths | Use `app_sys()` wrapper |
-| Manual CSS/JS includes | Use `golem::add_css_file()`, `add_js_file()` |
+| Traditional Shiny         | Golem Implementation                                |
+| ------------------------- | --------------------------------------------------- |
+| `R/shiny/modules/{type}/` | `R/mod_{type}_{name}.R` (flat structure)            |
+| `workflow_data` global    | Passed as argument: `mod_server(id, workflow_data)` |
+| Local CSV/assets          | Move to `inst/extdata/` or `inst/app/www/`          |
+| `source("file.R")`        | Remove. Functions auto-loaded by package namespace. |
+| `library(pkg)` in code    | Use `pkg::function()` or `@importFrom`              |
+| Relative file paths       | Use `app_sys()` wrapper                             |
+| Manual CSS/JS includes    | Use `golem::add_css_file()`, `add_js_file()`        |
 
 ---
 
@@ -7017,7 +7204,8 @@ mod_example_server <- function(id, workflow_data) {
 ---
 
 **Remember:** Golem enforces package structure discipline. This pays dividends in maintainability, testability, and deployment flexibility.
-```
+
+````
 
 ### R.md
 ```markdown
@@ -7076,17 +7264,19 @@ results <- lapply(data_list, \(df) {
         filter(q_value < 0.05) |>
         arrange(desc(log2fc))
 })
-```
+````
 
 ---
 
 ## Preferred Tools
 
 ### Package Management
+
 - **MUST** use `renv` for dependency management and reproducibility
 - **MUST** commit `renv.lock` to version control
 - **MUST** run `renv::snapshot()` after adding/updating packages
 - **MUST** use `renv::restore()` to recreate environments
+
 ```r
 renv::init()            # Initialize renv in project
 renv::install("dplyr")  # Install packages
@@ -7095,6 +7285,7 @@ renv::restore()         # Restore from lockfile
 ```
 
 ### Development Tools
+
 - **styler** for code formatting (`styler::style_file()`, `styler::style_dir()`)
 - **lintr** for static code analysis
 - **roxygen2** for documentation (mandatory for all functions)
@@ -7104,6 +7295,7 @@ renv::restore()         # Restore from lockfile
 - **covr** for test coverage analysis
 
 ### Data Manipulation Tools
+
 - **dplyr/tidyr** for tidy data manipulation
 - **purrr** for functional programming on lists/vectors
 - **data.table** for performance-critical operations on very large tables
@@ -7112,13 +7304,13 @@ renv::restore()         # Restore from lockfile
 
 `{{ }}` is for **symbols passed as function arguments**, NOT string variables. For strings, use:
 
-| Verb | String Variable Pattern |
-|------|------------------------|
-| `pull()` | `df[[var]]` (base R only) |
-| `rename()` | `rename(new = !!rlang::sym(var))` |
-| `group_by()` | `group_by(across(all_of(var)))` |
-| `filter()`/`mutate()` | `.data[[var]]` works |
-| `select()` | `all_of(var)` |
+| Verb                  | String Variable Pattern           |
+| --------------------- | --------------------------------- |
+| `pull()`              | `df[[var]]` (base R only)         |
+| `rename()`            | `rename(new = !!rlang::sym(var))` |
+| `group_by()`          | `group_by(across(all_of(var)))`   |
+| `filter()`/`mutate()` | `.data[[var]]` works              |
+| `select()`            | `all_of(var)`                     |
 
 **MUST** namespace-prefix tidyselect helpers in packages: `dplyr::all_of()`, not `all_of()`.
 
@@ -7127,6 +7319,7 @@ renv::restore()         # Restore from lockfile
 ### S4 Method Calls (CRITICAL)
 
 **MUST** verify parameter names in `R/allGenerics.R` before calling S4 methods. Common traps:
+
 - Full descriptive names: `ruv_number_k` not `k`
 - British spelling: `normalisation_method` not `normalization_method`
 - Prefixed names: `itsd_aggregation` not `aggregation`
@@ -7136,6 +7329,7 @@ renv::restore()         # Restore from lockfile
 UI inputs may control **one** parameter while others need hardcoded values. **MUST** read function docs to identify which parameters are type selectors (hardcode) vs user choices (wire to UI).
 
 ### Proteomics/Bioinformatics Tools
+
 - **SummarizedExperiment** as base container for omics data
 - **MultiAssayExperiment** for multi-omics integration
 - **Biobase** for legacy ExpressionSet compatibility
@@ -7153,16 +7347,19 @@ UI inputs may control **one** parameter while others need hardcoded values. **MU
 - Limit line length to 80-100 characters
 
 ### Naming Conventions
-| Element | Convention | Example |
-|---------|------------|---------|
-| Functions | camelCase (verbs) | `normalizeProteomicsData()` |
-| Variables | snake_case (nouns) | `sample_annotation` |
-| Constants | UPPER_SNAKE_CASE | `MAX_Q_VALUE` |
-| S4 Classes | PascalCase | `ProteomicsData` |
-| R6 Classes | PascalCase | `ExperimentManager` |
+
+| Element    | Convention         | Example                     |
+| ---------- | ------------------ | --------------------------- |
+| Functions  | camelCase (verbs)  | `normalizeProteomicsData()` |
+| Variables  | snake_case (nouns) | `sample_annotation`         |
+| Constants  | UPPER_SNAKE_CASE   | `MAX_Q_VALUE`               |
+| S4 Classes | PascalCase         | `ProteomicsData`            |
+| R6 Classes | PascalCase         | `ExperimentManager`         |
 
 ### Leading Comma Convention
+
 **MUST** place commas at the beginning of new lines in multi-line constructs:
+
 ```r
 # CORRECT: Leading commas
 my_list <- list(
@@ -7185,6 +7382,7 @@ df |>
 ## Documentation
 
 ### roxygen2 Requirements
+
 - **MUST** include roxygen2 documentation for ALL functions (exported and internal)
 - **MUST** document `@param`, `@return`, description for every function
 - **MUST** use `@export`, `@examples`, `@importFrom` appropriately
@@ -7192,6 +7390,7 @@ df |>
 ### Critical roxygen2 Rules
 
 **NEVER add roxygen comments to `allGenerics.R`:**
+
 ```r
 # BAD - Will cause parsing errors
 #' @export
@@ -7202,6 +7401,7 @@ setGeneric("normalizeData", function(object, ...) standardGeneric("normalizeData
 ```
 
 **Tag order (recommended):**
+
 1. `@title` - Brief title
 2. `@name` - Explicit topic name (required for S4 methods)
 3. Description paragraph(s)
@@ -7212,6 +7412,7 @@ setGeneric("normalizeData", function(object, ...) standardGeneric("normalizeData
 8. `@examples` - Usage examples
 
 **Tag Conflicts - `@describeIn` and `@name` are mutually exclusive:**
+
 ```r
 # BAD - Will cause error: "@describeIn can not be used with @name"
 #' @describeIn plotPca Method for MetaboliteAssayData
@@ -7227,14 +7428,17 @@ setMethod(f = "plotPca", ...)
 ```
 
 **Inheritance Tags - Referenced topics MUST exist:**
+
 - `@inheritParams` and `@inheritDoc` require the referenced topic to exist
 - Verify referenced function/topic is documented before using inheritance
 - Consider explicit parameter documentation if reference is unclear
 
 **Duplicate Tags:**
+
 - **Only one `@export` per function/method** - multiple tags cause issues
 
 **S4 Method Documentation:**
+
 ```r
 #' @title Normalize Between Samples for ProteomicsData
 #' @name normaliseBetweenSamples,ProteomicsData-method
@@ -7253,6 +7457,7 @@ setMethod(
 ```
 
 ### Code Commenting Philosophy
+
 - **Explain the "Why", not the "What":** Focus on rationale and scientific reasoning
 - **Target audience:** Assume biologist/analyst reader
 - Use section dividers for complex functions: `# --- Section Name ---`
@@ -7273,12 +7478,14 @@ filtered_matrix <- data_matrix[features_to_keep, ]
 ## S4 Object-Oriented Programming
 
 ### Core S4 Principles
+
 - **MUST** use S4 classes inheriting from `SummarizedExperiment` for omics data
 - **MUST** use accessor methods instead of direct slot access (`@`)
 - **MUST** implement `setValidity` for all custom classes
 - **MUST** use dedicated constructor functions with validation
 
 ### S4 Class Hierarchy Pattern
+
 ```r
 # --- Base Class Definition ---
 setClass(
@@ -7339,6 +7546,7 @@ createProteomicsData <- function(
 ```
 
 ### S4 Generics and Methods Pattern
+
 ```r
 # In allGenerics.R - NO roxygen comments
 setGeneric("normalizeData", function(object, method, ...) {
@@ -7397,6 +7605,7 @@ if (!methods::is(my_object, "S4")) {  # BUG! "S4" is not a class
 ```
 
 **Key distinction:**
+
 - `isS4(x)` - Checks the object's **type system** (is it an S4 object?)
 - `methods::is(x, "ClassName")` - Checks **class inheritance** (does it inherit from ClassName?)
 - `inherits(x, "ClassName")` - Also checks class inheritance (works for S3 and S4)
@@ -7408,10 +7617,12 @@ The string `"S4"` is not a class that objects inherit from—it's a type system 
 ## R6 State Management
 
 ### When to Use R6
+
 - **Use R6 for:** Mutable state, complex workflows, caching, connection management
 - **Use S4 for:** Data containers, method dispatch, Bioconductor integration
 
 ### R6 Pattern for Large Data Workflows
+
 ```r
 #' @title Experiment Manager
 #' @description R6 class for managing proteomics analysis workflows with caching
@@ -7475,15 +7686,17 @@ ExperimentManager <- R6::R6Class(
 ## Concurrency and Parallelization
 
 ### Package Selection
-| Workload | Solution |
-|----------|----------|
-| Independent list operations | `future.apply::future_lapply()` |
-| Tidyverse-style parallel map | `furrr::future_map()` |
-| Bioconductor parallel | `BiocParallel::bplapply()` |
-| CPU-bound matrix ops | `RcppParallel` or `data.table` |
-| Very large data chunks | `future` with `multisession` plan |
+
+| Workload                     | Solution                          |
+| ---------------------------- | --------------------------------- |
+| Independent list operations  | `future.apply::future_lapply()`   |
+| Tidyverse-style parallel map | `furrr::future_map()`             |
+| Bioconductor parallel        | `BiocParallel::bplapply()`        |
+| CPU-bound matrix ops         | `RcppParallel` or `data.table`    |
+| Very large data chunks       | `future` with `multisession` plan |
 
 ### future/future.apply Setup
+
 ```r
 library(future)
 library(future.apply)
@@ -7503,6 +7716,7 @@ plan(sequential)
 ```
 
 ### furrr for Tidyverse Workflows
+
 ```r
 library(furrr)
 
@@ -7531,6 +7745,7 @@ results_df <- future_map_dfr(
 ```
 
 ### Wrapper Functions for CPU-Intensive S4 Operations
+
 **MUST** create simple wrappers for parallelizing operations on large S4 objects:
 
 ```r
@@ -7603,6 +7818,7 @@ normalizeChunkedProteomics <- function(prot_data, method = "vsn") {
 ```
 
 ### Parallel Pattern for Large Matrix Operations
+
 ```r
 #' @title Parallel Correlation Matrix for Large Proteomics Data
 #' @param prot_data ProteomicsData object
@@ -7644,6 +7860,7 @@ parallelCorrelation <- function(prot_data, method = "pearson") {
 ```
 
 ### BiocParallel for Bioconductor Workflows
+
 ```r
 library(BiocParallel)
 
@@ -7660,6 +7877,7 @@ results <- bplapply(
 ```
 
 ### Memory-Conscious Parallelization
+
 ```r
 #' @title Memory-Safe Parallel Processing for Large S4 Objects
 #' @description Process large objects in memory-efficient chunks
@@ -7701,6 +7919,7 @@ processLargeObject <- function(object, fn, chunk_size = 1000) {
 - **MUST** log errors with `logger::log_error()`
 
 ### Error Handling Pattern
+
 ```r
 processData <- function(object, method) {
     # Input validation
@@ -7763,12 +7982,14 @@ validateInput <- function(data, threshold) {
 ## Testing (testthat)
 
 ### Requirements
+
 - **MUST** use testthat for all testing
 - **MUST** create test fixtures with `set.seed()` for reproducibility
 - **MUST** test S4 class validity and method dispatch
 - **NEVER** delete test files or fixtures
 
 ### Test Structure
+
 ```r
 # tests/testthat/test-normalize.R
 test_that("normalizeData median method works correctly", {
@@ -7800,8 +8021,10 @@ test_that("normalizeData fails with invalid method", {
 ## Performance Optimization
 
 ### Profiling First
+
 - **MUST** profile before optimizing with `profvis`
 - **NEVER** optimize without profiling data
+
 ```r
 profvis::profvis({
     result <- expensiveOperation(large_data)
@@ -7809,6 +8032,7 @@ profvis::profvis({
 ```
 
 ### Optimization Techniques
+
 - Use vectorized operations over loops
 - Use matrices for numeric data (avoid data frames in hot paths)
 - Use `data.table` for large table operations
@@ -7816,6 +8040,7 @@ profvis::profvis({
 - Use `Rcpp` for critical bottlenecks
 
 ### Memory Management
+
 - Remove large unused objects: `rm(large_obj); gc()`
 - Monitor memory: `lobstr::obj_size()`, `pryr::mem_used()`
 - Use `arrow` for larger-than-memory datasets
@@ -7826,13 +8051,16 @@ profvis::profvis({
 ## Reproducibility
 
 ### Seed Management
+
 - **MUST** use `set.seed()` before ALL stochastic operations
 - Document seed values in analysis parameters
 - Use `set.seed()` in test fixtures
 
 ### Dependency Management
+
 - **MUST** use `renv` for all projects
 - **MUST** commit `renv.lock` to version control
+
 ```r
 renv::init()      # Initialize
 renv::snapshot()  # Lock current state
@@ -7840,12 +8068,15 @@ renv::restore()   # Recreate environment
 ```
 
 ### Parameter Tracking
+
 - Track all analysis parameters in config files or script headers
 - Log parameters with results
 - Use the `processing_log` slot in S4 objects
 
 ### Session Info
+
 - **MUST** save session info with results for reproducibility
+
 ```r
 # Save with results
 session_info <- sessionInfo()
@@ -7854,6 +8085,7 @@ session_info <- devtools::session_info()
 ```
 
 ### Version Control
+
 - **MUST** use Git for ALL code, scripts, `renv.lock`, config files
 - **MUST** commit often with descriptive messages
 - **NEVER** commit `.Rhistory`, `.RData`, or large data files
@@ -7863,22 +8095,26 @@ session_info <- devtools::session_info()
 ## MultiOmics-Specific Guidelines
 
 ### Interoperability
+
 - Maintain consistent sample and feature identifiers across omics layers
 - Use stable IDs (e.g., Ensembl gene IDs, UniProt accessions)
 - Document ID sources and mappings
 - Use standard `colData`/`rowData` column names where applicable
 
 ### Integration Tools
+
 - Use `MultiAssayExperiment` for managing linked assays
 - Consider `mixOmics` for advanced integration analysis
 - Document data merging/joining strategies (inner/outer joins)
 - Document rationale for normalization methods
 
 ### Missing Values
+
 - **Understand missingness type:** MNAR (Missing Not At Random) vs MAR/MCAR
 - Visualize patterns with `visdat`, `naniar`
 - Choose and document appropriate imputation methods
 - Consider type-specific defaults via S4 methods for `imputeMissingValues`
+
 ```r
 # Visualize missing data patterns
 visdat::vis_miss(assay_df)
@@ -7890,17 +8126,21 @@ naniar::gg_miss_upset(assay_df)
 ## Quality Control Standards
 
 ### Documentation Requirements
+
 - **MUST** justify all filtering thresholds in comments/logs
 - **MUST** document normalization choices and rationale
 
 ### Visualization
+
 - Generate plots (PCA, density, boxplots, heatmaps) before/after each major QC step
 - Use generic plotting functions with S4 dispatch (e.g., `plotPCA(object, ...)`)
 
 ### Impact Tracking
+
 - Log features/samples removed at each step
 - Track changes in data distribution
 - Use the `processing_log` slot in S4 objects
+
 ```r
 # Track processing step
 object@processing_log <- c(
@@ -7919,18 +8159,22 @@ object@processing_log <- c(
 ## Statistical Best Practices
 
 ### Multiple Testing Correction
+
 - **MUST** correct p-values using `p.adjust()` when testing multiple hypotheses
 - Prefer method="BH" (Benjamini-Hochberg) for FDR control
 - Report BOTH raw and adjusted p-values
+
 ```r
 results$p_adjusted <- p.adjust(results$p_value, method = "BH")
 ```
 
 ### Effect Sizes
+
 - **MUST** report effect sizes alongside p-values
 - Use log2 fold change for expression data
 - Use Cohen's d for group comparisons
 - Visualize with volcano plots
+
 ```r
 # Volcano plot pattern
 ggplot(results, aes(x = log2fc, y = -log10(p_adjusted))) +
@@ -7943,8 +8187,10 @@ ggplot(results, aes(x = log2fc, y = -log10(p_adjusted))) +
 ## External Resources and Caching
 
 ### API Requests
+
 - **MUST** use `httr2` for robust HTTP requests
 - Configure retries, error handling, user-agent, timeout
+
 ```r
 library(httr2)
 
@@ -7957,9 +8203,11 @@ response <- request("https://api.example.com/data") |>
 ```
 
 ### Caching Strategies
+
 - Use `memoise` for function-level caching of expensive operations
 - Use RDS caching for intermediate results
 - Provide cache invalidation mechanisms
+
 ```r
 library(memoise)
 
@@ -7985,8 +8233,10 @@ getCachedResult <- function(cache_path, compute_fn, force_refresh = FALSE) {
 ## Package and Dependency Management
 
 ### Loading Packages
+
 - Use `pacman::p_load()` for convenient loading/installation
 - Use `conflicted::conflict_prefer()` to resolve namespace conflicts
+
 ```r
 # Convenient loading with auto-install
 pacman::p_load(dplyr, tidyr, ggplot2, SummarizedExperiment)
@@ -7999,6 +8249,7 @@ conflict_prefer("lag", "dplyr")
 ```
 
 ### Namespace Conflicts
+
 - Be explicit with `package::function()` when conflicts exist
 - Document known conflicts in project README
 - Use `conflicted` package to force explicit resolution
@@ -8018,6 +8269,7 @@ conflict_prefer("lag", "dplyr")
 ## Shiny Application Development
 
 **MUST** use explicit namespaces for all Shiny functions:
+
 ```r
 # BAD - Will fail if packages are detached/reloaded
 tabItem(tabName = "home", h3("Welcome"), br())
@@ -8031,7 +8283,9 @@ shinydashboard::tabItem(
 ```
 
 ### Logger Bug in Reactive Contexts
+
 **NEVER** use `{}` interpolation in logger calls inside error handlers or reactive contexts:
+
 ```r
 # BAD - Will cause error
 log_error("Error: {e$message}")
@@ -8045,8 +8299,10 @@ log_error(paste("Error:", e$message))
 ## Logging
 
 ### logger Package Setup
+
 - **MUST** use `logger` for structured logging instead of `print`/`message`
 - Configure appropriate log levels, appenders, and layout
+
 ```r
 library(logger)
 
@@ -8064,19 +8320,23 @@ log_fatal("Unrecoverable error, aborting")
 ```
 
 ### Log Levels
-| Level | Use Case |
-|-------|----------|
-| DEBUG | Detailed tracing, variable values |
-| INFO | Normal operation milestones |
-| WARN | Unexpected but recoverable situations |
-| ERROR | Failures that don't stop execution |
-| FATAL | Unrecoverable errors |
+
+| Level | Use Case                              |
+| ----- | ------------------------------------- |
+| DEBUG | Detailed tracing, variable values     |
+| INFO  | Normal operation milestones           |
+| WARN  | Unexpected but recoverable situations |
+| ERROR | Failures that don't stop execution    |
+| FATAL | Unrecoverable errors                  |
 
 ### Logger Interpolation Bug (CRITICAL)
+
 The `logger` package has a known issue with string interpolation in certain contexts:
+
 - **NEVER** use `{}` interpolation in `tryCatch` error handlers
 - **NEVER** use `{}` interpolation in Shiny reactive contexts
 - **ALWAYS** use `paste()` or `sprintf()` in these contexts
+
 ```r
 # Safe contexts for interpolation:
 log_info("Processing {n_samples} samples")  # OK in regular functions
@@ -8094,15 +8354,15 @@ tryCatch(
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern | Correct Approach |
-|--------------|------------------|
-| `df[,1]` (numeric indexing) | `df$col` or `df[["col"]]` |
-| `attach()` / `detach()` | Use explicit references |
-| `rm(list = ls())` | Never use; restart R session |
-| `setwd()` | Use `here::here()` or relative paths |
-| Bare `%>%` in packages | Use `\|>` or import from magrittr |
-| `source()` for shared code | Create proper packages |
-| Deep nesting (>3 levels) | Refactor into smaller functions |
+| Anti-Pattern                | Correct Approach                     |
+| --------------------------- | ------------------------------------ |
+| `df[,1]` (numeric indexing) | `df$col` or `df[["col"]]`            |
+| `attach()` / `detach()`     | Use explicit references              |
+| `rm(list = ls())`           | Never use; restart R session         |
+| `setwd()`                   | Use `here::here()` or relative paths |
+| Bare `%>%` in packages      | Use `\|>` or import from magrittr    |
+| `source()` for shared code  | Create proper packages               |
+| Deep nesting (>3 levels)    | Refactor into smaller functions      |
 
 ---
 
@@ -8146,7 +8406,8 @@ myproject/
 ---
 
 **Remember:** Prioritize clarity and maintainability over cleverness.
-```
+
+````
 
 ### R-shiny.md
 ```markdown
@@ -8192,13 +8453,14 @@ myModuleServer <- function(id, shared_data) {
         # Module logic here
     })
 }
-```
+````
 
 ### 2. R6/S4 Hybrid State Management (Recommended Pattern)
 
 For complex apps with undo/revert functionality, use R6 as a state tracker for S4 objects:
 
 **Division of Labor:**
+
 - **S4 Classes**: Represent all core data structures; handle validation, transformation, computation
 - **R6 Class (StateManager)**: Track snapshots of S4 objects; enable undo/revert; NO transformation logic
 
@@ -8258,6 +8520,7 @@ myModuleServer("module_id", workflow_data)
 ```
 
 **Rules:**
+
 - Modules MUST NOT use the global environment for data sharing
 - All shared state flows through `workflow_data`
 - Each module reads from and writes to `workflow_data`
@@ -8268,11 +8531,11 @@ myModuleServer("module_id", workflow_data)
 
 ### Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Module UI Function | `moduleNameUI` | `qualityControlUI` |
+| Element                | Convention         | Example                |
+| ---------------------- | ------------------ | ---------------------- |
+| Module UI Function     | `moduleNameUI`     | `qualityControlUI`     |
 | Module Server Function | `moduleNameServer` | `qualityControlServer` |
-| Module ID | snake_case | `"quality_control"` |
+| Module ID              | snake_case         | `"quality_control"`    |
 
 ### Namespace Handling
 
@@ -8770,17 +9033,18 @@ shiny::onRestore(function(state) {
 
 ### Grid Plot Rendering
 
-| Problem | Solution |
-|---------|----------|
-| `arrangeGrob()` errors with "cannot open Rplots.pdf" | Wrap with `pdf(NULL)` ... `dev.off()` |
-| `grid.arrange()` draws immediately, nothing stored | Use `arrangeGrob()` to create grob object |
-| Grob doesn't appear in `renderPlot()` | Use `grid::grid.draw(grob)`, not `print()` |
+| Problem                                              | Solution                                   |
+| ---------------------------------------------------- | ------------------------------------------ |
+| `arrangeGrob()` errors with "cannot open Rplots.pdf" | Wrap with `pdf(NULL)` ... `dev.off()`      |
+| `grid.arrange()` draws immediately, nothing stored   | Use `arrangeGrob()` to create grob object  |
+| Grob doesn't appear in `renderPlot()`                | Use `grid::grid.draw(grob)`, not `print()` |
 
 ### Dynamic UI Race Conditions
 
 **NEVER** use `renderUI()` to generate output IDs dynamically—causes timing mismatches where outputs bind to non-existent elements.
 
 **MUST** use slot-based static IDs:
+
 ```r
 # WRONG - dynamic IDs from data
 output_id <- paste0("plot_", assay_name)  # Race condition
@@ -8795,6 +9059,7 @@ output$plot_assay2 <- renderImage({ ... })
 ### Data Type Preservation
 
 **Matrix roundtrip coerces ID columns to character.** Capture type BEFORE conversion, restore AFTER:
+
 ```r
 original_type <- class(df[[id_col]])[1]
 # ... matrix operations ...
@@ -8813,16 +9078,16 @@ After editing large S4 class files, **MUST** verify no truncation: `wc -l R/func
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern | Correct Approach |
-|--------------|------------------|
-| Global variables for state | Use `reactiveValues` passed to modules |
-| `library()` in app code | Use `package::function()` or `@importFrom` |
-| `source()` for modules | Use proper module pattern |
-| Relative file paths | Use `here::here()` or proper resource management |
-| Blocking long operations | Use `future`/`promises` for async |
-| `print()` for debugging | Use `logger` or structured debug functions |
-| `fileInput()` for production | Use `shinyFiles` for native file access |
-| Direct slot access (`@`) | Use accessor methods for S4 objects |
+| Anti-Pattern                 | Correct Approach                                 |
+| ---------------------------- | ------------------------------------------------ |
+| Global variables for state   | Use `reactiveValues` passed to modules           |
+| `library()` in app code      | Use `package::function()` or `@importFrom`       |
+| `source()` for modules       | Use proper module pattern                        |
+| Relative file paths          | Use `here::here()` or proper resource management |
+| Blocking long operations     | Use `future`/`promises` for async                |
+| `print()` for debugging      | Use `logger` or structured debug functions       |
+| `fileInput()` for production | Use `shinyFiles` for native file access          |
+| Direct slot access (`@`)     | Use accessor methods for S4 objects              |
 
 ---
 
@@ -8840,7 +9105,8 @@ After editing large S4 class files, **MUST** verify no truncation: `wc -l R/func
 ---
 
 **Remember:** Modular architecture and proper state management are the foundation of maintainable Shiny apps.
-```
+
+````
 
 ### typescript.md
 ```markdown
@@ -8876,7 +9142,7 @@ All TypeScript code must:
     "verbatimModuleSyntax": true
   }
 }
-```
+````
 
 ### Type vs Interface
 
@@ -8927,10 +9193,10 @@ function handleResponse<T>(response: ApiResponse<T>): void {
       console.log("Loading...");
       break;
     case "success":
-      console.log(response.data);  // TypeScript knows data exists
+      console.log(response.data); // TypeScript knows data exists
       break;
     case "error":
-      console.error(response.error);  // TypeScript knows error exists
+      console.error(response.error); // TypeScript knows error exists
       break;
     default:
       // Exhaustiveness check - will error if new status added
@@ -8940,9 +9206,7 @@ function handleResponse<T>(response: ApiResponse<T>): void {
 }
 
 // WRONG: Union without discriminant
-type BadResponse<T> =
-  | { data: T }
-  | { error: Error };
+type BadResponse<T> = { data: T } | { error: Error };
 // Can't tell which is which at runtime
 ```
 
@@ -8972,14 +9236,16 @@ function createEmail(email: string): Email {
 }
 
 // Usage
-function getUserById(id: UserId): User { /* ... */ }
+function getUserById(id: UserId): User {
+  /* ... */
+}
 
 const id = createUserId("usr_123");
 const email = createEmail("user@example.com");
 
-getUserById(id);  // OK
-getUserById(email);  // Type error - can't pass Email where UserId expected
-getUserById("usr_123");  // Type error - must use constructor
+getUserById(id); // OK
+getUserById(email); // Type error - can't pass Email where UserId expected
+getUserById("usr_123"); // Type error - must use constructor
 ```
 
 ### Conditional Types
@@ -9000,21 +9266,19 @@ type SecondParameter<T> = T extends (
 
 // Example usage
 function example(a: string, b: number): void {}
-type First = FirstParameter<typeof example>;  // string
-type Second = SecondParameter<typeof example>;  // number
+type First = FirstParameter<typeof example>; // string
+type Second = SecondParameter<typeof example>; // number
 
 // Conditional return types
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
-type A = UnwrapPromise<Promise<string>>;  // string
-type B = UnwrapPromise<number>;           // number
+type A = UnwrapPromise<Promise<string>>; // string
+type B = UnwrapPromise<number>; // number
 
 // Recursive conditional types
-type Awaited<T> = T extends Promise<infer U>
-  ? Awaited<U>
-  : T;
+type Awaited<T> = T extends Promise<infer U> ? Awaited<U> : T;
 
-type Nested = Awaited<Promise<Promise<Promise<string>>>>;  // string
+type Nested = Awaited<Promise<Promise<Promise<string>>>>; // string
 ```
 
 ### Mapped Types
@@ -9056,8 +9320,8 @@ type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE";
 type Endpoint = `/api/${string}`;
 type Route = `${HTTPMethod} ${Endpoint}`;
 
-const route: Route = "GET /api/users";  // OK
-const invalid: Route = "PATCH /api/users";  // Error: PATCH not in HTTPMethod
+const route: Route = "GET /api/users"; // OK
+const invalid: Route = "PATCH /api/users"; // Error: PATCH not in HTTPMethod
 
 // Derive related types
 type EventName = "click" | "focus" | "blur";
@@ -9100,18 +9364,20 @@ type UserRequired = Required<User>;
 type UserRoles = Record<string, "admin" | "user" | "guest">;
 
 // Extract return type
-function getUser(): User { /* ... */ }
-type GetUserReturn = ReturnType<typeof getUser>;  // User
+function getUser(): User {
+  /* ... */
+}
+type GetUserReturn = ReturnType<typeof getUser>; // User
 
 // Extract parameter types
-type GetUserParams = Parameters<typeof getUserById>;  // [UserId]
+type GetUserParams = Parameters<typeof getUserById>; // [UserId]
 
 // Custom utility: Nullable
 type Nullable<T> = T | null;
 
 // Custom utility: ValueOf (get union of all property values)
 type ValueOf<T> = T[keyof T];
-type UserValue = ValueOf<User>;  // string | Date
+type UserValue = ValueOf<User>; // string | Date
 ```
 
 ## Modern Patterns
@@ -9167,9 +9433,9 @@ function log(value: string | number | boolean): void {
 // Built-in type guards
 function processValue(value: string | number): string {
   if (typeof value === "string") {
-    return value.toUpperCase();  // TypeScript knows it's string
+    return value.toUpperCase(); // TypeScript knows it's string
   }
-  return value.toFixed(2);  // TypeScript knows it's number
+  return value.toFixed(2); // TypeScript knows it's number
 }
 
 // Custom type guards
@@ -9191,9 +9457,9 @@ function isCat(animal: Animal): animal is Cat {
 
 function handleAnimal(animal: Animal): void {
   if (isCat(animal)) {
-    animal.meow();  // TypeScript knows it's Cat
+    animal.meow(); // TypeScript knows it's Cat
   } else {
-    animal.bark();  // TypeScript knows it's Dog
+    animal.bark(); // TypeScript knows it's Dog
   }
 }
 
@@ -9206,7 +9472,7 @@ function assertIsString(value: unknown): asserts value is string {
 
 function processInput(input: unknown): string {
   assertIsString(input);
-  return input.toUpperCase();  // TypeScript knows input is string
+  return input.toUpperCase(); // TypeScript knows input is string
 }
 ```
 
@@ -9223,7 +9489,7 @@ import { createUser } from "./user";
 import { type User, createUser } from "./user";
 
 // WRONG: Regular import for types only
-import { User, Config } from "./types";  // May cause circular dependency issues
+import { User, Config } from "./types"; // May cause circular dependency issues
 ```
 
 ### Const Assertions
@@ -9245,7 +9511,7 @@ type Config = typeof config;
 
 // CORRECT: Use for tuple types
 const point = [10, 20] as const;
-type Point = typeof point;  // readonly [10, 20]
+type Point = typeof point; // readonly [10, 20]
 
 // CORRECT: Use for enum-like objects
 const Status = {
@@ -9254,13 +9520,13 @@ const Status = {
   INACTIVE: "inactive",
 } as const;
 
-type StatusValue = typeof Status[keyof typeof Status];
+type StatusValue = (typeof Status)[keyof typeof Status];
 // "pending" | "active" | "inactive"
 
 // WRONG: Without const assertion
 const badConfig = {
-  apiUrl: "https://api.example.com",  // Type: string (too broad)
-  timeout: 5000,  // Type: number (too broad)
+  apiUrl: "https://api.example.com", // Type: string (too broad)
+  timeout: 5000, // Type: number (too broad)
 };
 ```
 
@@ -9276,11 +9542,11 @@ const favoriteColors = {
   charlie: "blue",
 } satisfies Record<string, Colors>;
 
-favoriteColors.alice;  // Type: "red" (literal, not Colors)
+favoriteColors.alice; // Type: "red" (literal, not Colors)
 
 // WRONG: Using type annotation widens types
 const badColors: Record<string, Colors> = {
-  alice: "red",  // Type: Colors (widened)
+  alice: "red", // Type: Colors (widened)
 };
 
 // CORRECT: Validate array elements
@@ -9289,7 +9555,7 @@ const endpoints = [
   { path: "/api/posts", method: "POST" },
 ] satisfies Array<{ path: string; method: "GET" | "POST" }>;
 
-endpoints[0].method;  // Type: "GET" (literal preserved)
+endpoints[0].method; // Type: "GET" (literal preserved)
 ```
 
 ## Error Handling
@@ -9299,9 +9565,7 @@ endpoints[0].method;  // Type: "GET" (literal preserved)
 **Never throw errors for expected failure cases. Use Result type.**
 
 ```typescript
-type Result<T, E = Error> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 // Helper constructors
 function Ok<T>(value: T): Result<T, never> {
@@ -9371,7 +9635,7 @@ class ValidationError extends AppError {
   constructor(
     message: string,
     public readonly field: string,
-    public readonly value: unknown
+    public readonly value: unknown,
   ) {
     super(message, { field, value });
   }
@@ -9383,7 +9647,7 @@ class NotFoundError extends AppError {
   constructor(
     message: string,
     public readonly resource: string,
-    public readonly id: string
+    public readonly id: string,
   ) {
     super(message, { resource, id });
   }
@@ -9482,18 +9746,18 @@ async function fetchUser(id: string): Promise<User> {
 // WRONG: Unhandled promise rejection
 async function badFetch(id: string): Promise<User> {
   const response = await fetch(`/api/users/${id}`);
-  return response.json();  // No error handling
+  return response.json(); // No error handling
 }
 
 // CORRECT: Concurrent requests
 async function fetchMultiple(ids: string[]): Promise<User[]> {
-  const promises = ids.map(id => fetchUser(id));
+  const promises = ids.map((id) => fetchUser(id));
   return Promise.all(promises);
 }
 
 // CORRECT: Fail-fast with Promise.all
 async function fetchWithDependencies(
-  userId: string
+  userId: string,
 ): Promise<{ user: User; posts: Post[] }> {
   const [user, posts] = await Promise.all([
     fetchUser(userId),
@@ -9507,10 +9771,11 @@ async function fetchAllUsers(ids: string[]): Promise<User[]> {
   const results = await Promise.allSettled(ids.map(fetchUser));
 
   return results
-    .filter((result): result is PromiseFulfilledResult<User> =>
-      result.status === "fulfilled"
+    .filter(
+      (result): result is PromiseFulfilledResult<User> =>
+        result.status === "fulfilled",
     )
-    .map(result => result.value);
+    .map((result) => result.value);
 }
 ```
 
@@ -9521,7 +9786,7 @@ async function fetchAllUsers(ids: string[]): Promise<User[]> {
 async function fetchWithTimeout<T>(
   url: string,
   timeoutMs: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -9550,7 +9815,7 @@ try {
   const data = await fetchWithTimeout<User>(
     "/api/user",
     3000,
-    controller.signal
+    controller.signal,
   );
   console.log(data);
 } catch (error) {
@@ -9567,7 +9832,7 @@ try {
 ```typescript
 // CORRECT: Async generator for pagination
 async function* fetchAllPages<T>(
-  baseUrl: string
+  baseUrl: string,
 ): AsyncGenerator<T[], void, undefined> {
   let page = 1;
   let hasMore = true;
@@ -9619,19 +9884,19 @@ class DataStream<T> {
 
 ## Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Variable | camelCase | `userName`, `totalCount` |
-| Function | camelCase | `fetchUser`, `calculateTotal` |
-| Class | PascalCase | `User`, `HttpClient` |
-| Interface | PascalCase | `User`, `Config` |
-| Type Alias | PascalCase | `Result`, `ApiResponse` |
-| Enum | PascalCase | `Status`, `HttpMethod` |
-| Enum Member | UPPER_CASE or PascalCase | `PENDING`, `Success` |
-| Generic Type Param | Single uppercase letter or PascalCase | `T`, `TKey`, `TValue` |
-| Constant | UPPER_SNAKE_CASE | `MAX_RETRIES`, `API_URL` |
-| Private Field | #prefix or _prefix | `#apiKey`, `_cache` |
-| Boolean | is/has/can prefix | `isLoading`, `hasError`, `canSubmit` |
+| Element            | Convention                            | Example                              |
+| ------------------ | ------------------------------------- | ------------------------------------ |
+| Variable           | camelCase                             | `userName`, `totalCount`             |
+| Function           | camelCase                             | `fetchUser`, `calculateTotal`        |
+| Class              | PascalCase                            | `User`, `HttpClient`                 |
+| Interface          | PascalCase                            | `User`, `Config`                     |
+| Type Alias         | PascalCase                            | `Result`, `ApiResponse`              |
+| Enum               | PascalCase                            | `Status`, `HttpMethod`               |
+| Enum Member        | UPPER_CASE or PascalCase              | `PENDING`, `Success`                 |
+| Generic Type Param | Single uppercase letter or PascalCase | `T`, `TKey`, `TValue`                |
+| Constant           | UPPER_SNAKE_CASE                      | `MAX_RETRIES`, `API_URL`             |
+| Private Field      | #prefix or \_prefix                   | `#apiKey`, `_cache`                  |
+| Boolean            | is/has/can prefix                     | `isLoading`, `hasError`, `canSubmit` |
 
 ### Avoid Abbreviations
 
@@ -9742,7 +10007,7 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-exports": "error",
       "@typescript-eslint/no-import-type-side-effects": "error",
     },
-  }
+  },
 );
 ```
 
@@ -9754,7 +10019,7 @@ export default tseslint.config(
 // WRONG: Truthy/falsy assumptions
 function getLength(arr: string[] | null): number {
   if (arr) {
-    return arr.length;  // What about empty array?
+    return arr.length; // What about empty array?
   }
   return 0;
 }
@@ -9769,7 +10034,7 @@ function getLength(arr: string[] | null): number {
 
 // WRONG: Implicit number coercion
 const value = "5";
-const result = value * 2;  // 10, but type is number (confusing)
+const result = value * 2; // 10, but type is number (confusing)
 
 // CORRECT: Explicit conversion
 const value = "5";
@@ -9780,7 +10045,7 @@ const result = Number(value) * 2;
 
 ```typescript
 // WRONG: Implicit any from missing types
-import express from "express";  // May be 'any' if @types/express not installed
+import express from "express"; // May be 'any' if @types/express not installed
 
 // CORRECT: Ensure types are installed
 // npm install --save-dev @types/express
@@ -9795,7 +10060,7 @@ export interface User {
 // post.ts
 import { User } from "./user";
 export interface Post {
-  author: User;  // Circular!
+  author: User; // Circular!
 }
 
 // CORRECT: Use type-only import or separate types file
@@ -9842,7 +10107,7 @@ interface Config {
 }
 
 const config: Config = { apiUrl: "https://api.example.com" };
-const value = config.missingKey;  // Type: string (but actually undefined)
+const value = config.missingKey; // Type: string (but actually undefined)
 
 // CORRECT: Enable noUncheckedIndexedAccess
 // With this flag, value is: string | undefined
@@ -9868,9 +10133,9 @@ function firstElement<T>(arr: T[]): T | undefined {
 }
 
 const nums = [1, 2, 3];
-const first = firstElement(nums);  // Type: number | undefined (correct)
+const first = firstElement(nums); // Type: number | undefined (correct)
 
-const value = firstElement([]);  // Type: never | undefined (useless)
+const value = firstElement([]); // Type: never | undefined (useless)
 
 // CORRECT: Constrain or provide default
 function firstElement<T = never>(arr: T[]): T | undefined {
@@ -9883,8 +10148,8 @@ function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
 }
 
 const user = { id: "1", name: "Alice" };
-const name = getProperty(user, "name");  // Type: string
-getProperty(user, "invalid");  // Type error
+const name = getProperty(user, "name"); // Type: string
+getProperty(user, "invalid"); // Type error
 ```
 
 ### Promise Type Issues
@@ -9892,21 +10157,21 @@ getProperty(user, "invalid");  // Type error
 ```typescript
 // WRONG: Promise<void> swallows errors
 async function process(): Promise<void> {
-  throw new Error("Failed");  // Error silently swallowed if not awaited
+  throw new Error("Failed"); // Error silently swallowed if not awaited
 }
 
-process();  // No error, promise rejected but not handled
+process(); // No error, promise rejected but not handled
 
 // CORRECT: Mark as floating or always await
-void process();  // Explicit void
+void process(); // Explicit void
 // or
-process().catch(console.error);  // Handle rejection
+process().catch(console.error); // Handle rejection
 // or
-await process();  // Await the promise
+await process(); // Await the promise
 
 // WRONG: Forgetting await in async function
 async function getData(): Promise<number> {
-  return fetchNumber();  // Returns Promise<Promise<number>>
+  return fetchNumber(); // Returns Promise<Promise<number>>
 }
 
 // CORRECT: Always await promises
@@ -9925,7 +10190,7 @@ enum Status {
   Success,
 }
 
-const status: Status = 99;  // Valid but nonsense
+const status: Status = 99; // Valid but nonsense
 
 // CORRECT: Use string enums or const objects
 enum Status {
@@ -9934,7 +10199,7 @@ enum Status {
   Success = "success",
 }
 
-const status: Status = 99;  // Type error
+const status: Status = 99; // Type error
 
 // BETTER: Use const object
 const Status = {
@@ -9943,7 +10208,9 @@ const Status = {
   Success: "success",
 } as const;
 
-type Status = typeof Status[keyof typeof Status];
-```
+type Status = (typeof Status)[keyof typeof Status];
 ```
 
+```
+
+```
