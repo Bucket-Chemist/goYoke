@@ -200,6 +200,8 @@ func TestDetectProjectType_Priority_GoOverPython(t *testing.T) {
 
 func TestFormatProjectType(t *testing.T) {
 	result := &ProjectDetectionResult{
+		Types:       []ProjectType{ProjectGo},
+		Primary:     ProjectGo,
 		Type:        ProjectGo,
 		Indicators:  []string{"go.mod"},
 		Conventions: []string{"go.md"},
@@ -217,5 +219,186 @@ func TestFormatProjectType(t *testing.T) {
 
 	if !strings.Contains(formatted, "go.mod") {
 		t.Error("Should contain indicator")
+	}
+}
+
+func TestDetectProjectType_GoTypescript(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module test"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "tsconfig.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "package.json"), []byte(`{"dependencies": {"typescript": "^5.0.0"}}`), 0644)
+
+	result := DetectProjectType(tmpDir)
+
+	// Check multiple types detected
+	if len(result.Types) != 2 {
+		t.Errorf("Expected 2 types, got %d: %v", len(result.Types), result.Types)
+	}
+
+	// Check Go is first (Primary)
+	if result.Primary != ProjectGo {
+		t.Errorf("Expected Primary=Go, got: %s", result.Primary)
+	}
+
+	// Check backward compatibility
+	if result.Type != ProjectGo {
+		t.Errorf("Expected Type=Go (backward compat), got: %s", result.Type)
+	}
+
+	// Check both types present
+	hasGo := false
+	hasTS := false
+	for _, typ := range result.Types {
+		if typ == ProjectGo {
+			hasGo = true
+		}
+		if typ == ProjectTypeScript {
+			hasTS = true
+		}
+	}
+	if !hasGo || !hasTS {
+		t.Errorf("Expected both Go and TypeScript types, got: %v", result.Types)
+	}
+
+	// Check conventions include both
+	hasGoMd := false
+	hasTSMd := false
+	for _, conv := range result.Conventions {
+		if conv == "go.md" {
+			hasGoMd = true
+		}
+		if conv == "typescript.md" {
+			hasTSMd = true
+		}
+	}
+	if !hasGoMd || !hasTSMd {
+		t.Errorf("Expected go.md and typescript.md conventions, got: %v", result.Conventions)
+	}
+}
+
+func TestDetectProjectType_GoTypescriptReact(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module test"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "tsconfig.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "package.json"), []byte(`{
+		"dependencies": {
+			"react": "^18.0.0",
+			"typescript": "^5.0.0"
+		}
+	}`), 0644)
+
+	result := DetectProjectType(tmpDir)
+
+	// Check 3 types detected
+	if len(result.Types) != 3 {
+		t.Errorf("Expected 3 types, got %d: %v", len(result.Types), result.Types)
+	}
+
+	// Check Primary is still Go
+	if result.Primary != ProjectGo {
+		t.Errorf("Expected Primary=Go, got: %s", result.Primary)
+	}
+
+	// Check all three types present
+	hasGo := false
+	hasTS := false
+	hasReact := false
+	for _, typ := range result.Types {
+		if typ == ProjectGo {
+			hasGo = true
+		}
+		if typ == ProjectTypeScript {
+			hasTS = true
+		}
+		if typ == ProjectReact {
+			hasReact = true
+		}
+	}
+	if !hasGo || !hasTS || !hasReact {
+		t.Errorf("Expected Go, TypeScript, and React types, got: %v", result.Types)
+	}
+
+	// Check conventions include all three
+	hasGoMd := false
+	hasTSMd := false
+	hasReactMd := false
+	for _, conv := range result.Conventions {
+		if conv == "go.md" {
+			hasGoMd = true
+		}
+		if conv == "typescript.md" {
+			hasTSMd = true
+		}
+		if conv == "react.md" {
+			hasReactMd = true
+		}
+	}
+	if !hasGoMd || !hasTSMd || !hasReactMd {
+		t.Errorf("Expected go.md, typescript.md, and react.md conventions, got: %v", result.Conventions)
+	}
+
+	// Check indicators mention React dependency
+	indicatorsStr := strings.Join(result.Indicators, ", ")
+	if !strings.Contains(indicatorsStr, "react dependency") {
+		t.Errorf("Expected indicators to mention react dependency, got: %s", indicatorsStr)
+	}
+}
+
+func TestDetectProjectType_TypescriptReactOnly(t *testing.T) {
+	tmpDir := t.TempDir()
+	os.WriteFile(filepath.Join(tmpDir, "tsconfig.json"), []byte("{}"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "package.json"), []byte(`{
+		"dependencies": {
+			"react": "^18.0.0"
+		}
+	}`), 0644)
+
+	result := DetectProjectType(tmpDir)
+
+	// Check 2 types: TypeScript + React
+	if len(result.Types) != 2 {
+		t.Errorf("Expected 2 types, got %d: %v", len(result.Types), result.Types)
+	}
+
+	// Check Primary is TypeScript (first detected)
+	if result.Primary != ProjectTypeScript {
+		t.Errorf("Expected Primary=TypeScript, got: %s", result.Primary)
+	}
+
+	// Check both types present
+	hasTS := false
+	hasReact := false
+	for _, typ := range result.Types {
+		if typ == ProjectTypeScript {
+			hasTS = true
+		}
+		if typ == ProjectReact {
+			hasReact = true
+		}
+	}
+	if !hasTS || !hasReact {
+		t.Errorf("Expected TypeScript and React types, got: %v", result.Types)
+	}
+}
+
+func TestFormatProjectType_Multiple(t *testing.T) {
+	result := &ProjectDetectionResult{
+		Types:       []ProjectType{ProjectGo, ProjectTypeScript, ProjectReact},
+		Primary:     ProjectGo,
+		Type:        ProjectGo,
+		Indicators:  []string{"go.mod", "tsconfig.json", "package.json (react dependency)"},
+		Conventions: []string{"go.md", "typescript.md", "react.md"},
+	}
+
+	formatted := FormatProjectType(result)
+
+	// Check format contains " + " separator
+	if !strings.Contains(formatted, "go + typescript + react") {
+		t.Errorf("Expected 'go + typescript + react' format, got: %s", formatted)
+	}
+
+	// Check all conventions listed
+	if !strings.Contains(formatted, "go.md") || !strings.Contains(formatted, "typescript.md") || !strings.Contains(formatted, "react.md") {
+		t.Errorf("Expected all conventions listed, got: %s", formatted)
 	}
 }

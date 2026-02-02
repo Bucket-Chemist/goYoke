@@ -1,0 +1,257 @@
+{
+  "version": "1.0",
+  "project": "TUI",
+  "generated_by": "/plan v1.0",
+  "generated_at": "2026-02-02T12:00:00Z",
+  "source_plan": "../TUI-TS-INK-CONVERSION-PLAN.md",
+  "total_phases": 9,
+  "total_tickets": 22,
+  "conventions_required": ["typescript.md", "react.md"],
+  "agents_primary": ["typescript-pro", "react-pro"],
+  "agents_supporting": ["scaffolder", "librarian", "frontend-reviewer", "standards-reviewer"],
+  "audit_patches": {
+    "audited_by": "gemini-slave architect",
+    "audited_at": "2026-02-02",
+    "gaps_found": 3,
+    "gaps_resolved": [
+      {
+        "id": "GAP-1",
+        "description": "Theming - no centralized theme.ts",
+        "severity": "minor",
+        "patched_in": ["TUI-003", "TUI-004", "TUI-007", "TUI-008", "TUI-014"]
+      },
+      {
+        "id": "GAP-2",
+        "description": "Input history state missing from store",
+        "severity": "minor",
+        "patched_in": ["TUI-005", "TUI-010"]
+      },
+      {
+        "id": "GAP-3",
+        "description": "Debug logging destination unclear",
+        "severity": "minor",
+        "patched_in": ["TUI-018"]
+      }
+    ]
+  },
+  "tickets": [
+    {
+      "id": "TUI-001",
+      "title": "SDK API Verification",
+      "status": "pending",
+      "phase": 0,
+      "dependencies": [],
+      "file": "TUI-001.md",
+      "gate": true
+    },
+    {
+      "id": "TUI-002",
+      "title": "Go Baseline Metrics & Hook Integration Test",
+      "status": "pending",
+      "phase": 0,
+      "dependencies": [],
+      "file": "TUI-002.md",
+      "gate": true
+    },
+    {
+      "id": "TUI-003",
+      "title": "Project Setup & Build Configuration",
+      "status": "pending",
+      "phase": 1,
+      "dependencies": ["TUI-001", "TUI-002"],
+      "file": "TUI-003.md"
+    },
+    {
+      "id": "TUI-004",
+      "title": "Basic App Shell & Ink Layout Spike",
+      "status": "pending",
+      "phase": 1,
+      "dependencies": ["TUI-003"],
+      "file": "TUI-004.md"
+    },
+    {
+      "id": "TUI-005",
+      "title": "Zustand Store Foundation",
+      "status": "pending",
+      "phase": 2,
+      "dependencies": ["TUI-004"],
+      "file": "TUI-005.md"
+    },
+    {
+      "id": "TUI-006",
+      "title": "Modal Queue with Promise Resolution",
+      "status": "pending",
+      "phase": 2,
+      "dependencies": ["TUI-005"],
+      "file": "TUI-006.md"
+    },
+    {
+      "id": "TUI-007",
+      "title": "Layout & Banner Components",
+      "status": "pending",
+      "phase": 3,
+      "dependencies": ["TUI-005"],
+      "file": "TUI-007.md"
+    },
+    {
+      "id": "TUI-008",
+      "title": "ClaudePanel & Input Components",
+      "status": "pending",
+      "phase": 3,
+      "dependencies": ["TUI-007"],
+      "file": "TUI-008.md"
+    },
+    {
+      "id": "TUI-009",
+      "title": "Modal System Components",
+      "status": "pending",
+      "phase": 3,
+      "dependencies": ["TUI-006", "TUI-007"],
+      "file": "TUI-009.md"
+    },
+    {
+      "id": "TUI-010",
+      "title": "Keyboard Handling & Timeout Logic",
+      "status": "pending",
+      "phase": 3,
+      "dependencies": ["TUI-008", "TUI-009"],
+      "file": "TUI-010.md"
+    },
+    {
+      "id": "TUI-011",
+      "title": "MCP Server with Tools",
+      "status": "pending",
+      "phase": 4,
+      "dependencies": ["TUI-006"],
+      "file": "TUI-011.md"
+    },
+    {
+      "id": "TUI-012",
+      "title": "useClaudeQuery Hook",
+      "status": "pending",
+      "phase": 4,
+      "dependencies": ["TUI-011", "TUI-005"],
+      "file": "TUI-012.md"
+    },
+    {
+      "id": "TUI-013",
+      "title": "MCP Integration Testing",
+      "status": "pending",
+      "phase": 4,
+      "dependencies": ["TUI-012", "TUI-009"],
+      "file": "TUI-013.md"
+    },
+    {
+      "id": "TUI-014",
+      "title": "AgentTree Component",
+      "status": "pending",
+      "phase": 5,
+      "dependencies": ["TUI-005", "TUI-007"],
+      "file": "TUI-014.md"
+    },
+    {
+      "id": "TUI-015",
+      "title": "AgentDetail & Tree Navigation",
+      "status": "pending",
+      "phase": 5,
+      "dependencies": ["TUI-014"],
+      "file": "TUI-015.md"
+    },
+    {
+      "id": "TUI-016",
+      "title": "Session Persistence",
+      "status": "pending",
+      "phase": 6,
+      "dependencies": ["TUI-005"],
+      "file": "TUI-016.md"
+    },
+    {
+      "id": "TUI-017",
+      "title": "Restart & Graceful Shutdown",
+      "status": "pending",
+      "phase": 6,
+      "dependencies": ["TUI-016"],
+      "file": "TUI-017.md"
+    },
+    {
+      "id": "TUI-018",
+      "title": "Telemetry Integration",
+      "status": "pending",
+      "phase": 7,
+      "dependencies": ["TUI-005"],
+      "file": "TUI-018.md"
+    },
+    {
+      "id": "TUI-019",
+      "title": "Terminal Compatibility Testing",
+      "status": "pending",
+      "phase": 7,
+      "dependencies": ["TUI-010", "TUI-013"],
+      "file": "TUI-019.md"
+    },
+    {
+      "id": "TUI-020",
+      "title": "Performance Benchmarking",
+      "status": "pending",
+      "phase": 7,
+      "dependencies": ["TUI-002", "TUI-019"],
+      "file": "TUI-020.md"
+    },
+    {
+      "id": "TUI-021",
+      "title": "Archive Go Frontend & Build Updates",
+      "status": "pending",
+      "phase": 8,
+      "dependencies": ["TUI-019", "TUI-020"],
+      "file": "TUI-021.md"
+    },
+    {
+      "id": "TUI-022",
+      "title": "Integration Tests & Rollback Rehearsal",
+      "status": "pending",
+      "phase": 8,
+      "dependencies": ["TUI-021"],
+      "file": "TUI-022.md"
+    }
+  ],
+  "phases": {
+    "0": {
+      "name": "Validation Sprint (GATE)",
+      "tickets": ["TUI-001", "TUI-002"],
+      "gate": true,
+      "gate_criteria": "All pass → Proceed. SDK APIs missing → HALT."
+    },
+    "1": {
+      "name": "Project Foundation",
+      "tickets": ["TUI-003", "TUI-004"]
+    },
+    "2": {
+      "name": "Store & State",
+      "tickets": ["TUI-005", "TUI-006"]
+    },
+    "3": {
+      "name": "Core Components + Modal System",
+      "tickets": ["TUI-007", "TUI-008", "TUI-009", "TUI-010"]
+    },
+    "4": {
+      "name": "MCP Integration",
+      "tickets": ["TUI-011", "TUI-012", "TUI-013"]
+    },
+    "5": {
+      "name": "Agent Visualization",
+      "tickets": ["TUI-014", "TUI-015"]
+    },
+    "6": {
+      "name": "Session & Persistence",
+      "tickets": ["TUI-016", "TUI-017"]
+    },
+    "7": {
+      "name": "Telemetry & Polish",
+      "tickets": ["TUI-018", "TUI-019", "TUI-020"]
+    },
+    "8": {
+      "name": "Cutover",
+      "tickets": ["TUI-021", "TUI-022"]
+    }
+  }
+}

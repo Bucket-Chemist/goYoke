@@ -45,8 +45,11 @@
 
 **Examples:**
 - `[Session Init] Go. go.md. Router ready.`
+- `[Session Init] Go + TypeScript + React. go.md, typescript.md, react.md. Router ready.`
+- `[Session Init] Python + TypeScript + React. python.md, typescript.md, react.md. Router ready.`
 - `[Session Init] Python. python.md. Router ready.`
 - `[Session Init] R + Shiny. R.md, R-shiny.md. Router ready.`
+- `[Session Init] TypeScript + React. typescript.md, react.md. Router ready.`
 - `[Session Init] Home. None. Router ready.`
 
 The `gogent-load-context` hook injects language detection and conventions automatically. This output confirms you received and processed that context.

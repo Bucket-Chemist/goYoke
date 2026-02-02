@@ -18,42 +18,58 @@ const (
 	ProjectRGolem     ProjectType = "r-golem"
 	ProjectJavaScript ProjectType = "javascript"
 	ProjectTypeScript ProjectType = "typescript"
+	ProjectReact      ProjectType = "react"
 	ProjectGo         ProjectType = "go"
 	ProjectRust       ProjectType = "rust"
 )
 
 // ProjectDetectionResult contains detection output with metadata
 type ProjectDetectionResult struct {
-	Type        ProjectType `json:"type"`
-	Indicators  []string    `json:"indicators"`  // Files that triggered detection
-	Conventions []string    `json:"conventions"` // Convention files to load
+	Types       []ProjectType `json:"types"`       // Multiple types (additive detection)
+	Primary     ProjectType   `json:"primary"`     // First detected (for routing priority)
+	Type        ProjectType   `json:"type"`        // DEPRECATED: alias for Primary (backward compat)
+	Indicators  []string      `json:"indicators"`  // Files that triggered detection
+	Conventions []string      `json:"conventions"` // Convention files to load
 }
 
 // DetectProjectType auto-detects project type from indicator files.
-// Detection priority: Go > Python > R (with Shiny/Golem) > JavaScript/TypeScript > Rust > Generic
+// Uses additive detection - can detect multiple languages in polyglot projects.
+// Detection order (determines Primary): Go > Python > R > Rust > TypeScript/React > JavaScript
+// Backend languages prioritized over frontend for routing purposes.
 func DetectProjectType(projectDir string) *ProjectDetectionResult {
 	result := &ProjectDetectionResult{
-		Type:        ProjectGeneric,
+		Types:       []ProjectType{},
+		Primary:     ProjectGeneric,
+		Type:        ProjectGeneric, // Backward compatibility
 		Indicators:  []string{},
 		Conventions: []string{},
 	}
 
+	conventionsMap := make(map[string]bool) // For deduplication
+
+	// === BACKEND LANGUAGES (priority for routing) ===
+
 	// Go detection (highest priority - this is GOgent-Fortress)
 	if fileExists(filepath.Join(projectDir, "go.mod")) {
-		result.Type = ProjectGo
+		result.Types = append(result.Types, ProjectGo)
 		result.Indicators = append(result.Indicators, "go.mod")
-		result.Conventions = []string{"go.md"}
-		return result
+		conventionsMap["go.md"] = true
+		if result.Primary == ProjectGeneric {
+			result.Primary = ProjectGo
+		}
 	}
 
 	// Python detection
 	pythonIndicators := []string{"pyproject.toml", "setup.py", "requirements.txt", "uv.lock", "Pipfile"}
 	for _, indicator := range pythonIndicators {
 		if fileExists(filepath.Join(projectDir, indicator)) {
-			result.Type = ProjectPython
+			result.Types = append(result.Types, ProjectPython)
 			result.Indicators = append(result.Indicators, indicator)
-			result.Conventions = []string{"python.md"}
-			return result
+			conventionsMap["python.md"] = true
+			if result.Primary == ProjectGeneric {
+				result.Primary = ProjectPython
+			}
+			break // Only append once for Python
 		}
 	}
 
@@ -61,65 +77,146 @@ func DetectProjectType(projectDir string) *ProjectDetectionResult {
 	rIndicators := []string{"DESCRIPTION", "NAMESPACE", "renv.lock"}
 	for _, indicator := range rIndicators {
 		if fileExists(filepath.Join(projectDir, indicator)) {
-			result.Type = ProjectR
-			result.Indicators = append(result.Indicators, indicator)
-			result.Conventions = []string{"R.md"}
-
 			// Check for Golem (superset of Shiny)
 			if isGolemProject(projectDir) {
-				result.Type = ProjectRGolem
-				result.Conventions = []string{"R.md", "R-shiny.md", "R-golem.md"}
-				result.Indicators = append(result.Indicators, "inst/golem-config.yml or golem dependency")
-				return result
+				result.Types = append(result.Types, ProjectRGolem)
+				result.Indicators = append(result.Indicators, indicator, "inst/golem-config.yml or golem dependency")
+				conventionsMap["R.md"] = true
+				conventionsMap["R-shiny.md"] = true
+				conventionsMap["R-golem.md"] = true
+				if result.Primary == ProjectGeneric {
+					result.Primary = ProjectRGolem
+				}
+				break
 			}
 
 			// Check for Shiny
 			if isShinyProject(projectDir) {
-				result.Type = ProjectRShiny
-				result.Conventions = []string{"R.md", "R-shiny.md"}
-				result.Indicators = append(result.Indicators, "shiny dependency or app.R/ui.R")
+				result.Types = append(result.Types, ProjectRShiny)
+				result.Indicators = append(result.Indicators, indicator, "shiny dependency or app.R/ui.R")
+				conventionsMap["R.md"] = true
+				conventionsMap["R-shiny.md"] = true
+				if result.Primary == ProjectGeneric {
+					result.Primary = ProjectRShiny
+				}
+				break
 			}
 
-			return result
+			// Plain R
+			result.Types = append(result.Types, ProjectR)
+			result.Indicators = append(result.Indicators, indicator)
+			conventionsMap["R.md"] = true
+			if result.Primary == ProjectGeneric {
+				result.Primary = ProjectR
+			}
+			break
 		}
 	}
 
 	// Also check for standalone R files without DESCRIPTION
-	if hasRFiles(projectDir) {
-		// Check for Shiny indicators even without DESCRIPTION
-		if fileExists(filepath.Join(projectDir, "app.R")) || fileExists(filepath.Join(projectDir, "ui.R")) {
-			result.Type = ProjectRShiny
-			result.Indicators = append(result.Indicators, "app.R or ui.R (standalone Shiny)")
-			result.Conventions = []string{"R.md", "R-shiny.md"}
-			return result
+	if len(result.Types) == 0 || !containsRType(result.Types) {
+		if hasRFiles(projectDir) {
+			// Check for Shiny indicators even without DESCRIPTION
+			if fileExists(filepath.Join(projectDir, "app.R")) || fileExists(filepath.Join(projectDir, "ui.R")) {
+				result.Types = append(result.Types, ProjectRShiny)
+				result.Indicators = append(result.Indicators, "app.R or ui.R (standalone Shiny)")
+				conventionsMap["R.md"] = true
+				conventionsMap["R-shiny.md"] = true
+				if result.Primary == ProjectGeneric {
+					result.Primary = ProjectRShiny
+				}
+			}
 		}
-	}
-
-	// TypeScript detection (before JavaScript - more specific)
-	if fileExists(filepath.Join(projectDir, "tsconfig.json")) {
-		result.Type = ProjectTypeScript
-		result.Indicators = append(result.Indicators, "tsconfig.json")
-		result.Conventions = []string{"typescript.md"}
-		return result
-	}
-
-	// JavaScript detection
-	if fileExists(filepath.Join(projectDir, "package.json")) {
-		result.Type = ProjectJavaScript
-		result.Indicators = append(result.Indicators, "package.json")
-		result.Conventions = []string{"javascript.md"}
-		return result
 	}
 
 	// Rust detection
 	if fileExists(filepath.Join(projectDir, "Cargo.toml")) {
-		result.Type = ProjectRust
+		result.Types = append(result.Types, ProjectRust)
 		result.Indicators = append(result.Indicators, "Cargo.toml")
-		result.Conventions = []string{"rust.md"}
-		return result
+		conventionsMap["rust.md"] = true
+		if result.Primary == ProjectGeneric {
+			result.Primary = ProjectRust
+		}
 	}
 
+	// === FRONTEND LANGUAGES (lower priority - detected but don't take Primary over backend) ===
+
+	// TypeScript detection
+	if fileExists(filepath.Join(projectDir, "tsconfig.json")) {
+		result.Types = append(result.Types, ProjectTypeScript)
+		result.Indicators = append(result.Indicators, "tsconfig.json")
+		conventionsMap["typescript.md"] = true
+		if result.Primary == ProjectGeneric {
+			result.Primary = ProjectTypeScript
+		}
+
+		// Check for React dependency in TypeScript projects
+		if hasReactDependency(projectDir) {
+			result.Types = append(result.Types, ProjectReact)
+			result.Indicators = append(result.Indicators, "package.json (react dependency)")
+			conventionsMap["react.md"] = true
+		}
+	}
+
+	// JavaScript detection (after TypeScript to avoid double-detection)
+	if !containsProjectType(result.Types, ProjectTypeScript) && fileExists(filepath.Join(projectDir, "package.json")) {
+		result.Types = append(result.Types, ProjectJavaScript)
+		result.Indicators = append(result.Indicators, "package.json")
+		conventionsMap["javascript.md"] = true
+		if result.Primary == ProjectGeneric {
+			result.Primary = ProjectJavaScript
+		}
+
+		// Check for React in JavaScript projects too
+		if hasReactDependency(projectDir) {
+			result.Types = append(result.Types, ProjectReact)
+			result.Indicators = append(result.Indicators, "package.json (react dependency)")
+			conventionsMap["react.md"] = true
+		}
+	}
+
+	// Convert conventions map to slice
+	for convention := range conventionsMap {
+		result.Conventions = append(result.Conventions, convention)
+	}
+
+	// Set Type for backward compatibility
+	result.Type = result.Primary
+
 	return result
+}
+
+// hasReactDependency checks if package.json contains React in dependencies or devDependencies
+func hasReactDependency(projectDir string) bool {
+	packageJSONPath := filepath.Join(projectDir, "package.json")
+	content, err := os.ReadFile(packageJSONPath)
+	if err != nil {
+		return false
+	}
+
+	// Simple string search - avoid full JSON parsing for performance
+	contentStr := string(content)
+	return strings.Contains(contentStr, `"react"`)
+}
+
+// containsProjectType checks if a ProjectType slice contains a specific type
+func containsProjectType(types []ProjectType, target ProjectType) bool {
+	for _, t := range types {
+		if t == target {
+			return true
+		}
+	}
+	return false
+}
+
+// containsRType checks if any R variant is in the types slice
+func containsRType(types []ProjectType) bool {
+	for _, t := range types {
+		if t == ProjectR || t == ProjectRShiny || t == ProjectRGolem {
+			return true
+		}
+	}
+	return false
 }
 
 // fileExists checks if file exists (not directory)
@@ -187,15 +284,22 @@ func isGolemProject(projectDir string) bool {
 
 // FormatProjectType returns human-readable project type string for context injection
 func FormatProjectType(result *ProjectDetectionResult) string {
-	if result.Type == ProjectGeneric {
+	if result.Primary == ProjectGeneric {
 		return "PROJECT TYPE: Generic (no language-specific conventions)"
 	}
+
+	// Join multiple types with " + " for polyglot projects
+	var typeStrings []string
+	for _, t := range result.Types {
+		typeStrings = append(typeStrings, string(t))
+	}
+	projectTypes := strings.Join(typeStrings, " + ")
 
 	conventions := strings.Join(result.Conventions, ", ")
 	indicators := strings.Join(result.Indicators, ", ")
 
 	return fmt.Sprintf("PROJECT TYPE: %s\n  Detected via: %s\n  Conventions: %s",
-		string(result.Type),
+		projectTypes,
 		indicators,
 		conventions,
 	)
