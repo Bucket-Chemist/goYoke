@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "lastComputedDate": "2026-02-01",
   "dailyActivity": [
     {
@@ -156,5 +156,6 @@
     "19": 14,
     "20": 3,
     "21": 4
-  }
+  },
+  "totalSpeculationTimeSavedMs": 0
 }

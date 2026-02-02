@@ -101,7 +101,7 @@
       }
     ]
   },
-  "autoUpdatesChannel": "stable",
+  "autoUpdatesChannel": "latest",
   "minimumVersion": "2.1.25",
   "trustedDirectories": [
     "/home/doktersmol",

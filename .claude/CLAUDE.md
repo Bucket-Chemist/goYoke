@@ -186,7 +186,11 @@ Request arrives
 | Create plan, break down, dependency analysis | `architect` | Plan |
 | Review plan, critical review | `staff-architect-critical-review` | Plan or Explore |
 
-### Tier 3: Opus (Deep Analysis)
+### Tier 3: Opus (Architecture Decisions)
+
+| Trigger Patterns | Agent | subagent_type |
+|------------------|-------|---------------|
+| design neural network, architecture decision, training strategy, loss function design, attention mechanism choice, which approach, tradeoff analysis | `python-architect` | Plan |
 
 | Trigger | Handler | Notes |
 |---------|---------|-------|
@@ -197,6 +201,45 @@ Request arrives
 | Trigger Patterns | Handler | Notes |
 |------------------|---------|-------|
 | full codebase, cross-module, large context | `gemini-slave` | Via Bash, not Task() |
+
+---
+
+## Convention Auto-Loading
+
+Python agents load conventions based on file context:
+
+| File Pattern | Conventions Loaded |
+|--------------|-------------------|
+| `**/data/**/*.py` | python.md + python-datasci.md |
+| `**/preprocessing/**/*.py` | python.md + python-datasci.md |
+| `**/models/**/*.py` | python.md + python-ml.md |
+| `**/training/**/*.py` | python.md + python-ml.md |
+| `**/inference/**/*.py` | python.md + python-ml.md |
+
+---
+
+## Domain-Specific Conventions
+
+| Convention | Scope | Key Topics |
+|------------|-------|------------|
+| `python-datasci.md` | Data pipelines, preprocessing | VST transforms, binning, baseline correction, noise estimation, pyOpenMS |
+| `python-ml.md` | ML/NN implementation | PyTorch patterns, attention mechanisms, loss functions, training, ONNX |
+
+---
+
+## Internal Escalation
+
+Agents can escalate to higher-tier agents for decisions:
+
+| From | To | When |
+|------|----|----- |
+| python-pro | python-architect | Architecture ambiguity, design decisions, tradeoff analysis |
+| python-architect | /einstein | Intractable design problem after clarification attempts |
+
+python-pro should escalate when:
+- Multiple valid implementation approaches exist
+- Decision has significant downstream implications
+- Tradeoff analysis requires deep reasoning
 
 ---
 

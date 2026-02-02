@@ -484,6 +484,47 @@
       "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context."
     },
     {
+      "id": "python-architect",
+      "parallelization_template": "E",
+      "name": "Python ML Architect",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "thinking_budget_complex": 48000,
+      "tier": 3,
+      "category": "architecture",
+      "path": "python-architect",
+      "triggers": [
+        "design neural network",
+        "architecture decision",
+        "training strategy",
+        "loss function design",
+        "attention mechanism choice",
+        "model architecture",
+        "multi-task learning design",
+        "should I use",
+        "which approach",
+        "tradeoff analysis",
+        "ml architecture",
+        "nn design",
+        "preprocessing architecture"
+      ],
+      "tools": ["Read", "Write", "Glob", "Grep", "Task", "AskUserQuestion"],
+      "auto_activate": null,
+      "conventions_required": ["python.md", "python-datasci.md", "python-ml.md"],
+      "inputs": [".claude/tmp/scout_metrics.json", "docs/*-plan.md", "docs/*-analysis.md"],
+      "output_artifacts": {
+        "required": ["architecture-decision.md"],
+        "decision_location": ".claude/tmp/architecture-decision.md",
+        "metadata_location": ".claude/tmp/architecture-metadata.json"
+      },
+      "spawnable_by": ["python-pro", "orchestrator", "impl-manager", "planner"],
+      "can_spawn": ["codebase-search", "librarian", "haiku-scout"],
+      "sharp_edges_count": 8,
+      "cost_per_invocation": "0.20-0.40",
+      "description": "Opus-tier ML architecture decisions. Handles attention mechanism choices, loss function design, multi-task learning strategy, training curriculum design. Spawnable by python-pro for implementation guidance. Outputs structured decision documents."
+    },
+    {
       "id": "planner",
       "parallelization_template": "E",
       "name": "Planner",
