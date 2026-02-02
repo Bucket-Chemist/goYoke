@@ -34,7 +34,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 func TestValidateRouting_Integration(t *testing.T) {

@@ -205,7 +205,7 @@ echo "For violations: cat $VIOLATIONS_LOG"
 # crontab -e
 
 # Run health check every hour, log to file
-0 * * * * /path/to/gogent-fortress/scripts/health-check.sh >> ~/gogent-health-$(date +\%Y\%m\%d).log 2>&1
+0 * * * * /path/to/gogent/scripts/health-check.sh >> ~/gogent-health-$(date +\%Y\%m\%d).log 2>&1
 ```
 
 **Acceptance Criteria**:

@@ -167,8 +167,8 @@ GOgent-086b → GOgent-087c → GOgent-087 → GOgent-087b
 
 ### Routing Decisions (GOgent-087b)
 
-**Primary File**: `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl`
-**Updates File**: `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl`
+**Primary File**: `$XDG_DATA_HOME/gogent/routing-decisions.jsonl`
+**Updates File**: `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl`
 
 **Schema Evolution**:
 - Initial design: Single file with in-place updates → Race condition risk

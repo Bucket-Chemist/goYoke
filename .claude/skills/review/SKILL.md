@@ -484,8 +484,8 @@ This skill logs all findings to ML telemetry for downstream analysis:
 
 | File | Purpose |
 |------|---------|
-| `$XDG_DATA_HOME/gogent-fortress/review-findings.jsonl` | All review findings |
-| `$XDG_DATA_HOME/gogent-fortress/sharp-edge-hits.jsonl` | Sharp edge correlations |
+| `$XDG_DATA_HOME/gogent/review-findings.jsonl` | All review findings |
+| `$XDG_DATA_HOME/gogent/sharp-edge-hits.jsonl` | Sharp edge correlations |
 | `.claude/tmp/review-telemetry.json` | Session telemetry output (finding IDs) |
 
 Telemetry is non-blocking - skill continues even if logging fails.

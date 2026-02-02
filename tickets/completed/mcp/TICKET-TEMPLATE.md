@@ -29,7 +29,7 @@ import (
     "standard/library/package1"
     "standard/library/package2"
 
-    "github.com/yourusername/gogent-fortress/pkg/internal"
+    "github.com/yourusername/gogent/pkg/internal"
 )
 ```
 

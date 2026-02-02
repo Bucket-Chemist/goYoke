@@ -7,9 +7,9 @@ import (
 func TestValidateSubagentType_Correct(t *testing.T) {
 	schema := &Schema{
 		AgentSubagentMapping: AgentSubagentMapping{
-			PythonPro:      "general-purpose",
-			CodebaseSearch: "Explore",
-			Orchestrator:   "Plan",
+			PythonPro:      NewFlexibleSubagentType("general-purpose"),
+			CodebaseSearch: NewFlexibleSubagentType("Explore"),
+			Orchestrator:   NewFlexibleSubagentType("Plan"),
 		},
 	}
 
@@ -37,8 +37,8 @@ func TestValidateSubagentType_Correct(t *testing.T) {
 func TestValidateSubagentType_Incorrect(t *testing.T) {
 	schema := &Schema{
 		AgentSubagentMapping: AgentSubagentMapping{
-			PythonPro:      "general-purpose",
-			CodebaseSearch: "Explore",
+			PythonPro:      NewFlexibleSubagentType("general-purpose"),
+			CodebaseSearch: NewFlexibleSubagentType("Explore"),
 		},
 	}
 
@@ -49,8 +49,8 @@ func TestValidateSubagentType_Incorrect(t *testing.T) {
 		t.Error("Expected invalid result for wrong subagent_type")
 	}
 
-	if result.RequiredType != "general-purpose" {
-		t.Errorf("Expected required type 'general-purpose', got: %s", result.RequiredType)
+	if len(result.AllowedTypes) != 1 || result.AllowedTypes[0] != "general-purpose" {
+		t.Errorf("Expected allowed types ['general-purpose'], got: %v", result.AllowedTypes)
 	}
 
 	if result.ErrorMessage == "" {
@@ -74,7 +74,7 @@ func TestValidateSubagentType_Incorrect(t *testing.T) {
 func TestValidateSubagentType_NoAgent(t *testing.T) {
 	schema := &Schema{
 		AgentSubagentMapping: AgentSubagentMapping{
-			PythonPro: "general-purpose",
+			PythonPro: NewFlexibleSubagentType("general-purpose"),
 		},
 	}
 
@@ -89,7 +89,7 @@ func TestValidateSubagentType_NoAgent(t *testing.T) {
 func TestValidateSubagentType_AgentNotInMapping(t *testing.T) {
 	schema := &Schema{
 		AgentSubagentMapping: AgentSubagentMapping{
-			PythonPro: "general-purpose",
+			PythonPro: NewFlexibleSubagentType("general-purpose"),
 		},
 	}
 
@@ -118,7 +118,7 @@ func TestFormatSubagentTypeError(t *testing.T) {
 		Valid:         false,
 		Agent:         "tech-docs-writer",
 		RequestedType: "Explore",
-		RequiredType:  "general-purpose",
+		AllowedTypes:  []string{"general-purpose"},
 		ErrorMessage:  "[task-validation] Invalid subagent_type",
 	}
 
@@ -147,7 +147,7 @@ func TestFormatSubagentTypeError_Valid(t *testing.T) {
 		Valid:         true,
 		Agent:         "python-pro",
 		RequestedType: "general-purpose",
-		RequiredType:  "general-purpose",
+		AllowedTypes:  []string{"general-purpose"},
 		ErrorMessage:  "",
 	}
 
@@ -155,5 +155,92 @@ func TestFormatSubagentTypeError_Valid(t *testing.T) {
 
 	if formatted != "" {
 		t.Errorf("Expected empty string for valid validation, got: %s", formatted)
+	}
+}
+
+func TestValidateSubagentType_MultiType_FirstType(t *testing.T) {
+	schema := &Schema{
+		AgentSubagentMapping: AgentSubagentMapping{
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan", "Explore"),
+		},
+	}
+
+	// First type should be valid
+	result := ValidateSubagentType(schema, "staff-architect-critical-review", "Plan")
+
+	if !result.Valid {
+		t.Errorf("Expected valid for first type in multi-type agent, got error: %s", result.ErrorMessage)
+	}
+
+	if len(result.AllowedTypes) != 2 {
+		t.Errorf("Expected 2 allowed types, got: %d", len(result.AllowedTypes))
+	}
+}
+
+func TestValidateSubagentType_MultiType_SecondType(t *testing.T) {
+	schema := &Schema{
+		AgentSubagentMapping: AgentSubagentMapping{
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan", "Explore"),
+		},
+	}
+
+	// Second type should also be valid
+	result := ValidateSubagentType(schema, "staff-architect-critical-review", "Explore")
+
+	if !result.Valid {
+		t.Errorf("Expected valid for second type in multi-type agent, got error: %s", result.ErrorMessage)
+	}
+}
+
+func TestValidateSubagentType_MultiType_InvalidType(t *testing.T) {
+	schema := &Schema{
+		AgentSubagentMapping: AgentSubagentMapping{
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan", "Explore"),
+		},
+	}
+
+	// Type not in allowed list should be invalid
+	result := ValidateSubagentType(schema, "staff-architect-critical-review", "general-purpose")
+
+	if result.Valid {
+		t.Error("Expected invalid result for type not in multi-type agent's allowed list")
+	}
+
+	if len(result.AllowedTypes) != 2 {
+		t.Errorf("Expected 2 allowed types in error, got: %d", len(result.AllowedTypes))
+	}
+
+	if !contains(result.ErrorMessage, "Plan") || !contains(result.ErrorMessage, "Explore") {
+		t.Error("Error should mention both allowed types")
+	}
+
+	if !contains(result.ErrorMessage, "general-purpose") {
+		t.Error("Error should mention requested type")
+	}
+}
+
+func TestValidateSubagentType_MultiType_ErrorFormat(t *testing.T) {
+	schema := &Schema{
+		AgentSubagentMapping: AgentSubagentMapping{
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan", "Explore"),
+		},
+	}
+
+	result := ValidateSubagentType(schema, "staff-architect-critical-review", "Bash")
+
+	formatted := result.FormatSubagentTypeError()
+
+	if formatted == "" {
+		t.Error("Expected non-empty formatted error for multi-type agent")
+	}
+
+	// Should suggest the first type (primary)
+	if !contains(formatted, "Plan") {
+		t.Error("Formatted error should suggest primary type (Plan)")
+	}
+
+	// Should show the fix suggestion
+	if !contains(formatted, "Fix:") {
+		t.Error("Formatted error should include fix suggestion")
 	}
 }

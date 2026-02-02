@@ -556,7 +556,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 ```
 
@@ -1183,7 +1183,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/memory"
+	"github.com/yourusername/gogent/pkg/memory"
 )
 
 func TestSharpEdgeDetectionWorkflow(t *testing.T) {
@@ -1392,7 +1392,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/memory"
+	"github.com/yourusername/gogent/pkg/memory"
 )
 ```
 

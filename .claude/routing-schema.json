@@ -318,7 +318,7 @@
     "planner": "Plan",
     "einstein": "general-purpose",
     "gemini-slave": "Bash",
-    "staff-architect-critical-review": "Plan"
+    "staff-architect-critical-review": ["Plan", "Explore"]
   },
 
   "blocked_patterns": {

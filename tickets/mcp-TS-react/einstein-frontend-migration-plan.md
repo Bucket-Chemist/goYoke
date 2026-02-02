@@ -693,7 +693,7 @@ The Go hooks communicate via environment variables and file system:
 │                                                                 │
 │  ~/.claude/tmp/scout_metrics.json                               │
 │  ~/.claude/memory/handoffs.jsonl                                │
-│  $XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl         │
+│  $XDG_DATA_HOME/gogent/routing-decisions.jsonl         │
 │                                                                 │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -709,7 +709,7 @@ import { readFile } from "fs/promises";
 import { useStore } from "../store";
 
 const TELEMETRY_PATHS = {
-  routingDecisions: `${process.env.XDG_DATA_HOME}/gogent-fortress/routing-decisions.jsonl`,
+  routingDecisions: `${process.env.XDG_DATA_HOME}/gogent/routing-decisions.jsonl`,
   handoffs: `${process.env.HOME}/.claude/memory/handoffs.jsonl`,
   scoutMetrics: `${process.env.HOME}/.claude/tmp/scout_metrics.json`
 };

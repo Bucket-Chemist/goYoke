@@ -461,9 +461,9 @@ import (
     "os"
     "time"
 
-    "github.com/yourusername/gogent-fortress/pkg/routing"
-    "github.com/yourusername/gogent-fortress/pkg/config"
-    "github.com/yourusername/gogent-fortress/internal/logger"
+    "github.com/yourusername/gogent/pkg/routing"
+    "github.com/yourusername/gogent/pkg/config"
+    "github.com/yourusername/gogent/internal/logger"
 )
 
 func main() {

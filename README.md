@@ -211,10 +211,10 @@ GOgent-Fortress captures routing decisions and agent collaborations for optimiza
 
 | Data Type | Written By | Location |
 |-----------|------------|----------|
-| Routing Decisions | `gogent-sharp-edge` | `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl` |
-| Decision Outcomes | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl` |
-| Agent Collaborations | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl` |
-| Collaboration Outcomes | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent-fortress/agent-collaboration-updates.jsonl` |
+| Routing Decisions | `gogent-sharp-edge` | `$XDG_DATA_HOME/gogent/routing-decisions.jsonl` |
+| Decision Outcomes | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl` |
+| Agent Collaborations | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent/agent-collaborations.jsonl` |
+| Collaboration Outcomes | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent/agent-collaboration-updates.jsonl` |
 
 ### Append-Only Pattern
 
@@ -379,7 +379,7 @@ Project/
 ├── escalations.jsonl               # Tier escalations
 └── scout-recommendations.jsonl     # Scout accuracy data
 
-$XDG_DATA_HOME/gogent-fortress/     # ML Telemetry (default: ~/.local/share)
+$XDG_DATA_HOME/gogent/     # ML Telemetry (default: ~/.local/share)
 ├── routing-decisions.jsonl         # ML training data (initial)
 ├── routing-decision-updates.jsonl  # ML training data (outcomes)
 ├── agent-collaborations.jsonl      # Team patterns (initial)

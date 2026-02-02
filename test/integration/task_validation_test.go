@@ -26,9 +26,9 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 			Opus:   30,
 		},
 		AgentSubagentMapping: routing.AgentSubagentMapping{
-			PythonPro:      "general-purpose",
-			CodebaseSearch: "Explore",
-			TechDocsWriter: "general-purpose",
+			PythonPro:      routing.NewFlexibleSubagentType("general-purpose"),
+			CodebaseSearch: routing.NewFlexibleSubagentType("Explore"),
+			TechDocsWriter: routing.NewFlexibleSubagentType("general-purpose"),
 		},
 	}
 
@@ -98,8 +98,8 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 			t.Error("Wrong subagent_type should be rejected")
 		}
 
-		if result.RequiredType != "Explore" {
-			t.Errorf("Expected required type 'Explore', got: %s", result.RequiredType)
+		if len(result.AllowedTypes) == 0 || result.AllowedTypes[0] != "Explore" {
+			t.Errorf("Expected allowed types to include 'Explore', got: %v", result.AllowedTypes)
 		}
 
 		formatted := result.FormatSubagentTypeError()
@@ -119,17 +119,17 @@ func TestTaskValidation_RealWorldScenarios(t *testing.T) {
 			},
 		},
 		AgentSubagentMapping: routing.AgentSubagentMapping{
-			PythonPro:      "general-purpose",
-			PythonUX:       "general-purpose",
-			RPro:           "general-purpose",
-			RShinyPro:      "general-purpose",
-			CodebaseSearch: "Explore",
-			Scaffolder:     "general-purpose",
-			TechDocsWriter: "general-purpose",
-			Librarian:      "Explore",
-			CodeReviewer:   "Explore",
-			Orchestrator:   "Plan",
-			Architect:      "Plan",
+			PythonPro:      routing.NewFlexibleSubagentType("general-purpose"),
+			PythonUX:       routing.NewFlexibleSubagentType("general-purpose"),
+			RPro:           routing.NewFlexibleSubagentType("general-purpose"),
+			RShinyPro:      routing.NewFlexibleSubagentType("general-purpose"),
+			CodebaseSearch: routing.NewFlexibleSubagentType("Explore"),
+			Scaffolder:     routing.NewFlexibleSubagentType("general-purpose"),
+			TechDocsWriter: routing.NewFlexibleSubagentType("general-purpose"),
+			Librarian:      routing.NewFlexibleSubagentType("Explore"),
+			CodeReviewer:   routing.NewFlexibleSubagentType("Explore"),
+			Orchestrator:   routing.NewFlexibleSubagentType("Plan"),
+			Architect:      routing.NewFlexibleSubagentType("Plan"),
 		},
 	}
 

@@ -181,7 +181,7 @@ Request arrives
 | code review, full review, review changes | `review-orchestrator` | Plan |
 | Ambiguous scope, synthesize, think through | `orchestrator` | Plan |
 | Create plan, break down, dependency analysis | `architect` | Plan |
-| Review plan, critical review | `staff-architect-critical-review` | Explore |
+| Review plan, critical review | `staff-architect-critical-review` | Plan or Explore |
 
 ### Tier 3: Opus (Deep Analysis)
 

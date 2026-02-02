@@ -95,11 +95,11 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 
 	// Verify agent_subagent_mapping
 	t.Run("AgentSubagentMapping", func(t *testing.T) {
-		assert.Equal(t, "Explore", schema.AgentSubagentMapping.CodebaseSearch)
-		assert.Equal(t, "general-purpose", schema.AgentSubagentMapping.PythonPro)
-		assert.Equal(t, "general-purpose", schema.AgentSubagentMapping.GoPro)
-		assert.Equal(t, "Plan", schema.AgentSubagentMapping.Orchestrator)
-		assert.Equal(t, "Bash", schema.AgentSubagentMapping.GeminiSlave)
+		assert.True(t, schema.AgentSubagentMapping.CodebaseSearch.Contains("Explore"))
+		assert.True(t, schema.AgentSubagentMapping.PythonPro.Contains("general-purpose"))
+		assert.True(t, schema.AgentSubagentMapping.GoPro.Contains("general-purpose"))
+		assert.True(t, schema.AgentSubagentMapping.Orchestrator.Contains("Plan"))
+		assert.True(t, schema.AgentSubagentMapping.GeminiSlave.Contains("Bash"))
 	})
 
 	// Verify escalation_rules structure
@@ -173,7 +173,7 @@ func TestSchemaValidate(t *testing.T) {
 					Explore: SubagentType{},
 				},
 				AgentSubagentMapping: AgentSubagentMapping{
-					CodebaseSearch: "Explore",
+					CodebaseSearch: NewFlexibleSubagentType("Explore"),
 				},
 			},
 			wantErr: false,
@@ -209,7 +209,7 @@ func TestSchemaValidate(t *testing.T) {
 				},
 				SubagentTypesConfig: SubagentTypesConfig{},
 				AgentSubagentMapping: AgentSubagentMapping{
-					CodebaseSearch: "NonexistentType",
+					CodebaseSearch: NewFlexibleSubagentType("NonexistentType"),
 				},
 			},
 			wantErr:   true,
@@ -257,8 +257,8 @@ func TestGetTier(t *testing.T) {
 func TestGetSubagentTypeForAgent(t *testing.T) {
 	schema := Schema{
 		AgentSubagentMapping: AgentSubagentMapping{
-			CodebaseSearch: "Explore",
-			PythonPro:      "general-purpose",
+			CodebaseSearch: NewFlexibleSubagentType("Explore"),
+			PythonPro:      NewFlexibleSubagentType("general-purpose"),
 		},
 	}
 
@@ -283,8 +283,8 @@ func TestValidateAgentSubagentPair(t *testing.T) {
 			GeneralPurpose: SubagentType{},
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			CodebaseSearch: "Explore",
-			PythonPro:      "general-purpose",
+			CodebaseSearch: NewFlexibleSubagentType("Explore"),
+			PythonPro:      NewFlexibleSubagentType("general-purpose"),
 		},
 	}
 
@@ -497,4 +497,311 @@ func TestLoadAndFormatSchemaSummary_MissingFile(t *testing.T) {
 	// Should NOT return error for missing file (graceful fallback)
 	require.NoError(t, err)
 	assert.Contains(t, summary, "[No routing schema found - using defaults]")
+}
+
+// TestFlexibleSubagentType_UnmarshalJSON tests JSON unmarshaling for both formats.
+func TestFlexibleSubagentType_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantTypes []string
+		wantErr   bool
+		errSubstr string
+	}{
+		{
+			name:      "single string (backwards compat)",
+			input:     `"Explore"`,
+			wantTypes: []string{"Explore"},
+		},
+		{
+			name:      "array with one element",
+			input:     `["general-purpose"]`,
+			wantTypes: []string{"general-purpose"},
+		},
+		{
+			name:      "array with multiple elements",
+			input:     `["Plan", "Explore"]`,
+			wantTypes: []string{"Plan", "Explore"},
+		},
+		{
+			name:      "array with three elements",
+			input:     `["Explore", "Plan", "general-purpose"]`,
+			wantTypes: []string{"Explore", "Plan", "general-purpose"},
+		},
+		{
+			name:      "empty array",
+			input:     `[]`,
+			wantErr:   true,
+			errSubstr: "cannot be empty",
+		},
+		{
+			name:      "null value",
+			input:     `null`,
+			wantErr:   true,
+			errSubstr: "null/empty",
+		},
+		{
+			name:      "number value",
+			input:     `123`,
+			wantErr:   true,
+			errSubstr: "must be string or []string",
+		},
+		{
+			name:      "object value",
+			input:     `{"type": "Explore"}`,
+			wantErr:   true,
+			errSubstr: "must be string or []string",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var f FlexibleSubagentType
+			err := json.Unmarshal([]byte(tc.input), &f)
+
+			if tc.wantErr {
+				require.Error(t, err)
+				if tc.errSubstr != "" {
+					assert.Contains(t, err.Error(), tc.errSubstr)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantTypes, f.types)
+		})
+	}
+}
+
+// TestFlexibleSubagentType_Contains tests the Contains method.
+func TestFlexibleSubagentType_Contains(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+		checkType string
+		want      bool
+	}{
+		{
+			name:      "single type - match",
+			jsonInput: `"Explore"`,
+			checkType: "Explore",
+			want:      true,
+		},
+		{
+			name:      "single type - no match",
+			jsonInput: `"Explore"`,
+			checkType: "Plan",
+			want:      false,
+		},
+		{
+			name:      "multiple types - match first",
+			jsonInput: `["Plan", "Explore"]`,
+			checkType: "Plan",
+			want:      true,
+		},
+		{
+			name:      "multiple types - match second",
+			jsonInput: `["Plan", "Explore"]`,
+			checkType: "Explore",
+			want:      true,
+		},
+		{
+			name:      "multiple types - no match",
+			jsonInput: `["Plan", "Explore"]`,
+			checkType: "general-purpose",
+			want:      false,
+		},
+		{
+			name:      "case sensitive - no match",
+			jsonInput: `"Explore"`,
+			checkType: "explore",
+			want:      false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var f FlexibleSubagentType
+			err := json.Unmarshal([]byte(tc.jsonInput), &f)
+			require.NoError(t, err)
+
+			got := f.Contains(tc.checkType)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestFlexibleSubagentType_GetAll tests the GetAll method.
+func TestFlexibleSubagentType_GetAll(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+		want      []string
+	}{
+		{
+			name:      "single type",
+			jsonInput: `"Explore"`,
+			want:      []string{"Explore"},
+		},
+		{
+			name:      "two types",
+			jsonInput: `["Plan", "Explore"]`,
+			want:      []string{"Plan", "Explore"},
+		},
+		{
+			name:      "three types",
+			jsonInput: `["Explore", "Plan", "general-purpose"]`,
+			want:      []string{"Explore", "Plan", "general-purpose"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var f FlexibleSubagentType
+			err := json.Unmarshal([]byte(tc.jsonInput), &f)
+			require.NoError(t, err)
+
+			got := f.GetAll()
+			assert.Equal(t, tc.want, got)
+
+			// Verify returned slice is a copy, not the internal slice
+			if len(got) > 0 {
+				got[0] = "Modified"
+				assert.NotEqual(t, "Modified", f.types[0], "GetAll should return a copy")
+			}
+		})
+	}
+}
+
+// TestFlexibleSubagentType_Primary tests the Primary method.
+func TestFlexibleSubagentType_Primary(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+		want      string
+	}{
+		{
+			name:      "single type",
+			jsonInput: `"Explore"`,
+			want:      "Explore",
+		},
+		{
+			name:      "multiple types - returns first",
+			jsonInput: `["Plan", "Explore", "general-purpose"]`,
+			want:      "Plan",
+		},
+		{
+			name:      "order matters",
+			jsonInput: `["Explore", "Plan"]`,
+			want:      "Explore",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var f FlexibleSubagentType
+			err := json.Unmarshal([]byte(tc.jsonInput), &f)
+			require.NoError(t, err)
+
+			got := f.Primary()
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// TestFlexibleSubagentType_Primary_Empty tests Primary on uninitialized type.
+func TestFlexibleSubagentType_Primary_Empty(t *testing.T) {
+	var f FlexibleSubagentType
+	assert.Equal(t, "", f.Primary(), "Primary should return empty string for uninitialized type")
+}
+
+// TestFlexibleSubagentType_CompleteWorkflow tests a realistic workflow.
+func TestFlexibleSubagentType_CompleteWorkflow(t *testing.T) {
+	// Simulate routing-schema.json with mixed formats
+	schemaJSON := `{
+		"codebase-search": "Explore",
+		"orchestrator": "Plan",
+		"staff-architect-critical-review": ["Plan", "Explore"]
+	}`
+
+	var mapping map[string]FlexibleSubagentType
+	err := json.Unmarshal([]byte(schemaJSON), &mapping)
+	require.NoError(t, err)
+
+	// Verify backwards-compatible single string
+	codebaseSearch := mapping["codebase-search"]
+	assert.True(t, codebaseSearch.Contains("Explore"))
+	assert.False(t, codebaseSearch.Contains("Plan"))
+	assert.Equal(t, "Explore", codebaseSearch.Primary())
+	assert.Equal(t, []string{"Explore"}, codebaseSearch.GetAll())
+
+	// Verify single string in array format
+	orchestrator := mapping["orchestrator"]
+	assert.True(t, orchestrator.Contains("Plan"))
+	assert.False(t, orchestrator.Contains("Explore"))
+	assert.Equal(t, "Plan", orchestrator.Primary())
+
+	// Verify multi-type array
+	staffArchitect := mapping["staff-architect-critical-review"]
+	assert.True(t, staffArchitect.Contains("Plan"))
+	assert.True(t, staffArchitect.Contains("Explore"))
+	assert.False(t, staffArchitect.Contains("general-purpose"))
+	assert.Equal(t, "Plan", staffArchitect.Primary())
+	assert.Equal(t, []string{"Plan", "Explore"}, staffArchitect.GetAll())
+}
+
+// TestMultiTypeValidation_EndToEnd tests the complete multi-type validation workflow.
+func TestMultiTypeValidation_EndToEnd(t *testing.T) {
+	// Create a schema with a multi-type agent
+	schema := Schema{
+		Version: "2.5.0",
+		Tiers: map[string]TierConfig{
+			"sonnet": {Model: "sonnet"},
+		},
+		TierLevels: TierLevels{
+			Sonnet: 3,
+		},
+		SubagentTypesConfig: SubagentTypesConfig{
+			Explore: SubagentType{
+				Description: "Exploration type",
+				Tools:       []string{"Read", "Grep", "Glob"},
+			},
+			Plan: SubagentType{
+				Description: "Planning type",
+				Tools:       []string{"Read", "Write", "Edit"},
+			},
+		},
+		AgentSubagentMapping: AgentSubagentMapping{
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan", "Explore"),
+		},
+	}
+
+	// Test 1: Validate returns both allowed types
+	allowedTypes, err := schema.GetAllowedSubagentTypes("staff-architect-critical-review")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Plan", "Explore"}, allowedTypes)
+
+	// Test 2: Primary type (backwards compatibility)
+	primaryType, err := schema.GetSubagentTypeForAgent("staff-architect-critical-review")
+	require.NoError(t, err)
+	assert.Equal(t, "Plan", primaryType)
+
+	// Test 3: First type validation passes
+	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Plan")
+	assert.NoError(t, err)
+
+	// Test 4: Second type validation passes
+	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Explore")
+	assert.NoError(t, err)
+
+	// Test 5: Invalid type fails
+	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Bash")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Plan")
+	assert.Contains(t, err.Error(), "Explore")
+	assert.Contains(t, err.Error(), "Bash")
+
+	// Test 6: Schema validation passes
+	err = schema.Validate()
+	assert.NoError(t, err)
 }

@@ -1911,7 +1911,7 @@ A: After parallel testing shows 99%+ match rate.
 
 ---
 
-**Migration Support**: [GitHub Issues](https://github.com/yourusername/gogent-fortress/issues)
+**Migration Support**: [GitHub Issues](https://github.com/yourusername/gogent/issues)
 
 ````
 
@@ -2129,7 +2129,7 @@ cp ~/.claude/hooks/backup-cutover-*/sharp-edge-detector ~/.claude/hooks/
 1. **Check logs**: `~/.gogent/hooks.log`
 2. **Check violations**: `~/.gogent/routing-violations.jsonl`
 3. **Run health check**: `./scripts/health-check.sh`
-4. **Report issue**: [GitHub Issues](https://github.com/yourusername/gogent-fortress/issues)
+4. **Report issue**: [GitHub Issues](https://github.com/yourusername/gogent/issues)
 
 Include in bug reports:
 
@@ -2348,7 +2348,7 @@ echo "For violations: cat $VIOLATIONS_LOG"
 # crontab -e
 
 # Run health check every hour, log to file
-0 * * * * /path/to/gogent-fortress/scripts/health-check.sh >> ~/gogent-health-$(date +\%Y\%m\%d).log 2>&1
+0 * * * * /path/to/gogent/scripts/health-check.sh >> ~/gogent-health-$(date +\%Y\%m\%d).log 2>&1
 ```
 
 **Acceptance Criteria**:

@@ -297,9 +297,9 @@ gogent-sharp-edge logs every routing decision:
 
 | Data Point           | Location                                                        |
 | -------------------- | --------------------------------------------------------------- |
-| Routing decisions    | `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl`        |
-| Decision outcomes    | `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl` |
-| Agent collaborations | `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl`     |
+| Routing decisions    | `$XDG_DATA_HOME/gogent/routing-decisions.jsonl`        |
+| Decision outcomes    | `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl` |
+| Agent collaborations | `$XDG_DATA_HOME/gogent/agent-collaborations.jsonl`     |
 
 **Export for analysis:**
 

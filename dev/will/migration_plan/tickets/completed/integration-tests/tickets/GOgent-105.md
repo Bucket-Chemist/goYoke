@@ -39,7 +39,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/test/integration"
+	"github.com/yourusername/gogent/test/integration"
 )
 ```
 
@@ -60,7 +60,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/test/integration"
+	"github.com/yourusername/gogent/test/integration"
 )
 
 // TestRegression_LoadContext validates gogent-load-context vs load-routing-context.sh

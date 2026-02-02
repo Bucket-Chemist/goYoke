@@ -1077,7 +1077,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/workflow"
+	"github.com/yourusername/gogent/pkg/workflow"
 )
 ```
 
@@ -2012,7 +2012,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/observability"
+	"github.com/yourusername/gogent/pkg/observability"
 )
 ```
 

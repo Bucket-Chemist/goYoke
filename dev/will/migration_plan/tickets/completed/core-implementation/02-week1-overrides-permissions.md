@@ -216,7 +216,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 ```
 
@@ -271,7 +271,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 func TestLogViolation(t *testing.T) {
@@ -619,8 +619,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/routing"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 func TestOverrideWorkflow(t *testing.T) {
@@ -1043,7 +1043,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 ```
@@ -1109,7 +1109,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 func TestUpdateTierFromMetrics_Fresh(t *testing.T) {
@@ -1242,8 +1242,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/routing"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 func TestComplexityRoutingWorkflow(t *testing.T) {
@@ -1770,7 +1770,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/yourusername/gogent/pkg/routing"
 )
 
 func TestToolPermissions_HaikuTier(t *testing.T) {

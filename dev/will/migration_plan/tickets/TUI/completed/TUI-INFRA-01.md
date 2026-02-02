@@ -139,7 +139,7 @@ if err := telemetry.LogAgentLifecycle(lifecycle); err != nil {
 - [ ] `ReadAgentLifecycleLogs()` can filter by session ID
 - [ ] `gogent-validate` emits spawn event on Task() validation pass
 - [ ] `gogent-agent-endstate` emits complete event on SubagentStop
-- [ ] Events written to `$XDG_DATA_HOME/gogent-fortress/agent-lifecycle.jsonl`
+- [ ] Events written to `$XDG_DATA_HOME/gogent/agent-lifecycle.jsonl`
 - [ ] Unit tests pass with 80%+ coverage
 - [ ] Integration test: run a Task, verify both spawn and complete events logged
 
@@ -149,7 +149,7 @@ if err := telemetry.LogAgentLifecycle(lifecycle); err != nil {
 
 ```bash
 # After running a claudeGO session with Task() calls:
-cat ~/.local/share/gogent-fortress/agent-lifecycle.jsonl | jq -s 'group_by(.agent_id) | map({agent: .[0].agent_id, events: map(.event_type)})'
+cat ~/.local/share/gogent/agent-lifecycle.jsonl | jq -s 'group_by(.agent_id) | map({agent: .[0].agent_id, events: map(.event_type)})'
 
 # Expected output:
 # [

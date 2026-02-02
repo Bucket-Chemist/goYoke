@@ -38,7 +38,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/test/integration"
+	"github.com/yourusername/gogent/test/integration"
 )
 
 // TestRegression_ValidateRouting compares Go vs Bash validate-routing output

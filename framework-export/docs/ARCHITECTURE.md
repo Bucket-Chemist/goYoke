@@ -734,7 +734,7 @@ flowchart TB
         lasthandoff[/last-handoff.md/]
     end
 
-    subgraph "ML Scope ($XDG_DATA_HOME/gogent-fortress/)"
+    subgraph "ML Scope ($XDG_DATA_HOME/gogent/)"
         routingdec[/routing-decisions.jsonl/]
         routingupdates[/routing-decision-updates.jsonl/]
         collaborations[/agent-collaborations.jsonl/]
@@ -1104,7 +1104,7 @@ Project/
 ├── escalations.jsonl                # Tier escalations
 └── scout-recommendations.jsonl      # Scout accuracy data
 │
-$XDG_DATA_HOME/gogent-fortress/
+$XDG_DATA_HOME/gogent/
 ├── routing-decisions.jsonl          # ML training (initial)
 ├── routing-decision-updates.jsonl   # ML training (outcomes)
 ├── agent-collaborations.jsonl       # Team patterns (initial)

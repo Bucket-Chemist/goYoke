@@ -13,22 +13,22 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	schema := Schema{
 		Version: "2.5.0",
 		Tiers: map[string]TierConfig{
-			"haiku":  {},
-			"sonnet": {},
-			"opus":   {},
+			"haiku":    {},
+			"sonnet":   {},
+			"opus":     {},
 			"external": {},
 		},
 		TierLevels: TierLevels{
-			Haiku:  1,
-			Sonnet: 3,
-			Opus:   4,
+			Haiku:    1,
+			Sonnet:   3,
+			Opus:     4,
 			External: 0,
 		},
 		SubagentTypesConfig: SubagentTypesConfig{
 			Plan: SubagentType{}, // The expected type for this agent (changed from Explore in v2.3.0)
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			StaffArchitectCriticalReview: "Plan",
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan"),
 		},
 	}
 
@@ -50,7 +50,7 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 
 		// Now intentionally break it to ensure it IS being checked
 		invalidSchema := schema
-		invalidSchema.AgentSubagentMapping.StaffArchitectCriticalReview = "InvalidType"
+		invalidSchema.AgentSubagentMapping.StaffArchitectCriticalReview = NewFlexibleSubagentType("InvalidType")
 		err = invalidSchema.Validate()
 		require.Error(t, err, "Validate() should fail for invalid subagent type on new agent")
 		assert.Contains(t, err.Error(), "Invalid subagent_type reference", "Error message should mention invalid type")

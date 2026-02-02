@@ -243,7 +243,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 ```
 
@@ -913,7 +913,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/yourusername/gogent/pkg/routing"
 )
 ```
 
@@ -1022,7 +1022,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/yourusername/gogent/pkg/routing"
 )
 
 func TestFormatViolationsSummary(t *testing.T) {
@@ -1451,7 +1451,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/session"
+	"github.com/yourusername/gogent/pkg/session"
 )
 
 func TestSessionArchiveWorkflow(t *testing.T) {
@@ -1608,7 +1608,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/session"
+	"github.com/yourusername/gogent/pkg/session"
 )
 ```
 

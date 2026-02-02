@@ -274,7 +274,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/yourusername/gogent/pkg/routing"
 )
 ```
 
@@ -347,7 +347,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/routing"
+	"github.com/yourusername/gogent/pkg/routing"
 )
 
 func TestLoadRoutingSchemaSummary(t *testing.T) {
@@ -1264,7 +1264,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/session"
+	"github.com/yourusername/gogent/pkg/session"
 )
 ```
 

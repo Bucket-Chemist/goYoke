@@ -259,7 +259,7 @@ ls -la bin/gogent-log-review bin/gogent-update-review-outcome
 echo '{"session_id":"verify","review_scope":"test","files_reviewed":1,"findings":[{"severity":"info","reviewer":"test","category":"test","file":"test.go","line":1,"message":"test"}]}' | ./bin/gogent-log-review
 
 # Verify JSONL output
-cat ~/.local/share/gogent-fortress/review-findings.jsonl | tail -1 | jq .
+cat ~/.local/share/gogent/review-findings.jsonl | tail -1 | jq .
 
 # Test outcome update
 ./bin/gogent-update-review-outcome --finding-id=test --resolution=fixed

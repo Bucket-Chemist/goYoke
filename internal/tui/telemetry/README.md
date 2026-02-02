@@ -80,10 +80,10 @@ for event := range watcher.Events() {
 Manages multiple file watchers for all telemetry streams.
 
 **Watched Files:**
-- `$XDG_DATA_HOME/gogent-fortress/agent-lifecycle.jsonl`
-- `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl`
-- `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl`
-- `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl`
+- `$XDG_DATA_HOME/gogent/agent-lifecycle.jsonl`
+- `$XDG_DATA_HOME/gogent/routing-decisions.jsonl`
+- `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl`
+- `$XDG_DATA_HOME/gogent/agent-collaborations.jsonl`
 
 **Usage:**
 ```go

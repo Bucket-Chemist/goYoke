@@ -563,7 +563,7 @@ import { readNewLines, JsonlReader } from "../utils/jsonl";
 
 const readers: Record<string, JsonlReader> = {
   routingDecisions: {
-    path: `${process.env.XDG_DATA_HOME}/gogent-fortress/routing-decisions.jsonl`,
+    path: `${process.env.XDG_DATA_HOME}/gogent/routing-decisions.jsonl`,
     offset: 0,
     inode: 0
   },

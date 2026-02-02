@@ -76,8 +76,8 @@ Output(`[Review] Cost: ~$0.15-0.17`)
 
 const reviewTask = Task({
   description: `Critical review of implementation plan: ${targetFile}`,
-  subagent_type: "Explore",
-  model: "sonnet",
+  subagent_type: "Plan",  // Can also use "Explore" for read-only analysis
+  model: "opus",          // Full opus power - allowed via task_invocation_allowlist
   prompt: `AGENT: staff-architect-critical-review
 
 1. TASK: Perform 7-layer critical review of ${targetFile}

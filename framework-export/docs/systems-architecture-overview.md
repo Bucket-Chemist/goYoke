@@ -533,7 +533,7 @@ flowchart TB
         lasthandoff[/last-handoff.md/]
     end
 
-    subgraph "ML Scope ($XDG_DATA_HOME/gogent-fortress/)"
+    subgraph "ML Scope ($XDG_DATA_HOME/gogent/)"
         routingdec[/routing-decisions.jsonl/]
         routingupdates[/routing-decision-updates.jsonl/]
         collaborations[/agent-collaborations.jsonl/]
@@ -878,7 +878,7 @@ Project/
 ├── escalations.jsonl                # Tier escalations
 └── scout-recommendations.jsonl      # Scout accuracy data
 │
-$XDG_DATA_HOME/gogent-fortress/
+$XDG_DATA_HOME/gogent/
 ├── routing-decisions.jsonl          # ML training (initial)
 ├── routing-decision-updates.jsonl   # ML training (outcomes)
 ├── agent-collaborations.jsonl       # Team patterns (initial)
@@ -966,7 +966,7 @@ The following data streams are available for TUI integration:
 | Data Source | Update Frequency | Access Pattern |
 |-------------|------------------|----------------|
 | Tool counter | Every tool | `tail -f /tmp/claude-tool-counter-*.log` |
-| Routing decisions | Every tool | `tail -f $XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl` |
+| Routing decisions | Every tool | `tail -f $XDG_DATA_HOME/gogent/routing-decisions.jsonl` |
 | Violations | On violation | `tail -f /tmp/claude-routing-violations.jsonl` |
 | Pending learnings | On sharp edge | `tail -f .claude/memory/pending-learnings.jsonl` |
 

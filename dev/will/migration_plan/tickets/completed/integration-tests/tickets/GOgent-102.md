@@ -34,7 +34,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 ```
 
@@ -51,7 +51,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 // TestSessionStart_Integration runs SessionStart with all fixture scenarios

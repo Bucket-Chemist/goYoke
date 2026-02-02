@@ -18,7 +18,7 @@ func TestValidationOrchestrator_AllowedTask(t *testing.T) {
 			Haiku: 10, Sonnet: 20,
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			PythonPro: "general-purpose",
+			PythonPro: NewFlexibleSubagentType("general-purpose"),
 		},
 	}
 
@@ -115,7 +115,7 @@ func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
 			"opus": {TaskInvocationBlocked: false},
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			CodebaseSearch: "Explore",
+			CodebaseSearch: NewFlexibleSubagentType("Explore"),
 		},
 	}
 
@@ -161,7 +161,7 @@ func TestValidationOrchestrator_OpusAllowlistBypassesCeiling(t *testing.T) {
 			Haiku: 1, HaikuThinking: 2, Sonnet: 3, Opus: 4,
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			Planner: "Plan",
+			Planner: NewFlexibleSubagentType("Plan"),
 		},
 	}
 

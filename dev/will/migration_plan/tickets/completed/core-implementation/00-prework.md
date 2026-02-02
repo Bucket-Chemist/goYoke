@@ -307,7 +307,7 @@ $(jq -s 'group_by(.tool_name) | map("- \(.[0].tool_name): \(. | length)")[]' eve
 
 - **Production Corpus (raw):** ~/.cache/gogent/event-corpus-raw.jsonl ($(wc -l < ~/.cache/gogent/event-corpus-raw.jsonl) events)
 - **Curated Corpus (100 events):** ~/gogent-baseline/event-corpus.json
-- **Test Fixtures (project):** /home/doktersmol/Documents/gogent-fortress/test/fixtures/event-corpus.json
+- **Test Fixtures (project):** /home/doktersmol/Documents/gogent/test/fixtures/event-corpus.json
 
 ## Corpus Validation
 
@@ -319,8 +319,8 @@ $(jq -s 'group_by(.tool_name) | map("- \(.[0].tool_name): \(. | length)")[]' eve
 
 ## Next Steps
 
-1. Copy corpus to project: \`cp event-corpus.json /home/doktersmol/Documents/gogent-fortress/test/fixtures/\`
-2. Copy baseline to migration plan: \`cp BASELINE.md /home/doktersmol/Documents/gogent-fortress/migration_plan/\`
+1. Copy corpus to project: \`cp event-corpus.json /home/doktersmol/Documents/gogent/test/fixtures/\`
+2. Copy baseline to migration plan: \`cp BASELINE.md /home/doktersmol/Documents/gogent/migration_plan/\`
 3. Remove logger hook: \`rm ~/.claude/hooks/zzz-corpus-logger.sh\`
 4. Proceed to Week 1 (GOgent-001)
 
@@ -342,11 +342,11 @@ echo "✓ BASELINE.md created with actual latency numbers"
 cd ~/gogent-baseline
 
 # Copy corpus to project test fixtures
-mkdir -p /home/doktersmol/Documents/gogent-fortress/test/fixtures
-cp event-corpus.json /home/doktersmol/Documents/gogent-fortress/test/fixtures/
+mkdir -p /home/doktersmol/Documents/gogent/test/fixtures
+cp event-corpus.json /home/doktersmol/Documents/gogent/test/fixtures/
 
 # Copy baseline doc to migration plan
-cp BASELINE.md /home/doktersmol/Documents/gogent-fortress/migration_plan/
+cp BASELINE.md /home/doktersmol/Documents/gogent/migration_plan/
 
 # Remove logger hook (no longer needed)
 rm ~/.claude/hooks/zzz-corpus-logger.sh
@@ -357,8 +357,8 @@ echo "Deliverables:"
 echo "  - ~/gogent-baseline/BASELINE.md"
 echo "  - ~/gogent-baseline/baseline-results.txt"
 echo "  - ~/gogent-baseline/event-corpus.json (100 events)"
-echo "  - /home/doktersmol/Documents/gogent-fortress/test/fixtures/event-corpus.json"
-echo "  - /home/doktersmol/Documents/gogent-fortress/migration_plan/BASELINE.md"
+echo "  - /home/doktersmol/Documents/gogent/test/fixtures/event-corpus.json"
+echo "  - /home/doktersmol/Documents/gogent/migration_plan/BASELINE.md"
 echo ""
 echo "Ready to start Week 1 (GOgent-001)"
 ```
@@ -370,8 +370,8 @@ echo "Ready to start Week 1 (GOgent-001)"
 - [ ] `~/gogent-baseline/BASELINE.md` exists with actual latency numbers (not XX placeholders)
 - [ ] `~/gogent-baseline/baseline-results.txt` shows benchmark output from all 3 hooks
 - [ ] `~/gogent-baseline/event-corpus.json` contains exactly 100 diverse events
-- [ ] Corpus copied to `/home/doktersmol/Documents/gogent-fortress/test/fixtures/event-corpus.json`
-- [ ] BASELINE.md copied to `/home/doktersmol/Documents/gogent-fortress/migration_plan/BASELINE.md`
+- [ ] Corpus copied to `/home/doktersmol/Documents/gogent/test/fixtures/event-corpus.json`
+- [ ] BASELINE.md copied to `/home/doktersmol/Documents/gogent/migration_plan/BASELINE.md`
 - [ ] Event distribution matches target:
   - Task events: 25
   - Read events: 20
@@ -413,7 +413,7 @@ echo "Ready to start Week 1 (GOgent-001)"
 └── event-distribution.json      # Tool type distribution stats
 
 Project locations:
-/home/doktersmol/Documents/gogent-fortress/
+/home/doktersmol/Documents/gogent/
 ├── migration_plan/BASELINE.md   # Copy of baseline (for reference)
 └── test/fixtures/
     └── event-corpus.json        # Copy of corpus (for testing)

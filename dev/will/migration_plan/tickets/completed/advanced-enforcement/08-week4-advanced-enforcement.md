@@ -859,7 +859,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/enforcement"
+	"github.com/yourusername/gogent/pkg/enforcement"
 )
 ```
 
@@ -1565,7 +1565,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/enforcement"
+	"github.com/yourusername/gogent/pkg/enforcement"
 )
 ```
 

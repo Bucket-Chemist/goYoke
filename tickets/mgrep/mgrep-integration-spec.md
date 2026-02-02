@@ -228,13 +228,13 @@ src/auth/handler.go:45-67
 {
   "telemetry": {
     "mgrep_invocations": {
-      "file": "${XDG_DATA_HOME}/gogent-fortress/mgrep-invocations.jsonl",
+      "file": "${XDG_DATA_HOME}/gogent/mgrep-invocations.jsonl",
       "schema": "MgrepInvocation",
       "written_by": ["gogent-sharp-edge"],
       "retention": "30_days"
     },
     "mgrep_outcomes": {
-      "file": "${XDG_DATA_HOME}/gogent-fortress/mgrep-outcomes.jsonl",
+      "file": "${XDG_DATA_HOME}/gogent/mgrep-outcomes.jsonl",
       "schema": "MgrepOutcome",
       "written_by": ["gogent-agent-endstate"],
       "retention": "30_days"
@@ -946,7 +946,7 @@ func LogMgrepOutcome(outcome *MgrepOutcome) error {
     return appendJSONL(path, outcome)
 }
 
-// getMgrepInvocationsPath returns XDG_DATA_HOME/gogent-fortress/mgrep-invocations.jsonl
+// getMgrepInvocationsPath returns XDG_DATA_HOME/gogent/mgrep-invocations.jsonl
 func getMgrepInvocationsPath() string {
     dataHome := os.Getenv("XDG_DATA_HOME")
     if dataHome == "" {
@@ -956,7 +956,7 @@ func getMgrepInvocationsPath() string {
     return filepath.Join(dataHome, "gogent-fortress", "mgrep-invocations.jsonl")
 }
 
-// getMgrepOutcomesPath returns XDG_DATA_HOME/gogent-fortress/mgrep-outcomes.jsonl
+// getMgrepOutcomesPath returns XDG_DATA_HOME/gogent/mgrep-outcomes.jsonl
 func getMgrepOutcomesPath() string {
     dataHome := os.Getenv("XDG_DATA_HOME")
     if dataHome == "" {

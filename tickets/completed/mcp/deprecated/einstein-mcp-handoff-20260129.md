@@ -272,7 +272,7 @@ Project/
 ├── failure-tracker.jsonl            # Cross-session failures
 └── agent-invocations.jsonl          # Invocation telemetry
 
-$XDG_DATA_HOME/gogent-fortress/
+$XDG_DATA_HOME/gogent/
 ├── routing-decisions.jsonl          # ML training data
 └── agent-collaborations.jsonl       # Team patterns
 

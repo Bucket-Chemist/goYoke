@@ -110,7 +110,7 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 			SessionID:     sessionID,
 			ViolationType: "subagent_type_mismatch",
 			Agent:         targetAgent,
-			Reason:        fmt.Sprintf("Required: %s, Requested: %s", subagentCheck.RequiredType, subagentCheck.RequestedType),
+			Reason:        fmt.Sprintf("Allowed: %v, Requested: %s", subagentCheck.AllowedTypes, subagentCheck.RequestedType),
 		}
 		result.Violations = append(result.Violations, violation)
 		return result // Hard block

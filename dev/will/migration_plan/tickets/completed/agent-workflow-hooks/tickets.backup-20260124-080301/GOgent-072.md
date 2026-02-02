@@ -31,7 +31,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/observability"
+	"github.com/yourusername/gogent/pkg/observability"
 )
 ```
 

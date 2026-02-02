@@ -35,7 +35,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/yourusername/gogent-fortress/pkg/telemetry"
+	"github.com/yourusername/gogent/pkg/telemetry"
 )
 ```
 

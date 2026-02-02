@@ -32,7 +32,7 @@ import (
     "fmt"
 
     "go.starlark.net/starlark"
-    "github.com/yourusername/gogent-fortress/pkg/rlm"
+    "github.com/yourusername/gogent/pkg/rlm"
 )
 ```
 

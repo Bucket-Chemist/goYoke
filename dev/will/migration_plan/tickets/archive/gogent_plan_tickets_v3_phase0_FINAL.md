@@ -209,7 +209,7 @@ cat > BASELINE.md << 'EOF'
 
 **Production Corpus:** ~/.cache/gogent/event-corpus-raw.jsonl
 **Curated Corpus:** ~/gogent-baseline/event-corpus.json
-**Test Fixtures:** /home/doktersmol/Documents/gogent-fortress/test/fixtures/event-corpus.json
+**Test Fixtures:** /home/doktersmol/Documents/gogent/test/fixtures/event-corpus.json
 
 ## Validation
 
@@ -241,7 +241,7 @@ EOF
 └── event-distribution.json      # Tool type counts
 
 Project location:
-/home/doktersmol/Documents/gogent-fortress/
+/home/doktersmol/Documents/gogent/
 ├── migration_plan/BASELINE.md   # Copy of baseline doc
 └── test/fixtures/
     └── event-corpus.json        # Copy of corpus
@@ -263,7 +263,7 @@ Project location:
 Create Go module and directory structure for the gogent-fortress project.
 
 **Steps**:
-1. Navigate to `/home/doktersmol/Documents/gogent-fortress/`
+1. Navigate to `/home/doktersmol/Documents/gogent/`
 2. Run `go version` - verify Go 1.21+ installed
 3. Run `go mod init github.com/yourusername/gogent-fortress`
    - Replace "yourusername" with your GitHub username
@@ -632,7 +632,7 @@ import (
     "os"
     "path/filepath"
 
-    "github.com/yourusername/gogent-fortress/pkg/routing"
+    "github.com/yourusername/gogent/pkg/routing"
 )
 ```
 
@@ -1072,7 +1072,7 @@ cat ~/.cache/gogent/event-corpus-raw.jsonl | \
     ] | flatten' > event-corpus.json
 
 # Copy to project
-cp event-corpus.json /home/doktersmol/Documents/gogent-fortress/test/fixtures/
+cp event-corpus.json /home/doktersmol/Documents/gogent/test/fixtures/
 
 # Remove logger hook (no longer needed)
 rm ~/.claude/hooks/zzz-corpus-logger.sh
@@ -1093,7 +1093,7 @@ rm ~/.claude/hooks/zzz-corpus-logger.sh
 ├── event-corpus.json              # 100 curated events
 └── event-distribution-week1.json  # Type distribution stats
 
-/home/doktersmol/Documents/gogent-fortress/test/fixtures/
+/home/doktersmol/Documents/gogent/test/fixtures/
 └── event-corpus.json              # Copy for integration tests
 ```
 
@@ -1397,7 +1397,7 @@ import (
     "os"
     "time"
 
-    "github.com/yourusername/gogent-fortress/pkg/config"
+    "github.com/yourusername/gogent/pkg/config"
 )
 ```
 
@@ -1452,7 +1452,7 @@ import (
     "os"
     "testing"
 
-    "github.com/yourusername/gogent-fortress/pkg/config"
+    "github.com/yourusername/gogent/pkg/config"
 )
 
 func TestLogViolation(t *testing.T) {
@@ -1532,8 +1532,8 @@ import (
     "testing"
     "time"
 
-    "github.com/yourusername/gogent-fortress/pkg/routing"
-    "github.com/yourusername/gogent-fortress/pkg/config"
+    "github.com/yourusername/gogent/pkg/routing"
+    "github.com/yourusername/gogent/pkg/config"
 )
 
 func TestOverrideWorkflow(t *testing.T) {

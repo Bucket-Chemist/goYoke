@@ -559,7 +559,7 @@ This ticket cluster represents the final enforcement layer for Task tool validat
    import (
        "testing"
 
-       "github.com/yourusername/gogent-fortress/pkg/routing"
+       "github.com/yourusername/gogent/pkg/routing"
    }
    ```
 
@@ -779,8 +779,8 @@ This ticket cluster represents the final enforcement layer for Task tool validat
 1. **Import Path Placeholder (Line 1423)**
 
    ```go
-   "github.com/yourusername/gogent-fortress/pkg/config"
-   "github.com/yourusername/gogent-fortress/pkg/routing"
+   "github.com/yourusername/gogent/pkg/config"
+   "github.com/yourusername/gogent/pkg/routing"
    ```
 
    **Problem**: Must use actual module path `github.com/Bucket-Chemist/GOgent-Fortress`

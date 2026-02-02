@@ -633,7 +633,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/pkg/config"
+	"github.com/yourusername/gogent/pkg/config"
 )
 
 func TestValidateRouting_Integration(t *testing.T) {
@@ -2233,7 +2233,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/gogent-fortress/test/integration"
+	"github.com/yourusername/gogent/test/integration"
 )
 
 // TestRegression_ValidateRouting compares Go vs Bash validate-routing output

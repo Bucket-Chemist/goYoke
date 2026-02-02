@@ -2,13 +2,14 @@ package routing
 
 import (
 	"fmt"
+	"slices"
 )
 
 // SubagentTypeValidation represents result of subagent_type check
 type SubagentTypeValidation struct {
 	Valid            bool
 	RequestedType    string
-	RequiredType     string
+	AllowedTypes     []string
 	Agent            string
 	ErrorMessage     string
 }
@@ -26,23 +27,23 @@ func ValidateSubagentType(schema *Schema, targetAgent string, requestedType stri
 		return result
 	}
 
-	// Use schema method to get required type
-	requiredType, err := schema.GetSubagentTypeForAgent(targetAgent)
+	// Use schema method to get allowed types
+	allowedTypes, err := schema.GetAllowedSubagentTypes(targetAgent)
 	if err != nil {
 		// Agent not in mapping, allow (might be custom agent)
 		result.Valid = true
 		return result
 	}
 
-	result.RequiredType = requiredType
+	result.AllowedTypes = allowedTypes
 
-	// Check if types match
-	if requestedType != requiredType {
+	// Check if requested type is in allowed list
+	if !slices.Contains(allowedTypes, requestedType) {
 		result.Valid = false
 		result.ErrorMessage = fmt.Sprintf(
-			"[task-validation] Invalid subagent_type for agent '%s'. Required: '%s'. Requested: '%s'. Subagent_type mismatch causes wrong tool permissions. See routing-schema.json → agent_subagent_mapping.",
+			"[task-validation] Invalid subagent_type for agent '%s'. Allowed: %v. Requested: '%s'. Subagent_type mismatch causes wrong tool permissions. See routing-schema.json → agent_subagent_mapping.",
 			targetAgent,
-			requiredType,
+			allowedTypes,
 			requestedType,
 		)
 		return result
@@ -58,11 +59,17 @@ func (v *SubagentTypeValidation) FormatSubagentTypeError() string {
 		return ""
 	}
 
+	// Suggest primary type (first in list)
+	primaryType := ""
+	if len(v.AllowedTypes) > 0 {
+		primaryType = v.AllowedTypes[0]
+	}
+
 	return fmt.Sprintf(
 		"%s\n\nFix: Change subagent_type to '%s' in Task() call.\nExample: Task({subagent_type: '%s', prompt: 'AGENT: %s\\n\\n...'})",
 		v.ErrorMessage,
-		v.RequiredType,
-		v.RequiredType,
+		primaryType,
+		primaryType,
 		v.Agent,
 	)
 }
