@@ -3,6 +3,8 @@ package telemetry
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
@@ -56,4 +58,31 @@ func LogSharpEdgeHit(hit *SharpEdgeHit) error {
 	}
 
 	return AppendJSONL(path, data)
+}
+
+// ReadSharpEdgeHits reads all sharp edge hits from storage
+func ReadSharpEdgeHits() ([]SharpEdgeHit, error) {
+	path := config.GetSharpEdgeHitsPathWithProjectDir()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []SharpEdgeHit{}, nil
+		}
+		return nil, fmt.Errorf("[sharp-edge-hit] read: %w", err)
+	}
+
+	var hits []SharpEdgeHit
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		var h SharpEdgeHit
+		if err := json.Unmarshal([]byte(line), &h); err != nil {
+			continue // Skip malformed lines
+		}
+		hits = append(hits, h)
+	}
+	return hits, nil
 }
