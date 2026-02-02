@@ -474,14 +474,14 @@
         "from scout report",
         "from strategy"
       ],
-      "tools": ["Read", "Write", "Glob", "Grep"],
+      "tools": ["Read", "Write", "Glob", "Grep", "TaskCreate", "TaskUpdate"],
       "auto_activate": null,
       "output_artifacts": {
-        "required": ["specs.md", "write_todos"],
+        "required": ["specs.md", "TaskCreate"],
         "specs_location": ".claude/tmp/specs.md"
       },
       "input_sources": [".claude/tmp/scout_metrics.json", ".claude/tmp/strategy.md"],
-      "description": "Implementation planner (opus tier). Produces specs.md + write_todos. Reads scout reports and strategy documents for context."
+      "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context."
     },
     {
       "id": "planner",
@@ -753,6 +753,29 @@
       "description": "Code standards review specialist. Naming, organization, documentation, consistency."
     },
     {
+      "id": "architect-reviewer",
+      "parallelization_template": "C",
+      "name": "Architect Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 12000,
+      "tier": 2,
+      "category": "review",
+      "path": "architect-reviewer",
+      "triggers": [
+        "review architecture",
+        "structural review",
+        "dependency review",
+        "design review",
+        "coupling review"
+      ],
+      "tools": ["Read", "Glob", "Grep"],
+      "auto_activate": null,
+      "conventions_required": ["go.md", "python.md", "typescript.md", "react.md"],
+      "sharp_edges_count": 12,
+      "description": "Architectural code review specialist. Module boundaries, dependency health, design patterns, change impact."
+    },
+    {
       "id": "review-orchestrator",
       "parallelization_template": "E",
       "name": "Review Orchestrator",
@@ -855,7 +878,7 @@
     "model_tiers": {
       "haiku": ["codebase-search", "scaffolder", "librarian", "tech-docs-writer", "code-reviewer", "haiku-scout", "memory-archivist"],
       "haiku_thinking": ["backend-reviewer", "frontend-reviewer", "standards-reviewer"],
-      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator"],
+      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "architect-reviewer"],
       "opus": ["einstein", "planner", "architect", "staff-architect-critical-review"],
       "external": ["gemini-slave"]
     }

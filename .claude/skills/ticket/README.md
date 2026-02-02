@@ -13,7 +13,7 @@ The `/ticket` skill provides a systematic workflow for ticket-driven development
 - Dependency-aware ticket selection
 - Schema validation (for properly formatted tickets)
 - Planning decision routing (architect delegation when needed)
-- Progress tracking with TodoWrite
+- Progress tracking with TaskCreate/TaskUpdate
 - Acceptance criteria verification
 - Automated commit generation
 
@@ -267,7 +267,7 @@ cd ~/my-project
 # [ticket] Schema validation: PASS
 # [ticket] Planning needed: false
 # [ticket] Status updated: in_progress
-# [ticket] Created TodoWrite with 5 acceptance criteria
+# [ticket] Created 5 tasks from acceptance criteria
 ```
 
 ### Check Status

@@ -87,7 +87,7 @@ const reviewTask = Task({
    - review-metadata.json with verdict and counts
 
 3. REQUIRED SKILLS:
-   - 7-layer critical review framework (agent.md)
+   - 7-layer critical review framework (staff-architect-critical-review.md)
    - Assumption extraction and challenge
    - Dependency graph validation
    - Failure mode analysis

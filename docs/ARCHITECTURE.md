@@ -1138,7 +1138,8 @@ $XDG_DATA_HOME/gogent-fortress/
 │   ├── go.md
 │   └── R.md
 ├── agents/                          # Agent definitions
-│   └── */agent.yaml
+│   └── */{agent-name}.md            # Unified YAML frontmatter + instructions
+│   └── */sharp-edges.yaml           # Known failure patterns (separate)
 ├── skills/                          # Skill definitions
 │   └── */SKILL.md
 └── rules/                           # Behavioral rules

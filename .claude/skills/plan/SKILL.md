@@ -197,7 +197,7 @@ INSTRUCTIONS:
 4. Assess risks per phase
 5. Define validation criteria per phase
 6. Write specs.md to .claude/tmp/specs.md
-7. Call write_todos to register tasks
+7. Use TaskCreate to register tasks, TaskUpdate to set dependencies
 
 CONSTRAINTS:
 - Follow existing codebase patterns

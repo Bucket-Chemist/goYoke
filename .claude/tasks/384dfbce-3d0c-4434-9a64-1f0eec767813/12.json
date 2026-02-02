@@ -1,0 +1,9 @@
+{
+  "id": "12",
+  "subject": "Add TaskUpdate+TaskGet to scaffolder and tech-docs-writer",
+  "description": "Add TaskUpdate and TaskGet to frontmatter tools for:\n- scaffolder/scaffolder.md\n- tech-docs-writer/tech-docs-writer.md",
+  "activeForm": "Updating utility agents",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

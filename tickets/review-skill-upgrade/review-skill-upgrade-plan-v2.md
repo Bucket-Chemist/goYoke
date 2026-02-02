@@ -2,9 +2,9 @@
 
 **Generated**: 2026-02-01
 **Author**: Einstein Analysis (Opus)
-**Revised**: 2026-02-01 (Einstein Critical Review v2.1 - Post Schema v2.5.0)
+**Revised**: 2026-02-02 (Einstein v2.2 - Added architect-reviewer to review team)
 **Status**: Ready for Implementation
-**Estimated Tasks**: 26
+**Estimated Tasks**: 27
 
 ---
 
@@ -386,6 +386,62 @@ Both could share a common finding schema:
 
 For v2.5.0, files remain separate. Unification deferred to v2.6.0.
 ```
+
+---
+
+### Task 1.10: Create architect-reviewer Agent (NEW in v2.2)
+
+**Directory**: `.claude/agents/architect-reviewer/`
+**Priority**: HIGH
+**Agent**: go-pro
+**Added**: Post Einstein analysis for review skill enhancement
+**Status**: ✅ COMPLETE
+
+**Purpose**: Add 4th specialized reviewer to the review-orchestrator team. While backend/frontend/standards reviewers check for implementation bugs, architect-reviewer checks for structural patterns, dependency health, and design smells.
+
+**Files Created**:
+
+1. `agent.yaml` - Sonnet tier, 12K thinking budget, subagent_type: Explore
+2. `agent.md` - Full role, workflow, severity classification, output format
+3. `sharp-edges.yaml` - 12 architectural anti-patterns:
+   - `circular-dependency` (critical)
+   - `god-module` (critical)
+   - `leaky-abstraction` (critical)
+   - `tight-coupling` (high)
+   - `high-fan-out` (high)
+   - `shotgun-surgery` (high)
+   - `missing-abstraction` (medium)
+   - `premature-abstraction` (medium)
+   - `feature-envy` (medium)
+   - `inappropriate-intimacy` (medium)
+   - `unstable-dependency` (medium)
+   - `missing-interface` (low)
+
+**Updates to Existing Files**:
+
+1. `agents-index.json`:
+   - Added architect-reviewer entry with `sharp_edges_count: 12`
+   - Added to `routing_rules.model_tiers.sonnet` array
+
+2. `review-orchestrator/agent.md`:
+   - Updated Phase 1 Detection to include architecture
+   - Updated Phase 2 to spawn 4th reviewer (sonnet tier)
+   - Updated output format with Architecture Review section
+   - Updated BLOCK criteria with architectural issues
+   - Updated WARNING criteria with design smells
+
+**Cost Impact**:
+| Before (3 reviewers) | After (4 reviewers) |
+|----------------------|---------------------|
+| ~$0.08-$0.13 | ~$0.15-$0.24 |
+
+Increase of ~$0.07-$0.11 per review due to Sonnet-tier architect-reviewer.
+
+**Rationale**:
+- Runs in **parallel** with other reviewers (orthogonal judgment, no context bias)
+- Uses **Sonnet** tier (architectural judgment requires more reasoning)
+- Focuses on **structure not bugs** (complements implementation reviewers)
+- Produces **telemetry-compatible output** (sharp_edge_id correlations)
 
 ---
 

@@ -290,7 +290,7 @@ Before writing the GAP document, verify:
 - [ ] Question is answerable from provided context
 - [ ] Anti-scope prevents scope creep
 
-**Reference:** See `orchestrator/agent.md` for complete GAP generation code example.
+**Reference:** See `orchestrator/orchestrator.md` for complete GAP generation code example.
 
 ---
 

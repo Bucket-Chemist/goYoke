@@ -505,7 +505,7 @@ Is this enforcement of a behavior?
 | Require pre-check | "ALWAYS check Y first" in CLAUDE.md | Hook injects reminder at trigger point |
 | Prevent anti-pattern | "NEVER do Z" in CLAUDE.md | This section in LLM-guidelines.md + warning hook |
 | Document workflow | Gates 1-5 in CLAUDE.md | ✅ Appropriate (this IS documentation) |
-| Agent-specific rule | In CLAUDE.md | `agents/*/sharp-edges.yaml` or `agent.yaml` |
+| Agent-specific rule | In CLAUDE.md | `agents/*/sharp-edges.yaml` or `agents/*/{agent-name}.md` (unified frontmatter) |
 
 ### Pre-Commit Checklist for CLAUDE.md Edits
 

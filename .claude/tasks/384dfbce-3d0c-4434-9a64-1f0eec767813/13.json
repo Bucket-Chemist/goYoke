@@ -1,0 +1,9 @@
+{
+  "id": "13",
+  "subject": "Add TaskList+TaskGet to orchestrator and review-orchestrator",
+  "description": "Add TaskList and TaskGet to frontmatter tools for:\n- orchestrator/agent.md\n- review-orchestrator/review-orchestrator.md\n\nThese are coordinators that need to READ task state but not create tasks.",
+  "activeForm": "Updating coordinator agents",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

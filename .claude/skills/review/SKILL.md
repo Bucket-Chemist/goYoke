@@ -12,7 +12,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 **What this skill does:**
 1. **Detect** — Find changed files via git diff or specified scope
 2. **Classify** — Identify languages and architectural layers present
-3. **Select** — Choose relevant reviewers (backend, frontend, standards)
+3. **Select** — Choose relevant reviewers (backend, frontend, standards, architecture)
 4. **Execute** — Spawn reviewers in parallel via review-orchestrator
 5. **Synthesize** — Collect and group findings by severity
 6. **Report** — Generate unified report with approval status
@@ -113,6 +113,8 @@ if [[ -n "${langs[ts]}" || -n "${langs[tsx]}" || -n "${langs[jsx]}" ]]; then
 fi
 # Always include standards reviewer
 reviewers+=("standards-reviewer")
+# Always include architecture reviewer
+reviewers+=("architect-reviewer")
 
 echo "[review] Selected reviewers: ${reviewers[*]}"
 ```
@@ -314,6 +316,21 @@ fi
 - Warning: Convention violations, missing docs
 - Info: Style suggestions, minor improvements
 
+### architect-reviewer
+**Focus areas:**
+- Module boundaries and cohesion
+- Dependency health (circular deps, coupling)
+- Design patterns (god objects, leaky abstractions)
+- Change impact and testability
+- Structural anti-patterns
+
+**Languages:** All
+
+**Severity mapping:**
+- Critical: Circular dependencies, god modules, leaky abstractions
+- Warning: High fan-out, tight coupling, missing abstractions
+- Info: Interface extraction opportunities, testability improvements
+
 ---
 
 ## Cost Model
@@ -326,9 +343,10 @@ fi
 | Backend Reviewer | Haiku+Think | 3-5K | $0.003-$0.005 |
 | Frontend Reviewer | Haiku+Think | 3-5K | $0.003-$0.005 |
 | Standards Reviewer | Haiku+Think | 3-5K | $0.003-$0.005 |
-| **Total (3 reviewers)** | | 20-32K | **$0.08-$0.13** |
+| Architect Reviewer | Sonnet | 8-12K | $0.07-$0.11 |
+| **Total (4 reviewers)** | | 28-42K | **$0.15-$0.24** |
 
-**Cost per file reviewed:** ~$0.02-$0.04
+**Cost per file reviewed:** ~$0.03-$0.06
 
 **Parallelization savings:** ~40% faster than sequential review
 
@@ -423,12 +441,13 @@ Changes to be committed:
 $ /review
 
 [review] Found 3 files to review
-[review] Selected reviewers: backend-reviewer standards-reviewer
+[review] Selected reviewers: backend-reviewer standards-reviewer architect-reviewer
 [ROUTING] → review-orchestrator (multi-domain code review)
 
 [review-orchestrator spawns reviewers...]
 [backend-reviewer analyzing internal/api/handler.go...]
 [standards-reviewer analyzing all files...]
+[architect-reviewer analyzing structural patterns...]
 
 [All reviewers complete]
 
@@ -495,6 +514,6 @@ This data feeds ML models for:
 
 ---
 
-**Skill Version**: 1.0
-**Last Updated**: 2026-02-01
+**Skill Version**: 1.1
+**Last Updated**: 2026-02-02
 **Maintained By**: System

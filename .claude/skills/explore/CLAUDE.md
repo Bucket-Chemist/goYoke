@@ -33,7 +33,7 @@ Task({
 ## Key Outputs
 
 1. **specs.md** - Decision record (created by architect)
-2. **write_todos** - Actionable tasks (called by architect)
+2. **TaskCreate** - Actionable tasks (called by architect)
 
 ## Cost Ceilings
 

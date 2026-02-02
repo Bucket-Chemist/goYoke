@@ -1,0 +1,9 @@
+{
+  "id": "14",
+  "subject": "Update task-tools-reference.md with complete matrix",
+  "description": "Update docs/task-tools-reference.md to include all 15 newly updated agents in the access matrix.",
+  "activeForm": "Updating documentation",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

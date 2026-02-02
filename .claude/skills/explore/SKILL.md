@@ -145,14 +145,14 @@ Task({
   prompt: `AGENT: architect
 
 1. TASK: Create phased implementation plan for: <goal>
-2. EXPECTED OUTCOME: specs.md file + write_todos call
+2. EXPECTED OUTCOME: specs.md file + TaskCreate calls
 3. REQUIRED SKILLS: Dependency mapping, risk assessment
 4. REQUIRED TOOLS: Read, Glob, Grep, Write
 5. MUST DO:
    - Parse scout report (attached)
    - If scout confidence was low, incorporate clarification response
    - Create .claude/tmp/specs.md with decisions and rationale
-   - Call write_todos to register actionable tasks
+   - Use TaskCreate to register actionable tasks
 6. MUST NOT DO:
    - Implement code (planning only)
    - Skip specs.md
@@ -240,7 +240,7 @@ User Request
        │
        ▼
 ┌─────────────┐
-│  ARCHITECT  │ ← Sonnet: specs.md + write_todos
+│  ARCHITECT  │ ← Sonnet: specs.md + TaskCreate
 └──────┬──────┘
        │
        ▼

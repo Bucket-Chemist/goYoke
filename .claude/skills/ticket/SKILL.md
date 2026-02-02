@@ -14,7 +14,7 @@ Turn ticket specifications into completed work through systematic workflow execu
 2. **Select** — Choose next actionable ticket (dependencies met)
 3. **Validate** — Check ticket structure and completeness
 4. **Plan** — Delegate to architect if ticket needs implementation planning
-5. **Track** — Monitor progress with TodoWrite and acceptance criteria
+5. **Track** — Monitor progress with TaskCreate/TaskUpdate and acceptance criteria
 6. **Verify** — Ensure all acceptance criteria met before completion
 7. **Audit** — Optionally run automated tests and generate documentation
 8. **Complete** — Update status, generate commit, mark done
@@ -240,7 +240,7 @@ If `needs_planning == false`, skip to Phase 6.
 
 ### Phase 6: Implementation Tracking
 
-Update ticket status and create TodoWrite for tracking:
+Update ticket status and create tasks for tracking:
 
 ```bash
 # Update status to in_progress
@@ -255,16 +255,25 @@ echo "[ticket] Status updated: in_progress"
 echo "$ticket_id" > "$tickets_dir/.current-ticket"
 ```
 
-**Create TodoWrite from acceptance criteria:**
+**Create tasks from acceptance criteria:**
 
-Parse the ticket file and extract acceptance criteria checkboxes, then create todos.
+Parse the ticket file and extract acceptance criteria checkboxes, then create tasks.
 
-Example:
+For each criterion, use TaskCreate:
+```javascript
+TaskCreate({
+  subject: "[Criterion text]",
+  description: "From ticket {ticket_id}: [full criterion details]",
+  activeForm: "Working on [criterion]..."
+})
 ```
-TodoWrite with items:
-- Implement function X
-- Write tests for Y
-- Update documentation
+
+Example output:
+```
+[ticket] Created 3 tasks from acceptance criteria:
+  - Task #1: Implement function X
+  - Task #2: Write tests for Y
+  - Task #3: Update documentation
 ```
 
 ---
@@ -547,7 +556,7 @@ echo "[ticket] Next available tickets:"
 | Selection | Bash | 0 | $0.000 |
 | Validation | Python | 0 | $0.000 |
 | Planning (if needed) | Sonnet | 10-15K | $0.09-$0.14 |
-| Tracking | TodoWrite | 0 | $0.000 |
+| Tracking | TaskCreate | 0 | $0.000 |
 | Verification | Python | 0 | $0.000 |
 | Audit (if enabled) | Bash | 0 | $0.000 |
 | Completion | Bash | 0 | $0.000 |
@@ -616,7 +625,7 @@ $ /ticket next
 [architect returns plan]
 
 [ticket] Status updated: in_progress
-[ticket] Created TodoWrite with 8 acceptance criteria
+[ticket] Created 8 tasks from acceptance criteria
 
 [... implementation work happens ...]
 
