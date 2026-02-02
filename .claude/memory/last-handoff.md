@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-02 06:36:20
+# Session Handoff - 2026-02-02 07:26:23
 
 ## Session Context
 
-- **Session ID**: 6d642d8b-8467-4119-ba41-9737d491252d
+- **Session ID**: 384dfbce-3d0c-4434-9a64-1f0eec767813
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 52
+- **Tool Calls**: 155
 - **Errors Logged**: 0
 - **Routing Violations**: 1
 
@@ -16,54 +16,5 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/agents/CLAUDE.md
-  - claude/agents/agents-index.json
-  - claude/agents/architect/CLAUDE.md
-  - claude/agents/architect/agent.md
-  - claude/agents/backend-reviewer/CLAUDE.md
-  - claude/agents/backend-reviewer/agent.md
-  - claude/agents/codebase-search/CLAUDE.md
-  - claude/agents/einstein/CLAUDE.md
-  - claude/agents/frontend-reviewer/CLAUDE.md
-  - claude/agents/frontend-reviewer/agent.md
-  - claude/agents/gemini-slave/CLAUDE.md
-  - claude/agents/go-api/CLAUDE.md
-  - claude/agents/go-cli/CLAUDE.md
-  - claude/agents/go-concurrent/CLAUDE.md
-  - claude/agents/go-pro/CLAUDE.md
-  - claude/agents/go-tui/CLAUDE.md
-  - claude/agents/haiku-scout/CLAUDE.md
-  - claude/agents/haiku-scout/agent.md
-  - claude/agents/impl-manager/CLAUDE.md
-  - claude/agents/librarian/CLAUDE.md
-  - claude/agents/orchestrator/CLAUDE.md
-  - claude/agents/planner/agent.md
-  - claude/agents/python-pro/CLAUDE.md
-  - claude/agents/python-ux/CLAUDE.md
-  - claude/agents/r-pro/CLAUDE.md
-  - claude/agents/r-shiny-pro/CLAUDE.md
-  - claude/agents/react-pro/CLAUDE.md
-  - claude/agents/review-orchestrator/CLAUDE.md
-  - claude/agents/review-orchestrator/agent.md
-  - claude/agents/scaffolder/CLAUDE.md
-  - claude/agents/staff-architect-critical-review/agent.md
-  - claude/agents/standards-reviewer/CLAUDE.md
-  - claude/agents/standards-reviewer/agent.md
-  - claude/agents/tech-docs-writer/CLAUDE.md
-  - claude/agents/typescript-pro/CLAUDE.md
-  - claude/memory/handoffs.jsonl
-  - claude/memory/last-handoff.md
-  - claude/memory/ml-tool-events.jsonl
-  - claude/shell-snapshots/snapshot-bash-1769984884937-2xcx1v.sh
-  - claude/skills/review/SKILL.md
-  - claude/statsig/statsig.cached.evaluations.0c58c3bdeb
-  - claude/statsig/statsig.last_modified_time.evaluations
   - claude/statsig/statsig.session_id.2656274335
-  - ickets/review-skill-upgrade/review-skill-upgrade-plan-v2.md
-  - .claude/agents/.claude/
-  - .claude/agents/architect-reviewer/
-  - .claude/agents/impl-manager/agent.md
-  - .claude/todos/6d642d8b-8467-4119-ba41-9737d491252d-agent-6d642d8b-8467-4119-ba41-9737d491252d.json
-  - .claude/todos/6ddad5df-2d23-423b-8250-49647ef6fc9c-agent-6ddad5df-2d23-423b-8250-49647ef6fc9c.json
-  - .claude/todos/bdf969df-1f8e-453b-8f97-6978c9fa80cb-agent-bdf969df-1f8e-453b-8f97-6978c9fa80cb.json
 

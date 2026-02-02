@@ -11,7 +11,6 @@ import (
 var (
 	sharpEdgeIDs     map[string]bool
 	sharpEdgeIDsOnce sync.Once
-	sharpEdgeLoadErr error
 )
 
 // SharpEdgesYAML represents the structure of sharp-edges.yaml
@@ -23,6 +22,7 @@ type SharpEdgesYAML struct {
 
 // LoadSharpEdgeIDs scans all agent sharp-edges.yaml files and builds registry
 func LoadSharpEdgeIDs() error {
+	var loadErr error
 	sharpEdgeIDsOnce.Do(func() {
 		sharpEdgeIDs = make(map[string]bool)
 
@@ -35,7 +35,7 @@ func LoadSharpEdgeIDs() error {
 		// Walk agent directories
 		entries, err := os.ReadDir(agentsDir)
 		if err != nil {
-			sharpEdgeLoadErr = err
+			loadErr = err
 			return
 		}
 
@@ -61,7 +61,7 @@ func LoadSharpEdgeIDs() error {
 			}
 		}
 	})
-	return sharpEdgeLoadErr
+	return loadErr
 }
 
 // IsValidSharpEdgeID checks if an ID exists in the registry
@@ -88,5 +88,4 @@ func GetAllSharpEdgeIDs() []string {
 func ResetRegistry() {
 	sharpEdgeIDs = nil
 	sharpEdgeIDsOnce = sync.Once{}
-	sharpEdgeLoadErr = nil
 }

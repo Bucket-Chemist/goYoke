@@ -1,10 +1,8 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
@@ -16,14 +14,14 @@ type SharpEdgeHit struct {
 	HitID           string  `json:"hit_id"`
 	Timestamp       int64   `json:"timestamp"`
 	SessionID       string  `json:"session_id"`
-	SharpEdgeID     string  `json:"sharp_edge_id"`
-	AgentID         string  `json:"agent_id"`
-	ReviewerID      string  `json:"reviewer_id"`
-	FindingID       string  `json:"finding_id"`
+	SharpEdgeID     string  `json:"sharp_edge_id"`     // From sharp-edges.yaml (validated)
+	AgentID         string  `json:"agent_id"`          // Which agent owns the sharp edge
+	ReviewerID      string  `json:"reviewer_id"`       // Which reviewer caught it
+	FindingID       string  `json:"finding_id"`        // Links to ReviewFinding
 	File            string  `json:"file"`
 	Line            int     `json:"line,omitempty"`
-	MatchConfidence float64 `json:"match_confidence"`
-	WasActioned     bool    `json:"was_actioned"`
+	MatchConfidence float64 `json:"match_confidence"`  // 0.0-1.0
+	WasActioned     bool    `json:"was_actioned"`      // Did user fix it
 }
 
 // NewSharpEdgeHit creates a new hit record
@@ -44,40 +42,18 @@ func NewSharpEdgeHit(sessionID, sharpEdgeID, agentID, reviewerID, findingID, fil
 		FindingID:       findingID,
 		File:            file,
 		Line:            line,
-		MatchConfidence: 1.0, // Default to exact match
+		MatchConfidence: 1.0, // Default to exact match; can be overridden
 	}, nil
 }
 
-// LogSharpEdgeHit writes hit to JSONL storage
+// LogSharpEdgeHit writes hit to JSONL storage (concurrency-safe)
 func LogSharpEdgeHit(hit *SharpEdgeHit) error {
 	path := config.GetSharpEdgeHitsPathWithProjectDir()
+
 	data, err := json.Marshal(hit)
 	if err != nil {
 		return fmt.Errorf("[sharp-edge-hit] marshal: %w", err)
 	}
+
 	return AppendJSONL(path, data)
-}
-
-// ReadSharpEdgeHits reads all hits from storage
-func ReadSharpEdgeHits() ([]SharpEdgeHit, error) {
-	path := config.GetSharpEdgeHitsPathWithProjectDir()
-	file, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []SharpEdgeHit{}, nil
-		}
-		return nil, fmt.Errorf("[sharp-edge-hit] open: %w", err)
-	}
-	defer file.Close()
-
-	var hits []SharpEdgeHit
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		var h SharpEdgeHit
-		if err := json.Unmarshal(scanner.Bytes(), &h); err != nil {
-			continue // Skip malformed lines
-		}
-		hits = append(hits, h)
-	}
-	return hits, scanner.Err()
 }

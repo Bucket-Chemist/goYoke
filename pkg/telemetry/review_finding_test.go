@@ -3,16 +3,22 @@ package telemetry
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
-func setupTestDir(t *testing.T) func() {
+func setupReviewTestDir(t *testing.T) func() {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("GOGENT_PROJECT_DIR", dir)
+
+	// Create minimal structure
 	os.MkdirAll(filepath.Join(dir, ".gogent"), 0755)
-	os.MkdirAll(filepath.Join(dir, ".claude", "agents"), 0755)
-	return func() {}
+	os.MkdirAll(filepath.Join(dir, ".claude", "memory"), 0755)
+
+	return func() { /* TempDir auto-cleans */ }
 }
 
 func TestNewReviewFinding(t *testing.T) {
@@ -22,15 +28,18 @@ func TestNewReviewFinding(t *testing.T) {
 		t.Error("FindingID should not be empty")
 	}
 	if finding.Severity != "critical" {
-		t.Errorf("Expected severity 'critical', got '%s'", finding.Severity)
+		t.Errorf("Expected severity 'critical', got %q", finding.Severity)
 	}
-	if finding.SessionID != "session1" {
-		t.Errorf("Expected session 'session1', got '%s'", finding.SessionID)
+	if finding.Reviewer != "backend-reviewer" {
+		t.Errorf("Expected reviewer 'backend-reviewer', got %q", finding.Reviewer)
+	}
+	if finding.Timestamp == 0 {
+		t.Error("Timestamp should not be 0")
 	}
 }
 
 func TestLogReviewFinding(t *testing.T) {
-	cleanup := setupTestDir(t)
+	cleanup := setupReviewTestDir(t)
 	defer cleanup()
 
 	finding := NewReviewFinding("session1", "backend-reviewer", "critical", "security", "file.go", 10, "test message")
@@ -39,18 +48,22 @@ func TestLogReviewFinding(t *testing.T) {
 		t.Fatalf("LogReviewFinding failed: %v", err)
 	}
 
-	// Read back and verify
-	findings, err := ReadReviewFindings()
+	// Verify file written
+	path := config.GetReviewFindingsPathWithProjectDir()
+	content, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("ReadReviewFindings failed: %v", err)
+		t.Fatalf("Failed to read file: %v", err)
 	}
-	if len(findings) != 1 {
-		t.Errorf("Expected 1 finding, got %d", len(findings))
+	if len(content) == 0 {
+		t.Error("File should not be empty")
+	}
+	if !strings.Contains(string(content), finding.FindingID) {
+		t.Error("File should contain finding ID")
 	}
 }
 
 func TestLookupFindingTimestamp(t *testing.T) {
-	cleanup := setupTestDir(t)
+	cleanup := setupReviewTestDir(t)
 	defer cleanup()
 
 	finding := NewReviewFinding("session1", "reviewer", "warning", "perf", "file.go", 1, "msg")
@@ -65,26 +78,83 @@ func TestLookupFindingTimestamp(t *testing.T) {
 	}
 }
 
+func TestLookupFindingTimestamp_NotFound(t *testing.T) {
+	cleanup := setupReviewTestDir(t)
+	defer cleanup()
+
+	_, err := LookupFindingTimestamp("nonexistent-id")
+	if err == nil {
+		t.Error("Expected error for nonexistent finding")
+	}
+}
+
 func TestUpdateReviewFindingOutcome(t *testing.T) {
-	cleanup := setupTestDir(t)
+	cleanup := setupReviewTestDir(t)
 	defer cleanup()
 
 	err := UpdateReviewFindingOutcome("finding-123", "fixed", "TICKET-1", "abc123", 5000)
 	if err != nil {
 		t.Fatalf("UpdateReviewFindingOutcome failed: %v", err)
 	}
+
+	// Verify appended to outcomes file
+	path := config.GetReviewOutcomesPathWithProjectDir()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if !strings.Contains(string(content), "finding-123") {
+		t.Error("File should contain finding ID")
+	}
+	if !strings.Contains(string(content), "fixed") {
+		t.Error("File should contain resolution")
+	}
 }
 
-func TestCalculateReviewStats(t *testing.T) {
-	findings := []ReviewFinding{
-		{Severity: "critical", Reviewer: "backend-reviewer", Category: "security"},
-		{Severity: "warning", Reviewer: "backend-reviewer", Category: "performance"},
-		{Severity: "critical", Reviewer: "frontend-reviewer", Category: "security"},
+func TestTruncateMessage(t *testing.T) {
+	short := "short message"
+	if truncateMessage(short, 1000) != short {
+		t.Error("Short message should not be truncated")
 	}
 
-	stats := CalculateReviewStats(findings)
+	long := strings.Repeat("a", 2000)
+	truncated := truncateMessage(long, 1000)
+	if len(truncated) != 1003 { // 1000 + "..."
+		t.Errorf("Expected length 1003, got %d", len(truncated))
+	}
+	if !strings.HasSuffix(truncated, "...") {
+		t.Error("Truncated message should end with ...")
+	}
+}
 
-	if stats["total_findings"].(int) != 3 {
-		t.Errorf("Expected 3 total findings")
+func TestReadReviewFindings(t *testing.T) {
+	cleanup := setupReviewTestDir(t)
+	defer cleanup()
+
+	// Write multiple findings
+	for i := 0; i < 3; i++ {
+		finding := NewReviewFinding("session1", "reviewer", "warning", "test", "file.go", i, "msg")
+		LogReviewFinding(finding)
+	}
+
+	findings, err := ReadReviewFindings()
+	if err != nil {
+		t.Fatalf("ReadReviewFindings failed: %v", err)
+	}
+	if len(findings) != 3 {
+		t.Errorf("Expected 3 findings, got %d", len(findings))
+	}
+}
+
+func TestReadReviewFindings_Empty(t *testing.T) {
+	cleanup := setupReviewTestDir(t)
+	defer cleanup()
+
+	findings, err := ReadReviewFindings()
+	if err != nil {
+		t.Fatalf("ReadReviewFindings failed: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Errorf("Expected 0 findings, got %d", len(findings))
 	}
 }

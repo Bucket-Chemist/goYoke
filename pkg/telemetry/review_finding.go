@@ -1,10 +1,10 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
@@ -55,7 +55,7 @@ func NewReviewFinding(sessionID, reviewer, severity, category, file string, line
 	}
 }
 
-// LogReviewFinding writes finding to JSONL storage
+// LogReviewFinding writes finding to JSONL storage (concurrency-safe)
 func LogReviewFinding(finding *ReviewFinding) error {
 	path := config.GetReviewFindingsPathWithProjectDir()
 	data, err := json.Marshal(finding)
@@ -65,7 +65,7 @@ func LogReviewFinding(finding *ReviewFinding) error {
 	return AppendJSONL(path, data)
 }
 
-// UpdateReviewFindingOutcome appends outcome update
+// UpdateReviewFindingOutcome appends outcome update (concurrency-safe)
 func UpdateReviewFindingOutcome(findingID, resolution, ticketID, commitHash string, resolutionMs int64) error {
 	update := ReviewOutcomeUpdate{
 		FindingID:       findingID,
@@ -84,6 +84,7 @@ func UpdateReviewFindingOutcome(findingID, resolution, ticketID, commitHash stri
 }
 
 // LookupFindingTimestamp retrieves the original timestamp for a finding
+// Used to calculate accurate resolution time
 func LookupFindingTimestamp(findingID string) (int64, error) {
 	findings, err := ReadReviewFindings()
 	if err != nil {
@@ -100,25 +101,28 @@ func LookupFindingTimestamp(findingID string) (int64, error) {
 // ReadReviewFindings reads all findings from storage
 func ReadReviewFindings() ([]ReviewFinding, error) {
 	path := config.GetReviewFindingsPathWithProjectDir()
-	file, err := os.Open(path)
+
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []ReviewFinding{}, nil
 		}
-		return nil, fmt.Errorf("[review-finding] open: %w", err)
+		return nil, fmt.Errorf("[review-finding] read: %w", err)
 	}
-	defer file.Close()
 
 	var findings []ReviewFinding
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
 		var f ReviewFinding
-		if err := json.Unmarshal(scanner.Bytes(), &f); err != nil {
+		if err := json.Unmarshal([]byte(line), &f); err != nil {
 			continue // Skip malformed lines
 		}
 		findings = append(findings, f)
 	}
-	return findings, scanner.Err()
+	return findings, nil
 }
 
 // CalculateReviewStats returns aggregate metrics
