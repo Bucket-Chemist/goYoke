@@ -324,9 +324,9 @@ func TestMarshal_OutputFormat(t *testing.T) {
 			expectedReason:   "Tool blocked",
 		},
 		{
-			name:             "warn response",
+			name:             "warn response (maps to approve per Claude Code schema)",
 			resp:             NewWarnResponse("PostToolUse", "Warning message"),
-			expectedDecision: "warn",
+			expectedDecision: "approve", // Claude Code only supports approve|block
 			expectedReason:   "Warning message",
 		},
 	}
@@ -586,17 +586,24 @@ func TestIntegration_EventToResponse(t *testing.T) {
 }
 
 // Test decision constants
+// Note: DecisionWarn and DecisionPass are legacy aliases that map to "approve"
+// because Claude Code schema only supports "approve" | "block"
 func TestDecisionConstants(t *testing.T) {
 	if DecisionBlock != "block" {
 		t.Errorf("expected DecisionBlock constant to be %q, got %q", "block", DecisionBlock)
 	}
 
-	if DecisionWarn != "warn" {
-		t.Errorf("expected DecisionWarn constant to be %q, got %q", "warn", DecisionWarn)
+	if DecisionApprove != "approve" {
+		t.Errorf("expected DecisionApprove constant to be %q, got %q", "approve", DecisionApprove)
 	}
 
-	if DecisionPass != "pass" {
-		t.Errorf("expected DecisionPass constant to be %q, got %q", "pass", DecisionPass)
+	// Legacy aliases - both map to "approve" per Claude Code schema
+	if DecisionWarn != "approve" {
+		t.Errorf("expected DecisionWarn (legacy) to map to %q, got %q", "approve", DecisionWarn)
+	}
+
+	if DecisionPass != "approve" {
+		t.Errorf("expected DecisionPass (legacy) to map to %q, got %q", "approve", DecisionPass)
 	}
 }
 
@@ -615,7 +622,7 @@ func TestResponseErrorMessageFormat(t *testing.T) {
 					"hookEventName": "PreToolUse",
 				},
 			},
-			expectedParts: []string{"[hook-response]", "Invalid decision value", "Use decision constants"},
+			expectedParts: []string{"[hook-response]", "Invalid decision value", "DecisionApprove or DecisionBlock"},
 		},
 		{
 			name: "missing reason for block",

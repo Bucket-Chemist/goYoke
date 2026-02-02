@@ -311,7 +311,7 @@ func TestIntegration_NonTaskToolPassthrough(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	minimalSchema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {},
 		"delegation_ceiling": {},
 		"agent_subagent_mapping": {},
@@ -373,7 +373,7 @@ func TestIntegration_TaskValidation_ValidAgent(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	schema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},
@@ -625,7 +625,7 @@ func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	schema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},
@@ -827,7 +827,7 @@ func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
 
 	// Schema with agent mapping but wrong subagent_type will block
 	schema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},
@@ -916,7 +916,7 @@ func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	schema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},
@@ -1007,7 +1007,7 @@ func TestMain_ConcurrentInvocation(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	schema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},
@@ -1329,7 +1329,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	schema := `{
-		"version": "2.2.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {"model": "haiku"}
 		},

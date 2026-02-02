@@ -63,7 +63,7 @@ The `gogent-load-context` hook injects language detection and conventions automa
 | Python | Externally managed (PEP 668) |
 | Python execution | `uv run python` or `~/.generic-python/bin/python` |
 | Config location | `~/Documents/GOgent-Fortress/.claude/` |
-| Schema version | `routing-schema.json` v2.2.0 |
+| Schema version | `routing-schema.json` v2.5.0 |
 | Symlink | `~/.claude → ~/Documents/GOgent-Fortress/.claude` |
 
 ---
@@ -303,9 +303,9 @@ gogent-sharp-edge logs every routing decision:
 
 | Data Point | Location |
 |------------|----------|
-| Routing decisions | `$XDG_DATA_HOME/gogent-fortress/routing-decisions.jsonl` |
-| Decision outcomes | `$XDG_DATA_HOME/gogent-fortress/routing-decision-updates.jsonl` |
-| Agent collaborations | `$XDG_DATA_HOME/gogent-fortress/agent-collaborations.jsonl` |
+| Routing decisions | `$XDG_DATA_HOME/gogent/routing-decisions.jsonl` |
+| Decision outcomes | `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl` |
+| Agent collaborations | `$XDG_DATA_HOME/gogent/agent-collaborations.jsonl` |
 
 **Export for analysis:**
 ```bash
