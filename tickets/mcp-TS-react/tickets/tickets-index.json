@@ -69,7 +69,7 @@
     {
       "id": "TUI-002",
       "title": "Go Baseline Metrics & Hook Integration Test",
-      "status": "pending",
+      "status": "completed",
       "phase": 0,
       "dependencies": [],
       "file": "TUI-002.md",
