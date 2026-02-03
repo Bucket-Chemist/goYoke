@@ -106,5 +106,6 @@
   "trustedDirectories": [
     "/home/doktersmol",
     "/home/doktersmol/Documents"
-  ]
+  ],
+  "model": "sonnet"
 }

@@ -53,5 +53,19 @@ test/audit/**
 /.ticket-audits/
 /test/simulation/harness/tmp/*
 /test/simulation/tmp/
-/test/simulation/reports/packages/tui/node_modules/
+/test/simulation/reports/
+
+# Claude Code ephemeral data
+.claude/shell-snapshots/
+.claude/tasks/
+.claude/todos/
+
+# Debug logs
+/debug/
+
+# Completed tickets (archived)
+tickets/completed/
+
+# TypeScript/Node.js
+packages/tui/node_modules/
 packages/tui/dist/
