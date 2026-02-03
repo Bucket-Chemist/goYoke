@@ -150,7 +150,7 @@
     {
       "id": "TUI-010",
       "title": "Keyboard Handling & Timeout Logic",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 3,
       "dependencies": [
         "TUI-008",
@@ -161,7 +161,7 @@
     {
       "id": "TUI-011",
       "title": "MCP Server with Tools",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 4,
       "dependencies": [
         "TUI-006"
