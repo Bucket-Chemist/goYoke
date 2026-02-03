@@ -5,6 +5,7 @@ import { useKeymap } from "../hooks/useKeymap.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { ClaudePanel } from "./ClaudePanel.js";
+import { AgentTree } from "./AgentTree.js";
 import { ModalOverlay } from "./Modal.js";
 import { colors, borders } from "../config/theme.js";
 
@@ -64,9 +65,8 @@ export function Layout(): JSX.Element {
             borderStyle={borders.panel}
             borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
             flexDirection="column"
-            paddingX={1}
           >
-            <Text color={colors.muted}>Agent Tree (placeholder)</Text>
+            <AgentTree focused={focusedPanel === "agents"} />
           </Box>
 
           {/* Agent Detail (40% of right panel) */}
