@@ -77,23 +77,24 @@
       "max_thinking_budget": 32000,
       "cost_per_1k_tokens": 0.045,
       "patterns": [
-        "einstein", "deep analysis", "security audit",
+        "braintrust", "einstein", "deep analysis", "security audit",
         "architectural decision", "complex tradeoff",
         "synthesize findings", "cross-domain",
         "novel problem", "nuclear option",
-        "plan", "strategy", "comprehensive planning"
+        "plan", "strategy", "comprehensive planning",
+        "thought workshop", "whiteboard"
       ],
       "tools": ["*"],
-      "invocation": "/einstein for standalone, Task() for allowlisted planning agents",
+      "invocation": "/braintrust for multi-perspective analysis, Task() for allowlisted planning agents",
       "task_invocation_blocked": true,
-      "task_invocation_allowlist": ["planner", "architect", "staff-architect-critical-review", "python-architect"],
+      "task_invocation_allowlist": ["planner", "architect", "staff-architect-critical-review", "python-architect", "mozart", "einstein", "beethoven"],
       "escalation_protocol": "escalate_to_einstein",
       "thresholds": {
         "max_files": null,
         "max_lines": null,
         "max_tokens_estimate": null
       },
-      "agents": ["einstein", "planner", "architect", "staff-architect-critical-review", "python-architect"]
+      "agents": ["einstein", "planner", "architect", "staff-architect-critical-review", "python-architect", "mozart", "beethoven"]
     },
 
     "external": {
@@ -280,10 +281,10 @@
     },
     "Plan": {
       "description": "Architecture and planning mode with controlled write access",
-      "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion"],
+      "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate"],
       "allows_write": true,
       "respects_agent_yaml": false,
-      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager"],
+      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager", "mozart", "einstein", "beethoven"],
       "rationale": "Planning agents need to write plans and spawn other agents"
     }
   },
@@ -329,7 +330,9 @@
     "architect": "Plan",
     "planner": "Plan",
     "python-architect": ["Plan", "Explore"],
-    "einstein": "general-purpose",
+    "einstein": "Plan",
+    "mozart": "Plan",
+    "beethoven": "Plan",
     "gemini-slave": "Bash",
     "staff-architect-critical-review": ["Plan", "Explore"]
   },

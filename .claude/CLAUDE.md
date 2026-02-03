@@ -90,7 +90,7 @@ These Go binaries run automatically. You cannot bypass them.
 
 **What hooks enforce:**
 
-- ✅ Task(opus) is BLOCKED → use `/einstein` instead
+- ✅ Task(opus) is BLOCKED → use `/braintrust` instead (allowlisted agents excepted)
 - ✅ Wrong subagent_type → BLOCKED with corrective message
 - ✅ 3+ consecutive failures → Sharp edge captured, execution blocked
 - ✅ Every 10 tools → Routing compliance reminder injected
@@ -108,7 +108,7 @@ These Go binaries run automatically. You cannot bypass them.
 ```
 Request arrives
     │
-    ├─► Is it a slash command (/explore, /einstein, etc.)?
+    ├─► Is it a slash command (/explore, /braintrust, etc.)?
     │       YES → Execute the skill
     │
     ├─► Does it match an agent trigger? (see Agent Dispatch Table)
@@ -137,7 +137,7 @@ Request arrives
 | Command               | What It Does                                                |
 | --------------------- | ----------------------------------------------------------- |
 | `/explore`            | Structured codebase exploration with scout → architect flow |
-| `/einstein`           | Deep analysis with Opus (bypasses Task blocking)            |
+| `/braintrust`         | Multi-perspective deep analysis (Mozart → Einstein + Staff-Architect → Beethoven) |
 | `/review`             | Multi-domain code review with severity-grouped findings     |
 | `/review-plan`        | Critical 7-layer review of implementation plans             |
 | `/ticket`             | Ticket-driven implementation workflow                       |
@@ -200,9 +200,17 @@ Request arrives
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------- |
 | design neural network, architecture decision, training strategy, loss function design, attention mechanism choice, which approach, tradeoff analysis | `python-architect` | Plan          |
 
-| Trigger                 | Handler           | Notes                                |
-| ----------------------- | ----------------- | ------------------------------------ |
-| einstein, deep analysis | `/einstein` skill | **NOT via Task()** - blocked by hook |
+| Trigger                               | Handler             | Notes                                           |
+| ------------------------------------- | ------------------- | ----------------------------------------------- |
+| braintrust, deep analysis, whiteboard | `/braintrust` skill | Invokes Mozart → Einstein + Staff-Arch → Beethoven |
+
+**Braintrust Agents (spawned internally by /braintrust):**
+
+| Agent | Role | Spawned By |
+| ----- | ---- | ---------- |
+| `mozart` | Problem decomposition, interview, scout dispatch | /braintrust skill |
+| `einstein` | Theoretical analysis (root cause, frameworks, first principles) | mozart |
+| `beethoven` | Synthesis of orthogonal analyses into unified document | mozart |
 
 ### External: Gemini
 
@@ -242,7 +250,7 @@ Agents can escalate to higher-tier agents for decisions:
 | From             | To               | When                                                        |
 | ---------------- | ---------------- | ----------------------------------------------------------- |
 | python-pro       | python-architect | Architecture ambiguity, design decisions, tradeoff analysis |
-| python-architect | /einstein        | Intractable design problem after clarification attempts     |
+| python-architect | /braintrust      | Intractable design problem after clarification attempts     |
 
 python-pro should escalate when:
 
@@ -343,14 +351,19 @@ For large-context analysis:
 3. architect (Task) → creates implementation plan
 ```
 
-### Pattern 3: Einstein Escalation
+### Pattern 3: Braintrust Escalation
 
 When orchestrator fails 3x or problem is intractable:
 
 ```
-1. Generate GAP document to .claude/tmp/einstein-gap-{timestamp}.md
-2. Output: "🚨 Run /einstein to process"
+1. Generate GAP document to .claude/tmp/braintrust-gap-{timestamp}.md
+2. Output: "🚨 Run /braintrust to process"
 3. STOP - wait for user
+```
+
+**Or invoke directly for complex thought workshopping:**
+```
+/braintrust "your complex problem statement"
 ```
 
 ---
@@ -490,7 +503,7 @@ ROUTER CHECKLIST:
 □ Ambiguous? → Ask ONE question
 
 BLOCKED BY HOOKS:
-✗ Task(model: "opus") → use /einstein
+✗ Task(model: "opus") → use /braintrust (or allowlisted agents)
 ✗ Wrong subagent_type → check dispatch table
 ✗ 3+ failures → stop, sharp edge captured
 

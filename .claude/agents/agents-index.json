@@ -565,14 +565,52 @@
       "category": "analysis",
       "path": "einstein",
       "triggers": [
-        "einstein",
-        "call einstein",
-        "orchestrator fails 3x same task",
-        "deep analysis"
+        "escalate to einstein",
+        "deep theoretical analysis"
       ],
-      "tools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+      "tools": ["Read", "Write", "Glob", "Grep", "Task", "TaskList", "TaskGet"],
       "auto_activate": null,
-      "description": "Last-resort escalation for issues unresolvable by orchestrator. Receives full diagnostic context."
+      "spawned_by": ["mozart"],
+      "outputs_to": ["beethoven"],
+      "focus_areas": ["root cause", "conceptual frameworks", "first principles", "novel approaches"],
+      "description": "Theoretical analysis agent for Braintrust workflow. Performs deep reasoning using first principles, conceptual frameworks, and novel approaches. Spawned by Mozart, outputs to Beethoven."
+    },
+    {
+      "id": "mozart",
+      "parallelization_template": "E",
+      "name": "Mozart",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "orchestration",
+      "path": "mozart",
+      "triggers": [],
+      "tools": ["Read", "Glob", "Grep", "Task", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate", "Write", "AskUserQuestion"],
+      "auto_activate": null,
+      "invoked_by": "/braintrust skill only",
+      "can_spawn": ["haiku-scout", "codebase-search", "einstein", "staff-architect-critical-review", "beethoven"],
+      "outputs": [".claude/braintrust/problem-brief-*.md"],
+      "description": "Problem decomposition orchestrator for Braintrust workflow. Conducts interviews, spawns scouts, assembles Problem Brief, dispatches Einstein + Staff-Architect in parallel, hands off to Beethoven."
+    },
+    {
+      "id": "beethoven",
+      "parallelization_template": "F",
+      "name": "Beethoven",
+      "model": "opus",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "synthesis",
+      "path": "beethoven",
+      "triggers": [],
+      "tools": ["Read", "Write", "Glob", "TaskList", "TaskGet"],
+      "auto_activate": null,
+      "spawned_by": ["mozart"],
+      "inputs": ["problem-brief", "einstein-analysis", "staff-architect-review"],
+      "outputs": [".claude/braintrust/analysis-*.md"],
+      "focus_areas": ["convergence", "divergence resolution", "synthesis", "unified recommendations"],
+      "description": "Synthesis and composition agent for Braintrust workflow. Receives orthogonal analyses from Einstein and Staff-Architect, resolves contradictions, produces unified Braintrust Analysis document."
     },
     {
       "id": "gemini-slave",
@@ -950,7 +988,7 @@
       "haiku": ["codebase-search", "scaffolder", "librarian", "tech-docs-writer", "code-reviewer", "haiku-scout", "memory-archivist"],
       "haiku_thinking": ["backend-reviewer", "frontend-reviewer", "standards-reviewer"],
       "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "architect-reviewer"],
-      "opus": ["einstein", "planner", "architect", "staff-architect-critical-review"],
+      "opus": ["einstein", "planner", "architect", "staff-architect-critical-review", "python-architect", "mozart", "beethoven"],
       "external": ["gemini-slave"]
     }
   },
