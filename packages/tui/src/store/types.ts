@@ -115,9 +115,45 @@ export interface InputSlice {
   clearHistory: () => void;
 }
 
+// Modal slice (ephemeral - not persisted)
+export interface ModalSlice {
+  modalQueue: Array<{
+    id: string;
+    type: "ask" | "confirm" | "input" | "select";
+    payload: unknown;
+    resolve: (response: ModalResponse) => void;
+    reject: (error: Error) => void;
+    timeout?: number;
+    timeoutId?: NodeJS.Timeout;
+  }>;
+  enqueue: <T>(
+    request: Omit<
+      {
+        id: string;
+        type: "ask" | "confirm" | "input" | "select";
+        payload: T;
+        resolve: (response: ModalResponse) => void;
+        reject: (error: Error) => void;
+        timeout?: number;
+        timeoutId?: NodeJS.Timeout;
+      },
+      "id" | "resolve" | "reject" | "timeoutId"
+    >
+  ) => Promise<ModalResponse>;
+  dequeue: (id: string, response: ModalResponse) => void;
+  cancel: (id: string) => void;
+}
+
+export type ModalResponse =
+  | { type: "ask"; value: string }
+  | { type: "confirm"; confirmed: boolean; cancelled: boolean }
+  | { type: "input"; value: string }
+  | { type: "select"; selected: string; index: number };
+
 // Combined store type
 export type Store = MessagesSlice &
   AgentsSlice &
   SessionSlice &
   UISlice &
-  InputSlice;
+  InputSlice &
+  ModalSlice;

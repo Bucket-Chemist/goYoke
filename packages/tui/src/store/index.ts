@@ -11,6 +11,7 @@ import { createAgentsSlice } from "./slices/agents.js";
 import { createSessionSlice } from "./slices/session.js";
 import { createUISlice } from "./slices/ui.js";
 import { createInputSlice } from "./slices/input.js";
+import { createModalSlice } from "./slices/modal.js";
 
 /**
  * Combined Zustand store with all slices
@@ -26,6 +27,7 @@ export const useStore = create<Store>()(
         ...createSessionSlice(...a),
         ...createUISlice(...a),
         ...createInputSlice(...a),
+        ...createModalSlice(...a),
       }),
       {
         name: "tui-store",
@@ -39,7 +41,7 @@ export const useStore = create<Store>()(
           sessionId: state.sessionId,
           totalCost: state.totalCost,
           tokenCount: state.tokenCount,
-          // Exclude: streaming, focusedPanel, inputHistory, inputHistoryIndex
+          // Exclude: streaming, focusedPanel, inputHistory, inputHistoryIndex, modalQueue
         }),
       }
     ),
