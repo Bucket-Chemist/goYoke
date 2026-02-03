@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Text, useInput } from "ink";
 import { useStore } from "../store/index.js";
 import { Banner } from "./Banner.js";
+import { ClaudePanel } from "./ClaudePanel.js";
 import { colors, borders } from "../config/theme.js";
 
 /**
@@ -34,14 +35,8 @@ export function Layout(): JSX.Element {
       <Banner />
       <Box flexDirection="row" flexGrow={1}>
         {/* Left Panel: Claude conversation (70%) */}
-        <Box
-          width="70%"
-          borderStyle={borders.panel}
-          borderColor={focusedPanel === "claude" ? colors.focused : colors.unfocused}
-          flexDirection="column"
-          paddingX={1}
-        >
-          <Text color={colors.muted}>Claude Panel (placeholder)</Text>
+        <Box width="70%">
+          <ClaudePanel focused={focusedPanel === "claude"} />
         </Box>
 
         {/* Right Panel: Agent tree + detail (30%) */}

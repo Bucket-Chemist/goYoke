@@ -119,7 +119,7 @@
     {
       "id": "TUI-007",
       "title": "Layout & Banner Components",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 3,
       "dependencies": [
         "TUI-005"
@@ -129,7 +129,7 @@
     {
       "id": "TUI-008",
       "title": "ClaudePanel & Input Components",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "dependencies": [
         "TUI-007"
