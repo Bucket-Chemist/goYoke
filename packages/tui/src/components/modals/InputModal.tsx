@@ -1,13 +1,13 @@
 /**
  * InputModal component - text input with placeholder
  * - Enter submits input
- * - Displays placeholder when input is empty
+ * - Uses TextInput primitive for robust input handling
  */
 
 import React, { useState } from "react";
-import { Box, Text, useInput } from "ink";
+import { Box, Text } from "ink";
 import type { ModalRequest, ModalResponse, InputPayload } from "../../store/slices/modal.js";
-import { colors } from "../../config/theme.js";
+import { TextInput } from "../primitives/TextInput.js";
 
 interface InputModalProps {
   request: ModalRequest<InputPayload>;
@@ -18,31 +18,22 @@ export function InputModal({ request, onComplete }: InputModalProps): JSX.Elemen
   const payload = request.payload as InputPayload;
   const [value, setValue] = useState("");
 
-  useInput(
-    (input, key) => {
-      if (key.return) {
-        onComplete({ type: "input", value });
-      } else if (key.backspace || key.delete) {
-        setValue((prev) => prev.slice(0, -1));
-      } else if (input && !key.ctrl && !key.meta) {
-        setValue((prev) => prev + input);
-      }
-    },
-    { isActive: true }
-  );
+  const handleSubmit = () => {
+    onComplete({ type: "input", value });
+  };
 
   return (
     <Box flexDirection="column" gap={1}>
       <Text>{payload.prompt}</Text>
 
       <Box marginTop={1}>
-        <Text color={colors.muted}>&gt; </Text>
-        {value ? (
-          <Text>{value}</Text>
-        ) : (
-          <Text dimColor>{payload.placeholder || "Type here..."}</Text>
-        )}
-        <Text color={colors.primary}>▎</Text>
+        <TextInput
+          value={value}
+          onChange={setValue}
+          onSubmit={handleSubmit}
+          placeholder={payload.placeholder || "Type here..."}
+          focused={true}
+        />
       </Box>
 
       <Box marginTop={1}>

@@ -9,7 +9,7 @@
  * - Up/Down arrow keys for input history (TUI-005 integration)
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Box, Text } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
@@ -103,7 +103,29 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
     modalQueue,
   } = useStore();
   const [input, setInput] = useState("");
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const currentInputRef = useRef(""); // Store current input when navigating history
+
+  // Handle mock API response with cleanup
+  useEffect(() => {
+    if (!pendingMessage) return;
+
+    const timerId = setTimeout(() => {
+      addMessage({
+        role: "assistant",
+        content: [
+          {
+            type: "text",
+            text: `Mock response to: "${pendingMessage}"\n\nThis is a placeholder. Real Claude API integration coming soon.`,
+          },
+        ],
+        partial: false,
+      });
+      setPendingMessage(null);
+    }, 500);
+
+    return () => clearTimeout(timerId);
+  }, [pendingMessage, addMessage]);
 
   // Handle message submission
   const handleSubmit = (): void => {
@@ -128,19 +150,8 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
     resetHistoryIndex();
 
     // TODO: Trigger Claude API call
-    // For now, just add a mock response
-    setTimeout(() => {
-      addMessage({
-        role: "assistant",
-        content: [
-          {
-            type: "text",
-            text: `Mock response to: "${trimmedInput}"\n\nThis is a placeholder. Real Claude API integration coming soon.`,
-          },
-        ],
-        partial: false,
-      });
-    }, 500);
+    // For now, trigger mock response via state
+    setPendingMessage(trimmedInput);
   };
 
   // Navigate to previous input in history (up arrow)

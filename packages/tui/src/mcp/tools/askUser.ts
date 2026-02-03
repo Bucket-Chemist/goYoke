@@ -8,14 +8,16 @@ import { z } from "zod";
 import { useStore } from "../../store/index.js";
 import type { ModalResponse } from "../../store/slices/modal.js";
 
+export const askUserSchema = z.object({
+  message: z.string().min(1, "Message must not be empty").describe("The question to ask"),
+  options: z.array(z.string().min(1, "Option must not be empty")).optional().describe("Predefined answer options"),
+  default: z.string().optional().describe("Default value if timeout"),
+});
+
 export const askUserTool = tool(
   "ask_user",
   "Ask the user a question with optional predefined options",
-  {
-    message: z.string().describe("The question to ask"),
-    options: z.array(z.string()).optional().describe("Predefined answer options"),
-    default: z.string().optional().describe("Default value if timeout"),
-  },
+  askUserSchema.shape,
   async (args) => {
     const response = (await useStore.getState().enqueue({
       type: "ask",

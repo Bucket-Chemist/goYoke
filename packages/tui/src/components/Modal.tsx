@@ -3,8 +3,8 @@
  * Handles keyboard input (Escape to cancel) and delegates to specific modal types
  */
 
-import React from "react";
-import { Box, useInput } from "ink";
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { Box, Text, useInput } from "ink";
 import { useStore } from "../store/index.js";
 import type {
   ModalRequest,
@@ -22,6 +22,57 @@ import { SelectModal } from "./modals/SelectModal.js";
 
 interface ModalOverlayProps {
   request: ModalRequest;
+}
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  onDismiss: () => void;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+/**
+ * Error boundary for modal rendering - catches errors to prevent app crash
+ * Displays error message and allows dismissal with Escape key
+ */
+class ModalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  override state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true, error };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.error("[Modal Error]", error, info.componentStack);
+  }
+
+  override render(): ReactNode {
+    if (this.state.hasError) {
+      return <ErrorFallback error={this.state.error} onDismiss={this.props.onDismiss} />;
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Error fallback UI - allows dismissal with Escape
+ */
+function ErrorFallback({ error, onDismiss }: { error: Error | null; onDismiss: () => void }): JSX.Element {
+  useInput((input, key) => {
+    if (key.escape) {
+      onDismiss();
+    }
+  });
+
+  return (
+    <Box flexDirection="column" padding={1}>
+      <Text color="red">Modal Error: {error?.message ?? "Unknown error"}</Text>
+      <Text dimColor>Press Escape to dismiss</Text>
+    </Box>
+  );
 }
 
 /**
@@ -53,6 +104,7 @@ function CurrentModal({
  * - Captures keyboard focus
  * - Escape cancels modal
  * - Delegates to specific modal type for rendering and Enter handling
+ * - Error boundary prevents modal crashes from affecting app
  */
 export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
   const { dequeue, cancel } = useStore();
@@ -77,10 +129,12 @@ export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
         padding={2}
         flexDirection="column"
       >
-        <CurrentModal
-          request={request}
-          onComplete={(response) => dequeue(request.id, response)}
-        />
+        <ModalErrorBoundary onDismiss={() => cancel(request.id)}>
+          <CurrentModal
+            request={request}
+            onComplete={(response) => dequeue(request.id, response)}
+          />
+        </ModalErrorBoundary>
       </Box>
     </Box>
   );

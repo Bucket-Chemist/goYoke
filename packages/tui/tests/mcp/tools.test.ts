@@ -5,10 +5,10 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useStore } from "../../src/store/index.js";
-import { askUserTool } from "../../src/mcp/tools/askUser.js";
-import { confirmActionTool } from "../../src/mcp/tools/confirmAction.js";
-import { requestInputTool } from "../../src/mcp/tools/requestInput.js";
-import { selectOptionTool } from "../../src/mcp/tools/selectOption.js";
+import { askUserTool, askUserSchema } from "../../src/mcp/tools/askUser.js";
+import { confirmActionTool, confirmActionSchema } from "../../src/mcp/tools/confirmAction.js";
+import { requestInputTool, requestInputSchema } from "../../src/mcp/tools/requestInput.js";
+import { selectOptionTool, selectOptionSchema } from "../../src/mcp/tools/selectOption.js";
 import type { ModalResponse } from "../../src/store/slices/modal.js";
 
 describe("MCP Tools", () => {
@@ -277,6 +277,76 @@ describe("MCP Tools", () => {
       expect(response).toEqual({
         selected: "3",
         index: 2,
+      });
+    });
+  });
+
+  describe("Argument Validation", () => {
+    describe("selectOptionTool", () => {
+      it("should reject empty options array", () => {
+        expect(() =>
+          selectOptionSchema.parse({
+            message: "Select something",
+            options: [],
+          })
+        ).toThrow("Options array must contain at least one option");
+      });
+
+      it("should reject empty message", () => {
+        expect(() =>
+          selectOptionSchema.parse({
+            message: "",
+            options: [{ label: "Option 1", value: "1" }],
+          })
+        ).toThrow("Message must not be empty");
+      });
+
+      it("should reject empty option label", () => {
+        expect(() =>
+          selectOptionSchema.parse({
+            message: "Select something",
+            options: [{ label: "", value: "1" }],
+          })
+        ).toThrow("Option label must not be empty");
+      });
+    });
+
+    describe("askUserTool", () => {
+      it("should reject empty message", () => {
+        expect(() =>
+          askUserSchema.parse({
+            message: "",
+          })
+        ).toThrow("Message must not be empty");
+      });
+
+      it("should reject empty option in options array", () => {
+        expect(() =>
+          askUserSchema.parse({
+            message: "Choose",
+            options: ["valid", ""],
+          })
+        ).toThrow("Option must not be empty");
+      });
+    });
+
+    describe("requestInputTool", () => {
+      it("should reject empty prompt", () => {
+        expect(() =>
+          requestInputSchema.parse({
+            prompt: "",
+          })
+        ).toThrow("Prompt must not be empty");
+      });
+    });
+
+    describe("confirmActionTool", () => {
+      it("should reject empty action", () => {
+        expect(() =>
+          confirmActionSchema.parse({
+            action: "",
+          })
+        ).toThrow("Action description must not be empty");
       });
     });
   });

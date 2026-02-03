@@ -1,13 +1,14 @@
 /**
  * AskModal component - displays question with optional button options
  * - If options provided: arrow key navigation, Enter selects
- * - If no options: free text input, Enter submits
+ * - If no options: free text input using TextInput primitive, Enter submits
  */
 
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import type { ModalRequest, ModalResponse, AskPayload } from "../../store/slices/modal.js";
 import { colors } from "../../config/theme.js";
+import { TextInput } from "../primitives/TextInput.js";
 
 interface AskModalProps {
   request: ModalRequest<AskPayload>;
@@ -21,6 +22,7 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
 
   const hasOptions = payload.options && payload.options.length > 0;
 
+  // Only use useInput for arrow navigation when options are present
   useInput(
     (input, key) => {
       if (hasOptions) {
@@ -37,19 +39,14 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
           const value = payload.options?.[selectedIndex] || "";
           onComplete({ type: "ask", value });
         }
-      } else {
-        // Free text input mode
-        if (key.return) {
-          onComplete({ type: "ask", value: inputValue });
-        } else if (key.backspace || key.delete) {
-          setInputValue((prev) => prev.slice(0, -1));
-        } else if (input && !key.ctrl && !key.meta) {
-          setInputValue((prev) => prev + input);
-        }
       }
     },
-    { isActive: true }
+    { isActive: hasOptions }
   );
+
+  const handleSubmit = () => {
+    onComplete({ type: "ask", value: inputValue });
+  };
 
   return (
     <Box flexDirection="column" gap={1}>
@@ -68,9 +65,13 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
         </Box>
       ) : (
         <Box marginTop={1}>
-          <Text color={colors.muted}>&gt; </Text>
-          <Text>{inputValue}</Text>
-          <Text color={colors.primary}>▎</Text>
+          <TextInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSubmit={handleSubmit}
+            placeholder="Type your answer..."
+            focused={true}
+          />
         </Box>
       )}
 

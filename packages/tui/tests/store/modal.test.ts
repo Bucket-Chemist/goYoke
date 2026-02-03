@@ -10,8 +10,12 @@ import type { ModalResponse } from "../../src/store/slices/modal";
 describe("Modal Slice", () => {
   beforeEach(() => {
     // Clear modal queue before each test
+    // Use dequeue instead of cancel to avoid unhandled rejection warnings
     const state = useStore.getState();
-    state.modalQueue.forEach((modal) => state.cancel(modal.id));
+    state.modalQueue.forEach((modal) => {
+      // Resolve with a default response instead of rejecting
+      state.dequeue(modal.id, { type: modal.type, value: "__cleanup__" } as ModalResponse);
+    });
     vi.useFakeTimers();
   });
 
@@ -205,15 +209,18 @@ describe("Modal Slice", () => {
       expect(useStore.getState().modalQueue).toHaveLength(0);
     });
 
-    it("should remove modal from queue when cancelled", () => {
+    it("should remove modal from queue when cancelled", async () => {
       const { enqueue, cancel } = useStore.getState();
 
-      enqueue({ type: "ask", payload: { message: "First" } });
+      const p1 = enqueue({ type: "ask", payload: { message: "First" } });
       enqueue({ type: "confirm", payload: { action: "Second" } });
 
       const firstId = useStore.getState().modalQueue[0].id;
 
       cancel(firstId);
+
+      // Await the rejection to prevent unhandled rejection warning
+      await expect(p1).rejects.toThrow("Modal cancelled by user");
 
       const { modalQueue } = useStore.getState();
 
@@ -233,16 +240,19 @@ describe("Modal Slice", () => {
       expect(useStore.getState().modalQueue).toHaveLength(1);
     });
 
-    it("should allow cancelling middle modal in queue", () => {
+    it("should allow cancelling middle modal in queue", async () => {
       const { enqueue, cancel } = useStore.getState();
 
       enqueue({ type: "ask", payload: { message: "First" } });
-      enqueue({ type: "confirm", payload: { action: "Second" } });
+      const p2 = enqueue({ type: "confirm", payload: { action: "Second" } });
       enqueue({ type: "input", payload: { prompt: "Third" } });
 
       const middleId = useStore.getState().modalQueue[1].id;
 
       cancel(middleId);
+
+      // Await the rejection to prevent unhandled rejection warning
+      await expect(p2).rejects.toThrow("Modal cancelled by user");
 
       const { modalQueue } = useStore.getState();
 
@@ -271,10 +281,10 @@ describe("Modal Slice", () => {
       expect(useStore.getState().modalQueue).toHaveLength(0);
     });
 
-    it("should remove modal from queue after timeout", () => {
+    it("should remove modal from queue after timeout", async () => {
       const { enqueue } = useStore.getState();
 
-      enqueue({
+      const p1 = enqueue({
         type: "ask",
         payload: { message: "Will timeout" },
         timeout: 500,
@@ -285,6 +295,9 @@ describe("Modal Slice", () => {
       expect(useStore.getState().modalQueue).toHaveLength(2);
 
       vi.advanceTimersByTime(500);
+
+      // Await the rejection to prevent unhandled rejection warning
+      await expect(p1).rejects.toThrow("Modal timeout after 500ms");
 
       expect(useStore.getState().modalQueue).toHaveLength(1);
       expect(useStore.getState().modalQueue[0].type).toBe("confirm");
@@ -404,6 +417,66 @@ describe("Modal Slice", () => {
 
       const result = await promise;
       expect(result).toEqual({ type: "ask", value: "Answer" });
+    });
+
+    it("should not double-resolve when timeout and completion race", async () => {
+      const { enqueue, dequeue } = useStore.getState();
+
+      // Create a promise that will be resolved both by timeout and dequeue
+      const promise = enqueue({
+        type: "confirm",
+        payload: { action: "Delete file" },
+        timeout: 1000,
+      });
+
+      const modalId = useStore.getState().modalQueue[0].id;
+
+      // Advance time to exactly the timeout moment
+      vi.advanceTimersByTime(999);
+
+      // Simulate user completion happening at the same moment as timeout
+      dequeue(modalId, { type: "confirm", confirmed: true, cancelled: false });
+
+      // Complete the timeout
+      vi.advanceTimersByTime(1);
+
+      // Promise should resolve only once with user response (first to complete)
+      const result = await promise;
+
+      // The dequeue happened first (at 999ms), so it should win
+      expect(result).toEqual({ type: "confirm", confirmed: true, cancelled: false });
+
+      // Queue should be empty
+      expect(useStore.getState().modalQueue).toHaveLength(0);
+
+      // No error should be thrown (no double-resolution)
+      // If there was a race condition, this test would fail with:
+      // "Error: Promise already resolved"
+    });
+
+    it("should handle timeout winning the race condition", async () => {
+      const { enqueue, dequeue } = useStore.getState();
+
+      const promise = enqueue({
+        type: "confirm",
+        payload: { action: "Delete file" },
+        timeout: 1000,
+      });
+
+      const modalId = useStore.getState().modalQueue[0].id;
+
+      // Let timeout fire first
+      vi.advanceTimersByTime(1000);
+
+      // Try to dequeue after timeout - should be no-op
+      dequeue(modalId, { type: "confirm", confirmed: true, cancelled: false });
+
+      // Promise should resolve with timeout default (not confirmed)
+      const result = await promise;
+      expect(result).toEqual({ type: "confirm", confirmed: false, cancelled: true });
+
+      // Queue should be empty (timeout already removed it)
+      expect(useStore.getState().modalQueue).toHaveLength(0);
     });
   });
 

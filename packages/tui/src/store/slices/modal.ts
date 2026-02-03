@@ -71,6 +71,7 @@ export const createModalSlice: StateCreator<Store, [], [], ModalSlice> = (
     return new Promise<ModalResponse>((resolve, reject) => {
       const id = nanoid();
       let timeoutId: NodeJS.Timeout | undefined;
+      let completed = false;
 
       const cleanup = (): void => {
         if (timeoutId) {
@@ -78,13 +79,17 @@ export const createModalSlice: StateCreator<Store, [], [], ModalSlice> = (
         }
       };
 
-      // Wrapped resolve/reject that clean up timeout
+      // Wrapped resolve/reject that prevent double-resolution
       const wrappedResolve = (response: ModalResponse): void => {
+        if (completed) return;
+        completed = true;
         cleanup();
         resolve(response);
       };
 
       const wrappedReject = (error: Error): void => {
+        if (completed) return;
+        completed = true;
         cleanup();
         reject(error);
       };
@@ -100,14 +105,14 @@ export const createModalSlice: StateCreator<Store, [], [], ModalSlice> = (
           // Return default or cancel based on modal type
           if (request.type === "confirm") {
             // Confirm modals default to "not confirmed" on timeout
-            resolve({ type: "confirm", confirmed: false, cancelled: true });
+            wrappedResolve({ type: "confirm", confirmed: false, cancelled: true });
           } else if (request.type === "ask" && (request.payload as AskPayload).defaultValue) {
             // Ask modals return default value if provided
             const payload = request.payload as AskPayload;
-            resolve({ type: "ask", value: payload.defaultValue! });
+            wrappedResolve({ type: "ask", value: payload.defaultValue! });
           } else {
             // Other modals reject on timeout
-            reject(new Error(`Modal timeout after ${request.timeout}ms`));
+            wrappedReject(new Error(`Modal timeout after ${request.timeout}ms`));
           }
         }, request.timeout);
       }
