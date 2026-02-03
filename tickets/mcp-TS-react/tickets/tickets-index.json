@@ -89,7 +89,7 @@
     {
       "id": "TUI-004",
       "title": "Basic App Shell & Ink Layout Spike",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "dependencies": [
         "TUI-003"
@@ -99,7 +99,7 @@
     {
       "id": "TUI-005",
       "title": "Zustand Store Foundation",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "dependencies": [
         "TUI-004"
@@ -109,7 +109,7 @@
     {
       "id": "TUI-006",
       "title": "Modal Queue with Promise Resolution",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "dependencies": [
         "TUI-005"
@@ -119,7 +119,7 @@
     {
       "id": "TUI-007",
       "title": "Layout & Banner Components",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "dependencies": [
         "TUI-005"
