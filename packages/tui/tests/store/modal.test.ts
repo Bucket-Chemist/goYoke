@@ -382,6 +382,29 @@ describe("Modal Slice", () => {
       const result = await promise;
       expect(result).toEqual({ type: "ask", value: "Answer" });
     });
+
+    it("should handle negative timeout (no timeout)", async () => {
+      const { enqueue, dequeue } = useStore.getState();
+
+      const promise = enqueue({
+        type: "ask",
+        payload: { message: "No timeout with negative value" },
+        timeout: -1000,
+      });
+
+      const modalId = useStore.getState().modalQueue[0].id;
+
+      // Advance time arbitrarily - should never timeout
+      vi.advanceTimersByTime(999999);
+
+      expect(useStore.getState().modalQueue).toHaveLength(1);
+
+      // Manual dequeue should still work
+      dequeue(modalId, { type: "ask", value: "Answer" });
+
+      const result = await promise;
+      expect(result).toEqual({ type: "ask", value: "Answer" });
+    });
   });
 
   describe("queue behavior", () => {

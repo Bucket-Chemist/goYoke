@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.tsx",
-    "build": "esbuild src/index.tsx --bundle --platform=node --target=node22 --outfile=dist/index.js --external:react-devtools-core --format=esm",
+    "build": "esbuild src/index.tsx --bundle --platform=node --target=node22 --outfile=dist/index.js --external:react-devtools-core --format=esm --banner:js='#!/usr/bin/env node'",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
@@ -16,27 +16,28 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.0",
-    "ink": "^5.0.0",
-    "ink-text-input": "^6.0.0",
-    "ink-select-input": "^6.0.0",
-    "ink-spinner": "^5.0.0",
-    "react": "^18.3.0",
-    "zustand": "^5.0.0",
-    "zod": "^3.23.0",
     "chokidar": "^4.0.0",
     "commander": "^12.0.0",
+    "ink": "^5.0.0",
+    "ink-select-input": "^6.0.0",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
     "marked": "^15.0.0",
-    "marked-terminal": "^7.0.0"
+    "marked-terminal": "^7.0.0",
+    "nanoid": "^5.1.6",
+    "react": "^18.3.0",
+    "zod": "^3.23.0",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
     "esbuild": "^0.24.0",
+    "eslint": "^9.0.0",
+    "ink-testing-library": "^4.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.0.0",
-    "eslint": "^9.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "ink-testing-library": "^4.0.0"
+    "vitest": "^2.0.0"
   }
 }

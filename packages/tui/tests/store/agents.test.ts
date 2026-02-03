@@ -23,7 +23,7 @@ describe("Agents Slice", () => {
         status: "running",
       });
 
-      const agent = useStore.getState().agents.get("agent-1");
+      const agent = useStore.getState().agents["agent-1"];
       expect(agent).toBeDefined();
       expect(agent?.startTime).toBeGreaterThan(0);
       expect(agent?.model).toBe("claude-3-5-sonnet");
@@ -80,8 +80,8 @@ describe("Agents Slice", () => {
       });
 
       const { agents } = useStore.getState();
-      expect(agents.size).toBe(2);
-      expect(agents.get("agent-2")?.parentId).toBe("agent-1");
+      expect(Object.keys(agents).length).toBe(2);
+      expect(agents["agent-2"]?.parentId).toBe("agent-1");
     });
   });
 
@@ -97,7 +97,7 @@ describe("Agents Slice", () => {
 
       useStore.getState().updateAgent("agent-1", { status: "complete", endTime: Date.now() });
 
-      const agent = useStore.getState().agents.get("agent-1");
+      const agent = useStore.getState().agents["agent-1"];
       expect(agent?.status).toBe("complete");
       expect(agent?.endTime).toBeDefined();
     });
@@ -115,14 +115,14 @@ describe("Agents Slice", () => {
         tokenUsage: { input: 1000, output: 500 },
       });
 
-      const agent = useStore.getState().agents.get("agent-1");
+      const agent = useStore.getState().agents["agent-1"];
       expect(agent?.tokenUsage).toEqual({ input: 1000, output: 500 });
     });
 
     it("should handle non-existent agent gracefully", () => {
       useStore.getState().updateAgent("non-existent", { status: "complete" });
 
-      expect(useStore.getState().agents.size).toBe(0);
+      expect(Object.keys(useStore.getState().agents).length).toBe(0);
     });
 
     it("should preserve other agent properties on partial update", () => {
@@ -137,7 +137,7 @@ describe("Agents Slice", () => {
 
       useStore.getState().updateAgent("agent-1", { status: "complete" });
 
-      const agent = useStore.getState().agents.get("agent-1");
+      const agent = useStore.getState().agents["agent-1"];
       expect(agent?.description).toBe("Test agent");
       expect(agent?.model).toBe("claude-sonnet");
       expect(agent?.status).toBe("complete");
@@ -237,7 +237,7 @@ describe("Agents Slice", () => {
       useStore.getState().clearAgents();
 
       const state = useStore.getState();
-      expect(state.agents.size).toBe(0);
+      expect(Object.keys(state.agents).length).toBe(0);
       expect(state.selectedAgentId).toBeNull();
       expect(state.rootAgentId).toBeNull();
     });

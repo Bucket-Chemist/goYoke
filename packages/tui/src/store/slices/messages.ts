@@ -5,7 +5,7 @@
 
 import type { StateCreator } from "zustand";
 import type { Store, MessagesSlice, ContentBlock, Message } from "../types.js";
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 
 export const createMessagesSlice: StateCreator<
   Store,
@@ -21,7 +21,7 @@ export const createMessagesSlice: StateCreator<
         ...state.messages,
         {
           ...msg,
-          id: randomUUID(),
+          id: nanoid(),
           timestamp: Date.now(),
         },
       ],

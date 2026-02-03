@@ -76,7 +76,7 @@ export interface MessagesSlice {
 
 // Agents slice
 export interface AgentsSlice {
-  agents: Map<string, Agent>;
+  agents: Record<string, Agent>;
   selectedAgentId: string | null;
   rootAgentId: string | null;
   addAgent: (agent: Omit<Agent, "startTime">) => void;

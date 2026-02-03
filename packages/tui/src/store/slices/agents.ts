@@ -10,7 +10,7 @@ export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
   set,
   get
 ) => ({
-  agents: new Map(),
+  agents: {},
   selectedAgentId: null,
   rootAgentId: null,
 
@@ -21,8 +21,8 @@ export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
         startTime: Date.now(),
       };
 
-      const agents = new Map(state.agents);
-      agents.set(newAgent.id, newAgent);
+      const agents = { ...state.agents };
+      agents[newAgent.id] = newAgent;
 
       // Track root agent (first agent with no parent)
       const rootAgentId =
@@ -37,13 +37,13 @@ export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
 
   updateAgent: (id, data): void => {
     set((state) => {
-      const agent = state.agents.get(id);
+      const agent = state.agents[id];
       if (!agent) {
         return state;
       }
 
-      const agents = new Map(state.agents);
-      agents.set(id, { ...agent, ...data });
+      const agents = { ...state.agents };
+      agents[id] = { ...agent, ...data };
 
       return { agents };
     });
@@ -55,9 +55,15 @@ export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
 
   getAgentChildren: (id): Agent[] => {
     const agents = get().agents;
+
+    // Null safety: return empty array if parent doesn't exist
+    if (!(id in agents)) {
+      return [];
+    }
+
     const children: Agent[] = [];
 
-    agents.forEach((agent) => {
+    Object.values(agents).forEach((agent) => {
       if (agent.parentId === id) {
         children.push(agent);
       }
@@ -68,7 +74,7 @@ export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
 
   clearAgents: (): void => {
     set({
-      agents: new Map(),
+      agents: {},
       selectedAgentId: null,
       rootAgentId: null,
     });

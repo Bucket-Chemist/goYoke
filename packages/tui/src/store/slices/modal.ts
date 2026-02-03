@@ -5,7 +5,7 @@
 
 import type { StateCreator } from "zustand";
 import type { Store } from "../types.js";
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 
 // Payload types for different modal variants
 export interface AskPayload {
@@ -69,11 +69,11 @@ export const createModalSlice: StateCreator<Store, [], [], ModalSlice> = (
 
   enqueue: <T>(request: EnqueueRequest<T>): Promise<ModalResponse> => {
     return new Promise<ModalResponse>((resolve, reject) => {
-      const id = randomUUID();
+      const id = nanoid();
       let timeoutId: NodeJS.Timeout | undefined;
 
       // Set up optional timeout
-      if (request.timeout !== undefined && request.timeout > 0) {
+      if (request.timeout && request.timeout > 0) {
         timeoutId = setTimeout(() => {
           // Remove from queue and reject
           const queue = get().modalQueue;
