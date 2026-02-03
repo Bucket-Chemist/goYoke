@@ -129,13 +129,15 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		external := schema.Tiers["external"]
 		require.NotNil(t, external.Protocols, "External tier missing protocols")
 
-		scout := external.Protocols["scout"]
-		assert.Equal(t, "gemini-3-flash-preview", scout.Model)
-		assert.Equal(t, "json", scout.Output)
-
+		// Verify mapper protocol (Flash tier)
 		mapper := external.Protocols["mapper"]
 		assert.Equal(t, "gemini-3-flash-preview", mapper.Model)
 		assert.Equal(t, "json", mapper.Output)
+
+		// Verify architect protocol (Pro tier)
+		architect := external.Protocols["architect"]
+		assert.Equal(t, "gemini-3-pro-preview", architect.Model)
+		assert.Equal(t, "markdown", architect.Output)
 	})
 
 	// Verify meta_rules
