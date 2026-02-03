@@ -161,7 +161,7 @@
     {
       "id": "TUI-011",
       "title": "MCP Server with Tools",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 4,
       "dependencies": [
         "TUI-006"
