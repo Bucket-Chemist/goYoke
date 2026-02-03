@@ -1,0 +1,7 @@
+{
+  "id": "session-3",
+  "created_at": "2026-02-01T09:00:00Z",
+  "last_used": "2026-02-03T12:22:07.728Z",
+  "cost": 0.3,
+  "tool_calls": 30
+}

@@ -171,7 +171,7 @@
     {
       "id": "TUI-012",
       "title": "useClaudeQuery Hook",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "dependencies": [
         "TUI-011",
@@ -182,7 +182,7 @@
     {
       "id": "TUI-013",
       "title": "MCP Integration Testing",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "dependencies": [
         "TUI-012",
@@ -193,7 +193,7 @@
     {
       "id": "TUI-014",
       "title": "AgentTree Component",
-      "status": "pending",
+      "status": "completed",
       "phase": 5,
       "dependencies": [
         "TUI-005",
@@ -204,7 +204,7 @@
     {
       "id": "TUI-015",
       "title": "AgentDetail & Tree Navigation",
-      "status": "pending",
+      "status": "completed",
       "phase": 5,
       "dependencies": [
         "TUI-014"
@@ -214,7 +214,7 @@
     {
       "id": "TUI-016",
       "title": "Session Persistence",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "dependencies": [
         "TUI-005"
