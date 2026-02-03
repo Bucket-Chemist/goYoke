@@ -11,7 +11,7 @@ import (
 // TestSessionStart_Integration runs SessionStart with all fixture scenarios
 func TestSessionStart_Integration(t *testing.T) {
 	// Setup: Build binary if not present
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../bin/gogent-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-load-context binary not found. Run: go build -o cmd/gogent-load-context/gogent-load-context cmd/gogent-load-context/main.go")
 	}
@@ -81,7 +81,7 @@ func TestSessionStart_Integration(t *testing.T) {
 
 // TestSessionStart_LanguageDetection verifies Python/Go/R language detection
 func TestSessionStart_LanguageDetection(t *testing.T) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../bin/gogent-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-load-context binary not found")
 	}
@@ -171,7 +171,7 @@ func TestSessionStart_LanguageDetection(t *testing.T) {
 
 // TestSessionStart_ConventionLoading verifies conventions are injected into context
 func TestSessionStart_ConventionLoading(t *testing.T) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../bin/gogent-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-load-context binary not found")
 	}
@@ -242,7 +242,7 @@ func TestSessionStart_ConventionLoading(t *testing.T) {
 
 // TestSessionStart_HandoffInjection verifies last-handoff.md is injected if present
 func TestSessionStart_HandoffInjection(t *testing.T) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../bin/gogent-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-load-context binary not found")
 	}
@@ -318,7 +318,7 @@ func TestSessionStart_HandoffInjection(t *testing.T) {
 
 // TestSessionStart_RoutingSchemaLoad verifies routing schema is loaded and parsed
 func TestSessionStart_RoutingSchemaLoad(t *testing.T) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../bin/gogent-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-load-context binary not found")
 	}
@@ -331,16 +331,22 @@ func TestSessionStart_RoutingSchemaLoad(t *testing.T) {
 	os.MkdirAll(filepath.Dir(schemaPath), 0755)
 
 	schema := `{
-		"version": "1.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {
-				"tools_allowed": ["Read", "Glob", "Grep"],
-				"task_invocation_allowed": true
+				"model": "haiku",
+				"patterns": ["find"],
+				"tools": ["Read", "Glob", "Grep"]
 			},
 			"sonnet": {
-				"tools_allowed": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Task"],
-				"task_invocation_allowed": true
+				"model": "sonnet",
+				"patterns": ["implement"],
+				"tools": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Task"]
 			}
+		},
+		"tier_levels": {
+			"haiku": 1,
+			"sonnet": 3
 		},
 		"agent_subagent_mapping": {
 			"codebase-search": "Explore",
@@ -402,7 +408,7 @@ func TestSessionStart_RoutingSchemaLoad(t *testing.T) {
 
 // TestSessionStart_ErrorRecovery tests graceful fallback on errors
 func TestSessionStart_ErrorRecovery(t *testing.T) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../bin/gogent-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-load-context binary not found")
 	}
@@ -527,20 +533,29 @@ func setupTestSessionStartEnvironment(t *testing.T, projectDir string) {
 	// Create routing schema
 	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
 	schema := `{
-		"version": "1.0",
+		"version": "2.5.0",
 		"tiers": {
 			"haiku": {
-				"tools_allowed": ["Read", "Glob", "Grep"],
-				"task_invocation_allowed": true
+				"model": "haiku",
+				"patterns": ["find"],
+				"tools": ["Read", "Glob", "Grep"]
 			},
 			"sonnet": {
-				"tools_allowed": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Task"],
-				"task_invocation_allowed": true
+				"model": "sonnet",
+				"patterns": ["implement"],
+				"tools": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Task"]
 			},
 			"opus": {
-				"tools_allowed": ["*"],
+				"model": "opus",
+				"patterns": ["architect"],
+				"tools": ["*"],
 				"task_invocation_blocked": true
 			}
+		},
+		"tier_levels": {
+			"haiku": 1,
+			"sonnet": 3,
+			"opus": 4
 		},
 		"agent_subagent_mapping": {
 			"codebase-search": "Explore",

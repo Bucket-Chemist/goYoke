@@ -13,7 +13,7 @@ import (
 )
 
 func TestSessionArchive_Integration(t *testing.T) {
-	binaryPath := "../../cmd/gogent-archive/gogent-archive"
+	binaryPath := "../../bin/gogent-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-archive binary not found. Run: go build -o cmd/gogent-archive/gogent-archive cmd/gogent-archive/main.go")
 	}
@@ -93,7 +93,7 @@ func TestSessionArchive_Integration(t *testing.T) {
 }
 
 func TestSessionArchive_MetricsCollection(t *testing.T) {
-	binaryPath := "../../cmd/gogent-archive/gogent-archive"
+	binaryPath := "../../bin/gogent-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-archive binary not found")
 	}
@@ -178,7 +178,7 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 }
 
 func TestSessionArchive_FileArchival(t *testing.T) {
-	binaryPath := "../../cmd/gogent-archive/gogent-archive"
+	binaryPath := "../../bin/gogent-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-archive binary not found")
 	}

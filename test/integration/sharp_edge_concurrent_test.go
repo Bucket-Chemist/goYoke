@@ -185,8 +185,8 @@ func TestStorage_LogRotation(t *testing.T) {
 	memory.DefaultStoragePath = trackerPath
 	defer func() { memory.DefaultStoragePath = originalPath }()
 
-	// Set very short time window
-	t.Setenv("GOGENT_FAILURE_WINDOW", "1") // 1 second
+	// Set short time window (long enough for test execution, short enough to filter old)
+	t.Setenv("GOGENT_FAILURE_WINDOW", "5") // 5 seconds
 
 	now := time.Now().Unix()
 	old := now - 10 // 10 seconds ago

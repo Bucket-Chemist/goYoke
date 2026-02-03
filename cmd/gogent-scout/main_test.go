@@ -305,70 +305,47 @@ func TestAtomicWrite(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
-// TestValidateGeminiOutput verifies Gemini output validation.
-func TestValidateGeminiOutput(t *testing.T) {
+// TestParseMapperOutput verifies mapper protocol output parsing.
+func TestParseMapperOutput(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
+		target  string
 		wantErr bool
 	}{
 		{
-			name: "valid output",
+			name: "valid mapper output",
 			input: `{
-				"schema_version": "1.0",
-				"scout_report": {
-					"backend": "gemini",
-					"target": "/test",
-					"timestamp": "2026-02-02T10:00:00Z",
-					"scope_metrics": {
-						"total_files": 10,
-						"total_lines": 1000,
-						"estimated_tokens": 10000,
-						"languages": ["go"],
-						"file_types": {".go": 10}
-					},
-					"complexity_signals": {
-						"available": true,
-						"import_density": "medium"
-					},
-					"routing_recommendation": {
-						"recommended_tier": "sonnet",
-						"confidence": "high",
-						"reasoning": "Test"
-					},
-					"key_files": [],
-					"warnings": []
-				}
+				"summary": "Test project with moderate complexity",
+				"entry_points": [
+					{"file": "main.go", "line": 10, "description": "Main entry point"}
+				],
+				"core_logic": [
+					{"file": "handler.go", "line": 20, "description": "Request handler"}
+				],
+				"dependencies": ["encoding/json", "net/http", "context"],
+				"architectural_note": "Standard HTTP service pattern"
 			}`,
+			target:  "/test",
 			wantErr: false,
 		},
 		{
 			name:    "invalid JSON",
 			input:   `{invalid}`,
+			target:  "/test",
 			wantErr: true,
 		},
 		{
-			name: "missing scout_report",
-			input: `{
-				"schema_version": "1.0"
-			}`,
-			wantErr: true,
-		},
-		{
-			name: "missing scope_metrics",
-			input: `{
-				"schema_version": "1.0",
-				"scout_report": {
-					"routing_recommendation": {}
-				}
-			}`,
+			name:    "no JSON in output",
+			input:   `plain text output`,
+			target:  "/test",
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			report, err := validateGeminiOutput([]byte(tt.input))
+			report, err := parseMapperOutput([]byte(tt.input), tt.target)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, report)
@@ -376,7 +353,12 @@ func TestValidateGeminiOutput(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, report)
 				assert.Equal(t, "gemini", report.Backend)
+				assert.Equal(t, tt.target, report.Target)
 				assert.True(t, report.ComplexitySignals.Available)
+				assert.NotNil(t, report.ComplexitySignals.CrossFileDependencies)
+				assert.Equal(t, 3, *report.ComplexitySignals.CrossFileDependencies)
+				assert.Equal(t, "low", *report.ComplexitySignals.ImportDensity)
+				assert.Equal(t, "haiku", report.RoutingRecommendation.RecommendedTier)
 			}
 		})
 	}

@@ -317,7 +317,6 @@ cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependenci
 | `mapper`    | JSON structure         | Reduce files to critical paths |
 | `debugger`  | Root cause analysis    | Cross-module error tracing     |
 | `architect` | Patterns/anti-patterns | Module review                  |
-| `scout`     | Scope metrics          | Pre-routing assessment         |
 
 ---
 
@@ -328,7 +327,7 @@ cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependenci
 For unknown scope:
 
 ```
-1. [SCOUTING] Spawn haiku-scout or gemini-slave scout
+1. [SCOUTING] Spawn haiku-scout (or gogent-scout for native metrics)
 2. Read .claude/tmp/scout_metrics.json
 3. Route based on recommended_tier
 4. Execute via appropriate agent

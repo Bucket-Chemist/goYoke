@@ -20,7 +20,7 @@ func TestRegression_ValidateRouting(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests (from GOgent-000)")
 	}
 
-	goBinary := "../../cmd/gogent-validate/gogent-validate"
+	goBinary := "../../bin/gogent-validate"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/validate-routing.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -101,7 +101,7 @@ func TestRegression_SessionArchive(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../cmd/gogent-archive/gogent-archive"
+	goBinary := "../../bin/gogent-archive"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/session-archive.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -187,7 +187,7 @@ func TestRegression_SharpEdgeDetector(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	goBinary := "../../bin/gogent-sharp-edge"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/sharp-edge-detector.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -251,7 +251,7 @@ func TestRegression_LoadContext(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../cmd/gogent-load-context/gogent-load-context"
+	goBinary := "../../bin/gogent-load-context"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/load-routing-context.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -338,7 +338,7 @@ func TestRegression_AgentEndstate(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	goBinary := "../../bin/gogent-agent-endstate"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/agent-endstate.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {

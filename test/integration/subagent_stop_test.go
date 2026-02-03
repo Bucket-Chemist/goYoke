@@ -42,7 +42,7 @@ type CollaborationUpdate struct {
 
 // TestSubagentStop_Integration verifies complete SubagentStop workflow across various agent scenarios
 func TestSubagentStop_Integration(t *testing.T) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../bin/gogent-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-agent-endstate binary not found. Run: go build -o cmd/gogent-agent-endstate/gogent-agent-endstate cmd/gogent-agent-endstate/main.go")
 	}
@@ -152,7 +152,7 @@ func TestSubagentStop_Integration(t *testing.T) {
 
 // TestSubagentStop_MLOutcomeLogging verifies routing-decision-updates.jsonl contains complete outcome data
 func TestSubagentStop_MLOutcomeLogging(t *testing.T) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../bin/gogent-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-agent-endstate binary not found")
 	}
@@ -213,7 +213,7 @@ func TestSubagentStop_MLOutcomeLogging(t *testing.T) {
 
 // TestSubagentStop_CollaborationUpdates verifies agent-collaboration-updates.jsonl tracks agent interactions
 func TestSubagentStop_CollaborationUpdates(t *testing.T) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../bin/gogent-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-agent-endstate binary not found")
 	}
@@ -298,7 +298,7 @@ func TestSubagentStop_CollaborationUpdates(t *testing.T) {
 
 // TestSubagentStop_DecisionCorrelation verifies agent events are logged with unique identifiers
 func TestSubagentStop_DecisionCorrelation(t *testing.T) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../bin/gogent-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-agent-endstate binary not found")
 	}
@@ -375,7 +375,7 @@ func TestSubagentStop_DecisionCorrelation(t *testing.T) {
 
 // TestSubagentStop_ParallelAgentCompletion verifies 5 agents completing in parallel without race conditions
 func TestSubagentStop_ParallelAgentCompletion(t *testing.T) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../bin/gogent-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-agent-endstate binary not found")
 	}
@@ -483,7 +483,7 @@ func TestSubagentStop_ParallelAgentCompletion(t *testing.T) {
 
 // TestSubagentStop_TierSpecificPrompts verifies tier-specific prompt generation for haiku, sonnet, and orchestrator
 func TestSubagentStop_TierSpecificPrompts(t *testing.T) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../bin/gogent-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-agent-endstate binary not found")
 	}

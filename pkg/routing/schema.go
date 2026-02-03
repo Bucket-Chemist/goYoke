@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -344,17 +345,28 @@ type DocumentationTheater struct {
 func LoadSchema() (*Schema, error) {
 	schemaPath := os.Getenv("GOGENT_ROUTING_SCHEMA")
 
-	// Fall back to XDG default if env var not set
+	// If explicit path not set, try project-specific or XDG default
 	if schemaPath == "" {
-		configHome := os.Getenv("XDG_CONFIG_HOME")
-		if configHome == "" {
-			home := os.Getenv("HOME")
-			if home == "" {
-				return nil, fmt.Errorf("[routing] HOME environment variable not set")
+		// Priority 1: GOGENT_PROJECT_DIR (test isolation)
+		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+			path := filepath.Join(projectDir, ".claude", "routing-schema.json")
+			if _, err := os.Stat(path); err == nil {
+				schemaPath = path
 			}
-			configHome = home + "/.config"
 		}
-		schemaPath = configHome + "/../.claude/routing-schema.json"
+
+		// Priority 2: XDG default
+		if schemaPath == "" {
+			configHome := os.Getenv("XDG_CONFIG_HOME")
+			if configHome == "" {
+				home := os.Getenv("HOME")
+				if home == "" {
+					return nil, fmt.Errorf("[routing] HOME environment variable not set")
+				}
+				configHome = filepath.Join(home, ".config")
+			}
+			schemaPath = filepath.Join(configHome, "..", ".claude", "routing-schema.json")
+		}
 	}
 
 	data, err := os.ReadFile(schemaPath)

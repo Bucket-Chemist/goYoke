@@ -37,6 +37,29 @@ func ArchiveArtifacts(cfg HandoffConfig, sessionID string) error {
 		}
 	}
 
+	// GOgent-011: Also cleanup global violations log to maintain sync
+	globalViolations := config.GetViolationsLogPath()
+	if _, err := os.Stat(globalViolations); err == nil {
+		// If project-scoped was missing, archive global one instead
+		projectViolationsArchived := false
+		if violationsPath != "" {
+			destPath := filepath.Join(archiveDir, fmt.Sprintf("routing-violations-%s.jsonl", sessionID))
+			if _, err := os.Stat(destPath); err == nil {
+				projectViolationsArchived = true
+			}
+		}
+
+		if !projectViolationsArchived {
+			destPath := filepath.Join(archiveDir, fmt.Sprintf("routing-violations-%s.jsonl", sessionID))
+			if err := moveFile(globalViolations, destPath); err != nil {
+				fmt.Fprintf(os.Stderr, "[session-archive] Warning: Failed to move global violations: %v\n", err)
+			}
+		} else {
+			// Already archived from project-scoped, just delete global
+			os.Remove(globalViolations)
+		}
+	}
+
 	// Copy transcript if available (optional)
 	if cfg.TranscriptPath != "" {
 		if _, err := os.Stat(cfg.TranscriptPath); err == nil {

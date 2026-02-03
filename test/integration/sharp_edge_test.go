@@ -396,7 +396,7 @@ func TestWorkflow_ClearAfterResolution(t *testing.T) {
 // ============================================================================
 
 func TestSharpEdge_Integration(t *testing.T) {
-	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	binaryPath := "../../bin/gogent-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-sharp-edge binary not found. Run: go build -o cmd/gogent-sharp-edge/gogent-sharp-edge cmd/gogent-sharp-edge/main.go")
 	}
@@ -487,7 +487,7 @@ func TestSharpEdge_Integration(t *testing.T) {
 }
 
 func TestSharpEdge_FailureDetection(t *testing.T) {
-	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	binaryPath := "../../bin/gogent-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-sharp-edge binary not found")
 	}
@@ -576,7 +576,7 @@ func TestSharpEdge_FailureDetection(t *testing.T) {
 }
 
 func TestSharpEdge_SlidingWindow(t *testing.T) {
-	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	binaryPath := "../../bin/gogent-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-sharp-edge binary not found")
 	}
@@ -629,7 +629,7 @@ func TestSharpEdge_SlidingWindow(t *testing.T) {
 }
 
 func TestSharpEdge_PerFileTracking(t *testing.T) {
-	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	binaryPath := "../../bin/gogent-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-sharp-edge binary not found")
 	}
@@ -676,7 +676,7 @@ func TestSharpEdge_PerFileTracking(t *testing.T) {
 }
 
 func TestSharpEdge_MLTelemetryFields(t *testing.T) {
-	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	binaryPath := "../../bin/gogent-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-sharp-edge binary not found")
 	}
@@ -736,7 +736,7 @@ func TestSharpEdge_MLTelemetryFields(t *testing.T) {
 }
 
 func TestSharpEdge_DecisionCorrelation(t *testing.T) {
-	binaryPath := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	binaryPath := "../../bin/gogent-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
 		t.Skip("gogent-sharp-edge binary not found")
 	}

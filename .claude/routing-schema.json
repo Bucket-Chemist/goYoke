@@ -104,12 +104,11 @@
       "patterns": [
         "large context", "entire codebase", "full module",
         "10+ files", "cross-module trace", "architectural review",
-        "map the codebase", "trace through", "assess scope"
+        "map the codebase", "trace through"
       ],
       "tools": ["Bash"],
       "invocation": "cat [files] | gemini-slave [protocol] \"[instruction]\"",
       "protocols": {
-        "scout": {"model": "gemini-3-flash-preview", "output": "json"},
         "mapper": {"model": "gemini-3-flash-preview", "output": "json"},
         "debugger": {"model": "gemini-3-pro-preview", "output": "markdown"},
         "architect": {"model": "gemini-3-pro-preview", "output": "markdown"},
@@ -150,21 +149,11 @@
   },
 
   "scout_protocol": {
-    "description": "Pre-routing reconnaissance via unified gogent-scout binary",
+    "description": "Pre-routing reconnaissance via native Go gogent-scout binary only",
     "primary": "gogent-scout",
-    "backends": {
-      "native": {
-        "threshold_score": 40,
-        "capabilities": ["file_count", "line_count", "language_detection", "test_detection"],
-        "latency_target_ms": 100
-      },
-      "gemini": {
-        "min_score": 40,
-        "capabilities": ["import_analysis", "dependency_graph", "semantic_complexity"],
-        "model": "gemini-3-flash-preview"
-      }
-    },
-    "fallback_chain": ["primary", "opposite", "synthetic"],
+    "backend": "native",
+    "capabilities": ["file_count", "line_count", "language_detection", "test_detection"],
+    "latency_target_ms": 100,
     "cost_per_call_estimate": 0.001,
     "invocation": "gogent-scout <target> \"<instruction>\"",
     "output_file": ".claude/tmp/scout_metrics.json",
@@ -184,7 +173,7 @@
       "Single file operation",
       "Trivial task (typo, config change)"
     ],
-    "deprecated": "Direct gemini-slave scout calls (use gogent-scout instead)"
+    "deprecated": "Direct gemini-slave scout calls (use gogent-scout instead). Gemini backends removed from scout_protocol."
   },
   
   "escalation_paths": {

@@ -33,7 +33,7 @@ func TestMLTelemetry_RoutingDecisionCapture(t *testing.T) {
 	}
 
 	// Run events through telemetry system
-	results, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+	results, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 	}
 
 	// First batch
-	results1, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+	results1, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("First batch failed: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 	}
 
 	// Run second batch
-	results2, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+	results2, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Second batch failed: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestMLTelemetry_ConcurrentWrites(t *testing.T) {
 				return
 			}
 
-			_, err = harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+			_, err = harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
 			if err != nil {
 				errors <- fmt.Errorf("hook batch failed for agent %d: %v", agentID, err)
 				return
@@ -282,7 +282,7 @@ func TestMLTelemetry_CollaborationTracking(t *testing.T) {
 	}
 
 	// Run events
-	_, err = harness.RunHookBatch("../../cmd/gogent-agent-endstate/gogent-agent-endstate", "SubagentStop")
+	_, err = harness.RunHookBatch("../../bin/gogent-agent-endstate", "SubagentStop")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -361,7 +361,7 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 	}
 
 	// Populate telemetry files (PreToolUse creates routing decisions)
-	if _, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse"); err != nil {
+	if _, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse"); err != nil {
 		t.Fatalf("Failed to populate telemetry: %v", err)
 	}
 
@@ -504,7 +504,7 @@ func TestMLTelemetry_RaceConditionDetection(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+			_, _ = harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
 		}()
 	}
 
@@ -531,7 +531,7 @@ func TestMLTelemetry_SequenceIntegrity(t *testing.T) {
 		t.Fatalf("Failed to load corpus: %v", err)
 	}
 
-	results, err := harness.RunHookBatch("../../cmd/gogent-validate/gogent-validate", "PreToolUse")
+	results, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -579,6 +579,38 @@ func setupMLTelemetryProject(t *testing.T, projectDir string) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatalf("Failed to create directory %s: %v", dir, err)
 		}
+	}
+
+	// Create minimal routing schema for validation
+	schema := `{
+		"version": "2.5.0",
+		"tiers": {
+			"haiku": {
+				"model": "haiku",
+				"patterns": ["find"],
+				"tools": ["Read", "Glob", "Grep"]
+			},
+			"sonnet": {
+				"model": "sonnet",
+				"patterns": ["implement"],
+				"tools": ["Read", "Glob", "Grep", "Edit", "Write", "Bash", "Task"]
+			}
+		},
+		"tier_levels": {
+			"haiku": 1,
+			"sonnet": 3
+		},
+		"agent_subagent_mapping": {
+			"codebase-search": "Explore",
+			"python-pro": "general-purpose",
+			"librarian": "Explore",
+			"go-pro": "general-purpose",
+			"orchestrator": "Plan"
+		}
+	}`
+	schemaPath := filepath.Join(projectDir, ".claude", "routing-schema.json")
+	if err := os.WriteFile(schemaPath, []byte(schema), 0644); err != nil {
+		t.Fatalf("Failed to create routing schema: %v", err)
 	}
 }
 

@@ -15,28 +15,33 @@ func setupTestRoutingSchema(t *testing.T, projectDir string) {
 	os.MkdirAll(schemaDir, 0755)
 
 	schema := `{
+  "version": "2.5.0",
   "tiers": {
     "haiku": {
       "model": "claude-3-haiku",
       "thinking_budget": 0,
-      "allowed_tools": ["Read", "Glob", "Grep"]
+      "patterns": ["find"],
+      "tools": ["Read", "Glob", "Grep"]
     },
     "sonnet": {
       "model": "claude-3.5-sonnet",
       "thinking_budget": 10000,
-      "allowed_tools": ["Read", "Write", "Edit", "Bash", "Task"]
+      "patterns": ["implement"],
+      "tools": ["Read", "Write", "Edit", "Bash", "Task"]
     },
     "opus": {
       "model": "claude-opus-4.5",
       "thinking_budget": 16000,
+      "patterns": ["architect"],
+      "tools": ["*"],
       "task_invocation_blocked": true,
       "blocked_reason": "60K+ token inheritance overhead"
     }
   },
   "tier_levels": {
-    "haiku": 10,
-    "sonnet": 20,
-    "opus": 30
+    "haiku": 1,
+    "sonnet": 3,
+    "opus": 4
   },
   "agent_subagent_mapping": {
     "python-pro": "general-purpose",
@@ -56,9 +61,9 @@ func setupTestRoutingSchema(t *testing.T, projectDir string) {
 
 // TestEndToEnd_FullMLPipeline tests complete lifecycle with ML reconciliation
 func TestEndToEnd_FullMLPipeline(t *testing.T) {
-	validateBinary := "../../cmd/gogent-validate/gogent-validate"
-	sharpEdgeBinary := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
-	archiveBinary := "../../cmd/gogent-archive/gogent-archive"
+	validateBinary := "../../bin/gogent-validate"
+	sharpEdgeBinary := "../../bin/gogent-sharp-edge"
+	archiveBinary := "../../bin/gogent-archive"
 
 	if _, err := os.Stat(validateBinary); err != nil {
 		t.Skip("gogent-validate binary not found")
@@ -300,7 +305,7 @@ func TestEndToEnd_FullMLPipeline(t *testing.T) {
 
 //TestEndToEnd_SessionStartToValidate tests context injection at session start
 func TestEndToEnd_SessionStartToValidate(t *testing.T) {
-	validateBinary := "../../cmd/gogent-validate/gogent-validate"
+	validateBinary := "../../bin/gogent-validate"
 	if _, err := os.Stat(validateBinary); err != nil {
 		t.Skip("gogent-validate binary not found")
 	}
@@ -384,7 +389,7 @@ func TestEndToEnd_SessionStartToValidate(t *testing.T) {
 
 // TestEndToEnd_SubagentStopToArchive tests collaboration tracking through archival
 func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
-	archiveBinary := "../../cmd/gogent-archive/gogent-archive"
+	archiveBinary := "../../bin/gogent-archive"
 	if _, err := os.Stat(archiveBinary); err != nil {
 		t.Skip("gogent-archive binary not found")
 	}
@@ -485,8 +490,8 @@ func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
 
 // TestEndToEnd_ValidationToSharpEdge tests validation failure → sharp edge capture
 func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
-	validateBinary := "../../cmd/gogent-validate/gogent-validate"
-	sharpEdgeBinary := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
+	validateBinary := "../../bin/gogent-validate"
+	sharpEdgeBinary := "../../bin/gogent-sharp-edge"
 
 	if _, err := os.Stat(validateBinary); err != nil {
 		t.Skip("gogent-validate binary not found")
@@ -605,9 +610,9 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 
 // TestEndToEnd_SessionArchivalWorkflow tests complete session lifecycle  
 func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
-	validateBinary := "../../cmd/gogent-validate/gogent-validate"
-	sharpEdgeBinary := "../../cmd/gogent-sharp-edge/gogent-sharp-edge"
-	archiveBinary := "../../cmd/gogent-archive/gogent-archive"
+	validateBinary := "../../bin/gogent-validate"
+	sharpEdgeBinary := "../../bin/gogent-sharp-edge"
+	archiveBinary := "../../bin/gogent-archive"
 
 	if _, err := os.Stat(validateBinary); err != nil {
 		t.Skip("gogent-validate binary not found")
@@ -806,7 +811,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 
 // TestEndToEnd_MultiSessionHandoff tests handoff continuity across sessions
 func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
-	archiveBinary := "../../cmd/gogent-archive/gogent-archive"
+	archiveBinary := "../../bin/gogent-archive"
 	if _, err := os.Stat(archiveBinary); err != nil {
 		t.Skip("gogent-archive binary not found")
 	}

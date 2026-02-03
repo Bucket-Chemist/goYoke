@@ -667,8 +667,8 @@
       "id": "gogent-scout",
       "parallelization_template": "A",
       "name": "GOgent Smart Scout",
-      "model": "hybrid",
-      "tier": "hybrid",
+      "model": "gemini-3-flash-preview",
+      "tier": "external",
       "category": "reconnaissance",
       "path": "cmd/gogent-scout",
       "triggers": [

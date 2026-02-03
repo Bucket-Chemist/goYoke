@@ -7,7 +7,7 @@ description: >
 
 model: external # Not Claude - uses Gemini 3 via CLI
 model_routing:
-  flash: ["scout", "mapper"]           # gemini-3-flash-preview
+  flash: ["mapper", "memory-drift", "benchmark-score", "deps", "api-surface"]  # gemini-3-flash-preview
   pro: ["architect", "debugger", "memory-audit", "benchmark-audit"]  # gemini-3-pro-preview
 
 triggers:
@@ -23,18 +23,23 @@ triggers:
   - "entire module"
   - "large context"
   - "cross-module"
+  - "dependency graph"
+  - "what depends on"
+  - "public API"
+  - "exported functions"
+  - "API surface"
 
 protocols:
   mapper:
     description: "Rapidly map unknown codebases to identify relevant files"
     input: "Large file lists (find output)"
-    output: "JSON with entry_points, core_logic, dependencies"
+    output: "JSON with summary, entry_points, core_logic, dependencies"
     when: "Need to reduce 100 files to 5 critical ones"
     constraints:
-      - "Return ONLY the top 5-10 most relevant files."
-      - "Briefly explain 'why' for each file (1 sentence)."
-      - "Do NOT list the entire file tree."
-      - "JSON format: { relevant_files: [{ path, reason }] }"
+      - "Limit lists to the top 5 most relevant items."
+      - "Provide entry points with file, line, and description."
+      - "Core logic items must include file, line, and description (max 5)."
+      - "List external module dependencies."
 
   debugger:
     description: "Trace errors across deep call stacks and multiple modules"
@@ -69,8 +74,48 @@ protocols:
       - "Group findings by Agent/Domain (e.g., Python, R, General)."
       - "Output MUST be consumable by 'orchestrator' agent for synthesis."
 
+  memory-drift:
+    description: "Quick drift detection between memory and config"
+    input: "Memory files + agent configs + routing schema"
+    output: "JSON with drift_level, gaps, conflicts, priority_actions"
+    when: "Routine drift checks, CI/CD validation"
+    constraints:
+      - "Maximum 5 items per array"
+      - "Focus on HIGH severity only"
+      - "Target response time: <5 seconds"
+
+  benchmark-score:
+    description: "Quick pass/fail scoring of benchmark runs"
+    input: "Suite definition + run summary + per-prompt metrics"
+    output: "JSON with score, status, critical_violations"
+    when: "CI/CD checks, quick status, automated gates"
+    constraints:
+      - "Maximum 5 critical violations"
+      - "Target response time: <3 seconds"
+
+  deps:
+    description: "Extract dependency graph from source files"
+    input: "Source code files"
+    output: "JSON with internal_deps, external_deps, circular_deps, metrics"
+    when: "Dependency visualization, migration planning, architecture review"
+    constraints:
+      - "Report only visible dependencies"
+      - "Flag circular dependencies"
+      - "Identify orphan files"
+
+  api-surface:
+    description: "Extract public API surface from source files"
+    input: "Source code files"
+    output: "JSON with public_functions, public_classes, http_endpoints, constants"
+    when: "API documentation, migration planning, compatibility checks"
+    constraints:
+      - "Only public/exported symbols"
+      - "Include type signatures"
+      - "Detect HTTP endpoints"
+
 invocation: |
   # NOT via Task tool - use Bash directly:
+  # ALL protocols expect file CONTENT via stdin, NOT file paths
   cat $FILES | gemini-slave <protocol> "<instruction>"
 
 tools:
@@ -108,8 +153,29 @@ You are orchestrating the **Gemini Slave** - a headless, large-context subagent 
 FILES=$(find src/module -name "*.py")
 
 # Step 2: Invoke with protocol
+# IMPORTANT: Pipe file CONTENT via stdin, NOT paths
 cat $FILES | gemini-slave <protocol> "<instruction>"
 ```
+
+## Correct Invocation: File Content vs File Paths
+
+**All gemini-slave protocols expect FILE CONTENT via stdin.**
+
+```bash
+# ✅ CORRECT: Pipe file content
+cat src/auth/*.py | gemini-slave mapper "Find authentication entry points"
+
+# ✅ CORRECT: Use find with -exec to get content
+find src -name "*.go" -exec cat {} \; | gemini-slave architect "Review module design"
+
+# ❌ WRONG: Piping file paths (not content)
+find src -name "*.py" | gemini-slave mapper "..."  # Empty input!
+
+# ❌ WRONG: Passing paths as arguments
+gemini-slave mapper src/file1.py src/file2.py "..."  # Not supported
+```
+
+The wrapper reads file contents from stdin and passes them to the Gemini backend for analysis.
 
 ## Protocol Reference
 
@@ -136,6 +202,40 @@ cat src/auth/**/*.py | gemini-slave architect "Document the authentication modul
 ```
 
 **Output:** Markdown with design patterns, anti-patterns, coupling matrix
+
+## HOME Override for Config Isolation
+
+Gemini Slave respects the `HOME` environment variable for configuration isolation. This allows you to use different config files for different analysis contexts:
+
+```bash
+# Use custom config for this analysis
+HOME=/tmp/gemini-slave-context cat files | gemini-slave mapper "instruction"
+
+# Use default config
+cat files | gemini-slave mapper "instruction"
+```
+
+**Why this matters:**
+
+- Gemini Slave reads credentials from `$HOME/.config/gemini-slave/`
+- Reads cache from `$HOME/.cache/gemini-slave/`
+- By overriding HOME, you isolate auth and cache per context
+- Useful for: testing, CI/CD, multi-tenant scenarios, credential rotation
+
+**Example CI/CD usage:**
+
+```bash
+# Ephemeral config directory for this build
+export HOME=$(mktemp -d)
+trap "rm -rf $HOME" EXIT
+
+# Configure credentials for this build
+mkdir -p $HOME/.config/gemini-slave/
+echo "GEMINI_API_KEY=..." > $HOME/.config/gemini-slave/credentials
+
+# Run analysis with isolated config
+cat src/**/*.py | gemini-slave architect "Code review"
+```
 
 ## 7-Section Prompt Structure (for orchestrator notes)
 

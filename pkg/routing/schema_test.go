@@ -130,11 +130,11 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		require.NotNil(t, external.Protocols, "External tier missing protocols")
 
 		scout := external.Protocols["scout"]
-		assert.Equal(t, "gemini-2.0-flash", scout.Model)
+		assert.Equal(t, "gemini-3-flash-preview", scout.Model)
 		assert.Equal(t, "json", scout.Output)
 
 		mapper := external.Protocols["mapper"]
-		assert.Equal(t, "gemini-2.0-pro", mapper.Model)
+		assert.Equal(t, "gemini-3-flash-preview", mapper.Model)
 		assert.Equal(t, "json", mapper.Output)
 	})
 

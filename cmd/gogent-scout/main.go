@@ -15,8 +15,6 @@ func main() {
 	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: gogent-scout <target> \"<instruction>\" [--output=<file>]\n")
 		fmt.Fprintf(os.Stderr, "\nEnvironment variables:\n")
-		fmt.Fprintf(os.Stderr, "  SCOUT_BACKEND=native|gemini  Force specific backend\n")
-		fmt.Fprintf(os.Stderr, "  SCOUT_THRESHOLD=N            Override routing threshold (default: 40)\n")
 		fmt.Fprintf(os.Stderr, "  SCOUT_OUTPUT=<file>          Output file path\n")
 		os.Exit(1)
 	}
@@ -48,10 +46,9 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Run scout with fallback chain
+	// Run native scout
 	report, err := runScout(target, instruction)
 	if err != nil {
-		// This should be rare - runScout includes synthetic fallback
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -88,66 +85,19 @@ func main() {
 	fmt.Println(string(data))
 }
 
-// runScout executes the scout with full fallback chain:
-// 1. Try primary backend (based on routing score)
-// 2. If primary fails, try opposite backend
-// 3. If both fail, generate synthetic report
+// runScout executes the native scout with synthetic fallback.
 func runScout(target, instruction string) (*ScoutReport, error) {
-	// 1. Select primary backend
-	backend, _ := selectBackend(target)
+	// Run native scout
+	scout := &NativeScout{Target: target, Instruction: instruction}
+	report, err := scout.Run()
 
-	var report *ScoutReport
-	var primaryErr, fallbackErr error
-
-	// 2. Try primary backend
-	switch backend {
-	case "native":
-		scout := &NativeScout{Target: target, Instruction: instruction}
-		report, primaryErr = scout.Run()
-
-	case "gemini":
-		report, primaryErr = delegateToGemini(target, instruction)
-	}
-
-	// 3. Primary succeeded
-	if primaryErr == nil {
+	if err == nil {
 		return report, nil
 	}
 
-	// 4. Try fallback (opposite backend)
-	log.Printf("Primary backend (%s) failed: %v, trying fallback", backend, primaryErr)
-
-	switch backend {
-	case "native":
-		// Native failed, try Gemini
-		report, fallbackErr = delegateToGemini(target, instruction)
-		if fallbackErr == nil {
-			if report.Warnings == nil {
-				report.Warnings = []string{}
-			}
-			report.Warnings = append(report.Warnings,
-				fmt.Sprintf("Native scout failed (%v), used Gemini", primaryErr))
-			return report, nil
-		}
-
-	case "gemini":
-		// Gemini failed, try native
-		scout := &NativeScout{Target: target, Instruction: instruction}
-		report, fallbackErr = scout.Run()
-		if fallbackErr == nil {
-			report.Backend = "native_fallback"
-			if report.Warnings == nil {
-				report.Warnings = []string{}
-			}
-			report.Warnings = append(report.Warnings,
-				fmt.Sprintf("Gemini scout failed (%v), used native", primaryErr))
-			return report, nil
-		}
-	}
-
-	// 5. Both failed - synthetic fallback (always succeeds)
-	log.Printf("Both backends failed, generating synthetic report")
-	return generateSyntheticReport(target, primaryErr, fallbackErr), nil
+	// Native failed - synthetic fallback (always succeeds)
+	log.Printf("Native scout failed: %v, generating synthetic report", err)
+	return generateSyntheticReport(target, err, nil), nil
 }
 
 // atomicWrite writes data to a file atomically using temp + rename.

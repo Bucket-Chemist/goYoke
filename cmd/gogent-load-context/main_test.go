@@ -95,12 +95,15 @@ func TestIntegration_ValidStartupSession(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	minimalSchema := `{
-		"schema_version": "1.0",
+		"version": "2.5.0",
 		"tiers": {
-			"haiku": {"model": "haiku"},
-			"sonnet": {"model": "sonnet"}
+			"haiku": {"model": "haiku", "patterns": ["find"], "tools": ["Read"]},
+			"sonnet": {"model": "sonnet", "patterns": ["implement"], "tools": ["Write"]}
 		},
-		"delegation_ceiling": {"default": "sonnet"},
+		"tier_levels": {
+			"haiku": 1,
+			"sonnet": 3
+		},
 		"agent_subagent_mapping": {},
 		"escalation_rules": {}
 	}`
@@ -157,7 +160,7 @@ func TestIntegration_ValidStartupSession(t *testing.T) {
 	}
 
 	// Verify routing info is included (either schema or default message)
-	if !strings.Contains(response.HookSpecificOutput.AdditionalContext, "routing schema") &&
+	if !strings.Contains(response.HookSpecificOutput.AdditionalContext, "ROUTING TIERS ACTIVE") &&
 		!strings.Contains(response.HookSpecificOutput.AdditionalContext, "No routing schema") {
 		t.Logf("Actual response:\n%s", response.HookSpecificOutput.AdditionalContext)
 		t.Error("Expected routing schema information in startup session")
@@ -176,9 +179,9 @@ func TestIntegration_ValidResumeSession(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	minimalSchema := `{
-		"schema_version": "1.0",
+		"version": "2.5.0",
 		"tiers": {},
-		"delegation_ceiling": {},
+		"tier_levels": {},
 		"agent_subagent_mapping": {},
 		"escalation_rules": {}
 	}`
@@ -361,7 +364,7 @@ func TestIntegration_PendingLearnings(t *testing.T) {
 	claudeDir := filepath.Join(tmpDir, ".claude")
 	os.MkdirAll(claudeDir, 0755)
 
-	minimalSchema := `{"schema_version":"1.0","tiers":{},"delegation_ceiling":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
+	minimalSchema := `{"version":"2.5.0","tiers":{},"tier_levels":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	// Setup project with pending learnings
@@ -428,7 +431,7 @@ func TestIntegration_GitInfoDetection(t *testing.T) {
 	claudeDir := filepath.Join(tmpDir, ".claude")
 	os.MkdirAll(claudeDir, 0755)
 
-	minimalSchema := `{"schema_version":"1.0","tiers":{},"delegation_ceiling":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
+	minimalSchema := `{"version":"2.5.0","tiers":{},"tier_levels":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	// Create fake git directory
@@ -499,7 +502,7 @@ func TestIntegration_WithCLAUDE_PROJECT_DIR(t *testing.T) {
 	claudeDir := filepath.Join(tmpDir, ".claude")
 	os.MkdirAll(claudeDir, 0755)
 
-	minimalSchema := `{"schema_version":"1.0","tiers":{},"delegation_ceiling":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
+	minimalSchema := `{"version":"2.5.0","tiers":{},"tier_levels":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	// Setup project directory
@@ -559,7 +562,7 @@ func TestIntegration_NoPendingLearnings(t *testing.T) {
 	claudeDir := filepath.Join(tmpDir, ".claude")
 	os.MkdirAll(claudeDir, 0755)
 
-	minimalSchema := `{"schema_version":"1.0","tiers":{},"delegation_ceiling":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
+	minimalSchema := `{"version":"2.5.0","tiers":{},"tier_levels":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	projectDir := t.TempDir()
@@ -616,7 +619,7 @@ func TestIntegration_WithToolCounterInitialization(t *testing.T) {
 	claudeDir := filepath.Join(tmpDir, ".claude")
 	os.MkdirAll(claudeDir, 0755)
 
-	minimalSchema := `{"schema_version":"1.0","tiers":{},"delegation_ceiling":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
+	minimalSchema := `{"version":"2.5.0","tiers":{},"tier_levels":{},"agent_subagent_mapping":{},"escalation_rules":{}}`
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	projectDir := t.TempDir()

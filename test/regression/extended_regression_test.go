@@ -20,7 +20,7 @@ func TestExtendedRegression_LoadContext(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests (from GOgent-000)")
 	}
 
-	goBinary := "../../cmd/gogent-load-context/gogent-load-context"
+	goBinary := "../../bin/gogent-load-context"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/load-routing-context.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -122,7 +122,7 @@ func TestExtendedRegression_AgentEndstate(t *testing.T) {
 		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	goBinary := "../../bin/gogent-agent-endstate"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/agent-endstate.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {

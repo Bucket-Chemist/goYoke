@@ -6,7 +6,7 @@ import "encoding/json"
 type ScoutReport struct {
 	SchemaVersion string `json:"schema_version"`
 
-	Backend   string `json:"backend"` // "native", "gemini", "native_fallback", "synthetic_fallback"
+	Backend   string `json:"backend"` // "native" or "synthetic_fallback"
 	Target    string `json:"target"`
 	Timestamp string `json:"timestamp"` // RFC3339 format
 
@@ -28,7 +28,7 @@ type ScopeMetrics struct {
 	FilesOver500Lines int            `json:"files_over_500_lines"`
 }
 
-// ComplexitySignals provides semantic analysis (Gemini only).
+// ComplexitySignals provides semantic analysis.
 type ComplexitySignals struct {
 	Available             bool    `json:"available"`
 	ImportDensity         *string `json:"import_density,omitempty"`          // "low", "medium", "high"
@@ -58,13 +58,6 @@ type FileInfo struct {
 	Lines    int
 	Language string
 	IsTest   bool
-}
-
-// GeminiScoutOutput wraps the Gemini-slave scout protocol output.
-// This matches the expected structure from gemini-slave.
-type GeminiScoutOutput struct {
-	SchemaVersion string       `json:"schema_version"`
-	ScoutReport   *ScoutReport `json:"scout_report"`
 }
 
 // MarshalJSON ensures consistent JSON output.

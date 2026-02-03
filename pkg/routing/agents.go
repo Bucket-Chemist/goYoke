@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 )
 
@@ -145,22 +146,33 @@ type Cleanup struct {
 }
 
 // LoadAgentIndex loads and validates agents-index.json.
-// Priority: GOGENT_AGENTS_INDEX env var > XDG config directory default.
+// Priority: GOGENT_AGENTS_INDEX env var > GOGENT_PROJECT_DIR > XDG config directory default.
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadAgentIndex() (*AgentIndex, error) {
 	agentIndexPath := os.Getenv("GOGENT_AGENTS_INDEX")
 
-	// Fall back to XDG default if env var not set
+	// If explicit path not set, try project-specific or XDG default
 	if agentIndexPath == "" {
-		configHome := os.Getenv("XDG_CONFIG_HOME")
-		if configHome == "" {
-			home := os.Getenv("HOME")
-			if home == "" {
-				return nil, fmt.Errorf("[routing] HOME environment variable not set")
+		// Priority 1: GOGENT_PROJECT_DIR (test isolation)
+		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+			path := filepath.Join(projectDir, ".claude", "agents", "agents-index.json")
+			if _, err := os.Stat(path); err == nil {
+				agentIndexPath = path
 			}
-			configHome = home + "/.config"
 		}
-		agentIndexPath = configHome + "/../.claude/agents/agents-index.json"
+
+		// Priority 2: XDG default
+		if agentIndexPath == "" {
+			configHome := os.Getenv("XDG_CONFIG_HOME")
+			if configHome == "" {
+				home := os.Getenv("HOME")
+				if home == "" {
+					return nil, fmt.Errorf("[routing] HOME environment variable not set")
+				}
+				configHome = filepath.Join(home, ".config")
+			}
+			agentIndexPath = filepath.Join(configHome, "..", ".claude", "agents", "agents-index.json")
+		}
 	}
 
 	data, err := os.ReadFile(agentIndexPath)

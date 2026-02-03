@@ -317,10 +317,10 @@ func TestSessionHandoffIntegration_ArtifactArchival(t *testing.T) {
 	// Should have learnings and violations archives
 	var hasLearnings, hasViolations bool
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), "learnings-") {
+		if strings.HasPrefix(entry.Name(), "pending-learnings-") {
 			hasLearnings = true
 		}
-		if strings.HasPrefix(entry.Name(), "violations-") {
+		if strings.HasPrefix(entry.Name(), "routing-violations-") {
 			hasViolations = true
 		}
 	}

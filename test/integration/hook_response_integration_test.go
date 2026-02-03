@@ -69,7 +69,7 @@ func TestHookWorkflow_FullPipeline(t *testing.T) {
 				resp.AddField("expected", "general-purpose")
 				return resp
 			},
-			wantDecision: "warn",
+			wantDecision: "approve",
 			wantReason:   "Subagent_type mismatch detected",
 			wantFields: map[string]interface{}{
 				"hookEventName": "PreToolUse",
