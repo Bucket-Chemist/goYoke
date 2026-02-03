@@ -1,19 +1,11 @@
+#!/usr/bin/env node
 import React from "react";
-import { render, Text, Box } from "ink";
+import { render } from "ink";
+import { App } from "./App.js";
 
 /**
  * GOfortress TUI Entry Point
- * Placeholder for initial TUI implementation
+ * Renders the main App component in the terminal
  */
-
-const App: React.FC = () => {
-  return (
-    <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">
-        GOfortress TUI - Under Development
-      </Text>
-    </Box>
-  );
-};
 
 render(<App />);
