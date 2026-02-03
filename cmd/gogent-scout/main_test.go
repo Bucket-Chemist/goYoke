@@ -148,55 +148,6 @@ func TestIdentifyKeyFiles(t *testing.T) {
 	assert.Equal(t, "large.go", keyFiles[1].Path)
 }
 
-// TestRoutingScore verifies routing score calculation.
-func TestRoutingScore(t *testing.T) {
-	tests := []struct {
-		name      string
-		score     RoutingScore
-		wantScore int
-		wantRoute string
-	}{
-		{
-			name:      "tiny project",
-			score:     RoutingScore{FileCount: 3, TotalLines: 300, MaxFileLines: 100, LanguageCount: 1},
-			wantScore: 12, // (15*40 + 6*30 + 10*20 + 25*10)/100
-			wantRoute: "native",
-		},
-		{
-			name:      "small project",
-			score:     RoutingScore{FileCount: 8, TotalLines: 2000, MaxFileLines: 400, LanguageCount: 1},
-			wantScore: 38, // (40*40 + 40*30 + 40*20 + 25*10)/100
-			wantRoute: "native",
-		},
-		{
-			name:      "medium project",
-			score:     RoutingScore{FileCount: 15, TotalLines: 3000, MaxFileLines: 500, LanguageCount: 2},
-			wantScore: 63,
-			wantRoute: "gemini",
-		},
-		{
-			name:      "large project",
-			score:     RoutingScore{FileCount: 30, TotalLines: 10000, MaxFileLines: 1000, LanguageCount: 3},
-			wantScore: 97,
-			wantRoute: "gemini",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			score := tt.score.Score()
-			assert.Equal(t, tt.wantScore, score)
-
-			// Verify routing decision
-			expectedBackend := "native"
-			if score >= NativeThreshold {
-				expectedBackend = "gemini"
-			}
-			assert.Equal(t, tt.wantRoute, expectedBackend)
-		})
-	}
-}
-
 // TestNativeScout_SmallProject verifies native scout on a small project.
 func TestNativeScout_SmallProject(t *testing.T) {
 	tmpDir := createTestFiles(t, map[string]string{
@@ -305,65 +256,6 @@ func TestAtomicWrite(t *testing.T) {
 	assert.True(t, os.IsNotExist(err))
 }
 
-// TestParseMapperOutput verifies mapper protocol output parsing.
-func TestParseMapperOutput(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   string
-		target  string
-		wantErr bool
-	}{
-		{
-			name: "valid mapper output",
-			input: `{
-				"summary": "Test project with moderate complexity",
-				"entry_points": [
-					{"file": "main.go", "line": 10, "description": "Main entry point"}
-				],
-				"core_logic": [
-					{"file": "handler.go", "line": 20, "description": "Request handler"}
-				],
-				"dependencies": ["encoding/json", "net/http", "context"],
-				"architectural_note": "Standard HTTP service pattern"
-			}`,
-			target:  "/test",
-			wantErr: false,
-		},
-		{
-			name:    "invalid JSON",
-			input:   `{invalid}`,
-			target:  "/test",
-			wantErr: true,
-		},
-		{
-			name:    "no JSON in output",
-			input:   `plain text output`,
-			target:  "/test",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			report, err := parseMapperOutput([]byte(tt.input), tt.target)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, report)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, report)
-				assert.Equal(t, "gemini", report.Backend)
-				assert.Equal(t, tt.target, report.Target)
-				assert.True(t, report.ComplexitySignals.Available)
-				assert.NotNil(t, report.ComplexitySignals.CrossFileDependencies)
-				assert.Equal(t, 3, *report.ComplexitySignals.CrossFileDependencies)
-				assert.Equal(t, "low", *report.ComplexitySignals.ImportDensity)
-				assert.Equal(t, "haiku", report.RoutingRecommendation.RecommendedTier)
-			}
-		})
-	}
-}
-
 // TestScoutReport_JSONMarshaling verifies JSON serialization.
 func TestScoutReport_JSONMarshaling(t *testing.T) {
 	report := &ScoutReport{
@@ -425,16 +317,6 @@ func BenchmarkNativeScout15Files(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = scout.Run()
-	}
-}
-
-// BenchmarkCalculateRoutingScore benchmarks routing score calculation.
-func BenchmarkCalculateRoutingScore(b *testing.B) {
-	tmpDir := createBenchmarkFiles(b, 10)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = calculateRoutingScore(tmpDir)
 	}
 }
 

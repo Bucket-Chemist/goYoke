@@ -1,15 +1,15 @@
-# Session Handoff - 2026-01-31 12:45:24
+# Session Handoff - 2026-02-03 07:30:01
 
 ## Session Context
 
-- **Session ID**: 04fb4d75-579a-481b-8826-5ab144e5c3f4
+- **Session ID**: 13719b23-ca3c-47a2-a1e1-5a4c4154f954
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/internal/mcp
 
 ## Session Metrics
 
-- **Tool Calls**: 178
+- **Tool Calls**: 6
 - **Errors Logged**: 0
-- **Routing Violations**: 0
+- **Routing Violations**: 1
 
 ## Git State
 
@@ -17,12 +17,22 @@
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
   - claude/memory/ml-tool-events.jsonl
-  - claude/statsig/statsig.session_id.2656274335
-  - nternal/mcp/.claude/memory/handoffs.jsonl
-  - nternal/mcp/.claude/memory/last-handoff.md
-  - nternal/mcp/config_test.go
-  - ickets/mcp/.current-ticket
-  - ickets/mcp/GOgent-MCP-015.md
-  - ickets/mcp/tickets-index.json
-  - internal/mcp/integration_test.go
+  - md/gogent-scout/main_test.go
+  - ogent-scout
+  - gogent-agent-endstate
+  - gogent-load-context
+  - internal/tui/claude/debug/conversation_2026-02-03_07-29-59_integrat.log
+  - internal/tui/claude/debug/conversation_2026-02-03_07-29-59_test-ses.log
+  - internal/tui/claude/debug/conversation_2026-02-03_07-30-00_test-ses.log
+  - internal/tui/layout/debug/
+
+## Error Patterns
+
+- **import_error**: 5 occurrences
+- **syntax_error**: 2 occurrences
+
+## Immediate Actions
+
+1. Investigate 2 error pattern(s)
+   - Recurring errors may need systematic fixes
 
