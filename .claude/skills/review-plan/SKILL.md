@@ -2,7 +2,7 @@
 name: review-plan
 description: Critical review of implementation plans via staff architect agent
 usage: /review-plan [file.md]
-cost: $0.15-0.17 per invocation
+cost: $0.20-0.27 per invocation (opus tier)
 ---
 
 # Review Plan Skill
@@ -31,7 +31,7 @@ Manual invocation of staff-architect-critical-review agent for critical review o
 
 ## Cost & Performance
 
-- **Cost:** $0.15-0.17 per review (includes up to 2 scout spawns)
+- **Cost:** $0.20-0.27 per review (opus tier, includes up to 2 scout spawns)
 - **Duration:** 2-3 minutes (includes thinking time + scout calls)
 - **Budget:** Paid from your session budget
 
@@ -72,7 +72,7 @@ const userGoal = goalMatch ? goalMatch[1].trim() : "Not specified"
 ```javascript
 Output(`[Review] Analyzing ${targetFile}...`)
 Output("[Review] This will take 2-3 minutes (thinking + scout verification)")
-Output(`[Review] Cost: ~$0.15-0.17`)
+Output(`[Review] Cost: ~$0.20-0.27 (opus tier)`)
 
 const reviewTask = Task({
   description: `Critical review of implementation plan: ${targetFile}`,
@@ -305,10 +305,10 @@ vim my-custom-plan.md
 
 | Component | Model | Cost |
 |-----------|-------|------|
-| Review agent | Sonnet+16K | ~$0.15 |
+| Review agent | Opus+32K | ~$0.20-0.25 |
 | Scout 1 (if spawned) | Haiku+2K | ~$0.01 |
 | Scout 2 (if spawned) | Haiku+2K | ~$0.01 |
-| **Total** | | **$0.15-0.17** |
+| **Total** | | **$0.20-0.27** |
 
 **Budget Source:** Paid from your session budget (same pool as /explore, /commit, etc.)
 
@@ -349,4 +349,4 @@ vim my-custom-plan.md
 **When to Re-Review:**
 - After significant plan changes (e.g., revised 3+ phases)
 - If first review had CRITICAL issues and you addressed them
-- Cost: $0.15 per review, budget accordingly
+- Cost: ~$0.25 per review (opus tier), budget accordingly

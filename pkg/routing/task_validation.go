@@ -77,6 +77,32 @@ func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, se
 		return result
 	}
 
+	// Check 3: If agent is in opus allowlist but model is NOT opus, block and require opus
+	// This ensures opus-tier agents (staff-architect, architect, planner, python-architect)
+	// always run at their intended tier, regardless of how they're invoked.
+	if isInAllowlist(targetAgent, opusConfig.TaskInvocationAllowlist) && model != "opus" {
+		result.Allowed = false
+		result.BlockReason = fmt.Sprintf(
+			"Agent '%s' requires model: opus (currently: %s). This agent is opus-tier and must run at full capability. Add model: \"opus\" to your Task() call.",
+			targetAgent,
+			model,
+		)
+		result.Recommendation = fmt.Sprintf(
+			"Change Task invocation to include model: \"opus\". Example: Task({model: \"opus\", subagent_type: \"Plan\", prompt: \"AGENT: %s\\n...\"})",
+			targetAgent,
+		)
+
+		result.Violation = &Violation{
+			SessionID:     sessionID,
+			ViolationType: "opus_agent_wrong_model",
+			Model:         model,
+			Agent:         targetAgent,
+			Reason:        fmt.Sprintf("agent_requires_opus_got_%s", model),
+		}
+
+		return result
+	}
+
 	return result
 }
 

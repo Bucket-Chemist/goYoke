@@ -1,0 +1,13 @@
+{
+  "id": "6",
+  "subject": "Implement unit tests for input capture",
+  "description": "Create unit tests in main_test.go for input capture:\n\n```go\nfunc TestCaptureInput_Files(t *testing.T) {\n    // Create temp files\n    tmpDir := t.TempDir()\n    file1 := filepath.Join(tmpDir, \"a.go\")\n    file2 := filepath.Join(tmpDir, \"b.go\")\n    os.WriteFile(file1, []byte(\"package a\"), 0644)\n    os.WriteFile(file2, []byte(\"package b\"), 0644)\n\n    input, err := CaptureInput([]string{file1, file2})\n    require.NoError(t, err)\n    assert.Contains(t, input, \"package a\")\n    assert.Contains(t, input, \"package b\")\n}\n\nfunc TestCaptureInput_Empty(t *testing.T) {\n    input, err := CaptureInput(nil)\n    require.NoError(t, err)\n    assert.Equal(t, \"\", input)\n}\n\nfunc TestCaptureInput_MissingFile(t *testing.T) {\n    _, err := CaptureInput([]string{\"/nonexistent/file.go\"})\n    require.Error(t, err)\n}\n```\n\nAlso test protocol loading and model mapping.",
+  "activeForm": "Implementing input capture unit tests",
+  "status": "pending",
+  "blocks": [
+    "10"
+  ],
+  "blockedBy": [
+    "2"
+  ]
+}

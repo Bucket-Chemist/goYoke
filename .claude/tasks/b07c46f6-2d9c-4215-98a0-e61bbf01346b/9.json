@@ -1,0 +1,13 @@
+{
+  "id": "9",
+  "subject": "Create E2E test script with real gemini invocation",
+  "description": "Create scripts/test_gemini_slave_e2e.sh:\n\n```bash\n#!/bin/bash\n# E2E test suite for gemini-slave Go implementation\nset -euo pipefail\n\nBINARY=\"${1:-./gemini-slave}\"\nPASS=0\nFAIL=0\n\ntest_case() {\n    local name=\"$1\"\n    local cmd=\"$2\"\n    local check=\"$3\"\n    \n    echo -n \"Test: $name... \"\n    if eval \"$cmd\" 2>/dev/null | eval \"$check\" > /dev/null 2>&1; then\n        echo \"✓ PASS\"\n        ((PASS++))\n    else\n        echo \"✗ FAIL\"\n        ((FAIL++))\n    fi\n}\n\necho \"=== Gemini-Slave E2E Tests ===\"\necho \"Binary: $BINARY\"\necho \"\"\n\n# Test 1: Large stdin (THE BUG)\ntest_case \"Large stdin capture (50KB)\" \\\n    \"find cmd/gogent-scout -name '*.go' -exec cat {} \\\\; | $BINARY mapper 'Map entry points' -o json\" \\\n    \"jq -e '.entry_points'\"\n\n# Test 2: File arguments\ntest_case \"File arguments\" \\\n    \"$BINARY deps 'Extract deps' cmd/gogent-scout/*.go -o json\" \\\n    \"jq -e '.internal_deps'\"\n\n# Test 3: JSON output flag\ntest_case \"JSON output (-o json)\" \\\n    \"echo 'package main' | $BINARY architect 'Review' -o json\" \\\n    \"jq -e '.overview'\"\n\n# Test 4: Model override\ntest_case \"Model override (GEMINI_MODEL)\" \\\n    \"GEMINI_MODEL=gemini-3-pro-preview echo 'package main' | $BINARY mapper 'test' -o json\" \\\n    \"jq -e '.summary'\"\n\n# Test 5: Empty input handling\ntest_case \"Empty input\" \\\n    \"$BINARY mapper 'test' < /dev/null\" \\\n    \"grep -i 'empty\\\\|no input\\\\|INPUT CONTEXT'\"\n\n# Test 6: Protocol listing\ntest_case \"Protocol listing\" \\\n    \"$BINARY nonexistent 'test' 2>&1 || true\" \\\n    \"grep -q 'mapper'\"\n\n# Test 7: Help output\ntest_case \"Help flag\" \\\n    \"$BINARY --help\" \\\n    \"grep -q 'Usage:'\"\n\necho \"\"\necho \"=== Results ===\"\necho \"Passed: $PASS\"\necho \"Failed: $FAIL\"\n[ $FAIL -eq 0 ] && exit 0 || exit 1\n```\n\nMake executable and add to Makefile.",
+  "activeForm": "Creating E2E test script",
+  "status": "pending",
+  "blocks": [
+    "12"
+  ],
+  "blockedBy": [
+    "5"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "2",
+  "subject": "Implement input.go - deterministic stdin capture",
+  "description": "Implement input capture that fixes the bash race condition:\n\n```go\n// input.go\npackage main\n\nimport (\n    \"fmt\"\n    \"io\"\n    \"os\"\n    \"strings\"\n)\n\n// CaptureInput reads all input from stdin or file arguments.\n// CRITICAL: This MUST be called as the FIRST operation in main()\n// before any other I/O to avoid the race condition that plagued bash.\nfunc CaptureInput(args []string) (string, error) {\n    // Check stdin FIRST - before any other operations\n    stat, _ := os.Stdin.Stat()\n    if (stat.Mode() & os.ModeCharDevice) == 0 {\n        // Stdin is piped - read ALL immediately\n        data, err := io.ReadAll(os.Stdin)\n        if err != nil {\n            return \"\", fmt.Errorf(\"reading stdin: %w\", err)\n        }\n        return string(data), nil\n    }\n\n    // Fallback to file arguments\n    if len(args) > 0 {\n        var parts []string\n        for _, f := range args {\n            data, err := os.ReadFile(f)\n            if err != nil {\n                return \"\", fmt.Errorf(\"reading file %s: %w\", f, err)\n            }\n            parts = append(parts, string(data))\n        }\n        return strings.Join(parts, \"\\n\"), nil\n    }\n\n    return \"\", nil\n}\n```\n\nKey requirements:\n- io.ReadAll for deterministic capture\n- Check stdin mode before reading\n- Support file arguments as fallback\n- Return empty string (not error) for no input",
+  "activeForm": "Implementing deterministic stdin capture",
+  "status": "pending",
+  "blocks": [
+    "5",
+    "6"
+  ],
+  "blockedBy": [
+    "1"
+  ]
+}

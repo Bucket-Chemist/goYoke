@@ -331,3 +331,96 @@ func TestValidateModelMatch_AllowedModels(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateTaskInvocation_OpusAgentWrongModel_StaffArchitect(t *testing.T) {
+	// staff-architect-critical-review is in allowlist but invoked with sonnet
+	// Should be BLOCKED - opus agents must run at opus
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "staff-architect-critical-review"},
+			},
+		},
+	}
+
+	taskInput := map[string]interface{}{
+		"model":  "sonnet", // Wrong model for opus-tier agent
+		"prompt": "AGENT: staff-architect-critical-review\n\nReview this plan",
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if result.Allowed {
+		t.Error("Expected staff-architect with model:sonnet to be blocked - opus agents require opus")
+	}
+
+	if result.Violation == nil {
+		t.Fatal("Expected violation to be set")
+	}
+
+	if result.Violation.ViolationType != "opus_agent_wrong_model" {
+		t.Errorf("Expected violation type opus_agent_wrong_model, got: %s", result.Violation.ViolationType)
+	}
+
+	if !strings.Contains(result.BlockReason, "requires model: opus") {
+		t.Errorf("Block reason should mention opus requirement, got: %s", result.BlockReason)
+	}
+
+	if !strings.Contains(result.Recommendation, "model: \"opus\"") {
+		t.Errorf("Recommendation should include fix example, got: %s", result.Recommendation)
+	}
+}
+
+func TestValidateTaskInvocation_OpusAgentWrongModel_Planner(t *testing.T) {
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "staff-architect-critical-review"},
+			},
+		},
+	}
+
+	taskInput := map[string]interface{}{
+		"model":  "haiku", // Wrong model
+		"prompt": "AGENT: planner\n\nCreate strategy",
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if result.Allowed {
+		t.Error("Expected planner with model:haiku to be blocked")
+	}
+
+	if result.Violation.ViolationType != "opus_agent_wrong_model" {
+		t.Errorf("Expected opus_agent_wrong_model, got: %s", result.Violation.ViolationType)
+	}
+}
+
+func TestValidateTaskInvocation_OpusAgentWrongModel_NoModel(t *testing.T) {
+	// No model specified (empty string) should also be blocked
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "staff-architect-critical-review"},
+			},
+		},
+	}
+
+	taskInput := map[string]interface{}{
+		"prompt": "AGENT: architect\n\nCreate plan",
+		// model not specified
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if result.Allowed {
+		t.Error("Expected architect with no model to be blocked - opus agents require explicit opus")
+	}
+
+	if result.Violation.ViolationType != "opus_agent_wrong_model" {
+		t.Errorf("Expected opus_agent_wrong_model, got: %s", result.Violation.ViolationType)
+	}
+}

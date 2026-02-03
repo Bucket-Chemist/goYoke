@@ -1,0 +1,14 @@
+{
+  "id": "8",
+  "subject": "Implement integration tests for all 9 protocols",
+  "description": "Create integration tests that verify each protocol works with real gemini CLI:\n\n```go\n// main_test.go - integration tests\n\nfunc TestMapper_LargeInput(t *testing.T) {\n    if testing.Short() {\n        t.Skip(\"skipping integration test\")\n    }\n\n    // THE CRITICAL TEST - this is what was failing with bash\n    input := generateLargeInput(50000) // 50KB\n    \n    // Simulate: find ... | gemini-slave mapper \"...\"\n    cmd := exec.Command(\"./gemini-slave\", \"mapper\", \"Map entry points\", \"-o\", \"json\")\n    cmd.Stdin = strings.NewReader(input)\n    output, err := cmd.Output()\n    \n    require.NoError(t, err, \"gemini-slave should not fail on large input\")\n    \n    var result map[string]interface{}\n    err = json.Unmarshal(output, &result)\n    require.NoError(t, err, \"output should be valid JSON\")\n    \n    assert.Contains(t, result, \"entry_points\")\n    assert.Contains(t, result, \"summary\")\n}\n```\n\nTest matrix (9 protocols):\n- mapper: JSON output with entry_points\n- architect: JSON with -o json flag\n- debugger: JSON with root_cause\n- deps: JSON with internal_deps\n- api-surface: JSON with public_functions\n- memory-audit: Markdown with drift level\n- memory-drift: Quick JSON score\n- benchmark-score: JSON score\n- benchmark-audit: Full markdown report",
+  "activeForm": "Implementing protocol integration tests",
+  "status": "pending",
+  "blocks": [
+    "12"
+  ],
+  "blockedBy": [
+    "5",
+    "7"
+  ]
+}

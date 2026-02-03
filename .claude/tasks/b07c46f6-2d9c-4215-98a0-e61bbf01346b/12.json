@@ -1,0 +1,13 @@
+{
+  "id": "12",
+  "subject": "Verify all 9 protocols work E2E with JSON output",
+  "description": "Final verification that all protocols work correctly:\n\n**Test each protocol with appropriate input:**\n\n1. mapper - Go files → JSON with entry_points\n2. architect - Module files → JSON with -o json\n3. debugger - Error + source → JSON with root_cause\n4. deps - Source files → JSON with internal_deps\n5. api-surface - Public files → JSON with public_functions\n6. memory-audit - Memory files → Markdown report\n7. memory-drift - Recent memory → JSON score\n8. benchmark-score - Benchmark data → JSON score\n9. benchmark-audit - Full data → Markdown report\n\n**Success criteria:**\n- All fast protocols (mapper, deps, api-surface, memory-drift, benchmark-score) use Flash model\n- All complex protocols (architect, debugger, memory-audit, benchmark-audit) use Pro model\n- -o json flag works for ALL protocols\n- Large input (50KB+) works reliably (NO RACE CONDITION)\n- Timeout handling works (test with -t 1)\n\nMark GEMINI-SLAVE-DEBUG-SUMMARY.md as RESOLVED when complete.",
+  "activeForm": "Verifying all protocols E2E",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": [
+    "8",
+    "9",
+    "10"
+  ]
+}
