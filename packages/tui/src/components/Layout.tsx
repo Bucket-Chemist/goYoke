@@ -1,6 +1,8 @@
 import React from "react";
-import { Box, Text, useInput } from "ink";
+import { Box, Text } from "ink";
 import { useStore } from "../store/index.js";
+import { useKeymap } from "../hooks/useKeymap.js";
+import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { ClaudePanel } from "./ClaudePanel.js";
 import { ModalOverlay } from "./Modal.js";
@@ -10,30 +12,40 @@ import { colors, borders } from "../config/theme.js";
  * Layout component - main 2-panel split (70/30) with focus management
  *
  * Features:
- * - Left panel (70%): Claude conversation (placeholder)
+ * - Left panel (70%): Claude conversation
  * - Right panel (30%): Agent tree (60%) + Agent detail (40%)
- * - Tab key switches focus between claude/agents panels
- * - Escape exits when no modal active
+ * - Global keyboard bindings (Tab, Escape, Ctrl+C, Ctrl+L)
  * - Focus indicated by border color (cyan/gray from theme)
  * - Modal overlay renders when queue is non-empty
+ * - Modal captures all input when active
  */
 export function Layout(): JSX.Element {
-  const { focusedPanel, setFocusedPanel, modalQueue } = useStore();
+  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages } = useStore();
 
-  useInput((input, key) => {
-    // Only handle input when no modal is active
-    if (modalQueue.length === 0) {
-      // Tab switches focus between panels
-      if (key.tab) {
-        setFocusedPanel(focusedPanel === "claude" ? "agents" : "claude");
-      }
-
-      // Escape exits when no modal is active
-      if (key.escape) {
+  // Global key bindings (only active when no modal is present)
+  const globalBindings = createGlobalBindings({
+    toggleFocus: () => {
+      setFocusedPanel(focusedPanel === "claude" ? "agents" : "claude");
+    },
+    handleEscape: () => {
+      // If modal is active, cancel it; otherwise exit
+      if (modalQueue.length > 0 && modalQueue[0]) {
+        const modal = modalQueue[0];
+        useStore.getState().cancel(modal.id);
+      } else {
         process.exit(0);
       }
-    }
+    },
+    forceQuit: () => {
+      process.exit(0);
+    },
+    clearScreen: () => {
+      clearMessages();
+    },
   });
+
+  // Only enable global bindings when no modal is active
+  useKeymap(globalBindings, modalQueue.length === 0);
 
   return (
     <Box flexDirection="column" height="100%">

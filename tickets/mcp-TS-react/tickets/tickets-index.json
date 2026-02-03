@@ -139,7 +139,7 @@
     {
       "id": "TUI-009",
       "title": "Modal System Components",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 3,
       "dependencies": [
         "TUI-006",
@@ -150,7 +150,7 @@
     {
       "id": "TUI-010",
       "title": "Keyboard Handling & Timeout Logic",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "dependencies": [
         "TUI-008",

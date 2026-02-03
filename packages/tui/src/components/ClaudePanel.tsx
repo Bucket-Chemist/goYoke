@@ -2,15 +2,18 @@
  * ClaudePanel - Main conversation panel
  * Features:
  * - Message viewport with scrolling
- * - Text input with submit handling
+ * - Text input with submit handling and history navigation
  * - Markdown rendering
  * - Streaming state management
  * - Visual distinction between user/assistant messages
+ * - Up/Down arrow keys for input history (TUI-005 integration)
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Box, Text } from "ink";
 import { useStore } from "../store/index.js";
+import { useKeymap } from "../hooks/useKeymap.js";
+import { createClaudePanelBindings } from "../config/keybindings.js";
 import { Viewport } from "./primitives/Viewport.js";
 import { TextInput } from "./primitives/TextInput.js";
 import { Spinner } from "./primitives/Spinner.js";
@@ -90,8 +93,17 @@ function MessageItem({ message }: { message: Message }): JSX.Element {
  * Main conversation panel with messages and input
  */
 export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
-  const { messages, streaming, addMessage } = useStore();
+  const {
+    messages,
+    streaming,
+    addMessage,
+    addToHistory,
+    navigateHistory,
+    resetHistoryIndex,
+    modalQueue,
+  } = useStore();
   const [input, setInput] = useState("");
+  const currentInputRef = useRef(""); // Store current input when navigating history
 
   // Handle message submission
   const handleSubmit = (): void => {
@@ -100,6 +112,9 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
       return;
     }
 
+    // Add to input history (TUI-005)
+    addToHistory(trimmedInput);
+
     // Add user message to store
     addMessage({
       role: "user",
@@ -107,8 +122,10 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
       partial: false,
     });
 
-    // Clear input
+    // Clear input and reset history navigation
     setInput("");
+    currentInputRef.current = "";
+    resetHistoryIndex();
 
     // TODO: Trigger Claude API call
     // For now, just add a mock response
@@ -125,6 +142,42 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
       });
     }, 500);
   };
+
+  // Navigate to previous input in history (up arrow)
+  const handleHistoryPrev = (): void => {
+    // Save current input if we're starting navigation
+    const historyIndex = useStore.getState().inputHistoryIndex;
+    if (historyIndex === -1) {
+      currentInputRef.current = input;
+    }
+
+    const historyItem = navigateHistory("up");
+    if (historyItem !== null) {
+      setInput(historyItem);
+    }
+  };
+
+  // Navigate to next input in history (down arrow)
+  const handleHistoryNext = (): void => {
+    const historyItem = navigateHistory("down");
+    if (historyItem !== null) {
+      setInput(historyItem);
+    } else {
+      // Reached the end, restore current input
+      setInput(currentInputRef.current);
+      resetHistoryIndex();
+    }
+  };
+
+  // Panel-specific key bindings (only active when focused and no modal)
+  const panelBindings = createClaudePanelBindings({
+    submitMessage: handleSubmit,
+    historyPrev: handleHistoryPrev,
+    historyNext: handleHistoryNext,
+  });
+
+  // Enable panel bindings only when focused and no modal is active
+  useKeymap(panelBindings, focused && modalQueue.length === 0);
 
   // Render message item
   const renderMessage = (message: Message, _index: number): React.ReactNode => {

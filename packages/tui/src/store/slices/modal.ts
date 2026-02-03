@@ -72,26 +72,51 @@ export const createModalSlice: StateCreator<Store, [], [], ModalSlice> = (
       const id = nanoid();
       let timeoutId: NodeJS.Timeout | undefined;
 
+      const cleanup = (): void => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
+
+      // Wrapped resolve/reject that clean up timeout
+      const wrappedResolve = (response: ModalResponse): void => {
+        cleanup();
+        resolve(response);
+      };
+
+      const wrappedReject = (error: Error): void => {
+        cleanup();
+        reject(error);
+      };
+
       // Set up optional timeout
       if (request.timeout && request.timeout > 0) {
         timeoutId = setTimeout(() => {
-          // Remove from queue and reject
-          const queue = get().modalQueue;
-          const index = queue.findIndex((req) => req.id === id);
-          if (index !== -1) {
-            set((state) => ({
-              modalQueue: state.modalQueue.filter((req) => req.id !== id),
-            }));
+          // Remove from queue
+          set((state) => ({
+            modalQueue: state.modalQueue.filter((req) => req.id !== id),
+          }));
+
+          // Return default or cancel based on modal type
+          if (request.type === "confirm") {
+            // Confirm modals default to "not confirmed" on timeout
+            resolve({ type: "confirm", confirmed: false, cancelled: true });
+          } else if (request.type === "ask" && (request.payload as AskPayload).defaultValue) {
+            // Ask modals return default value if provided
+            const payload = request.payload as AskPayload;
+            resolve({ type: "ask", value: payload.defaultValue! });
+          } else {
+            // Other modals reject on timeout
+            reject(new Error(`Modal timeout after ${request.timeout}ms`));
           }
-          reject(new Error(`Modal timeout after ${request.timeout}ms`));
         }, request.timeout);
       }
 
       const fullRequest: ModalRequest<T> = {
         ...request,
         id,
-        resolve,
-        reject,
+        resolve: wrappedResolve,
+        reject: wrappedReject,
         timeoutId,
       };
 
