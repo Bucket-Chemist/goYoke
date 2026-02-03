@@ -2,10 +2,12 @@ import React from "react";
 import { Box, Text } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
+import { useAgentTree } from "../hooks/useAgentTree.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { ClaudePanel } from "./ClaudePanel.js";
 import { AgentTree } from "./AgentTree.js";
+import { AgentDetail } from "./AgentDetail.js";
 import { ModalOverlay } from "./Modal.js";
 import { colors, borders } from "../config/theme.js";
 
@@ -22,6 +24,7 @@ import { colors, borders } from "../config/theme.js";
  */
 export function Layout(): JSX.Element {
   const { focusedPanel, setFocusedPanel, modalQueue, clearMessages } = useStore();
+  const { selectPrevious, selectNext } = useAgentTree();
 
   // Global key bindings (only active when no modal is present)
   const globalBindings = createGlobalBindings({
@@ -45,8 +48,17 @@ export function Layout(): JSX.Element {
     },
   });
 
+  // Agent tree navigation bindings (only when agents panel focused)
+  const agentBindings = {
+    up: selectPrevious,
+    down: selectNext,
+  };
+
   // Only enable global bindings when no modal is active
   useKeymap(globalBindings, modalQueue.length === 0);
+
+  // Only enable agent navigation when agents panel focused and no modal
+  useKeymap(agentBindings, focusedPanel === "agents" && modalQueue.length === 0);
 
   return (
     <Box flexDirection="column" height="100%">
@@ -75,9 +87,8 @@ export function Layout(): JSX.Element {
             borderStyle={borders.panel}
             borderColor={colors.muted}
             flexDirection="column"
-            paddingX={1}
           >
-            <Text color={colors.muted}>Agent Detail (placeholder)</Text>
+            <AgentDetail focused={false} />
           </Box>
         </Box>
 
