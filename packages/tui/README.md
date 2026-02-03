@@ -16,6 +16,11 @@ npm run build
 
 # Run production build
 npm start
+
+# Session management
+gofortress-tui --list              # List available sessions
+gofortress-tui --session <id>      # Resume a specific session
+gofortress-tui --verbose           # Enable verbose logging
 ```
 
 ## Development
@@ -61,14 +66,19 @@ import { colors, borders } from "./config/theme.js";
 
 ```
 src/
-├── index.tsx                    # Entry point
-├── App.tsx                      # Root component
+├── index.tsx                    # Entry point with CLI integration
+├── App.tsx                      # Root component with session handling
+├── cli.ts                       # CLI argument parsing
 ├── config/
 │   └── theme.ts                # Theme constants
-└── components/
-    ├── LayoutSpike.tsx         # Layout testing
-    ├── ResponsiveLayout.tsx    # Resize handling
-    └── BorderStyleTest.tsx     # Border validation
+├── components/
+│   ├── LayoutSpike.tsx         # Layout testing
+│   ├── ResponsiveLayout.tsx    # Resize handling
+│   └── BorderStyleTest.tsx     # Border validation
+├── commands/
+│   └── list.tsx                # List sessions command
+└── hooks/
+    └── useSession.ts           # Session persistence operations
 ```
 
 ## Spike Results

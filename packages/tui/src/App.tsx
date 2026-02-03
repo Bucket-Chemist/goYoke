@@ -1,20 +1,107 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { colors } from "./config/theme.js";
 import { Layout } from "./components/Layout.js";
 import { LayoutSpike } from "./components/LayoutSpike.js";
 import { ResponsiveLayout } from "./components/ResponsiveLayout.js";
 import { BorderStyleTest } from "./components/BorderStyleTest.js";
+import { loadSession, saveSession } from "./hooks/useSession.js";
+import { useStore } from "./store/index.js";
+import { nanoid } from "nanoid";
 
 type DemoMode = "main" | "hello" | "layout" | "responsive" | "borders";
+
+interface AppProps {
+  sessionId?: string;
+  verbose?: boolean;
+}
 
 /**
  * Root component for GOfortress TUI
  * Entry point for the application UI structure
  * Includes spike testing modes for layout validation
+ * Handles session persistence and resumption
  */
-export function App(): JSX.Element {
+export function App({ sessionId, verbose }: AppProps): JSX.Element {
   const [mode, setMode] = useState<DemoMode>("main");
+  const [loading, setLoading] = useState(!!sessionId);
+  const updateSession = useStore((state) => state.updateSession);
+  const totalCost = useStore((state) => state.totalCost);
+  const currentSessionId = useStore((state) => state.sessionId);
+
+  // Set verbose mode
+  useEffect(() => {
+    if (verbose) {
+      process.env["VERBOSE"] = "1";
+    }
+  }, [verbose]);
+
+  // Load session on mount if sessionId provided
+  useEffect(() => {
+    async function resumeSession() {
+      if (!sessionId) return;
+
+      try {
+        const session = await loadSession(sessionId);
+        updateSession({
+          id: session.id,
+          cost: session.cost,
+        });
+
+        if (verbose) {
+          console.log(`[Session] Resumed: ${session.id}`);
+          console.log(`[Session] Cost: $${session.cost.toFixed(4)}`);
+          console.log(`[Session] Tools: ${session.tool_calls}`);
+        }
+      } catch (error) {
+        console.error(`Failed to load session: ${sessionId}`, error);
+        // Continue with new session on error
+        updateSession({ id: nanoid() });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    resumeSession();
+  }, [sessionId, updateSession, verbose]);
+
+  // Auto-save session on cost changes
+  useEffect(() => {
+    async function persistSession() {
+      if (!currentSessionId) return;
+      if (totalCost === 0) return; // Don't save empty sessions
+
+      try {
+        const tokenCount = useStore.getState().tokenCount;
+        const toolCalls = tokenCount.input + tokenCount.output; // Approximate tool calls
+
+        await saveSession({
+          id: currentSessionId,
+          created_at: new Date().toISOString(),
+          last_used: new Date().toISOString(),
+          cost: totalCost,
+          tool_calls: toolCalls,
+        });
+
+        if (verbose) {
+          console.log(`[Session] Saved: ${currentSessionId}`);
+        }
+      } catch (error) {
+        console.error("Failed to save session:", error);
+      }
+    }
+
+    persistSession();
+  }, [totalCost, currentSessionId, verbose]);
+
+  // Show loading state while resuming session
+  if (loading) {
+    return (
+      <Box padding={1}>
+        <Text color={colors.muted}>Loading session {sessionId}...</Text>
+      </Box>
+    );
+  }
 
   useInput((input, key) => {
     // Cycle through demo modes with number keys
