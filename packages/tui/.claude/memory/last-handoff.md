@@ -1,8 +1,8 @@
-# Session Handoff - 2026-02-04 11:32:02
+# Session Handoff - 2026-02-04 16:05:59
 
 ## Session Context
 
-- **Session ID**: 9c5068a0-e666-4989-886d-00c4d5e76261
+- **Session ID**: 3631eb37-8c2f-4b73-a510-f1d1e05e9277
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
@@ -17,21 +17,100 @@
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
   - claude/memory/ml-tool-events.jsonl
+  - claude/tmp/review-metadata.json
   - ackages/tui/.claude/memory/handoffs.jsonl
   - ackages/tui/.claude/memory/last-handoff.md
-  - ackages/tui/bin/gofortress-tui.js
-  - ackages/tui/package.json
+  - ackages/tui/src/components/Banner.tsx
   - ackages/tui/src/components/ClaudePanel.tsx
-  - ackages/tui/src/components/Layout.tsx
+  - ackages/tui/src/components/Modal.tsx
+  - ackages/tui/src/components/modals/AskModal.tsx
+  - ackages/tui/src/components/primitives/TextInput.tsx
+  - ackages/tui/src/components/primitives/Viewport.tsx
   - ackages/tui/src/hooks/useClaudeQuery.ts
-  - ackages/tui/src/index.tsx
-  - .claude/sessions/0010d4a7-0942-4265-b492-7fa641f1447d.json
-  - .claude/sessions/087f4eae-1490-44a4-88c2-06638c8379cb.json
-  - .claude/sessions/757a082d-69be-4885-8e0a-83362048f4f3.json
-  - .claude/sessions/8be26003-474d-42ed-8831-3d910747fbda.json
-  - .claude/sessions/94dd6518-0b5d-471d-9a2e-c8acf3b6ebe7.json
-  - .claude/sessions/baf89875-deef-4002-a52c-1024209dcf85.json
-  - .claude/sessions/e93224b6-507c-4e3a-926e-ae91cc2887e7.json
-  - .claude/sessions/f6b70964-cc8b-4c61-a76e-3dc28f179bef.json
-  - packages/tui/src/stubs/
+  - ackages/tui/src/store/slices/modal.ts
+  - ackages/tui/src/store/slices/session.ts
+  - ackages/tui/src/store/types.ts
+  - ackages/tui/src/types/events.ts
+  - .claude/braintrust/analysis-tui-interactive-2026-02-04.md
+  - .claude/memory/routing-violations.jsonl
+  - .claude/sessions/038a2675-398d-4e4b-afd4-1a6674a176f2.json
+  - .claude/sessions/06351b58-3e8f-4a09-8d2a-5083a0ab0deb.json
+  - .claude/sessions/064d392f-70a1-48f7-bbe4-8dad15f0fee3.json
+  - .claude/sessions/079b3609-424b-4dde-9171-33244d14eaa0.json
+  - .claude/sessions/0c085aa2-f2ac-4b54-a701-7299d512db76.json
+  - .claude/sessions/0c777e0c-7925-4bca-a166-8e0f4bfc1ea5.json
+  - .claude/sessions/168991b9-0b1f-4816-82c0-c3854357e6a5.json
+  - .claude/sessions/1723dfe6-c53f-4c04-b1ec-00348268bb76.json
+  - .claude/sessions/197a646e-c93c-4d81-81a2-307872dba608.json
+  - .claude/sessions/1b30a444-cc88-476c-8295-66c7edfb2638.json
+  - .claude/sessions/1d2cfd34-93d6-4d50-ac47-5e74905de7bf.json
+  - .claude/sessions/24fb0240-bbbf-418a-a0e9-d885538b6e96.json
+  - .claude/sessions/2d635fcf-1c2e-43b3-81bb-79dfd5e4be21.json
+  - .claude/sessions/319fdebb-7fe0-4eec-b2d6-02e4e8dd4a5b.json
+  - .claude/sessions/32b12fcd-a456-45f9-bc0a-516f7527436a.json
+  - .claude/sessions/32f44cd4-ab60-463e-81fd-ab5e2f6798a2.json
+  - .claude/sessions/33b619ab-34e6-49cf-85f0-2b10f388e37f.json
+  - .claude/sessions/3464aaea-de03-4ccf-bdbb-2dd8262288b5.json
+  - .claude/sessions/3631eb37-8c2f-4b73-a510-f1d1e05e9277.json
+  - .claude/sessions/3c2415ac-5392-4908-a0a7-812b2c54ec13.json
+  - .claude/sessions/3effe079-169e-4206-8b24-064707d5b9de.json
+  - .claude/sessions/40a1d364-572e-424c-a56e-28755ec2cf9d.json
+  - .claude/sessions/422c0c7b-2ed0-4080-8281-975489db7e5c.json
+  - .claude/sessions/466bcdb1-69c7-4578-bba9-24e00b8bbf06.json
+  - .claude/sessions/4b86f000-34a2-4b08-843e-c8a182c8e8ce.json
+  - .claude/sessions/5bb3981a-6891-4b32-ab07-9b261e39ea3a.json
+  - .claude/sessions/5be71899-9bf0-4c06-a8ef-035c3d854055.json
+  - .claude/sessions/5e74767c-3069-41f4-a8b2-586199b9c5f4.json
+  - .claude/sessions/5e8cad3c-6f07-411b-9d4e-ba394bae0575.json
+  - .claude/sessions/60442d85-21ec-4c28-afb0-1cee1eb1618e.json
+  - .claude/sessions/62c134dc-fd8c-4e18-aca8-d68b7c07d56e.json
+  - .claude/sessions/6e0bb641-e732-4bf8-bf93-07538fb08547.json
+  - .claude/sessions/6ff61070-9b23-4301-b4db-43e0a68e4597.json
+  - .claude/sessions/70ff6062-1c7f-44b5-8df7-744c3b099c11.json
+  - .claude/sessions/734030c6-b1a3-487f-8aca-7b570c77dc22.json
+  - .claude/sessions/76d36958-7778-42fe-bc20-42408f97a250.json
+  - .claude/sessions/774e0de0-9ed0-45b9-975a-ab9e627e79e9.json
+  - .claude/sessions/79b73e7c-8b34-4316-96b9-6c697a34e2b5.json
+  - .claude/sessions/7d5dbc9f-184b-49a9-bafb-ad25a76f8343.json
+  - .claude/sessions/80ca594d-fed7-4a7a-9807-c984e5dc7735.json
+  - .claude/sessions/844bfa94-7d69-4bdc-ac64-8531f71d86a2.json
+  - .claude/sessions/8d9ba723-d522-4e87-ba4a-72e47806160d.json
+  - .claude/sessions/8dcb6326-aa85-44a9-96d2-773d23db6da4.json
+  - .claude/sessions/926843fd-3aa5-4cb7-b14c-e1ad8f8967e6.json
+  - .claude/sessions/9630b2b4-5571-4c66-b5f9-8db76215df6e.json
+  - .claude/sessions/97131a96-8a90-41e9-be4d-5a8d1842354d.json
+  - .claude/sessions/9972dcbe-d005-4b68-9d8f-6a20332cb01b.json
+  - .claude/sessions/a1566b37-fb75-496e-a1fe-3248e245c34f.json
+  - .claude/sessions/a2e35256-4c59-4151-b006-4f1b93a706cc.json
+  - .claude/sessions/a4f73b50-bfd1-4c4d-807e-fba8ee0850d2.json
+  - .claude/sessions/a5114fd4-f6de-4c8f-a1cb-8c5480f57568.json
+  - .claude/sessions/a6787f6d-1e6e-43f9-b035-7d85e453c7ad.json
+  - .claude/sessions/a9929775-ac4b-4fa3-ba6d-df18fc6ac89c.json
+  - .claude/sessions/a9f68f9e-1960-478f-9b26-94b62c5dd467.json
+  - .claude/sessions/aad8d148-146e-4ade-b631-a994cbf3e1ac.json
+  - .claude/sessions/aeabe8fe-746e-45b9-b64e-ccff97b1ecdd.json
+  - .claude/sessions/b4adc868-76b7-404d-8ead-dec592f7199a.json
+  - .claude/sessions/b4d9cc52-2486-4649-9d3e-0f3515c599c0.json
+  - .claude/sessions/bc053744-8c74-43c0-8f7e-3053860b6033.json
+  - .claude/sessions/c1e253de-94f8-4c64-9fc4-90615ac93174.json
+  - .claude/sessions/c2b73547-1746-4ff1-a214-53c56ca8a740.json
+  - .claude/sessions/ca8bc80a-c9e9-4f36-bf19-7c691f749a9e.json
+  - .claude/sessions/ce014901-026b-40cf-b158-5a0a3cf3aa76.json
+  - .claude/sessions/ce3e91ad-9e82-4c67-9568-c4c032da4111.json
+  - .claude/sessions/ce3fb78e-c757-4393-9af1-a9288a206ebc.json
+  - .claude/sessions/d6377c4a-eeb1-4f94-bec5-556d2ec4e184.json
+  - .claude/sessions/d71d0a16-0bd6-4899-aa53-02f059747038.json
+  - .claude/sessions/dc232ab2-a4fa-48d1-83fa-6a4aa5a4249b.json
+  - .claude/sessions/e249cdab-6320-4e8f-a9a4-fe833fc9b4e6.json
+  - .claude/sessions/e2cbdcd5-ef35-46d6-9f98-a616ffb27dff.json
+  - .claude/sessions/e6fa5adc-d64a-42ff-bda7-0bffdc00fae9.json
+  - .claude/sessions/e7d9d983-d705-49e1-9e0a-a3659922c1e4.json
+  - .claude/sessions/f1909ae0-56bd-485b-b39d-29cbe2ab2c4a.json
+  - .claude/sessions/f206eaae-59e4-43e2-a8f7-4f6e434c47de.json
+  - .claude/sessions/f5a49170-3ea8-459f-b416-0303f529e361.json
+  - packages/tui/.claude/memory/decisions/
+  - packages/tui/.claude/memory/ml-tool-events.jsonl
+  - packages/tui/.claude/memory/remaining-tasks-2026-02-04.md
+  - packages/tui/.claude/memory/session-archive/
+  - packages/tui/.claude/memory/sharp-edges/
 

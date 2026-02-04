@@ -91,9 +91,18 @@ export interface SessionSlice {
   sessionId: string | null;
   totalCost: number;
   tokenCount: TokenCount;
+  permissionMode: string;
+  isCompacting: boolean;
+  preferredModel: string | null;
+  activeModel: string | null; // Actual model from SDK init event
   updateSession: (data: Partial<SessionData>) => void;
   incrementCost: (cost: number) => void;
   addTokens: (tokens: Partial<TokenCount>) => void;
+  setPermissionMode: (mode: string) => void;
+  setCompacting: (compacting: boolean) => void;
+  setPreferredModel: (model: string | null) => void;
+  setActiveModel: (model: string | null) => void;
+  isPlanMode: () => boolean;
   clearSession: () => void;
 }
 

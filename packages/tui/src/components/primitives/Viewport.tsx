@@ -107,11 +107,17 @@ export function Viewport<T>({
             No messages yet. Start a conversation!
           </Text>
         ) : (
-          visibleItems.map((item, index) => (
-            <Box key={scrollOffset + index} flexDirection="column">
-              {renderItem(item, scrollOffset + index)}
-            </Box>
-          ))
+          visibleItems.map((item, index) => {
+            // Use stable ID if available, fallback to global index (not scrollOffset-dependent)
+            const itemWithId = item as { id?: string };
+            const globalIndex = scrollOffset + index;
+            const key = itemWithId.id ?? `viewport-item-${globalIndex}`;
+            return (
+              <Box key={key} flexDirection="column">
+                {renderItem(item, globalIndex)}
+              </Box>
+            );
+          })
         )}
       </Box>
 

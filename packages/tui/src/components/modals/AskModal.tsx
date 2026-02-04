@@ -36,7 +36,8 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
             prev < (payload.options?.length || 1) - 1 ? prev + 1 : 0
           );
         } else if (key.return) {
-          const value = payload.options?.[selectedIndex] || "";
+          // Return the value field, not the label
+          const value = payload.options?.[selectedIndex]?.value || "";
           onComplete({ type: "ask", value });
         }
       }
@@ -58,7 +59,7 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
             <Box key={index}>
               <Text color={index === selectedIndex ? colors.primary : colors.muted}>
                 {index === selectedIndex ? "▶ " : "  "}
-                {option}
+                {option.label}
               </Text>
             </Box>
           ))}

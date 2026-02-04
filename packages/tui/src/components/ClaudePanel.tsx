@@ -18,7 +18,7 @@ import { useClaudeQuery } from "../hooks/useClaudeQuery.js";
 import { Viewport } from "./primitives/Viewport.js";
 import { TextInput } from "./primitives/TextInput.js";
 import { Spinner } from "./primitives/Spinner.js";
-import { renderMarkdown } from "../utils/markdown.js";
+// Removed: import { renderMarkdown } - causes ANSI conflicts with Ink
 import { colors, borders } from "../config/theme.js";
 import type { Message, ContentBlock } from "../store/types.js";
 
@@ -68,28 +68,39 @@ function MessageItem({ message }: { message: Message }): JSX.Element {
         )}
       </Box>
 
-      {/* Text content with markdown rendering */}
+      {/* Text content - render each line separately for proper Ink handling */}
       {textContent && (
         <Box flexDirection="column" paddingLeft={2}>
-          <Text>{renderMarkdown(textContent)}</Text>
+          {textContent.split('\n').map((line, idx) => (
+            <Text key={`${message.id}-line-${idx}`}>{line || ' '}</Text>
+          ))}
         </Box>
       )}
 
       {/* Tool blocks (simplified display) */}
-      {toolBlocks.map((block, idx) => (
-        <Box key={idx} paddingLeft={2}>
-          {block.type === "tool_use" && (
-            <Text color={colors.accent} dimColor>
-              [Tool: {block.name}]
-            </Text>
-          )}
-          {block.type === "tool_result" && (
-            <Text color={colors.muted} dimColor>
-              [Tool result]
-            </Text>
-          )}
-        </Box>
-      ))}
+      {toolBlocks.map((block) => {
+        // Use stable ID for tool blocks
+        const blockId = block.type === "tool_use"
+          ? block.id
+          : block.type === "tool_result"
+            ? block.tool_use_id
+            : `unknown-${Math.random()}`;
+
+        return (
+          <Box key={blockId} paddingLeft={2}>
+            {block.type === "tool_use" && (
+              <Text color={colors.accent} dimColor>
+                [Tool: {block.name}]
+              </Text>
+            )}
+            {block.type === "tool_result" && (
+              <Text color={colors.muted} dimColor>
+                [Tool result]
+              </Text>
+            )}
+          </Box>
+        );
+      })}
     </Box>
   );
 }
@@ -105,10 +116,82 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
     navigateHistory,
     resetHistoryIndex,
     modalQueue,
+    isPlanMode,
   } = useStore();
-  const { sendMessage, error } = useClaudeQuery();
+  const { sendMessage, setModel, error } = useClaudeQuery();
   const [input, setInput] = useState("");
   const currentInputRef = useRef(""); // Store current input when navigating history
+  const isPlan = isPlanMode(); // Compute plan mode state
+
+  // Helper to add system messages
+  const addSystemMessage = (text: string): void => {
+    useStore.getState().addMessage({
+      role: "system",
+      content: [{ type: "text", text }],
+      partial: false,
+    });
+  };
+
+  // Handle /model command
+  const handleModelCommand = async (arg: string): Promise<void> => {
+    if (arg) {
+      // Direct model set: /model haiku
+      // Use short aliases - SDK prefers these and resolves to latest version
+      const MODEL_ALIASES: Record<string, string> = {
+        "haiku": "haiku",
+        "sonnet": "sonnet",
+        "opus": "opus",
+      };
+      const modelId = MODEL_ALIASES[arg.toLowerCase()] || arg;
+
+      console.log("[/model] Setting model to:", modelId);
+
+      // Try setModel first (works if query active AND in streaming input mode)
+      const success = await setModel(modelId);
+      if (success) {
+        addSystemMessage(`Model switched to: ${modelId}`);
+      } else {
+        // No active query - store preference for next message
+        console.log("[/model] No active query, storing preference:", modelId);
+        useStore.getState().setPreferredModel(modelId);
+        addSystemMessage(`Model set to: ${modelId}. Will apply on next message.`);
+      }
+    } else {
+      // Show model selector modal - use short aliases
+      const result = await useStore.getState().enqueue({
+        type: "select",
+        payload: {
+          message: "Select a model:",
+          options: [
+            {
+              label: "Haiku (fast, cheap)",
+              value: "haiku",
+            },
+            {
+              label: "Sonnet (balanced)",
+              value: "sonnet",
+            },
+            {
+              label: "Opus (powerful)",
+              value: "opus",
+            },
+          ],
+        },
+      });
+
+      if (result.type === "select" && result.selected) {
+        // Try setModel first (works if query active)
+        const success = await setModel(result.selected);
+        if (success) {
+          addSystemMessage(`Model switched to: ${result.selected}`);
+        } else {
+          // No active query - store preference for next message
+          useStore.getState().setPreferredModel(result.selected);
+          addSystemMessage(`Model set to: ${result.selected}. Will apply on next message.`);
+        }
+      }
+    }
+  };
 
   // Handle message submission
   const handleSubmit = (): void => {
@@ -117,6 +200,46 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
       return;
     }
 
+    // Check for known slash commands (unknown commands pass through to Claude)
+    if (trimmedInput.startsWith("/")) {
+      const [command, ...args] = trimmedInput.slice(1).split(" ");
+
+      // Guard against empty command (just "/" typed)
+      if (!command) {
+        setInput("");
+        return;
+      }
+
+      // Handle known commands - these return early
+      switch (command.toLowerCase()) {
+        case "model":
+          void handleModelCommand(args.join(" "));
+          setInput("");
+          return;
+
+        case "clear":
+          useStore.getState().clearMessages();
+          setInput("");
+          return;
+
+        case "help":
+          addSystemMessage(
+            "Available commands:\n" +
+              "  /model [haiku|sonnet|opus] - Switch model\n" +
+              "  /clear - Clear message history\n" +
+              "  /help - Show this help"
+          );
+          setInput("");
+          return;
+
+        default:
+          // Unknown command - fall through to normal submission
+          break;
+      }
+      // Execution continues here for unknown slash commands
+    }
+
+    // Normal message submission (reached by regular messages and unknown slash commands)
     // Add to input history (TUI-005)
     addToHistory(trimmedInput);
 
@@ -183,7 +306,19 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
         <Text bold color={focused ? colors.focused : colors.muted}>
           Claude Conversation
         </Text>
+        {isPlan && (
+          <Text bold color="yellow"> [PLAN MODE]</Text>
+        )}
       </Box>
+
+      {/* Plan mode info banner */}
+      {isPlan && (
+        <Box marginBottom={1} borderStyle="round" borderColor="yellow" paddingX={1}>
+          <Text color="yellow">
+            📋 Claude is planning. Review the plan before approving.
+          </Text>
+        </Box>
+      )}
 
       {/* Message viewport - constrained to available space */}
       <Box height={maxHeight - 6} overflow="hidden">
@@ -201,7 +336,6 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
         <TextInput
           value={input}
           onChange={setInput}
-          onSubmit={handleSubmit}
           placeholder={streaming ? "Waiting for response..." : "Type a message..."}
           disabled={streaming}
           focused={focused}

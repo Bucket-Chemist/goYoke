@@ -128,6 +128,9 @@ export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
         borderColor={colors.warning}
         padding={2}
         flexDirection="column"
+        // Solid background to make modal opaque (not see-through)
+        // @ts-expect-error - Ink supports backgroundColor but types may not include it
+        backgroundColor="black"
       >
         <ModalErrorBoundary onDismiss={() => cancel(request.id)}>
           <CurrentModal

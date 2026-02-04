@@ -52,8 +52,18 @@ export interface ResultEvent {
   };
 }
 
+// Status event - system status updates (compacting, permission mode)
+export interface StatusEvent {
+  type: "system";
+  subtype: "status";
+  status: "compacting" | null;
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "delegate" | "dontAsk";
+  uuid: string;
+  session_id: string;
+}
+
 // Union type for all query events
-export type QueryEvent = SystemEvent | AssistantEvent | ResultEvent;
+export type QueryEvent = SystemEvent | AssistantEvent | ResultEvent | StatusEvent;
 
 // Error classification for better error handling
 export type ErrorType =

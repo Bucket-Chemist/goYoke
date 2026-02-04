@@ -20,9 +20,9 @@ export interface TextInputProps {
   onChange: (value: string) => void;
 
   /**
-   * Called when Enter is pressed
+   * Called when Enter is pressed (optional - useKeymap handles this in most cases)
    */
-  onSubmit: () => void;
+  onSubmit?: () => void;
 
   /**
    * Placeholder text when empty

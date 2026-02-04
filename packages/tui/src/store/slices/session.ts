@@ -7,7 +7,8 @@ import type { StateCreator } from "zustand";
 import type { Store, SessionSlice } from "../types.js";
 
 export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
-  set
+  set,
+  get
 ) => ({
   sessionId: null,
   totalCost: 0,
@@ -15,6 +16,10 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
     input: 0,
     output: 0,
   },
+  permissionMode: "default",
+  isCompacting: false,
+  preferredModel: null,
+  activeModel: null,
 
   updateSession: (data): void => {
     set((state) => ({
@@ -39,6 +44,27 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
     }));
   },
 
+  setPermissionMode: (mode): void => {
+    set({ permissionMode: mode });
+  },
+
+  setCompacting: (compacting): void => {
+    set({ isCompacting: compacting });
+  },
+
+  setPreferredModel: (model): void => {
+    set({ preferredModel: model });
+  },
+
+  setActiveModel: (model): void => {
+    set({ activeModel: model });
+  },
+
+  // Computed property: check if currently in plan mode
+  isPlanMode: (): boolean => {
+    return get().permissionMode === "plan";
+  },
+
   clearSession: (): void => {
     set({
       sessionId: null,
@@ -47,6 +73,10 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
         input: 0,
         output: 0,
       },
+      permissionMode: "default",
+      isCompacting: false,
+      preferredModel: null,
+      activeModel: null,
     });
   },
 });
