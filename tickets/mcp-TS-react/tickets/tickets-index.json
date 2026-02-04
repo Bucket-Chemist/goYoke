@@ -266,7 +266,7 @@
     {
       "id": "TUI-021",
       "title": "Archive Go Frontend & Build Updates",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 8,
       "dependencies": [
         "TUI-019",
@@ -277,7 +277,7 @@
     {
       "id": "TUI-022",
       "title": "Integration Tests & Rollback Rehearsal",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 8,
       "dependencies": [
         "TUI-021"
