@@ -1,5 +1,5 @@
 import React from "react";
-import { Box } from "ink";
+import { Box, useStdout } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap, KeyBinding } from "../hooks/useKeymap.js";
 import { useAgentTree } from "../hooks/useAgentTree.js";
@@ -10,6 +10,9 @@ import { AgentTree } from "./AgentTree.js";
 import { AgentDetail } from "./AgentDetail.js";
 import { ModalOverlay } from "./Modal.js";
 import { colors, borders } from "../config/theme.js";
+
+// Fixed heights
+const BANNER_HEIGHT = 3; // Banner takes 3 rows
 
 /**
  * Layout component - main 2-panel split (70/30) with focus management
@@ -25,6 +28,11 @@ import { colors, borders } from "../config/theme.js";
 export function Layout(): JSX.Element {
   const { focusedPanel, setFocusedPanel, modalQueue, clearMessages } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
+  const { stdout } = useStdout();
+
+  // Calculate available height for content area
+  const terminalHeight = stdout?.rows ?? 24;
+  const contentHeight = terminalHeight - BANNER_HEIGHT;
 
   // Global key bindings (only active when no modal is present)
   const globalBindings = createGlobalBindings({
@@ -60,20 +68,29 @@ export function Layout(): JSX.Element {
   // Only enable agent navigation when agents panel focused and no modal
   useKeymap(agentBindings, focusedPanel === "agents" && modalQueue.length === 0);
 
+  // Calculate right panel heights (fixed row counts)
+  const agentTreeHeight = Math.floor(contentHeight * 0.6);
+  const agentDetailHeight = contentHeight - agentTreeHeight;
+
   return (
-    <Box flexDirection="column" height="100%">
-      <Banner />
-      <Box flexDirection="row" flexGrow={1} position="relative">
+    <Box flexDirection="column" height={terminalHeight}>
+      {/* Banner - FIXED at top */}
+      <Box height={BANNER_HEIGHT}>
+        <Banner />
+      </Box>
+
+      {/* Content area - FIXED height */}
+      <Box flexDirection="row" height={contentHeight}>
         {/* Left Panel: Claude conversation (70%) */}
-        <Box width="70%">
-          <ClaudePanel focused={focusedPanel === "claude"} />
+        <Box width="70%" height={contentHeight}>
+          <ClaudePanel focused={focusedPanel === "claude"} maxHeight={contentHeight - 2} />
         </Box>
 
         {/* Right Panel: Agent tree + detail (30%) */}
-        <Box width="30%" flexDirection="column">
+        <Box width="30%" flexDirection="column" height={contentHeight}>
           {/* Agent Tree (60% of right panel) */}
           <Box
-            height="60%"
+            height={agentTreeHeight}
             borderStyle={borders.panel}
             borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
             flexDirection="column"
@@ -83,7 +100,7 @@ export function Layout(): JSX.Element {
 
           {/* Agent Detail (40% of right panel) */}
           <Box
-            height="40%"
+            height={agentDetailHeight}
             borderStyle={borders.panel}
             borderColor={colors.muted}
             flexDirection="column"
@@ -91,10 +108,10 @@ export function Layout(): JSX.Element {
             <AgentDetail focused={false} />
           </Box>
         </Box>
-
-        {/* Modal overlay (rendered when queue is non-empty) */}
-        {modalQueue.length > 0 && modalQueue[0] && <ModalOverlay request={modalQueue[0]} />}
       </Box>
+
+      {/* Modal overlay (rendered when queue is non-empty) */}
+      {modalQueue.length > 0 && modalQueue[0] && <ModalOverlay request={modalQueue[0]} />}
     </Box>
   );
 }

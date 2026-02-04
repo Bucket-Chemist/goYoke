@@ -261,10 +261,12 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         setIsStreaming(true);
         setStreamingState(true);
 
-        // Query Claude with MCP server registration
+        // Query Claude with MCP server registration and GOgent settings
         const eventStream = query({
           prompt: message,
           options: {
+            // Load GOgent-Fortress settings (hooks, CLAUDE.md, etc.)
+            settingSources: ['user', 'project', 'local'],
             // SDK expects specific config format - mcpServers array type is more specific than our config
             mcpServers: [mcpServer] as unknown as NonNullable<Parameters<typeof query>[0]["options"]>["mcpServers"],
           },

@@ -21,5 +21,14 @@ if (process.argv.includes("--legacy")) {
   });
 } else {
   // Run TypeScript TUI
-  import("../dist/index.js");
+  const tuiDir = join(__dirname, "..");
+  const tuiBin = join(tuiDir, "dist/index.js");
+  const child = spawn("node", [tuiBin, ...process.argv.slice(2)], {
+    stdio: "inherit",
+    cwd: tuiDir
+  });
+
+  child.on("exit", (code) => {
+    process.exit(code || 0);
+  });
 }

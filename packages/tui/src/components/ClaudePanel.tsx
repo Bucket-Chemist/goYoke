@@ -9,11 +9,12 @@
  * - Up/Down arrow keys for input history (TUI-005 integration)
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { Box, Text } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
 import { createClaudePanelBindings } from "../config/keybindings.js";
+import { useClaudeQuery } from "../hooks/useClaudeQuery.js";
 import { Viewport } from "./primitives/Viewport.js";
 import { TextInput } from "./primitives/TextInput.js";
 import { Spinner } from "./primitives/Spinner.js";
@@ -26,6 +27,10 @@ export interface ClaudePanelProps {
    * Whether this panel has focus
    */
   focused: boolean;
+  /**
+   * Maximum height for the message viewport in rows
+   */
+  maxHeight?: number;
 }
 
 /**
@@ -92,40 +97,18 @@ function MessageItem({ message }: { message: Message }): JSX.Element {
 /**
  * Main conversation panel with messages and input
  */
-export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
+export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.Element {
   const {
     messages,
     streaming,
-    addMessage,
     addToHistory,
     navigateHistory,
     resetHistoryIndex,
     modalQueue,
   } = useStore();
+  const { sendMessage, error } = useClaudeQuery();
   const [input, setInput] = useState("");
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const currentInputRef = useRef(""); // Store current input when navigating history
-
-  // Handle mock API response with cleanup
-  useEffect(() => {
-    if (!pendingMessage) return;
-
-    const timerId = setTimeout(() => {
-      addMessage({
-        role: "assistant",
-        content: [
-          {
-            type: "text",
-            text: `Mock response to: "${pendingMessage}"\n\nThis is a placeholder. Real Claude API integration coming soon.`,
-          },
-        ],
-        partial: false,
-      });
-      setPendingMessage(null);
-    }, 500);
-
-    return () => clearTimeout(timerId);
-  }, [pendingMessage, addMessage]);
 
   // Handle message submission
   const handleSubmit = (): void => {
@@ -137,21 +120,13 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
     // Add to input history (TUI-005)
     addToHistory(trimmedInput);
 
-    // Add user message to store
-    addMessage({
-      role: "user",
-      content: [{ type: "text", text: trimmedInput }],
-      partial: false,
-    });
-
     // Clear input and reset history navigation
     setInput("");
     currentInputRef.current = "";
     resetHistoryIndex();
 
-    // TODO: Trigger Claude API call
-    // For now, trigger mock response via state
-    setPendingMessage(trimmedInput);
+    // Send to Claude API
+    void sendMessage(trimmedInput);
   };
 
   // Navigate to previous input in history (up arrow)
@@ -210,14 +185,16 @@ export function ClaudePanel({ focused }: ClaudePanelProps): JSX.Element {
         </Text>
       </Box>
 
-      {/* Message viewport */}
-      <Viewport
-        items={messages}
-        renderItem={renderMessage}
-        height={20}
-        focused={focused && !streaming}
-        autoScroll={true}
-      />
+      {/* Message viewport - constrained to available space */}
+      <Box height={maxHeight - 6} overflow="hidden">
+        <Viewport
+          items={messages}
+          renderItem={renderMessage}
+          height={Math.max(5, maxHeight - 8)}
+          focused={focused && !streaming}
+          autoScroll={true}
+        />
+      </Box>
 
       {/* Input area */}
       <Box flexDirection="column" marginTop={1}>

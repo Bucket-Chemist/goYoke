@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-04 11:14:37
+# Session Handoff - 2026-02-04 11:32:02
 
 ## Session Context
 
-- **Session ID**: 0c657ca8-d556-42ea-b372-0e9a0ef1caa7
+- **Session ID**: 9c5068a0-e666-4989-886d-00c4d5e76261
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 104
+- **Tool Calls**: 0
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,54 +16,22 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/memory/handoffs.jsonl
-  - claude/memory/last-handoff.md
   - claude/memory/ml-tool-events.jsonl
-  - claude/sessions/test-session-123.json
-  - claude/settings.json
-  - claude/tmp/unleash-backup-codeium-extension.json
-  - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
+  - ackages/tui/.claude/memory/handoffs.jsonl
+  - ackages/tui/.claude/memory/last-handoff.md
   - ackages/tui/bin/gofortress-tui.js
-  - ackages/tui/package-lock.json
   - ackages/tui/package.json
-  - ackages/tui/src/App.tsx
-  - ackages/tui/src/components/ErrorBoundary.tsx
+  - ackages/tui/src/components/ClaudePanel.tsx
   - ackages/tui/src/components/Layout.tsx
-  - ackages/tui/src/hooks/useAgentTree.ts
   - ackages/tui/src/hooks/useClaudeQuery.ts
-  - ackages/tui/src/lifecycle/shutdown.ts
-  - ackages/tui/src/store/index.ts
-  - ackages/tui/src/store/slices/messages.ts
-  - ackages/tui/src/store/slices/session.ts
-  - ackages/tui/src/store/slices/telemetry.ts
-  - ackages/tui/src/utils/markdown.ts
-  - kg/routing/task_validation.go
-  - kg/routing/task_validation_test.go
-  - ickets/mcp-TS-react/tickets/tickets-index.json
-  - .claude/memory/session-archive/routing-violations-744143d6-5c98-46d2-8f33-3ff76f44caa2.jsonl
-  - .claude/memory/session-archive/routing-violations-c4d3975a-4b4e-4e4c-a0b1-bc7647b0ac31.jsonl
-  - packages/tui/debug/
-  - packages/tui/eslint.config.js
-  - packages/tui/tests/cli/
-  - packages/tui/tests/components/AskModal.test.tsx
-  - packages/tui/tests/components/Banner.test.tsx
-  - packages/tui/tests/components/ClaudePanel.test.tsx
-  - packages/tui/tests/components/ConfirmModal.test.tsx
-  - packages/tui/tests/components/InputModal.test.tsx
-  - packages/tui/tests/components/Layout.test.tsx
-  - packages/tui/tests/components/ResponsiveLayout.test.tsx
-  - packages/tui/tests/components/SelectModal.test.tsx
-  - packages/tui/tests/components/Spinner.test.tsx
-  - packages/tui/tests/components/TextInput.test.tsx
-  - packages/tui/tests/components/Viewport.test.tsx
-  - packages/tui/tests/hooks/useKeymap.test.ts
-  - packages/tui/tests/hooks/useSession.test.ts
-  - packages/tui/tests/hooks/useTelemetry.test.ts
-  - packages/tui/tests/performance/
-  - packages/tui/tests/terminal/
-  - tickets/mcp-TS-react/cutover-signoff.md
-  - tickets/mcp-agent-teams-integration/mcp-spawn/
-  - tickets/mcp-agent-teams-integration/mcp-spawning-architecture-critical-review.md
-  - tickets/mcp-agent-teams-integration/mcp-spawning-v3.md
-  - tickets/mcp-agent-teams-integration/slice-tickets.sh
+  - ackages/tui/src/index.tsx
+  - .claude/sessions/0010d4a7-0942-4265-b492-7fa641f1447d.json
+  - .claude/sessions/087f4eae-1490-44a4-88c2-06638c8379cb.json
+  - .claude/sessions/757a082d-69be-4885-8e0a-83362048f4f3.json
+  - .claude/sessions/8be26003-474d-42ed-8831-3d910747fbda.json
+  - .claude/sessions/94dd6518-0b5d-471d-9a2e-c8acf3b6ebe7.json
+  - .claude/sessions/baf89875-deef-4002-a52c-1024209dcf85.json
+  - .claude/sessions/e93224b6-507c-4e3a-926e-ae91cc2887e7.json
+  - .claude/sessions/f6b70964-cc8b-4c61-a76e-3dc28f179bef.json
+  - packages/tui/src/stubs/
 
