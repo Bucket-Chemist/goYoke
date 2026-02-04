@@ -5,7 +5,7 @@ title: Mozart Orchestrator Update
 description: Update Mozart to use spawn_agent for spawning Einstein and Staff-Architect.
 status: pending
 time_estimate: 2h
-dependencies: [MCP-SPAWN-009]
+dependencies: [MCP-SPAWN-009, MCP-SPAWN-013]
 phase: 2
 tags: [orchestrator, braintrust, phase-2]
 needs_planning: false

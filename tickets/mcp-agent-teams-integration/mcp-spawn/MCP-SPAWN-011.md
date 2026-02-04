@@ -5,7 +5,7 @@ title: Review-Orchestrator Update
 description: Update review-orchestrator to use spawn_agent for parallel reviewer spawning.
 status: pending
 time_estimate: 2h
-dependencies: [MCP-SPAWN-009]
+dependencies: [MCP-SPAWN-009, MCP-SPAWN-013]
 phase: 2
 tags: [orchestrator, review, phase-2]
 needs_planning: false

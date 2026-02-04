@@ -5,7 +5,7 @@ title: Integration Testing and Documentation
 description: End-to-end testing of MCP spawning and documentation updates.
 status: pending
 time_estimate: 4h
-dependencies: [MCP-SPAWN-010, MCP-SPAWN-011]
+dependencies: [MCP-SPAWN-010, MCP-SPAWN-011, MCP-SPAWN-014]
 phase: 3
 tags: [testing, documentation, phase-3]
 needs_planning: false
