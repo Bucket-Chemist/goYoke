@@ -12,6 +12,7 @@ import { createSessionSlice } from "./slices/session.js";
 import { createUISlice } from "./slices/ui.js";
 import { createInputSlice } from "./slices/input.js";
 import { createModalSlice } from "./slices/modal.js";
+import { createTelemetrySlice } from "./slices/telemetry.js";
 
 /**
  * Combined Zustand store with all slices
@@ -27,12 +28,13 @@ const storeConfig = (...a: Parameters<typeof createMessagesSlice>) => ({
   ...createUISlice(...a),
   ...createInputSlice(...a),
   ...createModalSlice(...a),
+  ...createTelemetrySlice(...a),
 });
 
 const persistConfig = {
   name: "tui-store",
   // Only persist messages, agents, and session
-  // UI state and input history are ephemeral
+  // UI state, input history, and telemetry are ephemeral
   partialize: (state: Store) => ({
     messages: state.messages,
     agents: state.agents,
@@ -42,6 +44,7 @@ const persistConfig = {
     totalCost: state.totalCost,
     tokenCount: state.tokenCount,
     // Exclude: streaming, focusedPanel, inputHistory, inputHistoryIndex, modalQueue
+    // Exclude telemetry: routingDecisions, lastHandoff, sharpEdges, totalRoutingCost
   }),
 };
 

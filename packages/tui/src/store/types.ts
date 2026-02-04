@@ -150,10 +150,15 @@ export type ModalResponse =
   | { type: "input"; value: string }
   | { type: "select"; selected: string; index: number };
 
+// Import telemetry types
+import type { TelemetrySlice } from "./slices/telemetry.js";
+export type { TelemetrySlice, RoutingDecision, Handoff, SharpEdge } from "./slices/telemetry.js";
+
 // Combined store type
 export type Store = MessagesSlice &
   AgentsSlice &
   SessionSlice &
   UISlice &
   InputSlice &
-  ModalSlice;
+  ModalSlice &
+  TelemetrySlice;

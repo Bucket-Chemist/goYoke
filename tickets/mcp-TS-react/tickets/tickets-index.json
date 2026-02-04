@@ -224,7 +224,7 @@
     {
       "id": "TUI-017",
       "title": "Restart & Graceful Shutdown",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 6,
       "dependencies": [
         "TUI-016"
@@ -234,7 +234,7 @@
     {
       "id": "TUI-018",
       "title": "Telemetry Integration",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 7,
       "dependencies": [
         "TUI-005"
