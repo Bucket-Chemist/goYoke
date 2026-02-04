@@ -1,26 +1,38 @@
-# Session Handoff - 2026-02-03 20:09:59
+# Session Handoff - 2026-02-04 07:19:22
 
 ## Session Context
 
-- **Session ID**: c0dc3695-3eb7-4ba7-a36c-77b241746eef
+- **Session ID**: 7de55ea5-8404-4cd3-acda-502bb5927384
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 45
+- **Tool Calls**: 87
 - **Errors Logged**: 0
-- **Routing Violations**: 0
+- **Routing Violations**: 1
 
 ## Git State
 
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
+  - claude/agents/agents-index.json
+  - claude/memory/handoffs.jsonl
+  - claude/memory/last-handoff.md
   - claude/memory/ml-tool-events.jsonl
-  - ickets/mcp-TS-react/tickets/TUI-011.md
-  - ickets/mcp-TS-react/tickets/tickets-index.json
-  - .claude/sessions/
-  - GAP-review-orchestrator-failure-2026-02-03.md
-  - packages/tui/.claude/
-  - tickets/mcp-TS-react/tickets/completed/TUI-011.md
+  - claude/settings.json
+  - claude/tmp/unleash-backup-codeium-extension.json
+  - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
+  - .claude/braintrust/
+  - .claude/memory/routing-violations.jsonl
+  - .claude/schemas/
+
+## Routing Violations
+
+- **einstein**: blocked_task_einstein
+
+## Immediate Actions
+
+1. Review 1 routing violation(s) for pattern issues
+   - May indicate incorrect tier selection or agent usage
 

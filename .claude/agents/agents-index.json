@@ -445,8 +445,10 @@
         "triage",
         "interpret results"
       ],
-      "tools": ["Read", "Glob", "Grep", "Task", "Bash"],
+      "tools": ["Read", "Glob", "Grep", "Task", "Bash", "TaskList", "TaskGet"],
       "auto_activate": null,
+      "can_spawn": ["codebase-search", "haiku-scout", "librarian", "code-reviewer", "architect", "go-pro", "python-pro", "typescript-pro", "react-pro"],
+      "must_delegate": false,
       "scout_first": true,
       "sharp_edges_count": 12,
       "description": "Handles ambiguous scope, cross-module planning, user interviews, design tradeoffs, and debugging loops. Uses Scout-First Protocol."
@@ -901,8 +903,11 @@
         "/review",
         "orchestrate review"
       ],
-      "tools": ["Read", "Glob", "Grep", "Task", "Write"],
+      "tools": ["Read", "Glob", "Grep", "Task", "Write", "TaskList", "TaskGet"],
       "auto_activate": null,
+      "can_spawn": ["backend-reviewer", "frontend-reviewer", "standards-reviewer", "architect-reviewer", "codebase-search"],
+      "must_delegate": true,
+      "min_delegations": 2,
       "sharp_edges_count": 4,
       "description": "Coordinates multi-domain code review. Spawns specialized reviewers, synthesizes findings."
     },
@@ -927,6 +932,9 @@
       ],
       "tools": ["Read", "Glob", "Grep", "Task", "Write", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet"],
       "auto_activate": null,
+      "can_spawn": ["go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "typescript-pro", "react-pro", "codebase-search", "code-reviewer"],
+      "must_delegate": true,
+      "min_delegations": 1,
       "inputs": [".claude/tmp/specs.md", "conventions/*.md"],
       "outputs": [".claude/tmp/impl-progress.json", ".claude/tmp/impl-violations.jsonl"],
       "sharp_edges_count": 7,

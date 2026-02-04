@@ -255,7 +255,7 @@
     {
       "id": "TUI-020",
       "title": "Performance Benchmarking",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 7,
       "dependencies": [
         "TUI-002",
@@ -266,7 +266,7 @@
     {
       "id": "TUI-021",
       "title": "Archive Go Frontend & Build Updates",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 8,
       "dependencies": [
         "TUI-019",

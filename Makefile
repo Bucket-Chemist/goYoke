@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools all
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -16,7 +16,10 @@ help:
 	@echo "  make test-integration - Run integration tests only"
 	@echo "  make test-race       - Run race detector"
 	@echo "  make coverage        - Generate coverage report"
-	@echo "  make build           - Build binary"
+	@echo "  make build           - Build TypeScript TUI and all hooks (default)"
+	@echo "  make build-tui       - Build TypeScript TUI only"
+	@echo "  make build-legacy    - Build legacy Go TUI"
+	@echo "  make build-hooks     - Build all hook binaries"
 	@echo "  make build-validate  - Build gogent-validate binary"
 	@echo "  make build-archive   - Build gogent-archive binary"
 	@echo "  make build-aggregate - Build gogent-aggregate binary"
@@ -89,8 +92,25 @@ coverage:
 	@echo "  go tool cover -html=coverage.out"
 
 # Build targets
-build:
-	go build ${LDFLAGS} -o ${BINARY_NAME} ./cmd/${BINARY_NAME}
+# New default: TypeScript TUI + hooks
+build: build-hooks build-tui
+
+# Build TypeScript TUI
+build-tui:
+	@echo "Building TypeScript TUI..."
+	@cd packages/tui && npm install && npm run build
+	@chmod +x packages/tui/bin/gofortress-tui.js
+	@echo "✓ TypeScript TUI built at packages/tui/dist/index.js"
+
+# Build legacy Go TUI
+build-legacy:
+	@echo "Building legacy Go TUI..."
+	@go build -o bin/gofortress-legacy ./deprecated/cmd/gofortress
+	@echo "✓ Legacy Go TUI built at bin/gofortress-legacy"
+
+# Build all hook binaries
+build-hooks: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review
+	@echo "✓ All hook binaries built"
 
 build-validate:
 	@echo "Building gogent-validate binary..."
@@ -286,6 +306,9 @@ clean:
 	rm -f bin/gogent-doc-theater
 	rm -f bin/gogent-update-review-outcome
 	rm -f bin/gogent-log-review
+	rm -f bin/gofortress-legacy
+	rm -rf packages/tui/dist
+	rm -rf packages/tui/node_modules
 	rm -f coverage.out
 	rm -f *.test
 

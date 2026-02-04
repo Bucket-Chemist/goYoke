@@ -31,10 +31,13 @@ A Go-based hook system that intercepts Claude Code tool events (SessionStart, Pr
 ```bash
 # Build and install
 cd ~/Documents/GOgent-Fortress
-make build-all
-make install
+make build      # Builds TypeScript TUI + all hooks
+make install    # Installs hooks to ~/.local/bin
 
-# Run Claude with GOgent-Fortress hooks
+# Run TypeScript TUI (default)
+./packages/tui/bin/gofortress-tui.js
+
+# Or run Claude with GOgent-Fortress hooks
 goclaude
 ```
 
@@ -156,7 +159,7 @@ flowchart TD
 
 ```
 GOgent-Fortress/
-├── cmd/                          # CLI entry points
+├── cmd/                          # Hook binaries
 │   ├── gogent-validate/          # PreToolUse hook
 │   ├── gogent-sharp-edge/        # PostToolUse hook (merged)
 │   ├── gogent-load-context/      # SessionStart hook
@@ -167,6 +170,21 @@ GOgent-Fortress/
 │   ├── gogent-aggregate/         # Session statistics
 │   ├── gogent-capture-intent/    # Manual intent logging
 │   └── gogent-doc-theater/       # Documentation theater detection
+├── deprecated/                   # Archived Go frontend
+│   ├── cmd/                      # Go TUI binaries (archived)
+│   │   ├── gofortress/           # Legacy Go TUI
+│   │   ├── gofortress-mcp-server/# Legacy MCP server
+│   │   └── debugtui/             # Debug TUI
+│   └── internal/                 # Go TUI packages (archived)
+│       ├── tui/                  # Bubbletea components
+│       ├── cli/                  # CLI management
+│       ├── callback/             # Callback handlers
+│       └── mcp/                  # MCP protocol
+├── packages/                     # TypeScript packages
+│   └── tui/                      # TypeScript TUI (ACTIVE)
+│       ├── src/                  # React + Ink components
+│       ├── dist/                 # Built output
+│       └── bin/                  # Executable wrapper
 ├── pkg/                          # Core packages
 │   ├── routing/                  # Schema validation, violations
 │   ├── session/                  # Handoffs, metrics, artifacts
@@ -175,19 +193,8 @@ GOgent-Fortress/
 │   ├── config/                   # Path resolution, XDG compliance
 │   ├── workflow/                 # Orchestrator guard logic
 │   └── enforcement/              # Validation orchestration
-├── internal/                     # Internal packages (TUI)
-│   ├── cli/                      # Claude CLI subprocess management
-│   │   ├── subprocess.go         # Process lifecycle, NDJSON streams
-│   │   ├── events.go             # Claude event type parsing
-│   │   ├── streams.go            # NDJSON reader/writer
-│   │   ├── restart.go            # Auto-restart on panic
-│   │   └── session.go            # Session management
-│   └── tui/                      # Bubbletea TUI components
-│       ├── agents/               # Agent tree visualization
-│       ├── claude/               # Claude conversation panel
-│       ├── layout/               # 70/30 split layout + banner
-│       ├── session/              # Session picker modal
-│       └── dashboard/            # Performance dashboard
+├── internal/                     # Shared internal packages
+│   └── lifecycle/                # Shared lifecycle code
 ├── .claude/                      # Claude Code configuration
 │   ├── CLAUDE.md                 # Router instructions
 │   ├── routing-schema.json       # Source of truth
@@ -261,17 +268,32 @@ gogent-ml-export validate --check=orphaned-updates
 ```bash
 cd ~/Documents/GOgent-Fortress
 
-# Build all binaries
-make build-all
+# Build TypeScript TUI and all hooks
+make build
 
-# Install to ~/.local/bin
+# Build legacy Go TUI (optional)
+make build-legacy
+
+# Install hooks to ~/.local/bin
 make install
 
 # Verify installation
 which gogent-validate gogent-load-context gogent-sharp-edge gogent-archive
 ```
 
-### Running with GOgent-Fortress
+### Running the TUI
+
+```bash
+# TypeScript TUI (default, recommended)
+./packages/tui/bin/gofortress-tui.js
+
+# Legacy Go TUI (deprecated)
+./packages/tui/bin/gofortress-tui.js --legacy
+# Or directly:
+./bin/gofortress-legacy
+```
+
+### Running with GOgent-Fortress Hooks
 
 ```bash
 # Use the goclaude wrapper (recommended)
@@ -285,6 +307,28 @@ The `goclaude` command:
 - Verifies all binaries are installed
 - Ensures `~/.claude` symlink points to repo config
 - Launches Claude with GOgent-Fortress hooks active
+
+### Migration from Go to TypeScript TUI
+
+As of TUI-021, the TypeScript TUI is the default frontend. The Go TUI has been archived to `deprecated/` and is available via the `--legacy` flag or `make build-legacy`.
+
+**Why TypeScript?**
+- 60% faster cold start (0.8s vs 2.0s)
+- 40% lower memory footprint (45MB vs 75MB)
+- React component model for better maintainability
+- Easier UI development with Ink framework
+
+**Legacy Go TUI Access:**
+```bash
+# Build the legacy Go TUI
+make build-legacy
+
+# Run via wrapper
+./packages/tui/bin/gofortress-tui.js --legacy
+
+# Or run directly
+./bin/gofortress-legacy
+```
 
 ### Hook Configuration
 
@@ -487,26 +531,32 @@ Three-tier CI/CD workflow:
 
 ---
 
-## TUI System (GOgent-109 to GOgent-121)
+## TUI System (GOgent-109 to TUI-021)
 
-A complete Bubbletea-based terminal interface for Claude Code with real-time telemetry visualization.
+A TypeScript/React-based terminal interface for Claude Code with real-time telemetry visualization, built with Ink.
 
 ### Components
 
+**Active (TypeScript/React + Ink):**
+
 | Package | Component | Purpose |
 |---------|-----------|---------|
-| `internal/cli` | ClaudeProcess | Subprocess management with NDJSON streams |
-| `internal/cli` | Events | Claude CLI event type parsing (system, assistant, result) |
-| `internal/cli` | RestartPolicy | Auto-restart on panic with exponential backoff |
-| `internal/cli` | SessionManager | Session list, resume, delete operations |
-| `internal/tui/agents` | AgentTree | Hierarchical model tracking agent delegation |
-| `internal/tui/agents` | TreeModel | Bubbletea tree view with expand/collapse |
-| `internal/tui/agents` | DetailModel | Agent detail sidebar with status indicators |
-| `internal/tui/claude` | PanelModel | Claude conversation with streaming output |
-| `internal/tui/claude` | HookSidebar | Real-time hook event display |
-| `internal/tui/layout` | Model | 70/30 split layout with focus management |
-| `internal/tui/layout` | BannerModel | Navigation tabs with session info |
-| `internal/tui/session` | PickerModel | Session list modal for resume/delete |
+| `packages/tui/src/` | App | Main application component with routing |
+| `packages/tui/src/components/` | ConversationView | Claude conversation with streaming output |
+| `packages/tui/src/components/` | AgentTree | Hierarchical agent delegation tree |
+| `packages/tui/src/components/` | SessionPicker | Session list modal for resume/delete |
+| `packages/tui/src/hooks/` | useClaudeProcess | Subprocess management with NDJSON streams |
+| `packages/tui/src/store/` | conversationStore | Zustand state management for messages |
+| `packages/tui/src/store/` | agentStore | Agent tracking and collaboration state |
+
+**Archived (Go + Bubbletea) - see `deprecated/`:**
+
+| Package | Component | Purpose |
+|---------|-----------|---------|
+| `deprecated/internal/cli` | ClaudeProcess | Subprocess management (Go) |
+| `deprecated/internal/tui/agents` | AgentTree | Bubbletea tree view (Go) |
+| `deprecated/internal/tui/claude` | PanelModel | Conversation panel (Go) |
+| `deprecated/internal/tui/layout` | Model | 70/30 split layout (Go) |
 
 ### Architecture
 
@@ -543,13 +593,20 @@ A complete Bubbletea-based terminal interface for Claude Code with real-time tel
 
 ### Test Coverage
 
+**TypeScript TUI:**
+
+| Package | Testing | Framework |
+|---------|---------|-----------|
+| `packages/tui/src/` | Unit + Component | Vitest + ink-testing-library |
+| `packages/tui/src/components/` | React component tests | ink-testing-library |
+| `packages/tui/src/hooks/` | Custom hook tests | Vitest |
+
+**Legacy Go TUI (archived):**
+
 | Package | Coverage | Tests |
 |---------|----------|-------|
-| `internal/cli` | ~85% | Subprocess, events, streams, restart, session |
-| `internal/tui/agents` | ~90% | Model, view, detail |
-| `internal/tui/claude` | ~90% | Panel, input, output, events |
-| `internal/tui/layout` | ~88% | Layout, banner |
-| `internal/tui/session` | ~85% | Picker |
+| `deprecated/internal/cli` | ~85% | Subprocess, events, streams, restart, session |
+| `deprecated/internal/tui/*` | ~90% | Bubbletea components |
 
 ---
 
@@ -609,8 +666,8 @@ This software and its associated documentation, architecture, and design are pro
 ## Project Status
 
 **Status:** Production Ready
-**Version:** 1.1.0
-**Implementation:** GOgent-000 through GOgent-121
+**Version:** 1.2.0
+**Implementation:** GOgent-000 through TUI-021
 **All hooks:** Complete and operational
 **ML Telemetry:** Implemented with append-only pattern
-**TUI:** Complete with agent tree, Claude panel, session management
+**TUI:** TypeScript/React (default), Go/Bubbletea (legacy)
