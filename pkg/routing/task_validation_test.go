@@ -105,8 +105,8 @@ func TestValidateTaskInvocation_OpusAllowlist_StaffArchitect(t *testing.T) {
 	}
 }
 
-func TestValidateTaskInvocation_EinsteinAlwaysBlocked_EvenIfAllowlisted(t *testing.T) {
-	// Einstein should ALWAYS be blocked, even if someone mistakenly adds it to allowlist
+func TestValidateTaskInvocation_EinsteinAllowed_WhenInAllowlistWithOpus(t *testing.T) {
+	// Einstein should be allowed when in allowlist AND model is opus
 	schema := &Schema{
 		Tiers: map[string]TierConfig{
 			"opus": {
@@ -123,12 +123,12 @@ func TestValidateTaskInvocation_EinsteinAlwaysBlocked_EvenIfAllowlisted(t *testi
 
 	result := ValidateTaskInvocation(schema, taskInput, "test-session")
 
-	if result.Allowed {
-		t.Error("Expected einstein to be blocked even if in allowlist - must use /einstein skill")
+	if !result.Allowed {
+		t.Errorf("Expected einstein with opus model to be allowed via allowlist, got blocked: %s", result.BlockReason)
 	}
 
-	if result.Violation.ViolationType != "blocked_task_einstein" {
-		t.Errorf("Expected blocked_task_einstein violation, got: %s", result.Violation.ViolationType)
+	if result.Violation != nil {
+		t.Error("Expected no violation for allowlisted einstein with opus model")
 	}
 }
 
@@ -167,11 +167,13 @@ func TestIsInAllowlist_EmptyList(t *testing.T) {
 	}
 }
 
-func TestValidateTaskInvocation_EinsteinAgentBlocked(t *testing.T) {
+func TestValidateTaskInvocation_EinsteinRequiresOpus(t *testing.T) {
+	// Einstein is in allowlist but requires opus model - sonnet should be blocked
 	schema := &Schema{
 		Tiers: map[string]TierConfig{
 			"opus": {
-				TaskInvocationBlocked: true,
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "einstein"},
 			},
 		},
 	}
@@ -184,15 +186,23 @@ func TestValidateTaskInvocation_EinsteinAgentBlocked(t *testing.T) {
 	result := ValidateTaskInvocation(schema, taskInput, "test-session")
 
 	if result.Allowed {
-		t.Error("Expected einstein agent to be blocked")
+		t.Error("Expected einstein with sonnet model to be blocked - requires opus")
+	}
+
+	if result.Violation == nil {
+		t.Fatal("Expected violation to be set")
 	}
 
 	if result.Violation.Agent != "einstein" {
 		t.Errorf("Expected agent einstein, got: %s", result.Violation.Agent)
 	}
 
-	if !strings.Contains(result.Recommendation, "GAP document") {
-		t.Error("Recommendation should mention GAP document")
+	if result.Violation.ViolationType != "opus_agent_wrong_model" {
+		t.Errorf("Expected opus_agent_wrong_model violation, got: %s", result.Violation.ViolationType)
+	}
+
+	if !strings.Contains(result.BlockReason, "requires model: opus") {
+		t.Errorf("Block reason should mention opus requirement, got: %s", result.BlockReason)
 	}
 }
 

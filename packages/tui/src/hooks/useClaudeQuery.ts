@@ -13,7 +13,7 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { useStore } from "../store/index.js";
 import { mcpServer } from "../mcp/server.js";
-import type { ClassifiedError, ErrorType } from "../types/events.js";
+import type { ClassifiedError } from "../types/events.js";
 import type { ContentBlock } from "../store/types.js";
 
 /**
@@ -122,7 +122,6 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
   const updateSession = useStore((state) => state.updateSession);
   const incrementCost = useStore((state) => state.incrementCost);
   const addTokens = useStore((state) => state.addTokens);
-  const addAgent = useStore((state) => state.addAgent);
   const setStreamingState = useStore((state) => state.setStreaming);
 
   // Track current assistant message being built
@@ -266,7 +265,8 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         const eventStream = query({
           prompt: message,
           options: {
-            mcpServers: [mcpServer] as any, // SDK expects specific config format
+            // SDK expects specific config format - mcpServers array type is more specific than our config
+            mcpServers: [mcpServer] as unknown as NonNullable<Parameters<typeof query>[0]["options"]>["mcpServers"],
           },
         });
 

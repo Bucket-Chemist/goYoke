@@ -4,7 +4,7 @@
  */
 
 import type { StateCreator } from "zustand";
-import type { Store, MessagesSlice, ContentBlock, Message } from "../types.js";
+import type { Store, MessagesSlice } from "../types.js";
 import { nanoid } from "nanoid";
 
 export const createMessagesSlice: StateCreator<

@@ -32,13 +32,13 @@ interface State {
  * ```
  */
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, error: null };
+  override state: State = { hasError: false, error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo): void {
+  override componentDidCatch(error: Error, info: ErrorInfo): void {
     // Log error to debug file (if DEBUG=true) and memory buffer
     logger.error("Component error caught by ErrorBoundary", {
       message: error.message,
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
     });
   }
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.hasError) {
       return this.props.fallback ?? (
         <Box borderStyle="single" borderColor="red" padding={1}>

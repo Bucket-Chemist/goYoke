@@ -88,9 +88,11 @@ export function useAgentTree(): AgentTreeNavigation {
 
     if (currentIndex <= 0) {
       // Wrap to end
-      selectAgent(agentIds[agentIds.length - 1]);
+      const targetId = agentIds[agentIds.length - 1];
+      if (targetId !== undefined) selectAgent(targetId);
     } else {
-      selectAgent(agentIds[currentIndex - 1]);
+      const targetId = agentIds[currentIndex - 1];
+      if (targetId !== undefined) selectAgent(targetId);
     }
   };
 
@@ -100,9 +102,11 @@ export function useAgentTree(): AgentTreeNavigation {
 
     if (currentIndex === -1 || currentIndex >= agentIds.length - 1) {
       // Wrap to beginning
-      selectAgent(agentIds[0]);
+      const targetId = agentIds[0];
+      if (targetId !== undefined) selectAgent(targetId);
     } else {
-      selectAgent(agentIds[currentIndex + 1]);
+      const targetId = agentIds[currentIndex + 1];
+      if (targetId !== undefined) selectAgent(targetId);
     }
   };
 

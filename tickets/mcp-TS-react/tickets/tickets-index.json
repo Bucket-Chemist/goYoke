@@ -277,7 +277,7 @@
     {
       "id": "TUI-022",
       "title": "Integration Tests & Rollback Rehearsal",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 8,
       "dependencies": [
         "TUI-021"

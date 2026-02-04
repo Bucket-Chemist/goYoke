@@ -62,7 +62,10 @@ export async function initiateShutdown(signal: string): Promise<void> {
     console.log(`[Shutdown] Running ${handlers.length} shutdown handlers...`);
     for (let i = 0; i < handlers.length; i++) {
       try {
-        await handlers[i]();
+        const handler = handlers[i];
+        if (handler) {
+          await handler();
+        }
       } catch (error) {
         console.error(`[Shutdown] Handler ${i} error:`, error);
         // Continue with other handlers even if one fails

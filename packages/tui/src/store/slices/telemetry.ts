@@ -50,7 +50,7 @@ export const createTelemetrySlice: StateCreator<
   [],
   [],
   TelemetrySlice
-> = (set, get) => ({
+> = (set, _get) => ({
   routingDecisions: [],
   lastHandoff: null,
   sharpEdges: [],

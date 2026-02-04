@@ -50,10 +50,11 @@ const persistConfig = {
 
 // Conditionally apply devtools middleware only in development
 // Type assertion needed due to conditional middleware application
+// The middleware chain returns a compatible store creator despite TypeScript's inability to infer it
 export const useStore = create<Store>()(
   (process.env["NODE_ENV"] === "development"
     ? devtools(persist(storeConfig, persistConfig), { name: "TUI Store" })
-    : persist(storeConfig, persistConfig)) as any
+    : persist(storeConfig, persistConfig)) as unknown as typeof storeConfig
 );
 
 // Export types for convenience

@@ -4,7 +4,7 @@
  */
 
 import type { StateCreator } from "zustand";
-import type { Store, SessionSlice, SessionData } from "../types.js";
+import type { Store, SessionSlice } from "../types.js";
 
 export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
   set

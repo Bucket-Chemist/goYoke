@@ -1,7 +1,7 @@
 import React from "react";
-import { Box, Text } from "ink";
+import { Box } from "ink";
 import { useStore } from "../store/index.js";
-import { useKeymap } from "../hooks/useKeymap.js";
+import { useKeymap, KeyBinding } from "../hooks/useKeymap.js";
 import { useAgentTree } from "../hooks/useAgentTree.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
@@ -49,10 +49,10 @@ export function Layout(): JSX.Element {
   });
 
   // Agent tree navigation bindings (only when agents panel focused)
-  const agentBindings = {
-    up: selectPrevious,
-    down: selectNext,
-  };
+  const agentBindings: KeyBinding[] = [
+    { key: "up", action: selectPrevious, description: "Select previous agent" },
+    { key: "down", action: selectNext, description: "Select next agent" },
+  ];
 
   // Only enable global bindings when no modal is active
   useKeymap(globalBindings, modalQueue.length === 0);

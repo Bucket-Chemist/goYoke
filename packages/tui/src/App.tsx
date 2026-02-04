@@ -103,7 +103,7 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     );
   }
 
-  useInput((input, key) => {
+  useInput((input, _key) => {
     // Cycle through demo modes with number keys
     if (input === "0") setMode("main");
     if (input === "1") setMode("hello");

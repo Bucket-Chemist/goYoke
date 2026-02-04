@@ -36,25 +36,8 @@ func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, se
 		return result // Blocking not enabled, allow
 	}
 
-	// Block 1: Target agent is einstein (always blocked, must use /einstein skill)
-	// This check comes FIRST because einstein is never allowed via Task(), even if in allowlist
-	if targetAgent == "einstein" {
-		result.Allowed = false
-		result.BlockReason = fmt.Sprintf("Einstein must be invoked via /einstein slash command, not Task tool (even with model: %s). Task tool causes 60K token inheritance.", model)
-		result.Recommendation = "Generate GAP document, then notify user to run /einstein."
-
-		result.Violation = &Violation{
-			SessionID:     sessionID,
-			ViolationType: "blocked_task_einstein",
-			Model:         model,
-			Agent:         "einstein",
-			Reason:        "agent_is_einstein",
-		}
-
-		return result
-	}
-
-	// Check 2: If model is opus, check if agent is in the allowlist
+	// Check 1: If model is opus, check if agent is in the allowlist
+	// Einstein and other opus-tier agents are now in the allowlist and callable via Task(model: opus)
 	if model == "opus" {
 		// Allow if agent is in the allowlist (e.g., planner, architect, staff-architect-critical-review)
 		if isInAllowlist(targetAgent, opusConfig.TaskInvocationAllowlist) {
