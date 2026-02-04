@@ -459,6 +459,261 @@ function createMockProcess(): ChildProcess {
 }
 ```
 
+### C4 Critical Enhancement: PID File Tracking for Orphan Prevention
+
+**Problem:** Process registry is in-memory. If TUI crashes, spawned CLI processes become orphans.
+
+**Solution:** Persist PIDs to file; clean up on startup.
+
+#### Design Specification
+
+| Aspect | Specification |
+|--------|---------------|
+| **File Location** | `$XDG_RUNTIME_DIR/gogent/spawn-pids.json` (fallback: `/tmp/gogent-$UID/spawn-pids.json`) |
+| **File Format** | JSON object mapping agentId → {pid, startTime, agentType} |
+| **Write Timing** | Immediately after `spawn()` succeeds, before waiting for completion |
+| **Remove Timing** | When process exits (success, error, or killed) |
+| **Cleanup Timing** | TUI startup, before MCP server registration |
+
+#### Implementation (`packages/tui/src/spawn/pidTracker.ts`)
+
+```typescript
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+
+interface PidEntry {
+  pid: number;
+  agentType: string;
+  startTime: number;
+}
+
+interface PidFile {
+  version: 1;
+  tuiPid: number;
+  entries: Record<string, PidEntry>;
+}
+
+const PID_FILE_NAME = "spawn-pids.json";
+
+function getPidFilePath(): string {
+  const runtimeDir = process.env.XDG_RUNTIME_DIR;
+  if (runtimeDir) {
+    const dir = path.join(runtimeDir, "gogent");
+    fs.mkdirSync(dir, { recursive: true });
+    return path.join(dir, PID_FILE_NAME);
+  }
+  // Fallback for systems without XDG_RUNTIME_DIR
+  const fallbackDir = path.join(os.tmpdir(), `gogent-${process.getuid()}`);
+  fs.mkdirSync(fallbackDir, { recursive: true });
+  return path.join(fallbackDir, PID_FILE_NAME);
+}
+
+function readPidFile(): PidFile {
+  const filePath = getPidFilePath();
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(content) as PidFile;
+  } catch {
+    return { version: 1, tuiPid: process.pid, entries: {} };
+  }
+}
+
+function writePidFile(data: PidFile): void {
+  const filePath = getPidFilePath();
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+}
+
+/**
+ * Register a spawned process PID for orphan tracking.
+ * Call immediately after spawn() succeeds.
+ */
+export function registerPid(agentId: string, pid: number, agentType: string): void {
+  const data = readPidFile();
+  data.tuiPid = process.pid;
+  data.entries[agentId] = {
+    pid,
+    agentType,
+    startTime: Date.now(),
+  };
+  writePidFile(data);
+}
+
+/**
+ * Unregister a PID when process exits normally.
+ */
+export function unregisterPid(agentId: string): void {
+  const data = readPidFile();
+  delete data.entries[agentId];
+  writePidFile(data);
+}
+
+/**
+ * Check if a process is still running.
+ */
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0); // Signal 0 = check existence
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Kill orphaned processes from previous TUI sessions.
+ * Call at TUI startup BEFORE registering MCP server.
+ */
+export function cleanupOrphanedProcesses(): { killed: number; errors: string[] } {
+  const data = readPidFile();
+  const errors: string[] = [];
+  let killed = 0;
+
+  // If TUI PID matches, this is a restart - file is stale
+  // If TUI PID doesn't match, previous TUI crashed
+  if (data.tuiPid !== process.pid) {
+    for (const [agentId, entry] of Object.entries(data.entries)) {
+      if (isProcessRunning(entry.pid)) {
+        try {
+          // SIGTERM first
+          process.kill(entry.pid, "SIGTERM");
+          console.log(`[pidTracker] Killed orphaned process ${entry.pid} (${entry.agentType})`);
+          killed++;
+
+          // Schedule SIGKILL fallback
+          setTimeout(() => {
+            if (isProcessRunning(entry.pid)) {
+              try {
+                process.kill(entry.pid, "SIGKILL");
+                console.log(`[pidTracker] Force-killed ${entry.pid}`);
+              } catch {
+                // Already dead
+              }
+            }
+          }, 5000);
+        } catch (err) {
+          errors.push(`Failed to kill PID ${entry.pid}: ${err}`);
+        }
+      }
+    }
+  }
+
+  // Reset file for this session
+  writePidFile({ version: 1, tuiPid: process.pid, entries: {} });
+
+  return { killed, errors };
+}
+
+/**
+ * Get current orphan-trackable process count.
+ */
+export function getTrackedProcessCount(): number {
+  return Object.keys(readPidFile().entries).length;
+}
+```
+
+#### Integration Points
+
+**1. TUI Startup (`packages/tui/src/index.tsx`):**
+
+```typescript
+import { cleanupOrphanedProcesses } from "./spawn/pidTracker";
+
+async function main() {
+  // FIRST: Clean up orphans from crashed sessions
+  const cleanup = cleanupOrphanedProcesses();
+  if (cleanup.killed > 0) {
+    console.log(`[startup] Cleaned up ${cleanup.killed} orphaned processes`);
+  }
+  if (cleanup.errors.length > 0) {
+    console.warn("[startup] Cleanup errors:", cleanup.errors);
+  }
+
+  // THEN: Validate environment
+  await assertValidSpawnEnvironment();
+
+  // THEN: Start MCP server
+  // ...
+}
+```
+
+**2. spawn_agent Tool (`packages/tui/src/mcp/tools/spawnAgent.ts`):**
+
+```typescript
+import { registerPid, unregisterPid } from "../../spawn/pidTracker";
+
+// After spawn() succeeds:
+const proc = spawn("claude", cliArgs, { /* ... */ });
+
+// Register IMMEDIATELY after spawn
+if (proc.pid) {
+  registerPid(agentId, proc.pid, args.agent);
+}
+
+// Unregister on ANY exit
+proc.on("close", () => {
+  unregisterPid(agentId);
+  // ... rest of completion handling
+});
+
+proc.on("error", () => {
+  unregisterPid(agentId);
+  // ... rest of error handling
+});
+```
+
+#### PID Tracker Tests (`packages/tui/src/spawn/pidTracker.test.ts`)
+
+```typescript
+describe("pidTracker", () => {
+  describe("registerPid / unregisterPid", () => {
+    it("should persist PID to file", () => {
+      registerPid("agent-1", 12345, "einstein");
+      const data = readPidFile();
+      expect(data.entries["agent-1"].pid).toBe(12345);
+    });
+
+    it("should remove PID on unregister", () => {
+      registerPid("agent-1", 12345, "einstein");
+      unregisterPid("agent-1");
+      const data = readPidFile();
+      expect(data.entries["agent-1"]).toBeUndefined();
+    });
+  });
+
+  describe("cleanupOrphanedProcesses", () => {
+    it("should kill processes from different TUI session", () => {
+      // Write file with different tuiPid
+      writePidFile({
+        version: 1,
+        tuiPid: process.pid + 1, // Different session
+        entries: {
+          "old-agent": { pid: 99999, agentType: "test", startTime: 0 }
+        }
+      });
+
+      const result = cleanupOrphanedProcesses();
+      // PID 99999 likely doesn't exist, so no kill but file is reset
+      expect(readPidFile().entries).toEqual({});
+    });
+
+    it("should preserve entries from current session", () => {
+      writePidFile({
+        version: 1,
+        tuiPid: process.pid, // Same session
+        entries: {
+          "current-agent": { pid: 12345, agentType: "test", startTime: 0 }
+        }
+      });
+
+      cleanupOrphanedProcesses();
+      // File is reset even for current session (fresh start)
+      expect(readPidFile().entries).toEqual({});
+    });
+  });
+});
+```
+
 ## Acceptance Criteria
 
 - [ ] ProcessRegistry class implemented with all methods
@@ -466,13 +721,18 @@ function createMockProcess(): ChildProcess {
 - [ ] Signal forwarding works (SIGINT, SIGTERM)
 - [ ] Auto-unregister on process exit
 - [ ] Integrated with existing shutdown handlers
+- [ ] PID file tracking implemented
+- [ ] Orphan cleanup runs at TUI startup
+- [ ] Integration with spawn_agent tool complete
+- [ ] pidTracker tests pass
 - [ ] All tests pass: `npm test -- src/spawn/processRegistry.test.ts`
 - [ ] Code coverage ≥80%
 
 ## Test Deliverables
 
 - [ ] Test file created: `packages/tui/src/spawn/processRegistry.test.ts`
-- [ ] Number of test functions: 9
+- [ ] Test file created: `packages/tui/src/spawn/pidTracker.test.ts`
+- [ ] Number of test functions: 13
 - [ ] All tests passing
 - [ ] Coverage ≥80%
 - [ ] Integration tested with real processes (manual)

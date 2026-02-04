@@ -129,10 +129,12 @@ func (e *ToolEvent) IsWriteOperation() bool {
 // TaskInput represents Task tool_input structure.
 // This is the specific structure for Task tool invocations.
 type TaskInput struct {
-	Model        string `json:"model"`
-	Prompt       string `json:"prompt"`
-	SubagentType string `json:"subagent_type"`
-	Description  string `json:"description"`
+	Model           string `json:"model"`
+	Prompt          string `json:"prompt"`
+	SubagentType    string `json:"subagent_type"`
+	Description     string `json:"description"`
+	MaxTurns        int    `json:"max_turns,omitempty"`
+	RunInBackground bool   `json:"run_in_background,omitempty"`
 }
 
 // ParseToolEvent reads JSON from io.Reader and parses into ToolEvent.

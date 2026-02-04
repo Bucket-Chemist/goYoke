@@ -276,6 +276,104 @@ function getCurrentNestingLevel(): number {
 }
 ```
 
+### M1 Enhancement: Nesting Depth Validation
+
+**Problem:** spawn_agent could allow infinite nesting without explicit depth check.
+
+**Solution:** Add depth validation before spawning to reject requests at MAX_DEPTH.
+
+#### Add Depth Check Constant and Validation
+
+```typescript
+// Add at top with other constants
+const MAX_NESTING_DEPTH = 10;
+
+/**
+ * Validate nesting depth before spawning.
+ * Returns error message if depth exceeded, null if OK.
+ */
+function validateNestingDepth(): string | null {
+  const currentLevel = getCurrentNestingLevel();
+
+  if (currentLevel >= MAX_NESTING_DEPTH) {
+    return `Maximum nesting depth (${MAX_NESTING_DEPTH}) exceeded. ` +
+           `Current level: ${currentLevel}. ` +
+           `Cannot spawn sub-agent at this depth.`;
+  }
+
+  return null;
+}
+```
+
+#### Integration in spawn_agent Handler
+
+Add depth check at the start of the handler, BEFORE any spawn logic:
+
+```typescript
+export const spawnAgent = tool(
+  "spawn_agent",
+  // ... description and schema ...
+  async (args): Promise<{ content: Array<{ type: "text"; text: string }> }> => {
+    // === DEPTH VALIDATION (NEW) ===
+    const depthError = validateNestingDepth();
+    if (depthError) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            agentId: null,
+            agent: args.agent,
+            success: false,
+            error: depthError,
+            errorCode: "E_MAX_DEPTH_EXCEEDED",
+          }, null, 2),
+        }],
+      };
+    }
+    // === END DEPTH VALIDATION ===
+
+    const agentId = randomUUID();
+    // ... rest of existing implementation
+  }
+);
+```
+
+#### Depth Check Test Case
+
+Add to `spawnAgent.test.ts`:
+
+```typescript
+describe("nesting depth validation", () => {
+  it("should reject spawn when at MAX_NESTING_DEPTH", () => {
+    const originalEnv = process.env.GOGENT_NESTING_LEVEL;
+    process.env.GOGENT_NESTING_LEVEL = "10"; // MAX_NESTING_DEPTH
+
+    vi.resetModules();
+    const { validateNestingDepth } = require("./spawnAgent");
+    const error = validateNestingDepth();
+
+    expect(error).not.toBeNull();
+    expect(error).toContain("Maximum nesting depth");
+    expect(error).toContain("10");
+
+    process.env.GOGENT_NESTING_LEVEL = originalEnv;
+  });
+
+  it("should allow spawn when under MAX_NESTING_DEPTH", () => {
+    const originalEnv = process.env.GOGENT_NESTING_LEVEL;
+    process.env.GOGENT_NESTING_LEVEL = "5";
+
+    vi.resetModules();
+    const { validateNestingDepth } = require("./spawnAgent");
+    const error = validateNestingDepth();
+
+    expect(error).toBeNull();
+
+    process.env.GOGENT_NESTING_LEVEL = originalEnv;
+  });
+});
+```
+
 ### Tests (`packages/tui/src/mcp/tools/spawnAgent.test.ts`)
 
 ```typescript
@@ -420,13 +518,16 @@ describe("spawn_agent tool", () => {
 - [ ] JSON output parsed correctly
 - [ ] Returns structured SpawnResult
 - [ ] Nesting level incremented for child processes
+- [ ] Nesting depth validation implemented
+- [ ] Spawn blocked at MAX_NESTING_DEPTH (10)
+- [ ] Clear error message returned when depth exceeded
 - [ ] All tests pass with mock CLI
 - [ ] Code coverage ≥80%
 
 ## Test Deliverables
 
 - [ ] Test file created: `packages/tui/src/mcp/tools/spawnAgent.test.ts`
-- [ ] Number of test functions: 8
+- [ ] Number of test functions: 10
 - [ ] All tests passing
 - [ ] Coverage ≥80%
 - [ ] Manual test: invoke from subagent, verify CLI spawns

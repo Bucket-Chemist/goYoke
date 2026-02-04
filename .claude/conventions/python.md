@@ -1,8 +1,3 @@
----
-paths:
-  - "**/*.py"
----
-
 # Agent Guidelines for Python Code Quality
 
 This document provides guidelines for maintaining high-quality Python code. These rules MUST be followed by all AI coding agents and contributors.

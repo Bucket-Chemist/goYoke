@@ -473,6 +473,127 @@ func TestBlockResponseForDelegation(t *testing.T) {
 }
 ```
 
+### C3 Enhancement: Hook I/O Schema Alignment
+
+**Requirement:** Hook inputs/outputs must conform to `~/.claude/schemas/hook-io-schema.json`
+
+#### Go Type Definitions (align with schema)
+
+The SubagentStopEvent struct should align with schema:
+
+```go
+// SubagentStopInput matches hook-io-schema.json#/definitions/SubagentStopInput
+type SubagentStopInput struct {
+    HookEventName string `json:"hook_event_name"` // Must be "SubagentStop"
+    SessionID     string `json:"session_id"`
+    AgentID       string `json:"agent_id"`
+    AgentType     string `json:"agent_type"`
+    ChildCount    int    `json:"child_count"`
+    Status        string `json:"status"` // "complete", "error", "timeout"
+}
+
+// SubagentStopOutput matches hook-io-schema.json#/definitions/SubagentStopOutput
+type SubagentStopOutput struct {
+    Decision           string                   `json:"decision"`
+    Reason             string                   `json:"reason,omitempty"`
+    Message            string                   `json:"message,omitempty"`
+    Error              string                   `json:"error,omitempty"`
+    HookSpecificOutput *SubagentStopHookOutput  `json:"hookSpecificOutput,omitempty"`
+}
+
+type SubagentStopHookOutput struct {
+    HookEventName            string `json:"hookEventName"`
+    PermissionDecision       string `json:"permissionDecision"`
+    PermissionDecisionReason string `json:"permissionDecisionReason,omitempty"`
+    AgentID                  string `json:"agentId,omitempty"`
+    RequiredDelegations      int    `json:"requiredDelegations,omitempty"`
+    ActualDelegations        int    `json:"actualDelegations,omitempty"`
+    Suggestion               string `json:"suggestion,omitempty"`
+}
+```
+
+#### Schema Reference
+
+The hook MUST produce output conforming to:
+- Schema: `~/.claude/schemas/hook-io-schema.json`
+- Definition: `SubagentStopOutput`
+- Required field: `decision` (enum: "allow", "block", "modify")
+
+### M4 Enhancement: Additional Test Coverage
+
+Add these test cases to `pkg/routing/delegation_test.go`:
+
+```go
+func TestLoadAgentsIndex_FileNotFound(t *testing.T) {
+    // Clear cache and set invalid path
+    ClearAgentsIndexCache()
+    originalHome := os.Getenv("HOME")
+    os.Setenv("HOME", "/nonexistent")
+    defer os.Setenv("HOME", originalHome)
+
+    _, err := LoadAgentsIndex()
+
+    if err == nil {
+        t.Error("Expected error when agents-index.json not found")
+    }
+    if !strings.Contains(err.Error(), "not found") {
+        t.Errorf("Expected 'not found' in error, got: %v", err)
+    }
+}
+
+func TestValidateDelegationRequirement_ConfigLoadError(t *testing.T) {
+    // Simulate config load failure - should fail-open
+    ClearAgentsIndexCache()
+    originalHome := os.Getenv("HOME")
+    os.Setenv("HOME", "/nonexistent")
+    defer os.Setenv("HOME", originalHome)
+
+    result := ValidateDelegationRequirement("mozart", 0)
+
+    // Fail-open: should allow even though we couldn't load config
+    if !result.Valid {
+        t.Error("Expected fail-open behavior (Valid=true) on config load error")
+    }
+    if !strings.Contains(result.Message, "Could not load config") {
+        t.Errorf("Expected error message, got: %s", result.Message)
+    }
+}
+
+func TestValidateDelegationRequirement_MoreThanMinimum(t *testing.T) {
+    // Setup mock with min_delegations: 3
+    setupMockAgentsIndex(t)
+    defer ClearAgentsIndexCache()
+
+    // Mozart with 5 children (more than min 3)
+    result := ValidateDelegationRequirement("mozart", 5)
+
+    if !result.Valid {
+        t.Error("Expected valid when exceeding min_delegations")
+    }
+    if result.Actual != 5 {
+        t.Errorf("Expected actual=5, got %d", result.Actual)
+    }
+}
+
+func TestBlockResponseForDelegation_IncludesSuggestion(t *testing.T) {
+    result := &DelegationValidationResult{
+        Valid:      false,
+        AgentID:    "review-orchestrator",
+        Required:   2,
+        Actual:     1,
+        Message:    "review-orchestrator requires at least 2 delegations",
+        Suggestion: "Spawn backend-reviewer or frontend-reviewer",
+    }
+
+    response := BlockResponseForDelegation(result)
+
+    hookOutput := response["hookSpecificOutput"].(map[string]interface{})
+    if hookOutput["suggestion"] != "Spawn backend-reviewer or frontend-reviewer" {
+        t.Errorf("Expected suggestion in response, got: %v", hookOutput["suggestion"])
+    }
+}
+```
+
 ## Acceptance Criteria
 
 - [ ] Hook reads SubagentStop event from stdin
@@ -483,11 +604,14 @@ func TestBlockResponseForDelegation(t *testing.T) {
 - [ ] Logs both violations and successes for telemetry
 - [ ] All tests pass: `go test ./pkg/routing/...`
 - [ ] Code coverage ≥80%
+- [ ] Hook output conforms to hook-io-schema.json
+- [ ] SubagentStopOutput types defined in pkg/routing
+- [ ] Config load error handled with fail-open behavior
 
 ## Test Deliverables
 
 - [ ] Test file: `pkg/routing/delegation_test.go`
-- [ ] Number of test functions: 2
+- [ ] Number of test functions: 6
 - [ ] All tests passing
 - [ ] Coverage ≥80%
 - [ ] Manual test: Mozart completes with <3 children (blocked), Mozart completes with 3+ children (allowed)

@@ -480,14 +480,14 @@ When 2+ agent triggers fire:
 
 ## Reference Documents
 
-| Document                  | Purpose                                       |
-| ------------------------- | --------------------------------------------- |
-| `routing-schema.json`     | Source of truth for tiers, agents, thresholds |
-| `agents-index.json`       | Complete agent definitions with triggers      |
-| `conventions/*.md`        | Language-specific coding conventions          |
-| `rules/LLM-guidelines.md` | Multi-model strategy, anti-patterns           |
-| `rules/agent-behavior.md` | Behavioral guidelines for all agents          |
-| `ARCHITECTURE.md`         | Full system architecture (in repo root)       |
+| Document                     | Purpose                                                    |
+| ---------------------------- | ---------------------------------------------------------- |
+| `routing-schema.json`        | Source of truth for tiers, agents, thresholds              |
+| `agents-index.json`          | Complete agent definitions with triggers                   |
+| `conventions/*.md`           | Language-specific coding conventions                       |
+| `rules/router-guidelines.md` | Router-essential guidance, tier selection, enforcement     |
+| `rules/agent-guidelines.md`  | Agent-essential guidance (injected at spawn time)          |
+| `ARCHITECTURE.md`            | Full system architecture (in repo root)                    |
 
 ---
 

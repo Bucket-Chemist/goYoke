@@ -327,6 +327,146 @@ export function formatValidationResult(result: SpawnValidationResult): string {
 }
 ```
 
+### C1 Critical Fix: Atomic Child Count Management
+
+**Problem:** Lines 247-254 have a TOCTOU (time-of-check-time-of-use) race condition. When multiple spawns occur concurrently, the check-then-spawn pattern allows exceeding limits.
+
+**Solution:** Use a mutex to make validation + child registration atomic.
+
+#### Updated `relationshipValidation.ts` with Atomic Operations
+
+Add these imports and functions to the file:
+
+```typescript
+import { Mutex } from "async-mutex";
+
+// Per-parent mutex map to allow parallel spawns from DIFFERENT parents
+const parentMutexes = new Map<string, Mutex>();
+
+function getParentMutex(parentId: string): Mutex {
+  if (!parentMutexes.has(parentId)) {
+    parentMutexes.set(parentId, new Mutex());
+  }
+  return parentMutexes.get(parentId)!;
+}
+
+/**
+ * Validates spawn AND registers child atomically.
+ * Returns validation result; if valid, child is already registered.
+ */
+export async function validateAndRegisterSpawn(
+  parentId: string | null,
+  parentType: string | null | undefined,
+  childType: string,
+  childId: string,
+  store: AgentsStore
+): Promise<SpawnValidationResult> {
+  // No parent = router spawn, no locking needed
+  if (!parentId) {
+    return validateSpawnRelationship(parentType, childType, 0);
+  }
+
+  const mutex = getParentMutex(parentId);
+
+  // Critical section: validate + register atomically
+  return await mutex.runExclusive(async () => {
+    const parent = store.get(parentId);
+    const currentChildCount = parent?.childIds?.length || 0;
+
+    const result = validateSpawnRelationship(
+      parentType,
+      childType,
+      currentChildCount
+    );
+
+    if (result.valid) {
+      // Register child INSIDE the lock
+      store.addChild(parentId, childId);
+    }
+
+    return result;
+  });
+}
+
+/**
+ * Cleanup mutex when parent completes (prevent memory leak)
+ */
+export function cleanupParentMutex(parentId: string): void {
+  parentMutexes.delete(parentId);
+}
+```
+
+#### Required Dependency
+
+Add to `packages/tui/package.json`:
+```json
+"dependencies": {
+  "async-mutex": "^0.4.0"
+}
+```
+
+#### Integration in `spawnAgent.ts`
+
+Replace the validation block (around line 357-391 in current spec):
+
+```typescript
+// OLD (race-prone):
+// const validation = validateSpawnRelationship(parentType, args.agent, currentChildCount);
+
+// NEW (atomic):
+import { validateAndRegisterSpawn, cleanupParentMutex } from "../../spawn/relationshipValidation";
+
+const validation = await validateAndRegisterSpawn(
+  parentId,
+  parentType,
+  args.agent,
+  agentId,  // Pre-generated UUID
+  getAgentsStore()
+);
+
+// If validation failed, child was NOT registered - safe to return error
+if (!validation.valid) {
+  return { content: [{ type: "text", text: JSON.stringify({ /* error */ }) }] };
+}
+
+// Child already registered - proceed with spawn
+// On spawn failure, must REMOVE child from parent:
+proc.on("error", () => {
+  getAgentsStore().removeChild(parentId, agentId);
+});
+```
+
+#### Concurrent Spawn Test Case
+
+Add to `relationshipValidation.test.ts`:
+
+```typescript
+describe("concurrent spawn handling", () => {
+  it("should not exceed max_delegations under concurrent spawns", async () => {
+    // Parent with max_delegations: 2
+    const parentId = "test-parent";
+    const store = createMockStore({ maxDelegations: 2 });
+
+    // Spawn 5 children concurrently
+    const results = await Promise.all([
+      validateAndRegisterSpawn(parentId, "orchestrator", "child", "c1", store),
+      validateAndRegisterSpawn(parentId, "orchestrator", "child", "c2", store),
+      validateAndRegisterSpawn(parentId, "orchestrator", "child", "c3", store),
+      validateAndRegisterSpawn(parentId, "orchestrator", "child", "c4", store),
+      validateAndRegisterSpawn(parentId, "orchestrator", "child", "c5", store),
+    ]);
+
+    const successes = results.filter(r => r.valid).length;
+    const failures = results.filter(r => !r.valid).length;
+
+    // Exactly 2 should succeed, 3 should fail
+    expect(successes).toBe(2);
+    expect(failures).toBe(3);
+    expect(store.getChildCount(parentId)).toBe(2);
+  });
+});
+```
+
 ### Integration into spawn_agent (`packages/tui/src/mcp/tools/spawnAgent.ts`)
 
 ```typescript
@@ -614,13 +754,15 @@ describe("formatValidationResult", () => {
 - [ ] Errors block spawn with clear message
 - [ ] Warnings logged but spawn proceeds
 - [ ] Integration with spawn_agent works correctly
+- [ ] Race condition fix implemented with async-mutex
+- [ ] Concurrent spawn test passes
 - [ ] All tests pass: `npm test -- src/spawn/relationshipValidation.test.ts`
 - [ ] Code coverage ≥80%
 
 ## Test Deliverables
 
 - [ ] Test file: `packages/tui/src/spawn/relationshipValidation.test.ts`
-- [ ] Number of test functions: 12
+- [ ] Number of test functions: 13
 - [ ] All tests passing
 - [ ] Coverage ≥80%
 - [ ] Manual test: Mozart spawns Einstein (allowed), Mozart spawns backend-reviewer (blocked)

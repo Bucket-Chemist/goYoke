@@ -772,3 +772,47 @@ type failingWriter struct{}
 func (fw *failingWriter) Write(p []byte) (n int, err error) {
 	return 0, fmt.Errorf("write failed")
 }
+
+// Test NewModifyResponse constructor and helpers
+func TestNewModifyResponse(t *testing.T) {
+	updatedInput := map[string]interface{}{
+		"prompt": "modified prompt",
+		"model":  "sonnet",
+	}
+
+	resp := NewModifyResponse("PreToolUse", updatedInput)
+
+	if resp.Decision != DecisionApprove {
+		t.Errorf("Expected decision %s, got %s", DecisionApprove, resp.Decision)
+	}
+
+	if !resp.HasUpdatedInput() {
+		t.Error("Expected HasUpdatedInput to return true")
+	}
+
+	ui := resp.GetUpdatedInput()
+	if ui == nil {
+		t.Fatal("GetUpdatedInput returned nil")
+	}
+
+	if ui["prompt"] != "modified prompt" {
+		t.Errorf("Expected modified prompt, got %v", ui["prompt"])
+	}
+}
+
+func TestHasUpdatedInput_False(t *testing.T) {
+	resp := NewPassResponse("PreToolUse")
+
+	if resp.HasUpdatedInput() {
+		t.Error("Expected HasUpdatedInput to return false for pass response")
+	}
+}
+
+func TestGetUpdatedInput_Nil(t *testing.T) {
+	resp := NewBlockResponse("PreToolUse", "blocked for testing")
+
+	ui := resp.GetUpdatedInput()
+	if ui != nil {
+		t.Error("Expected GetUpdatedInput to return nil for block response")
+	}
+}

@@ -115,9 +115,10 @@ func extractAgentFromPrompt(prompt string) string {
 
 // AgentConfig represents agent metadata from agents-index.json
 type AgentConfig struct {
-	Model         string   `json:"model"`
-	SubagentType  string   `json:"subagent_type"`
-	AllowedModels []string `json:"allowed_models,omitempty"`
+	Model               string               `json:"model"`
+	SubagentType        string               `json:"subagent_type"`
+	AllowedModels       []string             `json:"allowed_models,omitempty"`
+	ContextRequirements *ContextRequirements `json:"context_requirements,omitempty"`
 }
 
 // AgentsIndex represents the full agents-index.json structure

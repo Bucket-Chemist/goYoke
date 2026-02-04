@@ -117,6 +117,123 @@ DO NOT fabricate results. Report exactly what happens.`
 });
 ```
 
+### M2 Enhancement: Automated Phase 0 Gate Test
+
+**Problem:** The current verification requires manual execution. Need automated test for CI.
+
+**Solution:** Add automated test that can verify MCP tool availability programmatically.
+
+#### Automated Test (`packages/tui/tests/e2e/mcpAvailability.test.ts`)
+
+```typescript
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { spawn, ChildProcess } from "child_process";
+
+describe("MCP Tool Availability Gate", () => {
+  let tuiProcess: ChildProcess;
+  let mcpServerReady: boolean = false;
+
+  beforeAll(async () => {
+    // Start TUI in test mode
+    tuiProcess = spawn("npm", ["run", "start:test"], {
+      cwd: "packages/tui",
+      env: { ...process.env, GOGENT_TEST_MODE: "true" },
+    });
+
+    // Wait for MCP server to be ready
+    await waitForMcpServer(tuiProcess);
+    mcpServerReady = true;
+  }, 30000);
+
+  afterAll(() => {
+    if (tuiProcess) {
+      tuiProcess.kill("SIGTERM");
+    }
+  });
+
+  it("should make MCP tools available to spawned subagents", async () => {
+    expect(mcpServerReady).toBe(true);
+
+    // Spawn a minimal subagent that attempts to invoke MCP tool
+    const result = await spawnTestSubagent({
+      prompt: "Invoke mcp__gofortress__test_mcp_ping with echo='gate-test'",
+      timeout: 30000,
+    });
+
+    // Verify the subagent could access the MCP tool
+    expect(result.success).toBe(true);
+    expect(result.output).toContain("PONG");
+    expect(result.output).toContain("gate-test");
+  });
+
+  it("should return tool not found for non-existent MCP tools", async () => {
+    const result = await spawnTestSubagent({
+      prompt: "Invoke mcp__gofortress__nonexistent_tool",
+      timeout: 10000,
+    });
+
+    // Should fail gracefully with clear error
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("tool not found");
+  });
+});
+
+async function waitForMcpServer(proc: ChildProcess): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("MCP server startup timeout")), 20000);
+
+    proc.stdout?.on("data", (data: Buffer) => {
+      if (data.toString().includes("MCP server ready")) {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+
+    proc.on("error", (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+  });
+}
+
+async function spawnTestSubagent(opts: { prompt: string; timeout: number }): Promise<{
+  success: boolean;
+  output?: string;
+  error?: string;
+}> {
+  // Implementation uses mock CLI infrastructure from MCP-SPAWN-003
+  // Returns parsed result from subagent execution
+  throw new Error("Implement with MCP-SPAWN-003 mock infrastructure");
+}
+```
+
+#### CI Integration
+
+Add to `.github/workflows/ci.yml`:
+
+```yaml
+- name: Run MCP Gate Test
+  run: npm run test:e2e -- mcpAvailability.test.ts
+  timeout-minutes: 5
+```
+
+#### Gate Decision Automation
+
+The test outputs to `.claude/tmp/mcp-verification-result.json`:
+
+```json
+{
+  "timestamp": "2026-02-05T10:30:00Z",
+  "gate": "MCP-SPAWN-001",
+  "result": "PASS" | "FAIL",
+  "details": {
+    "toolAccessible": true,
+    "responseTime": 150,
+    "pongReceived": true
+  }
+}
+```
+
 ## Acceptance Criteria
 
 - [ ] `testMcpPing` tool created and compiles without errors
@@ -125,6 +242,9 @@ DO NOT fabricate results. Report exactly what happens.`
 - [ ] Verification test executed from router level
 - [ ] Result documented in `.claude/tmp/mcp-verification-result.json`
 - [ ] Gate decision recorded: PROCEED or HALT
+- [ ] Automated e2e test created for MCP availability
+- [ ] Test can run in CI without manual intervention
+- [ ] Gate result automatically written to JSON file
 
 ## Gate Decision Matrix
 
@@ -142,6 +262,9 @@ DO NOT fabricate results. Report exactly what happens.`
 - [ ] Manual verification executed
 - [ ] Results documented with exact output
 - [ ] Gate decision recorded
+- [ ] Test file: `packages/tui/tests/e2e/mcpAvailability.test.ts`
+- [ ] Number of test functions: 2
+- [ ] CI workflow updated
 
 ## Rollback
 

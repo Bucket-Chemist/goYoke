@@ -73,11 +73,14 @@ Phase 1:
   All Phase 1 deps ──────►└─► MCP-SPAWN-008
 
 Phase 2 (CRITICAL PATH - validation before orchestrators):
-  MCP-SPAWN-008 ─► MCP-SPAWN-009 ─► MCP-SPAWN-013 ─┬─► MCP-SPAWN-010
-                                                    │
-                                                    ├─► MCP-SPAWN-011
+  MCP-SPAWN-008 ─┬─► MCP-SPAWN-009 ─────────────────┬─► MCP-SPAWN-010
+                 │                                   │
+                 └─► MCP-SPAWN-013 ─────────────────┼─► MCP-SPAWN-011
                                                     │
   MCP-SPAWN-007 ────────────────────────────────────┴─► MCP-SPAWN-014
+
+  Note: 009 and 013 can run in PARALLEL (both depend only on 008)
+  010/011 require BOTH 009 AND 013 to complete before starting
 
 Phase 3:
   MCP-SPAWN-010 + 011 + 014 ─► MCP-SPAWN-012 ─► MCP-SPAWN-015
@@ -90,6 +93,11 @@ Phase 3:
 - 014 validates delegation requirements at completion time
 - 012 needs 014 complete to test full workflow with enforcement
 - 015 tests the validation failure paths specifically
+
+**Parallelism Opportunity:**
+- 009 (MCP Server Registration) and 013 (Relationship Validation) can run concurrently
+- Both depend only on 008, with no dependencies on each other
+- Estimated time savings: ~2 hours if executed in parallel
 
 ---
 

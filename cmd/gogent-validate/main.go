@@ -135,11 +135,64 @@ func main() {
 	// Extract agent and model for logging
 	agent := "unknown"
 	model := "unknown"
-	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
+	var taskInput *routing.TaskInput
+	if ti, err := routing.ParseTaskInput(event.ToolInput); err == nil {
+		taskInput = ti
 		agent = extractAgentFromPrompt(taskInput.Prompt)
 		model = taskInput.Model
 		if model == "" {
 			model = "default"
+		}
+	}
+
+	// If validation passed, try to inject conventions
+	if (result.Decision == "allow" || result.Decision == "") && taskInput != nil {
+		if agent != "" && agent != "unknown" {
+			// Load agent config
+			agentConfig, err := loadAgentConfig(agent)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to load agent config: %v\n", err)
+			} else if agentConfig != nil && agentConfig.ContextRequirements != nil && agentConfig.ContextRequirements.HasContextRequirements() {
+				// Extract file paths from prompt for conditional convention matching
+				taskFiles := routing.ExtractFilesFromPrompt(taskInput.Prompt)
+
+				// Build augmented prompt with conventions
+				augmentedPrompt, err := routing.BuildAugmentedPrompt(
+					taskInput.Prompt,
+					agentConfig.ContextRequirements,
+					taskFiles,
+				)
+
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to build augmented prompt: %v\n", err)
+				} else if augmentedPrompt != taskInput.Prompt {
+					// Conventions were injected - return modify response
+					updatedInput := map[string]interface{}{
+						"prompt":        augmentedPrompt,
+						"model":         taskInput.Model,
+						"subagent_type": taskInput.SubagentType,
+						"description":   taskInput.Description,
+					}
+
+					// Preserve optional fields if present
+					if taskInput.MaxTurns > 0 {
+						updatedInput["max_turns"] = taskInput.MaxTurns
+					}
+					if taskInput.RunInBackground {
+						updatedInput["run_in_background"] = taskInput.RunInBackground
+					}
+
+					resp := routing.NewModifyResponse("PreToolUse", updatedInput)
+					if err := resp.Marshal(os.Stdout); err != nil {
+						fmt.Fprintf(os.Stderr, "[gogent-validate] Error: Failed to marshal response: %v\n", err)
+						os.Exit(1)
+					}
+					fmt.Println() // Add newline after JSON
+
+					logValidation(event.SessionID, agent, model, "modify", "conventions injected")
+					return
+				}
+			}
 		}
 	}
 
@@ -248,4 +301,45 @@ func extractAgentFromPrompt(prompt string) string {
 		}
 	}
 	return "unknown"
+}
+
+// loadAgentConfig loads agent configuration from agents-index.json.
+// Returns nil without error if agent is not found (not all agents are in index).
+func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
+	configDir, err := routing.GetClaudeConfigDir()
+	if err != nil {
+		return nil, err
+	}
+
+	indexPath := filepath.Join(configDir, "agents", "agents-index.json")
+	data, err := os.ReadFile(indexPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read agents-index.json: %w", err)
+	}
+
+	// Parse the index structure (agents is an array)
+	var index struct {
+		Agents []struct {
+			ID                  string                    `json:"id"`
+			Model               string                    `json:"model"`
+			SubagentType        string                    `json:"subagent_type"`
+			ContextRequirements *routing.ContextRequirements `json:"context_requirements"`
+		} `json:"agents"`
+	}
+	if err := json.Unmarshal(data, &index); err != nil {
+		return nil, fmt.Errorf("failed to parse agents-index.json: %w", err)
+	}
+
+	// Search for agent by ID
+	for _, agent := range index.Agents {
+		if agent.ID == agentID {
+			return &routing.AgentConfig{
+				Model:               agent.Model,
+				SubagentType:        agent.SubagentType,
+				ContextRequirements: agent.ContextRequirements,
+			}, nil
+		}
+	}
+
+	return nil, nil // Agent not found, return nil (not an error)
 }

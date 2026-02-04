@@ -81,4 +81,84 @@ BRAINTRUST WORKFLOW - PRACTICAL REVIEW
 - [ ] Both outputs collected correctly
 - [ ] Beethoven synthesis works with collected outputs
 - [ ] Full Braintrust workflow completes end-to-end
+- [ ] All tests pass: `npm test -- tests/e2e/mozart-spawn.test.ts`
+- [ ] Code coverage ≥80%
+
+## Test Deliverables
+
+- [ ] Test file created: `packages/tui/tests/e2e/mozart-spawn.test.ts`
+- [ ] Number of test functions: 5
+- [ ] All tests passing
+- [ ] Coverage ≥80%
+
+### Required Test Cases (`packages/tui/tests/e2e/mozart-spawn.test.ts`)
+
+```typescript
+import { describe, it, expect } from "vitest";
+
+describe("Mozart Orchestrator MCP Spawning", () => {
+  describe("spawn_agent usage", () => {
+    it("should spawn Einstein via MCP spawn_agent", async () => {
+      const result = await invokeMozartWithMockSpawn({
+        childAgent: "einstein",
+        expectedInvocation: "mcp__gofortress__spawn_agent"
+      });
+
+      expect(result.spawnCalled).toBe(true);
+      expect(result.agentType).toBe("einstein");
+    });
+
+    it("should spawn Staff-Architect via MCP spawn_agent", async () => {
+      const result = await invokeMozartWithMockSpawn({
+        childAgent: "staff-architect-critical-review",
+        expectedInvocation: "mcp__gofortress__spawn_agent"
+      });
+
+      expect(result.spawnCalled).toBe(true);
+      expect(result.agentType).toBe("staff-architect-critical-review");
+    });
+
+    it("should NOT use Task() for Einstein/Staff-Architect spawning", async () => {
+      const result = await invokeMozartWithMockSpawn({
+        verifyNoTaskCall: true
+      });
+
+      expect(result.taskCalled).toBe(false);
+    });
+  });
+
+  describe("parallel spawning", () => {
+    it("should spawn Einstein and Staff-Architect in parallel", async () => {
+      const results = await trackMozartSpawnOrder();
+
+      // Both should start before either completes
+      const einsteinStart = results.find(r => r.agent === "einstein")?.startTime;
+      const staffStart = results.find(r => r.agent === "staff-architect-critical-review")?.startTime;
+      const einsteinEnd = results.find(r => r.agent === "einstein")?.endTime;
+
+      // Staff-Architect should start before Einstein ends (parallel)
+      expect(staffStart).toBeLessThan(einsteinEnd!);
+    });
+  });
+
+  describe("Beethoven synthesis", () => {
+    it("should invoke Beethoven after Einstein and Staff-Architect complete", async () => {
+      const timeline = await trackFullBraintrustTimeline();
+
+      const beethovenStart = timeline.find(e => e.agent === "beethoven")?.startTime;
+      const einsteinEnd = timeline.find(e => e.agent === "einstein")?.endTime;
+      const staffEnd = timeline.find(e => e.agent === "staff-architect-critical-review")?.endTime;
+
+      // Beethoven should start AFTER both others complete
+      expect(beethovenStart).toBeGreaterThan(einsteinEnd!);
+      expect(beethovenStart).toBeGreaterThan(staffEnd!);
+    });
+  });
+});
+
+// Helper functions use mock CLI infrastructure from MCP-SPAWN-003
+async function invokeMozartWithMockSpawn(opts: any): Promise<any> {
+  throw new Error("Implement with MCP-SPAWN-003 infrastructure");
+}
+```
 

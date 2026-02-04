@@ -60,6 +60,20 @@ func NewPassResponse(hookEventName string) *HookResponse {
 	}
 }
 
+// NewModifyResponse creates a HookResponse that modifies the tool input.
+// This is used by PreToolUse hooks to inject conventions into Task prompts.
+// The updatedInput map should contain the complete modified tool input.
+// Decision is omitted (not required for modify responses per Claude Code schema).
+func NewModifyResponse(hookEventName string, updatedInput map[string]interface{}) *HookResponse {
+	return &HookResponse{
+		// Decision omitted - not required for modify responses
+		HookSpecificOutput: map[string]interface{}{
+			"hookEventName": hookEventName,
+			"updatedInput":  updatedInput,
+		},
+	}
+}
+
 // AddField adds a custom field to hookSpecificOutput.
 // This allows hooks to include tool-specific data in the response.
 func (r *HookResponse) AddField(key string, value interface{}) {
@@ -78,6 +92,26 @@ func (r *HookResponse) SetDecision(decision string) {
 // GetDecision retrieves the decision field from the HookResponse.
 func (r *HookResponse) GetDecision() string {
 	return r.Decision
+}
+
+// HasUpdatedInput returns true if this response modifies the tool input.
+func (r *HookResponse) HasUpdatedInput() bool {
+	if r.HookSpecificOutput == nil {
+		return false
+	}
+	_, ok := r.HookSpecificOutput["updatedInput"]
+	return ok
+}
+
+// GetUpdatedInput returns the updatedInput map if present, nil otherwise.
+func (r *HookResponse) GetUpdatedInput() map[string]interface{} {
+	if r.HookSpecificOutput == nil {
+		return nil
+	}
+	if ui, ok := r.HookSpecificOutput["updatedInput"].(map[string]interface{}); ok {
+		return ui
+	}
+	return nil
 }
 
 // Validate checks that the HookResponse has valid decision values and required fields.

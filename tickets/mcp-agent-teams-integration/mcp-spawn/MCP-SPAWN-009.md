@@ -102,4 +102,63 @@ async function main() {
 - [ ] Feature flag respected (GOGENT_MCP_SPAWN_ENABLED=false disables)
 - [ ] Environment validation runs at startup
 - [ ] Tool available to subagents (verified with testMcpPing)
+- [ ] All tests pass: `npm test -- src/mcp/server.test.ts`
+- [ ] Code coverage ≥80%
+
+## Test Deliverables
+
+- [ ] Test file created: `packages/tui/src/mcp/server.test.ts`
+- [ ] Number of test functions: 6
+- [ ] All tests passing
+- [ ] Coverage ≥80%
+
+### Required Test Cases (`packages/tui/src/mcp/server.test.ts`)
+
+```typescript
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+describe("MCP Server Registration", () => {
+  describe("isSpawnEnabled", () => {
+    it("should return true when GOGENT_MCP_SPAWN_ENABLED is not set", () => {
+      delete process.env.GOGENT_MCP_SPAWN_ENABLED;
+      const { isSpawnEnabled } = require("./server");
+      expect(isSpawnEnabled()).toBe(true);
+    });
+
+    it("should return true when GOGENT_MCP_SPAWN_ENABLED is 'true'", () => {
+      process.env.GOGENT_MCP_SPAWN_ENABLED = "true";
+      const { isSpawnEnabled } = require("./server");
+      expect(isSpawnEnabled()).toBe(true);
+    });
+
+    it("should return false when GOGENT_MCP_SPAWN_ENABLED is 'false'", () => {
+      process.env.GOGENT_MCP_SPAWN_ENABLED = "false";
+      const { isSpawnEnabled } = require("./server");
+      expect(isSpawnEnabled()).toBe(false);
+    });
+  });
+
+  describe("createMcpServer", () => {
+    it("should include spawn_agent when spawn is enabled", () => {
+      delete process.env.GOGENT_MCP_SPAWN_ENABLED;
+      const server = createMcpServer();
+      const toolNames = server.tools.map(t => t.name);
+      expect(toolNames).toContain("spawn_agent");
+    });
+
+    it("should exclude spawn_agent when spawn is disabled", () => {
+      process.env.GOGENT_MCP_SPAWN_ENABLED = "false";
+      const server = createMcpServer();
+      const toolNames = server.tools.map(t => t.name);
+      expect(toolNames).not.toContain("spawn_agent");
+    });
+
+    it("should always include test_mcp_ping tool", () => {
+      const server = createMcpServer();
+      const toolNames = server.tools.map(t => t.name);
+      expect(toolNames).toContain("test_mcp_ping");
+    });
+  });
+});
+```
 

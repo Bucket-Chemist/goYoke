@@ -1,12 +1,3 @@
----
-paths:
-  - "**/app.R"
-  - "**/ui.R"
-  - "**/server.R"
-  - "**/R/mod_*.R"
-  - "**/www/**"
----
-
 # Shiny Application Development Standards
 
 This document provides guidelines for building production-grade Shiny applications. These conventions extend the core R rules and MUST be followed for all Shiny projects.

@@ -352,6 +352,64 @@ func TestBlockResponseForNesting(t *testing.T) {
 }
 ```
 
+### C3 Enhancement: Hook I/O Schema Alignment
+
+**Requirement:** Hook inputs/outputs must conform to `~/.claude/schemas/hook-io-schema.json`
+
+#### Go Type Definitions (align with schema)
+
+Add to `pkg/routing/hook_types.go`:
+
+```go
+package routing
+
+// PreToolUseInput matches hook-io-schema.json#/definitions/PreToolUseInput
+type PreToolUseInput struct {
+    HookEventName string                 `json:"hook_event_name"`
+    SessionID     string                 `json:"session_id"`
+    ToolName      string                 `json:"tool_name"`
+    ToolInput     map[string]interface{} `json:"tool_input,omitempty"`
+}
+
+// PreToolUseOutput matches hook-io-schema.json#/definitions/PreToolUseOutput
+type PreToolUseOutput struct {
+    Decision           string                 `json:"decision"` // "allow", "block", "modify"
+    Reason             string                 `json:"reason,omitempty"`
+    HookSpecificOutput *PreToolUseHookOutput  `json:"hookSpecificOutput,omitempty"`
+}
+
+type PreToolUseHookOutput struct {
+    HookEventName            string `json:"hookEventName"`
+    PermissionDecision       string `json:"permissionDecision"` // "allow", "deny"
+    PermissionDecisionReason string `json:"permissionDecisionReason,omitempty"`
+    NestingLevel             int    `json:"nestingLevel,omitempty"`
+    Suggestion               string `json:"suggestion,omitempty"`
+}
+
+// ValidateHookOutput validates output against schema (lightweight check)
+func ValidateHookOutput(output interface{}) error {
+    m, ok := output.(map[string]interface{})
+    if !ok {
+        return fmt.Errorf("hook output must be JSON object")
+    }
+    decision, ok := m["decision"].(string)
+    if !ok {
+        return fmt.Errorf("hook output missing required 'decision' field")
+    }
+    if decision != "allow" && decision != "block" && decision != "modify" {
+        return fmt.Errorf("invalid decision: %s (must be allow/block/modify)", decision)
+    }
+    return nil
+}
+```
+
+#### Schema Reference
+
+The hook MUST produce output conforming to:
+- Schema: `~/.claude/schemas/hook-io-schema.json`
+- Definition: `PreToolUseOutput`
+- Required field: `decision` (enum: "allow", "block", "modify")
+
 ## Acceptance Criteria
 
 - [ ] GetNestingLevel() returns correct values for all cases
@@ -362,6 +420,8 @@ func TestBlockResponseForNesting(t *testing.T) {
 - [ ] All tests pass: `go test ./pkg/routing/...`
 - [ ] Code coverage ≥80%
 - [ ] Hook compiles and runs correctly
+- [ ] Hook output conforms to hook-io-schema.json
+- [ ] PreToolUseOutput types defined in pkg/routing/hook_types.go
 
 ## Test Deliverables
 

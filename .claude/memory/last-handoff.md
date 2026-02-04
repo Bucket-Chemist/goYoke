@@ -1,61 +1,84 @@
-# Session Handoff - 2026-02-04 11:03:48
+# Session Handoff - 2026-02-05 05:52:16
 
 ## Session Context
 
-- **Session ID**: 8ebce9aa-f395-4fd5-ac3d-27082189547d
+- **Session ID**: b03658a7-af60-44cb-b6c0-e7229b34a1fe
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 57
+- **Tool Calls**: 41
 - **Errors Logged**: 0
-- **Routing Violations**: 0
+- **Routing Violations**: 1
 
 ## Git State
 
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
+  - claude/CLAUDE.md
+  - claude/agents/agents-index.json
+  - claude/conventions/R-shiny.md
+  - claude/conventions/R.md
+  - claude/conventions/python.md
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
   - claude/memory/ml-tool-events.jsonl
-  - claude/sessions/test-session-123.json
-  - claude/settings.json
-  - claude/tmp/unleash-backup-codeium-extension.json
-  - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
-  - ackages/tui/bin/gofortress-tui.js
-  - ackages/tui/package-lock.json
-  - ackages/tui/package.json
-  - ackages/tui/src/components/ErrorBoundary.tsx
-  - ackages/tui/src/components/Layout.tsx
-  - ackages/tui/src/hooks/useAgentTree.ts
-  - ackages/tui/src/lifecycle/shutdown.ts
+  - claude/memory/routing-violations.jsonl
+  - claude/rules/LLM-guidelines.md
+  - claude/rules/agent-behavior.md
+  - md/gogent-validate/gogent-validate
+  - md/gogent-validate/main.go
+  - eprecated/internal/mcp/.claude/memory/handoffs.jsonl
+  - eprecated/internal/mcp/.claude/memory/last-handoff.md
+  - kg/routing/events.go
+  - kg/routing/response.go
+  - kg/routing/response_test.go
   - kg/routing/task_validation.go
-  - kg/routing/task_validation_test.go
-  - ickets/mcp-TS-react/tickets/tickets-index.json
-  - .claude/memory/session-archive/routing-violations-744143d6-5c98-46d2-8f33-3ff76f44caa2.jsonl
-  - .claude/memory/session-archive/routing-violations-c4d3975a-4b4e-4e4c-a0b1-bc7647b0ac31.jsonl
-  - packages/tui/debug/
-  - packages/tui/eslint.config.js
-  - packages/tui/tests/cli/
-  - packages/tui/tests/components/AskModal.test.tsx
-  - packages/tui/tests/components/Banner.test.tsx
-  - packages/tui/tests/components/ClaudePanel.test.tsx
-  - packages/tui/tests/components/ConfirmModal.test.tsx
-  - packages/tui/tests/components/InputModal.test.tsx
-  - packages/tui/tests/components/Layout.test.tsx
-  - packages/tui/tests/components/ResponsiveLayout.test.tsx
-  - packages/tui/tests/components/SelectModal.test.tsx
-  - packages/tui/tests/components/Spinner.test.tsx
-  - packages/tui/tests/components/TextInput.test.tsx
-  - packages/tui/tests/components/Viewport.test.tsx
-  - packages/tui/tests/hooks/useKeymap.test.ts
-  - packages/tui/tests/hooks/useSession.test.ts
-  - packages/tui/tests/hooks/useTelemetry.test.ts
-  - packages/tui/tests/performance/
-  - packages/tui/tests/terminal/
-  - tickets/mcp-TS-react/cutover-signoff.md
-  - tickets/mcp-agent-teams-integration/mcp-spawning-architecture-critical-review.md
-  - tickets/mcp-agent-teams-integration/mcp-spawning-v3.md
-  - tickets/mcp-agent-teams-integration/slice-tickets.sh
+  - ickets/mcp-agent-teams-integration/mcp-spawn/INDEX.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-001.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-005.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-007.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-008.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-009.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-010.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-011.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-012.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-013.md
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-014.md
+  - .claude/braintrust/analysis-context-loading-2026-02-05.md
+  - .claude/braintrust/analysis-mcp-spawn-2026-02-05.md
+  - .claude/braintrust/problem-brief-mcp-spawn-2026-02-05.md
+  - .claude/memory/session-archive/routing-violations-9e9f7110-eec1-4e61-b3ac-bd45f0b1a17d.jsonl
+  - .claude/rules/agent-guidelines.md
+  - .claude/rules/router-guidelines.md
+  - .claude/schemas/hook-io-schema.json
+  - cmd/gogent-validate/convention_injection_test.go
+  - deprecated/internal/mcp/.claude/memory/session-archive/routing-violations-84f36b6b-39df-43df-8cd3-a852fa00dbd3.jsonl
+  - deprecated/internal/mcp/.claude/memory/session-archive/routing-violations-f26aaab0-c80c-4cbc-8d74-dd698b71a6b8.jsonl
+  - deprecated/internal/tui/claude/debug/conversation_2026-02-05_05-38-28_integrat.log
+  - deprecated/internal/tui/claude/debug/conversation_2026-02-05_05-38-28_test-ses.log
+  - deprecated/internal/tui/claude/debug/conversation_2026-02-05_05-40-23_integrat.log
+  - deprecated/internal/tui/claude/debug/conversation_2026-02-05_05-40-23_test-ses.log
+  - deprecated/internal/tui/claude/debug/conversation_2026-02-05_05-42-21_integrat.log
+  - deprecated/internal/tui/claude/debug/conversation_2026-02-05_05-42-21_test-ses.log
+  - deprecated/internal/tui/layout/debug/conversation_2026-02-05_05-38-28_test-ses.log
+  - deprecated/internal/tui/layout/debug/conversation_2026-02-05_05-40-23_test-ses.log
+  - deprecated/internal/tui/layout/debug/conversation_2026-02-05_05-42-21_test-ses.log
+  - pkg/routing/context_loader.go
+  - pkg/routing/context_loader_test.go
+  - pkg/routing/context_types.go
+  - pkg/routing/prompt_builder.go
+  - pkg/routing/prompt_builder_test.go
+  - tickets/mcp-agent-teams-integration/mcp-spawn/analysis-mcp-spawn-2026-02-05.md
+
+## Error Patterns
+
+- **import_error**: 5 occurrences
+- **syntax_error**: 2 occurrences
+
+## Immediate Actions
+
+1. Investigate 2 error pattern(s)
+   - Recurring errors may need systematic fixes
 

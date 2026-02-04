@@ -28,7 +28,11 @@
       "inputs": [".claude/tmp/specs.md", ".claude/memory/pending-learnings.jsonl"],
       "outputs": [".claude/memory/decisions/", ".claude/memory/sharp-edges/"],
       "sharp_edges_count": 3,
-      "description": "The Historian. Archives specs.md and session learnings to structured memory for RAG queries."
+      "description": "The Historian. Archives specs.md and session learnings to structured memory for RAG queries.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "codebase-search",
@@ -51,7 +55,11 @@
       ],
       "tools": ["Glob", "Grep", "Read"],
       "auto_activate": null,
-      "description": "Fast file and code discovery. Haiku-tier for mechanical extraction."
+      "description": "Fast file and code discovery. Haiku-tier for mechanical extraction.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "librarian",
@@ -77,7 +85,11 @@
       "auto_activate": null,
       "auto_fire": ["External library mentioned", "Unfamiliar package"],
       "sharp_edges_count": 4,
-      "description": "External research with GitHub permalinks and documentation fetching."
+      "description": "External research with GitHub permalinks and documentation fetching.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "scaffolder",
@@ -101,7 +113,11 @@
       ],
       "tools": ["Read", "Write", "Glob"],
       "auto_activate": null,
-      "description": "Generate boilerplate code following conventions. Haiku-tier for fast scaffolding."
+      "description": "Generate boilerplate code following conventions. Haiku-tier for fast scaffolding.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "tech-docs-writer",
@@ -128,7 +144,11 @@
       ],
       "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
       "auto_activate": null,
-      "description": "Technical documentation specialist. README, API docs, architecture guides."
+      "description": "Technical documentation specialist. README, API docs, architecture guides.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "code-reviewer",
@@ -150,7 +170,11 @@
       ],
       "tools": ["Read", "Glob", "Grep"],
       "auto_activate": null,
-      "description": "Routine code review for style, simple bugs, and obvious improvements."
+      "description": "Routine code review for style, simple bugs, and obvious improvements.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "python-pro",
@@ -179,7 +203,20 @@
       },
       "conventions_required": ["python.md"],
       "sharp_edges_count": 6,
-      "description": "Expert Python development with modern patterns. Auto-activated for Python projects."
+      "description": "Expert Python development with modern patterns. Auto-activated for Python projects.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["python.md"],
+          "conditional": [
+            {"pattern": "**/data/**", "convention": "python-datasci.md"},
+            {"pattern": "**/preprocessing/**", "convention": "python-datasci.md"},
+            {"pattern": "**/models/**", "convention": "python-ml.md"},
+            {"pattern": "**/training/**", "convention": "python-ml.md"},
+            {"pattern": "**/inference/**", "convention": "python-ml.md"}
+          ]
+        }
+      }
     },
     {
       "id": "python-ux",
@@ -210,7 +247,14 @@
       },
       "conventions_required": ["python.md"],
       "sharp_edges_count": 7,
-      "description": "PySide6/Qt6 GUI development expert. Desktop application UI specialist."
+      "description": "PySide6/Qt6 GUI development expert. Desktop application UI specialist.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["python.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "r-pro",
@@ -241,7 +285,14 @@
       },
       "conventions_required": ["R.md"],
       "sharp_edges_count": 6,
-      "description": "Expert R development with S4 OOP, tidyverse, and bioinformatics patterns."
+      "description": "Expert R development with S4 OOP, tidyverse, and bioinformatics patterns.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["R.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "r-shiny-pro",
@@ -271,7 +322,14 @@
       },
       "conventions_required": ["R.md", "R-shiny.md"],
       "sharp_edges_count": 6,
-      "description": "Shiny application expert with module architecture and R6/S4 state management."
+      "description": "Shiny application expert with module architecture and R6/S4 state management.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["R.md", "R-shiny.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "go-pro",
@@ -302,7 +360,14 @@
       },
       "conventions_required": ["go.md"],
       "sharp_edges_count": 8,
-      "description": "Expert GO development. Auto-activated for GO projects. Single-binary desktop distribution focus."
+      "description": "Expert GO development. Auto-activated for GO projects. Single-binary desktop distribution focus.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["go.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "go-cli",
@@ -331,7 +396,16 @@
       },
       "conventions_required": ["go.md", "go-cobra.md"],
       "sharp_edges_count": 5,
-      "description": "Cobra CLI specialist. Factory pattern, Viper config, shell completion."
+      "description": "Cobra CLI specialist. Factory pattern, Viper config, shell completion.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["go.md"],
+          "conditional": [
+            {"pattern": "**/cmd/**", "convention": "go-cobra.md"}
+          ]
+        }
+      }
     },
     {
       "id": "go-tui",
@@ -359,7 +433,16 @@
       },
       "conventions_required": ["go.md", "go-bubbletea.md"],
       "sharp_edges_count": 6,
-      "description": "Bubbletea TUI specialist. MVU architecture, Lipgloss styling, component composition."
+      "description": "Bubbletea TUI specialist. MVU architecture, Lipgloss styling, component composition.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["go.md"],
+          "conditional": [
+            {"pattern": "**/tui/**", "convention": "go-bubbletea.md"}
+          ]
+        }
+      }
     },
     {
       "id": "go-api",
@@ -388,7 +471,14 @@
       },
       "conventions_required": ["go.md"],
       "sharp_edges_count": 5,
-      "description": "HTTP client specialist. Timeouts, retries, rate limiting, SSE streaming."
+      "description": "HTTP client specialist. Timeouts, retries, rate limiting, SSE streaming.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["go.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "go-concurrent",
@@ -418,7 +508,14 @@
       },
       "conventions_required": ["go.md"],
       "sharp_edges_count": 7,
-      "description": "Concurrency specialist. Worker pools, errgroup, semaphores, channels, graceful shutdown."
+      "description": "Concurrency specialist. Worker pools, errgroup, semaphores, channels, graceful shutdown.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["go.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "orchestrator",
@@ -451,7 +548,11 @@
       "must_delegate": false,
       "scout_first": true,
       "sharp_edges_count": 12,
-      "description": "Handles ambiguous scope, cross-module planning, user interviews, design tradeoffs, and debugging loops. Uses Scout-First Protocol."
+      "description": "Handles ambiguous scope, cross-module planning, user interviews, design tradeoffs, and debugging loops. Uses Scout-First Protocol.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "architect",
@@ -483,7 +584,11 @@
         "specs_location": ".claude/tmp/specs.md"
       },
       "input_sources": [".claude/tmp/scout_metrics.json", ".claude/tmp/strategy.md"],
-      "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context."
+      "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "python-architect",
@@ -524,7 +629,14 @@
       "can_spawn": ["codebase-search", "librarian", "haiku-scout"],
       "sharp_edges_count": 8,
       "cost_per_invocation": "0.20-0.40",
-      "description": "Opus-tier ML architecture decisions. Handles attention mechanism choices, loss function design, multi-task learning strategy, training curriculum design. Spawnable by python-pro for implementation guidance. Outputs structured decision documents."
+      "description": "Opus-tier ML architecture decisions. Handles attention mechanism choices, loss function design, multi-task learning strategy, training curriculum design. Spawnable by python-pro for implementation guidance. Outputs structured decision documents.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["python.md", "python-datasci.md", "python-ml.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "planner",
@@ -554,7 +666,11 @@
       "input_sources": [".claude/tmp/scout_metrics.json"],
       "max_clarifying_questions": 2,
       "sharp_edges_count": 4,
-      "description": "Strategic planner (opus tier). Transforms goals into requirements, risks, and high-level approach. Produces strategy.md for architect."
+      "description": "Strategic planner (opus tier). Transforms goals into requirements, risks, and high-level approach. Produces strategy.md for architect.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "einstein",
@@ -575,7 +691,11 @@
       "spawned_by": ["mozart"],
       "outputs_to": ["beethoven"],
       "focus_areas": ["root cause", "conceptual frameworks", "first principles", "novel approaches"],
-      "description": "Theoretical analysis agent for Braintrust workflow. Performs deep reasoning using first principles, conceptual frameworks, and novel approaches. Spawned by Mozart, outputs to Beethoven."
+      "description": "Theoretical analysis agent for Braintrust workflow. Performs deep reasoning using first principles, conceptual frameworks, and novel approaches. Spawned by Mozart, outputs to Beethoven.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "mozart",
@@ -593,7 +713,11 @@
       "invoked_by": "/braintrust skill only",
       "can_spawn": ["haiku-scout", "codebase-search", "einstein", "staff-architect-critical-review", "beethoven"],
       "outputs": [".claude/braintrust/problem-brief-*.md"],
-      "description": "Problem decomposition orchestrator for Braintrust workflow. Conducts interviews, spawns scouts, assembles Problem Brief, dispatches Einstein + Staff-Architect in parallel, hands off to Beethoven."
+      "description": "Problem decomposition orchestrator for Braintrust workflow. Conducts interviews, spawns scouts, assembles Problem Brief, dispatches Einstein + Staff-Architect in parallel, hands off to Beethoven.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "beethoven",
@@ -612,7 +736,11 @@
       "inputs": ["problem-brief", "einstein-analysis", "staff-architect-review"],
       "outputs": [".claude/braintrust/analysis-*.md"],
       "focus_areas": ["convergence", "divergence resolution", "synthesis", "unified recommendations"],
-      "description": "Synthesis and composition agent for Braintrust workflow. Receives orthogonal analyses from Einstein and Staff-Architect, resolves contradictions, produces unified Braintrust Analysis document."
+      "description": "Synthesis and composition agent for Braintrust workflow. Receives orthogonal analyses from Einstein and Staff-Architect, resolves contradictions, produces unified Braintrust Analysis document.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "gemini-slave",
@@ -647,7 +775,11 @@
         "complexity_score": ".claude/tmp/complexity_score"
       },
       "sharp_edges_count": 4,
-      "description": "Large-context analysis subagent with 1M+ token window. Includes scout protocol for pre-routing reconnaissance."
+      "description": "Large-context analysis subagent with 1M+ token window. Includes scout protocol for pre-routing reconnaissance.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "staff-architect-critical-review",
@@ -671,7 +803,11 @@
       "outputs": [".claude/tmp/review-critique.md", ".claude/tmp/review-metadata.json"],
       "sharp_edges_count": 6,
       "cost_per_invocation": "0.15-0.25",
-      "description": "Critical review of implementation plans using 7-layer framework. Invoked via /review-plan command or automatically in /plan workflow."
+      "description": "Critical review of implementation plans using 7-layer framework. Invoked via /review-plan command or automatically in /plan workflow.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "haiku-scout",
@@ -701,7 +837,11 @@
       "cost_ceiling_usd": 0.02,
       "fallback_for": "gogent-scout native backend",
       "sharp_edges_count": 2,
-      "description": "Legacy fallback scout. Prefer gogent-scout which auto-routes between native and Gemini backends."
+      "description": "Legacy fallback scout. Prefer gogent-scout which auto-routes between native and Gemini backends.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "gogent-scout",
@@ -731,7 +871,11 @@
       },
       "fallback_chain": ["native", "gemini", "synthetic"],
       "cost_ceiling_usd": 0.01,
-      "description": "Unified scout with smart backend routing. Native Go for small scopes (<40 score), Gemini 3 Flash for large. Always returns valid JSON."
+      "description": "Unified scout with smart backend routing. Native Go for small scopes (<40 score), Gemini 3 Flash for large. Always returns valid JSON.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "typescript-pro",
@@ -762,7 +906,14 @@
       },
       "conventions_required": ["typescript.md"],
       "sharp_edges_count": 10,
-      "description": "Expert TypeScript development with strict types and modern patterns. Auto-activated for TypeScript projects."
+      "description": "Expert TypeScript development with strict types and modern patterns. Auto-activated for TypeScript projects.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["typescript.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "react-pro",
@@ -793,7 +944,14 @@
       },
       "conventions_required": ["typescript.md", "react.md"],
       "sharp_edges_count": 11,
-      "description": "React specialist with hooks, Ink TUI components, and state management. Auto-activated for React patterns."
+      "description": "React specialist with hooks, Ink TUI components, and state management. Auto-activated for React patterns.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {
+          "base": ["typescript.md", "react.md"],
+          "conditional": []
+        }
+      }
     },
     {
       "id": "backend-reviewer",
@@ -816,7 +974,11 @@
       "auto_activate": null,
       "conventions_required": ["go.md", "python.md", "R.md", "typescript.md"],
       "sharp_edges_count": 10,
-      "description": "Backend code review specialist. API design, data patterns, error handling, concurrency."
+      "description": "Backend code review specialist. API design, data patterns, error handling, concurrency.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "frontend-reviewer",
@@ -839,7 +1001,11 @@
       "auto_activate": null,
       "conventions_required": ["typescript.md", "react.md"],
       "sharp_edges_count": 10,
-      "description": "Frontend code review specialist. Component architecture, state management, hooks, performance."
+      "description": "Frontend code review specialist. Component architecture, state management, hooks, performance.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "standards-reviewer",
@@ -861,7 +1027,11 @@
       "tools": ["Read", "Glob", "Grep"],
       "auto_activate": null,
       "sharp_edges_count": 10,
-      "description": "Code standards review specialist. Naming, organization, documentation, consistency."
+      "description": "Code standards review specialist. Naming, organization, documentation, consistency.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "architect-reviewer",
@@ -884,7 +1054,11 @@
       "auto_activate": null,
       "conventions_required": ["go.md", "python.md", "typescript.md", "react.md"],
       "sharp_edges_count": 12,
-      "description": "Architectural code review specialist. Module boundaries, dependency health, design patterns, change impact."
+      "description": "Architectural code review specialist. Module boundaries, dependency health, design patterns, change impact.",
+      "context_requirements": {
+        "rules": [],
+        "conventions": {}
+      }
     },
     {
       "id": "review-orchestrator",
@@ -909,7 +1083,11 @@
       "must_delegate": true,
       "min_delegations": 2,
       "sharp_edges_count": 4,
-      "description": "Coordinates multi-domain code review. Spawns specialized reviewers, synthesizes findings."
+      "description": "Coordinates multi-domain code review. Spawns specialized reviewers, synthesizes findings.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     },
     {
       "id": "impl-manager",
@@ -939,7 +1117,11 @@
       "outputs": [".claude/tmp/impl-progress.json", ".claude/tmp/impl-violations.jsonl"],
       "sharp_edges_count": 7,
       "cost_per_invocation": "0.50-1.50",
-      "description": "Implementation coordinator. Enforces specs.md adherence, injects conventions, validates task completion, runs mid-flight reviews."
+      "description": "Implementation coordinator. Enforces specs.md adherence, injects conventions, validates task completion, runs mid-flight reviews.",
+      "context_requirements": {
+        "rules": ["agent-guidelines.md"],
+        "conventions": {}
+      }
     }
   ],
   "routing_rules": {

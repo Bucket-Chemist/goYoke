@@ -1,10 +1,3 @@
----
-paths:
-  - "**/*.R"
-  - "**/*.Rmd"
-  - "**/*.qmd"
----
-
 # Agent Guidelines for R Code Quality
 
 This document provides guidelines for maintaining high-quality R code. These rules MUST be followed by all AI coding agents and contributors.
