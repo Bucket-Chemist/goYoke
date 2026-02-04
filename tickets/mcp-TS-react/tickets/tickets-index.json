@@ -224,7 +224,7 @@
     {
       "id": "TUI-017",
       "title": "Restart & Graceful Shutdown",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 6,
       "dependencies": [
         "TUI-016"

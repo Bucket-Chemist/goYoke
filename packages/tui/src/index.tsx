@@ -5,14 +5,20 @@ import { App } from "./App.js";
 import { parseCLI } from "./cli.js";
 import { listSessions } from "./hooks/useSession.js";
 import { ListSessions } from "./commands/list.jsx";
+import { setupSignalHandlers } from "./lifecycle/shutdown.js";
+import { getRestartManager } from "./lifecycle/restart.js";
 
 /**
  * GOfortress TUI Entry Point
- * Renders the main App component in the terminal
+ * Renders the main App component in the terminal with lifecycle management
  */
 
 async function main() {
+  // Setup graceful shutdown handlers first
+  setupSignalHandlers();
+
   const options = parseCLI();
+  const restartManager = getRestartManager();
 
   // Handle --list flag
   if (options.list) {
@@ -29,11 +35,55 @@ async function main() {
     process.exit(1);
   }
 
+  // Record successful start for backoff reset detection
+  restartManager.recordSuccessfulStart();
+
   // Normal mode: render main app
   render(<App sessionId={options.session} verbose={options.verbose} />);
 }
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
+/**
+ * Restart wrapper with exponential backoff
+ * Catches crashes and retries with increasing delays
+ */
+async function runWithRestart() {
+  const restartManager = getRestartManager();
+
+  while (true) {
+    try {
+      await main();
+      // Normal exit - check if we should reset backoff
+      restartManager.checkAndResetIfSuccessful();
+      break;
+    } catch (error) {
+      console.error("\n[Restart] App crashed:", error);
+
+      // Check if we should restart
+      if (!restartManager.shouldRestart()) {
+        console.error("[Restart] Max restart attempts reached");
+        console.error("[Restart] Giving up");
+        process.exit(1);
+      }
+
+      // Calculate delay and log restart info
+      const delay = restartManager.getDelay();
+      const state = restartManager.getState();
+      console.error(
+        `[Restart] Attempt ${state.attempts + 1}/${state.maxAttempts} - waiting ${delay}ms...`
+      );
+
+      // Record this attempt
+      restartManager.recordAttempt();
+
+      // Wait before restarting
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      console.error("[Restart] Restarting app...\n");
+    }
+  }
+}
+
+runWithRestart().catch((error) => {
+  console.error("Fatal error in restart manager:", error);
   process.exit(1);
 });
