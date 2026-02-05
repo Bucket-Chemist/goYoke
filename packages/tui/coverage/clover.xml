@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1770252766605" clover="3.2.0">
-  <project timestamp="1770252766606" name="All files">
-    <metrics statements="3972" coveredstatements="229" conditionals="57" coveredconditionals="16" methods="101" coveredmethods="15" elements="4130" coveredelements="260" complexity="0" loc="3972" ncloc="3972" packages="18" files="60" classes="60"/>
+<coverage generated="1770262352576" clover="3.2.0">
+  <project timestamp="1770262352576" name="All files">
+    <metrics statements="4268" coveredstatements="457" conditionals="140" coveredconditionals="57" methods="125" coveredmethods="36" elements="4533" coveredelements="550" complexity="0" loc="4268" ncloc="4268" packages="18" files="63" classes="63"/>
     <package name="bin">
       <metrics statements="34" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
       <file name="gofortress-tui.js" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/bin/gofortress-tui.js">
@@ -2820,56 +2820,56 @@
       </file>
     </package>
     <package name="src.mcp">
-      <metrics statements="27" coveredstatements="26" conditionals="5" coveredconditionals="4" methods="4" coveredmethods="3"/>
+      <metrics statements="27" coveredstatements="0" conditionals="2" coveredconditionals="0" methods="2" coveredmethods="0"/>
       <file name="index.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/index.ts">
         <metrics statements="1" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
       </file>
       <file name="server.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/server.ts">
-        <metrics statements="26" coveredstatements="26" conditionals="4" coveredconditionals="4" methods="3" coveredmethods="3"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="18" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="19" count="12" type="stmt"/>
-        <line num="20" count="12" type="stmt"/>
-        <line num="26" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="27" count="9" type="stmt"/>
-        <line num="29" count="9" type="stmt"/>
-        <line num="30" count="9" type="stmt"/>
-        <line num="31" count="9" type="stmt"/>
-        <line num="32" count="9" type="stmt"/>
-        <line num="34" count="9" type="stmt"/>
-        <line num="35" count="9" type="stmt"/>
-        <line num="38" count="9" type="cond" truecount="1" falsecount="0"/>
-        <line num="39" count="6" type="stmt"/>
-        <line num="40" count="6" type="stmt"/>
-        <line num="42" count="9" type="stmt"/>
-        <line num="43" count="9" type="stmt"/>
-        <line num="49" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="50" count="6" type="stmt"/>
-        <line num="52" count="6" type="stmt"/>
-        <line num="53" count="6" type="stmt"/>
-        <line num="54" count="6" type="stmt"/>
-        <line num="55" count="6" type="stmt"/>
-        <line num="56" count="6" type="stmt"/>
-        <line num="57" count="6" type="stmt"/>
-        <line num="63" count="1" type="stmt"/>
+        <metrics statements="26" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
+        <line num="27" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="30" count="0" type="stmt"/>
+        <line num="31" count="0" type="stmt"/>
+        <line num="32" count="0" type="stmt"/>
+        <line num="34" count="0" type="stmt"/>
+        <line num="35" count="0" type="stmt"/>
+        <line num="38" count="0" type="stmt"/>
+        <line num="39" count="0" type="stmt"/>
+        <line num="40" count="0" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+        <line num="49" count="0" type="stmt"/>
+        <line num="50" count="0" type="stmt"/>
+        <line num="52" count="0" type="stmt"/>
+        <line num="53" count="0" type="stmt"/>
+        <line num="54" count="0" type="stmt"/>
+        <line num="55" count="0" type="stmt"/>
+        <line num="56" count="0" type="stmt"/>
+        <line num="57" count="0" type="stmt"/>
+        <line num="63" count="0" type="stmt"/>
       </file>
     </package>
     <package name="src.mcp.tools">
-      <metrics statements="315" coveredstatements="85" conditionals="0" coveredconditionals="0" methods="4" coveredmethods="0"/>
+      <metrics statements="386" coveredstatements="138" conditionals="32" coveredconditionals="9" methods="9" coveredmethods="4"/>
       <file name="askUser.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/askUser.ts">
-        <metrics statements="29" coveredstatements="12" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="11" count="1" type="stmt"/>
-        <line num="12" count="1" type="stmt"/>
-        <line num="13" count="1" type="stmt"/>
-        <line num="14" count="1" type="stmt"/>
-        <line num="15" count="1" type="stmt"/>
-        <line num="17" count="1" type="stmt"/>
-        <line num="18" count="1" type="stmt"/>
-        <line num="19" count="1" type="stmt"/>
-        <line num="20" count="1" type="stmt"/>
-        <line num="21" count="1" type="stmt"/>
+        <metrics statements="29" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="15" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
         <line num="22" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
         <line num="24" count="0" type="stmt"/>
@@ -2887,20 +2887,20 @@
         <line num="37" count="0" type="stmt"/>
         <line num="38" count="0" type="stmt"/>
         <line num="39" count="0" type="stmt"/>
-        <line num="40" count="1" type="stmt"/>
+        <line num="40" count="0" type="stmt"/>
       </file>
       <file name="confirmAction.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/confirmAction.ts">
-        <metrics statements="30" coveredstatements="11" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="11" count="1" type="stmt"/>
-        <line num="12" count="1" type="stmt"/>
-        <line num="13" count="1" type="stmt"/>
-        <line num="14" count="1" type="stmt"/>
-        <line num="16" count="1" type="stmt"/>
-        <line num="17" count="1" type="stmt"/>
-        <line num="18" count="1" type="stmt"/>
-        <line num="19" count="1" type="stmt"/>
-        <line num="20" count="1" type="stmt"/>
+        <metrics statements="30" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="16" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
         <line num="21" count="0" type="stmt"/>
         <line num="22" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
@@ -2920,20 +2920,20 @@
         <line num="38" count="0" type="stmt"/>
         <line num="39" count="0" type="stmt"/>
         <line num="40" count="0" type="stmt"/>
-        <line num="41" count="1" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
       </file>
       <file name="requestInput.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/requestInput.ts">
-        <metrics statements="27" coveredstatements="11" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="11" count="1" type="stmt"/>
-        <line num="12" count="1" type="stmt"/>
-        <line num="13" count="1" type="stmt"/>
-        <line num="14" count="1" type="stmt"/>
-        <line num="16" count="1" type="stmt"/>
-        <line num="17" count="1" type="stmt"/>
-        <line num="18" count="1" type="stmt"/>
-        <line num="19" count="1" type="stmt"/>
-        <line num="20" count="1" type="stmt"/>
+        <metrics statements="27" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="16" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
         <line num="21" count="0" type="stmt"/>
         <line num="22" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
@@ -2950,28 +2950,28 @@
         <line num="35" count="0" type="stmt"/>
         <line num="36" count="0" type="stmt"/>
         <line num="37" count="0" type="stmt"/>
-        <line num="38" count="1" type="stmt"/>
+        <line num="38" count="0" type="stmt"/>
       </file>
       <file name="selectOption.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/selectOption.ts">
-        <metrics statements="38" coveredstatements="19" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="11" count="1" type="stmt"/>
-        <line num="12" count="1" type="stmt"/>
-        <line num="13" count="1" type="stmt"/>
-        <line num="14" count="1" type="stmt"/>
-        <line num="15" count="1" type="stmt"/>
-        <line num="16" count="1" type="stmt"/>
-        <line num="17" count="1" type="stmt"/>
-        <line num="18" count="1" type="stmt"/>
-        <line num="19" count="1" type="stmt"/>
-        <line num="20" count="1" type="stmt"/>
-        <line num="21" count="1" type="stmt"/>
-        <line num="22" count="1" type="stmt"/>
-        <line num="24" count="1" type="stmt"/>
-        <line num="25" count="1" type="stmt"/>
-        <line num="26" count="1" type="stmt"/>
-        <line num="27" count="1" type="stmt"/>
-        <line num="28" count="1" type="stmt"/>
+        <metrics statements="38" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="15" count="0" type="stmt"/>
+        <line num="16" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
+        <line num="22" count="0" type="stmt"/>
+        <line num="24" count="0" type="stmt"/>
+        <line num="25" count="0" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
+        <line num="27" count="0" type="stmt"/>
+        <line num="28" count="0" type="stmt"/>
         <line num="29" count="0" type="stmt"/>
         <line num="30" count="0" type="stmt"/>
         <line num="31" count="0" type="stmt"/>
@@ -2991,185 +2991,256 @@
         <line num="46" count="0" type="stmt"/>
         <line num="47" count="0" type="stmt"/>
         <line num="48" count="0" type="stmt"/>
-        <line num="49" count="1" type="stmt"/>
+        <line num="49" count="0" type="stmt"/>
       </file>
       <file name="spawnAgent.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/spawnAgent.ts">
-        <metrics statements="163" coveredstatements="22" conditionals="0" coveredconditionals="0" methods="4" coveredmethods="0"/>
+        <metrics statements="234" coveredstatements="138" conditionals="27" coveredconditionals="9" methods="4" coveredmethods="4"/>
         <line num="1" count="1" type="stmt"/>
-        <line num="8" count="1" type="stmt"/>
-        <line num="9" count="1" type="stmt"/>
-        <line num="10" count="1" type="stmt"/>
-        <line num="30" count="1" type="stmt"/>
-        <line num="31" count="1" type="stmt"/>
-        <line num="32" count="1" type="stmt"/>
-        <line num="44" count="1" type="stmt"/>
-        <line num="45" count="1" type="stmt"/>
-        <line num="46" count="1" type="stmt"/>
-        <line num="47" count="1" type="stmt"/>
-        <line num="48" count="1" type="stmt"/>
-        <line num="49" count="1" type="stmt"/>
-        <line num="50" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="37" count="1" type="stmt"/>
+        <line num="38" count="1" type="stmt"/>
+        <line num="39" count="1" type="stmt"/>
         <line num="51" count="1" type="stmt"/>
         <line num="52" count="1" type="stmt"/>
         <line num="53" count="1" type="stmt"/>
-        <line num="55" count="0" type="stmt"/>
-        <line num="56" count="0" type="stmt"/>
-        <line num="57" count="0" type="stmt"/>
-        <line num="58" count="0" type="stmt"/>
-        <line num="59" count="0" type="stmt"/>
-        <line num="60" count="0" type="stmt"/>
-        <line num="61" count="0" type="stmt"/>
-        <line num="62" count="0" type="stmt"/>
-        <line num="63" count="0" type="stmt"/>
+        <line num="54" count="1" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
+        <line num="57" count="1" type="stmt"/>
+        <line num="58" count="1" type="stmt"/>
+        <line num="59" count="1" type="stmt"/>
+        <line num="60" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="62" count="12" type="stmt"/>
+        <line num="63" count="12" type="cond" truecount="0" falsecount="1"/>
         <line num="64" count="0" type="stmt"/>
         <line num="65" count="0" type="stmt"/>
         <line num="66" count="0" type="stmt"/>
         <line num="67" count="0" type="stmt"/>
         <line num="68" count="0" type="stmt"/>
         <line num="69" count="0" type="stmt"/>
+        <line num="70" count="0" type="stmt"/>
+        <line num="71" count="0" type="stmt"/>
         <line num="72" count="0" type="stmt"/>
         <line num="73" count="0" type="stmt"/>
         <line num="74" count="0" type="stmt"/>
         <line num="75" count="0" type="stmt"/>
-        <line num="78" count="0" type="stmt"/>
-        <line num="80" count="0" type="stmt"/>
-        <line num="82" count="0" type="stmt"/>
-        <line num="83" count="0" type="stmt"/>
-        <line num="84" count="0" type="stmt"/>
-        <line num="85" count="0" type="stmt"/>
-        <line num="86" count="0" type="stmt"/>
-        <line num="87" count="0" type="stmt"/>
-        <line num="88" count="0" type="stmt"/>
-        <line num="89" count="0" type="stmt"/>
-        <line num="90" count="0" type="stmt"/>
-        <line num="93" count="0" type="stmt"/>
-        <line num="96" count="0" type="stmt"/>
-        <line num="97" count="0" type="stmt"/>
-        <line num="98" count="0" type="stmt"/>
-        <line num="100" count="0" type="stmt"/>
-        <line num="101" count="0" type="stmt"/>
-        <line num="102" count="0" type="stmt"/>
+        <line num="76" count="0" type="stmt"/>
+        <line num="79" count="12" type="stmt"/>
+        <line num="80" count="12" type="stmt"/>
+        <line num="81" count="12" type="stmt"/>
+        <line num="82" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="83" count="12" type="stmt"/>
+        <line num="86" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="87" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="88" count="12" type="stmt"/>
+        <line num="91" count="12" type="stmt"/>
+        <line num="92" count="12" type="stmt"/>
+        <line num="93" count="12" type="stmt"/>
+        <line num="94" count="12" type="stmt"/>
+        <line num="95" count="12" type="stmt"/>
+        <line num="96" count="12" type="stmt"/>
+        <line num="97" count="12" type="stmt"/>
+        <line num="99" count="12" type="stmt"/>
+        <line num="102" count="12" type="cond" truecount="0" falsecount="1"/>
         <line num="103" count="0" type="stmt"/>
         <line num="104" count="0" type="stmt"/>
         <line num="105" count="0" type="stmt"/>
         <line num="106" count="0" type="stmt"/>
         <line num="107" count="0" type="stmt"/>
         <line num="108" count="0" type="stmt"/>
+        <line num="109" count="0" type="stmt"/>
         <line num="110" count="0" type="stmt"/>
+        <line num="111" count="0" type="stmt"/>
         <line num="112" count="0" type="stmt"/>
         <line num="113" count="0" type="stmt"/>
         <line num="114" count="0" type="stmt"/>
         <line num="115" count="0" type="stmt"/>
+        <line num="116" count="0" type="stmt"/>
+        <line num="117" count="0" type="stmt"/>
         <line num="118" count="0" type="stmt"/>
-        <line num="119" count="0" type="stmt"/>
+        <line num="121" count="12" type="cond" truecount="0" falsecount="1"/>
         <line num="122" count="0" type="stmt"/>
+        <line num="123" count="0" type="stmt"/>
         <line num="124" count="0" type="stmt"/>
+        <line num="125" count="0" type="stmt"/>
+        <line num="126" count="0" type="stmt"/>
         <line num="127" count="0" type="stmt"/>
         <line num="128" count="0" type="stmt"/>
         <line num="129" count="0" type="stmt"/>
         <line num="130" count="0" type="stmt"/>
         <line num="131" count="0" type="stmt"/>
+        <line num="132" count="0" type="stmt"/>
         <line num="133" count="0" type="stmt"/>
-        <line num="134" count="0" type="stmt"/>
         <line num="135" count="0" type="stmt"/>
         <line num="136" count="0" type="stmt"/>
         <line num="137" count="0" type="stmt"/>
         <line num="138" count="0" type="stmt"/>
         <line num="139" count="0" type="stmt"/>
         <line num="140" count="0" type="stmt"/>
+        <line num="141" count="0" type="stmt"/>
         <line num="142" count="0" type="stmt"/>
         <line num="143" count="0" type="stmt"/>
         <line num="144" count="0" type="stmt"/>
         <line num="145" count="0" type="stmt"/>
+        <line num="146" count="0" type="stmt"/>
+        <line num="147" count="0" type="stmt"/>
         <line num="148" count="0" type="stmt"/>
         <line num="149" count="0" type="stmt"/>
+        <line num="150" count="0" type="stmt"/>
         <line num="151" count="0" type="stmt"/>
         <line num="152" count="0" type="stmt"/>
+        <line num="153" count="0" type="stmt"/>
         <line num="154" count="0" type="stmt"/>
         <line num="155" count="0" type="stmt"/>
         <line num="156" count="0" type="stmt"/>
-        <line num="157" count="0" type="stmt"/>
-        <line num="158" count="0" type="stmt"/>
-        <line num="159" count="0" type="stmt"/>
-        <line num="160" count="0" type="stmt"/>
-        <line num="161" count="0" type="stmt"/>
-        <line num="162" count="0" type="stmt"/>
-        <line num="163" count="0" type="stmt"/>
-        <line num="164" count="0" type="stmt"/>
-        <line num="166" count="0" type="stmt"/>
-        <line num="167" count="0" type="stmt"/>
-        <line num="168" count="0" type="stmt"/>
-        <line num="169" count="0" type="stmt"/>
-        <line num="171" count="0" type="stmt"/>
-        <line num="172" count="0" type="stmt"/>
-        <line num="174" count="0" type="stmt"/>
-        <line num="175" count="0" type="stmt"/>
-        <line num="176" count="0" type="stmt"/>
-        <line num="177" count="0" type="stmt"/>
-        <line num="178" count="0" type="stmt"/>
-        <line num="179" count="0" type="stmt"/>
-        <line num="180" count="0" type="stmt"/>
-        <line num="182" count="0" type="stmt"/>
-        <line num="183" count="0" type="stmt"/>
-        <line num="184" count="0" type="stmt"/>
-        <line num="185" count="0" type="stmt"/>
+        <line num="160" count="12" type="stmt"/>
+        <line num="162" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="164" count="12" type="stmt"/>
+        <line num="165" count="12" type="stmt"/>
+        <line num="166" count="12" type="stmt"/>
+        <line num="167" count="12" type="stmt"/>
+        <line num="168" count="12" type="stmt"/>
+        <line num="169" count="12" type="stmt"/>
+        <line num="170" count="12" type="stmt"/>
+        <line num="171" count="12" type="stmt"/>
+        <line num="172" count="12" type="stmt"/>
+        <line num="175" count="12" type="stmt"/>
+        <line num="178" count="12" type="stmt"/>
+        <line num="179" count="12" type="stmt"/>
+        <line num="180" count="12" type="stmt"/>
+        <line num="182" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="183" count="11" type="stmt"/>
+        <line num="184" count="11" type="stmt"/>
+        <line num="185" count="11" type="cond" truecount="0" falsecount="1"/>
         <line num="186" count="0" type="stmt"/>
         <line num="187" count="0" type="stmt"/>
-        <line num="188" count="1" type="stmt"/>
-        <line num="193" count="1" type="stmt"/>
-        <line num="197" count="0" type="stmt"/>
-        <line num="198" count="0" type="stmt"/>
-        <line num="200" count="0" type="stmt"/>
-        <line num="201" count="0" type="stmt"/>
-        <line num="202" count="0" type="stmt"/>
-        <line num="205" count="0" type="stmt"/>
-        <line num="207" count="0" type="stmt"/>
-        <line num="208" count="0" type="stmt"/>
-        <line num="209" count="0" type="stmt"/>
+        <line num="188" count="0" type="stmt"/>
+        <line num="189" count="11" type="stmt"/>
+        <line num="190" count="12" type="stmt"/>
+        <line num="192" count="12" type="stmt"/>
+        <line num="194" count="0" type="stmt"/>
+        <line num="195" count="0" type="stmt"/>
+        <line num="196" count="0" type="stmt"/>
+        <line num="197" count="12" type="stmt"/>
+        <line num="200" count="12" type="stmt"/>
+        <line num="201" count="12" type="stmt"/>
+        <line num="204" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="206" count="1" type="stmt"/>
+        <line num="209" count="1" type="stmt"/>
+        <line num="210" count="0" type="stmt"/>
         <line num="211" count="0" type="stmt"/>
         <line num="212" count="0" type="stmt"/>
-        <line num="213" count="0" type="stmt"/>
-        <line num="215" count="0" type="stmt"/>
-        <line num="216" count="0" type="stmt"/>
+        <line num="213" count="1" type="stmt"/>
+        <line num="215" count="1" type="stmt"/>
+        <line num="216" count="1" type="stmt"/>
+        <line num="217" count="1" type="stmt"/>
+        <line num="218" count="1" type="stmt"/>
+        <line num="219" count="1" type="stmt"/>
+        <line num="220" count="1" type="stmt"/>
         <line num="221" count="1" type="stmt"/>
-        <line num="225" count="0" type="stmt"/>
-        <line num="226" count="0" type="stmt"/>
-        <line num="227" count="0" type="stmt"/>
-        <line num="228" count="0" type="stmt"/>
-        <line num="229" count="0" type="stmt"/>
-        <line num="230" count="0" type="stmt"/>
-        <line num="231" count="0" type="stmt"/>
-        <line num="232" count="0" type="stmt"/>
-        <line num="233" count="0" type="stmt"/>
-        <line num="235" count="0" type="stmt"/>
-        <line num="236" count="0" type="stmt"/>
-        <line num="237" count="0" type="stmt"/>
-        <line num="242" count="1" type="stmt"/>
-        <line num="243" count="0" type="stmt"/>
-        <line num="244" count="0" type="stmt"/>
-        <line num="245" count="0" type="stmt"/>
-        <line num="246" count="0" type="stmt"/>
-        <line num="247" count="0" type="stmt"/>
-        <line num="253" count="1" type="stmt"/>
-        <line num="254" count="0" type="stmt"/>
-        <line num="256" count="0" type="stmt"/>
-        <line num="257" count="0" type="stmt"/>
-        <line num="258" count="0" type="stmt"/>
-        <line num="260" count="0" type="stmt"/>
+        <line num="222" count="1" type="stmt"/>
+        <line num="224" count="1" type="stmt"/>
+        <line num="225" count="1" type="stmt"/>
+        <line num="226" count="1" type="stmt"/>
+        <line num="227" count="12" type="stmt"/>
+        <line num="230" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="231" count="11" type="stmt"/>
+        <line num="234" count="11" type="stmt"/>
+        <line num="235" count="11" type="stmt"/>
+        <line num="236" count="11" type="stmt"/>
+        <line num="238" count="11" type="stmt"/>
+        <line num="239" count="11" type="stmt"/>
+        <line num="241" count="11" type="stmt"/>
+        <line num="242" count="11" type="stmt"/>
+        <line num="243" count="11" type="stmt"/>
+        <line num="244" count="11" type="stmt"/>
+        <line num="245" count="11" type="cond" truecount="0" falsecount="1"/>
+        <line num="246" count="11" type="cond" truecount="0" falsecount="1"/>
+        <line num="247" count="11" type="stmt"/>
+        <line num="248" count="11" type="stmt"/>
+        <line num="249" count="11" type="stmt"/>
+        <line num="250" count="11" type="stmt"/>
+        <line num="251" count="11" type="stmt"/>
+        <line num="253" count="11" type="stmt"/>
+        <line num="254" count="11" type="stmt"/>
+        <line num="255" count="11" type="stmt"/>
+        <line num="256" count="12" type="stmt"/>
+        <line num="258" count="12" type="stmt"/>
+        <line num="259" count="0" type="stmt"/>
         <line num="262" count="0" type="stmt"/>
         <line num="263" count="0" type="stmt"/>
+        <line num="264" count="0" type="stmt"/>
+        <line num="265" count="0" type="stmt"/>
+        <line num="267" count="0" type="stmt"/>
+        <line num="268" count="0" type="stmt"/>
+        <line num="269" count="0" type="stmt"/>
+        <line num="270" count="0" type="stmt"/>
+        <line num="271" count="0" type="stmt"/>
+        <line num="272" count="0" type="stmt"/>
+        <line num="273" count="0" type="stmt"/>
+        <line num="275" count="0" type="stmt"/>
+        <line num="276" count="0" type="stmt"/>
+        <line num="277" count="0" type="stmt"/>
+        <line num="278" count="12" type="stmt"/>
+        <line num="279" count="12" type="stmt"/>
+        <line num="280" count="12" type="stmt"/>
+        <line num="281" count="1" type="stmt"/>
+        <line num="286" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="290" count="12" type="stmt"/>
+        <line num="291" count="12" type="stmt"/>
+        <line num="293" count="12" type="stmt"/>
+        <line num="294" count="12" type="stmt"/>
+        <line num="295" count="12" type="stmt"/>
+        <line num="298" count="12" type="stmt"/>
+        <line num="300" count="12" type="cond" truecount="0" falsecount="2"/>
+        <line num="301" count="0" type="stmt"/>
+        <line num="302" count="0" type="stmt"/>
+        <line num="304" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="305" count="0" type="stmt"/>
+        <line num="306" count="0" type="stmt"/>
+        <line num="308" count="12" type="stmt"/>
+        <line num="309" count="12" type="stmt"/>
+        <line num="314" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="318" count="11" type="stmt"/>
+        <line num="319" count="11" type="stmt"/>
+        <line num="320" count="11" type="stmt"/>
+        <line num="321" count="11" type="stmt"/>
+        <line num="322" count="11" type="cond" truecount="0" falsecount="1"/>
+        <line num="323" count="11" type="cond" truecount="0" falsecount="1"/>
+        <line num="324" count="11" type="stmt"/>
+        <line num="325" count="11" type="stmt"/>
+        <line num="326" count="11" type="cond" truecount="0" falsecount="1"/>
+        <line num="328" count="0" type="stmt"/>
+        <line num="329" count="0" type="stmt"/>
+        <line num="330" count="11" type="stmt"/>
+        <line num="335" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="336" count="24" type="stmt"/>
+        <line num="337" count="24" type="cond" truecount="0" falsecount="1"/>
+        <line num="338" count="24" type="stmt"/>
+        <line num="339" count="24" type="cond" truecount="0" falsecount="1"/>
+        <line num="340" count="24" type="stmt"/>
+        <line num="346" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="347" count="12" type="stmt"/>
+        <line num="349" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="350" count="0" type="stmt"/>
+        <line num="351" count="0" type="stmt"/>
+        <line num="353" count="0" type="stmt"/>
+        <line num="355" count="12" type="stmt"/>
+        <line num="356" count="12" type="stmt"/>
       </file>
       <file name="testMcpPing.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/testMcpPing.ts">
-        <metrics statements="28" coveredstatements="10" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="10" count="1" type="stmt"/>
-        <line num="11" count="1" type="stmt"/>
-        <line num="12" count="1" type="stmt"/>
-        <line num="18" count="1" type="stmt"/>
-        <line num="19" count="1" type="stmt"/>
-        <line num="20" count="1" type="stmt"/>
-        <line num="21" count="1" type="stmt"/>
-        <line num="22" count="1" type="stmt"/>
+        <metrics statements="28" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="10" count="0" type="stmt"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
+        <line num="22" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
         <line num="24" count="0" type="stmt"/>
         <line num="25" count="0" type="stmt"/>
@@ -3188,11 +3259,51 @@
         <line num="39" count="0" type="stmt"/>
         <line num="40" count="0" type="stmt"/>
         <line num="41" count="0" type="stmt"/>
-        <line num="42" count="1" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
       </file>
     </package>
     <package name="src.spawn">
-      <metrics statements="304" coveredstatements="18" conditionals="3" coveredconditionals="0" methods="16" coveredmethods="0"/>
+      <metrics statements="517" coveredstatements="172" conditionals="50" coveredconditionals="30" methods="29" coveredmethods="16"/>
+      <file name="agentConfig.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/agentConfig.ts">
+        <metrics statements="37" coveredstatements="30" conditionals="12" coveredconditionals="9" methods="4" coveredmethods="3"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="38" count="1" type="stmt"/>
+        <line num="39" count="1" type="stmt"/>
+        <line num="40" count="1" type="stmt"/>
+        <line num="45" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="47" count="1" type="stmt"/>
+        <line num="48" count="1" type="stmt"/>
+        <line num="49" count="1" type="cond" truecount="0" falsecount="1"/>
+        <line num="50" count="1" type="stmt"/>
+        <line num="52" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="53" count="2" type="cond" truecount="1" falsecount="0"/>
+        <line num="54" count="1" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="56" count="2" type="cond" truecount="0" falsecount="1"/>
+        <line num="58" count="0" type="stmt"/>
+        <line num="59" count="0" type="stmt"/>
+        <line num="60" count="0" type="stmt"/>
+        <line num="61" count="0" type="stmt"/>
+        <line num="66" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="67" count="24" type="stmt"/>
+        <line num="70" count="24" type="cond" truecount="2" falsecount="0"/>
+        <line num="71" count="23" type="stmt"/>
+        <line num="72" count="23" type="cond" truecount="1" falsecount="0"/>
+        <line num="74" count="1" type="stmt"/>
+        <line num="75" count="1" type="stmt"/>
+        <line num="76" count="1" type="stmt"/>
+        <line num="77" count="1" type="stmt"/>
+        <line num="79" count="1" type="stmt"/>
+        <line num="80" count="1" type="stmt"/>
+        <line num="85" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="86" count="24" type="stmt"/>
+        <line num="87" count="24" type="cond" truecount="1" falsecount="1"/>
+        <line num="88" count="24" type="stmt"/>
+        <line num="93" count="1" type="stmt"/>
+        <line num="94" count="0" type="stmt"/>
+        <line num="95" count="0" type="stmt"/>
+        <line num="96" count="0" type="stmt"/>
+      </file>
       <file name="pidTracker.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/pidTracker.ts">
         <metrics statements="81" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
@@ -3278,49 +3389,49 @@
         <line num="132" count="0" type="stmt"/>
       </file>
       <file name="processRegistry.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/processRegistry.ts">
-        <metrics statements="133" coveredstatements="18" conditionals="1" coveredconditionals="0" methods="14" coveredmethods="0"/>
+        <metrics statements="133" coveredstatements="59" conditionals="16" coveredconditionals="9" methods="14" coveredmethods="6"/>
         <line num="1" count="1" type="stmt"/>
         <line num="22" count="1" type="stmt"/>
-        <line num="23" count="1" type="cond" truecount="0" falsecount="1"/>
-        <line num="24" count="0" type="stmt"/>
-        <line num="25" count="0" type="stmt"/>
-        <line num="26" count="0" type="stmt"/>
-        <line num="28" count="1" type="stmt"/>
-        <line num="29" count="0" type="stmt"/>
-        <line num="30" count="0" type="stmt"/>
-        <line num="31" count="0" type="stmt"/>
-        <line num="32" count="0" type="stmt"/>
-        <line num="37" count="1" type="stmt"/>
-        <line num="38" count="0" type="stmt"/>
+        <line num="23" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="24" count="5" type="stmt"/>
+        <line num="25" count="5" type="stmt"/>
+        <line num="26" count="5" type="stmt"/>
+        <line num="28" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="29" count="5" type="stmt"/>
+        <line num="30" count="5" type="cond" truecount="0" falsecount="1"/>
+        <line num="31" count="5" type="cond" truecount="0" falsecount="1"/>
+        <line num="32" count="5" type="stmt"/>
+        <line num="37" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="38" count="12" type="cond" truecount="0" falsecount="1"/>
         <line num="40" count="0" type="stmt"/>
         <line num="41" count="0" type="stmt"/>
         <line num="42" count="0" type="stmt"/>
-        <line num="44" count="0" type="stmt"/>
-        <line num="45" count="0" type="stmt"/>
-        <line num="46" count="0" type="stmt"/>
-        <line num="47" count="0" type="stmt"/>
-        <line num="48" count="0" type="stmt"/>
-        <line num="49" count="0" type="stmt"/>
-        <line num="50" count="0" type="stmt"/>
-        <line num="52" count="0" type="stmt"/>
-        <line num="53" count="0" type="stmt"/>
-        <line num="56" count="0" type="stmt"/>
-        <line num="57" count="0" type="stmt"/>
-        <line num="58" count="0" type="stmt"/>
-        <line num="59" count="0" type="stmt"/>
-        <line num="60" count="0" type="stmt"/>
-        <line num="65" count="1" type="stmt"/>
-        <line num="66" count="0" type="stmt"/>
-        <line num="67" count="0" type="stmt"/>
-        <line num="68" count="0" type="stmt"/>
-        <line num="69" count="0" type="stmt"/>
-        <line num="70" count="0" type="stmt"/>
-        <line num="71" count="0" type="stmt"/>
-        <line num="73" count="0" type="stmt"/>
+        <line num="44" count="12" type="stmt"/>
+        <line num="45" count="12" type="stmt"/>
+        <line num="46" count="12" type="stmt"/>
+        <line num="47" count="12" type="stmt"/>
+        <line num="48" count="12" type="stmt"/>
+        <line num="49" count="12" type="stmt"/>
+        <line num="50" count="12" type="stmt"/>
+        <line num="52" count="12" type="stmt"/>
+        <line num="53" count="12" type="stmt"/>
+        <line num="56" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="57" count="11" type="cond" truecount="0" falsecount="2"/>
+        <line num="58" count="11" type="stmt"/>
+        <line num="59" count="12" type="stmt"/>
+        <line num="60" count="12" type="stmt"/>
+        <line num="65" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="66" count="11" type="stmt"/>
+        <line num="67" count="11" type="stmt"/>
+        <line num="68" count="11" type="stmt"/>
+        <line num="69" count="11" type="stmt"/>
+        <line num="70" count="11" type="stmt"/>
+        <line num="71" count="11" type="stmt"/>
+        <line num="73" count="11" type="cond" truecount="0" falsecount="2"/>
         <line num="74" count="0" type="stmt"/>
         <line num="75" count="0" type="stmt"/>
-        <line num="76" count="0" type="stmt"/>
-        <line num="77" count="0" type="stmt"/>
+        <line num="76" count="11" type="stmt"/>
+        <line num="77" count="11" type="stmt"/>
         <line num="82" count="1" type="stmt"/>
         <line num="83" count="0" type="stmt"/>
         <line num="84" count="0" type="stmt"/>
@@ -3400,18 +3511,200 @@
         <line num="198" count="0" type="stmt"/>
         <line num="199" count="1" type="stmt"/>
         <line num="202" count="1" type="stmt"/>
-        <line num="207" count="1" type="stmt"/>
-        <line num="208" count="0" type="stmt"/>
-        <line num="209" count="0" type="stmt"/>
-        <line num="210" count="0" type="stmt"/>
-        <line num="211" count="0" type="stmt"/>
-        <line num="212" count="0" type="stmt"/>
-        <line num="217" count="1" type="stmt"/>
+        <line num="207" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="208" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="209" count="5" type="stmt"/>
+        <line num="210" count="5" type="stmt"/>
+        <line num="211" count="12" type="stmt"/>
+        <line num="212" count="12" type="stmt"/>
+        <line num="217" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="218" count="10" type="cond" truecount="1" falsecount="0"/>
+        <line num="219" count="5" type="stmt"/>
+        <line num="220" count="5" type="stmt"/>
+        <line num="221" count="10" type="stmt"/>
+        <line num="222" count="10" type="stmt"/>
+      </file>
+      <file name="relationshipValidation.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/relationshipValidation.ts">
+        <metrics statements="146" coveredstatements="61" conditionals="16" coveredconditionals="8" methods="5" coveredmethods="4"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="33" count="1" type="stmt"/>
+        <line num="35" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="36" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="37" count="5" type="stmt"/>
+        <line num="38" count="5" type="stmt"/>
+        <line num="39" count="12" type="stmt"/>
+        <line num="40" count="12" type="stmt"/>
+        <line num="52" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="53" count="12" type="stmt"/>
+        <line num="54" count="12" type="stmt"/>
+        <line num="55" count="12" type="stmt"/>
+        <line num="56" count="12" type="stmt"/>
+        <line num="57" count="12" type="stmt"/>
+        <line num="58" count="12" type="stmt"/>
+        <line num="60" count="12" type="stmt"/>
+        <line num="63" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="64" count="0" type="stmt"/>
+        <line num="65" count="0" type="stmt"/>
+        <line num="66" count="0" type="stmt"/>
+        <line num="67" count="0" type="stmt"/>
+        <line num="68" count="0" type="stmt"/>
+        <line num="69" count="0" type="stmt"/>
+        <line num="70" count="0" type="stmt"/>
+        <line num="73" count="12" type="cond" truecount="0" falsecount="2"/>
+        <line num="74" count="0" type="stmt"/>
+        <line num="77" count="0" type="stmt"/>
+        <line num="79" count="0" type="stmt"/>
+        <line num="81" count="0" type="stmt"/>
+        <line num="82" count="0" type="stmt"/>
+        <line num="83" count="0" type="stmt"/>
+        <line num="84" count="0" type="stmt"/>
+        <line num="85" count="0" type="stmt"/>
+        <line num="86" count="0" type="stmt"/>
+        <line num="87" count="0" type="stmt"/>
+        <line num="88" count="0" type="stmt"/>
+        <line num="89" count="0" type="stmt"/>
+        <line num="90" count="0" type="stmt"/>
+        <line num="91" count="0" type="stmt"/>
+        <line num="94" count="12" type="stmt"/>
+        <line num="95" count="12" type="stmt"/>
+        <line num="97" count="12" type="stmt"/>
+        <line num="99" count="12" type="stmt"/>
+        <line num="100" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="101" count="0" type="stmt"/>
+        <line num="102" count="0" type="stmt"/>
+        <line num="103" count="0" type="stmt"/>
+        <line num="104" count="0" type="stmt"/>
+        <line num="105" count="0" type="stmt"/>
+        <line num="106" count="0" type="stmt"/>
+        <line num="107" count="0" type="stmt"/>
+        <line num="108" count="0" type="stmt"/>
+        <line num="109" count="12" type="stmt"/>
+        <line num="112" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="113" count="0" type="stmt"/>
+        <line num="114" count="0" type="stmt"/>
+        <line num="115" count="0" type="stmt"/>
+        <line num="116" count="0" type="stmt"/>
+        <line num="117" count="0" type="stmt"/>
+        <line num="118" count="0" type="stmt"/>
+        <line num="119" count="0" type="stmt"/>
+        <line num="120" count="0" type="stmt"/>
+        <line num="121" count="0" type="stmt"/>
+        <line num="122" count="0" type="stmt"/>
+        <line num="123" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="125" count="0" type="stmt"/>
+        <line num="126" count="0" type="stmt"/>
+        <line num="127" count="0" type="stmt"/>
+        <line num="128" count="0" type="stmt"/>
+        <line num="129" count="0" type="stmt"/>
+        <line num="130" count="0" type="stmt"/>
+        <line num="131" count="12" type="stmt"/>
+        <line num="134" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="135" count="0" type="stmt"/>
+        <line num="138" count="0" type="stmt"/>
+        <line num="139" count="0" type="stmt"/>
+        <line num="141" count="0" type="stmt"/>
+        <line num="142" count="0" type="stmt"/>
+        <line num="143" count="0" type="stmt"/>
+        <line num="144" count="0" type="stmt"/>
+        <line num="145" count="0" type="stmt"/>
+        <line num="146" count="0" type="stmt"/>
+        <line num="147" count="0" type="stmt"/>
+        <line num="148" count="0" type="stmt"/>
+        <line num="149" count="0" type="stmt"/>
+        <line num="150" count="0" type="stmt"/>
+        <line num="151" count="0" type="stmt"/>
+        <line num="152" count="0" type="stmt"/>
+        <line num="153" count="0" type="stmt"/>
+        <line num="154" count="0" type="stmt"/>
+        <line num="155" count="0" type="stmt"/>
+        <line num="157" count="12" type="stmt"/>
+        <line num="158" count="12" type="stmt"/>
+        <line num="159" count="12" type="stmt"/>
+        <line num="160" count="12" type="stmt"/>
+        <line num="161" count="12" type="stmt"/>
+        <line num="162" count="12" type="stmt"/>
+        <line num="168" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="169" count="12" type="stmt"/>
+        <line num="170" count="12" type="stmt"/>
+        <line num="171" count="12" type="stmt"/>
+        <line num="172" count="12" type="stmt"/>
+        <line num="173" count="12" type="stmt"/>
+        <line num="174" count="12" type="stmt"/>
+        <line num="176" count="12" type="cond" truecount="0" falsecount="1"/>
+        <line num="177" count="0" type="stmt"/>
+        <line num="178" count="0" type="stmt"/>
+        <line num="180" count="12" type="stmt"/>
+        <line num="183" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="184" count="12" type="stmt"/>
+        <line num="185" count="12" type="cond" truecount="2" falsecount="0"/>
+        <line num="187" count="12" type="stmt"/>
+        <line num="188" count="12" type="stmt"/>
+        <line num="189" count="12" type="stmt"/>
+        <line num="190" count="12" type="stmt"/>
+        <line num="191" count="12" type="stmt"/>
+        <line num="193" count="12" type="stmt"/>
+        <line num="195" count="12" type="stmt"/>
+        <line num="196" count="12" type="stmt"/>
+        <line num="198" count="12" type="stmt"/>
+        <line num="199" count="12" type="stmt"/>
+        <line num="200" count="12" type="stmt"/>
+        <line num="205" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="206" count="11" type="stmt"/>
+        <line num="207" count="11" type="stmt"/>
+        <line num="212" count="1" type="stmt"/>
+        <line num="213" count="0" type="stmt"/>
+        <line num="215" count="0" type="stmt"/>
+        <line num="216" count="0" type="stmt"/>
+        <line num="217" count="0" type="stmt"/>
         <line num="218" count="0" type="stmt"/>
         <line num="219" count="0" type="stmt"/>
-        <line num="220" count="0" type="stmt"/>
         <line num="221" count="0" type="stmt"/>
         <line num="222" count="0" type="stmt"/>
+        <line num="223" count="0" type="stmt"/>
+        <line num="224" count="0" type="stmt"/>
+        <line num="225" count="0" type="stmt"/>
+        <line num="226" count="0" type="stmt"/>
+        <line num="228" count="0" type="stmt"/>
+        <line num="229" count="0" type="stmt"/>
+        <line num="230" count="0" type="stmt"/>
+        <line num="231" count="0" type="stmt"/>
+        <line num="232" count="0" type="stmt"/>
+        <line num="233" count="0" type="stmt"/>
+        <line num="235" count="0" type="stmt"/>
+        <line num="236" count="0" type="stmt"/>
+      </file>
+      <file name="storeAdapter.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/storeAdapter.ts">
+        <metrics statements="30" coveredstatements="22" conditionals="4" coveredconditionals="4" methods="4" coveredmethods="3"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="7" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="8" count="12" type="stmt"/>
+        <line num="9" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="10" count="24" type="stmt"/>
+        <line num="11" count="24" type="stmt"/>
+        <line num="12" count="24" type="stmt"/>
+        <line num="13" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="14" count="12" type="stmt"/>
+        <line num="15" count="12" type="stmt"/>
+        <line num="16" count="12" type="stmt"/>
+        <line num="17" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="18" count="12" type="stmt"/>
+        <line num="19" count="12" type="stmt"/>
+        <line num="20" count="12" type="stmt"/>
+        <line num="21" count="12" type="stmt"/>
+        <line num="22" count="12" type="stmt"/>
+        <line num="23" count="12" type="stmt"/>
+        <line num="24" count="12" type="stmt"/>
+        <line num="25" count="12" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
+        <line num="27" count="0" type="stmt"/>
+        <line num="28" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="30" count="0" type="stmt"/>
+        <line num="31" count="0" type="stmt"/>
+        <line num="32" count="0" type="stmt"/>
+        <line num="33" count="0" type="stmt"/>
+        <line num="34" count="12" type="stmt"/>
+        <line num="35" count="12" type="stmt"/>
       </file>
       <file name="validation.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/validation.ts">
         <metrics statements="90" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
@@ -3568,14 +3861,14 @@
         <metrics statements="27" coveredstatements="18" conditionals="2" coveredconditionals="1" methods="2" coveredmethods="1"/>
         <line num="1" count="1" type="stmt"/>
         <line num="24" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="25" count="6" type="stmt"/>
-        <line num="26" count="6" type="stmt"/>
-        <line num="27" count="6" type="stmt"/>
-        <line num="28" count="6" type="stmt"/>
-        <line num="29" count="6" type="stmt"/>
-        <line num="30" count="6" type="stmt"/>
-        <line num="31" count="6" type="stmt"/>
-        <line num="32" count="6" type="stmt"/>
+        <line num="25" count="1" type="stmt"/>
+        <line num="26" count="1" type="stmt"/>
+        <line num="27" count="1" type="stmt"/>
+        <line num="28" count="1" type="stmt"/>
+        <line num="29" count="1" type="stmt"/>
+        <line num="30" count="1" type="stmt"/>
+        <line num="31" count="1" type="stmt"/>
+        <line num="32" count="1" type="stmt"/>
         <line num="34" count="1" type="stmt"/>
         <line num="35" count="1" type="stmt"/>
         <line num="38" count="1" type="stmt"/>
@@ -3599,47 +3892,47 @@
       </file>
     </package>
     <package name="src.store.slices">
-      <metrics statements="474" coveredstatements="82" conditionals="8" coveredconditionals="7" methods="36" coveredmethods="7"/>
+      <metrics statements="474" coveredstatements="111" conditionals="15" coveredconditionals="12" methods="36" coveredmethods="10"/>
       <file name="agents.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/agents.ts">
-        <metrics statements="58" coveredstatements="13" conditionals="1" coveredconditionals="1" methods="6" coveredmethods="1"/>
+        <metrics statements="58" coveredstatements="42" conditionals="8" coveredconditionals="6" methods="6" coveredmethods="4"/>
         <line num="9" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="10" count="6" type="stmt"/>
-        <line num="11" count="6" type="stmt"/>
-        <line num="12" count="6" type="stmt"/>
-        <line num="13" count="6" type="stmt"/>
-        <line num="14" count="6" type="stmt"/>
-        <line num="15" count="6" type="stmt"/>
-        <line num="17" count="6" type="stmt"/>
-        <line num="18" count="0" type="stmt"/>
-        <line num="19" count="0" type="stmt"/>
-        <line num="20" count="0" type="stmt"/>
-        <line num="21" count="0" type="stmt"/>
-        <line num="22" count="0" type="stmt"/>
-        <line num="24" count="0" type="stmt"/>
-        <line num="25" count="0" type="stmt"/>
-        <line num="28" count="0" type="stmt"/>
-        <line num="29" count="0" type="stmt"/>
-        <line num="31" count="0" type="stmt"/>
-        <line num="32" count="0" type="stmt"/>
-        <line num="33" count="0" type="stmt"/>
-        <line num="34" count="0" type="stmt"/>
-        <line num="35" count="0" type="stmt"/>
-        <line num="36" count="0" type="stmt"/>
-        <line num="38" count="6" type="stmt"/>
-        <line num="39" count="0" type="stmt"/>
-        <line num="40" count="0" type="stmt"/>
-        <line num="41" count="0" type="stmt"/>
+        <line num="10" count="1" type="stmt"/>
+        <line num="11" count="1" type="stmt"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="13" count="1" type="stmt"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="17" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="18" count="5" type="cond" truecount="1" falsecount="0"/>
+        <line num="19" count="5" type="stmt"/>
+        <line num="20" count="5" type="stmt"/>
+        <line num="21" count="5" type="stmt"/>
+        <line num="22" count="5" type="stmt"/>
+        <line num="24" count="5" type="stmt"/>
+        <line num="25" count="5" type="stmt"/>
+        <line num="28" count="5" type="stmt"/>
+        <line num="29" count="5" type="cond" truecount="0" falsecount="1"/>
+        <line num="31" count="5" type="stmt"/>
+        <line num="32" count="5" type="stmt"/>
+        <line num="33" count="5" type="stmt"/>
+        <line num="34" count="5" type="stmt"/>
+        <line num="35" count="5" type="stmt"/>
+        <line num="36" count="5" type="stmt"/>
+        <line num="38" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="39" count="12" type="cond" truecount="1" falsecount="0"/>
+        <line num="40" count="12" type="stmt"/>
+        <line num="41" count="12" type="cond" truecount="0" falsecount="1"/>
         <line num="42" count="0" type="stmt"/>
         <line num="43" count="0" type="stmt"/>
-        <line num="45" count="0" type="stmt"/>
-        <line num="46" count="0" type="stmt"/>
-        <line num="48" count="0" type="stmt"/>
-        <line num="49" count="0" type="stmt"/>
-        <line num="50" count="0" type="stmt"/>
-        <line num="52" count="6" type="stmt"/>
+        <line num="45" count="12" type="stmt"/>
+        <line num="46" count="12" type="stmt"/>
+        <line num="48" count="12" type="stmt"/>
+        <line num="49" count="12" type="stmt"/>
+        <line num="50" count="12" type="stmt"/>
+        <line num="52" count="1" type="stmt"/>
         <line num="53" count="0" type="stmt"/>
         <line num="54" count="0" type="stmt"/>
-        <line num="56" count="6" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
         <line num="57" count="0" type="stmt"/>
         <line num="60" count="0" type="stmt"/>
         <line num="61" count="0" type="stmt"/>
@@ -3652,25 +3945,25 @@
         <line num="70" count="0" type="stmt"/>
         <line num="72" count="0" type="stmt"/>
         <line num="73" count="0" type="stmt"/>
-        <line num="75" count="6" type="stmt"/>
-        <line num="76" count="0" type="stmt"/>
-        <line num="77" count="0" type="stmt"/>
-        <line num="78" count="0" type="stmt"/>
-        <line num="79" count="0" type="stmt"/>
-        <line num="80" count="0" type="stmt"/>
-        <line num="81" count="0" type="stmt"/>
-        <line num="82" count="6" type="stmt"/>
+        <line num="75" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="76" count="12" type="stmt"/>
+        <line num="77" count="12" type="stmt"/>
+        <line num="78" count="12" type="stmt"/>
+        <line num="79" count="12" type="stmt"/>
+        <line num="80" count="12" type="stmt"/>
+        <line num="81" count="12" type="stmt"/>
+        <line num="82" count="1" type="stmt"/>
       </file>
       <file name="input.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/input.ts">
         <metrics statements="46" coveredstatements="12" conditionals="1" coveredconditionals="1" methods="5" coveredmethods="1"/>
         <line num="10" count="1" type="stmt"/>
         <line num="12" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="13" count="6" type="stmt"/>
-        <line num="14" count="6" type="stmt"/>
-        <line num="15" count="6" type="stmt"/>
-        <line num="16" count="6" type="stmt"/>
-        <line num="17" count="6" type="stmt"/>
-        <line num="19" count="6" type="stmt"/>
+        <line num="13" count="1" type="stmt"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="19" count="1" type="stmt"/>
         <line num="20" count="0" type="stmt"/>
         <line num="21" count="0" type="stmt"/>
         <line num="22" count="0" type="stmt"/>
@@ -3684,7 +3977,7 @@
         <line num="36" count="0" type="stmt"/>
         <line num="37" count="0" type="stmt"/>
         <line num="38" count="0" type="stmt"/>
-        <line num="40" count="6" type="stmt"/>
+        <line num="40" count="1" type="stmt"/>
         <line num="41" count="0" type="stmt"/>
         <line num="42" count="0" type="stmt"/>
         <line num="44" count="0" type="stmt"/>
@@ -3699,24 +3992,24 @@
         <line num="59" count="0" type="stmt"/>
         <line num="62" count="0" type="stmt"/>
         <line num="63" count="0" type="stmt"/>
-        <line num="65" count="6" type="stmt"/>
+        <line num="65" count="1" type="stmt"/>
         <line num="66" count="0" type="stmt"/>
         <line num="67" count="0" type="stmt"/>
-        <line num="69" count="6" type="stmt"/>
+        <line num="69" count="1" type="stmt"/>
         <line num="70" count="0" type="stmt"/>
         <line num="71" count="0" type="stmt"/>
         <line num="72" count="0" type="stmt"/>
         <line num="73" count="0" type="stmt"/>
         <line num="74" count="0" type="stmt"/>
-        <line num="75" count="6" type="stmt"/>
+        <line num="75" count="1" type="stmt"/>
       </file>
       <file name="messages.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/messages.ts">
         <metrics statements="39" coveredstatements="8" conditionals="1" coveredconditionals="1" methods="4" coveredmethods="1"/>
         <line num="1" count="1" type="stmt"/>
         <line num="10" count="1" type="stmt"/>
         <line num="15" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="16" count="6" type="stmt"/>
-        <line num="18" count="6" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
         <line num="19" count="0" type="stmt"/>
         <line num="20" count="0" type="stmt"/>
         <line num="21" count="0" type="stmt"/>
@@ -3728,7 +4021,7 @@
         <line num="27" count="0" type="stmt"/>
         <line num="28" count="0" type="stmt"/>
         <line num="29" count="0" type="stmt"/>
-        <line num="31" count="6" type="stmt"/>
+        <line num="31" count="1" type="stmt"/>
         <line num="32" count="0" type="stmt"/>
         <line num="33" count="0" type="stmt"/>
         <line num="34" count="0" type="stmt"/>
@@ -3747,10 +4040,10 @@
         <line num="52" count="0" type="stmt"/>
         <line num="53" count="0" type="stmt"/>
         <line num="54" count="0" type="stmt"/>
-        <line num="56" count="6" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
         <line num="57" count="0" type="stmt"/>
         <line num="58" count="0" type="stmt"/>
-        <line num="59" count="6" type="stmt"/>
+        <line num="59" count="1" type="stmt"/>
       </file>
       <file name="modal.example.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/modal.example.ts">
         <metrics statements="132" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
@@ -3891,11 +4184,11 @@
         <metrics statements="84" coveredstatements="10" conditionals="1" coveredconditionals="1" methods="4" coveredmethods="1"/>
         <line num="1" count="1" type="stmt"/>
         <line num="64" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="65" count="6" type="stmt"/>
-        <line num="66" count="6" type="stmt"/>
-        <line num="67" count="6" type="stmt"/>
-        <line num="68" count="6" type="stmt"/>
-        <line num="70" count="6" type="stmt"/>
+        <line num="65" count="1" type="stmt"/>
+        <line num="66" count="1" type="stmt"/>
+        <line num="67" count="1" type="stmt"/>
+        <line num="68" count="1" type="stmt"/>
+        <line num="70" count="1" type="stmt"/>
         <line num="71" count="0" type="stmt"/>
         <line num="72" count="0" type="stmt"/>
         <line num="73" count="0" type="stmt"/>
@@ -3944,7 +4237,7 @@
         <line num="131" count="0" type="stmt"/>
         <line num="132" count="0" type="stmt"/>
         <line num="133" count="0" type="stmt"/>
-        <line num="135" count="6" type="stmt"/>
+        <line num="135" count="1" type="stmt"/>
         <line num="136" count="0" type="stmt"/>
         <line num="137" count="0" type="stmt"/>
         <line num="139" count="0" type="stmt"/>
@@ -3958,7 +4251,7 @@
         <line num="151" count="0" type="stmt"/>
         <line num="154" count="0" type="stmt"/>
         <line num="155" count="0" type="stmt"/>
-        <line num="157" count="6" type="stmt"/>
+        <line num="157" count="1" type="stmt"/>
         <line num="158" count="0" type="stmt"/>
         <line num="159" count="0" type="stmt"/>
         <line num="161" count="0" type="stmt"/>
@@ -3972,36 +4265,36 @@
         <line num="173" count="0" type="stmt"/>
         <line num="176" count="0" type="stmt"/>
         <line num="177" count="0" type="stmt"/>
-        <line num="178" count="6" type="stmt"/>
+        <line num="178" count="1" type="stmt"/>
       </file>
       <file name="session.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/session.ts">
         <metrics statements="63" coveredstatements="24" conditionals="1" coveredconditionals="1" methods="10" coveredmethods="1"/>
         <line num="9" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="10" count="6" type="stmt"/>
-        <line num="11" count="6" type="stmt"/>
-        <line num="12" count="6" type="stmt"/>
-        <line num="13" count="6" type="stmt"/>
-        <line num="14" count="6" type="stmt"/>
-        <line num="15" count="6" type="stmt"/>
-        <line num="16" count="6" type="stmt"/>
-        <line num="17" count="6" type="stmt"/>
-        <line num="18" count="6" type="stmt"/>
-        <line num="19" count="6" type="stmt"/>
-        <line num="20" count="6" type="stmt"/>
-        <line num="21" count="6" type="stmt"/>
-        <line num="22" count="6" type="stmt"/>
-        <line num="24" count="6" type="stmt"/>
+        <line num="10" count="1" type="stmt"/>
+        <line num="11" count="1" type="stmt"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="13" count="1" type="stmt"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
+        <line num="19" count="1" type="stmt"/>
+        <line num="20" count="1" type="stmt"/>
+        <line num="21" count="1" type="stmt"/>
+        <line num="22" count="1" type="stmt"/>
+        <line num="24" count="1" type="stmt"/>
         <line num="25" count="0" type="stmt"/>
         <line num="26" count="0" type="stmt"/>
         <line num="27" count="0" type="stmt"/>
         <line num="29" count="0" type="stmt"/>
         <line num="30" count="0" type="stmt"/>
-        <line num="32" count="6" type="stmt"/>
+        <line num="32" count="1" type="stmt"/>
         <line num="33" count="0" type="stmt"/>
         <line num="34" count="0" type="stmt"/>
         <line num="35" count="0" type="stmt"/>
         <line num="36" count="0" type="stmt"/>
-        <line num="38" count="6" type="stmt"/>
+        <line num="38" count="1" type="stmt"/>
         <line num="39" count="0" type="stmt"/>
         <line num="40" count="0" type="stmt"/>
         <line num="41" count="0" type="stmt"/>
@@ -4009,22 +4302,22 @@
         <line num="43" count="0" type="stmt"/>
         <line num="44" count="0" type="stmt"/>
         <line num="45" count="0" type="stmt"/>
-        <line num="47" count="6" type="stmt"/>
+        <line num="47" count="1" type="stmt"/>
         <line num="48" count="0" type="stmt"/>
         <line num="49" count="0" type="stmt"/>
-        <line num="51" count="6" type="stmt"/>
+        <line num="51" count="1" type="stmt"/>
         <line num="52" count="0" type="stmt"/>
         <line num="53" count="0" type="stmt"/>
-        <line num="55" count="6" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
         <line num="56" count="0" type="stmt"/>
         <line num="57" count="0" type="stmt"/>
-        <line num="59" count="6" type="stmt"/>
+        <line num="59" count="1" type="stmt"/>
         <line num="60" count="0" type="stmt"/>
         <line num="61" count="0" type="stmt"/>
-        <line num="64" count="6" type="stmt"/>
+        <line num="64" count="1" type="stmt"/>
         <line num="65" count="0" type="stmt"/>
         <line num="66" count="0" type="stmt"/>
-        <line num="68" count="6" type="stmt"/>
+        <line num="68" count="1" type="stmt"/>
         <line num="69" count="0" type="stmt"/>
         <line num="70" count="0" type="stmt"/>
         <line num="71" count="0" type="stmt"/>
@@ -4038,17 +4331,17 @@
         <line num="79" count="0" type="stmt"/>
         <line num="80" count="0" type="stmt"/>
         <line num="81" count="0" type="stmt"/>
-        <line num="82" count="6" type="stmt"/>
+        <line num="82" count="1" type="stmt"/>
       </file>
       <file name="telemetry.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/telemetry.ts">
         <metrics statements="42" coveredstatements="9" conditionals="1" coveredconditionals="1" methods="3" coveredmethods="1"/>
         <line num="48" count="1" type="stmt"/>
         <line num="53" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="54" count="6" type="stmt"/>
-        <line num="55" count="6" type="stmt"/>
-        <line num="56" count="6" type="stmt"/>
-        <line num="57" count="6" type="stmt"/>
-        <line num="59" count="6" type="stmt"/>
+        <line num="54" count="1" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
+        <line num="57" count="1" type="stmt"/>
+        <line num="59" count="1" type="stmt"/>
         <line num="60" count="0" type="stmt"/>
         <line num="61" count="0" type="stmt"/>
         <line num="62" count="0" type="stmt"/>
@@ -4075,7 +4368,7 @@
         <line num="83" count="0" type="stmt"/>
         <line num="84" count="0" type="stmt"/>
         <line num="85" count="0" type="stmt"/>
-        <line num="87" count="6" type="stmt"/>
+        <line num="87" count="1" type="stmt"/>
         <line num="88" count="0" type="stmt"/>
         <line num="89" count="0" type="stmt"/>
         <line num="90" count="0" type="stmt"/>
@@ -4083,20 +4376,20 @@
         <line num="92" count="0" type="stmt"/>
         <line num="93" count="0" type="stmt"/>
         <line num="94" count="0" type="stmt"/>
-        <line num="95" count="6" type="stmt"/>
+        <line num="95" count="1" type="stmt"/>
       </file>
       <file name="ui.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/store/slices/ui.ts">
         <metrics statements="10" coveredstatements="6" conditionals="1" coveredconditionals="1" methods="3" coveredmethods="1"/>
         <line num="9" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="10" count="6" type="stmt"/>
-        <line num="11" count="6" type="stmt"/>
-        <line num="13" count="6" type="stmt"/>
+        <line num="10" count="1" type="stmt"/>
+        <line num="11" count="1" type="stmt"/>
+        <line num="13" count="1" type="stmt"/>
         <line num="14" count="0" type="stmt"/>
         <line num="15" count="0" type="stmt"/>
-        <line num="17" count="6" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
         <line num="18" count="0" type="stmt"/>
         <line num="19" count="0" type="stmt"/>
-        <line num="20" count="6" type="stmt"/>
+        <line num="20" count="1" type="stmt"/>
       </file>
     </package>
     <package name="src.stubs">
@@ -4115,7 +4408,7 @@
       </file>
     </package>
     <package name="src.utils">
-      <metrics statements="82" coveredstatements="0" conditionals="3" coveredconditionals="0" methods="3" coveredmethods="0"/>
+      <metrics statements="94" coveredstatements="18" conditionals="3" coveredconditionals="1" methods="11" coveredmethods="1"/>
       <file name="jsonl.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/utils/jsonl.ts">
         <metrics statements="32" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
@@ -4152,17 +4445,13 @@
         <line num="65" count="0" type="stmt"/>
       </file>
       <file name="logger.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/utils/logger.ts">
-        <metrics statements="41" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
-        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
-        <line num="14" count="0" type="stmt"/>
-        <line num="15" count="0" type="stmt"/>
-        <line num="16" count="0" type="stmt"/>
-        <line num="17" count="0" type="stmt"/>
-        <line num="27" count="0" type="stmt"/>
-        <line num="33" count="0" type="stmt"/>
-        <line num="34" count="0" type="stmt"/>
-        <line num="35" count="0" type="stmt"/>
-        <line num="36" count="0" type="stmt"/>
+        <metrics statements="53" coveredstatements="18" conditionals="1" coveredconditionals="1" methods="9" coveredmethods="1"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="20" count="1" type="stmt"/>
+        <line num="31" count="1" type="stmt"/>
         <line num="37" count="0" type="stmt"/>
         <line num="38" count="0" type="stmt"/>
         <line num="39" count="0" type="stmt"/>
@@ -4170,6 +4459,8 @@
         <line num="41" count="0" type="stmt"/>
         <line num="42" count="0" type="stmt"/>
         <line num="43" count="0" type="stmt"/>
+        <line num="44" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
         <line num="46" count="0" type="stmt"/>
         <line num="47" count="0" type="stmt"/>
         <line num="48" count="0" type="stmt"/>
@@ -4178,22 +4469,36 @@
         <line num="53" count="0" type="stmt"/>
         <line num="54" count="0" type="stmt"/>
         <line num="55" count="0" type="stmt"/>
-        <line num="56" count="0" type="stmt"/>
+        <line num="58" count="0" type="stmt"/>
         <line num="61" count="0" type="stmt"/>
         <line num="62" count="0" type="stmt"/>
         <line num="63" count="0" type="stmt"/>
+        <line num="64" count="0" type="stmt"/>
+        <line num="66" count="0" type="stmt"/>
+        <line num="67" count="0" type="stmt"/>
         <line num="68" count="0" type="stmt"/>
-        <line num="69" count="0" type="stmt"/>
-        <line num="70" count="0" type="stmt"/>
+        <line num="73" count="1" type="stmt"/>
+        <line num="74" count="0" type="stmt"/>
         <line num="75" count="0" type="stmt"/>
-        <line num="76" count="0" type="stmt"/>
-        <line num="77" count="0" type="stmt"/>
+        <line num="80" count="1" type="stmt"/>
+        <line num="81" count="0" type="stmt"/>
         <line num="82" count="0" type="stmt"/>
-        <line num="83" count="0" type="stmt"/>
-        <line num="84" count="0" type="stmt"/>
-        <line num="85" count="0" type="stmt"/>
-        <line num="86" count="0" type="stmt"/>
-        <line num="87" count="0" type="stmt"/>
+        <line num="87" count="1" type="stmt"/>
+        <line num="88" count="0" type="stmt"/>
+        <line num="89" count="0" type="stmt"/>
+        <line num="94" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="95" count="12" type="stmt"/>
+        <line num="96" count="12" type="stmt"/>
+        <line num="101" count="1" type="stmt"/>
+        <line num="102" count="1" type="stmt"/>
+        <line num="103" count="0" type="stmt"/>
+        <line num="104" count="1" type="stmt"/>
+        <line num="105" count="0" type="stmt"/>
+        <line num="106" count="1" type="stmt"/>
+        <line num="107" count="0" type="stmt"/>
+        <line num="108" count="1" type="stmt"/>
+        <line num="109" count="0" type="stmt"/>
+        <line num="110" count="1" type="stmt"/>
       </file>
       <file name="markdown.ts" path="/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/utils/markdown.ts">
         <metrics statements="9" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
