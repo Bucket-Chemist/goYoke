@@ -799,6 +799,7 @@
       ],
       "tools": ["Read", "Glob", "Grep", "Task", "Write"],
       "auto_activate": null,
+      "spawned_by": ["mozart", "router"],
       "inputs": [".claude/tmp/specs.md"],
       "outputs": [".claude/tmp/review-critique.md", ".claude/tmp/review-metadata.json"],
       "sharp_edges_count": 6,
@@ -1077,7 +1078,7 @@
         "/review",
         "orchestrate review"
       ],
-      "tools": ["Read", "Glob", "Grep", "Task", "Write", "TaskList", "TaskGet"],
+      "tools": ["Read", "Glob", "Grep", "mcp__gofortress__spawn_agent", "Write"],
       "auto_activate": null,
       "can_spawn": ["backend-reviewer", "frontend-reviewer", "standards-reviewer", "architect-reviewer", "codebase-search"],
       "must_delegate": true,

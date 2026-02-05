@@ -26,10 +26,8 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task
+  - mcp__gofortress__spawn_agent
   - Write
-  - TaskList
-  - TaskGet
 
 delegation:
   cannot_spawn:
@@ -103,66 +101,81 @@ Analyze files to determine which reviewers are needed:
 
 ### Phase 2: Parallel Review
 
-Spawn all reviewers **in a single message** (parallel execution):
+Spawn all reviewers **in a single message** via MCP spawn_agent (parallel execution):
 
 ```javascript
-// Spawn all reviewers in PARALLEL - ONE message, multiple Task calls
-Task({
+// Spawn all reviewers in PARALLEL - ONE message, multiple spawn_agent calls
+mcp__gofortress__spawn_agent({
+  agent: "backend-reviewer",
   description: "Backend security and API review",
-  subagent_type: "Explore",
-  model: "haiku",
   prompt: `AGENT: backend-reviewer
 
 TASK: Review backend files for security and API design
 FILES: [relevant backend files]
 EXPECTED OUTPUT: Structured findings by severity (Critical/Warning/Info)
 FOCUS: Security, API design, error handling, concurrency safety`,
+  model: "haiku",
+  timeout: 300000,  // 5 minutes for review
 });
 
-Task({
+mcp__gofortress__spawn_agent({
+  agent: "frontend-reviewer",
   description: "Frontend UX and accessibility review",
-  subagent_type: "Explore",
-  model: "haiku",
   prompt: `AGENT: frontend-reviewer
 
 TASK: Review frontend files for UX and accessibility
 FILES: [relevant frontend files]
 EXPECTED OUTPUT: Structured findings by severity (Critical/Warning/Info)
 FOCUS: Accessibility, hooks patterns, error states, performance`,
+  model: "haiku",
+  timeout: 300000,
 });
 
-Task({
+mcp__gofortress__spawn_agent({
+  agent: "standards-reviewer",
   description: "Universal code quality standards review",
-  subagent_type: "Explore",
-  model: "haiku",
   prompt: `AGENT: standards-reviewer
 
 TASK: Review all files for code quality standards
 FILES: [all files]
 EXPECTED OUTPUT: Structured findings by severity (Warning/Info only)
 FOCUS: Naming, complexity, DRY, documentation`,
+  model: "haiku",
+  timeout: 300000,
 });
 
-Task({
+mcp__gofortress__spawn_agent({
+  agent: "architect-reviewer",
   description: "Architectural patterns review",
-  subagent_type: "Explore",
-  model: "sonnet",
   prompt: `AGENT: architect-reviewer
 
 TASK: Review all files for structural patterns and design health
 FILES: [all files]
 EXPECTED OUTPUT: Structured findings by severity (Critical/Warning/Info)
 FOCUS: Module boundaries, dependency health, design patterns, change impact`,
+  model: "sonnet",
+  timeout: 300000,
 });
 ```
 
 **Important Notes:**
 
-- Spawn all reviewers in ONE message (parallel execution)
-- Use `subagent_type: "Explore"` for all reviewers (read-only)
+- Spawn all reviewers in ONE message (parallel execution) using mcp__gofortress__spawn_agent
+- All reviewers spawn as separate processes via MCP (better isolation)
 - Implementation reviewers (backend, frontend, standards) use haiku with thinking (tier 1.5)
 - Architecture reviewer uses sonnet (tier 2) for structural judgment
+- Each reviewer has 5-minute timeout (adjustable based on codebase size)
 - Wait for all to complete before synthesizing
+
+**Partial Failure Handling:**
+
+If one or more reviewers fail:
+
+- Collect results from successful reviewers
+- Note failed reviewer(s) in synthesis output
+- Continue with available findings
+- Only fail overall review if ALL reviewers fail
+- Include caveat about incomplete review scope in final report
 
 ### Phase 3: Collection
 
