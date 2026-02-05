@@ -34,13 +34,34 @@ export interface Message {
   timestamp: number;
 }
 
+/**
+ * Status values - union of V1 and V2
+ */
+export type AgentStatus =
+  | "queued"      // New: waiting to spawn
+  | "spawning"   // V1: CLI starting
+  | "running"    // V1: executing
+  | "streaming"  // New: producing output
+  | "complete"   // V1: finished successfully
+  | "error"      // V1: failed
+  | "timeout";   // New: exceeded time limit
+
+/**
+ * Spawn method discriminator
+ */
+export type SpawnMethod = "task" | "mcp-cli";
+
 // Agent interface with tree structure
-export interface Agent {
+/**
+ * Legacy Agent interface (V1) - DO NOT MODIFY existing fields.
+ * Kept for backward compatibility reference.
+ */
+export interface AgentV1 {
   id: string;
   parentId: string | null;
   model: string;
   tier: "haiku" | "sonnet" | "opus";
-  status: "spawning" | "running" | "complete" | "error";
+  status: AgentStatus;
   description?: string;
   startTime: number;
   endTime?: number;
@@ -48,6 +69,58 @@ export interface Agent {
     input: number;
     output: number;
   };
+}
+
+/**
+ * Extended Agent interface (V2) - All new fields are OPTIONAL.
+ * This maintains backward compatibility with V1.
+ */
+export interface Agent extends AgentV1 {
+  // Hierarchy (optional for V1 compatibility)
+  agentType?: string;
+  epicId?: string;
+  depth?: number;
+  childIds?: string[];
+
+  // Spawning metadata (optional)
+  spawnMethod?: "task" | "mcp-cli";
+  spawnedBy?: string;
+  prompt?: string;
+
+  // Process info (for MCP-CLI spawns)
+  pid?: number;
+  queuedAt?: number;
+
+  // Extended status (compatible with V1 status)
+  // V1 status values still valid, these are additions
+  // "queued" | "streaming" | "timeout" are new options
+
+  // Output (optional)
+  output?: string;
+  streamBuffer?: string;
+  error?: string;
+
+  // Extended metrics (optional)
+  cost?: number;
+  turns?: number;
+  toolCalls?: number;
+}
+
+/**
+ * Input for creating a new agent
+ */
+export interface CreateAgentInput {
+  // Required
+  model: string;
+  tier: "haiku" | "sonnet" | "opus";
+  description: string;
+
+  // Optional hierarchy
+  parentId?: string | null;
+  agentType?: string;
+  epicId?: string;
+  spawnMethod?: SpawnMethod;
+  prompt?: string;
 }
 
 // Session data (matches Go format exactly)

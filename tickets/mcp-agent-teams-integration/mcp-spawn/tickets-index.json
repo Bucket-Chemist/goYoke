@@ -48,7 +48,7 @@
       "id": "MCP-SPAWN-006",
       "title": "Store Interface Extension (Backward Compatible)",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "time_estimate": "2h",
       "dependencies": ["MCP-SPAWN-004"]
     },
