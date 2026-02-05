@@ -1,4 +1,3 @@
-```yaml
 ---
 id: MCP-SPAWN-009
 title: MCP Server Registration and Integration
@@ -12,7 +11,6 @@ needs_planning: false
 agent: typescript-pro
 priority: HIGH
 ---
-```
 
 # MCP-SPAWN-009: MCP Server Registration and Integration
 
@@ -98,19 +96,19 @@ async function main() {
 
 ## Acceptance Criteria
 
-- [ ] spawn_agent registered in MCP server
-- [ ] Feature flag respected (GOGENT_MCP_SPAWN_ENABLED=false disables)
-- [ ] Environment validation runs at startup
-- [ ] Tool available to subagents (verified with testMcpPing)
-- [ ] All tests pass: `npm test -- src/mcp/server.test.ts`
-- [ ] Code coverage ≥80%
+- [x] spawn_agent registered in MCP server
+- [x] Feature flag respected (GOGENT_MCP_SPAWN_ENABLED=false disables)
+- [x] Environment validation runs at startup
+- [x] Tool available to subagents (verified with testMcpPing)
+- [x] All tests pass: `npm test -- src/mcp/server.test.ts`
+- [x] Code coverage ≥80%
 
 ## Test Deliverables
 
-- [ ] Test file created: `packages/tui/src/mcp/server.test.ts`
-- [ ] Number of test functions: 6
-- [ ] All tests passing
-- [ ] Coverage ≥80%
+- [x] Test file created: `packages/tui/src/mcp/server.test.ts`
+- [x] Number of test functions: 6
+- [x] All tests passing
+- [x] Coverage ≥80%
 
 ### Required Test Cases (`packages/tui/src/mcp/server.test.ts`)
 

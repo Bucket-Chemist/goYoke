@@ -6,6 +6,7 @@ import { listSessions } from "./hooks/useSession.js";
 import { ListSessions } from "./commands/list.jsx";
 import { setupSignalHandlers } from "./lifecycle/shutdown.js";
 import { getRestartManager } from "./lifecycle/restart.js";
+import { validateSpawnEnvironment, formatValidationResult } from "./spawn/validation.js";
 
 /**
  * GOfortress TUI Entry Point
@@ -15,6 +16,21 @@ import { getRestartManager } from "./lifecycle/restart.js";
 async function main() {
   // Setup graceful shutdown handlers first
   setupSignalHandlers();
+
+  // Validate spawn environment before starting
+  // Errors are logged but don't block startup - allows running with spawn disabled
+  try {
+    const validationResult = await validateSpawnEnvironment();
+    if (!validationResult.ok || validationResult.warnings.length > 0) {
+      console.error(formatValidationResult(validationResult));
+      if (!validationResult.ok) {
+        console.error("\n⚠️  Some spawn features may be unavailable\n");
+      }
+    }
+  } catch (err) {
+    console.error("Environment validation error:", err instanceof Error ? err.message : err);
+    console.error("⚠️  Continuing with warnings - some features may be unavailable\n");
+  }
 
   const options = parseCLI();
   const restartManager = getRestartManager();
