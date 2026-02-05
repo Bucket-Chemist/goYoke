@@ -9,6 +9,7 @@ import {
   cleanupParentMutex,
 } from "../../spawn/relationshipValidation.js";
 import { getAgentsStore } from "../../spawn/storeAdapter.js";
+import { logger, getSessionId } from "../../utils/logger.js";
 
 // Constants
 const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
@@ -95,13 +96,42 @@ Example:
       store
     );
 
-    // Log validation result
+    const sessionId = getSessionId();
+
+    // Log validation result to file and console
     if (!validation.valid || validation.warnings.length > 0) {
-      console.log(formatValidationResult(validation));
+      const formattedResult = formatValidationResult(validation);
+      await logger.info(
+        "Spawn validation result",
+        {
+          parentId,
+          parentType,
+          childAgent: args.agent,
+          childId: agentId,
+          valid: validation.valid,
+          errors: validation.errors,
+          warnings: validation.warnings,
+          formattedResult,
+        },
+        sessionId
+      );
     }
 
     // Block on validation errors
     if (!validation.valid) {
+      await logger.error(
+        "Spawn validation failed - blocking spawn",
+        {
+          parentId,
+          parentType,
+          childAgent: args.agent,
+          childId: agentId,
+          errors: validation.errors,
+          warnings: validation.warnings,
+        },
+        sessionId
+      );
+
       return {
         content: [
           {
