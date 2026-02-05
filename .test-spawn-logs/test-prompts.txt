@@ -1,0 +1,58 @@
+=== MCP spawn_agent Test Prompts ===
+
+TEST 1: Simple Single Agent Spawn
+==================================
+Please use the spawn_agent tool to spawn a codebase-search agent to find all
+TypeScript files in packages/tui/src/mcp that contain the word "spawn".
+
+Use these parameters:
+- agent: "codebase-search"
+- model: "haiku"
+- description: "Find spawn references in MCP code"
+
+Expected: See 1 additional process in Process Monitor, then it disappears
+
+
+TEST 2: Nested Orchestrator (Complex)
+======================================
+I want to test nested agent spawning. Please use spawn_agent to spawn a
+review-orchestrator that will review the MCP-SPAWN-009 implementation.
+
+Files to review:
+- packages/tui/src/mcp/server.ts
+- packages/tui/src/index.tsx
+- packages/tui/src/mcp/server.test.ts
+
+Use:
+- agent: "review-orchestrator"
+- model: "sonnet"
+- description: "Review MCP-SPAWN-009 implementation"
+
+Expected: See up to 4 additional processes (orchestrator + 3 reviewers)
+
+
+TEST 3: Simple Orchestrator Test
+=================================
+Use spawn_agent to spawn a general-purpose orchestrator agent. Give it this task:
+
+"Analyze the spawn_agent implementation in packages/tui/src/mcp/tools/spawnAgent.ts
+and create a 3-point summary of how it works."
+
+agent: "orchestrator"
+model: "sonnet"
+description: "Analyze spawn_agent implementation"
+
+Expected: See 2-3 processes as orchestrator may spawn helpers
+
+
+TEST 4: Quick Verification
+===========================
+Use spawn_agent to spawn a haiku agent with this simple task:
+"Count to 5 and return the result"
+
+agent: "general-purpose"
+model: "haiku"
+description: "Quick test"
+prompt: "AGENT: general-purpose\n\nCount from 1 to 5 and return the numbers."
+
+Expected: Fast execution (<5 seconds), minimal cost (<$0.01)

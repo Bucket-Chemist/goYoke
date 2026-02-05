@@ -1,0 +1,33 @@
+
+> @gofortress/tui@1.0.0 start
+> node dist/index.js
+
+✅ Environment validation passed
+
+Warnings:
+  [W_XDG_DATA_HOME_MISSING] XDG_DATA_HOME not set
+    Impact: Telemetry will use fallback ~/.local/share
+╭────────────────────────────────────────────╮
+│ GOfortress—Session: NoneCost: $0.0000Ready │
+╰────────────────────────────────────────────╯
+┌────────────────────────────────────────┐              ┌──────────────────────┐
+│ Claude Conversation                    │              │ No agents yet        │
+│                                        │              │                      │
+│ No messages yet. Start a conversation! │              │                      │
+│                                        │              │                      │
+│                                        │              │                      │
+│                                        │              │                      │
+│                                        │              │                      │
+│                                        │              │                      │
+│                                        │              │                      │
+│                                        │              │                      │
+│                                        │              └──────────────────────┘
+│                                        │              ┌──────────────────────┐
+│                                        │              │ Agent Detail         │
+│                                        │              │                      │
+│                                        │              │ Select an agent to   │
+│                                        │              │ view details         │
+│ ┌────────────────────────────────────┐ │              │                      │
+│ │ Type a message...                  │ │              │                      │
+│ └────────────────────────────────────┘ │              │                      │
+└────────────────────────────────────────┘              └──────────────────────┘

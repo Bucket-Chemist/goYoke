@@ -3,7 +3,7 @@
 id: MCP-SPAWN-006
 title: Store Interface Extension (Backward Compatible)
 description: Extend the Agent interface with hierarchy fields while maintaining backward compatibility with existing code.
-status: pending
+status: complete
 time_estimate: 2h
 dependencies: [MCP-SPAWN-004]
 phase: 1

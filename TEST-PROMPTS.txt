@@ -1,0 +1,63 @@
+=== MCP spawn_agent Test Prompts ===
+
+Copy-paste these into the TUI after it starts.
+Watch the process monitor in the other terminal/pane.
+
+---
+
+TEST 1: Simple Spawn (Start Here)
+==================================
+
+Please use the spawn_agent tool to spawn a codebase-search agent to find all
+TypeScript files in packages/tui/src/mcp that contain the word "spawn".
+
+Use these parameters:
+- agent: "codebase-search"
+- model: "haiku"
+- description: "Find spawn references in MCP code"
+
+Expected: Process count 0 → 1 → 0 (~5-10 seconds)
+
+---
+
+TEST 2: Quick Haiku Test
+=========================
+
+Use spawn_agent to spawn a haiku agent with this simple task:
+"Count from 1 to 5 and return the numbers as a list"
+
+Parameters:
+- agent: "general-purpose"
+- model: "haiku"
+- description: "Quick count test"
+
+Expected: Process count 0 → 1 → 0 (~3-5 seconds, <$0.01)
+
+---
+
+TEST 3: Nested Orchestrator (Advanced)
+=======================================
+
+I want to test nested agent spawning. Please use spawn_agent to spawn a
+review-orchestrator that will review the MCP-SPAWN-009 implementation.
+
+Files to review:
+- packages/tui/src/mcp/server.ts
+- packages/tui/src/index.tsx
+- packages/tui/src/mcp/server.test.ts
+
+Use:
+- agent: "review-orchestrator"
+- model: "sonnet"
+- description: "Review MCP-SPAWN-009 implementation"
+
+Expected: Process count 0 → 1 → 3-4 → 0 (~30-60 seconds, ~$0.30-0.50)
+
+---
+
+SUCCESS INDICATORS:
+- spawn_agent tool is called (check TUI output)
+- JSON response with success: true
+- Process count changes in monitor
+- Clean return to 0 processes after completion
+

@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	DEFAULT_TIMEOUT = 5 * time.Second
+	DEFAULT_TIMEOUT          = 5 * time.Second
+	MAX_TASK_NESTING_LEVEL   = 5 // Allow orchestrator → sub-agents spawning (aligns with MCP spawn_agent pattern)
 )
 
 // getLogPath returns the path for validation logs.
@@ -97,7 +98,7 @@ func main() {
 	nestingLevel := routing.GetNestingLevel()
 	isExplicit := routing.IsNestingLevelExplicit()
 
-	if nestingLevel > 0 {
+	if nestingLevel > MAX_TASK_NESTING_LEVEL {
 		// Log the block for telemetry
 		logNestingBlock(event, nestingLevel, isExplicit)
 
