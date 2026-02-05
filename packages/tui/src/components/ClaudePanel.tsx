@@ -33,6 +33,12 @@ export interface ClaudePanelProps {
   maxHeight?: number;
 }
 
+// Named constants for height calculations
+// Prevents magic numbers and makes layout calculations explicit
+const HEADER_ROWS = 2;
+const INPUT_ROWS = 4;
+const VIEWPORT_CHROME = 2;
+
 /**
  * Render a single message with role-based styling
  */
@@ -338,11 +344,11 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
       )}
 
       {/* Message viewport - constrained to available space */}
-      <Box height={maxHeight - 6} overflow="hidden">
+      <Box height={maxHeight - HEADER_ROWS - INPUT_ROWS} overflow="hidden">
         <Viewport
           items={messages}
           renderItem={renderMessage}
-          height={Math.max(5, maxHeight - 8)}
+          height={Math.max(5, maxHeight - HEADER_ROWS - INPUT_ROWS - VIEWPORT_CHROME)}
           focused={focused && !streaming}
           autoScroll={true}
         />

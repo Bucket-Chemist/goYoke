@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-05 16:00:41
+# Session Handoff - 2026-02-05 22:03:57
 
 ## Session Context
 
-- **Session ID**: 9494e07c-7320-4baf-9cd2-e84f10c5b7c6
+- **Session ID**: 05d12289-a091-491a-9352-176b9691e2c6
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 0
+- **Tool Calls**: 8
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -18,128 +18,69 @@
 - **Uncommitted Files**:
   - claude/CLAUDE.md
   - claude/agents/agents-index.json
-  - claude/agents/mozart/mozart.md
-  - claude/agents/review-orchestrator/review-orchestrator.md
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
   - claude/memory/ml-tool-events.jsonl
-  - claude/settings.json
+  - claude/routing-schema.json
   - claude/skills/braintrust/SKILL.md
-  - claude/skills/review/SKILL.md
-  - claude/tmp/unleash-backup-codeium-extension.json
-  - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
-  - md/gogent-validate/main.go
+  - claude/skills/plan/SKILL.md
+  - claude/skills/review-plan/SKILL.md
+  - creenshot_2026-02-05_10-02-18.png
   - ackages/tui/.claude/memory/handoffs.jsonl
   - ackages/tui/.claude/memory/last-handoff.md
   - ackages/tui/.claude/memory/ml-tool-events.jsonl
-  - ackages/tui/coverage/bin/gofortress-tui.js.html
-  - ackages/tui/coverage/bin/index.html
-  - ackages/tui/coverage/clover.xml
-  - ackages/tui/coverage/coverage-final.json
-  - ackages/tui/coverage/index.html
-  - ackages/tui/coverage/scripts/benchmark.ts.html
-  - ackages/tui/coverage/scripts/index.html
-  - ackages/tui/coverage/src/App.tsx.html
-  - ackages/tui/coverage/src/cli.ts.html
-  - ackages/tui/coverage/src/commands/index.html
-  - ackages/tui/coverage/src/commands/list.tsx.html
-  - ackages/tui/coverage/src/components/AgentDetail.tsx.html
-  - ackages/tui/coverage/src/components/AgentTree.tsx.html
-  - ackages/tui/coverage/src/components/Banner.tsx.html
-  - ackages/tui/coverage/src/components/BorderStyleTest.tsx.html
-  - ackages/tui/coverage/src/components/ClaudePanel.tsx.html
-  - ackages/tui/coverage/src/components/ErrorBoundary.tsx.html
-  - ackages/tui/coverage/src/components/Layout.tsx.html
-  - ackages/tui/coverage/src/components/LayoutSpike.tsx.html
-  - ackages/tui/coverage/src/components/Modal.tsx.html
-  - ackages/tui/coverage/src/components/ResponsiveLayout.tsx.html
-  - ackages/tui/coverage/src/components/index.html
-  - ackages/tui/coverage/src/components/modals/AskModal.tsx.html
-  - ackages/tui/coverage/src/components/modals/ConfirmModal.tsx.html
-  - ackages/tui/coverage/src/components/modals/InputModal.tsx.html
-  - ackages/tui/coverage/src/components/modals/SelectModal.tsx.html
-  - ackages/tui/coverage/src/components/modals/index.html
-  - ackages/tui/coverage/src/components/primitives/Spinner.tsx.html
-  - ackages/tui/coverage/src/components/primitives/TextInput.tsx.html
-  - ackages/tui/coverage/src/components/primitives/Viewport.tsx.html
-  - ackages/tui/coverage/src/components/primitives/index.html
-  - ackages/tui/coverage/src/config/index.html
-  - ackages/tui/coverage/src/config/keybindings.ts.html
-  - ackages/tui/coverage/src/config/theme.ts.html
-  - ackages/tui/coverage/src/hooks/index.html
-  - ackages/tui/coverage/src/hooks/useAgentTree.ts.html
-  - ackages/tui/coverage/src/hooks/useClaudeQuery.ts.html
-  - ackages/tui/coverage/src/hooks/useKeymap.ts.html
-  - ackages/tui/coverage/src/hooks/useSession.ts.html
-  - ackages/tui/coverage/src/hooks/useTelemetry.ts.html
-  - ackages/tui/coverage/src/index.html
-  - ackages/tui/coverage/src/index.tsx.html
-  - ackages/tui/coverage/src/lifecycle/index.html
-  - ackages/tui/coverage/src/lifecycle/index.ts.html
-  - ackages/tui/coverage/src/lifecycle/restart.ts.html
-  - ackages/tui/coverage/src/lifecycle/shutdown.ts.html
-  - ackages/tui/coverage/src/mcp/index.html
-  - ackages/tui/coverage/src/mcp/index.ts.html
-  - ackages/tui/coverage/src/mcp/server.ts.html
-  - ackages/tui/coverage/src/mcp/tools/askUser.ts.html
-  - ackages/tui/coverage/src/mcp/tools/confirmAction.ts.html
-  - ackages/tui/coverage/src/mcp/tools/index.html
-  - ackages/tui/coverage/src/mcp/tools/requestInput.ts.html
-  - ackages/tui/coverage/src/mcp/tools/selectOption.ts.html
-  - ackages/tui/coverage/src/mcp/tools/spawnAgent.ts.html
-  - ackages/tui/coverage/src/mcp/tools/testMcpPing.ts.html
-  - ackages/tui/coverage/src/spawn/agentConfig.ts.html
-  - ackages/tui/coverage/src/spawn/index.html
-  - ackages/tui/coverage/src/spawn/pidTracker.ts.html
-  - ackages/tui/coverage/src/spawn/processRegistry.ts.html
-  - ackages/tui/coverage/src/spawn/relationshipValidation.ts.html
-  - ackages/tui/coverage/src/spawn/storeAdapter.ts.html
-  - ackages/tui/coverage/src/spawn/validation.ts.html
-  - ackages/tui/coverage/src/store/adapters.ts.html
-  - ackages/tui/coverage/src/store/index.html
-  - ackages/tui/coverage/src/store/index.ts.html
-  - ackages/tui/coverage/src/store/slices/agents.ts.html
-  - ackages/tui/coverage/src/store/slices/index.html
-  - ackages/tui/coverage/src/store/slices/input.ts.html
-  - ackages/tui/coverage/src/store/slices/messages.ts.html
-  - ackages/tui/coverage/src/store/slices/modal.example.ts.html
-  - ackages/tui/coverage/src/store/slices/modal.ts.html
-  - ackages/tui/coverage/src/store/slices/session.ts.html
-  - ackages/tui/coverage/src/store/slices/telemetry.ts.html
-  - ackages/tui/coverage/src/store/slices/ui.ts.html
-  - ackages/tui/coverage/src/store/types.ts.html
-  - ackages/tui/coverage/src/stubs/index.html
-  - ackages/tui/coverage/src/stubs/react-devtools-core.js.html
-  - ackages/tui/coverage/src/types/events.ts.html
-  - ackages/tui/coverage/src/types/index.html
-  - ackages/tui/coverage/src/utils/index.html
-  - ackages/tui/coverage/src/utils/jsonl.ts.html
-  - ackages/tui/coverage/src/utils/logger.ts.html
-  - ackages/tui/coverage/src/utils/markdown.ts.html
   - ackages/tui/src/components/ClaudePanel.tsx
-  - ackages/tui/src/mcp/tools/spawnAgent.ts
-  - ackages/tui/src/spawn/relationshipValidation.ts
-  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-012.md
-  - ickets/mcp-agent-teams-integration/mcp-spawn/tickets-index.json
-  - .claude/docs/mcp-spawning-troubleshooting.md
-  - .claude/sessions/255bfb66-f5fb-4022-81b2-37e974d511c0.json
-  - .claude/sessions/27c1abea-ff37-43eb-832c-a9b23016a08c.json
-  - .claude/sessions/5633935c-60ca-404c-a418-01d49e81313c.json
-  - .claude/sessions/5d636034-0b18-47dc-8586-da8c412ddc1c.json
-  - .claude/sessions/90cf5058-61b5-46c4-afe7-c5d7953f6877.json
-  - .claude/sessions/ad703473-053e-4621-8dd4-c288a78ae55c.json
-  - .claude/sessions/b87ad3e4-0ea1-408d-899e-a9cdf930ff94.json
-  - .claude/sessions/b8df8196-1ab7-4e48-959b-c2c52befd10b.json
-  - .claude/sessions/cbd7c009-9ef5-4cea-980e-c32278952b57.json
-  - .claude/sessions/fa8b89e7-6787-403c-bf85-ea73456544d4.json
-  - .claude/sessions/ff20f2f2-cde0-4b29-8f62-044337527dfc.json
-  - docs/mcp-spawning-troubleshooting.md
-  - packages/tui/.claude/memory/session-archive/routing-violations-255bfb66-f5fb-4022-81b2-37e974d511c0.jsonl
-  - packages/tui/.claude/memory/session-archive/routing-violations-27c1abea-ff37-43eb-832c-a9b23016a08c.jsonl
-  - packages/tui/bitcoin_price.py
-  - packages/tui/coverage/src/cost/
-  - packages/tui/src/cost/
-  - packages/tui/tests/e2e/cost-tracking.test.ts
-  - packages/tui/tests/e2e/spawn-error-scenarios.test.ts
-  - tickets/mcp-agent-teams-integration/mcp-spawn/.current-ticket
+  - ackages/tui/src/components/Layout.tsx
+  - ackages/tui/src/hooks/useClaudeQuery.ts
+  - ackages/tui/src/index.tsx
+  - .claude/braintrust/problem-brief-2026-02-05T1.md
+  - .claude/sessions/05d12289-a091-491a-9352-176b9691e2c6.json
+  - .claude/sessions/0b71a7d2-9b67-4c70-9283-371cb9490197.json
+  - .claude/sessions/14ccdcb4-115b-47df-a401-29fd8a3ccf60.json
+  - .claude/sessions/1bf75a7f-eba3-4fd7-a408-00826dde0b75.json
+  - .claude/sessions/30c1d6ad-2697-4f5a-ad79-d5f9b3ab5880.json
+  - .claude/sessions/33589147-8fc3-4d13-bb7f-769964471bd5.json
+  - .claude/sessions/34a08509-0797-493e-8473-371c3a471c84.json
+  - .claude/sessions/3c5169fc-c025-44b2-924f-0d976943933c.json
+  - .claude/sessions/3c9b4c33-ac75-4f3c-8a27-c882ec138b97.json
+  - .claude/sessions/3ff4dd23-573e-4612-b6bf-12682486afdd.json
+  - .claude/sessions/46dc6a56-18f8-41e2-86e8-bf65f42ae327.json
+  - .claude/sessions/5b40d407-beff-43cf-98d4-e89a8af67b96.json
+  - .claude/sessions/5c4e44d4-43e2-4357-8bb0-1952abf754b1.json
+  - .claude/sessions/5cb4ed33-8515-41ca-b37c-cc2ed8a59cf5.json
+  - .claude/sessions/68bdf9d9-0dd4-4ada-b376-d8405bcf2cd1.json
+  - .claude/sessions/76ddfffe-4a61-42fd-aa2b-84e43e270d38.json
+  - .claude/sessions/789e6971-6731-4bea-abad-78cc9a5634b4.json
+  - .claude/sessions/7933813f-33ee-4a5d-9cd4-c8c0d9511fa0.json
+  - .claude/sessions/83c3b262-47b4-4ba0-b298-82a1a88e6ba2.json
+  - .claude/sessions/91de796f-449a-4136-ae15-3ce93958b01f.json
+  - .claude/sessions/acea8581-1774-4bc3-9efd-405d20f91b06.json
+  - .claude/sessions/adad3b83-68c7-4b55-836c-7c3f32a292b8.json
+  - .claude/sessions/af129377-4f2b-4856-bacb-700e75983b9a.json
+  - .claude/sessions/b50c0111-d56f-442a-9aab-6fd93f1f016f.json
+  - .claude/sessions/bd39c6c0-add6-4126-9e3f-450038345f42.json
+  - .claude/sessions/be1bbab0-f519-44d5-9631-3d180db1b67c.json
+  - .claude/sessions/bf4cb16b-4c26-46cb-b06c-598901f97b9f.json
+  - .claude/sessions/c05b4dc7-aa4c-452b-8bd9-670b5d6505e8.json
+  - .claude/sessions/c22f41b8-4bb0-40bf-bb17-0bb3dde1c4b7.json
+  - .claude/sessions/c639850b-2279-472a-9528-fbb8b18ec28b.json
+  - .claude/sessions/c8207b4b-f311-4ce2-9aba-fd30adfe279a.json
+  - .claude/sessions/cbafcb48-b172-41b6-a7c4-4392649f1493.json
+  - .claude/sessions/cfc5f077-7a42-4dcd-8af8-d1596fb08af5.json
+  - .claude/sessions/d0e0f1d7-5f80-4435-b57f-3cbbe38c7a3e.json
+  - .claude/sessions/d158b925-625b-4de3-ad0d-eaaa9f73e6a1.json
+  - .claude/sessions/d88c63f8-ed76-424b-a3a2-53351f7a3bfa.json
+  - .claude/sessions/ed3f857a-2f8d-4bfd-b35f-c92c184d7027.json
+  - Screenshot_2026-02-05_20-40-53.png
+  - cmd/gogent-validate/gogent-validate
+  - packages/tui/.claude/braintrust/analysis-2026-02-05-agent-monitoring.md
+  - packages/tui/.claude/braintrust/analysis-2026-02-05-tui-facelift.md
+  - packages/tui/.claude/braintrust/analysis-2026-02-05-tui-rendering.md
+  - packages/tui/.claude/braintrust/dispatch-instructions-2026-02-05-agent-monitoring.md
+  - packages/tui/.claude/braintrust/dispatch-instructions-2026-02-05.md
+  - packages/tui/.claude/braintrust/problem-brief-2026-02-05-agent-monitoring.md
+  - packages/tui/.claude/braintrust/problem-brief-2026-02-05T10-45.md
+  - packages/tui/.claude/braintrust/problem-brief-2026-02-05T12-30.md
+  - packages/tui/.claude/memory/session-archive/routing-violations-3c5169fc-c025-44b2-924f-0d976943933c.jsonl
+  - packages/tui/src/hooks/useTerminalDimensions.ts
 

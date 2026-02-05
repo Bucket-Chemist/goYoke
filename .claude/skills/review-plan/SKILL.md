@@ -19,12 +19,14 @@ Manual invocation of staff-architect-critical-review agent for critical review o
 ## When to Use
 
 **Good Use Cases:**
+
 - After `/explore` produces specs.md, before approving implementation
 - Reviewing custom plan you wrote manually
 - Second opinion on complex/risky architectural decisions
 - Before committing to multi-day implementation effort
 
 **When to Skip:**
+
 - Trivial changes (single file, <50 LoC)
 - Time-sensitive fixes (review adds 2-3 minutes)
 - You've already reviewed manually and are confident
@@ -40,28 +42,31 @@ Manual invocation of staff-architect-critical-review agent for critical review o
 ### Phase 1: Validate Input
 
 **Step 1:** Determine target file
+
 ```javascript
-const targetFile = args.trim() || ".claude/tmp/specs.md"
+const targetFile = args.trim() || ".claude/tmp/specs.md";
 ```
 
 **Step 2:** Validate file exists
+
 ```javascript
 try {
-  const fileCheck = Read({file_path: targetFile, limit: 1})
+  const fileCheck = Read({ file_path: targetFile, limit: 1 });
 } catch (error) {
-  Output(`[Error] File not found: ${targetFile}`)
-  Output("\nUsage: /review-plan [file.md]")
-  Output("Default: /review-plan reviews .claude/tmp/specs.md")
-  exit()
+  Output(`[Error] File not found: ${targetFile}`);
+  Output("\nUsage: /review-plan [file.md]");
+  Output("Default: /review-plan reviews .claude/tmp/specs.md");
+  exit();
 }
 ```
 
 **Step 3:** Read file to extract context (goal, complexity)
+
 ```javascript
-const planContent = Read({file_path: targetFile, limit: 50})
+const planContent = Read({ file_path: targetFile, limit: 50 });
 // Extract goal from frontmatter or first paragraph
-const goalMatch = planContent.match(/goal:(.*?)$/m)
-const userGoal = goalMatch ? goalMatch[1].trim() : "Not specified"
+const goalMatch = planContent.match(/goal:(.*?)$/m);
+const userGoal = goalMatch ? goalMatch[1].trim() : "Not specified";
 ```
 
 ---
@@ -69,15 +74,16 @@ const userGoal = goalMatch ? goalMatch[1].trim() : "Not specified"
 ### Phase 2: Invoke Review Agent
 
 **Step 4:** Call staff-architect-critical-review
+
 ```javascript
-Output(`[Review] Analyzing ${targetFile}...`)
-Output("[Review] This will take 2-3 minutes (thinking + scout verification)")
-Output(`[Review] Cost: ~$0.20-0.27 (opus tier)`)
+Output(`[Review] Analyzing ${targetFile}...`);
+Output("[Review] This will take 2-3 minutes (thinking + scout verification)");
+Output(`[Review] Cost: ~$0.20-0.27 (opus tier)`);
 
 const reviewTask = Task({
   description: `Critical review of implementation plan: ${targetFile}`,
-  subagent_type: "Plan",  // Can also use "Explore" for read-only analysis
-  model: "opus",          // Full opus power - allowed via task_invocation_allowlist
+  subagent_type: "Analyst", // Can also use "Explore" for read-only analysis
+  model: "opus", // Full opus power - allowed via task_invocation_allowlist
   prompt: `AGENT: staff-architect-critical-review
 
 1. TASK: Perform 7-layer critical review of ${targetFile}
@@ -131,8 +137,8 @@ const reviewTask = Task({
    - This is a manual review request, user wants thorough analysis
    - User will decide how to act on findings (no automatic iteration)
    - Be comprehensive but balanced (commend good practices too)
-   - Focus on risks that could cause implementation failure or rework`
-})
+   - Focus on risks that could cause implementation failure or rework`,
+});
 ```
 
 ---
@@ -140,71 +146,82 @@ const reviewTask = Task({
 ### Phase 3: Present Results
 
 **Step 5:** Wait for review completion (with progress indicator)
+
 ```javascript
 // Task() is blocking, but show user we're working
-Output("[Review] Agent is analyzing plan (7-layer framework)...")
-Output("[Review] Spawning scouts if verification needed...")
+Output("[Review] Agent is analyzing plan (7-layer framework)...");
+Output("[Review] Spawning scouts if verification needed...");
 // reviewTask completes here
 ```
 
 **Step 6:** Read outputs
+
 ```javascript
-const critique = Read({file_path: ".claude/tmp/review-critique.md"})
-const metadata = Read({file_path: ".claude/tmp/review-metadata.json"})
-const meta = JSON.parse(metadata)
+const critique = Read({ file_path: ".claude/tmp/review-critique.md" });
+const metadata = Read({ file_path: ".claude/tmp/review-metadata.json" });
+const meta = JSON.parse(metadata);
 ```
 
 **Step 7:** Present critique to user
+
 ```javascript
-Output("\n" + "=".repeat(80))
-Output("CRITICAL REVIEW COMPLETE")
-Output("=".repeat(80) + "\n")
+Output("\n" + "=".repeat(80));
+Output("CRITICAL REVIEW COMPLETE");
+Output("=".repeat(80) + "\n");
 
-Output(critique)
+Output(critique);
 
-Output("\n" + "-".repeat(80))
-Output("REVIEW METADATA")
-Output("-".repeat(80))
-Output(`Verdict: ${meta.verdict}`)
-Output(`Confidence: ${meta.confidence}`)
-Output(`Issues: ${meta.issue_counts.critical} Critical, ${meta.issue_counts.major} Major, ${meta.issue_counts.minor} Minor`)
-Output(`Commendations: ${meta.commendations_count}`)
-Output(`Scouts Used: ${meta.scouts_spawned.length}`)
-Output(`Cost: $${meta.cost_estimate_usd.toFixed(2)}`)
-Output(`Duration: ${meta.review_duration_minutes} minutes`)
-Output(`Thinking Budget: ${meta.thinking_budget_used} / 16000 tokens`)
+Output("\n" + "-".repeat(80));
+Output("REVIEW METADATA");
+Output("-".repeat(80));
+Output(`Verdict: ${meta.verdict}`);
+Output(`Confidence: ${meta.confidence}`);
+Output(
+  `Issues: ${meta.issue_counts.critical} Critical, ${meta.issue_counts.major} Major, ${meta.issue_counts.minor} Minor`,
+);
+Output(`Commendations: ${meta.commendations_count}`);
+Output(`Scouts Used: ${meta.scouts_spawned.length}`);
+Output(`Cost: $${meta.cost_estimate_usd.toFixed(2)}`);
+Output(`Duration: ${meta.review_duration_minutes} minutes`);
+Output(`Thinking Budget: ${meta.thinking_budget_used} / 16000 tokens`);
 
-Output("\n" + "-".repeat(80))
-Output("FILES SAVED")
-Output("-".repeat(80))
-Output(`Critique: .claude/tmp/review-critique.md (TTL: 7 days)`)
-Output(`Metadata: .claude/tmp/review-metadata.json (TTL: 60 min)`)
+Output("\n" + "-".repeat(80));
+Output("FILES SAVED");
+Output("-".repeat(80));
+Output(`Critique: .claude/tmp/review-critique.md (TTL: 7 days)`);
+Output(`Metadata: .claude/tmp/review-metadata.json (TTL: 60 min)`);
 
-Output("\n" + "=".repeat(80))
-Output("NEXT STEPS")
-Output("=".repeat(80))
+Output("\n" + "=".repeat(80));
+Output("NEXT STEPS");
+Output("=".repeat(80));
 
 if (meta.issue_counts.critical > 0) {
-  Output(`WARNING: ${meta.issue_counts.critical} CRITICAL issues found - strongly recommend addressing before implementation`)
-  Output("\nOptions:")
-  Output("1. Revise plan manually to address Critical issues")
-  Output("2. Re-run /explore with additional context")
-  Output("3. Accept risk and proceed (document decision)")
+  Output(
+    `WARNING: ${meta.issue_counts.critical} CRITICAL issues found - strongly recommend addressing before implementation`,
+  );
+  Output("\nOptions:");
+  Output("1. Revise plan manually to address Critical issues");
+  Output("2. Re-run /explore with additional context");
+  Output("3. Accept risk and proceed (document decision)");
 } else if (meta.issue_counts.major > 0) {
-  Output(`WARNING: ${meta.issue_counts.major} MAJOR issues found - consider addressing`)
-  Output("\nOptions:")
-  Output("1. Address Major issues now (reduces implementation risk)")
-  Output("2. Proceed with caution (monitor these areas during implementation)")
-  Output("3. Defer to post-implementation refinement")
+  Output(
+    `WARNING: ${meta.issue_counts.major} MAJOR issues found - consider addressing`,
+  );
+  Output("\nOptions:");
+  Output("1. Address Major issues now (reduces implementation risk)");
+  Output("2. Proceed with caution (monitor these areas during implementation)");
+  Output("3. Defer to post-implementation refinement");
 } else {
-  Output("OK: No Critical or Major issues found")
-  Output("\nYou can proceed with implementation confidently.")
+  Output("OK: No Critical or Major issues found");
+  Output("\nYou can proceed with implementation confidently.");
   if (meta.issue_counts.minor > 0) {
-    Output(`\n${meta.issue_counts.minor} Minor issues noted - address when convenient.`)
+    Output(
+      `\n${meta.issue_counts.minor} Minor issues noted - address when convenient.`,
+    );
   }
 }
 
-Output("\n")
+Output("\n");
 ```
 
 ---
@@ -212,16 +229,18 @@ Output("\n")
 ## Error Handling
 
 **File Not Found:**
+
 ```javascript
 if (!fileExists) {
-  Output("[Error] File not found: " + targetFile)
-  Output("\nDid you run /explore yet? That creates .claude/tmp/specs.md")
-  Output("\nOr specify a custom file: /review-plan path/to/custom.md")
-  exit()
+  Output("[Error] File not found: " + targetFile);
+  Output("\nDid you run /explore yet? That creates .claude/tmp/specs.md");
+  Output("\nOr specify a custom file: /review-plan path/to/custom.md");
+  exit();
 }
 ```
 
 **Review Agent Failure:**
+
 ```javascript
 try {
   const reviewTask = Task({...})
@@ -236,12 +255,16 @@ try {
 ```
 
 **Output File Missing:**
+
 ```javascript
 if (!critiqueExists) {
-  Output("[Error] Review agent did not produce critique file")
-  Output("\nThis indicates an agent execution issue.")
-  Output("Check: .claude/tmp/review-critique.md exists?")
-  Output("\nReport this issue with: agent=staff-architect-critical-review, file=" + targetFile)
+  Output("[Error] Review agent did not produce critique file");
+  Output("\nThis indicates an agent execution issue.");
+  Output("Check: .claude/tmp/review-critique.md exists?");
+  Output(
+    "\nReport this issue with: agent=staff-architect-critical-review, file=" +
+      targetFile,
+  );
 }
 ```
 
@@ -303,12 +326,12 @@ vim my-custom-plan.md
 
 ## Cost Breakdown
 
-| Component | Model | Cost |
-|-----------|-------|------|
-| Review agent | Opus+32K | ~$0.20-0.25 |
-| Scout 1 (if spawned) | Haiku+2K | ~$0.01 |
-| Scout 2 (if spawned) | Haiku+2K | ~$0.01 |
-| **Total** | | **$0.20-0.27** |
+| Component            | Model    | Cost           |
+| -------------------- | -------- | -------------- |
+| Review agent         | Opus+32K | ~$0.20-0.25    |
+| Scout 1 (if spawned) | Haiku+2K | ~$0.01         |
+| Scout 2 (if spawned) | Haiku+2K | ~$0.01         |
+| **Total**            |          | **$0.20-0.27** |
 
 **Budget Source:** Paid from your session budget (same pool as /explore, /commit, etc.)
 
@@ -317,16 +340,19 @@ vim my-custom-plan.md
 ## Limitations
 
 **Not a Replacement for Human Review:**
+
 - Agent catches common anti-patterns and architectural flaws
 - May miss domain-specific issues requiring deep expertise
 - Use as second opinion, not sole reviewer
 
 **Limited Context:**
+
 - Agent reviews plan file only (+ optional scout verification)
 - Doesn't have full conversation history
 - Provide context in plan if important
 
 **Manual Follow-Up:**
+
 - Agent provides critique, doesn't automatically fix issues
 - You decide how to address findings
 - No automatic iteration loops
@@ -336,17 +362,20 @@ vim my-custom-plan.md
 ## Tips
 
 **Get Better Reviews:**
+
 1. **Add context to plan:** Include user goal, constraints, assumptions in frontmatter
 2. **Run after explore:** scout_metrics.json provides additional context
 3. **Be specific:** Plans with specific file paths and code structure get more targeted feedback
 
 **Interpret Results:**
+
 - **CRITICAL:** Address before implementation (high risk of rework)
 - **MAJOR:** Address if time permits (medium risk)
 - **MINOR:** Note for future (low risk)
 - **Commendations:** Keep doing this (patterns to replicate)
 
 **When to Re-Review:**
+
 - After significant plan changes (e.g., revised 3+ phases)
 - If first review had CRITICAL issues and you addressed them
 - Cost: ~$0.25 per review (opus tier), budget accordingly

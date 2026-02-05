@@ -53,8 +53,34 @@ async function main() {
   // Record successful start for backoff reset detection
   restartManager.recordSuccessfulStart();
 
-  // Normal mode: render main app
-  render(<App sessionId={options.session} verbose={options.verbose} />);
+  // Enter alternate screen buffer for fullscreen TUI
+  // This prevents banner duplication and provides clean rendering surface
+  process.stdout.write('\x1b[?1049h'); // Enter alternate buffer
+  process.stdout.write('\x1b[2J');     // Clear screen
+  process.stdout.write('\x1b[H');      // Home cursor
+  process.stdout.write('\x1b[?25l');   // Hide cursor
+
+  // Render main app
+  const { waitUntilExit } = render(
+    <App sessionId={options.session} verbose={options.verbose} />,
+    {
+      exitOnCtrlC: true,
+      patchConsole: true,
+    }
+  );
+
+  // Cleanup function to restore terminal state
+  const cleanup = () => {
+    process.stdout.write('\x1b[?25h');  // Show cursor
+    process.stdout.write('\x1b[?1049l'); // Exit alternate buffer
+  };
+
+  // Ensure cleanup on all exit paths
+  process.on('exit', cleanup);
+  process.on('SIGINT', () => { cleanup(); process.exit(0); });
+  process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+
+  await waitUntilExit();
 }
 
 /**

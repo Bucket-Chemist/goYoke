@@ -1,8 +1,9 @@
 import React from "react";
-import { Box, useStdout } from "ink";
+import { Box } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap, KeyBinding } from "../hooks/useKeymap.js";
 import { useAgentTree } from "../hooks/useAgentTree.js";
+import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { ClaudePanel } from "./ClaudePanel.js";
@@ -28,10 +29,9 @@ const BANNER_HEIGHT = 3; // Banner takes 3 rows
 export function Layout(): JSX.Element {
   const { focusedPanel, setFocusedPanel, modalQueue, clearMessages } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
-  const { stdout } = useStdout();
+  const { rows: terminalHeight } = useTerminalDimensions();
 
   // Calculate available height for content area
-  const terminalHeight = stdout?.rows ?? 24;
   const contentHeight = terminalHeight - BANNER_HEIGHT;
 
   // Global key bindings (only active when no modal is present)

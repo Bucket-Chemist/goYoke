@@ -539,13 +539,17 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
 
         // DEBUG: Log query options to file
         const queryModel = preferredModel || undefined;
+        const existingSessionId = useStore.getState().sessionId;
         fs.appendFileSync("/tmp/tui-model-debug.log",
-          `[${new Date().toISOString()}] Calling query() with model: ${queryModel}\n`);
+          `[${new Date().toISOString()}] Calling query() with model: ${queryModel}, resume: ${existingSessionId}\n`);
 
         // Query Claude with MCP server registration and GOgent settings
         const eventStream = query({
           prompt: message,
           options: {
+            // CRITICAL: Resume existing session to maintain conversation context
+            // Without this, each message creates a new session and loses history
+            resume: existingSessionId || undefined,
             // Apply preferred model if set (allows /model before first message)
             model: queryModel,
             // Load GOgent-Fortress settings (hooks, CLAUDE.md, etc.)

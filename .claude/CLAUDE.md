@@ -374,7 +374,7 @@ When multiple agents match a request, resolution follows this order:
 ```javascript
 Task({
   description: "Brief description",
-  subagent_type: "[from dispatch table]", // ENFORCED by gogent-validate
+  subagent_type: "[from dispatch table]" | "Plan" | "Explore" | "general-purpose", // MANDATORY: Enforced by gogent-validate
   model: "haiku" | "sonnet",
   prompt: `AGENT: [agent-id]
 

@@ -281,11 +281,19 @@
     },
     "Plan": {
       "description": "Architecture and planning mode with controlled write access",
+      "tools": ["Read", "Glob", "Grep", "Write", "Task", "spawn_agent", "AskUserQuestion", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate"],
+      "allows_write": true,
+      "respects_agent_yaml": false,
+      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager", "mozart"],
+      "rationale": "Planning agents need to write plans and spawn other agents"
+    },
+    "Analyst": {
+      "description": "Deep thinking and analysis with report writing but NO delegation",
       "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate"],
       "allows_write": true,
       "respects_agent_yaml": false,
-      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager", "mozart", "einstein", "beethoven"],
-      "rationale": "Planning agents need to write plans and spawn other agents"
+      "use_for": ["einstein", "beethoven", "staff-architect-critical-review"],
+      "rationale": "Analysts produce thought work and documents but should not spawn sub-agents (Principle of Least Privilege)"
     }
   },
 
@@ -330,11 +338,11 @@
     "architect": "Plan",
     "planner": "Plan",
     "python-architect": ["Plan", "Explore"],
-    "einstein": "Plan",
+    "einstein": "Analyst",
     "mozart": "Plan",
-    "beethoven": "Plan",
+    "beethoven": "Analyst",
     "gemini-slave": "Bash",
-    "staff-architect-critical-review": ["Plan", "Explore"]
+    "staff-architect-critical-review": ["Analyst", "Explore"]
   },
 
   "blocked_patterns": {

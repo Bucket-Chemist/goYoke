@@ -117,6 +117,7 @@ When `/braintrust` is invoked:
 Task({
   model: "opus",
   description: "Mozart: Braintrust problem decomposition",
+  subagent_type: "Plan",
   prompt: `AGENT: mozart
 
 BRAINTRUST INVOCATION

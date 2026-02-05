@@ -719,6 +719,7 @@
       "tier": 3,
       "category": "analysis",
       "path": "einstein",
+      "subagent_type": "Analyst",
       "triggers": ["escalate to einstein", "deep theoretical analysis"],
       "tools": ["Read", "Write", "Glob", "Grep", "TaskGet"],
       "auto_activate": null,
@@ -746,6 +747,7 @@
       "tier": 3,
       "category": "orchestration",
       "path": "mozart",
+      "subagent_type": "Plan",
       "triggers": [],
       "tools": [
         "Read",
@@ -788,6 +790,7 @@
       "tier": 3,
       "category": "synthesis",
       "path": "beethoven",
+      "subagent_type": "Analyst",
       "triggers": [],
       "tools": ["Read", "Write", "Glob", "TaskGet"],
       "auto_activate": null,

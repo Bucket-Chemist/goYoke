@@ -10,6 +10,7 @@ description: Comprehensive planning workflow with opus-tier agents. Scout -> Pla
 Transform a goal into a comprehensive, critically-reviewed implementation plan with itemized tickets ready for the `/ticket` workflow.
 
 **What this skill does:**
+
 1. **Scout** — Assess scope before committing expensive resources
 2. **Plan** — High-level strategy via planner (opus, 32K thinking)
 3. **Architect** — Detailed implementation plan (opus, 32K thinking)
@@ -18,6 +19,7 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 6. **Synthesize** — Generate overview.md + itemized tickets
 
 **What this skill does NOT do:**
+
 - Implement code (delegates to language agents via `/ticket`)
 - Skip the review phase (always runs staff-architect)
 - Rush through planning (this is deliberate, thorough planning)
@@ -26,22 +28,24 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 
 ## Invocation
 
-| Command | Behavior |
-|---------|----------|
-| `/plan` | Prompt for goal |
-| `/plan [goal]` | Start with stated goal |
+| Command              | Behavior                                  |
+| -------------------- | ----------------------------------------- |
+| `/plan`              | Prompt for goal                           |
+| `/plan [goal]`       | Start with stated goal                    |
 | `/plan --skip-scout` | Skip reconnaissance (when scope is known) |
-| `/plan --resume` | Resume from last checkpoint |
+| `/plan --resume`     | Resume from last checkpoint               |
 
 ---
 
 ## Prerequisites
 
 **Required state:**
+
 - Project directory with identifiable language (go.mod, pyproject.toml, etc.)
 - Writeable `.claude/tmp/` directory
 
 **Optional inputs:**
+
 - `.claude/tmp/scout_metrics.json` (from prior scout)
 - Existing tickets directory for integration
 
@@ -57,11 +61,13 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 ```
 
 **If no goal provided:**
+
 ```
 What do you want to achieve? (One sentence describing the end state)
 ```
 
 **After goal captured:**
+
 ```
 [plan] Goal: "<user's goal>"
 [plan] Proceeding to reconnaissance...
@@ -70,16 +76,19 @@ What do you want to achieve? (One sentence describing the end state)
 ### Phase 2: Scout (Conditional)
 
 **When to scout:**
+
 - Scope is unknown ("implement X", "add feature Y")
 - Goal mentions modules, systems, or architecture
 - Could involve 5+ files
 
 **When to skip:**
+
 - User specified `--skip-scout`
 - Goal mentions specific files
 - Trivial scope
 
 **Scout invocation:**
+
 ```bash
 # Gather metrics
 ~/.claude/scripts/gather-scout-metrics.sh <target> > /tmp/bash_metrics.txt
@@ -93,6 +102,7 @@ What do you want to achieve? (One sentence describing the end state)
 ```
 
 **Scout with fallback:**
+
 ```bash
 if command -v gemini-slave >/dev/null 2>&1; then
     # Primary: gemini-slave
@@ -105,15 +115,27 @@ fi
 ```
 
 **Scout Output Schema:**
+
 ```json
 {
-  "scope_metrics": {"total_files": 47, "total_lines": 8234, "estimated_tokens": 32936},
-  "complexity_signals": {"import_density": 0.15, "cross_file_dependencies": 12},
-  "routing_recommendation": {"recommended_tier": "sonnet", "confidence": "high"}
+  "scope_metrics": {
+    "total_files": 47,
+    "total_lines": 8234,
+    "estimated_tokens": 32936
+  },
+  "complexity_signals": {
+    "import_density": 0.15,
+    "cross_file_dependencies": 12
+  },
+  "routing_recommendation": {
+    "recommended_tier": "sonnet",
+    "confidence": "high"
+  }
 }
 ```
 
 **Output:**
+
 ```
 [scout] Files: X | Lines: Y | Tokens: ~Z
 [scout] Complexity: <score> | Recommended tier: opus
@@ -150,11 +172,12 @@ INSTRUCTIONS:
 6. Write strategy to .claude/tmp/strategy.md
 
 If genuinely ambiguous, ask up to 2 clarifying questions via AskUserQuestion.
-`
-})
+`,
+});
 ```
 
 **User checkpoint:**
+
 ```
 [plan] Strategy complete.
 
@@ -169,6 +192,7 @@ Review strategy before proceeding? (y/n/edit)
 ```
 
 **On response:**
+
 - `y` or `yes` — Show strategy.md contents, then ask to proceed
 - `n` or `no` — Proceed directly to architect
 - `edit` — Allow user to modify, then re-validate
@@ -203,11 +227,12 @@ CONSTRAINTS:
 - Follow existing codebase patterns
 - Each phase should be independently testable
 - Include rollback considerations
-`
-})
+`,
+});
 ```
 
 **Output:**
+
 ```
 [plan] Implementation plan complete.
 
@@ -227,7 +252,7 @@ Proceeding to critical review...
 ```javascript
 Task({
   description: "Critical review of implementation plan",
-  subagent_type: "Plan",
+  subagent_type: "Analyst",
   model: "opus",
   prompt: `AGENT: staff-architect-critical-review
 
@@ -250,8 +275,8 @@ OUTPUT:
 - .claude/tmp/review-metadata.json
 
 Be adversarial to the plan, but constructive to the outcome.
-`
-})
+`,
+});
 ```
 
 **Process review result:**
@@ -264,12 +289,12 @@ critical_count=$(jq -r '.issue_counts.critical' .claude/tmp/review-metadata.json
 
 **Branch based on verdict:**
 
-| Verdict | Action |
-|---------|--------|
-| `APPROVE` | Proceed to synthesis |
-| `APPROVE_WITH_CONDITIONS` | Show conditions, ask user to acknowledge, proceed |
-| `CONCERNS` | Show concerns, ask if user wants to proceed or revise |
-| `CRITICAL_ISSUES` | Escalate to Einstein or revise |
+| Verdict                   | Action                                                |
+| ------------------------- | ----------------------------------------------------- |
+| `APPROVE`                 | Proceed to synthesis                                  |
+| `APPROVE_WITH_CONDITIONS` | Show conditions, ask user to acknowledge, proceed     |
+| `CONCERNS`                | Show concerns, ask if user wants to proceed or revise |
+| `CRITICAL_ISSUES`         | Escalate to Einstein or revise                        |
 
 ### Phase 5b: Einstein Resolution (Conditional)
 
@@ -290,11 +315,13 @@ Choice? (1/2/3)
 ```
 
 **If Einstein escalation chosen:**
+
 ```
 [plan] Generating GAP document for Einstein...
 ```
 
 Generate GAP document with:
+
 - Review critique as context
 - Specific critical issues as questions
 - Plan excerpts as relevant context
@@ -330,17 +357,17 @@ After review passes (APPROVE or APPROVE_WITH_CONDITIONS acknowledged):
 
 ## Implementation Phases
 
-| Phase | Description | Tickets | Dependencies |
-|-------|-------------|---------|--------------|
-| 1 | <name> | PROJ-001, PROJ-002 | None |
-| 2 | <name> | PROJ-003 | Phase 1 |
-| ... | ... | ... | ... |
+| Phase | Description | Tickets            | Dependencies |
+| ----- | ----------- | ------------------ | ------------ |
+| 1     | <name>      | PROJ-001, PROJ-002 | None         |
+| 2     | <name>      | PROJ-003           | Phase 1      |
+| ...   | ...         | ...                | ...          |
 
 ## Risk Register
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| <top 3 from review> | ... | ... | ... |
+| Risk                | Likelihood | Impact | Mitigation |
+| ------------------- | ---------- | ------ | ---------- |
+| <top 3 from review> | ...        | ...    | ...        |
 
 ## Review Summary
 
@@ -350,6 +377,7 @@ After review passes (APPROVE or APPROVE_WITH_CONDITIONS acknowledged):
 **Commendations:** <count>
 
 ### Conditions (if any)
+
 <list conditions that must be addressed>
 
 ## Success Criteria
@@ -364,7 +392,7 @@ After review passes (APPROVE or APPROVE_WITH_CONDITIONS acknowledged):
 
 ---
 
-*Generated by /plan skill. Review critique: .claude/tmp/review-critique.md*
+_Generated by /plan skill. Review critique: .claude/tmp/review-critique.md_
 ```
 
 **Generate tickets:**
@@ -380,6 +408,7 @@ mkdir -p tickets
 ```
 
 **tickets-index.json Schema:**
+
 ```json
 {
   "version": "1.0",
@@ -387,21 +416,31 @@ mkdir -p tickets
   "generated_by": "/plan v1.0",
   "generated_at": "<ISO timestamp>",
   "tickets": [
-    {"id": "PROJ-001", "title": "...", "status": "pending", "phase": 1, "dependencies": [], "file": "tickets/PROJ-001.md"}
+    {
+      "id": "PROJ-001",
+      "title": "...",
+      "status": "pending",
+      "phase": 1,
+      "dependencies": [],
+      "file": "tickets/PROJ-001.md"
+    }
   ]
 }
 ```
 
 **Ticket Prefix Resolution:**
+
 1. Read `.ticket-config.json` if exists → use `project_name` field
 2. Parse `go.mod` module name → use last path component uppercase
 3. Fallback: "PROJ"
 
 **Dependency Mapping:**
+
 - Phase 1 tickets: `dependencies: []`
 - Phase N tickets (N>1): `dependencies: [all Phase N-1 ticket IDs]`
 
 **Ticket format:**
+
 ```markdown
 ---
 id: PROJ-001
@@ -441,10 +480,11 @@ needs_planning: false
 
 ---
 
-*Generated from: .claude/tmp/specs.md Phase <N>*
+_Generated from: .claude/tmp/specs.md Phase <N>_
 ```
 
 **Final output:**
+
 ```
 [plan] Synthesis complete.
 
@@ -463,33 +503,34 @@ Ready for implementation. Run /ticket to begin.
 
 ## State Files
 
-| File | Written By | Read By | Purpose |
-|------|------------|---------|---------|
-| `.claude/tmp/strategy.md` | planner | architect, synthesis | High-level strategy |
-| `.claude/tmp/specs.md` | architect | staff-architect, synthesis | Detailed implementation plan |
-| `.claude/tmp/review-critique.md` | staff-architect | user, synthesis | Critical review |
-| `.claude/tmp/review-metadata.json` | staff-architect | /plan workflow | Review verdict and counts |
-| `.claude/tmp/einstein-gap-*.md` | /plan (if needed) | /einstein | Escalation context |
-| `overview.md` | synthesis | user | Human-readable summary |
-| `tickets/*.md` | synthesis | /ticket | Individual tickets |
-| `tickets/tickets-index.json` | synthesis | /ticket | Ticket registry |
+| File                               | Written By        | Read By                    | Purpose                      |
+| ---------------------------------- | ----------------- | -------------------------- | ---------------------------- |
+| `.claude/tmp/strategy.md`          | planner           | architect, synthesis       | High-level strategy          |
+| `.claude/tmp/specs.md`             | architect         | staff-architect, synthesis | Detailed implementation plan |
+| `.claude/tmp/review-critique.md`   | staff-architect   | user, synthesis            | Critical review              |
+| `.claude/tmp/review-metadata.json` | staff-architect   | /plan workflow             | Review verdict and counts    |
+| `.claude/tmp/einstein-gap-*.md`    | /plan (if needed) | /einstein                  | Escalation context           |
+| `overview.md`                      | synthesis         | user                       | Human-readable summary       |
+| `tickets/*.md`                     | synthesis         | /ticket                    | Individual tickets           |
+| `tickets/tickets-index.json`       | synthesis         | /ticket                    | Ticket registry              |
 
 ---
 
 ## Cost Model
 
-| Phase | Model | Est. Tokens | Est. Cost |
-|-------|-------|-------------|-----------|
-| Scout | Gemini/Haiku | 2-5K | $0.01-0.02 |
-| Planner | Opus | 15-30K | $0.68-1.35 |
-| Architect | Opus | 20-40K | $0.90-1.80 |
-| Review | Opus | 15-30K | $0.68-1.35 |
-| Synthesis | N/A | 0 | $0.00 |
-| **Total** | | 52-105K | **$2.27-4.52** |
+| Phase     | Model        | Est. Tokens | Est. Cost      |
+| --------- | ------------ | ----------- | -------------- |
+| Scout     | Gemini/Haiku | 2-5K        | $0.01-0.02     |
+| Planner   | Opus         | 15-30K      | $0.68-1.35     |
+| Architect | Opus         | 20-40K      | $0.90-1.80     |
+| Review    | Opus         | 15-30K      | $0.68-1.35     |
+| Synthesis | N/A          | 0           | $0.00          |
+| **Total** |              | 52-105K     | **$2.27-4.52** |
 
 **Note:** Einstein resolution (if triggered) adds ~$0.90 per invocation.
 
 **Cost Disclaimer:** Estimates assume efficient execution. Actual cost may be higher with:
+
 - Extended user review time (context accumulates)
 - Einstein escalation (+$0.90 per call)
 - Retry loops on agent failures
@@ -501,20 +542,22 @@ Ready for implementation. Run /ticket to begin.
 
 The /plan skill saves state at each phase:
 
-| Checkpoint | State File | Resume Point |
-|------------|------------|--------------|
-| After scout | `.claude/tmp/scout_metrics.json` | Phase 3 (planner) |
-| After planner | `.claude/tmp/strategy.md` | Phase 4 (architect) |
-| After architect | `.claude/tmp/specs.md` | Phase 5 (review) |
-| After review | `.claude/tmp/review-metadata.json` | Phase 6 (synthesis) |
-| Einstein needed | `.claude/tmp/einstein-gap-*.md` | After /einstein |
+| Checkpoint      | State File                         | Resume Point        |
+| --------------- | ---------------------------------- | ------------------- |
+| After scout     | `.claude/tmp/scout_metrics.json`   | Phase 3 (planner)   |
+| After planner   | `.claude/tmp/strategy.md`          | Phase 4 (architect) |
+| After architect | `.claude/tmp/specs.md`             | Phase 5 (review)    |
+| After review    | `.claude/tmp/review-metadata.json` | Phase 6 (synthesis) |
+| Einstein needed | `.claude/tmp/einstein-gap-*.md`    | After /einstein     |
 
 **Resume command:**
+
 ```
 /plan --resume
 ```
 
 **Resume Detection Algorithm:**
+
 ```
 Check in order (first match wins):
 1. einstein-gap-*.md exists → resume at synthesis (post-Einstein)
@@ -531,15 +574,16 @@ Detects last checkpoint and continues from there.
 
 ## Error Handling
 
-| Error | Recovery |
-|-------|----------|
-| Scout fails | Fall back to haiku-scout, or skip scout with warning |
-| Planner fails | Retry once, then ask user for manual strategy input |
-| Architect fails | Retry with simpler constraints, or escalate |
-| Review fails | Proceed with warning (review is advisory) |
-| Synthesis fails | Manual ticket creation from specs.md |
+| Error           | Recovery                                             |
+| --------------- | ---------------------------------------------------- |
+| Scout fails     | Fall back to haiku-scout, or skip scout with warning |
+| Planner fails   | Retry once, then ask user for manual strategy input  |
+| Architect fails | Retry with simpler constraints, or escalate          |
+| Review fails    | Proceed with warning (review is advisory)            |
+| Synthesis fails | Manual ticket creation from specs.md                 |
 
 **Timeout Behavior:**
+
 - Interactive mode: Wait indefinitely for user response
 - Non-interactive mode: Default after 30s (proceed=yes, acknowledge=yes)
 
@@ -564,6 +608,7 @@ The tickets generated by /plan are fully compatible with /ticket skill:
 ## When to Use /plan
 
 **Use /plan when:**
+
 - Starting a new feature with unclear scope
 - Making architectural changes
 - Planning multi-phase implementations
@@ -571,6 +616,7 @@ The tickets generated by /plan are fully compatible with /ticket skill:
 - The goal is complex enough to benefit from structured planning
 
 **Don't use /plan when:**
+
 - Fixing a simple bug (just fix it)
 - Single-file changes (use /ticket directly)
 - Documentation updates
