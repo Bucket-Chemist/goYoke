@@ -1,8 +1,14 @@
 import { tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { spawn } from "child_process";
-import { getProcessRegistry } from "../../spawn/processRegistry";
+import { getProcessRegistry } from "../../spawn/processRegistry.js";
 import { randomUUID } from "crypto";
+import {
+  validateAndRegisterSpawn,
+  formatValidationResult,
+  cleanupParentMutex,
+} from "../../spawn/relationshipValidation.js";
+import { getAgentsStore } from "../../spawn/storeAdapter.js";
 
 // Constants
 const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
@@ -71,8 +77,54 @@ Example:
 
     const agentId = randomUUID();
     const registry = getProcessRegistry();
+    const store = getAgentsStore();
     const timeout = args.timeout ?? DEFAULT_TIMEOUT;
     const startTime = Date.now();
+
+    // Get parent info from store
+    const parentId = process.env["GOGENT_PARENT_AGENT"] || null;
+    const parentAgent = parentId ? store.get(parentId) : null;
+    const parentType = parentAgent?.agentType;
+
+    // === RELATIONSHIP VALIDATION ===
+    const validation = await validateAndRegisterSpawn(
+      parentId,
+      parentType,
+      args.agent,
+      agentId,
+      store
+    );
+
+    // Log validation result
+    if (!validation.valid || validation.warnings.length > 0) {
+      console.log(formatValidationResult(validation));
+    }
+
+    // Block on validation errors
+    if (!validation.valid) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                agentId: null,
+                agent: args.agent,
+                success: false,
+                error: `Spawn validation failed: ${validation.errors
+                  .map((e) => e.message)
+                  .join("; ")}`,
+                validationErrors: validation.errors,
+                validationWarnings: validation.warnings,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+    // === END VALIDATION ===
 
     // Build CLI arguments
     const cliArgs = buildCliArgs(args);
@@ -148,6 +200,11 @@ Example:
       proc.on("close", (code, signal) => {
         clearTimeout(timer);
 
+        // Cleanup mutex for this parent to prevent memory leak
+        if (parentId) {
+          cleanupParentMutex(parentId);
+        }
+
         const duration = Date.now() - startTime;
         const parsed = parseCliOutput(stdout);
 
@@ -170,6 +227,12 @@ Example:
 
       proc.on("error", (err) => {
         clearTimeout(timer);
+
+        // On error, remove child from parent (spawn failed after validation)
+        if (parentId) {
+          store.removeChild(parentId, agentId);
+          cleanupParentMutex(parentId);
+        }
 
         const result: SpawnResult = {
           agentId,
