@@ -24,13 +24,14 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task
+  - Task  # For Haiku scouts only
   - TaskList
   - TaskGet
   - TaskCreate
   - TaskUpdate
   - Write
   - AskUserQuestion
+  - mcp__gofortress__spawn_agent  # For Level 2 Opus spawning (Einstein, Staff-Architect, Beethoven)
 
 delegation:
   can_spawn:
@@ -155,8 +156,10 @@ AskUserQuestion({
 
 After interview (or if skipped), spawn scouts to gather context:
 
+**NOTE: Scouts use Task() (not MCP spawn_agent) because they are Haiku-tier Level 1 agents.**
+
 ```javascript
-// Spawn scouts in PARALLEL - single message
+// Spawn scouts in PARALLEL - single message using Task()
 Task({
   description: "Assess problem scope and file landscape",
   subagent_type: "Explore",
@@ -180,6 +183,13 @@ EXPECTED OUTPUT: List of relevant files with excerpts
 FOCUS: Prior solutions, related code, documentation`
 });
 ```
+
+### Spawning Pattern Summary
+
+| Agent Tier | Spawning Mechanism | Examples |
+|------------|-------------------|----------|
+| **Level 1 (Haiku)** | `Task()` tool | haiku-scout, codebase-search |
+| **Level 2 (Opus)** | `mcp__gofortress__spawn_agent` | einstein, staff-architect-critical-review, beethoven |
 
 ### Scout Results Processing
 
@@ -331,14 +341,16 @@ AskUserQuestion({
 
 ## Phase 6: Orthogonal Dispatch
 
-**Spawn Einstein and Staff-Architect in PARALLEL (single message):**
+**Spawn Einstein and Staff-Architect in PARALLEL using MCP spawn_agent (single message):**
 
 ```javascript
-Task({
-  description: "Einstein theoretical analysis",
-  subagent_type: "Plan",
-  model: "opus",
+// Spawn Einstein via MCP
+mcp__gofortress__spawn_agent({
+  agent: "einstein",
+  description: "Theoretical analysis for Braintrust",
   prompt: `AGENT: einstein
+
+BRAINTRUST WORKFLOW - THEORETICAL ANALYSIS
 
 PROBLEM BRIEF: {path to problem-brief.md}
 
@@ -351,14 +363,18 @@ FOCUS:
 
 EXPECTED OUTPUT: Structured theoretical analysis
 CONSTRAINTS: Stay within theoretical/conceptual domain
-HANDOFF TO: Beethoven (your output will be synthesized)`
+HANDOFF TO: Beethoven (your output will be synthesized)`,
+  model: "opus",
+  timeout: 600000  // 10 minutes for complex analysis
 });
 
-Task({
-  description: "Staff-Architect practical review",
-  subagent_type: "Plan",
-  model: "opus",
+// Spawn Staff-Architect via MCP (parallel with Einstein)
+mcp__gofortress__spawn_agent({
+  agent: "staff-architect-critical-review",
+  description: "Practical review for Braintrust",
   prompt: `AGENT: staff-architect-critical-review
+
+BRAINTRUST WORKFLOW - PRACTICAL REVIEW
 
 PROBLEM BRIEF: {path to problem-brief.md}
 
@@ -372,37 +388,76 @@ FOCUS:
 
 EXPECTED OUTPUT: Structured practical review
 CONSTRAINTS: Stay within practical/implementation domain
-HANDOFF TO: Beethoven (your output will be synthesized)`
+HANDOFF TO: Beethoven (your output will be synthesized)`,
+  model: "opus",
+  timeout: 600000  // 10 minutes for complex analysis
 });
 ```
 
 ### Parallel Execution Notes
 
+- Both agents spawn via MCP spawn_agent tool (not Task())
 - Both agents receive the SAME Problem Brief
 - They analyze from DIFFERENT perspectives
 - Their outputs go to Beethoven for synthesis
-- Mozart waits for BOTH to complete
+- Mozart waits for BOTH to complete before proceeding
+- 10-minute timeout allows for deep Opus-level analysis
 
 ---
 
 ## Phase 7: Handoff to Beethoven
 
-After both analyses complete, invoke Beethoven:
+After both analyses complete, collect outputs and invoke Beethoven via MCP:
 
 ```javascript
-Task({
-  description: "Beethoven synthesis of orthogonal analyses",
-  subagent_type: "Plan",
-  model: "opus",
+// Both Einstein and Staff-Architect outputs are available in their respective task results
+// Now spawn Beethoven to synthesize them
+mcp__gofortress__spawn_agent({
+  agent: "beethoven",
+  description: "Synthesis of orthogonal analyses",
   prompt: `AGENT: beethoven
 
+BRAINTRUST WORKFLOW - SYNTHESIS
+
 INPUTS:
-- Problem Brief: {path}
-- Einstein Analysis: {einstein_output}
-- Staff-Architect Review: {staff_architect_output}
+- Problem Brief: {path to problem-brief.md}
+- Einstein Analysis: {einstein_output or path to Einstein's output}
+- Staff-Architect Review: {staff_architect_output or path to Staff-Architect's output}
 
 TASK: Synthesize these orthogonal analyses into unified Braintrust output
-OUTPUT: Standardized Braintrust Analysis Document at .claude/braintrust/analysis-{timestamp}.md`
+EXPECTED OUTPUT: Standardized Braintrust Analysis Document
+OUTPUT FILE: .claude/braintrust/analysis-{timestamp}.md
+
+Your synthesis should:
+- Integrate theoretical (Einstein) and practical (Staff-Architect) perspectives
+- Resolve any tensions between the two analyses
+- Provide unified recommendations
+- Highlight areas where both perspectives agree (high confidence)
+- Flag areas where perspectives diverge (requires user judgment)`,
+  model: "opus",
+  timeout: 600000  // 10 minutes for synthesis
+});
+```
+
+### Output Collection Pattern
+
+```javascript
+// Example of collecting outputs before Beethoven spawn
+const einsteinResult = await mcp__gofortress__spawn_agent({
+  agent: "einstein",
+  // ... Einstein config
+});
+
+const staffArchitectResult = await mcp__gofortress__spawn_agent({
+  agent: "staff-architect-critical-review",
+  // ... Staff-Architect config
+});
+
+// Then pass collected outputs to Beethoven
+const beethovenResult = await mcp__gofortress__spawn_agent({
+  agent: "beethoven",
+  prompt: `... Einstein: ${einsteinResult} ... Staff-Arch: ${staffArchitectResult} ...`,
+  // ... Beethoven config
 });
 ```
 
@@ -414,6 +469,7 @@ After Beethoven completes:
 [Mozart] Braintrust analysis complete.
 [Mozart] Output: .claude/braintrust/analysis-{timestamp}.md
 [Mozart] Agents invoked: 4 (Mozart, Einstein, Staff-Architect, Beethoven)
+[Mozart] All spawned via MCP spawn_agent (Level 2 pattern)
 ```
 
 ---
