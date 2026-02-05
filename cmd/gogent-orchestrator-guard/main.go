@@ -32,16 +32,30 @@ func main() {
 		return
 	}
 
-	// Check if orchestrator type using EXISTING GetAgentClass function
-	agentClass := routing.GetAgentClass(metadata.AgentID)
-	if agentClass != routing.ClassOrchestrator {
-		// Silent pass-through for non-orchestrator agents
-		outputAllow(fmt.Sprintf("Non-orchestrator agent (%s) - no guard needed", metadata.AgentID))
+	// Check delegation requirements for all agents (MCP-SPAWN-014)
+	// This validates must_delegate and min_delegations from agents-index.json
+	delegationResponse, err := routing.ValidateDelegationFromTranscript(event.TranscriptPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[orchestrator-guard] Warning: Delegation validation failed: %v\n", err)
+		// Non-fatal: fail-open on validation errors
+	} else if delegationResponse.Decision == routing.DecisionBlock {
+		// Delegation requirement not met - block completion
+		if err := delegationResponse.Marshal(os.Stdout); err != nil {
+			outputError(fmt.Sprintf("Failed to marshal delegation response: %v", err))
+			os.Exit(1)
+		}
 		return
 	}
 
-	// Analyze transcript for background task tracking
-	// Uses GOgent-078 enforcement.NewTranscriptAnalyzer() implementation
+	// Check if orchestrator type for background task validation
+	agentClass := routing.GetAgentClass(metadata.AgentID)
+	if agentClass != routing.ClassOrchestrator {
+		// Non-orchestrator agent - delegation check passed, allow completion
+		outputAllow(fmt.Sprintf("Agent %s delegation requirements met", metadata.AgentID))
+		return
+	}
+
+	// Orchestrator-specific: Analyze transcript for background task tracking
 	analyzer := routing.NewTranscriptAnalyzer(event.TranscriptPath)
 	if err := analyzer.Analyze(); err != nil {
 		fmt.Fprintf(os.Stderr, "[orchestrator-guard] Warning: Analysis failed: %v\n", err)
@@ -50,7 +64,6 @@ func main() {
 	}
 
 	// Generate guard response (block if uncollected tasks)
-	// Uses GOgent-077 enforcement.GenerateGuardResponse() implementation
 	response := enforcement.GenerateGuardResponse(analyzer, metadata)
 
 	// Output response as JSON to stdout

@@ -43,6 +43,8 @@ type Agent struct {
 	Description           string          `json:"description"`
 	AutoFire              []string        `json:"auto_fire,omitempty"`
 	ScoutFirst            bool            `json:"scout_first,omitempty"`
+	MustDelegate          bool            `json:"must_delegate,omitempty"`
+	MinDelegations        int             `json:"min_delegations,omitempty"`
 	OutputArtifacts       *OutputArtifacts `json:"output_artifacts,omitempty"`
 	InputSources          []string        `json:"input_sources,omitempty"`
 	Invocation            string          `json:"invocation,omitempty"`

@@ -712,6 +712,8 @@
       "auto_activate": null,
       "invoked_by": "/braintrust skill only",
       "can_spawn": ["haiku-scout", "codebase-search", "einstein", "staff-architect-critical-review", "beethoven"],
+      "must_delegate": true,
+      "min_delegations": 3,
       "outputs": [".claude/braintrust/problem-brief-*.md"],
       "description": "Problem decomposition orchestrator for Braintrust workflow. Conducts interviews, spawns scouts, assembles Problem Brief, dispatches Einstein + Staff-Architect in parallel, hands off to Beethoven.",
       "context_requirements": {
