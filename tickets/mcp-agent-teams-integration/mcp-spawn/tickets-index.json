@@ -40,7 +40,7 @@
       "id": "MCP-SPAWN-005",
       "title": "Process Registry and Cleanup",
       "priority": "CRITICAL",
-      "status": "pending",
+      "status": "completed",
       "time_estimate": "3h",
       "dependencies": ["MCP-SPAWN-004"]
     },
