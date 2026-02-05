@@ -2,8 +2,10 @@ package routing
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"slices"
+	"strconv"
 )
 
 // TaskValidationResult represents result of Task tool validation
@@ -154,4 +156,92 @@ func ValidateModelMatch(agentName string, agentConfig *AgentConfig, requestedMod
 	}
 
 	return true, ""
+}
+
+const (
+	// MaxNestingDepth prevents runaway nesting
+	MaxNestingDepth = 10
+
+	// DefaultNestingLevel for fail-closed behavior
+	DefaultNestingLevel = 1
+)
+
+// GetNestingLevel returns the current nesting level from environment.
+// Fail-closed: returns 1 (blocked) if missing or invalid.
+func GetNestingLevel() int {
+	levelStr := os.Getenv("GOGENT_NESTING_LEVEL")
+
+	// Missing = fail-closed (assume nested)
+	if levelStr == "" {
+		return DefaultNestingLevel
+	}
+
+	level, err := strconv.Atoi(levelStr)
+
+	// Invalid = fail-closed
+	if err != nil {
+		return DefaultNestingLevel
+	}
+
+	// Out of range = fail-closed
+	if level < 0 || level > MaxNestingDepth {
+		return DefaultNestingLevel
+	}
+
+	return level
+}
+
+// IsNestingLevelExplicit returns true if GOGENT_NESTING_LEVEL was set explicitly.
+// Used for telemetry to distinguish real Level 0 from assumed nesting.
+func IsNestingLevelExplicit() bool {
+	return os.Getenv("GOGENT_NESTING_LEVEL") != ""
+}
+
+// ValidateTaskNestingLevel checks if Task() is allowed at current nesting level.
+// Returns nil if allowed, error with guidance if blocked.
+func ValidateTaskNestingLevel() error {
+	level := GetNestingLevel()
+
+	if level > 0 {
+		return &NestingLevelError{
+			Level:   level,
+			Message: fmt.Sprintf(
+				"Task() blocked at nesting level %d. "+
+					"Subagents cannot spawn sub-subagents via Task(). "+
+					"Use MCP spawn_agent tool instead: "+
+					"mcp__gofortress__spawn_agent({agent: '...', prompt: '...'})",
+				level,
+			),
+		}
+	}
+
+	return nil
+}
+
+// NestingLevelError represents a Task() blocked due to nesting level.
+type NestingLevelError struct {
+	Level   int
+	Message string
+}
+
+func (e *NestingLevelError) Error() string {
+	return e.Message
+}
+
+// BlockResponseForNesting creates the standard block response for nesting violations.
+func BlockResponseForNesting(level int) map[string]interface{} {
+	return map[string]interface{}{
+		"decision": "block",
+		"reason": fmt.Sprintf(
+			"Task() blocked at nesting level %d. Use MCP spawn_agent instead.",
+			level,
+		),
+		"hookSpecificOutput": map[string]interface{}{
+			"hookEventName":            "PreToolUse",
+			"permissionDecision":       "deny",
+			"permissionDecisionReason": "nesting_level_exceeded",
+			"nestingLevel":             level,
+			"suggestion":               "mcp__gofortress__spawn_agent({agent: '...', prompt: '...'})",
+		},
+	}
 }

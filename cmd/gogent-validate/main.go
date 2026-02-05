@@ -93,6 +93,20 @@ func main() {
 		return
 	}
 
+	// Check nesting level for Task tool
+	nestingLevel := routing.GetNestingLevel()
+	isExplicit := routing.IsNestingLevelExplicit()
+
+	if nestingLevel > 0 {
+		// Log the block for telemetry
+		logNestingBlock(event, nestingLevel, isExplicit)
+
+		// Return block response
+		response := routing.BlockResponseForNesting(nestingLevel)
+		outputJSON(response)
+		return
+	}
+
 	// Log routing decision for Task() calls (GOgent-087e)
 	var decisionID string
 	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
@@ -343,3 +357,49 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 
 	return nil, nil // Agent not found, return nil (not an error)
 }
+
+// logNestingBlock logs Task() blocks due to nesting level for telemetry
+func logNestingBlock(event *routing.ToolEvent, level int, explicit bool) {
+	telemetry := map[string]interface{}{
+		"timestamp":      time.Now().UTC().Format(time.RFC3339),
+		"event":          "task_blocked_nesting",
+		"session_id":     event.SessionID,
+		"nesting_level":  level,
+		"level_explicit": explicit,
+		"tool_name":      event.ToolName,
+	}
+
+	// Append to telemetry file
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, _ := os.UserHomeDir()
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	telemetryPath := filepath.Join(dataHome, "gogent", "nesting-blocks.jsonl")
+
+	appendJSONL(telemetryPath, telemetry)
+}
+
+// appendJSONL appends a JSON object to a JSONL file
+func appendJSONL(path string, data interface{}) {
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return // Silent fail - don't block validation
+	}
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return // Silent fail
+	}
+	defer f.Close()
+
+	encoder := json.NewEncoder(f)
+	encoder.Encode(data)
+}
+
+// outputJSON writes a map as formatted JSON to stdout
+func outputJSON(data map[string]interface{}) {
+	output, _ := json.MarshalIndent(data, "", "  ")
+	fmt.Println(string(output))
+}
+

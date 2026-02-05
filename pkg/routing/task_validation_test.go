@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -432,5 +433,161 @@ func TestValidateTaskInvocation_OpusAgentWrongModel_NoModel(t *testing.T) {
 
 	if result.Violation.ViolationType != "opus_agent_wrong_model" {
 		t.Errorf("Expected opus_agent_wrong_model, got: %s", result.Violation.ViolationType)
+	}
+}
+
+func TestGetNestingLevel(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		expected int
+	}{
+		{
+			name:     "missing env var returns default (fail-closed)",
+			envValue: "",
+			expected: DefaultNestingLevel,
+		},
+		{
+			name:     "level 0 returns 0",
+			envValue: "0",
+			expected: 0,
+		},
+		{
+			name:     "level 1 returns 1",
+			envValue: "1",
+			expected: 1,
+		},
+		{
+			name:     "level 5 returns 5",
+			envValue: "5",
+			expected: 5,
+		},
+		{
+			name:     "invalid string returns default (fail-closed)",
+			envValue: "abc",
+			expected: DefaultNestingLevel,
+		},
+		{
+			name:     "negative returns default (fail-closed)",
+			envValue: "-1",
+			expected: DefaultNestingLevel,
+		},
+		{
+			name:     "exceeds max returns default (fail-closed)",
+			envValue: "100",
+			expected: DefaultNestingLevel,
+		},
+		{
+			name:     "max valid level returns correctly",
+			envValue: "10",
+			expected: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set or clear env var
+			if tt.envValue == "" {
+				os.Unsetenv("GOGENT_NESTING_LEVEL")
+			} else {
+				os.Setenv("GOGENT_NESTING_LEVEL", tt.envValue)
+			}
+			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+
+			result := GetNestingLevel()
+
+			if result != tt.expected {
+				t.Errorf("GetNestingLevel() = %d, want %d", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsNestingLevelExplicit(t *testing.T) {
+	// Test when not set
+	os.Unsetenv("GOGENT_NESTING_LEVEL")
+	if IsNestingLevelExplicit() {
+		t.Error("IsNestingLevelExplicit() = true when env not set")
+	}
+
+	// Test when set (even to empty)
+	os.Setenv("GOGENT_NESTING_LEVEL", "")
+	// Note: os.Getenv returns "" for both unset and empty, so this tests implementation
+
+	os.Setenv("GOGENT_NESTING_LEVEL", "0")
+	if !IsNestingLevelExplicit() {
+		t.Error("IsNestingLevelExplicit() = false when env is set")
+	}
+
+	os.Unsetenv("GOGENT_NESTING_LEVEL")
+}
+
+func TestValidateTaskNestingLevel(t *testing.T) {
+	tests := []struct {
+		name      string
+		level     string
+		wantError bool
+	}{
+		{
+			name:      "level 0 allows Task",
+			level:     "0",
+			wantError: false,
+		},
+		{
+			name:      "level 1 blocks Task",
+			level:     "1",
+			wantError: true,
+		},
+		{
+			name:      "level 2 blocks Task",
+			level:     "2",
+			wantError: true,
+		},
+		{
+			name:      "missing level blocks Task (fail-closed)",
+			level:     "",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.level == "" {
+				os.Unsetenv("GOGENT_NESTING_LEVEL")
+			} else {
+				os.Setenv("GOGENT_NESTING_LEVEL", tt.level)
+			}
+			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+
+			err := ValidateTaskNestingLevel()
+
+			if tt.wantError && err == nil {
+				t.Error("ValidateTaskNestingLevel() = nil, want error")
+			}
+			if !tt.wantError && err != nil {
+				t.Errorf("ValidateTaskNestingLevel() = %v, want nil", err)
+			}
+		})
+	}
+}
+
+func TestBlockResponseForNesting(t *testing.T) {
+	response := BlockResponseForNesting(2)
+
+	if response["decision"] != "block" {
+		t.Errorf("decision = %v, want 'block'", response["decision"])
+	}
+
+	hookOutput, ok := response["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hookSpecificOutput not a map")
+	}
+
+	if hookOutput["nestingLevel"] != 2 {
+		t.Errorf("nestingLevel = %v, want 2", hookOutput["nestingLevel"])
+	}
+
+	if hookOutput["permissionDecision"] != "deny" {
+		t.Errorf("permissionDecision = %v, want 'deny'", hookOutput["permissionDecision"])
 	}
 }
