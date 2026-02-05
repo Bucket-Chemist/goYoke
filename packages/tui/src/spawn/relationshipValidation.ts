@@ -48,11 +48,14 @@ function getParentMutex(parentId: string): Mutex {
  * @param parentType - Agent type of the parent (null if spawned by router)
  * @param childType - Agent type to spawn
  * @param currentChildCount - Number of children already spawned by parent
+ * @param usingClaimedType - If true, parentType came from caller_type (not store).
+ *                           Requires BIDIRECTIONAL validation: both spawned_by AND can_spawn must pass.
  */
 export function validateSpawnRelationship(
   parentType: string | null | undefined,
   childType: string,
-  currentChildCount: number = 0
+  currentChildCount: number = 0,
+  usingClaimedType: boolean = false
 ): SpawnValidationResult {
   const errors: SpawnValidationError[] = [];
   const warnings: SpawnValidationWarning[] = [];
@@ -68,6 +71,81 @@ export function validateSpawnRelationship(
     });
     return { valid: true, errors, warnings };
   }
+
+  // If using claimed type, we REQUIRE bidirectional validation for security
+  // Both spawned_by (child allows parent) AND can_spawn (parent allows child) must pass
+  if (usingClaimedType && parentType) {
+    const parentConfig = getAgentConfig(parentType);
+
+    if (!parentConfig) {
+      errors.push({
+        code: "E_CLAIMED_TYPE_UNKNOWN",
+        message:
+          `Claimed caller_type '${parentType}' not found in agents-index.json. ` +
+          `Cannot validate claimed identity.`,
+        field: "caller_type",
+      });
+      return { valid: false, errors, warnings };
+    }
+
+    // Bidirectional check 1: Does child allow this parent? (spawned_by)
+    if (childConfig.spawned_by && childConfig.spawned_by.length > 0) {
+      if (!childConfig.spawned_by.includes("any") && !childConfig.spawned_by.includes(parentType)) {
+        errors.push({
+          code: "E_CLAIMED_TYPE_SPAWNED_BY_VIOLATION",
+          message:
+            `Claimed caller_type '${parentType}' is not in '${childType}'.spawned_by. ` +
+            `Allowed: [${childConfig.spawned_by.join(", ")}]`,
+          field: "caller_type",
+        });
+      }
+    }
+
+    // Bidirectional check 2: Does parent allow this child? (can_spawn)
+    if (parentConfig.can_spawn && parentConfig.can_spawn.length > 0) {
+      if (!parentConfig.can_spawn.includes(childType)) {
+        errors.push({
+          code: "E_CLAIMED_TYPE_CAN_SPAWN_VIOLATION",
+          message:
+            `Claimed caller_type '${parentType}' does not list '${childType}' in can_spawn. ` +
+            `Allowed: [${parentConfig.can_spawn.join(", ")}]`,
+          field: "caller_type",
+        });
+      }
+    } else {
+      // Parent has no can_spawn list but claiming to spawn - warn but allow
+      warnings.push({
+        code: "W_CLAIMED_TYPE_NO_CAN_SPAWN",
+        message:
+          `Claimed caller_type '${parentType}' has no can_spawn list defined. ` +
+          `Allowing based on child's spawned_by only.`,
+        field: "caller_type",
+      });
+    }
+
+    // If bidirectional checks failed, return early
+    if (errors.length > 0) {
+      return { valid: false, errors, warnings };
+    }
+
+    // Bidirectional validation passed! Log for audit trail
+    warnings.push({
+      code: "I_CLAIMED_TYPE_ACCEPTED",
+      message:
+        `Using claimed caller_type '${parentType}' (Task-spawned agent). ` +
+        `Bidirectional validation passed: can_spawn ✓, spawned_by ✓`,
+      field: "caller_type",
+    });
+
+    // Continue to other checks but skip redundant spawned_by/can_spawn since we already did them
+    return {
+      valid: true,
+      errors,
+      warnings,
+    };
+  }
+
+  // Standard validation path (parent from store or router)
 
   // 1. Check spawned_by (who is allowed to spawn this child)
   if (childConfig.spawned_by && childConfig.spawned_by.length > 0) {
@@ -164,17 +242,21 @@ export function validateSpawnRelationship(
 /**
  * Validates spawn AND registers child atomically.
  * Returns validation result; if valid, child is already registered.
+ *
+ * @param usingClaimedType - If true, parentType came from caller_type param (not store).
+ *                           Requires bidirectional validation for security.
  */
 export async function validateAndRegisterSpawn(
   parentId: string | null,
   parentType: string | null | undefined,
   childType: string,
   childId: string,
-  store: AgentsStore
+  store: AgentsStore,
+  usingClaimedType: boolean = false
 ): Promise<SpawnValidationResult> {
   // No parent = router spawn, no locking needed
   if (!parentId) {
-    return validateSpawnRelationship(parentType, childType, 0);
+    return validateSpawnRelationship(parentType, childType, 0, usingClaimedType);
   }
 
   const mutex = getParentMutex(parentId);
@@ -187,7 +269,8 @@ export async function validateAndRegisterSpawn(
     const result = validateSpawnRelationship(
       parentType,
       childType,
-      currentChildCount
+      currentChildCount,
+      usingClaimedType
     );
 
     if (result.valid) {

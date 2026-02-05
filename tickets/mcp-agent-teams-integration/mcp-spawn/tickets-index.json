@@ -121,7 +121,7 @@
       "id": "MCP-SPAWN-012",
       "title": "Integration Testing and Documentation",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "time_estimate": "4h",
       "dependencies": [
         "MCP-SPAWN-010",
@@ -143,7 +143,7 @@
       "id": "MCP-SPAWN-014",
       "title": "Delegation Requirement Enforcement",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "time_estimate": "2h",
       "dependencies": [
         "MCP-SPAWN-007",

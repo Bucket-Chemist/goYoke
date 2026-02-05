@@ -10,6 +10,7 @@ description: Orchestrated multi-domain code review with severity-grouped finding
 Automated code review through coordinated specialist reviewers. Analyzes changed files, identifies relevant review domains, spawns reviewers in parallel, and synthesizes findings into actionable report.
 
 **What this skill does:**
+
 1. **Detect** — Find changed files via git diff or specified scope
 2. **Classify** — Identify languages and architectural layers present
 3. **Select** — Choose relevant reviewers (backend, frontend, standards, architecture)
@@ -18,6 +19,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 6. **Report** — Generate unified report with approval status
 
 **What this skill does NOT do:**
+
 - Implement fixes (generates recommendations only)
 - Enforce routing rules (handled by hooks)
 - Replace human review (supplements, doesn't replace)
@@ -28,7 +30,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 
 - `/review` — Review all staged changes (git diff --staged)
 - `/review --all` — Review all uncommitted changes (git diff HEAD)
-- `/review --scope=<glob>` — Review specific files (e.g., "**/*.go")
+- `/review --scope=<glob>` — Review specific files (e.g., "\*_/_.go")
 - `/review path/to/file` — Review specific file or directory
 
 ---
@@ -36,6 +38,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 ## Prerequisites
 
 **Required tools:**
+
 - `git` (for change detection)
 - `jq` (JSON processing)
 
@@ -126,6 +129,7 @@ echo "[review] Selected reviewers: ${reviewers[*]}"
 Delegate to review-orchestrator:
 
 **Task Invocation:**
+
 ```
 Tool: Task
 Description: Coordinate multi-domain code review
@@ -143,7 +147,7 @@ Prompt:
      {reviewers}
 
   4. EXPECTED OUTCOME:
-     - Spawn reviewers in parallel via Task
+     - Spawn reviewers in parallel via mcp__gofortress__spawn_agent (Task() is blocked for sub-agents)
      - Each reviewer examines files in their domain
      - Collect findings from all reviewers
      - Synthesize into unified report
@@ -272,7 +276,9 @@ fi
 ## Reviewer Specializations
 
 ### backend-reviewer
+
 **Focus areas:**
+
 - API design and contracts
 - Data layer patterns
 - Error handling
@@ -282,12 +288,15 @@ fi
 **Languages:** Go, Python, backend TypeScript
 
 **Severity mapping:**
+
 - Critical: SQL injection, race conditions, resource leaks
 - Warning: Inefficient algorithms, missing error checks
 - Info: Style preferences, optimization opportunities
 
 ### frontend-reviewer
+
 **Focus areas:**
+
 - Component architecture
 - State management
 - Hook usage patterns
@@ -297,12 +306,15 @@ fi
 **Languages:** TypeScript, React, Ink
 
 **Severity mapping:**
+
 - Critical: XSS vulnerabilities, infinite loops, memory leaks
 - Warning: Missing memoization, prop drilling, missing keys
 - Info: Component naming, file organization
 
 ### standards-reviewer
+
 **Focus areas:**
+
 - Naming conventions
 - Code organization
 - Documentation
@@ -312,12 +324,15 @@ fi
 **Languages:** All
 
 **Severity mapping:**
+
 - Critical: None (standards reviewer never blocks)
 - Warning: Convention violations, missing docs
 - Info: Style suggestions, minor improvements
 
 ### architect-reviewer
+
 **Focus areas:**
+
 - Module boundaries and cohesion
 - Dependency health (circular deps, coupling)
 - Design patterns (god objects, leaky abstractions)
@@ -327,6 +342,7 @@ fi
 **Languages:** All
 
 **Severity mapping:**
+
 - Critical: Circular dependencies, god modules, leaky abstractions
 - Warning: High fan-out, tight coupling, missing abstractions
 - Info: Interface extraction opportunities, testability improvements
@@ -335,16 +351,16 @@ fi
 
 ## Cost Model
 
-| Phase | Model | Est. Tokens | Cost |
-|-------|-------|-------------|------|
-| Detection | Bash | 0 | $0.000 |
-| Classification | Bash | 0 | $0.000 |
-| Orchestrator | Sonnet | 8-12K | $0.07-$0.11 |
-| Backend Reviewer | Haiku+Think | 3-5K | $0.003-$0.005 |
-| Frontend Reviewer | Haiku+Think | 3-5K | $0.003-$0.005 |
-| Standards Reviewer | Haiku+Think | 3-5K | $0.003-$0.005 |
-| Architect Reviewer | Sonnet | 8-12K | $0.07-$0.11 |
-| **Total (4 reviewers)** | | 28-42K | **$0.15-$0.24** |
+| Phase                   | Model       | Est. Tokens | Cost            |
+| ----------------------- | ----------- | ----------- | --------------- |
+| Detection               | Bash        | 0           | $0.000          |
+| Classification          | Bash        | 0           | $0.000          |
+| Orchestrator            | Sonnet      | 8-12K       | $0.07-$0.11     |
+| Backend Reviewer        | Haiku+Think | 3-5K        | $0.003-$0.005   |
+| Frontend Reviewer       | Haiku+Think | 3-5K        | $0.003-$0.005   |
+| Standards Reviewer      | Haiku+Think | 3-5K        | $0.003-$0.005   |
+| Architect Reviewer      | Sonnet      | 8-12K       | $0.07-$0.11     |
+| **Total (4 reviewers)** |             | 28-42K      | **$0.15-$0.24** |
 
 **Cost per file reviewed:** ~$0.03-$0.06
 
@@ -380,6 +396,7 @@ fi
 ```
 
 **Configuration example:**
+
 ```json
 {
   "tickets_dir": "tickets/",
@@ -398,30 +415,34 @@ fi
 
 ## State Files
 
-| File | Purpose | Format |
-|------|---------|--------|
+| File                             | Purpose                    | Format                              |
+| -------------------------------- | -------------------------- | ----------------------------------- |
 | `.claude/tmp/review-result.json` | Review findings and status | JSON with status, summary, findings |
-| `.claude/tmp/review-scope.txt` | Files under review | Line-separated file paths |
+| `.claude/tmp/review-scope.txt`   | Files under review         | Line-separated file paths           |
 
 ---
 
 ## Troubleshooting
 
 **"No files to review"**
+
 - Check git status - are there staged changes?
 - Use `--all` to include unstaged changes
 - Use `--scope=<glob>` to specify files explicitly
 
 **"Reviewer not found"**
+
 - Ensure agents-index.json includes reviewer agents
 - Check routing-schema.json has correct mappings
 
 **"Review failed with no findings"**
+
 - Check reviewer output in task logs
 - Verify reviewers have access to files
 - Ensure file paths are absolute
 
 **"False positives in review"**
+
 - Review is advisory - human judgment still required
 - Use findings as guidance, not absolute truth
 - Consider adding project-specific review guidelines
@@ -482,11 +503,11 @@ $ /review
 
 This skill logs all findings to ML telemetry for downstream analysis:
 
-| File | Purpose |
-|------|---------|
-| `$XDG_DATA_HOME/gogent/review-findings.jsonl` | All review findings |
-| `$XDG_DATA_HOME/gogent/sharp-edge-hits.jsonl` | Sharp edge correlations |
-| `.claude/tmp/review-telemetry.json` | Session telemetry output (finding IDs) |
+| File                                          | Purpose                                |
+| --------------------------------------------- | -------------------------------------- |
+| `$XDG_DATA_HOME/gogent/review-findings.jsonl` | All review findings                    |
+| `$XDG_DATA_HOME/gogent/sharp-edge-hits.jsonl` | Sharp edge correlations                |
+| `.claude/tmp/review-telemetry.json`           | Session telemetry output (finding IDs) |
 
 Telemetry is non-blocking - skill continues even if logging fails.
 
@@ -501,12 +522,14 @@ GOGENT_ENABLE_TELEMETRY=0 /review
 ### Telemetry Schema
 
 Each review session logs:
+
 - **session_id**: Unique session identifier
 - **review_scope**: staged | all | glob | explicit
 - **files_reviewed**: Number of files reviewed
 - **findings**: Array of findings with severity, file, line, reviewer, message
 
 This data feeds ML models for:
+
 - Pattern recognition (which findings appear most often)
 - Sharp edge detection (which code patterns trigger critical findings)
 - Review effectiveness (do findings prevent bugs)

@@ -343,10 +343,14 @@ AskUserQuestion({
 
 **Spawn Einstein and Staff-Architect in PARALLEL using MCP spawn_agent (single message):**
 
+**CRITICAL: Include `caller_type: "mozart"`** - This identifies you to the spawn validation system.
+Mozart is spawned via Task() (not spawn_agent), so you must self-identify when spawning children.
+
 ```javascript
 // Spawn Einstein via MCP
 mcp__gofortress__spawn_agent({
   agent: "einstein",
+  caller_type: "mozart",  // REQUIRED: Self-identify for validation
   description: "Theoretical analysis for Braintrust",
   prompt: `AGENT: einstein
 
@@ -371,6 +375,7 @@ HANDOFF TO: Beethoven (your output will be synthesized)`,
 // Spawn Staff-Architect via MCP (parallel with Einstein)
 mcp__gofortress__spawn_agent({
   agent: "staff-architect-critical-review",
+  caller_type: "mozart",  // REQUIRED: Self-identify for validation
   description: "Practical review for Braintrust",
   prompt: `AGENT: staff-architect-critical-review
 
@@ -414,6 +419,7 @@ After both analyses complete, collect outputs and invoke Beethoven via MCP:
 // Now spawn Beethoven to synthesize them
 mcp__gofortress__spawn_agent({
   agent: "beethoven",
+  caller_type: "mozart",  // REQUIRED: Self-identify for validation
   description: "Synthesis of orthogonal analyses",
   prompt: `AGENT: beethoven
 

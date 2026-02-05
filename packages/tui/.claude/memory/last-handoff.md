@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-05 10:30:35
+# Session Handoff - 2026-02-05 16:00:41
 
 ## Session Context
 
-- **Session ID**: 5741a49c-e539-4d92-b8c7-1c330e4a00d9
+- **Session ID**: 9494e07c-7320-4baf-9cd2-e84f10c5b7c6
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 7
+- **Tool Calls**: 0
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,28 +16,29 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
+  - claude/CLAUDE.md
   - claude/agents/agents-index.json
+  - claude/agents/mozart/mozart.md
   - claude/agents/review-orchestrator/review-orchestrator.md
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
   - claude/memory/ml-tool-events.jsonl
+  - claude/settings.json
+  - claude/skills/braintrust/SKILL.md
+  - claude/skills/review/SKILL.md
+  - claude/tmp/unleash-backup-codeium-extension.json
+  - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
+  - md/gogent-validate/main.go
   - ackages/tui/.claude/memory/handoffs.jsonl
   - ackages/tui/.claude/memory/last-handoff.md
   - ackages/tui/.claude/memory/ml-tool-events.jsonl
-  - ackages/tui/coverage/base.css
   - ackages/tui/coverage/bin/gofortress-tui.js.html
   - ackages/tui/coverage/bin/index.html
-  - ackages/tui/coverage/block-navigation.js
   - ackages/tui/coverage/clover.xml
   - ackages/tui/coverage/coverage-final.json
-  - ackages/tui/coverage/favicon.png
   - ackages/tui/coverage/index.html
-  - ackages/tui/coverage/prettify.css
-  - ackages/tui/coverage/prettify.js
   - ackages/tui/coverage/scripts/benchmark.ts.html
   - ackages/tui/coverage/scripts/index.html
-  - ackages/tui/coverage/sort-arrow-sprite.png
-  - ackages/tui/coverage/sorter.js
   - ackages/tui/coverage/src/App.tsx.html
   - ackages/tui/coverage/src/cli.ts.html
   - ackages/tui/coverage/src/commands/index.html
@@ -87,9 +88,12 @@
   - ackages/tui/coverage/src/mcp/tools/selectOption.ts.html
   - ackages/tui/coverage/src/mcp/tools/spawnAgent.ts.html
   - ackages/tui/coverage/src/mcp/tools/testMcpPing.ts.html
+  - ackages/tui/coverage/src/spawn/agentConfig.ts.html
   - ackages/tui/coverage/src/spawn/index.html
   - ackages/tui/coverage/src/spawn/pidTracker.ts.html
   - ackages/tui/coverage/src/spawn/processRegistry.ts.html
+  - ackages/tui/coverage/src/spawn/relationshipValidation.ts.html
+  - ackages/tui/coverage/src/spawn/storeAdapter.ts.html
   - ackages/tui/coverage/src/spawn/validation.ts.html
   - ackages/tui/coverage/src/store/adapters.ts.html
   - ackages/tui/coverage/src/store/index.html
@@ -112,16 +116,30 @@
   - ackages/tui/coverage/src/utils/jsonl.ts.html
   - ackages/tui/coverage/src/utils/logger.ts.html
   - ackages/tui/coverage/src/utils/markdown.ts.html
-  - ickets/mcp-agent-teams-integration/mcp-spawn/.current-ticket
-  - ickets/mcp-agent-teams-integration/mcp-spawn/INDEX.md
+  - ackages/tui/src/components/ClaudePanel.tsx
+  - ackages/tui/src/mcp/tools/spawnAgent.ts
+  - ackages/tui/src/spawn/relationshipValidation.ts
+  - ickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-012.md
   - ickets/mcp-agent-teams-integration/mcp-spawn/tickets-index.json
-  - .claude/sessions/035f248a-5b18-4987-bc44-d397fcec5f3b.json
-  - .claude/sessions/0dce50dd-fda2-41ee-980e-dfbd15732090.json
-  - Screenshot_2026-02-05_10-02-18.png
-  - packages/tui/.claude/braintrust/
-  - packages/tui/.claude/memory/session-archive/routing-violations-0dce50dd-fda2-41ee-980e-dfbd15732090.jsonl
-  - packages/tui/coverage/coverage-summary.json
-  - packages/tui/tests/e2e/review-orchestrator-spawn.test.ts
-  - tickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-016.md
-  - tickets/mcp-agent-teams-integration/mcp-spawn/MCP-SPAWN-017.md
+  - .claude/docs/mcp-spawning-troubleshooting.md
+  - .claude/sessions/255bfb66-f5fb-4022-81b2-37e974d511c0.json
+  - .claude/sessions/27c1abea-ff37-43eb-832c-a9b23016a08c.json
+  - .claude/sessions/5633935c-60ca-404c-a418-01d49e81313c.json
+  - .claude/sessions/5d636034-0b18-47dc-8586-da8c412ddc1c.json
+  - .claude/sessions/90cf5058-61b5-46c4-afe7-c5d7953f6877.json
+  - .claude/sessions/ad703473-053e-4621-8dd4-c288a78ae55c.json
+  - .claude/sessions/b87ad3e4-0ea1-408d-899e-a9cdf930ff94.json
+  - .claude/sessions/b8df8196-1ab7-4e48-959b-c2c52befd10b.json
+  - .claude/sessions/cbd7c009-9ef5-4cea-980e-c32278952b57.json
+  - .claude/sessions/fa8b89e7-6787-403c-bf85-ea73456544d4.json
+  - .claude/sessions/ff20f2f2-cde0-4b29-8f62-044337527dfc.json
+  - docs/mcp-spawning-troubleshooting.md
+  - packages/tui/.claude/memory/session-archive/routing-violations-255bfb66-f5fb-4022-81b2-37e974d511c0.jsonl
+  - packages/tui/.claude/memory/session-archive/routing-violations-27c1abea-ff37-43eb-832c-a9b23016a08c.jsonl
+  - packages/tui/bitcoin_price.py
+  - packages/tui/coverage/src/cost/
+  - packages/tui/src/cost/
+  - packages/tui/tests/e2e/cost-tracking.test.ts
+  - packages/tui/tests/e2e/spawn-error-scenarios.test.ts
+  - tickets/mcp-agent-teams-integration/mcp-spawn/.current-ticket
 

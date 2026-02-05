@@ -16,7 +16,7 @@ import (
 
 const (
 	DEFAULT_TIMEOUT          = 5 * time.Second
-	MAX_TASK_NESTING_LEVEL   = 5 // Allow orchestrator → sub-agents spawning (aligns with MCP spawn_agent pattern)
+	MAX_TASK_NESTING_LEVEL   = 0 // Strict: Only Router (Level 0) can use Task()
 )
 
 // getLogPath returns the path for validation logs.

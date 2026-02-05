@@ -61,7 +61,7 @@ You are the review orchestrator responsible for coordinating comprehensive code 
 ## Responsibilities
 
 1. **Detection**: Analyze changed files to determine review domains (backend, frontend, standards, architecture).
-2. **Coordination**: Spawn specialist reviewers in parallel using Task tool.
+2. **Coordination**: Spawn specialist reviewers in parallel using `mcp__gofortress__spawn_agent`.
 3. **Collection**: Gather findings from all reviewers.
 4. **Synthesis**: Combine findings into unified report with overall assessment.
 5. **Decision**: Recommend Approve, Warning, or Block based on aggregate severity.
@@ -103,10 +103,14 @@ Analyze files to determine which reviewers are needed:
 
 Spawn all reviewers **in a single message** via MCP spawn_agent (parallel execution):
 
+**CRITICAL: Include `caller_type: "review-orchestrator"`** - This identifies you to the spawn validation system.
+Review-orchestrator is spawned via Task() (not spawn_agent), so you must self-identify when spawning children.
+
 ```javascript
 // Spawn all reviewers in PARALLEL - ONE message, multiple spawn_agent calls
 mcp__gofortress__spawn_agent({
   agent: "backend-reviewer",
+  caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Backend security and API review",
   prompt: `AGENT: backend-reviewer
 
@@ -120,6 +124,7 @@ FOCUS: Security, API design, error handling, concurrency safety`,
 
 mcp__gofortress__spawn_agent({
   agent: "frontend-reviewer",
+  caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Frontend UX and accessibility review",
   prompt: `AGENT: frontend-reviewer
 
@@ -133,6 +138,7 @@ FOCUS: Accessibility, hooks patterns, error states, performance`,
 
 mcp__gofortress__spawn_agent({
   agent: "standards-reviewer",
+  caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Universal code quality standards review",
   prompt: `AGENT: standards-reviewer
 
@@ -146,6 +152,7 @@ FOCUS: Naming, complexity, DRY, documentation`,
 
 mcp__gofortress__spawn_agent({
   agent: "architect-reviewer",
+  caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Architectural patterns review",
   prompt: `AGENT: architect-reviewer
 

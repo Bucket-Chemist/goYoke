@@ -1,0 +1,1 @@
+{"timestamp":"2026-02-05T12:24:26+07:00","session_id":"255bfb66-f5fb-4022-81b2-37e974d511c0","violation_type":"subagent_type_mismatch","agent":"python-pro","reason":"Allowed: [general-purpose], Requested: python-pro","project_dir":"/home/doktersmol/Documents/GOgent-Fortress/packages/tui"}

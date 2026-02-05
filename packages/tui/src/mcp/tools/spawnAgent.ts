@@ -10,6 +10,7 @@ import {
 } from "../../spawn/relationshipValidation.js";
 import { getAgentsStore } from "../../spawn/storeAdapter.js";
 import { logger, getSessionId } from "../../utils/logger.js";
+import { getSessionCostTracker } from "../../cost/tracker.js";
 
 // Constants
 const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
@@ -56,6 +57,7 @@ Example:
     timeout: z.number().optional().describe("Timeout in ms (default: 300000)"),
     allowedTools: z.array(z.string()).optional().describe("Restrict available tools"),
     maxBudget: z.number().optional().describe("Max budget in USD"),
+    caller_type: z.string().optional().describe("Self-identification of calling agent type (for Task-spawned agents like Mozart)"),
   },
   async (args): Promise<{ content: Array<{ type: "text"; text: string }> }> => {
     // === DEPTH VALIDATION ===
@@ -85,15 +87,22 @@ Example:
     // Get parent info from store
     const parentId = process.env["GOGENT_PARENT_AGENT"] || null;
     const parentAgent = parentId ? store.get(parentId) : null;
-    const parentType = parentAgent?.agentType;
+    const parentTypeFromStore = parentAgent?.agentType;
+
+    // Determine effective parent type:
+    // 1. Store lookup (for spawn_agent-spawned parents)
+    // 2. caller_type parameter (for Task-spawned parents like Mozart)
+    // 3. Default to null (will become "router" in validation)
+    const effectiveParentType = parentTypeFromStore || args.caller_type || null;
 
     // === RELATIONSHIP VALIDATION ===
     const validation = await validateAndRegisterSpawn(
       parentId,
-      parentType,
+      effectiveParentType,
       args.agent,
       agentId,
-      store
+      store,
+      !parentTypeFromStore && !!args.caller_type // Flag: using claimed type, needs bidirectional check
     );
 
     const sessionId = getSessionId();
@@ -105,7 +114,7 @@ Example:
         "Spawn validation result",
         {
           parentId,
-          parentType,
+          parentType: effectiveParentType,
           childAgent: args.agent,
           childId: agentId,
           valid: validation.valid,
@@ -123,7 +132,7 @@ Example:
         "Spawn validation failed - blocking spawn",
         {
           parentId,
-          parentType,
+          parentType: effectiveParentType,
           childAgent: args.agent,
           childId: agentId,
           errors: validation.errors,
@@ -238,6 +247,23 @@ Example:
         const duration = Date.now() - startTime;
         const parsed = parseCliOutput(stdout);
 
+        // === COST TRACKING ===
+        // Extract cost from CLI output and add to session tracker
+        if (parsed.cost && parsed.cost > 0) {
+          const tracker = getSessionCostTracker();
+          tracker.addSpawnCost({
+            agentId,
+            agentType: args.agent,
+            cost: parsed.cost,
+            tokens: {
+              input: parsed.inputTokens || 0,
+              output: parsed.outputTokens || 0,
+            },
+            turns: parsed.turns || 0,
+          });
+        }
+        // === END COST TRACKING ===
+
         const result: SpawnResult = {
           agentId,
           agent: args.agent,
@@ -315,6 +341,8 @@ export function parseCliOutput(stdout: string): {
   result?: string;
   cost?: number;
   turns?: number;
+  inputTokens?: number;
+  outputTokens?: number;
 } {
   try {
     const json = JSON.parse(stdout.trim());
@@ -322,6 +350,8 @@ export function parseCliOutput(stdout: string): {
       result: json.result || json.output,
       cost: json.cost_usd || json.total_cost_usd,
       turns: json.num_turns,
+      inputTokens: json.input_tokens,
+      outputTokens: json.output_tokens,
     };
   } catch {
     // Not valid JSON, return raw output

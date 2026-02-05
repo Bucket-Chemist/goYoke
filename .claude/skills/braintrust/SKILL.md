@@ -16,12 +16,14 @@ version: 1.0.0
 Braintrust is the premium analysis workflow for complex problems requiring both theoretical depth and practical rigor. It replaces the standalone `/einstein` skill with a multi-agent orchestrated approach.
 
 **What this skill does:**
+
 1. **Mozart** (Opus) - Intake, interview, scout, decompose problem
 2. **Einstein** (Opus) - Theoretical analysis: root cause, frameworks, first principles
 3. **Staff-Architect** (Opus) - Practical review: 7-layer framework, risks, implementation
 4. **Beethoven** (Opus) - Synthesize orthogonal analyses into unified document
 
 **What this skill does NOT do:**
+
 - Implement code (analysis only, delegate execution after)
 - Skip user confirmation (Mozart always confirms before heavy Opus spend)
 - Produce vague outputs (standardized document format)
@@ -30,11 +32,11 @@ Braintrust is the premium analysis workflow for complex problems requiring both 
 
 ## Invocation
 
-| Command | Behavior |
-|---------|----------|
-| `/braintrust` | Start with problem statement prompt |
-| `/braintrust "question"` | Quick mode with inline problem |
-| `/braintrust path/to/gap.md` | Process existing GAP document |
+| Command                      | Behavior                            |
+| ---------------------------- | ----------------------------------- |
+| `/braintrust`                | Start with problem statement prompt |
+| `/braintrust "question"`     | Quick mode with inline problem      |
+| `/braintrust path/to/gap.md` | Process existing GAP document       |
 
 ---
 
@@ -107,13 +109,14 @@ Braintrust is the premium analysis workflow for complex problems requiring both 
 
 When `/braintrust` is invoked:
 
-### Step 1: Invoke Mozart
+### Step 1: Invoke Mozart via Task()
+
+**IMPORTANT**: The Router (Level 0) IS allowed to use Task(). This ensures TUI interactivity (stdin/stdout) is preserved.
 
 ```javascript
 Task({
-  description: "Mozart: Braintrust problem decomposition",
-  subagent_type: "Plan",
   model: "opus",
+  description: "Mozart: Braintrust problem decomposition",
   prompt: `AGENT: mozart
 
 BRAINTRUST INVOCATION
@@ -124,19 +127,20 @@ INPUT TYPE: {raw_problem | gap_document | inline_question}
 Execute full Braintrust workflow:
 1. Parse input
 2. Interview if needed (max 3 questions)
-3. Spawn scouts for reconnaissance
+3. Spawn scouts for reconnaissance (use mcp__gofortress__spawn_agent for ALL sub-agents)
 4. Assemble Problem Brief
 5. Confirm with user before proceeding
-6. Dispatch Einstein + Staff-Architect in parallel
+6. Dispatch Einstein + Staff-Architect in parallel (mcp__gofortress__spawn_agent)
 7. Collect analyses
-8. Invoke Beethoven for synthesis
-9. Return final analysis document path`
+8. Invoke Beethoven for synthesis (mcp__gofortress__spawn_agent)
+9. Return final analysis document path`,
 });
 ```
 
 ### Step 2: Mozart Handles Everything
 
 Mozart orchestrates the entire workflow internally:
+
 - Spawns scouts (haiku)
 - Spawns Einstein (opus)
 - Spawns Staff-Architect-Critical-Review (opus)
@@ -161,17 +165,29 @@ The final Braintrust Analysis document includes:
 # Braintrust Analysis: {Title}
 
 ## Executive Summary
+
 ## Problem Statement
+
 ## Analysis Perspectives
-   ### Einstein (Theoretical)
-   ### Staff-Architect (Practical)
+
+### Einstein (Theoretical)
+
+### Staff-Architect (Practical)
+
 ## Convergence Points
+
 ## Divergence Resolution
+
 ## Unified Recommendations
+
 ## Implementation Pathway
+
 ## Risk Assessment
+
 ## Open Questions
+
 ## Appendix: Full Analyses
+
 ## Metadata
 ```
 
@@ -179,14 +195,14 @@ The final Braintrust Analysis document includes:
 
 ## Cost Model
 
-| Agent | Typical Tokens | Estimated Cost |
-|-------|----------------|----------------|
-| Mozart (orchestration) | 15,000 in / 5,000 out | ~$0.75 |
-| Scouts (2x haiku) | 2,000 each | ~$0.01 |
-| Einstein | 20,000 in / 8,000 out | ~$1.10 |
-| Staff-Architect | 20,000 in / 6,000 out | ~$1.00 |
-| Beethoven | 25,000 in / 10,000 out | ~$1.25 |
-| **Total** | - | **~$4.10** |
+| Agent                  | Typical Tokens         | Estimated Cost |
+| ---------------------- | ---------------------- | -------------- |
+| Mozart (orchestration) | 15,000 in / 5,000 out  | ~$0.75         |
+| Scouts (2x haiku)      | 2,000 each             | ~$0.01         |
+| Einstein               | 20,000 in / 8,000 out  | ~$1.10         |
+| Staff-Architect        | 20,000 in / 6,000 out  | ~$1.00         |
+| Beethoven              | 25,000 in / 10,000 out | ~$1.25         |
+| **Total**              | -                      | **~$4.10**     |
 
 **Note**: No cost ceiling. Quality over cost for Braintrust.
 
@@ -194,32 +210,33 @@ The final Braintrust Analysis document includes:
 
 ## State Files
 
-| File | Written By | Read By | Purpose |
-|------|------------|---------|---------|
-| `.claude/braintrust/problem-brief-*.md` | Mozart | Einstein, Staff-Architect, Beethoven | Problem decomposition |
-| `.claude/braintrust/analysis-*.md` | Beethoven | User | Final output |
-| `.claude/braintrust/mozart-log-*.jsonl` | Mozart | Telemetry | Workflow tracking |
-| `.claude/tmp/scout_metrics.json` | Scouts | Mozart | Reconnaissance data |
+| File                                    | Written By | Read By                              | Purpose               |
+| --------------------------------------- | ---------- | ------------------------------------ | --------------------- |
+| `.claude/braintrust/problem-brief-*.md` | Mozart     | Einstein, Staff-Architect, Beethoven | Problem decomposition |
+| `.claude/braintrust/analysis-*.md`      | Beethoven  | User                                 | Final output          |
+| `.claude/braintrust/mozart-log-*.jsonl` | Mozart     | Telemetry                            | Workflow tracking     |
+| `.claude/tmp/scout_metrics.json`        | Scouts     | Mozart                               | Reconnaissance data   |
 
 ---
 
 ## Comparison: Einstein vs Braintrust
 
-| Aspect | Old /einstein | New /braintrust |
-|--------|--------------|-----------------|
-| Agents | 1 (Einstein) | 4 (Mozart, Einstein, Staff-Arch, Beethoven) |
-| Perspectives | Single deep analysis | Theoretical + Practical orthogonal |
-| Interview | None (GAP doc required) | Built-in clarification |
-| Confirmation | Pre-flight check | Full problem brief review |
-| Output | Analysis markdown | Standardized synthesis document |
-| Cost | ~$0.92 | ~$4.10 |
-| Use case | Bounded escalations | Complex problem workshopping |
+| Aspect       | Old /einstein           | New /braintrust                             |
+| ------------ | ----------------------- | ------------------------------------------- |
+| Agents       | 1 (Einstein)            | 4 (Mozart, Einstein, Staff-Arch, Beethoven) |
+| Perspectives | Single deep analysis    | Theoretical + Practical orthogonal          |
+| Interview    | None (GAP doc required) | Built-in clarification                      |
+| Confirmation | Pre-flight check        | Full problem brief review                   |
+| Output       | Analysis markdown       | Standardized synthesis document             |
+| Cost         | ~$0.92                  | ~$4.10                                      |
+| Use case     | Bounded escalations     | Complex problem workshopping                |
 
 ---
 
 ## When to Use Braintrust
 
 **Use Braintrust for:**
+
 - Complex architectural decisions
 - Problems with both theoretical and practical dimensions
 - Situations requiring multiple perspectives
@@ -228,6 +245,7 @@ The final Braintrust Analysis document includes:
 - Problems where implementation concerns matter
 
 **Don't use Braintrust for:**
+
 - Simple debugging (use regular agents)
 - Single-perspective analysis (old einstein pattern still works via escalation)
 - Time-sensitive issues (4 Opus agents take time)

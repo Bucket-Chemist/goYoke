@@ -87,16 +87,33 @@ function MessageItem({ message }: { message: Message }): JSX.Element {
             : `unknown-${Math.random()}`;
 
         return (
-          <Box key={blockId} paddingLeft={2}>
+          <Box key={blockId} paddingLeft={2} flexDirection="column">
             {block.type === "tool_use" && (
-              <Text color={colors.accent} dimColor>
-                [Tool: {block.name}]
-              </Text>
+              <>
+                <Text color={colors.accent} dimColor bold>
+                  [Tool: {block.name}]
+                </Text>
+                {/* Render tool inputs */}
+                {block.input && Object.entries(block.input).map(([key, value]) => (
+                  <Box key={key} paddingLeft={2}>
+                    <Text color={colors.muted} dimColor>
+                      {key}:{" "}
+                    </Text>
+                    <Text color={colors.assistantMessage}>
+                      {typeof value === 'string' ? value : JSON.stringify(value)}
+                    </Text>
+                  </Box>
+                ))}
+              </>
             )}
             {block.type === "tool_result" && (
-              <Text color={colors.muted} dimColor>
-                [Tool result]
-              </Text>
+              <Box flexDirection="column">
+                <Text color={colors.muted} dimColor>
+                  [Tool result]
+                </Text>
+                {/* Optional: Render truncated result preview if needed */}
+                {/* <Text color={colors.dim} numberOfLines={2}>{block.content}</Text> */}
+              </Box>
             )}
           </Box>
         );

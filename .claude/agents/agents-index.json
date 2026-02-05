@@ -25,7 +25,10 @@
       ],
       "tools": ["Read", "Write", "Glob", "save_memory"],
       "auto_activate": null,
-      "inputs": [".claude/tmp/specs.md", ".claude/memory/pending-learnings.jsonl"],
+      "inputs": [
+        ".claude/tmp/specs.md",
+        ".claude/memory/pending-learnings.jsonl"
+      ],
       "outputs": [".claude/memory/decisions/", ".claude/memory/sharp-edges/"],
       "sharp_edges_count": 3,
       "description": "The Historian. Archives specs.md and session learnings to structured memory for RAG queries.",
@@ -209,11 +212,14 @@
         "conventions": {
           "base": ["python.md"],
           "conditional": [
-            {"pattern": "**/data/**", "convention": "python-datasci.md"},
-            {"pattern": "**/preprocessing/**", "convention": "python-datasci.md"},
-            {"pattern": "**/models/**", "convention": "python-ml.md"},
-            {"pattern": "**/training/**", "convention": "python-ml.md"},
-            {"pattern": "**/inference/**", "convention": "python-ml.md"}
+            { "pattern": "**/data/**", "convention": "python-datasci.md" },
+            {
+              "pattern": "**/preprocessing/**",
+              "convention": "python-datasci.md"
+            },
+            { "pattern": "**/models/**", "convention": "python-ml.md" },
+            { "pattern": "**/training/**", "convention": "python-ml.md" },
+            { "pattern": "**/inference/**", "convention": "python-ml.md" }
           ]
         }
       }
@@ -402,7 +408,7 @@
         "conventions": {
           "base": ["go.md"],
           "conditional": [
-            {"pattern": "**/cmd/**", "convention": "go-cobra.md"}
+            { "pattern": "**/cmd/**", "convention": "go-cobra.md" }
           ]
         }
       }
@@ -439,7 +445,7 @@
         "conventions": {
           "base": ["go.md"],
           "conditional": [
-            {"pattern": "**/tui/**", "convention": "go-bubbletea.md"}
+            { "pattern": "**/tui/**", "convention": "go-bubbletea.md" }
           ]
         }
       }
@@ -542,9 +548,29 @@
         "triage",
         "interpret results"
       ],
-      "tools": ["Read", "Glob", "Grep", "Task", "Bash", "TaskList", "TaskGet"],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Bash",
+        "TaskList",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskGet",
+        "mcp__gofortress__spawn_agent"
+      ],
       "auto_activate": null,
-      "can_spawn": ["codebase-search", "haiku-scout", "librarian", "code-reviewer", "architect", "go-pro", "python-pro", "typescript-pro", "react-pro"],
+      "can_spawn": [
+        "codebase-search",
+        "haiku-scout",
+        "librarian",
+        "code-reviewer",
+        "architect",
+        "go-pro",
+        "python-pro",
+        "typescript-pro",
+        "react-pro"
+      ],
       "must_delegate": false,
       "scout_first": true,
       "sharp_edges_count": 12,
@@ -583,7 +609,10 @@
         "required": ["specs.md", "TaskCreate"],
         "specs_location": ".claude/tmp/specs.md"
       },
-      "input_sources": [".claude/tmp/scout_metrics.json", ".claude/tmp/strategy.md"],
+      "input_sources": [
+        ".claude/tmp/scout_metrics.json",
+        ".claude/tmp/strategy.md"
+      ],
       "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context.",
       "context_requirements": {
         "rules": ["agent-guidelines.md"],
@@ -616,10 +645,18 @@
         "nn design",
         "preprocessing architecture"
       ],
-      "tools": ["Read", "Write", "Glob", "Grep", "Task", "AskUserQuestion"],
+      "tools": ["Read", "Write", "Glob", "Grep", "AskUserQuestion"],
       "auto_activate": null,
-      "conventions_required": ["python.md", "python-datasci.md", "python-ml.md"],
-      "inputs": [".claude/tmp/scout_metrics.json", "docs/*-plan.md", "docs/*-analysis.md"],
+      "conventions_required": [
+        "python.md",
+        "python-datasci.md",
+        "python-ml.md"
+      ],
+      "inputs": [
+        ".claude/tmp/scout_metrics.json",
+        "docs/*-plan.md",
+        "docs/*-analysis.md"
+      ],
       "output_artifacts": {
         "required": ["architecture-decision.md"],
         "decision_location": ".claude/tmp/architecture-decision.md",
@@ -682,15 +719,17 @@
       "tier": 3,
       "category": "analysis",
       "path": "einstein",
-      "triggers": [
-        "escalate to einstein",
-        "deep theoretical analysis"
-      ],
-      "tools": ["Read", "Write", "Glob", "Grep", "Task", "TaskList", "TaskGet"],
+      "triggers": ["escalate to einstein", "deep theoretical analysis"],
+      "tools": ["Read", "Write", "Glob", "Grep", "TaskGet"],
       "auto_activate": null,
       "spawned_by": ["mozart"],
       "outputs_to": ["beethoven"],
-      "focus_areas": ["root cause", "conceptual frameworks", "first principles", "novel approaches"],
+      "focus_areas": [
+        "root cause",
+        "conceptual frameworks",
+        "first principles",
+        "novel approaches"
+      ],
       "description": "Theoretical analysis agent for Braintrust workflow. Performs deep reasoning using first principles, conceptual frameworks, and novel approaches. Spawned by Mozart, outputs to Beethoven.",
       "context_requirements": {
         "rules": ["agent-guidelines.md"],
@@ -708,10 +747,28 @@
       "category": "orchestration",
       "path": "mozart",
       "triggers": [],
-      "tools": ["Read", "Glob", "Grep", "Task", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate", "Write", "AskUserQuestion"],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Write",
+        "AskUserQuestion",
+        "TaskList",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskGet",
+        "mcp__gofortress__spawn_agent"
+      ],
       "auto_activate": null,
       "invoked_by": "/braintrust skill only",
-      "can_spawn": ["haiku-scout", "codebase-search", "einstein", "staff-architect-critical-review", "beethoven"],
+      "spawned_by": ["router"],
+      "can_spawn": [
+        "haiku-scout",
+        "codebase-search",
+        "einstein",
+        "staff-architect-critical-review",
+        "beethoven"
+      ],
       "must_delegate": true,
       "min_delegations": 3,
       "outputs": [".claude/braintrust/problem-brief-*.md"],
@@ -732,12 +789,21 @@
       "category": "synthesis",
       "path": "beethoven",
       "triggers": [],
-      "tools": ["Read", "Write", "Glob", "TaskList", "TaskGet"],
+      "tools": ["Read", "Write", "Glob", "TaskGet"],
       "auto_activate": null,
       "spawned_by": ["mozart"],
-      "inputs": ["problem-brief", "einstein-analysis", "staff-architect-review"],
+      "inputs": [
+        "problem-brief",
+        "einstein-analysis",
+        "staff-architect-review"
+      ],
       "outputs": [".claude/braintrust/analysis-*.md"],
-      "focus_areas": ["convergence", "divergence resolution", "synthesis", "unified recommendations"],
+      "focus_areas": [
+        "convergence",
+        "divergence resolution",
+        "synthesis",
+        "unified recommendations"
+      ],
       "description": "Synthesis and composition agent for Braintrust workflow. Receives orthogonal analyses from Einstein and Staff-Architect, resolves contradictions, produces unified Braintrust Analysis document.",
       "context_requirements": {
         "rules": ["agent-guidelines.md"],
@@ -771,7 +837,14 @@
       "tools": ["Bash"],
       "auto_activate": null,
       "invocation": "Bash (gemini-slave wrapper), NOT Task tool",
-      "protocols": ["mapper", "debugger", "architect", "benchmark-audit", "memory-audit", "scout"],
+      "protocols": [
+        "mapper",
+        "debugger",
+        "architect",
+        "benchmark-audit",
+        "memory-audit",
+        "scout"
+      ],
       "state_files": {
         "scout_output": ".claude/tmp/scout_metrics.json",
         "complexity_score": ".claude/tmp/complexity_score"
@@ -799,11 +872,14 @@
         "review implementation plan",
         "validate specs"
       ],
-      "tools": ["Read", "Glob", "Grep", "Task", "Write"],
+      "tools": ["Read", "Glob", "Grep", "Write"],
       "auto_activate": null,
       "spawned_by": ["mozart", "router"],
       "inputs": [".claude/tmp/specs.md"],
-      "outputs": [".claude/tmp/review-critique.md", ".claude/tmp/review-metadata.json"],
+      "outputs": [
+        ".claude/tmp/review-critique.md",
+        ".claude/tmp/review-metadata.json"
+      ],
       "sharp_edges_count": 6,
       "cost_per_invocation": "0.15-0.25",
       "description": "Critical review of implementation plans using 7-layer framework. Invoked via /review-plan command or automatically in /plan workflow.",
@@ -1055,7 +1131,12 @@
       ],
       "tools": ["Read", "Glob", "Grep"],
       "auto_activate": null,
-      "conventions_required": ["go.md", "python.md", "typescript.md", "react.md"],
+      "conventions_required": [
+        "go.md",
+        "python.md",
+        "typescript.md",
+        "react.md"
+      ],
       "sharp_edges_count": 12,
       "description": "Architectural code review specialist. Module boundaries, dependency health, design patterns, change impact.",
       "context_requirements": {
@@ -1080,9 +1161,22 @@
         "/review",
         "orchestrate review"
       ],
-      "tools": ["Read", "Glob", "Grep", "mcp__gofortress__spawn_agent", "Write"],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "mcp__gofortress__spawn_agent",
+        "Write"
+      ],
       "auto_activate": null,
-      "can_spawn": ["backend-reviewer", "frontend-reviewer", "standards-reviewer", "architect-reviewer", "codebase-search"],
+      "spawned_by": ["router"],
+      "can_spawn": [
+        "backend-reviewer",
+        "frontend-reviewer",
+        "standards-reviewer",
+        "architect-reviewer",
+        "codebase-search"
+      ],
       "must_delegate": true,
       "min_delegations": 2,
       "sharp_edges_count": 4,
@@ -1111,13 +1205,40 @@
         "implement with validation",
         "managed implementation"
       ],
-      "tools": ["Read", "Glob", "Grep", "Task", "Write", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet"],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Write",
+        "TaskList",
+        "TaskCreate",
+        "TaskUpdate",
+        "TaskGet",
+        "mcp__gofortress__spawn_agent"
+      ],
       "auto_activate": null,
-      "can_spawn": ["go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "typescript-pro", "react-pro", "codebase-search", "code-reviewer"],
+      "can_spawn": [
+        "go-pro",
+        "go-cli",
+        "go-tui",
+        "go-api",
+        "go-concurrent",
+        "python-pro",
+        "python-ux",
+        "r-pro",
+        "r-shiny-pro",
+        "typescript-pro",
+        "react-pro",
+        "codebase-search",
+        "code-reviewer"
+      ],
       "must_delegate": true,
       "min_delegations": 1,
       "inputs": [".claude/tmp/specs.md", "conventions/*.md"],
-      "outputs": [".claude/tmp/impl-progress.json", ".claude/tmp/impl-violations.jsonl"],
+      "outputs": [
+        ".claude/tmp/impl-progress.json",
+        ".claude/tmp/impl-violations.jsonl"
+      ],
       "sharp_edges_count": 7,
       "cost_per_invocation": "0.50-1.50",
       "description": "Implementation coordinator. Enforces specs.md adherence, injects conventions, validates task completion, runs mid-flight reviews.",
@@ -1131,11 +1252,31 @@
     "intent_gate": {
       "description": "Pre-classify every message before routing",
       "types": [
-        {"type": "trivial", "signal": "Single file, known location", "action": "Direct tools only"},
-        {"type": "explicit", "signal": "Specific file/line, clear command", "action": "Execute directly"},
-        {"type": "exploratory", "signal": "How does X work?", "action": "Fire codebase-search + librarian"},
-        {"type": "open-ended", "signal": "Improve, Refactor", "action": "Scout first, then route"},
-        {"type": "ambiguous", "signal": "Unclear scope", "action": "Scout first, clarify if needed"}
+        {
+          "type": "trivial",
+          "signal": "Single file, known location",
+          "action": "Direct tools only"
+        },
+        {
+          "type": "explicit",
+          "signal": "Specific file/line, clear command",
+          "action": "Execute directly"
+        },
+        {
+          "type": "exploratory",
+          "signal": "How does X work?",
+          "action": "Fire codebase-search + librarian"
+        },
+        {
+          "type": "open-ended",
+          "signal": "Improve, Refactor",
+          "action": "Scout first, then route"
+        },
+        {
+          "type": "ambiguous",
+          "signal": "Unclear scope",
+          "action": "Scout first, clarify if needed"
+        }
       ]
     },
     "scout_first_protocol": {
@@ -1159,9 +1300,9 @@
       "description": "Code-enforced tier selection based on complexity score",
       "calculator": ".claude/scripts/calculate-complexity.sh",
       "thresholds": {
-        "haiku": {"max_score": 2},
-        "sonnet": {"min_score": 2, "max_score": 10},
-        "external": {"min_score": 10}
+        "haiku": { "max_score": 2 },
+        "sonnet": { "min_score": 2, "max_score": 10 },
+        "external": { "min_score": 10 }
       },
       "force_external_if": "tokens > 50000"
     },
@@ -1178,10 +1319,45 @@
       "high_context_detected": "gemini-slave"
     },
     "model_tiers": {
-      "haiku": ["codebase-search", "scaffolder", "librarian", "tech-docs-writer", "code-reviewer", "haiku-scout", "memory-archivist"],
-      "haiku_thinking": ["backend-reviewer", "frontend-reviewer", "standards-reviewer"],
-      "sonnet": ["python-pro", "python-ux", "r-pro", "r-shiny-pro", "orchestrator", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro", "review-orchestrator", "architect-reviewer"],
-      "opus": ["einstein", "planner", "architect", "staff-architect-critical-review", "python-architect", "mozart", "beethoven"],
+      "haiku": [
+        "codebase-search",
+        "scaffolder",
+        "librarian",
+        "tech-docs-writer",
+        "code-reviewer",
+        "haiku-scout",
+        "memory-archivist"
+      ],
+      "haiku_thinking": [
+        "backend-reviewer",
+        "frontend-reviewer",
+        "standards-reviewer"
+      ],
+      "sonnet": [
+        "python-pro",
+        "python-ux",
+        "r-pro",
+        "r-shiny-pro",
+        "orchestrator",
+        "go-pro",
+        "go-cli",
+        "go-tui",
+        "go-api",
+        "go-concurrent",
+        "typescript-pro",
+        "react-pro",
+        "review-orchestrator",
+        "architect-reviewer"
+      ],
+      "opus": [
+        "einstein",
+        "planner",
+        "architect",
+        "staff-architect-critical-review",
+        "python-architect",
+        "mozart",
+        "beethoven"
+      ],
       "external": ["gemini-slave"]
     }
   },

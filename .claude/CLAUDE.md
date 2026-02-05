@@ -15,7 +15,6 @@
     |█████████████████|  ROUTER  |████████████████|
     |█ DISPATCH █ DELEGATE █ VERIFY █ RETURN █████|
     |█████████████████████████████████████████████|
-
     ⚡ You are a ROUTER, not an implementer ⚡
 ```
 
@@ -26,7 +25,7 @@
 **You are a request ROUTER.** Your job:
 
 1. **Classify** incoming requests
-2. **Dispatch** to the appropriate handler
+2. **Dispatch** to the appropriate agent using Task()
 3. **Verify** results meet requirements
 4. **Return** to user
 
@@ -134,19 +133,19 @@ Request arrives
 
 ## Slash Commands (Skills)
 
-| Command               | What It Does                                                |
-| --------------------- | ----------------------------------------------------------- |
-| `/explore`            | Structured codebase exploration with scout → architect flow |
+| Command               | What It Does                                                                      |
+| --------------------- | --------------------------------------------------------------------------------- |
+| `/explore`            | Structured codebase exploration with scout → architect flow                       |
 | `/braintrust`         | Multi-perspective deep analysis (Mozart → Einstein + Staff-Architect → Beethoven) |
-| `/review`             | Multi-domain code review with severity-grouped findings     |
-| `/review-plan`        | Critical 7-layer review of implementation plans             |
-| `/ticket`             | Ticket-driven implementation workflow                       |
-| `/init-auto`          | Initialize project with CLAUDE.md scaffold                  |
-| `/benchmark`          | Run gold standard prompts, generate compliance report       |
-| `/benchmark-meta`     | Analyze benchmark trends across commits                     |
-| `/memory-improvement` | Audit system memory, find gaps                              |
-| `/explore-add`        | Add custom skill to spawner system                          |
-| `/dummies-guide`      | Explain the config system                                   |
+| `/review`             | Multi-domain code review with severity-grouped findings                           |
+| `/review-plan`        | Critical 7-layer review of implementation plans                                   |
+| `/ticket`             | Ticket-driven implementation workflow                                             |
+| `/init-auto`          | Initialize project with CLAUDE.md scaffold                                        |
+| `/benchmark`          | Run gold standard prompts, generate compliance report                             |
+| `/benchmark-meta`     | Analyze benchmark trends across commits                                           |
+| `/memory-improvement` | Audit system memory, find gaps                                                    |
+| `/explore-add`        | Add custom skill to spawner system                                                |
+| `/dummies-guide`      | Explain the config system                                                         |
 
 ---
 
@@ -200,23 +199,105 @@ Request arrives
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------- |
 | design neural network, architecture decision, training strategy, loss function design, attention mechanism choice, which approach, tradeoff analysis | `python-architect` | Plan          |
 
-| Trigger                               | Handler             | Notes                                           |
-| ------------------------------------- | ------------------- | ----------------------------------------------- |
+| Trigger                               | Handler             | Notes                                              |
+| ------------------------------------- | ------------------- | -------------------------------------------------- |
 | braintrust, deep analysis, whiteboard | `/braintrust` skill | Invokes Mozart → Einstein + Staff-Arch → Beethoven |
 
 **Braintrust Agents (spawned internally by /braintrust):**
 
-| Agent | Role | Spawned By |
-| ----- | ---- | ---------- |
-| `mozart` | Problem decomposition, interview, scout dispatch | /braintrust skill |
-| `einstein` | Theoretical analysis (root cause, frameworks, first principles) | mozart |
-| `beethoven` | Synthesis of orthogonal analyses into unified document | mozart |
+| Agent       | Role                                                            | Spawned By        |
+| ----------- | --------------------------------------------------------------- | ----------------- |
+| `mozart`    | Problem decomposition, interview, scout dispatch                | /braintrust skill |
+| `einstein`  | Theoretical analysis (root cause, frameworks, first principles) | mozart            |
+| `beethoven` | Synthesis of orthogonal analyses into unified document          | mozart            |
 
 ### External: Gemini
 
 | Trigger Patterns                           | Handler        | Notes                |
 | ------------------------------------------ | -------------- | -------------------- |
 | full codebase, cross-module, large context | `gemini-slave` | Via Bash, not Task() |
+
+---
+
+## Agent Spawning Architecture
+
+### TUI Context (Claude Agent SDK)
+
+**CRITICAL**: The TUI uses Claude Agent SDK's `query()` function, NOT Claude Code CLI.
+The Agent SDK does **NOT** have the `Task` tool. ALL agent spawning in TUI must use `mcp__gofortress__spawn_agent`.
+
+| Context                   | Task() Available    | spawn_agent Available |
+| ------------------------- | ------------------- | --------------------- |
+| **Router (Root Session)** | **YES** (Exclusive) | YES                   |
+| **Sub-Agents (Level 1+)** | **NO** (Blocked)    | **YES** (Required)    |
+
+### spawn_agent MCP Tool
+
+**Tool Signature:**
+
+```typescript
+mcp__gofortress__spawn_agent({
+  agent: string,        // Agent ID from agents-index.json
+  description: string,  // Brief description for logging
+  prompt: string,       // Task prompt for the agent
+  model?: string,       // Optional model override (default: from agent config)
+  timeout?: number,     // Optional timeout in ms (default: 300000)
+  caller_type?: string, // Self-identification for CLI-spawned agents
+})
+```
+
+**Router (Root Session) spawns Mozart:**
+
+```javascript
+// Router uses Task() to spawn the initial orchestrator.
+// This keeps the TUI stdin/stdout connected for interactivity.
+Task({
+  model: "opus",
+  description: "Mozart: Braintrust problem decomposition",
+  prompt: "AGENT: mozart\n\nBRAINTRUST INVOCATION...",
+});
+```
+
+**Mozart (Sub-Agent) spawns children:**
+
+```javascript
+// Mozart runs as a sub-agent (Level 1). Task() is BLOCKED.
+// It MUST use mcp__gofortress__spawn_agent for children (Einstein, Beethoven).
+mcp__gofortress__spawn_agent({
+  agent: "einstein",
+  caller_type: "mozart", // Mozart self-identifies
+  description: "Theoretical analysis",
+  prompt: "AGENT: einstein\n\nAnalyze the problem...",
+  model: "opus",
+  timeout: 600000,
+});
+```
+
+### Validation
+
+The validation performs **bidirectional checks** when `caller_type` is used:
+
+1. Does Einstein's `spawned_by` include "mozart"? ✓
+2. Does Mozart's `can_spawn` include "einstein"? ✓
+
+For router spawns (no caller_type), validation checks:
+
+1. Does Mozart's `spawned_by` include "router"? ✓
+
+````
+
+**Cost Attribution:**
+Costs from spawned agents are extracted from CLI output and rolled up to the parent session. Session summary includes breakdown of direct costs and spawn costs grouped by agent type.
+
+**Spawning Mechanisms by Tier:**
+
+| Agent Tier | Mechanism | Examples |
+|------------|-----------|----------|
+| **Level 0 (Router)** | `Task()` | Spawning Orchestrator, Mozart, or Scout |
+| **Level 1+ (Sub-agents)** | `mcp__gofortress__spawn_agent` | Orchestrator -> Scout, Mozart -> Einstein |
+
+**Troubleshooting:**
+If spawn_agent fails, see `~/.claude/docs/mcp-spawning-troubleshooting.md`
 
 ---
 
@@ -302,7 +383,7 @@ CONTEXT: [relevant files, patterns]
 EXPECTED OUTPUT: [deliverable]
 CONSTRAINTS: [what not to do]`,
 });
-```
+````
 
 **If gogent-validate blocks your Task():**
 
@@ -362,6 +443,7 @@ When orchestrator fails 3x or problem is intractable:
 ```
 
 **Or invoke directly for complex thought workshopping:**
+
 ```
 /braintrust "your complex problem statement"
 ```
@@ -480,14 +562,14 @@ When 2+ agent triggers fire:
 
 ## Reference Documents
 
-| Document                     | Purpose                                                    |
-| ---------------------------- | ---------------------------------------------------------- |
-| `routing-schema.json`        | Source of truth for tiers, agents, thresholds              |
-| `agents-index.json`          | Complete agent definitions with triggers                   |
-| `conventions/*.md`           | Language-specific coding conventions                       |
-| `rules/router-guidelines.md` | Router-essential guidance, tier selection, enforcement     |
-| `rules/agent-guidelines.md`  | Agent-essential guidance (injected at spawn time)          |
-| `ARCHITECTURE.md`            | Full system architecture (in repo root)                    |
+| Document                     | Purpose                                                |
+| ---------------------------- | ------------------------------------------------------ |
+| `routing-schema.json`        | Source of truth for tiers, agents, thresholds          |
+| `agents-index.json`          | Complete agent definitions with triggers               |
+| `conventions/*.md`           | Language-specific coding conventions                   |
+| `rules/router-guidelines.md` | Router-essential guidance, tier selection, enforcement |
+| `rules/agent-guidelines.md`  | Agent-essential guidance (injected at spawn time)      |
+| `ARCHITECTURE.md`            | Full system architecture (in repo root)                |
 
 ---
 

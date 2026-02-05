@@ -1,4 +1,3 @@
-```yaml
 ---
 id: MCP-SPAWN-012
 title: Integration Testing and Documentation
@@ -13,7 +12,6 @@ agent: typescript-pro
 priority: HIGH
 coverage_target: 80
 ---
-```
 
 # MCP-SPAWN-012: Integration Testing and Documentation
 
