@@ -16,6 +16,10 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
     input: 0,
     output: 0,
   },
+  contextWindow: {
+    usedTokens: 0,
+    totalCapacity: 200000,
+  },
   permissionMode: "default",
   isCompacting: false,
   preferredModel: null,
@@ -42,6 +46,15 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
         output: state.tokenCount.output + (tokens.output ?? 0),
       },
     }));
+  },
+
+  updateContextWindow: (usedTokens, totalCapacity): void => {
+    set({
+      contextWindow: {
+        usedTokens,
+        totalCapacity,
+      },
+    });
   },
 
   setPermissionMode: (mode): void => {
@@ -72,6 +85,10 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
       tokenCount: {
         input: 0,
         output: 0,
+      },
+      contextWindow: {
+        usedTokens: 0,
+        totalCapacity: 200000,
       },
       permissionMode: "default",
       isCompacting: false,

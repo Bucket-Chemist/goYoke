@@ -20,9 +20,10 @@ type TaskValidationResult struct {
 func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, sessionID string) *TaskValidationResult {
 	result := &TaskValidationResult{Allowed: true}
 
-	// Extract model and prompt
+	// Extract model, prompt, and resume
 	model, _ := taskInput["model"].(string)
 	prompt, _ := taskInput["prompt"].(string)
+	resume, _ := taskInput["resume"].(string)
 
 	// Extract target agent from prompt (pattern: "AGENT: agent-id")
 	targetAgent := extractAgentFromPrompt(prompt)
@@ -44,6 +45,12 @@ func ValidateTaskInvocation(schema *Schema, taskInput map[string]interface{}, se
 		// Allow if agent is in the allowlist (e.g., planner, architect, staff-architect-critical-review)
 		if isInAllowlist(targetAgent, opusConfig.TaskInvocationAllowlist) {
 			return result // Allowed via allowlist
+		}
+
+		// Allow resume calls: the original spawn was already validated.
+		// Resume prompts lack the "AGENT:" preamble so agent extraction returns "".
+		if resume != "" {
+			return result // Allowed via resume bypass
 		}
 
 		// Block: opus model requested but agent not in allowlist
@@ -117,6 +124,7 @@ func extractAgentFromPrompt(prompt string) string {
 
 // AgentConfig represents agent metadata from agents-index.json
 type AgentConfig struct {
+	Name                string               `json:"name"`
 	Model               string               `json:"model"`
 	SubagentType        string               `json:"subagent_type"`
 	AllowedModels       []string             `json:"allowed_models,omitempty"`

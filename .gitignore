@@ -69,3 +69,7 @@ tickets/completed/
 # TypeScript/Node.js
 packages/tui/node_modules/
 packages/tui/dist/
+
+# Claude memory
+.claude/memory/ml-tool-events.jsonl
+/.claude/memory/*.jsonl

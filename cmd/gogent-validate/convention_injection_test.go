@@ -240,7 +240,7 @@ func TestConventionInjection_GoProAgent(t *testing.T) {
 	}
 
 	// Validate and check for convention injection
-	orchestrator := routing.NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(schema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(toolInput, "test-session")
 
 	if result.Decision == "block" {
@@ -317,7 +317,7 @@ func TestConventionInjection_NoRequirements(t *testing.T) {
 	}
 
 	// Validate
-	orchestrator := routing.NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(schema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(toolInput, "test-session")
 
 	if result.Decision == "block" {
@@ -384,7 +384,7 @@ func TestConventionInjection_UnknownAgent(t *testing.T) {
 	}
 
 	// Validate - should not crash
-	orchestrator := routing.NewValidationOrchestrator(schema, testDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(schema, testDir, nil, nil)
 	result := orchestrator.ValidateTask(toolInput, "test-session")
 
 	// May or may not block depending on validation rules, but shouldn't crash
@@ -533,7 +533,7 @@ func TestConventionInjection_PreservesTaskFields(t *testing.T) {
 	}
 
 	// Validate
-	orchestrator := routing.NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(schema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(toolInput, "test-session")
 
 	if result.Decision == "block" {

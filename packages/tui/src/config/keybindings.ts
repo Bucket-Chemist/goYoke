@@ -10,7 +10,7 @@ import type { KeyBinding } from "../hooks/useKeymap.js";
  */
 export function createGlobalBindings(actions: {
   toggleFocus: () => void;
-  handleEscape: () => void;
+  interruptQuery: () => void;
   forceQuit: () => void;
   clearScreen: () => void;
 }): KeyBinding[] {
@@ -22,8 +22,8 @@ export function createGlobalBindings(actions: {
     },
     {
       key: "escape",
-      action: actions.handleEscape,
-      description: "Cancel/Exit",
+      action: actions.interruptQuery,
+      description: "Interrupt / Cancel",
     },
     {
       key: "c",
@@ -114,7 +114,7 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
       context: "Global",
       bindings: [
         { keys: "Tab", action: "Switch panel focus" },
-        { keys: "Escape", action: "Cancel modal / Exit" },
+        { keys: "Escape", action: "Interrupt query / Cancel modal" },
         { keys: "Ctrl+C", action: "Force quit" },
         { keys: "Ctrl+L", action: "Clear screen" },
       ],

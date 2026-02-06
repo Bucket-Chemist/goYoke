@@ -571,6 +571,106 @@ func TestValidateTaskNestingLevel(t *testing.T) {
 	}
 }
 
+func TestValidateTaskInvocation_OpusResume_BypassesAllowlist(t *testing.T) {
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "mozart"},
+			},
+		},
+	}
+
+	// Resume call with no AGENT: prefix in prompt (typical resume scenario)
+	taskInput := map[string]interface{}{
+		"model":  "opus",
+		"prompt": "USER RESPONSE: Option 1 - proceed with minimal scope",
+		"resume": "a391659",
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if !result.Allowed {
+		t.Errorf("Expected opus resume to bypass allowlist, got blocked: %s", result.BlockReason)
+	}
+
+	if result.Violation != nil {
+		t.Error("Expected no violation for resume call")
+	}
+}
+
+func TestValidateTaskInvocation_OpusResume_WithAgentPrefix(t *testing.T) {
+	// Even if someone includes AGENT: in a resume prompt, allowlist should work normally
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"mozart"},
+			},
+		},
+	}
+
+	taskInput := map[string]interface{}{
+		"model":  "opus",
+		"prompt": "AGENT: mozart\n\nContinue analysis",
+		"resume": "b123456",
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if !result.Allowed {
+		t.Errorf("Expected opus resume with allowlisted agent to be allowed, got blocked: %s", result.BlockReason)
+	}
+}
+
+func TestValidateTaskInvocation_OpusNoResume_StillBlocked(t *testing.T) {
+	// Without resume, non-allowlisted agent should still be blocked
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect"},
+			},
+		},
+	}
+
+	taskInput := map[string]interface{}{
+		"model":  "opus",
+		"prompt": "Do something without AGENT prefix",
+		// no resume field
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if result.Allowed {
+		t.Error("Expected opus without resume and without allowlisted agent to be blocked")
+	}
+}
+
+func TestValidateTaskInvocation_NonOpusResume_Unchanged(t *testing.T) {
+	// Resume with non-opus model should pass through as normal
+	schema := &Schema{
+		Tiers: map[string]TierConfig{
+			"opus": {
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner"},
+			},
+		},
+	}
+
+	taskInput := map[string]interface{}{
+		"model":  "sonnet",
+		"prompt": "Continue previous work",
+		"resume": "c789012",
+	}
+
+	result := ValidateTaskInvocation(schema, taskInput, "test-session")
+
+	if !result.Allowed {
+		t.Errorf("Expected sonnet resume to be allowed, got blocked: %s", result.BlockReason)
+	}
+}
+
 func TestBlockResponseForNesting(t *testing.T) {
 	response := BlockResponseForNesting(2)
 

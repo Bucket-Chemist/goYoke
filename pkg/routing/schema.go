@@ -171,6 +171,7 @@ type SubagentTypesConfig struct {
 	GeneralPurpose SubagentType `json:"general-purpose"`
 	Bash           SubagentType `json:"Bash"`
 	Plan           SubagentType `json:"Plan"`
+	Analyst        SubagentType `json:"Analyst"`
 }
 
 // SubagentType defines tool capabilities for each subagent_type.
@@ -598,6 +599,8 @@ func (s *Schema) GetSubagentType(subagentType string) (*SubagentType, error) {
 		return &s.SubagentTypesConfig.Bash, nil
 	case "Plan":
 		return &s.SubagentTypesConfig.Plan, nil
+	case "Analyst":
+		return &s.SubagentTypesConfig.Analyst, nil
 	default:
 		return nil, fmt.Errorf("[routing] Unknown subagent_type: %s", subagentType)
 	}

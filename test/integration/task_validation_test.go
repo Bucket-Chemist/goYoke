@@ -11,7 +11,8 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 	schema := &routing.Schema{
 		Tiers: map[string]routing.TierConfig{
 			"opus": {
-				TaskInvocationBlocked: true,
+				TaskInvocationBlocked:   true,
+				TaskInvocationAllowlist: []string{"planner", "architect", "staff-architect-critical-review", "python-architect", "mozart", "einstein", "beethoven"},
 			},
 			"sonnet": {
 				Model: "claude-3.5-sonnet",
@@ -46,7 +47,7 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 		}
 
 		// Subagent type
-		subagentResult := routing.ValidateSubagentType(schema, "python-pro", "general-purpose")
+		subagentResult := routing.ValidateSubagentType(schema, "python-pro", "general-purpose", nil)
 		if !subagentResult.Valid {
 			t.Errorf("Valid subagent_type rejected: %s", subagentResult.ErrorMessage)
 		}
@@ -72,7 +73,9 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 		t.Log("✓ Opus model correctly blocked")
 	})
 
-	t.Run("Einstein agent blocked", func(t *testing.T) {
+	t.Run("Einstein requires opus model", func(t *testing.T) {
+		// Einstein is allowlisted but must be invoked with model: opus
+		// ValidateTaskInvocation enforces this: allowlisted agent + non-opus model = blocked
 		taskInput := map[string]interface{}{
 			"model":  "sonnet",
 			"prompt": "AGENT: einstein\n\nDeep analysis",
@@ -80,19 +83,34 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 
 		result := routing.ValidateTaskInvocation(schema, taskInput, "test-session")
 		if result.Allowed {
-			t.Error("Einstein agent should be blocked")
+			t.Error("Einstein with sonnet model should be blocked (requires opus)")
 		}
 
-		if !contains(result.Recommendation, "GAP document") {
-			t.Error("Should recommend GAP document workflow")
+		if result.Violation == nil {
+			t.Fatal("Expected violation for einstein with wrong model")
 		}
 
-		t.Log("✓ Einstein agent correctly blocked")
+		if result.Violation.ViolationType != "opus_agent_wrong_model" {
+			t.Errorf("Wrong violation type: expected opus_agent_wrong_model, got %s", result.Violation.ViolationType)
+		}
+
+		// Verify einstein with opus is allowed
+		taskInputOpus := map[string]interface{}{
+			"model":  "opus",
+			"prompt": "AGENT: einstein\n\nDeep analysis",
+		}
+
+		resultOpus := routing.ValidateTaskInvocation(schema, taskInputOpus, "test-session")
+		if !resultOpus.Allowed {
+			t.Errorf("Einstein with opus should be allowed, got blocked: %s", resultOpus.BlockReason)
+		}
+
+		t.Log("✓ Einstein correctly requires opus model")
 	})
 
 	t.Run("Wrong subagent_type", func(t *testing.T) {
 		// codebase-search requires "Explore", using "general-purpose" instead
-		result := routing.ValidateSubagentType(schema, "codebase-search", "general-purpose")
+		result := routing.ValidateSubagentType(schema, "codebase-search", "general-purpose", nil)
 
 		if result.Valid {
 			t.Error("Wrong subagent_type should be rejected")
@@ -151,7 +169,7 @@ func TestTaskValidation_RealWorldScenarios(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := routing.ValidateSubagentType(schema, tt.agent, tt.subagentType)
+			result := routing.ValidateSubagentType(schema, tt.agent, tt.subagentType, nil)
 
 			if result.Valid != tt.shouldBeValid {
 				t.Errorf("Agent %s with type %s: expected valid=%v, got %v (error: %s)",

@@ -111,14 +111,14 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     activeModel,
     preferredModel,
     totalCost,
-    tokenCount,
+    contextWindow,
     streaming,
     agents,
   } = useStore();
 
   const gitInfo = useGitInfo();
   const startTime = useRef(Date.now());
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
 
   // Force re-render every second for duration display
   useEffect(() => {
@@ -135,11 +135,14 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     return model.substring(0, 10); // Fallback: truncate
   }, [activeModel, preferredModel]);
 
-  // Calculate context percentage (out of 200K budget)
+  // Calculate context percentage based on actual context window usage
   const contextPct = useMemo(() => {
-    const total = tokenCount.input + tokenCount.output;
-    return Math.min(100, Math.round((total / 200000) * 100));
-  }, [tokenCount]);
+    if (contextWindow.totalCapacity === 0) return 0;
+    return Math.min(
+      100,
+      Math.round((contextWindow.usedTokens / contextWindow.totalCapacity) * 100)
+    );
+  }, [contextWindow]);
 
   // Format cost
   const cost = useMemo(() => totalCost.toFixed(2), [totalCost]);
@@ -151,7 +154,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
       minutes: Math.floor(elapsed / 60),
       seconds: elapsed % 60,
     };
-  }, [startTime.current, setTick]);
+  }, [tick]);
 
   // Count agents by status
   const agentCounts = useMemo(() => {

@@ -163,9 +163,11 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
   const updateSession = useStore((state) => state.updateSession);
   const incrementCost = useStore((state) => state.incrementCost);
   const addTokens = useStore((state) => state.addTokens);
+  const updateContextWindow = useStore((state) => state.updateContextWindow);
   const setStreamingState = useStore((state) => state.setStreaming);
   const setPermissionMode = useStore((state) => state.setPermissionMode);
   const setCompacting = useStore((state) => state.setCompacting);
+  const setInterruptQuery = useStore((state) => state.setInterruptQuery);
 
   // Track current assistant message being built
   const currentMessageRef = useRef<ContentBlock[]>([]);
@@ -544,6 +546,21 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         });
       }
 
+      // Extract context window usage from modelUsage
+      if (event.modelUsage) {
+        const models = Object.values(event.modelUsage);
+        if (models.length > 0) {
+          // Sum across all models (usually just one)
+          const totalUsed = models.reduce(
+            (sum, m) =>
+              sum + m.inputTokens + m.cacheCreationInputTokens + m.cacheReadInputTokens,
+            0
+          );
+          const capacity = models[0].contextWindow || 200000;
+          updateContextWindow(totalUsed, capacity);
+        }
+      }
+
       // Handle error result
       if (event.subtype !== "success") {
         const errorMessages =
@@ -559,11 +576,15 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
       setIsStreaming(false);
       streamingRef.current = false;
       setStreamingState(false);
+
+      // Clear interrupt function
+      setInterruptQuery(null);
     },
     [
       updateLastMessage,
       incrementCost,
       addTokens,
+      updateContextWindow,
       setIsStreaming,
       setStreamingState,
     ]
@@ -699,6 +720,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         // Store reference for setModel calls
         eventStreamRef.current = eventStream;
 
+        // Register interrupt function in store
+        setInterruptQuery(() => eventStream.interrupt.bind(eventStream));
+
         // NOTE: Don't clear preferredModel - it should persist for all
         // subsequent messages until user explicitly changes it via /model
 
@@ -745,6 +769,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         setIsStreaming(false);
         streamingRef.current = false;
         setStreamingState(false);
+
+        // Clear interrupt function
+        setInterruptQuery(null);
 
         void logger.error("Query error", {
           error: err instanceof Error ? err.message : String(err),

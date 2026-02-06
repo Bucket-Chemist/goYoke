@@ -15,7 +15,7 @@ type SubagentTypeValidation struct {
 }
 
 // ValidateSubagentType checks if Task uses correct subagent_type for agent
-func ValidateSubagentType(schema *Schema, targetAgent string, requestedType string) *SubagentTypeValidation {
+func ValidateSubagentType(schema *Schema, targetAgent string, requestedType string, agentTaskNames map[string]string) *SubagentTypeValidation {
 	result := &SubagentTypeValidation{
 		Agent:         targetAgent,
 		RequestedType: requestedType,
@@ -39,6 +39,15 @@ func ValidateSubagentType(schema *Schema, targetAgent string, requestedType stri
 
 	// Check if requested type is in allowed list
 	if !slices.Contains(allowedTypes, requestedType) {
+		// Also accept the agent's Task tool subagent_type name as a valid alias
+		if agentTaskNames != nil {
+			if taskName, ok := agentTaskNames[targetAgent]; ok && taskName == requestedType {
+				result.Valid = true
+				result.AllowedTypes = append(allowedTypes, taskName)
+				return result
+			}
+		}
+
 		result.Valid = false
 		result.ErrorMessage = fmt.Sprintf(
 			"[task-validation] Invalid subagent_type for agent '%s'. Allowed: %v. Requested: '%s'. Subagent_type mismatch causes wrong tool permissions. See routing-schema.json → agent_subagent_mapping.",

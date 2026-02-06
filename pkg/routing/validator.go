@@ -6,19 +6,21 @@ import (
 )
 
 // NewValidationOrchestrator creates orchestrator with all dependencies loaded
-func NewValidationOrchestrator(schema *Schema, projectDir string, agentsIndex *AgentsIndex) *ValidationOrchestrator {
+func NewValidationOrchestrator(schema *Schema, projectDir string, agentsIndex *AgentsIndex, agentTaskNames map[string]string) *ValidationOrchestrator {
 	return &ValidationOrchestrator{
-		Schema:      schema,
-		ProjectDir:  projectDir,
-		AgentsIndex: agentsIndex,
+		Schema:         schema,
+		ProjectDir:     projectDir,
+		AgentsIndex:    agentsIndex,
+		AgentTaskNames: agentTaskNames,
 	}
 }
 
 // ValidationOrchestrator coordinates all Task validation checks
 type ValidationOrchestrator struct {
-	Schema      *Schema
-	ProjectDir  string
-	AgentsIndex *AgentsIndex
+	Schema         *Schema
+	ProjectDir     string
+	AgentsIndex    *AgentsIndex
+	AgentTaskNames map[string]string
 }
 
 // ValidationResult combines all validation outcomes
@@ -42,6 +44,7 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 	model, _ := taskInput["model"].(string)
 	prompt, _ := taskInput["prompt"].(string)
 	subagentType, _ := taskInput["subagent_type"].(string)
+	resume, _ := taskInput["resume"].(string)
 	targetAgent := extractAgentFromPrompt(prompt)
 
 	// Check 1: Einstein/Opus blocking (with allowlist)
@@ -74,8 +77,8 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 	}
 
 	// Check 3: Delegation ceiling
-	// SKIP ceiling check if agent is in opus allowlist - the allowlist explicitly permits opus usage
-	if !opusAllowlisted {
+	// SKIP ceiling check if agent is in opus allowlist or resuming a previous agent
+	if !opusAllowlisted && resume == "" {
 		ceiling, err := LoadDelegationCeiling(v.ProjectDir)
 		if err == nil && ceiling != nil {
 			allowed, ceilingMsg := CheckDelegationCeiling(v.Schema, ceiling, model)
@@ -98,8 +101,11 @@ func (v *ValidationOrchestrator) ValidateTask(taskInput map[string]interface{}, 
 		}
 	}
 
-	// Check 4: Subagent_type validation
-	subagentCheck := ValidateSubagentType(v.Schema, targetAgent, subagentType)
+	// Check 4: Subagent_type validation (skip for resume — original spawn was validated)
+	if resume != "" {
+		return result
+	}
+	subagentCheck := ValidateSubagentType(v.Schema, targetAgent, subagentType, v.AgentTaskNames)
 	if !subagentCheck.Valid {
 		result.Decision = "block"
 		result.Reason = subagentCheck.FormatSubagentTypeError()

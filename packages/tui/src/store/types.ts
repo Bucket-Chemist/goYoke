@@ -164,6 +164,10 @@ export interface SessionSlice {
   sessionId: string | null;
   totalCost: number;
   tokenCount: TokenCount;
+  contextWindow: {
+    usedTokens: number;      // input + cache_creation + cache_read from last API call
+    totalCapacity: number;   // contextWindow from ModelUsage (default 200000)
+  };
   permissionMode: string;
   isCompacting: boolean;
   preferredModel: string | null;
@@ -171,6 +175,7 @@ export interface SessionSlice {
   updateSession: (data: Partial<SessionData>) => void;
   incrementCost: (cost: number) => void;
   addTokens: (tokens: Partial<TokenCount>) => void;
+  updateContextWindow: (usedTokens: number, totalCapacity: number) => void;
   setPermissionMode: (mode: string) => void;
   setCompacting: (compacting: boolean) => void;
   setPreferredModel: (model: string | null) => void;
@@ -184,9 +189,11 @@ export interface UISlice {
   streaming: boolean;
   focusedPanel: "claude" | "agents";
   rightPanelMode: "agents" | "dashboard" | "settings";
+  interruptQuery: (() => Promise<void>) | null;
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
+  setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
 }
 
 // Input history slice (ephemeral - not persisted)

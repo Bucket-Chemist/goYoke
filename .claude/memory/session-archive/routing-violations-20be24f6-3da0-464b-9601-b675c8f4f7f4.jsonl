@@ -1,0 +1,2 @@
+{"timestamp":"2026-02-06T15:20:42+07:00","session_id":"20be24f6-3da0-464b-9601-b675c8f4f7f4","violation_type":"opus_agent_wrong_model","agent":"architect","model":"sonnet","reason":"agent_requires_opus_got_sonnet","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}
+{"timestamp":"2026-02-06T17:16:32+07:00","session_id":"20be24f6-3da0-464b-9601-b675c8f4f7f4","violation_type":"subagent_type_mismatch","agent":"standards-reviewer","reason":"Allowed: [Explore], Requested: general-purpose","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}

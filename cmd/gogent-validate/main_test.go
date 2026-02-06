@@ -684,7 +684,7 @@ func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
 	}
 
 	// Step 4: Create orchestrator and validate (simulating main lines 51-57)
-	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
 
 	if result == nil {
@@ -880,7 +880,7 @@ func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
 	}
 
 	// Validate with orchestrator
-	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
 
 	// Capture output
@@ -969,7 +969,7 @@ func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
 	}
 
 	// Validate with orchestrator
-	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
 
 	// Capture output
@@ -1394,7 +1394,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 	}
 
 	// Run validation
-	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil, nil)
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
 
 	if result.Decision == "block" {

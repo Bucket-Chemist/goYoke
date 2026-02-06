@@ -22,7 +22,7 @@ func TestValidationOrchestrator_AllowedTask(t *testing.T) {
 		},
 	}
 
-	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil, nil)
 
 	taskInput := map[string]interface{}{
 		"model":         "sonnet",
@@ -50,7 +50,7 @@ func TestValidationOrchestrator_OpusBlocked(t *testing.T) {
 		},
 	}
 
-	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil, nil)
 
 	taskInput := map[string]interface{}{
 		"model":  "opus",
@@ -89,7 +89,7 @@ func TestValidationOrchestrator_CeilingViolation(t *testing.T) {
 		},
 	}
 
-	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil, nil)
 
 	taskInput := map[string]interface{}{
 		"model":  "sonnet",
@@ -119,7 +119,7 @@ func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
 		},
 	}
 
-	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil, nil)
 
 	taskInput := map[string]interface{}{
 		"model":         "sonnet",
@@ -165,7 +165,7 @@ func TestValidationOrchestrator_OpusAllowlistBypassesCeiling(t *testing.T) {
 		},
 	}
 
-	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil, nil)
 
 	taskInput := map[string]interface{}{
 		"model":         "opus",
@@ -204,7 +204,7 @@ func TestValidationOrchestrator_NonAllowlistedOpusStillBlockedByCeiling(t *testi
 		},
 	}
 
-	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil)
+	orchestrator := NewValidationOrchestrator(schema, tmpDir, nil, nil)
 
 	// Try opus with non-allowlisted agent - should be blocked by opus check, not ceiling
 	taskInput := map[string]interface{}{

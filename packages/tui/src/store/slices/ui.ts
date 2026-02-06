@@ -10,6 +10,7 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
   streaming: false,
   focusedPanel: "claude",
   rightPanelMode: "agents",
+  interruptQuery: null,
 
   setStreaming: (streaming): void => {
     set({ streaming });
@@ -26,5 +27,9 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
       const next = (current + 1) % modes.length;
       return { rightPanelMode: modes[next]! };
     });
+  },
+
+  setInterruptQuery: (fn): void => {
+    set({ interruptQuery: fn });
   },
 });

@@ -141,8 +141,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to parse Task input for routing decision: %v\n", err)
 	}
 
+	// Build agent task names lookup
+	agentTaskNames := buildAgentTaskNames()
+
 	// Create validation orchestrator
-	orchestrator := routing.NewValidationOrchestrator(schema, projectDir, nil)
+	orchestrator := routing.NewValidationOrchestrator(schema, projectDir, nil, agentTaskNames)
 
 	// Validate task
 	result := orchestrator.ValidateTask(event.ToolInput, event.SessionID)
@@ -154,6 +157,9 @@ func main() {
 	if ti, err := routing.ParseTaskInput(event.ToolInput); err == nil {
 		taskInput = ti
 		agent = extractAgentFromPrompt(taskInput.Prompt)
+		if agent == "unknown" && taskInput.Resume != "" {
+			agent = "resumed:" + taskInput.Resume[:min(len(taskInput.Resume), 8)]
+		}
 		model = taskInput.Model
 		if model == "" {
 			model = "default"
@@ -318,6 +324,43 @@ func extractAgentFromPrompt(prompt string) string {
 	return "unknown"
 }
 
+// buildAgentTaskNames builds a map of agent-id → Task tool name from agents-index.json.
+// This allows validation to accept both category names (e.g., "Analyst") and
+// agent display names (e.g., "Einstein") as valid subagent_type values.
+func buildAgentTaskNames() map[string]string {
+	configDir, err := routing.GetClaudeConfigDir()
+	if err != nil {
+		return nil
+	}
+
+	indexPath := filepath.Join(configDir, "agents", "agents-index.json")
+	data, err := os.ReadFile(indexPath)
+	if err != nil {
+		return nil
+	}
+
+	// Parse the index structure
+	var index struct {
+		Agents []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"agents"`
+	}
+	if err := json.Unmarshal(data, &index); err != nil {
+		return nil
+	}
+
+	// Build map: agent-id → name (Task tool subagent_type)
+	result := make(map[string]string)
+	for _, agent := range index.Agents {
+		if agent.ID != "" && agent.Name != "" {
+			result[agent.ID] = agent.Name
+		}
+	}
+
+	return result
+}
+
 // loadAgentConfig loads agent configuration from agents-index.json.
 // Returns nil without error if agent is not found (not all agents are in index).
 func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
@@ -335,9 +378,10 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 	// Parse the index structure (agents is an array)
 	var index struct {
 		Agents []struct {
-			ID                  string                    `json:"id"`
-			Model               string                    `json:"model"`
-			SubagentType        string                    `json:"subagent_type"`
+			ID                  string                       `json:"id"`
+			Name                string                       `json:"name"`
+			Model               string                       `json:"model"`
+			SubagentType        string                       `json:"subagent_type"`
 			ContextRequirements *routing.ContextRequirements `json:"context_requirements"`
 		} `json:"agents"`
 	}
@@ -349,6 +393,7 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 	for _, agent := range index.Agents {
 		if agent.ID == agentID {
 			return &routing.AgentConfig{
+				Name:                agent.Name,
 				Model:               agent.Model,
 				SubagentType:        agent.SubagentType,
 				ContextRequirements: agent.ContextRequirements,

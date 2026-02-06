@@ -135,6 +135,7 @@ type TaskInput struct {
 	Description     string `json:"description"`
 	MaxTurns        int    `json:"max_turns,omitempty"`
 	RunInBackground bool   `json:"run_in_background,omitempty"`
+	Resume          string `json:"resume,omitempty"`
 }
 
 // ParseToolEvent reads JSON from io.Reader and parses into ToolEvent.
