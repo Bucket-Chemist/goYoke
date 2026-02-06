@@ -9,18 +9,19 @@
  * - Up/Down arrow keys for input history (TUI-005 integration)
  */
 
-import React, { useState, useRef } from "react";
-import { Box, Text } from "ink";
+import React, { useState, useRef, useEffect } from "react";
+import { Box, Text, measureElement } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
+import type { KeyBinding } from "../hooks/useKeymap.js";
 import { createClaudePanelBindings } from "../config/keybindings.js";
 import { useClaudeQuery } from "../hooks/useClaudeQuery.js";
-import { Viewport } from "./primitives/Viewport.js";
+import { ScrollView } from "./primitives/ScrollView.js";
 import { TextInput } from "./primitives/TextInput.js";
 import { Spinner } from "./primitives/Spinner.js";
-// Removed: import { renderMarkdown } - causes ANSI conflicts with Ink
+import { MessageRenderer } from "./MessageRenderer.js";
 import { colors, borders } from "../config/theme.js";
-import type { Message, ContentBlock } from "../store/types.js";
+import { logger } from "../utils/logger.js";
 
 export interface ClaudePanelProps {
   /**
@@ -28,110 +29,15 @@ export interface ClaudePanelProps {
    */
   focused: boolean;
   /**
-   * Maximum height for the message viewport in rows
+   * Available character columns for content (for width constraints)
    */
-  maxHeight?: number;
-}
-
-// Named constants for height calculations
-// Prevents magic numbers and makes layout calculations explicit
-const HEADER_ROWS = 2;
-const INPUT_ROWS = 4;
-const VIEWPORT_CHROME = 2;
-
-/**
- * Render a single message with role-based styling
- */
-function MessageItem({ message }: { message: Message }): JSX.Element {
-  // Determine message color based on role
-  const roleColor =
-    message.role === "user"
-      ? colors.userMessage
-      : message.role === "assistant"
-        ? colors.assistantMessage
-        : colors.systemMessage;
-
-  // Extract text content from content blocks
-  const textContent = message.content
-    .filter((block): block is Extract<ContentBlock, { type: "text" }> => block.type === "text")
-    .map((block) => block.text)
-    .join("\n");
-
-  // Render tool use/results (simplified for now)
-  const toolBlocks = message.content.filter(
-    (block) => block.type === "tool_use" || block.type === "tool_result"
-  );
-
-  return (
-    <Box flexDirection="column" marginY={0} paddingBottom={1}>
-      {/* Role header */}
-      <Box>
-        <Text bold color={roleColor}>
-          {message.role === "user" ? "You" : message.role === "assistant" ? "Claude" : "System"}
-        </Text>
-        {message.partial && (
-          <Text color={colors.muted}> (streaming...)</Text>
-        )}
-      </Box>
-
-      {/* Text content - render each line separately for proper Ink handling */}
-      {textContent && (
-        <Box flexDirection="column" paddingLeft={2}>
-          {textContent.split('\n').map((line, idx) => (
-            <Text key={`${message.id}-line-${idx}`}>{line || ' '}</Text>
-          ))}
-        </Box>
-      )}
-
-      {/* Tool blocks (simplified display) */}
-      {toolBlocks.map((block) => {
-        // Use stable ID for tool blocks
-        const blockId = block.type === "tool_use"
-          ? block.id
-          : block.type === "tool_result"
-            ? block.tool_use_id
-            : `unknown-${Math.random()}`;
-
-        return (
-          <Box key={blockId} paddingLeft={2} flexDirection="column">
-            {block.type === "tool_use" && (
-              <>
-                <Text color={colors.accent} dimColor bold>
-                  [Tool: {block.name}]
-                </Text>
-                {/* Render tool inputs */}
-                {block.input && Object.entries(block.input).map(([key, value]) => (
-                  <Box key={key} paddingLeft={2}>
-                    <Text color={colors.muted} dimColor>
-                      {key}:{" "}
-                    </Text>
-                    <Text color={colors.assistantMessage}>
-                      {typeof value === 'string' ? value : JSON.stringify(value)}
-                    </Text>
-                  </Box>
-                ))}
-              </>
-            )}
-            {block.type === "tool_result" && (
-              <Box flexDirection="column">
-                <Text color={colors.muted} dimColor>
-                  [Tool result]
-                </Text>
-                {/* Optional: Render truncated result preview if needed */}
-                {/* <Text color={colors.dim} numberOfLines={2}>{block.content}</Text> */}
-              </Box>
-            )}
-          </Box>
-        );
-      })}
-    </Box>
-  );
+  width?: number;
 }
 
 /**
  * Main conversation panel with messages and input
  */
-export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.Element {
+export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   const {
     messages,
     streaming,
@@ -143,8 +49,26 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
   } = useStore();
   const { sendMessage, setModel, error } = useClaudeQuery();
   const [input, setInput] = useState("");
+  const [toolsExpanded, setToolsExpanded] = useState(false);
   const currentInputRef = useRef(""); // Store current input when navigating history
   const isPlan = isPlanMode(); // Compute plan mode state
+
+  // Measure ScrollView height dynamically
+  const scrollContainerRef = useRef<any>(null);
+  const [scrollHeight, setScrollHeight] = useState(10);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      try {
+        const measured = measureElement(scrollContainerRef.current);
+        if (measured.height > 0) {
+          setScrollHeight(measured.height);
+        }
+      } catch {
+        // measureElement may fail in test environments
+      }
+    }
+  });
 
   // Helper to add system messages
   const addSystemMessage = (text: string): void => {
@@ -167,7 +91,7 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
       };
       const modelId = MODEL_ALIASES[arg.toLowerCase()] || arg;
 
-      console.log("[/model] Setting model to:", modelId);
+      void logger.debug("Setting model", { modelId });
 
       // Try setModel first (works if query active AND in streaming input mode)
       const success = await setModel(modelId);
@@ -175,7 +99,7 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
         addSystemMessage(`Model switched to: ${modelId}`);
       } else {
         // No active query - store preference for next message
-        console.log("[/model] No active query, storing preference:", modelId);
+        void logger.debug("No active query, storing preference", { modelId });
         useStore.getState().setPreferredModel(modelId);
         addSystemMessage(`Model set to: ${modelId}. Will apply on next message.`);
       }
@@ -308,13 +232,19 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
     historyNext: handleHistoryNext,
   });
 
-  // Enable panel bindings only when focused and no modal is active
-  useKeymap(panelBindings, focused && modalQueue.length === 0);
+  // Ctrl+E toggles tool block expansion (safe - Ctrl modifier doesn't conflict with typing)
+  const toolToggleBindings: KeyBinding[] = [
+    {
+      key: "e",
+      ctrl: true,
+      action: () => setToolsExpanded((prev) => !prev),
+      description: "Toggle tool expansion",
+    },
+  ];
 
-  // Render message item
-  const renderMessage = (message: Message, _index: number): React.ReactNode => {
-    return <MessageItem message={message} />;
-  };
+  // Enable panel bindings only when focused and no modal is active
+  useKeymap(panelBindings, focused && modalQueue.length === 0 && !streaming);
+  useKeymap(toolToggleBindings, focused && modalQueue.length === 0);
 
   return (
     <Box
@@ -343,15 +273,29 @@ export function ClaudePanel({ focused, maxHeight = 20 }: ClaudePanelProps): JSX.
         </Box>
       )}
 
-      {/* Message viewport - constrained to available space */}
-      <Box height={maxHeight - HEADER_ROWS - INPUT_ROWS} overflow="hidden">
-        <Viewport
-          items={messages}
-          renderItem={renderMessage}
-          height={Math.max(5, maxHeight - HEADER_ROWS - INPUT_ROWS - VIEWPORT_CHROME)}
+      {/* Message viewport - uses measured height */}
+      <Box flexGrow={1} overflow="hidden" ref={scrollContainerRef}>
+        <ScrollView
+          height={scrollHeight}
+          width={width}
           focused={focused && !streaming}
           autoScroll={true}
-        />
+        >
+          {messages.length === 0 ? (
+            <Text color={colors.muted} italic>
+              No messages yet. Start a conversation!
+            </Text>
+          ) : (
+            messages.map((msg) => (
+              <MessageRenderer
+                key={msg.id}
+                message={msg}
+                maxWidth={width ? width - 4 : undefined}
+                allExpanded={toolsExpanded}
+              />
+            ))
+          )}
+        </ScrollView>
       </Box>
 
       {/* Input area */}

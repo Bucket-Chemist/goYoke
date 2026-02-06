@@ -183,8 +183,10 @@ export interface SessionSlice {
 export interface UISlice {
   streaming: boolean;
   focusedPanel: "claude" | "agents";
+  rightPanelMode: "agents" | "dashboard" | "settings";
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
+  cycleRightPanel: () => void;
 }
 
 // Input history slice (ephemeral - not persisted)
@@ -232,6 +234,20 @@ export type ModalResponse =
   | { type: "input"; value: string }
   | { type: "select"; selected: string; index: number };
 
+// Toast notification types
+export interface Toast {
+  id: string;
+  message: string;
+  type: "info" | "success" | "warning" | "error";
+  createdAt: number;
+}
+
+export interface ToastSlice {
+  toasts: Toast[];
+  addToast: (message: string, type?: Toast["type"]) => void;
+  removeToast: (id: string) => void;
+}
+
 // Import telemetry types
 import type { TelemetrySlice } from "./slices/telemetry.js";
 export type { TelemetrySlice, RoutingDecision, Handoff, SharpEdge } from "./slices/telemetry.js";
@@ -243,4 +259,5 @@ export type Store = MessagesSlice &
   UISlice &
   InputSlice &
   ModalSlice &
-  TelemetrySlice;
+  TelemetrySlice &
+  ToastSlice;

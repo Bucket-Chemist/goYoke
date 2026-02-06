@@ -167,12 +167,18 @@ const (
 )
 
 // GetNestingLevel returns the current nesting level from environment.
-// Fail-closed: returns 1 (blocked) if missing or invalid.
+// If GOGENT_NESTING_LEVEL is unset, checks CLAUDE_CODE_NESTING_LEVEL to
+// distinguish root sessions (level 0) from unknown contexts (fail-closed to 1).
 func GetNestingLevel() int {
 	levelStr := os.Getenv("GOGENT_NESTING_LEVEL")
 
-	// Missing = fail-closed (assume nested)
 	if levelStr == "" {
+		// If Claude Code's own nesting level is also unset or "0", we're at root
+		claudeLevel := os.Getenv("CLAUDE_CODE_NESTING_LEVEL")
+		if claudeLevel == "" || claudeLevel == "0" {
+			return 0
+		}
+		// Claude says nested but GOGENT not set = fail-closed
 		return DefaultNestingLevel
 	}
 

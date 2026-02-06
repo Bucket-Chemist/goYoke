@@ -8,6 +8,7 @@ import { BorderStyleTest } from "./components/BorderStyleTest.js";
 import { loadSession, saveSession } from "./hooks/useSession.js";
 import { useStore } from "./store/index.js";
 import { nanoid } from "nanoid";
+import { logger } from "./utils/logger.js";
 
 type DemoMode = "main" | "hello" | "layout" | "responsive" | "borders";
 
@@ -49,12 +50,17 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
         });
 
         if (verbose) {
-          console.log(`[Session] Resumed: ${session.id}`);
-          console.log(`[Session] Cost: $${session.cost.toFixed(4)}`);
-          console.log(`[Session] Tools: ${session.tool_calls}`);
+          void logger.info("Session resumed", {
+            sessionId: session.id,
+            cost: session.cost,
+            toolCalls: session.tool_calls,
+          });
         }
       } catch (error) {
-        console.error(`Failed to load session: ${sessionId}`, error);
+        void logger.error("Failed to load session", {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         // Continue with new session on error
         updateSession({ id: nanoid() });
       } finally {
@@ -84,10 +90,12 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
         });
 
         if (verbose) {
-          console.log(`[Session] Saved: ${currentSessionId}`);
+          void logger.info("Session saved", { sessionId: currentSessionId });
         }
       } catch (error) {
-        console.error("Failed to save session:", error);
+        void logger.error("Failed to save session", {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -103,15 +111,15 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     );
   }
 
+  // Demo mode switching - only active when NOT in main mode
+  // (prevents number keys from intercepting text input)
   useInput((input, _key) => {
-    // Cycle through demo modes with number keys
+    if (mode === "main") return; // Don't intercept typing in main app
     if (input === "0") setMode("main");
     if (input === "1") setMode("hello");
     if (input === "2") setMode("layout");
     if (input === "3") setMode("responsive");
     if (input === "4") setMode("borders");
-
-    // Exit handled by Layout component (Escape) or Ink's default Ctrl+C
   });
 
   return (

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -107,6 +108,10 @@ func main() {
 		fmt.Println("{}")
 		return
 	}
+
+	// === VITEST CLEANUP ===
+	// Clean up vitest processes that may persist after typescript-pro/react-pro agents complete
+	cleanupVitestProcesses(event)
 
 	// === ML TOOL EVENT LOGGING (GOgent-087d) ===
 	// Log to global and project-scoped paths (non-blocking)
@@ -369,6 +374,39 @@ func buildWarningResponse(file string, count int, reminderMsg, flushMsg string) 
 	response.AddField("additionalContext", strings.Join(contextParts, "\n\n"))
 
 	return response
+}
+
+// cleanupVitestProcesses kills lingering vitest processes after typescript-pro/react-pro agents complete.
+// Vitest processes can persist after subagent termination, consuming CPU/RAM.
+// This cleanup runs silently - errors are ignored as processes may already be dead.
+func cleanupVitestProcesses(event *routing.PostToolEvent) {
+	// Only check Bash tool invocations
+	if event.ToolName != "Bash" {
+		return
+	}
+
+	// Extract command from tool input
+	commandRaw, ok := event.ToolInput["command"]
+	if !ok {
+		return
+	}
+
+	command, ok := commandRaw.(string)
+	if !ok {
+		return
+	}
+
+	// Check if command contains "vitest"
+	if !strings.Contains(command, "vitest") {
+		return
+	}
+
+	// Kill vitest processes (ignore errors - process may already be dead)
+	cmd := exec.Command("pkill", "-f", "vitest")
+	_ = cmd.Run()
+
+	// Log cleanup for debugging
+	fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Cleaned up vitest processes\n")
 }
 
 // getProjectDir returns the project directory from environment or cwd.

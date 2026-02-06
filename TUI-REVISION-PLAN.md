@@ -238,6 +238,55 @@ const handleAssistantEvent = useCallback(async (event) => {
 
 ### Phase 3: Feature Parity with Ralph-TUI
 
+#### 3.0 Status Line (Footer Bar)
+**Priority:** P1 (user requested)
+**New Files:** `components/StatusLine.tsx`, `scripts/statusline.sh`
+**Approach:**
+Implement a customizable, informative status bar at the bottom of the TUI, inspired by Claude Code's statusline feature. The status line is a fixed-height (1-2 row) bar anchored at the bottom that displays at-a-glance session metadata.
+
+**Default display (2 lines):**
+```
+Line 1: [Model] 📁 project-name | 🌿 branch +staged ~modified
+Line 2: ▓▓▓░░░░░░░ 30% context | $0.45 | ⏱️ 12m 34s | Agents: 3 running
+```
+
+**Data sources (from Zustand store):**
+- `activeModel` / `preferredModel` → Model name
+- `totalCost` → Session cost (formatted as $X.XX)
+- `tokenCount` → Context percentage (input+output / 200K window)
+- `streaming` → Streaming indicator
+- `agents` → Active agent count by status
+- Git branch/status → via cached shell exec (5s cache, like ralph-tui)
+- Session duration → computed from session start time
+
+**Component design:**
+```tsx
+interface StatusLineProps {
+  width: number;          // Terminal columns
+  height?: 1 | 2;        // 1 or 2 row mode
+}
+```
+
+**Features:**
+- Color-coded context bar: green (<70%), yellow (70-89%), red (90%+)
+- Streaming pulse indicator (braille animation) when active
+- Agent count with status breakdown (running/queued/complete)
+- Responsive: collapses to 1-line on narrow terminals (<100 cols)
+- Updates reactively from Zustand store (no polling)
+- Git info cached to avoid perf impact (5s TTL like statusline docs recommend)
+
+**Integration with Layout:**
+```tsx
+<Box flexDirection="column" height={terminalHeight}>
+  <Header height={3} />
+  <Box flexDirection="row" flexGrow={1}>
+    <LeftPanel width="70%" />
+    <RightPanel width="30%" />
+  </Box>
+  <StatusLine width={terminalColumns} height={2} />
+</Box>
+```
+
 #### 3.1 Right Panel View Cycling
 **Priority:** P2
 **File:** Modify `Layout.tsx`, new `DashboardView.tsx`, new `SettingsView.tsx`

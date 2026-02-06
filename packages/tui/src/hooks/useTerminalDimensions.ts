@@ -32,11 +32,8 @@ export function useTerminalDimensions(debounceMs = 100): Dimensions {
         clearTimeout(timeoutRef.current);
       }
 
-      // Clear screen immediately to prevent old content from showing
-      // This fixes the banner duplication and text overwriting issues
-      process.stdout.write('\x1b[2J\x1b[H');
-
       // Debounce dimension update to avoid rapid re-renders
+      // Ink handles re-rendering automatically - don't write raw escape codes
       timeoutRef.current = setTimeout(() => {
         if (stdout) {
           setDimensions({

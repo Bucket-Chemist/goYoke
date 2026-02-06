@@ -63,13 +63,14 @@ func NewPassResponse(hookEventName string) *HookResponse {
 // NewModifyResponse creates a HookResponse that modifies the tool input.
 // This is used by PreToolUse hooks to inject conventions into Task prompts.
 // The updatedInput map should contain the complete modified tool input.
-// Decision is omitted (not required for modify responses per Claude Code schema).
+// Uses permissionDecision: "allow" in hookSpecificOutput per Claude Code PreToolUse schema.
+// Top-level decision is omitted (deprecated for PreToolUse events).
 func NewModifyResponse(hookEventName string, updatedInput map[string]interface{}) *HookResponse {
 	return &HookResponse{
-		// Decision omitted - not required for modify responses
 		HookSpecificOutput: map[string]interface{}{
-			"hookEventName": hookEventName,
-			"updatedInput":  updatedInput,
+			"hookEventName":      hookEventName,
+			"permissionDecision": "allow",
+			"updatedInput":       updatedInput,
 		},
 	}
 }

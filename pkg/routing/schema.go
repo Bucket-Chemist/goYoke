@@ -423,6 +423,7 @@ func (s *Schema) Validate() error {
 		"general-purpose": true,
 		"Bash":            true,
 		"Plan":            true,
+		"Analyst":         true,
 	}
 
 	// Check all agent mappings (each field is now FlexibleSubagentType)

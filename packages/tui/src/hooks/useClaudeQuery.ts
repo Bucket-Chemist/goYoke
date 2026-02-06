@@ -3,7 +3,7 @@
  * Connects Claude SDK query() to Zustand store with event streaming
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type {
   SDKMessage,
@@ -16,13 +16,12 @@ import { useStore } from "../store/index.js";
 import { mcpServer } from "../mcp/server.js";
 import type { ClassifiedError } from "../types/events.js";
 import type { ContentBlock } from "../store/types.js";
-import fs from "fs";
+import { logger } from "../utils/logger.js";
 
 /**
  * Debug configuration
  */
 const DEBUG_EVENTS = false; // Set to true for debugging
-const DEBUG_FILE = "/tmp/tui-events.jsonl";
 
 /**
  * Log SDK events for debugging
@@ -31,21 +30,14 @@ const logEvent = (event: unknown) => {
   if (!DEBUG_EVENTS) return;
 
   const summary = {
-    timestamp: new Date().toISOString(),
     type: (event as any)?.type,
     subtype: (event as any)?.subtype,
     keys: Object.keys(event as object),
     preview: JSON.stringify(event).slice(0, 500),
   };
 
-  console.log("[SDK Event]", summary.type, summary.subtype || "");
-
-  // Append to file (async, fire-and-forget)
-  try {
-    fs.appendFileSync(DEBUG_FILE, JSON.stringify(summary) + "\n");
-  } catch {
-    // Ignore errors - debug logging should never crash the app
-  }
+  // Log to file only - never stdout/stderr
+  void logger.debug("[SDK Event]", summary);
 };
 
 /**
@@ -160,6 +152,11 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<ClassifiedError | null>(null);
 
+  // Sync streamingRef with isStreaming state to avoid stale closures
+  useEffect(() => {
+    streamingRef.current = isStreaming;
+  }, [isStreaming]);
+
   // Store actions
   const addMessage = useStore((state) => state.addMessage);
   const updateLastMessage = useStore((state) => state.updateLastMessage);
@@ -173,6 +170,12 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
   // Track current assistant message being built
   const currentMessageRef = useRef<ContentBlock[]>([]);
 
+  // Track current assistant message ID to distinguish streaming updates from new messages
+  const currentMessageIdRef = useRef<string | null>(null);
+
+  // Track streaming state with ref to avoid stale closures
+  const streamingRef = useRef(false);
+
   // Track active query for setModel calls and streamInput
   const eventStreamRef = useRef<Awaited<ReturnType<typeof query>> | null>(null);
 
@@ -184,8 +187,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
       // Extract model from init message (SDK provides this authoritatively)
       const initEvent = event as SDKSystemMessage & { model?: string };
       if (initEvent.model) {
-        fs.appendFileSync("/tmp/tui-model-debug.log",
-          `[${new Date().toISOString()}] SDK Init returned model: ${initEvent.model}\n`);
+        void logger.debug("SDK Init returned model", { model: initEvent.model });
         useStore.getState().setActiveModel(initEvent.model);
       }
 
@@ -224,12 +226,10 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         setPermissionMode(statusEvent.permissionMode);
 
         // Debug logging
-        console.log(
-          "[Status] Permission mode:",
-          statusEvent.permissionMode,
-          "→ Plan mode:",
-          statusEvent.permissionMode === "plan"
-        );
+        void logger.debug("Permission mode changed", {
+          permissionMode: statusEvent.permissionMode,
+          planMode: statusEvent.permissionMode === "plan",
+        });
       }
     },
     [setPermissionMode, setCompacting]
@@ -243,7 +243,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
       const sessionId = useStore.getState().sessionId;
 
       if (!sessionId) {
-        console.error('[handleBuiltinToolUse] No session ID available');
+        void logger.error("No session ID available for built-in tool", { blockName: block.name });
         return;
       }
 
@@ -325,7 +325,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         } else {
           // Other built-in tools (EnterPlanMode, ExitPlanMode)
           // These are typically handled automatically by SDK
-          console.warn(`[handleBuiltinToolUse] Unhandled built-in tool: ${block.name}`);
+          void logger.warn("Unhandled built-in tool", { toolName: block.name });
           return;
         }
 
@@ -352,10 +352,16 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
             })()
           );
 
-          console.log(`[handleBuiltinToolUse] Sent result for ${block.name}:`, toolResult);
+          void logger.debug("Sent built-in tool result", {
+            toolName: block.name,
+            result: toolResult,
+          });
         }
       } catch (err) {
-        console.error('[handleBuiltinToolUse] Error:', err);
+        void logger.error("Built-in tool error", {
+          toolName: block.name,
+          error: err instanceof Error ? err.message : String(err),
+        });
 
         // Send error response back to Claude
         if (eventStreamRef.current) {
@@ -430,18 +436,31 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
               name: block.name,
               input: block.input,
             }).catch((err) => {
-              console.error('[handleAssistantEvent] Built-in tool error:', err);
+              void logger.error("Built-in tool error in background", {
+                error: err instanceof Error ? err.message : String(err),
+              });
             });
           }
         }
       }
 
-      // If streaming, update the last message
-      if (isStreaming && currentMessageRef.current.length > 0) {
+      // Use message ID to distinguish streaming updates from new messages.
+      // The SDK sends multiple assistant events with the SAME message.id for
+      // streaming updates to one message, but a DIFFERENT message.id when
+      // Claude starts a new response (e.g., after a tool call completes).
+      const messageId = event.message.id;
+
+      if (messageId === currentMessageIdRef.current) {
+        // Same message ID - streaming update to current message
         currentMessageRef.current = contentBlocks;
         updateLastMessage(contentBlocks);
       } else {
-        // First chunk - add new message
+        // Different message ID - new assistant message (first chunk or new turn after tool call)
+        // Finalize previous message if any
+        if (currentMessageRef.current.length > 0) {
+          updateLastMessage(currentMessageRef.current);
+        }
+        currentMessageIdRef.current = messageId;
         currentMessageRef.current = contentBlocks;
         addMessage({
           role: "assistant",
@@ -450,7 +469,57 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         });
       }
     },
-    [isStreaming, addMessage, updateLastMessage, handleBuiltinToolUse]
+    [addMessage, updateLastMessage, handleBuiltinToolUse]
+  );
+
+  /**
+   * Handle user event - tool results from CLI tool execution
+   * These appear between assistant messages and provide the audit trail
+   */
+  const handleUserEvent = useCallback(
+    (event: SDKUserMessage) => {
+      // Finalize the current assistant message before adding tool results
+      if (currentMessageRef.current.length > 0) {
+        updateLastMessage(currentMessageRef.current);
+        currentMessageRef.current = [];
+        currentMessageIdRef.current = null;
+      }
+
+      // Convert user message content to ContentBlocks
+      // SDK content can be string or ContentBlockParam[]
+      const rawContent = event.message.content;
+      const contentBlocks: ContentBlock[] = typeof rawContent === "string"
+        ? [{ type: "text" as const, text: rawContent }]
+        : rawContent.map(
+          (block: any) => {
+            if (block.type === "tool_result") {
+              return {
+                type: "tool_result" as const,
+                tool_use_id: block.tool_use_id ?? "",
+                content: typeof block.content === "string"
+                  ? block.content
+                  : Array.isArray(block.content)
+                    ? block.content.map((c: any) => c.text || JSON.stringify(c)).join("\n")
+                    : JSON.stringify(block.content ?? ""),
+                is_error: block.is_error || false,
+              };
+            }
+            if (block.type === "text") {
+              return { type: "text" as const, text: block.text };
+            }
+            // Fallback
+            return { type: "text" as const, text: JSON.stringify(block) };
+          }
+        );
+
+      // Add as a system message (tool results aren't really "user" messages in the UI)
+      addMessage({
+        role: "system",
+        content: contentBlocks,
+        partial: false,
+      });
+    },
+    [addMessage, updateLastMessage]
   );
 
   /**
@@ -462,6 +531,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
       if (currentMessageRef.current.length > 0) {
         updateLastMessage(currentMessageRef.current);
         currentMessageRef.current = [];
+        currentMessageIdRef.current = null;
       }
 
       // Update usage statistics (available on both success and error)
@@ -485,8 +555,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         });
       }
 
-      // Stop streaming
+      // Stop streaming - update both state and ref synchronously
       setIsStreaming(false);
+      streamingRef.current = false;
       setStreamingState(false);
     },
     [
@@ -504,8 +575,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
   const sendMessage = useCallback(
     async (message: string): Promise<void> => {
       // GUARD: Prevent concurrent queries (fixes multiple session spawning bug)
-      if (isStreaming) {
-        console.warn('[sendMessage] Query already in progress, ignoring duplicate call');
+      // Use streamingRef to avoid stale closure in concurrent calls
+      if (streamingRef.current) {
+        void logger.warn("Query already in progress, ignoring duplicate call");
         return;
       }
 
@@ -513,13 +585,12 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         // Reset error state
         setError(null);
         currentMessageRef.current = [];
+        currentMessageIdRef.current = null;
 
         // Get preferred model if set (for pre-query model selection)
         const preferredModel = useStore.getState().preferredModel;
 
-        // DEBUG: Log to file (Ink captures stdout)
-        fs.appendFileSync("/tmp/tui-model-debug.log",
-          `[${new Date().toISOString()}] preferredModel from store: ${preferredModel}\n`);
+        void logger.debug("preferredModel from store", { preferredModel });
 
         // Add user message to store
         addMessage({
@@ -533,15 +604,18 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
           partial: false,
         });
 
-        // Start streaming
+        // Start streaming - update both state and ref synchronously
         setIsStreaming(true);
+        streamingRef.current = true;
         setStreamingState(true);
 
         // DEBUG: Log query options to file
         const queryModel = preferredModel || undefined;
         const existingSessionId = useStore.getState().sessionId;
-        fs.appendFileSync("/tmp/tui-model-debug.log",
-          `[${new Date().toISOString()}] Calling query() with model: ${queryModel}, resume: ${existingSessionId}\n`);
+        void logger.debug("Calling query()", {
+          model: queryModel,
+          resume: existingSessionId,
+        });
 
         // Query Claude with MCP server registration and GOgent settings
         const eventStream = query({
@@ -644,10 +718,11 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
             }
           } else if (sdkMessage.type === "assistant") {
             handleAssistantEvent(sdkMessage);
+          } else if (sdkMessage.type === "user") {
+            handleUserEvent(sdkMessage as SDKUserMessage);
           } else if (sdkMessage.type === "result") {
             handleResultEvent(sdkMessage);
           }
-          // Other event types logged but not processed
         }
       } catch (err) {
         // Classify and store error
@@ -666,19 +741,23 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
           partial: false,
         });
 
-        // Stop streaming
+        // Stop streaming - update both state and ref synchronously
         setIsStreaming(false);
+        streamingRef.current = false;
         setStreamingState(false);
 
-        console.error("Query error:", err);
+        void logger.error("Query error", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     },
     [
-      isStreaming, // CRITICAL: Required for re-entry guard
+      // Note: streamingRef used instead of isStreaming in callback body to avoid stale closures
       addMessage,
       handleSystemEvent,
       handleStatusEvent,
       handleAssistantEvent,
+      handleUserEvent,
       handleResultEvent,
       setStreamingState,
     ]
@@ -690,16 +769,19 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
    */
   const setModel = useCallback(async (modelId: string): Promise<boolean> => {
     if (!eventStreamRef.current) {
-      console.warn('[setModel] No active query. Send a message first.');
+      void logger.warn("No active query for setModel", { modelId });
       return false;
     }
 
     try {
       await eventStreamRef.current.setModel(modelId);
-      console.log(`[setModel] Successfully switched to ${modelId}`);
+      void logger.info("Successfully switched model", { modelId });
       return true;
     } catch (err) {
-      console.error('[setModel] Failed:', err);
+      void logger.error("setModel failed", {
+        modelId,
+        error: err instanceof Error ? err.message : String(err),
+      });
       return false;
     }
   }, []);

@@ -375,6 +375,18 @@ vitest run
 eslint src --ext .ts,.tsx
 ```
 
+## Process Cleanup (CRITICAL)
+
+**After running any vitest command (vitest run, vitest, vitest watch, etc.), ALWAYS run:**
+
+```bash
+pkill -f vitest 2>/dev/null || true
+```
+
+Vitest spawns persistent child processes that consume CPU and RAM if not killed.
+This cleanup MUST happen after every test invocation, even if tests pass.
+Chain it: `vitest run && pkill -f vitest 2>/dev/null || true`
+
 ## Output Requirements
 
 - Clean, type-safe TypeScript code

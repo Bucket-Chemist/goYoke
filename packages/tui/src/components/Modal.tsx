@@ -19,6 +19,7 @@ import { AskModal } from "./modals/AskModal.js";
 import { ConfirmModal } from "./modals/ConfirmModal.js";
 import { InputModal } from "./modals/InputModal.js";
 import { SelectModal } from "./modals/SelectModal.js";
+import { logger } from "../utils/logger.js";
 
 interface ModalOverlayProps {
   request: ModalRequest;
@@ -46,7 +47,11 @@ class ModalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("[Modal Error]", error, info.componentStack);
+    void logger.error("Modal rendering error", {
+      error: error.message,
+      stack: error.stack,
+      componentStack: info.componentStack,
+    });
   }
 
   override render(): ReactNode {

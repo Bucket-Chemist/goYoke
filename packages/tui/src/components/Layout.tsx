@@ -1,7 +1,8 @@
 import React from "react";
 import { Box } from "ink";
 import { useStore } from "../store/index.js";
-import { useKeymap, KeyBinding } from "../hooks/useKeymap.js";
+import { useKeymap } from "../hooks/useKeymap.js";
+import type { KeyBinding } from "../hooks/useKeymap.js";
 import { useAgentTree } from "../hooks/useAgentTree.js";
 import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
 import { createGlobalBindings } from "../config/keybindings.js";
@@ -9,7 +10,11 @@ import { Banner } from "./Banner.js";
 import { ClaudePanel } from "./ClaudePanel.js";
 import { AgentTree } from "./AgentTree.js";
 import { AgentDetail } from "./AgentDetail.js";
+import { DashboardView } from "./DashboardView.js";
+import { SettingsView } from "./SettingsView.js";
 import { ModalOverlay } from "./Modal.js";
+import { StatusLine } from "./StatusLine.js";
+import { ToastContainer } from "./Toast.js";
 import { colors, borders } from "../config/theme.js";
 
 // Fixed heights
@@ -27,12 +32,18 @@ const BANNER_HEIGHT = 3; // Banner takes 3 rows
  * - Modal captures all input when active
  */
 export function Layout(): JSX.Element {
-  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages } = useStore();
+  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
-  const { rows: terminalHeight } = useTerminalDimensions();
+  const { rows: terminalHeight, columns: terminalWidth } = useTerminalDimensions();
 
-  // Calculate available height for content area
-  const contentHeight = terminalHeight - BANNER_HEIGHT;
+  // Responsive layout breakpoints
+  const isNarrow = terminalWidth < 100;
+  const isVeryNarrow = terminalWidth < 80;
+  const leftWidth = isVeryNarrow ? "100%" : isNarrow ? "75%" : "70%";
+  const showRightPanel = !isVeryNarrow;
+
+  // Calculate panel width based on responsive layout
+  const claudePanelWidth = Math.floor(terminalWidth * (isVeryNarrow ? 1 : isNarrow ? 0.75 : 0.7)) - 4;
 
   // Global key bindings (only active when no modal is present)
   const globalBindings = createGlobalBindings({
@@ -68,10 +79,6 @@ export function Layout(): JSX.Element {
   // Only enable agent navigation when agents panel focused and no modal
   useKeymap(agentBindings, focusedPanel === "agents" && modalQueue.length === 0);
 
-  // Calculate right panel heights (fixed row counts)
-  const agentTreeHeight = Math.floor(contentHeight * 0.6);
-  const agentDetailHeight = contentHeight - agentTreeHeight;
-
   return (
     <Box flexDirection="column" height={terminalHeight}>
       {/* Banner - FIXED at top */}
@@ -79,36 +86,72 @@ export function Layout(): JSX.Element {
         <Banner />
       </Box>
 
-      {/* Content area - FIXED height */}
-      <Box flexDirection="row" height={contentHeight}>
-        {/* Left Panel: Claude conversation (70%) */}
-        <Box width="70%" height={contentHeight}>
-          <ClaudePanel focused={focusedPanel === "claude"} maxHeight={contentHeight - 2} />
+      {/* Content area - FILLS remaining space */}
+      <Box flexDirection="row" flexGrow={1}>
+        {/* Left Panel: Claude conversation */}
+        <Box width={leftWidth}>
+          <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
         </Box>
 
-        {/* Right Panel: Agent tree + detail (30%) */}
-        <Box width="30%" flexDirection="column" height={contentHeight}>
-          {/* Agent Tree (60% of right panel) */}
-          <Box
-            height={agentTreeHeight}
-            borderStyle={borders.panel}
-            borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
-            flexDirection="column"
-          >
-            <AgentTree focused={focusedPanel === "agents"} />
-          </Box>
+        {/* Right Panel: Conditional rendering based on mode */}
+        {showRightPanel && (
+          <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
+            {rightPanelMode === "agents" && (
+              <>
+                {/* Agent Tree (60% via flexGrow) */}
+                <Box
+                  flexGrow={6}
+                  borderStyle={borders.panel}
+                  borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
+                  flexDirection="column"
+                  overflow="hidden"
+                >
+                  <AgentTree focused={focusedPanel === "agents"} />
+                </Box>
 
-          {/* Agent Detail (40% of right panel) */}
-          <Box
-            height={agentDetailHeight}
-            borderStyle={borders.panel}
-            borderColor={colors.muted}
-            flexDirection="column"
-          >
-            <AgentDetail focused={false} />
+                {/* Agent Detail (40% via flexGrow) */}
+                <Box
+                  flexGrow={4}
+                  borderStyle={borders.panel}
+                  borderColor={colors.muted}
+                  flexDirection="column"
+                  overflow="hidden"
+                >
+                  <AgentDetail focused={false} />
+                </Box>
+              </>
+            )}
+            {rightPanelMode === "dashboard" && (
+              <Box
+                flexGrow={1}
+                borderStyle={borders.panel}
+                borderColor={colors.muted}
+                flexDirection="column"
+                overflow="hidden"
+              >
+                <DashboardView />
+              </Box>
+            )}
+            {rightPanelMode === "settings" && (
+              <Box
+                flexGrow={1}
+                borderStyle={borders.panel}
+                borderColor={colors.muted}
+                flexDirection="column"
+                overflow="hidden"
+              >
+                <SettingsView />
+              </Box>
+            )}
           </Box>
-        </Box>
+        )}
       </Box>
+
+      {/* Status Line - FIXED at bottom */}
+      <StatusLine width={terminalWidth} height={2} />
+
+      {/* Toast notifications */}
+      <ToastContainer />
 
       {/* Modal overlay (rendered when queue is non-empty) */}
       {modalQueue.length > 0 && modalQueue[0] && <ModalOverlay request={modalQueue[0]} />}

@@ -54,16 +54,14 @@ export async function log(
     memoryLogs.shift();
   }
 
-  // Always write to console (for TUI visibility)
-  console.log(`[${level.toUpperCase()}] ${message}`, context ? JSON.stringify(context, null, 2) : "");
-
   // Always write to file (no DEBUG check)
+  // IMPORTANT: Never write to stdout/stderr - Ink owns those streams
   try {
     await mkdir(LOG_DIR, { recursive: true });
     await appendFile(LOG_FILE, JSON.stringify(entry) + "\n");
-  } catch (error) {
-    // Don't crash if logging fails, but log to stderr
-    console.error("Failed to write to debug.log:", error);
+  } catch {
+    // Don't crash if logging fails - silently ignore
+    // Cannot log to stderr as it would corrupt Ink rendering
   }
 }
 
