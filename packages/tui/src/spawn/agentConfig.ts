@@ -23,6 +23,7 @@ export interface AgentRelationships {
 export interface AgentConfig extends AgentRelationships {
   name: string;
   model: string;
+  effortLevel?: "low" | "medium" | "high";
   tier: number | string;
   triggers?: string[];
   tools?: string[];

@@ -9,6 +9,7 @@ import {
   cleanupParentMutex,
 } from "../../spawn/relationshipValidation.js";
 import { getAgentsStore } from "../../spawn/storeAdapter.js";
+import { getAgentConfig } from "../../spawn/agentConfig.js";
 import { logger, getSessionId } from "../../utils/logger.js";
 import { getSessionCostTracker } from "../../cost/tracker.js";
 
@@ -168,16 +169,26 @@ Example:
     // Build CLI arguments
     const cliArgs = buildCliArgs(args);
 
+    // Resolve effort level from agent config
+    const agentConfig = getAgentConfig(args.agent);
+    const effortLevel = agentConfig?.effortLevel;
+
     return new Promise((resolve) => {
+      // Build env with optional effort level override
+      const spawnEnv: Record<string, string> = {
+        ...process.env as Record<string, string>,
+        GOGENT_NESTING_LEVEL: String(getCurrentNestingLevel() + 1),
+        GOGENT_PARENT_AGENT: agentId,
+        GOGENT_SPAWN_METHOD: "mcp-cli",
+      };
+      if (effortLevel) {
+        spawnEnv["CLAUDE_CODE_EFFORT_LEVEL"] = effortLevel;
+      }
+
       // Spawn CLI process (NO shell: true)
       const proc = spawn("claude", cliArgs, {
         stdio: ["pipe", "pipe", "pipe"],
-        env: {
-          ...process.env,
-          GOGENT_NESTING_LEVEL: String(getCurrentNestingLevel() + 1),
-          GOGENT_PARENT_AGENT: agentId,
-          GOGENT_SPAWN_METHOD: "mcp-cli",
-        },
+        env: spawnEnv,
       });
 
       // Register with process registry
