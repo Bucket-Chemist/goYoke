@@ -162,7 +162,7 @@
       "title": "Rewrite Inter-Wave Script as Go Binary",
       "file": "TC-010.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
