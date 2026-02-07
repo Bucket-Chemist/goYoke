@@ -3,6 +3,10 @@
   "stdin": {
     "agent": "einstein",
     "workflow": "braintrust",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
     "problem_brief": {
       "title": "Brief problem title",
       "statement": "Full problem statement as written by Mozart after clarification interview",

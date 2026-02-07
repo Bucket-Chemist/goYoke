@@ -1451,3 +1451,332 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// =============================================================================
+// Model-Aware Nesting Enforcement Tests (TC-017)
+// =============================================================================
+
+func TestTaskModelEnforcement(t *testing.T) {
+	tests := []struct {
+		name          string
+		nestingLevel  int
+		model         string
+		expectedBlock bool
+		description   string
+	}{
+		{
+			name:          "Router spawns opus",
+			nestingLevel:  0,
+			model:         "opus",
+			expectedBlock: false,
+			description:   "Level 0 (Router) can spawn any model including opus",
+		},
+		{
+			name:          "Team agent spawns haiku",
+			nestingLevel:  2,
+			model:         "haiku",
+			expectedBlock: false,
+			description:   "Level 2 agents can spawn haiku",
+		},
+		{
+			name:          "Team agent spawns sonnet",
+			nestingLevel:  2,
+			model:         "sonnet",
+			expectedBlock: false,
+			description:   "Level 2 agents can spawn sonnet",
+		},
+		{
+			name:          "Team agent spawns opus",
+			nestingLevel:  2,
+			model:         "opus",
+			expectedBlock: true,
+			description:   "Level 2 agents cannot spawn opus (blocked)",
+		},
+		{
+			name:          "Team agent no model",
+			nestingLevel:  2,
+			model:         "",
+			expectedBlock: true,
+			description:   "Level 2 agents with unspecified model blocked defensively",
+		},
+		{
+			name:          "MCP agent spawns haiku",
+			nestingLevel:  1,
+			model:         "haiku",
+			expectedBlock: false,
+			description:   "Level 1 agents can spawn haiku",
+		},
+		{
+			name:          "MCP agent spawns sonnet",
+			nestingLevel:  1,
+			model:         "sonnet",
+			expectedBlock: false,
+			description:   "Level 1 agents can spawn sonnet",
+		},
+		{
+			name:          "MCP agent spawns opus",
+			nestingLevel:  1,
+			model:         "opus",
+			expectedBlock: true,
+			description:   "Level 1 agents cannot spawn opus (blocked)",
+		},
+		{
+			name:          "Router spawns haiku",
+			nestingLevel:  0,
+			model:         "haiku",
+			expectedBlock: false,
+			description:   "Level 0 can spawn haiku",
+		},
+		{
+			name:          "Router spawns sonnet",
+			nestingLevel:  0,
+			model:         "sonnet",
+			expectedBlock: false,
+			description:   "Level 0 can spawn sonnet",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create task input
+			toolInput := map[string]interface{}{
+				"model":         tc.model,
+				"prompt":        "AGENT: test-agent\n\nTest task",
+				"subagent_type": "general-purpose",
+				"description":   "Test task",
+			}
+
+			// Call ValidateTaskAtNestingLevel
+			blockResponse := routing.ValidateTaskAtNestingLevel(tc.nestingLevel, toolInput)
+
+			if tc.expectedBlock {
+				if blockResponse == nil {
+					t.Errorf("Expected block response, got nil. %s", tc.description)
+				} else {
+					// Verify block response structure
+					decision, ok := blockResponse["decision"].(string)
+					if !ok || decision != "block" {
+						t.Errorf("Expected decision='block', got: %v", blockResponse["decision"])
+					}
+
+					// Verify reason mentions opus blocking
+					reason, ok := blockResponse["reason"].(string)
+					if !ok {
+						t.Error("Expected reason string in block response")
+					}
+					if !strings.Contains(reason, "opus") {
+						t.Errorf("Expected 'opus' in reason, got: %s", reason)
+					}
+
+					// Verify hookSpecificOutput
+					hookOutput, ok := blockResponse["hookSpecificOutput"].(map[string]interface{})
+					if !ok {
+						t.Fatal("Expected hookSpecificOutput in block response")
+					}
+
+					if hookOutput["permissionDecision"] != "deny" {
+						t.Errorf("Expected permissionDecision='deny', got: %v", hookOutput["permissionDecision"])
+					}
+
+					if hookOutput["permissionDecisionReason"] != "opus_blocked_at_nesting_level" {
+						t.Errorf("Expected permissionDecisionReason='opus_blocked_at_nesting_level', got: %v",
+							hookOutput["permissionDecisionReason"])
+					}
+				}
+			} else {
+				if blockResponse != nil {
+					t.Errorf("Expected no block (nil), got block response: %v. %s",
+						blockResponse, tc.description)
+				}
+			}
+		})
+	}
+}
+
+func TestTaskModelEnforcement_InvalidInput(t *testing.T) {
+	// Test with invalid task input (missing required fields)
+	invalidInput := map[string]interface{}{
+		"model": "opus",
+		// Missing prompt field
+	}
+
+	nestingLevel := 1
+	blockResponse := routing.ValidateTaskAtNestingLevel(nestingLevel, invalidInput)
+
+	if blockResponse == nil {
+		t.Error("Expected block response for invalid input, got nil")
+	}
+
+	// Should still block even with parse failure
+	decision, ok := blockResponse["decision"].(string)
+	if !ok || decision != "block" {
+		t.Errorf("Expected decision='block' for invalid input, got: %v", blockResponse["decision"])
+	}
+}
+
+func TestTaskModelEnforcement_Level0AllowsAll(t *testing.T) {
+	// Test that Level 0 (Router) allows all models
+	models := []string{"opus", "sonnet", "haiku", ""}
+
+	for _, model := range models {
+		t.Run("model="+model, func(t *testing.T) {
+			toolInput := map[string]interface{}{
+				"model":         model,
+				"prompt":        "AGENT: test\n\nTest",
+				"subagent_type": "general-purpose",
+				"description":   "Test",
+			}
+
+			blockResponse := routing.ValidateTaskAtNestingLevel(0, toolInput)
+			if blockResponse != nil {
+				t.Errorf("Level 0 should allow model '%s', got block: %v", model, blockResponse)
+			}
+		})
+	}
+}
+
+func TestTaskModelEnforcement_Integration(t *testing.T) {
+	// Integration test simulating full main.go flow with nesting enforcement
+	tmpDir := t.TempDir()
+
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	os.MkdirAll(claudeDir, 0755)
+
+	schema := `{
+		"version": "2.5.0",
+		"tiers": {
+			"haiku": {"model": "haiku"},
+			"sonnet": {"model": "sonnet"},
+			"opus": {"model": "opus", "task_invocation_blocked": true}
+		},
+		"delegation_ceiling": {"default": "sonnet"},
+		"agent_subagent_mapping": {
+			"python-pro": "general-purpose"
+		},
+		"escalation_rules": {}
+	}`
+	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
+	os.WriteFile(schemaPath, []byte(schema), 0644)
+
+	t.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
+	t.Setenv("GOGENT_NESTING_LEVEL", "1") // Set to Level 1
+
+	// Load schema
+	loadedSchema, err := routing.LoadSchema()
+	if err != nil {
+		t.Fatalf("Failed to load schema: %v", err)
+	}
+
+	// Test 1: Opus at Level 1 should be blocked by nesting check
+	taskEventOpus := `{
+		"tool_name": "Task",
+		"session_id": "test-nesting-opus",
+		"tool_input": {
+			"description": "Python implementation",
+			"subagent_type": "general-purpose",
+			"model": "opus",
+			"prompt": "AGENT: python-pro\n\nImplement feature"
+		}
+	}`
+
+	r := strings.NewReader(taskEventOpus)
+	event, err := parseEvent(r, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse opus event: %v", err)
+	}
+
+	nestingLevel := routing.GetNestingLevel()
+	if nestingLevel != 1 {
+		t.Fatalf("Expected nesting level 1, got: %d", nestingLevel)
+	}
+
+	// Check nesting validation
+	blockResponse := routing.ValidateTaskAtNestingLevel(nestingLevel, event.ToolInput)
+	if blockResponse == nil {
+		t.Error("Expected opus to be blocked at Level 1, got nil")
+	}
+
+	// Test 2: Sonnet at Level 1 should pass nesting check
+	taskEventSonnet := `{
+		"tool_name": "Task",
+		"session_id": "test-nesting-sonnet",
+		"tool_input": {
+			"description": "Python implementation",
+			"subagent_type": "general-purpose",
+			"model": "sonnet",
+			"prompt": "AGENT: python-pro\n\nImplement feature"
+		}
+	}`
+
+	r2 := strings.NewReader(taskEventSonnet)
+	event2, err := parseEvent(r2, DEFAULT_TIMEOUT)
+	if err != nil {
+		t.Fatalf("Failed to parse sonnet event: %v", err)
+	}
+
+	// Check nesting validation
+	blockResponse2 := routing.ValidateTaskAtNestingLevel(nestingLevel, event2.ToolInput)
+	if blockResponse2 != nil {
+		t.Errorf("Expected sonnet to pass at Level 1, got block: %v", blockResponse2)
+	}
+
+	// Now check full validation (including opus allowlist logic)
+	orchestrator := routing.NewValidationOrchestrator(loadedSchema, tmpDir, nil, nil)
+	result := orchestrator.ValidateTask(event2.ToolInput, event2.SessionID)
+
+	if result.Decision == "block" {
+		t.Logf("Full validation blocked sonnet (expected if opus allowlist enforced): %s", result.Reason)
+	}
+}
+
+func TestLogNestingBlock_IncludesModel(t *testing.T) {
+	// Test that logNestingBlock properly includes model information
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", tmpDir)
+
+	event := &routing.ToolEvent{
+		ToolName:  "Task",
+		SessionID: "test-session-model-log",
+		ToolInput: map[string]interface{}{
+			"model":  "opus",
+			"prompt": "AGENT: test\n\nTest",
+		},
+	}
+
+	// Call logNestingBlock with model parameter
+	logNestingBlock(event, 1, true, "opus")
+
+	// Verify log file created and contains model
+	logPath := filepath.Join(tmpDir, "gogent", "nesting-blocks.jsonl")
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		t.Error("Expected nesting-blocks.jsonl to be created")
+	}
+
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("Failed to read log file: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, "opus") {
+		t.Error("Expected 'opus' in nesting block log")
+	}
+
+	if !strings.Contains(content, "test-session-model-log") {
+		t.Error("Expected session ID in nesting block log")
+	}
+
+	// Parse JSON and verify structure
+	var logEntry map[string]interface{}
+	if err := json.Unmarshal(data, &logEntry); err != nil {
+		t.Fatalf("Failed to parse log entry: %v", err)
+	}
+
+	if logEntry["model"] != "opus" {
+		t.Errorf("Expected model='opus' in log entry, got: %v", logEntry["model"])
+	}
+
+	if logEntry["nesting_level"].(float64) != 1 {
+		t.Errorf("Expected nesting_level=1, got: %v", logEntry["nesting_level"])
+	}
+}

@@ -1,0 +1,90 @@
+{
+  "$comment": "Stdin/stdout contract for implementation workers in implementation workflow",
+  "stdin": {
+    "agent": "{dynamic-agent-id}",
+    "workflow": "implementation",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
+    "task": {
+      "task_id": "task-001",
+      "subject": "Task title from specs.md or ticket",
+      "description": "Full task description with implementation requirements",
+      "acceptance_criteria": [
+        "Criterion 1: specific, testable requirement",
+        "Criterion 2: specific, testable requirement"
+      ],
+      "blocked_by": [],
+      "blocks": ["task-003"]
+    },
+    "implementation_scope": {
+      "target_packages": ["pkg/routing", "cmd/gogent-validate"],
+      "related_files": [
+        {
+          "path": "relative/path/to/file.go",
+          "relevance": "Why this file is relevant to the task"
+        }
+      ],
+      "tests_required": true,
+      "build_verification": "go build ./..."
+    },
+    "conventions": {
+      "language": "go",
+      "conventions_file": "go.md",
+      "error_handling": "fmt.Errorf with %w wrapping",
+      "test_pattern": "table-driven tests"
+    },
+    "codebase_context": {
+      "architecture_notes": "Brief description of relevant architecture",
+      "patterns_to_follow": ["Existing pattern descriptions to be consistent with"],
+      "anti_patterns": ["What NOT to do"]
+    }
+  },
+  "stdout": {
+    "worker": "{agent-id}",
+    "task_id": "task-001",
+    "status": "complete|partial|failed",
+    "summary": "1-2 sentence summary of what was implemented",
+    "files_modified": [
+      {
+        "path": "relative/path/to/file.go",
+        "action": "created|modified|deleted",
+        "lines_changed": 45,
+        "description": "What was changed and why"
+      }
+    ],
+    "tests_written": [
+      {
+        "file": "relative/path/to/file_test.go",
+        "test_count": 3,
+        "test_names": ["TestFoo", "TestBar", "TestBaz"]
+      }
+    ],
+    "acceptance_criteria_met": [
+      {
+        "criterion": "Criterion text from stdin",
+        "status": "met|not_met|partial",
+        "evidence": "How this was verified"
+      }
+    ],
+    "build_status": {
+      "compiled": true,
+      "tests_passed": true,
+      "race_detector_clean": true
+    },
+    "blockers": [
+      {
+        "blocker": "Description of what blocked completion",
+        "impact": "Which acceptance criteria affected",
+        "needs": "What's needed to resolve"
+      }
+    ],
+    "metadata": {
+      "thinking_budget_used": 0,
+      "files_read": 0,
+      "tool_calls": 0,
+      "attempt_number": 1
+    }
+  }
+}

@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdout/staff-architect.json",
+  "title": "Staff-Architect Stdout Schema",
+  "description": "Validates stdout for Staff-Architect (practical critical review) in braintrust workflow",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "review_id",
+    "status",
+    "executive_assessment",
+    "issue_register",
+    "assumption_register",
+    "dependency_analysis",
+    "failure_mode_analysis",
+    "commendations",
+    "recommendations",
+    "sign_off",
+    "handoff_notes",
+    "metadata"
+  ],
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "pattern": "^staff-arch-",
+      "description": "Unique review identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "partial", "failed"],
+      "description": "Review completion status"
+    },
+    "executive_assessment": {
+      "type": "object",
+      "required": ["verdict", "confidence", "summary", "issue_counts"],
+      "properties": {
+        "verdict": {
+          "type": "string",
+          "enum": ["APPROVE", "APPROVE_WITH_CONDITIONS", "REVISE", "REJECT"]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "summary": {"type": "string"},
+        "issue_counts": {
+          "type": "object",
+          "required": ["critical", "major", "minor"],
+          "properties": {
+            "critical": {"type": "integer", "minimum": 0},
+            "major": {"type": "integer", "minimum": 0},
+            "minor": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "issue_register": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "layer", "title", "description", "evidence", "impact", "recommendation"],
+        "properties": {
+          "id": {"type": "string"},
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "major", "minor"]
+          },
+          "layer": {
+            "type": "string",
+            "enum": [
+              "assumptions",
+              "dependencies",
+              "failure_modes",
+              "cost_benefit",
+              "testing",
+              "architecture_smells",
+              "contractor_readiness"
+            ]
+          },
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "evidence": {"type": "string"},
+          "impact": {"type": "string"},
+          "recommendation": {"type": "string"},
+          "affected_tickets": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "affected_files": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "assumption_register": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "assumption", "source", "verified", "risk_if_false", "mitigation", "verification_method"],
+        "properties": {
+          "id": {"type": "string"},
+          "assumption": {"type": "string"},
+          "source": {"type": "string"},
+          "verified": {"type": "boolean"},
+          "risk_if_false": {"type": "string"},
+          "mitigation": {"type": "string"},
+          "verification_method": {"type": "string"}
+        }
+      }
+    },
+    "dependency_analysis": {
+      "type": "object",
+      "required": ["critical_path", "bottlenecks", "circular_risks"],
+      "properties": {
+        "critical_path": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "bottlenecks": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "circular_risks": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "failure_mode_analysis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["scenario", "probability", "impact", "detection", "mitigation"],
+        "properties": {
+          "scenario": {"type": "string"},
+          "probability": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "detection": {"type": "string"},
+          "mitigation": {"type": "string"}
+        }
+      }
+    },
+    "commendations": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "recommendations": {
+      "type": "object",
+      "required": ["high_priority"],
+      "properties": {
+        "high_priority": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action", "rationale", "effort"],
+            "properties": {
+              "action": {"type": "string"},
+              "rationale": {"type": "string"},
+              "effort": {"type": "string"}
+            }
+          }
+        },
+        "medium_priority": {
+          "type": "array",
+          "items": {"type": "object"}
+        },
+        "low_priority": {
+          "type": "array",
+          "items": {"type": "object"}
+        }
+      }
+    },
+    "sign_off": {
+      "type": "object",
+      "required": ["conditions", "post_approval_monitoring"],
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "post_approval_monitoring": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "handoff_notes": {
+      "type": "string",
+      "description": "Key points Beethoven should focus on during synthesis"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["thinking_budget_used"],
+      "properties": {
+        "review_layers_applied": {"type": "integer", "minimum": 0},
+        "scouts_spawned": {"type": "integer", "minimum": 0},
+        "cost_estimate_usd": {"type": "number", "minimum": 0},
+        "thinking_budget_used": {"type": "integer", "minimum": 0},
+        "review_duration_minutes": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "additionalProperties": false
+}

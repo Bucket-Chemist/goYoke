@@ -3,6 +3,10 @@
   "stdin": {
     "agent": "frontend-reviewer",
     "workflow": "review",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
     "review_scope": {
       "files": [
         {
@@ -16,7 +20,7 @@
       "total_files": 0,
       "languages_detected": ["typescript", "tsx"]
     },
-    "context": {
+    "git_context": {
       "commit_message": "What this change is supposed to do",
       "pr_description": "PR description if available",
       "related_tickets": ["TC-XXX"],

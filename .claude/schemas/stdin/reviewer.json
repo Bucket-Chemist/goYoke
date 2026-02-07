@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdin/reviewer.json",
+  "title": "Generic Reviewer Stdin Schema",
+  "description": "Validates stdin for all review workflow reviewers (backend, frontend, standards, architect)",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["agent", "workflow", "context", "review_scope", "git_context", "focus_areas", "project_conventions"],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "enum": ["backend-reviewer", "frontend-reviewer", "standards-reviewer", "architect-reviewer"],
+      "description": "Agent identifier"
+    },
+    "workflow": {
+      "type": "string",
+      "const": "review",
+      "description": "Workflow type"
+    },
+    "context": {
+      "type": "object",
+      "required": ["project_root", "team_dir"],
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to project root"
+        },
+        "team_dir": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to team directory"
+        }
+      }
+    },
+    "review_scope": {
+      "type": "object",
+      "required": ["files", "total_files", "languages_detected"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "language", "category", "changed_lines", "is_new_file"],
+            "properties": {
+              "path": {"type": "string"},
+              "language": {"type": "string"},
+              "category": {"type": "string"},
+              "changed_lines": {
+                "type": "object",
+                "required": ["added", "removed"],
+                "properties": {
+                  "added": {"type": "integer", "minimum": 0},
+                  "removed": {"type": "integer", "minimum": 0}
+                }
+              },
+              "is_new_file": {"type": "boolean"}
+            }
+          }
+        },
+        "total_files": {"type": "integer", "minimum": 0},
+        "languages_detected": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "changed_files": {
+          "type": "array",
+          "description": "For architect-reviewer: includes dependency context",
+          "items": {
+            "type": "object"
+          }
+        },
+        "direct_imports": {
+          "type": "array",
+          "description": "For architect-reviewer: direct dependencies",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "git_context": {
+      "type": "object",
+      "required": ["commit_message"],
+      "properties": {
+        "commit_message": {"type": "string"},
+        "pr_description": {"type": "string"},
+        "related_tickets": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "branch_name": {"type": "string"}
+      }
+    },
+    "focus_areas": {
+      "type": "object",
+      "description": "Domain-specific focus areas (varies by reviewer type)"
+    },
+    "project_conventions": {
+      "type": "object",
+      "description": "Project-specific coding conventions and patterns"
+    },
+    "component_tree": {
+      "type": "object",
+      "description": "For frontend-reviewer: component hierarchy context",
+      "properties": {
+        "parent_components": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "child_components": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "shared_state": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "architecture_context": {
+      "type": "object",
+      "description": "For architect-reviewer: architectural context",
+      "properties": {
+        "module_map": {"type": "string"},
+        "dependency_graph_summary": {"type": "string"},
+        "known_architectural_debt": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "design_decisions": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

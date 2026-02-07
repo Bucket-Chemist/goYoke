@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdout/beethoven.json",
+  "title": "Beethoven Stdout Schema",
+  "description": "Validates stdout for Beethoven (synthesis) in braintrust workflow",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "analysis_id",
+    "status",
+    "executive_summary",
+    "problem_statement",
+    "analysis_perspectives",
+    "convergence_points",
+    "divergence_resolution",
+    "unified_recommendations",
+    "risk_assessment",
+    "assumptions_to_validate",
+    "open_questions",
+    "metadata"
+  ],
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^braintrust-",
+      "description": "Unique braintrust analysis identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "partial", "failed"],
+      "description": "Synthesis completion status"
+    },
+    "executive_summary": {
+      "type": "string",
+      "description": "3-5 sentences: core insight, what to do, key tradeoffs"
+    },
+    "problem_statement": {
+      "type": "object",
+      "required": ["original", "clarified", "success_criteria"],
+      "properties": {
+        "original": {"type": "string"},
+        "clarified": {"type": "string"},
+        "success_criteria": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "analysis_perspectives": {
+      "type": "object",
+      "required": ["einstein_summary", "einstein_strengths", "staff_architect_verdict", "staff_architect_strengths"],
+      "properties": {
+        "einstein_summary": {"type": "string"},
+        "einstein_strengths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "staff_architect_verdict": {
+          "type": "string",
+          "enum": ["APPROVE", "APPROVE_WITH_CONDITIONS", "REVISE", "REJECT"]
+        },
+        "staff_architect_strengths": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "convergence_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["topic", "einstein_view", "staff_architect_view", "synthesis", "confidence"],
+        "properties": {
+          "topic": {"type": "string"},
+          "einstein_view": {"type": "string"},
+          "staff_architect_view": {"type": "string"},
+          "synthesis": {"type": "string"},
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
+        }
+      }
+    },
+    "divergence_resolution": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["topic", "einstein_position", "staff_architect_position", "resolution", "reasoning", "confidence", "unresolved"],
+        "properties": {
+          "topic": {"type": "string"},
+          "einstein_position": {"type": "string"},
+          "staff_architect_position": {"type": "string"},
+          "resolution": {"type": "string"},
+          "reasoning": {"type": "string"},
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "unresolved": {"type": "boolean"}
+        }
+      }
+    },
+    "unified_recommendations": {
+      "type": "object",
+      "required": ["primary", "secondary", "not_recommended"],
+      "properties": {
+        "primary": {
+          "type": "object",
+          "required": ["recommendation", "rationale", "supporting_evidence", "implementation_phases"],
+          "properties": {
+            "recommendation": {"type": "string"},
+            "rationale": {"type": "string"},
+            "supporting_evidence": {
+              "type": "object",
+              "required": ["from_einstein", "from_staff_architect"],
+              "properties": {
+                "from_einstein": {"type": "string"},
+                "from_staff_architect": {"type": "string"}
+              }
+            },
+            "implementation_phases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["phase", "description", "decision_points", "success_criteria"],
+                "properties": {
+                  "phase": {"type": "integer", "minimum": 1},
+                  "description": {"type": "string"},
+                  "decision_points": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  },
+                  "success_criteria": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                  }
+                }
+              }
+            }
+          }
+        },
+        "secondary": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["recommendation", "when_to_use", "tradeoffs"],
+            "properties": {
+              "recommendation": {"type": "string"},
+              "when_to_use": {"type": "string"},
+              "tradeoffs": {"type": "string"}
+            }
+          }
+        },
+        "not_recommended": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["approach", "reason"],
+            "properties": {
+              "approach": {"type": "string"},
+              "reason": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "risk_assessment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk", "probability", "impact", "source", "mitigation", "owner"],
+        "properties": {
+          "risk": {"type": "string"},
+          "probability": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "source": {
+            "type": "string",
+            "enum": ["einstein", "staff-architect", "synthesis"]
+          },
+          "mitigation": {"type": "string"},
+          "owner": {"type": "string"}
+        }
+      }
+    },
+    "assumptions_to_validate": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["assumption", "source", "validation_method", "priority", "blocking"],
+        "properties": {
+          "assumption": {"type": "string"},
+          "source": {
+            "type": "string",
+            "enum": ["einstein", "staff-architect", "both"]
+          },
+          "validation_method": {"type": "string"},
+          "priority": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "blocking": {"type": "boolean"}
+        }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question", "importance", "suggested_next_step", "source"],
+        "properties": {
+          "question": {"type": "string"},
+          "importance": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "suggested_next_step": {"type": "string"},
+          "source": {
+            "type": "string",
+            "enum": ["einstein", "staff-architect", "synthesis"]
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["thinking_budget_used"],
+      "properties": {
+        "convergence_points_count": {"type": "integer", "minimum": 0},
+        "divergence_points_count": {"type": "integer", "minimum": 0},
+        "contradictions_resolved": {"type": "integer", "minimum": 0},
+        "unresolved_tensions": {"type": "integer", "minimum": 0},
+        "recommendation_count": {"type": "integer", "minimum": 0},
+        "risks_identified": {"type": "integer", "minimum": 0},
+        "open_questions_count": {"type": "integer", "minimum": 0},
+        "estimated_total_cost_usd": {"type": "number", "minimum": 0},
+        "thinking_budget_used": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "additionalProperties": false
+}

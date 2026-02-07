@@ -672,7 +672,7 @@ func TestValidateTaskInvocation_NonOpusResume_Unchanged(t *testing.T) {
 }
 
 func TestBlockResponseForNesting(t *testing.T) {
-	response := BlockResponseForNesting(2)
+	response := BlockResponseForNesting(2, "opus", "opus model requested at Level 2")
 
 	if response["decision"] != "block" {
 		t.Errorf("decision = %v, want 'block'", response["decision"])
@@ -689,5 +689,14 @@ func TestBlockResponseForNesting(t *testing.T) {
 
 	if hookOutput["permissionDecision"] != "deny" {
 		t.Errorf("permissionDecision = %v, want 'deny'", hookOutput["permissionDecision"])
+	}
+
+	if hookOutput["permissionDecisionReason"] != "opus_blocked_at_nesting_level" {
+		t.Errorf("permissionDecisionReason = %v, want 'opus_blocked_at_nesting_level'",
+			hookOutput["permissionDecisionReason"])
+	}
+
+	if hookOutput["model"] != "opus" {
+		t.Errorf("model = %v, want 'opus'", hookOutput["model"])
 	}
 }

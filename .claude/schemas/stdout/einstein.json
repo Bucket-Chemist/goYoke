@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdout/einstein.json",
+  "title": "Einstein Stdout Schema",
+  "description": "Validates stdout for Einstein (theoretical analysis) in braintrust workflow",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "analysis_id",
+    "status",
+    "executive_summary",
+    "root_cause_analysis",
+    "conceptual_framework",
+    "first_principles_analysis",
+    "novel_approaches",
+    "theoretical_tradeoffs",
+    "assumptions_surfaced",
+    "open_questions",
+    "handoff_notes",
+    "metadata"
+  ],
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "pattern": "^einstein-",
+      "description": "Unique analysis identifier"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "partial", "failed"],
+      "description": "Analysis completion status"
+    },
+    "executive_summary": {
+      "type": "string",
+      "description": "3-5 sentence summary of findings"
+    },
+    "root_cause_analysis": {
+      "type": "object",
+      "required": ["identified_causes"],
+      "properties": {
+        "identified_causes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["cause", "evidence", "confidence", "affected_scope"],
+            "properties": {
+              "cause": {"type": "string"},
+              "evidence": {"type": "string"},
+              "confidence": {
+                "type": "string",
+                "enum": ["high", "medium", "low"]
+              },
+              "affected_scope": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "conceptual_framework": {
+      "type": "object",
+      "required": ["framework_name", "description", "key_insights"],
+      "properties": {
+        "framework_name": {"type": "string"},
+        "description": {"type": "string"},
+        "key_insights": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "first_principles_analysis": {
+      "type": "object",
+      "required": ["assumptions_challenged", "fundamental_constraints"],
+      "properties": {
+        "assumptions_challenged": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["assumption", "validity", "evidence", "implication_if_wrong"],
+            "properties": {
+              "assumption": {"type": "string"},
+              "validity": {
+                "type": "string",
+                "enum": ["valid", "questionable", "invalid"]
+              },
+              "evidence": {"type": "string"},
+              "implication_if_wrong": {"type": "string"}
+            }
+          }
+        },
+        "fundamental_constraints": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "novel_approaches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["approach", "rationale", "tradeoffs", "feasibility", "implementation_sketch"],
+        "properties": {
+          "approach": {"type": "string"},
+          "rationale": {"type": "string"},
+          "tradeoffs": {
+            "type": "object",
+            "required": ["pros", "cons", "risks"],
+            "properties": {
+              "pros": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "cons": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "risks": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          },
+          "feasibility": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "implementation_sketch": {"type": "string"}
+        }
+      }
+    },
+    "theoretical_tradeoffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["dimension", "option_a", "option_b", "recommendation"],
+        "properties": {
+          "dimension": {"type": "string"},
+          "option_a": {"type": "string"},
+          "option_b": {"type": "string"},
+          "recommendation": {"type": "string"}
+        }
+      }
+    },
+    "assumptions_surfaced": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["assumption", "source", "risk_if_false", "validation_method"],
+        "properties": {
+          "assumption": {"type": "string"},
+          "source": {"type": "string"},
+          "risk_if_false": {"type": "string"},
+          "validation_method": {"type": "string"}
+        }
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question", "importance", "suggested_investigation"],
+        "properties": {
+          "question": {"type": "string"},
+          "importance": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "suggested_investigation": {"type": "string"}
+        }
+      }
+    },
+    "handoff_notes": {
+      "type": "string",
+      "description": "Key points Beethoven should focus on during synthesis"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["thinking_budget_used"],
+      "properties": {
+        "frameworks_applied": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "assumptions_surfaced_count": {"type": "integer", "minimum": 0},
+        "novel_approaches_proposed": {"type": "integer", "minimum": 0},
+        "scouts_spawned": {"type": "integer", "minimum": 0},
+        "thinking_budget_used": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "additionalProperties": false
+}

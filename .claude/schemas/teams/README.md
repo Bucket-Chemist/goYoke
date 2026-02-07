@@ -25,6 +25,12 @@ Team templates define the structure and execution parameters for coordinated mul
 **Budget**: $2.00
 **Use Case**: Comprehensive code review with domain-specific perspectives
 
+### `implementation.json`
+**Workflow**: Task DAG-driven implementation with wave-based dependency resolution
+**Pattern**: N waves — tasks grouped by dependency order, workers execute in parallel within each wave
+**Budget**: $10.00
+**Use Case**: Multi-file implementation from specs.md or ticket task DAGs
+
 ## Stdin/Stdout Schemas
 
 The `stdin-stdout/` directory contains comprehensive JSON contracts for each agent type. These define exactly what input each agent receives and what structured output it produces.
@@ -47,6 +53,12 @@ The `stdin-stdout/` directory contains comprehensive JSON contracts for each age
 | Architect | `review-architect.json` | Changed files + direct imports, coupling/boundary/testability focus | Findings by severity, structural health score (A-F) |
 
 All reviewers share a common findings structure: `severity`, `category`, `file`, `line`, `message`, `recommendation`, `sharp_edge_id`.
+
+### Implementation Agents
+
+| Agent | Schema | Input | Output |
+|-------|--------|-------|--------|
+| Worker | `implementation-worker.json` | Task description, acceptance criteria, conventions, codebase context | Files modified, tests written, acceptance criteria status, build status |
 
 ## Usage
 

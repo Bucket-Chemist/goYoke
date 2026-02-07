@@ -129,6 +129,7 @@ type AgentConfig struct {
 	SubagentType        string               `json:"subagent_type"`
 	AllowedModels       []string             `json:"allowed_models,omitempty"`
 	ContextRequirements *ContextRequirements `json:"context_requirements,omitempty"`
+	CliFlags            *AgentCliFlags       `json:"cli_flags,omitempty"`
 }
 
 // AgentsIndex represents the full agents-index.json structure
@@ -242,20 +243,58 @@ func (e *NestingLevelError) Error() string {
 	return e.Message
 }
 
+// ValidateTaskAtNestingLevel checks if a Task() call is allowed at the given nesting level.
+// Returns nil if allowed, or a block response map if blocked.
+//
+// At nesting level 0 (Router), all models are allowed.
+// At nesting level 1+ (sub-agents), only haiku and sonnet are allowed.
+// Task(opus) is blocked at Level 1+ to prevent expensive delegation chains.
+func ValidateTaskAtNestingLevel(nestingLevel int, toolInput map[string]interface{}) map[string]interface{} {
+	// Level 0 (Router) can spawn anything
+	if nestingLevel == 0 {
+		return nil
+	}
+
+	// Parse task input to extract model
+	taskInput, err := ParseTaskInput(toolInput)
+	if err != nil {
+		// Cannot parse - block defensively
+		return BlockResponseForNesting(nestingLevel, "unknown", "failed to parse task input")
+	}
+
+	// Check if model is opus (or empty, which defaults to opus behavior)
+	if taskInput.Model == "opus" {
+		return BlockResponseForNesting(nestingLevel, "opus", "opus model explicitly requested")
+	}
+
+	// Empty model field is ambiguous - block defensively
+	if taskInput.Model == "" {
+		return BlockResponseForNesting(nestingLevel, "", "model not specified")
+	}
+
+	// haiku and sonnet allowed at Level 1+
+	return nil
+}
+
 // BlockResponseForNesting creates the standard block response for nesting violations.
-func BlockResponseForNesting(level int) map[string]interface{} {
+// This is specifically for blocking Task(opus) at nesting levels 1+.
+func BlockResponseForNesting(level int, model, reason string) map[string]interface{} {
+	message := fmt.Sprintf(
+		"Task(opus) blocked at nesting level %d. Only the Router (Level 0) can spawn Opus agents. Use Task(haiku) or Task(sonnet) for delegation.",
+		level,
+	)
+
 	return map[string]interface{}{
 		"decision": "block",
-		"reason": fmt.Sprintf(
-			"Task() blocked at nesting level %d. Use MCP spawn_agent instead.",
-			level,
-		),
+		"reason":   message,
 		"hookSpecificOutput": map[string]interface{}{
 			"hookEventName":            "PreToolUse",
 			"permissionDecision":       "deny",
-			"permissionDecisionReason": "nesting_level_exceeded",
+			"permissionDecisionReason": "opus_blocked_at_nesting_level",
 			"nestingLevel":             level,
-			"suggestion":               "mcp__gofortress__spawn_agent({agent: '...', prompt: '...'})",
+			"model":                    model,
+			"blockReason":              reason,
+			"suggestion":               "Use Task(haiku) or Task(sonnet) for delegation, or mcp__gofortress__spawn_agent for MCP spawning.",
 		},
 	}
 }

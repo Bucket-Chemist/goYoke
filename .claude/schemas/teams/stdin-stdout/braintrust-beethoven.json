@@ -3,6 +3,10 @@
   "stdin": {
     "agent": "beethoven",
     "workflow": "braintrust",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
     "problem_brief": {
       "title": "Brief problem title (same as provided to Wave 1)",
       "statement": "Full problem statement from Mozart",

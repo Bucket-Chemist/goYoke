@@ -50,7 +50,7 @@
       "title": "gogent-validate Level 2 Enforcement",
       "file": "TC-017.md",
       "priority": "CRITICAL",
-      "status": "pending",
+      "status": "completed",
       "phase": "blocker",
       "time_estimate": "1d",
       "dependencies": []
@@ -60,7 +60,7 @@
       "title": "Mozart Interview Protocol Specification",
       "file": "TC-018.md",
       "priority": "CRITICAL",
-      "status": "pending",
+      "status": "completed",
       "phase": "blocker",
       "time_estimate": "1d",
       "dependencies": []
@@ -70,7 +70,7 @@
       "title": "SDK Concurrency Investigation",
       "file": "TC-019.md",
       "priority": "CRITICAL",
-      "status": "pending",
+      "status": "completed",
       "phase": "independent",
       "time_estimate": "1-2d",
       "dependencies": []
@@ -80,7 +80,7 @@
       "title": "Add project_root to Team Config Schema",
       "file": "TC-006.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "time_estimate": "0.5d",
       "dependencies": []
@@ -90,7 +90,7 @@
       "title": "Document Task() Access for Team-Spawned Agents",
       "file": "TC-007.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "time_estimate": "0.5d",
       "dependencies": []
@@ -100,7 +100,7 @@
       "title": "Design All Three Team Templates (Full)",
       "file": "TC-009.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "time_estimate": "2-3d",
       "dependencies": [

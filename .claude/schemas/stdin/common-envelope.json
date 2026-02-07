@@ -1,0 +1,46 @@
+{
+  "$comment": "Common context fields required in all team stdin files. The Go binary (gogent-team-run) injects these when constructing agent prompts.",
+  "paths": {
+    "project_root": {
+      "type": "string",
+      "description": "Absolute path to project root. Agents spawn with cmd.Dir set to this path. Must start with /.",
+      "pattern": "^/",
+      "examples": ["/home/user/Documents/GOgent-Fortress"]
+    },
+    "team_dir": {
+      "type": "string",
+      "description": "Absolute path to team working directory. Contains config.json, stdin/stdout files.",
+      "pattern": "^/",
+      "examples": ["/home/user/.claude/sessions/260207.abc/teams/1707300000.braintrust"]
+    }
+  },
+  "capabilities": {
+    "$comment": "Injected by buildPromptEnvelope() to inform agents of their Task() access level. See TASK-ACCESS-POLICY.md for rationale.",
+    "nesting_level": {
+      "type": "integer",
+      "description": "GOGENT_NESTING_LEVEL set for this agent. Determines Task() access. Level 2 = team-spawned.",
+      "default": 2
+    },
+    "task_access": {
+      "type": "object",
+      "description": "Which Task() model tiers are allowed at this nesting level.",
+      "properties": {
+        "haiku": { "type": "boolean", "const": true, "description": "Task(model: 'haiku') allowed for mechanical work" },
+        "sonnet": { "type": "boolean", "const": true, "description": "Task(model: 'sonnet') allowed for focused analysis" },
+        "opus": { "type": "boolean", "const": false, "description": "Task(model: 'opus') blocked by gogent-validate" }
+      }
+    },
+    "mcp_tools": {
+      "type": "object",
+      "description": "MCP tool availability for team-spawned agents.",
+      "properties": {
+        "spawn_agent": { "type": "boolean", "const": false, "description": "spawn_agent is MCP-only, not available in CLI sessions" }
+      }
+    },
+    "policy_reference": {
+      "type": "string",
+      "const": ".claude/schemas/teams/TASK-ACCESS-POLICY.md",
+      "description": "Full policy documentation for Task() access at different nesting levels"
+    }
+  }
+}

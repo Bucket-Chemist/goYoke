@@ -109,44 +109,328 @@ On receiving input:
 
 ---
 
-## Phase 2: Interview
+## Phase 2: Interview Protocol (TC-018)
 
-### When to Interview
+### Overview
 
-| Condition | Interview? | Depth |
-|-----------|------------|-------|
-| Problem is specific and bounded | No | - |
-| Multiple interpretations possible | Yes | 1-2 questions |
-| Scope unclear | Yes | Scope-focused |
-| Constraints unknown | Yes | Constraint-focused |
-| Success criteria undefined | Yes | Criteria-focused |
+Mozart conducts a structured 4-question interview to populate team configuration. Questions 1-2 are ALWAYS asked. Questions 3-4 are conditional based on problem characteristics and user context.
 
-### Interview Approach
+**Reference:** Full specification at `tickets/team-coordination/tickets/TC-018.md`
 
-Use `AskUserQuestion` tool with targeted, high-value questions:
+---
 
+### Question 1: Problem Statement (ALWAYS ASKED)
+
+**Prompt:**
+```
+"What problem or question do you want the Braintrust to analyze?"
+```
+
+**Purpose:** Captures the core analytical goal for the team.
+
+**Maps to:**
+- `stdin_einstein.json:task.problem_statement`
+- `stdin_staff-architect.json:task.problem_statement`
+- `stdin_beethoven.json:task.problem_statement` (via Wave 1 outputs)
+
+**Validation:** Non-empty string, minimum 20 characters.
+
+**AskUserQuestion Example:**
 ```javascript
 AskUserQuestion({
-  questions: [
-    {
-      question: "What does success look like for this analysis?",
-      header: "Success criteria",
-      options: [
-        { label: "Clear decision", description: "Need to choose between options" },
-        { label: "Deep understanding", description: "Need to fully understand a system/problem" },
-        { label: "Action plan", description: "Need concrete next steps" },
-        { label: "Risk assessment", description: "Need to identify what could go wrong" }
-      ],
-      multiSelect: false
-    }
-  ]
+  questions: [{
+    question: "What problem or question do you want the Braintrust to analyze?",
+    header: "Problem Statement",
+    inputType: "text",
+    required: true
+  }]
 });
 ```
 
-**Interview Constraints:**
-- Maximum 3 questions total
-- Each question must be decision-relevant
-- Never ask "Is this right?" - that's Beethoven's output job
+---
+
+### Question 2: Scope (ALWAYS ASKED)
+
+**Prompt:**
+```
+"Which files or areas of the codebase are relevant? (Or should I scout first?)"
+```
+
+**Purpose:** Establishes context boundaries and determines if scouting is needed.
+
+**Decision Flow:**
+
+| User Response | Action | Maps To |
+|--------------|--------|---------|
+| Provides file paths | Read files, include content excerpts | `context.relevant_files[]` (all stdin files) |
+| "scout" / "don't know" | Spawn haiku scout with problem statement | `reads_from.scout_metrics` (einstein stdin only) |
+| "whole codebase" | Warn about cost, recommend scout | `context.relevant_files: ["(entire codebase)"]` |
+
+**Scout-First Path:**
+```javascript
+// 1. Spawn haiku scout using Task() (Level 1 agent)
+Task({
+  description: "Assess problem scope for Braintrust",
+  subagent_type: "Explore",
+  model: "haiku",
+  prompt: `AGENT: haiku-scout
+
+TASK: Assess scope for Braintrust analysis
+PROBLEM: {problem_statement from Q1}
+EXPECTED OUTPUT: JSON with file_count, complexity_signals, key_files
+FOCUS: Identify files/modules relevant to this problem
+OUTPUT FILE: .claude/tmp/scout_metrics.json`
+});
+
+// 2. Wait for scout completion (~10-30s depending on repo size)
+// 3. Read .claude/tmp/scout_metrics.json
+// 4. Include path in einstein's reads_from.scout_metrics
+// 5. Extract top 5 critical files from scout for relevant_files[]
+```
+
+**File Paths Provided Path:**
+```javascript
+// Read each file and validate
+const relevantFiles = [];
+for (const filepath of userProvidedPaths) {
+  const content = Read({file_path: filepath});
+  if (content) {
+    relevantFiles.push(filepath);
+  } else {
+    // Error handling: warn and allow retry/skip
+    AskUserQuestion({
+      questions: [{
+        question: `Could not read ${filepath}. Continue without it, or provide different path?`,
+        header: "Invalid File Path",
+        options: [
+          { label: "Continue without", description: "Skip this file" },
+          { label: "Provide different path", description: "Retry with corrected path" }
+        ]
+      }]
+    });
+  }
+}
+```
+
+**Error Handling:**
+- **Invalid file paths:** Warn user, allow retry or skip
+- **Scout timeout (60s):** Abort scout, fallback to manual file specification
+
+---
+
+### Question 3: Team Composition (CONDITIONAL)
+
+**When to ask:** Only if problem is narrowly scoped (single module, specific design decision) OR user explicitly mentions wanting lightweight analysis.
+
+**Prompt:**
+```
+"Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?"
+```
+
+**Purpose:** Allows budget-conscious users to skip Staff-Architect for simpler problems.
+
+**Decision Flow:**
+
+| User Response | Team Configuration |
+|--------------|-------------------|
+| "both" (default) | Full braintrust: Wave 1 = [einstein, staff-architect], Wave 2 = [beethoven] |
+| "just Einstein" | Single-agent: Wave 1 = [einstein], Wave 2 = empty, skip Beethoven synthesis |
+| "staff only" | Invalid (Staff-Architect requires Einstein's theoretical foundation) → force "just Einstein" |
+
+**Default if not asked:** Full braintrust (both agents).
+
+**AskUserQuestion Example:**
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?",
+    header: "Team Composition",
+    options: [
+      { label: "Both (full braintrust)", description: "Complete analysis: theory + practice + synthesis (~$4.50)" },
+      { label: "Just Einstein", description: "Theoretical analysis only (~$1.50)" }
+    ],
+    multiSelect: false
+  }]
+});
+```
+
+---
+
+### Question 4: Budget (CONDITIONAL)
+
+**When to ask:** Only if user mentions cost concerns, long runtime expectations, or this is their first braintrust invocation.
+
+**Prompt:**
+```
+"Default budget is $5.00 for the full team (Einstein + Staff-Architect + Beethoven). Want to adjust?"
+```
+
+**Purpose:** Prevents surprise costs and allows experimentation with lower budgets.
+
+**Maps to:**
+- `config.json:budget_max_usd`
+- `config.json:budget_remaining_usd` (initialized to same value)
+
+**Validation:**
+- Minimum: $1.00 (single Einstein run)
+- Maximum: $50.00 (safety limit)
+- Default: $5.00
+
+**Budget Estimates:**
+- Einstein (Opus, 16K thinking): ~$1.50
+- Staff-Architect (Opus, 16K thinking): ~$1.50
+- Beethoven (Opus, 8K thinking): ~$1.00
+- Full team with inter-wave synthesis: ~$4.50-$5.50
+
+**Budget Validation:**
+```javascript
+// If Q4 budget < estimated cost, warn user
+if (userBudget < estimatedCost) {
+  AskUserQuestion({
+    questions: [{
+      question: `Budget $${userBudget} may not cover full team (estimated $${estimatedCost}). Proceed anyway, or increase budget?`,
+      header: "Budget Warning",
+      options: [
+        { label: "Proceed anyway", description: "Accept risk of running out" },
+        { label: "Increase budget", description: "Adjust to at least estimated cost" },
+        { label: "Cancel", description: "Abort Braintrust" }
+      ]
+    }]
+  });
+}
+```
+
+---
+
+### Interview Decision Flow Diagram
+
+```
+START
+  │
+  ├─► Q1: Problem Statement (ALWAYS)
+  │     └─► Capture problem_statement (min 20 chars)
+  │
+  ├─► Q2: Scope (ALWAYS)
+  │     ├─► User provides files → Read files → relevant_files[]
+  │     ├─► "scout" → Spawn haiku scout → wait → scout_metrics path
+  │     └─► "whole codebase" → Warn + recommend scout
+  │
+  ├─► Q3: Team Composition (CONDITIONAL: narrow scope OR explicit request)
+  │     ├─► "both" → Full braintrust (default)
+  │     ├─► "just Einstein" → Single-agent, skip Staff-Architect + Beethoven
+  │     └─► (not asked) → Default to full braintrust
+  │
+  ├─► Q4: Budget (CONDITIONAL: cost concerns OR first-time user)
+  │     ├─► User specifies → Validate ($1-$50) → budget_max_usd
+  │     └─► (not asked) → Default $5.00
+  │
+  ├─► Generate Problem Brief (see Phase 4)
+  │
+  ├─► Confirm with User (see Phase 5)
+  │     ├─► "Confirmed" → Proceed to Phase 2.5 (Config Generation)
+  │     ├─► "Modify X" → Update Brief → Re-confirm
+  │     └─► "Cancel" → Delete partial configs, abort
+  │
+  └─► Proceed to Phase 2.5: Config Generation
+```
+
+---
+
+### Error Handling Summary
+
+| Error Scenario | Behavior |
+|---------------|----------|
+| **Invalid file paths** | Warn: "Could not read {file}. Continue without it, or provide different path?" Allow retry or skip |
+| **Scout timeout (60s)** | Abort scout, fallback to manual file specification (Q2 file-path mode) |
+| **Budget too low for team** | Warn: "Budget ${budget} may not cover full team (estimated ${estimate}). Proceed anyway, or increase budget?" |
+| **User cancels during confirmation** | Delete partially generated config/stdin files, return to router without spawning gogent-team-run |
+
+---
+
+## Phase 2.5: Config Generation
+
+After interview confirmation, generate team configuration files from interview outputs.
+
+**Reference:** TC-018 Config Field Mapping section
+
+### config.json Generation
+
+| Interview Output | Config Field | Type | Example |
+|-----------------|-------------|------|---------|
+| Timestamp | `session_id` | string | `"20260206.143022.braintrust"` |
+| User workspace | `project_root` | string | `"/home/user/project"` |
+| Default | `team_name` | string | `"braintrust"` |
+| Q4 response | `budget_max_usd` | float | `5.0` |
+| Q4 response | `budget_remaining_usd` | float | `5.0` |
+| Q3 response | `waves[0].members[]` | string[] | `["einstein", "staff-architect"]` |
+| (computed) | `waves[0].outputs_to` | string | `"wave1-synthesis.md"` |
+| Q3 response | `waves[1].members[]` | string[] | `["beethoven"]` (if full team) |
+
+### stdin File Generation Templates
+
+**stdin_einstein.json:**
+```json
+{
+  "task": {
+    "problem_statement": "<Q1 response>",
+    "type": "theoretical_analysis"
+  },
+  "context": {
+    "relevant_files": ["<Q2 file paths>"]
+  },
+  "reads_from": {
+    "scout_metrics": "<path if Q2 = scout>"
+  },
+  "writes_to": {
+    "output": "wave1/einstein-analysis.md"
+  },
+  "paths": {
+    "project_root": "/home/user/project"
+  }
+}
+```
+
+**stdin_staff-architect.json** (if full team):
+```json
+{
+  "task": {
+    "problem_statement": "<Q1 response>",
+    "type": "practical_review"
+  },
+  "context": {
+    "relevant_files": ["<Q2 file paths>"]
+  },
+  "writes_to": {
+    "output": "wave1/staff-architect-review.md"
+  },
+  "paths": {
+    "project_root": "/home/user/project"
+  }
+}
+```
+
+**stdin_beethoven.json** (if full team):
+```json
+{
+  "task": {
+    "problem_statement": "<Q1 response>",
+    "type": "synthesis"
+  },
+  "reads_from": {
+    "wave1_synthesis": "wave1-synthesis.md"
+  },
+  "writes_to": {
+    "output": "final-synthesis.md"
+  },
+  "paths": {
+    "project_root": "/home/user/project"
+  }
+}
+```
+
+**File Locations:**
+- Config: `.claude/braintrust/sessions/{timestamp}.{name}/config.json`
+- Stdin files: `.claude/braintrust/sessions/{timestamp}.{name}/stdin_{agent}.json`
 
 ---
 

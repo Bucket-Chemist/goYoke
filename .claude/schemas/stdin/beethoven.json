@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdin/beethoven.json",
+  "title": "Beethoven Stdin Schema",
+  "description": "Validates stdin for Beethoven (synthesis) in braintrust workflow",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["agent", "workflow", "context", "problem_brief", "einstein_analysis", "staff_architect_review"],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "const": "beethoven",
+      "description": "Agent identifier"
+    },
+    "workflow": {
+      "type": "string",
+      "const": "braintrust",
+      "description": "Workflow type"
+    },
+    "context": {
+      "type": "object",
+      "required": ["project_root", "team_dir"],
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to project root"
+        },
+        "team_dir": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to team directory"
+        }
+      }
+    },
+    "problem_brief": {
+      "type": "object",
+      "required": ["title", "statement", "scope"],
+      "properties": {
+        "title": {"type": "string"},
+        "statement": {"type": "string"},
+        "scope": {
+          "type": "object",
+          "required": ["in_scope", "out_of_scope"],
+          "properties": {
+            "in_scope": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "out_of_scope": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "success_criteria": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "einstein_analysis": {
+      "type": "object",
+      "required": ["analysis_id", "status"],
+      "description": "Full stdout from Einstein (see stdout/braintrust-einstein.schema.json)"
+    },
+    "staff_architect_review": {
+      "type": "object",
+      "required": ["review_id", "status"],
+      "description": "Full stdout from Staff-Architect (see stdout/braintrust-staff-architect.schema.json)"
+    }
+  },
+  "additionalProperties": false
+}

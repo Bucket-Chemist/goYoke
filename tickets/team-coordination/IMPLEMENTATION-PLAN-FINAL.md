@@ -306,10 +306,15 @@ Agents spawned by `gogent-team-run` via `claude -p` are independent CLI sessions
 
 Explicitly document this design decision: "Team-spawned agents have Task() access at Level 2, which means Task(haiku) and Task(sonnet) are allowed but Task(opus) is blocked by gogent-validate."
 
+**Deliverable**: `.claude/schemas/teams/TASK-ACCESS-POLICY.md`
+
 **Acceptance Criteria**:
-- [ ] Design decision documented in implementation plan and prompt envelope docs
+- [x] Design decision documented in TASK-ACCESS-POLICY.md with spawn path comparison table
+- [x] Prompt envelope template includes "Your Capabilities" section
+- [x] Common envelope schema updated (`.claude/schemas/stdin/common-envelope.json`)
 - [ ] Verified during Phase 2: Einstein can call Task(haiku) but not Task(opus) when spawned by gogent-team-run
-- [ ] Prompt envelope mentions available capabilities
+- [x] Edge cases documented (spawn_agent unavailable, no-model-specified, budget exhaustion)
+- [ ] Future ticket: Modify gogent-validate to allow Task(haiku/sonnet) at Level 2
 
 **Source**: Staff-Architect F-NEW-1 (HIGH)
 

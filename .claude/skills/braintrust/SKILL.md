@@ -105,6 +105,64 @@ Braintrust is the premium analysis workflow for complex problems requiring both 
 
 ---
 
+## Interview Protocol
+
+Mozart conducts a structured 4-question interview to configure the Braintrust team. This protocol is defined in TC-018 and ensures complete, validated team configurations.
+
+### The Four Questions
+
+| # | Question | When Asked | Maps To |
+|---|----------|------------|---------|
+| **Q1** | "What problem or question do you want the Braintrust to analyze?" | **ALWAYS** | `task.problem_statement` (all stdin files) |
+| **Q2** | "Which files or areas of the codebase are relevant? (Or should I scout first?)" | **ALWAYS** | `context.relevant_files[]` OR `reads_from.scout_metrics` |
+| **Q3** | "Should I include both Einstein and Staff-Architect, or just Einstein?" | **CONDITIONAL** (narrow scope) | `waves[].members[]` (full vs single-agent) |
+| **Q4** | "Default budget is $5.00. Want to adjust?" | **CONDITIONAL** (cost concerns) | `budget_max_usd`, `budget_remaining_usd` |
+
+### Decision Flow
+
+```
+Q1: Problem Statement (ALWAYS)
+  └─► Capture problem (min 20 chars)
+
+Q2: Scope (ALWAYS)
+  ├─► Files provided → Read and validate → relevant_files[]
+  ├─► "scout" → Spawn haiku scout → wait → scout_metrics path
+  └─► "whole codebase" → Warn + recommend scout
+
+Q3: Team Composition (CONDITIONAL)
+  ├─► "both" (default) → Full: Einstein + Staff-Architect + Beethoven
+  ├─► "just Einstein" → Single: Einstein only, skip synthesis
+  └─► (not asked) → Default to full braintrust
+
+Q4: Budget (CONDITIONAL)
+  ├─► User specifies → Validate ($1-$50)
+  └─► (not asked) → Default $5.00
+
+Generate Problem Brief → Confirm → Generate config.json + stdin files → Launch
+```
+
+### Budget Ranges
+
+| Configuration | Estimated Cost |
+|--------------|----------------|
+| Just Einstein | ~$1.50 |
+| Full Braintrust (Einstein + Staff-Architect + Beethoven) | ~$4.50-$5.50 |
+| Validation limits | Min $1.00, Max $50.00, Default $5.00 |
+
+### Scout-First Path
+
+When user responds "scout" or "don't know" to Q2:
+
+1. Mozart spawns haiku scout via `Task(model: "haiku")`
+2. Scout analyzes codebase (~10-30s depending on repo size)
+3. Scout writes `.claude/tmp/scout_metrics.json`
+4. Mozart reads scout output, extracts top 5 critical files
+5. Scout metrics path included in `einstein.reads_from.scout_metrics`
+
+**Full executable protocol:** See `.claude/agents/mozart/mozart.md` Phase 2
+
+---
+
 ## Execution
 
 When `/braintrust` is invoked:

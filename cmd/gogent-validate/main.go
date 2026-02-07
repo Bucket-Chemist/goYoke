@@ -94,18 +94,29 @@ func main() {
 		return
 	}
 
-	// Check nesting level for Task tool
+	// Check nesting level for Task tool with model-aware enforcement
 	nestingLevel := routing.GetNestingLevel()
 	isExplicit := routing.IsNestingLevelExplicit()
 
 	if nestingLevel > MAX_TASK_NESTING_LEVEL {
-		// Log the block for telemetry
-		logNestingBlock(event, nestingLevel, isExplicit)
+		// Validate if this specific Task call is allowed (model-aware)
+		if blockResponse := routing.ValidateTaskAtNestingLevel(nestingLevel, event.ToolInput); blockResponse != nil {
+			// Extract model from tool input for logging
+			model := "unknown"
+			if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
+				model = taskInput.Model
+				if model == "" {
+					model = "unspecified"
+				}
+			}
 
-		// Return block response
-		response := routing.BlockResponseForNesting(nestingLevel)
-		outputJSON(response)
-		return
+			// Log the block for telemetry
+			logNestingBlock(event, nestingLevel, isExplicit, model)
+
+			// Return block response
+			outputJSON(blockResponse)
+			return
+		}
 	}
 
 	// Log routing decision for Task() calls (GOgent-087e)
@@ -383,6 +394,7 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 			Model               string                       `json:"model"`
 			SubagentType        string                       `json:"subagent_type"`
 			ContextRequirements *routing.ContextRequirements `json:"context_requirements"`
+			CliFlags            *routing.AgentCliFlags       `json:"cli_flags,omitempty"`
 		} `json:"agents"`
 	}
 	if err := json.Unmarshal(data, &index); err != nil {
@@ -397,6 +409,7 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 				Model:               agent.Model,
 				SubagentType:        agent.SubagentType,
 				ContextRequirements: agent.ContextRequirements,
+				CliFlags:            agent.CliFlags,
 			}, nil
 		}
 	}
@@ -405,7 +418,7 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 }
 
 // logNestingBlock logs Task() blocks due to nesting level for telemetry
-func logNestingBlock(event *routing.ToolEvent, level int, explicit bool) {
+func logNestingBlock(event *routing.ToolEvent, level int, explicit bool, model string) {
 	telemetry := map[string]interface{}{
 		"timestamp":      time.Now().UTC().Format(time.RFC3339),
 		"event":          "task_blocked_nesting",
@@ -413,6 +426,7 @@ func logNestingBlock(event *routing.ToolEvent, level int, explicit bool) {
 		"nesting_level":  level,
 		"level_explicit": explicit,
 		"tool_name":      event.ToolName,
+		"model":          model,
 	}
 
 	// Append to telemetry file

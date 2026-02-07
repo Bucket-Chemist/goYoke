@@ -8,6 +8,38 @@ import {
   validateNestingDepth,
 } from "./spawnAgent";
 
+// Mock agentConfig module
+vi.mock("../../spawn/agentConfig.js", () => ({
+  getAgentConfig: vi.fn((id: string) => {
+    if (id === "einstein") {
+      return {
+        id: "einstein",
+        name: "Einstein",
+        model: "opus",
+        tier: 3,
+        tools: ["Read", "Write", "Glob", "Grep", "TaskGet"],
+        cli_flags: {
+          allowed_tools: ["Read", "Glob", "Grep"],
+          additional_flags: ["--permission-mode delegate"],
+        },
+      };
+    }
+    if (id === "go-pro") {
+      return {
+        id: "go-pro",
+        name: "Go Pro",
+        model: "sonnet",
+        tier: 2,
+        tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        cli_flags: {
+          allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        },
+      };
+    }
+    return null;
+  }),
+}));
+
 // Note: Full tests require mock CLI infrastructure from MCP-SPAWN-003
 
 describe("spawn_agent tool", () => {
@@ -54,6 +86,59 @@ describe("spawn_agent tool", () => {
 
       expect(args).toContain("--max-budget-usd");
       expect(args).toContain("0.5");
+    });
+
+    it("should always include --allowedTools flag", () => {
+      const args = buildCliArgs({});
+
+      expect(args).toContain("--allowedTools");
+    });
+
+    it("should use config cli_flags when no caller tools provided", () => {
+      const args = buildCliArgs({ agent: "einstein" });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
+
+    it("should override config with caller-provided tools", () => {
+      const args = buildCliArgs({
+        agent: "einstein",
+        allowedTools: ["Read", "Write"]
+      });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Write");
+    });
+
+    it("should use conservative fallback for unknown agent", () => {
+      const args = buildCliArgs({ agent: "nonexistent-agent" });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
+
+    it("should use conservative fallback when no agent or caller tools", () => {
+      const args = buildCliArgs({});
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
+
+    it("should use config tools for go-pro agent", () => {
+      const args = buildCliArgs({ agent: "go-pro" });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Write,Edit,Bash,Glob,Grep");
+    });
+
+    it("should combine model and config tools", () => {
+      const args = buildCliArgs({ agent: "einstein", model: "opus" });
+
+      expect(args).toContain("--model");
+      expect(args).toContain("opus");
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
     });
   });
 

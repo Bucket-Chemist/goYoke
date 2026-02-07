@@ -14,6 +14,10 @@ This document defines the field contracts for team configuration JSON files used
 | `background_pid` | int/null | yes | Initially `null`. Written by `gogent-team-run` after spawning background process. |
 | `budget_max_usd` | float64 | yes | Maximum USD budget for entire team. **Top-level flat field** (not nested). |
 | `budget_remaining_usd` | float64 | yes | Remaining budget. Decremented as agents complete. **Top-level flat field** (not nested). |
+| `warning_threshold_usd` | float64 | yes | Budget warning threshold. Typically 80% of `budget_max_usd`. |
+| `status` | enum | yes | Team status. Initially `pending`. Runtime: `running`, `completed`, `failed`. |
+| `started_at` | int64/null | yes | Unix timestamp when team execution began. Initially `null`. |
+| `completed_at` | int64/null | yes | Unix timestamp when team completed. Initially `null`. |
 | `waves` | array | yes | Array of wave objects. Must have at least one wave. |
 
 ## Wave Fields
@@ -21,6 +25,7 @@ This document defines the field contracts for team configuration JSON files used
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | `wave_number` | int | yes | 1-indexed. Must be sequential (1, 2, 3...). |
+| `description` | string | yes | Human-readable description of wave purpose. |
 | `members` | array | yes | Array of member objects. Must have at least one member. |
 | `on_complete_script` | string/null | yes | Script to run after all wave members complete. `null` if no script. |
 
@@ -29,13 +34,18 @@ This document defines the field contracts for team configuration JSON files used
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | `name` | string | yes | Unique within team. Used for stdin/stdout filenames. Human-readable (e.g., "einstein", "backend-reviewer"). |
-| `agent_id` | string | yes | Must exist in `agents-index.json`. Determines agent capabilities. |
+| `agent` | string | yes | Must exist in `agents-index.json`. Determines agent capabilities. (Renamed from `agent_id` to match Go struct.) |
 | `model` | enum | yes | One of: `haiku`, `sonnet`, `opus`. Used for cost calculation. |
-| `stdin_file` | string | yes | Filename for agent input. Convention: `stdin_{name}.json` (use `name`, not `agent_id`). |
-| `stdout_file` | string | yes | Filename for agent output. Convention: `stdout_{name}.json` (use `name`, not `agent_id`). |
+| `stdin_file` | string | yes | Filename for agent input. Convention: `stdin_{name}.json` (use `name`, not `agent`). |
+| `stdout_file` | string | yes | Filename for agent output. Convention: `stdout_{name}.json` (use `name`, not `agent`). |
 | `status` | enum | yes | Initially `pending`. Runtime values: `running`, `completed`, `failed`. |
-| `pid` | int/null | yes | Initially `null`. Written by `gogent-team-run` after spawning agent process. |
+| `process_pid` | int/null | yes | Initially `null`. Written by `gogent-team-run`. (Renamed from `pid` to match Go struct.) |
+| `exit_code` | int/null | yes | Process exit code. Initially `null`. Written on completion. |
+| `error_message` | string | yes | Error details if failed. Initially empty string. |
+| `started_at` | int64/null | yes | Unix timestamp when member started. Initially `null`. |
+| `completed_at` | int64/null | yes | Unix timestamp when member completed. Initially `null`. |
 | `cost_usd` | float64 | yes | Initially `0.0`. Updated when agent completes. |
+| `cost_status` | string | yes | Cost extraction status. Values: `""`, `"ok"`, `"unknown"`, `"error"`. |
 | `retry_count` | int | yes | Initially `0`. Incremented on retry. |
 | `max_retries` | int | yes | Maximum retry attempts. Typically `1` for Opus (expensive), `2` for Haiku/Sonnet. |
 | `timeout_ms` | int | yes | Agent timeout in milliseconds. Typical values: 120000 (Haiku), 300000 (Sonnet), 600000 (Opus). |
@@ -69,16 +79,23 @@ Budget fields are **top-level flat** (`budget_max_usd`, `budget_remaining_usd`),
 }
 ```
 
+## Field Rename History
+
+| Old Name | New Name | Reason | Changed In |
+|----------|----------|--------|------------|
+| `agent_id` | `agent` | Match TC-008 Go struct `json:"agent"` tag | TC-006 |
+| `pid` | `process_pid` | Match TC-008 Go struct `json:"process_pid"` tag | TC-006 |
+
 ## Naming Conventions
 
-### `name` vs `agent_id`
+### `name` vs `agent`
 
 - **`name`**: Human-readable identifier unique within the team. Used for:
   - stdin/stdout filenames (`stdin_{name}.json`)
   - User-facing status messages
   - Log entries
 
-- **`agent_id`**: References entry in `agents-index.json`. Determines:
+- **`agent`**: References entry in `agents-index.json`. Determines:
   - Agent capabilities and prompt
   - Spawning relationships
   - Validation rules
@@ -88,12 +105,12 @@ Budget fields are **top-level flat** (`budget_max_usd`, `budget_remaining_usd`),
 ```json
 {
   "name": "staff-architect",
-  "agent_id": "staff-architect-critical-review",
+  "agent": "staff-architect-critical-review",
   "stdin_file": "stdin_staff-architect.json"
 }
 ```
 
-Note: `stdin_file` uses `name`, not `agent_id`.
+Note: `stdin_file` uses `name`, not `agent`.
 
 ## Stdin/Stdout Contracts
 
@@ -164,8 +181,10 @@ Templates are stored in:
 .claude/schemas/teams/
   ├── braintrust.json
   ├── review.json
+  ├── implementation.json
   ├── common-types.md (this file)
   ├── README.md
+  ├── PROJECT-ROOT-RESOLUTION.md
   └── stdin-stdout/
       ├── braintrust-einstein.json
       ├── braintrust-staff-architect.json
@@ -173,7 +192,8 @@ Templates are stored in:
       ├── review-backend.json
       ├── review-frontend.json
       ├── review-standards.json
-      └── review-architect.json
+      ├── review-architect.json
+      └── implementation-worker.json
 ```
 
 Instantiated team configs are written to:
