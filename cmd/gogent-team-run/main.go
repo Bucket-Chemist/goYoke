@@ -76,6 +76,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Start heartbeat (background goroutine)
+	startHeartbeat(ctx, teamDir)
+
 	// Setup signal handler for graceful shutdown
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
@@ -130,30 +133,4 @@ func main() {
 	// PID file cleanup via defer
 }
 
-// runWaves is a placeholder for wave execution logic (TC-008)
-// Returns when all waves complete or context is cancelled
-func runWaves(ctx context.Context, runner *TeamRunner) error {
-	// TC-008 will implement wave execution here
-	// For now, simulate some work to demonstrate daemon lifecycle
-
-	log.Printf("Starting wave execution (placeholder)")
-
-	// Simulate work with context cancellation support
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for i := 0; i < 300; i++ { // Run for up to 5 minutes
-		select {
-		case <-ctx.Done():
-			log.Printf("Wave execution cancelled")
-			return ctx.Err()
-		case <-ticker.C:
-			if i%10 == 0 {
-				log.Printf("Wave execution running... (%ds elapsed)", i)
-			}
-		}
-	}
-
-	log.Printf("Wave execution completed")
-	return nil
-}
+// runWaves is implemented in wave.go (TC-008)

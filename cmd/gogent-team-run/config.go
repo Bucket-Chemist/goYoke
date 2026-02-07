@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,6 +22,8 @@ type TeamConfig struct {
 	SessionID           string  `json:"session_id"`
 	CreatedAt           string  `json:"created_at"`
 	BudgetMaxUSD        float64 `json:"budget_max_usd"`
+	// DO NOT mutate directly. Use tryReserveBudget()/reconcileCost() ONLY.
+	// Field must remain exported for JSON marshaling, but access via BudgetRemaining() reader.
 	BudgetRemainingUSD  float64 `json:"budget_remaining_usd"`
 	WarningThresholdUSD float64 `json:"warning_threshold_usd"`
 	Status              string  `json:"status"`
@@ -148,6 +151,10 @@ func uniqueTmpPath(configPath string) string {
 // SaveConfig marshals and atomically writes the team config.json
 // Uses atomic write pattern: write to .tmp, rename
 func (tr *TeamRunner) SaveConfig() error {
+	// C4: Acquire write mutex to serialize disk writes
+	tr.writeMu.Lock()
+	defer tr.writeMu.Unlock()
+
 	tr.configMu.RLock()
 	if tr.config == nil {
 		tr.configMu.RUnlock()
@@ -181,6 +188,10 @@ func (tr *TeamRunner) SaveConfig() error {
 // updateMember atomically updates a member by applying a function to it
 // Locks configMu, calls fn, saves config
 func (tr *TeamRunner) updateMember(waveIdx, memIdx int, fn func(*Member)) error {
+	// C4: Acquire write mutex FIRST to serialize disk writes
+	tr.writeMu.Lock()
+	defer tr.writeMu.Unlock()
+
 	tr.configMu.Lock()
 
 	if tr.config == nil {
@@ -207,7 +218,7 @@ func (tr *TeamRunner) updateMember(waveIdx, memIdx int, fn func(*Member)) error 
 
 	tr.configMu.Unlock()
 
-	// Marshal and write (no lock held)
+	// Marshal and write (writeMu still held - no concurrent writes)
 	data, err := json.MarshalIndent(&configCopy, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
@@ -245,4 +256,129 @@ func (tr *TeamRunner) findMember(name string) (waveIdx, memIdx int, found bool) 
 	}
 
 	return -1, -1, false
+}
+
+// BudgetRemaining returns the current budget remaining with thread-safe read access.
+// This is the ONLY safe way to read budget without holding both locks.
+func (tr *TeamRunner) BudgetRemaining() float64 {
+	tr.configMu.RLock()
+	defer tr.configMu.RUnlock()
+
+	if tr.config == nil {
+		return 0
+	}
+
+	return tr.config.BudgetRemainingUSD
+}
+
+// tryReserveBudget atomically checks if sufficient budget exists and reserves it.
+// Returns true if reservation succeeded, false if insufficient budget.
+// This is the ONLY safe way to reserve budget before spawning an agent.
+func (tr *TeamRunner) tryReserveBudget(estimatedCost float64) bool {
+	tr.writeMu.Lock()
+	defer tr.writeMu.Unlock()
+
+	tr.configMu.Lock()
+	defer tr.configMu.Unlock()
+
+	if tr.config == nil {
+		return false
+	}
+
+	if tr.config.BudgetRemainingUSD < estimatedCost {
+		return false
+	}
+
+	tr.config.BudgetRemainingUSD -= estimatedCost
+	return true
+}
+
+// reconcileCost returns the estimated cost reservation and deducts the actual cost.
+// Ensures budget never goes negative (C1: floor enforcement).
+// Logs at CRITICAL level when clamping occurs.
+func (tr *TeamRunner) reconcileCost(estimated, actual float64) error {
+	tr.writeMu.Lock()
+	defer tr.writeMu.Unlock()
+
+	tr.configMu.Lock()
+
+	if tr.config == nil {
+		tr.configMu.Unlock()
+		return fmt.Errorf("config not loaded")
+	}
+
+	// Return the reservation
+	tr.config.BudgetRemainingUSD += estimated
+
+	// Deduct actual cost
+	tr.config.BudgetRemainingUSD -= actual
+
+	// C1: Floor enforcement - budget must never go negative
+	if tr.config.BudgetRemainingUSD < 0 {
+		log.Printf("[CRITICAL] Budget went negative ($%.4f), clamping to $0.00", tr.config.BudgetRemainingUSD)
+		tr.config.BudgetRemainingUSD = 0
+	}
+
+	// Make a deep copy for serialization
+	configCopy := deepCopyConfig(tr.config)
+	configPath := tr.configPath
+
+	tr.configMu.Unlock()
+
+	// Marshal and write (writeMu still held)
+	data, err := json.MarshalIndent(&configCopy, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	tmpPath := uniqueTmpPath(configPath)
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return fmt.Errorf("write tmp config: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, configPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("rename tmp config: %w", err)
+	}
+
+	return nil
+}
+
+// estimateCost returns a conservative cost estimate for an agent based on model.
+// Uses model-based heuristics with fallback for unknown agents.
+// Default fallback: $1.50 (conservative Sonnet estimate).
+func (tr *TeamRunner) estimateCost(agentID string) float64 {
+	// TODO(TC-008): Load from agents-index.json when available
+	// For now, use model-based heuristics
+
+	tr.configMu.RLock()
+	model := ""
+	if tr.config != nil {
+		// Find agent's model in config
+		for _, wave := range tr.config.Waves {
+			for _, member := range wave.Members {
+				if member.Agent == agentID {
+					model = member.Model
+					break
+				}
+			}
+			if model != "" {
+				break
+			}
+		}
+	}
+	tr.configMu.RUnlock()
+
+	// Model-based cost estimates (conservative)
+	switch model {
+	case "haiku":
+		return 0.10 // ~$0.10 for typical haiku task
+	case "sonnet":
+		return 1.50 // ~$1.50 for typical sonnet task
+	case "opus":
+		return 5.00 // ~$5.00 for typical opus task
+	default:
+		// Unknown agent or model - use conservative fallback
+		return 1.50
+	}
 }

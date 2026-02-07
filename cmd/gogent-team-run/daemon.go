@@ -141,6 +141,7 @@ type TeamRunner struct {
 	config     *TeamConfig   // Team configuration (loaded from config.json)
 	configPath string        // Path to config.json
 	configMu   sync.RWMutex  // Protects config reads/writes
+	writeMu    sync.Mutex    // Serializes config writes (C4: prevents lost updates)
 
 	spawner    Spawner              // Injected spawn implementation
 	childPIDs  map[int]struct{}     // Track spawned child PIDs

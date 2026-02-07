@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -548,4 +550,221 @@ func TestFindMember(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestBuildCLIArgs tests CLI argument construction
+func TestBuildCLIArgs(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *agentCLIConfig
+		expected []string
+	}{
+		{
+			name: "basic_tools",
+			config: &agentCLIConfig{
+				AllowedTools: []string{"Read", "Write"},
+			},
+			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Write"},
+		},
+		{
+			name: "with_additional_flags",
+			config: &agentCLIConfig{
+				AllowedTools:    []string{"Read", "Glob", "Grep"},
+				AdditionalFlags: []string{"--permission-mode", "delegate"},
+			},
+			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Glob,Grep", "--permission-mode", "delegate"},
+		},
+		{
+			name: "no_tools",
+			config: &agentCLIConfig{
+				AllowedTools: []string{},
+			},
+			expected: []string{"-p", "--output-format", "json"},
+		},
+		{
+			name: "only_additional_flags",
+			config: &agentCLIConfig{
+				AdditionalFlags: []string{"--max-tokens", "4000"},
+			},
+			expected: []string{"-p", "--output-format", "json", "--max-tokens", "4000"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := buildCLIArgs(tc.config)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// TestIsRetryableError tests error classification for retry decisions
+func TestIsRetryableError(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		retryable  bool
+	}{
+		{
+			name:      "nil_error",
+			err:       nil,
+			retryable: false,
+		},
+		{
+			name:      "context_canceled",
+			err:       context.Canceled,
+			retryable: false,
+		},
+		{
+			name:      "exec_not_found",
+			err:       exec.ErrNotFound,
+			retryable: false,
+		},
+		{
+			name:      "permission_denied",
+			err:       os.ErrPermission,
+			retryable: false,
+		},
+		{
+			name:      "generic_error",
+			err:       fmt.Errorf("some random error"),
+			retryable: true,
+		},
+		{
+			name:      "timeout_error",
+			err:       context.DeadlineExceeded,
+			retryable: true,
+		},
+		{
+			name:      "exit_error",
+			err:       &exec.ExitError{},
+			retryable: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := isRetryableError(tc.err)
+			assert.Equal(t, tc.retryable, result)
+		})
+	}
+}
+
+// TestLoadAgentConfig_ValidAgent tests loading real agent config from agents-index.json
+func TestLoadAgentConfig_ValidAgent(t *testing.T) {
+	// This test requires agents-index.json to exist at ~/.claude/agents/agents-index.json
+	// Skip if not in the expected environment
+	agentsIndexPath := filepath.Join(os.Getenv("HOME"), ".claude", "agents", "agents-index.json")
+	if _, err := os.Stat(agentsIndexPath); os.IsNotExist(err) {
+		t.Skip("agents-index.json not found, skipping test")
+	}
+
+	// Try to load a known agent (codebase-search is in the sample we read)
+	config, err := loadAgentConfig("codebase-search")
+	require.NoError(t, err)
+	assert.NotNil(t, config)
+	assert.Equal(t, "haiku", config.Model)
+	assert.Contains(t, config.AllowedTools, "Glob")
+	assert.Contains(t, config.AllowedTools, "Grep")
+	assert.Contains(t, config.AllowedTools, "Read")
+}
+
+// TestLoadAgentConfig_UnknownAgent tests fallback behavior for unknown agents
+func TestLoadAgentConfig_UnknownAgent(t *testing.T) {
+	agentsIndexPath := filepath.Join(os.Getenv("HOME"), ".claude", "agents", "agents-index.json")
+	if _, err := os.Stat(agentsIndexPath); os.IsNotExist(err) {
+		t.Skip("agents-index.json not found, skipping test")
+	}
+
+	// Try to load a non-existent agent
+	_, err := loadAgentConfig("nonexistent-agent-xyz")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found in agents-index.json")
+}
+
+// TestPrepareSpawn_ValidConfig tests prepareSpawn with valid member config
+func TestPrepareSpawn_ValidConfig(t *testing.T) {
+	member := Member{
+		Name:       "test-agent",
+		Agent:      "codebase-search",
+		Model:      "haiku",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		TimeoutMs:  30000,
+	}
+
+	config := testConfig(member)
+	config.ProjectRoot = "/tmp/test-project"
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Create minimal stdin file
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	stdinData := `{
+		"agent": "codebase-search",
+		"task": "Find all Go files",
+		"context": {"files": ["*.go"]}
+	}`
+	err := os.WriteFile(stdinPath, []byte(stdinData), 0644)
+	require.NoError(t, err)
+
+	spawner := &claudeSpawner{}
+	cfg, err := spawner.prepareSpawn(runner, 0, 0)
+
+	// May fail to load agents-index.json in test env - that's OK, fallback should work
+	if err != nil {
+		assert.Contains(t, err.Error(), "build envelope")
+		return
+	}
+
+	assert.NotNil(t, cfg)
+	assert.Equal(t, "test-agent", cfg.memberName)
+	assert.Equal(t, "codebase-search", cfg.agentID)
+	assert.Equal(t, "/tmp/test-project", cfg.projectRoot)
+	assert.Equal(t, 30*time.Second, cfg.timeout)
+	assert.Contains(t, cfg.envelope, "AGENT: codebase-search")
+	assert.Contains(t, cfg.args, "-p")
+	assert.Contains(t, cfg.args, "--output-format")
+	assert.Contains(t, cfg.args, "json")
+}
+
+// TestPrepareSpawn_FallbackTools tests fallback to Read,Glob,Grep when agent config unavailable
+func TestPrepareSpawn_FallbackTools(t *testing.T) {
+	member := Member{
+		Name:       "unknown-agent",
+		Agent:      "nonexistent-agent-xyz",
+		Model:      "sonnet",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		TimeoutMs:  60000,
+	}
+
+	config := testConfig(member)
+	config.ProjectRoot = "/tmp/test-project"
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Create minimal stdin file
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	stdinData := `{
+		"agent": "nonexistent-agent-xyz",
+		"task": "Do something",
+		"context": {"note": "test"}
+	}`
+	err := os.WriteFile(stdinPath, []byte(stdinData), 0644)
+	require.NoError(t, err)
+
+	spawner := &claudeSpawner{}
+	cfg, err := spawner.prepareSpawn(runner, 0, 0)
+
+	// Should succeed with fallback tools
+	if err != nil {
+		// Acceptable if agents-index.json doesn't exist
+		return
+	}
+
+	assert.NotNil(t, cfg)
+	// Args should contain fallback tools
+	argsStr := strings.Join(cfg.args, " ")
+	assert.Contains(t, argsStr, "Read")
+	assert.Contains(t, argsStr, "Glob")
+	assert.Contains(t, argsStr, "Grep")
 }

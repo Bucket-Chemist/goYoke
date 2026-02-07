@@ -132,7 +132,7 @@
       "title": "Fix Recursive Retry WaitGroup Panic",
       "file": "TC-003.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "included in TC-008",
       "dependencies": [
@@ -144,7 +144,7 @@
       "title": "Implement gogent-team-run Go Binary",
       "file": "TC-008.md",
       "priority": "CRITICAL",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 2,
       "time_estimate": "5-7d",
       "dependencies": [
