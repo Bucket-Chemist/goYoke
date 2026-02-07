@@ -112,7 +112,7 @@
       "title": "Add cli_flags to agents-index.json",
       "file": "TC-014.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "time_estimate": "1d",
       "dependencies": []
@@ -122,7 +122,7 @@
       "title": "Implement Full Daemon Pattern in Go Binary",
       "file": "TC-004.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1d",
       "dependencies": []
