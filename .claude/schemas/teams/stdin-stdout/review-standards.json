@@ -1,0 +1,96 @@
+{
+  "$comment": "Stdin/stdout contract for standards-reviewer in review workflow",
+  "stdin": {
+    "agent": "standards-reviewer",
+    "workflow": "review",
+    "review_scope": {
+      "files": [
+        {
+          "path": "relative/path/to/file.go",
+          "language": "go",
+          "category": "source|test|config|documentation",
+          "changed_lines": {"added": 60, "removed": 20},
+          "is_new_file": false
+        }
+      ],
+      "total_files": 0,
+      "languages_detected": ["go", "typescript"]
+    },
+    "context": {
+      "commit_message": "What this change is supposed to do",
+      "pr_description": "PR description if available",
+      "related_tickets": ["TC-XXX"],
+      "branch_name": "feature/my-feature"
+    },
+    "focus_areas": {
+      "naming": {
+        "enabled": true,
+        "priorities": ["consistency", "descriptive_names", "convention_adherence", "abbreviation_policy"]
+      },
+      "complexity": {
+        "enabled": true,
+        "priorities": ["cyclomatic_complexity", "function_length", "nesting_depth", "parameter_count"]
+      },
+      "dry_kiss_yagni": {
+        "enabled": true,
+        "priorities": ["code_duplication", "premature_abstraction", "unused_code", "over_engineering"]
+      },
+      "structure": {
+        "enabled": true,
+        "priorities": ["single_responsibility", "file_organization", "import_organization", "package_cohesion"]
+      },
+      "documentation": {
+        "enabled": true,
+        "priorities": ["public_api_docs", "complex_logic_comments", "misleading_comments", "stale_comments"]
+      },
+      "readability": {
+        "enabled": true,
+        "priorities": ["early_returns", "guard_clauses", "magic_numbers", "boolean_logic_clarity"]
+      }
+    },
+    "project_conventions": {
+      "languages": ["go", "typescript"],
+      "conventions_files": ["go.md", "typescript.md"],
+      "naming_convention": "Go: exported PascalCase / unexported camelCase. TS: camelCase functions, PascalCase types",
+      "max_function_length": 50,
+      "max_cyclomatic_complexity": 15
+    }
+  },
+  "stdout": {
+    "reviewer": "standards-reviewer",
+    "status": "complete|partial|failed",
+    "overall_assessment": "APPROVE|WARNING|BLOCK",
+    "summary": "1-2 sentence summary of findings",
+    "complexity_score": {
+      "average_cyclomatic": 0.0,
+      "max_cyclomatic": 0,
+      "functions_over_threshold": 0,
+      "god_functions": 0
+    },
+    "findings": [
+      {
+        "id": "ST-1",
+        "severity": "critical|warning|info",
+        "category": "maintainability|readability|complexity|documentation|naming|structure",
+        "file": "relative/path/to/file.go",
+        "line": 100,
+        "end_line": 150,
+        "title": "Brief issue title",
+        "message": "Detailed description with principle violated",
+        "principle": "DRY|KISS|YAGNI|SRP|naming_convention",
+        "impact": "How this affects maintainability",
+        "recommendation": "Specific fix",
+        "code_snippet": "Relevant code",
+        "sharp_edge_id": "magic-numbers|inconsistent-naming|dead-code|god-function|deep-nesting|duplicate-code",
+        "references": []
+      }
+    ],
+    "files_reviewed": 0,
+    "files_skipped": 0,
+    "metadata": {
+      "duration_ms": 0,
+      "thinking_budget_used": 0,
+      "attempt_number": 1
+    }
+  }
+}

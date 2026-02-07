@@ -1,0 +1,131 @@
+{
+  "$comment": "Stdin/stdout contract for Staff-Architect (practical critical review) in braintrust workflow",
+  "stdin": {
+    "agent": "staff-architect-critical-review",
+    "workflow": "braintrust",
+    "problem_brief": {
+      "title": "Brief problem title",
+      "statement": "Full problem statement from Mozart",
+      "scope": {
+        "in_scope": ["List of things explicitly in scope"],
+        "out_of_scope": ["List of things explicitly excluded"],
+        "affected_modules": ["module paths relevant to the problem"]
+      }
+    },
+    "plan_to_review": {
+      "source": "Path or inline content of the plan/specs being reviewed",
+      "format": "markdown|json",
+      "content": "Full plan content (phases, tickets, dependencies, acceptance criteria)",
+      "assumptions_declared": ["Assumptions explicitly stated in the plan"]
+    },
+    "codebase_context": {
+      "architecture_summary": "High-level system architecture",
+      "key_files": [
+        {
+          "path": "relative/path/to/file.go",
+          "relevance": "Why this file matters",
+          "excerpt": "Critical code sections"
+        }
+      ],
+      "existing_patterns": ["Patterns already established in the codebase"],
+      "technical_debt": ["Known technical debt relevant to this review"]
+    },
+    "scout_metrics": {
+      "total_files": 0,
+      "total_loc": 0,
+      "complexity_score": 0,
+      "recommended_tier": "sonnet|opus"
+    },
+    "review_focus": {
+      "layers": [
+        "assumptions",
+        "dependencies",
+        "failure_modes",
+        "cost_benefit",
+        "testing",
+        "architecture_smells",
+        "contractor_readiness"
+      ],
+      "priority_concerns": ["Specific concerns flagged by Mozart or the user"]
+    }
+  },
+  "stdout": {
+    "review_id": "staff-arch-{timestamp}",
+    "status": "complete",
+    "executive_assessment": {
+      "verdict": "APPROVE|APPROVE_WITH_CONDITIONS|REVISE|REJECT",
+      "confidence": "high|medium|low",
+      "summary": "1-2 sentence overall assessment",
+      "issue_counts": {
+        "critical": 0,
+        "major": 0,
+        "minor": 0
+      }
+    },
+    "issue_register": [
+      {
+        "id": "C-1",
+        "severity": "critical|major|minor",
+        "layer": "assumptions|dependencies|failure_modes|cost_benefit|testing|architecture_smells|contractor_readiness",
+        "title": "Brief issue title",
+        "description": "Detailed description of the issue",
+        "evidence": "Supporting evidence (code references, logical reasoning)",
+        "impact": "What happens if this isn't addressed",
+        "recommendation": "Specific actionable fix",
+        "affected_tickets": ["TC-XXX"],
+        "affected_files": ["path/to/file.go"]
+      }
+    ],
+    "assumption_register": [
+      {
+        "id": "A-1",
+        "assumption": "The assumption being evaluated",
+        "source": "Where this assumption originates (plan section, ticket, implicit)",
+        "verified": true,
+        "risk_if_false": "Impact if assumption proves wrong",
+        "mitigation": "How to reduce risk",
+        "verification_method": "How to validate this assumption"
+      }
+    ],
+    "dependency_analysis": {
+      "critical_path": ["TC-001 -> TC-008 -> TC-012"],
+      "bottlenecks": ["Description of dependency bottlenecks"],
+      "circular_risks": ["Any circular dependency risks"]
+    },
+    "failure_mode_analysis": [
+      {
+        "scenario": "What could go wrong",
+        "probability": "high|medium|low",
+        "impact": "high|medium|low",
+        "detection": "How would you know this happened",
+        "mitigation": "How to prevent or recover"
+      }
+    ],
+    "commendations": [
+      "Things the plan does well that should be preserved"
+    ],
+    "recommendations": {
+      "high_priority": [
+        {
+          "action": "What to do",
+          "rationale": "Why",
+          "effort": "Estimated effort to implement"
+        }
+      ],
+      "medium_priority": [],
+      "low_priority": []
+    },
+    "sign_off": {
+      "conditions": ["Conditions that must be met for approval"],
+      "post_approval_monitoring": ["Things to watch for during implementation"]
+    },
+    "handoff_notes": "Key points Beethoven should focus on during synthesis",
+    "metadata": {
+      "review_layers_applied": 7,
+      "scouts_spawned": 0,
+      "cost_estimate_usd": 0.0,
+      "thinking_budget_used": 0,
+      "review_duration_minutes": 0
+    }
+  }
+}

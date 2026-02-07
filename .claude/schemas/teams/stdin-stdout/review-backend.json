@@ -1,0 +1,90 @@
+{
+  "$comment": "Stdin/stdout contract for backend-reviewer in review workflow",
+  "stdin": {
+    "agent": "backend-reviewer",
+    "workflow": "review",
+    "review_scope": {
+      "files": [
+        {
+          "path": "relative/path/to/handler.go",
+          "language": "go",
+          "category": "api_handler|database|middleware|service|auth|validation",
+          "changed_lines": {"added": 45, "removed": 12},
+          "is_new_file": false
+        }
+      ],
+      "total_files": 0,
+      "languages_detected": ["go"]
+    },
+    "context": {
+      "commit_message": "What this change is supposed to do",
+      "pr_description": "PR description if available",
+      "related_tickets": ["TC-XXX"],
+      "branch_name": "feature/my-feature"
+    },
+    "focus_areas": {
+      "security": {
+        "enabled": true,
+        "priorities": ["injection", "auth_bypass", "secrets_exposure", "input_validation"]
+      },
+      "api_design": {
+        "enabled": true,
+        "priorities": ["rest_conventions", "error_responses", "versioning", "rate_limiting"]
+      },
+      "data_handling": {
+        "enabled": true,
+        "priorities": ["sql_safety", "transactions", "connection_pooling", "migrations"]
+      },
+      "concurrency": {
+        "enabled": true,
+        "priorities": ["goroutine_safety", "context_propagation", "error_wrapping", "mutex_usage"]
+      },
+      "observability": {
+        "enabled": true,
+        "priorities": ["logging", "metrics", "tracing", "error_reporting"]
+      }
+    },
+    "project_conventions": {
+      "language": "go",
+      "conventions_file": "go.md",
+      "error_handling_pattern": "fmt.Errorf with %w wrapping",
+      "logging_pattern": "structured logging with slog or zerolog"
+    }
+  },
+  "stdout": {
+    "reviewer": "backend-reviewer",
+    "status": "complete|partial|failed",
+    "overall_assessment": "APPROVE|WARNING|BLOCK",
+    "summary": "1-2 sentence summary of findings",
+    "findings": [
+      {
+        "id": "BE-1",
+        "severity": "critical|warning|info",
+        "category": "security|api_design|data_handling|concurrency|observability|error_handling",
+        "file": "relative/path/to/file.go",
+        "line": 42,
+        "end_line": 48,
+        "title": "Brief issue title",
+        "message": "Detailed description of the issue",
+        "impact": "What could happen if this isn't fixed",
+        "recommendation": "Specific fix with code example if applicable",
+        "code_snippet": "Relevant code from the file",
+        "sharp_edge_id": "sql-injection|command-injection|auth-bypass|hardcoded-secrets|missing-rate-limit|n-plus-one|missing-transaction|unhandled-error",
+        "references": ["Link to relevant documentation or best practice"]
+      }
+    ],
+    "security_summary": {
+      "injection_risks": 0,
+      "auth_issues": 0,
+      "secrets_exposure": 0,
+      "input_validation_gaps": 0
+    },
+    "files_reviewed": 0,
+    "files_skipped": 0,
+    "metadata": {
+      "duration_ms": 0,
+      "thinking_budget_used": 0,
+      "attempt_number": 1
+    }
+  }
+}

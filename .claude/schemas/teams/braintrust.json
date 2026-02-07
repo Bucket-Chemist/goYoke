@@ -1,0 +1,63 @@
+{
+  "team_name": "braintrust-{timestamp}",
+  "workflow_type": "braintrust",
+  "project_root": "/absolute/path",
+  "session_id": "{uuid}",
+  "created_at": "{ISO-8601}",
+  "background_pid": null,
+  "budget_max_usd": 5.0,
+  "budget_remaining_usd": 5.0,
+  "waves": [
+    {
+      "wave_number": 1,
+      "members": [
+        {
+          "name": "einstein",
+          "agent_id": "einstein",
+          "model": "opus",
+          "stdin_file": "stdin_einstein.json",
+          "stdout_file": "stdout_einstein.json",
+          "status": "pending",
+          "pid": null,
+          "cost_usd": 0.0,
+          "retry_count": 0,
+          "max_retries": 1,
+          "timeout_ms": 600000
+        },
+        {
+          "name": "staff-architect",
+          "agent_id": "staff-architect-critical-review",
+          "model": "opus",
+          "stdin_file": "stdin_staff-architect.json",
+          "stdout_file": "stdout_staff-architect.json",
+          "status": "pending",
+          "pid": null,
+          "cost_usd": 0.0,
+          "retry_count": 0,
+          "max_retries": 1,
+          "timeout_ms": 600000
+        }
+      ],
+      "on_complete_script": "gogent-team-prepare-synthesis"
+    },
+    {
+      "wave_number": 2,
+      "members": [
+        {
+          "name": "beethoven",
+          "agent_id": "beethoven",
+          "model": "opus",
+          "stdin_file": "stdin_beethoven.json",
+          "stdout_file": "stdout_beethoven.json",
+          "status": "pending",
+          "pid": null,
+          "cost_usd": 0.0,
+          "retry_count": 0,
+          "max_retries": 1,
+          "timeout_ms": 600000
+        }
+      ],
+      "on_complete_script": null
+    }
+  ]
+}
