@@ -511,3 +511,62 @@ func TestReconcileCost_LargeActualCost(t *testing.T) {
 	budget := runner.BudgetRemaining()
 	assert.Equal(t, 0.0, budget)
 }
+
+// TestReconcileCost_WritesToDisk verifies reconcileCost persists budget to config.json
+func TestReconcileCost_WritesToDisk(t *testing.T) {
+	t.Parallel()
+	config := testConfig(Member{Name: "a", Agent: "test", Status: "pending"})
+	config.BudgetMaxUSD = 10.0
+	config.BudgetRemainingUSD = 10.0
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Reserve then reconcile
+	require.True(t, runner.tryReserveBudget(2.0))
+	err := runner.reconcileCost(2.0, 1.5)
+	require.NoError(t, err)
+
+	// Verify budget written to disk
+	data, err := os.ReadFile(filepath.Join(teamDir, ConfigFileName))
+	require.NoError(t, err)
+	var reloaded TeamConfig
+	require.NoError(t, json.Unmarshal(data, &reloaded))
+	assert.InDelta(t, 8.5, reloaded.BudgetRemainingUSD, 0.01)
+}
+
+// TestSaveConfig_WritesToDisk tests SaveConfig writes updated status to disk
+func TestSaveConfig_WritesToDisk(t *testing.T) {
+	t.Parallel()
+	config := testConfig(Member{Name: "a", Status: "pending"})
+	runner, teamDir := setupTestRunner(t, config)
+
+	runner.configMu.Lock()
+	runner.config.Status = "completed"
+	runner.configMu.Unlock()
+
+	err := runner.SaveConfig()
+	require.NoError(t, err)
+
+	data, err := os.ReadFile(filepath.Join(teamDir, ConfigFileName))
+	require.NoError(t, err)
+	var reloaded TeamConfig
+	require.NoError(t, json.Unmarshal(data, &reloaded))
+	assert.Equal(t, "completed", reloaded.Status)
+}
+
+// TestLoadConfig_ReadError tests LoadConfig handles read errors gracefully
+func TestLoadConfig_ReadError(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Create config.json as a directory, not a file
+	err := os.Mkdir(filepath.Join(dir, ConfigFileName), 0755)
+	require.NoError(t, err)
+
+	runner := &TeamRunner{
+		teamDir:    dir,
+		configPath: filepath.Join(dir, ConfigFileName),
+		childPIDs:  make(map[int]struct{}),
+	}
+	err = runner.LoadConfig()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read config.json")
+}

@@ -136,3 +136,28 @@ func TestWriteHeartbeat_ErrorHandling(t *testing.T) {
 		writeHeartbeat(invalidPath)
 	})
 }
+
+// TestStartHeartbeat tests the public startHeartbeat wrapper
+func TestStartHeartbeat(t *testing.T) {
+	teamDir := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	heartbeatPath := filepath.Join(teamDir, "heartbeat")
+
+	// Start heartbeat using public wrapper
+	startHeartbeat(ctx, teamDir)
+
+	// Wait for initial heartbeat write
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify heartbeat file was created
+	_, err := os.Stat(heartbeatPath)
+	assert.NoError(t, err, "heartbeat file should exist")
+
+	// Cancel context to stop heartbeat
+	cancel()
+
+	// Wait for goroutine to stop
+	time.Sleep(50 * time.Millisecond)
+}

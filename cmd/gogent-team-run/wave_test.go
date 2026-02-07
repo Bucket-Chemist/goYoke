@@ -440,3 +440,33 @@ func TestRunWaves_BudgetFloor(t *testing.T) {
 	finalBudget := runner.BudgetRemaining()
 	assert.GreaterOrEqual(t, finalBudget, 0.0, "Budget must never go negative (C1 enforcement)")
 }
+
+// TestSpawnAndWaitWithBudget_InvalidIndices tests graceful handling of invalid indices
+func TestSpawnAndWaitWithBudget_InvalidIndices(t *testing.T) {
+	t.Parallel()
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		Status:     "pending",
+		MaxRetries: 1,
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			return nil
+		},
+	})
+
+	ctx := context.Background()
+
+	// Call with invalid indices - should not panic, just log and return gracefully
+	spawnAndWaitWithBudget(ctx, runner, 99, 0, 1.50)
+
+	// Verify original member is unchanged
+	runner.configMu.RLock()
+	status := runner.config.Waves[0].Members[0].Status
+	runner.configMu.RUnlock()
+	assert.Equal(t, "pending", status, "Original member should be unchanged")
+}

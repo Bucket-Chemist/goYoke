@@ -447,11 +447,11 @@ func TestConcurrentUpdateMember(t *testing.T) {
 	// Hammer updateMember from 8 goroutines simultaneously
 	var wg sync.WaitGroup
 	var errCount atomic.Int64
-	for i := 0; i < len(members); i++ {
+	for i := range len(members) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			for j := 0; j < 10; j++ {
+			for j := range 10 {
 				if err := runner.updateMember(0, idx, func(m *Member) {
 					m.RetryCount = j
 					m.Status = "running"
@@ -767,4 +767,261 @@ func TestPrepareSpawn_FallbackTools(t *testing.T) {
 	assert.Contains(t, argsStr, "Read")
 	assert.Contains(t, argsStr, "Glob")
 	assert.Contains(t, argsStr, "Grep")
+}
+
+// TestSaveConfig_NilConfig tests SaveConfig error path when config is nil
+func TestSaveConfig_NilConfig(t *testing.T) {
+	t.Parallel()
+	// Create a TeamRunner with no config file (empty TempDir, manually set config to nil)
+	teamDir := t.TempDir()
+	runner, err := NewTeamRunner(teamDir)
+	require.NoError(t, err)
+
+	// Ensure config is nil
+	runner.configMu.Lock()
+	runner.config = nil
+	runner.configMu.Unlock()
+
+	// Call SaveConfig() → expect error "config not loaded"
+	err = runner.SaveConfig()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "config not loaded")
+}
+
+// TestUpdateMember_NilConfig tests updateMember error path when config is nil
+func TestUpdateMember_NilConfig(t *testing.T) {
+	t.Parallel()
+	// Create TeamRunner with nil config
+	teamDir := t.TempDir()
+	runner, err := NewTeamRunner(teamDir)
+	require.NoError(t, err)
+
+	// Ensure config is nil
+	runner.configMu.Lock()
+	runner.config = nil
+	runner.configMu.Unlock()
+
+	// Call updateMember → expect error
+	err = runner.updateMember(0, 0, func(m *Member) {
+		m.Status = "running"
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "config not loaded")
+}
+
+// TestUpdateMember_NegativeIndices tests updateMember error path with negative indices
+func TestUpdateMember_NegativeIndices(t *testing.T) {
+	t.Parallel()
+	member := Member{
+		Name:   "agent-1",
+		Status: "pending",
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config)
+
+	tests := []struct {
+		name     string
+		waveIdx  int
+		memIdx   int
+		wantErr  string
+	}{
+		{
+			name:    "negative_wave_index",
+			waveIdx: -1,
+			memIdx:  0,
+			wantErr: "invalid wave index: -1",
+		},
+		{
+			name:    "negative_member_index",
+			waveIdx: 0,
+			memIdx:  -1,
+			wantErr: "invalid member index: -1",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := runner.updateMember(tc.waveIdx, tc.memIdx, func(m *Member) {
+				m.Status = "running"
+			})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+// TestSpawnAndWait_NonRetryableError tests the non-retryable error path
+func TestSpawnAndWait_NonRetryableError(t *testing.T) {
+	t.Parallel()
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.txt",
+		StdoutFile: "stdout.txt",
+		Status:     "pending",
+		MaxRetries: 3, // Should only attempt once for non-retryable
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			// Return non-retryable error (exec.ErrNotFound)
+			return exec.ErrNotFound
+		},
+	})
+
+	// Spawn and wait
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	spawnAndWait(ctx, runner, 0, 0, &wg)
+	wg.Wait()
+
+	// Verify status is failed and error message contains "fatal, non-retryable"
+	runner.configMu.RLock()
+	finalStatus := runner.config.Waves[0].Members[0].Status
+	errorMsg := runner.config.Waves[0].Members[0].ErrorMessage
+	retryCount := runner.config.Waves[0].Members[0].RetryCount
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "failed", finalStatus)
+	assert.Contains(t, errorMsg, "fatal, non-retryable")
+	assert.Equal(t, 0, retryCount, "Should only attempt once for non-retryable error")
+}
+
+// TestFinalizeSpawn_CostOK tests finalizeSpawn with valid cost extraction
+func TestFinalizeSpawn_CostOK(t *testing.T) {
+	t.Parallel()
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		Status:     "pending",
+		MaxRetries: 1,
+	}
+
+	config := testConfig(member)
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Write valid stdout JSON file to teamDir
+	stdoutPath := filepath.Join(teamDir, "stdout.json")
+	stdoutContent := `{"$schema":"test","status":"completed","content":{}}`
+	err := os.WriteFile(stdoutPath, []byte(stdoutContent), 0644)
+	require.NoError(t, err)
+
+	// Create spawnResult with stdout bytes containing cost
+	stdoutWithCost := `{"cost_usd":0.42,"status":"completed"}`
+	result := &spawnResult{
+		stdout:   []byte(stdoutWithCost),
+		exitCode: 0,
+		pid:      12345,
+	}
+
+	spawner := &claudeSpawner{}
+	err = spawner.finalizeSpawn(runner, 0, 0, result, 1.50)
+	require.NoError(t, err)
+
+	// Verify member's CostUSD=0.42 and CostStatus="ok"
+	runner.configMu.RLock()
+	costUSD := runner.config.Waves[0].Members[0].CostUSD
+	costStatus := runner.config.Waves[0].Members[0].CostStatus
+	runner.configMu.RUnlock()
+
+	assert.InDelta(t, 0.42, costUSD, 0.01)
+	assert.Equal(t, "ok", costStatus)
+}
+
+// TestFinalizeSpawn_NoCostField tests finalizeSpawn fallback when no cost field
+func TestFinalizeSpawn_NoCostField(t *testing.T) {
+	t.Parallel()
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		Status:     "pending",
+		MaxRetries: 1,
+	}
+
+	config := testConfig(member)
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Write valid stdout JSON file to teamDir
+	stdoutPath := filepath.Join(teamDir, "stdout.json")
+	stdoutContent := `{"$schema":"test","status":"completed","content":{}}`
+	err := os.WriteFile(stdoutPath, []byte(stdoutContent), 0644)
+	require.NoError(t, err)
+
+	// Create spawnResult with stdout bytes containing NO cost field
+	stdoutNoCost := `{"status":"completed"}`
+	result := &spawnResult{
+		stdout:   []byte(stdoutNoCost),
+		exitCode: 0,
+		pid:      12345,
+	}
+
+	estimatedCost := 1.50
+	spawner := &claudeSpawner{}
+	err = spawner.finalizeSpawn(runner, 0, 0, result, estimatedCost)
+	require.NoError(t, err)
+
+	// Verify fallback cost used (CostStatus="fallback")
+	runner.configMu.RLock()
+	costUSD := runner.config.Waves[0].Members[0].CostUSD
+	costStatus := runner.config.Waves[0].Members[0].CostStatus
+	runner.configMu.RUnlock()
+
+	assert.InDelta(t, estimatedCost, costUSD, 0.01)
+	assert.Equal(t, "fallback", costStatus)
+}
+
+// TestClaudeSpawner_Spawn_InvalidIndices tests Spawn with invalid wave index
+func TestClaudeSpawner_Spawn_InvalidIndices(t *testing.T) {
+	t.Parallel()
+	config := testConfig(Member{Name: "a", Agent: "test", Status: "pending"})
+	config.BudgetMaxUSD = 5.0
+	config.BudgetRemainingUSD = 5.0
+	runner, _ := setupTestRunner(t, config)
+
+	spawner := &claudeSpawner{}
+	ctx := context.Background()
+
+	// Invalid wave index → prepareSpawn fails
+	err := spawner.Spawn(ctx, runner, 99, 0)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "prepare:")
+}
+
+// TestClaudeSpawner_Spawn_BudgetInsufficient tests Spawn when budget is insufficient
+func TestClaudeSpawner_Spawn_BudgetInsufficient(t *testing.T) {
+	t.Parallel()
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "opus",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		Status:     "pending",
+	}
+	config := testConfig(member)
+	config.ProjectRoot = "/tmp/test"
+	config.BudgetMaxUSD = 0.01
+	config.BudgetRemainingUSD = 0.01 // Not enough for opus ($5 estimate)
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Write valid stdin file with context field
+	stdinData := `{"agent":"test-agent","task":"test","context":{"files":["test.go"]}}`
+	err := os.WriteFile(filepath.Join(teamDir, "stdin.json"), []byte(stdinData), 0644)
+	require.NoError(t, err)
+
+	spawner := &claudeSpawner{}
+	ctx := context.Background()
+	err = spawner.Spawn(ctx, runner, 0, 0)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insufficient budget")
 }

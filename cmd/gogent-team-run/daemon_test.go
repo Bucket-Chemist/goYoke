@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -314,4 +316,107 @@ func TestKillAllChildrenErrorCollection(t *testing.T) {
 
 	// Child should be cleared from tracking
 	assert.Equal(t, 0, runner.childCount())
+}
+
+// TestRedirectOutput tests redirectOutput function
+func TestRedirectOutput(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping fd-manipulation test in short mode")
+	}
+
+	teamDir := t.TempDir()
+
+	// Save original stdout/stderr file descriptors (NOT just the File pointers)
+	oldStdoutFd, err := syscall.Dup(int(os.Stdout.Fd()))
+	require.NoError(t, err)
+	oldStderrFd, err := syscall.Dup(int(os.Stderr.Fd()))
+	require.NoError(t, err)
+
+	defer func() {
+		// Restore original fds using Dup2
+		syscall.Dup2(oldStdoutFd, int(os.Stdout.Fd()))
+		syscall.Dup2(oldStderrFd, int(os.Stderr.Fd()))
+		syscall.Close(oldStdoutFd)
+		syscall.Close(oldStderrFd)
+	}()
+
+	// Call redirectOutput
+	logFile, err := redirectOutput(teamDir)
+	require.NoError(t, err)
+	require.NotNil(t, logFile)
+	defer logFile.Close()
+
+	// Verify runner.log was created
+	logPath := filepath.Join(teamDir, RunnerLogFile)
+	_, err = os.Stat(logPath)
+	require.NoError(t, err, "runner.log should be created")
+
+	// Write something via log.Printf and verify it appears in runner.log
+	log.Printf("TEST_MESSAGE_12345")
+
+	// Flush and read back
+	logFile.Sync()
+	content, err := os.ReadFile(logPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "TEST_MESSAGE_12345", "Log message should appear in runner.log")
+}
+
+// TestDaemonizeStdin tests daemonizeStdin function
+func TestDaemonizeStdin(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping fd-manipulation test in short mode")
+	}
+
+	// Save original stdin file descriptor
+	oldStdinFd, err := syscall.Dup(int(os.Stdin.Fd()))
+	require.NoError(t, err)
+	defer func() {
+		// Restore original stdin
+		syscall.Dup2(oldStdinFd, int(os.Stdin.Fd()))
+		syscall.Close(oldStdinFd)
+	}()
+
+	// Call daemonizeStdin - this should succeed
+	err = daemonizeStdin()
+	require.NoError(t, err)
+
+	// Verify stdin is now connected to /dev/null by checking stat
+	stat, err := os.Stdin.Stat()
+	require.NoError(t, err)
+	// /dev/null is a character device
+	assert.NotEqual(t, 0, stat.Mode()&os.ModeCharDevice, "stdin should be a character device (/dev/null)")
+}
+
+// TestNewTeamRunner_InvalidConfig tests NewTeamRunner with malformed JSON
+func TestNewTeamRunner_InvalidConfig(t *testing.T) {
+	t.Parallel()
+	teamDir := t.TempDir()
+
+	// Write malformed JSON to config.json
+	configPath := filepath.Join(teamDir, ConfigFileName)
+	malformedJSON := `{"team_name": "test", "waves": [invalid json}`
+	err := os.WriteFile(configPath, []byte(malformedJSON), 0644)
+	require.NoError(t, err)
+
+	// Call NewTeamRunner → expect error containing "unmarshal"
+	_, err = NewTeamRunner(teamDir)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unmarshal")
+}
+
+// TestNewTeamRunner_NoConfig tests NewTeamRunner with empty dir (no config.json)
+func TestNewTeamRunner_NoConfig(t *testing.T) {
+	t.Parallel()
+	teamDir := t.TempDir()
+
+	// Call NewTeamRunner with empty dir → expect success with nil config
+	runner, err := NewTeamRunner(teamDir)
+	require.NoError(t, err)
+	require.NotNil(t, runner)
+
+	// Verify config is nil
+	runner.configMu.RLock()
+	isNil := runner.config == nil
+	runner.configMu.RUnlock()
+	assert.True(t, isNil, "Config should be nil when config.json doesn't exist")
 }
