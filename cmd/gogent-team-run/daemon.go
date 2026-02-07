@@ -21,7 +21,9 @@ var (
 
 // Daemon timing constants
 const (
-	PIDFileName = "gogent-team-run.pid"
+	PIDFileName    = "gogent-team-run.pid"
+	ConfigFileName = "config.json"
+	RunnerLogFile  = "runner.log"
 
 	// sigTermGracePeriod is time to wait after SIGTERM before escalating to SIGKILL.
 	// Matches typical systemd KillSignal timeout.
@@ -91,7 +93,7 @@ func processExists(pid int) bool {
 // redirectOutput redirects stdout and stderr to team_dir/runner.log
 // Returns the log file handle (caller must close)
 func redirectOutput(teamDir string) (*os.File, error) {
-	logPath := filepath.Join(teamDir, "runner.log")
+	logPath := filepath.Join(teamDir, RunnerLogFile)
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("open runner.log: %w", err)
@@ -136,20 +138,34 @@ func daemonizeStdin() error {
 type TeamRunner struct {
 	teamDir string
 
-	childPIDs  map[int]struct{} // Track spawned child PIDs
-	childrenMu sync.Mutex       // Protect childPIDs map
+	config     *TeamConfig   // Team configuration (loaded from config.json)
+	configPath string        // Path to config.json
+	configMu   sync.RWMutex  // Protects config reads/writes
+
+	spawner    Spawner              // Injected spawn implementation
+	childPIDs  map[int]struct{}     // Track spawned child PIDs
+	childrenMu sync.Mutex           // Protect childPIDs map
 }
 
 // NewTeamRunner creates a TeamRunner for the given team directory.
 // It is safe for concurrent use by multiple goroutines.
 //
-// TC-008 will extend this to accept *TeamConfig and context.Context parameters
-// for wave execution and config state management.
+// Loads config.json if present. If config.json doesn't exist (e.g., in tests),
+// returns success with nil config to maintain compatibility with existing tests.
 func NewTeamRunner(teamDir string) (*TeamRunner, error) {
-	return &TeamRunner{
-		teamDir:   teamDir,
-		childPIDs: make(map[int]struct{}),
-	}, nil
+	tr := &TeamRunner{
+		teamDir:    teamDir,
+		configPath: filepath.Join(teamDir, ConfigFileName),
+		spawner:    &claudeSpawner{},
+		childPIDs:  make(map[int]struct{}),
+	}
+
+	// Attempt to load config (non-fatal if missing)
+	if err := tr.LoadConfig(); err != nil {
+		return nil, fmt.Errorf("load config: %w", err)
+	}
+
+	return tr, nil
 }
 
 // registerChild adds a child PID to tracking

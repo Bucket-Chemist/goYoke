@@ -1,0 +1,551 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// testConfig creates a TeamConfig for testing with given members
+func testConfig(members ...Member) *TeamConfig {
+	return &TeamConfig{
+		TeamName:    "test-team",
+		WorkflowType: "test",
+		ProjectRoot: "/tmp/test",
+		SessionID:   "test-session",
+		Status:      "running",
+		Waves: []Wave{{
+			WaveNumber:  1,
+			Description: "Test wave",
+			Members:     members,
+		}},
+	}
+}
+
+// fakeSpawner implements Spawner for testing
+type fakeSpawner struct {
+	fn func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error
+}
+
+func (f *fakeSpawner) Spawn(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+	return f.fn(ctx, tr, waveIdx, memIdx)
+}
+
+// setupTestRunner creates a TeamRunner with a test config and optional spawner.
+// If spawner is nil, the default claudeSpawner is used.
+func setupTestRunner(t *testing.T, config *TeamConfig, spawner ...Spawner) (*TeamRunner, string) {
+	teamDir := t.TempDir()
+
+	// Write config.json
+	configPath := filepath.Join(teamDir, ConfigFileName)
+	data, err := json.MarshalIndent(config, "", "  ")
+	require.NoError(t, err)
+	err = os.WriteFile(configPath, data, 0644)
+	require.NoError(t, err)
+
+	// Create TeamRunner
+	runner, err := NewTeamRunner(teamDir)
+	require.NoError(t, err)
+
+	if len(spawner) > 0 && spawner[0] != nil {
+		runner.spawner = spawner[0]
+	}
+
+	return runner, teamDir
+}
+
+// TestSpawnAndWait_SuccessFirstAttempt tests successful spawn on first attempt
+func TestSpawnAndWait_SuccessFirstAttempt(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.txt",
+		StdoutFile: "stdout.txt",
+		Status:     "pending",
+		MaxRetries: 1,
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			return nil // always succeed
+		},
+	})
+
+	// Spawn and wait
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	spawnAndWait(ctx, runner, 0, 0, &wg)
+	wg.Wait()
+
+	// Verify status is completed
+	runner.configMu.RLock()
+	finalStatus := runner.config.Waves[0].Members[0].Status
+	retryCount := runner.config.Waves[0].Members[0].RetryCount
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "completed", finalStatus)
+	assert.Equal(t, 0, retryCount)
+}
+
+// TestSpawnAndWait_FailOnceThenSucceed tests retry logic with one failure then success
+func TestSpawnAndWait_FailOnceThenSucceed(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.txt",
+		StdoutFile: "stdout.txt",
+		Status:     "pending",
+		MaxRetries: 1,
+	}
+
+	config := testConfig(member)
+
+	// Create fake that fails first call, succeeds second
+	var callCount int
+	var mu sync.Mutex
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			mu.Lock()
+			defer mu.Unlock()
+			callCount++
+			if callCount == 1 {
+				return fmt.Errorf("first attempt failed")
+			}
+			return nil
+		},
+	})
+
+	// Spawn and wait
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	spawnAndWait(ctx, runner, 0, 0, &wg)
+	wg.Wait()
+
+	// Verify status is completed after retry
+	runner.configMu.RLock()
+	finalStatus := runner.config.Waves[0].Members[0].Status
+	retryCount := runner.config.Waves[0].Members[0].RetryCount
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "completed", finalStatus)
+	assert.Equal(t, 1, retryCount, "Should succeed on second attempt (retry 1)")
+}
+
+// TestSpawnAndWait_AllRetriesExhausted tests failure after all retries
+func TestSpawnAndWait_AllRetriesExhausted(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.txt",
+		StdoutFile: "stdout.txt",
+		Status:     "pending",
+		MaxRetries: 2, // Will try 3 times total (attempt 0, 1, 2)
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			return fmt.Errorf("simulated spawn failure")
+		},
+	})
+
+	// Spawn and wait
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	spawnAndWait(ctx, runner, 0, 0, &wg)
+	wg.Wait()
+
+	// Verify status is failed after exhausting retries
+	runner.configMu.RLock()
+	finalStatus := runner.config.Waves[0].Members[0].Status
+	retryCount := runner.config.Waves[0].Members[0].RetryCount
+	errorMsg := runner.config.Waves[0].Members[0].ErrorMessage
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "failed", finalStatus)
+	assert.Equal(t, 2, retryCount, "Should have attempted retry 0, 1, 2")
+	assert.Contains(t, errorMsg, "attempt 0:")
+	assert.Contains(t, errorMsg, "attempt 1:")
+	assert.Contains(t, errorMsg, "attempt 2:")
+}
+
+// TestSpawnAndWait_ConcurrentMembers tests parallel spawning with mixed success/failure
+func TestSpawnAndWait_ConcurrentMembers(t *testing.T) {
+	members := []Member{
+		{Name: "agent-1", Agent: "test", Model: "sonnet", Status: "pending", MaxRetries: 1},
+		{Name: "agent-2", Agent: "test", Model: "sonnet", Status: "pending", MaxRetries: 1},
+		{Name: "agent-3", Agent: "test", Model: "sonnet", Status: "pending", MaxRetries: 1},
+		{Name: "agent-4", Agent: "test", Model: "sonnet", Status: "pending", MaxRetries: 1},
+	}
+
+	config := testConfig(members...)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			if memIdx%2 == 0 {
+				return nil // Success for agent-1 and agent-3
+			}
+			return fmt.Errorf("failure for odd index")
+		},
+	})
+
+	// Spawn all 4 members in parallel
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	for i := range members {
+		wg.Add(1)
+		go spawnAndWait(ctx, runner, 0, i, &wg)
+	}
+	wg.Wait()
+
+	// Verify results
+	runner.configMu.RLock()
+	defer runner.configMu.RUnlock()
+
+	assert.Equal(t, "completed", runner.config.Waves[0].Members[0].Status, "agent-1 should succeed")
+	assert.Equal(t, "failed", runner.config.Waves[0].Members[1].Status, "agent-2 should fail")
+	assert.Equal(t, "completed", runner.config.Waves[0].Members[2].Status, "agent-3 should succeed")
+	assert.Equal(t, "failed", runner.config.Waves[0].Members[3].Status, "agent-4 should fail")
+}
+
+// TestSpawnAndWait_ContextCancelled tests context cancellation during retry
+func TestSpawnAndWait_ContextCancelled(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.txt",
+		StdoutFile: "stdout.txt",
+		Status:     "pending",
+		MaxRetries: 5, // Many retries, but context will cancel
+	}
+
+	config := testConfig(member)
+
+	// Create fake that delays to allow cancellation
+	var attemptCount int
+	var mu sync.Mutex
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			mu.Lock()
+			attemptCount++
+			mu.Unlock()
+
+			// Delay to allow cancellation
+			time.Sleep(50 * time.Millisecond)
+			return fmt.Errorf("simulated failure")
+		},
+	})
+
+	// Create cancellable context
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Spawn in goroutine
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go spawnAndWait(ctx, runner, 0, 0, &wg)
+
+	// Cancel after short delay
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+
+	wg.Wait()
+
+	// Verify status is failed with context cancellation message
+	runner.configMu.RLock()
+	finalStatus := runner.config.Waves[0].Members[0].Status
+	errorMsg := runner.config.Waves[0].Members[0].ErrorMessage
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "failed", finalStatus)
+	assert.Contains(t, errorMsg, "context cancelled")
+
+	// Should not have exhausted all retries
+	mu.Lock()
+	assert.Less(t, attemptCount, 5, "Should stop before exhausting retries")
+	mu.Unlock()
+}
+
+// TestSpawnAndWait_MaxRetriesZero tests single attempt with maxRetries=0
+func TestSpawnAndWait_MaxRetriesZero(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		StdinFile:  "stdin.txt",
+		StdoutFile: "stdout.txt",
+		Status:     "pending",
+		MaxRetries: 0, // Single attempt only
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			return fmt.Errorf("simulated spawn failure")
+		},
+	})
+
+	// Spawn and wait
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	spawnAndWait(ctx, runner, 0, 0, &wg)
+	wg.Wait()
+
+	// Verify only one attempt was made
+	runner.configMu.RLock()
+	finalStatus := runner.config.Waves[0].Members[0].Status
+	retryCount := runner.config.Waves[0].Members[0].RetryCount
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "failed", finalStatus)
+	assert.Equal(t, 0, retryCount, "Should only attempt once (attempt 0)")
+}
+
+// TestSpawnAndWait_InvalidIndices tests handling of invalid wave/member indices
+func TestSpawnAndWait_InvalidIndices(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Agent:      "test-agent",
+		Model:      "sonnet",
+		Status:     "pending",
+		MaxRetries: 1,
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			return nil
+		},
+	})
+
+	tests := []struct {
+		name     string
+		waveIdx  int
+		memIdx   int
+	}{
+		{"invalid_wave", 99, 0},
+		{"invalid_member", 0, 99},
+		{"both_invalid", 99, 99},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			var wg sync.WaitGroup
+			wg.Add(1)
+
+			// Should not panic
+			spawnAndWait(ctx, runner, tc.waveIdx, tc.memIdx, &wg)
+			wg.Wait()
+
+			// Original member should be unchanged
+			runner.configMu.RLock()
+			status := runner.config.Waves[0].Members[0].Status
+			runner.configMu.RUnlock()
+			assert.Equal(t, "pending", status, "Original member should be unchanged")
+		})
+	}
+}
+
+// TestConfigLoadAndSave tests config loading and atomic saving
+func TestConfigLoadAndSave(t *testing.T) {
+	teamDir := t.TempDir()
+	configPath := filepath.Join(teamDir, ConfigFileName)
+
+	// Create initial config
+	config := testConfig(Member{
+		Name:   "agent-1",
+		Status: "pending",
+	})
+	data, err := json.MarshalIndent(config, "", "  ")
+	require.NoError(t, err)
+	err = os.WriteFile(configPath, data, 0644)
+	require.NoError(t, err)
+
+	// Create runner and load config
+	runner, err := NewTeamRunner(teamDir)
+	require.NoError(t, err)
+	require.NotNil(t, runner.config)
+
+	// Modify and save
+	runner.configMu.Lock()
+	runner.config.Waves[0].Members[0].Status = "completed"
+	runner.configMu.Unlock()
+
+	err = runner.SaveConfig()
+	require.NoError(t, err)
+
+	// Reload and verify
+	data, err = os.ReadFile(configPath)
+	require.NoError(t, err)
+	var reloaded TeamConfig
+	err = json.Unmarshal(data, &reloaded)
+	require.NoError(t, err)
+
+	assert.Equal(t, "completed", reloaded.Waves[0].Members[0].Status)
+}
+
+// TestUpdateMember tests atomic member updates
+func TestUpdateMember(t *testing.T) {
+	member := Member{
+		Name:       "agent-1",
+		Status:     "pending",
+		RetryCount: 0,
+	}
+
+	config := testConfig(member)
+	runner, _ := setupTestRunner(t, config)
+
+	// Update member
+	err := runner.updateMember(0, 0, func(m *Member) {
+		m.Status = "running"
+		m.RetryCount = 1
+	})
+	require.NoError(t, err)
+
+	// Verify update persisted
+	runner.configMu.RLock()
+	status := runner.config.Waves[0].Members[0].Status
+	retryCount := runner.config.Waves[0].Members[0].RetryCount
+	runner.configMu.RUnlock()
+
+	assert.Equal(t, "running", status)
+	assert.Equal(t, 1, retryCount)
+}
+
+// TestConcurrentUpdateMember verifies no lost writes under concurrent updateMember calls.
+// This was a real bug: shared .tmp filename caused rename failures.
+func TestConcurrentUpdateMember(t *testing.T) {
+	members := make([]Member, 8)
+	for i := range members {
+		members[i] = Member{
+			Name:   fmt.Sprintf("agent-%d", i+1),
+			Status: "pending",
+		}
+	}
+	config := testConfig(members...)
+	runner, _ := setupTestRunner(t, config)
+
+	// Hammer updateMember from 8 goroutines simultaneously
+	var wg sync.WaitGroup
+	var errCount atomic.Int64
+	for i := 0; i < len(members); i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				if err := runner.updateMember(0, idx, func(m *Member) {
+					m.RetryCount = j
+					m.Status = "running"
+				}); err != nil {
+					errCount.Add(1)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	// ZERO errors allowed — this was the bug
+	assert.Equal(t, int64(0), errCount.Load(), "All concurrent updateMember calls must succeed")
+
+	// Verify final state is consistent
+	runner.configMu.RLock()
+	for i, m := range runner.config.Waves[0].Members {
+		assert.Equal(t, "running", m.Status, "member %d should be running", i)
+		assert.Equal(t, 9, m.RetryCount, "member %d should have retryCount 9", i)
+	}
+	runner.configMu.RUnlock()
+}
+
+// TestDeepCopyConfig verifies deep cloning of all pointer fields
+func TestDeepCopyConfig(t *testing.T) {
+	startedAt := "2026-02-07T10:00:00Z"
+	pid := 12345
+	script := "inter-wave.sh"
+
+	original := &TeamConfig{
+		TeamName:      "test",
+		BackgroundPID: &pid,
+		StartedAt:     &startedAt,
+		Waves: []Wave{{
+			WaveNumber:       1,
+			OnCompleteScript: &script,
+			Members: []Member{{
+				Name:       "agent-1",
+				ProcessPID: &pid,
+				StartedAt:  &startedAt,
+			}},
+		}},
+	}
+
+	copied := deepCopyConfig(original)
+
+	// Mutate original pointers
+	newPID := 99999
+	newTime := "2026-12-31T23:59:59Z"
+	newScript := "mutated.sh"
+	original.BackgroundPID = &newPID
+	original.StartedAt = &newTime
+	original.Waves[0].OnCompleteScript = &newScript
+	original.Waves[0].Members[0].ProcessPID = &newPID
+	original.Waves[0].Members[0].StartedAt = &newTime
+
+	// Copy must be unaffected
+	assert.Equal(t, 12345, *copied.BackgroundPID)
+	assert.Equal(t, "2026-02-07T10:00:00Z", *copied.StartedAt)
+	assert.Equal(t, "inter-wave.sh", *copied.Waves[0].OnCompleteScript)
+	assert.Equal(t, 12345, *copied.Waves[0].Members[0].ProcessPID)
+	assert.Equal(t, "2026-02-07T10:00:00Z", *copied.Waves[0].Members[0].StartedAt)
+}
+
+// TestFindMember tests member lookup by name
+func TestFindMember(t *testing.T) {
+	members := []Member{
+		{Name: "agent-1"},
+		{Name: "agent-2"},
+		{Name: "agent-3"},
+	}
+
+	config := testConfig(members...)
+	runner, _ := setupTestRunner(t, config)
+
+	tests := []struct {
+		name      string
+		searchFor string
+		wantWave  int
+		wantMem   int
+		wantFound bool
+	}{
+		{"found_first", "agent-1", 0, 0, true},
+		{"found_middle", "agent-2", 0, 1, true},
+		{"found_last", "agent-3", 0, 2, true},
+		{"not_found", "agent-99", -1, -1, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			waveIdx, memIdx, found := runner.findMember(tc.searchFor)
+			assert.Equal(t, tc.wantFound, found)
+			if found {
+				assert.Equal(t, tc.wantWave, waveIdx)
+				assert.Equal(t, tc.wantMem, memIdx)
+			}
+		})
+	}
+}
