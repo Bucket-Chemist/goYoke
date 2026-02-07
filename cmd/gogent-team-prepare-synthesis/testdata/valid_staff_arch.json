@@ -1,0 +1,106 @@
+{
+  "review_id": "staff-arch-20260207-123456",
+  "status": "complete",
+  "executive_assessment": {
+    "verdict": "APPROVE_WITH_CONDITIONS",
+    "confidence": "high",
+    "summary": "Overall good design with minor improvements needed",
+    "issue_counts": {
+      "critical": 1,
+      "major": 1,
+      "minor": 1
+    }
+  },
+  "issue_register": [
+    {
+      "id": "ISS-001",
+      "severity": "critical",
+      "layer": "architecture",
+      "title": "Critical test issue",
+      "description": "Issue description",
+      "evidence": "Evidence details",
+      "impact": "High impact",
+      "recommendation": "Fix immediately",
+      "affected_tickets": ["TC-001"],
+      "affected_files": ["file1.go"]
+    },
+    {
+      "id": "ISS-002",
+      "severity": "major",
+      "layer": "implementation",
+      "title": "Major test issue",
+      "description": "Major issue description",
+      "evidence": "Major evidence",
+      "impact": "Medium impact",
+      "recommendation": "Address soon",
+      "affected_tickets": ["TC-002"],
+      "affected_files": ["file2.go"]
+    },
+    {
+      "id": "ISS-003",
+      "severity": "minor",
+      "layer": "testing",
+      "title": "Minor test issue",
+      "description": "Minor issue description",
+      "evidence": "Minor evidence",
+      "impact": "Low impact",
+      "recommendation": "Optional fix",
+      "affected_tickets": [],
+      "affected_files": ["file3.go"]
+    }
+  ],
+  "assumption_register": [
+    {
+      "id": "ASM-001",
+      "assumption": "Test assumption",
+      "source": "Design doc",
+      "verified": true,
+      "risk_if_false": "Medium risk",
+      "mitigation": "Mitigation strategy",
+      "verification_method": "Code review"
+    }
+  ],
+  "dependency_analysis": {
+    "critical_path": ["task1", "task2"],
+    "bottlenecks": ["resource1"],
+    "circular_risks": []
+  },
+  "failure_mode_analysis": [
+    {
+      "scenario": "Test failure scenario",
+      "probability": "low",
+      "impact": "high",
+      "detection": "Monitoring",
+      "mitigation": "Fallback strategy"
+    }
+  ],
+  "commendations": ["Good error handling", "Clear structure"],
+  "recommendations": {
+    "high_priority": [
+      {
+        "action": "Fix critical issue",
+        "rationale": "Security concern",
+        "effort": "2 hours"
+      }
+    ],
+    "medium_priority": [
+      {
+        "action": "Improve test coverage",
+        "rationale": "Better reliability",
+        "effort": "4 hours"
+      }
+    ],
+    "low_priority": [
+      {
+        "action": "Consider refactoring utility functions",
+        "rationale": "Code cleanliness",
+        "effort": "1 hour"
+      }
+    ]
+  },
+  "sign_off": {
+    "conditions": ["Fix ISS-001 before deployment"],
+    "post_approval_monitoring": ["Monitor error rates"]
+  },
+  "handoff_notes": "Staff handoff notes"
+}

@@ -144,7 +144,7 @@
       "title": "Implement gogent-team-run Go Binary",
       "file": "TC-008.md",
       "priority": "CRITICAL",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "5-7d",
       "dependencies": [
@@ -162,7 +162,7 @@
       "title": "Rewrite Inter-Wave Script as Go Binary",
       "file": "TC-010.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
