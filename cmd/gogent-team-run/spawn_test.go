@@ -913,8 +913,10 @@ func TestFinalizeSpawn_CostOK(t *testing.T) {
 	err := os.WriteFile(stdoutPath, []byte(stdoutContent), 0644)
 	require.NoError(t, err)
 
-	// Create spawnResult with stdout bytes containing cost
-	stdoutWithCost := `{"cost_usd":0.42,"status":"completed"}`
+	// Create spawnResult with stdout bytes containing cost (array format)
+	stdoutWithCost := `[
+		{"type": "result", "result": "Task completed", "total_cost_usd": 0.42}
+	]`
 	result := &spawnResult{
 		stdout:   []byte(stdoutWithCost),
 		exitCode: 0,
@@ -957,8 +959,10 @@ func TestFinalizeSpawn_NoCostField(t *testing.T) {
 	err := os.WriteFile(stdoutPath, []byte(stdoutContent), 0644)
 	require.NoError(t, err)
 
-	// Create spawnResult with stdout bytes containing NO cost field
-	stdoutNoCost := `{"status":"completed"}`
+	// Create spawnResult with stdout bytes containing NO cost field (array format)
+	stdoutNoCost := `[
+		{"type": "result", "result": "Done"}
+	]`
 	result := &spawnResult{
 		stdout:   []byte(stdoutNoCost),
 		exitCode: 0,
@@ -1029,4 +1033,247 @@ func TestClaudeSpawner_Spawn_NoBudgetCheck(t *testing.T) {
 	assert.NotContains(t, err.Error(), "insufficient budget")
 	// Should fail with CLI-related error instead
 	assert.Contains(t, err.Error(), "claude")
+}
+
+// TestParseCLIOutput tests parsing of Claude CLI JSON array output
+func TestParseCLIOutput(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		wantResult   string
+		wantCost     float64
+		wantError    bool
+		wantIsError  bool
+		wantSession  string
+	}{
+		{
+			name: "valid_array_with_result",
+			input: `[
+				{"type": "system", "subtype": "init", "session_id": "sess-123"},
+				{"type": "assistant", "message": {"content": [{"type": "text", "text": "processing..."}]}},
+				{"type": "result", "subtype": "success", "result": "Task completed successfully", "total_cost_usd": 0.24, "session_id": "sess-123"}
+			]`,
+			wantResult:  "Task completed successfully",
+			wantCost:    0.24,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-123",
+		},
+		{
+			name: "result_with_zero_cost",
+			input: `[
+				{"type": "result", "result": "Done", "total_cost_usd": 0, "session_id": "sess-456"}
+			]`,
+			wantResult:  "Done",
+			wantCost:    0,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-456",
+		},
+		{
+			name: "result_with_error_flag",
+			input: `[
+				{"type": "result", "result": "Failed", "total_cost_usd": 0.12, "is_error": true, "session_id": "sess-789"}
+			]`,
+			wantResult:  "Failed",
+			wantCost:    0.12,
+			wantError:   false,
+			wantIsError: true,
+			wantSession: "sess-789",
+		},
+		{
+			name:      "empty_array",
+			input:     `[]`,
+			wantError: true,
+		},
+		{
+			name: "array_with_no_result_entry",
+			input: `[
+				{"type": "system", "subtype": "init"},
+				{"type": "assistant", "message": {}}
+			]`,
+			wantError: true,
+		},
+		{
+			name:      "not_an_array",
+			input:     `{"type": "result", "result": "test"}`,
+			wantError: true,
+		},
+		{
+			name: "array_with_skippable_entries",
+			input: `[
+				{"invalid": "entry"},
+				{"type": "result", "result": "Success", "total_cost_usd": 0.5, "session_id": "sess-999"}
+			]`,
+			wantResult:  "Success",
+			wantCost:    0.5,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-999",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := parseCLIOutput([]byte(tc.input))
+
+			if tc.wantError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantResult, result.Result)
+			assert.InDelta(t, tc.wantCost, result.TotalCostUSD, 0.01)
+			assert.Equal(t, tc.wantIsError, result.IsError)
+			assert.Equal(t, tc.wantSession, result.SessionID)
+		})
+	}
+}
+
+// TestWriteStdoutFile tests writing agent stdout to file
+func TestWriteStdoutFile(t *testing.T) {
+	tests := []struct {
+		name            string
+		agentResult     string
+		agentID         string
+		wantStatus      string
+		wantRawOutput   bool
+		wantValidJSON   bool
+		wantPathTraversal bool
+	}{
+		{
+			name:          "agent_returns_valid_json",
+			agentResult:   `{"status": "complete", "data": {"count": 42}}`,
+			agentID:       "test-agent",
+			wantStatus:    "complete",
+			wantValidJSON: true,
+		},
+		{
+			name: "agent_returns_json_code_block",
+			agentResult: `Here is the result:
+` + "```json\n" + `{
+  "status": "complete",
+  "items": ["a", "b", "c"]
+}
+` + "```\n" + `
+That's it!`,
+			agentID:       "test-agent",
+			wantStatus:    "complete",
+			wantValidJSON: true,
+		},
+		{
+			name:          "agent_returns_plain_text",
+			agentResult:   "Task completed successfully. Found 10 items.",
+			agentID:       "test-agent",
+			wantRawOutput: true,
+			wantValidJSON: true,
+		},
+		{
+			name:              "path_traversal_attempt",
+			agentResult:       "test",
+			agentID:           "test",
+			wantPathTraversal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			teamDir := t.TempDir()
+			stdoutPath := filepath.Join(teamDir, "stdout.json")
+
+			if tc.wantPathTraversal {
+				// Try to write outside teamDir
+				stdoutPath = filepath.Join(teamDir, "../../../etc/passwd")
+				err := writeStdoutFile(stdoutPath, teamDir, tc.agentResult, tc.agentID)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "stdout path security")
+				return
+			}
+
+			err := writeStdoutFile(stdoutPath, teamDir, tc.agentResult, tc.agentID)
+			require.NoError(t, err)
+
+			// Verify file was written
+			data, err := os.ReadFile(stdoutPath)
+			require.NoError(t, err)
+
+			if tc.wantValidJSON {
+				var result map[string]interface{}
+				err := json.Unmarshal(data, &result)
+				require.NoError(t, err)
+
+				if tc.wantRawOutput {
+					assert.Equal(t, true, result["raw_output"])
+					assert.Equal(t, tc.agentID, result["agent"])
+					assert.Equal(t, tc.agentResult, result["result"])
+				} else if tc.wantStatus != "" {
+					assert.Equal(t, tc.wantStatus, result["status"])
+				}
+			}
+		})
+	}
+}
+
+// TestExtractCostFromCLIOutput_ArrayFormat tests cost extraction from array format
+func TestExtractCostFromCLIOutput_ArrayFormat(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantCost   float64
+		wantStatus CostStatus
+	}{
+		{
+			name: "array_with_cost",
+			input: `[
+				{"type": "result", "result": "Done", "total_cost_usd": 0.42}
+			]`,
+			wantCost:   0.42,
+			wantStatus: CostOK,
+		},
+		{
+			name: "array_with_zero_cost",
+			input: `[
+				{"type": "result", "result": "Done", "total_cost_usd": 0}
+			]`,
+			wantCost:   0,
+			wantStatus: CostFallback,
+		},
+		{
+			name: "array_no_result_entry",
+			input: `[
+				{"type": "system", "subtype": "init"}
+			]`,
+			wantCost:   0,
+			wantStatus: CostError, // parseCLIOutput fails (no result), tries object parse (array->map fails), returns error
+		},
+		{
+			name:       "legacy_object_format",
+			input:      `{"cost_usd": 1.23}`,
+			wantCost:   1.23,
+			wantStatus: CostOK,
+		},
+		{
+			name:       "legacy_nested_format",
+			input:      `{"usage": {"cost_usd": 2.34}}`,
+			wantCost:   2.34,
+			wantStatus: CostOK,
+		},
+		{
+			name:       "invalid_json",
+			input:      `{not valid}`,
+			wantCost:   0,
+			wantStatus: CostError,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := extractCostFromCLIOutput([]byte(tc.input))
+			assert.Equal(t, tc.wantStatus, result.Status)
+			if tc.wantStatus == CostOK {
+				assert.InDelta(t, tc.wantCost, result.Cost, 0.01)
+			}
+		})
+	}
 }

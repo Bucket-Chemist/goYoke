@@ -37,32 +37,35 @@ type CostResult struct {
 //	    actualCost = result.Cost
 //	}
 func extractCostFromCLIOutput(output []byte) CostResult {
-	var data map[string]interface{}
-	if err := json.Unmarshal(output, &data); err != nil {
-		return CostResult{
-			Cost:   0,
-			Status: CostError,
-			Err:    fmt.Errorf("CLI output not valid JSON: %w", err),
-		}
+	// First try: parse as JSON array (new format from --output-format json)
+	cliOut, err := parseCLIOutput(output)
+	if err == nil && cliOut.TotalCostUSD > 0 {
+		return CostResult{Cost: cliOut.TotalCostUSD, Status: CostOK}
 	}
 
-	// Try fields in priority order
+	// Check if it was successfully parsed as array but with zero/missing cost
+	arrayParsedOK := err == nil
+
+	// Second try: parse as JSON object (legacy/test format)
+	var data map[string]interface{}
+	if err := json.Unmarshal(output, &data); err != nil {
+		if arrayParsedOK {
+			// Array parsed successfully but no/zero cost found
+			return CostResult{Cost: 0, Status: CostFallback, Err: fmt.Errorf("no cost in CLI output")}
+		}
+		// Neither array nor object - JSON parse error
+		return CostResult{Cost: 0, Status: CostError, Err: fmt.Errorf("CLI output not valid JSON: %w", err)}
+	}
+
+	// Try fields in priority order (legacy path)
 	fields := []string{"cost_usd", "total_cost_usd", "usage.cost_usd"}
 	for _, field := range fields {
 		if val, ok := getNestedFloat(data, field); ok {
-			return CostResult{
-				Cost:   val,
-				Status: CostOK,
-			}
+			return CostResult{Cost: val, Status: CostOK}
 		}
 	}
 
-	// C3 FIX: Missing field = CostFallback status, caller uses estimated cost
-	return CostResult{
-		Cost:   0,
-		Status: CostFallback,
-		Err:    fmt.Errorf("no cost field found in CLI output (checked: %s)", strings.Join(fields, ", ")),
-	}
+	return CostResult{Cost: 0, Status: CostFallback, Err: fmt.Errorf("no cost field found")}
 }
 
 // getNestedFloat traverses a map by dot-separated path (e.g., "usage.cost_usd").

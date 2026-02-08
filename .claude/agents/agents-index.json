@@ -26,7 +26,7 @@
       "tools": ["Read", "Write", "Glob", "save_memory"],
       "cli_flags": {
         "allowed_tools": ["Read", "Write", "Glob"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "inputs": [
@@ -63,7 +63,7 @@
       "tools": ["Glob", "Grep", "Read"],
       "cli_flags": {
         "allowed_tools": ["Glob", "Grep", "Read"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "description": "Fast file and code discovery. Haiku-tier for mechanical extraction.",
@@ -95,7 +95,7 @@
       "tools": ["WebFetch", "WebSearch", "Bash", "Read", "Grep"],
       "cli_flags": {
         "allowed_tools": ["WebFetch", "WebSearch", "Bash", "Read", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "auto_fire": ["External library mentioned", "Unfamiliar package"],
@@ -129,7 +129,7 @@
       "tools": ["Read", "Write", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Write", "Glob"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "description": "Generate boilerplate code following conventions. Haiku-tier for fast scaffolding.",
@@ -164,7 +164,7 @@
       "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
       "cli_flags": {
         "allowed_tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "description": "Technical documentation specialist. README, API docs, architecture guides.",
@@ -194,7 +194,7 @@
       "tools": ["Read", "Glob", "Grep"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "description": "Routine code review for style, simple bugs, and obvious improvements.",
@@ -227,7 +227,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "languages": ["Python"]
@@ -278,7 +278,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "patterns": ["PySide6", "PyQt", "QWidget", "QMainWindow", "Qt"]
@@ -320,7 +320,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "languages": ["R"]
@@ -360,7 +360,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "languages": ["R+Shiny"],
@@ -402,7 +402,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "languages": ["Go"],
@@ -443,7 +443,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "patterns": ["**/cmd/**/main.go", "**/cli/**/*.go"]
@@ -484,7 +484,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "patterns": ["**/tui/**/*.go", "**/ui/**/*.go"]
@@ -526,7 +526,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "patterns": ["**/api/**/*.go", "**/client/**/*.go"]
@@ -567,7 +567,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "patterns": ["**/worker/**/*.go", "**/pool/**/*.go"]
@@ -621,7 +621,7 @@
       ],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "can_spawn": [
@@ -671,7 +671,7 @@
       "tools": ["Read", "Write", "Glob", "Grep", "TaskCreate", "TaskUpdate"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "output_artifacts": {
@@ -718,7 +718,7 @@
       "tools": ["Read", "Write", "Glob", "Grep", "AskUserQuestion"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "conventions_required": [
@@ -772,7 +772,7 @@
       "tools": ["Read", "Glob", "Grep", "Write", "AskUserQuestion"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "output_artifacts": {
@@ -804,7 +804,7 @@
       "tools": ["Read", "Write", "Glob", "Grep", "TaskGet"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "spawned_by": ["mozart"],
@@ -848,7 +848,7 @@
       ],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "invoked_by": "/braintrust skill only",
@@ -885,7 +885,7 @@
       "tools": ["Read", "Write", "Glob", "TaskGet"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "spawned_by": ["mozart"],
@@ -973,7 +973,7 @@
       "tools": ["Read", "Glob", "Grep", "Write"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "spawned_by": ["mozart", "router"],
@@ -1012,7 +1012,7 @@
       "tools": ["Read", "Glob", "Grep", "Bash"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "parallel_safe": true,
@@ -1087,7 +1087,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "languages": ["TypeScript"],
@@ -1130,7 +1130,7 @@
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": {
         "patterns": ["*.tsx", "use*.ts"]
@@ -1166,7 +1166,7 @@
       "tools": ["Read", "Glob", "Grep"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "conventions_required": ["go.md", "python.md", "R.md", "typescript.md"],
@@ -1197,7 +1197,7 @@
       "tools": ["Read", "Glob", "Grep"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "conventions_required": ["typescript.md", "react.md"],
@@ -1228,7 +1228,7 @@
       "tools": ["Read", "Glob", "Grep"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "sharp_edges_count": 10,
@@ -1258,7 +1258,7 @@
       "tools": ["Read", "Glob", "Grep"],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "conventions_required": [
@@ -1300,7 +1300,7 @@
       ],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "spawned_by": ["router"],
@@ -1352,7 +1352,7 @@
       ],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
-        "additional_flags": ["--permission-mode delegate"]
+        "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "can_spawn": [

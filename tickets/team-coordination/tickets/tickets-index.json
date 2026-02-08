@@ -233,7 +233,7 @@
       "title": "Review Workflow Team-Run Migration",
       "file": "TC-013a.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "complete",
       "phase": "4a",
       "time_estimate": "1-2d",
       "dependencies": [

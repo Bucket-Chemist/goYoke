@@ -1,5 +1,4 @@
 {
-  "use_team_pattern": true,
   "permissions": {
     "allow": [
       "Read(**)",
@@ -104,6 +103,7 @@
   },
   "autoUpdatesChannel": "latest",
   "minimumVersion": "2.1.25",
+  "use_team_pattern": true,
   "trustedDirectories": [
     "/home/doktersmol",
     "/home/doktersmol/Documents"

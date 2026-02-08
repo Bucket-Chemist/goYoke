@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-08 11:03:59
+# Session Handoff - 2026-02-08 13:11:03
 
 ## Session Context
 
-- **Session ID**: df447c36-915c-42ac-b61d-1326908b2140
+- **Session ID**: 489aa0ca-0d33-46ee-98ad-0acae9e61192
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 73
+- **Tool Calls**: 5
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,34 +16,19 @@
 - **Branch**: multiagent-dispatch
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
+  - claude/agents/agents-index.json
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
-  - claude/schemas/stdin/beethoven.json
-  - claude/schemas/stdin/einstein.json
-  - claude/schemas/stdin/reviewer.json
-  - claude/schemas/stdin/staff-architect.json
-  - claude/schemas/stdin/worker.json
-  - claude/schemas/teams/braintrust.json
-  - claude/schemas/teams/stdin-stdout/review-architect.json
-  - claude/tmp/review-metadata.json
-  - md/gogent-team-run/main.go
+  - claude/settings.json
+  - md/gogent-team-run/cost.go
+  - md/gogent-team-run/envelope.go
+  - md/gogent-team-run/envelope_test.go
   - md/gogent-team-run/spawn.go
   - md/gogent-team-run/spawn_test.go
-  - md/gogent-team-run/wave.go
-  - md/gogent-team-run/wave_test.go
-  - ickets/team-coordination/tickets/TC-020.md
+  - ogent-team-run
+  - ickets/team-coordination/tickets/TC-013a.md
+  - ickets/team-coordination/tickets/TC-013b.md
+  - ickets/team-coordination/tickets/TC-013c.md
   - ickets/team-coordination/tickets/tickets-index.json
-  - .claude/braintrust/analysis-tc013-alignment-review.md
-  - .claude/braintrust/analysis-tc013-ticket-quality.md
-  - .claude/braintrust/einstein-tc013-review.md
-  - .claude/braintrust/staff-architect-tc013-review.md
-  - .claude/memory/session-archive/routing-violations-4f7eb7b2-4bec-4e6a-98ab-683f2fa05c1e.jsonl
-  - .claude/memory/session-archive/routing-violations-6bdb6ced-5bfe-4cdd-bc10-64d1b4fcb94a.jsonl
-  - gogent-team-run
-  - tickets/team-coordination/ImplMgr-team-bridge.md
-  - tickets/team-coordination/ReviewOrch-team-bridge.md
-  - tickets/team-coordination/team-dispatch-decision-matrix.md
-  - tickets/team-coordination/tickets/TC-013a.md
-  - tickets/team-coordination/tickets/TC-013b.md
-  - tickets/team-coordination/tickets/TC-013c.md
+  - .claude/memory/session-archive/routing-violations-76e77123-cf4e-41b7-99f7-d7d7572b0295.jsonl
 
