@@ -187,7 +187,7 @@
       "title": "Implement Team Slash Commands",
       "file": "TC-012.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 3,
       "time_estimate": "2-3d",
       "dependencies": [
@@ -196,26 +196,73 @@
     },
     {
       "id": "TC-020",
-      "title": "Orchestrator Rewrite Design Docs",
+      "title": "Orchestrator Team-Dispatch Bridge Docs",
       "file": "TC-020.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "completed",
       "phase": "independent",
-      "time_estimate": "2-3d",
-      "dependencies": []
+      "time_estimate": "1-2d",
+      "dependencies": [],
+      "reworked": "2026-02-08",
+      "rework_reason": "Mozart deliverable removed (TC-018 covered). Remaining docs refocused as bridge corrections for TC-013 stale references. Added dispatch decision matrix.",
+      "completed": "2026-02-08"
     },
     {
       "id": "TC-013",
-      "title": "Rewrite Orchestrator Prompts for Team Pattern",
+      "title": "Rewrite Orchestrator Prompts for Team Pattern (DECOMPOSED)",
       "file": "TC-013.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "decomposed",
       "phase": 4,
       "time_estimate": "3-5d",
       "dependencies": [
         "TC-012",
         "TC-018",
         "TC-020"
+      ],
+      "decomposed_into": [
+        "TC-013a",
+        "TC-013b",
+        "TC-013c"
+      ],
+      "decomposed_date": "2026-02-08",
+      "decomposed_reason": "Braintrust analysis identified TC-013 as 3 distinct workflows with different complexity profiles. Decomposed into ascending-complexity tickets for partial delivery and independent validation."
+    },
+    {
+      "id": "TC-013a",
+      "title": "Review Workflow Team-Run Migration",
+      "file": "TC-013a.md",
+      "priority": "HIGH",
+      "status": "in_progress",
+      "phase": "4a",
+      "time_estimate": "1-2d",
+      "dependencies": [
+        "TC-020"
+      ]
+    },
+    {
+      "id": "TC-013b",
+      "title": "Braintrust Workflow Team-Run Migration",
+      "file": "TC-013b.md",
+      "priority": "HIGH",
+      "status": "pending",
+      "phase": "4b",
+      "time_estimate": "2-3d",
+      "dependencies": [
+        "TC-013a",
+        "TC-020"
+      ]
+    },
+    {
+      "id": "TC-013c",
+      "title": "Implementation Workflow Team-Run Migration",
+      "file": "TC-013c.md",
+      "priority": "HIGH",
+      "status": "pending",
+      "phase": "4c",
+      "time_estimate": "2-3d",
+      "dependencies": [
+        "TC-013b"
       ]
     },
     {

@@ -922,7 +922,7 @@ func TestFinalizeSpawn_CostOK(t *testing.T) {
 	}
 
 	spawner := &claudeSpawner{}
-	err = spawner.finalizeSpawn(runner, 0, 0, result, 1.50)
+	err = spawner.finalizeSpawn(runner, 0, 0, result)
 	require.NoError(t, err)
 
 	// Verify member's CostUSD=0.42 and CostStatus="ok"
@@ -965,18 +965,18 @@ func TestFinalizeSpawn_NoCostField(t *testing.T) {
 		pid:      12345,
 	}
 
-	estimatedCost := 1.50
 	spawner := &claudeSpawner{}
-	err = spawner.finalizeSpawn(runner, 0, 0, result, estimatedCost)
+	err = spawner.finalizeSpawn(runner, 0, 0, result)
 	require.NoError(t, err)
 
-	// Verify fallback cost used (CostStatus="fallback")
+	// Verify fallback cost behavior (CostStatus="fallback", CostUSD=0.0)
+	// Budget reconciliation happens at wave level, not in finalizeSpawn
 	runner.configMu.RLock()
 	costUSD := runner.config.Waves[0].Members[0].CostUSD
 	costStatus := runner.config.Waves[0].Members[0].CostStatus
 	runner.configMu.RUnlock()
 
-	assert.InDelta(t, estimatedCost, costUSD, 0.01)
+	assert.Equal(t, 0.0, costUSD)
 	assert.Equal(t, "fallback", costStatus)
 }
 
@@ -997,8 +997,9 @@ func TestClaudeSpawner_Spawn_InvalidIndices(t *testing.T) {
 	assert.Contains(t, err.Error(), "prepare:")
 }
 
-// TestClaudeSpawner_Spawn_BudgetInsufficient tests Spawn when budget is insufficient
-func TestClaudeSpawner_Spawn_BudgetInsufficient(t *testing.T) {
+// TestClaudeSpawner_Spawn_NoBudgetCheck tests that Spawn no longer checks budget
+// Budget checking happens at wave level in spawnAndWaitWithBudget
+func TestClaudeSpawner_Spawn_NoBudgetCheck(t *testing.T) {
 	t.Parallel()
 	member := Member{
 		Name:       "agent-1",
@@ -1011,7 +1012,8 @@ func TestClaudeSpawner_Spawn_BudgetInsufficient(t *testing.T) {
 	config := testConfig(member)
 	config.ProjectRoot = "/tmp/test"
 	config.BudgetMaxUSD = 0.01
-	config.BudgetRemainingUSD = 0.01 // Not enough for opus ($5 estimate)
+	config.BudgetRemainingUSD = 0.01 // Low budget, but Spawn doesn't check it
+
 	runner, teamDir := setupTestRunner(t, config)
 
 	// Write valid stdin file with context field
@@ -1022,6 +1024,9 @@ func TestClaudeSpawner_Spawn_BudgetInsufficient(t *testing.T) {
 	spawner := &claudeSpawner{}
 	ctx := context.Background()
 	err = spawner.Spawn(ctx, runner, 0, 0)
+	// Spawn will fail due to missing claude CLI, but NOT due to budget
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "insufficient budget")
+	assert.NotContains(t, err.Error(), "insufficient budget")
+	// Should fail with CLI-related error instead
+	assert.Contains(t, err.Error(), "claude")
 }

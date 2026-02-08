@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -288,7 +290,13 @@ func TestRunWaves_ContextCancellation(t *testing.T) {
 
 // TestRunWaves_InterWaveScript tests inter-wave script execution
 func TestRunWaves_InterWaveScript(t *testing.T) {
-	scriptPath := "test-script.sh"
+	// Create a test script that exits successfully
+	tempDir := t.TempDir()
+	scriptPath := filepath.Join(tempDir, "test-script.sh")
+	scriptContent := "#!/bin/bash\nexit 0\n"
+	err := os.WriteFile(scriptPath, []byte(scriptContent), 0755)
+	require.NoError(t, err)
+
 	config := &TeamConfig{
 		TeamName:            "test-team",
 		WorkflowType:        "test",
@@ -319,10 +327,10 @@ func TestRunWaves_InterWaveScript(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	err := runWaves(ctx, runner)
+	err = runWaves(ctx, runner)
 	require.NoError(t, err)
 
-	// Inter-wave script stub should not fail (TC-010 will implement)
+	// Verify wave completed successfully and script was executed
 	runner.configMu.RLock()
 	defer runner.configMu.RUnlock()
 	assert.Equal(t, "completed", runner.config.Waves[0].Members[0].Status)

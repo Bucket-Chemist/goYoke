@@ -1,32 +1,114 @@
 {
-  "plan_file": "tickets/codebase-map/IMPLEMENTATION-PLAN.md",
-  "verdict": "CONDITIONAL_PASS",
+  "review_id": "tc013abc-critical-review-20260208",
+  "timestamp": "2026-02-08T16:45:00Z",
+  "input_files": [
+    "tickets/team-coordination/tickets/TC-013a.md",
+    "tickets/team-coordination/tickets/TC-013b.md",
+    "tickets/team-coordination/tickets/TC-013c.md"
+  ],
+  "supporting_files": [
+    "tickets/team-coordination/ReviewOrch-team-bridge.md",
+    "tickets/team-coordination/ImplMgr-team-bridge.md",
+    "tickets/team-coordination/tickets/TC-020.md"
+  ],
+  "output_file": ".claude/braintrust/staff-architect-tc013-review.md",
+  "verdict": "CONCERNS",
   "confidence": "HIGH",
   "issue_counts": {
     "critical": 3,
     "major": 7,
-    "minor": 10,
-    "low": 4
+    "minor": 6
   },
-  "commendations_count": 6,
-  "critical_issues": [
-    "A1: Fork skill context:fork must be validated as real Claude Code feature",
-    "D1: CM-007 has undeclared dependency on CM-006 for non-Go call queries",
-    "F1: No context window overflow mitigation for LLM enrichment on large modules"
+  "commendations_count": 5,
+  "assumptions_registered": 10,
+  "assumptions_verified_true": 5,
+  "assumptions_verified_false": 0,
+  "assumptions_unverified": 3,
+  "assumptions_partially_verified": 2,
+  "files_examined": [
+    "tickets/team-coordination/tickets/TC-013a.md",
+    "tickets/team-coordination/tickets/TC-013b.md",
+    "tickets/team-coordination/tickets/TC-013c.md",
+    "tickets/team-coordination/tickets/TC-020.md",
+    "tickets/team-coordination/ReviewOrch-team-bridge.md",
+    "tickets/team-coordination/ImplMgr-team-bridge.md",
+    "cmd/gogent-team-run/main.go",
+    "cmd/gogent-team-run/wave.go",
+    "cmd/gogent-team-run/spawn.go",
+    "cmd/gogent-team-run/spawn_test.go",
+    "cmd/gogent-team-run/wave_test.go",
+    "cmd/gogent-team-run/envelope.go",
+    "cmd/gogent-team-run/config.go",
+    ".claude/schemas/stdin/reviewer.json",
+    ".claude/schemas/stdin/einstein.json",
+    ".claude/schemas/stdin/worker.json",
+    ".claude/schemas/stdin/staff-architect.json",
+    ".claude/schemas/teams/review.json",
+    ".claude/schemas/teams/braintrust.json",
+    ".claude/schemas/teams/implementation.json",
+    ".claude/schemas/teams/stdin-stdout/review-architect.json",
+    ".claude/schemas/teams/stdin-stdout/review-backend.json",
+    ".claude/schemas/teams/stdin-stdout/braintrust-einstein.json",
+    ".claude/schemas/teams/stdin-stdout/implementation-worker.json",
+    ".claude/skills/review/SKILL.md",
+    ".claude/skills/team-result/SKILL.md"
   ],
-  "high_issues": [
-    "A2: CGo dependency is first in project, impacts build system",
-    "D2: CM-003 logically depends on CM-002 but not declared",
-    "F2: Call graph symbol table collision on short names",
-    "F3: No reporting of tree-sitter parse errors",
-    "CB1: Phase 1 effort underestimated (CM-005 should be 5-7d not 3-5d)",
-    "T1: No integration test for full 3-stage pipeline",
-    "CR1: CM-005 too large for single session, should split into 3 sub-tickets"
+  "critical_issues_summary": [
+    {
+      "id": "C-1",
+      "layer": "Failure Modes",
+      "location": "TC-013b Section 5 + config.go:379 + braintrust.json",
+      "title": "Braintrust budget arithmetic blocks Wave 2 (Beethoven never runs)",
+      "impact": "Braintrust produces no synthesis -- entire workflow broken",
+      "fix": "Raise braintrust.json budget_max_usd from 5.0 to 16.0",
+      "fix_effort": "15 minutes (one-line JSON change + decision)"
+    },
+    {
+      "id": "C-2",
+      "layer": "Assumptions",
+      "location": "TC-013c Test 4 + wave.go:14-59",
+      "title": "Wave failure propagation requires unscoped code change to wave.go",
+      "impact": "Test case describes behavior that binary does not implement; implementer discovers mismatch",
+      "fix": "Add wave.go to TC-013c deliverables, scope the change, add unit test",
+      "fix_effort": "0.5 days"
+    },
+    {
+      "id": "C-3",
+      "layer": "Dependencies",
+      "location": "reviewer.json:38 vs review-architect.json:11-28",
+      "title": "Schema/contract duality: architect contract breaks schema validation (missing required 'files' array)",
+      "impact": "CI validation fails OR implementer generates invalid stdin OR schema is ignored",
+      "fix": "Add 'files[]' to architect contract, declare schema as authoritative",
+      "fix_effort": "15 minutes"
+    }
   ],
+  "major_issues": [
+    "M-1: No code/pseudocode for TC-013a config generation",
+    "M-2: settings.json with use_team_pattern flag does not exist",
+    "M-3: /team-result severity enum mismatch with contracts",
+    "M-4: No unit tests for config generators in TC-013a/b",
+    "M-5: Review SKILL.md rewrite underscoped",
+    "M-6: Mozart template location uses fragile line numbers",
+    "M-7: Inter-wave script PATH resolution not verified"
+  ],
+  "undeclared_dependencies": [
+    "settings.json creation (M-2)",
+    "Schema/contract alignment (C-3)",
+    "wave.go modification (C-2)",
+    "claude CLI on PATH in spawned processes",
+    "GOGENT_SESSION_DIR vs GOGENT_SESSION_ID alignment (m-1)"
+  ],
+  "effort_estimate": {
+    "tc013a_declared": "1-2 days",
+    "tc013b_declared": "2-3 days",
+    "tc013c_declared": "2-3 days",
+    "total_declared": "5-8 days",
+    "prerequisites_additional": "0.5 days (C-1, C-2, C-3 resolution + M-2 settings.json)",
+    "underscoped_work": "0.5-1 day (M-5 SKILL.md rewrite, M-4 unit tests, wave.go change)",
+    "total_revised": "6-9.5 days"
+  },
+  "review_duration_minutes": 35,
   "scouts_spawned": [],
-  "cost_estimate_usd": 0.23,
-  "review_duration_minutes": 3.4,
-  "thinking_budget_used": 12000,
-  "reviewed_at": "2026-02-08T00:00:00Z",
+  "cost_estimate_usd": 0.0,
   "reviewer": "staff-architect-critical-review"
 }

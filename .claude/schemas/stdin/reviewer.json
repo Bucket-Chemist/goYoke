@@ -133,6 +133,10 @@
           "items": {"type": "string"}
         }
       }
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable task summary for envelope builder compatibility"
     }
   },
   "additionalProperties": false

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os/exec"
 	"sync"
 )
 
@@ -94,9 +95,15 @@ func spawnAndWaitWithBudget(ctx context.Context, tr *TeamRunner, waveIdx, memIdx
 }
 
 // runInterWaveScript executes a script between waves.
-// Stub implementation for TC-010 — logs and returns nil.
+// Passes teamDir as the first argument to the script.
 func runInterWaveScript(ctx context.Context, scriptPath string, teamDir string) error {
-	log.Printf("[INFO] wave: inter-wave script %s (TC-010 stub, not yet implemented)", scriptPath)
-	// TC-010 will implement real execution here
+	log.Printf("[INFO] wave: executing inter-wave script: %s %s", scriptPath, teamDir)
+	cmd := exec.CommandContext(ctx, scriptPath, teamDir)
+	cmd.Dir = teamDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("inter-wave script %s failed: %w\noutput: %s", scriptPath, err, string(output))
+	}
+	log.Printf("[INFO] wave: inter-wave script %s completed successfully", scriptPath)
 	return nil
 }

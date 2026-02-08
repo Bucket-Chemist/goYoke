@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-08 08:08:26
+# Session Handoff - 2026-02-08 11:03:59
 
 ## Session Context
 
-- **Session ID**: 85c41c65-0c38-466a-a791-35626f7b1798
+- **Session ID**: df447c36-915c-42ac-b61d-1326908b2140
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 24
+- **Tool Calls**: 73
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,37 +16,34 @@
 - **Branch**: multiagent-dispatch
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/CLAUDE.md
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
-  - claude/stats-cache.json
+  - claude/schemas/stdin/beethoven.json
+  - claude/schemas/stdin/einstein.json
+  - claude/schemas/stdin/reviewer.json
+  - claude/schemas/stdin/staff-architect.json
+  - claude/schemas/stdin/worker.json
+  - claude/schemas/teams/braintrust.json
+  - claude/schemas/teams/stdin-stdout/review-architect.json
   - claude/tmp/review-metadata.json
-  - claude/tmp/unleash-backup-codeium-extension.json
-  - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
-  - ticket-config.json
-  - ackages/tui/src/App.tsx
-  - ackages/tui/src/components/StatusLine.tsx
-  - ackages/tui/src/store/slices/session.ts
-  - ackages/tui/src/store/types.ts
+  - md/gogent-team-run/main.go
+  - md/gogent-team-run/spawn.go
+  - md/gogent-team-run/spawn_test.go
+  - md/gogent-team-run/wave.go
+  - md/gogent-team-run/wave_test.go
+  - ickets/team-coordination/tickets/TC-020.md
   - ickets/team-coordination/tickets/tickets-index.json
-  - .claude/memory/session-archive/routing-violations-3331a11d-05f9-4c0b-a1ae-feb687a6280b.jsonl
-  - .claude/memory/session-archive/routing-violations-3331cceb-de18-475f-8315-a9d32791f3a1.jsonl
-  - .claude/memory/session-archive/routing-violations-8a1ae2bd-9346-4a29-98c0-5763c652f55f.jsonl
-  - .claude/memory/session-archive/routing-violations-a0d8278a-e17e-4fe3-b61f-6f525b592e33.jsonl
-  - .claude/memory/session-archive/routing-violations-db5ca9ca-2298-4855-aa57-465444368d51.jsonl
-  - .claude/memory/session-archive/routing-violations-f9a42bc9-576f-431f-a640-c7414430aa30.jsonl
-  - .claude/schemas/teams/stdin-stdout/.claude/
-  - .claude/skills/team-cancel/
-  - .claude/skills/team-result/
-  - .claude/skills/team-status/
-  - .claude/skills/teams/
-  - gogent-team-prepare-synthesis
+  - .claude/braintrust/analysis-tc013-alignment-review.md
+  - .claude/braintrust/analysis-tc013-ticket-quality.md
+  - .claude/braintrust/einstein-tc013-review.md
+  - .claude/braintrust/staff-architect-tc013-review.md
+  - .claude/memory/session-archive/routing-violations-4f7eb7b2-4bec-4e6a-98ab-683f2fa05c1e.jsonl
+  - .claude/memory/session-archive/routing-violations-6bdb6ced-5bfe-4cdd-bc10-64d1b4fcb94a.jsonl
   - gogent-team-run
-  - packages/tui/src/hooks/useTeamCount.ts
-  - packages/tui/tests/components/StatusLine.test.tsx
-  - packages/tui/tests/hooks/useTeamCount.test.ts
-  - packages/tui/tests/integration/session-env.test.ts
-  - tickets/codebase-map/
-  - tickets/team-coordination/tickets/TC-021.md
-  - tickets/team-coordination/tickets/tc-012-review.md
+  - tickets/team-coordination/ImplMgr-team-bridge.md
+  - tickets/team-coordination/ReviewOrch-team-bridge.md
+  - tickets/team-coordination/team-dispatch-decision-matrix.md
+  - tickets/team-coordination/tickets/TC-013a.md
+  - tickets/team-coordination/tickets/TC-013b.md
+  - tickets/team-coordination/tickets/TC-013c.md
 

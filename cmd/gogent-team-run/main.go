@@ -72,6 +72,21 @@ func main() {
 		log.Fatalf("Failed to initialize TeamRunner: %v", err)
 	}
 
+	// Write startup state to config.json for external monitoring
+	pid := os.Getpid()
+	now := time.Now().UTC().Format(time.RFC3339)
+	runner.configMu.Lock()
+	if runner.config != nil {
+		runner.config.BackgroundPID = &pid
+		runner.config.StartedAt = &now
+		runner.config.Status = "running"
+	}
+	runner.configMu.Unlock()
+	if err := runner.SaveConfig(); err != nil {
+		log.Fatalf("Failed to write startup state to config.json: %v", err)
+	}
+	log.Printf("[INFO] main: wrote startup state (PID=%d, status=running) to config.json", pid)
+
 	// Create context for cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -95,9 +110,27 @@ func main() {
 		// Waves completed normally
 		if err != nil {
 			log.Printf("Wave execution failed: %v", err)
+			// Update config with failure status
+			now := time.Now().UTC().Format(time.RFC3339)
+			runner.configMu.Lock()
+			if runner.config != nil {
+				runner.config.Status = "failed"
+				runner.config.CompletedAt = &now
+			}
+			runner.configMu.Unlock()
+			runner.SaveConfig()
 			os.Exit(1)
 		}
 		log.Printf("Wave execution completed successfully")
+		// Update config with completion status
+		now := time.Now().UTC().Format(time.RFC3339)
+		runner.configMu.Lock()
+		if runner.config != nil {
+			runner.config.Status = "completed"
+			runner.config.CompletedAt = &now
+		}
+		runner.configMu.Unlock()
+		runner.SaveConfig()
 	case sig := <-sigCh:
 		log.Printf("Received signal %s, shutting down gracefully", sig)
 		cancel()

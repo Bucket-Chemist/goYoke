@@ -54,29 +54,19 @@ type agentCLIConfig struct {
 var defaultFallbackTools = []string{"Read", "Glob", "Grep"}
 
 // Spawn delegates to the three phases.
+// Budget management happens at wave level in spawnAndWaitWithBudget.
 func (s *claudeSpawner) Spawn(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
 	cfg, err := s.prepareSpawn(tr, waveIdx, memIdx)
 	if err != nil {
 		return fmt.Errorf("prepare: %w", err)
 	}
 
-	estimatedCost := tr.estimateCost(cfg.agentID)
-
-	// Try to reserve budget before spawning
-	if !tr.tryReserveBudget(estimatedCost) {
-		return fmt.Errorf("insufficient budget: need $%.4f, have $%.4f", estimatedCost, tr.BudgetRemaining())
-	}
-
 	result, err := s.executeSpawn(ctx, tr, cfg)
 	if err != nil {
-		// Budget reservation failed - return it
-		if reconcileErr := tr.reconcileCost(estimatedCost, 0); reconcileErr != nil {
-			log.Printf("WARNING: Failed to return reserved budget: %v", reconcileErr)
-		}
 		return fmt.Errorf("execute: %w", err)
 	}
 
-	return s.finalizeSpawn(tr, waveIdx, memIdx, result, estimatedCost)
+	return s.finalizeSpawn(tr, waveIdx, memIdx, result)
 }
 
 // prepareSpawn builds all inputs needed for spawning (no side effects).
@@ -211,36 +201,32 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 }
 
 // finalizeSpawn processes results (cost extraction, stdout validation, member update).
-func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, result *spawnResult, estimatedCost float64) error {
+// Budget reconciliation happens at wave level in spawnAndWaitWithBudget.
+func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, result *spawnResult) error {
 	// 1. Extract cost
 	costResult := extractCostFromCLIOutput(result.stdout)
 
-	actualCost := estimatedCost // Default to estimated if extraction fails
-	costStatus := "fallback"
+	actualCost := 0.0 // Will be used for cost reporting only
+	costStatus := "ok"
 
-	// 2. Handle CostFallback and CostError
+	// 2. Handle cost extraction results
 	switch costResult.Status {
 	case CostOK:
 		actualCost = costResult.Cost
 		costStatus = "ok"
 	case CostFallback:
-		// Use estimatedCost as actualCost
-		log.Printf("WARNING: No cost field in CLI output for member, using estimated $%.4f", estimatedCost)
-		actualCost = estimatedCost
+		// No cost field in CLI output
+		log.Printf("WARNING: No cost field in CLI output for member")
+		actualCost = 0.0
 		costStatus = "fallback"
 	case CostError:
-		// JSON parse error - use estimated
-		log.Printf("ERROR: Cost extraction failed: %v (using estimated $%.4f)", costResult.Err, estimatedCost)
-		actualCost = estimatedCost
+		// JSON parse error
+		log.Printf("ERROR: Cost extraction failed: %v", costResult.Err)
+		actualCost = 0.0
 		costStatus = "error"
 	}
 
-	// 3. Reconcile budget
-	if err := tr.reconcileCost(estimatedCost, actualCost); err != nil {
-		return fmt.Errorf("reconcile cost: %w", err)
-	}
-
-	// 4. Validate stdout (W2: pass teamDir for path traversal check)
+	// 3. Validate stdout (W2: pass teamDir for path traversal check)
 	stdoutPath := filepath.Join(tr.teamDir, "")
 	tr.configMu.RLock()
 	if tr.config != nil && waveIdx < len(tr.config.Waves) && memIdx < len(tr.config.Waves[waveIdx].Members) {
@@ -254,7 +240,7 @@ func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, resul
 		// Don't fail the member - validation errors are non-fatal
 	}
 
-	// 5. Update member status
+	// 4. Update member status
 	exitCodeCopy := result.exitCode
 	pidCopy := result.pid
 	if err := tr.updateMember(waveIdx, memIdx, func(m *Member) {
