@@ -79,10 +79,11 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 	}
 	member := tr.config.Waves[waveIdx].Members[memIdx]
 	projectRoot := tr.config.ProjectRoot
+	workflowType := tr.config.WorkflowType
 	tr.configMu.RUnlock()
 
-	// 2. Build prompt envelope
-	envelope, err := buildPromptEnvelope(tr.teamDir, &member)
+	// 2. Build prompt envelope (includes stdout schema instructions when contract exists)
+	envelope, err := buildPromptEnvelope(tr.teamDir, &member, workflowType)
 	if err != nil {
 		return nil, fmt.Errorf("build envelope: %w", err)
 	}
@@ -203,38 +204,44 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 // finalizeSpawn processes results (cost extraction, stdout validation, member update).
 // Budget reconciliation happens at wave level in spawnAndWaitWithBudget.
 func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, result *spawnResult) error {
-	// 1. Extract cost
-	costResult := extractCostFromCLIOutput(result.stdout)
+	// 1. Parse CLI output
+	cliOut, err := parseCLIOutput(result.stdout)
 
-	actualCost := 0.0 // Will be used for cost reporting only
+	actualCost := 0.0
 	costStatus := "ok"
 
-	// 2. Handle cost extraction results
-	switch costResult.Status {
-	case CostOK:
-		actualCost = costResult.Cost
-		costStatus = "ok"
-	case CostFallback:
-		// No cost field in CLI output
-		log.Printf("WARNING: No cost field in CLI output for member")
-		actualCost = 0.0
-		costStatus = "fallback"
-	case CostError:
-		// JSON parse error
-		log.Printf("ERROR: Cost extraction failed: %v", costResult.Err)
-		actualCost = 0.0
-		costStatus = "error"
-	}
-
-	// 3. Validate stdout (W2: pass teamDir for path traversal check)
-	stdoutPath := filepath.Join(tr.teamDir, "")
 	tr.configMu.RLock()
+	memberName := ""
+	agentID := ""
+	stdoutPath := ""
 	if tr.config != nil && waveIdx < len(tr.config.Waves) && memIdx < len(tr.config.Waves[waveIdx].Members) {
 		member := tr.config.Waves[waveIdx].Members[memIdx]
+		memberName = member.Name
+		agentID = member.Agent
 		stdoutPath = filepath.Join(tr.teamDir, member.StdoutFile)
 	}
 	tr.configMu.RUnlock()
 
+	if err != nil {
+		log.Printf("WARNING: CLI output parse failed for %s: %v", memberName, err)
+		costStatus = "error"
+	} else {
+		actualCost = cliOut.TotalCostUSD
+		if actualCost == 0 {
+			costStatus = "fallback"
+		}
+	}
+
+	// 2. Write stdout file
+	if cliOut != nil && cliOut.Result != "" {
+		if err := writeStdoutFile(stdoutPath, tr.teamDir, cliOut.Result, agentID); err != nil {
+			log.Printf("WARNING: failed to write stdout for %s: %v", memberName, err)
+		}
+	} else {
+		log.Printf("WARNING: no result text to write for %s", memberName)
+	}
+
+	// 3. Validate stdout
 	if err := validateStdout(stdoutPath, tr.teamDir); err != nil {
 		log.Printf("WARNING: stdout validation failed: %v", err)
 		// Don't fail the member - validation errors are non-fatal
@@ -297,6 +304,10 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 	args := []string{"-p", "--output-format", "json"}
 
+	if agentConfig.Model != "" {
+		args = append(args, "--model", agentConfig.Model)
+	}
+
 	if len(agentConfig.AllowedTools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(agentConfig.AllowedTools, ","))
 	}
@@ -304,6 +315,112 @@ func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 	args = append(args, agentConfig.AdditionalFlags...)
 
 	return args
+}
+
+// cliOutput represents parsed Claude CLI JSON output.
+type cliOutput struct {
+	Result       string  // Agent's text response from the "result" entry
+	TotalCostUSD float64 // Total cost from the "result" entry
+	IsError      bool    // Whether the CLI reported an error
+	SessionID    string  // CLI session ID for tracking
+}
+
+// parseCLIOutput parses the JSON array from `claude -p --output-format json`.
+// Returns the extracted result entry data, or error if parsing fails.
+func parseCLIOutput(output []byte) (*cliOutput, error) {
+	// Parse as JSON array
+	var entries []json.RawMessage
+	if err := json.Unmarshal(output, &entries); err != nil {
+		return nil, fmt.Errorf("CLI output not valid JSON array: %w", err)
+	}
+
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("CLI output is empty array")
+	}
+
+	// Find the "result" entry
+	for _, entry := range entries {
+		// Partially unmarshal to check type field
+		var partial struct {
+			Type    string  `json:"type"`
+			Subtype string  `json:"subtype"`
+			Result  string  `json:"result"`
+			Cost    float64 `json:"total_cost_usd"`
+			IsError bool    `json:"is_error"`
+			Session string  `json:"session_id"`
+		}
+
+		if err := json.Unmarshal(entry, &partial); err != nil {
+			// Skip malformed entries
+			continue
+		}
+
+		if partial.Type == "result" {
+			return &cliOutput{
+				Result:       partial.Result,
+				TotalCostUSD: partial.Cost,
+				IsError:      partial.IsError,
+				SessionID:    partial.Session,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no result entry found in CLI output")
+}
+
+// writeStdoutFile writes the agent's response to the stdout JSON file.
+// Attempts to extract structured JSON from the response text.
+// Falls back to wrapping the text in a minimal JSON envelope.
+func writeStdoutFile(stdoutPath string, teamDir string, agentResult string, agentID string) error {
+	// Validate path is within teamDir
+	if err := validatePathWithinDir(stdoutPath, teamDir); err != nil {
+		return fmt.Errorf("stdout path security: %w", err)
+	}
+
+	var outputJSON map[string]interface{}
+
+	// Try to extract JSON from agent result
+	// First try: unmarshal entire result as JSON object
+	if err := json.Unmarshal([]byte(agentResult), &outputJSON); err == nil {
+		// Valid JSON object found - use it directly
+		log.Printf("Wrote structured stdout (direct JSON)")
+	} else {
+		// Second try: look for JSON code block
+		jsonBlockStart := strings.Index(agentResult, "```json\n")
+		if jsonBlockStart != -1 {
+			jsonBlockStart += len("```json\n")
+			jsonBlockEnd := strings.Index(agentResult[jsonBlockStart:], "\n```")
+			if jsonBlockEnd != -1 {
+				jsonStr := agentResult[jsonBlockStart : jsonBlockStart+jsonBlockEnd]
+				if err := json.Unmarshal([]byte(jsonStr), &outputJSON); err == nil {
+					log.Printf("Wrote structured stdout (extracted from code block)")
+				}
+			}
+		}
+
+		// Fallback: wrap in minimal envelope
+		if outputJSON == nil {
+			outputJSON = map[string]interface{}{
+				"agent":      agentID,
+				"status":     "complete",
+				"raw_output": true,
+				"result":     agentResult,
+			}
+			log.Printf("Wrote raw stdout (no JSON found, wrapped in envelope)")
+		}
+	}
+
+	// Write pretty-printed JSON
+	data, err := json.MarshalIndent(outputJSON, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal stdout JSON: %w", err)
+	}
+
+	if err := os.WriteFile(stdoutPath, data, 0644); err != nil {
+		return fmt.Errorf("write stdout file: %w", err)
+	}
+
+	return nil
 }
 
 // isRetryableError classifies errors for retry decisions.

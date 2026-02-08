@@ -15,7 +15,7 @@ import (
 type StdinEnvelope struct {
 	// Fields used for validation only
 	Agent       string                 `json:"agent"`
-	Context     map[string]interface{} `json:"context"`
+	Context     map[string]any `json:"context"`
 	Task        string                 `json:"task,omitempty"`
 	Description string                 `json:"description,omitempty"`
 
@@ -40,6 +40,75 @@ func (s *StdinEnvelope) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, aux)
 }
 
+// stdoutSchemasBaseDir can be overridden in tests to use a temp directory.
+// When empty, defaults to $HOME/.claude/schemas/teams/stdin-stdout/
+var stdoutSchemasBaseDir string
+
+// resolveStdoutSchema finds the stdout contract schema for the given workflow and agent.
+// Returns the pretty-printed stdout JSON schema and the schema filename (without .json),
+// or empty strings if no matching schema is found.
+// This is a best-effort lookup — missing schemas are not errors.
+func resolveStdoutSchema(workflowType, agentID string) (stdoutJSON string, schemaName string) {
+	dir := stdoutSchemasBaseDir
+	if dir == "" {
+		dir = filepath.Join(os.Getenv("HOME"), ".claude", "schemas", "teams", "stdin-stdout")
+	}
+
+	candidates := buildSchemaCandidates(workflowType, agentID)
+
+	for _, candidate := range candidates {
+		path := filepath.Join(dir, candidate)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+
+		// Parse as map to extract "stdout" key
+		var contract map[string]json.RawMessage
+		if err := json.Unmarshal(data, &contract); err != nil {
+			continue
+		}
+
+		stdoutRaw, ok := contract["stdout"]
+		if !ok {
+			continue
+		}
+
+		// Pretty-print the stdout schema
+		var pretty bytes.Buffer
+		if err := json.Indent(&pretty, stdoutRaw, "", "  "); err != nil {
+			continue
+		}
+
+		name := strings.TrimSuffix(candidate, ".json")
+		return pretty.String(), name
+	}
+
+	return "", ""
+}
+
+// buildSchemaCandidates generates candidate filenames for contract schema lookup.
+// Tries in order: exact match, suffix-stripped variants, generic worker fallback.
+func buildSchemaCandidates(workflowType, agentID string) []string {
+	var candidates []string
+
+	// 1. Exact: e.g., "review-backend-reviewer.json" or "braintrust-einstein.json"
+	candidates = append(candidates, fmt.Sprintf("%s-%s.json", workflowType, agentID))
+
+	// 2. Strip common agent suffixes
+	suffixes := []string{"-reviewer", "-critical-review", "-pro", "-writer", "-archivist"}
+	for _, suffix := range suffixes {
+		if stripped, ok := strings.CutSuffix(agentID, suffix); ok {
+			candidates = append(candidates, fmt.Sprintf("%s-%s.json", workflowType, stripped))
+		}
+	}
+
+	// 3. Generic worker fallback: e.g., "implementation-worker.json"
+	candidates = append(candidates, fmt.Sprintf("%s-worker.json", workflowType))
+
+	return candidates
+}
+
 // buildPromptEnvelope reads stdin JSON from member.StdinFile and builds a formatted
 // prompt string for the Claude CLI. Validates required fields and prevents path traversal.
 //
@@ -48,13 +117,14 @@ func (s *StdinEnvelope) UnmarshalJSON(data []byte) error {
 // - Task/context description
 // - Capabilities notice (Task delegation policy at nesting level 2)
 // - All workflow-specific fields from stdin
+// - Stdout contract schema with output format instructions (when available)
 //
 // Returns error if:
 // - stdin path escapes teamDir (path traversal)
 // - stdin file doesn't exist or is unreadable
 // - stdin is not valid JSON
 // - required fields (task/description and context) are empty
-func buildPromptEnvelope(teamDir string, member *Member) (string, error) {
+func buildPromptEnvelope(teamDir string, member *Member, workflowType string) (string, error) {
 	// W2: Validate stdin path is within teamDir (path traversal protection)
 	stdinPath := filepath.Join(teamDir, member.StdinFile)
 	if err := validatePathWithinDir(stdinPath, teamDir); err != nil {
@@ -82,7 +152,7 @@ func buildPromptEnvelope(teamDir string, member *Member) (string, error) {
 	}
 
 	contextField := ""
-	if stdin.Context != nil && len(stdin.Context) > 0 {
+	if len(stdin.Context) > 0 {
 		contextField = "present"
 	}
 	if contextField == "" {
@@ -92,7 +162,7 @@ func buildPromptEnvelope(teamDir string, member *Member) (string, error) {
 	// Build envelope with capabilities notice
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("AGENT: %s\n\n", member.Agent))
+	fmt.Fprintf(&builder, "AGENT: %s\n\n", member.Agent)
 
 	// Serialize full stdin for agent consumption (use raw JSON to preserve all fields)
 	builder.WriteString("# Stdin Envelope\n\n")
@@ -124,6 +194,21 @@ session model, which may be Opus — causing an unintended block.
 You do NOT have access to spawn_agent (that's for MCP-spawned agents only).
 
 `)
+
+	// Resolve and embed stdout contract schema for output format compliance
+	if workflowType != "" {
+		stdoutSchema, schemaName := resolveStdoutSchema(workflowType, member.Agent)
+		if stdoutSchema != "" {
+			builder.WriteString("## Expected Output Format\n\n")
+			builder.WriteString("Your response MUST be a single JSON code block. Do NOT include any text outside the code block — no markdown, no explanations, no preamble or postamble.\n\n")
+			builder.WriteString("The JSON must conform to this schema:\n\n")
+			builder.WriteString("```json\n")
+			builder.WriteString(stdoutSchema)
+			builder.WriteString("\n```\n\n")
+			fmt.Fprintf(&builder, "Include \"$schema\": \"%s\" in your JSON output.\n", schemaName)
+			builder.WriteString("Use exact field names, types, and enum values as shown in the schema.\n\n")
+		}
+	}
 
 	return builder.String(), nil
 }

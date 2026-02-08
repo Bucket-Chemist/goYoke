@@ -33,7 +33,7 @@ func TestBuildEnvelope_ValidStdin(t *testing.T) {
 		StdoutFile: "stdout_worker.json",
 	}
 
-	envelope, err := buildPromptEnvelope(teamDir, member)
+	envelope, err := buildPromptEnvelope(teamDir, member, "")
 	require.NoError(t, err)
 
 	// Verify envelope contains all expected sections
@@ -70,7 +70,7 @@ func TestBuildEnvelope_EmptyTask(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	_, err := buildPromptEnvelope(teamDir, member)
+	_, err := buildPromptEnvelope(teamDir, member, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "task field is empty")
 }
@@ -95,7 +95,7 @@ func TestBuildEnvelope_EmptyContext(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	_, err := buildPromptEnvelope(teamDir, member)
+	_, err := buildPromptEnvelope(teamDir, member, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "context field is empty")
 }
@@ -110,7 +110,7 @@ func TestBuildEnvelope_MissingFile(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	_, err := buildPromptEnvelope(teamDir, member)
+	_, err := buildPromptEnvelope(teamDir, member, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "read stdin file")
 }
@@ -130,7 +130,7 @@ func TestBuildEnvelope_InvalidJSON(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	_, err := buildPromptEnvelope(teamDir, member)
+	_, err := buildPromptEnvelope(teamDir, member, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parse stdin JSON")
 }
@@ -150,7 +150,7 @@ func TestBuildEnvelope_PathTraversal(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	_, err := buildPromptEnvelope(teamDir, member)
+	_, err := buildPromptEnvelope(teamDir, member, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "escapes")
 }
@@ -173,7 +173,7 @@ func TestBuildEnvelope_CapabilitiesNotice(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	envelope, err := buildPromptEnvelope(teamDir, member)
+	envelope, err := buildPromptEnvelope(teamDir, member, "")
 	require.NoError(t, err)
 
 	// Verify capabilities notice is present
@@ -200,7 +200,7 @@ func TestBuildEnvelope_AgentName(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	envelope, err := buildPromptEnvelope(teamDir, member)
+	envelope, err := buildPromptEnvelope(teamDir, member, "")
 	require.NoError(t, err)
 
 	// Verify agent name in header
@@ -226,7 +226,7 @@ func TestBuildEnvelope_DescriptionFallback(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	envelope, err := buildPromptEnvelope(teamDir, member)
+	envelope, err := buildPromptEnvelope(teamDir, member, "")
 	require.NoError(t, err)
 
 	assert.Contains(t, envelope, "Implement feature using description field")
@@ -374,7 +374,7 @@ func TestBuildEnvelope_WorkflowSpecificFields(t *testing.T) {
 		StdoutFile: "stdout_einstein.json",
 	}
 
-	envelope, err := buildPromptEnvelope(teamDir, member)
+	envelope, err := buildPromptEnvelope(teamDir, member, "")
 	require.NoError(t, err)
 
 	// Verify workflow-specific fields are preserved in envelope
@@ -426,7 +426,7 @@ func TestBuildEnvelope_MissingContext(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	_, err := buildPromptEnvelope(teamDir, member)
+	_, err := buildPromptEnvelope(teamDir, member, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "context field is empty")
 }
@@ -462,7 +462,7 @@ func TestBuildEnvelope_JSONSerializationPreservation(t *testing.T) {
 		StdoutFile: "stdout.json",
 	}
 
-	envelope, err := buildPromptEnvelope(teamDir, member)
+	envelope, err := buildPromptEnvelope(teamDir, member, "")
 	require.NoError(t, err)
 
 	// Verify complex structures are preserved
@@ -471,6 +471,182 @@ func TestBuildEnvelope_JSONSerializationPreservation(t *testing.T) {
 	assert.Contains(t, envelope, `"custom_field"`)
 	assert.Contains(t, envelope, `"array"`)
 	assert.Contains(t, envelope, `"Constraint 1"`)
+}
+
+func TestBuildSchemaCandidates(t *testing.T) {
+	tests := []struct {
+		name         string
+		workflowType string
+		agentID      string
+		expected     []string
+	}{
+		{
+			name:         "reviewer_agent",
+			workflowType: "review",
+			agentID:      "backend-reviewer",
+			expected:     []string{"review-backend-reviewer.json", "review-backend.json", "review-worker.json"},
+		},
+		{
+			name:         "exact_match_agent",
+			workflowType: "braintrust",
+			agentID:      "einstein",
+			expected:     []string{"braintrust-einstein.json", "braintrust-worker.json"},
+		},
+		{
+			name:         "critical_review_suffix",
+			workflowType: "braintrust",
+			agentID:      "staff-architect-critical-review",
+			expected:     []string{"braintrust-staff-architect-critical-review.json", "braintrust-staff-architect.json", "braintrust-worker.json"},
+		},
+		{
+			name:         "pro_suffix",
+			workflowType: "implementation",
+			agentID:      "go-pro",
+			expected:     []string{"implementation-go-pro.json", "implementation-go.json", "implementation-worker.json"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := buildSchemaCandidates(tc.workflowType, tc.agentID)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestBuildEnvelope_StdoutSchemaEmbedding(t *testing.T) {
+	teamDir := t.TempDir()
+
+	// Create a fake schemas directory with a test contract
+	schemasDir := t.TempDir()
+	contractContent := `{
+  "stdin": {"agent": "test-reviewer"},
+  "stdout": {
+    "reviewer": "test-reviewer",
+    "status": "complete|partial|failed",
+    "overall_assessment": "APPROVE|WARNING|BLOCK",
+    "findings": [{"severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO", "message": "description"}]
+  }
+}`
+	require.NoError(t, os.WriteFile(filepath.Join(schemasDir, "review-test.json"), []byte(contractContent), 0644))
+
+	// Override schemas dir
+	oldDir := stdoutSchemasBaseDir
+	stdoutSchemasBaseDir = schemasDir
+	defer func() { stdoutSchemasBaseDir = oldDir }()
+
+	// Create stdin file
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	require.NoError(t, os.WriteFile(stdinPath, []byte(`{
+  "agent": "test-reviewer",
+  "context": {"project_root": "/test"},
+  "task": "Review code"
+}`), 0644))
+
+	member := &Member{
+		Name:       "reviewer-1",
+		Agent:      "test-reviewer",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+	}
+
+	envelope, err := buildPromptEnvelope(teamDir, member, "review")
+	require.NoError(t, err)
+
+	// Verify stdout schema instructions are present
+	assert.Contains(t, envelope, "Expected Output Format")
+	assert.Contains(t, envelope, "single JSON code block")
+	assert.Contains(t, envelope, "findings")
+	assert.Contains(t, envelope, "severity")
+	assert.Contains(t, envelope, "$schema")
+	assert.Contains(t, envelope, "review-test")
+}
+
+func TestBuildEnvelope_NoSchemaAvailable(t *testing.T) {
+	teamDir := t.TempDir()
+
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	require.NoError(t, os.WriteFile(stdinPath, []byte(`{
+  "agent": "go-pro",
+  "context": {"project_root": "/test"},
+  "task": "Implement handler"
+}`), 0644))
+
+	member := &Member{
+		Name:       "worker-1",
+		Agent:      "go-pro",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+	}
+
+	// Use a nonexistent workflow type to ensure no schema is found
+	envelope, err := buildPromptEnvelope(teamDir, member, "nonexistent-workflow")
+	require.NoError(t, err)
+
+	// Envelope should still work, just without output format section
+	assert.Contains(t, envelope, "AGENT: go-pro")
+	assert.Contains(t, envelope, "Implement handler")
+	assert.NotContains(t, envelope, "Expected Output Format")
+}
+
+func TestResolveStdoutSchema_RealSchemas(t *testing.T) {
+	// Test with real schemas directory if available
+	schemasDir := filepath.Join(os.Getenv("HOME"), ".claude", "schemas", "teams", "stdin-stdout")
+	if _, err := os.Stat(schemasDir); os.IsNotExist(err) {
+		t.Skip("schemas directory not found")
+	}
+
+	tests := []struct {
+		name         string
+		workflowType string
+		agentID      string
+		wantFound    bool
+		wantContains string
+	}{
+		{"review_standards", "review", "standards-reviewer", true, "findings"},
+		{"review_backend", "review", "backend-reviewer", true, "findings"},
+		{"braintrust_einstein", "braintrust", "einstein", true, ""},
+		{"nonexistent", "nonexistent", "fake-agent", false, ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			schema, name := resolveStdoutSchema(tc.workflowType, tc.agentID)
+			if tc.wantFound {
+				assert.NotEmpty(t, schema, "expected schema for %s/%s", tc.workflowType, tc.agentID)
+				assert.NotEmpty(t, name)
+				if tc.wantContains != "" {
+					assert.Contains(t, schema, tc.wantContains)
+				}
+			} else {
+				assert.Empty(t, schema)
+				assert.Empty(t, name)
+			}
+		})
+	}
+}
+
+func TestResolveStdoutSchema_FakeDir(t *testing.T) {
+	schemasDir := t.TempDir()
+
+	// Create a contract with stdout section
+	contract := `{"stdin": {}, "stdout": {"status": "ok", "data": []}}`
+	require.NoError(t, os.WriteFile(filepath.Join(schemasDir, "test-myagent.json"), []byte(contract), 0644))
+
+	oldDir := stdoutSchemasBaseDir
+	stdoutSchemasBaseDir = schemasDir
+	defer func() { stdoutSchemasBaseDir = oldDir }()
+
+	// Exact match
+	schema, name := resolveStdoutSchema("test", "myagent")
+	assert.NotEmpty(t, schema)
+	assert.Equal(t, "test-myagent", name)
+	assert.Contains(t, schema, "status")
+
+	// No match
+	schema, name = resolveStdoutSchema("test", "otheragent")
+	assert.Empty(t, schema)
+	assert.Empty(t, name)
 }
 
 func TestValidatePathWithinDir_RealWorldPaths(t *testing.T) {
