@@ -255,6 +255,12 @@ export interface ToastSlice {
   removeToast: (id: string) => void;
 }
 
+// Teams slice
+export interface TeamsSlice {
+  backgroundTeamCount: number;
+  setBackgroundTeamCount: (count: number) => void;
+}
+
 // Import telemetry types
 import type { TelemetrySlice } from "./slices/telemetry.js";
 export type { TelemetrySlice, RoutingDecision, Handoff, SharpEdge } from "./slices/telemetry.js";
@@ -267,4 +273,5 @@ export type Store = MessagesSlice &
   InputSlice &
   ModalSlice &
   TelemetrySlice &
-  ToastSlice;
+  ToastSlice &
+  TeamsSlice;

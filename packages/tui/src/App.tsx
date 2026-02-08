@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
+import { join } from "path";
+import { homedir } from "os";
 import { colors } from "./config/theme.js";
 import { Layout } from "./components/Layout.js";
 import { LayoutSpike } from "./components/LayoutSpike.js";
@@ -9,6 +11,12 @@ import { loadSession, saveSession } from "./hooks/useSession.js";
 import { useStore } from "./store/index.js";
 import { nanoid } from "nanoid";
 import { logger } from "./utils/logger.js";
+
+/** Set GOGENT_SESSION_DIR for child processes and team polling */
+function setSessionDir(sessionId: string): void {
+  const home = process.env["HOME"] || homedir();
+  process.env["GOGENT_SESSION_DIR"] = join(home, ".claude", "sessions", sessionId);
+}
 
 type DemoMode = "main" | "hello" | "layout" | "responsive" | "borders";
 
@@ -25,7 +33,7 @@ interface AppProps {
  */
 export function App({ sessionId, verbose }: AppProps): JSX.Element {
   const [mode, setMode] = useState<DemoMode>("main");
-  const [loading, setLoading] = useState(!!sessionId);
+  const [loading, setLoading] = useState(true);
   const updateSession = useStore((state) => state.updateSession);
   const totalCost = useStore((state) => state.totalCost);
   const currentSessionId = useStore((state) => state.sessionId);
@@ -40,7 +48,14 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
   // Load session on mount if sessionId provided
   useEffect(() => {
     async function resumeSession() {
-      if (!sessionId) return;
+      if (!sessionId) {
+        // No session ID provided - create new session
+        const newId = nanoid();
+        updateSession({ id: newId });
+        setSessionDir(newId);
+        setLoading(false);
+        return;
+      }
 
       try {
         const session = await loadSession(sessionId);
@@ -48,6 +63,7 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           id: session.id,
           cost: session.cost,
         });
+        setSessionDir(session.id);
 
         if (verbose) {
           void logger.info("Session resumed", {
@@ -62,7 +78,9 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           error: error instanceof Error ? error.message : String(error),
         });
         // Continue with new session on error
-        updateSession({ id: nanoid() });
+        const newId = nanoid();
+        updateSession({ id: newId });
+        setSessionDir(newId);
       } finally {
         setLoading(false);
       }
@@ -71,15 +89,15 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     resumeSession();
   }, [sessionId, updateSession, verbose]);
 
-  // Auto-save session on cost changes
+  // Auto-save session on cost changes (debounced to prevent overlapping writes)
   useEffect(() => {
-    async function persistSession() {
-      if (!currentSessionId) return;
-      if (totalCost === 0) return; // Don't save empty sessions
+    if (!currentSessionId) return;
+    if (totalCost === 0) return;
 
+    const timeout = setTimeout(async () => {
       try {
         const tokenCount = useStore.getState().tokenCount;
-        const toolCalls = tokenCount.input + tokenCount.output; // Approximate tool calls
+        const toolCalls = tokenCount.input + tokenCount.output;
 
         await saveSession({
           id: currentSessionId,
@@ -97,16 +115,16 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           error: error instanceof Error ? error.message : String(error),
         });
       }
-    }
+    }, 2000);
 
-    persistSession();
+    return () => clearTimeout(timeout);
   }, [totalCost, currentSessionId, verbose]);
 
   // Show loading state while resuming session
   if (loading) {
     return (
       <Box padding={1}>
-        <Text color={colors.muted}>Loading session {sessionId}...</Text>
+        <Text color={colors.muted}>Loading session...</Text>
       </Box>
     );
   }

@@ -3,6 +3,7 @@ import { Box, Text } from "ink";
 import { execSync } from "child_process";
 import { useStore } from "../store/index.js";
 import { colors } from "../config/theme.js";
+import { useTeamCount } from "../hooks/useTeamCount.js";
 
 interface StatusLineProps {
   width: number;
@@ -117,6 +118,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
   } = useStore();
 
   const gitInfo = useGitInfo();
+  const teamCount = useTeamCount();
   const startTime = useRef(Date.now());
   const [tick, setTick] = useState(0);
 
@@ -125,6 +127,9 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Detect ASCII mode
+  const useAscii = process.env["TERM"] === "dumb" || process.env["GOGENT_ASCII"] === "1";
 
   // Determine model display name
   const modelName = useMemo(() => {
@@ -225,6 +230,14 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
                 <Text color={colors.warning}> ({agentCounts.queued} queued)</Text>
               )}
             </Text>
+          )}
+          {teamCount > 0 && (
+            <>
+              <Text color={colors.muted}> | </Text>
+              <Text color={colors.success}>
+                {useAscii ? "[BG]" : "🏗️"} {teamCount} team{teamCount !== 1 ? "s" : ""} running
+              </Text>
+            </>
           )}
         </Box>
       )}
