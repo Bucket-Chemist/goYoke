@@ -41,6 +41,13 @@ const logEvent = (event: unknown) => {
 };
 
 /**
+ * Hook options
+ */
+interface UseClaudeQueryOptions {
+  onStreamingComplete?: () => void;
+}
+
+/**
  * Hook return type
  */
 interface UseClaudeQueryReturn {
@@ -148,9 +155,17 @@ const SDK_BUILTIN_TOOLS = [
 /**
  * Main hook for Claude query integration
  */
-export function useClaudeQuery(): UseClaudeQueryReturn {
+export function useClaudeQuery(options?: UseClaudeQueryOptions): UseClaudeQueryReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<ClassifiedError | null>(null);
+
+  // Store the callback ref to avoid stale closures
+  const onStreamingCompleteRef = useRef(options?.onStreamingComplete);
+
+  // Keep callback ref in sync with latest version
+  useEffect(() => {
+    onStreamingCompleteRef.current = options?.onStreamingComplete;
+  }, [options?.onStreamingComplete]);
 
   // Sync streamingRef with isStreaming state to avoid stale closures
   useEffect(() => {
@@ -556,7 +571,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
               sum + m.inputTokens + m.cacheCreationInputTokens + m.cacheReadInputTokens,
             0
           );
-          const capacity = models[0].contextWindow || 200000;
+          const capacity = models[0]?.contextWindow || 200000;
           updateContextWindow(totalUsed, capacity);
         }
       }
@@ -579,6 +594,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
 
       // Clear interrupt function
       setInterruptQuery(null);
+
+      // Notify that streaming is complete (for queue drain)
+      onStreamingCompleteRef.current?.();
     },
     [
       updateLastMessage,
@@ -721,7 +739,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         eventStreamRef.current = eventStream;
 
         // Register interrupt function in store
-        setInterruptQuery(() => eventStream.interrupt.bind(eventStream));
+        setInterruptQuery(eventStream.interrupt.bind(eventStream));
 
         // NOTE: Don't clear preferredModel - it should persist for all
         // subsequent messages until user explicitly changes it via /model
@@ -772,6 +790,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
 
         // Clear interrupt function
         setInterruptQuery(null);
+
+        // Notify that streaming is complete even on error (for queue drain)
+        onStreamingCompleteRef.current?.();
 
         void logger.error("Query error", {
           error: err instanceof Error ? err.message : String(err),

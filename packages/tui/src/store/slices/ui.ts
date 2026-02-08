@@ -11,6 +11,7 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
   focusedPanel: "claude",
   rightPanelMode: "agents",
   interruptQuery: null,
+  clearPendingMessage: null,
 
   setStreaming: (streaming): void => {
     set({ streaming });
@@ -31,5 +32,9 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
 
   setInterruptQuery: (fn): void => {
     set({ interruptQuery: fn });
+  },
+
+  setClearPendingMessage: (fn): void => {
+    set({ clearPendingMessage: fn });
   },
 });

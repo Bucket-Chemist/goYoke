@@ -190,10 +190,12 @@ export interface UISlice {
   focusedPanel: "claude" | "agents";
   rightPanelMode: "agents" | "dashboard" | "settings";
   interruptQuery: (() => Promise<void>) | null;
+  clearPendingMessage: (() => void) | null;
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
+  setClearPendingMessage: (fn: (() => void) | null) => void;
 }
 
 // Input history slice (ephemeral - not persisted)

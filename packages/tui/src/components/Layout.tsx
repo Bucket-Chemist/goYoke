@@ -32,7 +32,7 @@ const BANNER_HEIGHT = 3; // Banner takes 3 rows
  * - Modal captures all input when active
  */
 export function Layout(): JSX.Element {
-  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery } = useStore();
+  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
   const { rows: terminalHeight, columns: terminalWidth } = useTerminalDimensions();
 
@@ -56,8 +56,9 @@ export function Layout(): JSX.Element {
         const modal = modalQueue[0];
         useStore.getState().cancel(modal.id);
       } else if (streaming && interruptQuery) {
-        // If streaming, interrupt the query
+        // If streaming, interrupt the query and clear any queued message
         void interruptQuery();
+        clearPendingMessage?.();
       }
       // Otherwise do nothing
     },

@@ -290,7 +290,7 @@
       "title": "Input Buffer (Message Queuing During Streaming)",
       "file": "TC-015a.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": "independent",
       "time_estimate": "4-6h",
       "dependencies": []
