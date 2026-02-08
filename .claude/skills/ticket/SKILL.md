@@ -239,7 +239,9 @@ Prompt:
      Project: {project_name from config}
 ```
 
-After architect completes:
+After architect completes, it produces:
+- `specs.md` — human-readable plan for review
+- `implementation-plan.json` — machine-readable plan for team-run automation
 
 ```
 [ticket] Plan created.
@@ -250,7 +252,72 @@ If `needs_planning == false`, skip to Phase 6.
 
 ---
 
-### Phase 6: Implementation Tracking
+### Phase 5.5: Team-Run Dispatch (Conditional)
+
+If the architect produced `implementation-plan.json` AND the `use_team_pattern` feature flag is enabled, dispatch via background team-run instead of foreground sequential execution.
+
+**Decision logic:**
+
+```bash
+# Check feature flag
+use_team=$(jq -r '.use_team_pattern // true' ~/.claude/settings.json 2>/dev/null)
+
+# Check if implementation-plan.json exists
+plan_file=".claude/tmp/implementation-plan.json"
+
+if [[ "$use_team" == "true" ]] && [[ -f "$plan_file" ]]; then
+    echo "[ticket] Team-run dispatch: implementation-plan.json found"
+
+    # Determine team directory
+    team_dir="$GOGENT_SESSION_DIR/teams/$(date +%s).implementation"
+
+    # Generate config + stdin files
+    gogent-plan-impl \
+        --plan="$plan_file" \
+        --project-root="$(pwd)" \
+        --output="$team_dir"
+
+    if [[ $? -ne 0 ]]; then
+        echo "[ticket] ERROR: gogent-plan-impl failed. Falling back to foreground."
+        # Fall through to Phase 6 (foreground)
+    else
+        # Launch background execution
+        gogent-team-run "$team_dir" &
+        sleep 2
+
+        # Verify launch
+        background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
+        if kill -0 "$background_pid" 2>/dev/null; then
+            echo "[ticket] Team launched (PID $background_pid)"
+            echo "[ticket] Monitor with: /team-status"
+            echo "[ticket] Results with: /team-result"
+            # EXIT — TUI returns to user, background handles execution
+            exit 0
+        else
+            echo "[ticket] ERROR: Team failed to start. Falling back to foreground."
+        fi
+    fi
+fi
+
+# If team-run not used, fall through to Phase 6 (foreground tracking)
+```
+
+**When team-run is used:**
+- TUI returns to user in <15 seconds
+- `gogent-team-run` executes waves in the background
+- Tasks within a wave run in parallel
+- Wave failure propagation: if any task in Wave N fails, Wave N+1 members get status "skipped"
+- Monitor via `/team-status`, collect results via `/team-result`
+
+**When team-run is NOT used (fallback):**
+- `use_team_pattern: false` in settings.json
+- `implementation-plan.json` not produced by architect
+- `gogent-plan-impl` binary not found or fails
+- Single-task tickets (no specs.md / no multi-task plan)
+
+---
+
+### Phase 6: Implementation Tracking (Foreground Fallback)
 
 Update ticket status and create tasks for tracking:
 
@@ -562,17 +629,21 @@ echo "[ticket] Next available tickets:"
 
 ## State Files
 
-| File                          | Purpose                    | Format                                            |
-| ----------------------------- | -------------------------- | ------------------------------------------------- |
-| `.ticket-config.json`         | Project configuration      | JSON with tickets_dir, project_name, audit_config |
-| `tickets-index.json`          | Ticket registry and status | JSON with metadata and tickets array              |
-| `.current-ticket`             | Current ticket ID          | Plain text (e.g., "GoGent-002")                   |
-| `plans/{ticket-id}-plan.md`   | Implementation plans       | Markdown from architect                           |
-| `.ticket-audits/{ticket-id}/` | Audit artifacts            | Directory with test logs, coverage data, summary  |
+| File                          | Purpose                       | Format                                            |
+| ----------------------------- | ----------------------------- | ------------------------------------------------- |
+| `.ticket-config.json`         | Project configuration         | JSON with tickets_dir, project_name, audit_config |
+| `tickets-index.json`          | Ticket registry and status    | JSON with metadata and tickets array              |
+| `.current-ticket`             | Current ticket ID             | Plain text (e.g., "GoGent-002")                   |
+| `plans/{ticket-id}-plan.md`   | Implementation plans          | Markdown from architect                           |
+| `implementation-plan.json`    | Machine-readable plan         | JSON (architect dual-output)                      |
+| `teams/{ts}.implementation/`  | Team-run working directory    | config.json + stdin/stdout files                  |
+| `.ticket-audits/{ticket-id}/` | Audit artifacts               | Directory with test logs, coverage data, summary  |
 
 ---
 
 ## Cost Model
+
+### Foreground Path (no team-run)
 
 | Phase                | Model      | Est. Tokens | Cost            |
 | -------------------- | ---------- | ----------- | --------------- |
@@ -586,7 +657,17 @@ echo "[ticket] Next available tickets:"
 | Completion           | Bash       | 0           | $0.000          |
 | **Total per ticket** |            | 10-15K      | **$0.09-$0.14** |
 
-**Cost savings vs manual workflow:** ~40% (automated discovery, validation, status management, audit documentation)
+### Team-Run Path (background)
+
+| Phase                   | Model       | Est. Tokens | Cost              |
+| ----------------------- | ----------- | ----------- | ----------------- |
+| Discovery–Validation    | Bash/Python | 0           | $0.000            |
+| Planning                | Sonnet      | 10-15K      | $0.09-$0.14       |
+| gogent-plan-impl        | Go binary   | 0           | $0.000            |
+| Worker agents (per task)| Sonnet      | 10-20K each | $0.09-$0.18 each  |
+| **Total (3-task plan)** |             | 40-75K      | **$0.36-$0.68**   |
+
+**Cost savings vs manual workflow:** ~40% (foreground), ~60% (team-run: parallelism reduces wall-clock time)
 
 ---
 
@@ -694,6 +775,6 @@ FEAT-003
 
 ---
 
-**Skill Version**: 1.1
-**Last Updated**: 2026-01-18
+**Skill Version**: 1.2
+**Last Updated**: 2026-02-08
 **Maintained By**: System

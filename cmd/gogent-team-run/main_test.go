@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -301,10 +302,20 @@ func TestMain_ContextCancellation(t *testing.T) {
 	case err := <-done:
 		// Context cancellation during wave execution should either:
 		// 1. Return context.Canceled error if caught before wave completes
-		// 2. Return nil if all members finished processing before cancellation propagated
-		// Both are acceptable for this test - we just verify it terminates
+		// 2. Return wave failure error if members fail before cancellation
+		// 3. Return nil if all members finished processing before cancellation propagated
+		// All are acceptable for this test - we just verify it terminates
 		if err != nil {
-			assert.Contains(t, err.Error(), "context cancel")
+			// Accept either context cancellation or wave failure
+			acceptableErrors := []string{"context cancel", "failed member"}
+			containsAcceptable := false
+			for _, acceptable := range acceptableErrors {
+				if strings.Contains(err.Error(), acceptable) {
+					containsAcceptable = true
+					break
+				}
+			}
+			assert.True(t, containsAcceptable, "Error should be context cancel or wave failure, got: %v", err)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("runWaves did not terminate within timeout")
@@ -621,7 +632,9 @@ func TestMain_MixedSuccessFailure(t *testing.T) {
 	// Run waves
 	ctx := context.Background()
 	err := runWaves(ctx, runner)
-	require.NoError(t, err, "Wave should complete despite partial failures")
+	// With failure propagation, wave returns error when any member fails
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed member")
 
 	// Verify mixed outcomes
 	runner.configMu.RLock()

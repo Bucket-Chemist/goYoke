@@ -14,10 +14,10 @@ import (
 // the full JSON for the agent to consume.
 type StdinEnvelope struct {
 	// Fields used for validation only
-	Agent       string                 `json:"agent"`
-	Context     map[string]any `json:"context"`
-	Task        string                 `json:"task,omitempty"`
-	Description string                 `json:"description,omitempty"`
+	Agent       string             `json:"agent"`
+	Context     map[string]any     `json:"context"`
+	Task        json.RawMessage    `json:"task,omitempty"`        // string (review) or object (implementation)
+	Description string             `json:"description,omitempty"`
 
 	// Raw JSON for full preservation
 	raw json.RawMessage
@@ -143,11 +143,9 @@ func buildPromptEnvelope(teamDir string, member *Member, workflowType string) (s
 	}
 
 	// W3: Validate required fields
-	taskField := stdin.Task
-	if taskField == "" {
-		taskField = stdin.Description
-	}
-	if taskField == "" {
+	// Task can be a string (review workflow) or object (implementation workflow)
+	taskPresent := len(stdin.Task) > 0 && string(stdin.Task) != "null" && string(stdin.Task) != `""`
+	if !taskPresent && stdin.Description == "" {
 		return "", fmt.Errorf("stdin: task field is empty (checked both 'task' and 'description')")
 	}
 
@@ -200,7 +198,12 @@ You do NOT have access to spawn_agent (that's for MCP-spawned agents only).
 		stdoutSchema, schemaName := resolveStdoutSchema(workflowType, member.Agent)
 		if stdoutSchema != "" {
 			builder.WriteString("## Expected Output Format\n\n")
-			builder.WriteString("Your response MUST be a single JSON code block. Do NOT include any text outside the code block — no markdown, no explanations, no preamble or postamble.\n\n")
+			if workflowType == "implementation" {
+				builder.WriteString("Complete your implementation task using the tools available to you (Read, Write, Edit, Bash, Glob, Grep). Create files, run builds, run tests — do the actual work.\n\n")
+				builder.WriteString("After ALL implementation work is done, your FINAL response must be a single JSON code block summarizing what you accomplished.\n\n")
+			} else {
+				builder.WriteString("Your response MUST be a single JSON code block. Do NOT include any text outside the code block — no markdown, no explanations, no preamble or postamble.\n\n")
+			}
 			builder.WriteString("The JSON must conform to this schema:\n\n")
 			builder.WriteString("```json\n")
 			builder.WriteString(stdoutSchema)

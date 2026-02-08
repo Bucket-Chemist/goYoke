@@ -55,6 +55,13 @@ func runWaves(ctx context.Context, tr *TeamRunner) error {
 			}
 		}
 
+		// Check for wave failures and skip subsequent waves if any failed
+		if failed := checkWaveFailures(tr, waveIdx); len(failed) > 0 {
+			log.Printf("[WARN] wave: Wave %d had failed members: %v", wave.WaveNumber, failed)
+			skipRemainingWaves(tr, waveIdx)
+			return fmt.Errorf("wave %d had %d failed member(s), skipping subsequent waves", wave.WaveNumber, len(failed))
+		}
+
 		log.Printf("[INFO] wave: Wave %d completed", wave.WaveNumber)
 	}
 
@@ -106,4 +113,51 @@ func runInterWaveScript(ctx context.Context, scriptPath string, teamDir string) 
 	}
 	log.Printf("[INFO] wave: inter-wave script %s completed successfully", scriptPath)
 	return nil
+}
+
+// checkWaveFailures returns names of failed members in the given wave.
+// Reads member statuses under RLock.
+func checkWaveFailures(tr *TeamRunner, waveIdx int) []string {
+	tr.configMu.RLock()
+	defer tr.configMu.RUnlock()
+
+	if tr.config == nil || waveIdx >= len(tr.config.Waves) {
+		return nil
+	}
+
+	var failed []string
+	for _, member := range tr.config.Waves[waveIdx].Members {
+		if member.Status == "failed" {
+			failed = append(failed, member.Name)
+		}
+	}
+	return failed
+}
+
+// skipRemainingWaves sets all members in waves after fromWaveIdx to "skipped".
+// Uses updateMember for thread-safe status updates.
+func skipRemainingWaves(tr *TeamRunner, fromWaveIdx int) {
+	tr.configMu.RLock()
+	if tr.config == nil || fromWaveIdx+1 >= len(tr.config.Waves) {
+		tr.configMu.RUnlock()
+		return
+	}
+	totalWaves := len(tr.config.Waves)
+	tr.configMu.RUnlock()
+
+	// Skip all waves after fromWaveIdx
+	for waveIdx := fromWaveIdx + 1; waveIdx < totalWaves; waveIdx++ {
+		tr.configMu.RLock()
+		memberCount := len(tr.config.Waves[waveIdx].Members)
+		tr.configMu.RUnlock()
+
+		for memIdx := 0; memIdx < memberCount; memIdx++ {
+			// updateMember acquires writeMu then configMu - do NOT call while holding either lock
+			if err := tr.updateMember(waveIdx, memIdx, func(m *Member) {
+				m.Status = "skipped"
+			}); err != nil {
+				log.Printf("[ERROR] wave: failed to skip member at wave %d, member %d: %v", waveIdx, memIdx, err)
+			}
+		}
+	}
 }

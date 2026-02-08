@@ -140,6 +140,7 @@ Request arrives
 | `/review`             | Multi-domain code review with severity-grouped findings                           |
 | `/review-plan`        | Critical 7-layer review of implementation plans                                   |
 | `/ticket`             | Ticket-driven implementation workflow                                             |
+| `/implement`          | Plan + implement a feature (architect → team-run background)                      |
 | `/init-auto`          | Initialize project with CLAUDE.md scaffold                                        |
 | `/benchmark`          | Run gold standard prompts, generate compliance report                             |
 | `/benchmark-meta`     | Analyze benchmark trends across commits                                           |

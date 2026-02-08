@@ -53,6 +53,25 @@ type agentCLIConfig struct {
 // Default fallback tools (W4: least-privilege READ-ONLY when agents-index.json unavailable)
 var defaultFallbackTools = []string{"Read", "Glob", "Grep"}
 
+// implementationTools are required for workers that create/modify files.
+var implementationTools = []string{"Write", "Edit"}
+
+// augmentToolsForImplementation adds Write and Edit to the tool list if not already present.
+// Implementation workers need these to create files; review/braintrust workers don't.
+func augmentToolsForImplementation(tools []string) []string {
+	toolSet := make(map[string]bool, len(tools))
+	for _, t := range tools {
+		toolSet[t] = true
+	}
+	result := append([]string{}, tools...)
+	for _, t := range implementationTools {
+		if !toolSet[t] {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
 // Spawn delegates to the three phases.
 // Budget management happens at wave level in spawnAndWaitWithBudget.
 func (s *claudeSpawner) Spawn(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
@@ -97,6 +116,13 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 			AllowedTools: defaultFallbackTools,
 			Model:        member.Model,
 		}
+	}
+
+	// 3b. Augment allowed tools for implementation workflows.
+	// agents-index.json cli_flags.allowed_tools are designed for read-only analysis
+	// (review, braintrust). Implementation workers need Write and Edit to create files.
+	if workflowType == "implementation" {
+		agentConfig.AllowedTools = augmentToolsForImplementation(agentConfig.AllowedTools)
 	}
 
 	// 4. Build CLI args
@@ -301,6 +327,9 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 }
 
 // buildCLIArgs constructs claude CLI arguments from agent config.
+// Overrides --permission-mode for pipe mode: agents-index.json specifies "delegate"
+// for interactive contexts (TUI/MCP), but pipe mode (-p) has no interactive approval.
+// We replace "delegate" with "auto-edit" so workers can write files within the project.
 func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 	args := []string{"-p", "--output-format", "json"}
 
@@ -312,7 +341,16 @@ func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 		args = append(args, "--allowedTools", strings.Join(agentConfig.AllowedTools, ","))
 	}
 
-	args = append(args, agentConfig.AdditionalFlags...)
+	// Filter additional flags, replacing permission-mode for pipe-mode compatibility
+	for i := 0; i < len(agentConfig.AdditionalFlags); i++ {
+		flag := agentConfig.AdditionalFlags[i]
+		if flag == "--permission-mode" && i+1 < len(agentConfig.AdditionalFlags) {
+			// Replace "delegate" with "auto-edit" for pipe mode (no interactive approval)
+			i++ // skip the value
+			continue
+		}
+		args = append(args, flag)
+	}
 
 	return args
 }

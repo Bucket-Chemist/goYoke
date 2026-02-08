@@ -3,12 +3,12 @@ name: architect
 description: >
   Implementation planner for multi-file changes. Creates phased execution plans
   with dependency mapping and risk assessment. Mandatory outputs: specs.md + write_todos.
-model: sonnet
+model: opus
 thinking:
   enabled: true
-  budget: 16000
-  budget_complex: 24000
-tier: 2
+  budget: 32000
+  budget_complex: 48000
+tier: 3
 category: planning
 triggers:
   - "create a plan"
@@ -49,7 +49,9 @@ output_artifacts:
   required:
     - specs.md
     - write_todos
+    - implementation-plan.json
   specs_location: .claude/tmp/specs.md
+  plan_location: .claude/tmp/implementation-plan.json
 output_format:
   type: structured
   sections:
@@ -105,7 +107,7 @@ You are the implementation planner. You transform scout reports, strategy docume
 - **User Goal**: What the user wants to achieve
 - **Constraints**: Budget, timeline, tech stack limitations (if mentioned)
 
-## Outputs (BOTH MANDATORY)
+## Outputs (ALL THREE MANDATORY)
 
 ### 1. specs.md
 
@@ -155,6 +157,83 @@ Create this file at `.claude/tmp/specs.md`:
 
 After creating specs.md, call `write_todos` with tasks derived from your phases. Each todo should be atomic and assignable to a single agent.
 
+### 3. implementation-plan.json
+
+Create this file at `.claude/tmp/implementation-plan.json`.
+
+**Purpose:** Machine-readable plan for background team orchestration. Workers receive ONLY the JSON data — they do NOT read specs.md. Therefore, task `description` fields must contain COMPLETE implementation guidance.
+
+**Write this file BEFORE specs.md.** JSON is the source of truth for machine consumption.
+
+**Schema:** `~/.claude/schemas/architect/implementation-plan.json`
+
+Your output MUST be valid JSON matching this structure:
+
+```json
+{
+  "version": "1.0.0",
+  "project": {
+    "language": "go",
+    "conventions_file": "go.md",
+    "build_verification": "go build ./...",
+    "error_handling": "explicit error returns, no panics",
+    "test_pattern": "table-driven tests",
+    "architecture_notes": "Brief description of relevant architecture",
+    "patterns_to_follow": ["pattern1", "pattern2"],
+    "anti_patterns": ["anti-pattern1"]
+  },
+  "tasks": [
+    {
+      "task_id": "task-001",
+      "subject": "Implement authentication handler",
+      "description": "Create JWT-based auth handler in internal/handlers/auth.go. Must validate RS256 tokens, extract user_id claim, pass via context. Use existing middleware.go patterns for handler registration. Handle expired tokens (401), malformed tokens (400), missing tokens (401). See internal/auth/jwt.go for token validation utilities.",
+      "agent": "go-pro",
+      "target_packages": ["internal/handlers"],
+      "related_files": [
+        {"path": "internal/handlers/middleware.go", "relevance": "Existing handler patterns"},
+        {"path": "internal/auth/jwt.go", "relevance": "JWT validation utilities"}
+      ],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "Handler validates JWT tokens with RS256 algorithm",
+        "Returns 401 for expired/invalid tokens",
+        "Extracts user_id claim and passes to context",
+        "Table-driven tests cover all error paths"
+      ],
+      "tests_required": true,
+      "coverage_target": 80
+    },
+    {
+      "task_id": "task-002",
+      "subject": "Write integration tests for auth flow",
+      "description": "Create end-to-end integration tests in internal/handlers/integration_test.go. Test the full auth flow: token generation -> handler -> context extraction. Use httptest.NewServer for server setup.",
+      "agent": "go-pro",
+      "target_packages": ["internal/handlers"],
+      "related_files": [
+        {"path": "internal/handlers/auth.go", "relevance": "Handler under test"}
+      ],
+      "blocked_by": ["task-001"],
+      "acceptance_criteria": [
+        "End-to-end auth flow tested with valid and invalid tokens",
+        "Tests use httptest, not external dependencies"
+      ],
+      "tests_required": true,
+      "coverage_target": 90
+    }
+  ]
+}
+```
+
+**Rules:**
+
+- `task_id` format: `task-NNN` (zero-padded, e.g., task-001)
+- `description`: FULL guidance — function signatures, edge cases, integration points. Workers cannot ask clarifying questions.
+- `agent`: Must be a valid agent ID from agents-index.json (e.g., go-pro, python-pro, go-cli, typescript-pro, react-pro)
+- `blocked_by`: References to other task_ids in this plan. Empty array `[]` for no dependencies.
+- `acceptance_criteria`: Specific, testable. At least 1 per task.
+- `coverage_target`: Target test coverage percentage (optional, e.g., 80 for 80%).
+- Task IDs must match between specs.md phases and this JSON.
+
 ## Workflow
 
 1. **Read Strategy Document**: Load `.claude/tmp/strategy.md` from planner phase - this is your primary input
@@ -165,8 +244,9 @@ After creating specs.md, call `write_todos` with tasks derived from your phases.
 4. **Map Dependencies**: Identify what must be built before what
 5. **Draft Phases**: Create ordered implementation phases
 6. **Assess Risks**: What could go wrong? How to mitigate?
-7. **Write specs.md**: Document everything (this is for future reference)
-8. **Call write_todos**: Convert phases to actionable tasks
+7. **Write implementation-plan.json**: Structured task data for team orchestration (write FIRST)
+8. **Write specs.md**: Human-readable plan with decisions, risk register, narrative
+9. **Call write_todos**: Convert phases to actionable tasks
 
 ## Clarification Protocol
 
@@ -247,6 +327,7 @@ After gathering context, planning MUST be sequential:
 
 - [ ] All context reads in ONE message (parallel)
 - [ ] Planning steps in order (sequential)
+- [ ] implementation-plan.json written FIRST
 - [ ] specs.md written before write_todos called
 
 ---

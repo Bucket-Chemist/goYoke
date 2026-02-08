@@ -3,7 +3,7 @@
   "version": "1.0",
   "generated": "2026-02-06T00:00:00Z",
   "source": "IMPLEMENTATION-PLAN-FINAL.md + REVIEW-SYNTHESIS.md",
-  "total_tickets": 22,
+  "total_tickets": 28,
   "tickets": [
     {
       "id": "TC-001",
@@ -258,23 +258,63 @@
       "title": "Implementation Workflow Team-Run Migration",
       "file": "TC-013c.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "phase": "4c",
       "time_estimate": "2-3d",
       "dependencies": [
         "TC-013b"
-      ]
+      ],
+      "completed": "2026-02-08"
     },
     {
       "id": "TC-015",
-      "title": "TUI Concurrent Query Support",
+      "title": "TUI Concurrent Query Support (DECOMPOSED)",
       "file": "TC-015.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "decomposed",
       "phase": "independent",
       "time_estimate": "3-5d",
       "dependencies": [
         "TC-019"
+      ],
+      "decomposed_into": [
+        "TC-015a",
+        "TC-015b",
+        "TC-015c"
+      ],
+      "decomposed_date": "2026-02-08",
+      "decomposed_reason": "Braintrust analysis: TC-013 team-run solved primary TUI freeze scenarios. Full concurrent query refactor has poor cost-benefit ratio. Decomposed into input buffer (P0), team visibility (P1), full concurrency (P3 deferred)."
+    },
+    {
+      "id": "TC-015a",
+      "title": "Input Buffer (Message Queuing During Streaming)",
+      "file": "TC-015a.md",
+      "priority": "HIGH",
+      "status": "pending",
+      "phase": "independent",
+      "time_estimate": "4-6h",
+      "dependencies": []
+    },
+    {
+      "id": "TC-015b",
+      "title": "Team Visibility in TUI",
+      "file": "TC-015b.md",
+      "priority": "HIGH",
+      "status": "pending",
+      "phase": "independent",
+      "time_estimate": "2-3d",
+      "dependencies": []
+    },
+    {
+      "id": "TC-015c",
+      "title": "Full Concurrent Query Support (Deferred)",
+      "file": "TC-015c.md",
+      "priority": "LOW",
+      "status": "deferred",
+      "phase": "independent",
+      "time_estimate": "3-5d",
+      "dependencies": [
+        "TC-015a"
       ]
     },
     {

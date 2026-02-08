@@ -670,19 +670,20 @@
       ],
       "tools": ["Read", "Write", "Glob", "Grep", "TaskCreate", "TaskUpdate"],
       "cli_flags": {
-        "allowed_tools": ["Read", "Glob", "Grep"],
+        "allowed_tools": ["Read", "Write", "Glob", "Grep"],
         "additional_flags": ["--permission-mode", "delegate"]
       },
       "auto_activate": null,
       "output_artifacts": {
-        "required": ["specs.md", "TaskCreate"],
-        "specs_location": ".claude/tmp/specs.md"
+        "required": ["specs.md", "TaskCreate", "implementation-plan.json"],
+        "specs_location": ".claude/tmp/specs.md",
+        "plan_location": ".claude/tmp/implementation-plan.json"
       },
       "input_sources": [
         ".claude/tmp/scout_metrics.json",
         ".claude/tmp/strategy.md"
       ],
-      "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context.",
+      "description": "Implementation planner (opus tier). Produces implementation-plan.json + specs.md + TaskCreate calls. Reads scout reports and strategy documents for context.",
       "context_requirements": {
         "rules": ["agent-guidelines.md"],
         "conventions": {}

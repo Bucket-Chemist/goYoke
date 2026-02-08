@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -477,4 +478,112 @@ func TestSpawnAndWaitWithBudget_InvalidIndices(t *testing.T) {
 	status := runner.config.Waves[0].Members[0].Status
 	runner.configMu.RUnlock()
 	assert.Equal(t, "pending", status, "Original member should be unchanged")
+}
+
+// TestRunWaves_FailurePropagation tests that failures in one wave skip subsequent waves
+func TestRunWaves_FailurePropagation(t *testing.T) {
+	config := &TeamConfig{
+		TeamName:           "test-team",
+		WorkflowType:       "test",
+		ProjectRoot:        "/tmp/test",
+		SessionID:          "test-session",
+		Status:             "running",
+		BudgetMaxUSD:       10.00,
+		BudgetRemainingUSD: 10.00,
+		Waves: []Wave{
+			{
+				WaveNumber:  1,
+				Description: "Wave 1",
+				Members: []Member{
+					{Name: "agent-fail", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+					{Name: "agent-ok", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+				},
+			},
+			{
+				WaveNumber:  2,
+				Description: "Wave 2",
+				Members: []Member{
+					{Name: "agent-blocked", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+				},
+			},
+		},
+	}
+
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			tr.configMu.RLock()
+			name := tr.config.Waves[waveIdx].Members[memIdx].Name
+			tr.configMu.RUnlock()
+
+			if name == "agent-fail" {
+				return fmt.Errorf("simulated failure")
+			}
+
+			tr.configMu.Lock()
+			tr.config.Waves[waveIdx].Members[memIdx].CostUSD = 0.05
+			tr.configMu.Unlock()
+			return nil
+		},
+	})
+
+	ctx := context.Background()
+	err := runWaves(ctx, runner)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed member")
+
+	runner.configMu.RLock()
+	defer runner.configMu.RUnlock()
+	assert.Equal(t, "failed", runner.config.Waves[0].Members[0].Status)
+	assert.Equal(t, "completed", runner.config.Waves[0].Members[1].Status)
+	assert.Equal(t, "skipped", runner.config.Waves[1].Members[0].Status)
+}
+
+// TestRunWaves_AllSuccessNoSkip tests that all waves complete when no failures occur
+func TestRunWaves_AllSuccessNoSkip(t *testing.T) {
+	config := &TeamConfig{
+		TeamName:           "test-team",
+		WorkflowType:       "test",
+		ProjectRoot:        "/tmp/test",
+		SessionID:          "test-session",
+		Status:             "running",
+		BudgetMaxUSD:       10.00,
+		BudgetRemainingUSD: 10.00,
+		Waves: []Wave{
+			{
+				WaveNumber:  1,
+				Description: "Wave 1",
+				Members: []Member{
+					{Name: "agent-1", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+					{Name: "agent-2", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+				},
+			},
+			{
+				WaveNumber:  2,
+				Description: "Wave 2",
+				Members: []Member{
+					{Name: "agent-3", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+				},
+			},
+		},
+	}
+
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			tr.configMu.Lock()
+			tr.config.Waves[waveIdx].Members[memIdx].CostUSD = 0.05
+			tr.configMu.Unlock()
+			return nil
+		},
+	})
+
+	ctx := context.Background()
+	err := runWaves(ctx, runner)
+	require.NoError(t, err)
+
+	// Verify all members completed successfully
+	runner.configMu.RLock()
+	defer runner.configMu.RUnlock()
+	assert.Equal(t, "completed", runner.config.Waves[0].Members[0].Status)
+	assert.Equal(t, "completed", runner.config.Waves[0].Members[1].Status)
+	assert.Equal(t, "completed", runner.config.Waves[1].Members[0].Status)
 }

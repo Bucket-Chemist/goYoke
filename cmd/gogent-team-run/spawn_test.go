@@ -567,12 +567,20 @@ func TestBuildCLIArgs(t *testing.T) {
 			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Write"},
 		},
 		{
-			name: "with_additional_flags",
+			name: "with_additional_flags_permission_mode_stripped",
 			config: &agentCLIConfig{
 				AllowedTools:    []string{"Read", "Glob", "Grep"},
 				AdditionalFlags: []string{"--permission-mode", "delegate"},
 			},
-			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Glob,Grep", "--permission-mode", "delegate"},
+			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Glob,Grep"},
+		},
+		{
+			name: "non_permission_flags_preserved",
+			config: &agentCLIConfig{
+				AllowedTools:    []string{"Read"},
+				AdditionalFlags: []string{"--max-tokens", "4000", "--permission-mode", "delegate"},
+			},
+			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read", "--max-tokens", "4000"},
 		},
 		{
 			name: "no_tools",
