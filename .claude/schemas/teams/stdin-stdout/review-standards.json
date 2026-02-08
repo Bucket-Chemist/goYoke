@@ -74,7 +74,7 @@
     "findings": [
       {
         "id": "ST-1",
-        "severity": "critical|warning|info",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
         "category": "maintainability|readability|complexity|documentation|naming|structure",
         "file": "relative/path/to/file.go",
         "line": 100,

@@ -72,7 +72,7 @@
     "findings": [
       {
         "id": "FE-1",
-        "severity": "critical|warning|info",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
         "category": "memory|performance|accessibility|ux|hooks|reliability|error_handling",
         "file": "relative/path/to/Component.tsx",
         "line": 15,

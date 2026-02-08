@@ -1,4 +1,5 @@
 {
+  "use_team_pattern": true,
   "permissions": {
     "allow": [
       "Read(**)",

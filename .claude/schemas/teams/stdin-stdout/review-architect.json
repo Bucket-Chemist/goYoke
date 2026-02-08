@@ -8,13 +8,23 @@
       "team_dir": "/absolute/path/to/team/directory"
     },
     "review_scope": {
-      "changed_files": [
+      "files": [
         {
           "path": "relative/path/to/file.go",
           "language": "go",
           "category": "source|test|config",
           "changed_lines": {"added": 80, "removed": 30},
           "is_new_file": false
+        }
+      ],
+      "changed_files": [
+        {
+          "path": "relative/path/to/file.go",
+          "language": "go",
+          "category": "source|test|config",
+          "changed_lines": {"added": 80, "removed": 30},
+          "is_new_file": false,
+          "dependency_context": "Additional context for architect-reviewer"
         }
       ],
       "direct_imports": [
@@ -88,7 +98,7 @@
     "findings": [
       {
         "id": "AR-1",
-        "severity": "critical|warning|info",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
         "category": "architecture",
         "subcategory": "circular_dependency|god_module|leaky_abstraction|tight_coupling|missing_interface|wrong_layer|broken_encapsulation",
         "files_involved": ["path/to/file1.go", "path/to/file2.go"],

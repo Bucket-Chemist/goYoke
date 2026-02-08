@@ -63,7 +63,7 @@
     "findings": [
       {
         "id": "BE-1",
-        "severity": "critical|warning|info",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
         "category": "security|api_design|data_handling|concurrency|observability|error_handling",
         "file": "relative/path/to/file.go",
         "line": 42,
