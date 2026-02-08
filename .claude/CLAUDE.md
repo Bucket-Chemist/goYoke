@@ -146,6 +146,10 @@ Request arrives
 | `/memory-improvement` | Audit system memory, find gaps                                                    |
 | `/explore-add`        | Add custom skill to spawner system                                                |
 | `/dummies-guide`      | Explain the config system                                                         |
+| `/team-status`        | Show detailed progress for running or completed teams                             |
+| `/team-result`        | Display final output from a completed team                                        |
+| `/team-cancel`        | Gracefully stop a running team                                                    |
+| `/teams`              | List all teams in current session with summary status                             |
 
 ---
 

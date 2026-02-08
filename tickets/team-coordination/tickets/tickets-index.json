@@ -3,7 +3,7 @@
   "version": "1.0",
   "generated": "2026-02-06T00:00:00Z",
   "source": "IMPLEMENTATION-PLAN-FINAL.md + REVIEW-SYNTHESIS.md",
-  "total_tickets": 21,
+  "total_tickets": 22,
   "tickets": [
     {
       "id": "TC-001",
@@ -187,7 +187,7 @@
       "title": "Implement Team Slash Commands",
       "file": "TC-012.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "time_estimate": "2-3d",
       "dependencies": [
@@ -240,6 +240,18 @@
       "time_estimate": "0.5d",
       "dependencies": [
         "TC-008"
+      ]
+    },
+    {
+      "id": "TC-021",
+      "title": "Modernize Existing Skills with Official Skill Features",
+      "file": "TC-021.md",
+      "priority": "MEDIUM",
+      "status": "pending",
+      "phase": 3.5,
+      "time_estimate": "2-3d",
+      "dependencies": [
+        "TC-012"
       ]
     }
   ]

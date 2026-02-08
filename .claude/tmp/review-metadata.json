@@ -1,66 +1,32 @@
 {
-  "review_id": "tui-interactive-2026-02-04",
-  "timestamp": "2026-02-04T14:30:00Z",
-  "input_files": [
-    "packages/tui/src/hooks/useClaudeQuery.ts",
-    "packages/tui/src/types/events.ts",
-    "packages/tui/src/components/ClaudePanel.tsx",
-    "packages/tui/src/mcp/server.ts",
-    "packages/tui/src/mcp/tools/askUser.ts",
-    "packages/tui/src/store/slices/modal.ts",
-    "packages/tui/node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts"
-  ],
-  "output_file": ".claude/tmp/review-critique.md",
-  "verdict": "CRITICAL_ISSUES",
+  "plan_file": "tickets/codebase-map/IMPLEMENTATION-PLAN.md",
+  "verdict": "CONDITIONAL_PASS",
   "confidence": "HIGH",
   "issue_counts": {
     "critical": 3,
-    "major": 2,
-    "minor": 2
+    "major": 7,
+    "minor": 10,
+    "low": 4
   },
+  "commendations_count": 6,
   "critical_issues": [
-    {
-      "id": "C-1",
-      "title": "Missing canUseTool callback",
-      "location": "useClaudeQuery.ts:265-273",
-      "description": "SDK requires canUseTool callback for permission prompts. Without it, permission requests have no handler.",
-      "fix": "Add canUseTool callback to query() options that routes to modal queue"
-    },
-    {
-      "id": "C-2",
-      "title": "Ignoring unhandled SDK events",
-      "location": "useClaudeQuery.ts:276-288",
-      "description": "Many SDK event types are silently dropped including SDKStatusMessage which may contain permission mode changes.",
-      "fix": "Handle additional event types or at minimum log them in development"
-    },
-    {
-      "id": "C-3",
-      "title": "MCP vs SDK mechanisms conflated",
-      "location": "Architecture",
-      "description": "MCP tools (ask_user) work but SDK-native features (permission prompts, /model) don't because they use different mechanisms.",
-      "fix": "Implement canUseTool for SDK permissions, use Query interface methods for slash commands"
-    }
+    "A1: Fork skill context:fork must be validated as real Claude Code feature",
+    "D1: CM-007 has undeclared dependency on CM-006 for non-Go call queries",
+    "F1: No context window overflow mitigation for LLM enrichment on large modules"
   ],
-  "major_issues": [
-    {
-      "id": "M-1",
-      "title": "No tests for SDK permission flow",
-      "description": "Test suite only covers MCP tool happy paths, not SDK permission callbacks"
-    },
-    {
-      "id": "M-2",
-      "title": "Silent event dropping",
-      "description": "Unhandled events logged nowhere, making debugging difficult"
-    }
+  "high_issues": [
+    "A2: CGo dependency is first in project, impacts build system",
+    "D2: CM-003 logically depends on CM-002 but not declared",
+    "F2: Call graph symbol table collision on short names",
+    "F3: No reporting of tree-sitter parse errors",
+    "CB1: Phase 1 effort underestimated (CM-005 should be 5-7d not 3-5d)",
+    "T1: No integration test for full 3-stage pipeline",
+    "CR1: CM-005 too large for single session, should split into 3 sub-tickets"
   ],
-  "assumptions_verified": {
-    "mcp_handles_all_interactive": false,
-    "sdk_handles_slash_commands_automatically": "partial",
-    "query_returns_needed_events": true
-  },
-  "commendations_count": 3,
   "scouts_spawned": [],
-  "cost_estimate_usd": 0.35,
+  "cost_estimate_usd": 0.23,
+  "review_duration_minutes": 3.4,
   "thinking_budget_used": 12000,
-  "review_duration_minutes": 25
+  "reviewed_at": "2026-02-08T00:00:00Z",
+  "reviewer": "staff-architect-critical-review"
 }
