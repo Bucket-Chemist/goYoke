@@ -12,6 +12,8 @@ import { AgentTree } from "./AgentTree.js";
 import { AgentDetail } from "./AgentDetail.js";
 import { DashboardView } from "./DashboardView.js";
 import { SettingsView } from "./SettingsView.js";
+import { TeamList } from "./TeamList.js";
+import { TeamDetail } from "./TeamDetail.js";
 import { ModalOverlay } from "./Modal.js";
 import { StatusLine } from "./StatusLine.js";
 import { ToastContainer } from "./Toast.js";
@@ -145,6 +147,31 @@ export function Layout(): JSX.Element {
               >
                 <SettingsView />
               </Box>
+            )}
+            {rightPanelMode === "teams" && (
+              <>
+                {/* Team List (60% via flexGrow) */}
+                <Box
+                  flexGrow={6}
+                  borderStyle={borders.panel}
+                  borderColor={colors.muted}
+                  flexDirection="column"
+                  overflow="hidden"
+                >
+                  <TeamList />
+                </Box>
+
+                {/* Team Detail (40% via flexGrow) */}
+                <Box
+                  flexGrow={4}
+                  borderStyle={borders.panel}
+                  borderColor={colors.muted}
+                  flexDirection="column"
+                  overflow="hidden"
+                >
+                  <TeamDetail />
+                </Box>
+              </>
             )}
           </Box>
         )}

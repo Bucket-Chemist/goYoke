@@ -3,7 +3,6 @@ import { Box, Text } from "ink";
 import { execSync } from "child_process";
 import { useStore } from "../store/index.js";
 import { colors } from "../config/theme.js";
-import { useTeamCount } from "../hooks/useTeamCount.js";
 
 interface StatusLineProps {
   width: number;
@@ -118,7 +117,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
   } = useStore();
 
   const gitInfo = useGitInfo();
-  const teamCount = useTeamCount();
+  const teams = useStore((state) => state.teams);
   const startTime = useRef(Date.now());
   const [tick, setTick] = useState(0);
 
@@ -174,6 +173,20 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
       complete: values.filter((a) => a.status === "complete").length,
     };
   }, [agents]);
+
+  // Memoize team stats - runs only when teams array changes, not on every tick
+  const teamStats = useMemo(() => {
+    const aliveTeams = teams.filter((t) => t.alive);
+    const aliveCount = aliveTeams.length;
+    const furthest =
+      aliveTeams.length > 0
+        ? aliveTeams.reduce((max, t) =>
+            t.currentWave > max.currentWave ? t : max
+          )
+        : null;
+    const totalSpend = teams.reduce((sum, t) => sum + t.totalCost, 0);
+    return { aliveCount, furthest, totalSpend };
+  }, [teams]);
 
   // Responsive layout
   const effectiveHeight = width < 100 ? 1 : height;
@@ -231,11 +244,19 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
               )}
             </Text>
           )}
-          {teamCount > 0 && (
+          {teams.length > 0 && (
             <>
               <Text color={colors.muted}> | </Text>
               <Text color={colors.success}>
-                {useAscii ? "[BG]" : "🏗️"} {teamCount} team{teamCount !== 1 ? "s" : ""} running
+                {useAscii ? "[BG]" : "🏗️"} {teamStats.aliveCount} team{teamStats.aliveCount !== 1 ? "s" : ""}
+                {teamStats.furthest && teamStats.furthest.currentWave > 0 && (
+                  <>
+                    {" · "}wave {teamStats.furthest.currentWave}/{teamStats.furthest.waveCount}
+                  </>
+                )}
+                {teamStats.totalSpend > 0 && (
+                  <> · ${teamStats.totalSpend.toFixed(2)}</>
+                )}
               </Text>
             </>
           )}

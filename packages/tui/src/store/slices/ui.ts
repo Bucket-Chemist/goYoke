@@ -23,7 +23,7 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
 
   cycleRightPanel: (): void => {
     set((state) => {
-      const modes: Array<"agents" | "dashboard" | "settings"> = ["agents", "dashboard", "settings"];
+      const modes: Array<"agents" | "dashboard" | "settings" | "teams"> = ["agents", "dashboard", "teams", "settings"];
       const current = modes.indexOf(state.rightPanelMode);
       const next = (current + 1) % modes.length;
       return { rightPanelMode: modes[next]! };

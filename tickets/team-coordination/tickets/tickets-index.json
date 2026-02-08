@@ -300,7 +300,7 @@
       "title": "Team Visibility in TUI",
       "file": "TC-015b.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": "independent",
       "time_estimate": "2-3d",
       "dependencies": []
