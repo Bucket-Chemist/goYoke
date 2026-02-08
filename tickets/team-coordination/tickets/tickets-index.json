@@ -300,7 +300,7 @@
       "title": "Team Visibility in TUI",
       "file": "TC-015b.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": "independent",
       "time_estimate": "2-3d",
       "dependencies": []
@@ -322,24 +322,28 @@
       "title": "Duplicate Launch Prevention via PID File",
       "file": "TC-016.md",
       "priority": "LOW",
-      "status": "pending",
+      "status": "completed",
       "phase": "independent",
       "time_estimate": "0.5d",
       "dependencies": [
         "TC-008"
-      ]
+      ],
+      "completed": "2026-02-08",
+      "completion_note": "Already implemented in daemon.go (acquirePIDFile, Release, processExists). All 5 proposed test cases covered by daemon_test.go with 6 additional tests. Braintrust analysis confirmed full redundancy."
     },
     {
       "id": "TC-021",
       "title": "Modernize Existing Skills with Official Skill Features",
       "file": "TC-021.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "completed",
       "phase": 3.5,
       "time_estimate": "2-3d",
       "dependencies": [
         "TC-012"
-      ]
+      ],
+      "completed": "2026-02-08",
+      "completion_note": "Braintrust analysis: Parts 2-3 already done by TC-013a/b. Part 5 hook infrastructure actively harmful (race condition with daemon config writes, 6 failure modes vs 2 for direct invocation). Part 1 disable-model-invocation is unverified feature. Direct Bash invocation of gogent-team-run is strictly superior to hook-based launching."
     }
   ]
 }
