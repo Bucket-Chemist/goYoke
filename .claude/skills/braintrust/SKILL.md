@@ -165,11 +165,11 @@ When user responds "scout" or "don't know" to Q2:
 
 ## Execution
 
-When `/braintrust` is invoked:
+When `/braintrust` is invoked, the Router spawns Mozart via Task(). Mozart conducts the interview, then dispatches execution either in the background (team-run) or foreground (MCP spawn), controlled by `settings.json -> "use_team_pattern"`.
 
 ### Step 1: Invoke Mozart via Task()
 
-**IMPORTANT**: The Router (Level 0) IS allowed to use Task(). This ensures TUI interactivity (stdin/stdout) is preserved.
+**IMPORTANT**: The Router (Level 0) IS allowed to use Task(). This ensures TUI interactivity (stdin/stdout) is preserved for the interview phase.
 
 ```javascript
 Task({
@@ -183,31 +183,51 @@ BRAINTRUST INVOCATION
 USER INPUT: {user_input}
 INPUT TYPE: {raw_problem | gap_document | inline_question}
 
-Execute full Braintrust workflow:
+Execute Braintrust workflow:
 1. Parse input
-2. Interview if needed (max 3 questions)
-3. Spawn scouts for reconnaissance (use mcp__gofortress__spawn_agent for ALL sub-agents)
+2. Interview if needed (max 4 questions per TC-018 protocol)
+3. Spawn scouts for reconnaissance
 4. Assemble Problem Brief
 5. Confirm with user before proceeding
-6. Dispatch Einstein + Staff-Architect in parallel (mcp__gofortress__spawn_agent)
-7. Collect analyses
-8. Invoke Beethoven for synthesis (mcp__gofortress__spawn_agent)
-9. Return final analysis document path`,
+6. Check settings.json use_team_pattern flag:
+   - If true: Generate team config + stdin files, launch gogent-team-run (background), return immediately
+   - If false: Dispatch Einstein + Staff-Architect via mcp__gofortress__spawn_agent (foreground), collect, invoke Beethoven, return analysis path`,
 });
 ```
 
-### Step 2: Mozart Handles Everything
+### Step 2: Mozart Handles Orchestration
 
-Mozart orchestrates the entire workflow internally:
+**Background mode** (`use_team_pattern: true` — default):
 
-- Spawns scouts (haiku)
-- Spawns Einstein (opus)
-- Spawns Staff-Architect-Critical-Review (opus)
-- Spawns Beethoven (opus)
+Mozart conducts interview (~30s), generates team configuration:
+1. Creates team directory: `$GOGENT_SESSION_DIR/teams/{timestamp}.braintrust/`
+2. Writes Problem Brief, config.json, and 3 stdin files
+3. Launches `gogent-team-run` as background process
+4. Returns to user immediately (~40s total)
+
+Background execution continues autonomously:
+- **Wave 1**: Einstein + Staff-Architect run in parallel (~5-8 min)
+- **Inter-wave**: `gogent-team-prepare-synthesis` merges Wave 1 outputs → `pre-synthesis.md`
+- **Wave 2**: Beethoven reads `pre-synthesis.md` and produces final synthesis
+
+**Foreground mode** (`use_team_pattern: false`):
+
+Mozart conducts interview, then orchestrates the full workflow synchronously:
+- Spawns Einstein + Staff-Architect via `mcp__gofortress__spawn_agent` (parallel)
+- Waits for both to complete (~6-9 min)
+- Spawns Beethoven with collected analyses
 - Returns final document path
 
 ### Step 3: Return to User
 
+**Background mode:**
+```
+[Braintrust] Team dispatched.
+[Braintrust] Track progress: /team-status
+[Braintrust] View result when complete: /team-result
+```
+
+**Foreground mode:**
 ```
 [Braintrust] Analysis complete.
 [Braintrust] Output: .claude/braintrust/analysis-{timestamp}.md
@@ -269,12 +289,29 @@ The final Braintrust Analysis document includes:
 
 ## State Files
 
+### Foreground Mode
 | File                                    | Written By | Read By                              | Purpose               |
 | --------------------------------------- | ---------- | ------------------------------------ | --------------------- |
 | `.claude/braintrust/problem-brief-*.md` | Mozart     | Einstein, Staff-Architect, Beethoven | Problem decomposition |
 | `.claude/braintrust/analysis-*.md`      | Beethoven  | User                                 | Final output          |
 | `.claude/braintrust/mozart-log-*.jsonl` | Mozart     | Telemetry                            | Workflow tracking     |
 | `.claude/tmp/scout_metrics.json`        | Scouts     | Mozart                               | Reconnaissance data   |
+
+### Team-Run Mode (Background)
+| File                                    | Written By                       | Read By                | Purpose                      |
+| --------------------------------------- | -------------------------------- | ---------------------- | ---------------------------- |
+| `{team_dir}/config.json`               | Mozart                           | gogent-team-run        | Team execution configuration |
+| `{team_dir}/problem-brief.md`          | Mozart                           | Agents (via stdin)     | Problem decomposition        |
+| `{team_dir}/stdin_einstein.json`       | Mozart                           | gogent-team-run        | Einstein input               |
+| `{team_dir}/stdin_staff-architect.json` | Mozart                          | gogent-team-run        | Staff-Architect input        |
+| `{team_dir}/stdin_beethoven.json`      | Mozart                           | gogent-team-run        | Beethoven input              |
+| `{team_dir}/stdout_einstein.json`      | gogent-team-run                  | prepare-synthesis      | Einstein structured output   |
+| `{team_dir}/stdout_staff-arch.json`    | gogent-team-run                  | prepare-synthesis      | Staff-Architect output       |
+| `{team_dir}/pre-synthesis.md`          | gogent-team-prepare-synthesis    | Beethoven (Read tool)  | Merged Wave 1 analyses       |
+| `{team_dir}/stdout_beethoven.json`     | gogent-team-run                  | /team-result           | Final synthesis output       |
+| `{team_dir}/runner.log`               | gogent-team-run                  | /team-status           | Execution log                |
+
+`{team_dir}` = `$GOGENT_SESSION_DIR/teams/{timestamp}.braintrust/`
 
 ---
 

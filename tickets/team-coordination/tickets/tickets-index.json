@@ -245,7 +245,7 @@
       "title": "Braintrust Workflow Team-Run Migration",
       "file": "TC-013b.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "completed",
       "phase": "4b",
       "time_estimate": "2-3d",
       "dependencies": [
