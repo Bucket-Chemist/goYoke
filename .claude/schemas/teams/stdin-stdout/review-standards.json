@@ -3,6 +3,7 @@
   "stdin": {
     "agent": "standards-reviewer",
     "workflow": "review",
+    "description": "Standards code review: naming, structure, complexity, DRY/KISS/YAGNI",
     "context": {
       "project_root": "/absolute/path/to/project",
       "team_dir": "/absolute/path/to/team/directory"

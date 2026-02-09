@@ -33,7 +33,8 @@ Usage: /team-cancel <team-name>
 
 Check in order:
 1. Environment variable `GOGENT_SESSION_DIR`
-2. Fallback: Find most recent session with teams/ subdirectory under `~/.claude/sessions/`
+2. Read `.claude/current-session` marker file
+3. Fallback: `.claude/sessions/$(date +%Y%m%d-%H%M%S)`
 
 If no session found:
 ```

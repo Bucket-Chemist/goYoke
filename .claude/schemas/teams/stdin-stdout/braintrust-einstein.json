@@ -3,6 +3,7 @@
   "stdin": {
     "agent": "einstein",
     "workflow": "braintrust",
+    "description": "Theoretical analysis: {problem_brief.title}",
     "context": {
       "project_root": "/absolute/path/to/project",
       "team_dir": "/absolute/path/to/team/directory"

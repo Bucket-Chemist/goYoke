@@ -23,8 +23,9 @@ Follow these steps to generate the team listing:
 ### Step 1: Discover Session Directory
 
 1. Check environment variable `GOGENT_SESSION_DIR` first
-2. If unset, fallback: find most recent session with `teams/` subdirectory under `~/.claude/sessions/`
-3. Team directories are located at: `{session_dir}/teams/*/config.json`
+2. If unset, read `.claude/current-session` marker file
+3. If neither exists, fallback to `.claude/sessions/$(date +%Y%m%d-%H%M%S)`
+4. Team directories are located at: `{session_dir}/teams/*/config.json`
 
 If no session directory found:
 ```

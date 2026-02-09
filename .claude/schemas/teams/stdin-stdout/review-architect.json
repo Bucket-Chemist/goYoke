@@ -3,6 +3,7 @@
   "stdin": {
     "agent": "architect-reviewer",
     "workflow": "review",
+    "description": "Architectural code review: structural patterns, module boundaries, dependency graphs",
     "context": {
       "project_root": "/absolute/path/to/project",
       "team_dir": "/absolute/path/to/team/directory"

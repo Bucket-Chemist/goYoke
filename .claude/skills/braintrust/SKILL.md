@@ -200,7 +200,7 @@ Execute Braintrust workflow:
 **Background mode** (`use_team_pattern: true` — default):
 
 Mozart conducts interview (~30s), generates team configuration:
-1. Creates team directory: `$GOGENT_SESSION_DIR/teams/{timestamp}.braintrust/`
+1. Creates team directory: `{session_dir}/teams/{timestamp}.braintrust/` (resolved via env var → `.claude/current-session` → `.claude/sessions/` fallback)
 2. Writes Problem Brief, config.json, and 3 stdin files
 3. Launches `gogent-team-run` as background process
 4. Returns to user immediately (~40s total)
@@ -311,7 +311,7 @@ The final Braintrust Analysis document includes:
 | `{team_dir}/stdout_beethoven.json`     | gogent-team-run                  | /team-result           | Final synthesis output       |
 | `{team_dir}/runner.log`               | gogent-team-run                  | /team-status           | Execution log                |
 
-`{team_dir}` = `$GOGENT_SESSION_DIR/teams/{timestamp}.braintrust/`
+`{team_dir}` = `{session_dir}/teams/{timestamp}.braintrust/` (session_dir resolved via env var → `.claude/current-session` → `.claude/sessions/` fallback)
 
 ---
 

@@ -158,7 +158,7 @@ func BuildFullAgentContext(agentID string, requirements *ContextRequirements, ta
 		if sessionDir := GetSessionDir(); sessionDir != "" {
 			sections = append(sections, SessionMarker)
 			sections = append(sections, fmt.Sprintf("SESSION_DIR: %s", sessionDir))
-			sections = append(sections, "Write output artifacts (plans, reviews, analysis) to SESSION_DIR/. Use .claude/tmp/ only for disposable scratch.")
+			sections = append(sections, "Write output artifacts (plans, reviews, analysis) to SESSION_DIR/.")
 			sections = append(sections, SessionEndMarker)
 			sections = append(sections, "")
 			injected = true

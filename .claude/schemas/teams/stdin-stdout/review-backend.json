@@ -3,6 +3,7 @@
   "stdin": {
     "agent": "backend-reviewer",
     "workflow": "review",
+    "description": "Backend code review: API design, database patterns, authentication, security",
     "context": {
       "project_root": "/absolute/path/to/project",
       "team_dir": "/absolute/path/to/team/directory"

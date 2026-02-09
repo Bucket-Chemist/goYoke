@@ -29,23 +29,14 @@ const targetTeam = args.length > 0 ? args.join(' ') : null;
 ### 2. Discover Session Directory
 
 ```javascript
-// Step 2a: Check environment variable first
-const sessionDir = process.env.GOGENT_SESSION_DIR;
-
-if (sessionDir) {
-    // Verify it exists
-    Bash({command: `test -d "${sessionDir}" && echo "exists" || echo "missing"`})
-    // If missing, error and exit
-}
-
-// Step 2b: Fallback to most recent session with teams/
-if (!sessionDir) {
-    Bash({
-        command: `find ~/.claude/sessions -type d -name "teams" -printf "%T@ %h\n" | sort -rn | head -1 | cut -d' ' -f2`,
-        description: "Find most recent session with teams subdirectory"
-    })
-    // If empty result, error: "No teams in current session..."
-}
+// Resolve session directory: env var → current-session marker → fallback
+Bash({
+    command: `session_dir="\${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"; session_dir="\${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"; echo "$session_dir"`,
+    description: "Resolve session directory"
+})
+// Verify it exists
+Bash({command: `test -d "${sessionDir}" && echo "exists" || echo "missing"`})
+// If missing, error and exit
 ```
 
 ### 3. Find Team Directories

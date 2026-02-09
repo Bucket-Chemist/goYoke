@@ -3,6 +3,7 @@
   "stdin": {
     "agent": "frontend-reviewer",
     "workflow": "review",
+    "description": "Frontend code review: components, hooks, state management, accessibility",
     "context": {
       "project_root": "/absolute/path/to/project",
       "team_dir": "/absolute/path/to/team/directory"

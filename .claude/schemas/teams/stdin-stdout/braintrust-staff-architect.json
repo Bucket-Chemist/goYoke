@@ -3,6 +3,7 @@
   "stdin": {
     "agent": "staff-architect-critical-review",
     "workflow": "braintrust",
+    "description": "Practical critical review: {problem_brief.title}",
     "context": {
       "project_root": "/absolute/path/to/project",
       "team_dir": "/absolute/path/to/team/directory"

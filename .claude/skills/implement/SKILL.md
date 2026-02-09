@@ -108,7 +108,7 @@ After architect completes:
 
 ```bash
 session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/fallback}"
+session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
 plan_file="$session_dir/implementation-plan.json"
 
 if [[ ! -f "$plan_file" ]]; then
@@ -128,7 +128,7 @@ echo "[implement] Plan: $task_count tasks"
 
 ```bash
 session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-/tmp/gogent-sessions}"
+session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
 team_dir="$session_dir/teams/$(date +%s).implementation"
 
 gogent-plan-impl \
@@ -189,7 +189,7 @@ fi
 [implement] Specs: SESSION_DIR/specs.md
 [implement] Plan: 2 tasks
 
-[implement] Team config: /tmp/gogent-sessions/teams/1770551000.implementation
+[implement] Team config: .claude/sessions/20260209-143000/teams/1770551000.implementation
 
 [implement] Team launched (PID 12345)
 [implement] Budget: $10.00

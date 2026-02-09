@@ -251,7 +251,8 @@ This path generates config.json + stdin files directly, launches `gogent-team-ru
 #### Step 1: Create Team Directory
 
 ```bash
-session_dir="${GOGENT_SESSION_DIR:-$HOME/.claude/sessions/$(date +%Y%m%d).$(uuidgen | cut -d- -f1)}"
+session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
+session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
 team_dir="${session_dir}/teams/$(date +%s).code-review"
 mkdir -p "$team_dir"
 ```

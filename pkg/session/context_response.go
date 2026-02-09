@@ -68,7 +68,7 @@ func GenerateSessionStartResponse(ctx *ContextComponents) (string, error) {
 
 	// Session directory
 	if ctx.SessionDir != "" {
-		sessionInfo := fmt.Sprintf("SESSION_DIR: %s\nAll session artifacts (plans, team outputs, reviews) are written here. .claude/tmp/ is disposable scratch — safe to delete.", ctx.SessionDir)
+		sessionInfo := fmt.Sprintf("SESSION_DIR: %s\nAll session artifacts are written to this directory. .claude/tmp/ symlinks here.", ctx.SessionDir)
 		contextParts = append(contextParts, sessionInfo)
 	}
 

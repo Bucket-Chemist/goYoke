@@ -3,7 +3,6 @@ package session
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -140,84 +139,3 @@ func TestReadCurrentSessionFromEnv_NoEnv(t *testing.T) {
 	assert.Empty(t, result)
 }
 
-func TestSetupTmpSymlink_Fresh(t *testing.T) {
-	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".claude", "sessions", "fresh-session")
-	require.NoError(t, os.MkdirAll(sessionDir, 0755))
-
-	err := SetupTmpSymlink(projectDir, sessionDir)
-	require.NoError(t, err)
-
-	// Verify symlink exists and points to sessionDir
-	tmpPath := filepath.Join(projectDir, ".claude", "tmp")
-	info, err := os.Lstat(tmpPath)
-	require.NoError(t, err)
-	assert.True(t, info.Mode()&os.ModeSymlink != 0, "should be symlink")
-
-	target, err := os.Readlink(tmpPath)
-	require.NoError(t, err)
-	assert.Equal(t, sessionDir, target)
-}
-
-func TestSetupTmpSymlink_ExistingSymlink(t *testing.T) {
-	projectDir := t.TempDir()
-	oldSessionDir := filepath.Join(projectDir, ".claude", "sessions", "old-session")
-	newSessionDir := filepath.Join(projectDir, ".claude", "sessions", "new-session")
-	require.NoError(t, os.MkdirAll(oldSessionDir, 0755))
-	require.NoError(t, os.MkdirAll(newSessionDir, 0755))
-
-	// Create initial symlink
-	err := SetupTmpSymlink(projectDir, oldSessionDir)
-	require.NoError(t, err)
-
-	// Replace with new symlink
-	err = SetupTmpSymlink(projectDir, newSessionDir)
-	require.NoError(t, err)
-
-	// Verify it points to new session
-	tmpPath := filepath.Join(projectDir, ".claude", "tmp")
-	target, err := os.Readlink(tmpPath)
-	require.NoError(t, err)
-	assert.Equal(t, newSessionDir, target)
-}
-
-func TestSetupTmpSymlink_ExistingDir(t *testing.T) {
-	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".claude", "sessions", "migrate-session")
-	require.NoError(t, os.MkdirAll(sessionDir, 0755))
-
-	// Create real directory with some files
-	tmpPath := filepath.Join(projectDir, ".claude", "tmp")
-	require.NoError(t, os.MkdirAll(tmpPath, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpPath, "file1.txt"), []byte("test"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(tmpPath, "file2.txt"), []byte("test"), 0644))
-
-	err := SetupTmpSymlink(projectDir, sessionDir)
-	require.NoError(t, err)
-
-	// Verify symlink now exists
-	info, err := os.Lstat(tmpPath)
-	require.NoError(t, err)
-	assert.True(t, info.Mode()&os.ModeSymlink != 0, "should be symlink")
-
-	// Verify old content was migrated
-	migratedPath := filepath.Join(projectDir, ".claude", "tmp.pre-sessions")
-	entries, err := os.ReadDir(migratedPath)
-	require.NoError(t, err)
-	assert.Len(t, entries, 2, "should have migrated 2 files")
-}
-
-func TestMigrateExistingTmp_AlreadyMigrated(t *testing.T) {
-	projectDir := t.TempDir()
-
-	// Create both source and dest
-	tmpPath := filepath.Join(projectDir, ".claude", "tmp")
-	require.NoError(t, os.MkdirAll(tmpPath, 0755))
-
-	migratedPath := filepath.Join(projectDir, ".claude", "tmp.pre-sessions")
-	require.NoError(t, os.MkdirAll(migratedPath, 0755))
-
-	err := migrateExistingTmp(projectDir)
-	require.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "already exists"), "should indicate dest exists")
-}

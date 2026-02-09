@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-09 07:27:59
+# Session Handoff - 2026-02-09 12:23:21
 
 ## Session Context
 
-- **Session ID**: 1551b403-2bfd-4f4a-a7a4-30850d8f5c6e
+- **Session ID**: ae80a4e2-268b-4c38-9ca6-61ba2f0c8619
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 2
+- **Tool Calls**: 14
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -18,16 +18,24 @@
 - **Uncommitted Files**:
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
-  - claude/stats-cache.json
-  - ackages/tui/.claude/memory/handoffs.jsonl
-  - ackages/tui/.claude/memory/last-handoff.md
-  - ackages/tui/.claude/memory/ml-tool-events.jsonl
-  - ackages/tui/src/config/keybindings.ts
-  - ackages/tui/src/store/slices/ui.ts
-  - ackages/tui/src/store/types.ts
-  - .claude/sessions/a7ea4d93-4cf3-4223-a0a4-eacce6c756a2.json
-  - packages/tui/.claude/memory/session-archive/routing-violations-a7ea4d93-4cf3-4223-a0a4-eacce6c756a2.jsonl
-  - packages/tui/src/components/AgentConfigView.tsx
-  - packages/tui/src/components/TeamConfigView.tsx
-  - packages/tui/src/components/TelemetryView.tsx
+  - claude/schemas/teams/stdin-stdout/braintrust-einstein.json
+  - claude/schemas/teams/stdin-stdout/braintrust-staff-architect.json
+  - claude/schemas/teams/stdin-stdout/review-architect.json
+  - claude/schemas/teams/stdin-stdout/review-backend.json
+  - claude/schemas/teams/stdin-stdout/review-frontend.json
+  - claude/schemas/teams/stdin-stdout/review-standards.json
+  - claude/skills/implement/SKILL.md
+  - claude/skills/review/SKILL.md
+  - claude/skills/ticket/SKILL.md
+  - .claude/memory/session-archive/routing-violations-1df8126d-83ba-41a3-9414-c2cf1dd0795f.jsonl
+
+## Error Patterns
+
+- **import_error**: 5 occurrences
+- **syntax_error**: 2 occurrences
+
+## Immediate Actions
+
+1. Investigate 2 error pattern(s)
+   - Recurring errors may need systematic fixes
 

@@ -515,7 +515,7 @@ The `description` field is required for envelope builder compatibility.
 4. Wave 2 starts: Beethoven reads the file at `pre_synthesis_path` via Read tool at runtime
 
 **File Locations:**
-- Team directory: `$GOGENT_SESSION_DIR/teams/{timestamp}.braintrust/`
+- Team directory: `{session_dir}/teams/{timestamp}.braintrust/` (resolved via env var → current-session marker → `.claude/sessions/` fallback)
 - Config: `{team_dir}/config.json`
 - Stdin files: `{team_dir}/stdin_{agent}.json`
 - Stdout files: `{team_dir}/stdout_{agent}.json` (written by `gogent-team-run` after agent completion)
@@ -726,13 +726,12 @@ When `use_team_pattern` is true, Mozart generates team configuration files and l
 
 #### Step 1: Create Team Directory
 
-```javascript
-// Use GOGENT_SESSION_DIR env var (set by TUI)
-const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-const teamDir = `${process.env.GOGENT_SESSION_DIR}/teams/${timestamp}.braintrust`;
-
-// Create directory structure
-Bash({ command: `mkdir -p "${teamDir}"` });
+```bash
+# Resolve session directory: env var → current-session marker → fallback
+session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
+session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
+team_dir="$session_dir/teams/$(date +%s).braintrust"
+mkdir -p "$team_dir"
 ```
 
 #### Step 2: Write Problem Brief

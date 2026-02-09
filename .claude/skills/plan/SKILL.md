@@ -285,7 +285,7 @@ Be adversarial to the plan, but constructive to the outcome.
 ```bash
 # Read review verdict
 session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/fallback}"
+session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
 verdict=$(jq -r '.verdict' "$session_dir/review-metadata.json")
 critical_count=$(jq -r '.issue_counts.critical' "$session_dir/review-metadata.json")
 ```

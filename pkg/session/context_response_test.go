@@ -178,8 +178,8 @@ func TestGenerateSessionStartResponse_WithSessionDir(t *testing.T) {
 		t.Error("Should contain session directory usage description")
 	}
 
-	if !strings.Contains(context, ".claude/tmp/ is disposable scratch") {
-		t.Error("Should mention .claude/tmp/ is disposable scratch")
+	if !strings.Contains(context, ".claude/tmp/ symlinks here") {
+		t.Error("Should mention .claude/tmp/ symlinks here")
 	}
 }
 
