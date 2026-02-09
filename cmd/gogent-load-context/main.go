@@ -36,16 +36,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create session directory and setup symlink
+	// Create session directory and write marker (no symlink — .claude/tmp/ stays disposable scratch)
 	sessionDir, err := session.CreateSessionDir(projectDir, event.SessionID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: session dir: %v\n", err)
 	} else {
 		if err := session.WriteCurrentSession(projectDir, sessionDir); err != nil {
 			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: write current-session: %v\n", err)
-		}
-		if err := session.SetupTmpSymlink(projectDir, sessionDir); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: setup tmp symlink: %v\n", err)
 		}
 	}
 

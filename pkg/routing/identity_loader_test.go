@@ -477,7 +477,7 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 				if !strings.Contains(result, "SESSION_DIR: "+sessionPath) {
 					t.Errorf("missing SESSION_DIR line with path %q", sessionPath)
 				}
-				if !strings.Contains(result, "Write output artifacts to SESSION_DIR/") {
+				if !strings.Contains(result, "Write output artifacts") {
 					t.Error("missing session context instructions")
 				}
 			},

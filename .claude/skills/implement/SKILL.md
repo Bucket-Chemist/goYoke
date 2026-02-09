@@ -79,8 +79,8 @@ PROJECT CONTEXT:
 - Conventions: load from ~/.claude/conventions/ based on detected language
 
 REQUIRED OUTPUTS (ALL THREE MANDATORY):
-1. .claude/tmp/implementation-plan.json — Machine-readable plan (write FIRST)
-2. .claude/tmp/specs.md — Human-readable plan with decisions and risk register
+1. SESSION_DIR/implementation-plan.json — Machine-readable plan (write FIRST)
+2. SESSION_DIR/specs.md — Human-readable plan with decisions and risk register
 3. write_todos — Task list derived from implementation phases
 
 INSTRUCTIONS:
@@ -89,6 +89,7 @@ INSTRUCTIONS:
 - Task descriptions in implementation-plan.json must be COMPLETE — workers cannot ask clarifying questions
 - Each task needs: agent ID, target_packages, related_files, blocked_by, acceptance_criteria
 - Keep it focused — only plan what was asked for
+- Write outputs to SESSION_DIR/ (available as environment variable)
 
 CONSTRAINTS:
 - Do NOT implement code (planning only)
@@ -99,18 +100,20 @@ CONSTRAINTS:
 
 After architect completes:
 ```
-[implement] Plan created: .claude/tmp/implementation-plan.json
-[implement] Specs: .claude/tmp/specs.md
+[implement] Plan created: SESSION_DIR/implementation-plan.json
+[implement] Specs: SESSION_DIR/specs.md
 ```
 
 ### 3. Validate Plan Exists
 
 ```bash
-plan_file=".claude/tmp/implementation-plan.json"
+session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
+session_dir="${session_dir:-.claude/sessions/fallback}"
+plan_file="$session_dir/implementation-plan.json"
 
 if [[ ! -f "$plan_file" ]]; then
     echo "[implement] ERROR: Architect did not produce implementation-plan.json"
-    echo "[implement] Check .claude/tmp/specs.md for details"
+    echo "[implement] Check $session_dir/specs.md for details"
     # STOP — do not proceed
 fi
 
@@ -182,8 +185,8 @@ fi
 
 [architect explores codebase, creates plan]
 
-[implement] Plan created: .claude/tmp/implementation-plan.json
-[implement] Specs: .claude/tmp/specs.md
+[implement] Plan created: SESSION_DIR/implementation-plan.json
+[implement] Specs: SESSION_DIR/specs.md
 [implement] Plan: 2 tasks
 
 [implement] Team config: /tmp/gogent-sessions/teams/1770551000.implementation

@@ -50,8 +50,8 @@ output_artifacts:
     - specs.md
     - write_todos
     - implementation-plan.json
-  specs_location: .claude/tmp/specs.md
-  plan_location: .claude/tmp/implementation-plan.json
+  specs_location: SESSION_DIR/specs.md
+  plan_location: SESSION_DIR/implementation-plan.json
 output_format:
   type: structured
   sections:
@@ -111,7 +111,7 @@ You are the implementation planner. You transform scout reports, strategy docume
 
 ### 1. specs.md
 
-Create this file at `.claude/tmp/specs.md`:
+Create this file at `SESSION_DIR/specs.md`:
 
 ```markdown
 # Specification: [Feature/Task Name]
@@ -159,7 +159,7 @@ After creating specs.md, call `write_todos` with tasks derived from your phases.
 
 ### 3. implementation-plan.json
 
-Create this file at `.claude/tmp/implementation-plan.json`.
+Create this file at `SESSION_DIR/implementation-plan.json`.
 
 **Purpose:** Machine-readable plan for background team orchestration. Workers receive ONLY the JSON data — they do NOT read specs.md. Therefore, task `description` fields must contain COMPLETE implementation guidance.
 
@@ -236,7 +236,7 @@ Your output MUST be valid JSON matching this structure:
 
 ## Workflow
 
-1. **Read Strategy Document**: Load `.claude/tmp/strategy.md` from planner phase - this is your primary input
+1. **Read Strategy Document**: Load `SESSION_DIR/strategy.md` from planner phase - this is your primary input
 2. **Parse Scout Report**: Extract key metrics and recommendations
 3. **Check Confidence**:
    - If `routing_recommendation.confidence == "low"`: Ask 1-2 clarifying questions FIRST

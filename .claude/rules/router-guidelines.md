@@ -102,10 +102,10 @@ Escalate to Einstein when:
 
 1. **STOP** current execution
 2. **Generate GAP document** using template at `~/.claude/schemas/einstein-gap.md`
-3. **Write** to `.claude/tmp/einstein-gap-{timestamp}.md`
+3. **Write** to `SESSION_DIR/einstein-gap-{timestamp}.md`
 4. **Output notification**:
    ```
-   [ESCALATED] GAP document ready: .claude/tmp/einstein-gap-{timestamp}.md
+   [ESCALATED] GAP document ready: SESSION_DIR/einstein-gap-{timestamp}.md
 
    🚨 Run `/einstein` to process this escalation.
 

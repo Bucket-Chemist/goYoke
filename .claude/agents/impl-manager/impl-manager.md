@@ -35,13 +35,13 @@ tools:
   - TaskGet
 
 inputs:
-  - .claude/tmp/specs.md
+  - SESSION_DIR/specs.md
   - TaskList API (native Claude Code tool)
   - conventions/*.md (auto-loaded based on language)
 
 outputs:
-  - .claude/tmp/impl-progress.json
-  - .claude/tmp/impl-violations.jsonl
+  - SESSION_DIR/impl-progress.json
+  - SESSION_DIR/impl-violations.jsonl
 
 delegation:
   # Blocklist - can spawn implementation agents freely
@@ -149,10 +149,10 @@ Task({
   model: "sonnet",
   prompt: `AGENT: go-pro
 
-TASK: Implement user authentication handler per specs.md section 3.2
+TASK: Implement user authentication handler per SESSION_DIR/specs.md section 3.2
 
 SPECS EXTRACT:
-[Include relevant section from specs.md]
+[Include relevant section from SESSION_DIR/specs.md]
 
 CONVENTIONS (MANDATORY):
 [Include relevant sections from go.md]
@@ -192,12 +192,12 @@ Violations will be caught by mid-flight review and require fixes.
 
 ## Progress Tracking
 
-Write to `.claude/tmp/impl-progress.json`:
+Write to `SESSION_DIR/impl-progress.json`:
 
 ```json
 {
   "session_id": "...",
-  "specs_file": ".claude/tmp/specs.md",
+  "specs_file": "SESSION_DIR/specs.md",
   "total_tasks": 5,
   "completed_tasks": 2,
   "in_progress_tasks": 1,
@@ -219,7 +219,7 @@ Write to `.claude/tmp/impl-progress.json`:
 
 ## Violation Logging
 
-Append to `.claude/tmp/impl-violations.jsonl`:
+Append to `SESSION_DIR/impl-violations.jsonl`:
 
 ```json
 {
@@ -237,7 +237,7 @@ Append to `.claude/tmp/impl-violations.jsonl`:
 Escalate to orchestrator when:
 
 - 2+ consecutive task failures
-- Specs.md is incomplete/ambiguous
+- SESSION_DIR/specs.md is incomplete/ambiguous
 - Cross-module conflict detected
 - Test failures indicate design issue
 
@@ -245,11 +245,11 @@ Escalate to orchestrator when:
 
 | Anti-Pattern                        | Correct Approach                   |
 | ----------------------------------- | ---------------------------------- |
-| Spawning without conventions        | ALWAYS inject conventions          |
-| Skipping mid-flight reviews         | Review every 3 files               |
-| Marking task complete without tests | Verify test existence              |
-| Ignoring specs.md                   | Every task traces to specs section |
-| Scope creep acceptance              | Stop, ask user to update specs     |
+| Spawning without conventions        | ALWAYS inject conventions               |
+| Skipping mid-flight reviews         | Review every 3 files                    |
+| Marking task complete without tests | Verify test existence                   |
+| Ignoring specs.md                   | Every task traces to SESSION_DIR/specs  |
+| Scope creep acceptance              | Stop, ask user to update specs          |
 
 ## Telemetry Relationship
 

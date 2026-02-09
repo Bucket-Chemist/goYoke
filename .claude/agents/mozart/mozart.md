@@ -57,7 +57,7 @@ inputs:
   - Inline question (quick mode)
 
 outputs:
-  - .claude/braintrust/problem-brief-{timestamp}.md
+  - SESSION_DIR/problem-brief.md
   - Handoff to Beethoven with collected analyses
 
 failure_tracking:
@@ -577,7 +577,7 @@ Collect scout outputs and synthesize:
 
 ### Problem Brief Template
 
-Write to `.claude/braintrust/problem-brief-{timestamp}.md`:
+Write to `SESSION_DIR/problem-brief.md`:
 
 ```markdown
 # Problem Brief
@@ -991,7 +991,7 @@ Your synthesis should:
 **Foreground mode** (after Beethoven completes):
 ```
 [Mozart] Braintrust analysis complete.
-[Mozart] Output: .claude/braintrust/analysis-{timestamp}.md
+[Mozart] Output: SESSION_DIR/analysis-{timestamp}.md
 [Mozart] Agents invoked: 4 (Mozart, Einstein, Staff-Architect, Beethoven)
 [Mozart] All spawned via MCP spawn_agent (Level 2 pattern)
 ```
@@ -1042,7 +1042,7 @@ If Beethoven fails:
 
 ## Telemetry
 
-Mozart logs to `.claude/braintrust/mozart-log-{timestamp}.jsonl`:
+Mozart logs to `SESSION_DIR/mozart-log-{timestamp}.jsonl`:
 
 ```json
 {

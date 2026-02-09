@@ -442,7 +442,7 @@ For large-context analysis:
 When orchestrator fails 3x or problem is intractable:
 
 ```
-1. Generate GAP document to .claude/tmp/braintrust-gap-{timestamp}.md
+1. Generate GAP document to SESSION_DIR/braintrust-gap-{timestamp}.md
 2. Output: "🚨 Run /braintrust to process"
 3. STOP - wait for user
 ```

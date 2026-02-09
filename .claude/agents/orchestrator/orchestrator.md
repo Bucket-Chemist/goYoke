@@ -439,7 +439,7 @@ Task({
 ```javascript
 // 1. Generate GAP document
 const timestamp = Date.now();
-const gapPath = `.claude/tmp/einstein-gap-${timestamp}.md`;
+const gapPath = `SESSION_DIR/einstein-gap-${timestamp}.md`;
 
 Write({
   file_path: gapPath,
@@ -503,7 +503,7 @@ created_at: ${new Date().toISOString()}
 Output(`
 [ESCALATED] GAP document ready: ${gapPath}
 
-🚨 Run \`/einstein\` to process this escalation.
+🚨 Run \`/braintrust\` to process this escalation.
 
 Summary:
 - Problem: ${briefProblem}
