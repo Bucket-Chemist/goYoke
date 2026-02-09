@@ -184,15 +184,16 @@ func main() {
 			agentConfig, err := loadAgentConfig(agent)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to load agent config: %v\n", err)
-			} else if agentConfig != nil && agentConfig.ContextRequirements != nil && agentConfig.ContextRequirements.HasContextRequirements() {
-				// Extract file paths from prompt for conditional convention matching
+			} else if agentConfig != nil {
+				// Inject agent identity + rules + conventions via unified loader
+				// Even without ContextRequirements, we still inject identity from agent .md file
 				taskFiles := routing.ExtractFilesFromPrompt(taskInput.Prompt)
 
-				// Build augmented prompt with conventions
-				augmentedPrompt, err := routing.BuildAugmentedPrompt(
-					taskInput.Prompt,
+				augmentedPrompt, err := routing.BuildFullAgentContext(
+					agent,
 					agentConfig.ContextRequirements,
 					taskFiles,
+					taskInput.Prompt,
 				)
 
 				if err != nil {

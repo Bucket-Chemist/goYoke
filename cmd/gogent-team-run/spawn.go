@@ -14,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 // Spawner defines the interface for spawning Claude CLI processes.
@@ -43,11 +45,12 @@ type spawnResult struct {
 	pid      int
 }
 
-// agentCLIConfig holds CLI flags from agents-index.json for a given agent.
+// agentCLIConfig holds CLI flags and context requirements from agents-index.json.
 type agentCLIConfig struct {
-	AllowedTools    []string
-	AdditionalFlags []string
-	Model           string
+	AllowedTools        []string
+	AdditionalFlags     []string
+	Model               string
+	ContextRequirements *routing.ContextRequirements
 }
 
 // Default fallback tools (W4: least-privilege READ-ONLY when agents-index.json unavailable)
@@ -118,7 +121,23 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 		}
 	}
 
-	// 3b. Augment allowed tools for implementation workflows.
+	// 3b. Inject agent identity + rules + conventions into envelope.
+	// This gives team-run agents the same context Task()-spawned agents get via gogent-validate.
+	if agentConfig.ContextRequirements != nil || member.Agent != "" {
+		augmented, err := routing.BuildFullAgentContext(
+			member.Agent,
+			agentConfig.ContextRequirements,
+			nil, // no taskFiles — file context is in stdin JSON
+			envelope,
+		)
+		if err != nil {
+			log.Printf("WARNING: Failed to inject agent context for %s: %v", member.Agent, err)
+		} else {
+			envelope = augmented
+		}
+	}
+
+	// 3c. Augment allowed tools for implementation workflows.
 	// agents-index.json cli_flags.allowed_tools are designed for read-only analysis
 	// (review, braintrust). Implementation workers need Write and Edit to create files.
 	if workflowType == "implementation" {
@@ -300,12 +319,13 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 
 	var index struct {
 		Agents []struct {
-			ID       string `json:"id"`
-			Model    string `json:"model"`
-			CLIFlags struct {
+			ID                  string                       `json:"id"`
+			Model               string                       `json:"model"`
+			CLIFlags            struct {
 				AllowedTools    []string `json:"allowed_tools"`
 				AdditionalFlags []string `json:"additional_flags"`
 			} `json:"cli_flags"`
+			ContextRequirements *routing.ContextRequirements `json:"context_requirements,omitempty"`
 		} `json:"agents"`
 	}
 
@@ -316,9 +336,10 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 	for _, agent := range index.Agents {
 		if agent.ID == agentID {
 			return &agentCLIConfig{
-				AllowedTools:    agent.CLIFlags.AllowedTools,
-				AdditionalFlags: agent.CLIFlags.AdditionalFlags,
-				Model:           agent.Model,
+				AllowedTools:        agent.CLIFlags.AllowedTools,
+				AdditionalFlags:     agent.CLIFlags.AdditionalFlags,
+				Model:               agent.Model,
+				ContextRequirements: agent.ContextRequirements,
 			}, nil
 		}
 	}

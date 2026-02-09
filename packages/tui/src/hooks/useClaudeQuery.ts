@@ -12,6 +12,8 @@ import type {
   SDKResultMessage,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import { join } from "path";
+import { homedir } from "os";
 import { useStore } from "../store/index.js";
 import { mcpServer } from "../mcp/server.js";
 import type { ClassifiedError } from "../types/events.js";
@@ -208,14 +210,18 @@ export function useClaudeQuery(options?: UseClaudeQueryOptions): UseClaudeQueryR
         useStore.getState().setActiveModel(initEvent.model);
       }
 
-      // Update session with ID
+      // Update session with ID and set session dir for child processes/team polling
       updateSession({
         id: event.session_id,
       });
 
-      // Initialize agents from system event if present
-      // Note: SDK system messages may contain agent metadata in future versions
-      // For now, we just initialize the session
+      // Set GOGENT_SESSION_DIR so team polling and child processes can find the session
+      if (event.session_id && !process.env["GOGENT_SESSION_DIR"]) {
+        const home = process.env["HOME"] || homedir();
+        process.env["GOGENT_SESSION_DIR"] = join(
+          home, ".claude", "sessions", event.session_id
+        );
+      }
     },
     [updateSession]
   );

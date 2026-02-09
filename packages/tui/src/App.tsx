@@ -9,7 +9,7 @@ import { ResponsiveLayout } from "./components/ResponsiveLayout.js";
 import { BorderStyleTest } from "./components/BorderStyleTest.js";
 import { loadSession, saveSession } from "./hooks/useSession.js";
 import { useStore } from "./store/index.js";
-import { nanoid } from "nanoid";
+
 import { logger } from "./utils/logger.js";
 
 /** Set GOGENT_SESSION_DIR for child processes and team polling */
@@ -49,10 +49,9 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
   useEffect(() => {
     async function resumeSession() {
       if (!sessionId) {
-        // No session ID provided - create new session
-        const newId = nanoid();
-        updateSession({ id: newId });
-        setSessionDir(newId);
+        // No session ID provided — don't pre-populate sessionId in store.
+        // Leave it null so query() starts a new SDK session (resume: undefined).
+        // The real session ID arrives via system.init event in handleSystemEvent.
         setLoading(false);
         return;
       }
@@ -77,10 +76,8 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           sessionId,
           error: error instanceof Error ? error.message : String(error),
         });
-        // Continue with new session on error
-        const newId = nanoid();
-        updateSession({ id: newId });
-        setSessionDir(newId);
+        // Continue with new session on error — leave sessionId null
+        // so query() starts a fresh SDK session
       } finally {
         setLoading(false);
       }
@@ -120,15 +117,6 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     return () => clearTimeout(timeout);
   }, [totalCost, currentSessionId, verbose]);
 
-  // Show loading state while resuming session
-  if (loading) {
-    return (
-      <Box padding={1}>
-        <Text color={colors.muted}>Loading session...</Text>
-      </Box>
-    );
-  }
-
   // Demo mode switching - only active when NOT in main mode
   // (prevents number keys from intercepting text input)
   useInput((input, _key) => {
@@ -139,6 +127,15 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     if (input === "3") setMode("responsive");
     if (input === "4") setMode("borders");
   });
+
+  // Show loading state while resuming session
+  if (loading) {
+    return (
+      <Box padding={1}>
+        <Text color={colors.muted}>Loading session...</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" width="100%" height="100%">

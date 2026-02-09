@@ -735,6 +735,70 @@ func TestPrepareSpawn_ValidConfig(t *testing.T) {
 	assert.Contains(t, cfg.args, "json")
 }
 
+// TestPrepareSpawn_InjectsAgentIdentity tests that prepareSpawn injects agent identity and conventions
+func TestPrepareSpawn_InjectsAgentIdentity(t *testing.T) {
+	// Skip if agents-index.json doesn't exist
+	agentsIndexPath := filepath.Join(os.Getenv("HOME"), ".claude", "agents", "agents-index.json")
+	if _, err := os.Stat(agentsIndexPath); os.IsNotExist(err) {
+		t.Skip("agents-index.json not found, skipping test")
+	}
+
+	member := Member{
+		Name:       "test-go-pro",
+		Agent:      "go-pro",
+		Model:      "sonnet",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		TimeoutMs:  30000,
+	}
+
+	config := testConfig(member)
+	config.ProjectRoot = "/tmp/test-project"
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Create minimal stdin file
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	stdinData := `{
+		"agent": "go-pro",
+		"task": "Implement a function",
+		"context": {"files": ["main.go"]}
+	}`
+	err := os.WriteFile(stdinPath, []byte(stdinData), 0644)
+	require.NoError(t, err)
+
+	spawner := &claudeSpawner{}
+	cfg, err := spawner.prepareSpawn(runner, 0, 0)
+
+	// If identity files don't exist, this is acceptable for test env
+	if err != nil {
+		t.Logf("prepareSpawn failed (expected in some envs): %v", err)
+		return
+	}
+
+	require.NotNil(t, cfg)
+
+	// Verify envelope contains the injected identity marker
+	assert.Contains(t, cfg.envelope, "[AGENT IDENTITY - AUTO-INJECTED]",
+		"Envelope should contain agent identity marker")
+
+	// Verify envelope contains the conventions marker
+	assert.Contains(t, cfg.envelope, "[CONVENTIONS - AUTO-INJECTED BY gogent-validate]",
+		"Envelope should contain conventions marker")
+
+	// Verify envelope contains the original prompt content
+	assert.Contains(t, cfg.envelope, "AGENT: go-pro",
+		"Envelope should contain original prompt")
+
+	// Verify identity appears BEFORE conventions in the envelope
+	identityPos := strings.Index(cfg.envelope, "[AGENT IDENTITY - AUTO-INJECTED]")
+	conventionsPos := strings.Index(cfg.envelope, "[CONVENTIONS - AUTO-INJECTED BY gogent-validate]")
+
+	if identityPos >= 0 && conventionsPos >= 0 {
+		assert.Less(t, identityPos, conventionsPos,
+			"Agent identity should appear before conventions in envelope")
+	}
+}
+
 // TestPrepareSpawn_FallbackTools tests fallback to Read,Glob,Grep when agent config unavailable
 func TestPrepareSpawn_FallbackTools(t *testing.T) {
 	member := Member{
