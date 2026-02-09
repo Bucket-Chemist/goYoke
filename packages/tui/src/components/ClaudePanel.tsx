@@ -342,7 +342,8 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         <ScrollView
           height={scrollHeight}
           width={width}
-          focused={focused && !streaming}
+          focused={focused}
+          disableArrowKeys={true}
           autoScroll={true}
         >
           {messages.length === 0 ? (

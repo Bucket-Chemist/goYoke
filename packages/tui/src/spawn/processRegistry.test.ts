@@ -4,7 +4,7 @@ import {
   ProcessRegistry,
   getProcessRegistry,
   resetProcessRegistry,
-} from "./processRegistry";
+} from "./processRegistry.js";
 
 describe("ProcessRegistry", () => {
   let registry: ProcessRegistry;

@@ -36,6 +36,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create session directory and setup symlink
+	sessionDir, err := session.CreateSessionDir(projectDir, event.SessionID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: session dir: %v\n", err)
+	} else {
+		if err := session.WriteCurrentSession(projectDir, sessionDir); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: write current-session: %v\n", err)
+		}
+		if err := session.SetupTmpSymlink(projectDir, sessionDir); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: setup tmp symlink: %v\n", err)
+		}
+	}
+
 	// Initialize tool counter for attention-gate hook
 	if err := config.InitializeToolCounter(); err != nil {
 		// Non-fatal - log warning and continue
@@ -45,6 +58,7 @@ func main() {
 	// Build context components
 	ctx := &session.ContextComponents{
 		SessionType: event.Type,
+		SessionDir:  sessionDir,
 	}
 
 	// Load routing schema summary (non-fatal if missing)

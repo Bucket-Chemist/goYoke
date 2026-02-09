@@ -388,7 +388,7 @@ export function parseCliOutput(stdout: string): {
  * Get current nesting level from environment.
  */
 export function getCurrentNestingLevel(): number {
-  const level = process.env.GOGENT_NESTING_LEVEL;
+  const level = process.env['GOGENT_NESTING_LEVEL'];
   if (!level) return 0;
   const parsed = parseInt(level, 10);
   return isNaN(parsed) ? 0 : parsed;

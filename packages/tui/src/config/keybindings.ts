@@ -120,6 +120,15 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
       ],
     },
     {
+      context: "Tabs",
+      bindings: [
+        { keys: "Alt+C", action: "Switch to Chat" },
+        { keys: "Alt+A", action: "Switch to Agent Config" },
+        { keys: "Alt+T", action: "Switch to Team Config" },
+        { keys: "Alt+Y", action: "Switch to Telemetry" },
+      ],
+    },
+    {
       context: "Claude Panel",
       bindings: [
         { keys: "Enter", action: "Submit input" },

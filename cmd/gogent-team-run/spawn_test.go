@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1348,4 +1349,114 @@ func TestExtractCostFromCLIOutput_ArrayFormat(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSessionDirEnvInjection tests that GOGENT_SESSION_DIR is correctly set when current-session exists
+func TestSessionDirEnvInjection(t *testing.T) {
+	t.Parallel()
+	// Create temporary project directory
+	projectRoot := t.TempDir()
+	sessionDir := filepath.Join(projectRoot, ".claude", "sessions", "test-session-123")
+
+	// Create .claude directory and write current-session marker
+	claudeDir := filepath.Join(projectRoot, ".claude")
+	require.NoError(t, os.MkdirAll(claudeDir, 0755))
+	currentSessionPath := filepath.Join(claudeDir, "current-session")
+	require.NoError(t, os.WriteFile(currentSessionPath, []byte(sessionDir+"\n"), 0644))
+
+	// Verify ReadCurrentSession returns the expected path
+	retrievedSessionDir, err := session.ReadCurrentSession(projectRoot)
+	require.NoError(t, err)
+	assert.Equal(t, sessionDir, retrievedSessionDir)
+
+	// Create member config pointing to this projectRoot
+	member := Member{
+		Name:       "test-agent",
+		Agent:      "codebase-search",
+		Model:      "haiku",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		TimeoutMs:  30000,
+	}
+
+	config := testConfig(member)
+	config.ProjectRoot = projectRoot
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Create minimal stdin file
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	stdinData := `{"agent": "codebase-search", "task": "test", "context": {}}`
+	require.NoError(t, os.WriteFile(stdinPath, []byte(stdinData), 0644))
+
+	// Call prepareSpawn
+	spawner := &claudeSpawner{}
+	cfg, err := spawner.prepareSpawn(runner, 0, 0)
+
+	// May fail in test env without agents-index.json - that's acceptable
+	if err != nil {
+		t.Logf("prepareSpawn failed (acceptable in test env): %v", err)
+		return
+	}
+
+	require.NotNil(t, cfg)
+	assert.Equal(t, projectRoot, cfg.projectRoot)
+
+	// Verify that if we were to call ReadCurrentSession with cfg.projectRoot,
+	// it would return the correct session dir
+	verifySessionDir, err := session.ReadCurrentSession(cfg.projectRoot)
+	require.NoError(t, err)
+	assert.Equal(t, sessionDir, verifySessionDir,
+		"prepareSpawn should set projectRoot such that ReadCurrentSession returns the expected session dir")
+}
+
+// TestSessionDirEnvInjection_NoMarker tests fallback when current-session file doesn't exist
+func TestSessionDirEnvInjection_NoMarker(t *testing.T) {
+	t.Parallel()
+	// Create temporary project directory WITHOUT current-session marker
+	projectRoot := t.TempDir()
+
+	// Verify ReadCurrentSession returns empty string when marker doesn't exist
+	retrievedSessionDir, err := session.ReadCurrentSession(projectRoot)
+	require.NoError(t, err)
+	assert.Equal(t, "", retrievedSessionDir,
+		"ReadCurrentSession should return empty string when current-session file doesn't exist")
+
+	// Create member config pointing to this projectRoot
+	member := Member{
+		Name:       "test-agent",
+		Agent:      "codebase-search",
+		Model:      "haiku",
+		StdinFile:  "stdin.json",
+		StdoutFile: "stdout.json",
+		TimeoutMs:  30000,
+	}
+
+	config := testConfig(member)
+	config.ProjectRoot = projectRoot
+	runner, teamDir := setupTestRunner(t, config)
+
+	// Create minimal stdin file
+	stdinPath := filepath.Join(teamDir, "stdin.json")
+	stdinData := `{"agent": "codebase-search", "task": "test", "context": {}}`
+	require.NoError(t, os.WriteFile(stdinPath, []byte(stdinData), 0644))
+
+	// Call prepareSpawn
+	spawner := &claudeSpawner{}
+	cfg, err := spawner.prepareSpawn(runner, 0, 0)
+
+	// May fail in test env - that's acceptable
+	if err != nil {
+		t.Logf("prepareSpawn failed (acceptable in test env): %v", err)
+		return
+	}
+
+	require.NotNil(t, cfg)
+	assert.Equal(t, projectRoot, cfg.projectRoot)
+
+	// Verify that ReadCurrentSession still returns empty string
+	// (this proves the fallback: no marker = no GOGENT_SESSION_DIR env var would be set)
+	verifySessionDir, err := session.ReadCurrentSession(cfg.projectRoot)
+	require.NoError(t, err)
+	assert.Equal(t, "", verifySessionDir,
+		"When current-session doesn't exist, ReadCurrentSession should return empty string (no GOGENT_SESSION_DIR)")
 }

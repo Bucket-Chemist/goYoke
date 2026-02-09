@@ -7,6 +7,7 @@ import { useAgentTree } from "../hooks/useAgentTree.js";
 import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
+import { TabBar } from "./TabBar.js";
 import { ClaudePanel } from "./ClaudePanel.js";
 import { AgentTree } from "./AgentTree.js";
 import { AgentDetail } from "./AgentDetail.js";
@@ -14,6 +15,9 @@ import { DashboardView } from "./DashboardView.js";
 import { SettingsView } from "./SettingsView.js";
 import { TeamList } from "./TeamList.js";
 import { TeamDetail } from "./TeamDetail.js";
+import { AgentConfigView } from "./AgentConfigView.js";
+import { TeamConfigView } from "./TeamConfigView.js";
+import { TelemetryView } from "./TelemetryView.js";
 import { ModalOverlay } from "./Modal.js";
 import { StatusLine } from "./StatusLine.js";
 import { ToastContainer } from "./Toast.js";
@@ -21,20 +25,23 @@ import { colors, borders } from "../config/theme.js";
 
 // Fixed heights
 const BANNER_HEIGHT = 3; // Banner takes 3 rows
+const TAB_BAR_HEIGHT = 1; // TabBar takes 1 row
 
 /**
- * Layout component - main 2-panel split (70/30) with focus management
+ * Layout component - main 2-panel split (70/30) with focus management and tabbed navigation
  *
  * Features:
- * - Left panel (70%): Claude conversation
- * - Right panel (30%): Agent tree (60%) + Agent detail (40%)
+ * - Tab navigation: Chat, Agent Config, Team Config, Telemetry
+ * - Left panel (70%): Claude conversation (chat tab only)
+ * - Right panel (30%): Agent tree (60%) + Agent detail (40%) (chat tab only)
  * - Global keyboard bindings (Tab, Escape, Ctrl+C, Ctrl+L)
+ * - Tab shortcuts (Alt+c, Alt+a, Alt+t, Alt+y)
  * - Focus indicated by border color (cyan/gray from theme)
  * - Modal overlay renders when queue is non-empty
  * - Modal captures all input when active
  */
 export function Layout(): JSX.Element {
-  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage } = useStore();
+  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage, activeTab } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
   const { rows: terminalHeight, columns: terminalWidth } = useTerminalDimensions();
 
@@ -91,88 +98,115 @@ export function Layout(): JSX.Element {
         <Banner />
       </Box>
 
-      {/* Content area - FILLS remaining space */}
+      {/* TabBar - FIXED below banner */}
+      <Box height={TAB_BAR_HEIGHT} paddingX={1}>
+        <TabBar enabled={modalQueue.length === 0} />
+      </Box>
+
+      {/* Content area - FILLS remaining space, conditional on activeTab */}
       <Box flexDirection="row" flexGrow={1}>
-        {/* Left Panel: Claude conversation */}
-        <Box width={leftWidth}>
-          <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
-        </Box>
+        {activeTab === "chat" && (
+          <>
+            {/* Left Panel: Claude conversation */}
+            <Box width={leftWidth}>
+              <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
+            </Box>
 
-        {/* Right Panel: Conditional rendering based on mode */}
-        {showRightPanel && (
-          <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
-            {rightPanelMode === "agents" && (
-              <>
-                {/* Agent Tree (60% via flexGrow) */}
-                <Box
-                  flexGrow={6}
-                  borderStyle={borders.panel}
-                  borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
-                  flexDirection="column"
-                  overflow="hidden"
-                >
-                  <AgentTree focused={focusedPanel === "agents"} />
-                </Box>
+            {/* Right Panel: Conditional rendering based on mode */}
+            {showRightPanel && (
+              <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
+                {rightPanelMode === "agents" && (
+                  <>
+                    {/* Agent Tree (60% via flexGrow) */}
+                    <Box
+                      flexGrow={6}
+                      borderStyle={borders.panel}
+                      borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <AgentTree focused={focusedPanel === "agents"} />
+                    </Box>
 
-                {/* Agent Detail (40% via flexGrow) */}
-                <Box
-                  flexGrow={4}
-                  borderStyle={borders.panel}
-                  borderColor={colors.muted}
-                  flexDirection="column"
-                  overflow="hidden"
-                >
-                  <AgentDetail focused={false} />
-                </Box>
-              </>
-            )}
-            {rightPanelMode === "dashboard" && (
-              <Box
-                flexGrow={1}
-                borderStyle={borders.panel}
-                borderColor={colors.muted}
-                flexDirection="column"
-                overflow="hidden"
-              >
-                <DashboardView />
+                    {/* Agent Detail (40% via flexGrow) */}
+                    <Box
+                      flexGrow={4}
+                      borderStyle={borders.panel}
+                      borderColor={colors.muted}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <AgentDetail focused={false} />
+                    </Box>
+                  </>
+                )}
+                {rightPanelMode === "dashboard" && (
+                  <Box
+                    flexGrow={1}
+                    borderStyle={borders.panel}
+                    borderColor={colors.muted}
+                    flexDirection="column"
+                    overflow="hidden"
+                  >
+                    <DashboardView />
+                  </Box>
+                )}
+                {rightPanelMode === "settings" && (
+                  <Box
+                    flexGrow={1}
+                    borderStyle={borders.panel}
+                    borderColor={colors.muted}
+                    flexDirection="column"
+                    overflow="hidden"
+                  >
+                    <SettingsView />
+                  </Box>
+                )}
+                {rightPanelMode === "teams" && (
+                  <>
+                    {/* Team List (60% via flexGrow) */}
+                    <Box
+                      flexGrow={6}
+                      borderStyle={borders.panel}
+                      borderColor={colors.muted}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <TeamList />
+                    </Box>
+
+                    {/* Team Detail (40% via flexGrow) */}
+                    <Box
+                      flexGrow={4}
+                      borderStyle={borders.panel}
+                      borderColor={colors.muted}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <TeamDetail />
+                    </Box>
+                  </>
+                )}
               </Box>
             )}
-            {rightPanelMode === "settings" && (
-              <Box
-                flexGrow={1}
-                borderStyle={borders.panel}
-                borderColor={colors.muted}
-                flexDirection="column"
-                overflow="hidden"
-              >
-                <SettingsView />
-              </Box>
-            )}
-            {rightPanelMode === "teams" && (
-              <>
-                {/* Team List (60% via flexGrow) */}
-                <Box
-                  flexGrow={6}
-                  borderStyle={borders.panel}
-                  borderColor={colors.muted}
-                  flexDirection="column"
-                  overflow="hidden"
-                >
-                  <TeamList />
-                </Box>
+          </>
+        )}
 
-                {/* Team Detail (40% via flexGrow) */}
-                <Box
-                  flexGrow={4}
-                  borderStyle={borders.panel}
-                  borderColor={colors.muted}
-                  flexDirection="column"
-                  overflow="hidden"
-                >
-                  <TeamDetail />
-                </Box>
-              </>
-            )}
+        {activeTab === "agent-config" && (
+          <Box flexGrow={1}>
+            <AgentConfigView />
+          </Box>
+        )}
+
+        {activeTab === "team-config" && (
+          <Box flexGrow={1}>
+            <TeamConfigView />
+          </Box>
+        )}
+
+        {activeTab === "telemetry" && (
+          <Box flexGrow={1}>
+            <TelemetryView />
           </Box>
         )}
       </Box>

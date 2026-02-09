@@ -124,7 +124,9 @@ echo "[implement] Plan: $task_count tasks"
 ### 4. Generate Team Config
 
 ```bash
-team_dir="${GOGENT_SESSION_DIR:-/tmp/gogent-sessions}/teams/$(date +%s).implementation"
+session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
+session_dir="${session_dir:-/tmp/gogent-sessions}"
+team_dir="$session_dir/teams/$(date +%s).implementation"
 
 gogent-plan-impl \
     --plan="$plan_file" \

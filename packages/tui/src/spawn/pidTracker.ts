@@ -17,14 +17,14 @@ interface PidFile {
 const PID_FILE_NAME = "spawn-pids.json";
 
 function getPidFilePath(): string {
-  const runtimeDir = process.env.XDG_RUNTIME_DIR;
+  const runtimeDir = process.env['XDG_RUNTIME_DIR'];
   if (runtimeDir) {
     const dir = path.join(runtimeDir, "gogent");
     fs.mkdirSync(dir, { recursive: true });
     return path.join(dir, PID_FILE_NAME);
   }
   // Fallback for systems without XDG_RUNTIME_DIR
-  const fallbackDir = path.join(os.tmpdir(), `gogent-${process.getuid()}`);
+  const fallbackDir = path.join(os.tmpdir(), `gogent-${process.getuid?.() ?? 0}`);
   fs.mkdirSync(fallbackDir, { recursive: true });
   return path.join(fallbackDir, PID_FILE_NAME);
 }

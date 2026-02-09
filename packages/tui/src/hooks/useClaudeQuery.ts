@@ -218,9 +218,25 @@ export function useClaudeQuery(options?: UseClaudeQueryOptions): UseClaudeQueryR
       // Set GOGENT_SESSION_DIR so team polling and child processes can find the session
       if (event.session_id && !process.env["GOGENT_SESSION_DIR"]) {
         const home = process.env["HOME"] || homedir();
-        process.env["GOGENT_SESSION_DIR"] = join(
-          home, ".claude", "sessions", event.session_id
-        );
+        const sessionDirPath = join(home, ".claude", "sessions", event.session_id);
+        process.env["GOGENT_SESSION_DIR"] = sessionDirPath;
+
+        // Write current-session marker + setup tmp symlink (best-effort)
+        const projectRoot = process.env["GOGENT_PROJECT_DIR"] || process.cwd();
+        void (async () => {
+          try {
+            const { writeFile, mkdir, unlink, symlink, lstat } = await import("fs/promises");
+            await mkdir(sessionDirPath, { recursive: true });
+            await writeFile(join(projectRoot, ".claude", "current-session"), sessionDirPath + "\n");
+            const tmpPath = join(projectRoot, ".claude", "tmp");
+            try {
+              const stat = await lstat(tmpPath);
+              if (stat.isSymbolicLink()) { await unlink(tmpPath); }
+              else { return; } // Real directory — skip
+            } catch { /* doesn't exist */ }
+            await symlink(sessionDirPath, tmpPath);
+          } catch { /* best-effort */ }
+        })();
       }
     },
     [updateSession]

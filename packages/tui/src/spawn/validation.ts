@@ -56,7 +56,7 @@ export async function validateSpawnEnvironment(): Promise<ValidationResult> {
   }
 
   // Check 3: GOGENT_MCP_SPAWN_ENABLED not explicitly disabled
-  if (process.env.GOGENT_MCP_SPAWN_ENABLED === "false") {
+  if (process.env['GOGENT_MCP_SPAWN_ENABLED'] === "false") {
     warnings.push({
       code: "W_SPAWN_DISABLED",
       message: "MCP spawn is disabled via GOGENT_MCP_SPAWN_ENABLED=false",
@@ -65,7 +65,7 @@ export async function validateSpawnEnvironment(): Promise<ValidationResult> {
   }
 
   // Check 4: XDG_DATA_HOME for telemetry (warning only)
-  if (!process.env.XDG_DATA_HOME) {
+  if (!process.env['XDG_DATA_HOME']) {
     warnings.push({
       code: "W_XDG_DATA_HOME_MISSING",
       message: "XDG_DATA_HOME not set",
@@ -76,7 +76,7 @@ export async function validateSpawnEnvironment(): Promise<ValidationResult> {
   // Check 5: Node.js version
   const nodeVersion = process.versions.node;
   const [major] = nodeVersion.split(".").map(Number);
-  if (major < 20) {
+  if (major !== undefined && major < 20) {
     errors.push({
       code: "E_NODE_VERSION",
       message: `Node.js ${nodeVersion} is below minimum required version 20`,

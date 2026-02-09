@@ -11,6 +11,10 @@ const (
 	// IdentityMarker prevents double-injection of agent identity
 	IdentityMarker    = "[AGENT IDENTITY - AUTO-INJECTED]"
 	IdentityEndMarker = "[END AGENT IDENTITY]"
+
+	// SessionMarker prevents double-injection of session context
+	SessionMarker    = "[SESSION CONTEXT]"
+	SessionEndMarker = "[END SESSION CONTEXT]"
 )
 
 // LoadAgentIdentity loads the markdown body (post-frontmatter) from
@@ -92,6 +96,42 @@ func StripYAMLFrontmatter(content string) string {
 	return strings.TrimLeft(afterClose, "\n")
 }
 
+// GetSessionDir reads the current session directory path.
+// First checks GOGENT_SESSION_DIR (set directly by team-run for spawned agents),
+// then falls back to reading the current-session marker file using project dir resolution:
+// GOGENT_PROJECT_ROOT → GOGENT_PROJECT_DIR → CLAUDE_PROJECT_DIR → os.Getwd().
+// Returns empty string if unavailable.
+//
+// Note: Cannot import pkg/session (circular dependency via sharp_edge_utils.go),
+// so env var resolution is inlined here.
+func GetSessionDir() string {
+	// Direct path: team-run sets this for spawned CLI processes
+	if dir := os.Getenv("GOGENT_SESSION_DIR"); dir != "" {
+		return dir
+	}
+
+	// File-based path: read from current-session marker
+	projectDir := os.Getenv("GOGENT_PROJECT_ROOT")
+	if projectDir == "" {
+		projectDir = os.Getenv("GOGENT_PROJECT_DIR")
+	}
+	if projectDir == "" {
+		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
+	}
+	if projectDir == "" {
+		projectDir, _ = os.Getwd()
+	}
+	if projectDir == "" {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(projectDir, ".claude", "current-session"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.claude/current-session\n", projectDir)
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
 // BuildFullAgentContext builds complete agent context: identity + rules + conventions.
 // Unified entry point for both Task() (gogent-validate) and team-run (envelope.go) paths.
 //
@@ -112,6 +152,18 @@ func BuildFullAgentContext(agentID string, requirements *ContextRequirements, ta
 
 	var sections []string
 	injected := false
+
+	// 0. Inject session directory context
+	if !strings.Contains(originalPrompt, SessionMarker) {
+		if sessionDir := GetSessionDir(); sessionDir != "" {
+			sections = append(sections, SessionMarker)
+			sections = append(sections, fmt.Sprintf("SESSION_DIR: %s", sessionDir))
+			sections = append(sections, "Write output artifacts to SESSION_DIR/ instead of .claude/tmp/")
+			sections = append(sections, SessionEndMarker)
+			sections = append(sections, "")
+			injected = true
+		}
+	}
 
 	// 1. Load agent identity
 	identity, err := LoadAgentIdentity(agentID)

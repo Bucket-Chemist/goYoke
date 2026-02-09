@@ -42,7 +42,7 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 **Required state:**
 
 - Project directory with identifiable language (go.mod, pyproject.toml, etc.)
-- Writeable `.claude/tmp/` directory
+- Writeable `.claude/sessions/` directory (auto-created by session hook; `.claude/tmp/` symlinks here)
 
 **Optional inputs:**
 

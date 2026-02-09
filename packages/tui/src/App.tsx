@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import { join } from "path";
 import { homedir } from "os";
+import { writeFile, mkdir, unlink, symlink, lstat } from "fs/promises";
 import { colors } from "./config/theme.js";
 import { Layout } from "./components/Layout.js";
 import { LayoutSpike } from "./components/LayoutSpike.js";
@@ -12,10 +13,41 @@ import { useStore } from "./store/index.js";
 
 import { logger } from "./utils/logger.js";
 
-/** Set GOGENT_SESSION_DIR for child processes and team polling */
+/** Set GOGENT_SESSION_DIR for child processes and team polling.
+ *  Also writes .claude/current-session marker and .claude/tmp symlink. */
 function setSessionDir(sessionId: string): void {
   const home = process.env["HOME"] || homedir();
-  process.env["GOGENT_SESSION_DIR"] = join(home, ".claude", "sessions", sessionId);
+  const sessionDirPath = join(home, ".claude", "sessions", sessionId);
+  process.env["GOGENT_SESSION_DIR"] = sessionDirPath;
+
+  // Write current-session marker + setup tmp symlink (best-effort, non-blocking)
+  const projectRoot = process.env["GOGENT_PROJECT_DIR"] || process.cwd();
+  void setupSessionFiles(projectRoot, sessionDirPath);
+}
+
+/** Write .claude/current-session and symlink .claude/tmp → session dir */
+async function setupSessionFiles(projectRoot: string, sessionDirPath: string): Promise<void> {
+  try {
+    await mkdir(sessionDirPath, { recursive: true });
+    await writeFile(join(projectRoot, ".claude", "current-session"), sessionDirPath + "\n");
+
+    // Setup .claude/tmp symlink
+    const tmpPath = join(projectRoot, ".claude", "tmp");
+    try {
+      const stat = await lstat(tmpPath);
+      if (stat.isSymbolicLink()) {
+        await unlink(tmpPath);
+      } else {
+        // Real directory — skip (migration handled by gogent-load-context on CLI start)
+        return;
+      }
+    } catch {
+      // Doesn't exist — proceed to create symlink
+    }
+    await symlink(sessionDirPath, tmpPath);
+  } catch {
+    // Best-effort — don't crash TUI if session file ops fail
+  }
 }
 
 type DemoMode = "main" | "hello" | "layout" | "responsive" | "borders";

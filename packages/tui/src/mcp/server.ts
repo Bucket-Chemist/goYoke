@@ -16,7 +16,7 @@ import { spawnAgent } from "./tools/spawnAgent.js";
  * Defaults to enabled unless explicitly set to "false".
  */
 export function isSpawnEnabled(): boolean {
-  return process.env.GOGENT_MCP_SPAWN_ENABLED !== "false";
+  return process.env['GOGENT_MCP_SPAWN_ENABLED'] !== "false";
 }
 
 /**
@@ -36,7 +36,8 @@ export function getServerTools() {
 
   // Conditionally add spawn tools
   if (isSpawnEnabled()) {
-    tools.push(spawnAgent);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tool schemas vary
+    tools.push(spawnAgent as any);
   }
 
   return tools;

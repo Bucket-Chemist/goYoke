@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
 // Spawner defines the interface for spawning Claude CLI processes.
@@ -183,11 +184,15 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		Setsid: true,
 	}
 
-	// 5. Set Env: GOGENT_NESTING_LEVEL=2, GOGENT_PROJECT_ROOT
+	// 5. Set Env: GOGENT_NESTING_LEVEL=2, GOGENT_PROJECT_ROOT, GOGENT_SESSION_DIR
 	cmd.Env = append(os.Environ(),
 		"GOGENT_NESTING_LEVEL=2",
 		fmt.Sprintf("GOGENT_PROJECT_ROOT=%s", cfg.projectRoot),
 	)
+	// Add session dir if available (read from current-session marker file)
+	if sessionDir, err := session.ReadCurrentSession(cfg.projectRoot); err == nil && sessionDir != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GOGENT_SESSION_DIR=%s", sessionDir))
+	}
 
 	// 6. Capture stdout
 	var stdout bytes.Buffer

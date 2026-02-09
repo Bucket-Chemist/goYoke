@@ -22,7 +22,7 @@ export async function exampleAskModal(): Promise<void> {
       type: "ask",
       payload: {
         message: "What color scheme would you like?",
-        options: ["Dark", "Light", "Auto"],
+        options: [{ label: "Dark", value: "Dark" }, { label: "Light", value: "Light" }, { label: "Auto", value: "Auto" }],
         defaultValue: "Auto",
       },
       timeout: 30000, // 30 second timeout
@@ -123,7 +123,7 @@ export async function exampleQueuedModals(): Promise<void> {
   const [color, confirm, name] = await Promise.all([
     enqueue<AskPayload>({
       type: "ask",
-      payload: { message: "Pick a color", options: ["Red", "Blue", "Green"] },
+      payload: { message: "Pick a color", options: [{ label: "Red", value: "Red" }, { label: "Blue", value: "Blue" }, { label: "Green", value: "Green" }] },
     }),
     enqueue<ConfirmPayload>({
       type: "confirm",
@@ -146,7 +146,7 @@ export async function exampleCancellableModal(): Promise<void> {
 
   const promise = enqueue<AskPayload>({
     type: "ask",
-    payload: { message: "This can be cancelled", options: ["Option 1", "Option 2"] },
+    payload: { message: "This can be cancelled", options: [{ label: "Option 1", value: "Option 1" }, { label: "Option 2", value: "Option 2" }] },
   });
 
   // Get the modal ID for cancellation

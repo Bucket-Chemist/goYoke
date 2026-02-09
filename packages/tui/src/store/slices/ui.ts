@@ -10,6 +10,7 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
   streaming: false,
   focusedPanel: "claude",
   rightPanelMode: "agents",
+  activeTab: "chat",
   interruptQuery: null,
   clearPendingMessage: null,
 
@@ -28,6 +29,10 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
       const next = (current + 1) % modes.length;
       return { rightPanelMode: modes[next]! };
     });
+  },
+
+  setActiveTab: (tab): void => {
+    set({ activeTab: tab });
   },
 
   setInterruptQuery: (fn): void => {

@@ -42,6 +42,9 @@ test/audit/**
 .claude/tmp/*.md
 .claude/settings.local.json
 .claude/tmp/*
+.claude/sessions/*/
+.claude/current-session
+.claude/tmp.pre-sessions
 .claude/statsig/*
 
 # Obsidian

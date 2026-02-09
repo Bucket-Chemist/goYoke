@@ -299,3 +299,287 @@ func TestStripYAMLFrontmatter_RealFile(t *testing.T) {
 		t.Errorf("body seems too short: %d chars", len(body))
 	}
 }
+
+func TestGetSessionDir(t *testing.T) {
+	tests := []struct {
+		name        string
+		setupEnv    func(*testing.T) string // returns expected session dir path
+		expectEmpty bool
+	}{
+		{
+			name: "GOGENT_SESSION_DIR set directly (team-run path)",
+			setupEnv: func(t *testing.T) string {
+				sessionDir := "/tmp/fake-session-dir"
+				t.Setenv("GOGENT_SESSION_DIR", sessionDir)
+				t.Setenv("GOGENT_PROJECT_ROOT", "")
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return sessionDir
+			},
+		},
+		{
+			name: "GOGENT_SESSION_DIR takes priority over file-based",
+			setupEnv: func(t *testing.T) string {
+				// Set up both: direct env var AND file-based marker
+				tmpDir := t.TempDir()
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte("/file-based-path"), 0644)
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				// Direct env var should win
+				t.Setenv("GOGENT_SESSION_DIR", "/direct-env-path")
+				return "/direct-env-path"
+			},
+		},
+		{
+			name: "no env vars set",
+			setupEnv: func(t *testing.T) string {
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", "")
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return ""
+			},
+			expectEmpty: true,
+		},
+		{
+			name: "GOGENT_PROJECT_ROOT set with current-session file",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "test-session")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return sessionDir
+			},
+		},
+		{
+			name: "GOGENT_PROJECT_DIR set (no ROOT)",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "another-session")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", "")
+				t.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return sessionDir
+			},
+		},
+		{
+			name: "CLAUDE_PROJECT_DIR set (no ROOT, no DIR)",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "legacy-session")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", "")
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", tmpDir)
+				return sessionDir
+			},
+		},
+		{
+			name: "env var set but current-session file missing",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				os.MkdirAll(filepath.Join(tmpDir, ".claude"), 0755)
+				// Don't write current-session file
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return ""
+			},
+			expectEmpty: true,
+		},
+		{
+			name: "current-session file has trailing whitespace",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "whitespace-test")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				// Write with trailing whitespace and newlines
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir+"  \n\n"), 0644)
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return sessionDir // Expected result should be trimmed
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expected := tc.setupEnv(t)
+			result := GetSessionDir()
+
+			if tc.expectEmpty {
+				if result != "" {
+					t.Errorf("expected empty result, got: %q", result)
+				}
+			} else {
+				if result != expected {
+					t.Errorf("expected %q, got %q", expected, result)
+				}
+			}
+		})
+	}
+}
+
+func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
+	ClearConventionCache()
+
+	tests := []struct {
+		name         string
+		setupEnv     func(*testing.T) string // returns session dir path
+		agentID      string
+		requirements *ContextRequirements
+		prompt       string
+		checkFn      func(*testing.T, string, string) // check function receives result and session path
+	}{
+		{
+			name: "session dir present, session markers injected",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "test-123")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
+				t.Setenv("GOGENT_SESSION_DIR", "")
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("CLAUDE_PROJECT_DIR", "")
+				return sessionDir
+			},
+			agentID: "go-pro",
+			requirements: &ContextRequirements{
+				Rules: []string{"agent-guidelines.md"},
+			},
+			prompt: "TASK: do something",
+			checkFn: func(t *testing.T, result, sessionPath string) {
+				if !strings.Contains(result, SessionMarker) {
+					t.Error("missing session marker")
+				}
+				if !strings.Contains(result, SessionEndMarker) {
+					t.Error("missing session end marker")
+				}
+				if !strings.Contains(result, "SESSION_DIR: "+sessionPath) {
+					t.Errorf("missing SESSION_DIR line with path %q", sessionPath)
+				}
+				if !strings.Contains(result, "Write output artifacts to SESSION_DIR/") {
+					t.Error("missing session context instructions")
+				}
+			},
+		},
+		{
+			name: "session context appears before identity marker",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "ordering-test")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				return sessionDir
+			},
+			agentID: "go-pro",
+			requirements: &ContextRequirements{
+				Rules: []string{"agent-guidelines.md"},
+			},
+			prompt: "TASK: order check",
+			checkFn: func(t *testing.T, result, sessionPath string) {
+				sessionIdx := strings.Index(result, SessionMarker)
+				identityIdx := strings.Index(result, IdentityMarker)
+				if sessionIdx == -1 {
+					t.Fatal("session marker not found")
+				}
+				if identityIdx == -1 {
+					t.Fatal("identity marker not found")
+				}
+				if sessionIdx >= identityIdx {
+					t.Error("session context should appear before identity marker")
+				}
+			},
+		},
+		{
+			name: "prompt already contains session marker, no double injection",
+			setupEnv: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "double-test")
+				claudeDir := filepath.Join(tmpDir, ".claude")
+				os.MkdirAll(claudeDir, 0755)
+				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
+				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				return sessionDir
+			},
+			agentID:      "go-pro",
+			requirements: nil,
+			prompt: SessionMarker + "\nSESSION_DIR: /existing/path\n" + SessionEndMarker + "\n\nTASK: test",
+			checkFn: func(t *testing.T, result, sessionPath string) {
+				count := strings.Count(result, SessionMarker)
+				if count > 1 {
+					t.Errorf("expected 1 session marker, got %d (double injection!)", count)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			sessionPath := tc.setupEnv(t)
+			result, err := BuildFullAgentContext(tc.agentID, tc.requirements, nil, tc.prompt)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tc.checkFn(t, result, sessionPath)
+		})
+	}
+}
+
+func TestBuildFullAgentContext_NoSessionDir(t *testing.T) {
+	ClearConventionCache()
+
+	// Clear all env vars
+	t.Setenv("GOGENT_PROJECT_ROOT", "")
+	t.Setenv("GOGENT_PROJECT_DIR", "")
+	t.Setenv("CLAUDE_PROJECT_DIR", "")
+
+	result, err := BuildFullAgentContext(
+		"go-pro",
+		&ContextRequirements{
+			Rules: []string{"agent-guidelines.md"},
+		},
+		nil,
+		"TASK: no session context",
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should NOT contain session markers when no env vars set
+	if strings.Contains(result, SessionMarker) {
+		t.Error("should not have session marker when no env vars set")
+	}
+	if strings.Contains(result, SessionEndMarker) {
+		t.Error("should not have session end marker when no env vars set")
+	}
+
+	// Should still have identity and conventions
+	if !strings.Contains(result, IdentityMarker) {
+		t.Error("should still have identity marker")
+	}
+	if !strings.Contains(result, ConventionsMarker) {
+		t.Error("should still have conventions marker")
+	}
+}

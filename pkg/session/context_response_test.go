@@ -145,3 +145,121 @@ func TestGenerateErrorResponse(t *testing.T) {
 		t.Error("Should contain error message")
 	}
 }
+
+func TestGenerateSessionStartResponse_WithSessionDir(t *testing.T) {
+	ctx := &ContextComponents{
+		SessionType: "startup",
+		SessionDir:  "/tmp/test/.claude/sessions/abc-123",
+		ProjectInfo: &ProjectDetectionResult{
+			Type: ProjectGeneric,
+		},
+	}
+
+	response, err := GenerateSessionStartResponse(ctx)
+
+	if err != nil {
+		t.Fatalf("GenerateSessionStartResponse failed: %v", err)
+	}
+
+	// Verify valid JSON
+	var parsed SessionStartResponse
+	if err := json.Unmarshal([]byte(response), &parsed); err != nil {
+		t.Fatalf("Invalid JSON response: %v", err)
+	}
+
+	context := parsed.HookSpecificOutput.AdditionalContext
+
+	// Verify session directory is included
+	if !strings.Contains(context, "SESSION_DIR: /tmp/test/.claude/sessions/abc-123") {
+		t.Error("Should contain session directory path")
+	}
+
+	if !strings.Contains(context, "All session artifacts are written to this directory") {
+		t.Error("Should contain session directory usage description")
+	}
+
+	if !strings.Contains(context, ".claude/tmp/ symlinks here") {
+		t.Error("Should mention .claude/tmp/ symlink behavior")
+	}
+}
+
+func TestGenerateSessionStartResponse_WithoutSessionDir(t *testing.T) {
+	ctx := &ContextComponents{
+		SessionType: "startup",
+		SessionDir:  "", // Empty session dir
+		ProjectInfo: &ProjectDetectionResult{
+			Type: ProjectGeneric,
+		},
+	}
+
+	response, err := GenerateSessionStartResponse(ctx)
+
+	if err != nil {
+		t.Fatalf("GenerateSessionStartResponse failed: %v", err)
+	}
+
+	var parsed SessionStartResponse
+	if err := json.Unmarshal([]byte(response), &parsed); err != nil {
+		t.Fatalf("Invalid JSON response: %v", err)
+	}
+
+	context := parsed.HookSpecificOutput.AdditionalContext
+
+	// Verify session directory info is NOT included when empty
+	if strings.Contains(context, "SESSION_DIR:") {
+		t.Error("Should not contain SESSION_DIR when SessionDir is empty")
+	}
+
+	// Verify other content is still present
+	if !strings.Contains(context, "SESSION INITIALIZED") {
+		t.Error("Should still include session initialization header")
+	}
+}
+
+func TestGenerateSessionStartResponse_SessionDirWithOtherFields(t *testing.T) {
+	ctx := &ContextComponents{
+		SessionType:    "startup",
+		SessionDir:     "/home/user/.claude/sessions/test-session-123",
+		RoutingSummary: "ROUTING TIERS ACTIVE:\n  • haiku: find files...",
+		GitInfo:        "GIT: Branch: main | Uncommitted: 5 file(s)",
+		ProjectInfo: &ProjectDetectionResult{
+			Type:        ProjectGo,
+			Indicators:  []string{"go.mod", "go.sum"},
+			Conventions: []string{"go.md"},
+		},
+	}
+
+	response, err := GenerateSessionStartResponse(ctx)
+
+	if err != nil {
+		t.Fatalf("GenerateSessionStartResponse failed: %v", err)
+	}
+
+	var parsed SessionStartResponse
+	if err := json.Unmarshal([]byte(response), &parsed); err != nil {
+		t.Fatalf("Invalid JSON response: %v", err)
+	}
+
+	context := parsed.HookSpecificOutput.AdditionalContext
+
+	// Verify all fields are present
+	if !strings.Contains(context, "SESSION_DIR: /home/user/.claude/sessions/test-session-123") {
+		t.Error("Should contain session directory")
+	}
+
+	if !strings.Contains(context, "ROUTING TIERS") {
+		t.Error("Should contain routing summary")
+	}
+
+	if !strings.Contains(context, "GIT:") {
+		t.Error("Should contain git info")
+	}
+
+	if !strings.Contains(context, "go") {
+		t.Error("Should contain project type")
+	}
+
+	if !strings.Contains(context, "hooks are ACTIVE") {
+		t.Error("Should contain hook status footer")
+	}
+}

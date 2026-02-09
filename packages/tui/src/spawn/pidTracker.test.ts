@@ -7,15 +7,15 @@ import {
   unregisterPid,
   cleanupOrphanedProcesses,
   getTrackedProcessCount,
-} from "./pidTracker";
+} from "./pidTracker.js";
 
 // Helper to get PID file path
 function getPidFilePath(): string {
-  const runtimeDir = process.env.XDG_RUNTIME_DIR;
+  const runtimeDir = process.env['XDG_RUNTIME_DIR'];
   if (runtimeDir) {
     return path.join(runtimeDir, "gogent", "spawn-pids.json");
   }
-  return path.join(os.tmpdir(), `gogent-${process.getuid()}`, "spawn-pids.json");
+  return path.join(os.tmpdir(), `gogent-${process.getuid?.() ?? 0}`, "spawn-pids.json");
 }
 
 // Helper to read PID file

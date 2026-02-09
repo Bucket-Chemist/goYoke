@@ -184,16 +184,28 @@ export interface SessionSlice {
   clearSession: () => void;
 }
 
+// Tab types
+export type TabId = "chat" | "agent-config" | "team-config" | "telemetry";
+
+export interface TabDefinition {
+  id: TabId;
+  label: string;
+  shortcutKey: string; // Single lowercase letter for Alt+key
+  shortcutIndex: number; // Position of underlined char in label
+}
+
 // UI slice
 export interface UISlice {
   streaming: boolean;
   focusedPanel: "claude" | "agents";
   rightPanelMode: "agents" | "dashboard" | "settings" | "teams";
+  activeTab: TabId;
   interruptQuery: (() => Promise<void>) | null;
   clearPendingMessage: (() => void) | null;
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
+  setActiveTab: (tab: TabId) => void;
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
   setClearPendingMessage: (fn: (() => void) | null) => void;
 }

@@ -7,12 +7,23 @@
  * - Uses marginTop offset + overflow:hidden for clipping
  * - Measures actual content height in terminal rows
  * - Prevents text overflow that causes garbled rendering
+ *
+ * Features:
+ * - Keyboard: PageUp/PageDown (full page), Up/Down (line), Ctrl+A/E (top/bottom)
+ * - Visual scrollbar with thumb/track (█/░)
+ * - Mouse wheel scrolling (via SGR mouse mode)
+ * - Click+drag on scrollbar for fast positioning
  */
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Box, Text, useInput, measureElement } from "ink";
+import { useMouse } from "../../hooks/useMouse.js";
+import type { MouseEvent as TermMouseEvent } from "../../hooks/useMouse.js";
 import { colors } from "../../config/theme.js";
 import { logger } from "../../utils/logger.js";
+
+/** Lines scrolled per mouse wheel tick */
+const WHEEL_SCROLL_LINES = 3;
 
 export interface ScrollViewProps {
   /**
@@ -38,13 +49,20 @@ export interface ScrollViewProps {
   focused?: boolean;
 
   /**
+   * When true, only PageUp/PageDown + Ctrl+A/E are bound (not Up/Down arrows).
+   * Use when the parent component owns Up/Down for another purpose (e.g. input history).
+   * @default false
+   */
+  disableArrowKeys?: boolean;
+
+  /**
    * Content to render
    */
   children: React.ReactNode;
 }
 
 /**
- * Line-aware scrollable viewport
+ * Line-aware scrollable viewport with visual scrollbar
  * Renders children and scrolls by terminal lines rather than items
  */
 export function ScrollView({
@@ -52,12 +70,19 @@ export function ScrollView({
   width,
   autoScroll = true,
   focused = false,
+  disableArrowKeys = false,
   children,
 }: ScrollViewProps): JSX.Element {
   const [scrollOffset, setScrollOffset] = useState(0);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const contentRef = useRef<any>(null);
   const [contentHeight, setContentHeight] = useState(0);
+
+  // Refs for stable mouse callback (avoids stale closures)
+  const scrollOffsetRef = useRef(0);
+  scrollOffsetRef.current = scrollOffset;
+  const maxOffsetRef = useRef(0);
+  const dragRef = useRef<{ y: number; offset: number } | null>(null);
 
   // Measure content height whenever children change
   useEffect(() => {
@@ -87,9 +112,9 @@ export function ScrollView({
   const maxOffset = useMemo(() => {
     return Math.max(0, contentHeight - height);
   }, [contentHeight, height]);
+  maxOffsetRef.current = maxOffset;
 
   // Auto-scroll to bottom when content grows (if not manually scrolled up)
-  // Simple rule: if user hasn't scrolled up, always show the latest content.
   useEffect(() => {
     if (autoScroll && !userScrolledUp) {
       setScrollOffset(maxOffset);
@@ -101,7 +126,15 @@ export function ScrollView({
     setScrollOffset((prev) => Math.min(prev, maxOffset));
   }, [maxOffset]);
 
-  // Scroll controls (only active when focused)
+  // Stable scroll helper — sets offset + tracks user scroll state
+  const applyScroll = useCallback((target: number) => {
+    const curMax = maxOffsetRef.current;
+    const clamped = Math.max(0, Math.min(curMax, target));
+    setScrollOffset(clamped);
+    setUserScrolledUp(clamped < curMax);
+  }, []);
+
+  // Keyboard scroll controls (only active when focused)
   useInput(
     (input, key) => {
       if (!focused) return;
@@ -109,10 +142,10 @@ export function ScrollView({
       let newOffset = scrollOffset;
       let scrolled = false;
 
-      if (key.upArrow) {
+      if (!disableArrowKeys && key.upArrow) {
         newOffset = Math.max(0, scrollOffset - 1);
         scrolled = true;
-      } else if (key.downArrow) {
+      } else if (!disableArrowKeys && key.downArrow) {
         newOffset = Math.min(maxOffset, scrollOffset + 1);
         scrolled = true;
       } else if (key.pageUp) {
@@ -146,46 +179,96 @@ export function ScrollView({
     { isActive: focused }
   );
 
-  // Calculate scroll indicator values
-  const showScrollIndicator = contentHeight > height;
-  const visibleStart = scrollOffset + 1;
-  const visibleEnd = Math.min(scrollOffset + height, contentHeight);
-  const scrollPercentage =
-    maxOffset > 0 ? Math.round((scrollOffset / maxOffset) * 100) : 100;
+  // Mouse event handler — wheel scroll + click/drag on scrollbar
+  const handleMouseEvent = useCallback(
+    (event: TermMouseEvent) => {
+      // Mouse wheel up
+      if (event.button === 64 && event.isPress) {
+        applyScroll(scrollOffsetRef.current - WHEEL_SCROLL_LINES);
+        return;
+      }
+      // Mouse wheel down
+      if (event.button === 65 && event.isPress) {
+        applyScroll(scrollOffsetRef.current + WHEEL_SCROLL_LINES);
+        return;
+      }
+
+      // Left click press — start drag
+      if (event.button === 0 && event.isPress && !event.isDrag) {
+        dragRef.current = { y: event.y, offset: scrollOffsetRef.current };
+        return;
+      }
+
+      // Left button drag — scroll proportionally to Y delta
+      if (event.isDrag && event.button === 0 && dragRef.current) {
+        const deltaY = event.y - dragRef.current.y;
+        // Ratio: dragging through full viewport height scrolls through full content
+        const ratio = maxOffsetRef.current / (height || 1);
+        const newOffset = Math.round(dragRef.current.offset + deltaY * ratio);
+        applyScroll(newOffset);
+        return;
+      }
+
+      // Left button release — end drag
+      if (event.button === 0 && event.isRelease) {
+        dragRef.current = null;
+      }
+    },
+    [height, applyScroll]
+  );
+
+  useMouse({ isActive: focused, onMouseEvent: handleMouseEvent });
+
+  // Scrollbar geometry
+  const showScrollbar = contentHeight > height;
+  const trackHeight = height;
+  const thumbSize = showScrollbar
+    ? Math.max(1, Math.round(trackHeight * (height / contentHeight)))
+    : 0;
+  const thumbPos =
+    maxOffset > 0
+      ? Math.round((scrollOffset / maxOffset) * (trackHeight - thumbSize))
+      : 0;
+
+  // Build scrollbar track string (single render, no per-row components)
+  const scrollbarTrack = useMemo(() => {
+    if (!showScrollbar) return "";
+    return Array.from({ length: trackHeight }, (_, i) =>
+      i >= thumbPos && i < thumbPos + thumbSize ? "\u2588" : "\u2591"
+    ).join("\n");
+  }, [showScrollbar, trackHeight, thumbPos, thumbSize]);
 
   return (
     <Box flexDirection="column" height={height}>
-      {/* Content area with overflow clipping */}
-      <Box
-        flexDirection="column"
-        flexGrow={1}
-        overflow="hidden"
-        height={height - (showScrollIndicator ? 1 : 0)}
-      >
-        {/* Inner content box with negative marginTop for scrolling */}
-        {/* flexShrink={0} is CRITICAL: without it, Yoga shrinks this box to fit
-            the parent's height, making measureElement return the viewport height
-            instead of the actual content height, so maxOffset=0 and scrolling
-            never works. */}
+      <Box flexDirection="row" flexGrow={1}>
+        {/* Content area with overflow clipping */}
         <Box
-          ref={contentRef}
           flexDirection="column"
-          flexShrink={0}
-          marginTop={-scrollOffset}
+          flexGrow={1}
+          overflow="hidden"
         >
-          {children}
+          {/* Inner content box with negative marginTop for scrolling */}
+          {/* flexShrink={0} is CRITICAL: without it, Yoga shrinks this box to fit
+              the parent's height, making measureElement return the viewport height
+              instead of the actual content height, so maxOffset=0 and scrolling
+              never works. */}
+          <Box
+            ref={contentRef}
+            flexDirection="column"
+            flexShrink={0}
+            marginTop={-scrollOffset}
+          >
+            {children}
+          </Box>
         </Box>
-      </Box>
 
-      {/* Scroll position indicator */}
-      {showScrollIndicator && (
-        <Box justifyContent="flex-end">
-          <Text color={colors.muted} dimColor>
-            [lines {visibleStart}-{visibleEnd} of {contentHeight}] {scrollPercentage}%
-            {userScrolledUp && " (paused)"}
-          </Text>
-        </Box>
-      )}
+        {/* Visual scrollbar — track (░) + thumb (█) */}
+        {showScrollbar && (
+          <Box width={1} flexDirection="column" flexShrink={0} overflow="hidden">
+            <Text color={colors.muted}>{scrollbarTrack}</Text>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }
