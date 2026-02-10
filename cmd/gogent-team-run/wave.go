@@ -12,7 +12,16 @@ import (
 // Within each wave, members execute in parallel via spawnAndWait goroutines.
 // Budget gates prevent spawns when budget is insufficient.
 func runWaves(ctx context.Context, tr *TeamRunner) error {
-	for waveIdx, wave := range tr.config.Waves {
+	// Snapshot wave count under lock — config.Waves length is immutable after load
+	tr.configMu.RLock()
+	if tr.config == nil {
+		tr.configMu.RUnlock()
+		return fmt.Errorf("config not loaded")
+	}
+	waves := tr.config.Waves // snapshot slice header (safe: waves are never appended after load)
+	tr.configMu.RUnlock()
+
+	for waveIdx, wave := range waves {
 		log.Printf("[INFO] wave: Wave %d starting with %d members", wave.WaveNumber, len(wave.Members))
 
 		// Check budget before wave

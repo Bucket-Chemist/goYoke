@@ -1071,7 +1071,7 @@ func TestClaudeSpawner_Spawn_InvalidIndices(t *testing.T) {
 	// Invalid wave index → prepareSpawn fails
 	err := spawner.Spawn(ctx, runner, 99, 0)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "prepare:")
+	assert.Contains(t, err.Error(), "prepare spawn")
 }
 
 // TestClaudeSpawner_Spawn_NoBudgetCheck tests that Spawn no longer checks budget
@@ -1459,4 +1459,113 @@ func TestSessionDirEnvInjection_NoMarker(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "", verifySessionDir,
 		"When current-session doesn't exist, ReadCurrentSession should return empty string (no GOGENT_SESSION_DIR)")
+}
+
+// TestWorkflowTimeout tests workflow-based timeout defaults
+func TestWorkflowTimeout(t *testing.T) {
+	tests := []struct {
+		workflow string
+		want     time.Duration
+	}{
+		{"braintrust", 15 * time.Minute},
+		{"implementation", 10 * time.Minute},
+		{"review", 5 * time.Minute},
+		{"unknown", 10 * time.Minute},
+		{"", 10 * time.Minute},
+	}
+	for _, tt := range tests {
+		t.Run(tt.workflow, func(t *testing.T) {
+			got := workflowTimeout(tt.workflow)
+			if got != tt.want {
+				t.Errorf("workflowTimeout(%q) = %v, want %v", tt.workflow, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestProgressTracker tests the progressTracker concurrent writer
+func TestProgressTracker(t *testing.T) {
+	pt := newProgressTracker()
+
+	// Initial state
+	if pt.BytesReceived() != 0 {
+		t.Fatal("expected 0 bytes initially")
+	}
+
+	// Write updates lastActivity and bytesReceived
+	before := pt.LastActivity()
+	time.Sleep(10 * time.Millisecond)
+	n, err := pt.Write([]byte("hello"))
+	if err != nil {
+		t.Fatalf("Write error: %v", err)
+	}
+	if n != 5 {
+		t.Fatalf("expected 5 bytes written, got %d", n)
+	}
+	if pt.BytesReceived() != 5 {
+		t.Fatalf("expected 5 bytes received, got %d", pt.BytesReceived())
+	}
+	if !pt.LastActivity().After(before) {
+		t.Fatal("lastActivity should have advanced")
+	}
+
+	// Bytes() returns accumulated data
+	if string(pt.Bytes()) != "hello" {
+		t.Fatalf("expected 'hello', got %q", string(pt.Bytes()))
+	}
+
+	// Multiple writes accumulate
+	pt.Write([]byte(" world"))
+	if pt.BytesReceived() != 11 {
+		t.Fatalf("expected 11 bytes total, got %d", pt.BytesReceived())
+	}
+}
+
+// TestHealthMonitorShadowMode tests health monitoring in shadow mode
+func TestHealthMonitorShadowMode(t *testing.T) {
+	// Create a test runner with config
+	teamDir := t.TempDir()
+	tr := &TeamRunner{
+		teamDir:    teamDir,
+		configPath: filepath.Join(teamDir, "config.json"),
+		childPIDs:  make(map[int]struct{}),
+		spawner:    &claudeSpawner{},
+	}
+
+	// Create minimal config with one wave, one member
+	tr.config = &TeamConfig{
+		Waves: []Wave{
+			{
+				WaveNumber: 1,
+				Members: []Member{
+					{Name: "test-agent", Status: "running"},
+				},
+			},
+		},
+	}
+
+	// Create tracker with old lastActivity to trigger stall warning
+	tracker := newProgressTracker()
+	// Artificially age the lastActivity
+	tracker.mu.Lock()
+	tracker.lastActivity = time.Now().Add(-2 * stallWarningThreshold)
+	tracker.mu.Unlock()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Run one health check cycle by using a very short interval
+	testInterval := 10 * time.Millisecond
+	done := make(chan struct{})
+	go func() {
+		startHealthMonitor(ctx, tr, 0, 0, tracker, testInterval)
+		close(done)
+	}()
+
+	// Wait for at least one health check to run
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	<-done // Wait for goroutine to exit before t.TempDir() cleanup
+
+	// With 10ms interval, the goroutine should fire several times in 50ms.
+	// This test verifies the monitor starts, runs, and stops cleanly.
 }

@@ -5,6 +5,7 @@ import { useKeymap } from "../hooks/useKeymap.js";
 import type { KeyBinding } from "../hooks/useKeymap.js";
 import { useAgentTree } from "../hooks/useAgentTree.js";
 import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
+import { useTeamsPoller } from "../hooks/useTeams.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { TabBar } from "./TabBar.js";
@@ -41,9 +42,14 @@ const TAB_BAR_HEIGHT = 1; // TabBar takes 1 row
  * - Modal captures all input when active
  */
 export function Layout(): JSX.Element {
-  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage, activeTab } = useStore();
+  const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage, activeTab, cycleRightPanel } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
   const { rows: terminalHeight, columns: terminalWidth } = useTerminalDimensions();
+
+  // Start team polling unconditionally - this fixes the circular dependency
+  // where TeamList only renders when rightPanelMode === "teams", but polling
+  // was only happening inside useTeams() which was only called by TeamList
+  useTeamsPoller();
 
   // Responsive layout breakpoints
   const isNarrow = terminalWidth < 100;
@@ -58,6 +64,9 @@ export function Layout(): JSX.Element {
   const globalBindings = createGlobalBindings({
     toggleFocus: () => {
       setFocusedPanel(focusedPanel === "claude" ? "agents" : "claude");
+    },
+    cycleRightPanel: () => {
+      cycleRightPanel();
     },
     interruptQuery: () => {
       // If modal is active, cancel it

@@ -841,11 +841,11 @@
         "Grep",
         "Write",
         "AskUserQuestion",
+        "Task",
         "TaskList",
         "TaskCreate",
         "TaskUpdate",
-        "TaskGet",
-        "mcp__gofortress__spawn_agent"
+        "TaskGet"
       ],
       "cli_flags": {
         "allowed_tools": ["Read", "Glob", "Grep"],
@@ -1529,6 +1529,20 @@
     "cleanup": {
       "trigger": "memory-archivist or session end",
       "action": "delete files older than ttl"
+    }
+  },
+  "skill_guards": {
+    "braintrust": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "braintrust"
+    },
+    "review": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "Glob", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "code-review"
+    },
+    "implement": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "implementation"
     }
   }
 }

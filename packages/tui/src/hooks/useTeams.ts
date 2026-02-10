@@ -144,21 +144,31 @@ async function getTeamSummaries(sessionDir: string): Promise<TeamSummary[]> {
     summaries.sort((a, b) => b.dir.localeCompare(a.dir));
 
     return summaries;
-  } catch {
-    // Missing teams directory or other filesystem error
+  } catch (error) {
+    // Missing teams directory is expected on first run
+    // Log other errors for debugging
+    if (process.env["VERBOSE"]) {
+      console.warn(
+        `[useTeams] Failed to read teams directory: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
     return [];
   }
 }
 
 /**
- * Hook to poll and track all teams with adaptive polling
+ * Polling-only hook - runs team polling and auto-switch logic
+ * This hook should be called unconditionally in Layout.tsx to ensure polling
+ * runs regardless of which right panel mode is active.
  *
  * Polling interval:
  * - 5s when any team is running
  * - 30s when all teams are completed/failed
  */
-export function useTeams(): TeamSummary[] {
-  const { teams, setTeams } = useStore();
+export function useTeamsPoller(): void {
+  const { setTeams } = useStore();
   const isMountedRef = useRef(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollingRef = useRef(false);
@@ -187,8 +197,17 @@ export function useTeams(): TeamSummary[] {
         if (isMountedRef.current) {
           setTeams(summaries);
 
-          // Adaptive polling: 5s if any running, 30s otherwise
+          // Auto-switch to teams panel when teams are active
           const hasRunning = summaries.some((t) => t.alive);
+          if (hasRunning) {
+            const state = useStore.getState();
+            if (state.rightPanelMode === "agents" && !state.panelAutoSwitched) {
+              state.setRightPanelMode("teams");
+              state.setPanelAutoSwitched(true);
+            }
+          }
+
+          // Adaptive polling: 5s if any running, 30s otherwise
           return hasRunning ? 5000 : 30000;
         }
 
@@ -210,6 +229,8 @@ export function useTeams(): TeamSummary[] {
             currentIntervalRate.current = nextRate;
             setupInterval(nextRate);
           }
+        }).catch(() => {
+          // Filesystem errors during polling are non-fatal — next interval will retry
         });
       }, rate);
 
@@ -221,6 +242,8 @@ export function useTeams(): TeamSummary[] {
       if (isMountedRef.current) {
         setupInterval(initialRate);
       }
+    }).catch(() => {
+      // Initial poll failure is non-fatal — interval will retry
     });
 
     return () => {
@@ -230,8 +253,14 @@ export function useTeams(): TeamSummary[] {
       }
     };
   }, [setTeams]);
+}
 
-  return teams;
+/**
+ * Data-only hook - returns current teams from store
+ * Components that need team data should call this
+ */
+export function useTeams(): TeamSummary[] {
+  return useStore((state) => state.teams);
 }
 
 /**

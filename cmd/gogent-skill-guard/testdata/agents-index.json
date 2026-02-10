@@ -1,0 +1,16 @@
+{
+  "skill_guards": {
+    "braintrust": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "braintrust"
+    },
+    "review": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "Glob", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "code-review"
+    },
+    "implement": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "implementation"
+    }
+  }
+}

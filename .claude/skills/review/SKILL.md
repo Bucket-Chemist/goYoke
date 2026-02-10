@@ -3,21 +3,19 @@ name: review
 description: Orchestrated multi-domain code review with severity-grouped findings and approval status
 ---
 
-# Review Skill v2.0
+# Review Skill v3.0
 
 ## Purpose
 
-Automated code review through coordinated specialist reviewers. Analyzes changed files, identifies relevant review domains, spawns reviewers via background team-run (default) or foreground orchestrator (fallback), and synthesizes findings into actionable report.
+Automated code review through coordinated specialist reviewers. Analyzes changed files, identifies relevant review domains, spawns reviewers via background team-run, and provides findings via `/team-result`.
 
 **What this skill does:**
 
 1. **Detect** — Find changed files via git diff or specified scope
 2. **Classify** — Identify languages and architectural layers present
 3. **Select** — Choose relevant reviewers (backend, frontend, standards, architecture)
-4. **Execute** — Dispatch reviewers via background team-run (default) or foreground orchestrator (fallback)
+4. **Execute** — Dispatch reviewers via background team-run
 5. **Launch** — Start `gogent-team-run` in background, return immediately
-6. **Synthesize** — Collect and group findings by severity
-7. **Report** — Generate unified report with approval status
 
 **What this skill does NOT do:**
 
@@ -42,6 +40,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 
 - `git` (for change detection)
 - `jq` (JSON processing)
+- `gogent-team-run` (team execution)
 
 **Project setup:**
 None required. Works in any git repository.
@@ -50,7 +49,25 @@ None required. Works in any git repository.
 
 ## Workflow
 
-### Phase 1: Change Detection
+When `/review` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{session_dir}/teams/{timestamp}.code-review/`)
+- Written `active-skill.json` with guard restrictions + `team_dir` path
+- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
+
+The Router executes the following steps:
+
+### Phase 1: Read Guard File and Detect Changes
+
+#### Step 1: Read Team Directory from Guard File
+
+```javascript
+Read({ file_path: `${session_dir}/active-skill.json` })
+// Extract team_dir from JSON response
+```
+
+The `session_dir` is available from the `.claude/current-session` marker file or `GOGENT_SESSION_DIR` env var.
+
+#### Step 2: Detect Changed Files
 
 Determine which files to review:
 
@@ -87,6 +104,7 @@ esac
 
 if [[ -z "$files" ]]; then
     echo "[review] No files to review."
+    rm -f "$session_dir/active-skill.json"
     exit 0
 fi
 
@@ -133,131 +151,9 @@ echo "[review] Selected reviewers: ${reviewers[*]}"
 
 ---
 
-### Phase 2.5: Dispatch Path Selection
+### Phase 3: Background Team-Run Dispatch
 
-Determine whether to use background team-run or foreground orchestrator:
-
-```bash
-# Check feature flag (default: true = use team-run)
-use_team=$(jq -r '.use_team_pattern // true' ~/.claude/settings.json 2>/dev/null)
-
-# Fallback if binary not available
-if [[ "$use_team" == "true" ]] && ! command -v gogent-team-run &>/dev/null; then
-    echo "[review] gogent-team-run not found, using foreground path"
-    use_team="false"
-fi
-
-if [[ "$use_team" == "true" ]]; then
-    echo "[review] Using background team-run dispatch"
-    # Continue to Phase 3B
-else
-    echo "[review] Using foreground orchestrator dispatch"
-    # Continue to Phase 3A
-fi
-```
-
-**Feature flag:** `use_team_pattern` in `~/.claude/settings.json` (default: `true`).
-
-**Fallback triggers:**
-- `use_team_pattern: false` in settings.json
-- `gogent-team-run` binary not found in PATH
-
----
-
-### Phase 3A: Foreground Dispatch (Fallback)
-
-**When:** `use_team == "false"` (feature flag off or binary not found)
-
-This is the original foreground dispatch path. The router spawns review-orchestrator via Task, which coordinates reviewers using mcp__gofortress__spawn_agent. This path blocks the TUI for ~2-3 minutes.
-
-Delegate to review-orchestrator:
-
-**Task Invocation:**
-
-```
-Tool: Task
-Description: Coordinate multi-domain code review
-Subagent Type: Plan
-Model: sonnet
-Prompt:
-  AGENT: review-orchestrator
-
-  1. TASK: Coordinate code review for changed files
-
-  2. FILES TO REVIEW:
-     {files}
-
-  3. REVIEWERS TO SPAWN:
-     {reviewers}
-
-  4. EXPECTED OUTCOME:
-     - Spawn reviewers in parallel via mcp__gofortress__spawn_agent (Task() is blocked for sub-agents)
-     - Each reviewer examines files in their domain
-     - Collect findings from all reviewers
-     - Synthesize into unified report
-     - Assign approval status: APPROVED / WARNING / BLOCKED
-
-  5. REQUIRED SKILLS:
-     - Multi-agent coordination
-     - Finding synthesis
-     - Severity classification
-
-  6. MUST DO:
-     - Spawn each reviewer with relevant file subset
-     - Wait for all reviewers to complete
-     - Group findings by severity (critical, warning, info)
-     - Ensure file:line references in all findings
-     - Assign approval status based on severity
-
-  7. MUST NOT DO:
-     - Implement fixes (report only)
-     - Skip critical issues
-     - Generate vague findings without locations
-
-  8. APPROVAL CRITERIA:
-     - APPROVED: No critical or warning issues
-     - WARNING: Warnings present, no critical issues
-     - BLOCKED: Critical issues present
-
-  9. OUTPUT FORMAT:
-     {
-       "status": "APPROVED|WARNING|BLOCKED",
-       "summary": {
-         "critical": N,
-         "warnings": M,
-         "info": K
-       },
-       "findings": [
-         {
-           "severity": "critical|warning|info",
-           "file": "path/to/file",
-           "line": N,
-           "reviewer": "backend-reviewer",
-           "message": "Description",
-           "recommendation": "Fix suggestion"
-         }
-       ]
-     }
-```
-
----
-
-### Phase 3B: Background Team-Run Dispatch (Default)
-
-**When:** `use_team == "true"` (default)
-
-This path generates config.json + stdin files directly, launches `gogent-team-run`, and returns immediately. No review-orchestrator LLM agent is involved. Results are retrieved later via `/team-result`.
-
-#### Step 1: Create Team Directory
-
-```bash
-session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
-team_dir="${session_dir}/teams/$(date +%s).code-review"
-mkdir -p "$team_dir"
-```
-
-#### Step 2: Generate config.json
+#### Step 1: Generate config.json
 
 Read the review template from `.claude/schemas/teams/review.json` and populate with dynamic values. Only include selected reviewers in `waves[0].members[]`.
 
@@ -285,7 +181,7 @@ Read the review template from `.claude/schemas/teams/review.json` and populate w
 
 Write to `$team_dir/config.json`.
 
-#### Step 3: Generate Stdin Files
+#### Step 2: Generate Stdin Files
 
 For each selected reviewer, generate a stdin JSON file compliant with `schemas/stdin/reviewer.json`.
 
@@ -361,7 +257,7 @@ done
 
 Write each stdin file to `$team_dir/stdin_{reviewer-name}.json`.
 
-#### Step 4: Launch
+#### Step 3: Launch
 
 ```bash
 gogent-team-run "$team_dir"
@@ -373,15 +269,15 @@ No output redirection. No config.json path argument. The binary handles:
 - Session leadership (setsid)
 - Writing `background_pid` to config.json
 
-#### Step 5: Verify Launch
+#### Step 4: Verify Launch
 
 ```bash
 sleep 2
 background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
 if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
     echo "[review] ERROR: Team launch failed. Check $team_dir/runner.log"
-    echo "[review] Falling back to foreground path..."
-    # Fall through to Phase 3A
+    rm -f "$session_dir/active-skill.json"
+    exit 1
 else
     echo "[review] Team launched (PID $background_pid)"
     echo "[review] Use /team-status to track progress"
@@ -389,9 +285,15 @@ else
 fi
 ```
 
+#### Step 5: Remove Skill Guard
+
+```bash
+rm -f "$session_dir/active-skill.json"
+```
+
 #### Step 6: Return to User
 
-For background path, output summary and return immediately:
+Output summary and return immediately:
 
 ```
 [review] Review team launched in background
@@ -410,57 +312,7 @@ TUI returns to user within ~5 seconds.
 
 ### Phase 4: Report Generation
 
-**For foreground path (Phase 3A):** Display results inline as shown below.
-
-**For background path (Phase 3B):** Phase 4 is skipped — results come from `/team-result` after the team completes. The review skill returns immediately after Phase 3B Step 6.
-
-#### Foreground Report (Phase 3A only)
-
-After orchestrator completes, display results:
-
-```bash
-review_result=$(cat .claude/tmp/review-result.json)
-status=$(echo "$review_result" | jq -r '.status')
-critical=$(echo "$review_result" | jq -r '.summary.critical')
-warnings=$(echo "$review_result" | jq -r '.summary.warnings')
-info=$(echo "$review_result" | jq -r '.summary.info')
-
-echo ""
-echo "╔══════════════════════════════════════╗"
-echo "║        CODE REVIEW REPORT             ║"
-echo "╚══════════════════════════════════════╝"
-echo ""
-echo "Status: $status"
-echo "Critical: $critical"
-echo "Warnings: $warnings"
-echo "Info: $info"
-echo ""
-
-if [[ "$critical" -gt 0 ]]; then
-    echo "═══ CRITICAL ISSUES ═══"
-    echo "$review_result" | jq -r '.findings[] | select(.severity == "critical") | "  [\(.file):\(.line)] \(.message)\n    → \(.recommendation)"'
-    echo ""
-fi
-
-if [[ "$warnings" -gt 0 ]]; then
-    echo "═══ WARNINGS ═══"
-    echo "$review_result" | jq -r '.findings[] | select(.severity == "warning") | "  [\(.file):\(.line)] \(.message)\n    → \(.recommendation)"'
-    echo ""
-fi
-
-if [[ "$info" -gt 0 ]]; then
-    echo "═══ INFO ═══"
-    echo "$review_result" | jq -r '.findings[] | select(.severity == "info") | "  [\(.file):\(.line)] \(.message)"'
-    echo ""
-fi
-
-# Exit code matches approval status
-case "$status" in
-    APPROVED) exit 0 ;;
-    WARNING) exit 0 ;;
-    BLOCKED) exit 1 ;;
-esac
-```
+Results come from `/team-result` after the team completes. The review skill returns immediately after Phase 3 Step 6.
 
 ---
 
@@ -571,20 +423,12 @@ fi
 | ----------------------------- | ----------- | ----------- | --------------- |
 | Detection                     | Bash        | 0           | $0.000          |
 | Classification                | Bash        | 0           | $0.000          |
-| **Background Path (team-run)**|             |             |                 |
 | Config generation             | Router      | ~2K         | $0.000 (inline) |
 | Backend Reviewer              | Haiku       | 3-5K        | $0.003-$0.005   |
 | Frontend Reviewer             | Haiku       | 3-5K        | $0.003-$0.005   |
 | Standards Reviewer            | Haiku       | 3-5K        | $0.003-$0.005   |
 | Architect Reviewer            | Sonnet      | 8-12K       | $0.07-$0.11     |
-| **Background Total (4 rev.)** |             | 17-27K      | **$0.08-$0.13** |
-| **Foreground Path (fallback)**|             |             |                 |
-| Orchestrator                  | Sonnet      | 8-12K       | $0.07-$0.11     |
-| Backend Reviewer              | Haiku+Think | 3-5K        | $0.003-$0.005   |
-| Frontend Reviewer             | Haiku+Think | 3-5K        | $0.003-$0.005   |
-| Standards Reviewer            | Haiku+Think | 3-5K        | $0.003-$0.005   |
-| Architect Reviewer            | Sonnet      | 8-12K       | $0.07-$0.11     |
-| **Foreground Total (4 rev.)** |             | 28-42K      | **$0.15-$0.24** |
+| **Total (4 reviewers)**       |             | 17-27K      | **$0.08-$0.13** |
 
 **Cost per file reviewed:** ~$0.03-$0.06
 
@@ -610,12 +454,12 @@ if [[ "$review_enabled" == "true" ]]; then
     /review --scope="$changed_files"
 
     if [[ $? -ne 0 ]]; then
-        echo "[ticket] ❌ Code review FAILED - critical issues found"
+        echo "[ticket] Code review FAILED - critical issues found"
         echo "[ticket] Fix issues before completing ticket"
         exit 1
     fi
 
-    echo "[ticket] ✓ Code review passed"
+    echo "[ticket] Code review passed"
 fi
 ```
 
@@ -641,8 +485,12 @@ fi
 
 | File                             | Purpose                    | Format                              |
 | -------------------------------- | -------------------------- | ----------------------------------- |
-| `.claude/tmp/review-result.json` | Review findings and status | JSON with status, summary, findings |
-| `.claude/tmp/review-scope.txt`   | Files under review         | Line-separated file paths           |
+| `{team_dir}/config.json`        | Team execution config      | JSON with waves, members, budget    |
+| `{team_dir}/stdin_*.json`       | Per-reviewer input         | JSON per reviewer schema            |
+| `{team_dir}/stdout_*.json`      | Per-reviewer output        | JSON with findings                  |
+| `{team_dir}/runner.log`         | Execution log              | Plain text                          |
+
+`{team_dir}` = `{session_dir}/teams/{timestamp}.code-review/` (created by `gogent-skill-guard` hook)
 
 ---
 
@@ -671,57 +519,15 @@ fi
 - Use findings as guidance, not absolute truth
 - Consider adding project-specific review guidelines
 
+**"Team launch failed"**
+
+- Check `$team_dir/runner.log` for errors
+- Verify `gogent-team-run` is built and in PATH
+- Check `$team_dir/config.json` is valid JSON: `jq . "$team_dir/config.json"`
+
 ---
 
 ## Example Session
-
-```bash
-$ git status
-On branch feature/new-api
-Changes to be committed:
-  modified:   internal/api/handler.go
-  modified:   internal/models/user.go
-  new file:   internal/api/handler_test.go
-
-$ /review
-
-[review] Found 3 files to review
-[review] Selected reviewers: backend-reviewer standards-reviewer architect-reviewer
-[ROUTING] → review-orchestrator (multi-domain code review)
-
-[review-orchestrator spawns reviewers...]
-[backend-reviewer analyzing internal/api/handler.go...]
-[standards-reviewer analyzing all files...]
-[architect-reviewer analyzing structural patterns...]
-
-[All reviewers complete]
-
-╔══════════════════════════════════════╗
-║        CODE REVIEW REPORT             ║
-╚══════════════════════════════════════╝
-
-Status: WARNING
-Critical: 0
-Warnings: 2
-Info: 1
-
-═══ WARNINGS ═══
-  [internal/api/handler.go:45] Missing error check on database query
-    → Add error handling: if err != nil { return err }
-
-  [internal/models/user.go:23] Exported field without documentation
-    → Add godoc comment for Email field
-
-═══ INFO ═══
-  [internal/api/handler_test.go:12] Test table format recommended
-    → Consider using table-driven test pattern
-
-$ # Address warnings and re-review
-$ /review
-[review] Status: APPROVED ✓
-```
-
-**Background path example:**
 
 ```bash
 $ git status
@@ -753,31 +559,27 @@ Started: 5 seconds ago
 Progress: 1/2 complete
 
 Wave 1:
-  ✓ backend-reviewer (completed 3s ago)
-  ⟳ standards-reviewer (running, 2s elapsed)
+  backend-reviewer (completed 3s ago)
+  standards-reviewer (running, 2s elapsed)
 
 $ /team-result
 [team-result] Team: code-review (completed 8 seconds ago)
-
-╔══════════════════════════════════════╗
-║        CODE REVIEW REPORT             ║
-╚══════════════════════════════════════╝
 
 Status: WARNING
 Critical: 0
 Warnings: 2
 Info: 1
 
-═══ WARNINGS ═══
+WARNINGS:
   [internal/api/handler.go:45] Missing error check on database query
-    → Add error handling: if err != nil { return err }
+    Add error handling: if err != nil { return err }
 
   [internal/models/user.go:23] Exported field without documentation
-    → Add godoc comment for Email field
+    Add godoc comment for Email field
 
-═══ INFO ═══
+INFO:
   [internal/api/handler_test.go:12] Test table format recommended
-    → Consider using table-driven test pattern
+    Consider using table-driven test pattern
 ```
 
 ---
@@ -820,6 +622,6 @@ This data feeds ML models for:
 
 ---
 
-**Skill Version**: 2.0
-**Last Updated**: 2026-02-08
+**Skill Version**: 3.0
+**Last Updated**: 2026-02-10
 **Maintained By**: System

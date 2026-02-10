@@ -134,14 +134,29 @@ func daemonizeStdin() error {
 	return nil
 }
 
-// TeamRunner manages team execution and child process lifecycle
+// TeamRunner manages team execution and child process lifecycle.
+//
+// Lock Ordering Contract:
+// When acquiring multiple locks, ALWAYS acquire writeMu BEFORE configMu.
+// This prevents deadlocks between concurrent config mutations and saves.
+//
+//	Correct:   writeMu.Lock() → configMu.Lock()
+//	WRONG:     configMu.Lock() → writeMu.Lock()  // WILL DEADLOCK
+//
+// Purpose of each lock:
+//   - writeMu: Serializes all disk writes (prevents concurrent file corruption)
+//   - configMu: Protects the config struct in memory (RWMutex for read concurrency)
+//
+// Common patterns:
+//   - Read-only access: configMu.RLock() only (no writeMu needed)
+//   - Mutate + save: writeMu.Lock() → configMu.Lock() → mutate → unlock configMu → save → unlock writeMu
 type TeamRunner struct {
 	teamDir string
 
 	config     *TeamConfig   // Team configuration (loaded from config.json)
 	configPath string        // Path to config.json
-	configMu   sync.RWMutex  // Protects config reads/writes
-	writeMu    sync.Mutex    // Serializes config writes (C4: prevents lost updates)
+	configMu   sync.RWMutex  // Protects config reads/writes (acquire AFTER writeMu when both needed)
+	writeMu    sync.Mutex    // Serializes config writes (acquire FIRST when both locks needed)
 
 	spawner    Spawner              // Injected spawn implementation
 	childPIDs  map[int]struct{}     // Track spawned child PIDs

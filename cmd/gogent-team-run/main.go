@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -22,6 +23,12 @@ func main() {
 	// Validate team directory exists
 	if stat, err := os.Stat(teamDir); err != nil || !stat.IsDir() {
 		fmt.Fprintf(os.Stderr, "Error: Team directory does not exist or is not a directory: %s\n", teamDir)
+		os.Exit(1)
+	}
+
+	// Pre-flight config validation (before PID lock)
+	if err := preflight(teamDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Pre-flight validation failed: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -164,6 +171,22 @@ func main() {
 	}
 
 	// PID file cleanup via defer
+}
+
+// preflight performs pre-flight config validation before acquiring PID lock.
+// This prevents stale PID files when config is invalid.
+// Returns error if config loading or validation fails.
+func preflight(teamDir string) error {
+	tr := &TeamRunner{
+		teamDir:    teamDir,
+		configPath: filepath.Join(teamDir, ConfigFileName),
+		childPIDs:  make(map[int]struct{}),
+		spawner:    &claudeSpawner{},
+	}
+	if err := tr.LoadConfig(); err != nil {
+		return fmt.Errorf("load config: %w", err)
+	}
+	return tr.ValidateConfig()
 }
 
 // runWaves is implemented in wave.go (TC-008)

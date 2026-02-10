@@ -37,6 +37,8 @@ type spawnConfig struct {
 	memberName   string
 	agentID      string
 	stdoutPath   string
+	waveIdx      int
+	memIdx       int
 }
 
 // spawnResult holds the outputs from a completed CLI process.
@@ -60,6 +62,69 @@ var defaultFallbackTools = []string{"Read", "Glob", "Grep"}
 // implementationTools are required for workers that create/modify files.
 var implementationTools = []string{"Write", "Edit"}
 
+// Health monitoring defaults.
+// healthCheckInterval polls process health periodically to detect stalls.
+// 30s balances responsiveness with avoiding excessive config writes.
+var healthCheckInterval = 30 * time.Second
+
+// stallWarningThreshold is the duration of no output before flagging stall.
+// 90s allows for model thinking time while catching true stalls.
+var stallWarningThreshold = 90 * time.Second
+
+// progressTracker wraps a bytes.Buffer and timestamps every Write call.
+// Used to detect agent activity — if lastActivity stops updating, agent may be stalled.
+type progressTracker struct {
+	buf           bytes.Buffer
+	lastActivity  time.Time
+	bytesReceived int64
+	mu            sync.Mutex
+}
+
+func newProgressTracker() *progressTracker {
+	return &progressTracker{
+		lastActivity: time.Now(),
+	}
+}
+
+func (pt *progressTracker) Write(p []byte) (int, error) {
+	pt.mu.Lock()
+	pt.lastActivity = time.Now()
+	pt.bytesReceived += int64(len(p))
+	pt.mu.Unlock()
+	return pt.buf.Write(p)
+}
+
+func (pt *progressTracker) LastActivity() time.Time {
+	pt.mu.Lock()
+	defer pt.mu.Unlock()
+	return pt.lastActivity
+}
+
+func (pt *progressTracker) BytesReceived() int64 {
+	pt.mu.Lock()
+	defer pt.mu.Unlock()
+	return pt.bytesReceived
+}
+
+func (pt *progressTracker) Bytes() []byte {
+	return pt.buf.Bytes()
+}
+
+// workflowTimeout returns the default timeout for a workflow type.
+// Per-member TimeoutMs override takes precedence when set in config.json.
+func workflowTimeout(workflowType string) time.Duration {
+	switch workflowType {
+	case "braintrust":
+		return 15 * time.Minute
+	case "implementation":
+		return 10 * time.Minute
+	case "review":
+		return 5 * time.Minute
+	default:
+		return 10 * time.Minute
+	}
+}
+
 // augmentToolsForImplementation adds Write and Edit to the tool list if not already present.
 // Implementation workers need these to create files; review/braintrust workers don't.
 func augmentToolsForImplementation(tools []string) []string {
@@ -81,12 +146,12 @@ func augmentToolsForImplementation(tools []string) []string {
 func (s *claudeSpawner) Spawn(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
 	cfg, err := s.prepareSpawn(tr, waveIdx, memIdx)
 	if err != nil {
-		return fmt.Errorf("prepare: %w", err)
+		return fmt.Errorf("prepare spawn (wave=%d, member=%d): %w", waveIdx, memIdx, err)
 	}
 
 	result, err := s.executeSpawn(ctx, tr, cfg)
 	if err != nil {
-		return fmt.Errorf("execute: %w", err)
+		return fmt.Errorf("execute %s (agent=%s): %w", cfg.memberName, cfg.agentID, err)
 	}
 
 	return s.finalizeSpawn(tr, waveIdx, memIdx, result)
@@ -104,6 +169,19 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 	projectRoot := tr.config.ProjectRoot
 	workflowType := tr.config.WorkflowType
 	tr.configMu.RUnlock()
+
+	// 1b. Validate required member fields
+	if member.Agent == "" {
+		return nil, fmt.Errorf("member %q has empty agent ID", member.Name)
+	}
+	if member.Model != "" {
+		switch member.Model {
+		case "haiku", "sonnet", "opus":
+			// Valid model
+		default:
+			return nil, fmt.Errorf("member %q has invalid model %q (expected haiku|sonnet|opus)", member.Name, member.Model)
+		}
+	}
 
 	// 2. Build prompt envelope (includes stdout schema instructions when contract exists)
 	envelope, err := buildPromptEnvelope(tr.teamDir, &member, workflowType)
@@ -151,7 +229,7 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 	// 5. Determine timeout
 	timeout := time.Duration(member.TimeoutMs) * time.Millisecond
 	if timeout == 0 {
-		timeout = 5 * time.Minute // Default timeout
+		timeout = workflowTimeout(workflowType)
 	}
 
 	// 6. Build stdout path
@@ -165,6 +243,8 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 		memberName:  member.Name,
 		agentID:     member.Agent,
 		stdoutPath:  stdoutPath,
+		waveIdx:     waveIdx,
+		memIdx:      memIdx,
 	}, nil
 }
 
@@ -192,12 +272,14 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 	// Add session dir if available (read from current-session marker file)
 	if sessionDir, err := session.ReadCurrentSession(cfg.projectRoot); err == nil && sessionDir != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("GOGENT_SESSION_DIR=%s", sessionDir))
+	} else if err != nil {
+		log.Printf("INFO: Could not read current-session marker: %v (child will inherit parent session)", err)
 	}
 
 	// 6. Capture stdout
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stdout // Capture stderr too
+	tracker := newProgressTracker()
+	cmd.Stdout = tracker
+	cmd.Stderr = tracker
 
 	// 7. Start command
 	if err := cmd.Start(); err != nil {
@@ -212,18 +294,34 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 	// 9. defer unregisterChild
 	defer tr.unregisterChild(pid)
 
+	// Start health monitor (shadow mode — observe only, no kills)
+	monitorCtx, monitorCancel := context.WithCancel(ctx)
+	defer monitorCancel()
+	go startHealthMonitor(monitorCtx, tr, cfg.waveIdx, cfg.memIdx, tracker, healthCheckInterval)
+
 	// 10. Wait for command with timeout
 	waitDone := make(chan error, 1)
 	go func() {
 		waitDone <- cmd.Wait()
 	}()
 
+	// Guard against double-kill when context cancellation and timeout race
+	var killOnce sync.Once
+	doKill := func(sig syscall.Signal, reason string) {
+		killOnce.Do(func() {
+			if cmd.Process != nil {
+				log.Printf("[%s] Sending %v to process group %d", reason, sig, -pid)
+				if err := syscall.Kill(-pid, sig); err != nil {
+					log.Printf("WARNING: Failed to send %v to process group %d: %v", sig, -pid, err)
+				}
+			}
+		})
+	}
+
 	select {
 	case <-ctx.Done():
-		// Context cancelled - kill process
-		if cmd.Process != nil {
-			syscall.Kill(-pid, syscall.SIGKILL) // Kill process group
-		}
+		// Context cancelled - kill process group
+		doKill(syscall.SIGKILL, "CANCELLED")
 		return nil, fmt.Errorf("context cancelled: %w", ctx.Err())
 	case err := <-waitDone:
 		// Process completed
@@ -238,14 +336,25 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		}
 
 		return &spawnResult{
-			stdout:   stdout.Bytes(),
+			stdout:   tracker.Bytes(),
 			exitCode: exitCode,
 			pid:      pid,
 		}, nil
 	case <-time.After(cfg.timeout):
-		// Timeout - kill process
+		// Timeout - attempt graceful shutdown with SIGTERM first
+		log.Printf("[TIMEOUT] Sending SIGTERM to process group %d after %v", -pid, cfg.timeout)
 		if cmd.Process != nil {
-			syscall.Kill(-pid, syscall.SIGKILL) // Kill process group
+			if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+				log.Printf("WARNING: Failed to send SIGTERM to process group %d: %v", -pid, err)
+			}
+		}
+		select {
+		case <-waitDone:
+			// Process exited gracefully after SIGTERM
+			log.Printf("[TIMEOUT] Process group %d exited gracefully after SIGTERM", -pid)
+		case <-time.After(sigTermGracePeriod):
+			// Grace period expired, escalate to SIGKILL (guarded by killOnce)
+			doKill(syscall.SIGKILL, "TIMEOUT")
 		}
 		return nil, fmt.Errorf("timeout after %v", cfg.timeout)
 	}
@@ -315,7 +424,11 @@ func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, resul
 
 // loadAgentConfig reads CLI flags from agents-index.json for a given agent.
 func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
-	agentsIndexPath := filepath.Join(os.Getenv("HOME"), ".claude", "agents", "agents-index.json")
+	configDir, err := routing.GetClaudeConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("resolve config dir: %w", err)
+	}
+	agentsIndexPath := filepath.Join(configDir, "agents", "agents-index.json")
 
 	data, err := os.ReadFile(agentsIndexPath)
 	if err != nil {
@@ -504,6 +617,43 @@ func isRetryableError(err error) bool {
 	return true // Default: retry (timeout, exit code, etc.)
 }
 
+// startHealthMonitor watches a progressTracker and updates member health in config.json.
+// Shadow mode only: logs warnings, never kills. Runs until ctx is cancelled.
+func startHealthMonitor(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int, tracker *progressTracker, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			lastActivity := tracker.LastActivity()
+			sinceActivity := time.Since(lastActivity)
+			now := time.Now().UTC().Format(time.RFC3339)
+
+			if err := tr.updateMember(waveIdx, memIdx, func(m *Member) {
+				m.LastActivityTime = &now
+				if sinceActivity > stallWarningThreshold {
+					m.StallCount++
+					if m.StallCount >= 3 {
+						m.HealthStatus = "stalled"
+					} else {
+						m.HealthStatus = "stall_warning"
+					}
+					log.Printf("[SHADOW] health: member %s %s (no output for %v, count=%d)",
+						m.Name, m.HealthStatus, sinceActivity.Round(time.Second), m.StallCount)
+				} else {
+					m.StallCount = 0
+					m.HealthStatus = "healthy"
+				}
+			}); err != nil {
+				log.Printf("ERROR: health monitor update failed for wave %d member %d: %v", waveIdx, memIdx, err)
+			}
+		}
+	}
+}
+
 // spawnAndWait spawns a Claude CLI process for a team member and waits for completion.
 // Uses iterative retry (NOT recursive) to avoid WaitGroup panics.
 //
@@ -581,6 +731,15 @@ func spawnAndWait(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int, wg *
 		log.Printf("Spawn attempt %d for %s failed: %v", attempt, member.Name, err)
 		errMsg := fmt.Sprintf("attempt %d: %v", attempt, err)
 		errorHistory = append(errorHistory, errMsg)
+
+		// Set kill_reason if this was a timeout
+		if strings.Contains(err.Error(), "timeout") {
+			if updateErr := tr.updateMember(waveIdx, memIdx, func(m *Member) {
+				m.KillReason = "timeout"
+			}); updateErr != nil {
+				log.Printf("ERROR: Failed to set kill_reason for %s: %v", member.Name, updateErr)
+			}
+		}
 
 		// W7: Check if error is retryable (fatal errors = no retry)
 		if !isRetryableError(err) {

@@ -16,12 +16,15 @@ The GOfortress TUI pays 1.5-3.5 seconds of process initialization overhead per m
 ## Problem Statement
 
 ### Original Request
+
 The TUI has ~2x message latency (6-10s) compared to Claude Code CLI (3-5s). Investigate root cause and propose optimization path.
 
 ### Clarified Problem
+
 Each call to `query()` in `useClaudeQuery.ts` (line 666) spawns a fresh `claude` CLI process. The `resume` option (line 671) restores conversation history but does not reuse the process. The 1.5-3.5s overhead is CLI startup: Node.js bootstrap, hook loading (`gogent-load-context`, `gogent-validate`), MCP server registration, and Anthropic API handshake. This overhead is paid N times for an N-message conversation.
 
 ### Success Criteria
+
 1. First-message latency unchanged (process must start at least once)
 2. Subsequent-message latency reduced to <1s overhead above API round-trip
 3. All existing TUI features preserved: `interrupt()`, `setModel()`, `streamInput()` for built-in tools, `canUseTool()` permission modals, plan mode toggle, compaction detection
@@ -37,6 +40,7 @@ Each call to `query()` in `useClaudeQuery.ts` (line 666) spawns a fresh `claude`
 **Focus**: Lifecycle impedance mismatch between stateless `query()` and stateful conversation; ownership model for persistent sessions; state machine design; alternative transport architectures.
 
 **Key Insights**:
+
 1. **Lifecycle impedance mismatch** is the root cause: `query()` treats each turn as a fresh invocation when conversations are inherently stateful. The TUI's architecture (React hooks + Zustand store) already models stateful sessions -- the SDK connector is the mismatch point.
 2. **V1.5 AsyncIterable pattern** is the highest-value quick win. `query()` accepts `prompt: string | AsyncIterable<SDKUserMessage>`. Passing an AsyncIterable that yields messages on demand keeps a single CLI process alive indefinitely. The TUI already uses this exact mechanism for `streamInput()` tool responses (lines 357-376 of `useClaudeQuery.ts`).
 3. **Module-level singleton** ownership (matching existing `mcpServer` pattern at `src/mcp/server.ts`) is the correct abstraction. React hooks consume session state; Zustand publishes it; neither owns the process.
@@ -47,11 +51,13 @@ Each call to `query()` in `useClaudeQuery.ts` (line 666) spawns a fresh `claude`
 **Root Cause Identified**: Per-message process spawning via `query()` with no process reuse mechanism.
 
 **Novel Approaches Proposed**:
+
 - **V1.5 AsyncIterable**: Keep single process alive by feeding messages through an async generator
 - **Hybrid V2/V1 transport**: Circuit-breaker pattern with automatic fallback
 - **Session singleton module**: Process ownership decoupled from React lifecycle
 
 **Assumptions Surfaced**: 7 assumptions identified. Most critical:
+
 - A-1: V2 sessions support MCP registration -- **LOW confidence** (not in types)
 - A-2: AsyncIterable keeps process alive between yields -- **MEDIUM confidence** (types support it, needs empirical test)
 - A-3: CLI handles long-lived sessions without memory leaks -- **MEDIUM confidence** (no evidence either way)
@@ -65,23 +71,25 @@ Each call to `query()` in `useClaudeQuery.ts` (line 666) spawns a fresh `claude`
 **Verdict**: APPROVE_WITH_CONDITIONS
 
 **Issue Summary**:
+
 - Critical: 0
 - Major: 2 (V2 API surface gap, SDK version pinning)
 - Minor: 2 (hook complexity, test infrastructure gap)
 
 **7-Layer Results**:
 
-| Layer | Rating | Key Finding |
-|-------|--------|-------------|
-| Assumptions | RISK | V2 stability assumed but not verified empirically |
-| Dependencies | FAIL | `^0.2.31` semver range allows breaking upgrades to unstable API |
-| Failure Modes | RISK | Process crash = total conversation state loss; no interrupt/streamInput in V2 |
-| Cost-Benefit | PASS | 1.5-3.5s saving per message justifies engineering effort |
-| Testing | RISK | Persistent session is hard to test in CI (long-lived process, state accumulation) |
-| Architecture | RISK | 850-line `useClaudeQuery.ts` hook is already complex; V2 adds state machine on top |
-| Readiness | FAIL | V2 API missing critical control surface |
+| Layer         | Rating | Key Finding                                                                        |
+| ------------- | ------ | ---------------------------------------------------------------------------------- |
+| Assumptions   | RISK   | V2 stability assumed but not verified empirically                                  |
+| Dependencies  | FAIL   | `^0.2.31` semver range allows breaking upgrades to unstable API                    |
+| Failure Modes | RISK   | Process crash = total conversation state loss; no interrupt/streamInput in V2      |
+| Cost-Benefit  | PASS   | 1.5-3.5s saving per message justifies engineering effort                           |
+| Testing       | RISK   | Persistent session is hard to test in CI (long-lived process, state accumulation)  |
+| Architecture  | RISK   | 850-line `useClaudeQuery.ts` hook is already complex; V2 adds state machine on top |
+| Readiness     | FAIL   | V2 API missing critical control surface                                            |
 
 **BLOCKER DISCOVERY**: `SDKSession` interface has only 4 methods. Missing from V1 `Query` interface:
+
 - `interrupt()` -- Ctrl+C handling breaks (TUI registers this at line 748)
 - `setModel()` -- /model command breaks during streaming (lines 824-841)
 - `streamInput()` -- Built-in tool handling breaks: AskUserQuestion, ConfirmAction, RequestInput (lines 356-412)
@@ -89,10 +97,12 @@ Each call to `query()` in `useClaudeQuery.ts` (line 666) spawns a fresh `claude`
 - Plus ~15 Options fields the TUI actively configures (settingSources, mcpServers, model, resume, permissionMode)
 
 **Key Concerns**:
+
 1. SDK dependency must be pinned to exact version immediately (`"0.2.31"` not `"^0.2.31"`)
 2. Phase 0 empirical validation (1 day) must precede any implementation
 
 **Commendations**:
+
 - Problem identification is precise and well-scoped
 - Cost-benefit analysis is sound (N messages x 1.5-3.5s = substantial UX improvement)
 
@@ -102,23 +112,23 @@ Each call to `query()` in `useClaudeQuery.ts` (line 666) spawns a fresh `claude`
 
 ### Where Both Agree
 
-| # | Topic | Conclusion | Confidence |
-|---|-------|------------|------------|
-| C-1 | **Latency is real and worth fixing** | 1.5-3.5s per-message overhead from process spawning is the root cause. Cost-benefit justifies engineering effort. | HIGH |
-| C-2 | **V2 API is not ready for production use** | Missing `interrupt()`, `streamInput()`, `setModel()`, `canUseTool()`, MCP registration, and settingSources. Migration is blocked. | HIGH |
-| C-3 | **SDK version must be pinned** | `^0.2.31` semver range on an `@alpha` API is dangerous. Pin to exact `"0.2.31"`. | HIGH |
-| C-4 | **Existing hook complexity is a constraint** | `useClaudeQuery.ts` is 850 lines. Any solution must manage complexity, not compound it. | HIGH |
-| C-5 | **Process crash means total state loss** | A persistent session amplifies the blast radius of a crash vs. per-message (where only the current turn is lost). Recovery strategy is required. | MEDIUM |
-| C-6 | **Empirical validation must precede implementation** | Types alone are insufficient; runtime behavior of AsyncIterable process lifetime and V2 session capabilities must be tested. | HIGH |
+| #   | Topic                                                | Conclusion                                                                                                                                       | Confidence |
+| --- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| C-1 | **Latency is real and worth fixing**                 | 1.5-3.5s per-message overhead from process spawning is the root cause. Cost-benefit justifies engineering effort.                                | HIGH       |
+| C-2 | **V2 API is not ready for production use**           | Missing `interrupt()`, `streamInput()`, `setModel()`, `canUseTool()`, MCP registration, and settingSources. Migration is blocked.                | HIGH       |
+| C-3 | **SDK version must be pinned**                       | `^0.2.31` semver range on an `@alpha` API is dangerous. Pin to exact `"0.2.31"`.                                                                 | HIGH       |
+| C-4 | **Existing hook complexity is a constraint**         | `useClaudeQuery.ts` is 850 lines. Any solution must manage complexity, not compound it.                                                          | HIGH       |
+| C-5 | **Process crash means total state loss**             | A persistent session amplifies the blast radius of a crash vs. per-message (where only the current turn is lost). Recovery strategy is required. | MEDIUM     |
+| C-6 | **Empirical validation must precede implementation** | Types alone are insufficient; runtime behavior of AsyncIterable process lifetime and V2 session capabilities must be tested.                     | HIGH       |
 
 ### Complementary Insights
 
-| Einstein Contribution | Staff-Architect Contribution | Combined Value |
-|----------------------|------------------------------|----------------|
-| Identified AsyncIterable as the mechanism (`prompt: string \| AsyncIterable<SDKUserMessage>`) | Confirmed existing `streamInput()` code proves the pattern works within a single query turn | **V1.5 AsyncIterable is proven technology within the codebase** -- the question is only whether it works across turns (empirical test needed) |
-| Defined 6-state machine with formal invariants and transition rules | Flagged that the 850-line hook is already complex and adding a state machine compounds it | **State machine is necessary but must be extracted** -- not embedded in useClaudeQuery. Einstein's singleton module pattern addresses Staff-Architect's complexity concern. |
-| Proposed hybrid V2/V1 transport with circuit breaker for long-term | Catalogued exactly which V2 methods are missing and why migration is blocked today | **Hybrid architecture is the correct long-term target**, but V2 readiness is the gate. Staff-Architect's gap inventory becomes the V2 readiness checklist. |
-| Generalized TC-015a's `pendingMessage` into FIFO queue for state machine | Did not address TC-015a directly | Message queue generalization is sound and should be included in the V1.5 implementation, replacing the single-slot buffer with a proper queue. |
+| Einstein Contribution                                                                         | Staff-Architect Contribution                                                                | Combined Value                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identified AsyncIterable as the mechanism (`prompt: string \| AsyncIterable<SDKUserMessage>`) | Confirmed existing `streamInput()` code proves the pattern works within a single query turn | **V1.5 AsyncIterable is proven technology within the codebase** -- the question is only whether it works across turns (empirical test needed)                               |
+| Defined 6-state machine with formal invariants and transition rules                           | Flagged that the 850-line hook is already complex and adding a state machine compounds it   | **State machine is necessary but must be extracted** -- not embedded in useClaudeQuery. Einstein's singleton module pattern addresses Staff-Architect's complexity concern. |
+| Proposed hybrid V2/V1 transport with circuit breaker for long-term                            | Catalogued exactly which V2 methods are missing and why migration is blocked today          | **Hybrid architecture is the correct long-term target**, but V2 readiness is the gate. Staff-Architect's gap inventory becomes the V2 readiness checklist.                  |
+| Generalized TC-015a's `pendingMessage` into FIFO queue for state machine                      | Did not address TC-015a directly                                                            | Message queue generalization is sound and should be included in the V1.5 implementation, replacing the single-slot buffer with a proper queue.                              |
 
 ---
 
@@ -153,6 +163,7 @@ This resolves the apparent tension: Staff-Architect was not arguing against V1.5
 This refactor addresses Staff-Architect's complexity concern while implementing Einstein's ownership model. The key insight: **moving process lifecycle out of the React hook and into a standalone module reduces hook complexity while enabling persistent sessions.**
 
 File structure:
+
 - `src/session/SessionManager.ts` -- Singleton, owns process, state machine, message queue
 - `src/hooks/useClaudeQuery.ts` -- Thin adapter, subscribes to Zustand, delegates to SessionManager
 - `src/store/slices/session.ts` -- Unchanged (already exists)
@@ -172,6 +183,7 @@ File structure:
 Integration tests still need the real CLI, but the scope is narrower: verify that the AsyncIterable keeps the process alive across 2-3 messages. This is a single test case, not a full test suite.
 
 **Test strategy**:
+
 1. **Unit tests**: Mock AsyncIterable, verify state machine transitions, message queue behavior, error recovery
 2. **Integration test**: Single test with real CLI -- send 3 messages, verify process PID is the same for all 3
 3. **Regression test**: Verify all existing `streamInput()` flows still work (AskUserQuestion, ConfirmAction, RequestInput)
@@ -182,11 +194,11 @@ Integration tests still need the real CLI, but the scope is narrower: verify tha
 
 ### Unresolved Tensions
 
-| Topic | Theoretical View | Practical View | Why Unresolved |
-|-------|-----------------|----------------|----------------|
-| AsyncIterable process lifetime | Types support it; generator should keep process alive between yields | No empirical evidence; CLI may have idle timeouts or resource cleanup | **Requires empirical test** -- cannot be resolved analytically |
-| Long-lived CLI memory behavior | "MEDIUM confidence" that CLI handles long sessions | No data on memory growth over 50+ message sessions | **Requires benchmarking** -- memory profile over extended session |
-| Message queue vs single pending message | FIFO queue is theoretically correct for state machine | TC-015a's single `pendingMessage` works for current usage | **Pragmatic tension** -- queue is correct but may be premature. Resolve during implementation based on actual edge cases encountered |
+| Topic                                   | Theoretical View                                                     | Practical View                                                        | Why Unresolved                                                                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| AsyncIterable process lifetime          | Types support it; generator should keep process alive between yields | No empirical evidence; CLI may have idle timeouts or resource cleanup | **Requires empirical test** -- cannot be resolved analytically                                                                       |
+| Long-lived CLI memory behavior          | "MEDIUM confidence" that CLI handles long sessions                   | No data on memory growth over 50+ message sessions                    | **Requires benchmarking** -- memory profile over extended session                                                                    |
+| Message queue vs single pending message | FIFO queue is theoretically correct for state machine                | TC-015a's single `pendingMessage` works for current usage             | **Pragmatic tension** -- queue is correct but may be premature. Resolve during implementation based on actual edge cases encountered |
 
 **Recommendation for Unresolved**: The first two are gated by Phase 0 empirical validation. The third can be deferred -- implement single pending message first, upgrade to queue only if race conditions appear.
 
@@ -232,11 +244,11 @@ Implement process reuse via the AsyncIterable prompt pattern, housed in a new `S
 
 ### Phase 0: Empirical Validation (1 day)
 
-- [ ] **Pin SDK**: Change `"^0.2.31"` to `"0.2.31"` in `packages/tui/package.json`
-- [ ] **Write test script**: Create `scripts/test-async-iterable.ts` that calls `query()` with an AsyncIterable prompt, yields one message, waits 5 seconds, yields another message, and verifies the same process handles both
-- [ ] **Measure**: Record process PID across yields, measure inter-message latency, check for idle timeout
-- [ ] **Document**: Write results to `.claude/tmp/v15-validation-results.md`
-- [ ] **Go/No-Go**: If AsyncIterable keeps process alive: proceed to Phase 1. If not: investigate V2 timeline with Anthropic, consider alternative approaches.
+- [x] **Pin SDK**: Change `"^0.2.31"` to `"0.2.31"` in `packages/tui/package.json`
+- [x] **Write test script**: Create `scripts/test-async-iterable.ts` that calls `query()` with an AsyncIterable prompt, yields one message, waits 5 seconds, yields another message, and verifies the same process handles both
+- [x] **Measure**: Record process PID across yields, measure inter-message latency, check for idle timeout
+- [x] **Document**: Write results to `.claude/tmp/v15-validation-results.md`
+- [x] **Go/No-Go**: If AsyncIterable keeps process alive: proceed to Phase 1. If not: investigate V2 timeline with Anthropic, consider alternative approaches.
 
 ### Phase 1: SessionManager Extraction (2-3 days)
 
@@ -270,12 +282,12 @@ Implement process reuse via the AsyncIterable prompt pattern, housed in a new `S
 
 ### Decision Points
 
-| Decision | When | Options |
-|----------|------|---------|
-| Phase 0 Go/No-Go | After validation script | Proceed with V1.5 / Investigate V2 timeline / Hybrid approach |
-| Queue vs single pending message | During Phase 1 | FIFO queue (Einstein) / Single slot (current TC-015a) |
-| Reconnection strategy | During Phase 2 | Immediate retry / Exponential backoff / Circuit breaker |
-| V2 migration trigger | When Anthropic ships missing methods | Full V2 / Hybrid V2+V1 fallback / Stay on V1.5 |
+| Decision                        | When                                 | Options                                                       |
+| ------------------------------- | ------------------------------------ | ------------------------------------------------------------- |
+| Phase 0 Go/No-Go                | After validation script              | Proceed with V1.5 / Investigate V2 timeline / Hybrid approach |
+| Queue vs single pending message | During Phase 1                       | FIFO queue (Einstein) / Single slot (current TC-015a)         |
+| Reconnection strategy           | During Phase 2                       | Immediate retry / Exponential backoff / Circuit breaker       |
+| V2 migration trigger            | When Anthropic ships missing methods | Full V2 / Hybrid V2+V1 fallback / Stay on V1.5                |
 
 ---
 
@@ -283,25 +295,25 @@ Implement process reuse via the AsyncIterable prompt pattern, housed in a new `S
 
 ### Identified Risks
 
-| # | Risk | Source | Likelihood | Impact | Mitigation |
-|---|------|--------|------------|--------|------------|
-| R-1 | AsyncIterable does not keep process alive between yields | Einstein A-2 | LOW-MEDIUM | HIGH (blocks entire approach) | Phase 0 validation script; fallback to per-message if fails |
-| R-2 | SDK breaking change on `^0.2.31` upgrade | Staff-Arch Layer 2 | MEDIUM | HIGH | Pin to exact `"0.2.31"` immediately |
-| R-3 | CLI memory leak in long-lived session | Einstein A-3 | LOW | MEDIUM | Phase 3 memory profiling; reconnect as circuit breaker |
-| R-4 | Process crash loses conversation state | Both | LOW | HIGH | Reconnection with `resume: sessionId`; state machine ERROR->CONNECTING transition |
-| R-5 | Hook complexity regression | Staff-Arch Layer 6 | MEDIUM | MEDIUM | SessionManager extraction reduces hook from ~850 to ~200 lines |
-| R-6 | TC-015a pending message race condition under queue model | Einstein | LOW | LOW | Start with single slot, upgrade to queue only if needed |
-| R-7 | V2 API ships and diverges from V1.5 assumptions | Both | MEDIUM (long-term) | LOW | V1.5 is independent of V2; migration is additive, not replacement |
+| #   | Risk                                                     | Source             | Likelihood         | Impact                        | Mitigation                                                                        |
+| --- | -------------------------------------------------------- | ------------------ | ------------------ | ----------------------------- | --------------------------------------------------------------------------------- |
+| R-1 | AsyncIterable does not keep process alive between yields | Einstein A-2       | LOW-MEDIUM         | HIGH (blocks entire approach) | Phase 0 validation script; fallback to per-message if fails                       |
+| R-2 | SDK breaking change on `^0.2.31` upgrade                 | Staff-Arch Layer 2 | MEDIUM             | HIGH                          | Pin to exact `"0.2.31"` immediately                                               |
+| R-3 | CLI memory leak in long-lived session                    | Einstein A-3       | LOW                | MEDIUM                        | Phase 3 memory profiling; reconnect as circuit breaker                            |
+| R-4 | Process crash loses conversation state                   | Both               | LOW                | HIGH                          | Reconnection with `resume: sessionId`; state machine ERROR->CONNECTING transition |
+| R-5 | Hook complexity regression                               | Staff-Arch Layer 6 | MEDIUM             | MEDIUM                        | SessionManager extraction reduces hook from ~850 to ~200 lines                    |
+| R-6 | TC-015a pending message race condition under queue model | Einstein           | LOW                | LOW                           | Start with single slot, upgrade to queue only if needed                           |
+| R-7 | V2 API ships and diverges from V1.5 assumptions          | Both               | MEDIUM (long-term) | LOW                           | V1.5 is independent of V2; migration is additive, not replacement                 |
 
 ### Assumptions to Validate
 
-| # | Assumption | How to Validate | Before Phase |
-|---|------------|-----------------|--------------|
-| A-1 | AsyncIterable keeps CLI process alive between yields | Phase 0 test script: yield, wait 5s, yield, check PID | Phase 1 |
-| A-2 | `resume` option works after AsyncIterable reconnection | Phase 2 integration test: kill process, reconnect with resume, verify history | Phase 2 |
-| A-3 | CLI does not leak memory over 50+ message sessions | Phase 3 memory profiling with process RSS tracking | Phase 3 |
-| A-4 | `eventStreamRef.current` methods (`interrupt`, `setModel`) remain valid across AsyncIterable yields | Phase 2 regression tests for interrupt and model switching | Phase 2 |
-| A-5 | `canUseTool` callback fires correctly in persistent session | Phase 2 regression test: trigger permission modal in message 3+ of a persistent session | Phase 2 |
+| #   | Assumption                                                                                          | How to Validate                                                                         | Before Phase |
+| --- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------ |
+| A-1 | AsyncIterable keeps CLI process alive between yields                                                | Phase 0 test script: yield, wait 5s, yield, check PID                                   | Phase 1      |
+| A-2 | `resume` option works after AsyncIterable reconnection                                              | Phase 2 integration test: kill process, reconnect with resume, verify history           | Phase 2      |
+| A-3 | CLI does not leak memory over 50+ message sessions                                                  | Phase 3 memory profiling with process RSS tracking                                      | Phase 3      |
+| A-4 | `eventStreamRef.current` methods (`interrupt`, `setModel`) remain valid across AsyncIterable yields | Phase 2 regression tests for interrupt and model switching                              | Phase 2      |
+| A-5 | `canUseTool` callback fires correctly in persistent session                                         | Phase 2 regression test: trigger permission modal in message 3+ of a persistent session | Phase 2      |
 
 ---
 
@@ -336,20 +348,20 @@ agents_invoked:
 convergence_points: 6
 divergence_points: 3
 contradictions_resolved: 3
-contradictions_unresolved: 3  # Require empirical validation
+contradictions_unresolved: 3 # Require empirical validation
 
-recommendations_count: 4  # 1 primary + 3 secondary
+recommendations_count: 4 # 1 primary + 3 secondary
 risks_identified: 7
 open_questions: 5
 
-phases: 4  # Phase 0-3
-estimated_timeline_days: 6-9  # Phase 0 (1) + Phase 1 (2-3) + Phase 2 (2-3) + Phase 3 (1-2)
+phases: 4 # Phase 0-3
+estimated_timeline_days: 6-9 # Phase 0 (1) + Phase 1 (2-3) + Phase 2 (2-3) + Phase 3 (1-2)
 
 key_files_referenced:
-  - packages/tui/src/hooks/useClaudeQuery.ts  # 850 lines, primary refactor target
-  - packages/tui/src/mcp/server.ts             # mcpServer singleton pattern reference
-  - packages/tui/src/store/slices/session.ts   # Session state (unchanged)
-  - packages/tui/src/store/types.ts            # UISlice.streaming, pendingMessage
+  - packages/tui/src/hooks/useClaudeQuery.ts # 850 lines, primary refactor target
+  - packages/tui/src/mcp/server.ts # mcpServer singleton pattern reference
+  - packages/tui/src/store/slices/session.ts # Session state (unchanged)
+  - packages/tui/src/store/types.ts # UISlice.streaming, pendingMessage
 
-estimated_cost_usd: ~2.50  # Einstein + Staff-Architect + Beethoven
+estimated_cost_usd: ~2.50 # Einstein + Staff-Architect + Beethoven
 ```

@@ -10,6 +10,7 @@ import { requestInputTool } from "./tools/requestInput.js";
 import { selectOptionTool } from "./tools/selectOption.js";
 import { testMcpPingTool } from "./tools/testMcpPing.js";
 import { spawnAgent } from "./tools/spawnAgent.js";
+import { teamRun } from "./tools/teamRun.js";
 
 /**
  * Check if MCP spawning is enabled via feature flag.
@@ -38,6 +39,8 @@ export function getServerTools() {
   if (isSpawnEnabled()) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tool schemas vary
     tools.push(spawnAgent as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tool schemas vary
+    tools.push(teamRun as any);
   }
 
   return tools;

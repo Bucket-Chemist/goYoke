@@ -3,7 +3,7 @@ name: implement
 description: Plan and implement a feature end-to-end. Spawns architect for planning, then dispatches workers via background team-run.
 ---
 
-# /implement Skill
+# /implement Skill v2.0
 
 ## Purpose
 
@@ -28,9 +28,14 @@ Single command to go from feature description to working code:
 
 ---
 
-## Implementation Instructions
+## Workflow
 
-When this skill is invoked, follow these steps exactly:
+When `/implement` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{session_dir}/teams/{timestamp}.implementation/`)
+- Written `active-skill.json` with guard restrictions + `team_dir` path
+- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
+
+The Router executes the following steps:
 
 ### 1. Extract Feature Description
 
@@ -57,9 +62,18 @@ Output:
 [implement] Feature: {description}
 ```
 
-### 2. Spawn Architect
+### 2. Read Team Directory from Guard File
 
-Invoke the architect agent to produce `implementation-plan.json` and `specs.md`:
+```javascript
+Read({ file_path: `${session_dir}/active-skill.json` })
+// Extract team_dir from JSON response
+```
+
+The `session_dir` is available from the `.claude/current-session` marker file or `GOGENT_SESSION_DIR` env var.
+
+### 3. Spawn Architect
+
+Invoke the architect agent to produce `implementation-plan.json` and `specs.md`. The architect writes these to `SESSION_DIR/` (session-level artifacts, not team_dir).
 
 ```javascript
 Task({
@@ -104,7 +118,7 @@ After architect completes:
 [implement] Specs: SESSION_DIR/specs.md
 ```
 
-### 3. Validate Plan Exists
+### 4. Validate Plan Exists
 
 ```bash
 session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
@@ -114,6 +128,7 @@ plan_file="$session_dir/implementation-plan.json"
 if [[ ! -f "$plan_file" ]]; then
     echo "[implement] ERROR: Architect did not produce implementation-plan.json"
     echo "[implement] Check $session_dir/specs.md for details"
+    rm -f "$session_dir/active-skill.json"
     # STOP — do not proceed
 fi
 
@@ -124,13 +139,12 @@ wave_info=$(jq -r '.tasks | group_by(.blocked_by | length) | map(length) | @json
 echo "[implement] Plan: $task_count tasks"
 ```
 
-### 4. Generate Team Config
+### 5. Generate Team Config
+
+Use the hook-provided `team_dir` from `active-skill.json` (read in Step 2). No `mkdir -p` needed — the hook already created the directory.
 
 ```bash
-session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
-team_dir="$session_dir/teams/$(date +%s).implementation"
-
+# team_dir was extracted from active-skill.json in Step 2
 gogent-plan-impl \
     --plan="$plan_file" \
     --project-root="$(pwd)" \
@@ -139,22 +153,23 @@ gogent-plan-impl \
 if [[ $? -ne 0 ]]; then
     echo "[implement] ERROR: gogent-plan-impl failed"
     echo "[implement] Check plan validity: jq . $plan_file"
+    rm -f "$session_dir/active-skill.json"
     # STOP
 fi
 
 echo "[implement] Team config: $team_dir"
 ```
 
-### 5. Launch Background Execution
+### 6. Launch Background Execution
 
 ```bash
-gogent-team-run "$team_dir" &
+gogent-team-run "$team_dir"
 sleep 2
 
 # Verify launch
 background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
 
-if kill -0 "$background_pid" 2>/dev/null; then
+if [[ -n "$background_pid" && "$background_pid" != "null" ]]; then
     # Read wave structure for display
     wave_summary=$(jq -r '.waves[] | "  Wave \(.wave_number): \(.members | length) workers [\(.members | map(.agent) | unique | join(", "))]"' "$team_dir/config.json")
     budget=$(jq -r '.budget_max_usd' "$team_dir/config.json")
@@ -164,13 +179,19 @@ if kill -0 "$background_pid" 2>/dev/null; then
     echo "[implement] Budget: \$$budget"
     echo "$wave_summary"
     echo ""
-    echo "[implement] Monitor:  /team-status $team_dir"
-    echo "[implement] Results:  /team-result $team_dir"
-    echo "[implement] Cancel:   /team-cancel $team_dir"
+    echo "[implement] Monitor:  /team-status"
+    echo "[implement] Results:  /team-result"
+    echo "[implement] Cancel:   /team-cancel"
 else
     echo "[implement] ERROR: Team failed to start"
-    echo "[implement] Check: jq .status $team_dir/config.json"
+    echo "[implement] Check: $team_dir/runner.log"
 fi
+```
+
+### 7. Remove Skill Guard
+
+```bash
+rm -f "$session_dir/active-skill.json"
 ```
 
 ---
@@ -222,3 +243,9 @@ fi
 - Wave failure propagation: failed wave N → subsequent waves skipped
 - The architect decides the DAG structure via `blocked_by` relationships
 - `gogent-plan-impl` computes parallel waves via Kahn's algorithm
+
+---
+
+**Skill Version**: 2.0
+**Last Updated**: 2026-02-10
+**Maintained By**: System

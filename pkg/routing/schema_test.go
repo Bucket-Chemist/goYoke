@@ -121,7 +121,7 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		opus := schema.Tiers["opus"]
 		assert.True(t, opus.TaskInvocationBlocked, "Opus should have task_invocation_blocked=true")
 		assert.Equal(t, "escalate_to_einstein", opus.EscalationProtocol)
-		assert.Contains(t, opus.Invocation, "/einstein")
+		assert.Contains(t, opus.Invocation, "/braintrust")
 	})
 
 	// Verify external tier protocols

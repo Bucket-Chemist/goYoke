@@ -202,12 +202,15 @@ export interface UISlice {
   activeTab: TabId;
   interruptQuery: (() => Promise<void>) | null;
   clearPendingMessage: (() => void) | null;
+  panelAutoSwitched: boolean;
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
   setActiveTab: (tab: TabId) => void;
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
   setClearPendingMessage: (fn: (() => void) | null) => void;
+  setPanelAutoSwitched: (switched: boolean) => void;
+  setRightPanelMode: (mode: "agents" | "dashboard" | "settings" | "teams") => void;
 }
 
 // Input history slice (ephemeral - not persisted)

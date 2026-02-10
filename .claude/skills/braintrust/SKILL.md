@@ -165,11 +165,25 @@ When user responds "scout" or "don't know" to Q2:
 
 ## Execution
 
-When `/braintrust` is invoked, the Router spawns Mozart via Task(). Mozart conducts the interview, then dispatches execution either in the background (team-run) or foreground (MCP spawn), controlled by `settings.json -> "use_team_pattern"`.
+When `/braintrust` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{session_dir}/teams/{timestamp}.braintrust/`)
+- Written `active-skill.json` with guard restrictions + `team_dir` path
+- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
-### Step 1: Invoke Mozart via Task()
+The Router executes the following steps:
 
-**IMPORTANT**: The Router (Level 0) IS allowed to use Task(). This ensures TUI interactivity (stdin/stdout) is preserved for the interview phase.
+### Step 1: Read Team Directory from Guard File
+
+```javascript
+Read({ file_path: `${session_dir}/active-skill.json` })
+// Extract team_dir from JSON response
+```
+
+The `session_dir` is available from the `.claude/current-session` marker file.
+
+### Step 2: Spawn Mozart via Task(opus)
+
+Mozart conducts the interview and writes config files. The `team_dir` is passed in the prompt so Mozart knows where to write.
 
 ```javascript
 Task({
@@ -182,56 +196,59 @@ BRAINTRUST INVOCATION
 
 USER INPUT: {user_input}
 INPUT TYPE: {raw_problem | gap_document | inline_question}
+TEAM_DIR: {team_dir from active-skill.json}
 
 Execute Braintrust workflow:
 1. Parse input
 2. Interview if needed (max 4 questions per TC-018 protocol)
-3. Spawn scouts for reconnaissance
+3. Spawn scouts for reconnaissance (via Task with haiku)
 4. Assemble Problem Brief
 5. Confirm with user before proceeding
-6. Check settings.json use_team_pattern flag:
-   - If true: Generate team config + stdin files, launch gogent-team-run (background), return immediately
-   - If false: Dispatch Einstein + Staff-Architect via mcp__gofortress__spawn_agent (foreground), collect, invoke Beethoven, return analysis path`,
+6. Write config.json + stdin files + problem-brief.md to TEAM_DIR
+7. RETURN — do NOT launch team-run or spawn agents. Router handles dispatch.`,
 });
 ```
 
-### Step 2: Mozart Handles Orchestration
+### Step 3: Validate Mozart Output
 
-**Background mode** (`use_team_pattern: true` — default):
-
-Mozart conducts interview (~30s), generates team configuration:
-1. Creates team directory: `{session_dir}/teams/{timestamp}.braintrust/` (resolved via env var → `.claude/current-session` → `.claude/sessions/` fallback)
-2. Writes Problem Brief, config.json, and 3 stdin files
-3. Launches `gogent-team-run` as background process
-4. Returns to user immediately (~40s total)
-
-Background execution continues autonomously:
-- **Wave 1**: Einstein + Staff-Architect run in parallel (~5-8 min)
-- **Inter-wave**: `gogent-team-prepare-synthesis` merges Wave 1 outputs → `pre-synthesis.md`
-- **Wave 2**: Beethoven reads `pre-synthesis.md` and produces final synthesis
-
-**Foreground mode** (`use_team_pattern: false`):
-
-Mozart conducts interview, then orchestrates the full workflow synchronously:
-- Spawns Einstein + Staff-Architect via `mcp__gofortress__spawn_agent` (parallel)
-- Waits for both to complete (~6-9 min)
-- Spawns Beethoven with collected analyses
-- Returns final document path
-
-### Step 3: Return to User
-
-**Background mode:**
+```bash
+jq . "$team_dir/config.json" > /dev/null 2>&1
 ```
-[Braintrust] Team dispatched.
+
+If validation fails, clean up and report error:
+```bash
+if [[ $? -ne 0 ]]; then
+    echo "[braintrust] ERROR: Mozart produced invalid config.json"
+    rm -f "$session_dir/active-skill.json"
+    exit 1
+fi
+```
+
+### Step 4: Launch Team-Run
+
+```bash
+gogent-team-run "$team_dir"
+sleep 2
+background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
+if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
+    echo "[braintrust] ERROR: Team launch failed. Check $team_dir/runner.log"
+    rm -f "$session_dir/active-skill.json"
+    exit 1
+fi
+```
+
+### Step 5: Remove Skill Guard
+
+```bash
+rm -f "$session_dir/active-skill.json"
+```
+
+### Step 6: Return to User
+
+```
+[Braintrust] Team dispatched (PID {background_pid}).
 [Braintrust] Track progress: /team-status
 [Braintrust] View result when complete: /team-result
-```
-
-**Foreground mode:**
-```
-[Braintrust] Analysis complete.
-[Braintrust] Output: .claude/braintrust/analysis-{timestamp}.md
-[Braintrust] Agents: Mozart → Einstein + Staff-Architect → Beethoven
 ```
 
 ---
@@ -288,14 +305,6 @@ The final Braintrust Analysis document includes:
 ---
 
 ## State Files
-
-### Foreground Mode
-| File                                    | Written By | Read By                              | Purpose               |
-| --------------------------------------- | ---------- | ------------------------------------ | --------------------- |
-| `.claude/braintrust/problem-brief-*.md` | Mozart     | Einstein, Staff-Architect, Beethoven | Problem decomposition |
-| `.claude/braintrust/analysis-*.md`      | Beethoven  | User                                 | Final output          |
-| `.claude/braintrust/mozart-log-*.jsonl` | Mozart     | Telemetry                            | Workflow tracking     |
-| `.claude/tmp/scout_metrics.json`        | Scouts     | Mozart                               | Reconnaissance data   |
 
 ### Team-Run Mode (Background)
 | File                                    | Written By                       | Read By                | Purpose                      |

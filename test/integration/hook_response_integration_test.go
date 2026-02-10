@@ -323,7 +323,10 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	// Teardown: Clean up any test artifacts
-	// (No cleanup needed)
+	// Clean up skill-guard test binary if it was created
+	if skillGuardBinary != "" {
+		os.Remove(skillGuardBinary)
+	}
 
 	os.Exit(code)
 }

@@ -443,9 +443,9 @@ func TestGetNestingLevel(t *testing.T) {
 		expected int
 	}{
 		{
-			name:     "missing env var returns default (fail-closed)",
+			name:     "missing env var returns 0 (root when CLAUDE_CODE_NESTING_LEVEL also unset)",
 			envValue: "",
-			expected: DefaultNestingLevel,
+			expected: 0,
 		},
 		{
 			name:     "level 0 returns 0",
@@ -493,6 +493,9 @@ func TestGetNestingLevel(t *testing.T) {
 				os.Setenv("GOGENT_NESTING_LEVEL", tt.envValue)
 			}
 			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+			// Also clear CLAUDE_CODE_NESTING_LEVEL to isolate tests
+			os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
+			defer os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 
 			result := GetNestingLevel()
 
@@ -544,9 +547,9 @@ func TestValidateTaskNestingLevel(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "missing level blocks Task (fail-closed)",
+			name:      "missing level allows Task (root when CLAUDE_CODE_NESTING_LEVEL also unset)",
 			level:     "",
-			wantError: true,
+			wantError: false,
 		},
 	}
 
@@ -558,6 +561,8 @@ func TestValidateTaskNestingLevel(t *testing.T) {
 				os.Setenv("GOGENT_NESTING_LEVEL", tt.level)
 			}
 			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+			os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
+			defer os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 
 			err := ValidateTaskNestingLevel()
 

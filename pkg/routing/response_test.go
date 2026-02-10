@@ -782,8 +782,15 @@ func TestNewModifyResponse(t *testing.T) {
 
 	resp := NewModifyResponse("PreToolUse", updatedInput)
 
-	if resp.Decision != DecisionApprove {
-		t.Errorf("Expected decision %s, got %s", DecisionApprove, resp.Decision)
+	// NewModifyResponse omits top-level Decision (uses permissionDecision in hookSpecificOutput)
+	if resp.Decision != "" {
+		t.Errorf("Expected empty top-level decision, got %s", resp.Decision)
+	}
+
+	// Verify permissionDecision in hookSpecificOutput
+	pd, ok := resp.HookSpecificOutput["permissionDecision"]
+	if !ok || pd != "allow" {
+		t.Errorf("Expected permissionDecision=allow in hookSpecificOutput, got %v", pd)
 	}
 
 	if !resp.HasUpdatedInput() {

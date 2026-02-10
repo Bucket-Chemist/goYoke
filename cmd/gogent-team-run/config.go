@@ -30,6 +30,7 @@ type TeamConfig struct {
 	BackgroundPID       *int    `json:"background_pid"`
 	StartedAt           *string `json:"started_at"`
 	CompletedAt         *string `json:"completed_at"`
+	StallDetectionMode  string  `json:"stall_detection_mode,omitempty"` // ""=shadow|"active"=enforce
 	Waves               []Wave  `json:"waves"`
 }
 
@@ -43,22 +44,26 @@ type Wave struct {
 
 // Member represents a single team member (agent) within a wave
 type Member struct {
-	Name         string  `json:"name"`
-	Agent        string  `json:"agent"`
-	Model        string  `json:"model"`
-	StdinFile    string  `json:"stdin_file"`
-	StdoutFile   string  `json:"stdout_file"`
-	Status       string  `json:"status"`        // pending|running|completed|failed
-	ProcessPID   *int    `json:"process_pid"`   // PID of spawned Claude CLI process
-	ExitCode     *int    `json:"exit_code"`     // Exit code after completion
-	CostUSD      float64 `json:"cost_usd"`      // Extracted cost from CLI output
-	CostStatus   string  `json:"cost_status"`   // ok|warning|exceeded
-	ErrorMessage string  `json:"error_message"` // Error details if failed
-	RetryCount   int     `json:"retry_count"`   // Current retry attempt
-	MaxRetries   int     `json:"max_retries"`   // Maximum retry attempts
-	TimeoutMs    int     `json:"timeout_ms"`    // Process timeout in milliseconds
-	StartedAt    *string `json:"started_at"`    // ISO 8601 timestamp
-	CompletedAt  *string `json:"completed_at"`  // ISO 8601 timestamp
+	Name             string  `json:"name"`
+	Agent            string  `json:"agent"`
+	Model            string  `json:"model"`
+	StdinFile        string  `json:"stdin_file"`
+	StdoutFile       string  `json:"stdout_file"`
+	Status           string  `json:"status"`                      // pending|running|completed|failed
+	ProcessPID       *int    `json:"process_pid"`                 // PID of spawned Claude CLI process
+	ExitCode         *int    `json:"exit_code"`                   // Exit code after completion
+	CostUSD          float64 `json:"cost_usd"`                    // Extracted cost from CLI output
+	CostStatus       string  `json:"cost_status"`                 // ok|warning|exceeded
+	ErrorMessage     string  `json:"error_message"`               // Error details if failed
+	KillReason       string  `json:"kill_reason,omitempty"`       // Reason for termination (e.g., "timeout")
+	RetryCount       int     `json:"retry_count"`                 // Current retry attempt
+	MaxRetries       int     `json:"max_retries"`                 // Maximum retry attempts
+	TimeoutMs        int     `json:"timeout_ms"`                  // Process timeout in milliseconds
+	StartedAt        *string `json:"started_at"`                  // ISO 8601 timestamp
+	CompletedAt      *string `json:"completed_at"`                // ISO 8601 timestamp
+	HealthStatus     string  `json:"health_status,omitempty"`     // healthy|stall_warning|stalled
+	LastActivityTime *string `json:"last_activity_time,omitempty"` // ISO 8601 timestamp of last output
+	StallCount       int     `json:"stall_count,omitempty"`       // Number of consecutive stall warnings
 }
 
 // configManager provides thread-safe access to TeamConfig
@@ -118,6 +123,7 @@ func deepCopyConfig(src *TeamConfig) TeamConfig {
 			m.ExitCode = cloneIntPtr(m.ExitCode)
 			m.StartedAt = cloneStringPtr(m.StartedAt)
 			m.CompletedAt = cloneStringPtr(m.CompletedAt)
+			m.LastActivityTime = cloneStringPtr(m.LastActivityTime)
 			dst.Waves[i].Members[j] = m
 		}
 	}
@@ -178,7 +184,9 @@ func (tr *TeamRunner) SaveConfig() error {
 
 	if err := os.Rename(tmpPath, configPath); err != nil {
 		// Cleanup tmp file on failure
-		os.Remove(tmpPath)
+		if removeErr := os.Remove(tmpPath); removeErr != nil {
+			log.Printf("WARNING: Failed to clean up temp file %s: %v", tmpPath, removeErr)
+		}
 		return fmt.Errorf("rename tmp config: %w", err)
 	}
 

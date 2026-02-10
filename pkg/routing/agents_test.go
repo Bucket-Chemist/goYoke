@@ -77,8 +77,8 @@ func TestUnmarshalProductionAgentIndex(t *testing.T) {
 		if agent.Path == "" {
 			t.Errorf("Agent %d (%s) missing path", i, agent.ID)
 		}
-		if len(agent.Triggers) == 0 && agent.AutoActivate == nil {
-			t.Errorf("Agent %d (%s) missing triggers and auto_activate", i, agent.ID)
+		if len(agent.Triggers) == 0 && agent.AutoActivate == nil && len(agent.SpawnedBy) == 0 {
+			t.Errorf("Agent %d (%s) missing triggers, auto_activate, and spawned_by", i, agent.ID)
 		}
 		if len(agent.Tools) == 0 && agent.Model != "external" {
 			t.Errorf("Agent %d (%s) missing tools (non-external)", i, agent.ID)

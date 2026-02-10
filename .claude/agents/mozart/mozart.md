@@ -24,14 +24,13 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task  # For Haiku scouts only
+  - Task        # For Haiku scouts only
   - TaskList
   - TaskGet
   - TaskCreate
   - TaskUpdate
   - Write
   - AskUserQuestion
-  - mcp__gofortress__spawn_agent  # For Level 2 Opus spawning (Einstein, Staff-Architect, Beethoven)
 
 delegation:
   can_spawn:
@@ -561,7 +560,8 @@ FOCUS: Prior solutions, related code, documentation`
 | Agent Tier | Spawning Mechanism | Examples |
 |------------|-------------------|----------|
 | **Level 1 (Haiku)** | `Task()` tool | haiku-scout, codebase-search |
-| **Level 2 (Opus)** | `mcp__gofortress__spawn_agent` | einstein, staff-architect-critical-review, beethoven |
+
+**Note:** Mozart no longer spawns Opus agents directly. After interview + config generation, Mozart returns. The router launches `gogent-team-run` which handles all Opus agent spawning.
 
 ### Scout Results Processing
 
@@ -711,30 +711,18 @@ AskUserQuestion({
 
 ---
 
-## Phase 6: Dispatch
+## Phase 6: Generate Team Configuration
 
-**Decision point:** Check `settings.json -> "use_team_pattern"` to choose dispatch method.
+After user confirmation, generate team configuration files to the `team_dir` path provided in the prompt.
 
-- `use_team_pattern: true` → **Phase 6A: Team-Run Dispatch** (background, non-blocking)
-- `use_team_pattern: false` → **Phase 6B: MCP Spawn Dispatch** (foreground, blocking)
+### Step 1: Read Settings
 
----
-
-### Phase 6A: Team-Run Dispatch (Background)
-
-When `use_team_pattern` is true, Mozart generates team configuration files and launches `gogent-team-run` as a background process. The TUI returns to the user immediately.
-
-#### Step 1: Create Team Directory
-
-```bash
-# Resolve session directory: env var → current-session marker → fallback
-session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
-team_dir="$session_dir/teams/$(date +%s).braintrust"
-mkdir -p "$team_dir"
+```javascript
+Read({ file_path: "~/.claude/settings.json" })
+// Check use_team_pattern flag (advisory — always true for now)
 ```
 
-#### Step 2: Write Problem Brief
+### Step 2: Write Problem Brief
 
 ```javascript
 Write({
@@ -743,106 +731,25 @@ Write({
 });
 ```
 
-#### Step 3: Generate config.json
+### Step 3: Generate config.json
 
-Use `schemas/teams/braintrust.json` as template. Populate from interview outputs:
+Write team configuration to `{team_dir}/config.json`. Use the same template as the existing Phase 6A config:
 
-```json
-{
-  "$schema": "./team-config.json",
-  "version": "1.0.0",
-  "team_name": "braintrust-{timestamp}",
-  "workflow_type": "braintrust",
-  "project_root": "<user workspace absolute path>",
-  "session_id": "<generated UUID>",
-  "created_at": "<ISO-8601>",
-  "background_pid": null,
-  "budget_max_usd": 16.0,
-  "budget_remaining_usd": 16.0,
-  "warning_threshold_usd": 13.0,
-  "status": "pending",
-  "started_at": null,
-  "completed_at": null,
-  "waves": [
-    {
-      "wave_number": 1,
-      "description": "Parallel theoretical and practical analysis",
-      "members": [
-        {
-          "name": "einstein",
-          "agent": "einstein",
-          "model": "opus",
-          "stdin_file": "stdin_einstein.json",
-          "stdout_file": "stdout_einstein.json",
-          "status": "pending",
-          "process_pid": null,
-          "exit_code": null,
-          "cost_usd": 0.0,
-          "cost_status": "",
-          "error_message": "",
-          "retry_count": 0,
-          "max_retries": 1,
-          "timeout_ms": 600000,
-          "started_at": null,
-          "completed_at": null
-        },
-        {
-          "name": "staff-architect",
-          "agent": "staff-architect-critical-review",
-          "model": "opus",
-          "stdin_file": "stdin_staff-architect.json",
-          "stdout_file": "stdout_staff-arch.json",
-          "status": "pending",
-          "process_pid": null,
-          "exit_code": null,
-          "cost_usd": 0.0,
-          "cost_status": "",
-          "error_message": "",
-          "retry_count": 0,
-          "max_retries": 1,
-          "timeout_ms": 600000,
-          "started_at": null,
-          "completed_at": null
-        }
-      ],
-      "on_complete_script": "gogent-team-prepare-synthesis"
-    },
-    {
-      "wave_number": 2,
-      "description": "Synthesis of orthogonal analyses",
-      "members": [
-        {
-          "name": "beethoven",
-          "agent": "beethoven",
-          "model": "opus",
-          "stdin_file": "stdin_beethoven.json",
-          "stdout_file": "stdout_beethoven.json",
-          "status": "pending",
-          "process_pid": null,
-          "exit_code": null,
-          "cost_usd": 0.0,
-          "cost_status": "",
-          "error_message": "",
-          "retry_count": 0,
-          "max_retries": 1,
-          "timeout_ms": 600000,
-          "started_at": null,
-          "completed_at": null
-        }
-      ],
-      "on_complete_script": null
-    }
-  ]
-}
+- 2 waves: Einstein + Staff-Architect in Wave 1, Beethoven in Wave 2
+- `on_complete_script: "gogent-team-prepare-synthesis"` on Wave 1
+- Q3 adaptation: if user chose "just Einstein", remove staff-architect from Wave 1, remove Wave 2
+- Q4 adaptation: adjust `budget_max_usd`, `budget_remaining_usd`, `warning_threshold_usd` per user response
+
+```javascript
+Write({
+  file_path: `${teamDir}/config.json`,
+  content: JSON.stringify(teamConfig, null, 2)
+});
 ```
 
-**Q3 adaptation (Einstein-only):** If user chose "just Einstein" in Q3, remove the `staff-architect` member from Wave 1, remove Wave 2 entirely, and set `on_complete_script: null` on Wave 1.
+### Step 4: Generate stdin files
 
-**Q4 adaptation (budget):** Replace `budget_max_usd`, `budget_remaining_usd`, and `warning_threshold_usd` with user's Q4 response (default $16.00, warning at 80%).
-
-#### Step 4: Generate stdin files
-
-Write all 3 stdin files using the templates from Phase 2.5 (populated with interview + scout data):
+Write all stdin files using the templates from Phase 2.5:
 
 ```javascript
 Write({ file_path: `${teamDir}/stdin_einstein.json`, content: JSON.stringify(einsteinStdin, null, 2) });
@@ -852,153 +759,24 @@ Write({ file_path: `${teamDir}/stdin_beethoven.json`, content: JSON.stringify(be
 
 **Beethoven's `pre_synthesis_path`** must be set to `{teamDir}/pre-synthesis.md` — this file doesn't exist yet; it will be created by `gogent-team-prepare-synthesis` between Wave 1 and Wave 2.
 
-#### Step 5: Launch gogent-team-run
-
-```javascript
-Bash({
-  command: `gogent-team-run "${teamDir}" &`,
-  run_in_background: true
-});
-```
-
-#### Step 6: Verify launch
-
-```javascript
-// Wait briefly, then check config.json for background_pid
-const config = Read({ file_path: `${teamDir}/config.json` });
-// Verify background_pid is non-null and status changed to "running"
-```
-
-#### Step 7: Return to user
-
-```
-[Mozart] Braintrust team dispatched.
-[Mozart] Team directory: {teamDir}
-[Mozart] Wave 1: Einstein + Staff-Architect (parallel, ~5-8 min)
-[Mozart] Wave 2: Beethoven synthesis (after inter-wave preparation)
-[Mozart] Budget: ${budget_max_usd}
-[Mozart]
-[Mozart] Track progress: /team-status
-[Mozart] View result when complete: /team-result
-```
-
-**Mozart exits here.** Background execution continues autonomously:
-1. Wave 1: Einstein + Staff-Architect run in parallel
-2. Inter-wave: `gogent-team-prepare-synthesis` merges Wave 1 stdout → `pre-synthesis.md`
-3. Wave 2: Beethoven reads `pre-synthesis.md` and produces final synthesis
-
----
-
-### Phase 6B: MCP Spawn Dispatch (Foreground)
-
-When `use_team_pattern` is false, Mozart uses the original foreground pattern. This blocks the TUI until all agents complete (~6-9 minutes).
-
-**Spawn Einstein and Staff-Architect in PARALLEL using MCP spawn_agent (single message):**
-
-**CRITICAL: Include `caller_type: "mozart"`** — identifies you to the spawn validation system.
-
-```javascript
-// Spawn Einstein via MCP
-mcp__gofortress__spawn_agent({
-  agent: "einstein",
-  caller_type: "mozart",
-  description: "Theoretical analysis for Braintrust",
-  prompt: `AGENT: einstein
-
-BRAINTRUST WORKFLOW - THEORETICAL ANALYSIS
-
-PROBLEM BRIEF: {path to problem-brief.md}
-
-TASK: Perform theoretical analysis of this problem
-FOCUS:
-- Root cause analysis
-- Conceptual frameworks that apply
-- First principles reasoning
-- Novel approaches not yet considered
-
-EXPECTED OUTPUT: Structured theoretical analysis
-CONSTRAINTS: Stay within theoretical/conceptual domain
-HANDOFF TO: Beethoven (your output will be synthesized)`,
-  model: "opus",
-  timeout: 600000
-});
-
-// Spawn Staff-Architect via MCP (parallel with Einstein)
-mcp__gofortress__spawn_agent({
-  agent: "staff-architect-critical-review",
-  caller_type: "mozart",
-  description: "Practical review for Braintrust",
-  prompt: `AGENT: staff-architect-critical-review
-
-BRAINTRUST WORKFLOW - PRACTICAL REVIEW
-
-PROBLEM BRIEF: {path to problem-brief.md}
-
-TASK: Perform practical/implementation review of this problem
-FOCUS:
-- Apply 7-layer review framework where applicable
-- Risk assessment
-- Implementation concerns
-- Failure modes
-- Contractor readiness (if implementation follows)
-
-EXPECTED OUTPUT: Structured practical review
-CONSTRAINTS: Stay within practical/implementation domain
-HANDOFF TO: Beethoven (your output will be synthesized)`,
-  model: "opus",
-  timeout: 600000
-});
-```
-
-### Phase 7: Handoff to Beethoven (Foreground Only)
-
-**This phase applies only when `use_team_pattern` is false.** In team-run mode, Beethoven is dispatched automatically by `gogent-team-run` after the inter-wave script completes.
-
-After both analyses complete, collect outputs and invoke Beethoven via MCP:
-
-```javascript
-mcp__gofortress__spawn_agent({
-  agent: "beethoven",
-  caller_type: "mozart",
-  description: "Synthesis of orthogonal analyses",
-  prompt: `AGENT: beethoven
-
-BRAINTRUST WORKFLOW - SYNTHESIS
-
-INPUTS:
-- Problem Brief: {path to problem-brief.md}
-- Einstein Analysis: {einstein_output or path to Einstein's output}
-- Staff-Architect Review: {staff_architect_output or path to Staff-Architect's output}
-
-TASK: Synthesize these orthogonal analyses into unified Braintrust output
-EXPECTED OUTPUT: Standardized Braintrust Analysis Document
-OUTPUT FILE: .claude/braintrust/analysis-{timestamp}.md
-
-Your synthesis should:
-- Integrate theoretical (Einstein) and practical (Staff-Architect) perspectives
-- Resolve any tensions between the two analyses
-- Provide unified recommendations
-- Highlight areas where both perspectives agree (high confidence)
-- Flag areas where perspectives diverge (requires user judgment)`,
-  model: "opus",
-  timeout: 600000
-});
-```
-
 ### Mozart Completion
 
-**Foreground mode** (after Beethoven completes):
+Mozart outputs a single completion message and returns:
+
 ```
-[Mozart] Braintrust analysis complete.
-[Mozart] Output: SESSION_DIR/analysis-{timestamp}.md
-[Mozart] Agents invoked: 4 (Mozart, Einstein, Staff-Architect, Beethoven)
-[Mozart] All spawned via MCP spawn_agent (Level 2 pattern)
+[Mozart] Braintrust configuration complete.
+[Mozart] Team directory: {teamDir}
+[Mozart] Config: config.json + 3 stdin files written
+[Mozart] Router will launch gogent-team-run.
 ```
 
-**Team-run mode** (Mozart exits after launch):
-```
-[Mozart] Braintrust team dispatched. Use /team-status to track progress.
-```
+**Mozart exits here. Do NOT:**
+- Launch gogent-team-run
+- Use mcp__gofortress__spawn_agent
+- Spawn Einstein, Staff-Architect, or Beethoven
+- Use Bash for any shell operations
+
+The router handles all dispatch after Mozart returns.
 
 ---
 
