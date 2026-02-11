@@ -9,8 +9,7 @@ const __dirname = dirname(__filename);
 const tuiDir = join(__dirname, "..");
 const tuiBin = join(tuiDir, "dist/index.js");
 const child = spawn("node", [tuiBin, ...process.argv.slice(2)], {
-  stdio: "inherit",
-  cwd: tuiDir
+  stdio: "inherit"
 });
 
 child.on("exit", (code) => {
