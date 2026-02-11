@@ -2,6 +2,16 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
+ * CLI flags configuration for agent spawning.
+ * Specifies tool permissions and additional CLI flags when
+ * spawning agents via `claude -p --allowedTools`.
+ */
+export interface AgentCliFlags {
+  allowed_tools: string[];
+  additional_flags?: string[];
+}
+
+/**
  * Relationship fields from agents-index.json
  */
 export interface AgentRelationships {
@@ -27,6 +37,7 @@ export interface AgentConfig extends AgentRelationships {
   tier: number | string;
   triggers?: string[];
   tools?: string[];
+  cli_flags?: AgentCliFlags;
   description?: string;
 }
 

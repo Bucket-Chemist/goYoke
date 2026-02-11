@@ -24,13 +24,13 @@ tools:
 auto_activate: null # Manual invocation only
 
 inputs:
-  - .claude/tmp/specs.md (default)
+  - SESSION_DIR/specs.md (default)
   - Any .md plan file (custom)
   - .claude/tmp/scout_metrics.json (optional)
 
 outputs:
-  - .claude/tmp/review-critique.md
-  - .claude/tmp/review-metadata.json
+  - SESSION_DIR/review-critique.md
+  - SESSION_DIR/review-metadata.json
 
 delegation:
   cannot_spawn:
@@ -247,7 +247,7 @@ Can a contractor start Monday with ZERO questions?
 
 ## Input Format
 
-You will receive a plan file (typically specs.md) with:
+You will receive a plan file (typically SESSION_DIR/specs.md) with:
 
 - Phase breakdown (Phase 1, Phase 2, etc.)
 - Tickets per phase with acceptance criteria
@@ -391,8 +391,8 @@ List what the plan does **well**:
 {
   "review_id": "uuid",
   "timestamp": "2026-01-17T12:34:56Z",
-  "input_file": ".claude/tmp/specs.md",
-  "output_file": ".claude/tmp/review-critique.md",
+  "input_file": "SESSION_DIR/specs.md",
+  "output_file": "SESSION_DIR/review-critique.md",
   "verdict": "APPROVE|APPROVE_WITH_CONDITIONS|CONCERNS|CRITICAL_ISSUES",
   "confidence": "HIGH|MEDIUM|LOW",
   "issue_counts": {
@@ -466,7 +466,7 @@ Task({
 
 ```python
 # Phase 1: Batch all context reads
-Read(.claude/tmp/specs.md)              # CRITICAL: The plan
+Read(SESSION_DIR/specs.md)              # CRITICAL: The plan
 Read(.claude/tmp/scout_metrics.json)    # OPTIONAL: Scope context
 Read(src/auth/existing.py)              # OPTIONAL: Pattern reference
 
@@ -550,7 +550,7 @@ When review-plan skill calls you:
 ```
 AGENT: staff-architect-critical-review
 
-1. TASK: Perform 7-layer critical review of .claude/tmp/specs.md
+1. TASK: Perform 7-layer critical review of SESSION_DIR/specs.md
 
 2. EXPECTED OUTCOME:
    - review-critique.md with structured assessment
@@ -590,7 +590,7 @@ AGENT: staff-architect-critical-review
 
 7. CONTEXT:
    User goal: <from plan or user input>
-   Plan file: .claude/tmp/specs.md
+   Plan file: SESSION_DIR/specs.md
    Scout metrics: <if available>
    Invocation: Manual (user requested review)
 ```

@@ -12,6 +12,8 @@ import type {
   SDKResultMessage,
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import { join } from "path";
+import { homedir } from "os";
 import { useStore } from "../store/index.js";
 import { mcpServer } from "../mcp/server.js";
 import type { ClassifiedError } from "../types/events.js";
@@ -39,6 +41,13 @@ const logEvent = (event: unknown) => {
   // Log to file only - never stdout/stderr
   void logger.debug("[SDK Event]", summary);
 };
+
+/**
+ * Hook options
+ */
+interface UseClaudeQueryOptions {
+  onStreamingComplete?: () => void;
+}
 
 /**
  * Hook return type
@@ -148,9 +157,17 @@ const SDK_BUILTIN_TOOLS = [
 /**
  * Main hook for Claude query integration
  */
-export function useClaudeQuery(): UseClaudeQueryReturn {
+export function useClaudeQuery(options?: UseClaudeQueryOptions): UseClaudeQueryReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<ClassifiedError | null>(null);
+
+  // Store the callback ref to avoid stale closures
+  const onStreamingCompleteRef = useRef(options?.onStreamingComplete);
+
+  // Keep callback ref in sync with latest version
+  useEffect(() => {
+    onStreamingCompleteRef.current = options?.onStreamingComplete;
+  }, [options?.onStreamingComplete]);
 
   // Sync streamingRef with isStreaming state to avoid stale closures
   useEffect(() => {
@@ -193,14 +210,34 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         useStore.getState().setActiveModel(initEvent.model);
       }
 
-      // Update session with ID
+      // Update session with ID and set session dir for child processes/team polling
       updateSession({
         id: event.session_id,
       });
 
-      // Initialize agents from system event if present
-      // Note: SDK system messages may contain agent metadata in future versions
-      // For now, we just initialize the session
+      // Set GOGENT_SESSION_DIR so team polling and child processes can find the session
+      if (event.session_id && !process.env["GOGENT_SESSION_DIR"]) {
+        const home = process.env["HOME"] || homedir();
+        const sessionDirPath = join(home, ".claude", "sessions", event.session_id);
+        process.env["GOGENT_SESSION_DIR"] = sessionDirPath;
+
+        // Write current-session marker + setup tmp symlink (best-effort)
+        const projectRoot = process.env["GOGENT_PROJECT_DIR"] || process.cwd();
+        void (async () => {
+          try {
+            const { writeFile, mkdir, unlink, symlink, lstat } = await import("fs/promises");
+            await mkdir(sessionDirPath, { recursive: true });
+            await writeFile(join(projectRoot, ".claude", "current-session"), sessionDirPath + "\n");
+            const tmpPath = join(projectRoot, ".claude", "tmp");
+            try {
+              const stat = await lstat(tmpPath);
+              if (stat.isSymbolicLink()) { await unlink(tmpPath); }
+              else { return; } // Real directory — skip
+            } catch { /* doesn't exist */ }
+            await symlink(sessionDirPath, tmpPath);
+          } catch { /* best-effort */ }
+        })();
+      }
     },
     [updateSession]
   );
@@ -556,7 +593,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
               sum + m.inputTokens + m.cacheCreationInputTokens + m.cacheReadInputTokens,
             0
           );
-          const capacity = models[0].contextWindow || 200000;
+          const capacity = models[0]?.contextWindow || 200000;
           updateContextWindow(totalUsed, capacity);
         }
       }
@@ -579,6 +616,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
 
       // Clear interrupt function
       setInterruptQuery(null);
+
+      // Notify that streaming is complete (for queue drain)
+      onStreamingCompleteRef.current?.();
     },
     [
       updateLastMessage,
@@ -721,7 +761,7 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
         eventStreamRef.current = eventStream;
 
         // Register interrupt function in store
-        setInterruptQuery(() => eventStream.interrupt.bind(eventStream));
+        setInterruptQuery(eventStream.interrupt.bind(eventStream));
 
         // NOTE: Don't clear preferredModel - it should persist for all
         // subsequent messages until user explicitly changes it via /model
@@ -772,6 +812,9 @@ export function useClaudeQuery(): UseClaudeQueryReturn {
 
         // Clear interrupt function
         setInterruptQuery(null);
+
+        // Notify that streaming is complete even on error (for queue drain)
+        onStreamingCompleteRef.current?.();
 
         void logger.error("Query error", {
           error: err instanceof Error ? err.message : String(err),

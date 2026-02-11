@@ -41,6 +41,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-skill-guard",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Task",
         "hooks": [
           {
@@ -103,6 +113,7 @@
   },
   "autoUpdatesChannel": "latest",
   "minimumVersion": "2.1.25",
+  "use_team_pattern": true,
   "trustedDirectories": [
     "/home/doktersmol",
     "/home/doktersmol/Documents"

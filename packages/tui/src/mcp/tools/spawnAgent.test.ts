@@ -1,12 +1,45 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+// @ts-expect-error — vitest resolves cross-rootDir imports; tsc can't follow into tests/
 import { spawnMockClaude } from "../../../tests/mocks/spawnHelper";
-import { resetProcessRegistry, getProcessRegistry } from "../../spawn/processRegistry";
+import { resetProcessRegistry, getProcessRegistry } from "../../spawn/processRegistry.js";
 import {
   buildCliArgs,
   parseCliOutput,
   getCurrentNestingLevel,
   validateNestingDepth,
-} from "./spawnAgent";
+} from "./spawnAgent.js";
+
+// Mock agentConfig module
+vi.mock("../../spawn/agentConfig.js", () => ({
+  getAgentConfig: vi.fn((id: string) => {
+    if (id === "einstein") {
+      return {
+        id: "einstein",
+        name: "Einstein",
+        model: "opus",
+        tier: 3,
+        tools: ["Read", "Write", "Glob", "Grep", "TaskGet"],
+        cli_flags: {
+          allowed_tools: ["Read", "Glob", "Grep"],
+          additional_flags: ["--permission-mode delegate"],
+        },
+      };
+    }
+    if (id === "go-pro") {
+      return {
+        id: "go-pro",
+        name: "Go Pro",
+        model: "sonnet",
+        tier: 2,
+        tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        cli_flags: {
+          allowed_tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        },
+      };
+    }
+    return null;
+  }),
+}));
 
 // Note: Full tests require mock CLI infrastructure from MCP-SPAWN-003
 
@@ -55,6 +88,59 @@ describe("spawn_agent tool", () => {
       expect(args).toContain("--max-budget-usd");
       expect(args).toContain("0.5");
     });
+
+    it("should always include --allowedTools flag", () => {
+      const args = buildCliArgs({});
+
+      expect(args).toContain("--allowedTools");
+    });
+
+    it("should use config cli_flags when no caller tools provided", () => {
+      const args = buildCliArgs({ agent: "einstein" });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
+
+    it("should override config with caller-provided tools", () => {
+      const args = buildCliArgs({
+        agent: "einstein",
+        allowedTools: ["Read", "Write"]
+      });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Write");
+    });
+
+    it("should use conservative fallback for unknown agent", () => {
+      const args = buildCliArgs({ agent: "nonexistent-agent" });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
+
+    it("should use conservative fallback when no agent or caller tools", () => {
+      const args = buildCliArgs({});
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
+
+    it("should use config tools for go-pro agent", () => {
+      const args = buildCliArgs({ agent: "go-pro" });
+
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Write,Edit,Bash,Glob,Grep");
+    });
+
+    it("should combine model and config tools", () => {
+      const args = buildCliArgs({ agent: "einstein", model: "opus" });
+
+      expect(args).toContain("--model");
+      expect(args).toContain("opus");
+      expect(args).toContain("--allowedTools");
+      expect(args).toContain("Read,Glob,Grep");
+    });
   });
 
   describe("parseCliOutput", () => {
@@ -96,37 +182,37 @@ describe("spawn_agent tool", () => {
 
   describe("getCurrentNestingLevel", () => {
     it("should return 0 when not set", () => {
-      const originalEnv = process.env.GOGENT_NESTING_LEVEL;
-      delete process.env.GOGENT_NESTING_LEVEL;
+      const originalEnv = process.env['GOGENT_NESTING_LEVEL'];
+      delete process.env['GOGENT_NESTING_LEVEL'];
 
       expect(getCurrentNestingLevel()).toBe(0);
 
-      process.env.GOGENT_NESTING_LEVEL = originalEnv;
+      process.env['GOGENT_NESTING_LEVEL'] = originalEnv;
     });
 
     it("should return parsed level when set", () => {
-      const originalEnv = process.env.GOGENT_NESTING_LEVEL;
-      process.env.GOGENT_NESTING_LEVEL = "2";
+      const originalEnv = process.env['GOGENT_NESTING_LEVEL'];
+      process.env['GOGENT_NESTING_LEVEL'] = "2";
 
       expect(getCurrentNestingLevel()).toBe(2);
 
-      process.env.GOGENT_NESTING_LEVEL = originalEnv;
+      process.env['GOGENT_NESTING_LEVEL'] = originalEnv;
     });
 
     it("should return 0 for invalid nesting level", () => {
-      const originalEnv = process.env.GOGENT_NESTING_LEVEL;
-      process.env.GOGENT_NESTING_LEVEL = "invalid";
+      const originalEnv = process.env['GOGENT_NESTING_LEVEL'];
+      process.env['GOGENT_NESTING_LEVEL'] = "invalid";
 
       expect(getCurrentNestingLevel()).toBe(0);
 
-      process.env.GOGENT_NESTING_LEVEL = originalEnv;
+      process.env['GOGENT_NESTING_LEVEL'] = originalEnv;
     });
   });
 
   describe("nesting depth validation", () => {
     it("should reject spawn when at MAX_NESTING_DEPTH", () => {
-      const originalEnv = process.env.GOGENT_NESTING_LEVEL;
-      process.env.GOGENT_NESTING_LEVEL = "10"; // MAX_NESTING_DEPTH
+      const originalEnv = process.env['GOGENT_NESTING_LEVEL'];
+      process.env['GOGENT_NESTING_LEVEL'] = "10"; // MAX_NESTING_DEPTH
 
       const error = validateNestingDepth();
 
@@ -134,29 +220,29 @@ describe("spawn_agent tool", () => {
       expect(error).toContain("Maximum nesting depth");
       expect(error).toContain("10");
 
-      process.env.GOGENT_NESTING_LEVEL = originalEnv;
+      process.env['GOGENT_NESTING_LEVEL'] = originalEnv;
     });
 
     it("should allow spawn when under MAX_NESTING_DEPTH", () => {
-      const originalEnv = process.env.GOGENT_NESTING_LEVEL;
-      process.env.GOGENT_NESTING_LEVEL = "5";
+      const originalEnv = process.env['GOGENT_NESTING_LEVEL'];
+      process.env['GOGENT_NESTING_LEVEL'] = "5";
 
       const error = validateNestingDepth();
 
       expect(error).toBeNull();
 
-      process.env.GOGENT_NESTING_LEVEL = originalEnv;
+      process.env['GOGENT_NESTING_LEVEL'] = originalEnv;
     });
 
     it("should allow spawn at level 0", () => {
-      const originalEnv = process.env.GOGENT_NESTING_LEVEL;
-      delete process.env.GOGENT_NESTING_LEVEL;
+      const originalEnv = process.env['GOGENT_NESTING_LEVEL'];
+      delete process.env['GOGENT_NESTING_LEVEL'];
 
       const error = validateNestingDepth();
 
       expect(error).toBeNull();
 
-      process.env.GOGENT_NESTING_LEVEL = originalEnv;
+      process.env['GOGENT_NESTING_LEVEL'] = originalEnv;
     });
   });
 

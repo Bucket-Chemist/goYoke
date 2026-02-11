@@ -14,6 +14,7 @@ type ContextComponents struct {
 	PendingLearnings string                  // From CheckPendingLearnings()
 	GitInfo          string                  // From FormatGitInfo()
 	ProjectInfo      *ProjectDetectionResult // From DetectProjectType()
+	SessionDir       string                  // From CreateSessionDir() - absolute path
 }
 
 // SessionStartResponse is the hook output format for SessionStart
@@ -63,6 +64,12 @@ func GenerateSessionStartResponse(ctx *ContextComponents) (string, error) {
 	// Project type detection
 	if ctx.ProjectInfo != nil {
 		contextParts = append(contextParts, FormatProjectType(ctx.ProjectInfo))
+	}
+
+	// Session directory
+	if ctx.SessionDir != "" {
+		sessionInfo := fmt.Sprintf("SESSION_DIR: %s\nAll session artifacts are written to this directory. .claude/tmp/ symlinks here.", ctx.SessionDir)
+		contextParts = append(contextParts, sessionInfo)
 	}
 
 	// Hook status footer

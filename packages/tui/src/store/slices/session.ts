@@ -94,6 +94,10 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
       isCompacting: false,
       preferredModel: null,
       activeModel: null,
+      backgroundTeamCount: 0, // Reset teams count
     });
+
+    // Clear GOGENT_SESSION_DIR environment variable
+    delete process.env["GOGENT_SESSION_DIR"];
   },
 });

@@ -24,14 +24,13 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task  # For Haiku scouts only
+  - Task        # For Haiku scouts only
   - TaskList
   - TaskGet
   - TaskCreate
   - TaskUpdate
   - Write
   - AskUserQuestion
-  - mcp__gofortress__spawn_agent  # For Level 2 Opus spawning (Einstein, Staff-Architect, Beethoven)
 
 delegation:
   can_spawn:
@@ -57,7 +56,7 @@ inputs:
   - Inline question (quick mode)
 
 outputs:
-  - .claude/braintrust/problem-brief-{timestamp}.md
+  - SESSION_DIR/problem-brief.md
   - Handoff to Beethoven with collected analyses
 
 failure_tracking:
@@ -109,44 +108,416 @@ On receiving input:
 
 ---
 
-## Phase 2: Interview
+## Phase 2: Interview Protocol (TC-018)
 
-### When to Interview
+### Overview
 
-| Condition | Interview? | Depth |
-|-----------|------------|-------|
-| Problem is specific and bounded | No | - |
-| Multiple interpretations possible | Yes | 1-2 questions |
-| Scope unclear | Yes | Scope-focused |
-| Constraints unknown | Yes | Constraint-focused |
-| Success criteria undefined | Yes | Criteria-focused |
+Mozart conducts a structured 4-question interview to populate team configuration. Questions 1-2 are ALWAYS asked. Questions 3-4 are conditional based on problem characteristics and user context.
 
-### Interview Approach
+**Reference:** Full specification at `tickets/team-coordination/tickets/TC-018.md`
 
-Use `AskUserQuestion` tool with targeted, high-value questions:
+---
 
+### Question 1: Problem Statement (ALWAYS ASKED)
+
+**Prompt:**
+```
+"What problem or question do you want the Braintrust to analyze?"
+```
+
+**Purpose:** Captures the core analytical goal for the team.
+
+**Maps to:**
+- `stdin_einstein.json:problem_brief.statement`
+- `stdin_staff-architect.json:problem_brief.statement`
+- `stdin_beethoven.json:problem_brief.statement`
+
+**Validation:** Non-empty string, minimum 20 characters.
+
+**AskUserQuestion Example:**
 ```javascript
 AskUserQuestion({
-  questions: [
-    {
-      question: "What does success look like for this analysis?",
-      header: "Success criteria",
-      options: [
-        { label: "Clear decision", description: "Need to choose between options" },
-        { label: "Deep understanding", description: "Need to fully understand a system/problem" },
-        { label: "Action plan", description: "Need concrete next steps" },
-        { label: "Risk assessment", description: "Need to identify what could go wrong" }
-      ],
-      multiSelect: false
-    }
-  ]
+  questions: [{
+    question: "What problem or question do you want the Braintrust to analyze?",
+    header: "Problem Statement",
+    inputType: "text",
+    required: true
+  }]
 });
 ```
 
-**Interview Constraints:**
-- Maximum 3 questions total
-- Each question must be decision-relevant
-- Never ask "Is this right?" - that's Beethoven's output job
+---
+
+### Question 2: Scope (ALWAYS ASKED)
+
+**Prompt:**
+```
+"Which files or areas of the codebase are relevant? (Or should I scout first?)"
+```
+
+**Purpose:** Establishes context boundaries and determines if scouting is needed.
+
+**Decision Flow:**
+
+| User Response | Action | Maps To |
+|--------------|--------|---------|
+| Provides file paths | Read files, include content excerpts | `codebase_context.key_files[]` (einstein + staff-architect stdin) |
+| "scout" / "don't know" | Spawn haiku scout with problem statement | `scout_findings` (einstein stdin), `scout_metrics` (staff-architect stdin) |
+| "whole codebase" | Warn about cost, recommend scout | `codebase_context.key_files: [{"path": "(entire codebase)", "relevance": "full scope"}]` |
+
+**Scout-First Path:**
+```javascript
+// 1. Spawn haiku scout using Task() (Level 1 agent)
+Task({
+  description: "Assess problem scope for Braintrust",
+  subagent_type: "Explore",
+  model: "haiku",
+  prompt: `AGENT: haiku-scout
+
+TASK: Assess scope for Braintrust analysis
+PROBLEM: {problem_statement from Q1}
+EXPECTED OUTPUT: JSON with file_count, complexity_signals, key_files
+FOCUS: Identify files/modules relevant to this problem
+OUTPUT FILE: .claude/tmp/scout_metrics.json`
+});
+
+// 2. Wait for scout completion (~10-30s depending on repo size)
+// 3. Read .claude/tmp/scout_metrics.json
+// 4. Include path in einstein's reads_from.scout_metrics
+// 5. Extract top 5 critical files from scout for relevant_files[]
+```
+
+**File Paths Provided Path:**
+```javascript
+// Read each file and validate
+const relevantFiles = [];
+for (const filepath of userProvidedPaths) {
+  const content = Read({file_path: filepath});
+  if (content) {
+    relevantFiles.push(filepath);
+  } else {
+    // Error handling: warn and allow retry/skip
+    AskUserQuestion({
+      questions: [{
+        question: `Could not read ${filepath}. Continue without it, or provide different path?`,
+        header: "Invalid File Path",
+        options: [
+          { label: "Continue without", description: "Skip this file" },
+          { label: "Provide different path", description: "Retry with corrected path" }
+        ]
+      }]
+    });
+  }
+}
+```
+
+**Error Handling:**
+- **Invalid file paths:** Warn user, allow retry or skip
+- **Scout timeout (60s):** Abort scout, fallback to manual file specification
+
+---
+
+### Question 3: Team Composition (CONDITIONAL)
+
+**When to ask:** Only if problem is narrowly scoped (single module, specific design decision) OR user explicitly mentions wanting lightweight analysis.
+
+**Prompt:**
+```
+"Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?"
+```
+
+**Purpose:** Allows budget-conscious users to skip Staff-Architect for simpler problems.
+
+**Decision Flow:**
+
+| User Response | Team Configuration |
+|--------------|-------------------|
+| "both" (default) | Full braintrust: Wave 1 = [einstein, staff-architect], Wave 2 = [beethoven] |
+| "just Einstein" | Single-agent: Wave 1 = [einstein], Wave 2 = empty, skip Beethoven synthesis |
+| "staff only" | Invalid (Staff-Architect requires Einstein's theoretical foundation) → force "just Einstein" |
+
+**Default if not asked:** Full braintrust (both agents).
+
+**AskUserQuestion Example:**
+```javascript
+AskUserQuestion({
+  questions: [{
+    question: "Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?",
+    header: "Team Composition",
+    options: [
+      { label: "Both (full braintrust)", description: "Complete analysis: theory + practice + synthesis (~$4.50)" },
+      { label: "Just Einstein", description: "Theoretical analysis only (~$1.50)" }
+    ],
+    multiSelect: false
+  }]
+});
+```
+
+---
+
+### Question 4: Budget (CONDITIONAL)
+
+**When to ask:** Only if user mentions cost concerns, long runtime expectations, or this is their first braintrust invocation.
+
+**Prompt:**
+```
+"Default budget is $5.00 for the full team (Einstein + Staff-Architect + Beethoven). Want to adjust?"
+```
+
+**Purpose:** Prevents surprise costs and allows experimentation with lower budgets.
+
+**Maps to:**
+- `config.json:budget_max_usd`
+- `config.json:budget_remaining_usd` (initialized to same value)
+
+**Validation:**
+- Minimum: $1.00 (single Einstein run)
+- Maximum: $50.00 (safety limit)
+- Default: $5.00
+
+**Budget Estimates:**
+- Einstein (Opus, 16K thinking): ~$1.50
+- Staff-Architect (Opus, 16K thinking): ~$1.50
+- Beethoven (Opus, 8K thinking): ~$1.00
+- Full team with inter-wave synthesis: ~$4.50-$5.50
+
+**Budget Validation:**
+```javascript
+// If Q4 budget < estimated cost, warn user
+if (userBudget < estimatedCost) {
+  AskUserQuestion({
+    questions: [{
+      question: `Budget $${userBudget} may not cover full team (estimated $${estimatedCost}). Proceed anyway, or increase budget?`,
+      header: "Budget Warning",
+      options: [
+        { label: "Proceed anyway", description: "Accept risk of running out" },
+        { label: "Increase budget", description: "Adjust to at least estimated cost" },
+        { label: "Cancel", description: "Abort Braintrust" }
+      ]
+    }]
+  });
+}
+```
+
+---
+
+### Interview Decision Flow Diagram
+
+```
+START
+  │
+  ├─► Q1: Problem Statement (ALWAYS)
+  │     └─► Capture problem_statement (min 20 chars)
+  │
+  ├─► Q2: Scope (ALWAYS)
+  │     ├─► User provides files → Read files → relevant_files[]
+  │     ├─► "scout" → Spawn haiku scout → wait → scout_metrics path
+  │     └─► "whole codebase" → Warn + recommend scout
+  │
+  ├─► Q3: Team Composition (CONDITIONAL: narrow scope OR explicit request)
+  │     ├─► "both" → Full braintrust (default)
+  │     ├─► "just Einstein" → Single-agent, skip Staff-Architect + Beethoven
+  │     └─► (not asked) → Default to full braintrust
+  │
+  ├─► Q4: Budget (CONDITIONAL: cost concerns OR first-time user)
+  │     ├─► User specifies → Validate ($1-$50) → budget_max_usd
+  │     └─► (not asked) → Default $5.00
+  │
+  ├─► Generate Problem Brief (see Phase 4)
+  │
+  ├─► Confirm with User (see Phase 5)
+  │     ├─► "Confirmed" → Proceed to Phase 2.5 (Config Generation)
+  │     ├─► "Modify X" → Update Brief → Re-confirm
+  │     └─► "Cancel" → Delete partial configs, abort
+  │
+  └─► Proceed to Phase 2.5: Config Generation
+```
+
+---
+
+### Error Handling Summary
+
+| Error Scenario | Behavior |
+|---------------|----------|
+| **Invalid file paths** | Warn: "Could not read {file}. Continue without it, or provide different path?" Allow retry or skip |
+| **Scout timeout (60s)** | Abort scout, fallback to manual file specification (Q2 file-path mode) |
+| **Budget too low for team** | Warn: "Budget ${budget} may not cover full team (estimated ${estimate}). Proceed anyway, or increase budget?" |
+| **User cancels during confirmation** | Delete partially generated config/stdin files, return to router without spawning gogent-team-run |
+
+---
+
+## Phase 2.5: Config Generation
+
+After interview confirmation, generate team configuration files from interview outputs.
+
+**Reference:** TC-018 Config Field Mapping section
+
+### config.json Generation
+
+| Interview Output | Config Field | Type | Example |
+|-----------------|-------------|------|---------|
+| Timestamp | `session_id` | string | `"20260206.143022.braintrust"` |
+| User workspace | `project_root` | string | `"/home/user/project"` |
+| Default | `team_name` | string | `"braintrust"` |
+| Q4 response | `budget_max_usd` | float | `5.0` |
+| Q4 response | `budget_remaining_usd` | float | `5.0` |
+| Q3 response | `waves[0].members[]` | string[] | `["einstein", "staff-architect"]` |
+| (computed) | `waves[0].outputs_to` | string | `"wave1-synthesis.md"` |
+| Q3 response | `waves[1].members[]` | string[] | `["beethoven"]` (if full team) |
+
+### stdin File Generation Templates
+
+Each stdin file must validate against its corresponding schema in `~/.claude/schemas/stdin/`.
+The `description` field is required for envelope builder compatibility.
+
+**stdin_einstein.json** — schema: `schemas/stdin/einstein.json`
+```json
+{
+  "agent": "einstein",
+  "workflow": "braintrust",
+  "description": "Theoretical analysis: <problem_brief.title>",
+  "context": {
+    "project_root": "<absolute path to project root>",
+    "team_dir": "<absolute path to team directory>"
+  },
+  "problem_brief": {
+    "title": "<concise problem title from Q1>",
+    "statement": "<full clarified problem statement from Q1>",
+    "scope": {
+      "in_scope": ["<derived from Q2 files/scout>"],
+      "out_of_scope": ["<anti-scope items from Phase 4>"],
+      "affected_modules": ["<module paths from Q2 files or scout findings>"]
+    },
+    "complexity_signals": {
+      "cross_module": false,
+      "novel_problem": true,
+      "security_critical": false,
+      "performance_critical": false,
+      "estimated_files_affected": 0
+    },
+    "prior_art": {
+      "existing_patterns": ["<from codebase-search scout>"],
+      "previous_attempts": ["<from interview or GAP doc>"],
+      "related_tickets": ["<if applicable>"]
+    },
+    "analysis_axes": {
+      "conceptual_focus": ["<specific questions for Einstein>"],
+      "novel_angles": ["<unconventional perspectives to explore>"],
+      "first_principles": ["<core assumptions to challenge>"]
+    },
+    "constraints": {
+      "technical": ["<hard technical constraints>"],
+      "organizational": ["<budget, timeline constraints>"],
+      "compatibility": ["<backward compat requirements>"]
+    }
+  },
+  "codebase_context": {
+    "architecture_summary": "<from scout or interview>",
+    "key_files": [
+      {"path": "<relative path>", "relevance": "<why this file matters>"}
+    ],
+    "dependency_graph": "<optional: how modules connect>",
+    "conventions": "<active coding conventions>"
+  },
+  "scout_findings": {
+    "metrics": {
+      "total_files": 0,
+      "total_loc": 0,
+      "languages": ["go"]
+    },
+    "summary": "<scout reconnaissance summary, or empty if Q2 provided files>"
+  }
+}
+```
+
+**stdin_staff-architect.json** (if full team) — schema: `schemas/stdin/staff-architect.json`
+```json
+{
+  "agent": "staff-architect-critical-review",
+  "workflow": "braintrust",
+  "description": "Critical review: <problem_brief.title>",
+  "context": {
+    "project_root": "<absolute path to project root>",
+    "team_dir": "<absolute path to team directory>"
+  },
+  "problem_brief": {
+    "title": "<same as einstein>",
+    "statement": "<same as einstein>",
+    "scope": {
+      "in_scope": ["<same as einstein>"],
+      "out_of_scope": ["<same as einstein>"],
+      "affected_modules": ["<same as einstein>"]
+    }
+  },
+  "plan_to_review": {
+    "source": "<Problem Brief path or 'inline'>",
+    "format": "markdown",
+    "content": "<the Problem Brief content — Staff-Architect reviews the problem framing itself>",
+    "assumptions_declared": ["<assumptions surfaced during interview>"]
+  },
+  "codebase_context": {
+    "architecture_summary": "<same as einstein>",
+    "key_files": [
+      {"path": "<relative path>", "relevance": "<why this file matters>"}
+    ],
+    "existing_patterns": ["<patterns from codebase-search scout>"],
+    "technical_debt": ["<known debt relevant to this problem>"]
+  },
+  "scout_metrics": {
+    "total_files": 0,
+    "total_loc": 0,
+    "complexity_score": 0,
+    "recommended_tier": "opus"
+  },
+  "review_focus": {
+    "layers": [
+      "assumptions",
+      "dependencies",
+      "failure_modes",
+      "cost_benefit",
+      "testing",
+      "architecture_smells",
+      "contractor_readiness"
+    ],
+    "priority_concerns": ["<specific concerns from Mozart or user>"]
+  }
+}
+```
+
+**stdin_beethoven.json** (if full team) — schema: `schemas/stdin/beethoven.json`
+```json
+{
+  "agent": "beethoven",
+  "workflow": "braintrust",
+  "description": "Synthesize analyses for: <problem_brief.title>",
+  "context": {
+    "project_root": "<absolute path to project root>",
+    "team_dir": "<absolute path to team directory>"
+  },
+  "problem_brief": {
+    "title": "<same as einstein>",
+    "statement": "<same as einstein>",
+    "scope": {
+      "in_scope": ["<same as einstein>"],
+      "out_of_scope": ["<same as einstein>"]
+    },
+    "success_criteria": ["<from Phase 4 Problem Brief>"]
+  },
+  "pre_synthesis_path": "<team_dir>/pre-synthesis.md"
+}
+```
+
+**Beethoven `pre_synthesis_path` lifecycle:**
+1. Mozart writes `stdin_beethoven.json` with `pre_synthesis_path` pointing to `{team_dir}/pre-synthesis.md` — this file does NOT exist yet
+2. Wave 1 runs: Einstein + Staff-Architect produce `stdout_einstein.json` and `stdout_staff-arch.json`
+3. Inter-wave script (`gogent-team-prepare-synthesis`) reads Wave 1 stdout files → writes `pre-synthesis.md`
+4. Wave 2 starts: Beethoven reads the file at `pre_synthesis_path` via Read tool at runtime
+
+**File Locations:**
+- Team directory: `{session_dir}/teams/{timestamp}.braintrust/` (resolved via env var → current-session marker → `.claude/sessions/` fallback)
+- Config: `{team_dir}/config.json`
+- Stdin files: `{team_dir}/stdin_{agent}.json`
+- Stdout files: `{team_dir}/stdout_{agent}.json` (written by `gogent-team-run` after agent completion)
 
 ---
 
@@ -189,7 +560,8 @@ FOCUS: Prior solutions, related code, documentation`
 | Agent Tier | Spawning Mechanism | Examples |
 |------------|-------------------|----------|
 | **Level 1 (Haiku)** | `Task()` tool | haiku-scout, codebase-search |
-| **Level 2 (Opus)** | `mcp__gofortress__spawn_agent` | einstein, staff-architect-critical-review, beethoven |
+
+**Note:** Mozart no longer spawns Opus agents directly. After interview + config generation, Mozart returns. The router launches `gogent-team-run` which handles all Opus agent spawning.
 
 ### Scout Results Processing
 
@@ -205,7 +577,7 @@ Collect scout outputs and synthesize:
 
 ### Problem Brief Template
 
-Write to `.claude/braintrust/problem-brief-{timestamp}.md`:
+Write to `SESSION_DIR/problem-brief.md`:
 
 ```markdown
 # Problem Brief
@@ -339,144 +711,72 @@ AskUserQuestion({
 
 ---
 
-## Phase 6: Orthogonal Dispatch
+## Phase 6: Generate Team Configuration
 
-**Spawn Einstein and Staff-Architect in PARALLEL using MCP spawn_agent (single message):**
+After user confirmation, generate team configuration files to the `team_dir` path provided in the prompt.
 
-**CRITICAL: Include `caller_type: "mozart"`** - This identifies you to the spawn validation system.
-Mozart is spawned via Task() (not spawn_agent), so you must self-identify when spawning children.
+### Step 1: Read Settings
 
 ```javascript
-// Spawn Einstein via MCP
-mcp__gofortress__spawn_agent({
-  agent: "einstein",
-  caller_type: "mozart",  // REQUIRED: Self-identify for validation
-  description: "Theoretical analysis for Braintrust",
-  prompt: `AGENT: einstein
+Read({ file_path: "~/.claude/settings.json" })
+// Check use_team_pattern flag (advisory — always true for now)
+```
 
-BRAINTRUST WORKFLOW - THEORETICAL ANALYSIS
+### Step 2: Write Problem Brief
 
-PROBLEM BRIEF: {path to problem-brief.md}
-
-TASK: Perform theoretical analysis of this problem
-FOCUS:
-- Root cause analysis
-- Conceptual frameworks that apply
-- First principles reasoning
-- Novel approaches not yet considered
-
-EXPECTED OUTPUT: Structured theoretical analysis
-CONSTRAINTS: Stay within theoretical/conceptual domain
-HANDOFF TO: Beethoven (your output will be synthesized)`,
-  model: "opus",
-  timeout: 600000  // 10 minutes for complex analysis
-});
-
-// Spawn Staff-Architect via MCP (parallel with Einstein)
-mcp__gofortress__spawn_agent({
-  agent: "staff-architect-critical-review",
-  caller_type: "mozart",  // REQUIRED: Self-identify for validation
-  description: "Practical review for Braintrust",
-  prompt: `AGENT: staff-architect-critical-review
-
-BRAINTRUST WORKFLOW - PRACTICAL REVIEW
-
-PROBLEM BRIEF: {path to problem-brief.md}
-
-TASK: Perform practical/implementation review of this problem
-FOCUS:
-- Apply 7-layer review framework where applicable
-- Risk assessment
-- Implementation concerns
-- Failure modes
-- Contractor readiness (if implementation follows)
-
-EXPECTED OUTPUT: Structured practical review
-CONSTRAINTS: Stay within practical/implementation domain
-HANDOFF TO: Beethoven (your output will be synthesized)`,
-  model: "opus",
-  timeout: 600000  // 10 minutes for complex analysis
+```javascript
+Write({
+  file_path: `${teamDir}/problem-brief.md`,
+  content: problemBriefMarkdown  // From Phase 4
 });
 ```
 
-### Parallel Execution Notes
+### Step 3: Generate config.json
 
-- Both agents spawn via MCP spawn_agent tool (not Task())
-- Both agents receive the SAME Problem Brief
-- They analyze from DIFFERENT perspectives
-- Their outputs go to Beethoven for synthesis
-- Mozart waits for BOTH to complete before proceeding
-- 10-minute timeout allows for deep Opus-level analysis
+Write team configuration to `{team_dir}/config.json`. Use the same template as the existing Phase 6A config:
 
----
-
-## Phase 7: Handoff to Beethoven
-
-After both analyses complete, collect outputs and invoke Beethoven via MCP:
+- 2 waves: Einstein + Staff-Architect in Wave 1, Beethoven in Wave 2
+- `on_complete_script: "gogent-team-prepare-synthesis"` on Wave 1
+- Q3 adaptation: if user chose "just Einstein", remove staff-architect from Wave 1, remove Wave 2
+- Q4 adaptation: adjust `budget_max_usd`, `budget_remaining_usd`, `warning_threshold_usd` per user response
 
 ```javascript
-// Both Einstein and Staff-Architect outputs are available in their respective task results
-// Now spawn Beethoven to synthesize them
-mcp__gofortress__spawn_agent({
-  agent: "beethoven",
-  caller_type: "mozart",  // REQUIRED: Self-identify for validation
-  description: "Synthesis of orthogonal analyses",
-  prompt: `AGENT: beethoven
-
-BRAINTRUST WORKFLOW - SYNTHESIS
-
-INPUTS:
-- Problem Brief: {path to problem-brief.md}
-- Einstein Analysis: {einstein_output or path to Einstein's output}
-- Staff-Architect Review: {staff_architect_output or path to Staff-Architect's output}
-
-TASK: Synthesize these orthogonal analyses into unified Braintrust output
-EXPECTED OUTPUT: Standardized Braintrust Analysis Document
-OUTPUT FILE: .claude/braintrust/analysis-{timestamp}.md
-
-Your synthesis should:
-- Integrate theoretical (Einstein) and practical (Staff-Architect) perspectives
-- Resolve any tensions between the two analyses
-- Provide unified recommendations
-- Highlight areas where both perspectives agree (high confidence)
-- Flag areas where perspectives diverge (requires user judgment)`,
-  model: "opus",
-  timeout: 600000  // 10 minutes for synthesis
+Write({
+  file_path: `${teamDir}/config.json`,
+  content: JSON.stringify(teamConfig, null, 2)
 });
 ```
 
-### Output Collection Pattern
+### Step 4: Generate stdin files
+
+Write all stdin files using the templates from Phase 2.5:
 
 ```javascript
-// Example of collecting outputs before Beethoven spawn
-const einsteinResult = await mcp__gofortress__spawn_agent({
-  agent: "einstein",
-  // ... Einstein config
-});
-
-const staffArchitectResult = await mcp__gofortress__spawn_agent({
-  agent: "staff-architect-critical-review",
-  // ... Staff-Architect config
-});
-
-// Then pass collected outputs to Beethoven
-const beethovenResult = await mcp__gofortress__spawn_agent({
-  agent: "beethoven",
-  prompt: `... Einstein: ${einsteinResult} ... Staff-Arch: ${staffArchitectResult} ...`,
-  // ... Beethoven config
-});
+Write({ file_path: `${teamDir}/stdin_einstein.json`, content: JSON.stringify(einsteinStdin, null, 2) });
+Write({ file_path: `${teamDir}/stdin_staff-architect.json`, content: JSON.stringify(staffArchStdin, null, 2) });
+Write({ file_path: `${teamDir}/stdin_beethoven.json`, content: JSON.stringify(beethovenStdin, null, 2) });
 ```
+
+**Beethoven's `pre_synthesis_path`** must be set to `{teamDir}/pre-synthesis.md` — this file doesn't exist yet; it will be created by `gogent-team-prepare-synthesis` between Wave 1 and Wave 2.
 
 ### Mozart Completion
 
-After Beethoven completes:
+Mozart outputs a single completion message and returns:
 
 ```
-[Mozart] Braintrust analysis complete.
-[Mozart] Output: .claude/braintrust/analysis-{timestamp}.md
-[Mozart] Agents invoked: 4 (Mozart, Einstein, Staff-Architect, Beethoven)
-[Mozart] All spawned via MCP spawn_agent (Level 2 pattern)
+[Mozart] Braintrust configuration complete.
+[Mozart] Team directory: {teamDir}
+[Mozart] Config: config.json + 3 stdin files written
+[Mozart] Router will launch gogent-team-run.
 ```
+
+**Mozart exits here. Do NOT:**
+- Launch gogent-team-run
+- Use mcp__gofortress__spawn_agent
+- Spawn Einstein, Staff-Architect, or Beethoven
+- Use Bash for any shell operations
+
+The router handles all dispatch after Mozart returns.
 
 ---
 
@@ -519,7 +819,7 @@ If Beethoven fails:
 
 ## Telemetry
 
-Mozart logs to `.claude/braintrust/mozart-log-{timestamp}.jsonl`:
+Mozart logs to `SESSION_DIR/mozart-log-{timestamp}.jsonl`:
 
 ```json
 {

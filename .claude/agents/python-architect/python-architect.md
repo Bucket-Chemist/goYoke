@@ -41,8 +41,8 @@ inputs:
   - Existing model code (for pattern matching)
 
 outputs:
-  - .claude/tmp/architecture-decision.md
-  - .claude/tmp/architecture-metadata.json
+  - SESSION_DIR/architecture-decision.md
+  - SESSION_DIR/architecture-metadata.json
 
 delegation:
   can_spawn:
@@ -180,7 +180,7 @@ Provide actionable guidance for python-pro:
 
 ## Output Requirements
 
-### Primary Output: `.claude/tmp/architecture-decision.md`
+### Primary Output: `SESSION_DIR/architecture-decision.md`
 
 Must include:
 1. Decision Summary (2-3 sentences)
@@ -190,7 +190,7 @@ Must include:
 5. Implementation Guidance (specific patterns, files)
 6. Validation Criteria (how to verify correctness)
 
-### Secondary Output: `.claude/tmp/architecture-metadata.json`
+### Secondary Output: `SESSION_DIR/architecture-metadata.json`
 
 ```json
 {
@@ -247,7 +247,7 @@ If you cannot make a confident decision:
 [Excerpts from code, constraints, requirements]
 ```
 
-Output: `.claude/tmp/einstein-gap-{timestamp}.md`
+Output: `SESSION_DIR/einstein-gap-{timestamp}.md`
 Then STOP and inform user to run `/einstein`.
 
 ---
@@ -298,8 +298,8 @@ DECISION CHECKLIST:
 □ Specified validation criteria
 
 OUTPUT FILES:
-□ .claude/tmp/architecture-decision.md
-□ .claude/tmp/architecture-metadata.json
+□ SESSION_DIR/architecture-decision.md
+□ SESSION_DIR/architecture-metadata.json
 
 ESCALATION (if blocked):
 □ Tried AskUserQuestion (max 2x)

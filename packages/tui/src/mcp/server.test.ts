@@ -5,7 +5,7 @@ describe("MCP Server Registration", () => {
   let originalEnv: string | undefined;
 
   beforeEach(() => {
-    originalEnv = process.env.GOGENT_MCP_SPAWN_ENABLED;
+    originalEnv = process.env['GOGENT_MCP_SPAWN_ENABLED'];
     // Clear module cache to ensure fresh imports
     vi.resetModules();
   });
@@ -13,27 +13,27 @@ describe("MCP Server Registration", () => {
   afterEach(() => {
     // Restore original env
     if (originalEnv !== undefined) {
-      process.env.GOGENT_MCP_SPAWN_ENABLED = originalEnv;
+      process.env['GOGENT_MCP_SPAWN_ENABLED'] = originalEnv;
     } else {
-      delete process.env.GOGENT_MCP_SPAWN_ENABLED;
+      delete process.env['GOGENT_MCP_SPAWN_ENABLED'];
     }
   });
 
   describe("isSpawnEnabled", () => {
     it("should return true when GOGENT_MCP_SPAWN_ENABLED is not set", async () => {
-      delete process.env.GOGENT_MCP_SPAWN_ENABLED;
+      delete process.env['GOGENT_MCP_SPAWN_ENABLED'];
       const { isSpawnEnabled } = await import("./server.js");
       expect(isSpawnEnabled()).toBe(true);
     });
 
     it("should return true when GOGENT_MCP_SPAWN_ENABLED is 'true'", async () => {
-      process.env.GOGENT_MCP_SPAWN_ENABLED = "true";
+      process.env['GOGENT_MCP_SPAWN_ENABLED'] = "true";
       const { isSpawnEnabled } = await import("./server.js");
       expect(isSpawnEnabled()).toBe(true);
     });
 
     it("should return false when GOGENT_MCP_SPAWN_ENABLED is 'false'", async () => {
-      process.env.GOGENT_MCP_SPAWN_ENABLED = "false";
+      process.env['GOGENT_MCP_SPAWN_ENABLED'] = "false";
       const { isSpawnEnabled } = await import("./server.js");
       expect(isSpawnEnabled()).toBe(false);
     });
@@ -41,7 +41,7 @@ describe("MCP Server Registration", () => {
 
   describe("createMcpServer", () => {
     it("should include spawn_agent when spawn is enabled", async () => {
-      delete process.env.GOGENT_MCP_SPAWN_ENABLED;
+      delete process.env['GOGENT_MCP_SPAWN_ENABLED'];
       const { getServerTools } = await import("./server.js");
       const tools = getServerTools();
       const toolNames = tools.map((t) => t.name);
@@ -49,7 +49,7 @@ describe("MCP Server Registration", () => {
     });
 
     it("should exclude spawn_agent when spawn is disabled", async () => {
-      process.env.GOGENT_MCP_SPAWN_ENABLED = "false";
+      process.env['GOGENT_MCP_SPAWN_ENABLED'] = "false";
       const { getServerTools } = await import("./server.js");
       const tools = getServerTools();
       const toolNames = tools.map((t) => t.name);

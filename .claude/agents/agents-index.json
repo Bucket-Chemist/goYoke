@@ -1,5 +1,5 @@
 {
-  "version": "2.5.0",
+  "version": "2.6.0",
   "generated_at": "2026-02-01T00:00:00Z",
   "description": "Agent index for Intent Gate routing and auto-activation.",
   "agents": [
@@ -24,6 +24,10 @@
         "save plan"
       ],
       "tools": ["Read", "Write", "Glob", "save_memory"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Write", "Glob"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "inputs": [
         ".claude/tmp/specs.md",
@@ -57,6 +61,10 @@
         "look for"
       ],
       "tools": ["Glob", "Grep", "Read"],
+      "cli_flags": {
+        "allowed_tools": ["Glob", "Grep", "Read"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "description": "Fast file and code discovery. Haiku-tier for mechanical extraction.",
       "context_requirements": {
@@ -85,6 +93,10 @@
         "how does this library"
       ],
       "tools": ["WebFetch", "WebSearch", "Bash", "Read", "Grep"],
+      "cli_flags": {
+        "allowed_tools": ["WebFetch", "WebSearch", "Bash", "Read", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "auto_fire": ["External library mentioned", "Unfamiliar package"],
       "sharp_edges_count": 4,
@@ -115,6 +127,10 @@
         "stub out"
       ],
       "tools": ["Read", "Write", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Write", "Glob"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "description": "Generate boilerplate code following conventions. Haiku-tier for fast scaffolding.",
       "context_requirements": {
@@ -146,6 +162,10 @@
         "diagram"
       ],
       "tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "description": "Technical documentation specialist. README, API docs, architecture guides.",
       "context_requirements": {
@@ -172,6 +192,10 @@
         "spot check"
       ],
       "tools": ["Read", "Glob", "Grep"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "description": "Routine code review for style, simple bugs, and obvious improvements.",
       "context_requirements": {
@@ -201,6 +225,10 @@
         "python"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "languages": ["Python"]
       },
@@ -248,6 +276,10 @@
         "QThread"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "patterns": ["PySide6", "PyQt", "QWidget", "QMainWindow", "Qt"]
       },
@@ -286,6 +318,10 @@
         "ggplot"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "languages": ["R"]
       },
@@ -322,6 +358,10 @@
         "module"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "languages": ["R+Shiny"],
         "patterns": ["shiny", "app.R", "mod_", "reactive", "shinyFiles"]
@@ -360,6 +400,10 @@
         "go build"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "languages": ["Go"],
         "file_patterns": ["go.mod", "*.go"]
@@ -397,6 +441,10 @@
         "cli application"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "patterns": ["**/cmd/**/main.go", "**/cli/**/*.go"]
       },
@@ -434,6 +482,10 @@
         "status display"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "patterns": ["**/tui/**/*.go", "**/ui/**/*.go"]
       },
@@ -472,6 +524,10 @@
         "rest client"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "patterns": ["**/api/**/*.go", "**/client/**/*.go"]
       },
@@ -509,6 +565,10 @@
         "race condition"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "patterns": ["**/worker/**/*.go", "**/pool/**/*.go"]
       },
@@ -559,6 +619,10 @@
         "TaskGet",
         "mcp__gofortress__spawn_agent"
       ],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "can_spawn": [
         "codebase-search",
@@ -605,16 +669,21 @@
         "from strategy"
       ],
       "tools": ["Read", "Write", "Glob", "Grep", "TaskCreate", "TaskUpdate"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Write", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "output_artifacts": {
-        "required": ["specs.md", "TaskCreate"],
-        "specs_location": ".claude/tmp/specs.md"
+        "required": ["specs.md", "TaskCreate", "implementation-plan.json"],
+        "specs_location": ".claude/tmp/specs.md",
+        "plan_location": ".claude/tmp/implementation-plan.json"
       },
       "input_sources": [
         ".claude/tmp/scout_metrics.json",
         ".claude/tmp/strategy.md"
       ],
-      "description": "Implementation planner (opus tier). Produces specs.md + TaskCreate calls. Reads scout reports and strategy documents for context.",
+      "description": "Implementation planner (opus tier). Produces implementation-plan.json + specs.md + TaskCreate calls. Reads scout reports and strategy documents for context.",
       "context_requirements": {
         "rules": ["agent-guidelines.md"],
         "conventions": {}
@@ -648,6 +717,10 @@
         "preprocessing architecture"
       ],
       "tools": ["Read", "Write", "Glob", "Grep", "AskUserQuestion"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "conventions_required": [
         "python.md",
@@ -698,6 +771,10 @@
         "comprehensive plan"
       ],
       "tools": ["Read", "Glob", "Grep", "Write", "AskUserQuestion"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "output_artifacts": {
         "required": ["strategy.md"],
@@ -726,6 +803,10 @@
       "subagent_type": "Analyst",
       "triggers": ["escalate to einstein", "deep theoretical analysis"],
       "tools": ["Read", "Write", "Glob", "Grep", "TaskGet"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "spawned_by": ["mozart"],
       "outputs_to": ["beethoven"],
@@ -760,12 +841,16 @@
         "Grep",
         "Write",
         "AskUserQuestion",
+        "Task",
         "TaskList",
         "TaskCreate",
         "TaskUpdate",
-        "TaskGet",
-        "mcp__gofortress__spawn_agent"
+        "TaskGet"
       ],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "invoked_by": "/braintrust skill only",
       "spawned_by": ["router"],
@@ -799,6 +884,10 @@
       "subagent_type": "Analyst",
       "triggers": [],
       "tools": ["Read", "Write", "Glob", "TaskGet"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "spawned_by": ["mozart"],
       "inputs": [
@@ -883,6 +972,10 @@
         "validate specs"
       ],
       "tools": ["Read", "Glob", "Grep", "Write"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "spawned_by": ["mozart", "router"],
       "inputs": [".claude/tmp/specs.md"],
@@ -918,6 +1011,10 @@
         "how many files"
       ],
       "tools": ["Read", "Glob", "Grep", "Bash"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "parallel_safe": true,
       "swarm_compatible": true,
@@ -989,6 +1086,10 @@
         "type guard"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "languages": ["TypeScript"],
         "file_patterns": ["*.ts", "*.tsx"]
@@ -1028,6 +1129,10 @@
         "callback"
       ],
       "tools": ["Read", "Write", "Edit", "Bash", "Grep", "Glob"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep", "Bash"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": {
         "patterns": ["*.tsx", "use*.ts"]
       },
@@ -1060,6 +1165,10 @@
         "review api"
       ],
       "tools": ["Read", "Glob", "Grep"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "conventions_required": ["go.md", "python.md", "R.md", "typescript.md"],
       "sharp_edges_count": 10,
@@ -1087,6 +1196,10 @@
         "ink review"
       ],
       "tools": ["Read", "Glob", "Grep"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "conventions_required": ["typescript.md", "react.md"],
       "sharp_edges_count": 10,
@@ -1114,6 +1227,10 @@
         "convention review"
       ],
       "tools": ["Read", "Glob", "Grep"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "sharp_edges_count": 10,
       "description": "Code standards review specialist. Naming, organization, documentation, consistency.",
@@ -1140,6 +1257,10 @@
         "coupling review"
       ],
       "tools": ["Read", "Glob", "Grep"],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "conventions_required": [
         "go.md",
@@ -1178,6 +1299,10 @@
         "mcp__gofortress__spawn_agent",
         "Write"
       ],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "spawned_by": ["router"],
       "can_spawn": [
@@ -1226,6 +1351,10 @@
         "TaskGet",
         "mcp__gofortress__spawn_agent"
       ],
+      "cli_flags": {
+        "allowed_tools": ["Read", "Glob", "Grep"],
+        "additional_flags": ["--permission-mode", "delegate"]
+      },
       "auto_activate": null,
       "can_spawn": [
         "go-pro",
@@ -1400,6 +1529,20 @@
     "cleanup": {
       "trigger": "memory-archivist or session end",
       "action": "delete files older than ttl"
+    }
+  },
+  "skill_guards": {
+    "braintrust": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "braintrust"
+    },
+    "review": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "Glob", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "code-review"
+    },
+    "implement": {
+      "router_allowed_tools": ["Task", "Bash", "Read", "AskUserQuestion", "Skill"],
+      "team_dir_suffix": "implementation"
     }
   }
 }

@@ -14,6 +14,7 @@ import { createInputSlice } from "./slices/input.js";
 import { createModalSlice } from "./slices/modal.js";
 import { createTelemetrySlice } from "./slices/telemetry.js";
 import { createToastSlice } from "./slices/toasts.js";
+import { createTeamsSlice } from "./slices/teams.js";
 
 /**
  * Combined Zustand store with all slices
@@ -31,6 +32,7 @@ const storeConfig = (...a: Parameters<typeof createMessagesSlice>) => ({
   ...createModalSlice(...a),
   ...createTelemetrySlice(...a),
   ...createToastSlice(...a),
+  ...createTeamsSlice(...a),
 });
 
 const persistConfig = {

@@ -9,7 +9,7 @@ import (
 )
 
 // EXPECTED_AGENT_INDEX_VERSION is the version this code is built for.
-const EXPECTED_AGENT_INDEX_VERSION = "2.5.0"
+const EXPECTED_AGENT_INDEX_VERSION = "2.6.0"
 
 // AgentIndex represents the complete agents-index.json v2.2.0 structure.
 // This defines the agent catalog for Claude Code routing and auto-activation.
@@ -20,6 +20,12 @@ type AgentIndex struct {
 	Agents          []Agent         `json:"agents"`
 	RoutingRules    RoutingRules    `json:"routing_rules"`
 	StateManagement StateManagement `json:"state_management"`
+}
+
+// AgentCliFlags represents CLI spawning configuration for an agent.
+type AgentCliFlags struct {
+	AllowedTools    []string `json:"allowed_tools"`
+	AdditionalFlags []string `json:"additional_flags,omitempty"`
 }
 
 // Agent represents a single agent definition with complete v2.2.0 fields.
@@ -35,6 +41,7 @@ type Agent struct {
 	Path                  string          `json:"path"`
 	Triggers              []string        `json:"triggers"`
 	Tools                 []string        `json:"tools"`
+	CliFlags              *AgentCliFlags  `json:"cli_flags,omitempty"`
 	AutoActivate          *AutoActivate   `json:"auto_activate"` // Can be null or object
 	Inputs                []string        `json:"inputs,omitempty"`
 	Outputs               []string        `json:"outputs,omitempty"`
@@ -57,6 +64,8 @@ type Agent struct {
 	OutputFile            string          `json:"output_file,omitempty"`
 	CostCeilingUSD        float64         `json:"cost_ceiling_usd,omitempty"`
 	FallbackFor           string          `json:"fallback_for,omitempty"`
+	SpawnedBy             []string        `json:"spawned_by,omitempty"`
+	CanSpawn              []string        `json:"can_spawn,omitempty"`
 }
 
 // AutoActivate defines conditions for agent auto-activation.
@@ -488,4 +497,13 @@ func hasCycle(agentID string, graph map[string][]string, visited, recStack map[s
 
 	recStack[agentID] = false
 	return false
+}
+
+// GetAllowedTools returns CLI-permitted tools for this agent.
+// Returns cli_flags.allowed_tools if configured, otherwise conservative read-only fallback.
+func (ag *Agent) GetAllowedTools() []string {
+	if ag.CliFlags != nil && len(ag.CliFlags.AllowedTools) > 0 {
+		return ag.CliFlags.AllowedTools
+	}
+	return []string{"Read", "Glob", "Grep"}
 }

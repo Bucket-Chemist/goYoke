@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdin/worker.json",
+  "title": "Implementation Worker Stdin Schema",
+  "description": "Validates stdin for implementation workers in implementation workflow",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["agent", "workflow", "context", "task", "implementation_scope", "conventions", "codebase_context"],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "description": "Dynamic agent ID (e.g., go-pro, go-cli, python-pro)"
+    },
+    "workflow": {
+      "type": "string",
+      "const": "implementation",
+      "description": "Workflow type"
+    },
+    "context": {
+      "type": "object",
+      "required": ["project_root", "team_dir"],
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to project root"
+        },
+        "team_dir": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to team directory"
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["task_id", "subject", "description", "acceptance_criteria"],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "Unique task identifier"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Task title from specs.md or ticket"
+        },
+        "description": {
+          "type": "string",
+          "description": "Full task description with implementation requirements"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Specific, testable requirements"
+        },
+        "blocked_by": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Task IDs that must complete before this one"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Task IDs blocked by this task"
+        }
+      }
+    },
+    "implementation_scope": {
+      "type": "object",
+      "required": ["target_packages", "related_files", "tests_required"],
+      "properties": {
+        "target_packages": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Packages/directories to modify"
+        },
+        "related_files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "relevance"],
+            "properties": {
+              "path": {"type": "string"},
+              "relevance": {"type": "string"}
+            }
+          }
+        },
+        "tests_required": {
+          "type": "boolean",
+          "description": "Whether tests must be written"
+        },
+        "build_verification": {
+          "type": "string",
+          "description": "Command to verify build (e.g., 'go build ./...')"
+        }
+      }
+    },
+    "conventions": {
+      "type": "object",
+      "required": ["language", "conventions_file"],
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "Programming language"
+        },
+        "conventions_file": {
+          "type": "string",
+          "description": "Conventions file to follow (e.g., go.md)"
+        },
+        "error_handling": {"type": "string"},
+        "test_pattern": {"type": "string"}
+      }
+    },
+    "codebase_context": {
+      "type": "object",
+      "properties": {
+        "architecture_notes": {"type": "string"},
+        "patterns_to_follow": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "anti_patterns": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable task summary for envelope builder compatibility"
+    }
+  },
+  "additionalProperties": false
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"os"
 	"time"
 
@@ -36,6 +37,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create session directory and write marker
+	sessionDir, err := session.CreateSessionDir(projectDir, event.SessionID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: session dir: %v\n", err)
+	} else {
+		if err := session.WriteCurrentSession(projectDir, sessionDir); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: write current-session: %v\n", err)
+		}
+	}
+
+	// Clean up stale skill guard files (C-1 crash recovery)
+	if sessionDir != "" {
+		guardPath := filepath.Join(sessionDir, "active-skill.json")
+		if _, err := os.Stat(guardPath); err == nil {
+			os.Remove(guardPath)
+			fmt.Fprintf(os.Stderr, "[gogent-load-context] Cleaned up stale active-skill.json\n")
+		}
+	}
+
 	// Initialize tool counter for attention-gate hook
 	if err := config.InitializeToolCounter(); err != nil {
 		// Non-fatal - log warning and continue
@@ -45,6 +65,7 @@ func main() {
 	// Build context components
 	ctx := &session.ContextComponents{
 		SessionType: event.Type,
+		SessionDir:  sessionDir,
 	}
 
 	// Load routing schema summary (non-fatal if missing)

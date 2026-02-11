@@ -443,9 +443,9 @@ func TestGetNestingLevel(t *testing.T) {
 		expected int
 	}{
 		{
-			name:     "missing env var returns default (fail-closed)",
+			name:     "missing env var returns 0 (root when CLAUDE_CODE_NESTING_LEVEL also unset)",
 			envValue: "",
-			expected: DefaultNestingLevel,
+			expected: 0,
 		},
 		{
 			name:     "level 0 returns 0",
@@ -493,6 +493,9 @@ func TestGetNestingLevel(t *testing.T) {
 				os.Setenv("GOGENT_NESTING_LEVEL", tt.envValue)
 			}
 			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+			// Also clear CLAUDE_CODE_NESTING_LEVEL to isolate tests
+			os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
+			defer os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 
 			result := GetNestingLevel()
 
@@ -544,9 +547,9 @@ func TestValidateTaskNestingLevel(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "missing level blocks Task (fail-closed)",
+			name:      "missing level allows Task (root when CLAUDE_CODE_NESTING_LEVEL also unset)",
 			level:     "",
-			wantError: true,
+			wantError: false,
 		},
 	}
 
@@ -558,6 +561,8 @@ func TestValidateTaskNestingLevel(t *testing.T) {
 				os.Setenv("GOGENT_NESTING_LEVEL", tt.level)
 			}
 			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+			os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
+			defer os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 
 			err := ValidateTaskNestingLevel()
 
@@ -672,7 +677,7 @@ func TestValidateTaskInvocation_NonOpusResume_Unchanged(t *testing.T) {
 }
 
 func TestBlockResponseForNesting(t *testing.T) {
-	response := BlockResponseForNesting(2)
+	response := BlockResponseForNesting(2, "opus", "opus model requested at Level 2")
 
 	if response["decision"] != "block" {
 		t.Errorf("decision = %v, want 'block'", response["decision"])
@@ -689,5 +694,14 @@ func TestBlockResponseForNesting(t *testing.T) {
 
 	if hookOutput["permissionDecision"] != "deny" {
 		t.Errorf("permissionDecision = %v, want 'deny'", hookOutput["permissionDecision"])
+	}
+
+	if hookOutput["permissionDecisionReason"] != "opus_blocked_at_nesting_level" {
+		t.Errorf("permissionDecisionReason = %v, want 'opus_blocked_at_nesting_level'",
+			hookOutput["permissionDecisionReason"])
+	}
+
+	if hookOutput["model"] != "opus" {
+		t.Errorf("model = %v, want 'opus'", hookOutput["model"])
 	}
 }

@@ -48,7 +48,7 @@ inputs:
   - Project context
 
 outputs:
-  - .claude/tmp/strategy.md
+  - SESSION_DIR/strategy.md
 
 description: >
   Strategic planning specialist. Transforms vague goals into clear, actionable
@@ -78,7 +78,7 @@ You are a strategic planning specialist. You transform vague goals into clear, a
 
 ## Output: strategy.md
 
-**MANDATORY**: Create `.claude/tmp/strategy.md` with this structure:
+**MANDATORY**: Create `SESSION_DIR/strategy.md` with this structure:
 
 ````markdown
 # Strategy: [Goal Name]
@@ -306,7 +306,7 @@ Approach: JWT-based auth with refresh tokens, session management via Redis
 Risks: 3 identified (token security, session invalidation, backwards compatibility)
 Clarifications: 1 (confirmed OAuth not required)
 
-Strategy saved to: .claude/tmp/strategy.md
+Strategy saved to: SESSION_DIR/strategy.md
 
 Ready for architect phase.
 ```

@@ -3,20 +3,19 @@ name: review
 description: Orchestrated multi-domain code review with severity-grouped findings and approval status
 ---
 
-# Review Skill v1.0
+# Review Skill v3.0
 
 ## Purpose
 
-Automated code review through coordinated specialist reviewers. Analyzes changed files, identifies relevant review domains, spawns reviewers in parallel, and synthesizes findings into actionable report.
+Automated code review through coordinated specialist reviewers. Analyzes changed files, identifies relevant review domains, spawns reviewers via background team-run, and provides findings via `/team-result`.
 
 **What this skill does:**
 
 1. **Detect** — Find changed files via git diff or specified scope
 2. **Classify** — Identify languages and architectural layers present
 3. **Select** — Choose relevant reviewers (backend, frontend, standards, architecture)
-4. **Execute** — Spawn reviewers in parallel via review-orchestrator
-5. **Synthesize** — Collect and group findings by severity
-6. **Report** — Generate unified report with approval status
+4. **Execute** — Dispatch reviewers via background team-run
+5. **Launch** — Start `gogent-team-run` in background, return immediately
 
 **What this skill does NOT do:**
 
@@ -41,6 +40,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 
 - `git` (for change detection)
 - `jq` (JSON processing)
+- `gogent-team-run` (team execution)
 
 **Project setup:**
 None required. Works in any git repository.
@@ -49,7 +49,25 @@ None required. Works in any git repository.
 
 ## Workflow
 
-### Phase 1: Change Detection
+When `/review` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{session_dir}/teams/{timestamp}.code-review/`)
+- Written `active-skill.json` with guard restrictions + `team_dir` path
+- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
+
+The Router executes the following steps:
+
+### Phase 1: Read Guard File and Detect Changes
+
+#### Step 1: Read Team Directory from Guard File
+
+```javascript
+Read({ file_path: `${session_dir}/active-skill.json` })
+// Extract team_dir from JSON response
+```
+
+The `session_dir` is available from the `.claude/current-session` marker file or `GOGENT_SESSION_DIR` env var.
+
+#### Step 2: Detect Changed Files
 
 Determine which files to review:
 
@@ -86,6 +104,7 @@ esac
 
 if [[ -z "$files" ]]; then
     echo "[review] No files to review."
+    rm -f "$session_dir/active-skill.json"
     exit 0
 fi
 
@@ -94,21 +113,27 @@ echo "[review] Found $(echo "$files" | wc -l) files to review"
 
 ---
 
-### Phase 2: Language Classification
+### Phase 2: Reviewer Selection
 
-Identify languages and architectural layers:
+Identify languages and select relevant reviewers:
 
 ```bash
 # Group files by extension
 declare -A langs
+declare -A categories
+file_count=0
 while IFS= read -r file; do
     ext="${file##*.}"
     langs["$ext"]=1
+    file_count=$((file_count + 1))
 done <<< "$files"
+
+# Detect cross-module (files from 3+ distinct top-level directories)
+module_count=$(echo "$files" | cut -d/ -f1 | sort -u | wc -l)
 
 # Map to review domains
 reviewers=()
-if [[ -n "${langs[go]}" ]]; then
+if [[ -n "${langs[go]}" || -n "${langs[py]}" ]]; then
     reviewers+=("backend-reviewer")
 fi
 if [[ -n "${langs[ts]}" || -n "${langs[tsx]}" || -n "${langs[jsx]}" ]]; then
@@ -116,135 +141,178 @@ if [[ -n "${langs[ts]}" || -n "${langs[tsx]}" || -n "${langs[jsx]}" ]]; then
 fi
 # Always include standards reviewer
 reviewers+=("standards-reviewer")
-# Always include architecture reviewer
-reviewers+=("architect-reviewer")
+# Include architect-reviewer only for large or cross-module changes
+if [[ "$file_count" -ge 5 || "$module_count" -ge 3 ]]; then
+    reviewers+=("architect-reviewer")
+fi
 
 echo "[review] Selected reviewers: ${reviewers[*]}"
 ```
 
 ---
 
-### Phase 3: Orchestrated Review
+### Phase 3: Background Team-Run Dispatch
 
-Delegate to review-orchestrator:
+#### Step 1: Generate config.json
 
-**Task Invocation:**
+Read the review template from `.claude/schemas/teams/review.json` and populate with dynamic values. Only include selected reviewers in `waves[0].members[]`.
+
+**Template fields to populate:**
+- `team_name`: `"review-$(date +%Y%m%d-%H%M%S)"`
+- `workflow_type`: `"review"`
+- `project_root`: `$(git rev-parse --show-toplevel)`
+- `session_id`: basename of `$GOGENT_SESSION_DIR`
+- `created_at`: `$(date -u +%Y-%m-%dT%H:%M:%SZ)`
+- `budget_max_usd`: `2.0`
+- `budget_remaining_usd`: `2.0`
+- `warning_threshold_usd`: `1.6`
+- `status`: `"pending"`
+- `background_pid`: `null`
+- `started_at`: `null`
+- `completed_at`: `null`
+
+**Per-member fields** (from review.json template, filtered to selected reviewers):
+- `model`: `"haiku"` for backend/frontend/standards, `"sonnet"` for architect
+- `timeout_ms`: `120000` for haiku reviewers, `300000` for architect
+- `max_retries`: `2`
+- `stdin_file`: `"stdin_{reviewer-name}.json"`
+- `stdout_file`: `"stdout_{reviewer-name}.json"`
+- All runtime fields: `null`/`0`/`""`/`"pending"`
+
+Write to `$team_dir/config.json`.
+
+#### Step 2: Generate Stdin Files
+
+For each selected reviewer, generate a stdin JSON file compliant with `schemas/stdin/reviewer.json`.
+
+**Required fields (all reviewers):**
+
+```json
+{
+  "agent": "{reviewer-name}",
+  "workflow": "review",
+  "description": "Review {domain} code changes",
+  "context": {
+    "project_root": "{absolute project root}",
+    "team_dir": "{absolute team directory}"
+  },
+  "review_scope": {
+    "files": [
+      {
+        "path": "{relative file path}",
+        "language": "{language}",
+        "category": "{category}",
+        "changed_lines": {"added": N, "removed": M},
+        "is_new_file": false
+      }
+    ],
+    "total_files": N,
+    "languages_detected": ["{languages}"]
+  },
+  "git_context": {
+    "commit_message": "{from git log -1 or staged changes summary}",
+    "branch_name": "{current branch}"
+  },
+  "focus_areas": {},
+  "project_conventions": {}
+}
+```
+
+**Per-reviewer focus_areas:**
+
+| Reviewer | focus_areas |
+|----------|-------------|
+| backend-reviewer | `{"security": true, "api_design": true, "concurrency": true, "error_handling": true}` |
+| frontend-reviewer | `{"accessibility": true, "performance": true, "state_management": true, "component_design": true}` |
+| standards-reviewer | `{"naming": true, "structure": true, "complexity": true, "dry_kiss_yagni": true}` |
+| architect-reviewer | `{"module_boundaries": true, "coupling": true, "design_patterns": true, "change_impact": true}` |
+
+**Per-reviewer project_conventions:**
+
+Detect from project context:
+- `language`: primary language of files being reviewed
+- `conventions_file`: matching conventions file (e.g., `"go.md"`)
+
+**File classification for review_scope:**
+
+| Extension | Language | Category |
+|-----------|----------|----------|
+| `.go` | `go` | `backend` |
+| `.py` | `python` | `backend` |
+| `.ts` | `typescript` | `frontend` or `backend` (check path) |
+| `.tsx` | `typescript` | `frontend` |
+| `.jsx` | `javascript` | `frontend` |
+| `.md` | `markdown` | `docs` |
+| `.json` | `json` | `config` |
+| `.yaml`/`.yml` | `yaml` | `config` |
+
+**Changed lines detection:**
+
+```bash
+# Get per-file line counts from git diff
+git diff --staged --numstat | while read added removed file; do
+    echo "{\"path\": \"$file\", \"added\": $added, \"removed\": $removed}"
+done
+```
+
+Write each stdin file to `$team_dir/stdin_{reviewer-name}.json`.
+
+#### Step 3: Launch
+
+```bash
+gogent-team-run "$team_dir"
+```
+
+No output redirection. No config.json path argument. The binary handles:
+- PID file creation
+- Log redirection to `runner.log`
+- Session leadership (setsid)
+- Writing `background_pid` to config.json
+
+#### Step 4: Verify Launch
+
+```bash
+sleep 2
+background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
+if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
+    echo "[review] ERROR: Team launch failed. Check $team_dir/runner.log"
+    rm -f "$session_dir/active-skill.json"
+    exit 1
+else
+    echo "[review] Team launched (PID $background_pid)"
+    echo "[review] Use /team-status to track progress"
+    echo "[review] Use /team-result when complete to see findings"
+fi
+```
+
+#### Step 5: Remove Skill Guard
+
+```bash
+rm -f "$session_dir/active-skill.json"
+```
+
+#### Step 6: Return to User
+
+Output summary and return immediately:
 
 ```
-Tool: Task
-Description: Coordinate multi-domain code review
-Subagent Type: Plan
-Model: sonnet
-Prompt:
-  AGENT: review-orchestrator
+[review] Review team launched in background
+  Reviewers: {reviewer-list}
+  Files: {file-count} files across {language-count} languages
+  Team: {team_dir}
+  PID: {background_pid}
 
-  1. TASK: Coordinate code review for changed files
-
-  2. FILES TO REVIEW:
-     {files}
-
-  3. REVIEWERS TO SPAWN:
-     {reviewers}
-
-  4. EXPECTED OUTCOME:
-     - Spawn reviewers in parallel via mcp__gofortress__spawn_agent (Task() is blocked for sub-agents)
-     - Each reviewer examines files in their domain
-     - Collect findings from all reviewers
-     - Synthesize into unified report
-     - Assign approval status: APPROVED / WARNING / BLOCKED
-
-  5. REQUIRED SKILLS:
-     - Multi-agent coordination
-     - Finding synthesis
-     - Severity classification
-
-  6. MUST DO:
-     - Spawn each reviewer with relevant file subset
-     - Wait for all reviewers to complete
-     - Group findings by severity (critical, warning, info)
-     - Ensure file:line references in all findings
-     - Assign approval status based on severity
-
-  7. MUST NOT DO:
-     - Implement fixes (report only)
-     - Skip critical issues
-     - Generate vague findings without locations
-
-  8. APPROVAL CRITERIA:
-     - APPROVED: No critical or warning issues
-     - WARNING: Warnings present, no critical issues
-     - BLOCKED: Critical issues present
-
-  9. OUTPUT FORMAT:
-     {
-       "status": "APPROVED|WARNING|BLOCKED",
-       "summary": {
-         "critical": N,
-         "warnings": M,
-         "info": K
-       },
-       "findings": [
-         {
-           "severity": "critical|warning|info",
-           "file": "path/to/file",
-           "line": N,
-           "reviewer": "backend-reviewer",
-           "message": "Description",
-           "recommendation": "Fix suggestion"
-         }
-       ]
-     }
+Use /team-status to check progress
+Use /team-result to view findings when complete
 ```
+
+TUI returns to user within ~5 seconds.
 
 ---
 
 ### Phase 4: Report Generation
 
-After orchestrator completes, display results:
-
-```bash
-review_result=$(cat .claude/tmp/review-result.json)
-status=$(echo "$review_result" | jq -r '.status')
-critical=$(echo "$review_result" | jq -r '.summary.critical')
-warnings=$(echo "$review_result" | jq -r '.summary.warnings')
-info=$(echo "$review_result" | jq -r '.summary.info')
-
-echo ""
-echo "╔══════════════════════════════════════╗"
-echo "║        CODE REVIEW REPORT             ║"
-echo "╚══════════════════════════════════════╝"
-echo ""
-echo "Status: $status"
-echo "Critical: $critical"
-echo "Warnings: $warnings"
-echo "Info: $info"
-echo ""
-
-if [[ "$critical" -gt 0 ]]; then
-    echo "═══ CRITICAL ISSUES ═══"
-    echo "$review_result" | jq -r '.findings[] | select(.severity == "critical") | "  [\(.file):\(.line)] \(.message)\n    → \(.recommendation)"'
-    echo ""
-fi
-
-if [[ "$warnings" -gt 0 ]]; then
-    echo "═══ WARNINGS ═══"
-    echo "$review_result" | jq -r '.findings[] | select(.severity == "warning") | "  [\(.file):\(.line)] \(.message)\n    → \(.recommendation)"'
-    echo ""
-fi
-
-if [[ "$info" -gt 0 ]]; then
-    echo "═══ INFO ═══"
-    echo "$review_result" | jq -r '.findings[] | select(.severity == "info") | "  [\(.file):\(.line)] \(.message)"'
-    echo ""
-fi
-
-# Exit code matches approval status
-case "$status" in
-    APPROVED) exit 0 ;;
-    WARNING) exit 0 ;;
-    BLOCKED) exit 1 ;;
-esac
-```
+Results come from `/team-result` after the team completes. The review skill returns immediately after Phase 3 Step 6.
 
 ---
 
@@ -351,16 +419,16 @@ fi
 
 ## Cost Model
 
-| Phase                   | Model       | Est. Tokens | Cost            |
-| ----------------------- | ----------- | ----------- | --------------- |
-| Detection               | Bash        | 0           | $0.000          |
-| Classification          | Bash        | 0           | $0.000          |
-| Orchestrator            | Sonnet      | 8-12K       | $0.07-$0.11     |
-| Backend Reviewer        | Haiku+Think | 3-5K        | $0.003-$0.005   |
-| Frontend Reviewer       | Haiku+Think | 3-5K        | $0.003-$0.005   |
-| Standards Reviewer      | Haiku+Think | 3-5K        | $0.003-$0.005   |
-| Architect Reviewer      | Sonnet      | 8-12K       | $0.07-$0.11     |
-| **Total (4 reviewers)** |             | 28-42K      | **$0.15-$0.24** |
+| Phase                         | Model       | Est. Tokens | Cost            |
+| ----------------------------- | ----------- | ----------- | --------------- |
+| Detection                     | Bash        | 0           | $0.000          |
+| Classification                | Bash        | 0           | $0.000          |
+| Config generation             | Router      | ~2K         | $0.000 (inline) |
+| Backend Reviewer              | Haiku       | 3-5K        | $0.003-$0.005   |
+| Frontend Reviewer             | Haiku       | 3-5K        | $0.003-$0.005   |
+| Standards Reviewer            | Haiku       | 3-5K        | $0.003-$0.005   |
+| Architect Reviewer            | Sonnet      | 8-12K       | $0.07-$0.11     |
+| **Total (4 reviewers)**       |             | 17-27K      | **$0.08-$0.13** |
 
 **Cost per file reviewed:** ~$0.03-$0.06
 
@@ -386,12 +454,12 @@ if [[ "$review_enabled" == "true" ]]; then
     /review --scope="$changed_files"
 
     if [[ $? -ne 0 ]]; then
-        echo "[ticket] ❌ Code review FAILED - critical issues found"
+        echo "[ticket] Code review FAILED - critical issues found"
         echo "[ticket] Fix issues before completing ticket"
         exit 1
     fi
 
-    echo "[ticket] ✓ Code review passed"
+    echo "[ticket] Code review passed"
 fi
 ```
 
@@ -417,8 +485,12 @@ fi
 
 | File                             | Purpose                    | Format                              |
 | -------------------------------- | -------------------------- | ----------------------------------- |
-| `.claude/tmp/review-result.json` | Review findings and status | JSON with status, summary, findings |
-| `.claude/tmp/review-scope.txt`   | Files under review         | Line-separated file paths           |
+| `{team_dir}/config.json`        | Team execution config      | JSON with waves, members, budget    |
+| `{team_dir}/stdin_*.json`       | Per-reviewer input         | JSON per reviewer schema            |
+| `{team_dir}/stdout_*.json`      | Per-reviewer output        | JSON with findings                  |
+| `{team_dir}/runner.log`         | Execution log              | Plain text                          |
+
+`{team_dir}` = `{session_dir}/teams/{timestamp}.code-review/` (created by `gogent-skill-guard` hook)
 
 ---
 
@@ -447,6 +519,12 @@ fi
 - Use findings as guidance, not absolute truth
 - Consider adding project-specific review guidelines
 
+**"Team launch failed"**
+
+- Check `$team_dir/runner.log` for errors
+- Verify `gogent-team-run` is built and in PATH
+- Check `$team_dir/config.json` is valid JSON: `jq . "$team_dir/config.json"`
+
 ---
 
 ## Example Session
@@ -462,39 +540,46 @@ Changes to be committed:
 $ /review
 
 [review] Found 3 files to review
-[review] Selected reviewers: backend-reviewer standards-reviewer architect-reviewer
-[ROUTING] → review-orchestrator (multi-domain code review)
+[review] Selected reviewers: backend-reviewer standards-reviewer
+[review] Using background team-run dispatch
 
-[review-orchestrator spawns reviewers...]
-[backend-reviewer analyzing internal/api/handler.go...]
-[standards-reviewer analyzing all files...]
-[architect-reviewer analyzing structural patterns...]
+[review] Review team launched in background
+  Reviewers: backend-reviewer standards-reviewer
+  Files: 3 files across 1 languages
+  Team: /home/user/.claude/sessions/20260208.a1b2c3d4/teams/1738901234.code-review
+  PID: 12345
 
-[All reviewers complete]
+Use /team-status to check progress
+Use /team-result to view findings when complete
 
-╔══════════════════════════════════════╗
-║        CODE REVIEW REPORT             ║
-╚══════════════════════════════════════╝
+$ /team-status
+[team-status] Team: code-review
+Status: running
+Started: 5 seconds ago
+Progress: 1/2 complete
+
+Wave 1:
+  backend-reviewer (completed 3s ago)
+  standards-reviewer (running, 2s elapsed)
+
+$ /team-result
+[team-result] Team: code-review (completed 8 seconds ago)
 
 Status: WARNING
 Critical: 0
 Warnings: 2
 Info: 1
 
-═══ WARNINGS ═══
+WARNINGS:
   [internal/api/handler.go:45] Missing error check on database query
-    → Add error handling: if err != nil { return err }
+    Add error handling: if err != nil { return err }
 
   [internal/models/user.go:23] Exported field without documentation
-    → Add godoc comment for Email field
+    Add godoc comment for Email field
 
-═══ INFO ═══
+INFO:
   [internal/api/handler_test.go:12] Test table format recommended
-    → Consider using table-driven test pattern
-
-$ # Address warnings and re-review
-$ /review
-[review] Status: APPROVED ✓
+    Consider using table-driven test pattern
 ```
 
 ---
@@ -537,6 +622,6 @@ This data feeds ML models for:
 
 ---
 
-**Skill Version**: 1.1
-**Last Updated**: 2026-02-02
+**Skill Version**: 3.0
+**Last Updated**: 2026-02-10
 **Maintained By**: System

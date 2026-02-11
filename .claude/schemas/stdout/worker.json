@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdout/worker.json",
+  "title": "Implementation Worker Stdout Schema",
+  "description": "Validates stdout for implementation workers in implementation workflow",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "worker",
+    "task_id",
+    "status",
+    "summary",
+    "files_modified",
+    "tests_written",
+    "acceptance_criteria_met",
+    "build_status",
+    "blockers",
+    "metadata"
+  ],
+  "properties": {
+    "worker": {
+      "type": "string",
+      "description": "Agent ID that performed this work"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Task identifier from stdin"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "partial", "failed"],
+      "description": "Task completion status"
+    },
+    "summary": {
+      "type": "string",
+      "description": "1-2 sentence summary of what was implemented"
+    },
+    "files_modified": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "action", "lines_changed", "description"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to modified file"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["created", "modified", "deleted"],
+            "description": "Type of modification"
+          },
+          "lines_changed": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of lines changed"
+          },
+          "description": {
+            "type": "string",
+            "description": "What was changed and why"
+          }
+        }
+      }
+    },
+    "tests_written": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "test_count", "test_names"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Relative path to test file"
+          },
+          "test_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of tests written"
+          },
+          "test_names": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Names of test functions"
+          }
+        }
+      }
+    },
+    "acceptance_criteria_met": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterion", "status", "evidence"],
+        "properties": {
+          "criterion": {
+            "type": "string",
+            "description": "Criterion text from stdin"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["met", "not_met", "partial"],
+            "description": "Whether criterion was met"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "How this was verified"
+          }
+        }
+      }
+    },
+    "build_status": {
+      "type": "object",
+      "required": ["compiled", "tests_passed"],
+      "properties": {
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether code compiles/builds successfully"
+        },
+        "tests_passed": {
+          "type": "boolean",
+          "description": "Whether tests pass"
+        },
+        "race_detector_clean": {
+          "type": "boolean",
+          "description": "Whether race detector passes (for Go)"
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["blocker", "impact", "needs"],
+        "properties": {
+          "blocker": {
+            "type": "string",
+            "description": "Description of what blocked completion"
+          },
+          "impact": {
+            "type": "string",
+            "description": "Which acceptance criteria affected"
+          },
+          "needs": {
+            "type": "string",
+            "description": "What's needed to resolve"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["thinking_budget_used"],
+      "properties": {
+        "thinking_budget_used": {"type": "integer", "minimum": 0},
+        "files_read": {"type": "integer", "minimum": 0},
+        "tool_calls": {"type": "integer", "minimum": 0},
+        "attempt_number": {"type": "integer", "minimum": 1}
+      }
+    }
+  },
+  "additionalProperties": false
+}

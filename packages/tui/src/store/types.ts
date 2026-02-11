@@ -184,16 +184,33 @@ export interface SessionSlice {
   clearSession: () => void;
 }
 
+// Tab types
+export type TabId = "chat" | "agent-config" | "team-config" | "telemetry";
+
+export interface TabDefinition {
+  id: TabId;
+  label: string;
+  shortcutKey: string; // Single lowercase letter for Alt+key
+  shortcutIndex: number; // Position of underlined char in label
+}
+
 // UI slice
 export interface UISlice {
   streaming: boolean;
   focusedPanel: "claude" | "agents";
-  rightPanelMode: "agents" | "dashboard" | "settings";
+  rightPanelMode: "agents" | "dashboard" | "settings" | "teams";
+  activeTab: TabId;
   interruptQuery: (() => Promise<void>) | null;
+  clearPendingMessage: (() => void) | null;
+  panelAutoSwitched: boolean;
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
+  setActiveTab: (tab: TabId) => void;
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
+  setClearPendingMessage: (fn: (() => void) | null) => void;
+  setPanelAutoSwitched: (switched: boolean) => void;
+  setRightPanelMode: (mode: "agents" | "dashboard" | "settings" | "teams") => void;
 }
 
 // Input history slice (ephemeral - not persisted)
@@ -255,6 +272,83 @@ export interface ToastSlice {
   removeToast: (id: string) => void;
 }
 
+// Team types - imported from hooks
+export interface TeamSummary {
+  dir: string;
+  name: string;
+  workflowType: string;
+  status: "pending" | "running" | "completed" | "failed";
+  backgroundPid: number | null;
+  alive: boolean;
+  budgetMax: number;
+  budgetRemaining: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  totalCost: number;
+  waveCount: number;
+  currentWave: number;
+  memberCount: number;
+  completedMembers: number;
+  failedMembers: number;
+}
+
+// Full team config structure (matches Go TeamConfig)
+export interface TeamConfig {
+  team_name: string;
+  workflow_type: string;
+  project_root: string;
+  session_id: string;
+  created_at: string;
+  budget_max_usd: number;
+  budget_remaining_usd: number;
+  warning_threshold_usd: number;
+  status: string;
+  background_pid: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+  waves: TeamWave[];
+}
+
+export interface TeamWave {
+  wave_number: number;
+  description: string;
+  members: TeamMember[];
+  on_complete_script: string | null;
+}
+
+export interface TeamMember {
+  name: string;
+  agent: string;
+  model: string;
+  stdin_file: string;
+  stdout_file: string;
+  status: string;
+  process_pid: number | null;
+  exit_code: number | null;
+  cost_usd: number;
+  cost_status: string;
+  error_message: string;
+  retry_count: number;
+  max_retries: number;
+  timeout_ms: number;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+// Teams slice
+export interface TeamsSlice {
+  teams: TeamSummary[];
+  selectedTeamDir: string | null;
+  selectedTeamDetail: TeamConfig | null;
+  /** @deprecated Use teams.filter(t => t.alive).length instead */
+  backgroundTeamCount: number; // Derived for backward compat
+  setTeams: (teams: TeamSummary[]) => void;
+  selectTeam: (dir: string | null) => void;
+  setTeamDetail: (config: TeamConfig | null) => void;
+  /** @deprecated Use teams.filter(t => t.alive).length instead */
+  setBackgroundTeamCount: (count: number) => void; // Deprecated but kept for compat
+}
+
 // Import telemetry types
 import type { TelemetrySlice } from "./slices/telemetry.js";
 export type { TelemetrySlice, RoutingDecision, Handoff, SharpEdge } from "./slices/telemetry.js";
@@ -267,4 +361,5 @@ export type Store = MessagesSlice &
   InputSlice &
   ModalSlice &
   TelemetrySlice &
-  ToastSlice;
+  ToastSlice &
+  TeamsSlice;

@@ -105,13 +105,85 @@ Braintrust is the premium analysis workflow for complex problems requiring both 
 
 ---
 
+## Interview Protocol
+
+Mozart conducts a structured 4-question interview to configure the Braintrust team. This protocol is defined in TC-018 and ensures complete, validated team configurations.
+
+### The Four Questions
+
+| # | Question | When Asked | Maps To |
+|---|----------|------------|---------|
+| **Q1** | "What problem or question do you want the Braintrust to analyze?" | **ALWAYS** | `task.problem_statement` (all stdin files) |
+| **Q2** | "Which files or areas of the codebase are relevant? (Or should I scout first?)" | **ALWAYS** | `context.relevant_files[]` OR `reads_from.scout_metrics` |
+| **Q3** | "Should I include both Einstein and Staff-Architect, or just Einstein?" | **CONDITIONAL** (narrow scope) | `waves[].members[]` (full vs single-agent) |
+| **Q4** | "Default budget is $5.00. Want to adjust?" | **CONDITIONAL** (cost concerns) | `budget_max_usd`, `budget_remaining_usd` |
+
+### Decision Flow
+
+```
+Q1: Problem Statement (ALWAYS)
+  └─► Capture problem (min 20 chars)
+
+Q2: Scope (ALWAYS)
+  ├─► Files provided → Read and validate → relevant_files[]
+  ├─► "scout" → Spawn haiku scout → wait → scout_metrics path
+  └─► "whole codebase" → Warn + recommend scout
+
+Q3: Team Composition (CONDITIONAL)
+  ├─► "both" (default) → Full: Einstein + Staff-Architect + Beethoven
+  ├─► "just Einstein" → Single: Einstein only, skip synthesis
+  └─► (not asked) → Default to full braintrust
+
+Q4: Budget (CONDITIONAL)
+  ├─► User specifies → Validate ($1-$50)
+  └─► (not asked) → Default $5.00
+
+Generate Problem Brief → Confirm → Generate config.json + stdin files → Launch
+```
+
+### Budget Ranges
+
+| Configuration | Estimated Cost |
+|--------------|----------------|
+| Just Einstein | ~$1.50 |
+| Full Braintrust (Einstein + Staff-Architect + Beethoven) | ~$4.50-$5.50 |
+| Validation limits | Min $1.00, Max $50.00, Default $5.00 |
+
+### Scout-First Path
+
+When user responds "scout" or "don't know" to Q2:
+
+1. Mozart spawns haiku scout via `Task(model: "haiku")`
+2. Scout analyzes codebase (~10-30s depending on repo size)
+3. Scout writes `.claude/tmp/scout_metrics.json`
+4. Mozart reads scout output, extracts top 5 critical files
+5. Scout metrics path included in `einstein.reads_from.scout_metrics`
+
+**Full executable protocol:** See `.claude/agents/mozart/mozart.md` Phase 2
+
+---
+
 ## Execution
 
-When `/braintrust` is invoked:
+When `/braintrust` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{session_dir}/teams/{timestamp}.braintrust/`)
+- Written `active-skill.json` with guard restrictions + `team_dir` path
+- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
-### Step 1: Invoke Mozart via Task()
+The Router executes the following steps:
 
-**IMPORTANT**: The Router (Level 0) IS allowed to use Task(). This ensures TUI interactivity (stdin/stdout) is preserved.
+### Step 1: Read Team Directory from Guard File
+
+```javascript
+Read({ file_path: `${session_dir}/active-skill.json` })
+// Extract team_dir from JSON response
+```
+
+The `session_dir` is available from the `.claude/current-session` marker file.
+
+### Step 2: Spawn Mozart via Task(opus)
+
+Mozart conducts the interview and writes config files. The `team_dir` is passed in the prompt so Mozart knows where to write.
 
 ```javascript
 Task({
@@ -124,36 +196,59 @@ BRAINTRUST INVOCATION
 
 USER INPUT: {user_input}
 INPUT TYPE: {raw_problem | gap_document | inline_question}
+TEAM_DIR: {team_dir from active-skill.json}
 
-Execute full Braintrust workflow:
+Execute Braintrust workflow:
 1. Parse input
-2. Interview if needed (max 3 questions)
-3. Spawn scouts for reconnaissance (use mcp__gofortress__spawn_agent for ALL sub-agents)
+2. Interview if needed (max 4 questions per TC-018 protocol)
+3. Spawn scouts for reconnaissance (via Task with haiku)
 4. Assemble Problem Brief
 5. Confirm with user before proceeding
-6. Dispatch Einstein + Staff-Architect in parallel (mcp__gofortress__spawn_agent)
-7. Collect analyses
-8. Invoke Beethoven for synthesis (mcp__gofortress__spawn_agent)
-9. Return final analysis document path`,
+6. Write config.json + stdin files + problem-brief.md to TEAM_DIR
+7. RETURN — do NOT launch team-run or spawn agents. Router handles dispatch.`,
 });
 ```
 
-### Step 2: Mozart Handles Everything
+### Step 3: Validate Mozart Output
 
-Mozart orchestrates the entire workflow internally:
+```bash
+jq . "$team_dir/config.json" > /dev/null 2>&1
+```
 
-- Spawns scouts (haiku)
-- Spawns Einstein (opus)
-- Spawns Staff-Architect-Critical-Review (opus)
-- Spawns Beethoven (opus)
-- Returns final document path
+If validation fails, clean up and report error:
+```bash
+if [[ $? -ne 0 ]]; then
+    echo "[braintrust] ERROR: Mozart produced invalid config.json"
+    rm -f "$session_dir/active-skill.json"
+    exit 1
+fi
+```
 
-### Step 3: Return to User
+### Step 4: Launch Team-Run
+
+```bash
+gogent-team-run "$team_dir"
+sleep 2
+background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
+if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
+    echo "[braintrust] ERROR: Team launch failed. Check $team_dir/runner.log"
+    rm -f "$session_dir/active-skill.json"
+    exit 1
+fi
+```
+
+### Step 5: Remove Skill Guard
+
+```bash
+rm -f "$session_dir/active-skill.json"
+```
+
+### Step 6: Return to User
 
 ```
-[Braintrust] Analysis complete.
-[Braintrust] Output: .claude/braintrust/analysis-{timestamp}.md
-[Braintrust] Agents: Mozart → Einstein + Staff-Architect → Beethoven
+[Braintrust] Team dispatched (PID {background_pid}).
+[Braintrust] Track progress: /team-status
+[Braintrust] View result when complete: /team-result
 ```
 
 ---
@@ -211,12 +306,21 @@ The final Braintrust Analysis document includes:
 
 ## State Files
 
-| File                                    | Written By | Read By                              | Purpose               |
-| --------------------------------------- | ---------- | ------------------------------------ | --------------------- |
-| `.claude/braintrust/problem-brief-*.md` | Mozart     | Einstein, Staff-Architect, Beethoven | Problem decomposition |
-| `.claude/braintrust/analysis-*.md`      | Beethoven  | User                                 | Final output          |
-| `.claude/braintrust/mozart-log-*.jsonl` | Mozart     | Telemetry                            | Workflow tracking     |
-| `.claude/tmp/scout_metrics.json`        | Scouts     | Mozart                               | Reconnaissance data   |
+### Team-Run Mode (Background)
+| File                                    | Written By                       | Read By                | Purpose                      |
+| --------------------------------------- | -------------------------------- | ---------------------- | ---------------------------- |
+| `{team_dir}/config.json`               | Mozart                           | gogent-team-run        | Team execution configuration |
+| `{team_dir}/problem-brief.md`          | Mozart                           | Agents (via stdin)     | Problem decomposition        |
+| `{team_dir}/stdin_einstein.json`       | Mozart                           | gogent-team-run        | Einstein input               |
+| `{team_dir}/stdin_staff-architect.json` | Mozart                          | gogent-team-run        | Staff-Architect input        |
+| `{team_dir}/stdin_beethoven.json`      | Mozart                           | gogent-team-run        | Beethoven input              |
+| `{team_dir}/stdout_einstein.json`      | gogent-team-run                  | prepare-synthesis      | Einstein structured output   |
+| `{team_dir}/stdout_staff-arch.json`    | gogent-team-run                  | prepare-synthesis      | Staff-Architect output       |
+| `{team_dir}/pre-synthesis.md`          | gogent-team-prepare-synthesis    | Beethoven (Read tool)  | Merged Wave 1 analyses       |
+| `{team_dir}/stdout_beethoven.json`     | gogent-team-run                  | /team-result           | Final synthesis output       |
+| `{team_dir}/runner.log`               | gogent-team-run                  | /team-status           | Execution log                |
+
+`{team_dir}` = `{session_dir}/teams/{timestamp}.braintrust/` (session_dir resolved via env var → `.claude/current-session` → `.claude/sessions/` fallback)
 
 ---
 

@@ -167,7 +167,7 @@ Example:
     // === END VALIDATION ===
 
     // Build CLI arguments
-    const cliArgs = buildCliArgs(args);
+    const cliArgs = buildCliArgs({ ...args, agent: args.agent });
 
     // Resolve effort level from agent config
     const agentConfig = getAgentConfig(args.agent);
@@ -321,6 +321,7 @@ Example:
  * Build CLI arguments for claude command.
  */
 export function buildCliArgs(args: {
+  agent?: string;
   model?: string;
   allowedTools?: string[];
   maxBudget?: number;
@@ -334,9 +335,22 @@ export function buildCliArgs(args: {
   // Use delegate mode instead of dangerously-skip-permissions
   cliArgs.push("--permission-mode", "delegate");
 
-  if (args.allowedTools && args.allowedTools.length > 0) {
-    cliArgs.push("--allowedTools", args.allowedTools.join(","));
+  // Resolve allowed tools: caller > config > fallback
+  let resolvedTools: string[] | undefined = args.allowedTools;
+
+  if ((!resolvedTools || resolvedTools.length === 0) && args.agent) {
+    const config = getAgentConfig(args.agent);
+    if (config?.cli_flags?.allowed_tools && config.cli_flags.allowed_tools.length > 0) {
+      resolvedTools = config.cli_flags.allowed_tools;
+    }
   }
+
+  // Conservative fallback if nothing resolved
+  if (!resolvedTools || resolvedTools.length === 0) {
+    resolvedTools = ["Read", "Glob", "Grep"];
+  }
+
+  cliArgs.push("--allowedTools", resolvedTools.join(","));
 
   if (args.maxBudget) {
     cliArgs.push("--max-budget-usd", String(args.maxBudget));
@@ -374,7 +388,7 @@ export function parseCliOutput(stdout: string): {
  * Get current nesting level from environment.
  */
 export function getCurrentNestingLevel(): number {
-  const level = process.env.GOGENT_NESTING_LEVEL;
+  const level = process.env['GOGENT_NESTING_LEVEL'];
   if (!level) return 0;
   const parsed = parseInt(level, 10);
   return isNaN(parsed) ? 0 : parsed;

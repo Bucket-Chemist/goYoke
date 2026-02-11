@@ -117,6 +117,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
   } = useStore();
 
   const gitInfo = useGitInfo();
+  const teams = useStore((state) => state.teams);
   const startTime = useRef(Date.now());
   const [tick, setTick] = useState(0);
 
@@ -125,6 +126,9 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Detect ASCII mode
+  const useAscii = process.env["TERM"] === "dumb" || process.env["GOGENT_ASCII"] === "1";
 
   // Determine model display name
   const modelName = useMemo(() => {
@@ -169,6 +173,20 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
       complete: values.filter((a) => a.status === "complete").length,
     };
   }, [agents]);
+
+  // Memoize team stats - runs only when teams array changes, not on every tick
+  const teamStats = useMemo(() => {
+    const aliveTeams = teams.filter((t) => t.alive);
+    const aliveCount = aliveTeams.length;
+    const furthest =
+      aliveTeams.length > 0
+        ? aliveTeams.reduce((max, t) =>
+            t.currentWave > max.currentWave ? t : max
+          )
+        : null;
+    const totalSpend = teams.reduce((sum, t) => sum + t.totalCost, 0);
+    return { aliveCount, furthest, totalSpend };
+  }, [teams]);
 
   // Responsive layout
   const effectiveHeight = width < 100 ? 1 : height;
@@ -225,6 +243,22 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
                 <Text color={colors.warning}> ({agentCounts.queued} queued)</Text>
               )}
             </Text>
+          )}
+          {teams.length > 0 && (
+            <>
+              <Text color={colors.muted}> | </Text>
+              <Text color={colors.success}>
+                {useAscii ? "[BG]" : "🏗️"} {teamStats.aliveCount} team{teamStats.aliveCount !== 1 ? "s" : ""}
+                {teamStats.furthest && teamStats.furthest.currentWave > 0 && (
+                  <>
+                    {" · "}wave {teamStats.furthest.currentWave}/{teamStats.furthest.waveCount}
+                  </>
+                )}
+                {teamStats.totalSpend > 0 && (
+                  <> · ${teamStats.totalSpend.toFixed(2)}</>
+                )}
+              </Text>
+            </>
           )}
         </Box>
       )}

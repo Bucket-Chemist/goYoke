@@ -140,12 +140,17 @@ Request arrives
 | `/review`             | Multi-domain code review with severity-grouped findings                           |
 | `/review-plan`        | Critical 7-layer review of implementation plans                                   |
 | `/ticket`             | Ticket-driven implementation workflow                                             |
+| `/implement`          | Plan + implement a feature (architect → team-run background)                      |
 | `/init-auto`          | Initialize project with CLAUDE.md scaffold                                        |
 | `/benchmark`          | Run gold standard prompts, generate compliance report                             |
 | `/benchmark-meta`     | Analyze benchmark trends across commits                                           |
 | `/memory-improvement` | Audit system memory, find gaps                                                    |
 | `/explore-add`        | Add custom skill to spawner system                                                |
 | `/dummies-guide`      | Explain the config system                                                         |
+| `/team-status`        | Show detailed progress for running or completed teams                             |
+| `/team-result`        | Display final output from a completed team                                        |
+| `/team-cancel`        | Gracefully stop a running team                                                    |
+| `/teams`              | List all teams in current session with summary status                             |
 
 ---
 
@@ -437,7 +442,7 @@ For large-context analysis:
 When orchestrator fails 3x or problem is intractable:
 
 ```
-1. Generate GAP document to .claude/tmp/braintrust-gap-{timestamp}.md
+1. Generate GAP document to SESSION_DIR/braintrust-gap-{timestamp}.md
 2. Output: "🚨 Run /braintrust to process"
 3. STOP - wait for user
 ```

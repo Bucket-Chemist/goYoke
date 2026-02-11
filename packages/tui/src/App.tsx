@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
+import { join } from "path";
+import { homedir } from "os";
+import { writeFile, mkdir, unlink, symlink, lstat } from "fs/promises";
 import { colors } from "./config/theme.js";
 import { Layout } from "./components/Layout.js";
 import { LayoutSpike } from "./components/LayoutSpike.js";
@@ -7,8 +10,45 @@ import { ResponsiveLayout } from "./components/ResponsiveLayout.js";
 import { BorderStyleTest } from "./components/BorderStyleTest.js";
 import { loadSession, saveSession } from "./hooks/useSession.js";
 import { useStore } from "./store/index.js";
-import { nanoid } from "nanoid";
+
 import { logger } from "./utils/logger.js";
+
+/** Set GOGENT_SESSION_DIR for child processes and team polling.
+ *  Also writes .claude/current-session marker and .claude/tmp symlink. */
+function setSessionDir(sessionId: string): void {
+  const home = process.env["HOME"] || homedir();
+  const sessionDirPath = join(home, ".claude", "sessions", sessionId);
+  process.env["GOGENT_SESSION_DIR"] = sessionDirPath;
+
+  // Write current-session marker + setup tmp symlink (best-effort, non-blocking)
+  const projectRoot = process.env["GOGENT_PROJECT_DIR"] || process.cwd();
+  void setupSessionFiles(projectRoot, sessionDirPath);
+}
+
+/** Write .claude/current-session and symlink .claude/tmp → session dir */
+async function setupSessionFiles(projectRoot: string, sessionDirPath: string): Promise<void> {
+  try {
+    await mkdir(sessionDirPath, { recursive: true });
+    await writeFile(join(projectRoot, ".claude", "current-session"), sessionDirPath + "\n");
+
+    // Setup .claude/tmp symlink
+    const tmpPath = join(projectRoot, ".claude", "tmp");
+    try {
+      const stat = await lstat(tmpPath);
+      if (stat.isSymbolicLink()) {
+        await unlink(tmpPath);
+      } else {
+        // Real directory — skip (migration handled by gogent-load-context on CLI start)
+        return;
+      }
+    } catch {
+      // Doesn't exist — proceed to create symlink
+    }
+    await symlink(sessionDirPath, tmpPath);
+  } catch {
+    // Best-effort — don't crash TUI if session file ops fail
+  }
+}
 
 type DemoMode = "main" | "hello" | "layout" | "responsive" | "borders";
 
@@ -25,7 +65,7 @@ interface AppProps {
  */
 export function App({ sessionId, verbose }: AppProps): JSX.Element {
   const [mode, setMode] = useState<DemoMode>("main");
-  const [loading, setLoading] = useState(!!sessionId);
+  const [loading, setLoading] = useState(true);
   const updateSession = useStore((state) => state.updateSession);
   const totalCost = useStore((state) => state.totalCost);
   const currentSessionId = useStore((state) => state.sessionId);
@@ -40,7 +80,13 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
   // Load session on mount if sessionId provided
   useEffect(() => {
     async function resumeSession() {
-      if (!sessionId) return;
+      if (!sessionId) {
+        // No session ID provided — don't pre-populate sessionId in store.
+        // Leave it null so query() starts a new SDK session (resume: undefined).
+        // The real session ID arrives via system.init event in handleSystemEvent.
+        setLoading(false);
+        return;
+      }
 
       try {
         const session = await loadSession(sessionId);
@@ -48,6 +94,7 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           id: session.id,
           cost: session.cost,
         });
+        setSessionDir(session.id);
 
         if (verbose) {
           void logger.info("Session resumed", {
@@ -61,8 +108,8 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           sessionId,
           error: error instanceof Error ? error.message : String(error),
         });
-        // Continue with new session on error
-        updateSession({ id: nanoid() });
+        // Continue with new session on error — leave sessionId null
+        // so query() starts a fresh SDK session
       } finally {
         setLoading(false);
       }
@@ -71,15 +118,15 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     resumeSession();
   }, [sessionId, updateSession, verbose]);
 
-  // Auto-save session on cost changes
+  // Auto-save session on cost changes (debounced to prevent overlapping writes)
   useEffect(() => {
-    async function persistSession() {
-      if (!currentSessionId) return;
-      if (totalCost === 0) return; // Don't save empty sessions
+    if (!currentSessionId) return;
+    if (totalCost === 0) return;
 
+    const timeout = setTimeout(async () => {
       try {
         const tokenCount = useStore.getState().tokenCount;
-        const toolCalls = tokenCount.input + tokenCount.output; // Approximate tool calls
+        const toolCalls = tokenCount.input + tokenCount.output;
 
         await saveSession({
           id: currentSessionId,
@@ -97,19 +144,10 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
           error: error instanceof Error ? error.message : String(error),
         });
       }
-    }
+    }, 2000);
 
-    persistSession();
+    return () => clearTimeout(timeout);
   }, [totalCost, currentSessionId, verbose]);
-
-  // Show loading state while resuming session
-  if (loading) {
-    return (
-      <Box padding={1}>
-        <Text color={colors.muted}>Loading session {sessionId}...</Text>
-      </Box>
-    );
-  }
 
   // Demo mode switching - only active when NOT in main mode
   // (prevents number keys from intercepting text input)
@@ -121,6 +159,15 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     if (input === "3") setMode("responsive");
     if (input === "4") setMode("borders");
   });
+
+  // Show loading state while resuming session
+  if (loading) {
+    return (
+      <Box padding={1}>
+        <Text color={colors.muted}>Loading session...</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" width="100%" height="100%">

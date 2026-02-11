@@ -335,7 +335,7 @@
     "review-orchestrator": "Plan",
     "impl-manager": "Plan",
     "orchestrator": "Plan",
-    "architect": "Plan",
+    "architect": "general-purpose",
     "planner": "Plan",
     "python-architect": ["Plan", "Explore"],
     "einstein": "Analyst",

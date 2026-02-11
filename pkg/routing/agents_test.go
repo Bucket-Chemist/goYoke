@@ -77,8 +77,8 @@ func TestUnmarshalProductionAgentIndex(t *testing.T) {
 		if agent.Path == "" {
 			t.Errorf("Agent %d (%s) missing path", i, agent.ID)
 		}
-		if len(agent.Triggers) == 0 && agent.AutoActivate == nil {
-			t.Errorf("Agent %d (%s) missing triggers and auto_activate", i, agent.ID)
+		if len(agent.Triggers) == 0 && agent.AutoActivate == nil && len(agent.SpawnedBy) == 0 {
+			t.Errorf("Agent %d (%s) missing triggers, auto_activate, and spawned_by", i, agent.ID)
 		}
 		if len(agent.Tools) == 0 && agent.Model != "external" {
 			t.Errorf("Agent %d (%s) missing tools (non-external)", i, agent.ID)
@@ -1453,4 +1453,101 @@ func toLower(s string) string {
 		}
 	}
 	return string(result)
+}
+
+// slicesEqual compares two string slices for equality
+func slicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// TestAgentCliFlags_Parsing verifies cli_flags field parsing
+func TestAgentCliFlags_Parsing(t *testing.T) {
+	tests := []struct {
+		name      string
+		json      string
+		wantErr   bool
+		wantTools []string
+	}{
+		{
+			name:      "agent with cli_flags",
+			json:      `{"id":"test","name":"Test","model":"haiku","tier":1,"category":"task","path":"test","tools":["Read","Glob"],"cli_flags":{"allowed_tools":["Read","Glob"],"additional_flags":["--permission-mode delegate"]},"description":"test"}`,
+			wantErr:   false,
+			wantTools: []string{"Read", "Glob"},
+		},
+		{
+			name:      "agent without cli_flags",
+			json:      `{"id":"test","name":"Test","model":"haiku","tier":1,"category":"task","path":"test","tools":["Read","Glob"],"description":"test"}`,
+			wantErr:   false,
+			wantTools: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var agent Agent
+			err := json.Unmarshal([]byte(tt.json), &agent)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Unmarshal error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantTools != nil {
+				if agent.CliFlags == nil {
+					t.Fatal("expected cli_flags to be non-nil")
+				}
+				if !slicesEqual(agent.CliFlags.AllowedTools, tt.wantTools) {
+					t.Errorf("AllowedTools = %v, want %v", agent.CliFlags.AllowedTools, tt.wantTools)
+				}
+			} else if agent.CliFlags != nil && tt.wantTools == nil {
+				// Agent without cli_flags should have nil CliFlags
+				// This is only an error if we expected nil
+			}
+		})
+	}
+}
+
+// TestAgent_GetAllowedTools verifies GetAllowedTools method
+func TestAgent_GetAllowedTools(t *testing.T) {
+	tests := []struct {
+		name     string
+		agent    Agent
+		expected []string
+	}{
+		{
+			name:     "with cli_flags returns config tools",
+			agent:    Agent{CliFlags: &AgentCliFlags{AllowedTools: []string{"Read", "Glob"}}},
+			expected: []string{"Read", "Glob"},
+		},
+		{
+			name:     "without cli_flags returns conservative fallback",
+			agent:    Agent{},
+			expected: []string{"Read", "Glob", "Grep"},
+		},
+		{
+			name:     "with empty allowed_tools returns fallback",
+			agent:    Agent{CliFlags: &AgentCliFlags{AllowedTools: []string{}}},
+			expected: []string{"Read", "Glob", "Grep"},
+		},
+		{
+			name:     "with nil cli_flags returns fallback",
+			agent:    Agent{CliFlags: nil},
+			expected: []string{"Read", "Glob", "Grep"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.agent.GetAllowedTools()
+			if !slicesEqual(got, tt.expected) {
+				t.Errorf("GetAllowedTools() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
 }

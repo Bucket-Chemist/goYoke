@@ -5,7 +5,7 @@ import {
   validateSpawnEnvironment,
   formatValidationResult,
   assertValidSpawnEnvironment,
-} from "./validation";
+} from "./validation.js";
 
 // Mock child_process.execSync
 vi.mock("child_process", () => ({
@@ -59,8 +59,8 @@ describe("validateSpawnEnvironment", () => {
   });
 
   it("should warn when GOGENT_MCP_SPAWN_ENABLED=false", async () => {
-    const originalEnv = process.env.GOGENT_MCP_SPAWN_ENABLED;
-    process.env.GOGENT_MCP_SPAWN_ENABLED = "false";
+    const originalEnv = process.env['GOGENT_MCP_SPAWN_ENABLED'];
+    process.env['GOGENT_MCP_SPAWN_ENABLED'] = "false";
 
     try {
       const result = await validateSpawnEnvironment();
@@ -70,7 +70,7 @@ describe("validateSpawnEnvironment", () => {
         expect.objectContaining({ code: "W_SPAWN_DISABLED" })
       );
     } finally {
-      process.env.GOGENT_MCP_SPAWN_ENABLED = originalEnv;
+      process.env['GOGENT_MCP_SPAWN_ENABLED'] = originalEnv;
     }
   });
 });

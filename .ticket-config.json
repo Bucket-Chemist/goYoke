@@ -1,5 +1,5 @@
 {
-  "tickets_dir": "tickets/mcp-agent-teams-integration/mcp-spawn",
+  "tickets_dir": "tickets/team-coordination/tickets",
   "project_name": "gogent-fortress",
   "audit_config": {
     "enabled": true,

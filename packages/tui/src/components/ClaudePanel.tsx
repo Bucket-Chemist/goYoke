@@ -9,7 +9,7 @@
  * - Up/Down arrow keys for input history (TUI-005 integration)
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Box, Text, measureElement } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
@@ -46,12 +46,48 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
     resetHistoryIndex,
     modalQueue,
     isPlanMode,
+    setClearPendingMessage,
   } = useStore();
-  const { sendMessage, setModel, error } = useClaudeQuery();
   const [input, setInput] = useState("");
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const currentInputRef = useRef(""); // Store current input when navigating history
   const isPlan = isPlanMode(); // Compute plan mode state
+
+  // Input buffer state (TC-015a)
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const pendingMessageRef = useRef<string | null>(null);
+
+  // Keep ref in sync with state to avoid stale closures
+  useEffect(() => {
+    pendingMessageRef.current = pendingMessage;
+  }, [pendingMessage]);
+
+  // Drain queue callback - uses ref to avoid stale closure
+  const handleStreamingComplete = useCallback(() => {
+    const pending = pendingMessageRef.current;
+    if (pending) {
+      setPendingMessage(null);
+      // Use ref to get the latest sendMessage without circular dependency
+      // Small delay to let React render the completed response
+      setTimeout(() => {
+        void sendMessageRef.current?.(pending);
+      }, 100);
+    }
+  }, []);
+
+  // Initialize useClaudeQuery with drain callback
+  const { sendMessage: sendMessageOriginal, setModel, error } = useClaudeQuery({
+    onStreamingComplete: handleStreamingComplete,
+  });
+
+  // Store sendMessage in ref for drain callback access
+  const sendMessageRef = useRef<(msg: string) => Promise<void>>();
+  sendMessageRef.current = sendMessageOriginal;
+
+  // Wrap sendMessage for consistency
+  const sendMessage = useCallback(async (msg: string) => {
+    return sendMessageOriginal(msg);
+  }, [sendMessageOriginal]);
 
   // Measure ScrollView height dynamically
   const scrollContainerRef = useRef<any>(null);
@@ -71,13 +107,33 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   });
 
   // Helper to add system messages
-  const addSystemMessage = (text: string): void => {
+  const addSystemMessage = useCallback((text: string): void => {
     useStore.getState().addMessage({
       role: "system",
       content: [{ type: "text", text }],
       partial: false,
     });
-  };
+  }, []);
+
+  // Helper to enqueue a message when streaming
+  const enqueueMessage = useCallback((message: string) => {
+    setPendingMessage(message);
+    addSystemMessage("Message queued — will send when current response completes.");
+  }, [addSystemMessage]);
+
+  // Helper to clear pending message (for interrupt/cancel)
+  const clearPendingMessage = useCallback(() => {
+    if (pendingMessageRef.current) {
+      setPendingMessage(null);
+      addSystemMessage("Queued message cancelled.");
+    }
+  }, [addSystemMessage]);
+
+  // Register clear function in store (like interruptQuery pattern)
+  useEffect(() => {
+    setClearPendingMessage(clearPendingMessage);
+    return () => setClearPendingMessage(null);
+  }, [clearPendingMessage, setClearPendingMessage]);
 
   // Handle /model command
   const handleModelCommand = async (arg: string): Promise<void> => {
@@ -143,7 +199,14 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   // Handle message submission
   const handleSubmit = (): void => {
     const trimmedInput = input.trim();
-    if (!trimmedInput || streaming) {
+    if (!trimmedInput) {
+      return;
+    }
+
+    // If streaming, enqueue the message instead of rejecting it
+    if (streaming) {
+      enqueueMessage(trimmedInput);
+      setInput("");
       return;
     }
 
@@ -243,7 +306,8 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   ];
 
   // Enable panel bindings only when focused and no modal is active
-  useKeymap(panelBindings, focused && modalQueue.length === 0 && !streaming);
+  // Remove !streaming condition to allow input during streaming (TC-015a)
+  useKeymap(panelBindings, focused && modalQueue.length === 0);
   useKeymap(toolToggleBindings, focused && modalQueue.length === 0);
 
   return (
@@ -278,7 +342,8 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         <ScrollView
           height={scrollHeight}
           width={width}
-          focused={focused && !streaming}
+          focused={focused}
+          disableArrowKeys={true}
           autoScroll={true}
         >
           {messages.length === 0 ? (
@@ -303,10 +368,19 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         <TextInput
           value={input}
           onChange={setInput}
-          placeholder={streaming ? "Waiting for response..." : "Type a message..."}
-          disabled={streaming}
+          placeholder={streaming ? "Type to queue message..." : "Type a message..."}
           focused={focused}
         />
+
+        {/* Queued message indicator */}
+        {pendingMessage && (
+          <Box marginTop={1}>
+            <Text dimColor>
+              Queued: {pendingMessage.slice(0, 60)}
+              {pendingMessage.length > 60 ? "..." : ""}
+            </Text>
+          </Box>
+        )}
 
         {/* Streaming indicator */}
         {streaming && (

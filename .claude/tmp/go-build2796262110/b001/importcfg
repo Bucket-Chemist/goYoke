@@ -1,7 +1,0 @@
-# import config
-packagefile os=/home/doktersmol/.cache/go-build/69/691c4705d1662fb3095835c5472a0aa5b4b58a2513c8da7a2b834c9264dcf5cb-d
-packagefile reflect=/home/doktersmol/.cache/go-build/f2/f27964f643f15d397a60550f65d2d73029eb7cb2e3e6237df27fb7b954823e7f-d
-packagefile testing=/home/doktersmol/.cache/go-build/d7/d769308995ce002995ee66278621c342bbb9249171dc919134e7d8ea184dbd67-d
-packagefile testing/internal/testdeps=/home/doktersmol/.cache/go-build/e2/e257847f3f57a28c57f09fc6927f7bb715c24cffcf76c9896c42db20eb30b4ba-d
-packagefile runtime=/home/doktersmol/.cache/go-build/c2/c2302cd5b2523e88a08ba0c96030a9d371a8d8d38f7ddd2ee18958d51a3c0278-d
-packagefile github.com/Bucket-Chemist/GOgent-Fortress/cmd/gogent-archive=/home/doktersmol/.claude/tmp/go-build2796262110/b123/_pkg_.a
