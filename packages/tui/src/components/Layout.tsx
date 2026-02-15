@@ -6,6 +6,7 @@ import type { KeyBinding } from "../hooks/useKeymap.js";
 import { useAgentTree } from "../hooks/useAgentTree.js";
 import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
 import { useTeamsPoller } from "../hooks/useTeams.js";
+import { getSessionManager } from "../session/index.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { TabBar } from "./TabBar.js";
@@ -67,6 +68,10 @@ export function Layout(): JSX.Element {
     },
     cycleRightPanel: () => {
       cycleRightPanel();
+    },
+    cyclePermissionMode: () => {
+      const sessionManager = getSessionManager();
+      void sessionManager.cyclePermissionMode();
     },
     interruptQuery: () => {
       // If modal is active, cancel it

@@ -1,30 +1,168 @@
-# Session Handoff - 2026-02-11 19:37:14
+# Session Handoff - 2026-02-15 12:32:41
 
 ## Session Context
 
-- **Session ID**: 4f2b1da8-0d7a-48ce-b14d-e212f1b08455
+- **Session ID**: d549e006-c267-41d0-99e8-e01f2f31d6cb
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 2
+- **Tool Calls**: 32
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
 ## Git State
 
-- **Branch**: multiagent-dispatch
+- **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
+  - claude/sessions/test-session-123.json
   - claude/stats-cache.json
   - ackages/tui/.claude/current-session
   - ackages/tui/.claude/memory/handoffs.jsonl
   - ackages/tui/.claude/memory/last-handoff.md
-  - ackages/tui/.claude/memory/ml-tool-events.jsonl
   - ackages/tui/.claude/tmp
-  - ackages/tui/bin/gofortress-tui.js
-  - .claude/memory/session-archive/routing-violations-3006018b-e647-4109-afa5-6d867dd46d24.jsonl
-  - .claude/sessions/4f2b1da8-0d7a-48ce-b14d-e212f1b08455.json
+  - ackages/tui/coverage/bin/gofortress-tui.js.html
+  - ackages/tui/coverage/bin/index.html
+  - ackages/tui/coverage/clover.xml
+  - ackages/tui/coverage/coverage-final.json
+  - ackages/tui/coverage/index.html
+  - ackages/tui/coverage/scripts/benchmark.ts.html
+  - ackages/tui/coverage/scripts/index.html
+  - ackages/tui/coverage/src/App.tsx.html
+  - ackages/tui/coverage/src/cli.ts.html
+  - ackages/tui/coverage/src/commands/index.html
+  - ackages/tui/coverage/src/commands/list.tsx.html
+  - ackages/tui/coverage/src/components/AgentDetail.tsx.html
+  - ackages/tui/coverage/src/components/AgentTree.tsx.html
+  - ackages/tui/coverage/src/components/Banner.tsx.html
+  - ackages/tui/coverage/src/components/BorderStyleTest.tsx.html
+  - ackages/tui/coverage/src/components/ClaudePanel.tsx.html
+  - ackages/tui/coverage/src/components/ErrorBoundary.tsx.html
+  - ackages/tui/coverage/src/components/Layout.tsx.html
+  - ackages/tui/coverage/src/components/LayoutSpike.tsx.html
+  - ackages/tui/coverage/src/components/Modal.tsx.html
+  - ackages/tui/coverage/src/components/ResponsiveLayout.tsx.html
+  - ackages/tui/coverage/src/components/index.html
+  - ackages/tui/coverage/src/components/modals/AskModal.tsx.html
+  - ackages/tui/coverage/src/components/modals/ConfirmModal.tsx.html
+  - ackages/tui/coverage/src/components/modals/InputModal.tsx.html
+  - ackages/tui/coverage/src/components/modals/SelectModal.tsx.html
+  - ackages/tui/coverage/src/components/modals/index.html
+  - ackages/tui/coverage/src/components/primitives/Spinner.tsx.html
+  - ackages/tui/coverage/src/components/primitives/TextInput.tsx.html
+  - ackages/tui/coverage/src/components/primitives/Viewport.tsx.html
+  - ackages/tui/coverage/src/components/primitives/index.html
+  - ackages/tui/coverage/src/config/index.html
+  - ackages/tui/coverage/src/config/keybindings.ts.html
+  - ackages/tui/coverage/src/config/theme.ts.html
+  - ackages/tui/coverage/src/cost/index.html
+  - ackages/tui/coverage/src/cost/tracker.ts.html
+  - ackages/tui/coverage/src/hooks/index.html
+  - ackages/tui/coverage/src/hooks/useAgentTree.ts.html
+  - ackages/tui/coverage/src/hooks/useClaudeQuery.ts.html
+  - ackages/tui/coverage/src/hooks/useKeymap.ts.html
+  - ackages/tui/coverage/src/hooks/useSession.ts.html
+  - ackages/tui/coverage/src/hooks/useTelemetry.ts.html
+  - ackages/tui/coverage/src/index.html
+  - ackages/tui/coverage/src/index.tsx.html
+  - ackages/tui/coverage/src/lifecycle/index.html
+  - ackages/tui/coverage/src/lifecycle/index.ts.html
+  - ackages/tui/coverage/src/lifecycle/restart.ts.html
+  - ackages/tui/coverage/src/lifecycle/shutdown.ts.html
+  - ackages/tui/coverage/src/mcp/index.html
+  - ackages/tui/coverage/src/mcp/index.ts.html
+  - ackages/tui/coverage/src/mcp/server.ts.html
+  - ackages/tui/coverage/src/mcp/tools/askUser.ts.html
+  - ackages/tui/coverage/src/mcp/tools/confirmAction.ts.html
+  - ackages/tui/coverage/src/mcp/tools/index.html
+  - ackages/tui/coverage/src/mcp/tools/requestInput.ts.html
+  - ackages/tui/coverage/src/mcp/tools/selectOption.ts.html
+  - ackages/tui/coverage/src/mcp/tools/spawnAgent.ts.html
+  - ackages/tui/coverage/src/mcp/tools/testMcpPing.ts.html
+  - ackages/tui/coverage/src/spawn/agentConfig.ts.html
+  - ackages/tui/coverage/src/spawn/index.html
+  - ackages/tui/coverage/src/spawn/pidTracker.ts.html
+  - ackages/tui/coverage/src/spawn/processRegistry.ts.html
+  - ackages/tui/coverage/src/spawn/relationshipValidation.ts.html
+  - ackages/tui/coverage/src/spawn/storeAdapter.ts.html
+  - ackages/tui/coverage/src/spawn/validation.ts.html
+  - ackages/tui/coverage/src/store/adapters.ts.html
+  - ackages/tui/coverage/src/store/index.html
+  - ackages/tui/coverage/src/store/index.ts.html
+  - ackages/tui/coverage/src/store/slices/agents.ts.html
+  - ackages/tui/coverage/src/store/slices/index.html
+  - ackages/tui/coverage/src/store/slices/input.ts.html
+  - ackages/tui/coverage/src/store/slices/messages.ts.html
+  - ackages/tui/coverage/src/store/slices/modal.example.ts.html
+  - ackages/tui/coverage/src/store/slices/modal.ts.html
+  - ackages/tui/coverage/src/store/slices/session.ts.html
+  - ackages/tui/coverage/src/store/slices/telemetry.ts.html
+  - ackages/tui/coverage/src/store/slices/ui.ts.html
+  - ackages/tui/coverage/src/store/types.ts.html
+  - ackages/tui/coverage/src/stubs/index.html
+  - ackages/tui/coverage/src/stubs/react-devtools-core.js.html
+  - ackages/tui/coverage/src/types/events.ts.html
+  - ackages/tui/coverage/src/types/index.html
+  - ackages/tui/coverage/src/utils/index.html
+  - ackages/tui/coverage/src/utils/jsonl.ts.html
+  - ackages/tui/coverage/src/utils/logger.ts.html
+  - ackages/tui/coverage/src/utils/markdown.ts.html
+  - ackages/tui/src/components/Layout.tsx
+  - ackages/tui/src/components/MessageRenderer.tsx
+  - ackages/tui/src/components/Modal.tsx
+  - ackages/tui/src/components/StatusLine.tsx
+  - ackages/tui/src/components/modals/AskModal.tsx
+  - ackages/tui/src/config/keybindings.ts
+  - ackages/tui/src/hooks/useClaudeQuery.ts
+  - ackages/tui/src/store/index.ts
+  - ackages/tui/src/store/slices/modal.ts
+  - ickets/tui-latency/analysis-tui-latency.md
+  - ickets/tui-latency/v15-validation-results.md
+  - .claude/memory/session-archive/routing-violations-119fd790-d53d-41f7-80e4-b79fc730650b.jsonl
+  - .claude/memory/session-archive/routing-violations-241c55f7-0c57-48db-a31f-5a1a68d564ac.jsonl
+  - .claude/memory/session-archive/routing-violations-27f19553-42da-4a06-8007-f6206f01d00c.jsonl
+  - .claude/memory/session-archive/routing-violations-63af3493-405b-47d3-8378-f23a5fe90283.jsonl
+  - .claude/memory/session-archive/routing-violations-ec503498-7e93-4daa-a128-154414b56ed8.jsonl
+  - .claude/sessions/119fd790-d53d-41f7-80e4-b79fc730650b.json
+  - .claude/sessions/241c55f7-0c57-48db-a31f-5a1a68d564ac.json
+  - .claude/sessions/6e9b4f2a-6c58-456b-bde7-c8c7fa1cff22.json
+  - .claude/sessions/b32311d4-833b-4c48-9afa-890c708fe4b6.json
+  - .claude/sessions/ccda659e-7d87-436b-8c44-a452b8f81520.json
+  - .claude/sessions/d283e65e-6ad0-402a-a6ac-0491318f798d.json
+  - Screenshot_2026-02-15_12-27-00.png
+  - packages/tui/.claude/memory/session-archive/routing-violations-538addbf-23e1-4ea9-b6d1-76fdf0254c39.jsonl
+  - packages/tui/.claude/memory/session-archive/routing-violations-8ba4eae7-181f-4b0e-83ae-00f09c4c61a8.jsonl
+  - packages/tui/.claude/memory/session-archive/routing-violations-a5bdd3cf-c449-4a7b-bf9a-4f9b82698df4.jsonl
+  - packages/tui/coverage/scripts/test-async-iterable.ts.html
+  - packages/tui/coverage/scripts/test-concurrent-queries.ts.html
+  - packages/tui/coverage/scripts/test-query-cancellation.ts.html
+  - packages/tui/coverage/scripts/test-stream-isolation.ts.html
+  - packages/tui/coverage/src/components/AgentConfigView.tsx.html
+  - packages/tui/coverage/src/components/DashboardView.tsx.html
+  - packages/tui/coverage/src/components/MessageRenderer.tsx.html
+  - packages/tui/coverage/src/components/SettingsView.tsx.html
+  - packages/tui/coverage/src/components/StatusLine.tsx.html
+  - packages/tui/coverage/src/components/TabBar.tsx.html
+  - packages/tui/coverage/src/components/TeamConfigView.tsx.html
+  - packages/tui/coverage/src/components/TeamDetail.tsx.html
+  - packages/tui/coverage/src/components/TeamList.tsx.html
+  - packages/tui/coverage/src/components/TelemetryView.tsx.html
+  - packages/tui/coverage/src/components/Toast.tsx.html
+  - packages/tui/coverage/src/components/primitives/ScrollView.tsx.html
+  - packages/tui/coverage/src/hooks/useMouse.ts.html
+  - packages/tui/coverage/src/hooks/useTeamCount.ts.html
+  - packages/tui/coverage/src/hooks/useTeams.ts.html
+  - packages/tui/coverage/src/hooks/useTerminalDimensions.ts.html
+  - packages/tui/coverage/src/mcp/tools/teamRun.ts.html
+  - packages/tui/coverage/src/session/
+  - packages/tui/coverage/src/store/slices/teams.ts.html
+  - packages/tui/coverage/src/store/slices/toasts.ts.html
+  - packages/tui/coverage/src/utils/ansi.ts.html
+  - packages/tui/coverage/src/utils/teamFormatting.ts.html
+  - packages/tui/src/hooks/useClaudeQuery.test.ts
+  - packages/tui/src/session/
+  - tickets/obsidian-cli-knowledge-graph/
 

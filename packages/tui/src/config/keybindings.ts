@@ -11,6 +11,7 @@ import type { KeyBinding } from "../hooks/useKeymap.js";
 export function createGlobalBindings(actions: {
   toggleFocus: () => void;
   cycleRightPanel: () => void;
+  cyclePermissionMode: () => void;
   interruptQuery: () => void;
   forceQuit: () => void;
   clearScreen: () => void;
@@ -26,6 +27,12 @@ export function createGlobalBindings(actions: {
       meta: true,
       action: actions.cycleRightPanel,
       description: "Cycle right panel mode",
+    },
+    {
+      key: "p",
+      meta: true,
+      action: actions.cyclePermissionMode,
+      description: "Cycle permission mode",
     },
     {
       key: "escape",
@@ -122,6 +129,7 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
       bindings: [
         { keys: "Tab", action: "Switch panel focus" },
         { keys: "Alt+R", action: "Cycle right panel mode" },
+        { keys: "Alt+P", action: "Cycle permission mode" },
         { keys: "Escape", action: "Interrupt query / Cancel modal" },
         { keys: "Ctrl+C", action: "Force quit" },
         { keys: "Ctrl+L", action: "Clear screen" },

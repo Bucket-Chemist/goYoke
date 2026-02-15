@@ -4,7 +4,7 @@
  */
 
 import { create } from "zustand";
-import { devtools, persist } from "zustand/middleware";
+import { createJSONStorage, devtools, persist } from "zustand/middleware";
 import type { Store } from "./types.js";
 import { createMessagesSlice } from "./slices/messages.js";
 import { createAgentsSlice } from "./slices/agents.js";
@@ -35,8 +35,19 @@ const storeConfig = (...a: Parameters<typeof createMessagesSlice>) => ({
   ...createTeamsSlice(...a),
 });
 
+// Node.js/Ink has no localStorage — use in-memory storage to silence warnings
+const memoryStorage = createJSONStorage(() => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+  };
+});
+
 const persistConfig = {
   name: "tui-store",
+  storage: memoryStorage,
   // Only persist messages, agents, and session
   // UI state, input history, and telemetry are ephemeral
   partialize: (state: Store) => ({

@@ -10,8 +10,10 @@ import { nanoid } from "nanoid";
 // Payload types for different modal variants
 export interface AskPayload {
   message: string;
-  options?: Array<{ label: string; value: string }>;
+  header?: string;
+  options?: Array<{ label: string; value: string; description?: string }>;
   defaultValue?: string;
+  multiSelect?: boolean;
 }
 
 export interface ConfirmPayload {

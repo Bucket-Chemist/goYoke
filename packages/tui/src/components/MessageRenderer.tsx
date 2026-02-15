@@ -93,6 +93,43 @@ export function MessageRenderer({ message, maxWidth, allExpanded }: MessageRende
         const isToolUse = block.type === "tool_use";
 
         if (isToolUse) {
+          // --- TodoWrite: dedicated task list rendering ---
+          if (block.name === 'TodoWrite' && block.input) {
+            const todos = (block.input as Record<string, unknown>)['todos'] as
+              Array<{ content: string; status: string; activeForm?: string }> | undefined;
+
+            if (todos && Array.isArray(todos)) {
+              return (
+                <Box key={blockId} paddingLeft={2} flexDirection="column">
+                  {todos.map((todo, idx) => {
+                    const icon = todo.status === 'completed' ? '\u2713'
+                      : todo.status === 'in_progress' ? '\u25B6'
+                      : '\u25CB';
+                    const statusColor = todo.status === 'completed' ? colors.success
+                      : todo.status === 'in_progress' ? colors.warning
+                      : colors.muted;
+
+                    return (
+                      <Box key={`${blockId}-todo-${idx}`}>
+                        <Text color={statusColor}>{icon} </Text>
+                        <Text
+                          color={todo.status === 'completed' ? colors.muted : colors.assistantMessage}
+                          dimColor={todo.status === 'completed'}
+                          strikethrough={todo.status === 'completed'}
+                        >
+                          {todo.content}
+                        </Text>
+                        {todo.status === 'in_progress' && todo.activeForm && (
+                          <Text color={colors.warning} dimColor> ({todo.activeForm})</Text>
+                        )}
+                      </Box>
+                    );
+                  })}
+                </Box>
+              );
+            }
+          }
+
           const isExpanded = allExpanded ?? false;
 
           if (!isExpanded) {

@@ -124,16 +124,18 @@ export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
     <Box
       position="absolute"
       width="100%"
-      height="100%"
+      // Anchor to bottom of viewport instead of covering full screen.
+      // This leaves the conversation content (e.g. plan) visible above the modal.
+      marginTop={4}
       justifyContent="center"
-      alignItems="center"
+      alignItems="flex-end"
     >
       <Box
         borderStyle={borders.modal}
         borderColor={colors.warning}
         padding={2}
         flexDirection="column"
-        // Solid background to make modal opaque (not see-through)
+        width="80%"
         // @ts-expect-error - Ink supports backgroundColor but types may not include it
         backgroundColor="black"
       >

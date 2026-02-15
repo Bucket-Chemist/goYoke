@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/32</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/32</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
@@ -96,28 +96,9 @@
 <a name='L31'></a><a href='#L31'>31</a>
 <a name='L32'></a><a href='#L32'>32</a>
 <a name='L33'></a><a href='#L33'>33</a>
-<a name='L34'></a><a href='#L34'>34</a>
-<a name='L35'></a><a href='#L35'>35</a>
-<a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a>
-<a name='L38'></a><a href='#L38'>38</a>
-<a name='L39'></a><a href='#L39'>39</a>
-<a name='L40'></a><a href='#L40'>40</a>
-<a name='L41'></a><a href='#L41'>41</a>
-<a name='L42'></a><a href='#L42'>42</a>
-<a name='L43'></a><a href='#L43'>43</a>
-<a name='L44'></a><a href='#L44'>44</a>
-<a name='L45'></a><a href='#L45'>45</a>
-<a name='L46'></a><a href='#L46'>46</a>
-<a name='L47'></a><a href='#L47'>47</a>
-<a name='L48'></a><a href='#L48'>48</a>
-<a name='L49'></a><a href='#L49'>49</a>
-<a name='L50'></a><a href='#L50'>50</a>
-<a name='L51'></a><a href='#L51'>51</a>
-<a name='L52'></a><a href='#L52'>52</a>
-<a name='L53'></a><a href='#L53'>53</a>
-<a name='L54'></a><a href='#L54'>54</a>
-<a name='L55'></a><a href='#L55'>55</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L34'></a><a href='#L34'>34</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -127,33 +108,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -167,6 +123,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -177,51 +135,30 @@ import { useStore } from "../store/index.js";
 import { colors, borders } from "../config/theme.js";
 &nbsp;
 /**
- * Model ID to display name mapping (matches native Claude CLI format)
- */
-<span class="cstat-no" title="statement not covered" >const MODEL_DISPLAY_NAMES: Record&lt;string, string&gt; = {</span>
-<span class="cstat-no" title="statement not covered" >  "claude-opus-4-5-20251101": "Opus 4.5",</span>
-<span class="cstat-no" title="statement not covered" >  "claude-sonnet-4-5-20250929": "Sonnet 4.5",</span>
-<span class="cstat-no" title="statement not covered" >  "claude-haiku-4-5-20251001": "Haiku 4.5",</span>
-  // Aliases resolve to full IDs, but handle them too
-<span class="cstat-no" title="statement not covered" >  "opus": "Opus",</span>
-<span class="cstat-no" title="statement not covered" >  "sonnet": "Sonnet",</span>
-<span class="cstat-no" title="statement not covered" >  "haiku": "Haiku",</span>
-<span class="cstat-no" title="statement not covered" >};</span>
-&nbsp;
-/**
- * Get friendly display name for model ID
- */
-<span class="cstat-no" title="statement not covered" >function getModelDisplayName(modelId: string | null): string {</span>
-<span class="cstat-no" title="statement not covered" >  if (!modelId) return "—";</span>
-<span class="cstat-no" title="statement not covered" >  return MODEL_DISPLAY_NAMES[modelId] ?? modelId.replace("claude-", "");</span>
-<span class="cstat-no" title="statement not covered" >}</span>
-&nbsp;
-/**
- * Banner component - displays session info, cost, and status
+ * Banner component - displays branding, session ID, and keybind hints
  * Positioned at top of Layout, uses theme constants
+ * Model, cost, and streaming status are now shown in StatusLine
  */
 <span class="cstat-no" title="statement not covered" >export function Banner(): JSX.Element {</span>
-<span class="cstat-no" title="statement not covered" >  const { sessionId, totalCost, streaming, activeModel } = useStore();</span>
-&nbsp;
-<span class="cstat-no" title="statement not covered" >  const status = streaming ? "Streaming..." : "Ready";</span>
-<span class="cstat-no" title="statement not covered" >  const costDisplay = `$${totalCost.toFixed(4)}`;</span>
-<span class="cstat-no" title="statement not covered" >  const modelDisplay = getModelDisplayName(activeModel);</span>
+<span class="cstat-no" title="statement not covered" >  const { sessionId } = useStore();</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return (</span>
 <span class="cstat-no" title="statement not covered" >    &lt;Box</span>
 <span class="cstat-no" title="statement not covered" >      borderStyle={borders.banner}</span>
 <span class="cstat-no" title="statement not covered" >      borderColor={colors.primary}</span>
 <span class="cstat-no" title="statement not covered" >      paddingX={1}</span>
+<span class="cstat-no" title="statement not covered" >      width="100%"</span>
 <span class="cstat-no" title="statement not covered" >      justifyContent="space-between"</span>
     &gt;
 <span class="cstat-no" title="statement not covered" >      &lt;Text bold color={colors.primary}&gt;</span>
         GOfortress
 <span class="cstat-no" title="statement not covered" >      &lt;/Text&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;Text color={colors.accent}&gt;{modelDisplay}&lt;/Text&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;Text&gt;Session: {sessionId ? sessionId.slice(0, 8) : "None"}&lt;/Text&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;Text&gt;Cost: {costDisplay}&lt;/Text&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;Text color={streaming ? colors.warning : colors.success}&gt;{status}&lt;/Text&gt;</span>
+<span class="cstat-no" title="statement not covered" >      &lt;Text color={colors.muted}&gt;</span>
+<span class="cstat-no" title="statement not covered" >        Session: {sessionId ? sessionId.slice(0, 8) : "—"}</span>
+<span class="cstat-no" title="statement not covered" >      &lt;/Text&gt;</span>
+<span class="cstat-no" title="statement not covered" >      &lt;Text color={colors.muted} dimColor&gt;</span>
+        Tab: panels · Esc: exit · /help
+<span class="cstat-no" title="statement not covered" >      &lt;/Text&gt;</span>
 <span class="cstat-no" title="statement not covered" >    &lt;/Box&gt;</span>
   );
 <span class="cstat-no" title="statement not covered" >}</span>
@@ -232,7 +169,7 @@ import { colors, borders } from "../config/theme.js";
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-05T04:27:02.343Z
+                at 2026-02-11T13:50:34.241Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

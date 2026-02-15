@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">1.81% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/110</span>
+                <span class='fraction'>2/110</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">1.81% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/110</span>
+                <span class='fraction'>2/110</span>
             </div>
         
             
@@ -243,7 +243,7 @@
 <a name='L178'></a><a href='#L178'>178</a>
 <a name='L179'></a><a href='#L179'>179</a>
 <a name='L180'></a><a href='#L180'>180</a>
-<a name='L181'></a><a href='#L181'>181</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L181'></a><a href='#L181'>181</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -415,6 +415,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -422,8 +423,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >/**<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
  * Session file operations hook
  * Manages session persistence with Go-compatible format
  *
@@ -447,7 +447,7 @@ import type { SessionData } from "../store/types.js";
  * Get session directory path
  * Allows override via environment variable for testing
  */
-<span class="cstat-no" title="statement not covered" >function getSessionDir(): string {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >function getSessionDir(): string {</span></span>
 <span class="cstat-no" title="statement not covered" >  const home = process.env["HOME"] || homedir();</span>
 <span class="cstat-no" title="statement not covered" >  return join(home, ".claude", "sessions");</span>
 <span class="cstat-no" title="statement not covered" >}</span>
@@ -455,7 +455,7 @@ import type { SessionData } from "../store/types.js";
 /**
  * Ensure session directory exists
  */
-<span class="cstat-no" title="statement not covered" >async function ensureSessionDir(): Promise&lt;void&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async function ensureSessionDir(): Promise&lt;void&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const sessionDir = getSessionDir();</span>
 <span class="cstat-no" title="statement not covered" >  try {</span>
 <span class="cstat-no" title="statement not covered" >    await fs.mkdir(sessionDir, { recursive: true });</span>
@@ -471,7 +471,7 @@ import type { SessionData } from "../store/types.js";
  * Sorted by last_used descending (most recent first)
  * Skips invalid JSON files gracefully
  */
-<span class="cstat-no" title="statement not covered" >export async function listSessions(): Promise&lt;SessionData[]&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function listSessions(): Promise&lt;SessionData[]&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  await ensureSessionDir();</span>
 <span class="cstat-no" title="statement not covered" >  const sessionDir = getSessionDir();</span>
 &nbsp;
@@ -523,7 +523,7 @@ import type { SessionData } from "../store/types.js";
  * Load specific session by ID
  * Throws if session doesn't exist or is invalid
  */
-<span class="cstat-no" title="statement not covered" >export async function loadSession(id: string): Promise&lt;SessionData&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function loadSession(id: string): Promise&lt;SessionData&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const sessionDir = getSessionDir();</span>
 <span class="cstat-no" title="statement not covered" >  const filePath = join(sessionDir, `${id}.json`);</span>
 &nbsp;
@@ -556,7 +556,7 @@ import type { SessionData } from "../store/types.js";
  * Creates/updates session file with Go-compatible format
  * Uses snake_case field names for Go compatibility
  */
-<span class="cstat-no" title="statement not covered" >export async function saveSession(session: SessionData): Promise&lt;void&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function saveSession(session: SessionData): Promise&lt;void&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  await ensureSessionDir();</span>
 <span class="cstat-no" title="statement not covered" >  const sessionDir = getSessionDir();</span>
 <span class="cstat-no" title="statement not covered" >  const filePath = join(sessionDir, `${session.id}.json`);</span>
@@ -577,7 +577,7 @@ import type { SessionData } from "../store/types.js";
 /**
  * Delete session file
  */
-<span class="cstat-no" title="statement not covered" >export async function deleteSession(id: string): Promise&lt;void&gt; {</span>
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function deleteSession(id: string): Promise&lt;void&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  const sessionDir = getSessionDir();</span>
 <span class="cstat-no" title="statement not covered" >  const filePath = join(sessionDir, `${id}.json`);</span>
 &nbsp;
@@ -595,7 +595,7 @@ import type { SessionData } from "../store/types.js";
  * React hook for session operations
  * Provides session CRUD operations with error handling
  */
-<span class="cstat-no" title="statement not covered" >export function useSession() {</span>
+export <span class="fstat-no" title="function not covered" >function useSession() {</span>
 <span class="cstat-no" title="statement not covered" >  return {</span>
 <span class="cstat-no" title="statement not covered" >    listSessions,</span>
 <span class="cstat-no" title="statement not covered" >    loadSession,</span>
@@ -610,7 +610,7 @@ import type { SessionData } from "../store/types.js";
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-05T04:27:02.343Z
+                at 2026-02-11T13:50:34.241Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

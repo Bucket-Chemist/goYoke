@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "lastComputedDate": "2026-02-10",
+  "lastComputedDate": "2026-02-14",
   "dailyActivity": [
     {
       "date": "2026-01-26",
@@ -97,6 +97,18 @@
       "messageCount": 2346,
       "sessionCount": 7,
       "toolCallCount": 264
+    },
+    {
+      "date": "2026-02-11",
+      "messageCount": 1117,
+      "sessionCount": 7,
+      "toolCallCount": 162
+    },
+    {
+      "date": "2026-02-12",
+      "messageCount": 931,
+      "sessionCount": 7,
+      "toolCallCount": 95
     }
   ],
   "dailyModelTokens": [
@@ -222,52 +234,67 @@
         "claude-opus-4-6": 86316,
         "claude-sonnet-4-5-20250929": 3
       }
+    },
+    {
+      "date": "2026-02-11",
+      "tokensByModel": {
+        "claude-opus-4-5-20251101": 7682,
+        "claude-opus-4-6": 39091
+      }
+    },
+    {
+      "date": "2026-02-12",
+      "tokensByModel": {
+        "claude-opus-4-6": 51185,
+        "claude-sonnet-4-5-20250929": 16,
+        "claude-haiku-4-5-20251001": 28
+      }
     }
   ],
   "modelUsage": {
     "claude-opus-4-5-20251101": {
-      "inputTokens": 1237300,
-      "outputTokens": 386845,
-      "cacheReadInputTokens": 776314879,
-      "cacheCreationInputTokens": 91051510,
+      "inputTokens": 1244669,
+      "outputTokens": 387158,
+      "cacheReadInputTokens": 779685965,
+      "cacheCreationInputTokens": 92035355,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
       "maxOutputTokens": 0
     },
     "claude-sonnet-4-5-20250929": {
-      "inputTokens": 38908,
-      "outputTokens": 142462,
-      "cacheReadInputTokens": 274925774,
-      "cacheCreationInputTokens": 25177256,
+      "inputTokens": 38920,
+      "outputTokens": 142466,
+      "cacheReadInputTokens": 274960269,
+      "cacheCreationInputTokens": 25281798,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
       "maxOutputTokens": 0
     },
     "claude-haiku-4-5-20251001": {
-      "inputTokens": 1860,
-      "outputTokens": 494,
-      "cacheReadInputTokens": 6409754,
-      "cacheCreationInputTokens": 3771403,
+      "inputTokens": 1875,
+      "outputTokens": 507,
+      "cacheReadInputTokens": 6511494,
+      "cacheCreationInputTokens": 3810709,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
       "maxOutputTokens": 0
     },
     "claude-opus-4-6": {
-      "inputTokens": 240139,
-      "outputTokens": 1435131,
-      "cacheReadInputTokens": 770883026,
-      "cacheCreationInputTokens": 71083339,
+      "inputTokens": 249410,
+      "outputTokens": 1516136,
+      "cacheReadInputTokens": 814177710,
+      "cacheCreationInputTokens": 73969550,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
       "maxOutputTokens": 0
     }
   },
-  "totalSessions": 542,
-  "totalMessages": 83602,
+  "totalSessions": 556,
+  "totalMessages": 85650,
   "longestSession": {
     "sessionId": "bd42249f-1381-46ea-8365-daffda8ebc90",
     "duration": 63513869,
@@ -278,7 +305,7 @@
   "hourCounts": {
     "4": 5,
     "5": 21,
-    "6": 46,
+    "6": 47,
     "7": 43,
     "8": 44,
     "9": 13,
@@ -288,11 +315,11 @@
     "13": 28,
     "14": 31,
     "15": 45,
-    "16": 17,
-    "17": 17,
+    "16": 18,
+    "17": 23,
     "18": 23,
-    "19": 23,
-    "20": 15,
+    "19": 27,
+    "20": 17,
     "21": 35,
     "22": 1
   },

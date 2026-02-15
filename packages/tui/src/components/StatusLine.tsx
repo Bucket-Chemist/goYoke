@@ -114,6 +114,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     contextWindow,
     streaming,
     agents,
+    permissionMode,
   } = useStore();
 
   const gitInfo = useGitInfo();
@@ -200,11 +201,16 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
         {"─".repeat(width)}
       </Text>
 
-      {/* Line 1: Model, project, git */}
+      {/* Line 1: Model, project, git, permission mode */}
       <Box>
         <Text bold color={colors.primary}>
           [{modelName}]
         </Text>
+        {permissionMode !== 'default' && (
+          <Text bold color={permissionMode === 'plan' ? colors.secondary : colors.warning}>
+            {" "}[{permissionMode === 'acceptEdits' ? 'Auto-Edit' : 'Plan'}]
+          </Text>
+        )}
         <Text color={colors.muted}> 📁 {projectName}</Text>
         {showGit && gitInfo.branch && (
           <Text color={colors.muted}>

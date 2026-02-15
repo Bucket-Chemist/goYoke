@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/75</span>
+                <span class='fraction'>0/80</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/75</span>
+                <span class='fraction'>0/80</span>
             </div>
         
             
@@ -207,7 +207,14 @@
 <a name='L142'></a><a href='#L142'>142</a>
 <a name='L143'></a><a href='#L143'>143</a>
 <a name='L144'></a><a href='#L144'>144</a>
-<a name='L145'></a><a href='#L145'>145</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -247,6 +254,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -254,9 +262,13 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -328,6 +340,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -337,7 +351,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -372,6 +386,7 @@ import { AskModal } from "./modals/AskModal.js";
 import { ConfirmModal } from "./modals/ConfirmModal.js";
 import { InputModal } from "./modals/InputModal.js";
 import { SelectModal } from "./modals/SelectModal.js";
+import { logger } from "../utils/logger.js";
 &nbsp;
 interface ModalOverlayProps {
   request: ModalRequest;
@@ -399,7 +414,11 @@ interface ErrorBoundaryState {
 <span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  override componentDidCatch(error: Error, info: ErrorInfo): void {</span>
-<span class="cstat-no" title="statement not covered" >    console.error("[Modal Error]", error, info.componentStack);</span>
+<span class="cstat-no" title="statement not covered" >    void logger.error("Modal rendering error", {</span>
+<span class="cstat-no" title="statement not covered" >      error: error.message,</span>
+<span class="cstat-no" title="statement not covered" >      stack: error.stack,</span>
+<span class="cstat-no" title="statement not covered" >      componentStack: info.componentStack,</span>
+<span class="cstat-no" title="statement not covered" >    });</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  override render(): ReactNode {</span>
@@ -472,16 +491,18 @@ interface ErrorBoundaryState {
 <span class="cstat-no" title="statement not covered" >    &lt;Box</span>
 <span class="cstat-no" title="statement not covered" >      position="absolute"</span>
 <span class="cstat-no" title="statement not covered" >      width="100%"</span>
-<span class="cstat-no" title="statement not covered" >      height="100%"</span>
+      // Anchor to bottom of viewport instead of covering full screen.
+      // This leaves the conversation content (e.g. plan) visible above the modal.
+<span class="cstat-no" title="statement not covered" >      marginTop={4}</span>
 <span class="cstat-no" title="statement not covered" >      justifyContent="center"</span>
-<span class="cstat-no" title="statement not covered" >      alignItems="center"</span>
+<span class="cstat-no" title="statement not covered" >      alignItems="flex-end"</span>
     &gt;
 <span class="cstat-no" title="statement not covered" >      &lt;Box</span>
 <span class="cstat-no" title="statement not covered" >        borderStyle={borders.modal}</span>
 <span class="cstat-no" title="statement not covered" >        borderColor={colors.warning}</span>
 <span class="cstat-no" title="statement not covered" >        padding={2}</span>
 <span class="cstat-no" title="statement not covered" >        flexDirection="column"</span>
-        // Solid background to make modal opaque (not see-through)
+<span class="cstat-no" title="statement not covered" >        width="80%"</span>
         // @ts-expect-error - Ink supports backgroundColor but types may not include it
 <span class="cstat-no" title="statement not covered" >        backgroundColor="black"</span>
       &gt;
@@ -502,7 +523,7 @@ interface ErrorBoundaryState {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-05T04:27:02.343Z
+                at 2026-02-11T13:50:34.241Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
