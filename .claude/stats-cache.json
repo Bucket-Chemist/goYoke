@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "lastComputedDate": "2026-02-14",
+  "lastComputedDate": "2026-02-15",
   "dailyActivity": [
     {
       "date": "2026-01-26",
@@ -109,6 +109,12 @@
       "messageCount": 931,
       "sessionCount": 7,
       "toolCallCount": 95
+    },
+    {
+      "date": "2026-02-15",
+      "messageCount": 1323,
+      "sessionCount": 7,
+      "toolCallCount": 142
     }
   ],
   "dailyModelTokens": [
@@ -249,6 +255,13 @@
         "claude-sonnet-4-5-20250929": 16,
         "claude-haiku-4-5-20251001": 28
       }
+    },
+    {
+      "date": "2026-02-15",
+      "tokensByModel": {
+        "claude-opus-4-6": 41078,
+        "claude-sonnet-4-5-20250929": 5939
+      }
     }
   ],
   "modelUsage": {
@@ -263,10 +276,10 @@
       "maxOutputTokens": 0
     },
     "claude-sonnet-4-5-20250929": {
-      "inputTokens": 38920,
-      "outputTokens": 142466,
-      "cacheReadInputTokens": 274960269,
-      "cacheCreationInputTokens": 25281798,
+      "inputTokens": 44758,
+      "outputTokens": 142567,
+      "cacheReadInputTokens": 276447254,
+      "cacheCreationInputTokens": 25625565,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
@@ -283,18 +296,18 @@
       "maxOutputTokens": 0
     },
     "claude-opus-4-6": {
-      "inputTokens": 249410,
-      "outputTokens": 1516136,
-      "cacheReadInputTokens": 814177710,
-      "cacheCreationInputTokens": 73969550,
+      "inputTokens": 249886,
+      "outputTokens": 1556738,
+      "cacheReadInputTokens": 840602450,
+      "cacheCreationInputTokens": 75404348,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
       "maxOutputTokens": 0
     }
   },
-  "totalSessions": 556,
-  "totalMessages": 85650,
+  "totalSessions": 563,
+  "totalMessages": 86973,
   "longestSession": {
     "sessionId": "bd42249f-1381-46ea-8365-daffda8ebc90",
     "duration": 63513869,
@@ -310,8 +323,8 @@
     "8": 44,
     "9": 13,
     "10": 33,
-    "11": 45,
-    "12": 57,
+    "11": 47,
+    "12": 62,
     "13": 28,
     "14": 31,
     "15": 45,

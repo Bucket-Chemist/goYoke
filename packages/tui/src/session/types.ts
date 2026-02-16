@@ -57,6 +57,13 @@ export interface SessionManagerConfig {
 
   /** Maximum number of reconnection attempts before marking session DEAD */
   maxReconnectAttempts: number;
+
+  /**
+   * Backend to use for the session.
+   * - 'claude': Standard Claude Code CLI (default)
+   * - 'gemini': Local Gemini Adapter
+   */
+  backend?: 'claude' | 'gemini';
 }
 
 /**

@@ -22,6 +22,8 @@ import { Spinner } from "./primitives/Spinner.js";
 import { MessageRenderer } from "./MessageRenderer.js";
 import { colors, borders } from "../config/theme.js";
 import { logger } from "../utils/logger.js";
+import { filterCommands } from "../utils/slashCommands.js";
+import { SlashCommandMenu } from "./SlashCommandMenu.js";
 
 export interface ClaudePanelProps {
   /**
@@ -49,9 +51,21 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
     setClearPendingMessage,
   } = useStore();
   const [input, setInput] = useState("");
-  const [toolsExpanded, setToolsExpanded] = useState(false);
+  // Expansion level: 0=collapsed, 1=expanded (truncated), 2=full (no truncation)
+  const [expansionLevel, setExpansionLevel] = useState(0);
   const currentInputRef = useRef(""); // Store current input when navigating history
   const isPlan = isPlanMode(); // Compute plan mode state
+
+  // Slash command autocomplete state
+  const [slashMenuIndex, setSlashMenuIndex] = useState(0);
+  const slashQuery = input.startsWith("/") && !input.includes(" ") ? input.slice(1) : null;
+  const slashMatches = slashQuery !== null ? filterCommands(slashQuery) : [];
+  const showSlashMenu = slashQuery !== null && !streaming;
+
+  // Reset slash menu selection when filter changes
+  useEffect(() => {
+    setSlashMenuIndex(0);
+  }, [slashQuery]);
 
   // Input buffer state (TC-015a)
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
@@ -144,6 +158,8 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         "haiku": "haiku",
         "sonnet": "sonnet",
         "opus": "opus",
+        "gemini": "gemini-pro",
+        "flash": "gemini-flash",
       };
       const modelId = MODEL_ALIASES[arg.toLowerCase()] || arg;
 
@@ -152,11 +168,13 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
       // Try setModel first (works if query active AND in streaming input mode)
       const success = await setModel(modelId);
       if (success) {
+        useStore.getState().setActiveModel(modelId);
         addSystemMessage(`Model switched to: ${modelId}`);
       } else {
         // No active query - store preference for next message
         void logger.debug("No active query, storing preference", { modelId });
         useStore.getState().setPreferredModel(modelId);
+        useStore.getState().setActiveModel(modelId);
         addSystemMessage(`Model set to: ${modelId}. Will apply on next message.`);
       }
     } else {
@@ -178,6 +196,14 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
               label: "Opus (powerful)",
               value: "opus",
             },
+            {
+              label: "Gemini 3 Pro (Powerful)",
+              value: "gemini-pro",
+            },
+            {
+              label: "Gemini 3 Flash (Fast)",
+              value: "gemini-flash",
+            },
           ],
         },
       });
@@ -186,10 +212,12 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         // Try setModel first (works if query active)
         const success = await setModel(result.selected);
         if (success) {
+          useStore.getState().setActiveModel(result.selected);
           addSystemMessage(`Model switched to: ${result.selected}`);
         } else {
           // No active query - store preference for next message
           useStore.getState().setPreferredModel(result.selected);
+          useStore.getState().setActiveModel(result.selected);
           addSystemMessage(`Model set to: ${result.selected}. Will apply on next message.`);
         }
       }
@@ -288,27 +316,62 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
     }
   };
 
-  // Panel-specific key bindings (only active when focused and no modal)
-  const panelBindings = createClaudePanelBindings({
-    submitMessage: handleSubmit,
-    historyPrev: handleHistoryPrev,
-    historyNext: handleHistoryNext,
-  });
+  // Slash menu handlers
+  const handleSlashMenuUp = (): void => {
+    setSlashMenuIndex((prev) => (prev > 0 ? prev - 1 : slashMatches.length - 1));
+  };
+  const handleSlashMenuDown = (): void => {
+    setSlashMenuIndex((prev) => (prev < slashMatches.length - 1 ? prev + 1 : 0));
+  };
+  const handleSlashMenuSelect = (): void => {
+    const selected = slashMatches[slashMenuIndex];
+    if (selected) {
+      setInput(`/${selected.name} `);
+    }
+  };
+  const handleSlashMenuDismiss = (): void => {
+    setInput("");
+  };
 
-  // Ctrl+E toggles tool block expansion (safe - Ctrl modifier doesn't conflict with typing)
+  // Panel-specific key bindings — slash menu overrides history nav when visible
+  const panelBindings: KeyBinding[] = showSlashMenu
+    ? [
+        { key: "return", action: handleSlashMenuSelect, description: "Select command" },
+        { key: "tab", action: handleSlashMenuSelect, description: "Complete command" },
+        { key: "up", action: handleSlashMenuUp, description: "Previous command" },
+        { key: "down", action: handleSlashMenuDown, description: "Next command" },
+        { key: "escape", action: handleSlashMenuDismiss, description: "Dismiss menu" },
+      ]
+    : createClaudePanelBindings({
+        submitMessage: handleSubmit,
+        historyPrev: handleHistoryPrev,
+        historyNext: handleHistoryNext,
+      });
+
+  // Ctrl+E toggles tool blocks on/off (0↔1), Ctrl+Shift+E cycles levels (0→1→2→0)
   const toolToggleBindings: KeyBinding[] = [
     {
       key: "e",
       ctrl: true,
-      action: () => setToolsExpanded((prev) => !prev),
-      description: "Toggle tool expansion",
+      shift: true,
+      action: () => setExpansionLevel((prev) => (prev + 1) % 3),
+      description: "Cycle expansion level (collapsed → expanded → full)",
+    },
+    {
+      key: "e",
+      ctrl: true,
+      action: () => setExpansionLevel((prev) => prev > 0 ? 0 : 1),
+      description: "Toggle tool expansion on/off",
     },
   ];
 
   // Enable panel bindings only when focused and no modal is active
   // Remove !streaming condition to allow input during streaming (TC-015a)
   useKeymap(panelBindings, focused && modalQueue.length === 0);
-  useKeymap(toolToggleBindings, focused && modalQueue.length === 0);
+  // Allow Ctrl+E tool expansion even when modal is active — user needs to
+  // expand tool blocks to read plan content while ExitPlanMode modal is showing.
+  // No conflict: modal uses arrows/Enter/Escape, not Ctrl+E.
+  useKeymap(toolToggleBindings, focused);
 
   return (
     <Box
@@ -356,12 +419,20 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
                 key={msg.id}
                 message={msg}
                 maxWidth={width ? width - 4 : undefined}
-                allExpanded={toolsExpanded}
+                expansionLevel={expansionLevel}
               />
             ))
           )}
         </ScrollView>
       </Box>
+
+      {/* Slash command autocomplete menu */}
+      {showSlashMenu && (
+        <SlashCommandMenu
+          commands={slashMatches}
+          selectedIndex={slashMenuIndex}
+        />
+      )}
 
       {/* Input area */}
       <Box flexDirection="column" marginTop={1}>

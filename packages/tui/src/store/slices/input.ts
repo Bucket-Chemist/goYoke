@@ -1,19 +1,47 @@
 /**
  * Input history slice for Zustand store
- * Ephemeral state (not persisted) for up/down arrow navigation
+ * Persisted to ~/.claude/input-history.json for cross-session recall
  * GAP-2 resolution: shell-like input recall
  */
 
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 import type { StateCreator } from "zustand";
 import type { Store, InputSlice } from "../types.js";
 
 const MAX_HISTORY_SIZE = 100;
+const HISTORY_FILE = join(homedir(), ".claude", "input-history.json");
+
+/** Load history from disk (best-effort, returns [] on failure) */
+function loadHistory(): string[] {
+  try {
+    const data = readFileSync(HISTORY_FILE, "utf-8");
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === "string").slice(0, MAX_HISTORY_SIZE);
+    }
+  } catch {
+    // File doesn't exist or is corrupt — start fresh
+  }
+  return [];
+}
+
+/** Save history to disk (best-effort, fire-and-forget) */
+function saveHistory(history: string[]): void {
+  try {
+    mkdirSync(join(homedir(), ".claude"), { recursive: true });
+    writeFileSync(HISTORY_FILE, JSON.stringify(history), "utf-8");
+  } catch {
+    // Best-effort — don't crash on write failure
+  }
+}
 
 export const createInputSlice: StateCreator<Store, [], [], InputSlice> = (
   set,
   get
 ) => ({
-  inputHistory: [],
+  inputHistory: loadHistory(),
   inputHistoryIndex: -1,
 
   addToHistory: (input: string): void => {
@@ -29,6 +57,9 @@ export const createInputSlice: StateCreator<Store, [], [], InputSlice> = (
 
       // Add to front, limit to MAX_HISTORY_SIZE
       const newHistory = [input, ...filtered].slice(0, MAX_HISTORY_SIZE);
+
+      // Persist to disk
+      saveHistory(newHistory);
 
       return {
         inputHistory: newHistory,

@@ -15,7 +15,8 @@
 import { query, type SDKUserMessage, type SDKMessage, type SDKSystemMessage, type SDKAssistantMessage, type SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { nanoid } from "nanoid";
-import { join } from "path";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import { homedir } from "os";
 import {
   SessionState,
@@ -333,16 +334,41 @@ class SessionManager {
       this.initResolve = resolve;
       this.initReject = reject;
     });
+    
+    // Resolve model preference: argument > store > undefined
+    const modelToUse = preferredModel || useStore.getState().preferredModel;
 
     try {
+      // Determine executable path based on model
+      let pathToExecutable: string | undefined = undefined;
+      if (modelToUse && modelToUse.startsWith("gemini")) {
+        // Use local Gemini adapter for gemini-* models
+        // Resolve relative to this file (which ends up in dist/index.js)
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = dirname(__filename);
+        // dist/index.js -> ../scripts/gemini-adapter.ts
+        pathToExecutable = join(__dirname, "..", "scripts", "gemini-adapter.ts");
+        void logger.info("Using Gemini Adapter", { adapterPath: pathToExecutable, model: modelToUse });
+      }
+
       // Start query with AsyncIterable prompt
       this.eventStream = query({
         prompt: this.createMessageGenerator(),
         options: {
+          // Point to custom executable if needed (e.g. Gemini Adapter)
+          pathToClaudeCodeExecutable: pathToExecutable,
+          
+          // Pass model to adapter via env
+          env: pathToExecutable ? {
+            ...process.env,
+            GEMINI_MODEL: modelToUse || undefined
+          } : undefined,
+
           // Resume existing session to maintain conversation context
           resume: existingSessionId || undefined,
-          // Apply preferred model if set
-          model: preferredModel || "sonnet",
+          // Apply preferred model if set. If no preference, omit to let
+          // SDK use the model from user's Claude Code settings.
+          model: modelToUse || undefined,
           // Load GOgent-Fortress settings (hooks, CLAUDE.md, etc.)
           settingSources: ["user", "project", "local"],
           // Register MCP server
@@ -886,12 +912,19 @@ class SessionManager {
         ? '\n\nPermissions requested:\n' + allowedPrompts.map(p => `  - ${p.tool}: ${p.prompt}`).join('\n')
         : '';
 
+      // Rich ask modal: Approve / Request changes / Reject (+ auto "Other" for free text)
       let exitPlanResult;
       try {
         exitPlanResult = await useStore.getState().enqueue({
-          type: 'confirm',
+          type: 'ask',
           payload: {
-            action: `Approve plan and begin implementation?${promptSummary}\n\nThe plan is displayed in the conversation above.\nApprove to proceed, or deny to request changes.`,
+            message: `Approve plan and begin implementation?${promptSummary}\n\nUse Ctrl+E to expand tool blocks. PageUp/PageDown to scroll.`,
+            header: 'Plan',
+            options: [
+              { label: 'Approve', value: 'approve', description: 'Begin implementation as planned' },
+              { label: 'Request changes', value: 'changes', description: 'Send feedback — Claude will revise the plan' },
+              { label: 'Reject', value: 'reject', description: 'Block with a reason' },
+            ],
           },
           timeout: 120000,
         });
@@ -899,9 +932,43 @@ class SessionManager {
         return { behavior: 'deny' as const, message: 'User cancelled plan approval', toolUseID: options.toolUseID };
       }
 
-      if (exitPlanResult.type === 'confirm' && exitPlanResult.confirmed) {
-        return { behavior: 'allow' as const, updatedInput: input, toolUseID: options.toolUseID };
+      if (exitPlanResult.type === 'ask') {
+        if (exitPlanResult.value === 'Approve') {
+          return { behavior: 'allow' as const, updatedInput: input, toolUseID: options.toolUseID };
+        }
+
+        if (exitPlanResult.value === 'Request changes' || exitPlanResult.value === 'Reject') {
+          // Follow-up: collect feedback/reason via input modal
+          const promptText = exitPlanResult.value === 'Request changes'
+            ? 'What changes would you like?'
+            : 'Why are you rejecting the plan?';
+
+          let feedbackResult;
+          try {
+            feedbackResult = await useStore.getState().enqueue({
+              type: 'input',
+              payload: {
+                prompt: promptText,
+                placeholder: 'Type your feedback...',
+              },
+              timeout: 120000,
+            });
+          } catch {
+            return { behavior: 'deny' as const, message: 'User cancelled feedback', toolUseID: options.toolUseID };
+          }
+
+          if (feedbackResult.type === 'input' && feedbackResult.value.trim()) {
+            return { behavior: 'deny' as const, message: feedbackResult.value, toolUseID: options.toolUseID };
+          }
+          return { behavior: 'deny' as const, message: 'User rejected the plan', toolUseID: options.toolUseID };
+        }
+
+        // "Other" (free text from AskModal) — treat as feedback to Claude
+        if (exitPlanResult.value && exitPlanResult.value !== 'Other') {
+          return { behavior: 'deny' as const, message: exitPlanResult.value, toolUseID: options.toolUseID };
+        }
       }
+
       return { behavior: 'deny' as const, message: 'User rejected the plan', toolUseID: options.toolUseID };
     }
 
@@ -965,10 +1032,6 @@ class SessionManager {
     }
 
     // --- Standard tool permission flow ---
-    // Define destructive tools that need special UI treatment
-    const destructiveTools = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit"];
-    const isDestructive = destructiveTools.includes(toolName);
-
     // Create input preview (truncate if too long)
     const inputPreview = JSON.stringify(input, null, 2);
     const truncatedPreview =
@@ -984,20 +1047,24 @@ class SessionManager {
 
     // Add decision reason if present
     const reasonText = options.decisionReason
-      ? `\nReason: ${options.decisionReason}\n`
-      : '\n';
+      ? `\nReason: ${options.decisionReason}`
+      : '';
 
-    // Enqueue permission modal (wrapped in try/catch — modal cancel/timeout
-    // calls reject(), which must not propagate as unhandled error to the SDK)
+    // Rich ask modal: Allow / Deny (with reason) / Other (free text)
+    // Allow is first option → Enter key approves immediately
     let result;
     try {
       result = await useStore.getState().enqueue({
-        type: "confirm",
+        type: "ask",
         payload: {
-          action: `${actionDescription}${reasonText}\nInput:\n${truncatedPreview}`,
-          destructive: isDestructive,
+          message: `${actionDescription}${reasonText}\n\nInput:\n${truncatedPreview}`,
+          header: toolName.slice(0, 12),
+          options: [
+            { label: 'Allow', value: 'allow', description: 'Execute as requested' },
+            { label: 'Deny', value: 'deny', description: 'Block and tell Claude why' },
+          ],
         },
-        timeout: 60000, // 60 second timeout
+        timeout: 60000,
       });
     } catch {
       // Modal was cancelled (Escape) or timed out — treat as denial
@@ -1017,20 +1084,49 @@ class SessionManager {
       };
     }
 
-    // Return SDK-expected format
-    if (result.type === "confirm" && result.confirmed) {
-      return {
-        behavior: "allow" as const,
-        updatedInput: input,
-        toolUseID: options.toolUseID,
-      };
-    } else {
-      return {
-        behavior: "deny" as const,
-        message: "User denied permission",
-        toolUseID: options.toolUseID,
-      };
+    // Process response
+    if (result.type === "ask") {
+      if (result.value === 'Allow') {
+        return {
+          behavior: "allow" as const,
+          updatedInput: input,
+          toolUseID: options.toolUseID,
+        };
+      }
+
+      if (result.value === 'Deny') {
+        // Follow-up: collect reason via input modal
+        let reasonResult;
+        try {
+          reasonResult = await useStore.getState().enqueue({
+            type: 'input',
+            payload: {
+              prompt: `Why are you denying ${toolName}?`,
+              placeholder: 'Enter reason (or leave empty)...',
+            },
+            timeout: 60000,
+          });
+        } catch {
+          return { behavior: "deny" as const, message: "User denied permission", toolUseID: options.toolUseID };
+        }
+
+        const reason = reasonResult.type === 'input' && reasonResult.value.trim()
+          ? reasonResult.value
+          : 'User denied permission';
+        return { behavior: "deny" as const, message: reason, toolUseID: options.toolUseID };
+      }
+
+      // "Other" (free text from AskModal) — treat as deny with the typed message
+      if (result.value && result.value !== 'Other') {
+        return { behavior: "deny" as const, message: result.value, toolUseID: options.toolUseID };
+      }
     }
+
+    return {
+      behavior: "deny" as const,
+      message: "User denied permission",
+      toolUseID: options.toolUseID,
+    };
   }
 
   /**

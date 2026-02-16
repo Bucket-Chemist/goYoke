@@ -17,13 +17,18 @@ import type { Message, ContentBlock } from "../store/types.js";
 export interface MessageRendererProps {
   message: Message;
   maxWidth?: number;
+  /** Expansion level: 0=collapsed, 1=expanded (truncated), 2=full (no truncation) */
+  expansionLevel?: number;
+  /** @deprecated Use expansionLevel instead */
   allExpanded?: boolean;
 }
 
 /**
  * Render a single message with role-based styling and markdown support
  */
-export function MessageRenderer({ message, maxWidth, allExpanded }: MessageRendererProps): JSX.Element {
+export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded }: MessageRendererProps): JSX.Element {
+  // Support both new expansionLevel and deprecated allExpanded
+  const level = expansionLevel ?? (allExpanded ? 1 : 0);
   // Determine message color based on role
   const roleColor =
     message.role === "user"
@@ -130,9 +135,7 @@ export function MessageRenderer({ message, maxWidth, allExpanded }: MessageRende
             }
           }
 
-          const isExpanded = allExpanded ?? false;
-
-          if (!isExpanded) {
+          if (level === 0) {
             // Collapsed view: Single-line summary
             const inputSummary = block.input
               ? Object.entries(block.input)
@@ -157,14 +160,30 @@ export function MessageRenderer({ message, maxWidth, allExpanded }: MessageRende
             );
           }
 
-          // Expanded view: Show all parameters with values
+          // Level 1: expanded with truncation. Level 2: full, no truncation.
+          const isFull = level >= 2;
           return (
             <Box key={blockId} paddingLeft={2} flexDirection="column">
-              <Text color={colors.accent} bold>▾ [{block.name}]</Text>
+              <Text color={colors.accent} bold>▾ [{block.name}]{isFull ? ' [FULL]' : ''}</Text>
               {block.input && Object.entries(block.input).map(([key, value]) => {
                 const displayValue = typeof value === 'string'
                   ? sanitizeAnsi(value)
                   : JSON.stringify(value, null, 2);
+                if (isFull) {
+                  // Level 2: show everything, split into lines for wrapping
+                  const lines = displayValue.split('\n');
+                  return (
+                    <Box key={key} paddingLeft={2} flexDirection="column">
+                      <Text color={colors.muted}>{key}:</Text>
+                      {lines.map((line, i) => (
+                        <Box key={`${key}-${i}`} paddingLeft={2}>
+                          <Text color={colors.assistantMessage} wrap="wrap">{line || ' '}</Text>
+                        </Box>
+                      ))}
+                    </Box>
+                  );
+                }
+                // Level 1: truncated
                 const maxLen = maxWidth ? maxWidth - 8 : 120;
                 const truncated = displayValue.length > maxLen
                   ? displayValue.slice(0, maxLen - 3) + '...'
@@ -181,9 +200,7 @@ export function MessageRenderer({ message, maxWidth, allExpanded }: MessageRende
         }
 
         // tool_result
-        const isExpanded = allExpanded ?? false;
-
-        if (!isExpanded) {
+        if (level === 0) {
           // Collapsed view: minimal indicator
           return (
             <Box key={blockId} paddingLeft={2}>
@@ -194,22 +211,24 @@ export function MessageRenderer({ message, maxWidth, allExpanded }: MessageRende
           );
         }
 
-        // Expanded view: show content preview
+        // Level 1+: show content
         const content = sanitizeAnsi(typeof block.content === 'string' ? block.content : '');
-        const lines = content.split('\n').slice(0, 5);
-        const totalLines = content.split('\n').length;
+        const allLines = content.split('\n');
+        const isFull = level >= 2;
+        const displayLines = isFull ? allLines : allLines.slice(0, 5);
+        const hiddenCount = allLines.length - displayLines.length;
 
         return (
           <Box key={blockId} paddingLeft={2} flexDirection="column">
-            <Text color={colors.muted}>▾ [result] {block.is_error ? '✗' : '✓'}</Text>
-            {lines.map((line, i) => (
+            <Text color={colors.muted}>▾ [result] {block.is_error ? '✗' : '✓'}{isFull ? ' [FULL]' : ''}</Text>
+            {displayLines.map((line, i) => (
               <Box key={`${blockId}-line-${i}`} paddingLeft={2}>
                 <Text color={colors.assistantMessage} dimColor wrap="wrap">{line || ' '}</Text>
               </Box>
             ))}
-            {totalLines > 5 && (
+            {hiddenCount > 0 && (
               <Box paddingLeft={2}>
-                <Text color={colors.muted} dimColor italic>... ({totalLines - 5} more lines)</Text>
+                <Text color={colors.muted} dimColor italic>... ({hiddenCount} more lines — Ctrl+Shift+E for full)</Text>
               </Box>
             )}
           </Box>

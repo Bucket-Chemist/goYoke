@@ -149,6 +149,8 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
       bindings: [
         { keys: "Enter", action: "Submit input" },
         { keys: "Up/Down", action: "Input history" },
+        { keys: "Ctrl+E", action: "Toggle tool expansion on/off" },
+        { keys: "Ctrl+Shift+E", action: "Cycle expansion (collapsed → expanded → full)" },
       ],
     },
     {
