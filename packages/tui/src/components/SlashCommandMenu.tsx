@@ -15,6 +15,12 @@ interface SlashCommandMenuProps {
   maxVisible?: number;
 }
 
+const SOURCE_TAGS: Record<string, string> = {
+  builtin: "tui",
+  native: "cli",
+  skill: "skill",
+};
+
 export function SlashCommandMenu({
   commands,
   selectedIndex,
@@ -50,16 +56,17 @@ export function SlashCommandMenu({
       {visibleCommands.map((cmd, i) => {
         const actualIndex = startIdx + i;
         const isSelected = actualIndex === selectedIndex;
-        const sourceTag = cmd.source === "builtin" ? "" : " [skill]";
+        const tag = SOURCE_TAGS[cmd.source] || cmd.source;
 
         return (
-          <Box key={cmd.name}>
+          <Box key={cmd.name} flexDirection="row">
             <Text color={isSelected ? colors.primary : colors.muted} bold={isSelected}>
               {isSelected ? "▶ " : "  "}
               /{cmd.name}
             </Text>
-            <Text color={colors.muted} dimColor>
-              {" — "}{cmd.description.slice(0, 60)}{cmd.description.length > 60 ? "..." : ""}{sourceTag}
+            <Text color={colors.muted} dimColor> [{tag}] </Text>
+            <Text color={colors.muted} dimColor wrap="wrap">
+              {cmd.description}
             </Text>
           </Box>
         );

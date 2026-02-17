@@ -37,6 +37,31 @@
 
 ---
 
+## Workflow Rules
+
+- Before exploring the codebase autonomously, present the plan/approach first and get user approval. Do not go on extended autonomous exploration without checking in.
+- When presenting plans, always use the standard 4-options format. Do not skip the plan presentation step or write plans directly without offering options.
+
+---
+
+## Agent Delegation
+
+- When delegating to architect agents or staff-architect, ALWAYS use Opus model tier unless explicitly told otherwise. Never downgrade to a cheaper model for architect/review tasks.
+
+---
+
+## Multi-Agent Workflows
+
+- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `gogent-team-run`, and spawn agents through the standard team folder/config process.
+
+---
+
+## Build & Test
+
+- Always use project binaries (e.g., from `bin/`) when running tests or executing commands. Do not fall back to system-installed versions.
+
+---
+
 ## Session Init (First Response Only)
 
 **On first response of every session, output:**
@@ -150,6 +175,7 @@ Request arrives
 | `/team-status`        | Show detailed progress for running or completed teams                             |
 | `/team-result`        | Display final output from a completed team                                        |
 | `/team-cancel`        | Gracefully stop a running team                                                    |
+| `/plan-tickets`       | Comprehensive planning workflow (Scout → Planner → Architect → Review → Tickets)  |
 | `/teams`              | List all teams in current session with summary status                             |
 
 ---

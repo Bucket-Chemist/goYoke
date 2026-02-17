@@ -1,4 +1,4 @@
-# Session Handoff - 2026-02-16 15:04:59
+# Session Handoff - 2026-02-17 15:38:26
 
 ## Session Context
 
@@ -7,7 +7,7 @@
 
 ## Session Metrics
 
-- **Tool Calls**: 0
+- **Tool Calls**: 9
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,20 +16,11 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/memory/handoffs.jsonl
-  - claude/memory/last-handoff.md
   - claude/stats-cache.json
+  - ackages/tui/.claude/current-session
   - ackages/tui/.claude/memory/handoffs.jsonl
   - ackages/tui/.claude/memory/last-handoff.md
-  - ackages/tui/src/components/ClaudePanel.tsx
-  - ackages/tui/src/components/MessageRenderer.tsx
-  - ackages/tui/src/config/keybindings.ts
-  - ackages/tui/src/session/SessionManager.ts
-  - ackages/tui/src/store/slices/input.ts
-  - .claude/input-history.json
-  - .claude/memory/session-archive/routing-violations-46d06b34-5f1c-4247-8517-6afc2a61e3d5.jsonl
-  - .claude/sessions/29074430-15d9-40f4-a4ea-2944e27984b1.json
-  - .claude/sessions/46d06b34-5f1c-4247-8517-6afc2a61e3d5.json
-  - .claude/sessions/492392e4-e6f9-495f-b8fd-4712958d72d9.json
-  - dev/will/feature-ideas/Untitled.md
+  - ackages/tui/.claude/memory/ml-tool-events.jsonl
+  - ackages/tui/src/components/SlashCommandMenu.tsx
+  - ackages/tui/src/utils/slashCommands.ts
 

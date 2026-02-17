@@ -46,6 +46,7 @@ test/audit/**
 .claude/current-session
 .claude/tmp.pre-sessions
 .claude/statsig/*
+.claude/usage-data/*
 
 # Obsidian
 .obsidian/
