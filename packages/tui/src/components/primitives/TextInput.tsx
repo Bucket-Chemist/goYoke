@@ -56,7 +56,7 @@ export function TextInput({
 }: TextInputProps): JSX.Element {
   if (disabled) {
     return (
-      <Box borderStyle={borders.input} borderColor={colors.muted} paddingX={1}>
+      <Box borderStyle={borders.input} borderColor={colors.muted} paddingX={1} width="100%">
         <Text color={colors.muted}>{placeholder}</Text>
       </Box>
     );
@@ -67,6 +67,7 @@ export function TextInput({
       borderStyle={borders.input}
       borderColor={focused ? colors.focused : colors.unfocused}
       paddingX={1}
+      width="100%"
     >
       <TextInputLib
         value={value}

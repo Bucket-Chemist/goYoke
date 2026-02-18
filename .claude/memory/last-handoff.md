@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-17 15:46:19
+# Session Handoff - 2026-02-18 05:48:46
 
 ## Session Context
 
-- **Session ID**: bc84d123-34f0-4f9c-ad8a-a097ad56a0ae
+- **Session ID**: e4413436-fe51-41f1-9480-6dfd61d255ea
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress
 
 ## Session Metrics
 
-- **Tool Calls**: 46
+- **Tool Calls**: 0
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,16 +16,13 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/CLAUDE.md
-  - claude/skills/plan/SKILL.md
-  - claude/stats-cache.json
-  - creenshot_2026-02-15_12-27-00.png
-  - ackages/tui/.claude/current-session
-  - ackages/tui/.claude/memory/handoffs.jsonl
-  - ackages/tui/.claude/memory/last-handoff.md
-  - ackages/tui/.claude/memory/ml-tool-events.jsonl
-  - ackages/tui/src/components/SlashCommandMenu.tsx
-  - ackages/tui/src/utils/slashCommands.ts
-  - .claude/skills/plan-tickets/
-  - Screenshot_2026-02-17_15-39-04.png
+  - claude/input-history.json
+  - claude/memory/handoffs.jsonl
+  - claude/memory/last-handoff.md
+  - ickets/obsidian-cli-knowledge-graph/note.md
+  - .claude/image-cache/
+  - .claude/sessions/0322851c-21b2-4125-a558-961747ea025f.json
+  - .claude/sessions/48bea56c-c8d6-455d-8bc8-69560c774155.json
+  - "dev/will/feature-ideas/Obsidian Memory/"
+  - docs/tui/
 

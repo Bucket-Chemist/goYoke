@@ -43,9 +43,19 @@ export const createMessagesSlice: StateCreator<
         return state;
       }
 
+      // Preserve existing text blocks if new content has none.
+      // When the SDK fires an event with only tool_use blocks (between tool calls),
+      // the text block from Claude's prior streaming would otherwise be lost.
+      const newHasText = content.some((b) => b.type === "text");
+      const existingTextBlocks = lastMessage.content.filter((b) => b.type === "text");
+      const mergedContent =
+        !newHasText && existingTextBlocks.length > 0
+          ? [...existingTextBlocks, ...content]
+          : content;
+
       messages[lastIndex] = {
         ...lastMessage,
-        content,
+        content: mergedContent,
         partial: false, // Mark as complete when updating
       };
 

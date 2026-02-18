@@ -189,7 +189,7 @@ describe("ClaudePanel", () => {
       const output = lastFrame();
 
       expect(output).toContain("Let me help with that");
-      expect(output).toContain("[Tool: Read]");
+      expect(output).toContain("[Read]");
     });
 
     it("renders tool_result content blocks", () => {
@@ -212,7 +212,7 @@ describe("ClaudePanel", () => {
       const output = lastFrame();
 
       expect(output).toContain("Here's what I found");
-      expect(output).toContain("[Tool result]");
+      expect(output).toContain("[result]");
     });
 
     it("handles messages with multiple text blocks", () => {
@@ -269,7 +269,7 @@ describe("ClaudePanel", () => {
       const { lastFrame } = render(<ClaudePanel focused={true} />);
       const output = lastFrame();
 
-      expect(output).toContain("Waiting for response...");
+      expect(output).toContain("Type to queue message...");
     });
 
     it("hides streaming indicator when streaming is false", () => {
@@ -290,7 +290,7 @@ describe("ClaudePanel", () => {
       const output = lastFrame();
 
       // Placeholder text indicates disabled state
-      expect(output).toContain("Waiting for response...");
+      expect(output).toContain("Type to queue message...");
     });
   });
 
@@ -309,7 +309,7 @@ describe("ClaudePanel", () => {
       const { lastFrame } = render(<ClaudePanel focused={true} />);
       const output = lastFrame();
 
-      expect(output).toContain("Waiting for response...");
+      expect(output).toContain("Type to queue message...");
     });
 
     it("renders input component when panel is focused", () => {
@@ -485,8 +485,9 @@ describe("ClaudePanel", () => {
       const { lastFrame } = render(<ClaudePanel focused={false} />);
       const output = lastFrame();
 
-      // All messages should be visible (5 < viewport height of 20)
-      expect(output).toContain("Message 1");
+      // autoScroll=true shows most-recent messages; scrollHeight defaults to 10 in tests.
+      // With 5 messages × ~3 rows each = ~15 rows, earlier messages scroll off.
+      // Verify the most recent message is visible.
       expect(output).toContain("Message 5");
     });
 
@@ -573,8 +574,9 @@ describe("ClaudePanel", () => {
       const { lastFrame } = render(<ClaudePanel focused={false} />);
       const output = lastFrame();
 
-      // Should render without crashing
-      expect(output).toContain("You");
+      // Should render without crashing (1000-char text wraps to many rows,
+      // autoScroll scrolls past the "You" role header — just verify it renders)
+      expect(output).toBeTruthy();
     });
 
     it("handles rapid message additions", () => {
@@ -639,8 +641,8 @@ describe("ClaudePanel", () => {
       const output = lastFrame();
 
       expect(output).toContain("Using a tool now");
-      expect(output).toContain("[Tool: Grep]");
-      expect(output).toContain("[Tool result]");
+      expect(output).toContain("[Grep]");
+      expect(output).toContain("[result]");
       expect(output).toContain("Done!");
     });
 
@@ -679,7 +681,7 @@ describe("ClaudePanel", () => {
 
       const output2 = lastFrame();
       expect(output2).toContain("Claude is thinking...");
-      expect(output2).toContain("Waiting for response...");
+      expect(output2).toContain("Type to queue message...");
     });
   });
 

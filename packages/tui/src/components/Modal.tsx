@@ -105,11 +105,11 @@ function CurrentModal({
 }
 
 /**
- * ModalOverlay renders a centered modal over the main content
- * - Captures keyboard focus
- * - Escape cancels modal
- * - Delegates to specific modal type for rendering and Enter handling
- * - Error boundary prevents modal crashes from affecting app
+ * ModalOverlay renders a centered modal as a full content-area replacement.
+ * By NOT using position="absolute", the underlying panels are fully unmounted,
+ * giving 100% opacity — no bleed-through of background content.
+ *
+ * Layout.tsx swaps the content area for <ModalOverlay> when modalQueue is non-empty.
  */
 export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
   const { dequeue, cancel } = useStore();
@@ -120,25 +120,27 @@ export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
     }
   });
 
+  const modalTitle =
+    request.type === "confirm" ? "Confirmation Required" :
+    request.type === "select"  ? "Select an Option" :
+    request.type === "input"   ? "Input Required" :
+                                 "Question";
+
   return (
-    <Box
-      position="absolute"
-      width="100%"
-      // Anchor to bottom of viewport instead of covering full screen.
-      // This leaves the conversation content (e.g. plan) visible above the modal.
-      marginTop={4}
-      justifyContent="center"
-      alignItems="flex-end"
-    >
+    <Box flexGrow={1} flexDirection="column" justifyContent="center" alignItems="center">
       <Box
         borderStyle={borders.modal}
         borderColor={colors.warning}
-        padding={2}
+        paddingX={3}
+        paddingY={1}
         flexDirection="column"
-        width="80%"
-        // @ts-expect-error - Ink supports backgroundColor but types may not include it
-        backgroundColor="black"
+        minWidth={52}
       >
+        {/* Modal header */}
+        <Box marginBottom={1}>
+          <Text bold color={colors.warning}>⚡ {modalTitle}</Text>
+        </Box>
+
         <ModalErrorBoundary onDismiss={() => cancel(request.id)}>
           <CurrentModal
             request={request}

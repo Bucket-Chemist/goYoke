@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
@@ -23,6 +23,7 @@ import { TelemetryView } from "./TelemetryView.js";
 import { ModalOverlay } from "./Modal.js";
 import { StatusLine } from "./StatusLine.js";
 import { ToastContainer } from "./Toast.js";
+import { TaskBoard } from "./TaskBoard.js";
 import { colors, borders } from "../config/theme.js";
 
 // Fixed heights
@@ -46,6 +47,7 @@ export function Layout(): JSX.Element {
   const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage, activeTab, cycleRightPanel } = useStore();
   const { selectPrevious, selectNext } = useAgentTree();
   const { rows: terminalHeight, columns: terminalWidth } = useTerminalDimensions();
+  const [taskBoardTab, setTaskBoardTab] = useState<"active" | "done">("active");
 
   // Start team polling unconditionally - this fixes the circular dependency
   // where TeamList only renders when rightPanelMode === "teams", but polling
@@ -91,6 +93,9 @@ export function Layout(): JSX.Element {
     clearScreen: () => {
       clearMessages();
     },
+    toggleTaskBoardTab: () => {
+      setTaskBoardTab((prev) => (prev === "active" ? "done" : "active"));
+    },
   });
 
   // Agent tree navigation bindings (only when agents panel focused)
@@ -117,122 +122,132 @@ export function Layout(): JSX.Element {
         <TabBar enabled={modalQueue.length === 0} />
       </Box>
 
-      {/* Content area - FILLS remaining space, conditional on activeTab */}
-      <Box flexDirection="row" flexGrow={1}>
-        {activeTab === "chat" && (
-          <>
-            {/* Left Panel: Claude conversation */}
-            <Box width={leftWidth}>
-              <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
-            </Box>
+      {/* Content area: modal replaces panels entirely when active (no bleed-through) */}
+      {modalQueue.length > 0 && modalQueue[0] ? (
+        <ModalOverlay request={modalQueue[0]} />
+      ) : (
+        <>
+          <Box flexDirection="row" flexGrow={1}>
+            {activeTab === "chat" && (
+              <>
+                {/* Left Panel: Claude conversation */}
+                <Box width={leftWidth}>
+                  <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
+                </Box>
 
-            {/* Right Panel: Conditional rendering based on mode */}
-            {showRightPanel && (
-              <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
-                {rightPanelMode === "agents" && (
-                  <>
-                    {/* Agent Tree (60% via flexGrow) */}
-                    <Box
-                      flexGrow={6}
-                      borderStyle={borders.panel}
-                      borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
-                      flexDirection="column"
-                      overflow="hidden"
-                    >
-                      <AgentTree focused={focusedPanel === "agents"} />
-                    </Box>
+                {/* Right Panel: Conditional rendering based on mode */}
+                {showRightPanel && (
+                  <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
+                    {rightPanelMode === "agents" && (
+                      <>
+                        {/* Agent Tree (60% via flexGrow) */}
+                        <Box
+                          flexGrow={6}
+                          borderStyle={borders.panel}
+                          borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
+                          flexDirection="column"
+                          overflow="hidden"
+                        >
+                          <AgentTree focused={focusedPanel === "agents"} />
+                        </Box>
 
-                    {/* Agent Detail (40% via flexGrow) */}
-                    <Box
-                      flexGrow={4}
-                      borderStyle={borders.panel}
-                      borderColor={colors.muted}
-                      flexDirection="column"
-                      overflow="hidden"
-                    >
-                      <AgentDetail focused={false} />
-                    </Box>
-                  </>
-                )}
-                {rightPanelMode === "dashboard" && (
-                  <Box
-                    flexGrow={1}
-                    borderStyle={borders.panel}
-                    borderColor={colors.muted}
-                    flexDirection="column"
-                    overflow="hidden"
-                  >
-                    <DashboardView />
+                        {/* Agent Detail (40% via flexGrow) */}
+                        <Box
+                          flexGrow={4}
+                          borderStyle={borders.panel}
+                          borderColor={colors.muted}
+                          flexDirection="column"
+                          overflow="hidden"
+                        >
+                          <AgentDetail focused={false} />
+                        </Box>
+                      </>
+                    )}
+                    {rightPanelMode === "dashboard" && (
+                      <Box
+                        flexGrow={1}
+                        borderStyle={borders.panel}
+                        borderColor={colors.muted}
+                        flexDirection="column"
+                        overflow="hidden"
+                      >
+                        <DashboardView />
+                      </Box>
+                    )}
+                    {rightPanelMode === "settings" && (
+                      <Box
+                        flexGrow={1}
+                        borderStyle={borders.panel}
+                        borderColor={colors.muted}
+                        flexDirection="column"
+                        overflow="hidden"
+                      >
+                        <SettingsView />
+                      </Box>
+                    )}
+                    {rightPanelMode === "teams" && (
+                      <>
+                        {/* Team List (60% via flexGrow) */}
+                        <Box
+                          flexGrow={6}
+                          borderStyle={borders.panel}
+                          borderColor={colors.muted}
+                          flexDirection="column"
+                          overflow="hidden"
+                        >
+                          <TeamList />
+                        </Box>
+
+                        {/* Team Detail (40% via flexGrow) */}
+                        <Box
+                          flexGrow={4}
+                          borderStyle={borders.panel}
+                          borderColor={colors.muted}
+                          flexDirection="column"
+                          overflow="hidden"
+                        >
+                          <TeamDetail />
+                        </Box>
+                      </>
+                    )}
                   </Box>
                 )}
-                {rightPanelMode === "settings" && (
-                  <Box
-                    flexGrow={1}
-                    borderStyle={borders.panel}
-                    borderColor={colors.muted}
-                    flexDirection="column"
-                    overflow="hidden"
-                  >
-                    <SettingsView />
-                  </Box>
-                )}
-                {rightPanelMode === "teams" && (
-                  <>
-                    {/* Team List (60% via flexGrow) */}
-                    <Box
-                      flexGrow={6}
-                      borderStyle={borders.panel}
-                      borderColor={colors.muted}
-                      flexDirection="column"
-                      overflow="hidden"
-                    >
-                      <TeamList />
-                    </Box>
+              </>
+            )}
 
-                    {/* Team Detail (40% via flexGrow) */}
-                    <Box
-                      flexGrow={4}
-                      borderStyle={borders.panel}
-                      borderColor={colors.muted}
-                      flexDirection="column"
-                      overflow="hidden"
-                    >
-                      <TeamDetail />
-                    </Box>
-                  </>
-                )}
+            {activeTab === "agent-config" && (
+              <Box flexGrow={1}>
+                <AgentConfigView />
               </Box>
             )}
-          </>
-        )}
 
-        {activeTab === "agent-config" && (
-          <Box flexGrow={1}>
-            <AgentConfigView />
-          </Box>
-        )}
+            {activeTab === "team-config" && (
+              <Box flexGrow={1}>
+                <TeamConfigView />
+              </Box>
+            )}
 
-        {activeTab === "team-config" && (
-          <Box flexGrow={1}>
-            <TeamConfigView />
+            {activeTab === "telemetry" && (
+              <Box flexGrow={1}>
+                <TelemetryView />
+              </Box>
+            )}
           </Box>
-        )}
 
-        {activeTab === "telemetry" && (
-          <Box flexGrow={1}>
-            <TelemetryView />
-          </Box>
-        )}
-      </Box>
+          {/* TaskBoard - compact strip above status line, chat tab only */}
+          {activeTab === "chat" && (
+            <Box height={8} borderStyle={borders.panel} borderColor={colors.unfocused}>
+              <TaskBoard width={terminalWidth - 2} tab={taskBoardTab} />
+            </Box>
+          )}
+        </>
+      )}
 
       {/* Status Line - FIXED at bottom */}
       <StatusLine width={terminalWidth} height={2} />
 
       {/* Toast notifications */}
       <ToastContainer />
-
-      {/* Modal overlay (rendered when queue is non-empty) */}
-      {modalQueue.length > 0 && modalQueue[0] && <ModalOverlay request={modalQueue[0]} />}
     </Box>
   );
 }

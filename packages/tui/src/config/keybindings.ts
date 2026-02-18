@@ -15,6 +15,7 @@ export function createGlobalBindings(actions: {
   interruptQuery: () => void;
   forceQuit: () => void;
   clearScreen: () => void;
+  toggleTaskBoardTab: () => void;
 }): KeyBinding[] {
   return [
     {
@@ -50,6 +51,12 @@ export function createGlobalBindings(actions: {
       ctrl: true,
       action: actions.clearScreen,
       description: "Clear screen",
+    },
+    {
+      key: "b",
+      meta: true,
+      action: actions.toggleTaskBoardTab,
+      description: "Toggle task board tab (Active/Done)",
     },
   ];
 }
@@ -133,6 +140,7 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
         { keys: "Escape", action: "Interrupt query / Cancel modal" },
         { keys: "Ctrl+C", action: "Force quit" },
         { keys: "Ctrl+L", action: "Clear screen" },
+        { keys: "Alt+B", action: "Toggle task board Active/Done tab" },
       ],
     },
     {
