@@ -5,10 +5,10 @@
  */
 
 import { useEffect, useRef } from "react";
-import { readdir, readFile } from "fs/promises";
+import { readdir, readFile, open, stat } from "fs/promises";
 import { join } from "path";
 import { useStore } from "../store/index.js";
-import type { TeamSummary } from "../store/types.js";
+import type { TeamSummary, TeamMemberRow } from "../store/types.js";
 
 interface TeamConfigJSON {
   team_name: string;
@@ -22,8 +22,13 @@ interface TeamConfigJSON {
   waves: Array<{
     wave_number: number;
     members: Array<{
+      name: string;
+      agent: string;
+      model: string;
       status: string;
       cost_usd: number;
+      started_at: string | null;
+      completed_at: string | null;
     }>;
   }>;
 }
@@ -45,6 +50,112 @@ function isPidAlive(pid: number): boolean {
     }
     // Permission errors (EPERM) mean process exists but we can't signal it
     return true;
+  }
+}
+
+/**
+ * Read the last 4KB of a stream_{agentName}.ndjson file and extract
+ * the latest assistant message text (truncated to 100 chars).
+ * Returns null on any error (missing file, parse failure, etc.).
+ */
+async function readStreamActivity(
+  teamDir: string,
+  agentName: string
+): Promise<string | null> {
+  try {
+    const filePath = join(teamDir, `stream_${agentName}.ndjson`);
+
+    // Get file size first
+    const fileStat = await stat(filePath);
+    const fileSize = fileStat.size;
+
+    if (fileSize === 0) {
+      return null;
+    }
+
+    // Read last 4KB
+    const chunkSize = 4096;
+    const readSize = Math.min(chunkSize, fileSize);
+    const position = fileSize - readSize;
+
+    const buffer = Buffer.alloc(readSize);
+    const fh = await open(filePath, "r");
+    try {
+      await fh.read(buffer, 0, readSize, position);
+    } finally {
+      await fh.close();
+    }
+
+    const chunk = buffer.toString("utf-8");
+
+    // Split into lines and skip first (potentially truncated)
+    const lines = chunk.split("\n");
+    const candidateLines = position === 0 ? lines : lines.slice(1);
+
+    // Walk backwards to find last line with type === "assistant"
+    for (let i = candidateLines.length - 1; i >= 0; i--) {
+      const line = candidateLines[i]?.trim();
+      if (!line) continue;
+
+      try {
+        const parsed: unknown = JSON.parse(line);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          "type" in parsed &&
+          (parsed as Record<string, unknown>)["type"] === "assistant"
+        ) {
+          const record = parsed as Record<string, unknown>;
+          const message = record["message"];
+          if (
+            typeof message === "object" &&
+            message !== null &&
+            "content" in message
+          ) {
+            const content = (message as Record<string, unknown>)["content"];
+            if (Array.isArray(content)) {
+              for (const block of content as unknown[]) {
+                if (
+                  typeof block === "object" &&
+                  block !== null &&
+                  "type" in block &&
+                  (block as Record<string, unknown>)["type"] === "text" &&
+                  "text" in block
+                ) {
+                  const text = (block as Record<string, unknown>)["text"];
+                  if (typeof text === "string" && text.length > 0) {
+                    return text.slice(0, 100);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Skip unparseable lines
+        continue;
+      }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Attach stream activity to running team members.
+ * Mutates summary.members in place.
+ */
+async function attachStreamActivity(
+  summary: TeamSummary,
+  teamsBasePath: string
+): Promise<void> {
+  const teamPath = join(teamsBasePath, summary.dir);
+  for (const member of summary.members) {
+    if (member.status === "running") {
+      member.latestActivity = await readStreamActivity(teamPath, member.name) ?? undefined;
+    }
   }
 }
 
@@ -81,6 +192,23 @@ function parseTeamSummary(
     }
   }
 
+  // Build members array from waves
+  const members: TeamMemberRow[] = [];
+  for (const wave of config.waves) {
+    for (const member of wave.members) {
+      members.push({
+        name: member.name,
+        agent: member.agent,
+        model: member.model,
+        status: member.status,
+        wave: wave.wave_number,
+        cost: member.cost_usd,
+        startedAt: member.started_at,
+        completedAt: member.completed_at,
+      });
+    }
+  }
+
   // Check PID liveness
   const alive =
     config.background_pid !== null &&
@@ -103,6 +231,7 @@ function parseTeamSummary(
     memberCount,
     completedMembers,
     failedMembers,
+    members,
   };
 }
 
@@ -142,6 +271,11 @@ async function getTeamSummaries(sessionDir: string): Promise<TeamSummary[]> {
 
     // Sort by directory name descending (most recent first - dir names are timestamps)
     summaries.sort((a, b) => b.dir.localeCompare(a.dir));
+
+    // Attach stream activity for running teams
+    await Promise.all(
+      summaries.filter((s) => s.status === "running").map((s) => attachStreamActivity(s, teamsDir))
+    );
 
     return summaries;
   } catch (error) {
@@ -197,12 +331,11 @@ export function useTeamsPoller(): void {
         if (isMountedRef.current) {
           setTeams(summaries);
 
-          // Auto-switch to teams panel when teams are active
+          // Auto-switch panel tracking when teams become active
           const hasRunning = summaries.some((t) => t.alive);
           if (hasRunning) {
             const state = useStore.getState();
-            if (state.rightPanelMode === "agents" && !state.panelAutoSwitched) {
-              state.setRightPanelMode("teams");
+            if (!state.panelAutoSwitched) {
               state.setPanelAutoSwitched(true);
             }
           }

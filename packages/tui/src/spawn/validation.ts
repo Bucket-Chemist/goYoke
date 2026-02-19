@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import * as fs from "fs/promises";
+import * as fsSync from "fs";
 import * as path from "path";
 import * as os from "os";
 
@@ -29,16 +30,35 @@ export async function validateSpawnEnvironment(): Promise<ValidationResult> {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
 
-  // Check 1: claude CLI in PATH
+  // Check 1: claude CLI in PATH (also check ~/.local/bin which may not be in
+  // PATH when launched from desktop entries, zellij panes, or tmux without .bashrc)
+  let claudeFound = false;
   try {
     execSync("which claude", { stdio: "pipe" });
+    claudeFound = true;
   } catch {
-    errors.push({
-      code: "E_CLAUDE_NOT_FOUND",
-      message: "claude CLI not found in PATH",
-      resolution:
-        "Install Claude Code CLI: npm install -g @anthropic-ai/claude-code",
-    });
+    // Fallback: check common install locations
+    const fallbackPaths = [
+      path.join(os.homedir(), ".local", "bin", "claude"),
+      "/usr/local/bin/claude",
+    ];
+    for (const p of fallbackPaths) {
+      try {
+        fsSync.accessSync(p, fsSync.constants.X_OK);
+        claudeFound = true;
+        // Ensure it's in PATH for child processes
+        process.env['PATH'] = `${path.dirname(p)}:${process.env['PATH'] ?? ""}`;
+        break;
+      } catch { /* not found here */ }
+    }
+    if (!claudeFound) {
+      errors.push({
+        code: "E_CLAUDE_NOT_FOUND",
+        message: "claude CLI not found in PATH",
+        resolution:
+          "Install Claude Code CLI: npm install -g @anthropic-ai/claude-code",
+      });
+    }
   }
 
   // Check 2: /tmp writable

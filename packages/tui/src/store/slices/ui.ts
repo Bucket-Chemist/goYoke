@@ -14,6 +14,7 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
   interruptQuery: null,
   clearPendingMessage: null,
   panelAutoSwitched: false,
+  selectedUnifiedId: null,
 
   setStreaming: (streaming): void => {
     set({ streaming });
@@ -25,7 +26,7 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
 
   cycleRightPanel: (): void => {
     set((state) => {
-      const modes: Array<"agents" | "dashboard" | "settings" | "teams"> = ["agents", "dashboard", "teams", "settings"];
+      const modes: Array<"agents" | "dashboard" | "settings"> = ["agents", "dashboard", "settings"];
       const current = modes.indexOf(state.rightPanelMode);
       const next = (current + 1) % modes.length;
       return { rightPanelMode: modes[next]!, panelAutoSwitched: false };
@@ -50,5 +51,9 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set) => ({
 
   setRightPanelMode: (mode): void => {
     set({ rightPanelMode: mode });
+  },
+
+  setSelectedUnifiedId: (id): void => {
+    set({ selectedUnifiedId: id });
   },
 });

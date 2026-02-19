@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-17 15:38:26
+# Session Handoff - 2026-02-19 15:29:06
 
 ## Session Context
 
-- **Session ID**: 36e3010f-3e39-44e4-a649-85b4d0ef5738
+- **Session ID**: 55002e9a-f978-4b1d-9f74-4004c4a7262d
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 9
+- **Tool Calls**: 10
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,11 +16,51 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
+  - claude/agents/mozart/mozart.md
+  - claude/input-history.json
+  - claude/memory/handoffs.jsonl
+  - claude/memory/last-handoff.md
+  - claude/schemas/teams/stdin-stdout/braintrust-einstein.json
+  - claude/schemas/teams/stdin-stdout/braintrust-staff-architect.json
+  - .claude/sessions/1bd1a61a-dfcb-4205-ae21-81dea9121f24.json
+  - claude/settings.json
+  - claude/skills/braintrust/SKILL.md
   - claude/stats-cache.json
-  - ackages/tui/.claude/current-session
+  - md/gogent-team-run/spawn.go
+  - md/gogent-team-run/spawn_test.go
   - ackages/tui/.claude/memory/handoffs.jsonl
   - ackages/tui/.claude/memory/last-handoff.md
-  - ackages/tui/.claude/memory/ml-tool-events.jsonl
-  - ackages/tui/src/components/SlashCommandMenu.tsx
-  - ackages/tui/src/utils/slashCommands.ts
+  - ackages/tui/src/cli.ts
+  - ackages/tui/src/commands/list.tsx
+  - ackages/tui/src/components/Layout.tsx
+  - ackages/tui/src/components/TaskBoard.tsx
+  - ackages/tui/src/config/theme.ts
+  - ackages/tui/src/hooks/useAgentTree.ts
+  - ackages/tui/src/hooks/useTeams.ts
+  - ackages/tui/src/index.tsx
+  - ackages/tui/src/spawn/validation.ts
+  - ackages/tui/src/store/slices/ui.ts
+  - ackages/tui/src/store/types.ts
+  - ickets/obsidian-cli-knowledge-graph/note.md
+  - .claude/backups/
+  - .claude/image-cache/
+  - .claude/memory/session-archive/routing-violations-6834b3f1-0e81-424a-913c-2b82f50cf426.jsonl
+  - .claude/memory/session-archive/routing-violations-c49065d5-2d51-4361-8eda-63d936abebcd.jsonl
+  - .claude/memory/session-archive/routing-violations-c7ea6a4c-9ec8-47b8-8736-3c062f61ebb3.jsonl
+  - .claude/sessions/5a7607b4-8382-4432-87e8-7df14f4fe2cd.json
+  - .claude/telemetry/
+  - gogent-team-run
+  - packages/tui/src/components/UnifiedDetail.tsx
+  - packages/tui/src/components/UnifiedTree.tsx
+  - packages/tui/src/hooks/useUnifiedTree.ts
+  - tickets/obsidian-cli-knowledge-graph/braintrust-beethoven.json
+  - tickets/obsidian-cli-knowledge-graph/braintrust-einstein.json
+  - tickets/obsidian-cli-knowledge-graph/braintrust-pre-synthesis.md
+  - tickets/obsidian-cli-knowledge-graph/braintrust-problem-brief.md
+  - tickets/obsidian-cli-knowledge-graph/braintrust-staff-architect.json
+  - tickets/obsidian-cli-knowledge-graph/embedded_kg.md
+  - tickets/obsidian-cli-knowledge-graph/go-db-architect-sharp-edges.yaml
+  - tickets/obsidian-cli-knowledge-graph/go-db-architect.md
+  - tickets/obsidian-cli-knowledge-graph/obsidian_cli.md
+  - tickets/obsidian-cli-knowledge-graph/system_design.md
 

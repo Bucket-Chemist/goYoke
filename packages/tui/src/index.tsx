@@ -43,6 +43,17 @@ async function main() {
     process.exit(0);
   }
 
+  // Handle --resume flag: resolve to most recent session ID
+  if (options.resume && !options.session) {
+    const sessions = await listSessions();
+    if (sessions.length > 0) {
+      options.session = sessions[0]!.id;
+      console.error(`Resuming session ${options.session} (${sessions[0]!.name || sessions[0]!.last_used})`);
+    } else {
+      console.error("No previous sessions found — starting new session");
+    }
+  }
+
   // Handle --legacy flag (fallback to Go TUI)
   if (options.legacy) {
     console.error("Legacy mode: Falling back to Go TUI");

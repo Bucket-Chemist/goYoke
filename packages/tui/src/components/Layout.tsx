@@ -3,7 +3,8 @@ import { Box } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
 import type { KeyBinding } from "../hooks/useKeymap.js";
-import { useAgentTree } from "../hooks/useAgentTree.js";
+import { useUnifiedNav } from "../hooks/useAgentTree.js";
+import { useUnifiedTree } from "../hooks/useUnifiedTree.js";
 import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
 import { useTeamsPoller } from "../hooks/useTeams.js";
 import { getSessionManager } from "../session/index.js";
@@ -11,12 +12,10 @@ import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
 import { TabBar } from "./TabBar.js";
 import { ClaudePanel } from "./ClaudePanel.js";
-import { AgentTree } from "./AgentTree.js";
-import { AgentDetail } from "./AgentDetail.js";
+import { UnifiedTree } from "./UnifiedTree.js";
+import { UnifiedDetail } from "./UnifiedDetail.js";
 import { DashboardView } from "./DashboardView.js";
 import { SettingsView } from "./SettingsView.js";
-import { TeamList } from "./TeamList.js";
-import { TeamDetail } from "./TeamDetail.js";
 import { AgentConfigView } from "./AgentConfigView.js";
 import { TeamConfigView } from "./TeamConfigView.js";
 import { TelemetryView } from "./TelemetryView.js";
@@ -45,7 +44,8 @@ const TAB_BAR_HEIGHT = 1; // TabBar takes 1 row
  */
 export function Layout(): JSX.Element {
   const { focusedPanel, setFocusedPanel, modalQueue, clearMessages, rightPanelMode, streaming, interruptQuery, clearPendingMessage, activeTab, cycleRightPanel } = useStore();
-  const { selectPrevious, selectNext } = useAgentTree();
+  const { nodes, selectedNode, selectNode } = useUnifiedTree();
+  const { selectPrevious, selectNext } = useUnifiedNav(nodes, selectedNode, selectNode);
   const { rows: terminalHeight, columns: terminalWidth } = useTerminalDimensions();
   const [taskBoardTab, setTaskBoardTab] = useState<"active" | "done">("active");
 
@@ -140,7 +140,7 @@ export function Layout(): JSX.Element {
                   <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
                     {rightPanelMode === "agents" && (
                       <>
-                        {/* Agent Tree (60% via flexGrow) */}
+                        {/* Unified Tree (60% via flexGrow) */}
                         <Box
                           flexGrow={6}
                           borderStyle={borders.panel}
@@ -148,10 +148,10 @@ export function Layout(): JSX.Element {
                           flexDirection="column"
                           overflow="hidden"
                         >
-                          <AgentTree focused={focusedPanel === "agents"} />
+                          <UnifiedTree focused={focusedPanel === "agents"} nodes={nodes} selectedNode={selectedNode} />
                         </Box>
 
-                        {/* Agent Detail (40% via flexGrow) */}
+                        {/* Unified Detail (40% via flexGrow) */}
                         <Box
                           flexGrow={4}
                           borderStyle={borders.panel}
@@ -159,7 +159,7 @@ export function Layout(): JSX.Element {
                           flexDirection="column"
                           overflow="hidden"
                         >
-                          <AgentDetail focused={false} />
+                          <UnifiedDetail focused={false} selectedNode={selectedNode} />
                         </Box>
                       </>
                     )}
@@ -184,31 +184,6 @@ export function Layout(): JSX.Element {
                       >
                         <SettingsView />
                       </Box>
-                    )}
-                    {rightPanelMode === "teams" && (
-                      <>
-                        {/* Team List (60% via flexGrow) */}
-                        <Box
-                          flexGrow={6}
-                          borderStyle={borders.panel}
-                          borderColor={colors.muted}
-                          flexDirection="column"
-                          overflow="hidden"
-                        >
-                          <TeamList />
-                        </Box>
-
-                        {/* Team Detail (40% via flexGrow) */}
-                        <Box
-                          flexGrow={4}
-                          borderStyle={borders.panel}
-                          borderColor={colors.muted}
-                          flexDirection="column"
-                          overflow="hidden"
-                        >
-                          <TeamDetail />
-                        </Box>
-                      </>
                     )}
                   </Box>
                 )}

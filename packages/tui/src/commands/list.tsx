@@ -45,7 +45,7 @@ function formatDate(dateStr: string): string {
  * Truncate session ID for display
  */
 function truncateId(id: string): string {
-  return id.length > 12 ? `${id.substring(0, 12)}...` : id;
+  return id;
 }
 
 /**
@@ -75,7 +75,7 @@ export function ListSessions({ sessions }: ListSessionsProps): JSX.Element {
 
       {/* Column headers */}
       <Box>
-        <Box width={18}>
+        <Box width={40}>
           <Text bold dimColor>
             ID
           </Text>
@@ -105,7 +105,7 @@ export function ListSessions({ sessions }: ListSessionsProps): JSX.Element {
       {/* Session rows */}
       {sessions.map((session) => (
         <Box key={session.id} marginTop={1}>
-          <Box width={18}>
+          <Box width={40}>
             <Text color={colors.secondary}>{truncateId(session.id)}</Text>
           </Box>
           <Box width={20}>
@@ -126,9 +126,12 @@ export function ListSessions({ sessions }: ListSessionsProps): JSX.Element {
       ))}
 
       {/* Footer */}
-      <Box marginTop={1}>
+      <Box marginTop={1} flexDirection="column">
         <Text dimColor color={colors.muted}>
-          Use --session {"<id>"} to resume a session
+          Resume: gofortress --resume | gofortress --session {"<id>"}
+        </Text>
+        <Text dimColor color={colors.muted}>
+          {"        "}goclaude --resume   | goclaude --session {"<id>"}
         </Text>
       </Box>
     </Box>

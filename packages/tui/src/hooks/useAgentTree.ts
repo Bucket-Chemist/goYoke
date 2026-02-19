@@ -9,7 +9,7 @@
 
 import { useMemo } from "react";
 import { useStore } from "../store/index.js";
-import type { Agent } from "../store/types.js";
+import type { Agent, UnifiedNode } from "../store/types.js";
 
 export interface AgentTreeNavigation {
   /**
@@ -117,4 +117,49 @@ export function useAgentTree(): AgentTreeNavigation {
     selectNext,
     totalCount: agentIds.length,
   };
+}
+
+export interface UnifiedNavigation {
+  selectPrevious: () => void;
+  selectNext: () => void;
+}
+
+export function useUnifiedNav(
+  nodes: UnifiedNode[],
+  selectedNode: UnifiedNode | null,
+  selectNode: (id: string) => void
+): UnifiedNavigation {
+  const selectPrevious = (): void => {
+    if (nodes.length === 0) return;
+
+    const currentIndex = selectedNode
+      ? nodes.findIndex((n) => n.id === selectedNode.id)
+      : -1;
+
+    if (currentIndex <= 0) {
+      const target = nodes[nodes.length - 1];
+      if (target) selectNode(target.id);
+    } else {
+      const target = nodes[currentIndex - 1];
+      if (target) selectNode(target.id);
+    }
+  };
+
+  const selectNext = (): void => {
+    if (nodes.length === 0) return;
+
+    const currentIndex = selectedNode
+      ? nodes.findIndex((n) => n.id === selectedNode.id)
+      : -1;
+
+    if (currentIndex === -1 || currentIndex >= nodes.length - 1) {
+      const target = nodes[0];
+      if (target) selectNode(target.id);
+    } else {
+      const target = nodes[currentIndex + 1];
+      if (target) selectNode(target.id);
+    }
+  };
+
+  return { selectPrevious, selectNext };
 }

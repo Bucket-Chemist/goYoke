@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -115,13 +117,13 @@ func (pt *progressTracker) Bytes() []byte {
 func workflowTimeout(workflowType string) time.Duration {
 	switch workflowType {
 	case "braintrust":
-		return 15 * time.Minute
+		return 30 * time.Minute
 	case "implementation":
 		return 10 * time.Minute
 	case "review":
 		return 5 * time.Minute
 	default:
-		return 10 * time.Minute
+		return 15 * time.Minute // Safety net — catches Mozart bugs that leave workflow_type empty
 	}
 }
 
@@ -265,7 +267,9 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 	}
 
 	// 5. Set Env: GOGENT_NESTING_LEVEL=2, GOGENT_PROJECT_ROOT, GOGENT_SESSION_DIR
-	cmd.Env = append(os.Environ(),
+	// Filter out Claude Code session env vars that block nested CLI invocations.
+	// team-run spawns independent CLI processes that must not be treated as nested sessions.
+	cmd.Env = append(filterEnv(os.Environ(), "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"),
 		"GOGENT_NESTING_LEVEL=2",
 		fmt.Sprintf("GOGENT_PROJECT_ROOT=%s", cfg.projectRoot),
 	)
@@ -276,10 +280,26 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		log.Printf("INFO: Could not read current-session marker: %v (child will inherit parent session)", err)
 	}
 
-	// 6. Capture stdout
+	// 6. Capture output with live stream tee
 	tracker := newProgressTracker()
-	cmd.Stdout = tracker
-	cmd.Stderr = tracker
+
+	// Tee stream-json output to a file for live monitoring (tail -f, jq, /team-status)
+	streamPath := filepath.Join(tr.teamDir, fmt.Sprintf("stream_%s.ndjson", cfg.agentID))
+	streamFile, err := os.Create(streamPath)
+	if err != nil {
+		log.Printf("WARNING: Could not create stream file %s: %v (monitoring disabled)", streamPath, err)
+		cmd.Stdout = tracker
+		cmd.Stderr = tracker
+	} else {
+		multi := io.MultiWriter(tracker, streamFile)
+		cmd.Stdout = multi
+		cmd.Stderr = multi
+	}
+	defer func() {
+		if streamFile != nil {
+			streamFile.Close()
+		}
+	}()
 
 	// 7. Start command
 	if err := cmd.Start(); err != nil {
@@ -470,7 +490,7 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 // for interactive contexts (TUI/MCP), but pipe mode (-p) has no interactive approval.
 // We replace "delegate" with "auto-edit" so workers can write files within the project.
 func buildCLIArgs(agentConfig *agentCLIConfig) []string {
-	args := []string{"-p", "--output-format", "json"}
+	args := []string{"-p", "--output-format", "stream-json"}
 
 	if agentConfig.Model != "" {
 		args = append(args, "--model", agentConfig.Model)
@@ -502,22 +522,44 @@ type cliOutput struct {
 	SessionID    string  // CLI session ID for tracking
 }
 
-// parseCLIOutput parses the JSON array from `claude -p --output-format json`.
-// Returns the extracted result entry data, or error if parsing fails.
+// parseCLIOutput parses Claude CLI output in either NDJSON (stream-json) or
+// JSON array (legacy json) format. Returns the extracted result entry data.
 func parseCLIOutput(output []byte) (*cliOutput, error) {
-	// Parse as JSON array
 	var entries []json.RawMessage
-	if err := json.Unmarshal(output, &entries); err != nil {
-		return nil, fmt.Errorf("CLI output not valid JSON array: %w", err)
+
+	// Try NDJSON first (stream-json format: one JSON object per line)
+	trimmed := bytes.TrimSpace(output)
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("CLI output is empty")
+	}
+
+	if trimmed[0] == '[' {
+		// Legacy JSON array format
+		if err := json.Unmarshal(trimmed, &entries); err != nil {
+			return nil, fmt.Errorf("CLI output not valid JSON array: %w", err)
+		}
+	} else {
+		// NDJSON format (stream-json): one JSON object per line
+		scanner := bufio.NewScanner(bytes.NewReader(trimmed))
+		scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024) // 10MB max line
+		for scanner.Scan() {
+			line := bytes.TrimSpace(scanner.Bytes())
+			if len(line) == 0 {
+				continue
+			}
+			entries = append(entries, json.RawMessage(append([]byte{}, line...)))
+		}
+		if err := scanner.Err(); err != nil {
+			return nil, fmt.Errorf("scanning NDJSON output: %w", err)
+		}
 	}
 
 	if len(entries) == 0 {
-		return nil, fmt.Errorf("CLI output is empty array")
+		return nil, fmt.Errorf("CLI output has no entries")
 	}
 
 	// Find the "result" entry
 	for _, entry := range entries {
-		// Partially unmarshal to check type field
 		var partial struct {
 			Type    string  `json:"type"`
 			Subtype string  `json:"subtype"`
@@ -528,7 +570,6 @@ func parseCLIOutput(output []byte) (*cliOutput, error) {
 		}
 
 		if err := json.Unmarshal(entry, &partial); err != nil {
-			// Skip malformed entries
 			continue
 		}
 
@@ -543,6 +584,25 @@ func parseCLIOutput(output []byte) (*cliOutput, error) {
 	}
 
 	return nil, fmt.Errorf("no result entry found in CLI output")
+}
+
+// filterEnv returns a copy of environ with entries matching any of the given
+// key names removed. Comparison is prefix-based ("KEY=").
+func filterEnv(environ []string, keys ...string) []string {
+	filtered := make([]string, 0, len(environ))
+	for _, e := range environ {
+		skip := false
+		for _, k := range keys {
+			if strings.HasPrefix(e, k+"=") {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
 }
 
 // writeStdoutFile writes the agent's response to the stdout JSON file.

@@ -47,6 +47,8 @@ export const icons = {
   treeIndent: "│",
   treeBranch: "├─",
   treeLeaf: "└─",
+  teamRoot: "▶",
+  sectionHeader: "─",
 } as const;
 
 export type ThemeColor = typeof colors[keyof typeof colors];

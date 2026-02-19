@@ -58,6 +58,12 @@
         "languages": ["go", "typescript"]
       },
       "summary": "Scout reconnaissance summary if available"
+    },
+    "output_instructions": {
+      "format": "json",
+      "delivery": "stdout",
+      "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout section of this schema. gogent-team-run captures your process stdout as your result file (stdout_einstein.json). Do NOT use the Write() tool — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail silently, wasting your time budget. Output JSON to stdout only.",
+      "team_dir_note": "context.team_dir is for READING only (e.g. Read problem-brief.md). Do not write to it."
     }
   },
   "stdout": {

@@ -359,11 +359,15 @@ After interview confirmation, generate team configuration files from interview o
 | Timestamp | `session_id` | string | `"20260206.143022.braintrust"` |
 | User workspace | `project_root` | string | `"/home/user/project"` |
 | Default | `team_name` | string | `"braintrust"` |
+| **ALWAYS** | `workflow_type` | string | `"braintrust"` ← **REQUIRED: governs timeout and routing** |
 | Q4 response | `budget_max_usd` | float | `5.0` |
 | Q4 response | `budget_remaining_usd` | float | `5.0` |
-| Q3 response | `waves[0].members[]` | string[] | `["einstein", "staff-architect"]` |
+| Q3 response | `waves[0].members[].name` | string | `"einstein"`, `"staff-architect-critical-review"` ← **REQUIRED: member name must be set** |
+| Q3 response | `waves[0].members[].agent` | string | same as name |
 | (computed) | `waves[0].outputs_to` | string | `"wave1-synthesis.md"` |
-| Q3 response | `waves[1].members[]` | string[] | `["beethoven"]` (if full team) |
+| Q3 response | `waves[1].members[].name` | string | `"beethoven"` (if full team) |
+
+> ⚠️ **CRITICAL**: `workflow_type` MUST be `"braintrust"`. If empty, gogent-team-run uses a 15-minute default timeout instead of 30 minutes. Member `name` fields MUST be set — empty names break health monitoring and logging.
 
 ### stdin File Generation Templates
 
@@ -426,6 +430,13 @@ The `description` field is required for envelope builder compatibility.
       "languages": ["go"]
     },
     "summary": "<scout reconnaissance summary, or empty if Q2 provided files>"
+  },
+  "output_instructions": {
+    "format": "json",
+    "schema_ref": "~/.claude/schemas/teams/stdin-stdout/braintrust-einstein.json (stdout section)",
+    "delivery": "stdout",
+    "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout schema. gogent-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail. Output JSON to stdout only.",
+    "team_dir": "<absolute path to team directory — READ files from here (e.g. problem-brief.md), do not write>"
   }
 }
 ```
@@ -480,6 +491,13 @@ The `description` field is required for envelope builder compatibility.
       "contractor_readiness"
     ],
     "priority_concerns": ["<specific concerns from Mozart or user>"]
+  },
+  "output_instructions": {
+    "format": "json",
+    "schema_ref": "~/.claude/schemas/teams/stdin-stdout/braintrust-staff-architect.json (stdout section)",
+    "delivery": "stdout",
+    "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout schema. gogent-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail. Output JSON to stdout only.",
+    "team_dir": "<absolute path to team directory — READ files from here, do not write>"
   }
 }
 ```

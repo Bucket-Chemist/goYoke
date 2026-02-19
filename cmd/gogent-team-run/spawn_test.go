@@ -565,7 +565,7 @@ func TestBuildCLIArgs(t *testing.T) {
 			config: &agentCLIConfig{
 				AllowedTools: []string{"Read", "Write"},
 			},
-			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Write"},
+			expected: []string{"-p", "--output-format", "stream-json", "--allowedTools", "Read,Write"},
 		},
 		{
 			name: "with_additional_flags_permission_mode_stripped",
@@ -573,7 +573,7 @@ func TestBuildCLIArgs(t *testing.T) {
 				AllowedTools:    []string{"Read", "Glob", "Grep"},
 				AdditionalFlags: []string{"--permission-mode", "delegate"},
 			},
-			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read,Glob,Grep"},
+			expected: []string{"-p", "--output-format", "stream-json", "--allowedTools", "Read,Glob,Grep"},
 		},
 		{
 			name: "non_permission_flags_preserved",
@@ -581,21 +581,21 @@ func TestBuildCLIArgs(t *testing.T) {
 				AllowedTools:    []string{"Read"},
 				AdditionalFlags: []string{"--max-tokens", "4000", "--permission-mode", "delegate"},
 			},
-			expected: []string{"-p", "--output-format", "json", "--allowedTools", "Read", "--max-tokens", "4000"},
+			expected: []string{"-p", "--output-format", "stream-json", "--allowedTools", "Read", "--max-tokens", "4000"},
 		},
 		{
 			name: "no_tools",
 			config: &agentCLIConfig{
 				AllowedTools: []string{},
 			},
-			expected: []string{"-p", "--output-format", "json"},
+			expected: []string{"-p", "--output-format", "stream-json"},
 		},
 		{
 			name: "only_additional_flags",
 			config: &agentCLIConfig{
 				AdditionalFlags: []string{"--max-tokens", "4000"},
 			},
-			expected: []string{"-p", "--output-format", "json", "--max-tokens", "4000"},
+			expected: []string{"-p", "--output-format", "stream-json", "--max-tokens", "4000"},
 		},
 	}
 
@@ -733,7 +733,7 @@ func TestPrepareSpawn_ValidConfig(t *testing.T) {
 	assert.Contains(t, cfg.envelope, "AGENT: codebase-search")
 	assert.Contains(t, cfg.args, "-p")
 	assert.Contains(t, cfg.args, "--output-format")
-	assert.Contains(t, cfg.args, "json")
+	assert.Contains(t, cfg.args, "stream-json")
 }
 
 // TestPrepareSpawn_InjectsAgentIdentity tests that prepareSpawn injects agent identity and conventions
@@ -1108,7 +1108,8 @@ func TestClaudeSpawner_Spawn_NoBudgetCheck(t *testing.T) {
 	assert.Contains(t, err.Error(), "claude")
 }
 
-// TestParseCLIOutput tests parsing of Claude CLI JSON array output
+// TestParseCLIOutput tests parsing of Claude CLI output in both NDJSON (stream-json)
+// and legacy JSON array formats.
 func TestParseCLIOutput(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -1119,8 +1120,9 @@ func TestParseCLIOutput(t *testing.T) {
 		wantIsError  bool
 		wantSession  string
 	}{
+		// Legacy JSON array format (backward compatibility)
 		{
-			name: "valid_array_with_result",
+			name: "legacy_array_with_result",
 			input: `[
 				{"type": "system", "subtype": "init", "session_id": "sess-123"},
 				{"type": "assistant", "message": {"content": [{"type": "text", "text": "processing..."}]}},
@@ -1133,7 +1135,7 @@ func TestParseCLIOutput(t *testing.T) {
 			wantSession: "sess-123",
 		},
 		{
-			name: "result_with_zero_cost",
+			name: "legacy_result_with_zero_cost",
 			input: `[
 				{"type": "result", "result": "Done", "total_cost_usd": 0, "session_id": "sess-456"}
 			]`,
@@ -1144,7 +1146,7 @@ func TestParseCLIOutput(t *testing.T) {
 			wantSession: "sess-456",
 		},
 		{
-			name: "result_with_error_flag",
+			name: "legacy_result_with_error_flag",
 			input: `[
 				{"type": "result", "result": "Failed", "total_cost_usd": 0.12, "is_error": true, "session_id": "sess-789"}
 			]`,
@@ -1155,12 +1157,12 @@ func TestParseCLIOutput(t *testing.T) {
 			wantSession: "sess-789",
 		},
 		{
-			name:      "empty_array",
+			name:      "legacy_empty_array",
 			input:     `[]`,
 			wantError: true,
 		},
 		{
-			name: "array_with_no_result_entry",
+			name: "legacy_array_with_no_result_entry",
 			input: `[
 				{"type": "system", "subtype": "init"},
 				{"type": "assistant", "message": {}}
@@ -1168,12 +1170,7 @@ func TestParseCLIOutput(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "not_an_array",
-			input:     `{"type": "result", "result": "test"}`,
-			wantError: true,
-		},
-		{
-			name: "array_with_skippable_entries",
+			name: "legacy_array_with_skippable_entries",
 			input: `[
 				{"invalid": "entry"},
 				{"type": "result", "result": "Success", "total_cost_usd": 0.5, "session_id": "sess-999"}
@@ -1183,6 +1180,66 @@ func TestParseCLIOutput(t *testing.T) {
 			wantError:   false,
 			wantIsError: false,
 			wantSession: "sess-999",
+		},
+		// NDJSON format (stream-json)
+		{
+			name: "ndjson_full_session",
+			input: `{"type":"system","subtype":"init","session_id":"sess-ndjson-1"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"working..."}]}}
+{"type":"result","subtype":"success","result":"NDJSON task done","total_cost_usd":0.95,"session_id":"sess-ndjson-1"}`,
+			wantResult:  "NDJSON task done",
+			wantCost:    0.95,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-ndjson-1",
+		},
+		{
+			name: "ndjson_single_result_line",
+			input: `{"type":"result","result":"quick test","total_cost_usd":0.01,"session_id":"sess-ndjson-2"}`,
+			wantResult:  "quick test",
+			wantCost:    0.01,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-ndjson-2",
+		},
+		{
+			name: "ndjson_with_blank_lines",
+			input: `{"type":"system","subtype":"init","session_id":"sess-ndjson-3"}
+
+{"type":"result","result":"gaps ok","total_cost_usd":0.5,"session_id":"sess-ndjson-3"}
+`,
+			wantResult:  "gaps ok",
+			wantCost:    0.5,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-ndjson-3",
+		},
+		{
+			name: "ndjson_no_result_entry",
+			input: `{"type":"system","subtype":"init","session_id":"sess-ndjson-4"}
+{"type":"assistant","message":{}}`,
+			wantError: true,
+		},
+		{
+			name: "ndjson_with_error_flag",
+			input: `{"type":"system","subtype":"init","session_id":"sess-ndjson-5"}
+{"type":"result","result":"Failed hard","total_cost_usd":0.30,"is_error":true,"session_id":"sess-ndjson-5"}`,
+			wantResult:  "Failed hard",
+			wantCost:    0.30,
+			wantError:   false,
+			wantIsError: true,
+			wantSession: "sess-ndjson-5",
+		},
+		// Edge cases
+		{
+			name:      "empty_input",
+			input:     ``,
+			wantError: true,
+		},
+		{
+			name:      "whitespace_only",
+			input:     `   `,
+			wantError: true,
 		},
 	}
 
@@ -1467,7 +1524,7 @@ func TestWorkflowTimeout(t *testing.T) {
 		workflow string
 		want     time.Duration
 	}{
-		{"braintrust", 15 * time.Minute},
+		{"braintrust", 25 * time.Minute},
 		{"implementation", 10 * time.Minute},
 		{"review", 5 * time.Minute},
 		{"unknown", 10 * time.Minute},

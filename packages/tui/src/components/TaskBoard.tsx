@@ -28,7 +28,11 @@ function useTaskBoardData(): { todos: TodoItem[]; teams: TeamSummary[]; sessionI
       if (block.type === "tool_use" && block.name === "TodoWrite") {
         const todos = (block.input as Record<string, unknown>)["todos"];
         if (Array.isArray(todos)) {
-          lastTodos = todos as TodoItem[];
+          lastTodos = (todos as Record<string, unknown>[]).map((t) => ({
+            content: (t["content"] ?? t["subject"] ?? "") as string,
+            status: (t["status"] ?? "pending") as string,
+            activeForm: t["activeForm"] as string | undefined,
+          }));
         }
       }
     }
@@ -90,7 +94,8 @@ function memberColor(status: string): string {
   return colors.muted;
 }
 
-function truncate(str: string, maxLen: number): string {
+function truncate(str: string | undefined | null, maxLen: number): string {
+  if (!str) return "";
   return str.length > maxLen ? str.slice(0, maxLen - 1) + "…" : str;
 }
 

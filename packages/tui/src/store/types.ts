@@ -198,11 +198,12 @@ export interface TabDefinition {
 export interface UISlice {
   streaming: boolean;
   focusedPanel: "claude" | "agents";
-  rightPanelMode: "agents" | "dashboard" | "settings" | "teams";
+  rightPanelMode: "agents" | "dashboard" | "settings";
   activeTab: TabId;
   interruptQuery: (() => Promise<void>) | null;
   clearPendingMessage: (() => void) | null;
   panelAutoSwitched: boolean;
+  selectedUnifiedId: string | null;
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
@@ -210,7 +211,8 @@ export interface UISlice {
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
   setClearPendingMessage: (fn: (() => void) | null) => void;
   setPanelAutoSwitched: (switched: boolean) => void;
-  setRightPanelMode: (mode: "agents" | "dashboard" | "settings" | "teams") => void;
+  setRightPanelMode: (mode: "agents" | "dashboard" | "settings") => void;
+  setSelectedUnifiedId: (id: string | null) => void;
 }
 
 // Input history slice (ephemeral - not persisted)
@@ -272,6 +274,43 @@ export interface ToastSlice {
   removeToast: (id: string) => void;
 }
 
+// Unified tree node (view-layer projection, never stored in Zustand)
+export type UnifiedNodeKind = "sdk-agent" | "team-root" | "team-member";
+
+export interface UnifiedNode {
+  kind: UnifiedNodeKind;
+  id: string;
+  parentId: string | null;
+  displayName: string;
+  model: string;
+  status: AgentStatus;
+  startTime: number;
+  endTime?: number;
+  depth: number;
+  // Source references (one set per kind)
+  agentRef?: string;
+  teamDir?: string;
+  waveNumber?: number;
+  // Live monitoring (team members only)
+  latestActivity?: string;
+  healthStatus?: string;
+  cost?: number;
+}
+
+// Team member row (parsed from config.json waves)
+export interface TeamMemberRow {
+  name: string;
+  agent: string;
+  model: string;
+  status: string;
+  wave: number;
+  cost: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  healthStatus?: string;
+  latestActivity?: string;
+}
+
 // Team types - imported from hooks
 export interface TeamSummary {
   dir: string;
@@ -290,6 +329,7 @@ export interface TeamSummary {
   memberCount: number;
   completedMembers: number;
   failedMembers: number;
+  members: TeamMemberRow[];
 }
 
 // Full team config structure (matches Go TeamConfig)

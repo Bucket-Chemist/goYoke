@@ -116,7 +116,7 @@ Mozart conducts a structured 4-question interview to configure the Braintrust te
 | **Q1** | "What problem or question do you want the Braintrust to analyze?" | **ALWAYS** | `task.problem_statement` (all stdin files) |
 | **Q2** | "Which files or areas of the codebase are relevant? (Or should I scout first?)" | **ALWAYS** | `context.relevant_files[]` OR `reads_from.scout_metrics` |
 | **Q3** | "Should I include both Einstein and Staff-Architect, or just Einstein?" | **CONDITIONAL** (narrow scope) | `waves[].members[]` (full vs single-agent) |
-| **Q4** | "Default budget is $5.00. Want to adjust?" | **CONDITIONAL** (cost concerns) | `budget_max_usd`, `budget_remaining_usd` |
+| **Q4** | "Default budget is $25.00. Want to adjust?" | **CONDITIONAL** (cost concerns) | `budget_max_usd`, `budget_remaining_usd` |
 
 ### Decision Flow
 
@@ -136,7 +136,7 @@ Q3: Team Composition (CONDITIONAL)
 
 Q4: Budget (CONDITIONAL)
   ├─► User specifies → Validate ($1-$50)
-  └─► (not asked) → Default $5.00
+  └─► (not asked) → Default $25.00
 
 Generate Problem Brief → Confirm → Generate config.json + stdin files → Launch
 ```
@@ -147,7 +147,7 @@ Generate Problem Brief → Confirm → Generate config.json + stdin files → La
 |--------------|----------------|
 | Just Einstein | ~$1.50 |
 | Full Braintrust (Einstein + Staff-Architect + Beethoven) | ~$4.50-$5.50 |
-| Validation limits | Min $1.00, Max $50.00, Default $5.00 |
+| Validation limits | Min $1.00, Max $50.00, Default $25.00 |
 
 ### Scout-First Path
 
