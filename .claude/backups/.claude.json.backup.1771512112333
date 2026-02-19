@@ -1,5 +1,5 @@
 {
-  "numStartups": 582,
+  "numStartups": 583,
   "installMethod": "native",
   "autoUpdates": false,
   "theme": "dark-ansi",
@@ -697,7 +697,7 @@
     "ae0dd57c-7d6c-4957-b260-3ad68c7cd9a1": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1771505919780
+      "timestamp": 1771511806424
     }
   },
   "officialMarketplaceAutoInstallAttempted": true,
@@ -820,7 +820,7 @@
     "data": {
       "explore_agent_variant": "restrictive"
     },
-    "timestamp": 1771511724374
+    "timestamp": 1771512036743
   },
   "hasShownOpus46Notice": {
     "ae0dd57c-7d6c-4957-b260-3ad68c7cd9a1": true

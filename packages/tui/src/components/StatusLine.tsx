@@ -3,6 +3,7 @@ import { Box, Text } from "ink";
 import { execSync } from "child_process";
 import { useStore } from "../store/index.js";
 import { colors } from "../config/theme.js";
+import { PROVIDERS } from "../config/providers.js";
 
 interface StatusLineProps {
   width: number;
@@ -108,14 +109,23 @@ function StreamingSpinner(): JSX.Element {
  */
 export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element {
   const {
-    activeModel,
-    preferredModel,
     totalCost,
     contextWindow,
     streaming,
     agents,
     permissionMode,
   } = useStore();
+
+  // Use selector to subscribe to the actual providerModels data, avoiding
+  // the getter-on-state-object issue where Object.assign in Zustand's setState
+  // evaluates getters once and stores static values, breaking reactivity.
+  const modelName = useStore((state) => {
+    const provider = state.activeProvider;
+    const modelId = state.getActiveModel();
+    if (!modelId) return "unknown";
+    const def = PROVIDERS[provider]?.models.find((m) => m.id === modelId);
+    return def?.displayName ?? modelId.substring(0, 12);
+  });
 
   const gitInfo = useGitInfo();
   const teams = useStore((state) => state.teams);
@@ -130,15 +140,6 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
 
   // Detect ASCII mode
   const useAscii = process.env["TERM"] === "dumb" || process.env["GOGENT_ASCII"] === "1";
-
-  // Determine model display name
-  const modelName = useMemo(() => {
-    const model = activeModel || preferredModel || "unknown";
-    if (model.includes("opus")) return "Opus";
-    if (model.includes("sonnet")) return "Sonnet";
-    if (model.includes("haiku")) return "Haiku";
-    return model.substring(0, 10); // Fallback: truncate
-  }, [activeModel, preferredModel]);
 
   // Calculate context percentage based on actual context window usage
   const contextPct = useMemo(() => {

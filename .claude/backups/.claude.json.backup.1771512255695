@@ -1,5 +1,5 @@
 {
-  "numStartups": 580,
+  "numStartups": 583,
   "installMethod": "native",
   "autoUpdates": false,
   "theme": "dark-ansi",
@@ -37,7 +37,7 @@
     "shift-enter-setup": 156,
     "git-worktrees": 577,
     "default-permission-mode-config": 574,
-    "guest-passes": 578,
+    "guest-passes": 581,
     "shift-enter": 574,
     "agent-flag": 577,
     "overage-promo": 479
@@ -697,7 +697,7 @@
     "ae0dd57c-7d6c-4957-b260-3ad68c7cd9a1": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1771505919780
+      "timestamp": 1771511806424
     }
   },
   "officialMarketplaceAutoInstallAttempted": true,
@@ -809,7 +809,7 @@
       },
       "referrer_reward": null,
       "remaining_passes": 3,
-      "timestamp": 1771506185408
+      "timestamp": 1771511342846
     }
   },
   "passesUpsellSeenCount": 4,
@@ -820,7 +820,7 @@
     "data": {
       "explore_agent_variant": "restrictive"
     },
-    "timestamp": 1771510338195
+    "timestamp": 1771512185903
   },
   "hasShownOpus46Notice": {
     "ae0dd57c-7d6c-4957-b260-3ad68c7cd9a1": true
