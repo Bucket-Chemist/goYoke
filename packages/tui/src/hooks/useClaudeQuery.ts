@@ -67,7 +67,7 @@ export function useClaudeQuery(
     onStreamingCompleteRef.current = options?.onStreamingComplete;
   }, [options?.onStreamingComplete]);
 
-  // Register SessionManager events on mount
+  // Register SessionManager events on mount, cleanup on unmount
   useEffect(() => {
     if (eventsRegistered.current) return;
     eventsRegistered.current = true;
@@ -83,8 +83,9 @@ export function useClaudeQuery(
       onError: (classifiedError: ClassifiedError) => {
         setError(classifiedError);
 
-        // Add error message to chat
-        useStore.getState().addMessage({
+        // Add error message to chat (use active provider)
+        const store = useStore.getState();
+        store.addProviderMessage(store.activeProvider, {
           role: "assistant",
           content: [
             {
@@ -116,10 +117,22 @@ export function useClaudeQuery(
         onStreamingCompleteRef.current?.();
       },
     });
+
+    // Cleanup: clear event handlers on unmount to prevent memory leak
+    return () => {
+      manager.setEvents({
+        onStateChange: () => {},
+        onError: () => {},
+        onSessionId: () => {},
+        onStreamingComplete: () => {},
+      });
+      eventsRegistered.current = false;
+    };
   }, []);
 
   // Store actions for sendMessage
-  const addMessage = useStore((state) => state.addMessage);
+  const activeProvider = useStore((state) => state.activeProvider);
+  const addProviderMessage = useStore((state) => state.addProviderMessage);
   const setStreamingState = useStore((state) => state.setStreaming);
 
   /**
@@ -145,8 +158,8 @@ export function useClaudeQuery(
         // Reset error state
         setError(null);
 
-        // Add user message to store (user sees it immediately)
-        addMessage({
+        // Add user message to store (user sees it immediately, using active provider)
+        addProviderMessage(activeProvider, {
           role: "user",
           content: [
             {
@@ -198,7 +211,7 @@ export function useClaudeQuery(
         });
       }
     },
-    [isStreaming, addMessage, setStreamingState]
+    [isStreaming, activeProvider, addProviderMessage, setStreamingState]
   );
 
   /**

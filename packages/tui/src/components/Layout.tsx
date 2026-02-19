@@ -20,6 +20,13 @@ import { AgentConfigView } from "./AgentConfigView.js";
 import { TeamConfigView } from "./TeamConfigView.js";
 import { TelemetryView } from "./TelemetryView.js";
 import { ModalOverlay } from "./Modal.js";
+import type { AskPayload, ModalRequest } from "../store/slices/modal.js";
+
+/** Plan approval modals need a split layout so the conversation remains readable. */
+function isPlanApprovalModal(request: ModalRequest): boolean {
+  if (request.type !== "ask") return false;
+  return (request.payload as AskPayload).header === "Plan";
+}
 import { StatusLine } from "./StatusLine.js";
 import { ToastContainer } from "./Toast.js";
 import { TaskBoard } from "./TaskBoard.js";
@@ -122,16 +129,29 @@ export function Layout(): JSX.Element {
         <TabBar enabled={modalQueue.length === 0} />
       </Box>
 
-      {/* Content area: modal replaces panels entirely when active (no bleed-through) */}
+      {/* Content area: modal handling.
+          Plan approval: split layout so conversation stays readable above the modal.
+          All other modals: full-screen replacement (no bleed-through). */}
       {modalQueue.length > 0 && modalQueue[0] ? (
-        <ModalOverlay request={modalQueue[0]} />
+        isPlanApprovalModal(modalQueue[0]) ? (
+          <Box flexGrow={1} flexDirection="column">
+            {/* Conversation stays visible so the plan is readable */}
+            <Box flexGrow={1} overflow="hidden">
+              <ClaudePanel focused={false} width={claudePanelWidth} />
+            </Box>
+            {/* Compact approval strip at the bottom */}
+            <ModalOverlay request={modalQueue[0]} compact />
+          </Box>
+        ) : (
+          <ModalOverlay request={modalQueue[0]} />
+        )
       ) : (
         <>
           <Box flexDirection="row" flexGrow={1}>
             {activeTab === "chat" && (
               <>
                 {/* Left Panel: Claude conversation */}
-                <Box width={leftWidth}>
+                <Box width={leftWidth} flexDirection="column">
                   <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
                 </Box>
 

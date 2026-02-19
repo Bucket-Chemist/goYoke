@@ -135,6 +135,7 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
       context: "Global",
       bindings: [
         { keys: "Tab", action: "Switch panel focus" },
+        { keys: "Shift+Tab", action: "Cycle provider (Anthropic → Google → OpenAI → Local)" },
         { keys: "Alt+R", action: "Cycle right panel mode" },
         { keys: "Alt+P", action: "Cycle permission mode" },
         { keys: "Escape", action: "Interrupt query / Cancel modal" },
@@ -157,8 +158,8 @@ export function getKeyBindingsHelp(): KeyBindingReference[] {
       bindings: [
         { keys: "Enter", action: "Submit input" },
         { keys: "Up/Down", action: "Input history" },
-        { keys: "Ctrl+E", action: "Toggle tool expansion on/off" },
-        { keys: "Ctrl+Shift+E", action: "Cycle expansion (collapsed → expanded → full)" },
+        { keys: "Alt+E", action: "Toggle tool expansion on/off" },
+        { keys: "Alt+Shift+E", action: "Cycle expansion (collapsed → expanded → full)" },
       ],
     },
     {

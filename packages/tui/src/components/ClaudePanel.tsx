@@ -24,6 +24,8 @@ import { colors, borders } from "../config/theme.js";
 import { logger } from "../utils/logger.js";
 import { filterCommands } from "../utils/slashCommands.js";
 import { SlashCommandMenu } from "./SlashCommandMenu.js";
+import { PROVIDERS } from "../config/providers.js";
+import { ProviderTabs } from "./ProviderTabs.js";
 
 export interface ClaudePanelProps {
   /**
@@ -41,7 +43,6 @@ export interface ClaudePanelProps {
  */
 export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   const {
-    messages,
     streaming,
     addToHistory,
     navigateHistory,
@@ -49,7 +50,11 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
     modalQueue,
     isPlanMode,
     setClearPendingMessage,
+    getActiveMessages,
+    activeProvider,
   } = useStore();
+  // Use active provider's messages instead of global messages array
+  const messages = getActiveMessages();
   const [input, setInput] = useState("");
   // Expansion level: 0=collapsed, 1=expanded (truncated), 2=full (no truncation)
   const [expansionLevel, setExpansionLevel] = useState(0);
@@ -122,7 +127,8 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
 
   // Helper to add system messages
   const addSystemMessage = useCallback((text: string): void => {
-    useStore.getState().addMessage({
+    const store = useStore.getState();
+    store.addProviderMessage(store.activeProvider, {
       role: "system",
       content: [{ type: "text", text }],
       partial: false,
@@ -149,76 +155,80 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
     return () => setClearPendingMessage(null);
   }, [clearPendingMessage, setClearPendingMessage]);
 
-  // Handle /model command
+  // Handle /model command (provider-aware)
   const handleModelCommand = async (arg: string): Promise<void> => {
+    const store = useStore.getState();
+    const activeProvider = store.activeProvider;
+    const providerConfig = PROVIDERS[activeProvider];
+
+    if (!providerConfig) {
+      addSystemMessage(`Error: Unknown provider "${activeProvider}"`);
+      return;
+    }
+
     if (arg) {
       // Direct model set: /model haiku
-      // Use short aliases - SDK prefers these and resolves to latest version
-      const MODEL_ALIASES: Record<string, string> = {
-        "haiku": "haiku",
-        "sonnet": "sonnet",
-        "opus": "opus",
-        "gemini": "gemini-pro",
-        "flash": "gemini-flash",
-      };
-      const modelId = MODEL_ALIASES[arg.toLowerCase()] || arg;
+      const modelId = arg.trim();
 
-      void logger.debug("Setting model", { modelId });
+      // Validate model exists in current provider
+      const validModel = providerConfig.models.find((m) => m.id === modelId);
+      if (!validModel) {
+        const validIds = providerConfig.models.map((m) => m.id).join(", ");
+        addSystemMessage(
+          `Error: Model "${modelId}" not found for ${providerConfig.name}.\n` +
+          `Valid models: ${validIds}`
+        );
+        return;
+      }
+
+      void logger.debug("Setting model", { modelId, provider: activeProvider });
 
       // Try setModel first (works if query active AND in streaming input mode)
       const success = await setModel(modelId);
       if (success) {
-        useStore.getState().setActiveModel(modelId);
-        addSystemMessage(`Model switched to: ${modelId}`);
+        store.setProviderModel(activeProvider, modelId);
+        addSystemMessage(`Model switched to: ${validModel.displayName} for ${providerConfig.name}`);
       } else {
         // No active query - store preference for next message
         void logger.debug("No active query, storing preference", { modelId });
-        useStore.getState().setPreferredModel(modelId);
-        useStore.getState().setActiveModel(modelId);
-        addSystemMessage(`Model set to: ${modelId}. Will apply on next message.`);
+        store.setProviderModel(activeProvider, modelId);
+        addSystemMessage(
+          `Model set to: ${validModel.displayName} for ${providerConfig.name}. ` +
+          `Will apply on next message.`
+        );
       }
     } else {
-      // Show model selector modal - use short aliases
-      const result = await useStore.getState().enqueue({
+      // Show model selector modal with provider-specific models
+      const result = await store.enqueue({
         type: "select",
         payload: {
-          message: "Select a model:",
-          options: [
-            {
-              label: "Haiku (fast, cheap)",
-              value: "haiku",
-            },
-            {
-              label: "Sonnet (balanced)",
-              value: "sonnet",
-            },
-            {
-              label: "Opus (powerful)",
-              value: "opus",
-            },
-            {
-              label: "Gemini 3 Pro (Powerful)",
-              value: "gemini-pro",
-            },
-            {
-              label: "Gemini 3 Flash (Fast)",
-              value: "gemini-flash",
-            },
-          ],
+          message: `Select a model for ${providerConfig.name}:`,
+          options: providerConfig.models.map((model) => ({
+            label: `${model.displayName} - ${model.description}`,
+            value: model.id,
+          })),
         },
       });
 
       if (result.type === "select" && result.selected) {
+        const selectedModel = providerConfig.models.find((m) => m.id === result.selected);
+        if (!selectedModel) {
+          addSystemMessage(`Error: Model "${result.selected}" not found`);
+          return;
+        }
+
         // Try setModel first (works if query active)
         const success = await setModel(result.selected);
         if (success) {
-          useStore.getState().setActiveModel(result.selected);
-          addSystemMessage(`Model switched to: ${result.selected}`);
+          store.setProviderModel(activeProvider, result.selected);
+          addSystemMessage(`Model switched to: ${selectedModel.displayName} for ${providerConfig.name}`);
         } else {
           // No active query - store preference for next message
-          useStore.getState().setPreferredModel(result.selected);
-          useStore.getState().setActiveModel(result.selected);
-          addSystemMessage(`Model set to: ${result.selected}. Will apply on next message.`);
+          store.setProviderModel(activeProvider, result.selected);
+          addSystemMessage(
+            `Model set to: ${selectedModel.displayName} for ${providerConfig.name}. ` +
+            `Will apply on next message.`
+          );
         }
       }
     }
@@ -348,18 +358,21 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         historyNext: handleHistoryNext,
       });
 
-  // Ctrl+E toggles tool blocks on/off (0↔1), Ctrl+Shift+E cycles levels (0→1→2→0)
+  // Alt+E / Alt+Shift+E for tool expansion — NOT Ctrl+E / Ctrl+Shift+E.
+  // Ctrl+E is eaten by IBus Unicode input (Linux, system-wide) and Zellij scroll mode.
+  // Ctrl+Shift+E is eaten by IBus Unicode codepoint entry unconditionally on GNOME.
+  // Alt (Meta) keys pass through both Zellij panes and IBus without interception.
+  // Terminal sends Alt+Shift+E as Meta + capital "E" (ESC+E sequence).
   const toolToggleBindings: KeyBinding[] = [
     {
-      key: "e",
-      ctrl: true,
-      shift: true,
+      key: "E", // Alt+Shift+E
+      meta: true,
       action: () => setExpansionLevel((prev) => (prev + 1) % 3),
       description: "Cycle expansion level (collapsed → expanded → full)",
     },
     {
-      key: "e",
-      ctrl: true,
+      key: "e", // Alt+E
+      meta: true,
       action: () => setExpansionLevel((prev) => prev > 0 ? 0 : 1),
       description: "Toggle tool expansion on/off",
     },
@@ -368,9 +381,9 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   // Enable panel bindings only when focused and no modal is active
   // Remove !streaming condition to allow input during streaming (TC-015a)
   useKeymap(panelBindings, focused && modalQueue.length === 0);
-  // Allow Ctrl+E tool expansion even when modal is active — user needs to
+  // Allow Alt+E tool expansion even when modal is active — user needs to
   // expand tool blocks to read plan content while ExitPlanMode modal is showing.
-  // No conflict: modal uses arrows/Enter/Escape, not Ctrl+E.
+  // No conflict: modal uses arrows/Enter/Escape, not Alt+E.
   useKeymap(toolToggleBindings, focused);
 
   return (
@@ -382,13 +395,16 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
       height="100%"
     >
       {/* Header */}
-      <Box marginBottom={1}>
-        <Text bold color={focused ? colors.focused : colors.muted}>
-          Claude Conversation
-        </Text>
-        {isPlan && (
-          <Text bold color="yellow"> [PLAN MODE]</Text>
-        )}
+      <Box marginBottom={1} flexDirection="column">
+        <Box marginBottom={0}>
+          <Text bold color={focused ? colors.focused : colors.muted}>
+            {PROVIDERS[activeProvider]?.name ?? "Claude"} Conversation
+          </Text>
+          {isPlan && (
+            <Text bold color="yellow"> [PLAN MODE]</Text>
+          )}
+        </Box>
+        <ProviderTabs enabled={focused && modalQueue.length === 0} />
       </Box>
 
       {/* Plan mode info banner */}

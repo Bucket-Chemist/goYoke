@@ -269,6 +269,18 @@ export function ScrollView({
           </Box>
         )}
       </Box>
+
+      {/* Auto-scroll paused indicator */}
+      {userScrolledUp && (
+        <Box
+          justifyContent="center"
+          paddingX={1}
+        >
+          <Text color={colors.warning}>
+            ⏸ Auto-scroll paused • Press End to resume
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }

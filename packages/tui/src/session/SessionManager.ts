@@ -13,7 +13,7 @@
  */
 
 import { query, type SDKUserMessage, type SDKMessage, type SDKSystemMessage, type SDKAssistantMessage, type SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import type { MessageParam, ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import { nanoid } from "nanoid";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -27,10 +27,11 @@ import {
 } from "./types.js";
 import { useStore } from "../store/index.js";
 import { mcpServer } from "../mcp/server.js";
-import { type ContentBlock } from "../store/types.js";
+import { type ContentBlock, type ProviderId } from "../store/types.js";
 import { logger } from "../utils/logger.js";
 import { type ClassifiedError, type ErrorType } from "../types/events.js";
 import { onShutdown } from "../lifecycle/shutdown.js";
+import { PROVIDERS } from "../config/providers.js";
 
 /**
  * SDK tools handled internally by CLI subprocess.
@@ -127,6 +128,34 @@ class SessionManager {
    */
   setEvents(events: SessionManagerEvents): void {
     this.events = events;
+  }
+
+  /**
+   * Resolve adapter configuration for a provider and model
+   * @param provider - Provider ID
+   * @param model - Model identifier
+   * @returns Adapter configuration with executable path and env vars
+   */
+  private resolveAdapter(provider: ProviderId, model: string): {
+    executable?: string;
+    env?: Record<string, string>;
+  } {
+    const providerConfig = PROVIDERS[provider];
+
+    // Anthropic uses native SDK - no adapter needed
+    if (provider === "anthropic") {
+      return {};
+    }
+
+    // Non-Anthropic providers need adapters
+    return {
+      executable: providerConfig.adapterPath,
+      env: {
+        ...process.env,
+        ...(providerConfig.envVars || {}),
+        MODEL: model, // Generic env var for all adapters
+      },
+    };
   }
 
   /**
@@ -326,55 +355,53 @@ class SessionManager {
 
     // Get existing session ID for resume (from Zustand store)
     const store = useStore.getState();
-    const existingSessionId = store.sessionId;
-    const preferredModel = store.preferredModel;
+    const activeProvider = store.activeProvider;
+    const existingSessionId = store.providerSessionIds[activeProvider];
+    const preferredModel = store.providerModels[activeProvider];
 
     // Create Promise that resolves when system.init event received
     const initPromise = new Promise<void>((resolve, reject) => {
       this.initResolve = resolve;
       this.initReject = reject;
     });
-    
-    // Resolve model preference: argument > store > undefined
-    const modelToUse = preferredModel || useStore.getState().preferredModel;
 
     try {
-      // Determine executable path based on model
-      let pathToExecutable: string | undefined = undefined;
-      if (modelToUse && modelToUse.startsWith("gemini")) {
-        // Use local Gemini adapter for gemini-* models
-        // Resolve relative to this file (which ends up in dist/index.js)
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = dirname(__filename);
-        // dist/index.js -> ../scripts/gemini-adapter.ts
-        pathToExecutable = join(__dirname, "..", "scripts", "gemini-adapter.ts");
-        void logger.info("Using Gemini Adapter", { adapterPath: pathToExecutable, model: modelToUse });
+      // Resolve adapter for provider
+      const { executable, env } = this.resolveAdapter(activeProvider, preferredModel || "");
+
+      if (executable) {
+        void logger.info("Using provider adapter", {
+          provider: activeProvider,
+          adapterPath: executable,
+          model: preferredModel,
+        });
       }
 
       // Start query with AsyncIterable prompt
       this.eventStream = query({
         prompt: this.createMessageGenerator(),
         options: {
-          // Point to custom executable if needed (e.g. Gemini Adapter)
-          pathToClaudeCodeExecutable: pathToExecutable,
-          
-          // Pass model to adapter via env
-          env: pathToExecutable ? {
-            ...process.env,
-            GEMINI_MODEL: modelToUse || undefined
-          } : undefined,
+          // Point to custom executable if needed (e.g. provider adapter)
+          pathToClaudeCodeExecutable: executable,
+
+          // Pass adapter env vars
+          env,
 
           // Resume existing session to maintain conversation context
           resume: existingSessionId || undefined,
           // Apply preferred model if set. If no preference, omit to let
           // SDK use the model from user's Claude Code settings.
-          model: modelToUse || undefined,
+          model: preferredModel || undefined,
           // Load GOgent-Fortress settings (hooks, CLAUDE.md, etc.)
           settingSources: ["user", "project", "local"],
-          // Register MCP server
-          mcpServers: [mcpServer] as unknown as NonNullable<Parameters<typeof query>[0]["options"]>["mcpServers"],
+          // Register MCP server - SDK expects Record<string, McpServerConfig>
+          mcpServers: {
+            [mcpServer.name]: mcpServer,
+          },
           // Permission callback - prompts user before tool execution
           canUseTool: this.handleCanUseTool.bind(this),
+          // Enable partial message streaming for better UX
+          includePartialMessages: true,
         },
       });
 
@@ -545,6 +572,36 @@ class SessionManager {
             break;
         }
       }
+
+      // Health check: if iterator completes without error and state is not DEAD,
+      // the SDK subprocess crashed silently (SIGTERM, OOM, etc.)
+      if (this.state !== SessionState.DEAD) {
+        void logger.error("SDK subprocess iterator completed unexpectedly", {
+          state: this.state,
+          activeCoordinator: !!this.activeCoordinator,
+        });
+
+        // Reject orphaned message if exists
+        if (this.activeCoordinator) {
+          this.activeCoordinator.rejectResponse(
+            new Error("SDK subprocess terminated unexpectedly")
+          );
+          this.activeCoordinator.queuedMessage?.reject(
+            new Error("SDK subprocess terminated unexpectedly")
+          );
+          this.activeCoordinator = null;
+        }
+
+        // Transition to ERROR and attempt reconnect
+        this.transitionTo(SessionState.ERROR);
+        this.events?.onError({
+          type: "server_error",
+          message: "SDK subprocess terminated unexpectedly",
+          retryable: true,
+        });
+        this.events?.onStreamingComplete();
+        void this.attemptReconnect();
+      }
     } catch (error) {
       this.transitionTo(SessionState.ERROR);
       this.events?.onError(this.classifyError(error));
@@ -568,15 +625,19 @@ class SessionManager {
 
     // Extract model from init message
     const initEvent = event as SDKSystemMessage & { model?: string };
+    const store = useStore.getState();
+    const activeProvider = store.activeProvider;
+
     if (initEvent.model) {
       void logger.debug("SDK Init returned model", { model: initEvent.model });
-      useStore.getState().setActiveModel(initEvent.model);
+      store.setProviderModel(activeProvider, initEvent.model);
     }
 
     // Update session with ID and set session dir for child processes
     this.sessionId = event.session_id;
     this.events?.onSessionId(event.session_id);
-    useStore.getState().updateSession({ id: event.session_id });
+    store.setProviderSessionId(activeProvider, event.session_id);
+    store.updateSession({ id: event.session_id });
 
     // Set GOGENT_SESSION_DIR for team polling and child processes
     if (event.session_id && !process.env["GOGENT_SESSION_DIR"]) {
@@ -731,18 +792,21 @@ class SessionManager {
     // Use message ID to distinguish streaming updates from new messages
     const messageId = event.message.id;
 
+    // Get active provider for message storage
+    const activeProvider = store.activeProvider;
+
     if (messageId === this.currentMessageIdRef) {
       // Same message ID - streaming update to current message
       this.currentMessageRef = contentBlocks;
-      store.updateLastMessage(contentBlocks);
+      store.updateLastProviderMessage(activeProvider, contentBlocks);
     } else {
       // Different message ID - new assistant message
       if (this.currentMessageRef.length > 0) {
-        store.updateLastMessage(this.currentMessageRef);
+        store.updateLastProviderMessage(activeProvider, this.currentMessageRef);
       }
       this.currentMessageIdRef = messageId;
       this.currentMessageRef = contentBlocks;
-      store.addMessage({
+      store.addProviderMessage(activeProvider, {
         role: "assistant",
         content: contentBlocks,
         partial: true,
@@ -755,10 +819,11 @@ class SessionManager {
    */
   private handleUserEvent(event: SDKUserMessage): void {
     const store = useStore.getState();
+    const activeProvider = store.activeProvider;
 
     // Finalize the current assistant message before adding tool results
     if (this.currentMessageRef.length > 0) {
-      store.updateLastMessage(this.currentMessageRef);
+      store.updateLastProviderMessage(activeProvider, this.currentMessageRef);
       this.currentMessageRef = [];
       this.currentMessageIdRef = null;
     }
@@ -768,7 +833,7 @@ class SessionManager {
     const contentBlocks: ContentBlock[] =
       typeof rawContent === "string"
         ? [{ type: "text" as const, text: rawContent }]
-        : rawContent.map((block: any) => {
+        : rawContent.map((block: ContentBlockParam) => {
             if (block.type === "tool_result") {
               return {
                 type: "tool_result" as const,
@@ -778,7 +843,9 @@ class SessionManager {
                     ? block.content
                     : Array.isArray(block.content)
                       ? block.content
-                          .map((c: any) => c.text || JSON.stringify(c))
+                          .map((c: ContentBlockParam) =>
+                            c.type === "text" ? c.text : JSON.stringify(c)
+                          )
                           .join("\n")
                       : JSON.stringify(block.content ?? ""),
                 is_error: block.is_error || false,
@@ -792,7 +859,7 @@ class SessionManager {
           });
 
     // Add as a system message
-    store.addMessage({
+    store.addProviderMessage(activeProvider, {
       role: "system",
       content: contentBlocks,
       partial: false,
@@ -804,10 +871,11 @@ class SessionManager {
    */
   private handleResultEvent(event: SDKResultMessage): void {
     const store = useStore.getState();
+    const activeProvider = store.activeProvider;
 
     // Mark message as complete if we have one
     if (this.currentMessageRef.length > 0) {
-      store.updateLastMessage(this.currentMessageRef);
+      store.updateLastProviderMessage(activeProvider, this.currentMessageRef);
       this.currentMessageRef = [];
       this.currentMessageIdRef = null;
     }
@@ -836,8 +904,9 @@ class SessionManager {
 
     // Handle error result
     if (event.subtype !== "success") {
-      const errorMessages = "errors" in event
-        ? (event as any).errors.join("; ")
+      const eventWithErrors = event as SDKResultMessage & { errors?: string[] };
+      const errorMessages = eventWithErrors.errors
+        ? eventWithErrors.errors.join("; ")
         : "Query failed";
       this.events?.onError({
         type: "server_error" as ErrorType,
@@ -918,7 +987,7 @@ class SessionManager {
         exitPlanResult = await useStore.getState().enqueue({
           type: 'ask',
           payload: {
-            message: `Approve plan and begin implementation?${promptSummary}\n\nUse Ctrl+E to expand tool blocks. PageUp/PageDown to scroll.`,
+            message: `Approve plan and begin implementation?${promptSummary}`,
             header: 'Plan',
             options: [
               { label: 'Approve', value: 'approve', description: 'Begin implementation as planned' },

@@ -23,7 +23,7 @@ export const askUserTool = tool(
       type: "ask",
       payload: {
         message: args.message,
-        options: args.options,
+        options: args.options?.map((opt) => ({ label: opt, value: opt })),
         defaultValue: args.default,
       },
     })) as Extract<ModalResponse, { type: "ask" }>;

@@ -28,6 +28,23 @@ export interface AgentRelationships {
 }
 
 /**
+ * Conventions block from context_requirements in agents-index.json.
+ * May be an empty object {} or contain base/conditional arrays.
+ */
+export interface ContextConventions {
+  base?: string[];
+  conditional?: unknown[];
+}
+
+/**
+ * Context requirements for an agent — which rules and conventions to inject.
+ */
+export interface ContextRequirements {
+  rules?: string[];
+  conventions?: ContextConventions;
+}
+
+/**
  * Full agent config from agents-index.json
  */
 export interface AgentConfig extends AgentRelationships {
@@ -39,6 +56,7 @@ export interface AgentConfig extends AgentRelationships {
   tools?: string[];
   cli_flags?: AgentCliFlags;
   description?: string;
+  context_requirements?: ContextRequirements;
 }
 
 interface AgentsIndex {

@@ -44,6 +44,9 @@ interface GeminiEvent {
 let currentModel = MODEL_MAPPING["default"];
 let sessionId: string | null = null;
 let currentMessageId: string | null = null;
+let messageStarted = false;
+let contentBlockStarted = false;
+let currentBlockIndex = 0;
 
 // Debug logging
 const debug = process.env.DEBUG_ADAPTER === "1";
@@ -104,12 +107,16 @@ async function handleUserMessage(sdkMsg: SDKUserMessage) {
   if (sdkMsg.session_id) {
     sessionId = sdkMsg.session_id;
   }
-  
+
   // Reset message state for new turn
   currentMessageId = "msg_" + Date.now();
+  messageStarted = false;
+  contentBlockStarted = false;
+  currentBlockIndex = 0;
 
   // Determine model from env var (passed by SessionManager) or default
-  const envModel = process.env.GEMINI_MODEL;
+  // Check both MODEL (new) and GEMINI_MODEL (backward compat)
+  const envModel = process.env.MODEL || process.env.GEMINI_MODEL;
   // Map friendly name (e.g. 'gemini-pro') to CLI flag if needed
   const mappedModel = envModel ? (MODEL_MAPPING[envModel] || envModel) : currentModel;
 
@@ -149,6 +156,23 @@ async function handleUserMessage(sdkMsg: SDKUserMessage) {
 
   gemini.on("close", (code) => {
     log("Gemini process exited with code:", code);
+
+    // Close any open content blocks/messages
+    if (contentBlockStarted) {
+      sendEvent({
+        type: "content_block_stop",
+        index: currentBlockIndex
+      });
+      contentBlockStarted = false;
+    }
+
+    if (messageStarted) {
+      sendEvent({
+        type: "message_stop"
+      });
+      messageStarted = false;
+    }
+
     // Ensure we send a result event to close the turn if Gemini didn't
     sendEvent({
       type: "result", // SDK expects result to finish turn
@@ -159,8 +183,55 @@ async function handleUserMessage(sdkMsg: SDKUserMessage) {
   });
 }
 
+// Helper to chunk text for streaming
+function chunkText(text: string, chunkSize = 50): string[] {
+  if (!text) return [];
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+// Helper to ensure message_start is sent
+function ensureMessageStart() {
+  if (!messageStarted) {
+    log("Emitting message_start");
+    sendEvent({
+      type: "message_start",
+      message: {
+        id: currentMessageId,
+        type: "message",
+        role: "assistant",
+        content: [],
+        model: currentModel,
+        stop_reason: null,
+        stop_sequence: null,
+        usage: { input_tokens: 0, output_tokens: 0 }
+      }
+    });
+    messageStarted = true;
+  }
+}
+
+// Helper to ensure content_block_start is sent
+function ensureContentBlockStart() {
+  if (!contentBlockStarted) {
+    log("Emitting content_block_start for block", currentBlockIndex);
+    sendEvent({
+      type: "content_block_start",
+      index: currentBlockIndex,
+      content_block: {
+        type: "text",
+        text: ""
+      }
+    });
+    contentBlockStarted = true;
+  }
+}
+
 function mapAndEmitEvent(gEvent: GeminiEvent) {
-  // log("Mapping Gemini event:", gEvent.type);
+  log("Mapping Gemini event:", gEvent.type);
 
   switch (gEvent.type) {
     case "init":
@@ -174,53 +245,90 @@ function mapAndEmitEvent(gEvent: GeminiEvent) {
 
     case "message":
       if (gEvent.role === "assistant") {
-        sendEvent({
-          type: "assistant", // SDK event type
-          message: {
-            id: currentMessageId, // Persist ID for deltas
-            role: "assistant",
-            content: [{ type: "text", text: gEvent.content || "" }]
-          }
-        });
+        const textContent = typeof gEvent.content === "string" ? gEvent.content : "";
+
+        // Ensure message_start is sent first
+        ensureMessageStart();
+        ensureContentBlockStart();
+
+        // Chunk the text and send as deltas
+        const chunks = chunkText(textContent);
+        log(`Emitting ${chunks.length} content_block_delta chunks`);
+
+        for (const chunk of chunks) {
+          sendEvent({
+            type: "content_block_delta",
+            index: currentBlockIndex,
+            delta: {
+              type: "text_delta",
+              text: chunk
+            }
+          });
+        }
       }
       break;
-    
+
     case "tool_use":
-       sendEvent({
-         type: "assistant",
-         message: {
-           id: currentMessageId,
-           role: "assistant",
-           content: [{
-             type: "tool_use",
-             id: gEvent.tool_id || "call_" + Date.now(),
-             name: gEvent.tool_name,
-             input: gEvent.parameters
-           }]
-         }
-       });
-       break;
+      // Ensure message started
+      ensureMessageStart();
+
+      // Close any existing text content block
+      if (contentBlockStarted) {
+        sendEvent({
+          type: "content_block_stop",
+          index: currentBlockIndex
+        });
+        contentBlockStarted = false;
+        currentBlockIndex++;
+      }
+
+      // Send tool_use as a content block
+      sendEvent({
+        type: "content_block_start",
+        index: currentBlockIndex,
+        content_block: {
+          type: "tool_use",
+          id: gEvent.tool_id || "call_" + Date.now(),
+          name: gEvent.tool_name,
+          input: gEvent.parameters || {}
+        }
+      });
+
+      sendEvent({
+        type: "content_block_stop",
+        index: currentBlockIndex
+      });
+
+      currentBlockIndex++;
+      break;
 
     case "tool_result":
-        sendEvent({
-          type: "user",
-          message: {
-             role: "user",
-             content: [{
-               type: "tool_result",
-               tool_use_id: gEvent.tool_id,
-               content: gEvent.output
-             }]
-          }
-        });
-        break;
+      // Tool results should come from TUI side, not adapter
+      // But if Gemini sends them, log and ignore
+      log("Ignoring tool_result from Gemini (should be handled by TUI)");
+      break;
 
     case "result":
-      // Handled by close event fallback usually, but if received, good.
+      // Close any open blocks/messages
+      if (contentBlockStarted) {
+        sendEvent({
+          type: "content_block_stop",
+          index: currentBlockIndex
+        });
+        contentBlockStarted = false;
+      }
+
+      if (messageStarted) {
+        sendEvent({
+          type: "message_stop"
+        });
+        messageStarted = false;
+      }
       break;
-      
+
     case "error":
-      // Optional: send error event
+      log("Gemini error event:", gEvent);
+      // Could emit error event here if needed
       break;
   }
 }

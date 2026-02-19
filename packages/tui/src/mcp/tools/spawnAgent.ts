@@ -10,6 +10,7 @@ import {
 } from "../../spawn/relationshipValidation.js";
 import { getAgentsStore } from "../../spawn/storeAdapter.js";
 import { getAgentConfig } from "../../spawn/agentConfig.js";
+import { buildFullAgentContext } from "../../spawn/contextInjector.js";
 import { logger, getSessionId } from "../../utils/logger.js";
 import { getSessionCostTracker } from "../../cost/tracker.js";
 
@@ -173,6 +174,10 @@ Example:
     const agentConfig = getAgentConfig(args.agent);
     const effortLevel = agentConfig?.effortLevel;
 
+    // Inject agent identity + rules + conventions into the prompt.
+    // Mirrors what gogent-validate does for Task() and team-run does for batch spawns.
+    const augmentedPrompt = await buildFullAgentContext(args.agent, agentConfig, args.prompt);
+
     return new Promise((resolve) => {
       // Build env with optional effort level override
       const spawnEnv: Record<string, string> = {
@@ -216,8 +221,8 @@ Example:
         }
       });
 
-      // Send prompt via stdin
-      proc.stdin.write(args.prompt);
+      // Send augmented prompt via stdin (identity + rules + conventions prepended)
+      proc.stdin.write(augmentedPrompt);
       proc.stdin.end();
 
       // Timeout handling

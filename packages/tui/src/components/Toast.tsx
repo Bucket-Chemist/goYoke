@@ -28,7 +28,12 @@ export function ToastContainer(): JSX.Element | null {
   };
 
   return (
-    <Box flexDirection="column" position="absolute">
+    <Box
+      flexDirection="column"
+      marginTop={1}
+      width={40}
+      alignItems="flex-end"
+    >
       {toasts.map((toast) => (
         <Box key={toast.id} borderStyle="round" borderColor={colorMap[toast.type]} paddingX={1} marginBottom={1}>
           <Text color={colorMap[toast.type]}>{iconMap[toast.type]} </Text>

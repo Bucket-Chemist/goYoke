@@ -5,6 +5,7 @@
  * - options with descriptions
  * - multiSelect mode with Space to toggle checkboxes
  * - Automatic "Other" option for free-text fallback
+ * - Escape warns before discarding unsaved free-text
  * - Backward compatible with existing MCP askUser tool
  */
 
@@ -17,9 +18,10 @@ import { TextInput } from "../primitives/TextInput.js";
 interface AskModalProps {
   request: ModalRequest<AskPayload>;
   onComplete: (response: ModalResponse) => void;
+  onCancel: () => void;
 }
 
-export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
+export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.Element {
   const payload = request.payload as AskPayload;
   const hasOptions = payload.options && payload.options.length > 0;
 
@@ -32,15 +34,33 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [freeTextValue, setFreeTextValue] = useState(payload.defaultValue || "");
   const [showOtherInput, setShowOtherInput] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const isMultiSelect = payload.multiSelect === true;
   const isOtherOption = (index: number) => hasOptions && index === allOptions.length - 1;
+
+  // Check if user has typed content that differs from initial value
+  const hasUnsavedText = freeTextValue.trim() !== (payload.defaultValue || "").trim() &&
+                         freeTextValue.trim().length > 0;
+
+  const handleEscape = () => {
+    if (hasUnsavedText && !showConfirm) {
+      setShowConfirm(true);
+    } else {
+      onCancel();
+    }
+  };
 
   // Handle input for option navigation and selection
   useInput(
     (input, key) => {
       if (showOtherInput) {
         // When in "Other" text input mode, TextInput handles input
+        return;
+      }
+
+      if (key.escape) {
+        handleEscape();
         return;
       }
 
@@ -96,8 +116,27 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
         }
       }
     },
-    { isActive: hasOptions && !showOtherInput }
+    { isActive: hasOptions && !showOtherInput && !showConfirm }
   );
+
+  // Handle Escape in free-text mode
+  useInput(
+    (input, key) => {
+      if (key.escape) {
+        handleEscape();
+      }
+    },
+    { isActive: (showOtherInput || !hasOptions) && !showConfirm }
+  );
+
+  // Handle confirmation dialog input
+  useInput((input, key) => {
+    if (key.return || input.toLowerCase() === "y") {
+      onCancel();
+    } else if (input.toLowerCase() === "n") {
+      setShowConfirm(false);
+    }
+  }, { isActive: showConfirm });
 
   const handleFreeTextSubmit = () => {
     onComplete({ type: "ask", value: freeTextValue });
@@ -111,6 +150,20 @@ export function AskModal({ request, onComplete }: AskModalProps): JSX.Element {
     helpText = "↑↓ Navigate • Space Toggle • Enter Submit • Esc Cancel";
   } else {
     helpText = "↑↓ Navigate • Enter Select • Esc Cancel";
+  }
+
+  if (showConfirm) {
+    return (
+      <Box flexDirection="column" gap={1}>
+        <Text color="yellow">⚠ Discard typed text?</Text>
+        <Box marginTop={1}>
+          <Text>You have unsaved text: "{freeTextValue}"</Text>
+        </Box>
+        <Box marginTop={1}>
+          <Text dimColor>Y Discard • N Continue editing</Text>
+        </Box>
+      </Box>
+    );
   }
 
   return (

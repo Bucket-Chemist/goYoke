@@ -1,16 +1,28 @@
 /**
  * Session slice for Zustand store
  * Matches Go CLI session format for rollback compatibility
+ * Supports per-provider state management
  */
 
 import type { StateCreator } from "zustand";
-import type { Store, SessionSlice } from "../types.js";
+import type { Store, SessionSlice, ProviderId, Message, ContentBlock } from "../types.js";
+import { nanoid } from "nanoid";
+
+/**
+ * Initialize per-provider state records
+ */
+const initializeProviderRecords = <T>(defaultValue: T): Record<ProviderId, T> => ({
+  anthropic: defaultValue,
+  google: defaultValue,
+  openai: defaultValue,
+  local: defaultValue,
+});
 
 export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
   set,
   get
 ) => ({
-  sessionId: null,
+  // Global session state
   totalCost: 0,
   tokenCount: {
     input: 0,
@@ -22,12 +34,27 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
   },
   permissionMode: "default",
   isCompacting: false,
-  preferredModel: null,
-  activeModel: null,
 
+  // Legacy fields (computed properties for backward compatibility)
+  // Note: optional chaining guards against get() being undefined during Zustand init
+  get sessionId(): string | null {
+    return get()?.getActiveSessionId?.() ?? null;
+  },
+  get preferredModel(): string | null {
+    return get()?.getActiveModel?.() ?? null;
+  },
+  get activeModel(): string | null {
+    return get()?.getActiveModel?.() ?? null;
+  },
+
+  // Per-provider state
+  providerMessages: initializeProviderRecords([]),
+  providerSessionIds: initializeProviderRecords(null),
+  providerModels: initializeProviderRecords(null),
+
+  // Global actions
   updateSession: (data): void => {
     set((state) => ({
-      sessionId: data.id ?? state.sessionId,
       totalCost: data.cost ?? state.totalCost,
       // Note: Go format uses tool_calls, we track internally as tokenCount
     }));
@@ -65,22 +92,12 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
     set({ isCompacting: compacting });
   },
 
-  setPreferredModel: (model): void => {
-    set({ preferredModel: model });
-  },
-
-  setActiveModel: (model): void => {
-    set({ activeModel: model });
-  },
-
-  // Computed property: check if currently in plan mode
   isPlanMode: (): boolean => {
     return get().permissionMode === "plan";
   },
 
   clearSession: (): void => {
     set({
-      sessionId: null,
       totalCost: 0,
       tokenCount: {
         input: 0,
@@ -92,12 +109,148 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
       },
       permissionMode: "default",
       isCompacting: false,
-      preferredModel: null,
-      activeModel: null,
-      backgroundTeamCount: 0, // Reset teams count
+      providerMessages: initializeProviderRecords([]),
+      providerSessionIds: initializeProviderRecords(null),
+      providerModels: initializeProviderRecords(null),
     });
 
     // Clear GOGENT_SESSION_DIR environment variable
     delete process.env["GOGENT_SESSION_DIR"];
+  },
+
+  // Legacy actions (backward compatibility shims)
+  setPreferredModel: (model): void => {
+    const activeProvider = get().activeProvider;
+    get().setProviderModel(activeProvider, model);
+  },
+
+  setActiveModel: (model): void => {
+    const activeProvider = get().activeProvider;
+    get().setProviderModel(activeProvider, model);
+  },
+
+  // Per-provider actions
+  addProviderMessage: (provider, msg): void => {
+    set((state) => ({
+      providerMessages: {
+        ...state.providerMessages,
+        [provider]: [
+          ...state.providerMessages[provider]!,
+          {
+            ...msg,
+            id: nanoid(),
+            timestamp: Date.now(),
+          },
+        ],
+      },
+    }));
+  },
+
+  updateLastProviderMessage: (provider, content): void => {
+    set((state) => {
+      const messages = state.providerMessages[provider] ?? [];
+      if (messages.length === 0) {
+        return state;
+      }
+
+      const updatedMessages = [...messages];
+      const lastIndex = updatedMessages.length - 1;
+      const lastMessage = updatedMessages[lastIndex];
+
+      if (!lastMessage) {
+        return state;
+      }
+
+      // Preserve existing text blocks if new content has none
+      const newHasText = content.some((b) => b.type === "text");
+      const existingTextBlocks = lastMessage.content.filter((b) => b.type === "text");
+      const mergedContent =
+        !newHasText && existingTextBlocks.length > 0
+          ? [...existingTextBlocks, ...content]
+          : content;
+
+      updatedMessages[lastIndex] = {
+        ...lastMessage,
+        content: mergedContent,
+        partial: false,
+      };
+
+      return {
+        providerMessages: {
+          ...state.providerMessages,
+          [provider]: updatedMessages,
+        },
+      };
+    });
+  },
+
+  clearProviderMessages: (provider): void => {
+    set((state) => ({
+      providerMessages: {
+        ...state.providerMessages,
+        [provider]: [],
+      },
+    }));
+  },
+
+  setProviderSessionId: (provider, sessionId): void => {
+    set((state) => ({
+      providerSessionIds: {
+        ...state.providerSessionIds,
+        [provider]: sessionId,
+      },
+    }));
+  },
+
+  setProviderModel: (provider, model): void => {
+    set((state) => ({
+      providerModels: {
+        ...state.providerModels,
+        [provider]: model,
+      },
+    }));
+  },
+
+  // Convenience getters (use activeProvider from UISlice)
+  getActiveMessages: (): Message[] => {
+    const state = get();
+    const activeProvider = state.activeProvider;
+    return state.providerMessages[activeProvider] ?? [];
+  },
+
+  getActiveSessionId: (): string | null => {
+    const state = get();
+    const activeProvider = state.activeProvider;
+    return state.providerSessionIds[activeProvider] ?? null;
+  },
+
+  getActiveModel: (): string | null => {
+    const state = get();
+    const activeProvider = state.activeProvider;
+    return state.providerModels[activeProvider] ?? null;
+  },
+
+  // Handoff injection (for provider switching)
+  injectHandoffMessage: (provider, handoffContent, fromProvider): void => {
+    set((state) => ({
+      providerMessages: {
+        ...state.providerMessages,
+        [provider]: [
+          ...state.providerMessages[provider]!,
+          {
+            id: nanoid(),
+            role: "system" as const,
+            content: [
+              {
+                type: "text" as const,
+                text: `# Context Handoff from ${fromProvider}\n\n${handoffContent}`,
+              },
+            ],
+            partial: false,
+            timestamp: Date.now(),
+          },
+        ],
+      },
+    }));
   },
 });

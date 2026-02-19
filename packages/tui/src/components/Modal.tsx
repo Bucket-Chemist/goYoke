@@ -23,6 +23,8 @@ import { logger } from "../utils/logger.js";
 
 interface ModalOverlayProps {
   request: ModalRequest;
+  /** Renders inline (no full-screen centering) — used when content is visible behind */
+  compact?: boolean;
 }
 
 interface ErrorBoundaryProps {
@@ -86,17 +88,19 @@ function ErrorFallback({ error, onDismiss }: { error: Error | null; onDismiss: (
 function CurrentModal({
   request,
   onComplete,
+  onCancel,
 }: {
   request: ModalRequest;
   onComplete: (response: ModalResponse) => void;
+  onCancel: () => void;
 }): JSX.Element {
   switch (request.type) {
     case "ask":
-      return <AskModal request={request as ModalRequest<AskPayload>} onComplete={onComplete} />;
+      return <AskModal request={request as ModalRequest<AskPayload>} onComplete={onComplete} onCancel={onCancel} />;
     case "confirm":
       return <ConfirmModal request={request as ModalRequest<ConfirmPayload>} onComplete={onComplete} />;
     case "input":
-      return <InputModal request={request as ModalRequest<InputPayload>} onComplete={onComplete} />;
+      return <InputModal request={request as ModalRequest<InputPayload>} onComplete={onComplete} onCancel={onCancel} />;
     case "select":
       return <SelectModal request={request as ModalRequest<SelectPayload>} onComplete={onComplete} />;
     default:
@@ -111,14 +115,15 @@ function CurrentModal({
  *
  * Layout.tsx swaps the content area for <ModalOverlay> when modalQueue is non-empty.
  */
-export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
+export function ModalOverlay({ request, compact }: ModalOverlayProps): JSX.Element {
   const { dequeue, cancel } = useStore();
 
-  useInput((input, key) => {
-    if (key.escape) {
-      cancel(request.id);
-    }
-  });
+  const handleCancel = () => {
+    cancel(request.id);
+  };
+
+  // Note: Escape handling is now done by individual modals
+  // to allow them to show confirmation dialogs before closing
 
   const modalTitle =
     request.type === "confirm" ? "Confirmation Required" :
@@ -126,28 +131,39 @@ export function ModalOverlay({ request }: ModalOverlayProps): JSX.Element {
     request.type === "input"   ? "Input Required" :
                                  "Question";
 
+  const inner = (
+    <Box
+      borderStyle={borders.modal}
+      borderColor={colors.warning}
+      paddingX={3}
+      paddingY={1}
+      flexDirection="column"
+      minWidth={52}
+    >
+      {/* Modal header */}
+      <Box marginBottom={1}>
+        <Text bold color={colors.warning}>⚡ {modalTitle}</Text>
+      </Box>
+
+      <ModalErrorBoundary onDismiss={handleCancel}>
+        <CurrentModal
+          request={request}
+          onComplete={(response) => dequeue(request.id, response)}
+          onCancel={handleCancel}
+        />
+      </ModalErrorBoundary>
+    </Box>
+  );
+
+  // Compact mode: render inline at current position (used when content is visible above)
+  if (compact) {
+    return inner;
+  }
+
+  // Full-screen mode: center within the entire content area
   return (
     <Box flexGrow={1} flexDirection="column" justifyContent="center" alignItems="center">
-      <Box
-        borderStyle={borders.modal}
-        borderColor={colors.warning}
-        paddingX={3}
-        paddingY={1}
-        flexDirection="column"
-        minWidth={52}
-      >
-        {/* Modal header */}
-        <Box marginBottom={1}>
-          <Text bold color={colors.warning}>⚡ {modalTitle}</Text>
-        </Box>
-
-        <ModalErrorBoundary onDismiss={() => cancel(request.id)}>
-          <CurrentModal
-            request={request}
-            onComplete={(response) => dequeue(request.id, response)}
-          />
-        </ModalErrorBoundary>
-      </Box>
+      {inner}
     </Box>
   );
 }

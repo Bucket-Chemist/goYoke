@@ -159,9 +159,9 @@ export interface AgentsSlice {
   clearAgents: () => void;
 }
 
-// Session slice (Go format compatible)
+// Session slice (Go format compatible with per-provider state)
 export interface SessionSlice {
-  sessionId: string | null;
+  // Global session state
   totalCost: number;
   tokenCount: TokenCount;
   contextWindow: {
@@ -170,18 +170,69 @@ export interface SessionSlice {
   };
   permissionMode: string;
   isCompacting: boolean;
+
+  // Legacy fields (deprecated - use per-provider equivalents)
+  /** @deprecated Use getActiveSessionId() instead */
+  sessionId: string | null;
+  /** @deprecated Use getActiveModel() instead */
   preferredModel: string | null;
-  activeModel: string | null; // Actual model from SDK init event
+  /** @deprecated Use getActiveModel() instead */
+  activeModel: string | null;
+
+  // Per-provider state
+  providerMessages: Record<ProviderId, Message[]>;
+  providerSessionIds: Record<ProviderId, string | null>;
+  providerModels: Record<ProviderId, string | null>;
+
+  // Global actions
   updateSession: (data: Partial<SessionData>) => void;
   incrementCost: (cost: number) => void;
   addTokens: (tokens: Partial<TokenCount>) => void;
   updateContextWindow: (usedTokens: number, totalCapacity: number) => void;
   setPermissionMode: (mode: string) => void;
   setCompacting: (compacting: boolean) => void;
-  setPreferredModel: (model: string | null) => void;
-  setActiveModel: (model: string | null) => void;
   isPlanMode: () => boolean;
   clearSession: () => void;
+
+  // Legacy actions (deprecated - use per-provider equivalents)
+  /** @deprecated Use setProviderModel(activeProvider, model) instead */
+  setPreferredModel: (model: string | null) => void;
+  /** @deprecated Use setProviderModel(activeProvider, model) instead */
+  setActiveModel: (model: string | null) => void;
+
+  // Per-provider actions
+  addProviderMessage: (provider: ProviderId, msg: Omit<Message, "id" | "timestamp">) => void;
+  updateLastProviderMessage: (provider: ProviderId, content: ContentBlock[]) => void;
+  clearProviderMessages: (provider: ProviderId) => void;
+  setProviderSessionId: (provider: ProviderId, sessionId: string | null) => void;
+  setProviderModel: (provider: ProviderId, model: string | null) => void;
+
+  // Convenience getters (use activeProvider from UISlice)
+  getActiveMessages: () => Message[];
+  getActiveSessionId: () => string | null;
+  getActiveModel: () => string | null;
+
+  // Handoff injection (for provider switching)
+  injectHandoffMessage: (provider: ProviderId, handoffContent: string, fromProvider: ProviderId) => void;
+}
+
+// Provider types
+export type ProviderId = "anthropic" | "google" | "openai" | "local";
+
+export interface ModelDefinition {
+  id: string;
+  displayName: string;
+  description: string;
+  contextWindow: number;
+}
+
+export interface ProviderDefinition {
+  id: ProviderId;
+  name: string;
+  description: string;
+  models: ModelDefinition[];
+  adapterPath?: string;
+  envVars?: Record<string, string>;
 }
 
 // Tab types
@@ -200,6 +251,7 @@ export interface UISlice {
   focusedPanel: "claude" | "agents";
   rightPanelMode: "agents" | "dashboard" | "settings";
   activeTab: TabId;
+  activeProvider: ProviderId;
   interruptQuery: (() => Promise<void>) | null;
   clearPendingMessage: (() => void) | null;
   panelAutoSwitched: boolean;
@@ -208,6 +260,7 @@ export interface UISlice {
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
   setActiveTab: (tab: TabId) => void;
+  setActiveProvider: (provider: ProviderId) => void;
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
   setClearPendingMessage: (fn: (() => void) | null) => void;
   setPanelAutoSwitched: (switched: boolean) => void;
