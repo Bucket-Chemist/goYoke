@@ -3,6 +3,20 @@
  * Central state management for TUI application
  */
 
+// Per-agent live activity (unified shape for SDK agents and team-run agents)
+export interface AgentActivity {
+  lastText: string | null;
+  currentTool: {
+    name: string;       // "Read", "Grep", "Bash", etc.
+    target: string;     // file_path or key param, truncated to 60 chars
+    toolUseId: string;
+  } | null;
+  toolResult: {
+    status: "pending" | "success" | "failed";
+    error?: string;
+  } | null;
+}
+
 // Content block types (matching Anthropic SDK structure)
 export interface TextContent {
   type: "text";
@@ -104,6 +118,9 @@ export interface Agent extends AgentV1 {
   cost?: number;
   turns?: number;
   toolCalls?: number;
+
+  // Live activity (V2 - populated by SDK events or ndjson parsing)
+  activity?: AgentActivity;
 }
 
 /**
@@ -154,6 +171,7 @@ export interface AgentsSlice {
   rootAgentId: string | null;
   addAgent: (agent: Omit<Agent, "startTime">) => void;
   updateAgent: (id: string, data: Partial<Agent>) => void;
+  updateAgentActivity: (id: string, activity: AgentActivity) => void;
   selectAgent: (id: string | null) => void;
   getAgentChildren: (id: string) => Agent[];
   clearAgents: () => void;
@@ -344,10 +362,11 @@ export interface UnifiedNode {
   agentRef?: string;
   teamDir?: string;
   waveNumber?: number;
-  // Live monitoring (team members only)
+  // Live monitoring
   latestActivity?: string;
   healthStatus?: string;
   cost?: number;
+  activity?: AgentActivity;
 }
 
 // Team member row (parsed from config.json waves)
@@ -362,6 +381,7 @@ export interface TeamMemberRow {
   completedAt: string | null;
   healthStatus?: string;
   latestActivity?: string;
+  activity?: AgentActivity;
 }
 
 // Team types - imported from hooks

@@ -1,6 +1,6 @@
 ---
 id: planner
-name: Strategic Planner
+name: Planner
 model: opus
 thinking: true
 thinking_budget: 32000
@@ -17,10 +17,10 @@ triggers:
 
 tools:
   - Read
-  - Write
   - Glob
   - Grep
-  - Task
+  - Write
+  - AskUserQuestion
 
 delegation:
   cannot_spawn:

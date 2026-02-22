@@ -10,7 +10,7 @@ import React, { useMemo } from "react";
 import { Box, Text } from "ink";
 import { useStore } from "../store/index.js";
 import { colors } from "../config/theme.js";
-import type { UnifiedNode, AgentStatus } from "../store/types.js";
+import type { UnifiedNode, AgentStatus, AgentActivity } from "../store/types.js";
 import {
   formatDuration,
   formatElapsed,
@@ -49,6 +49,66 @@ function formatTokens(count: number): string {
 function calcDuration(startTime: number, endTime?: number): string {
   const ms = (endTime ?? Date.now()) - startTime;
   return formatDuration(ms);
+}
+
+// ---------------------------------------------------------------------------
+// ActivitySection
+// ---------------------------------------------------------------------------
+
+function ActivitySection({
+  activity,
+}: {
+  activity: AgentActivity;
+}): JSX.Element | null {
+  if (!activity.lastText && !activity.currentTool && !activity.toolResult) {
+    return null;
+  }
+
+  const resultColor =
+    activity.toolResult?.status === "failed"
+      ? colors.error
+      : activity.toolResult?.status === "success"
+        ? colors.success
+        : colors.muted;
+
+  const resultLabel =
+    activity.toolResult?.status === "pending"
+      ? "⏳ pending"
+      : activity.toolResult?.status === "success"
+        ? "✓ success"
+        : `✗ ${activity.toolResult?.error ?? "failed"}`;
+
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Text bold color={colors.focused}>
+        Activity
+      </Text>
+
+      {activity.currentTool !== null && activity.currentTool !== undefined && (
+        <Box paddingLeft={2}>
+          <Text color={colors.muted}>Tool: </Text>
+          <Text color={colors.accent}>{activity.currentTool.name}</Text>
+          <Text color={colors.muted}> → {activity.currentTool.target}</Text>
+        </Box>
+      )}
+
+      {activity.toolResult !== null && activity.toolResult !== undefined && (
+        <Box paddingLeft={2}>
+          <Text color={colors.muted}>Result: </Text>
+          <Text color={resultColor}>{resultLabel}</Text>
+        </Box>
+      )}
+
+      {activity.lastText !== null && activity.lastText !== undefined && (
+        <Box flexDirection="column" paddingLeft={2} marginTop={0}>
+          <Text color={colors.muted}>Last output:</Text>
+          <Box borderStyle="single" borderColor={colors.muted} paddingX={1}>
+            <Text wrap="wrap">{activity.lastText}</Text>
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +195,11 @@ function SdkAgentDetail({ agentRef }: SdkAgentDetailProps): JSX.Element {
           <Text color={colors.muted}>Cost: </Text>
           <Text>${agent.cost.toFixed(2)}</Text>
         </Box>
+      )}
+
+      {/* Activity */}
+      {agent.activity !== undefined && (
+        <ActivitySection activity={agent.activity} />
       )}
     </Box>
   );
@@ -262,8 +327,10 @@ function TeamMemberDetail({ node }: TeamMemberDetailProps): JSX.Element {
         <Text>{duration}</Text>
       </Box>
 
-      {/* Latest activity (full text, not truncated) */}
-      {node.latestActivity !== undefined && node.latestActivity.length > 0 && (
+      {/* Activity: structured (preferred) or legacy latestActivity string */}
+      {node.activity !== undefined ? (
+        <ActivitySection activity={node.activity} />
+      ) : node.latestActivity !== undefined && node.latestActivity.length > 0 ? (
         <Box marginTop={1} flexDirection="column">
           <Text color={colors.muted}>Latest Activity:</Text>
           <Box
@@ -275,7 +342,7 @@ function TeamMemberDetail({ node }: TeamMemberDetailProps): JSX.Element {
             <Text dimColor>{node.latestActivity}</Text>
           </Box>
         </Box>
-      )}
+      ) : null}
     </Box>
   );
 }

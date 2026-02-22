@@ -1,5 +1,5 @@
 ---
-name: typescript-pro
+name: TypeScript Pro
 description: >
   Expert TypeScript development with strict type safety. Auto-activated for TypeScript projects.
   Uses conventions from ~/.claude/conventions/typescript.md. Specializes in clean,
@@ -39,8 +39,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - typescript.md

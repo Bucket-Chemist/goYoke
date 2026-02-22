@@ -1,5 +1,5 @@
 ---
-name: go-tui
+name: GO TUI (Bubbletea)
 description: >
   Bubbletea TUI specialist for terminal user interfaces.
   Uses conventions from ~/.claude/conventions/go-bubbletea.md. Specializes in
@@ -38,8 +38,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - go.md

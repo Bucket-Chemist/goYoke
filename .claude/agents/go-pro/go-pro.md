@@ -1,5 +1,5 @@
 ---
-name: go-pro
+name: GO Pro
 description: >
   Expert GO development with modern patterns. Auto-activated for GO projects.
   Uses conventions from ~/.claude/conventions/go.md. Specializes in clean,
@@ -35,8 +35,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - go.md

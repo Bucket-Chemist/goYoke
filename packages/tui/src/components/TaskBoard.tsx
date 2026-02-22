@@ -17,7 +17,7 @@ interface TodoItem {
 }
 
 function useTaskBoardData(): { todos: TodoItem[]; teams: TeamSummary[]; sessionId: string | null; ownerLabel: string } {
-  const messages = useStore((s) => s.messages);
+  const messages = useStore((s) => s.providerMessages[s.activeProvider] ?? []);
   const teams = useStore((s) => s.teams);
   const sessionId = useStore((s) => s.sessionId);
 

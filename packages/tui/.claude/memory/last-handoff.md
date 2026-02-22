@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-19 21:12:34
+# Session Handoff - 2026-02-20 20:32:57
 
 ## Session Context
 
-- **Session ID**: ae7e6620-1437-4208-bba1-b5f7d1d463ad
+- **Session ID**: f7277649-9e9d-4de9-941b-52ee22d595ce
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 80
+- **Tool Calls**: 51
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,40 +16,32 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/backups/.claude.json.backup.1771493380478
-  - claude/backups/.claude.json.backup.1771493445519
-  - claude/backups/.claude.json.backup.1771493572570
-  - claude/backups/.claude.json.backup.1771493808441
-  - claude/backups/.claude.json.backup.1771495281977
+  - claude/backups/.claude.json.backup.1771512036746
+  - claude/backups/.claude.json.backup.1771512112333
+  - claude/backups/.claude.json.backup.1771512185905
+  - claude/backups/.claude.json.backup.1771512255695
+  - claude/backups/.claude.json.backup.1771512315745
   - claude/input-history.json
-  - ackages/tui/package-lock.json
-  - ackages/tui/package.json
+  - claude/memory/handoffs.jsonl
+  - claude/memory/last-handoff.md
+  - claude/settings.json
+  - claude/stats-cache.json
+  - ackages/tui/.claude/memory/handoffs.jsonl
+  - ackages/tui/.claude/memory/last-handoff.md
   - ackages/tui/src/components/ClaudePanel.tsx
-  - ackages/tui/src/components/Layout.tsx
-  - ackages/tui/src/components/Modal.tsx
-  - ackages/tui/src/components/Toast.tsx
-  - ackages/tui/src/components/modals/AskModal.tsx
-  - ackages/tui/src/components/modals/InputModal.tsx
-  - ackages/tui/src/components/primitives/ScrollView.tsx
-  - ackages/tui/src/config/keybindings.ts
-  - ackages/tui/src/hooks/useClaudeQuery.ts
-  - ackages/tui/src/mcp/tools/askUser.ts
+  - ackages/tui/src/components/MessageRenderer.tsx
+  - ackages/tui/src/components/UnifiedDetail.tsx
+  - ackages/tui/src/components/UnifiedTree.tsx
+  - ackages/tui/src/hooks/useTeams.ts
+  - ackages/tui/src/hooks/useUnifiedTree.ts
   - ackages/tui/src/mcp/tools/spawnAgent.ts
-  - ackages/tui/src/session/SessionManager.ts
-  - ackages/tui/src/spawn/agentConfig.ts
-  - ackages/tui/src/store/adapters.test.ts
-  - ackages/tui/src/store/adapters.ts
-  - ackages/tui/src/store/slices/session.ts
-  - ackages/tui/src/store/slices/ui.ts
+  - ackages/tui/src/store/slices/agents.ts
   - ackages/tui/src/store/types.ts
-  - .claude/backups/.claude.json.backup.1771509826439
-  - .claude/backups/.claude.json.backup.1771510007975
-  - .claude/backups/.claude.json.backup.1771510104976
-  - .claude/backups/.claude.json.backup.1771510242117
-  - .claude/backups/.claude.json.backup.1771510311175
+  - .claude/backups/.claude.json.backup.1771593859756
+  - .claude/backups/.claude.json.backup.1771593942208
+  - .claude/backups/.claude.json.backup.1771594032319
+  - .claude/backups/.claude.json.backup.1771594249482
+  - .claude/backups/.claude.json.backup.1771594316743
   - .claude/image-cache/
-  - .claude/sessions/a7e87acb-f712-4e72-b0df-da264443fb7c.json
-  - packages/tui/src/components/ProviderTabs.tsx
-  - packages/tui/src/config/providers.ts
-  - packages/tui/src/spawn/contextInjector.ts
+  - packages/tui/src/utils/agentActivity.ts
 

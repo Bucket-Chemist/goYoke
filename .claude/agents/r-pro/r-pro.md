@@ -1,5 +1,5 @@
 ---
-name: r-pro
+name: R Pro
 description: >
   Expert R development with S4 OOP, tidyverse, and bioinformatics patterns.
   Auto-activated for R projects. Uses conventions from ~/.claude/conventions/R.md.
@@ -35,8 +35,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - R.md

@@ -1,5 +1,5 @@
 ---
-name: scaffolder
+name: Scaffolder
 description: >
   Boilerplate and template generation. New class, new module, project structure.
   Uses thinking to reason through structure decisions while keeping costs low.
@@ -11,8 +11,6 @@ tools:
   - Read
   - Write
   - Glob
-  - TaskUpdate
-  - TaskGet
 triggers:
   - "create skeleton"
   - "scaffold"

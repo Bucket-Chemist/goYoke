@@ -21,12 +21,14 @@ export interface MessageRendererProps {
   expansionLevel?: number;
   /** @deprecated Use expansionLevel instead */
   allExpanded?: boolean;
+  /** Set of tool_use ids that correspond to Task() calls — rendered as collapsed single-line indicators */
+  taskToolUseIds?: Set<string>;
 }
 
 /**
  * Render a single message with role-based styling and markdown support
  */
-export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded }: MessageRendererProps): JSX.Element {
+export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded, taskToolUseIds }: MessageRendererProps): JSX.Element {
   // Support both new expansionLevel and deprecated allExpanded
   const level = expansionLevel ?? (allExpanded ? 1 : 0);
   // Determine message color based on role
@@ -37,11 +39,19 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
         ? colors.assistantMessage
         : colors.systemMessage;
 
-  // Extract text content from content blocks
-  const textContent = message.content
-    .filter((block): block is Extract<ContentBlock, { type: "text" }> => block.type === "text")
-    .map((block) => block.text)
-    .join("\n");
+  // Check if this message is a task/spawn result — if so, suppress its text content entirely.
+  // Tool results from handleUserEvent arrive as system messages with both text and tool_result blocks.
+  const isTaskResultMessage = taskToolUseIds && taskToolUseIds.size > 0 && message.content.some(
+    (block) => block.type === "tool_result" && taskToolUseIds.has(block.tool_use_id)
+  );
+
+  // Extract text content from content blocks (suppressed for task result messages)
+  const textContent = isTaskResultMessage
+    ? ""
+    : message.content
+        .filter((block): block is Extract<ContentBlock, { type: "text" }> => block.type === "text")
+        .map((block) => block.text)
+        .join("\n");
 
   // Render text content (with markdown for assistant messages)
   const renderedText = message.role === "assistant" && textContent
@@ -98,6 +108,26 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
         const isToolUse = block.type === "tool_use";
 
         if (isToolUse) {
+          // Agent-spawning calls are always rendered as a collapsed single-line indicator,
+          // regardless of expansionLevel — they contain verbose agent prompts/params.
+          // "Task" = Claude Code CLI, "spawn_agent" = Agent SDK (TUI)
+          if (block.name === "Task" || block.name === "spawn_agent") {
+            const desc = typeof block.input?.["description"] === "string"
+              ? block.input["description"] : "agent";
+            const model = typeof block.input?.["model"] === "string"
+              ? block.input["model"] : "";
+            const agent = typeof block.input?.["agent"] === "string"
+              ? block.input["agent"] : "";
+            const label = agent || desc;
+            return (
+              <Box key={blockId} paddingLeft={2}>
+                <Text color={colors.accent} dimColor>
+                  ◐ [{agent ? agent : "Task"}{model ? ` → ${model}` : ""}] {label.length > 50 ? label.slice(0, 47) + "..." : label}
+                </Text>
+              </Box>
+            );
+          }
+
           if (level === 0) {
             // Collapsed view: Single-line summary
             const inputSummary = block.input
@@ -163,6 +193,17 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
         }
 
         // tool_result
+        // If this result corresponds to a Task() call, collapse it to a single-line indicator.
+        if (taskToolUseIds?.has(block.tool_use_id)) {
+          return (
+            <Box key={blockId} paddingLeft={2}>
+              <Text color={block.is_error ? colors.error : colors.muted} dimColor>
+                {block.is_error ? "✗" : "✓"} [Task result]
+              </Text>
+            </Box>
+          );
+        }
+
         if (level === 0) {
           // Collapsed view: minimal indicator
           return (

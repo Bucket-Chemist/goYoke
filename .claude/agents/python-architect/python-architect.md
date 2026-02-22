@@ -26,10 +26,9 @@ triggers:
 
 tools:
   - Read
+  - Write
   - Glob
   - Grep
-  - Task
-  - Write
   - AskUserQuestion
 
 auto_activate: null  # Manual invocation or spawned by python-pro

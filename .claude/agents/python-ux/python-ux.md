@@ -1,5 +1,5 @@
 ---
-name: python-ux
+name: Python UX (PySide6)
 description: >
   PySide6/Qt6 GUI development expert. Specializes in desktop application UI,
   signal/slot patterns, Model/View architecture, and Qt threading.
@@ -39,8 +39,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - python.md

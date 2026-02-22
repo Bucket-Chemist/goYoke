@@ -1,5 +1,5 @@
 ---
-name: architect-reviewer
+name: Architect Reviewer
 description: >
   Architectural code reviewer specializing in structural patterns, module
   boundaries, dependency graphs, and design principle violations. Reviews

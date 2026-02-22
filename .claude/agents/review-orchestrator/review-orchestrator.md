@@ -1,5 +1,5 @@
 ---
-name: review-orchestrator
+name: Review Orchestrator
 description: >
   Coordinates comprehensive code reviews by spawning specialist reviewers
   (backend, frontend, standards) in parallel, collecting findings, and

@@ -1,5 +1,5 @@
 ---
-name: backend-reviewer
+name: Backend Reviewer
 description: >
   Backend code quality and security reviewer. Specializes in API design,
   database patterns, authentication, and server-side security across

@@ -8,7 +8,8 @@ import { useEffect, useRef } from "react";
 import { readdir, readFile, open, stat } from "fs/promises";
 import { join } from "path";
 import { useStore } from "../store/index.js";
-import type { TeamSummary, TeamMemberRow } from "../store/types.js";
+import type { TeamSummary, TeamMemberRow, AgentActivity } from "../store/types.js";
+import { activityFromNdjsonChunk } from "../utils/agentActivity.js";
 
 interface TeamConfigJSON {
   team_name: string;
@@ -53,15 +54,22 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
+interface StreamActivityResult {
+  text: string | null;
+  activity: AgentActivity | null;
+}
+
 /**
  * Read the last 4KB of a stream_{agentName}.ndjson file and extract
- * the latest assistant message text (truncated to 100 chars).
- * Returns null on any error (missing file, parse failure, etc.).
+ * the full AgentActivity (text, currentTool, toolResult).
+ * Returns null fields on any error (missing file, parse failure, etc.).
  */
 async function readStreamActivity(
   teamDir: string,
   agentName: string
-): Promise<string | null> {
+): Promise<StreamActivityResult> {
+  const nullResult: StreamActivityResult = { text: null, activity: null };
+
   try {
     const filePath = join(teamDir, `stream_${agentName}.ndjson`);
 
@@ -70,7 +78,7 @@ async function readStreamActivity(
     const fileSize = fileStat.size;
 
     if (fileSize === 0) {
-      return null;
+      return nullResult;
     }
 
     // Read last 4KB
@@ -92,54 +100,19 @@ async function readStreamActivity(
     const lines = chunk.split("\n");
     const candidateLines = position === 0 ? lines : lines.slice(1);
 
-    // Walk backwards to find last line with type === "assistant"
-    for (let i = candidateLines.length - 1; i >= 0; i--) {
-      const line = candidateLines[i]?.trim();
-      if (!line) continue;
+    // Collect valid non-empty trimmed lines for forward-parse
+    const validLines = candidateLines.filter(
+      (line): line is string => typeof line === "string" && line.trim().length > 0
+    );
 
-      try {
-        const parsed: unknown = JSON.parse(line);
-        if (
-          typeof parsed === "object" &&
-          parsed !== null &&
-          "type" in parsed &&
-          (parsed as Record<string, unknown>)["type"] === "assistant"
-        ) {
-          const record = parsed as Record<string, unknown>;
-          const message = record["message"];
-          if (
-            typeof message === "object" &&
-            message !== null &&
-            "content" in message
-          ) {
-            const content = (message as Record<string, unknown>)["content"];
-            if (Array.isArray(content)) {
-              for (const block of content as unknown[]) {
-                if (
-                  typeof block === "object" &&
-                  block !== null &&
-                  "type" in block &&
-                  (block as Record<string, unknown>)["type"] === "text" &&
-                  "text" in block
-                ) {
-                  const text = (block as Record<string, unknown>)["text"];
-                  if (typeof text === "string" && text.length > 0) {
-                    return text.slice(0, 100);
-                  }
-                }
-              }
-            }
-          }
-        }
-      } catch {
-        // Skip unparseable lines
-        continue;
-      }
-    }
+    const activity = activityFromNdjsonChunk(validLines);
 
-    return null;
+    return {
+      text: activity?.lastText?.slice(0, 100) ?? null,
+      activity,
+    };
   } catch {
-    return null;
+    return nullResult;
   }
 }
 
@@ -154,7 +127,9 @@ async function attachStreamActivity(
   const teamPath = join(teamsBasePath, summary.dir);
   for (const member of summary.members) {
     if (member.status === "running") {
-      member.latestActivity = await readStreamActivity(teamPath, member.name) ?? undefined;
+      const result = await readStreamActivity(teamPath, member.name);
+      member.latestActivity = result.text?.slice(0, 100) ?? undefined;
+      member.activity = result.activity ?? undefined;
     }
   }
 }

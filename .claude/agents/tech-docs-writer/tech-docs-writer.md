@@ -1,5 +1,5 @@
 ---
-name: tech-docs-writer
+name: Tech Docs Writer
 description: >
   Documentation creation and updates. README, guides, API docs, system-guide.
   Uses thinking to plan document structure and ensure completeness.
@@ -12,8 +12,8 @@ tools:
   - Write
   - Edit
   - Glob
-  - TaskUpdate
-  - TaskGet
+  - Grep
+  - Bash
 triggers:
   - "documentation"
   - "readme"

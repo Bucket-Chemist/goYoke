@@ -1,5 +1,5 @@
 ---
-name: react-pro
+name: React Pro
 description: >
   Expert React development (React 18+ and Ink). Auto-activated for React projects.
   Uses conventions from ~/.claude/conventions/typescript.md and react.md.
@@ -40,8 +40,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - typescript.md

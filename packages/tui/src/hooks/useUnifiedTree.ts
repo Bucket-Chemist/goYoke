@@ -43,6 +43,7 @@ export function useUnifiedTree(): UnifiedTreeResult {
           depth,
           agentRef: agent.id,
           cost: agent.cost,
+          activity: agent.activity,
         });
         const children = getAgentChildren(agentId);
         children.sort((a, b) => a.startTime - b.startTime);
@@ -95,6 +96,7 @@ export function useUnifiedTree(): UnifiedTreeResult {
           latestActivity: member.latestActivity,
           healthStatus: member.healthStatus,
           cost: member.cost,
+          activity: member.activity,
         });
       }
     }

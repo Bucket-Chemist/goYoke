@@ -1,16 +1,18 @@
 ---
-name: librarian
+name: Librarian
 description: >
-  External documentation lookup and synthesis. Library docs, API references, 
+  External documentation lookup and synthesis. Library docs, API references,
   best practices. Uses thinking to synthesize findings from multiple sources.
 model: haiku
 thinking:
   enabled: true
   budget: 4000
 tools:
-  - Read
   - WebFetch
   - WebSearch
+  - Bash
+  - Read
+  - Grep
 triggers:
   - "how do I use"
   - "library docs"

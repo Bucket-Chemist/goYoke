@@ -1,5 +1,5 @@
 ---
-name: code-reviewer
+name: Code Reviewer
 description: >
   Routine code review for style, simple bugs, and obvious improvements.
   Fast, cheap reviews using thinking to systematically check code quality.

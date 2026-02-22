@@ -1,5 +1,5 @@
 ---
-name: standards-reviewer
+name: Standards Reviewer
 description: >
   Universal code quality reviewer for language-agnostic standards.
   Focuses on naming, structure, complexity, DRY/KISS/YAGNI principles,

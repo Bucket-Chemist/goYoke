@@ -4,7 +4,7 @@
  */
 
 import type { StateCreator } from "zustand";
-import type { Store, AgentsSlice, Agent } from "../types.js";
+import type { Store, AgentsSlice, Agent, AgentActivity } from "../types.js";
 
 export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
   set,
@@ -46,6 +46,16 @@ export const createAgentsSlice: StateCreator<Store, [], [], AgentsSlice> = (
       agents[id] = { ...agent, ...data };
 
       return { agents };
+    });
+  },
+
+  updateAgentActivity: (id, activity): void => {
+    set((state) => {
+      const agent = state.agents[id];
+      if (!agent) return state;
+      return {
+        agents: { ...state.agents, [id]: { ...agent, activity } },
+      };
     });
   },
 

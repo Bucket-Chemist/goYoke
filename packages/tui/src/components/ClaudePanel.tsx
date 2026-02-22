@@ -9,7 +9,7 @@
  * - Up/Down arrow keys for input history (TUI-005 integration)
  */
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Box, Text, measureElement } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
@@ -55,6 +55,21 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   } = useStore();
   // Use active provider's messages instead of global messages array
   const messages = getActiveMessages();
+
+  // Collect tool_use ids for agent-spawning calls so MessageRenderer can suppress their verbose content.
+  // "Task" = Claude Code CLI, "spawn_agent" = Agent SDK (TUI)
+  const taskToolUseIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const msg of messages) {
+      for (const block of msg.content) {
+        if (block.type === "tool_use" && (block.name === "Task" || block.name === "spawn_agent") && block.id) {
+          ids.add(block.id);
+        }
+      }
+    }
+    return ids;
+  }, [messages]);
+
   const [input, setInput] = useState("");
   // Expansion level: 0=collapsed, 1=expanded (truncated), 2=full (no truncation)
   const [expansionLevel, setExpansionLevel] = useState(0);
@@ -436,6 +451,7 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
                 message={msg}
                 maxWidth={width ? width - 4 : undefined}
                 expansionLevel={expansionLevel}
+                taskToolUseIds={taskToolUseIds}
               />
             ))
           )}

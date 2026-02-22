@@ -1,5 +1,5 @@
 ---
-name: architect
+name: Architect
 description: >
   Implementation planner for multi-file changes. Creates phased execution plans
   with dependency mapping and risk assessment. Mandatory outputs: specs.md + write_todos.
@@ -24,6 +24,8 @@ tools:
   - Write
   - Glob
   - Grep
+  - TaskCreate
+  - TaskUpdate
 
 delegation:
   cannot_spawn:

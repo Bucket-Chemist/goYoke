@@ -27,9 +27,12 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task
+  - Bash
   - TaskList
+  - TaskCreate
+  - TaskUpdate
   - TaskGet
+  - mcp__gofortress__spawn_agent
 
 delegation:
   cannot_spawn:

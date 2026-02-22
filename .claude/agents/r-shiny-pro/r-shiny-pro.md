@@ -1,5 +1,5 @@
 ---
-name: r-shiny-pro
+name: R Shiny Pro
 description: >
   Shiny application expert with module architecture and R6/S4 state management.
   Auto-activated for Shiny projects. Uses conventions from R.md and R-shiny.md.
@@ -39,8 +39,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - R.md

@@ -950,6 +950,27 @@ class SessionManager {
     | { behavior: "allow"; updatedInput?: Record<string, unknown>; toolUseID?: string }
     | { behavior: "deny"; message: string; toolUseID?: string }
   > {
+    // --- acceptEdits mode: auto-approve execution tools ---
+    const currentMode = useStore.getState().permissionMode;
+    if (currentMode === 'acceptEdits') {
+      // Interactive tools always require manual approval
+      const interactiveTools = new Set([
+        'AskUserQuestion',
+        'EnterPlanMode',
+        'ExitPlanMode',
+      ]);
+
+      if (!interactiveTools.has(toolName)) {
+        void logger.debug("[canUseTool] Auto-approved in acceptEdits mode", { toolName });
+        return {
+          behavior: 'allow' as const,
+          updatedInput: input,
+          toolUseID: options.toolUseID,
+        };
+      }
+      // Interactive tools fall through to normal modal flow below
+    }
+
     // --- Plan mode tools: custom approval UI ---
     if (toolName === 'EnterPlanMode') {
       void logger.debug("[canUseTool] EnterPlanMode intercepted", { input });

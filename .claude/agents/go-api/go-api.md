@@ -1,5 +1,5 @@
 ---
-name: go-api
+name: GO API (HTTP Client)
 description: >
   HTTP client and API integration specialist. Auto-activated for API client code.
   Specializes in robust HTTP clients, timeouts, retries, rate limiting, and
@@ -37,8 +37,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - go.md

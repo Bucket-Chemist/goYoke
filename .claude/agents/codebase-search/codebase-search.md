@@ -1,5 +1,5 @@
 ---
-name: codebase-search
+name: Codebase Search
 description: >
   Fast file and code discovery specialist. Haiku-tier for mechanical extraction work.
   Use for locating code, files, and implementations within a codebase.

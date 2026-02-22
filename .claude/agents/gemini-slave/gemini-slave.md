@@ -1,5 +1,5 @@
 ---
-name: gemini-slave
+name: Gemini Slave
 description: >
   Large-context analysis subagent with 1M+ token context window.
   Invoked via Bash (gemini-slave wrapper), NOT via Task tool.

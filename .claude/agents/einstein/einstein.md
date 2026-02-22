@@ -23,11 +23,9 @@ triggers:
 
 tools:
   - Read
+  - Write
   - Glob
   - Grep
-  - Write
-  - Task
-  - TaskList
   - TaskGet
 
 delegation:

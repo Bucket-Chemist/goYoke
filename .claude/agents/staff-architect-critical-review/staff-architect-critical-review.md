@@ -18,7 +18,6 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task
   - Write
 
 auto_activate: null # Manual invocation only

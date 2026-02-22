@@ -108,8 +108,49 @@ function SdkAgentRow({ node, isSelected, isLast }: RowProps): JSX.Element {
 
   const line = `${prefix}${statusIcon} ${node.displayName}: ${node.status}`;
 
+  const isActive = node.status === "running" || node.status === "streaming";
+  const activity = node.activity;
+  const activityIndent = " ".repeat(prefix.length + 2);
+
+  let toolLine: JSX.Element | null = null;
+  let textLine: JSX.Element | null = null;
+
+  if (isActive && !isSelected && activity) {
+    const tool = activity.currentTool;
+    const result = activity.toolResult;
+
+    if (tool) {
+      if (result?.status === "failed") {
+        const errMsg = truncate(result.error ?? "failed", 40);
+        toolLine = (
+          <Text color={colors.agentError}>
+            {activityIndent}✗ {tool.name}: {errMsg}
+          </Text>
+        );
+      } else {
+        const pending = result?.status === "pending";
+        const toolPrefix = pending ? "⏳" : "▸";
+        const target = truncate(tool.target, 40);
+        toolLine = (
+          <Text color={colors.accent} dimColor>
+            {activityIndent}{toolPrefix} {tool.name} → {target}
+          </Text>
+        );
+      }
+    }
+
+    if (activity.lastText) {
+      const snippet = truncate(activity.lastText, 40);
+      textLine = (
+        <Text color={colors.muted} dimColor>
+          {activityIndent}&quot;{snippet}&quot;
+        </Text>
+      );
+    }
+  }
+
   return (
-    <Box>
+    <Box flexDirection="column">
       <Text
         color={isSelected ? undefined : statusColor}
         inverse={isSelected}
@@ -117,6 +158,8 @@ function SdkAgentRow({ node, isSelected, isLast }: RowProps): JSX.Element {
       >
         {line}
       </Text>
+      {toolLine}
+      {textLine}
     </Box>
   );
 }
@@ -143,11 +186,50 @@ function TeamMemberRow({ node, isSelected, isLast }: RowProps): JSX.Element {
   const statusIcon = getStatusIcon(node.status);
   const branch = isLast ? icons.treeLeaf : icons.treeBranch;
 
-  const activity =
-    node.latestActivity ? truncate(node.latestActivity, 30) : null;
+  const isActive = node.status === "running" || node.status === "streaming";
+  const activity = node.activity;
+  // 4 spaces: aligns under member name after "  " indent + branch chars
+  const activityIndent = "    ";
+
+  let toolLine: JSX.Element | null = null;
+  let textLine: JSX.Element | null = null;
+
+  if (isActive && !isSelected && activity) {
+    const tool = activity.currentTool;
+    const result = activity.toolResult;
+
+    if (tool) {
+      if (result?.status === "failed") {
+        const errMsg = truncate(result.error ?? "failed", 40);
+        toolLine = (
+          <Text color={colors.agentError}>
+            {activityIndent}✗ {tool.name}: {errMsg}
+          </Text>
+        );
+      } else {
+        const pending = result?.status === "pending";
+        const toolPrefix = pending ? "⏳" : "▸";
+        const target = truncate(tool.target, 40);
+        toolLine = (
+          <Text color={colors.accent} dimColor>
+            {activityIndent}{toolPrefix} {tool.name} → {target}
+          </Text>
+        );
+      }
+    }
+
+    if (activity.lastText) {
+      const snippet = truncate(activity.lastText, 40);
+      textLine = (
+        <Text color={colors.muted} dimColor>
+          {activityIndent}&quot;{snippet}&quot;
+        </Text>
+      );
+    }
+  }
 
   return (
-    <Box>
+    <Box flexDirection="column">
       <Text
         color={isSelected ? undefined : statusColor}
         inverse={isSelected}
@@ -155,11 +237,8 @@ function TeamMemberRow({ node, isSelected, isLast }: RowProps): JSX.Element {
       >
         {"  "}{branch} {statusIcon} {node.displayName}: {node.status}
       </Text>
-      {activity !== null && !isSelected && (
-        <Text color={colors.muted} dimColor>
-          {"  "}&quot;{activity}&quot;
-        </Text>
-      )}
+      {toolLine}
+      {textLine}
     </Box>
   );
 }

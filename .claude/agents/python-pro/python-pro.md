@@ -1,5 +1,5 @@
 ---
-name: python-pro
+name: Python Pro
 description: >
   Expert Python development with modern patterns. Auto-activated for Python projects.
   Uses conventions from ~/.claude/conventions/python.md. Specializes in clean,
@@ -33,8 +33,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - python.md

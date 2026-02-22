@@ -7,6 +7,7 @@ import { useUnifiedNav } from "../hooks/useAgentTree.js";
 import { useUnifiedTree } from "../hooks/useUnifiedTree.js";
 import { useTerminalDimensions } from "../hooks/useTerminalDimensions.js";
 import { useTeamsPoller } from "../hooks/useTeams.js";
+import { useAgentSync } from "../hooks/useAgentSync.js";
 import { getSessionManager } from "../session/index.js";
 import { createGlobalBindings } from "../config/keybindings.js";
 import { Banner } from "./Banner.js";
@@ -60,6 +61,7 @@ export function Layout(): JSX.Element {
   // where TeamList only renders when rightPanelMode === "teams", but polling
   // was only happening inside useTeams() which was only called by TeamList
   useTeamsPoller();
+  useAgentSync();
 
   // Responsive layout breakpoints
   const isNarrow = terminalWidth < 100;

@@ -12,6 +12,7 @@ import { getAgentsStore } from "../../spawn/storeAdapter.js";
 import { getAgentConfig } from "../../spawn/agentConfig.js";
 import { buildFullAgentContext } from "../../spawn/contextInjector.js";
 import { logger, getSessionId } from "../../utils/logger.js";
+import { useStore } from "../../store/index.js";
 import { getSessionCostTracker } from "../../cost/tracker.js";
 
 // Constants
@@ -199,6 +200,50 @@ Example:
       // Register with process registry
       registry.register(agentId, proc, args.agent);
 
+      // Register agent in Zustand store for the agents panel
+      const zustand = useStore.getState();
+      const tierMap: Record<string, "haiku" | "sonnet" | "opus"> = {
+        haiku: "haiku", sonnet: "sonnet", opus: "opus",
+      };
+      const resolvedModel = args.model || agentConfig?.model || "sonnet";
+
+      // Ensure a synthetic "Router" root exists so the tree has a parent
+      let effectiveParent = parentId;
+      if (!zustand.rootAgentId) {
+        const routerId = "router-root";
+        zustand.addAgent({
+          id: routerId,
+          parentId: null,
+          model: "opus",
+          tier: "opus",
+          status: "running",
+          description: "Router",
+          agentType: "router",
+          spawnMethod: "task",
+        });
+        effectiveParent = routerId;
+      } else if (!effectiveParent) {
+        effectiveParent = zustand.rootAgentId;
+      }
+
+      zustand.addAgent({
+        id: agentId,
+        parentId: effectiveParent,
+        model: resolvedModel,
+        tier: tierMap[resolvedModel] || "sonnet",
+        status: "running",
+        description: args.description,
+        agentType: args.agent,
+        spawnMethod: "mcp-cli",
+        pid: proc.pid ?? undefined,
+        childIds: [],
+        activity: {
+          lastText: args.description,
+          currentTool: null,
+          toolResult: { status: "pending" },
+        },
+      });
+
       // Output collection with buffer limit
       let stdout = "";
       let stderr = "";
@@ -246,6 +291,15 @@ Example:
           truncated,
         };
 
+        // Update store on timeout
+        const s = useStore.getState();
+        s.updateAgent(agentId, { status: "timeout", endTime: Date.now(), error: result.error });
+        s.updateAgentActivity(agentId, {
+          lastText: args.description,
+          currentTool: null,
+          toolResult: { status: "failed", error: `Timed out after ${timeout}ms` },
+        });
+
         resolve({
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
         });
@@ -280,10 +334,11 @@ Example:
         }
         // === END COST TRACKING ===
 
+        const success = code === 0 && !signal;
         const result: SpawnResult = {
           agentId,
           agent: args.agent,
-          success: code === 0 && !signal,
+          success,
           output: parsed.result || stdout,
           error: code !== 0 ? stderr || `Exit code ${code}` : undefined,
           cost: parsed.cost,
@@ -291,6 +346,31 @@ Example:
           duration,
           truncated,
         };
+
+        // Update store on completion
+        const s = useStore.getState();
+        s.updateAgent(agentId, {
+          status: success ? "complete" : "error",
+          endTime: Date.now(),
+          cost: parsed.cost,
+          turns: parsed.turns,
+          toolCalls: parsed.turns,
+          output: (parsed.result || stdout).slice(0, 500),
+          error: result.error,
+          tokenUsage: parsed.inputTokens || parsed.outputTokens
+            ? { input: parsed.inputTokens || 0, output: parsed.outputTokens || 0 }
+            : undefined,
+        });
+        s.updateAgentActivity(agentId, {
+          lastText: success
+            ? (parsed.result || "Complete").slice(0, 200)
+            : result.error || "Failed",
+          currentTool: null,
+          toolResult: {
+            status: success ? "success" : "failed",
+            error: success ? undefined : result.error,
+          },
+        });
 
         resolve({
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
@@ -313,6 +393,15 @@ Example:
           error: `Spawn error: ${err.message}`,
           duration: Date.now() - startTime,
         };
+
+        // Update store on spawn error
+        const s = useStore.getState();
+        s.updateAgent(agentId, { status: "error", endTime: Date.now(), error: result.error });
+        s.updateAgentActivity(agentId, {
+          lastText: result.error ?? null,
+          currentTool: null,
+          toolResult: { status: "failed", error: result.error },
+        });
 
         resolve({
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],

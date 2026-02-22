@@ -24,7 +24,6 @@ tools:
   - Read
   - Write
   - Glob
-  - TaskList
   - TaskGet
 
 delegation:

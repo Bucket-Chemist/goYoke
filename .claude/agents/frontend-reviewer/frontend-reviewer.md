@@ -1,5 +1,5 @@
 ---
-name: frontend-reviewer
+name: Frontend Reviewer
 description: >
   Frontend/UI code quality reviewer. Specializes in React components,
   hooks patterns, state management, accessibility, and performance

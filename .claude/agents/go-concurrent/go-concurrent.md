@@ -1,5 +1,5 @@
 ---
-name: go-cli
+name: GO Concurrent
 description: >
   Cobra CLI specialist for professional command-line applications.
   Uses conventions from ~/.claude/conventions/go-cobra.md. Specializes in
@@ -38,8 +38,6 @@ tools:
   - Bash
   - Grep
   - Glob
-  - TaskUpdate
-  - TaskGet
 
 conventions_required:
   - go.md
