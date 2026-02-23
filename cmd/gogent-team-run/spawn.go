@@ -56,6 +56,7 @@ type agentCLIConfig struct {
 	AdditionalFlags     []string
 	Model               string
 	ContextRequirements *routing.ContextRequirements
+	FormalSchema        string // Minified JSON Schema for --json-schema constrained decoding
 }
 
 // Default fallback tools (W4: least-privilege READ-ONLY when agents-index.json unavailable)
@@ -185,21 +186,26 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 		}
 	}
 
-	// 2. Build prompt envelope (includes stdout schema instructions when contract exists)
-	envelope, err := buildPromptEnvelope(tr.teamDir, &member, workflowType)
-	if err != nil {
-		return nil, fmt.Errorf("build envelope: %w", err)
-	}
-
-	// 3. Load agent config for CLI flags
+	// 2. Load agent config for CLI flags (moved up — needed before envelope)
 	agentConfig, err := loadAgentConfig(member.Agent)
 	if err != nil {
 		log.Printf("WARNING: Failed to load agent config for %s: %v (using fallback)", member.Agent, err)
-		// Use fallback with read-only tools
 		agentConfig = &agentCLIConfig{
 			AllowedTools: defaultFallbackTools,
 			Model:        member.Model,
 		}
+	}
+
+	// 2b. Resolve formal schema for constrained decoding
+	formalSchema, schemaFound := resolveFormalSchema(member.Agent)
+	if schemaFound {
+		agentConfig.FormalSchema = formalSchema
+	}
+
+	// 3. Build prompt envelope (schema_id vs $schema instruction depends on constrained decoding)
+	envelope, err := buildPromptEnvelope(tr.teamDir, &member, workflowType, schemaFound)
+	if err != nil {
+		return nil, fmt.Errorf("build envelope: %w", err)
 	}
 
 	// 3b. Inject agent identity + rules + conventions into envelope.
@@ -496,6 +502,10 @@ func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 		args = append(args, "--model", agentConfig.Model)
 	}
 
+	if agentConfig.FormalSchema != "" {
+		args = append(args, "--json-schema", agentConfig.FormalSchema)
+	}
+
 	if len(agentConfig.AllowedTools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(agentConfig.AllowedTools, ","))
 	}
@@ -561,12 +571,13 @@ func parseCLIOutput(output []byte) (*cliOutput, error) {
 	// Find the "result" entry
 	for _, entry := range entries {
 		var partial struct {
-			Type    string  `json:"type"`
-			Subtype string  `json:"subtype"`
-			Result  string  `json:"result"`
-			Cost    float64 `json:"total_cost_usd"`
-			IsError bool    `json:"is_error"`
-			Session string  `json:"session_id"`
+			Type             string          `json:"type"`
+			Subtype          string          `json:"subtype"`
+			Result           string          `json:"result"`
+			StructuredOutput json.RawMessage `json:"structured_output"`
+			Cost             float64         `json:"total_cost_usd"`
+			IsError          bool            `json:"is_error"`
+			Session          string          `json:"session_id"`
 		}
 
 		if err := json.Unmarshal(entry, &partial); err != nil {
@@ -574,8 +585,14 @@ func parseCLIOutput(output []byte) (*cliOutput, error) {
 		}
 
 		if partial.Type == "result" {
+			result := partial.Result
+			// When constrained decoding is active, structured_output contains
+			// the schema-enforced JSON. Use it instead of the text result.
+			if len(partial.StructuredOutput) > 0 && string(partial.StructuredOutput) != "null" {
+				result = string(partial.StructuredOutput)
+			}
 			return &cliOutput{
-				Result:       partial.Result,
+				Result:       result,
 				TotalCostUSD: partial.Cost,
 				IsError:      partial.IsError,
 				SessionID:    partial.Session,

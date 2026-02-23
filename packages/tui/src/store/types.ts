@@ -46,6 +46,7 @@ export interface Message {
   content: ContentBlock[];
   partial: boolean;
   timestamp: number;
+  subagentToolUseId?: string;  // Non-null when message belongs to a sub-agent (from SDK parent_tool_use_id)
 }
 
 /**

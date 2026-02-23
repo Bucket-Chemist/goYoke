@@ -6,6 +6,7 @@
   "version": "1.0.0",
   "type": "object",
   "required": [
+    "schema_id",
     "reviewer",
     "status",
     "overall_assessment",
@@ -16,9 +17,12 @@
     "metadata"
   ],
   "properties": {
+    "schema_id": {
+      "type": "string",
+      "const": "reviewer"
+    },
     "reviewer": {
       "type": "string",
-      "enum": ["backend-reviewer", "frontend-reviewer", "standards-reviewer", "architect-reviewer"],
       "description": "Agent identifier"
     },
     "status": {
@@ -43,8 +47,7 @@
         "properties": {
           "id": {"type": "string"},
           "severity": {
-            "type": "string",
-            "enum": ["critical", "warning", "info"]
+            "type": "string"
           },
           "category": {"type": "string"},
           "subcategory": {"type": "string"},

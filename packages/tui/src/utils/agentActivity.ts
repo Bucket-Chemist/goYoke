@@ -95,8 +95,15 @@ export function activityFromTaskBlocks(
   }
 
   return {
-    lastText,
-    currentTool: null,
+    lastText: null,
+    currentTool: {
+      name: "Task",
+      target:
+        typeof taskInput["description"] === "string"
+          ? truncate(taskInput["description"], MAX_TARGET_LENGTH)
+          : "running...",
+      toolUseId: "synthetic",
+    },
     toolResult,
   };
 }

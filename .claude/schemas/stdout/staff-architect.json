@@ -6,6 +6,7 @@
   "version": "1.0.0",
   "type": "object",
   "required": [
+    "schema_id",
     "review_id",
     "status",
     "executive_assessment",
@@ -20,6 +21,10 @@
     "metadata"
   ],
   "properties": {
+    "schema_id": {
+      "type": "string",
+      "const": "staff-architect"
+    },
     "review_id": {
       "type": "string",
       "pattern": "^staff-arch-",
@@ -39,8 +44,7 @@
           "enum": ["APPROVE", "APPROVE_WITH_CONDITIONS", "REVISE", "REJECT"]
         },
         "confidence": {
-          "type": "string",
-          "enum": ["high", "medium", "low"]
+          "type": "string"
         },
         "summary": {"type": "string"},
         "issue_counts": {
@@ -62,20 +66,10 @@
         "properties": {
           "id": {"type": "string"},
           "severity": {
-            "type": "string",
-            "enum": ["critical", "major", "minor"]
+            "type": "string"
           },
           "layer": {
-            "type": "string",
-            "enum": [
-              "assumptions",
-              "dependencies",
-              "failure_modes",
-              "cost_benefit",
-              "testing",
-              "architecture_smells",
-              "contractor_readiness"
-            ]
+            "type": "string"
           },
           "title": {"type": "string"},
           "description": {"type": "string"},
@@ -135,12 +129,10 @@
         "properties": {
           "scenario": {"type": "string"},
           "probability": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "impact": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "detection": {"type": "string"},
           "mitigation": {"type": "string"}

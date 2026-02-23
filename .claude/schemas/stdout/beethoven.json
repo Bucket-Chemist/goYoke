@@ -6,6 +6,7 @@
   "version": "1.0.0",
   "type": "object",
   "required": [
+    "schema_id",
     "analysis_id",
     "status",
     "executive_summary",
@@ -20,6 +21,10 @@
     "metadata"
   ],
   "properties": {
+    "schema_id": {
+      "type": "string",
+      "const": "beethoven"
+    },
     "analysis_id": {
       "type": "string",
       "pattern": "^braintrust-",
@@ -76,8 +81,7 @@
           "staff_architect_view": {"type": "string"},
           "synthesis": {"type": "string"},
           "confidence": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           }
         }
       }
@@ -94,8 +98,7 @@
           "resolution": {"type": "string"},
           "reasoning": {"type": "string"},
           "confidence": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "unresolved": {"type": "boolean"}
         }
@@ -173,16 +176,13 @@
         "properties": {
           "risk": {"type": "string"},
           "probability": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "impact": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "source": {
-            "type": "string",
-            "enum": ["einstein", "staff-architect", "synthesis"]
+            "type": "string"
           },
           "mitigation": {"type": "string"},
           "owner": {"type": "string"}
@@ -197,13 +197,11 @@
         "properties": {
           "assumption": {"type": "string"},
           "source": {
-            "type": "string",
-            "enum": ["einstein", "staff-architect", "both"]
+            "type": "string"
           },
           "validation_method": {"type": "string"},
           "priority": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "blocking": {"type": "boolean"}
         }
@@ -217,13 +215,11 @@
         "properties": {
           "question": {"type": "string"},
           "importance": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "suggested_next_step": {"type": "string"},
           "source": {
-            "type": "string",
-            "enum": ["einstein", "staff-architect", "synthesis"]
+            "type": "string"
           }
         }
       }

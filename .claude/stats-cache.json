@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "lastComputedDate": "2026-02-21",
+  "lastComputedDate": "2026-02-22",
   "dailyActivity": [
     {
       "date": "2026-01-26",
@@ -145,6 +145,12 @@
       "messageCount": 1027,
       "sessionCount": 6,
       "toolCallCount": 122
+    },
+    {
+      "date": "2026-02-22",
+      "messageCount": 4500,
+      "sessionCount": 35,
+      "toolCallCount": 548
     }
   ],
   "dailyModelTokens": [
@@ -331,14 +337,21 @@
         "claude-opus-4-5-20251101": 16,
         "claude-opus-4-6": 31170
       }
+    },
+    {
+      "date": "2026-02-22",
+      "tokensByModel": {
+        "claude-opus-4-6": 155952,
+        "claude-opus-4-5-20251101": 1250
+      }
     }
   ],
   "modelUsage": {
     "claude-opus-4-5-20251101": {
-      "inputTokens": 1273411,
-      "outputTokens": 388268,
-      "cacheReadInputTokens": 788239144,
-      "cacheCreationInputTokens": 94289559,
+      "inputTokens": 1273635,
+      "outputTokens": 389294,
+      "cacheReadInputTokens": 797475073,
+      "cacheCreationInputTokens": 94916961,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
@@ -365,10 +378,10 @@
       "maxOutputTokens": 0
     },
     "claude-opus-4-6": {
-      "inputTokens": 284058,
-      "outputTokens": 1697797,
-      "cacheReadInputTokens": 955397581,
-      "cacheCreationInputTokens": 89732962,
+      "inputTokens": 367191,
+      "outputTokens": 1770616,
+      "cacheReadInputTokens": 1006978719,
+      "cacheCreationInputTokens": 96523718,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
@@ -385,8 +398,8 @@
       "maxOutputTokens": 0
     }
   },
-  "totalSessions": 644,
-  "totalMessages": 96194,
+  "totalSessions": 679,
+  "totalMessages": 100694,
   "longestSession": {
     "sessionId": "bd42249f-1381-46ea-8365-daffda8ebc90",
     "duration": 63513869,
@@ -396,14 +409,14 @@
   "firstSessionDate": "2026-01-26T02:48:54.935Z",
   "hourCounts": {
     "4": 5,
-    "5": 32,
-    "6": 47,
+    "5": 39,
+    "6": 49,
     "7": 43,
     "8": 44,
     "9": 18,
-    "10": 50,
-    "11": 52,
-    "12": 62,
+    "10": 58,
+    "11": 65,
+    "12": 67,
     "13": 32,
     "14": 38,
     "15": 55,

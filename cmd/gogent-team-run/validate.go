@@ -12,9 +12,10 @@ import (
 // StdoutEnvelope represents the agent stdout JSON structure.
 // Per TC-009 stdin-stdout schema requirements.
 type StdoutEnvelope struct {
-	Schema  string                 `json:"$schema"`
-	Status  string                 `json:"status"`
-	Content map[string]interface{} `json:"content"`
+	Schema   string                 `json:"$schema"`
+	SchemaID string                 `json:"schema_id"`
+	Status   string                 `json:"status"`
+	Content  map[string]interface{} `json:"content"`
 }
 
 // validateStdout reads and validates the agent's stdout JSON file.
@@ -45,8 +46,8 @@ func validateStdout(stdoutPath string, teamDir string) error {
 		return fmt.Errorf("parse stdout JSON: %w", err)
 	}
 
-	if stdout.Schema == "" {
-		return fmt.Errorf("missing $schema field in stdout")
+	if stdout.Schema == "" && stdout.SchemaID == "" {
+		return fmt.Errorf("missing $schema or schema_id field in stdout")
 	}
 	if stdout.Status == "" {
 		return fmt.Errorf("missing status field in stdout")

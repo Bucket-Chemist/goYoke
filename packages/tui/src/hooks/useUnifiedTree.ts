@@ -35,7 +35,7 @@ export function useUnifiedTree(): UnifiedTreeResult {
           kind: "sdk-agent",
           id: `agent:${agent.id}`,
           parentId: agent.parentId ? `agent:${agent.parentId}` : null,
-          displayName: agent.description || agent.model,
+          displayName: (agent.agentType && agent.agentType !== "unknown") ? agent.agentType : (agent.description || agent.model),
           model: agent.model,
           status: agent.status,
           startTime: agent.startTime,

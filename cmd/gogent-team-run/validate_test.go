@@ -43,7 +43,21 @@ func TestValidateStdout(t *testing.T) {
 				return stdoutPath
 			},
 			wantErr:   true,
-			errSubstr: "missing $schema field",
+			errSubstr: "missing $schema or schema_id",
+		},
+		{
+			name: "ValidWithSchemaID",
+			setup: func(t *testing.T, teamDir string) string {
+				stdoutPath := filepath.Join(teamDir, "output.json")
+				content := `{
+					"schema_id": "worker",
+					"status": "completed",
+					"content": {"result": "success"}
+				}`
+				require.NoError(t, os.WriteFile(stdoutPath, []byte(content), 0644))
+				return stdoutPath
+			},
+			wantErr: false,
 		},
 		{
 			name: "MissingStatus",

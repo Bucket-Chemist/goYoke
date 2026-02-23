@@ -6,6 +6,7 @@
   "version": "1.0.0",
   "type": "object",
   "required": [
+    "schema_id",
     "worker",
     "task_id",
     "status",
@@ -18,6 +19,10 @@
     "metadata"
   ],
   "properties": {
+    "schema_id": {
+      "type": "string",
+      "const": "worker"
+    },
     "worker": {
       "type": "string",
       "description": "Agent ID that performed this work"

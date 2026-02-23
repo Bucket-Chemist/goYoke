@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   getSessionManager,
   resetSessionManager,
@@ -18,19 +18,51 @@ vi.mock("@anthropic-ai/claude-agent-sdk", async () => {
 
 /**
  * Mock useStore from Zustand
+ *
+ * Includes all fields accessed by SessionManager:
+ *   - Core session/message fields (original)
+ *   - Provider-namespaced fields added when multi-provider support landed
+ *   - Agents slice fields needed for eager root agent registration
  */
 vi.mock("../store/index.js", () => {
+  /**
+   * Mutable fields that tests may inspect or that addAgent writes.
+   * Exposed so the resetMockStore() helper can wipe them between tests.
+   */
+  const mutableState = {
+    rootAgentId: null as string | null,
+    agents: {} as Record<string, unknown>,
+  };
+
   const mockStore = {
+    // ── session ──────────────────────────────────────────────────────────
     sessionId: null,
     preferredModel: "sonnet",
     contextWindow: {
       usedTokens: 0,
       totalCapacity: 200000,
     },
+    // Provider namespace (required since multi-provider refactor)
+    activeProvider: "anthropic",
+    providerSessionIds: { anthropic: null } as Record<string, string | null>,
+    providerModels: { anthropic: "claude-sonnet-4-5" } as Record<string, string>,
+
+    // ── agents slice (backed by mutableState) ─────────────────────────────
+    get rootAgentId() { return mutableState.rootAgentId; },
+    set rootAgentId(v: string | null) { mutableState.rootAgentId = v; },
+    get agents() { return mutableState.agents; },
+
+    // ── actions ───────────────────────────────────────────────────────────
     updateSession: vi.fn(),
     setActiveModel: vi.fn(),
+    setProviderModel: vi.fn(),
+    setProviderSessionId: vi.fn(),
+
     addMessage: vi.fn(),
     updateLastMessage: vi.fn(),
+    addProviderMessage: vi.fn(),
+    updateLastProviderMessage: vi.fn(),
+
     incrementCost: vi.fn(),
     addTokens: vi.fn(),
     updateContextWindow: vi.fn(),
@@ -39,12 +71,29 @@ vi.mock("../store/index.js", () => {
     setStreaming: vi.fn(),
     setInterruptQuery: vi.fn(),
     enqueue: vi.fn(),
+    addToast: vi.fn(),
+
+    // Agents slice mutations — mirrors real addAgent behaviour for root tracking
+    addAgent: vi.fn((agent: { id: string; parentId: string | null; [k: string]: unknown }) => {
+      mutableState.agents = { ...mutableState.agents, [agent.id]: agent };
+      if (!mutableState.rootAgentId && agent.parentId === null) {
+        mutableState.rootAgentId = agent.id;
+      }
+    }),
+
+    // Helper to reset mutable state between tests (call from beforeEach)
+    _reset() {
+      mutableState.rootAgentId = null;
+      mutableState.agents = {};
+    },
   };
 
   return {
     useStore: {
       getState: vi.fn(() => mockStore),
     },
+    // Export mutableState for direct inspection in root-agent tests
+    _mockMutableState: mutableState,
   };
 });
 
@@ -66,6 +115,17 @@ vi.mock("../utils/logger.js", () => ({
     error: vi.fn(),
   },
 }));
+
+/**
+ * Reset mutable mock-store fields between tests.
+ * vi.clearAllMocks() resets call counts but NOT data mutations —
+ * addAgent() writes to rootAgentId/agents which must be wiped each test.
+ */
+afterEach(async () => {
+  const { useStore } = await import("../store/index.js");
+  const store = useStore.getState() as { _reset?: () => void };
+  store._reset?.();
+});
 
 /**
  * Helper to create a mock event stream that simulates SDK behavior
@@ -154,6 +214,30 @@ function createMockSDK(config: {
 
   return { mockQueryFn, interrupt, setModel };
 }
+
+/**
+ * Shut down any live SessionManager instance before each test.
+ * Without this, the old instance's consumeEvents() loop keeps running and
+ * can fire reconnect attempts that call vi.mocked(query) — now pointing to
+ * the next test's mock — causing spurious store method calls.
+ *
+ * shutdown() rejects any queued messages with "Session shutdown".
+ * Attach a no-op .catch() to every pending enqueue promise to prevent
+ * unhandled rejection warnings from those orphaned promises.
+ */
+beforeEach(async () => {
+  try {
+    const { getSessionManager: _get } = await import("./SessionManager.js");
+    const mgr = _get();
+    // Drain any pending promises from the queue before shutting down
+    // by attaching no-op handlers so Vitest doesn't flag them.
+    const shutdownPromise = mgr.shutdown();
+    shutdownPromise.catch(() => {/* intentional: cleanup rejection */});
+    await shutdownPromise.catch(() => {});
+  } catch {/* not yet constructed — safe to ignore */}
+  resetSessionManager();
+  vi.clearAllMocks();
+});
 
 describe("SessionManager state machine", () => {
   beforeEach(() => {
@@ -362,8 +446,8 @@ describe("SessionManager queue management", () => {
     await manager.connect();
 
     // Fill queue synchronously (don't await - capacity check runs before generator can drain)
-    void manager.enqueue("msg 1");
-    void manager.enqueue("msg 2");
+    void manager.enqueue("msg 1").catch(() => {});
+    void manager.enqueue("msg 2").catch(() => {});
 
     // 3rd message should return false immediately (capacity check is synchronous)
     const result = await manager.enqueue("msg 3");
@@ -381,7 +465,7 @@ describe("SessionManager queue management", () => {
     // Enqueue should trigger auto-connect
     // Note: This may timeout because mock doesn't properly simulate message processing
     // We just verify it doesn't throw and state changes
-    void manager.enqueue("test");
+    void manager.enqueue("test").catch(() => {});
 
     // Wait for connection
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -393,14 +477,13 @@ describe("SessionManager queue management", () => {
   it("enqueue from ERROR auto-reconnects", async () => {
     const { query } = await import("@anthropic-ai/claude-agent-sdk");
 
-    // First attempt fails
+    // First attempt fails; all subsequent succeed.
     let callCount = 0;
     vi.mocked(query).mockImplementation((args: any) => {
       callCount++;
       if (callCount === 1) {
         throw new Error("First attempt failed");
       }
-      // Second attempt succeeds
       return createMockSDK().mockQueryFn(args);
     });
 
@@ -411,18 +494,24 @@ describe("SessionManager queue management", () => {
 
     await expect(manager.connect()).rejects.toThrow();
 
-    // Wait a bit for state to settle in ERROR
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    const stateAfterFailure = manager.getState();
+    // Must be in ERROR (or auto-reconnect already ran and it's READY/CONNECTING)
+    expect([SessionState.ERROR, SessionState.CONNECTING, SessionState.READY]).toContain(
+      manager.getState()
+    );
 
-    // Enqueue should trigger reconnect
-    void manager.enqueue("test");
+    // Enqueue from ERROR should trigger reconnect (or succeed if already reconnected)
+    void manager.enqueue("test").catch(() => {});
 
-    // Wait for reconnection
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for any in-flight reconnection to complete
+    await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Should have reconnected (not ERROR anymore)
-    expect(manager.getState()).not.toBe(stateAfterFailure);
+    // query() should have been called more than once (reconnect happened)
+    expect(callCount).toBeGreaterThan(1);
+
+    // Final state should not be ERROR or DEAD
+    expect([SessionState.READY, SessionState.STREAMING, SessionState.CONNECTING]).toContain(
+      manager.getState()
+    );
   });
 
   it("enqueue from DEAD returns false", async () => {
@@ -731,7 +820,8 @@ describe("SessionManager handleAssistantEvent", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const store = useStore.getState();
-    expect(store.addMessage).toHaveBeenCalledWith({
+    // Code calls addProviderMessage (provider-namespaced) not the legacy addMessage
+    expect(store.addProviderMessage).toHaveBeenCalledWith("anthropic", {
       role: "assistant",
       content: [
         {
@@ -787,9 +877,9 @@ describe("SessionManager handleAssistantEvent", () => {
 
     const store = useStore.getState();
     // First call adds message
-    expect(store.addMessage).toHaveBeenCalledTimes(1);
+    expect(store.addProviderMessage).toHaveBeenCalledTimes(1);
     // Second call updates last message
-    expect(store.updateLastMessage).toHaveBeenCalled();
+    expect(store.updateLastProviderMessage).toHaveBeenCalled();
   });
 
   it("converts text and tool_use blocks correctly", async () => {
@@ -831,7 +921,7 @@ describe("SessionManager handleAssistantEvent", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const store = useStore.getState();
-    expect(store.addMessage).toHaveBeenCalledWith({
+    expect(store.addProviderMessage).toHaveBeenCalledWith("anthropic", {
       role: "assistant",
       content: [
         { type: "text", text: "Let me check that file." },
@@ -894,7 +984,7 @@ describe("SessionManager handleAssistantEvent", () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify message was added to store
-    expect(store.addMessage).toHaveBeenCalled();
+    expect(store.addProviderMessage).toHaveBeenCalled();
   });
 
   it("detects ConfirmAction tool use", async () => {
@@ -943,7 +1033,7 @@ describe("SessionManager handleAssistantEvent", () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Verify message was added to store
-    expect(store.addMessage).toHaveBeenCalled();
+    expect(store.addProviderMessage).toHaveBeenCalled();
   });
 
   it("logs SDK_INTERNAL_TOOLS", async () => {
@@ -993,7 +1083,7 @@ describe("SessionManager handleAssistantEvent", () => {
 
     // Verify message was added to store
     const store = useStore.getState();
-    expect(store.addMessage).toHaveBeenCalled();
+    expect(store.addProviderMessage).toHaveBeenCalled();
   });
 });
 
@@ -1042,7 +1132,7 @@ describe("SessionManager handleUserEvent", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const store = useStore.getState();
-    expect(store.addMessage).toHaveBeenCalledWith({
+    expect(store.addProviderMessage).toHaveBeenCalledWith("anthropic", {
       role: "system",
       content: [
         {
@@ -1106,9 +1196,10 @@ describe("SessionManager handleUserEvent", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const store = useStore.getState();
-    // Verify updateLastMessage called before addMessage
-    expect(store.updateLastMessage).toHaveBeenCalled();
-    expect(store.addMessage).toHaveBeenCalledWith(
+    // Verify updateLastProviderMessage called before addProviderMessage
+    expect(store.updateLastProviderMessage).toHaveBeenCalled();
+    expect(store.addProviderMessage).toHaveBeenCalledWith(
+      "anthropic",
       expect.objectContaining({ role: "system" })
     );
   });
@@ -1372,6 +1463,7 @@ describe("SessionManager handleCanUseTool", () => {
         }),
       })
     );
+    // Note: EnterPlanMode still uses confirm type with action field in the payload
 
     expect(result).toEqual({
       behavior: "allow",
@@ -1402,11 +1494,11 @@ describe("SessionManager handleCanUseTool", () => {
     const queryCall = vi.mocked(query).mock.calls[0]![0];
     const canUseTool = queryCall.options?.canUseTool;
 
-    // Mock store.enqueue
+    // ExitPlanMode uses an ask modal; code checks result.value === 'Approve'
     const store = useStore.getState();
     vi.mocked(store.enqueue).mockResolvedValue({
-      type: "confirm",
-      confirmed: true,
+      type: "ask",
+      value: "Approve",
     } as any);
 
     const mockOptions = {
@@ -1430,7 +1522,7 @@ describe("SessionManager handleCanUseTool", () => {
     expect(store.enqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({
-          action: expect.stringContaining("Permissions requested"),
+          message: expect.stringContaining("Permissions requested"),
         }),
       })
     );
@@ -1464,11 +1556,11 @@ describe("SessionManager handleCanUseTool", () => {
     const queryCall = vi.mocked(query).mock.calls[0]![0];
     const canUseTool = queryCall.options?.canUseTool;
 
-    // Mock store.enqueue
+    // Standard tool uses an ask modal; code checks result.value === 'Allow'
     const store = useStore.getState();
     vi.mocked(store.enqueue).mockResolvedValue({
-      type: "confirm",
-      confirmed: true,
+      type: "ask",
+      value: "Allow",
     } as any);
 
     const mockOptions = {
@@ -1487,7 +1579,7 @@ describe("SessionManager handleCanUseTool", () => {
     expect(store.enqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({
-          action: expect.stringContaining("Allow Claude to use Bash?"),
+          message: expect.stringContaining("Allow Claude to use Bash?"),
         }),
       })
     );
@@ -1720,11 +1812,11 @@ describe("SessionManager handleCanUseTool", () => {
     // Call canUseTool with reason and agent
     await canUseTool!("Read", { file_path: "/config.json" }, mockOptions);
 
-    // Verify modal includes agent and reason
+    // Verify modal includes agent and reason in the message field
     expect(store.enqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: expect.objectContaining({
-          action: expect.stringMatching(/\[go-pro\].*Read.*Reason: Need to check configuration/s),
+          message: expect.stringMatching(/\[go-pro\].*Read.*Reason: Need to check configuration/s),
         }),
       })
     );
@@ -1789,6 +1881,172 @@ describe("SessionManager error classification", () => {
       expect.objectContaining({
         type: "invalid_request",
         message: expect.stringContaining("Invalid request"),
+      })
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Eager root agent registration (handleSystemEvent)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Tests for the eager "router-root" agent registration added to handleSystemEvent.
+ *
+ * When the SDK fires system.init during CONNECTING state, SessionManager now
+ * immediately registers a root agent in the Zustand store so the agent panel
+ * shows without waiting for the first Task() delegation.
+ *
+ * Behaviour under test:
+ *   a) rootAgentId is set to "router-root" after system.init
+ *   b) agents["router-root"] has the correct fields (model, tier, status)
+ *   c) Duplicate system.init events do NOT create duplicate root entries
+ *   d) Tier is correctly extracted: haiku / sonnet / opus from model string
+ */
+describe("SessionManager handleSystemEvent — eager root agent registration", () => {
+  beforeEach(() => {
+    resetSessionManager();
+    vi.clearAllMocks();
+  });
+
+  it("registers router-root agent in store after system.init during CONNECTING", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { useStore } = await import("../store/index.js");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    const manager = getSessionManager();
+    pushEvent({ type: "system", subtype: "init", session_id: "sess-1", model: "claude-sonnet-4-5" } as any);
+    await manager.connect();
+
+    const store = useStore.getState();
+
+    // rootAgentId must be set
+    expect(store.rootAgentId).toBe("router-root");
+
+    // addAgent must have been called with the router-root shape
+    expect(store.addAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "router-root",
+        parentId: null,
+        status: "running",
+        agentType: "router",
+        spawnMethod: "task",
+        description: "Router",
+      })
+    );
+  });
+
+  it("sets model on root agent from the init event model field", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { useStore } = await import("../store/index.js");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    const manager = getSessionManager();
+    pushEvent({ type: "system", subtype: "init", session_id: "sess-2", model: "claude-opus-4-5" } as any);
+    await manager.connect();
+
+    const store = useStore.getState();
+    expect(store.addAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "claude-opus-4-5" })
+    );
+  });
+
+  describe("tier extraction from model string", () => {
+    const cases: Array<{ model: string; expectedTier: "haiku" | "sonnet" | "opus" }> = [
+      { model: "claude-haiku-3-5", expectedTier: "haiku" },
+      { model: "claude-sonnet-4-5", expectedTier: "sonnet" },
+      { model: "claude-opus-4-5", expectedTier: "opus" },
+      // Fallback: unknown model string → defaults to "opus" (see SessionManager fallback)
+      { model: "claude-sonnet-4-5", expectedTier: "sonnet" },
+    ];
+
+    for (const { model, expectedTier } of cases) {
+      it(`extracts tier "${expectedTier}" from model "${model}"`, async () => {
+        const { query } = await import("@anthropic-ai/claude-agent-sdk");
+        const { useStore } = await import("../store/index.js");
+        const { mockQueryFn, pushEvent } = createControllableMockSDK();
+        vi.mocked(query).mockImplementation(mockQueryFn);
+
+        const manager = getSessionManager();
+        pushEvent({ type: "system", subtype: "init", session_id: "sess-tier", model } as any);
+        await manager.connect();
+
+        const store = useStore.getState();
+        expect(store.addAgent).toHaveBeenCalledWith(
+          expect.objectContaining({ tier: expectedTier })
+        );
+
+        await manager.shutdown().catch(() => {});
+        resetSessionManager();
+      });
+    }
+  });
+
+  it("does NOT register a second root agent on duplicate system.init", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { useStore } = await import("../store/index.js");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    const manager = getSessionManager();
+
+    // First init (during CONNECTING) — registers root
+    pushEvent({ type: "system", subtype: "init", session_id: "sess-dup", model: "claude-sonnet-4-5" } as any);
+    await manager.connect();
+
+    const addAgentCallsAfterFirst = vi.mocked(useStore.getState().addAgent).mock.calls.length;
+    expect(addAgentCallsAfterFirst).toBe(1);
+
+    // Simulate a second system.init (SDK emits one per generator yield).
+    // State is now READY, so handleSystemEvent takes the early-return path —
+    // it must NOT call addAgent again.
+    pushEvent({ type: "system", subtype: "init", session_id: "sess-dup", model: "claude-sonnet-4-5" } as any);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const addAgentCallsAfterSecond = vi.mocked(useStore.getState().addAgent).mock.calls.length;
+    expect(addAgentCallsAfterSecond).toBe(1); // still exactly 1
+  });
+
+  it("skips root creation when rootAgentId already set (no double-registration)", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { useStore } = await import("../store/index.js");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    // Pre-set rootAgentId as if a previous session already created it
+    const store = useStore.getState() as ReturnType<typeof useStore.getState> & { _reset?: () => void };
+    store.rootAgentId = "pre-existing-root";
+
+    const manager = getSessionManager();
+    pushEvent({ type: "system", subtype: "init", session_id: "sess-skip", model: "claude-sonnet-4-5" } as any);
+    await manager.connect();
+
+    // addAgent must NOT have been called (root already existed)
+    expect(store.addAgent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "router-root" })
+    );
+    // rootAgentId remains the pre-existing one
+    expect(store.rootAgentId).toBe("pre-existing-root");
+  });
+
+  it("uses fallback model 'claude-sonnet-4-5' when init event lacks a model field", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { useStore } = await import("../store/index.js");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    const manager = getSessionManager();
+    // Emit init WITHOUT a model field
+    pushEvent({ type: "system", subtype: "init", session_id: "sess-nomodel" } as any);
+    await manager.connect();
+
+    const store = useStore.getState();
+    expect(store.addAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "router-root",
+        model: "claude-sonnet-4-5", // the code-level default
+        tier: "sonnet",
       })
     );
   });

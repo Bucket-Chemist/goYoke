@@ -87,6 +87,142 @@ func resolveStdoutSchema(workflowType, agentID string) (stdoutJSON string, schem
 	return "", ""
 }
 
+// formalSchemasBaseDir can be overridden in tests to use a temp directory.
+// When empty, defaults to $HOME/.claude/schemas/stdout/
+var formalSchemasBaseDir string
+
+// resolveFormalSchema loads a formal JSON Schema from schemas/stdout/,
+// strips meta-fields and descriptions, and returns minified JSON suitable
+// for the --json-schema CLI flag.
+//
+// Resolution candidates (reuses suffix-stripping pattern):
+//   - exact: einstein → schemas/stdout/einstein.json
+//   - suffix-stripped: staff-architect-critical-review → staff-architect.json
+//   - role fallback: backend-reviewer → reviewer.json
+//   - generic: go-pro → worker.json
+func resolveFormalSchema(agentID string) (string, bool) {
+	dir := formalSchemasBaseDir
+	if dir == "" {
+		dir = filepath.Join(os.Getenv("HOME"), ".claude", "schemas", "stdout")
+	}
+
+	candidates := buildFormalSchemaCandidates(agentID)
+
+	for _, candidate := range candidates {
+		path := filepath.Join(dir, candidate)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+
+		// Parse schema
+		var schema map[string]json.RawMessage
+		if err := json.Unmarshal(data, &schema); err != nil {
+			continue
+		}
+
+		// Strip top-level meta-fields (not valid in --json-schema input)
+		for _, key := range []string{"$schema", "$id", "title", "description", "version"} {
+			delete(schema, key)
+		}
+
+		// Strip description fields from nested properties
+		if props, ok := schema["properties"]; ok {
+			schema["properties"] = stripNestedDescriptions(props)
+		}
+
+		// Minify
+		cleaned, err := json.Marshal(schema)
+		if err != nil {
+			continue
+		}
+		var compact bytes.Buffer
+		if err := json.Compact(&compact, cleaned); err != nil {
+			continue
+		}
+
+		return compact.String(), true
+	}
+
+	return "", false
+}
+
+// buildFormalSchemaCandidates generates candidate filenames for formal schema lookup.
+// Unlike buildSchemaCandidates, these don't have a workflow-type prefix.
+func buildFormalSchemaCandidates(agentID string) []string {
+	var candidates []string
+
+	// 1. Exact: einstein.json, go-pro.json
+	candidates = append(candidates, agentID+".json")
+
+	// 2. Strip common agent suffixes, with role fallback
+	suffixes := []string{"-reviewer", "-critical-review", "-pro", "-writer", "-archivist"}
+	for _, suffix := range suffixes {
+		if stripped, ok := strings.CutSuffix(agentID, suffix); ok {
+			// Try the stripped name (e.g., "backend" from "backend-reviewer")
+			candidates = append(candidates, stripped+".json")
+			// Role fallback: try the suffix as a schema name
+			// (e.g., "reviewer.json" from "-reviewer" suffix)
+			role := strings.TrimPrefix(suffix, "-")
+			candidates = append(candidates, role+".json")
+		}
+	}
+
+	// 3. Generic worker fallback
+	candidates = append(candidates, "worker.json")
+
+	return candidates
+}
+
+// stripNestedDescriptions removes "description" keys from property definitions
+// within a JSON Schema "properties" object. This reduces token overhead in
+// constrained decoding where descriptions serve no purpose.
+func stripNestedDescriptions(propertiesRaw json.RawMessage) json.RawMessage {
+	var properties map[string]json.RawMessage
+	if err := json.Unmarshal(propertiesRaw, &properties); err != nil {
+		return propertiesRaw
+	}
+
+	for key, propRaw := range properties {
+		var prop map[string]json.RawMessage
+		if err := json.Unmarshal(propRaw, &prop); err != nil {
+			continue
+		}
+
+		// Remove description from this property
+		delete(prop, "description")
+
+		// Recurse into nested properties (objects with their own "properties" key)
+		if nestedProps, ok := prop["properties"]; ok {
+			prop["properties"] = stripNestedDescriptions(nestedProps)
+		}
+
+		// Recurse into items (arrays with item schemas)
+		if items, ok := prop["items"]; ok {
+			var itemSchema map[string]json.RawMessage
+			if err := json.Unmarshal(items, &itemSchema); err == nil {
+				delete(itemSchema, "description")
+				if nestedProps, ok := itemSchema["properties"]; ok {
+					itemSchema["properties"] = stripNestedDescriptions(nestedProps)
+				}
+				if updated, err := json.Marshal(itemSchema); err == nil {
+					prop["items"] = updated
+				}
+			}
+		}
+
+		if updated, err := json.Marshal(prop); err == nil {
+			properties[key] = updated
+		}
+	}
+
+	result, err := json.Marshal(properties)
+	if err != nil {
+		return propertiesRaw
+	}
+	return result
+}
+
 // buildSchemaCandidates generates candidate filenames for contract schema lookup.
 // Tries in order: exact match, suffix-stripped variants, generic worker fallback.
 func buildSchemaCandidates(workflowType, agentID string) []string {
@@ -124,7 +260,7 @@ func buildSchemaCandidates(workflowType, agentID string) []string {
 // - stdin file doesn't exist or is unreadable
 // - stdin is not valid JSON
 // - required fields (task/description and context) are empty
-func buildPromptEnvelope(teamDir string, member *Member, workflowType string) (string, error) {
+func buildPromptEnvelope(teamDir string, member *Member, workflowType string, constrainedDecoding bool) (string, error) {
 	// W2: Validate stdin path is within teamDir (path traversal protection)
 	stdinPath := filepath.Join(teamDir, member.StdinFile)
 	if err := validatePathWithinDir(stdinPath, teamDir); err != nil {
@@ -208,7 +344,11 @@ You do NOT have access to spawn_agent (that's for MCP-spawned agents only).
 			builder.WriteString("```json\n")
 			builder.WriteString(stdoutSchema)
 			builder.WriteString("\n```\n\n")
-			fmt.Fprintf(&builder, "Include \"$schema\": \"%s\" in your JSON output.\n", schemaName)
+			if constrainedDecoding {
+				fmt.Fprintf(&builder, "Include \"schema_id\": \"%s\" in your JSON output.\n", schemaName)
+			} else {
+				fmt.Fprintf(&builder, "Include \"$schema\": \"%s\" in your JSON output.\n", schemaName)
+			}
 			builder.WriteString("Use exact field names, types, and enum values as shown in the schema.\n\n")
 		}
 	}

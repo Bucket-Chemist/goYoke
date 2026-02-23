@@ -215,7 +215,8 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
   getActiveMessages: (): Message[] => {
     const state = get();
     const activeProvider = state.activeProvider;
-    return state.providerMessages[activeProvider] ?? [];
+    const messages = state.providerMessages[activeProvider] ?? [];
+    return messages.filter((msg) => !msg.subagentToolUseId);
   },
 
   getActiveSessionId: (): string | null => {

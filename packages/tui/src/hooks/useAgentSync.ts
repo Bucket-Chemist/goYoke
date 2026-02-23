@@ -45,13 +45,23 @@ function syncTaskAgents(
         // Read state fresh before each mutation
         const stateBeforeRoot = useStore.getState();
 
-        // Ensure router-root exists (first Task() block seen)
+        // Ensure router-root exists — defensive fallback if eager SessionManager
+        // creation didn't fire before the first Task() block arrived.
         if (!stateBeforeRoot.rootAgentId) {
+          console.warn(
+            "[useAgentSync] Root agent missing at first Task() — creating fallback",
+          );
+          const activeModel =
+            stateBeforeRoot.getActiveModel() ?? "opus";
+          const activeTier: "haiku" | "sonnet" | "opus" =
+            TIER_MAP[
+              Object.keys(TIER_MAP).find((k) => activeModel.includes(k)) ?? ""
+            ] ?? "opus";
           stateBeforeRoot.addAgent({
             id: ROUTER_ROOT_ID,
             parentId: null,
-            model: "opus",
-            tier: "opus",
+            model: activeModel,
+            tier: activeTier,
             status: "running",
             description: "Router",
             agentType: "router",

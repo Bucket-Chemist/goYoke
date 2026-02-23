@@ -597,6 +597,14 @@ func TestBuildCLIArgs(t *testing.T) {
 			},
 			expected: []string{"-p", "--output-format", "stream-json", "--max-tokens", "4000"},
 		},
+		{
+			name: "with_formal_schema",
+			config: &agentCLIConfig{
+				AllowedTools: []string{"Read", "Write"},
+				FormalSchema: `{"type":"object","required":["status"],"properties":{"status":{"type":"string"}}}`,
+			},
+			expected: []string{"-p", "--output-format", "stream-json", "--json-schema", `{"type":"object","required":["status"],"properties":{"status":{"type":"string"}}}`, "--allowedTools", "Read,Write"},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1229,6 +1237,26 @@ func TestParseCLIOutput(t *testing.T) {
 			wantError:   false,
 			wantIsError: true,
 			wantSession: "sess-ndjson-5",
+		},
+		// Constrained decoding (structured_output field)
+		{
+			name: "ndjson_with_structured_output",
+			input: `{"type":"system","subtype":"init","session_id":"sess-cd-1"}
+{"type":"result","result":"text fallback","structured_output":{"schema_id":"worker","status":"complete","summary":"did stuff"},"total_cost_usd":0.55,"session_id":"sess-cd-1"}`,
+			wantResult:  `{"schema_id":"worker","status":"complete","summary":"did stuff"}`,
+			wantCost:    0.55,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-cd-1",
+		},
+		{
+			name:        "ndjson_structured_output_null",
+			input:       `{"type":"result","result":"no constrained","structured_output":null,"total_cost_usd":0.10,"session_id":"sess-cd-2"}`,
+			wantResult:  "no constrained",
+			wantCost:    0.10,
+			wantError:   false,
+			wantIsError: false,
+			wantSession: "sess-cd-2",
 		},
 		// Edge cases
 		{

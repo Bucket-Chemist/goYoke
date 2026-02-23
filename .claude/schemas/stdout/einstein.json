@@ -6,6 +6,7 @@
   "version": "1.0.0",
   "type": "object",
   "required": [
+    "schema_id",
     "analysis_id",
     "status",
     "executive_summary",
@@ -20,6 +21,10 @@
     "metadata"
   ],
   "properties": {
+    "schema_id": {
+      "type": "string",
+      "const": "einstein"
+    },
     "analysis_id": {
       "type": "string",
       "pattern": "^einstein-",
@@ -47,8 +52,7 @@
               "cause": {"type": "string"},
               "evidence": {"type": "string"},
               "confidence": {
-                "type": "string",
-                "enum": ["high", "medium", "low"]
+                "type": "string"
               },
               "affected_scope": {
                 "type": "array",
@@ -124,8 +128,7 @@
             }
           },
           "feasibility": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "implementation_sketch": {"type": "string"}
         }
@@ -165,8 +168,7 @@
         "properties": {
           "question": {"type": "string"},
           "importance": {
-            "type": "string",
-            "enum": ["high", "medium", "low"]
+            "type": "string"
           },
           "suggested_investigation": {"type": "string"}
         }

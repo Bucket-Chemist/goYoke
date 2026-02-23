@@ -639,6 +639,27 @@ class SessionManager {
     store.setProviderSessionId(activeProvider, event.session_id);
     store.updateSession({ id: event.session_id });
 
+    // Eagerly register the root "Router" agent so the agent panel shows
+    // immediately on session start, before the first Task() delegation.
+    if (!store.rootAgentId) {
+      const realModel = initEvent.model ?? "claude-sonnet-4-5";
+      const tier = realModel.includes("haiku")
+        ? "haiku"
+        : realModel.includes("sonnet")
+          ? "sonnet"
+          : "opus";
+      store.addAgent({
+        id: "router-root",
+        parentId: null,
+        model: realModel,
+        tier,
+        status: "running",
+        description: "Router",
+        agentType: "router",
+        spawnMethod: "task",
+      });
+    }
+
     // Set GOGENT_SESSION_DIR for team polling and child processes
     if (event.session_id && !process.env["GOGENT_SESSION_DIR"]) {
       const home = process.env["HOME"] || homedir();
@@ -795,6 +816,9 @@ class SessionManager {
     // Get active provider for message storage
     const activeProvider = store.activeProvider;
 
+    // Extract sub-agent tag (null and undefined both mean root message)
+    const subagentToolUseId = event.parent_tool_use_id || undefined;
+
     if (messageId === this.currentMessageIdRef) {
       // Same message ID - streaming update to current message
       this.currentMessageRef = contentBlocks;
@@ -810,6 +834,7 @@ class SessionManager {
         role: "assistant",
         content: contentBlocks,
         partial: true,
+        subagentToolUseId,
       });
     }
   }
@@ -858,11 +883,15 @@ class SessionManager {
             return { type: "text" as const, text: JSON.stringify(block) };
           });
 
+    // Extract sub-agent tag (null and undefined both mean root message)
+    const subagentToolUseId = event.parent_tool_use_id || undefined;
+
     // Add as a system message
     store.addProviderMessage(activeProvider, {
       role: "system",
       content: contentBlocks,
       partial: false,
+      subagentToolUseId,
     });
   }
 

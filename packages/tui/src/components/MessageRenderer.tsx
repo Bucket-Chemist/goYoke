@@ -45,11 +45,27 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
     (block) => block.type === "tool_result" && taskToolUseIds.has(block.tool_use_id)
   );
 
-  // Extract text content from content blocks (suppressed for task result messages)
+  // Detect if this assistant message contains a Task/spawn_agent delegation call.
+  // When it does, verbose prompt text in the same message should be suppressed.
+  const isTaskDelegationMessage = message.role === "assistant" && message.content.some(
+    (block) => block.type === "tool_use" && (block.name === "Task" || block.name === "spawn_agent")
+  );
+
+  // Extract text content from content blocks (suppressed for task result messages).
+  // For task delegation messages: suppress verbose delegation prompt text blocks at default
+  // expansion level (level 0). Short routing commentary (< 200 chars, no AGENT: prefix) is kept.
   const textContent = isTaskResultMessage
     ? ""
     : message.content
         .filter((block): block is Extract<ContentBlock, { type: "text" }> => block.type === "text")
+        .filter((block) => {
+          if (!isTaskDelegationMessage || level >= 1) return true;
+          // Suppress blocks that look like delegation prompt templates:
+          //   - Contain an "AGENT: " line (the standard prompt template header)
+          //   - OR are longer than 200 chars (verbose prompt content)
+          const isVerbosePrompt = /^AGENT:\s/m.test(block.text) || block.text.length > 200;
+          return !isVerbosePrompt;
+        })
         .map((block) => block.text)
         .join("\n");
 

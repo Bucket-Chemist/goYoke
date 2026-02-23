@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box } from "ink";
 import { useStore } from "../store/index.js";
 import { useKeymap } from "../hooks/useKeymap.js";
@@ -71,6 +71,19 @@ export function Layout(): JSX.Element {
 
   // Calculate panel width based on responsive layout
   const claudePanelWidth = Math.floor(terminalWidth * (isVeryNarrow ? 1 : isNarrow ? 0.75 : 0.7)) - 4;
+
+  // Auto-select the first active agent when nothing is selected yet.
+  // Hysteresis: only fires when selectedNode is null — never overrides a manual selection.
+  useEffect(() => {
+    if (selectedNode !== null) return;
+    if (nodes.length === 0) return;
+
+    const activeNode = nodes.find(
+      (n) => n.status === "running" || n.status === "streaming"
+    );
+    const target = activeNode ?? nodes[0];
+    if (target) selectNode(target.id);
+  }, [nodes, selectedNode, selectNode]);
 
   // Global key bindings (only active when no modal is present)
   const globalBindings = createGlobalBindings({

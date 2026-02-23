@@ -210,12 +210,18 @@ Example:
       // Ensure a synthetic "Router" root exists so the tree has a parent
       let effectiveParent = parentId;
       if (!zustand.rootAgentId) {
+        console.warn("[spawnAgent] Root agent missing at first spawn — creating fallback");
         const routerId = "router-root";
+        const activeModel = zustand.getActiveModel?.() ?? "opus";
+        const fallbackTier: "haiku" | "sonnet" | "opus" =
+          activeModel.includes("haiku") ? "haiku"
+          : activeModel.includes("sonnet") ? "sonnet"
+          : "opus";
         zustand.addAgent({
           id: routerId,
           parentId: null,
-          model: "opus",
-          tier: "opus",
+          model: activeModel,
+          tier: fallbackTier,
           status: "running",
           description: "Router",
           agentType: "router",
