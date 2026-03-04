@@ -11,6 +11,69 @@ interface StatusLineProps {
 }
 
 /**
+ * Truncates an email address for compact display.
+ * Format: first 5 chars of local part + "...@" + domain
+ * e.g. "will.klare.nl@gmail.com" → "will....@gmail.com"
+ */
+export function truncateEmail(email: string): string {
+  const atIdx = email.indexOf("@");
+  if (atIdx === -1) return email;
+  const local = email.substring(0, atIdx);
+  const domain = email.substring(atIdx + 1);
+  const prefix = local.length <= 5 ? local : local.substring(0, 5) + "...";
+  return `${prefix}@${domain}`;
+}
+
+interface AuthInfo {
+  authMethod: string | null;
+  email: string | null;
+}
+
+/**
+ * Auth info hook with caching
+ * Polls `claude auth status --json` every cacheTtlMs to avoid expensive
+ * process spawns on every render. Auth state changes very rarely.
+ */
+function useAuthInfo(cacheTtlMs = 30000): AuthInfo {
+  const [info, setInfo] = useState<AuthInfo>({
+    authMethod: null,
+    email: null,
+  });
+  const lastFetch = useRef(0);
+
+  useEffect(() => {
+    const fetch = () => {
+      if (Date.now() - lastFetch.current < cacheTtlMs) return;
+      lastFetch.current = Date.now();
+      try {
+        const raw = execSync("claude auth status --json", {
+          encoding: "utf8",
+          stdio: ["pipe", "pipe", "ignore"],
+        }).trim();
+        const parsed = JSON.parse(raw) as {
+          loggedIn?: boolean;
+          authMethod?: string;
+          email?: string;
+        };
+        if (parsed.loggedIn) {
+          setInfo({
+            authMethod: parsed.authMethod ?? null,
+            email: parsed.email ?? null,
+          });
+        }
+      } catch {
+        /* claude CLI unavailable or not logged in — leave defaults */
+      }
+    };
+    fetch();
+    const interval = setInterval(fetch, cacheTtlMs);
+    return () => clearInterval(interval);
+  }, [cacheTtlMs]);
+
+  return info;
+}
+
+/**
  * Git info hook with caching
  * Polls git status every cacheTtlMs to avoid expensive syscalls on every render
  */
@@ -128,6 +191,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
   });
 
   const gitInfo = useGitInfo();
+  const authInfo = useAuthInfo();
   const teams = useStore((state) => state.teams);
   const startTime = useRef(Date.now());
   const [tick, setTick] = useState(0);
@@ -195,6 +259,9 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
   const showGit = width >= 80;
   const projectName = "GOgent-Fortress";
 
+  // Responsive ContextBar width: scales with terminal width (10–30 chars)
+  const contextBarWidth = Math.max(10, Math.min(30, Math.floor(width * 0.12)));
+
   return (
     <Box flexDirection="column" width={width}>
       {/* Separator line */}
@@ -202,71 +269,90 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
         {"─".repeat(width)}
       </Text>
 
-      {/* Line 1: Model, project, git, permission mode */}
-      <Box>
-        <Text bold color={colors.primary}>
-          [{modelName}]
-        </Text>
-        {permissionMode !== 'default' && (
-          <Text bold color={permissionMode === 'plan' ? colors.secondary : colors.warning}>
-            {" "}[{permissionMode === 'acceptEdits' ? 'Auto-Edit' : 'Plan'}]
-          </Text>
-        )}
-        <Text color={colors.muted}> 📁 {projectName}</Text>
-        {showGit && gitInfo.branch && (
-          <Text color={colors.muted}>
-            {" "}
-            | 🌿 {gitInfo.branch}
-            {gitInfo.staged > 0 && (
-              <Text color={colors.success}> +{gitInfo.staged}</Text>
-            )}
-            {gitInfo.modified > 0 && (
-              <Text color={colors.warning}> ~{gitInfo.modified}</Text>
-            )}
-          </Text>
-        )}
-      </Box>
-
-      {/* Line 2: Context bar, cost, duration, agents (only if height >= 2) */}
-      {effectiveHeight >= 2 && (
+      {/* Line 1: LEFT = model + permission + project + git | RIGHT = auth */}
+      <Box width={width} justifyContent="space-between">
+        {/* Left group */}
         <Box>
-          <ContextBar percentage={contextPct} />
-          <Text color={colors.muted}> | </Text>
-          <Text color={colors.warning}>${cost}</Text>
-          <Text color={colors.muted}>
-            {" "}
-            | ⏱️ {minutes}m {String(seconds).padStart(2, "0")}s
+          <Text bold color={colors.primary}>
+            [{modelName}]
           </Text>
-          <Text color={colors.muted}> | </Text>
-          {streaming ? (
-            <>
-              <StreamingSpinner />
-              <Text color={colors.muted}> streaming</Text>
-            </>
-          ) : (
+          {permissionMode !== 'default' && (
+            <Text bold color={permissionMode === 'plan' ? colors.secondary : colors.warning}>
+              {" "}[{permissionMode === 'acceptEdits' ? 'Auto-Edit' : 'Plan'}]
+            </Text>
+          )}
+          <Text color={colors.muted}> 📁 {projectName}</Text>
+          {showGit && gitInfo.branch && (
             <Text color={colors.muted}>
-              🤖 {agentCounts.running} running
-              {agentCounts.queued > 0 && (
-                <Text color={colors.warning}> ({agentCounts.queued} queued)</Text>
+              {" "}
+              | 🌿 {gitInfo.branch}
+              {gitInfo.staged > 0 && (
+                <Text color={colors.success}> +{gitInfo.staged}</Text>
+              )}
+              {gitInfo.modified > 0 && (
+                <Text color={colors.warning}> ~{gitInfo.modified}</Text>
               )}
             </Text>
           )}
-          {teams.length > 0 && (
-            <>
-              <Text color={colors.muted}> | </Text>
-              <Text color={colors.success}>
-                {useAscii ? "[BG]" : "🏗️"} {teamStats.aliveCount} team{teamStats.aliveCount !== 1 ? "s" : ""}
-                {teamStats.furthest && teamStats.furthest.currentWave > 0 && (
-                  <>
-                    {" · "}wave {teamStats.furthest.currentWave}/{teamStats.furthest.waveCount}
-                  </>
-                )}
-                {teamStats.totalSpend > 0 && (
-                  <> · ${teamStats.totalSpend.toFixed(2)}</>
+        </Box>
+
+        {/* Right group: auth info */}
+        {authInfo.authMethod && (
+          <Box>
+            <Text color={colors.muted}>
+              {authInfo.authMethod}
+              {authInfo.email && ` · ${truncateEmail(authInfo.email)}`}
+            </Text>
+          </Box>
+        )}
+      </Box>
+
+      {/* Line 2: LEFT = context bar + cost | RIGHT = duration + agents + teams */}
+      {effectiveHeight >= 2 && (
+        <Box width={width} justifyContent="space-between">
+          {/* Left group */}
+          <Box>
+            <ContextBar percentage={contextPct} width={contextBarWidth} />
+            <Text color={colors.muted}> | </Text>
+            <Text color={colors.warning}>${cost}</Text>
+          </Box>
+
+          {/* Right group: duration + agents + optional teams */}
+          <Box>
+            <Text color={colors.muted}>
+              ⏱️ {minutes}m {String(seconds).padStart(2, "0")}s
+            </Text>
+            <Text color={colors.muted}> | </Text>
+            {streaming ? (
+              <>
+                <StreamingSpinner />
+                <Text color={colors.muted}> streaming</Text>
+              </>
+            ) : (
+              <Text color={colors.muted}>
+                🤖 {agentCounts.running} running
+                {agentCounts.queued > 0 && (
+                  <Text color={colors.warning}> ({agentCounts.queued} queued)</Text>
                 )}
               </Text>
-            </>
-          )}
+            )}
+            {teams.length > 0 && (
+              <>
+                <Text color={colors.muted}> | </Text>
+                <Text color={colors.success}>
+                  {useAscii ? "[BG]" : "🏗️"} {teamStats.aliveCount} team{teamStats.aliveCount !== 1 ? "s" : ""}
+                  {teamStats.furthest && teamStats.furthest.currentWave > 0 && (
+                    <>
+                      {" · "}wave {teamStats.furthest.currentWave}/{teamStats.furthest.waveCount}
+                    </>
+                  )}
+                  {teamStats.totalSpend > 0 && (
+                    <> · ${teamStats.totalSpend.toFixed(2)}</>
+                  )}
+                </Text>
+              </>
+            )}
+          </Box>
         </Box>
       )}
     </Box>

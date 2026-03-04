@@ -51,13 +51,28 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
   providerMessages: initializeProviderRecords([]),
   providerSessionIds: initializeProviderRecords(null),
   providerModels: initializeProviderRecords(null),
+  providerProjectDirs: initializeProviderRecords(null),
 
   // Global actions
   updateSession: (data): void => {
-    set((state) => ({
-      totalCost: data.cost ?? state.totalCost,
-      // Note: Go format uses tool_calls, we track internally as tokenCount
-    }));
+    set((state) => {
+      const updates: Partial<typeof state> = {
+        totalCost: data.cost ?? state.totalCost,
+      };
+
+      // If an id is provided, also store it in providerSessionIds for the
+      // active provider so SessionManager.connect() can pass it as `resume:`
+      // to query(). Previously the id field was silently discarded.
+      if (data.id) {
+        const activeProvider = get().activeProvider;
+        updates.providerSessionIds = {
+          ...state.providerSessionIds,
+          [activeProvider]: data.id,
+        };
+      }
+
+      return updates;
+    });
   },
 
   incrementCost: (cost): void => {
@@ -112,6 +127,7 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
       providerMessages: initializeProviderRecords([]),
       providerSessionIds: initializeProviderRecords(null),
       providerModels: initializeProviderRecords(null),
+      providerProjectDirs: initializeProviderRecords(null),
     });
 
     // Clear GOGENT_SESSION_DIR environment variable
@@ -193,6 +209,15 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
     }));
   },
 
+  setProviderMessages: (provider, messages): void => {
+    set((state) => ({
+      providerMessages: {
+        ...state.providerMessages,
+        [provider]: messages,
+      },
+    }));
+  },
+
   setProviderSessionId: (provider, sessionId): void => {
     set((state) => ({
       providerSessionIds: {
@@ -207,6 +232,15 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
       providerModels: {
         ...state.providerModels,
         [provider]: model,
+      },
+    }));
+  },
+
+  setProviderProjectDir: (provider, dir): void => {
+    set((state) => ({
+      providerProjectDirs: {
+        ...state.providerProjectDirs,
+        [provider]: dir,
       },
     }));
   },

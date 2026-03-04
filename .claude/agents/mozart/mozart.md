@@ -261,7 +261,7 @@ AskUserQuestion({
 
 **Prompt:**
 ```
-"Default budget is $5.00 for the full team (Einstein + Staff-Architect + Beethoven). Want to adjust?"
+"Default budget is $50.00 for the full team (Einstein + Staff-Architect + Beethoven). Want to adjust?"
 ```
 
 **Purpose:** Prevents surprise costs and allows experimentation with lower budgets.
@@ -272,8 +272,8 @@ AskUserQuestion({
 
 **Validation:**
 - Minimum: $1.00 (single Einstein run)
-- Maximum: $50.00 (safety limit)
-- Default: $5.00
+- Maximum: $100.00 (safety limit)
+- Default: $50.00
 
 **Budget Estimates:**
 - Einstein (Opus, 16K thinking): ~$1.50
@@ -320,8 +320,8 @@ START
   │     └─► (not asked) → Default to full braintrust
   │
   ├─► Q4: Budget (CONDITIONAL: cost concerns OR first-time user)
-  │     ├─► User specifies → Validate ($1-$50) → budget_max_usd
-  │     └─► (not asked) → Default $5.00
+  │     ├─► User specifies → Validate ($1-$100) → budget_max_usd
+  │     └─► (not asked) → Default $50.00
   │
   ├─► Generate Problem Brief (see Phase 4)
   │

@@ -254,46 +254,41 @@
   },
 
   "subagent_types": {
-    "description": "Defines tool capabilities for each subagent_type used in Task invocations",
-    "Explore": {
+    "description": "Informational groupings of agent capabilities. Each agent now uses its specific CC agent type name (from agent_subagent_mapping) rather than these generic categories. These categories document the tool/permission model each group follows.",
+    "exploration": {
       "description": "Read-only codebase exploration and analysis",
       "tools": ["Read", "Glob", "Grep", "Bash"],
       "allows_write": false,
-      "respects_agent_yaml": false,
-      "use_for": ["codebase-search", "haiku-scout", "code-reviewer", "librarian", "backend-reviewer", "frontend-reviewer", "standards-reviewer"],
+      "agents": ["codebase-search", "haiku-scout", "code-reviewer", "librarian", "backend-reviewer", "frontend-reviewer", "standards-reviewer"],
       "rationale": "Exploration tasks should be non-destructive reconnaissance"
     },
-    "general-purpose": {
-      "description": "Full tool access following agent.yaml definitions",
+    "implementation": {
+      "description": "Full tool access following agent YAML definitions",
       "tools": ["*"],
       "allows_write": true,
-      "respects_agent_yaml": true,
-      "use_for": ["scaffolder", "tech-docs-writer", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "memory-archivist", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro"],
+      "agents": ["scaffolder", "tech-docs-writer", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "memory-archivist", "go-pro", "go-cli", "go-tui", "go-api", "go-concurrent", "typescript-pro", "react-pro"],
       "rationale": "Implementation and documentation agents need write permissions"
     },
-    "Bash": {
+    "external": {
       "description": "Command execution specialist for external processes",
       "tools": ["Bash", "Read"],
       "allows_write": false,
-      "respects_agent_yaml": false,
-      "use_for": ["gemini-slave"],
+      "agents": ["gemini-slave"],
       "rationale": "External context engines use shell piping, not file modification"
     },
-    "Plan": {
+    "planning": {
       "description": "Architecture and planning mode with controlled write access",
       "tools": ["Read", "Glob", "Grep", "Write", "Task", "spawn_agent", "AskUserQuestion", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate"],
       "allows_write": true,
-      "respects_agent_yaml": false,
-      "use_for": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager", "mozart"],
+      "agents": ["orchestrator", "architect", "planner", "review-orchestrator", "impl-manager", "mozart", "python-architect"],
       "rationale": "Planning agents need to write plans and spawn other agents"
     },
-    "Analyst": {
-      "description": "Deep thinking and analysis with report writing but NO delegation",
-      "tools": ["Read", "Glob", "Grep", "Write", "Task", "AskUserQuestion", "TaskList", "TaskGet", "TaskCreate", "TaskUpdate"],
+    "analysis": {
+      "description": "Deep thinking and analysis with report writing",
+      "tools": ["Read", "Glob", "Grep", "Write", "TaskGet"],
       "allows_write": true,
-      "respects_agent_yaml": false,
-      "use_for": ["einstein", "beethoven", "staff-architect-critical-review"],
-      "rationale": "Analysts produce thought work and documents but should not spawn sub-agents (Principle of Least Privilege)"
+      "agents": ["einstein", "beethoven", "staff-architect-critical-review"],
+      "rationale": "Analysts produce thought work and documents"
     }
   },
 
@@ -310,39 +305,39 @@
   },
 
   "agent_subagent_mapping": {
-    "description": "Maps each agent to its required subagent_type (enforced by validate-routing.sh)",
-    "codebase-search": "Explore",
-    "haiku-scout": "Explore",
-    "code-reviewer": "Explore",
-    "librarian": "Explore",
-    "tech-docs-writer": "general-purpose",
-    "scaffolder": "general-purpose",
-    "memory-archivist": "general-purpose",
-    "python-pro": "general-purpose",
-    "python-ux": "general-purpose",
-    "r-pro": "general-purpose",
-    "r-shiny-pro": "general-purpose",
-    "go-pro": "general-purpose",
-    "go-cli": "general-purpose",
-    "go-tui": "general-purpose",
-    "go-api": "general-purpose",
-    "go-concurrent": "general-purpose",
-    "typescript-pro": "general-purpose",
-    "react-pro": "general-purpose",
-    "backend-reviewer": "Explore",
-    "frontend-reviewer": "Explore",
-    "standards-reviewer": "Explore",
-    "review-orchestrator": "Plan",
-    "impl-manager": "Plan",
-    "orchestrator": "Plan",
-    "architect": "general-purpose",
-    "planner": "Plan",
-    "python-architect": ["Plan", "Explore"],
-    "einstein": "Analyst",
-    "mozart": "Plan",
-    "beethoven": "Analyst",
-    "gemini-slave": "Bash",
-    "staff-architect-critical-review": ["Analyst", "Explore"]
+    "description": "Maps each agent to its required subagent_type (must match CC's available agent types)",
+    "codebase-search": "Codebase Search",
+    "haiku-scout": "Haiku Scout",
+    "code-reviewer": "Code Reviewer",
+    "librarian": "Librarian",
+    "tech-docs-writer": "Tech Docs Writer",
+    "scaffolder": "Scaffolder",
+    "memory-archivist": "Memory Archivist",
+    "python-pro": "Python Pro",
+    "python-ux": "Python UX (PySide6)",
+    "r-pro": "R Pro",
+    "r-shiny-pro": "R Shiny Pro",
+    "go-pro": "GO Pro",
+    "go-cli": "GO CLI (Cobra)",
+    "go-tui": "GO TUI (Bubbletea)",
+    "go-api": "GO API (HTTP Client)",
+    "go-concurrent": "GO Concurrent",
+    "typescript-pro": "TypeScript Pro",
+    "react-pro": "React Pro",
+    "backend-reviewer": "Backend Reviewer",
+    "frontend-reviewer": "Frontend Reviewer",
+    "standards-reviewer": "Standards Reviewer",
+    "review-orchestrator": "Review Orchestrator",
+    "impl-manager": "Implementation Manager",
+    "orchestrator": "Orchestrator",
+    "architect": "Architect",
+    "planner": "Planner",
+    "python-architect": "Python ML Architect",
+    "einstein": "Einstein",
+    "mozart": "Mozart",
+    "beethoven": "Beethoven",
+    "gemini-slave": "Gemini Slave",
+    "staff-architect-critical-review": "Staff Architect Critical Review"
   },
 
   "blocked_patterns": {

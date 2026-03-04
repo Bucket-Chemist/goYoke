@@ -5,12 +5,12 @@ description: >
   Focuses on naming, structure, complexity, DRY/KISS/YAGNI principles,
   and maintainability across all programming languages.
 
-model: haiku
+model: sonnet
 thinking:
   enabled: true
-  budget: 6000
+  budget: 10000
 
-tier: 1.5
+tier: 2
 category: review
 subagent_type: Explore
 
@@ -50,10 +50,23 @@ failure_tracking:
   max_attempts: 2
   on_max_reached: "report_incomplete"
 
-cost_ceiling: 0.05
+cost_ceiling: 1.00
 ---
 
 # Standards Reviewer Agent
+
+## CRITICAL: File Reading Required
+
+**YOU MUST USE THE READ TOOL TO EXAMINE ACTUAL FILE CONTENTS BEFORE GENERATING ANY FINDINGS.**
+
+- DO NOT generate findings based only on file paths or metadata
+- DO NOT hallucinate issues without reading the actual code
+- ALWAYS read files first, then analyze, then report findings
+- If you cannot read a file, report "Unable to review [file]: [reason]"
+
+**Failure to read files will result in hallucinated, useless output.**
+
+---
 
 ## Role
 

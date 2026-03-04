@@ -56,6 +56,13 @@ export interface ScrollViewProps {
   disableArrowKeys?: boolean;
 
   /**
+   * Increment to force scroll-to-bottom (resets userScrolledUp).
+   * Used when a modal appears so the user sees latest content.
+   * @default 0
+   */
+  forceScrollToBottom?: number;
+
+  /**
    * Content to render
    */
   children: React.ReactNode;
@@ -71,6 +78,7 @@ export function ScrollView({
   autoScroll = true,
   focused = false,
   disableArrowKeys = false,
+  forceScrollToBottom = 0,
   children,
 }: ScrollViewProps): JSX.Element {
   const [scrollOffset, setScrollOffset] = useState(0);
@@ -125,6 +133,14 @@ export function ScrollView({
   useEffect(() => {
     setScrollOffset((prev) => Math.min(prev, maxOffset));
   }, [maxOffset]);
+
+  // Force scroll to bottom when prop increments (e.g., modal appears)
+  useEffect(() => {
+    if (forceScrollToBottom > 0) {
+      setUserScrolledUp(false);
+      setScrollOffset(maxOffsetRef.current);
+    }
+  }, [forceScrollToBottom]);
 
   // Stable scroll helper — sets offset + tracks user scroll state
   const applyScroll = useCallback((target: number) => {

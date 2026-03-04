@@ -20,6 +20,9 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set, get) =>
   clearPendingMessage: null,
   panelAutoSwitched: false,
   selectedUnifiedId: null,
+  planPreviewContent: null,
+  planPreviewPath: null,
+  previousRightPanelMode: "agents" as const,
 
   setStreaming: (streaming): void => {
     set({ streaming });
@@ -68,9 +71,13 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set, get) =>
   cycleRightPanel: (): void => {
     set((state) => {
       const modes: Array<"agents" | "dashboard" | "settings"> = ["agents", "dashboard", "settings"];
-      const current = modes.indexOf(state.rightPanelMode);
+      const current = modes.indexOf(state.rightPanelMode as typeof modes[number]);
       const next = (current + 1) % modes.length;
-      return { rightPanelMode: modes[next]!, panelAutoSwitched: false };
+      // Clean up plan preview state if escaping planPreview mode
+      const cleanup = state.rightPanelMode === "planPreview"
+        ? { planPreviewContent: null, planPreviewPath: null }
+        : {};
+      return { rightPanelMode: modes[next]!, panelAutoSwitched: false, ...cleanup };
     });
   },
 
@@ -96,5 +103,13 @@ export const createUISlice: StateCreator<Store, [], [], UISlice> = (set, get) =>
 
   setSelectedUnifiedId: (id): void => {
     set({ selectedUnifiedId: id });
+  },
+
+  setPlanPreview: (content, path): void => {
+    set({ planPreviewContent: content, planPreviewPath: path });
+  },
+
+  setPreviousRightPanelMode: (mode): void => {
+    set({ previousRightPanelMode: mode });
   },
 });

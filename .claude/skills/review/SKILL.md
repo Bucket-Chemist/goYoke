@@ -424,13 +424,16 @@ fi
 | Detection                     | Bash        | 0           | $0.000          |
 | Classification                | Bash        | 0           | $0.000          |
 | Config generation             | Router      | ~2K         | $0.000 (inline) |
-| Backend Reviewer              | Haiku       | 3-5K        | $0.003-$0.005   |
-| Frontend Reviewer             | Haiku       | 3-5K        | $0.003-$0.005   |
-| Standards Reviewer            | Haiku       | 3-5K        | $0.003-$0.005   |
-| Architect Reviewer            | Sonnet      | 8-12K       | $0.07-$0.11     |
-| **Total (4 reviewers)**       |             | 17-27K      | **$0.08-$0.13** |
+| Backend Reviewer              | Sonnet      | 20-40K      | $0.50-$1.00     |
+| Frontend Reviewer             | Sonnet      | 20-40K      | $0.50-$1.00     |
+| Standards Reviewer            | Sonnet      | 20-40K      | $0.50-$1.00     |
+| Architect Reviewer            | Sonnet      | 30-50K      | $0.80-$1.20     |
+| **Total (4 reviewers)**       |             | 90-170K     | **$2.30-$4.20** |
 
-**Cost per file reviewed:** ~$0.03-$0.06
+**Cost per file reviewed:** ~$0.15-$0.30
+
+**Note:** Reviewers upgraded from Haiku to Sonnet (2026-02-25) to ensure actual file reading.
+Haiku reviewers were generating hallucinated findings without using Read tools.
 
 **Parallelization savings:** ~40% faster than sequential review
 

@@ -11,9 +11,17 @@ import { nanoid } from "nanoid";
 export interface AskPayload {
   message: string;
   header?: string;
-  options?: Array<{ label: string; value: string; description?: string }>;
+  options?: Array<{
+    label: string;
+    value: string;
+    description?: string;
+    /** SDK future: monospace preview content shown when option is focused */
+    markdown?: string;
+  }>;
   defaultValue?: string;
   multiSelect?: boolean;
+  /** SDK future: per-question annotations from user responses */
+  annotations?: Record<string, { markdown?: string; notes?: string }>;
 }
 
 export interface ConfirmPayload {

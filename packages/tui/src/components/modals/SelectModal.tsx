@@ -3,19 +3,25 @@
  * - Arrow keys navigate options
  * - Number keys (1-9) for quick select
  * - Enter selects current option
+ *
+ * Split layout: scrollable message (top) + fixed options panel (bottom)
+ * Options are ALWAYS visible regardless of message length.
  */
 
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import type { ModalRequest, ModalResponse, SelectPayload } from "../../store/slices/modal.js";
 import { colors } from "../../config/theme.js";
+import { ScrollView } from "../primitives/ScrollView.js";
 
 interface SelectModalProps {
   request: ModalRequest<SelectPayload>;
   onComplete: (response: ModalResponse) => void;
+  /** Available terminal rows for scrollable content area (provided by ModalOverlay) */
+  contentHeight?: number;
 }
 
-export function SelectModal({ request, onComplete }: SelectModalProps): JSX.Element {
+export function SelectModal({ request, onComplete, contentHeight }: SelectModalProps): JSX.Element {
   const payload = request.payload as SelectPayload;
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -56,11 +62,19 @@ export function SelectModal({ request, onComplete }: SelectModalProps): JSX.Elem
     { isActive: true }
   );
 
-  return (
-    <Box flexDirection="column" gap={1}>
-      <Text>{payload.message}</Text>
+  const helpText = contentHeight !== undefined
+    ? "↑↓ or 1-9 Navigate • PgUp/PgDn Scroll • Enter Select • Esc Cancel"
+    : "↑↓ or 1-9 Navigate • Enter Select • Esc Cancel";
 
-      <Box flexDirection="column" marginTop={1}>
+  // Content region: message text
+  const contentRegion = (
+    <Text wrap="wrap">{payload.message}</Text>
+  );
+
+  // Options region: option list + help text
+  const optionsRegion = (
+    <Box flexDirection="column" flexShrink={0}>
+      <Box flexDirection="column">
         {payload.options.map((option, index) => {
           const isSelected = index === selectedIndex;
           const numberKey = index < 9 ? `${index + 1}` : " ";
@@ -78,8 +92,41 @@ export function SelectModal({ request, onComplete }: SelectModalProps): JSX.Elem
       </Box>
 
       <Box marginTop={1}>
-        <Text dimColor>↑↓ or 1-9 Navigate • Enter Select • Esc Cancel</Text>
+        <Text dimColor>{helpText}</Text>
       </Box>
+    </Box>
+  );
+
+  // Split layout: scrollable message (top) + fixed options (bottom)
+  if (contentHeight !== undefined && contentHeight > 0) {
+    return (
+      <Box flexDirection="column">
+        {/* TOP: Scrollable message region */}
+        <ScrollView
+          height={contentHeight}
+          autoScroll={false}
+          focused={false}
+          disableArrowKeys={true}
+        >
+          {contentRegion}
+        </ScrollView>
+
+        {/* Separator */}
+        <Box>
+          <Text dimColor>{"─".repeat(44)}</Text>
+        </Box>
+
+        {/* BOTTOM: Fixed options panel — never clipped */}
+        {optionsRegion}
+      </Box>
+    );
+  }
+
+  // Fallback: no split layout (full-screen mode or no height constraint)
+  return (
+    <Box flexDirection="column" gap={1}>
+      {contentRegion}
+      {optionsRegion}
     </Box>
   );
 }

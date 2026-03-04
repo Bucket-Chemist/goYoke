@@ -13,6 +13,7 @@ export interface CLIOptions {
   resume: boolean;
   verbose: boolean;
   legacy: boolean;
+  configDir?: string;
 }
 
 /**
@@ -20,16 +21,17 @@ export interface CLIOptions {
  * Zellij doesn't propagate env vars to layout pane commands, so the bash
  * function writes args to a temp file instead.
  */
-function readLaunchArgs(): { session?: string; resume?: boolean } {
+function readLaunchArgs(): { session?: string; resume?: boolean; configDir?: string } {
   const argsFile = "/tmp/.gofortress-launch-args";
   try {
     const content = readFileSync(argsFile, "utf-8");
     unlinkSync(argsFile);
-    const result: { session?: string; resume?: boolean } = {};
+    const result: { session?: string; resume?: boolean; configDir?: string } = {};
     for (const line of content.split("\n")) {
       const [key, val] = line.split("=", 2);
       if (key === "session" && val) result.session = val.trim();
       if (key === "resume" && val?.trim() === "1") result.resume = true;
+      if (key === "config_dir" && val) result.configDir = val.trim();
     }
     return result;
   } catch {
@@ -64,5 +66,6 @@ export function parseCLI(): CLIOptions {
     resume: options.resume ?? launchArgs.resume ?? false,
     verbose: options.verbose ?? false,
     legacy: options.legacy ?? false,
+    configDir: launchArgs.configDir,
   };
 }

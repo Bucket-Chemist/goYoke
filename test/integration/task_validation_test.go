@@ -27,9 +27,9 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 			Opus:   30,
 		},
 		AgentSubagentMapping: routing.AgentSubagentMapping{
-			PythonPro:      routing.NewFlexibleSubagentType("general-purpose"),
-			CodebaseSearch: routing.NewFlexibleSubagentType("Explore"),
-			TechDocsWriter: routing.NewFlexibleSubagentType("general-purpose"),
+			PythonPro:      routing.NewFlexibleSubagentType("Python Pro"),
+			CodebaseSearch: routing.NewFlexibleSubagentType("Codebase Search"),
+			TechDocsWriter: routing.NewFlexibleSubagentType("Tech Docs Writer"),
 		},
 	}
 
@@ -37,7 +37,7 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 		taskInput := map[string]interface{}{
 			"model":         "sonnet",
 			"prompt":        "AGENT: python-pro\n\nImplement feature",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 		}
 
 		// Einstein blocking
@@ -47,7 +47,7 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 		}
 
 		// Subagent type
-		subagentResult := routing.ValidateSubagentType(schema, "python-pro", "general-purpose", nil)
+		subagentResult := routing.ValidateSubagentType(schema, "python-pro", "Python Pro", nil)
 		if !subagentResult.Valid {
 			t.Errorf("Valid subagent_type rejected: %s", subagentResult.ErrorMessage)
 		}
@@ -109,15 +109,15 @@ func TestTaskValidation_CompleteWorkflow(t *testing.T) {
 	})
 
 	t.Run("Wrong subagent_type", func(t *testing.T) {
-		// codebase-search requires "Explore", using "general-purpose" instead
-		result := routing.ValidateSubagentType(schema, "codebase-search", "general-purpose", nil)
+		// codebase-search requires "Codebase Search", using "Python Pro" instead
+		result := routing.ValidateSubagentType(schema, "codebase-search", "Python Pro", nil)
 
 		if result.Valid {
 			t.Error("Wrong subagent_type should be rejected")
 		}
 
-		if len(result.AllowedTypes) == 0 || result.AllowedTypes[0] != "Explore" {
-			t.Errorf("Expected allowed types to include 'Explore', got: %v", result.AllowedTypes)
+		if len(result.AllowedTypes) == 0 || result.AllowedTypes[0] != "Codebase Search" {
+			t.Errorf("Expected allowed types to include 'Codebase Search', got: %v", result.AllowedTypes)
 		}
 
 		formatted := result.FormatSubagentTypeError()
@@ -137,17 +137,17 @@ func TestTaskValidation_RealWorldScenarios(t *testing.T) {
 			},
 		},
 		AgentSubagentMapping: routing.AgentSubagentMapping{
-			PythonPro:      routing.NewFlexibleSubagentType("general-purpose"),
-			PythonUX:       routing.NewFlexibleSubagentType("general-purpose"),
-			RPro:           routing.NewFlexibleSubagentType("general-purpose"),
-			RShinyPro:      routing.NewFlexibleSubagentType("general-purpose"),
-			CodebaseSearch: routing.NewFlexibleSubagentType("Explore"),
-			Scaffolder:     routing.NewFlexibleSubagentType("general-purpose"),
-			TechDocsWriter: routing.NewFlexibleSubagentType("general-purpose"),
-			Librarian:      routing.NewFlexibleSubagentType("Explore"),
-			CodeReviewer:   routing.NewFlexibleSubagentType("Explore"),
-			Orchestrator:   routing.NewFlexibleSubagentType("Plan"),
-			Architect:      routing.NewFlexibleSubagentType("Plan"),
+			PythonPro:      routing.NewFlexibleSubagentType("Python Pro"),
+			PythonUX:       routing.NewFlexibleSubagentType("Python UX (PySide6)"),
+			RPro:           routing.NewFlexibleSubagentType("R Pro"),
+			RShinyPro:      routing.NewFlexibleSubagentType("R Shiny Pro"),
+			CodebaseSearch: routing.NewFlexibleSubagentType("Codebase Search"),
+			Scaffolder:     routing.NewFlexibleSubagentType("Scaffolder"),
+			TechDocsWriter: routing.NewFlexibleSubagentType("Tech Docs Writer"),
+			Librarian:      routing.NewFlexibleSubagentType("Librarian"),
+			CodeReviewer:   routing.NewFlexibleSubagentType("Code Reviewer"),
+			Orchestrator:   routing.NewFlexibleSubagentType("Orchestrator"),
+			Architect:      routing.NewFlexibleSubagentType("Architect"),
 		},
 	}
 
@@ -157,14 +157,14 @@ func TestTaskValidation_RealWorldScenarios(t *testing.T) {
 		subagentType  string
 		shouldBeValid bool
 	}{
-		{"Python implementation (correct)", "python-pro", "general-purpose", true},
-		{"Python implementation (wrong)", "python-pro", "Explore", false},
-		{"Codebase search (correct)", "codebase-search", "Explore", true},
-		{"Codebase search (wrong)", "codebase-search", "general-purpose", false},
-		{"Tech docs writer (correct)", "tech-docs-writer", "general-purpose", true},
-		{"Tech docs writer (wrong)", "tech-docs-writer", "Explore", false},
-		{"Orchestrator (correct)", "orchestrator", "Plan", true},
-		{"Orchestrator (wrong)", "orchestrator", "general-purpose", false},
+		{"Python implementation (correct)", "python-pro", "Python Pro", true},
+		{"Python implementation (wrong)", "python-pro", "Codebase Search", false},
+		{"Codebase search (correct)", "codebase-search", "Codebase Search", true},
+		{"Codebase search (wrong)", "codebase-search", "Python Pro", false},
+		{"Tech docs writer (correct)", "tech-docs-writer", "Tech Docs Writer", true},
+		{"Tech docs writer (wrong)", "tech-docs-writer", "Codebase Search", false},
+		{"Orchestrator (correct)", "orchestrator", "Orchestrator", true},
+		{"Orchestrator (wrong)", "orchestrator", "Python Pro", false},
 	}
 
 	for _, tt := range tests {

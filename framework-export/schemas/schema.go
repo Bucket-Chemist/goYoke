@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 // EXPECTED_SCHEMA_VERSION is the version this code is built for.
-const EXPECTED_SCHEMA_VERSION = "2.4.0"
+const EXPECTED_SCHEMA_VERSION = "2.5.0"
 
 // Schema represents the complete routing-schema.json v2.2.0 structure.
 // This defines the tiered agent architecture for Claude Code.
@@ -164,22 +165,98 @@ type Override struct {
 }
 
 // SubagentTypesConfig wraps the subagent_types configuration with its description.
+// These are informational groupings — each agent uses its specific CC type name
+// from agent_subagent_mapping rather than these generic categories.
 type SubagentTypesConfig struct {
 	Description    string       `json:"description"`
-	Explore        SubagentType `json:"Explore"`
-	GeneralPurpose SubagentType `json:"general-purpose"`
-	Bash           SubagentType `json:"Bash"`
-	Plan           SubagentType `json:"Plan"`
+	Exploration    SubagentType `json:"exploration"`
+	Implementation SubagentType `json:"implementation"`
+	External       SubagentType `json:"external"`
+	Planning       SubagentType `json:"planning"`
+	Analysis       SubagentType `json:"analysis"`
 }
 
-// SubagentType defines tool capabilities for each subagent_type.
+// SubagentType defines tool capabilities for an agent category.
 type SubagentType struct {
-	Description       string   `json:"description"`
-	Tools             []string `json:"tools"`
-	AllowsWrite       bool     `json:"allows_write"`
-	RespectsAgentYaml bool     `json:"respects_agent_yaml"`
-	UseFor            []string `json:"use_for"`
-	Rationale         string   `json:"rationale"`
+	Description string   `json:"description"`
+	Tools       []string `json:"tools"`
+	AllowsWrite bool     `json:"allows_write"`
+	Agents      []string `json:"agents"`
+	Rationale   string   `json:"rationale"`
+}
+
+// FlexibleSubagentType supports both string and []string JSON unmarshaling
+// for backwards compatibility with routing-schema.json.
+//
+// Accepts:
+//   - "codebase-search": "Explore" (single string, backwards compat)
+//   - "staff-architect-critical-review": ["Plan", "Explore"] (array, new multi-type)
+type FlexibleSubagentType struct {
+	types []string
+}
+
+// UnmarshalJSON unmarshals either a string or []string into FlexibleSubagentType.
+// Tries string first, falls back to []string if that fails.
+func (f *FlexibleSubagentType) UnmarshalJSON(data []byte) error {
+	// Try unmarshaling as single string first (backwards compatibility)
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		// Reject empty strings (including null, which unmarshals to "")
+		if single == "" {
+			return fmt.Errorf("FlexibleSubagentType must be string or []string, got null/empty")
+		}
+		f.types = []string{single}
+		return nil
+	}
+
+	// Fall back to unmarshaling as []string (multi-type support)
+	var multi []string
+	if err := json.Unmarshal(data, &multi); err != nil {
+		return fmt.Errorf("FlexibleSubagentType must be string or []string")
+	}
+
+	if len(multi) == 0 {
+		return fmt.Errorf("FlexibleSubagentType array cannot be empty")
+	}
+
+	f.types = multi
+	return nil
+}
+
+// Contains checks if the given subagent_type is in the allowed list.
+func (f *FlexibleSubagentType) Contains(subagentType string) bool {
+	for _, t := range f.types {
+		if t == subagentType {
+			return true
+		}
+	}
+	return false
+}
+
+// GetAll returns all allowed subagent_types.
+// For single-type entries, returns a slice containing that one type.
+func (f *FlexibleSubagentType) GetAll() []string {
+	result := make([]string, len(f.types))
+	copy(result, f.types)
+	return result
+}
+
+// Primary returns the first/only subagent_type.
+// Useful for error messages and single-type compatibility.
+func (f *FlexibleSubagentType) Primary() string {
+	if len(f.types) == 0 {
+		return ""
+	}
+	return f.types[0]
+}
+
+// NewFlexibleSubagentType creates a FlexibleSubagentType from one or more types.
+// This is the recommended way to create FlexibleSubagentType in tests and code.
+func NewFlexibleSubagentType(types ...string) FlexibleSubagentType {
+	if len(types) == 0 {
+		return FlexibleSubagentType{types: []string{}}
+	}
+	return FlexibleSubagentType{types: types}
 }
 
 // DelegationRules defines Task() tool permissions.
@@ -193,29 +270,39 @@ type DelegationRules struct {
 
 // AgentSubagentMapping maps each agent to its required subagent_type.
 type AgentSubagentMapping struct {
-	Description                  string `json:"description"`
-	CodebaseSearch               string `json:"codebase-search"`
-	HaikuScout                   string `json:"haiku-scout"`
-	CodeReviewer                 string `json:"code-reviewer"`
-	Librarian                    string `json:"librarian"`
-	TechDocsWriter               string `json:"tech-docs-writer"`
-	Scaffolder                   string `json:"scaffolder"`
-	MemoryArchivist              string `json:"memory-archivist"`
-	PythonPro                    string `json:"python-pro"`
-	PythonUX                     string `json:"python-ux"`
-	RPro                         string `json:"r-pro"`
-	RShinyPro                    string `json:"r-shiny-pro"`
-	GoPro                        string `json:"go-pro"`
-	GoCLI                        string `json:"go-cli"`
-	GoTUI                        string `json:"go-tui"`
-	GoAPI                        string `json:"go-api"`
-	GoConcurrent                 string `json:"go-concurrent"`
-	Orchestrator                 string `json:"orchestrator"`
-	Architect                    string `json:"architect"`
-	Planner                      string `json:"planner"`
-	Einstein                     string `json:"einstein"`
-	GeminiSlave                  string `json:"gemini-slave"`
-	StaffArchitectCriticalReview string `json:"staff-architect-critical-review"`
+	Description                  string               `json:"description"`
+	CodebaseSearch               FlexibleSubagentType `json:"codebase-search"`
+	HaikuScout                   FlexibleSubagentType `json:"haiku-scout"`
+	CodeReviewer                 FlexibleSubagentType `json:"code-reviewer"`
+	Librarian                    FlexibleSubagentType `json:"librarian"`
+	TechDocsWriter               FlexibleSubagentType `json:"tech-docs-writer"`
+	Scaffolder                   FlexibleSubagentType `json:"scaffolder"`
+	MemoryArchivist              FlexibleSubagentType `json:"memory-archivist"`
+	PythonPro                    FlexibleSubagentType `json:"python-pro"`
+	PythonUX                     FlexibleSubagentType `json:"python-ux"`
+	RPro                         FlexibleSubagentType `json:"r-pro"`
+	RShinyPro                    FlexibleSubagentType `json:"r-shiny-pro"`
+	GoPro                        FlexibleSubagentType `json:"go-pro"`
+	GoCLI                        FlexibleSubagentType `json:"go-cli"`
+	GoTUI                        FlexibleSubagentType `json:"go-tui"`
+	GoAPI                        FlexibleSubagentType `json:"go-api"`
+	GoConcurrent                 FlexibleSubagentType `json:"go-concurrent"`
+	TypescriptPro                FlexibleSubagentType `json:"typescript-pro"`
+	ReactPro                     FlexibleSubagentType `json:"react-pro"`
+	BackendReviewer              FlexibleSubagentType `json:"backend-reviewer"`
+	FrontendReviewer             FlexibleSubagentType `json:"frontend-reviewer"`
+	StandardsReviewer            FlexibleSubagentType `json:"standards-reviewer"`
+	ReviewOrchestrator           FlexibleSubagentType `json:"review-orchestrator"`
+	ImplManager                  FlexibleSubagentType `json:"impl-manager"`
+	Orchestrator                 FlexibleSubagentType `json:"orchestrator"`
+	Architect                    FlexibleSubagentType `json:"architect"`
+	Planner                      FlexibleSubagentType `json:"planner"`
+	PythonArchitect              FlexibleSubagentType `json:"python-architect"`
+	Einstein                     FlexibleSubagentType `json:"einstein"`
+	Mozart                       FlexibleSubagentType `json:"mozart"`
+	Beethoven                    FlexibleSubagentType `json:"beethoven"`
+	GeminiSlave                  FlexibleSubagentType `json:"gemini-slave"`
+	StaffArchitectCriticalReview FlexibleSubagentType `json:"staff-architect-critical-review"`
 }
 
 // BlockedPatternsConfig contains patterns that should never be used.
@@ -263,17 +350,28 @@ type DocumentationTheater struct {
 func LoadSchema() (*Schema, error) {
 	schemaPath := os.Getenv("GOGENT_ROUTING_SCHEMA")
 
-	// Fall back to XDG default if env var not set
+	// If explicit path not set, try project-specific or XDG default
 	if schemaPath == "" {
-		configHome := os.Getenv("XDG_CONFIG_HOME")
-		if configHome == "" {
-			home := os.Getenv("HOME")
-			if home == "" {
-				return nil, fmt.Errorf("[routing] HOME environment variable not set")
+		// Priority 1: GOGENT_PROJECT_DIR (test isolation)
+		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+			path := filepath.Join(projectDir, ".claude", "routing-schema.json")
+			if _, err := os.Stat(path); err == nil {
+				schemaPath = path
 			}
-			configHome = home + "/.config"
 		}
-		schemaPath = configHome + "/../.claude/routing-schema.json"
+
+		// Priority 2: XDG default
+		if schemaPath == "" {
+			configHome := os.Getenv("XDG_CONFIG_HOME")
+			if configHome == "" {
+				home := os.Getenv("HOME")
+				if home == "" {
+					return nil, fmt.Errorf("[routing] HOME environment variable not set")
+				}
+				configHome = filepath.Join(home, ".config")
+			}
+			schemaPath = filepath.Join(configHome, "..", ".claude", "routing-schema.json")
+		}
 	}
 
 	data, err := os.ReadFile(schemaPath)
@@ -325,15 +423,44 @@ func (s *Schema) Validate() error {
 	}
 
 	// Agent-to-subagent mapping reference integrity
+	// Each agent now maps to its CC-specific type name
 	validSubagentTypes := map[string]bool{
-		"Explore":         true,
-		"general-purpose": true,
-		"Bash":            true,
-		"Plan":            true,
+		"Codebase Search":                true,
+		"Haiku Scout":                    true,
+		"Code Reviewer":                  true,
+		"Librarian":                      true,
+		"Tech Docs Writer":               true,
+		"Scaffolder":                     true,
+		"Memory Archivist":               true,
+		"Python Pro":                     true,
+		"Python UX (PySide6)":            true,
+		"R Pro":                          true,
+		"R Shiny Pro":                    true,
+		"GO Pro":                         true,
+		"GO CLI (Cobra)":                 true,
+		"GO TUI (Bubbletea)":             true,
+		"GO API (HTTP Client)":           true,
+		"GO Concurrent":                  true,
+		"TypeScript Pro":                 true,
+		"React Pro":                      true,
+		"Backend Reviewer":               true,
+		"Frontend Reviewer":              true,
+		"Standards Reviewer":             true,
+		"Review Orchestrator":            true,
+		"Implementation Manager":         true,
+		"Orchestrator":                   true,
+		"Architect":                      true,
+		"Planner":                        true,
+		"Python ML Architect":            true,
+		"Einstein":                       true,
+		"Mozart":                         true,
+		"Beethoven":                      true,
+		"Gemini Slave":                   true,
+		"Staff Architect Critical Review": true,
 	}
 
-	// Check all agent mappings
-	mappings := []string{
+	// Check all agent mappings (each field is now FlexibleSubagentType)
+	mappings := []FlexibleSubagentType{
 		s.AgentSubagentMapping.CodebaseSearch,
 		s.AgentSubagentMapping.HaikuScout,
 		s.AgentSubagentMapping.CodeReviewer,
@@ -350,20 +477,34 @@ func (s *Schema) Validate() error {
 		s.AgentSubagentMapping.GoTUI,
 		s.AgentSubagentMapping.GoAPI,
 		s.AgentSubagentMapping.GoConcurrent,
+		s.AgentSubagentMapping.TypescriptPro,
+		s.AgentSubagentMapping.ReactPro,
+		s.AgentSubagentMapping.BackendReviewer,
+		s.AgentSubagentMapping.FrontendReviewer,
+		s.AgentSubagentMapping.StandardsReviewer,
+		s.AgentSubagentMapping.ReviewOrchestrator,
+		s.AgentSubagentMapping.ImplManager,
 		s.AgentSubagentMapping.Orchestrator,
 		s.AgentSubagentMapping.Architect,
 		s.AgentSubagentMapping.Planner,
+		s.AgentSubagentMapping.PythonArchitect,
 		s.AgentSubagentMapping.Einstein,
+		s.AgentSubagentMapping.Mozart,
+		s.AgentSubagentMapping.Beethoven,
 		s.AgentSubagentMapping.GeminiSlave,
 		s.AgentSubagentMapping.StaffArchitectCriticalReview,
 	}
 
-	for _, subagentType := range mappings {
-		if subagentType != "" && !validSubagentTypes[subagentType] {
-			return fmt.Errorf(
-				"[routing] Invalid subagent_type reference: %q",
-				subagentType,
-			)
+	// Validate each FlexibleSubagentType's allowed types
+	for _, flexType := range mappings {
+		types := flexType.GetAll()
+		for _, subagentType := range types {
+			if subagentType != "" && !validSubagentTypes[subagentType] {
+				return fmt.Errorf(
+					"[routing] Invalid subagent_type reference: %q",
+					subagentType,
+				)
+			}
 		}
 	}
 
@@ -380,76 +521,153 @@ func (s *Schema) GetTier(tierName string) (*TierConfig, error) {
 	return &tier, nil
 }
 
-// GetSubagentTypeForAgent returns the required subagent_type for an agent.
+// GetAllowedSubagentTypes returns all allowed subagent_types for an agent.
+// For agents with multi-type support, returns all types.
+// For single-type agents, returns a slice containing that one type.
 // Returns an error if the agent is not in the mapping.
-func (s *Schema) GetSubagentTypeForAgent(agentName string) (string, error) {
-	mapping := map[string]string{
-		"codebase-search":                 s.AgentSubagentMapping.CodebaseSearch,
-		"haiku-scout":                     s.AgentSubagentMapping.HaikuScout,
-		"code-reviewer":                   s.AgentSubagentMapping.CodeReviewer,
-		"librarian":                       s.AgentSubagentMapping.Librarian,
-		"tech-docs-writer":                s.AgentSubagentMapping.TechDocsWriter,
-		"scaffolder":                      s.AgentSubagentMapping.Scaffolder,
-		"memory-archivist":                s.AgentSubagentMapping.MemoryArchivist,
-		"python-pro":                      s.AgentSubagentMapping.PythonPro,
-		"python-ux":                       s.AgentSubagentMapping.PythonUX,
-		"r-pro":                           s.AgentSubagentMapping.RPro,
-		"r-shiny-pro":                     s.AgentSubagentMapping.RShinyPro,
-		"go-pro":                          s.AgentSubagentMapping.GoPro,
-		"go-cli":                          s.AgentSubagentMapping.GoCLI,
-		"go-tui":                          s.AgentSubagentMapping.GoTUI,
-		"go-api":                          s.AgentSubagentMapping.GoAPI,
-		"go-concurrent":                   s.AgentSubagentMapping.GoConcurrent,
-		"orchestrator":                    s.AgentSubagentMapping.Orchestrator,
-		"architect":                       s.AgentSubagentMapping.Architect,
-		"planner":                         s.AgentSubagentMapping.Planner,
-		"einstein":                        s.AgentSubagentMapping.Einstein,
-		"gemini-slave":                    s.AgentSubagentMapping.GeminiSlave,
-		"staff-architect-critical-review": s.AgentSubagentMapping.StaffArchitectCriticalReview,
+func (s *Schema) GetAllowedSubagentTypes(agentName string) ([]string, error) {
+	mapping := map[string]*FlexibleSubagentType{
+		"codebase-search":                 &s.AgentSubagentMapping.CodebaseSearch,
+		"haiku-scout":                     &s.AgentSubagentMapping.HaikuScout,
+		"code-reviewer":                   &s.AgentSubagentMapping.CodeReviewer,
+		"librarian":                       &s.AgentSubagentMapping.Librarian,
+		"tech-docs-writer":                &s.AgentSubagentMapping.TechDocsWriter,
+		"scaffolder":                      &s.AgentSubagentMapping.Scaffolder,
+		"memory-archivist":                &s.AgentSubagentMapping.MemoryArchivist,
+		"python-pro":                      &s.AgentSubagentMapping.PythonPro,
+		"python-ux":                       &s.AgentSubagentMapping.PythonUX,
+		"r-pro":                           &s.AgentSubagentMapping.RPro,
+		"r-shiny-pro":                     &s.AgentSubagentMapping.RShinyPro,
+		"go-pro":                          &s.AgentSubagentMapping.GoPro,
+		"go-cli":                          &s.AgentSubagentMapping.GoCLI,
+		"go-tui":                          &s.AgentSubagentMapping.GoTUI,
+		"go-api":                          &s.AgentSubagentMapping.GoAPI,
+		"go-concurrent":                   &s.AgentSubagentMapping.GoConcurrent,
+		"typescript-pro":                  &s.AgentSubagentMapping.TypescriptPro,
+		"react-pro":                       &s.AgentSubagentMapping.ReactPro,
+		"backend-reviewer":                &s.AgentSubagentMapping.BackendReviewer,
+		"frontend-reviewer":               &s.AgentSubagentMapping.FrontendReviewer,
+		"standards-reviewer":              &s.AgentSubagentMapping.StandardsReviewer,
+		"review-orchestrator":             &s.AgentSubagentMapping.ReviewOrchestrator,
+		"impl-manager":                    &s.AgentSubagentMapping.ImplManager,
+		"orchestrator":                    &s.AgentSubagentMapping.Orchestrator,
+		"architect":                       &s.AgentSubagentMapping.Architect,
+		"planner":                         &s.AgentSubagentMapping.Planner,
+		"python-architect":                &s.AgentSubagentMapping.PythonArchitect,
+		"einstein":                        &s.AgentSubagentMapping.Einstein,
+		"mozart":                          &s.AgentSubagentMapping.Mozart,
+		"beethoven":                       &s.AgentSubagentMapping.Beethoven,
+		"gemini-slave":                    &s.AgentSubagentMapping.GeminiSlave,
+		"staff-architect-critical-review": &s.AgentSubagentMapping.StaffArchitectCriticalReview,
 	}
 
-	subagentType, exists := mapping[agentName]
-	if !exists || subagentType == "" {
-		return "", fmt.Errorf("[routing] Unknown agent: %s", agentName)
+	flexType, exists := mapping[agentName]
+	if !exists || flexType == nil {
+		return nil, fmt.Errorf("[routing] Unknown agent: %s", agentName)
 	}
-	return subagentType, nil
+
+	types := flexType.GetAll()
+	if len(types) == 0 {
+		return nil, fmt.Errorf("[routing] Agent %s has no subagent types defined", agentName)
+	}
+
+	return types, nil
 }
 
-// GetSubagentType returns SubagentType configuration.
-// Returns an error if the subagent_type does not exist.
-func (s *Schema) GetSubagentType(subagentType string) (*SubagentType, error) {
-	switch subagentType {
-	case "Explore":
-		return &s.SubagentTypesConfig.Explore, nil
-	case "general-purpose":
-		return &s.SubagentTypesConfig.GeneralPurpose, nil
-	case "Bash":
-		return &s.SubagentTypesConfig.Bash, nil
-	case "Plan":
-		return &s.SubagentTypesConfig.Plan, nil
+// GetSubagentTypeForAgent returns the primary subagent_type for an agent.
+// For backwards compatibility, this returns the first type in multi-type mappings.
+//
+// Deprecated: Use GetAllowedSubagentTypes to get all allowed types.
+// This function only returns the primary type and may not represent the full set of allowed types.
+func (s *Schema) GetSubagentTypeForAgent(agentName string) (string, error) {
+	mapping := map[string]*FlexibleSubagentType{
+		"codebase-search":                 &s.AgentSubagentMapping.CodebaseSearch,
+		"haiku-scout":                     &s.AgentSubagentMapping.HaikuScout,
+		"code-reviewer":                   &s.AgentSubagentMapping.CodeReviewer,
+		"librarian":                       &s.AgentSubagentMapping.Librarian,
+		"tech-docs-writer":                &s.AgentSubagentMapping.TechDocsWriter,
+		"scaffolder":                      &s.AgentSubagentMapping.Scaffolder,
+		"memory-archivist":                &s.AgentSubagentMapping.MemoryArchivist,
+		"python-pro":                      &s.AgentSubagentMapping.PythonPro,
+		"python-ux":                       &s.AgentSubagentMapping.PythonUX,
+		"r-pro":                           &s.AgentSubagentMapping.RPro,
+		"r-shiny-pro":                     &s.AgentSubagentMapping.RShinyPro,
+		"go-pro":                          &s.AgentSubagentMapping.GoPro,
+		"go-cli":                          &s.AgentSubagentMapping.GoCLI,
+		"go-tui":                          &s.AgentSubagentMapping.GoTUI,
+		"go-api":                          &s.AgentSubagentMapping.GoAPI,
+		"go-concurrent":                   &s.AgentSubagentMapping.GoConcurrent,
+		"typescript-pro":                  &s.AgentSubagentMapping.TypescriptPro,
+		"react-pro":                       &s.AgentSubagentMapping.ReactPro,
+		"backend-reviewer":                &s.AgentSubagentMapping.BackendReviewer,
+		"frontend-reviewer":               &s.AgentSubagentMapping.FrontendReviewer,
+		"standards-reviewer":              &s.AgentSubagentMapping.StandardsReviewer,
+		"review-orchestrator":             &s.AgentSubagentMapping.ReviewOrchestrator,
+		"impl-manager":                    &s.AgentSubagentMapping.ImplManager,
+		"orchestrator":                    &s.AgentSubagentMapping.Orchestrator,
+		"architect":                       &s.AgentSubagentMapping.Architect,
+		"planner":                         &s.AgentSubagentMapping.Planner,
+		"python-architect":                &s.AgentSubagentMapping.PythonArchitect,
+		"einstein":                        &s.AgentSubagentMapping.Einstein,
+		"mozart":                          &s.AgentSubagentMapping.Mozart,
+		"beethoven":                       &s.AgentSubagentMapping.Beethoven,
+		"gemini-slave":                    &s.AgentSubagentMapping.GeminiSlave,
+		"staff-architect-critical-review": &s.AgentSubagentMapping.StaffArchitectCriticalReview,
+	}
+
+	flexType, exists := mapping[agentName]
+	if !exists || flexType == nil {
+		return "", fmt.Errorf("[routing] Unknown agent: %s", agentName)
+	}
+
+	primaryType := flexType.Primary()
+	if primaryType == "" {
+		return "", fmt.Errorf("[routing] Agent %s has no subagent types defined", agentName)
+	}
+
+	return primaryType, nil
+}
+
+// GetSubagentType returns SubagentType configuration for an informational category.
+// Returns an error if the category does not exist.
+func (s *Schema) GetSubagentType(category string) (*SubagentType, error) {
+	switch category {
+	case "exploration":
+		return &s.SubagentTypesConfig.Exploration, nil
+	case "implementation":
+		return &s.SubagentTypesConfig.Implementation, nil
+	case "external":
+		return &s.SubagentTypesConfig.External, nil
+	case "planning":
+		return &s.SubagentTypesConfig.Planning, nil
+	case "analysis":
+		return &s.SubagentTypesConfig.Analysis, nil
 	default:
-		return nil, fmt.Errorf("[routing] Unknown subagent_type: %s", subagentType)
+		return nil, fmt.Errorf("[routing] Unknown subagent category: %s", category)
 	}
 }
 
 // ValidateAgentSubagentPair checks if agent-subagent_type pairing is valid.
 // Returns an error if the pairing violates the mapping in routing-schema.json.
 func (s *Schema) ValidateAgentSubagentPair(agentName, subagentType string) error {
-	requiredType, err := s.GetSubagentTypeForAgent(agentName)
+	allowedTypes, err := s.GetAllowedSubagentTypes(agentName)
 	if err != nil {
 		return err
 	}
 
-	if requiredType != subagentType {
-		return fmt.Errorf(
-			"[routing] Invalid subagent_type for agent %q: got %q, expected %q (enforced by routing-schema.json)",
-			agentName,
-			subagentType,
-			requiredType,
-		)
+	// Check if subagentType is in the allowed list
+	for _, allowedType := range allowedTypes {
+		if allowedType == subagentType {
+			return nil
+		}
 	}
 
-	return nil
+	return fmt.Errorf(
+		"[routing] Invalid subagent_type for agent %q: expected one of %v, got %q (enforced by routing-schema.json)",
+		agentName,
+		allowedTypes,
+		subagentType,
+	)
 }
 
 // GetTierLevel returns numeric tier level for comparison.

@@ -63,7 +63,7 @@ const mockStore = {
   updateAgentActivity: vi.fn(),
 
   // Zustand subscribe — returns an unsubscribe function (no-op for tests)
-  _subscribeCallbacks: [] as Array<(s: typeof mockStore) => void>,
+  _subscribeCallbacks: [] as Array<(s: Record<string, unknown>) => void>,
 
   getActiveModel: vi.fn(() => "claude-sonnet-4-5"),
 
@@ -167,10 +167,10 @@ describe("useAgentSync — syncTaskAgents fallback root creation", () => {
     // subscription callback that syncTaskAgents would be called from.
     //
     // Strategy: mock subscribe so we capture the callback, then trigger it.
-    const capturedSubscribeCallbacks: Array<(s: typeof mockStore) => void> = [];
+    const capturedSubscribeCallbacks: Array<(...args: unknown[]) => void> = [];
     const { useStore } = await import("../store/index.js");
     vi.mocked(useStore.subscribe).mockImplementation((cb) => {
-      capturedSubscribeCallbacks.push(cb as (s: typeof mockStore) => void);
+      capturedSubscribeCallbacks.push(cb as (...args: unknown[]) => void);
       return () => {};
     });
 
@@ -180,7 +180,7 @@ describe("useAgentSync — syncTaskAgents fallback root creation", () => {
 
     // Trigger a state change that the hook's subscription would receive
     capturedSubscribeCallbacks.forEach((cb) =>
-      cb({ ...mockStore, providerMessages: { anthropic: [taskMsg] } } as typeof mockStore)
+      cb({ ...mockStore, providerMessages: { anthropic: [taskMsg] } })
     );
 
     // The warn fires only if the subscribe callback was already registered.

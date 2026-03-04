@@ -21,7 +21,7 @@ func TestEcosystem_GOgent002(t *testing.T) {
 	// Verify critical v2.5.0 fields are present
 	assert.Equal(t, "2.5.0", schema.Version)
 	assert.NotEmpty(t, schema.Tiers, "Tiers map should be populated")
-	assert.NotEmpty(t, schema.SubagentTypesConfig.Explore.Tools, "SubagentTypes config incomplete")
+	assert.NotEmpty(t, schema.SubagentTypesConfig.Exploration.Tools, "SubagentTypes config incomplete")
 	assert.NotEmpty(t, schema.AgentSubagentMapping.CodebaseSearch, "AgentSubagentMapping incomplete")
 
 	t.Log("✅ Ecosystem Test GOgent-002: Schema loading pipeline operational")
@@ -111,28 +111,17 @@ func TestEcosystem_AllAgentsMappedCorrectly(t *testing.T) {
 	for _, agentID := range expectedAgents {
 		t.Run(agentID, func(t *testing.T) {
 			// Verify agent exists
-			agent, err := index.GetAgentByID(agentID)
+			_, err := index.GetAgentByID(agentID)
 			require.NoError(t, err, "Agent %s not found in agents-index.json", agentID)
 
-			// Verify schema has mapping
+			// Verify schema has mapping (now returns CC-specific type name)
 			subagentType, err := schema.GetSubagentTypeForAgent(agentID)
 			require.NoError(t, err, "Schema missing mapping for agent %s", agentID)
+			assert.NotEmpty(t, subagentType, "Empty subagent_type for %s", agentID)
 
-			// Verify subagent_type is valid
-			_, err = schema.GetSubagentType(subagentType)
-			require.NoError(t, err, "Invalid subagent_type %q for agent %s", subagentType, agentID)
-
-			// Verify pairing is correct
+			// Verify pairing self-validates
 			err = schema.ValidateAgentSubagentPair(agentID, subagentType)
 			require.NoError(t, err, "Invalid pairing: agent=%s, subagent_type=%s", agentID, subagentType)
-
-			// Verify agent has expected tools for subagent_type
-			expectedSubagentTypeConfig, _ := schema.GetSubagentType(subagentType)
-			if len(agent.Tools) > 0 && len(expectedSubagentTypeConfig.Tools) > 0 {
-				// Check that agent's tools are subset of subagent_type's allowed tools
-				// (or vice versa, depending on design - for now just verify non-empty)
-				assert.NotEmpty(t, agent.Tools, "Agent %s has empty tools list", agentID)
-			}
 		})
 	}
 

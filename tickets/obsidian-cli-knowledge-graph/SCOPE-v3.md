@@ -19,6 +19,7 @@
 | Δ14 | §9 | **Entity embedding input format specified.** Context-enriched embeddings (`type::name::description`) adopted as primary with name-only fallback. Prevents homonym false-merges (e.g., "Einstein" agent vs physicist). | Major | Einstein (new finding) |
 | Δ15 | §9 | **Tier 4 default added for borderline entity resolution.** Scores in range (cosine 0.60-0.89, Jaro-Winkler <0.85) now have explicit disposition: DISTINCT + flag for periodic review. Prevents unbounded duplicate accumulation. | Minor | Staff-Architect (new finding) |
 | Δ16 | §14 | **Blocking validation tasks formalized.** Two HIGH-BLOCKING validations must pass before Phase 2: nomic-embed-text L2 normalization, hybrid goldmark extension coexistence. | Major | Beethoven (synthesis) |
+| Δ17 | §1, §2, §10 | **Dual-authority model for vault/graph topology.** Braintrust vault-architecture analysis (2026-03-04) resolved the source-of-truth tension: `.gogent-vault/` (system memory) remains graph-authoritative (consolidation pipeline writes vault as export). Per-project dev vaults (EM-Deconvoluter style) are vault-authoritative (human/agent edits canonical, graph is derived query layer). `VaultSync` interface unchanged — direction is always graph→vault for system memory and vault→graph for dev vaults. See `Obsidian Memory/braintrust-vault-analysis-2026-03-04/`. | Major | Braintrust synthesis (2026-03-04) |
 
 ### Cumulative Delta Summary (v1 → v3)
 
@@ -40,6 +41,7 @@
 | Δ14 (embedding format) | 🆕 **New in v3** | High |
 | Δ15 (Tier 4 default) | 🆕 **New in v3** | High |
 | Δ16 (validation tasks) | 🆕 **New in v3** | High |
+| Δ17 (dual-authority model) | 🆕 **New in v3.1** | High |
 
 ---
 

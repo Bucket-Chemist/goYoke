@@ -40,9 +40,9 @@ func setupTestEnvironment(t *testing.T) (string, func()) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"go-pro": "general-purpose",
-			"codebase-search": "Explore",
-			"python-pro": "general-purpose"
+			"go-pro": "GO Pro",
+			"codebase-search": "Codebase Search",
+			"python-pro": "Python Pro"
 		},
 		"escalation_rules": {}
 	}`
@@ -61,7 +61,7 @@ func setupTestEnvironment(t *testing.T) (string, func()) {
 				"tier": 2,
 				"category": "implementation",
 				"path": "prompts/agents/tier-2-sonnet/go-pro.md",
-				"subagent_type": "general-purpose",
+				"subagent_type": "GO Pro",
 				"triggers": ["Go implementation"],
 				"tools": ["Read", "Write", "Edit", "Bash"],
 				"context_requirements": {
@@ -80,7 +80,7 @@ func setupTestEnvironment(t *testing.T) (string, func()) {
 				"tier": 1,
 				"category": "exploration",
 				"path": "prompts/agents/tier-1-haiku/codebase-search.md",
-				"subagent_type": "Explore",
+				"subagent_type": "Codebase Search",
 				"triggers": ["find", "search"],
 				"tools": ["Grep", "Glob"],
 				"description": "Fast codebase search"
@@ -93,7 +93,7 @@ func setupTestEnvironment(t *testing.T) (string, func()) {
 				"tier": 2,
 				"category": "implementation",
 				"path": "prompts/agents/tier-2-sonnet/python-pro.md",
-				"subagent_type": "general-purpose",
+				"subagent_type": "Python Pro",
 				"triggers": ["Python implementation"],
 				"tools": ["Read", "Write", "Edit", "Bash"],
 				"context_requirements": {
@@ -235,7 +235,7 @@ func TestConventionInjection_GoProAgent(t *testing.T) {
 	toolInput := map[string]interface{}{
 		"prompt":        "AGENT: go-pro\n\nTASK: Implement authentication handler",
 		"model":         "sonnet",
-		"subagent_type": "general-purpose",
+		"subagent_type": "GO Pro",
 		"description":   "Implement Go feature",
 	}
 
@@ -312,7 +312,7 @@ func TestConventionInjection_NoRequirements(t *testing.T) {
 	toolInput := map[string]interface{}{
 		"prompt":        "AGENT: codebase-search\n\nTASK: Find all Go files",
 		"model":         "haiku",
-		"subagent_type": "Explore",
+		"subagent_type": "Codebase Search",
 		"description":   "Search files",
 	}
 
@@ -379,7 +379,7 @@ func TestConventionInjection_UnknownAgent(t *testing.T) {
 	toolInput := map[string]interface{}{
 		"prompt":        "AGENT: nonexistent-agent\n\nTASK: Do something",
 		"model":         "sonnet",
-		"subagent_type": "general-purpose",
+		"subagent_type": "Python Pro",
 		"description":   "Unknown agent",
 	}
 
@@ -459,7 +459,7 @@ func TestConventionInjection_PythonWithConditional(t *testing.T) {
 	toolInput := map[string]interface{}{
 		"prompt":        "AGENT: python-pro\n\nTASK: Process mass spec data in src/data/loader.py",
 		"model":         "sonnet",
-		"subagent_type": "general-purpose",
+		"subagent_type": "Python Pro",
 		"description":   "Python data processing",
 	}
 
@@ -526,7 +526,7 @@ func TestConventionInjection_PreservesTaskFields(t *testing.T) {
 	toolInput := map[string]interface{}{
 		"prompt":            "AGENT: go-pro\n\nTASK: Implement feature",
 		"model":             "sonnet",
-		"subagent_type":     "general-purpose",
+		"subagent_type":     "GO Pro",
 		"description":       "Test task with all fields",
 		"max_turns":         float64(5),
 		"run_in_background": true,
@@ -583,8 +583,8 @@ func TestConventionInjection_PreservesTaskFields(t *testing.T) {
 		t.Errorf("Expected model 'sonnet', got: %v", updatedInput["model"])
 	}
 
-	if updatedInput["subagent_type"] != "general-purpose" {
-		t.Errorf("Expected subagent_type 'general-purpose', got: %v", updatedInput["subagent_type"])
+	if updatedInput["subagent_type"] != "GO Pro" {
+		t.Errorf("Expected subagent_type 'GO Pro', got: %v", updatedInput["subagent_type"])
 	}
 
 	if updatedInput["description"] != "Test task with all fields" {
@@ -639,7 +639,7 @@ func TestConventionInjection_ResponseFormat(t *testing.T) {
 	updatedInput := map[string]interface{}{
 		"prompt":        augmentedPrompt,
 		"model":         "sonnet",
-		"subagent_type": "general-purpose",
+		"subagent_type": "GO Pro",
 		"description":   "Test task",
 	}
 

@@ -8,7 +8,7 @@ import { Layout } from "./components/Layout.js";
 import { LayoutSpike } from "./components/LayoutSpike.js";
 import { ResponsiveLayout } from "./components/ResponsiveLayout.js";
 import { BorderStyleTest } from "./components/BorderStyleTest.js";
-import { loadSession, saveSession } from "./hooks/useSession.js";
+import { loadSession, saveSession, loadConversationHistory } from "./hooks/useSession.js";
 import { useStore } from "./store/index.js";
 
 import { logger } from "./utils/logger.js";
@@ -67,6 +67,9 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
   const [mode, setMode] = useState<DemoMode>("main");
   const [loading, setLoading] = useState(true);
   const updateSession = useStore((state) => state.updateSession);
+  const setProviderSessionId = useStore((state) => state.setProviderSessionId);
+  const setProviderProjectDir = useStore((state) => state.setProviderProjectDir);
+  const activeProvider = useStore((state) => state.activeProvider);
   const totalCost = useStore((state) => state.totalCost);
   const currentSessionId = useStore((state) => state.sessionId);
 
@@ -90,11 +93,24 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
 
       try {
         const session = await loadSession(sessionId);
+        // Store session ID in per-provider slot so SessionManager.connect()
+        // can pass it as `resume:` to query(). updateSession only sets cost.
+        setProviderSessionId(activeProvider, session.id);
+        // Store projectDir so SessionManager can pass cwd to query() for
+        // cross-project session resume
+        if (session.projectDir) {
+          setProviderProjectDir(activeProvider, session.projectDir);
+        }
         updateSession({
           id: session.id,
           cost: session.cost,
         });
         setSessionDir(session.id);
+
+        const history = await loadConversationHistory(session.id);
+        if (history.length > 0) {
+          useStore.getState().setProviderMessages(activeProvider, history);
+        }
 
         if (verbose) {
           void logger.info("Session resumed", {
@@ -116,7 +132,7 @@ export function App({ sessionId, verbose }: AppProps): JSX.Element {
     }
 
     resumeSession();
-  }, [sessionId, updateSession, verbose]);
+  }, [sessionId, updateSession, setProviderSessionId, setProviderProjectDir, activeProvider, verbose]);
 
   // Auto-save session on cost changes (debounced to prevent overlapping writes)
   useEffect(() => {

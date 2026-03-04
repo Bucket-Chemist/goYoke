@@ -18,7 +18,7 @@ func TestValidationOrchestrator_AllowedTask(t *testing.T) {
 			Haiku: 10, Sonnet: 20,
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			PythonPro: NewFlexibleSubagentType("general-purpose"),
+			PythonPro: NewFlexibleSubagentType("Python Pro"),
 		},
 	}
 
@@ -27,7 +27,7 @@ func TestValidationOrchestrator_AllowedTask(t *testing.T) {
 	taskInput := map[string]interface{}{
 		"model":         "sonnet",
 		"prompt":        "AGENT: python-pro\n\nImplement feature",
-		"subagent_type": "general-purpose",
+		"subagent_type": "Python Pro",
 	}
 
 	result := orchestrator.ValidateTask(taskInput, "test-session")
@@ -115,7 +115,7 @@ func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
 			"opus": {TaskInvocationBlocked: false},
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			CodebaseSearch: NewFlexibleSubagentType("Explore"),
+			CodebaseSearch: NewFlexibleSubagentType("Codebase Search"),
 		},
 	}
 
@@ -124,7 +124,7 @@ func TestValidationOrchestrator_SubagentTypeMismatch(t *testing.T) {
 	taskInput := map[string]interface{}{
 		"model":         "sonnet",
 		"prompt":        "AGENT: codebase-search\n\nFind files",
-		"subagent_type": "general-purpose", // Wrong!
+		"subagent_type": "Python Pro", // Wrong!
 	}
 
 	result := orchestrator.ValidateTask(taskInput, "test-session")
@@ -161,7 +161,7 @@ func TestValidationOrchestrator_OpusAllowlistBypassesCeiling(t *testing.T) {
 			Haiku: 1, HaikuThinking: 2, Sonnet: 3, Opus: 4,
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			Planner: NewFlexibleSubagentType("Plan"),
+			Planner: NewFlexibleSubagentType("Planner"),
 		},
 	}
 
@@ -170,7 +170,7 @@ func TestValidationOrchestrator_OpusAllowlistBypassesCeiling(t *testing.T) {
 	taskInput := map[string]interface{}{
 		"model":         "opus",
 		"prompt":        "AGENT: planner\n\nCreate strategic plan",
-		"subagent_type": "Plan",
+		"subagent_type": "Planner",
 	}
 
 	result := orchestrator.ValidateTask(taskInput, "test-session")

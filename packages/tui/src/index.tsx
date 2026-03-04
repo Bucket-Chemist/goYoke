@@ -33,6 +33,13 @@ async function main() {
   }
 
   const options = parseCLI();
+
+  // Set CLAUDE_CONFIG_DIR early so all downstream code (listSessions, query, etc.)
+  // uses the correct config directory (e.g. ~/.claude-em for EM accounts)
+  if (options.configDir) {
+    process.env["CLAUDE_CONFIG_DIR"] = options.configDir;
+  }
+
   const restartManager = getRestartManager();
 
   // Handle --list flag

@@ -30,7 +30,7 @@ import { mcpServer } from "../mcp/server.js";
 import { type ContentBlock, type ProviderId } from "../store/types.js";
 import { logger } from "../utils/logger.js";
 import { type ClassifiedError, type ErrorType } from "../types/events.js";
-import { onShutdown } from "../lifecycle/shutdown.js";
+import { onShutdown, isShutdownInProgress } from "../lifecycle/shutdown.js";
 import { PROVIDERS } from "../config/providers.js";
 
 /**
@@ -358,6 +358,7 @@ class SessionManager {
     const activeProvider = store.activeProvider;
     const existingSessionId = store.providerSessionIds[activeProvider];
     const preferredModel = store.providerModels[activeProvider];
+    const projectDir = store.providerProjectDirs[activeProvider];
 
     // Create Promise that resolves when system.init event received
     const initPromise = new Promise<void>((resolve, reject) => {
@@ -389,6 +390,10 @@ class SessionManager {
 
           // Resume existing session to maintain conversation context
           resume: existingSessionId || undefined,
+          // Set CWD for cross-project session resume — only when resuming
+          // AND we have a projectDir from the JSONL. Fresh sessions use
+          // the TUI's own CWD (process.cwd()).
+          ...(existingSessionId && projectDir ? { cwd: projectDir } : {}),
           // Apply preferred model if set. If no preference, omit to let
           // SDK use the model from user's Claude Code settings.
           model: preferredModel || undefined,
@@ -575,7 +580,8 @@ class SessionManager {
 
       // Health check: if iterator completes without error and state is not DEAD,
       // the SDK subprocess crashed silently (SIGTERM, OOM, etc.)
-      if (this.state !== SessionState.DEAD) {
+      // Also skip if graceful shutdown is in progress — the stream ending is expected.
+      if (this.state !== SessionState.DEAD && !isShutdownInProgress()) {
         void logger.error("SDK subprocess iterator completed unexpectedly", {
           state: this.state,
           activeCoordinator: !!this.activeCoordinator,
@@ -603,6 +609,10 @@ class SessionManager {
         void this.attemptReconnect();
       }
     } catch (error) {
+      // Don't treat stream errors during intentional shutdown as failures
+      if (this.state === SessionState.DEAD) {
+        return;
+      }
       this.transitionTo(SessionState.ERROR);
       this.events?.onError(this.classifyError(error));
       this.events?.onStreamingComplete();
@@ -1026,6 +1036,49 @@ class SessionManager {
     if (toolName === 'ExitPlanMode') {
       void logger.debug("[canUseTool] ExitPlanMode intercepted", { input });
 
+      // --- Plan preview: load plan .md into right panel ---
+      const storeState = useStore.getState();
+      const currentMode = storeState.rightPanelMode;
+      if (currentMode !== "planPreview") {
+        storeState.setPreviousRightPanelMode(currentMode as "agents" | "dashboard" | "settings");
+      }
+
+      // Await plan load BEFORE showing modal so the user sees the plan content first
+      try {
+        const { readdir, readFile, stat } = await import("fs/promises");
+        const home = process.env["HOME"] || homedir();
+        const plansDir = join(home, ".claude", "plans");
+        const entries = await readdir(plansDir, { withFileTypes: true });
+        const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith(".md"));
+        if (mdFiles.length > 0) {
+          // Find most recently modified .md file and include size for guard
+          const withStats = await Promise.all(
+            mdFiles.map(async (e) => {
+              const fullPath = join(plansDir, e.name);
+              const s = await stat(fullPath);
+              return { path: fullPath, mtime: s.mtimeMs, size: s.size };
+            })
+          );
+          withStats.sort((a, b) => b.mtime - a.mtime);
+          const newest = withStats[0]!;
+          // Size guard: skip files larger than 500KB to avoid rendering stalls
+          if (newest.size < 500_000) {
+            const content = await readFile(newest.path, "utf-8");
+            useStore.getState().setPlanPreview(content, newest.path);
+            useStore.getState().setRightPanelMode("planPreview");
+          }
+        }
+      } catch (err) {
+        void logger.debug("[canUseTool] Plan preview load failed (non-fatal)", { err: String(err) });
+      }
+
+      // Helper: clean up plan preview on any exit path
+      const clearPlanPreview = () => {
+        const s = useStore.getState();
+        s.setPlanPreview(null, null);
+        s.setRightPanelMode(s.previousRightPanelMode);
+      };
+
       const allowedPrompts = input['allowedPrompts'] as Array<{ tool: string; prompt: string }> | undefined;
       const promptSummary = allowedPrompts?.length
         ? '\n\nPermissions requested:\n' + allowedPrompts.map(p => `  - ${p.tool}: ${p.prompt}`).join('\n')
@@ -1048,11 +1101,13 @@ class SessionManager {
           timeout: 120000,
         });
       } catch {
+        clearPlanPreview();
         return { behavior: 'deny' as const, message: 'User cancelled plan approval', toolUseID: options.toolUseID };
       }
 
       if (exitPlanResult.type === 'ask') {
         if (exitPlanResult.value === 'Approve') {
+          clearPlanPreview();
           return { behavior: 'allow' as const, updatedInput: input, toolUseID: options.toolUseID };
         }
 
@@ -1073,21 +1128,26 @@ class SessionManager {
               timeout: 120000,
             });
           } catch {
+            clearPlanPreview();
             return { behavior: 'deny' as const, message: 'User cancelled feedback', toolUseID: options.toolUseID };
           }
 
           if (feedbackResult.type === 'input' && feedbackResult.value.trim()) {
+            clearPlanPreview();
             return { behavior: 'deny' as const, message: feedbackResult.value, toolUseID: options.toolUseID };
           }
+          clearPlanPreview();
           return { behavior: 'deny' as const, message: 'User rejected the plan', toolUseID: options.toolUseID };
         }
 
         // "Other" (free text from AskModal) — treat as feedback to Claude
         if (exitPlanResult.value && exitPlanResult.value !== 'Other') {
+          clearPlanPreview();
           return { behavior: 'deny' as const, message: exitPlanResult.value, toolUseID: options.toolUseID };
         }
       }
 
+      clearPlanPreview();
       return { behavior: 'deny' as const, message: 'User rejected the plan', toolUseID: options.toolUseID };
     }
 
@@ -1355,6 +1415,18 @@ class SessionManager {
 
     try {
       await this.eventStream.setModel(modelId);
+
+      // Sync the root agent node's model/tier so AgentDetail stays current.
+      const store = useStore.getState();
+      if (store.rootAgentId) {
+        const tier = modelId.includes("haiku")
+          ? "haiku"
+          : modelId.includes("sonnet")
+            ? "sonnet"
+            : "opus";
+        store.updateAgent(store.rootAgentId, { model: modelId, tier });
+      }
+
       return true;
     } catch (error) {
       // Log error but don't transition to ERROR state

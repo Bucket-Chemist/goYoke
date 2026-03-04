@@ -149,6 +149,7 @@ export interface SessionData {
   last_used: string; // ISO8601
   cost: number;
   tool_calls: number;
+  projectDir?: string; // Original CWD where session was created (not persisted to .json)
 }
 
 // Token count structure
@@ -202,6 +203,7 @@ export interface SessionSlice {
   providerMessages: Record<ProviderId, Message[]>;
   providerSessionIds: Record<ProviderId, string | null>;
   providerModels: Record<ProviderId, string | null>;
+  providerProjectDirs: Record<ProviderId, string | null>;
 
   // Global actions
   updateSession: (data: Partial<SessionData>) => void;
@@ -223,8 +225,10 @@ export interface SessionSlice {
   addProviderMessage: (provider: ProviderId, msg: Omit<Message, "id" | "timestamp">) => void;
   updateLastProviderMessage: (provider: ProviderId, content: ContentBlock[]) => void;
   clearProviderMessages: (provider: ProviderId) => void;
+  setProviderMessages: (provider: ProviderId, messages: Message[]) => void;
   setProviderSessionId: (provider: ProviderId, sessionId: string | null) => void;
   setProviderModel: (provider: ProviderId, model: string | null) => void;
+  setProviderProjectDir: (provider: ProviderId, dir: string | null) => void;
 
   // Convenience getters (use activeProvider from UISlice)
   getActiveMessages: () => Message[];
@@ -268,13 +272,17 @@ export interface TabDefinition {
 export interface UISlice {
   streaming: boolean;
   focusedPanel: "claude" | "agents";
-  rightPanelMode: "agents" | "dashboard" | "settings";
+  rightPanelMode: "agents" | "dashboard" | "settings" | "planPreview";
   activeTab: TabId;
   activeProvider: ProviderId;
   interruptQuery: (() => Promise<void>) | null;
   clearPendingMessage: (() => void) | null;
   panelAutoSwitched: boolean;
   selectedUnifiedId: string | null;
+  // Plan preview state (ephemeral — shown during ExitPlanMode approval)
+  planPreviewContent: string | null;
+  planPreviewPath: string | null;
+  previousRightPanelMode: "agents" | "dashboard" | "settings";
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
   cycleRightPanel: () => void;
@@ -283,8 +291,10 @@ export interface UISlice {
   setInterruptQuery: (fn: (() => Promise<void>) | null) => void;
   setClearPendingMessage: (fn: (() => void) | null) => void;
   setPanelAutoSwitched: (switched: boolean) => void;
-  setRightPanelMode: (mode: "agents" | "dashboard" | "settings") => void;
+  setRightPanelMode: (mode: "agents" | "dashboard" | "settings" | "planPreview") => void;
   setSelectedUnifiedId: (id: string | null) => void;
+  setPlanPreview: (content: string | null, path: string | null) => void;
+  setPreviousRightPanelMode: (mode: "agents" | "dashboard" | "settings") => void;
 }
 
 // Input history slice (ephemeral - not persisted)

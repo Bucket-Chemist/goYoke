@@ -25,10 +25,10 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 			External: 0,
 		},
 		SubagentTypesConfig: SubagentTypesConfig{
-			Plan: SubagentType{}, // The expected type for this agent (changed from Explore in v2.3.0)
+			Analysis: SubagentType{}, // Informational category
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan"),
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Staff Architect Critical Review"),
 		},
 	}
 
@@ -36,15 +36,11 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	t.Run("GetSubagentTypeForAgent", func(t *testing.T) {
 		subagentType, err := schema.GetSubagentTypeForAgent("staff-architect-critical-review")
 		require.NoError(t, err, "Should find staff-architect-critical-review agent")
-		assert.Equal(t, "Plan", subagentType, "Should map to Plan subagent type")
+		assert.Equal(t, "Staff Architect Critical Review", subagentType, "Should map to CC type name")
 	})
 
 	// 3. Test Validate (ensure the agent is included in the internal iteration list)
 	t.Run("Validate", func(t *testing.T) {
-		// We set up a schema where "Explore" is a valid subagent type
-		// If the internal loop in Validate() skipped StaffArchitectCriticalReview, 
-		// it wouldn't check if "Explore" was valid for it. 
-		// But here we want to ensure Validate() passes when correctly configured.
 		err := schema.Validate()
 		require.NoError(t, err, "Validate() should pass for correctly configured new agent")
 
@@ -59,11 +55,11 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	// 4. Test ValidateAgentSubagentPair
 	t.Run("ValidateAgentSubagentPair", func(t *testing.T) {
 		// Valid pair
-		err := schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Plan")
+		err := schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Staff Architect Critical Review")
 		require.NoError(t, err, "Should accept valid pairing")
 
 		// Invalid pair
-		err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Bash")
+		err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Python Pro")
 		require.Error(t, err, "Should reject invalid pairing")
 		assert.Contains(t, err.Error(), "Invalid subagent_type", "Error should mention invalid subagent type")
 	})

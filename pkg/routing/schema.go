@@ -165,23 +165,24 @@ type Override struct {
 }
 
 // SubagentTypesConfig wraps the subagent_types configuration with its description.
+// These are informational groupings — each agent uses its specific CC type name
+// from agent_subagent_mapping rather than these generic categories.
 type SubagentTypesConfig struct {
 	Description    string       `json:"description"`
-	Explore        SubagentType `json:"Explore"`
-	GeneralPurpose SubagentType `json:"general-purpose"`
-	Bash           SubagentType `json:"Bash"`
-	Plan           SubagentType `json:"Plan"`
-	Analyst        SubagentType `json:"Analyst"`
+	Exploration    SubagentType `json:"exploration"`
+	Implementation SubagentType `json:"implementation"`
+	External       SubagentType `json:"external"`
+	Planning       SubagentType `json:"planning"`
+	Analysis       SubagentType `json:"analysis"`
 }
 
-// SubagentType defines tool capabilities for each subagent_type.
+// SubagentType defines tool capabilities for an agent category.
 type SubagentType struct {
-	Description       string   `json:"description"`
-	Tools             []string `json:"tools"`
-	AllowsWrite       bool     `json:"allows_write"`
-	RespectsAgentYaml bool     `json:"respects_agent_yaml"`
-	UseFor            []string `json:"use_for"`
-	Rationale         string   `json:"rationale"`
+	Description string   `json:"description"`
+	Tools       []string `json:"tools"`
+	AllowsWrite bool     `json:"allows_write"`
+	Agents      []string `json:"agents"`
+	Rationale   string   `json:"rationale"`
 }
 
 // FlexibleSubagentType supports both string and []string JSON unmarshaling
@@ -296,7 +297,10 @@ type AgentSubagentMapping struct {
 	Orchestrator                 FlexibleSubagentType  `json:"orchestrator"`
 	Architect                    FlexibleSubagentType  `json:"architect"`
 	Planner                      FlexibleSubagentType  `json:"planner"`
+	PythonArchitect              FlexibleSubagentType  `json:"python-architect"`
 	Einstein                     FlexibleSubagentType  `json:"einstein"`
+	Mozart                       FlexibleSubagentType  `json:"mozart"`
+	Beethoven                    FlexibleSubagentType  `json:"beethoven"`
 	GeminiSlave                  FlexibleSubagentType  `json:"gemini-slave"`
 	StaffArchitectCriticalReview FlexibleSubagentType  `json:"staff-architect-critical-review"`
 }
@@ -419,12 +423,40 @@ func (s *Schema) Validate() error {
 	}
 
 	// Agent-to-subagent mapping reference integrity
+	// Each agent now maps to its CC-specific type name
 	validSubagentTypes := map[string]bool{
-		"Explore":         true,
-		"general-purpose": true,
-		"Bash":            true,
-		"Plan":            true,
-		"Analyst":         true,
+		"Codebase Search":               true,
+		"Haiku Scout":                   true,
+		"Code Reviewer":                 true,
+		"Librarian":                     true,
+		"Tech Docs Writer":              true,
+		"Scaffolder":                    true,
+		"Memory Archivist":              true,
+		"Python Pro":                    true,
+		"Python UX (PySide6)":           true,
+		"R Pro":                         true,
+		"R Shiny Pro":                   true,
+		"GO Pro":                        true,
+		"GO CLI (Cobra)":                true,
+		"GO TUI (Bubbletea)":            true,
+		"GO API (HTTP Client)":          true,
+		"GO Concurrent":                 true,
+		"TypeScript Pro":                true,
+		"React Pro":                     true,
+		"Backend Reviewer":              true,
+		"Frontend Reviewer":             true,
+		"Standards Reviewer":            true,
+		"Review Orchestrator":           true,
+		"Implementation Manager":        true,
+		"Orchestrator":                  true,
+		"Architect":                     true,
+		"Planner":                       true,
+		"Python ML Architect":           true,
+		"Einstein":                      true,
+		"Mozart":                        true,
+		"Beethoven":                     true,
+		"Gemini Slave":                  true,
+		"Staff Architect Critical Review": true,
 	}
 
 	// Check all agent mappings (each field is now FlexibleSubagentType)
@@ -455,7 +487,10 @@ func (s *Schema) Validate() error {
 		s.AgentSubagentMapping.Orchestrator,
 		s.AgentSubagentMapping.Architect,
 		s.AgentSubagentMapping.Planner,
+		s.AgentSubagentMapping.PythonArchitect,
 		s.AgentSubagentMapping.Einstein,
+		s.AgentSubagentMapping.Mozart,
+		s.AgentSubagentMapping.Beethoven,
 		s.AgentSubagentMapping.GeminiSlave,
 		s.AgentSubagentMapping.StaffArchitectCriticalReview,
 	}
@@ -486,12 +521,11 @@ func (s *Schema) GetTier(tierName string) (*TierConfig, error) {
 	return &tier, nil
 }
 
-// GetAllowedSubagentTypes returns all allowed subagent_types for an agent.
-// For agents with multi-type support, returns all types.
-// For single-type agents, returns a slice containing that one type.
-// Returns an error if the agent is not in the mapping.
-func (s *Schema) GetAllowedSubagentTypes(agentName string) ([]string, error) {
-	mapping := map[string]*FlexibleSubagentType{
+// agentMapping returns a map of agent name to its FlexibleSubagentType pointer.
+// This is the single source of truth for agent-to-subagent-type lookups.
+// Adding a new agent requires updating only this method.
+func (s *Schema) agentMapping() map[string]*FlexibleSubagentType {
+	return map[string]*FlexibleSubagentType{
 		"codebase-search":                 &s.AgentSubagentMapping.CodebaseSearch,
 		"haiku-scout":                     &s.AgentSubagentMapping.HaikuScout,
 		"code-reviewer":                   &s.AgentSubagentMapping.CodeReviewer,
@@ -518,12 +552,21 @@ func (s *Schema) GetAllowedSubagentTypes(agentName string) ([]string, error) {
 		"orchestrator":                    &s.AgentSubagentMapping.Orchestrator,
 		"architect":                       &s.AgentSubagentMapping.Architect,
 		"planner":                         &s.AgentSubagentMapping.Planner,
+		"python-architect":                &s.AgentSubagentMapping.PythonArchitect,
 		"einstein":                        &s.AgentSubagentMapping.Einstein,
+		"mozart":                          &s.AgentSubagentMapping.Mozart,
+		"beethoven":                       &s.AgentSubagentMapping.Beethoven,
 		"gemini-slave":                    &s.AgentSubagentMapping.GeminiSlave,
 		"staff-architect-critical-review": &s.AgentSubagentMapping.StaffArchitectCriticalReview,
 	}
+}
 
-	flexType, exists := mapping[agentName]
+// GetAllowedSubagentTypes returns all allowed subagent_types for an agent.
+// For agents with multi-type support, returns all types.
+// For single-type agents, returns a slice containing that one type.
+// Returns an error if the agent is not in the mapping.
+func (s *Schema) GetAllowedSubagentTypes(agentName string) ([]string, error) {
+	flexType, exists := s.agentMapping()[agentName]
 	if !exists || flexType == nil {
 		return nil, fmt.Errorf("[routing] Unknown agent: %s", agentName)
 	}
@@ -542,39 +585,7 @@ func (s *Schema) GetAllowedSubagentTypes(agentName string) ([]string, error) {
 // Deprecated: Use GetAllowedSubagentTypes to get all allowed types.
 // This function only returns the primary type and may not represent the full set of allowed types.
 func (s *Schema) GetSubagentTypeForAgent(agentName string) (string, error) {
-	mapping := map[string]*FlexibleSubagentType{
-		"codebase-search":                 &s.AgentSubagentMapping.CodebaseSearch,
-		"haiku-scout":                     &s.AgentSubagentMapping.HaikuScout,
-		"code-reviewer":                   &s.AgentSubagentMapping.CodeReviewer,
-		"librarian":                       &s.AgentSubagentMapping.Librarian,
-		"tech-docs-writer":                &s.AgentSubagentMapping.TechDocsWriter,
-		"scaffolder":                      &s.AgentSubagentMapping.Scaffolder,
-		"memory-archivist":                &s.AgentSubagentMapping.MemoryArchivist,
-		"python-pro":                      &s.AgentSubagentMapping.PythonPro,
-		"python-ux":                       &s.AgentSubagentMapping.PythonUX,
-		"r-pro":                           &s.AgentSubagentMapping.RPro,
-		"r-shiny-pro":                     &s.AgentSubagentMapping.RShinyPro,
-		"go-pro":                          &s.AgentSubagentMapping.GoPro,
-		"go-cli":                          &s.AgentSubagentMapping.GoCLI,
-		"go-tui":                          &s.AgentSubagentMapping.GoTUI,
-		"go-api":                          &s.AgentSubagentMapping.GoAPI,
-		"go-concurrent":                   &s.AgentSubagentMapping.GoConcurrent,
-		"typescript-pro":                  &s.AgentSubagentMapping.TypescriptPro,
-		"react-pro":                       &s.AgentSubagentMapping.ReactPro,
-		"backend-reviewer":                &s.AgentSubagentMapping.BackendReviewer,
-		"frontend-reviewer":               &s.AgentSubagentMapping.FrontendReviewer,
-		"standards-reviewer":              &s.AgentSubagentMapping.StandardsReviewer,
-		"review-orchestrator":             &s.AgentSubagentMapping.ReviewOrchestrator,
-		"impl-manager":                    &s.AgentSubagentMapping.ImplManager,
-		"orchestrator":                    &s.AgentSubagentMapping.Orchestrator,
-		"architect":                       &s.AgentSubagentMapping.Architect,
-		"planner":                         &s.AgentSubagentMapping.Planner,
-		"einstein":                        &s.AgentSubagentMapping.Einstein,
-		"gemini-slave":                    &s.AgentSubagentMapping.GeminiSlave,
-		"staff-architect-critical-review": &s.AgentSubagentMapping.StaffArchitectCriticalReview,
-	}
-
-	flexType, exists := mapping[agentName]
+	flexType, exists := s.agentMapping()[agentName]
 	if !exists || flexType == nil {
 		return "", fmt.Errorf("[routing] Unknown agent: %s", agentName)
 	}
@@ -587,22 +598,22 @@ func (s *Schema) GetSubagentTypeForAgent(agentName string) (string, error) {
 	return primaryType, nil
 }
 
-// GetSubagentType returns SubagentType configuration.
-// Returns an error if the subagent_type does not exist.
-func (s *Schema) GetSubagentType(subagentType string) (*SubagentType, error) {
-	switch subagentType {
-	case "Explore":
-		return &s.SubagentTypesConfig.Explore, nil
-	case "general-purpose":
-		return &s.SubagentTypesConfig.GeneralPurpose, nil
-	case "Bash":
-		return &s.SubagentTypesConfig.Bash, nil
-	case "Plan":
-		return &s.SubagentTypesConfig.Plan, nil
-	case "Analyst":
-		return &s.SubagentTypesConfig.Analyst, nil
+// GetSubagentType returns SubagentType configuration for an informational category.
+// Returns an error if the category does not exist.
+func (s *Schema) GetSubagentType(category string) (*SubagentType, error) {
+	switch category {
+	case "exploration":
+		return &s.SubagentTypesConfig.Exploration, nil
+	case "implementation":
+		return &s.SubagentTypesConfig.Implementation, nil
+	case "external":
+		return &s.SubagentTypesConfig.External, nil
+	case "planning":
+		return &s.SubagentTypesConfig.Planning, nil
+	case "analysis":
+		return &s.SubagentTypesConfig.Analysis, nil
 	default:
-		return nil, fmt.Errorf("[routing] Unknown subagent_type: %s", subagentType)
+		return nil, fmt.Errorf("[routing] Unknown subagent category: %s", category)
 	}
 }
 

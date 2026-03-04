@@ -7,6 +7,9 @@
  * - Automatic "Other" option for free-text fallback
  * - Escape warns before discarding unsaved free-text
  * - Backward compatible with existing MCP askUser tool
+ *
+ * Split layout: scrollable content region (top) + fixed options panel (bottom)
+ * Options are ALWAYS visible regardless of content length.
  */
 
 import React, { useState } from "react";
@@ -14,14 +17,17 @@ import { Box, Text, useInput } from "ink";
 import type { ModalRequest, ModalResponse, AskPayload } from "../../store/slices/modal.js";
 import { colors } from "../../config/theme.js";
 import { TextInput } from "../primitives/TextInput.js";
+import { ScrollView } from "../primitives/ScrollView.js";
 
 interface AskModalProps {
   request: ModalRequest<AskPayload>;
   onComplete: (response: ModalResponse) => void;
   onCancel: () => void;
+  /** Available terminal rows for scrollable content area (provided by ModalOverlay) */
+  contentHeight?: number;
 }
 
-export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.Element {
+export function AskModal({ request, onComplete, onCancel, contentHeight }: AskModalProps): JSX.Element {
   const payload = request.payload as AskPayload;
   const hasOptions = payload.options && payload.options.length > 0;
 
@@ -149,7 +155,9 @@ export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.
   } else if (isMultiSelect) {
     helpText = "↑↓ Navigate • Space Toggle • Enter Submit • Esc Cancel";
   } else {
-    helpText = "↑↓ Navigate • Enter Select • Esc Cancel";
+    helpText = contentHeight !== undefined
+      ? "↑↓ Navigate • PgUp/PgDn Scroll • Enter Submit • Esc Cancel"
+      : "↑↓ Navigate • Enter Select • Esc Cancel";
   }
 
   if (showConfirm) {
@@ -157,7 +165,7 @@ export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.
       <Box flexDirection="column" gap={1}>
         <Text color="yellow">⚠ Discard typed text?</Text>
         <Box marginTop={1}>
-          <Text>You have unsaved text: "{freeTextValue}"</Text>
+          <Text>You have unsaved text: &quot;{freeTextValue}&quot;</Text>
         </Box>
         <Box marginTop={1}>
           <Text dimColor>Y Discard • N Continue editing</Text>
@@ -166,21 +174,23 @@ export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.
     );
   }
 
-  return (
+  // Content region: header + question text
+  const contentRegion = (
     <Box flexDirection="column" gap={1}>
-      {/* Header (if present) */}
       {payload.header && (
         <Box>
-          <Text dimColor>[{payload.header.slice(0, 12)}]</Text>
+          <Text dimColor>[{payload.header}]</Text>
         </Box>
       )}
+      <Text wrap="wrap">{payload.message}</Text>
+    </Box>
+  );
 
-      {/* Question text */}
-      <Text>{payload.message}</Text>
-
-      {/* Options or free text input */}
+  // Options region: option list or free text input + help text
+  const optionsRegion = (
+    <Box flexDirection="column" flexShrink={0}>
       {hasOptions && !showOtherInput ? (
-        <Box flexDirection="column" marginTop={1}>
+        <Box flexDirection="column">
           {allOptions.map((option, index) => {
             const isSelected = index === selectedIndex;
             const isChecked = selectedIndices.has(index);
@@ -204,7 +214,7 @@ export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.
           })}
         </Box>
       ) : (
-        <Box marginTop={1}>
+        <Box>
           <TextInput
             value={freeTextValue}
             onChange={setFreeTextValue}
@@ -219,6 +229,39 @@ export function AskModal({ request, onComplete, onCancel }: AskModalProps): JSX.
       <Box marginTop={1}>
         <Text dimColor>{helpText}</Text>
       </Box>
+    </Box>
+  );
+
+  // Split layout: scrollable content (top) + fixed options (bottom)
+  if (contentHeight !== undefined && contentHeight > 0) {
+    return (
+      <Box flexDirection="column">
+        {/* TOP: Scrollable content region */}
+        <ScrollView
+          height={contentHeight}
+          autoScroll={false}
+          focused={false}
+          disableArrowKeys={true}
+        >
+          {contentRegion}
+        </ScrollView>
+
+        {/* Separator */}
+        <Box>
+          <Text dimColor>{"─".repeat(44)}</Text>
+        </Box>
+
+        {/* BOTTOM: Fixed options panel — never clipped */}
+        {optionsRegion}
+      </Box>
+    );
+  }
+
+  // Fallback: no split layout (full-screen mode or no height constraint)
+  return (
+    <Box flexDirection="column" gap={1}>
+      {contentRegion}
+      {optionsRegion}
     </Box>
   );
 }

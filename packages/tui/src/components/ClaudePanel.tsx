@@ -26,6 +26,7 @@ import { filterCommands } from "../utils/slashCommands.js";
 import { SlashCommandMenu } from "./SlashCommandMenu.js";
 import { PROVIDERS } from "../config/providers.js";
 import { ProviderTabs } from "./ProviderTabs.js";
+import { initiateShutdown } from "../lifecycle/shutdown.js";
 
 export interface ClaudePanelProps {
   /**
@@ -290,9 +291,16 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
             "Available commands:\n" +
               "  /model [haiku|sonnet|opus] - Switch model\n" +
               "  /clear - Clear message history\n" +
+              "  /exit - Exit gracefully (saves session)\n" +
               "  /help - Show this help"
           );
           setInput("");
+          return;
+
+        case "exit":
+        case "quit":
+          setInput("");
+          void initiateShutdown("/exit");
           return;
 
         default:
@@ -439,6 +447,7 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
           focused={focused}
           disableArrowKeys={true}
           autoScroll={true}
+          forceScrollToBottom={modalQueue.length}
         >
           {messages.length === 0 ? (
             <Text color={colors.muted} italic>

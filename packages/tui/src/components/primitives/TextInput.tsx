@@ -1,11 +1,12 @@
 /**
  * TextInput primitive - styled input wrapper
- * Wraps ink-text-input with theme integration and submit handling
+ * Wraps TextInputCore with theme integration (borders, colors)
+ * TextInputCore replaces ink-text-input to fix delete key border tearing
  */
 
 import React from "react";
-import TextInputLib from "ink-text-input";
 import { Box, Text } from "ink";
+import { TextInputCore } from "./TextInputCore.js";
 import { colors, borders } from "../../config/theme.js";
 
 export interface TextInputProps {
@@ -69,12 +70,12 @@ export function TextInput({
       paddingX={1}
       width="100%"
     >
-      <TextInputLib
+      <TextInputCore
         value={value}
         onChange={onChange}
         onSubmit={onSubmit}
         placeholder={placeholder}
-        focus={focused}
+        focused={focused}
       />
     </Box>
   );

@@ -11,7 +11,7 @@
  *
  * Note: AskModal has two modes:
  * - Options mode: arrow-navigable list (when options array has items)
- * - Input mode: free text input (when no options or empty array)
+ * - Input mode: free text input via TextInputCore (when no options or empty array)
  */
 
 import React from "react";
@@ -30,18 +30,20 @@ describe("AskModal", () => {
   });
 
   let onComplete: ReturnType<typeof vi.fn>;
+  let onCancel: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     onComplete = vi.fn();
+    onCancel = vi.fn();
   });
 
   describe("Rendering - Options Mode", () => {
     it("renders message with options", () => {
       const request = createRequest({
         message: "Choose your answer:",
-        options: ["Yes", "No", "Maybe"],
+        options: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }, { label: "Maybe", value: "maybe" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("Choose your answer:");
     });
@@ -49,9 +51,9 @@ describe("AskModal", () => {
     it("renders all options", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["Option A", "Option B", "Option C"],
+        options: [{ label: "Option A", value: "option-a" }, { label: "Option B", value: "option-b" }, { label: "Option C", value: "option-c" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
       expect(output).toContain("Option A");
@@ -62,9 +64,9 @@ describe("AskModal", () => {
     it("highlights first option by default", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["First", "Second"],
+        options: [{ label: "First", value: "first" }, { label: "Second", value: "second" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
       expect(output).toMatch(/▶.*First/);
@@ -73,9 +75,9 @@ describe("AskModal", () => {
     it("renders keyboard hints for options mode", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["Option A", "Option B"],
+        options: [{ label: "Option A", value: "option-a" }, { label: "Option B", value: "option-b" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
       expect(output).toMatch(/Navigate/);
@@ -90,7 +92,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "What is your name?",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("What is your name?");
     });
@@ -99,7 +101,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Enter answer:",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Should show default placeholder
       expect(lastFrame()).toContain("Type your answer...");
@@ -110,7 +112,7 @@ describe("AskModal", () => {
         message: "Enter name:",
         defaultValue: "John Doe",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("John Doe");
     });
@@ -119,7 +121,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Enter answer:",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
       expect(output).toMatch(/Enter/);
@@ -133,7 +135,7 @@ describe("AskModal", () => {
         message: "Enter answer:",
         options: [],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Empty array means no options, should show input
       expect(lastFrame()).toContain("Type your answer...");
@@ -144,9 +146,9 @@ describe("AskModal", () => {
     it("handles single option", () => {
       const request = createRequest({
         message: "Only one choice:",
-        options: ["Only option"],
+        options: [{ label: "Only option", value: "only-option" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("Only option");
     });
@@ -155,9 +157,9 @@ describe("AskModal", () => {
       const longOption = "A".repeat(200);
       const request = createRequest({
         message: "Select:",
-        options: [longOption, "Short"],
+        options: [{ label: longOption, value: "long-option" }, { label: "Short", value: "short" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("AAA");
     });
@@ -165,9 +167,12 @@ describe("AskModal", () => {
     it("handles options with special characters", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["<script>alert('xss')</script>", "Normal & Safe"],
+        options: [
+          { label: "<script>alert('xss')</script>", value: "xss-option" },
+          { label: "Normal & Safe", value: "normal-safe" },
+        ],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("<script>alert('xss')</script>");
       expect(lastFrame()).toContain("Normal & Safe");
@@ -176,9 +181,12 @@ describe("AskModal", () => {
     it("handles options with unicode", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["選項 A 🎯", "選項 B 🎨"],
+        options: [
+          { label: "選項 A 🎯", value: "option-a" },
+          { label: "選項 B 🎨", value: "option-b" },
+        ],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("選項 A 🎯");
       expect(lastFrame()).toContain("選項 B 🎨");
@@ -187,9 +195,13 @@ describe("AskModal", () => {
     it("handles duplicate options", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["Same", "Same", "Different"],
+        options: [
+          { label: "Same", value: "same-1" },
+          { label: "Same", value: "same-2" },
+          { label: "Different", value: "different" },
+        ],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Should show both options even with same text
       expect(lastFrame()).toContain("Same");
@@ -197,12 +209,15 @@ describe("AskModal", () => {
     });
 
     it("handles 20+ options", () => {
-      const options = Array.from({ length: 25 }, (_, i) => `Option ${i + 1}`);
+      const options = Array.from({ length: 25 }, (_, i) => ({
+        label: `Option ${i + 1}`,
+        value: `option-${i + 1}`,
+      }));
       const request = createRequest({
         message: "Select:",
         options,
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("Option 1");
       expect(lastFrame()).toContain("Option 25");
@@ -216,7 +231,7 @@ describe("AskModal", () => {
         message: "Enter text:",
         defaultValue: longDefault,
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("AAA");
     });
@@ -226,7 +241,7 @@ describe("AskModal", () => {
         message: "Enter text:",
         defaultValue: "<default@example.com>",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("<default@example.com>");
     });
@@ -236,7 +251,7 @@ describe("AskModal", () => {
         message: "Enter text:",
         defaultValue: "默认值 🌈",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("默认值 🌈");
     });
@@ -246,9 +261,9 @@ describe("AskModal", () => {
     it("handles empty message", () => {
       const request = createRequest({
         message: "",
-        options: ["Option A"],
+        options: [{ label: "Option A", value: "option-a" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toBeTruthy();
     });
@@ -257,9 +272,9 @@ describe("AskModal", () => {
       const longMessage = "A".repeat(300);
       const request = createRequest({
         message: longMessage,
-        options: ["Option A"],
+        options: [{ label: "Option A", value: "option-a" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("AAA");
     });
@@ -267,9 +282,9 @@ describe("AskModal", () => {
     it("handles message with newlines", () => {
       const request = createRequest({
         message: "Line 1\nLine 2\nChoose:",
-        options: ["Option A"],
+        options: [{ label: "Option A", value: "option-a" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
       expect(output).toContain("Line 1");
@@ -280,9 +295,9 @@ describe("AskModal", () => {
     it("handles message with special characters", () => {
       const request = createRequest({
         message: "Choose <option>:",
-        options: ["Option A"],
+        options: [{ label: "Option A", value: "option-a" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("Choose <option>:");
     });
@@ -290,9 +305,9 @@ describe("AskModal", () => {
     it("handles message with unicode", () => {
       const request = createRequest({
         message: "请选择: 🎯",
-        options: ["选项 A"],
+        options: [{ label: "选项 A", value: "option-a" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toContain("请选择: 🎯");
     });
@@ -302,9 +317,9 @@ describe("AskModal", () => {
     it("uses options mode when options array has items", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["Option A"],
+        options: [{ label: "Option A", value: "option-a" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Should show arrow indicator (options mode)
       expect(lastFrame()).toMatch(/▶/);
@@ -315,7 +330,7 @@ describe("AskModal", () => {
         message: "Enter:",
         options: undefined,
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Should show placeholder (input mode)
       expect(lastFrame()).toContain("Type your answer...");
@@ -326,7 +341,7 @@ describe("AskModal", () => {
         message: "Enter:",
         options: [],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Should show placeholder (input mode)
       expect(lastFrame()).toContain("Type your answer...");
@@ -335,10 +350,10 @@ describe("AskModal", () => {
     it("ignores defaultValue in options mode", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["Option A", "Option B"],
+        options: [{ label: "Option A", value: "option-a" }, { label: "Option B", value: "option-b" }],
         defaultValue: "This should be ignored",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Should show options, not input with default
       expect(lastFrame()).toMatch(/▶.*Option A/);
@@ -350,9 +365,9 @@ describe("AskModal", () => {
     it("defines correct response type structure", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["Option A", "Option B"],
+        options: [{ label: "Option A", value: "option-a" }, { label: "Option B", value: "option-b" }],
       });
-      render(<AskModal request={request} onComplete={onComplete} />);
+      render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       // Manually simulate what the component would call
       onComplete({
@@ -369,9 +384,13 @@ describe("AskModal", () => {
     it("callback returns selected option text", () => {
       const request = createRequest({
         message: "Select:",
-        options: ["First", "Second", "Third"],
+        options: [
+          { label: "First", value: "first" },
+          { label: "Second", value: "second" },
+          { label: "Third", value: "third" },
+        ],
       });
-      render(<AskModal request={request} onComplete={onComplete} />);
+      render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       onComplete({
         type: "ask",
@@ -390,7 +409,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Enter answer:",
       });
-      render(<AskModal request={request} onComplete={onComplete} />);
+      render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       onComplete({
         type: "ask",
@@ -407,7 +426,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Enter answer:",
       });
-      render(<AskModal request={request} onComplete={onComplete} />);
+      render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       onComplete({
         type: "ask",
@@ -424,7 +443,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Enter answer:",
       });
-      render(<AskModal request={request} onComplete={onComplete} />);
+      render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       onComplete({
         type: "ask",
@@ -442,9 +461,9 @@ describe("AskModal", () => {
     it("maintains consistent structure in options mode", () => {
       const request = createRequest({
         message: "Choose an option:",
-        options: ["Option A", "Option B"],
+        options: [{ label: "Option A", value: "option-a" }, { label: "Option B", value: "option-b" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
 
@@ -459,7 +478,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Enter your answer:",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       const output = lastFrame();
 
@@ -473,9 +492,9 @@ describe("AskModal", () => {
     it("renders without crashing for minimal options payload", () => {
       const request = createRequest({
         message: "Minimal",
-        options: ["One"],
+        options: [{ label: "One", value: "one" }],
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toBeTruthy();
     });
@@ -484,7 +503,7 @@ describe("AskModal", () => {
       const request = createRequest({
         message: "Minimal",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toBeTruthy();
     });
@@ -494,18 +513,21 @@ describe("AskModal", () => {
         message: "Full payload test",
         defaultValue: "Default value",
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toBeTruthy();
     });
 
     it("renders without crashing for large options list", () => {
-      const options = Array.from({ length: 50 }, (_, i) => `Option ${i + 1}`);
+      const options = Array.from({ length: 50 }, (_, i) => ({
+        label: `Option ${i + 1}`,
+        value: `option-${i + 1}`,
+      }));
       const request = createRequest({
         message: "Large list",
         options,
       });
-      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} />);
+      const { lastFrame } = render(<AskModal request={request} onComplete={onComplete} onCancel={onCancel} />);
 
       expect(lastFrame()).toBeTruthy();
     });

@@ -135,8 +135,8 @@ Q3: Team Composition (CONDITIONAL)
   └─► (not asked) → Default to full braintrust
 
 Q4: Budget (CONDITIONAL)
-  ├─► User specifies → Validate ($1-$50)
-  └─► (not asked) → Default $25.00
+  ├─► User specifies → Validate ($1-$100)
+  └─► (not asked) → Default $50.00
 
 Generate Problem Brief → Confirm → Generate config.json + stdin files → Launch
 ```
@@ -147,7 +147,7 @@ Generate Problem Brief → Confirm → Generate config.json + stdin files → La
 |--------------|----------------|
 | Just Einstein | ~$1.50 |
 | Full Braintrust (Einstein + Staff-Architect + Beethoven) | ~$4.50-$5.50 |
-| Validation limits | Min $1.00, Max $50.00, Default $25.00 |
+| Validation limits | Min $1.00, Max $100.00, Default $50.00 |
 
 ### Scout-First Path
 

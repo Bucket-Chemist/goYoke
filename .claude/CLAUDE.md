@@ -186,49 +186,49 @@ Request arrives
 
 ### Tier 1: Haiku (Fast, Cheap)
 
-| Trigger Patterns                          | Agent             | subagent_type |
-| ----------------------------------------- | ----------------- | ------------- |
-| where is, find, which files, grep, locate | `codebase-search` | Explore       |
-| assess scope, count lines, how big is     | `haiku-scout`     | Explore       |
+| Trigger Patterns                          | Agent             | subagent_type     |
+| ----------------------------------------- | ----------------- | ----------------- |
+| where is, find, which files, grep, locate | `codebase-search` | Codebase Search   |
+| assess scope, count lines, how big is     | `haiku-scout`     | Haiku Scout       |
 
 ### Tier 1.5: Haiku + Thinking (Structured Reasoning)
 
-| Trigger Patterns                              | Agent                | subagent_type   |
-| --------------------------------------------- | -------------------- | --------------- |
-| scaffold, boilerplate, new class, template    | `scaffolder`         | general-purpose |
-| readme, document, API docs, mermaid, diagram  | `tech-docs-writer`   | general-purpose |
-| review this, code review, spot check          | `code-reviewer`      | Explore         |
-| review backend, api review, security review   | `backend-reviewer`   | Explore         |
-| review frontend, component review, ui review  | `frontend-reviewer`  | Explore         |
-| review standards, code quality, naming review | `standards-reviewer` | Explore         |
-| how to use, library, best practice, docs      | `librarian`          | Explore         |
-| archive session, wrap up, save memory         | `memory-archivist`   | general-purpose |
+| Trigger Patterns                              | Agent                | subagent_type        |
+| --------------------------------------------- | -------------------- | -------------------- |
+| scaffold, boilerplate, new class, template    | `scaffolder`         | Scaffolder           |
+| readme, document, API docs, mermaid, diagram  | `tech-docs-writer`   | Tech Docs Writer     |
+| review this, code review, spot check          | `code-reviewer`      | Code Reviewer        |
+| review backend, api review, security review   | `backend-reviewer`   | Backend Reviewer     |
+| review frontend, component review, ui review  | `frontend-reviewer`  | Frontend Reviewer    |
+| review standards, code quality, naming review | `standards-reviewer` | Standards Reviewer   |
+| how to use, library, best practice, docs      | `librarian`          | Librarian            |
+| archive session, wrap up, save memory         | `memory-archivist`   | Memory Archivist     |
 
 ### Tier 2: Sonnet (Implementation)
 
-| Trigger Patterns                             | Agent                             | subagent_type   |
-| -------------------------------------------- | --------------------------------- | --------------- |
-| Python: implement, refactor, class, test     | `python-pro`                      | general-purpose |
-| PySide6, Qt, GUI, widget                     | `python-ux`                       | general-purpose |
-| Go: implement, struct, test, go build        | `go-pro`                          | general-purpose |
-| Cobra, CLI, subcommand, flags                | `go-cli`                          | general-purpose |
-| Bubbletea, TUI, lipgloss, tea.Model          | `go-tui`                          | general-purpose |
-| HTTP client, API, rate limit, retry          | `go-api`                          | general-purpose |
-| Concurrency, goroutine, errgroup, channel    | `go-concurrent`                   | general-purpose |
-| R: implement, S4, tidyverse, dplyr           | `r-pro`                           | general-purpose |
-| Shiny, reactive, module                      | `r-shiny-pro`                     | general-purpose |
-| typescript, ts code, type system, generics   | `typescript-pro`                  | general-purpose |
-| react, component, hook, useState, ink        | `react-pro`                       | general-purpose |
-| code review, full review, review changes     | `review-orchestrator`             | Plan            |
-| Ambiguous scope, synthesize, think through   | `orchestrator`                    | Plan            |
-| Create plan, break down, dependency analysis | `architect`                       | Plan            |
-| Review plan, critical review                 | `staff-architect-critical-review` | Plan or Explore |
+| Trigger Patterns                             | Agent                             | subagent_type                    |
+| -------------------------------------------- | --------------------------------- | -------------------------------- |
+| Python: implement, refactor, class, test     | `python-pro`                      | Python Pro                       |
+| PySide6, Qt, GUI, widget                     | `python-ux`                       | Python UX (PySide6)              |
+| Go: implement, struct, test, go build        | `go-pro`                          | GO Pro                           |
+| Cobra, CLI, subcommand, flags                | `go-cli`                          | GO CLI (Cobra)                   |
+| Bubbletea, TUI, lipgloss, tea.Model          | `go-tui`                          | GO TUI (Bubbletea)               |
+| HTTP client, API, rate limit, retry          | `go-api`                          | GO API (HTTP Client)             |
+| Concurrency, goroutine, errgroup, channel    | `go-concurrent`                   | GO Concurrent                    |
+| R: implement, S4, tidyverse, dplyr           | `r-pro`                           | R Pro                            |
+| Shiny, reactive, module                      | `r-shiny-pro`                     | R Shiny Pro                      |
+| typescript, ts code, type system, generics   | `typescript-pro`                  | TypeScript Pro                   |
+| react, component, hook, useState, ink        | `react-pro`                       | React Pro                        |
+| code review, full review, review changes     | `review-orchestrator`             | Review Orchestrator              |
+| Ambiguous scope, synthesize, think through   | `orchestrator`                    | Orchestrator                     |
+| Create plan, break down, dependency analysis | `architect`                       | Architect                        |
+| Review plan, critical review                 | `staff-architect-critical-review` | Staff Architect Critical Review  |
 
 ### Tier 3: Opus (Architecture Decisions)
 
-| Trigger Patterns                                                                                                                                     | Agent              | subagent_type |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------- |
-| design neural network, architecture decision, training strategy, loss function design, attention mechanism choice, which approach, tradeoff analysis | `python-architect` | Plan          |
+| Trigger Patterns                                                                                                                                     | Agent              | subagent_type        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------------- |
+| design neural network, architecture decision, training strategy, loss function design, attention mechanism choice, which approach, tradeoff analysis | `python-architect` | Python ML Architect  |
 
 | Trigger                               | Handler             | Notes                                              |
 | ------------------------------------- | ------------------- | -------------------------------------------------- |
@@ -405,7 +405,7 @@ When multiple agents match a request, resolution follows this order:
 ```javascript
 Task({
   description: "Brief description",
-  subagent_type: "[from dispatch table]" | "Plan" | "Explore" | "general-purpose", // MANDATORY: Enforced by gogent-validate
+  subagent_type: "[CC agent type name from dispatch table]", // MANDATORY: Enforced by gogent-validate
   model: "haiku" | "sonnet",
   prompt: `AGENT: [agent-id]
 

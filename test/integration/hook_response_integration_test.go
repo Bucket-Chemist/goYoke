@@ -29,7 +29,7 @@ func TestHookWorkflow_FullPipeline(t *testing.T) {
 				"tool_input": {
 					"model": "opus",
 					"prompt": "AGENT: einstein\n\nAnalyze this",
-					"subagent_type": "general-purpose"
+					"subagent_type": "Einstein"
 				},
 				"session_id": "test-123",
 				"hook_event_name": "PreToolUse",
@@ -56,7 +56,7 @@ func TestHookWorkflow_FullPipeline(t *testing.T) {
 				"tool_input": {
 					"model": "haiku",
 					"prompt": "AGENT: tech-docs-writer\n\nUpdate README",
-					"subagent_type": "Explore"
+					"subagent_type": "Codebase Search"
 				},
 				"session_id": "test-456",
 				"hook_event_name": "PreToolUse",
@@ -65,8 +65,8 @@ func TestHookWorkflow_FullPipeline(t *testing.T) {
 			createResponse: func(event *routing.ToolEvent) *routing.HookResponse {
 				resp := routing.NewWarnResponse(event.HookEventName, "Subagent_type mismatch detected")
 				resp.AddField("agent", "tech-docs-writer")
-				resp.AddField("requested", "Explore")
-				resp.AddField("expected", "general-purpose")
+				resp.AddField("requested", "Codebase Search")
+				resp.AddField("expected", "Tech Docs Writer")
 				return resp
 			},
 			wantDecision: "approve",
@@ -74,8 +74,8 @@ func TestHookWorkflow_FullPipeline(t *testing.T) {
 			wantFields: map[string]interface{}{
 				"hookEventName": "PreToolUse",
 				"agent":         "tech-docs-writer",
-				"requested":     "Explore",
-				"expected":      "general-purpose",
+				"requested":     "Codebase Search",
+				"expected":      "Tech Docs Writer",
 			},
 		},
 		{
@@ -213,13 +213,13 @@ func TestHookWorkflow_ErrorHandling(t *testing.T) {
 
 // TestHookWorkflow_RealWorldScenario simulates a realistic validate-routing hook
 func TestHookWorkflow_RealWorldScenario(t *testing.T) {
-	// Simulate real Claude Code event
+	// Simulate real Claude Code event with wrong subagent_type (Python Pro instead of Codebase Search)
 	realEventJSON := `{
 		"tool_name": "Task",
 		"tool_input": {
 			"description": "Search for auth files",
 			"prompt": "AGENT: codebase-search\n\nFind authentication implementation",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 			"model": "haiku"
 		},
 		"session_id": "claude-prod-abc123",
@@ -243,11 +243,11 @@ func TestHookWorkflow_RealWorldScenario(t *testing.T) {
 	// Step 3: Simulate validation logic
 	// (In real hook: check if subagent_type matches agent requirements)
 	resp := routing.NewBlockResponse(event.HookEventName,
-		"Subagent_type violation: codebase-search requires 'Explore', got 'general-purpose'")
+		"Subagent_type violation: codebase-search requires 'Codebase Search', got 'Python Pro'")
 	resp.AddField("permissionDecision", "deny")
 	resp.AddField("agent", "codebase-search")
-	resp.AddField("requested", "general-purpose")
-	resp.AddField("correct", "Explore")
+	resp.AddField("requested", "Python Pro")
+	resp.AddField("correct", "Codebase Search")
 
 	// Step 4: Validate
 	if err := resp.Validate(); err != nil {

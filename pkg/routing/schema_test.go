@@ -46,25 +46,23 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 	assert.Equal(t, 4, schema.TierLevels.Opus)
 	assert.Equal(t, 0, schema.TierLevels.External)
 
-	// Verify critical SubagentType fields (v2.3.0 additions)
+	// Verify informational SubagentType categories
 	t.Run("SubagentTypeFields", func(t *testing.T) {
-		explore := schema.SubagentTypesConfig.Explore
-		assert.False(t, explore.AllowsWrite, "Explore should not allow write")
-		assert.False(t, explore.RespectsAgentYaml, "Explore should not respect agent.yaml")
-		assert.Contains(t, explore.UseFor, "codebase-search")
+		exploration := schema.SubagentTypesConfig.Exploration
+		assert.False(t, exploration.AllowsWrite, "exploration should not allow write")
+		assert.Contains(t, exploration.Agents, "codebase-search")
 
-		generalPurpose := schema.SubagentTypesConfig.GeneralPurpose
-		assert.True(t, generalPurpose.AllowsWrite, "general-purpose should allow write")
-		assert.True(t, generalPurpose.RespectsAgentYaml, "general-purpose should respect agent.yaml")
-		assert.Contains(t, generalPurpose.UseFor, "python-pro")
+		implementation := schema.SubagentTypesConfig.Implementation
+		assert.True(t, implementation.AllowsWrite, "implementation should allow write")
+		assert.Contains(t, implementation.Agents, "python-pro")
 
-		bash := schema.SubagentTypesConfig.Bash
-		assert.False(t, bash.AllowsWrite, "Bash should not allow write")
-		assert.Contains(t, bash.UseFor, "gemini-slave")
+		external := schema.SubagentTypesConfig.External
+		assert.False(t, external.AllowsWrite, "external should not allow write")
+		assert.Contains(t, external.Agents, "gemini-slave")
 
-		plan := schema.SubagentTypesConfig.Plan
-		assert.True(t, plan.AllowsWrite, "Plan should allow write")
-		assert.Contains(t, plan.UseFor, "orchestrator")
+		planning := schema.SubagentTypesConfig.Planning
+		assert.True(t, planning.AllowsWrite, "planning should allow write")
+		assert.Contains(t, planning.Agents, "orchestrator")
 	})
 
 	// Verify DelegationCeiling fields (v2.3.0 critical metadata)
@@ -93,13 +91,13 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		assert.Contains(t, opusPattern.CostImpact, "$")
 	})
 
-	// Verify agent_subagent_mapping
+	// Verify agent_subagent_mapping uses CC type names
 	t.Run("AgentSubagentMapping", func(t *testing.T) {
-		assert.True(t, schema.AgentSubagentMapping.CodebaseSearch.Contains("Explore"))
-		assert.True(t, schema.AgentSubagentMapping.PythonPro.Contains("general-purpose"))
-		assert.True(t, schema.AgentSubagentMapping.GoPro.Contains("general-purpose"))
-		assert.True(t, schema.AgentSubagentMapping.Orchestrator.Contains("Plan"))
-		assert.True(t, schema.AgentSubagentMapping.GeminiSlave.Contains("Bash"))
+		assert.True(t, schema.AgentSubagentMapping.CodebaseSearch.Contains("Codebase Search"))
+		assert.True(t, schema.AgentSubagentMapping.PythonPro.Contains("Python Pro"))
+		assert.True(t, schema.AgentSubagentMapping.GoPro.Contains("GO Pro"))
+		assert.True(t, schema.AgentSubagentMapping.Orchestrator.Contains("Orchestrator"))
+		assert.True(t, schema.AgentSubagentMapping.GeminiSlave.Contains("Gemini Slave"))
 	})
 
 	// Verify escalation_rules structure
@@ -172,10 +170,10 @@ func TestSchemaValidate(t *testing.T) {
 					Sonnet: 3,
 				},
 				SubagentTypesConfig: SubagentTypesConfig{
-					Explore: SubagentType{},
+					Exploration: SubagentType{},
 				},
 				AgentSubagentMapping: AgentSubagentMapping{
-					CodebaseSearch: NewFlexibleSubagentType("Explore"),
+					CodebaseSearch: NewFlexibleSubagentType("Codebase Search"),
 				},
 			},
 			wantErr: false,
@@ -259,18 +257,18 @@ func TestGetTier(t *testing.T) {
 func TestGetSubagentTypeForAgent(t *testing.T) {
 	schema := Schema{
 		AgentSubagentMapping: AgentSubagentMapping{
-			CodebaseSearch: NewFlexibleSubagentType("Explore"),
-			PythonPro:      NewFlexibleSubagentType("general-purpose"),
+			CodebaseSearch: NewFlexibleSubagentType("Codebase Search"),
+			PythonPro:      NewFlexibleSubagentType("Python Pro"),
 		},
 	}
 
 	subagentType, err := schema.GetSubagentTypeForAgent("codebase-search")
 	require.NoError(t, err)
-	assert.Equal(t, "Explore", subagentType)
+	assert.Equal(t, "Codebase Search", subagentType)
 
 	subagentType, err = schema.GetSubagentTypeForAgent("python-pro")
 	require.NoError(t, err)
-	assert.Equal(t, "general-purpose", subagentType)
+	assert.Equal(t, "Python Pro", subagentType)
 
 	_, err = schema.GetSubagentTypeForAgent("unknown-agent")
 	require.Error(t, err)
@@ -280,13 +278,9 @@ func TestGetSubagentTypeForAgent(t *testing.T) {
 // TestValidateAgentSubagentPair tests agent-subagent_type pairing validation.
 func TestValidateAgentSubagentPair(t *testing.T) {
 	schema := Schema{
-		SubagentTypesConfig: SubagentTypesConfig{
-			Explore:        SubagentType{},
-			GeneralPurpose: SubagentType{},
-		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			CodebaseSearch: NewFlexibleSubagentType("Explore"),
-			PythonPro:      NewFlexibleSubagentType("general-purpose"),
+			CodebaseSearch: NewFlexibleSubagentType("Codebase Search"),
+			PythonPro:      NewFlexibleSubagentType("Python Pro"),
 		},
 	}
 
@@ -298,28 +292,28 @@ func TestValidateAgentSubagentPair(t *testing.T) {
 		errSubstr     string
 	}{
 		{
-			name:         "valid pairing - codebase-search + Explore",
+			name:         "valid pairing - codebase-search + Codebase Search",
 			agentName:    "codebase-search",
-			subagentType: "Explore",
+			subagentType: "Codebase Search",
 			wantErr:      false,
 		},
 		{
-			name:         "valid pairing - python-pro + general-purpose",
+			name:         "valid pairing - python-pro + Python Pro",
 			agentName:    "python-pro",
-			subagentType: "general-purpose",
+			subagentType: "Python Pro",
 			wantErr:      false,
 		},
 		{
 			name:         "invalid pairing - wrong subagent_type",
 			agentName:    "codebase-search",
-			subagentType: "general-purpose",
+			subagentType: "Python Pro",
 			wantErr:      true,
 			errSubstr:    "Invalid subagent_type",
 		},
 		{
 			name:         "unknown agent",
 			agentName:    "nonexistent-agent",
-			subagentType: "Explore",
+			subagentType: "Codebase Search",
 			wantErr:      true,
 			errSubstr:    "Unknown agent",
 		},
@@ -719,42 +713,41 @@ func TestFlexibleSubagentType_Primary_Empty(t *testing.T) {
 
 // TestFlexibleSubagentType_CompleteWorkflow tests a realistic workflow.
 func TestFlexibleSubagentType_CompleteWorkflow(t *testing.T) {
-	// Simulate routing-schema.json with mixed formats
+	// Simulate routing-schema.json with CC type names
 	schemaJSON := `{
-		"codebase-search": "Explore",
-		"orchestrator": "Plan",
-		"staff-architect-critical-review": ["Plan", "Explore"]
+		"codebase-search": "Codebase Search",
+		"orchestrator": "Orchestrator",
+		"staff-architect-critical-review": "Staff Architect Critical Review"
 	}`
 
 	var mapping map[string]FlexibleSubagentType
 	err := json.Unmarshal([]byte(schemaJSON), &mapping)
 	require.NoError(t, err)
 
-	// Verify backwards-compatible single string
+	// Verify codebase-search
 	codebaseSearch := mapping["codebase-search"]
-	assert.True(t, codebaseSearch.Contains("Explore"))
-	assert.False(t, codebaseSearch.Contains("Plan"))
-	assert.Equal(t, "Explore", codebaseSearch.Primary())
-	assert.Equal(t, []string{"Explore"}, codebaseSearch.GetAll())
+	assert.True(t, codebaseSearch.Contains("Codebase Search"))
+	assert.False(t, codebaseSearch.Contains("Orchestrator"))
+	assert.Equal(t, "Codebase Search", codebaseSearch.Primary())
+	assert.Equal(t, []string{"Codebase Search"}, codebaseSearch.GetAll())
 
-	// Verify single string in array format
+	// Verify orchestrator
 	orchestrator := mapping["orchestrator"]
-	assert.True(t, orchestrator.Contains("Plan"))
-	assert.False(t, orchestrator.Contains("Explore"))
-	assert.Equal(t, "Plan", orchestrator.Primary())
+	assert.True(t, orchestrator.Contains("Orchestrator"))
+	assert.False(t, orchestrator.Contains("Codebase Search"))
+	assert.Equal(t, "Orchestrator", orchestrator.Primary())
 
-	// Verify multi-type array
+	// Verify staff-architect-critical-review
 	staffArchitect := mapping["staff-architect-critical-review"]
-	assert.True(t, staffArchitect.Contains("Plan"))
-	assert.True(t, staffArchitect.Contains("Explore"))
-	assert.False(t, staffArchitect.Contains("general-purpose"))
-	assert.Equal(t, "Plan", staffArchitect.Primary())
-	assert.Equal(t, []string{"Plan", "Explore"}, staffArchitect.GetAll())
+	assert.True(t, staffArchitect.Contains("Staff Architect Critical Review"))
+	assert.False(t, staffArchitect.Contains("Orchestrator"))
+	assert.Equal(t, "Staff Architect Critical Review", staffArchitect.Primary())
+	assert.Equal(t, []string{"Staff Architect Critical Review"}, staffArchitect.GetAll())
 }
 
 // TestMultiTypeValidation_EndToEnd tests the complete multi-type validation workflow.
 func TestMultiTypeValidation_EndToEnd(t *testing.T) {
-	// Create a schema with a multi-type agent
+	// Create a schema — agents now use CC-specific type names
 	schema := Schema{
 		Version: "2.5.0",
 		Tiers: map[string]TierConfig{
@@ -764,46 +757,41 @@ func TestMultiTypeValidation_EndToEnd(t *testing.T) {
 			Sonnet: 3,
 		},
 		SubagentTypesConfig: SubagentTypesConfig{
-			Explore: SubagentType{
+			Exploration: SubagentType{
 				Description: "Exploration type",
 				Tools:       []string{"Read", "Grep", "Glob"},
 			},
-			Plan: SubagentType{
+			Planning: SubagentType{
 				Description: "Planning type",
 				Tools:       []string{"Read", "Write", "Edit"},
 			},
 		},
 		AgentSubagentMapping: AgentSubagentMapping{
-			StaffArchitectCriticalReview: NewFlexibleSubagentType("Plan", "Explore"),
+			StaffArchitectCriticalReview: NewFlexibleSubagentType("Staff Architect Critical Review"),
 		},
 	}
 
-	// Test 1: Validate returns both allowed types
+	// Test 1: Validate returns the CC type name
 	allowedTypes, err := schema.GetAllowedSubagentTypes("staff-architect-critical-review")
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Plan", "Explore"}, allowedTypes)
+	assert.Equal(t, []string{"Staff Architect Critical Review"}, allowedTypes)
 
-	// Test 2: Primary type (backwards compatibility)
+	// Test 2: Primary type
 	primaryType, err := schema.GetSubagentTypeForAgent("staff-architect-critical-review")
 	require.NoError(t, err)
-	assert.Equal(t, "Plan", primaryType)
+	assert.Equal(t, "Staff Architect Critical Review", primaryType)
 
-	// Test 3: First type validation passes
-	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Plan")
+	// Test 3: CC type name validation passes
+	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Staff Architect Critical Review")
 	assert.NoError(t, err)
 
-	// Test 4: Second type validation passes
-	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Explore")
-	assert.NoError(t, err)
-
-	// Test 5: Invalid type fails
-	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Bash")
+	// Test 4: Wrong type fails
+	err = schema.ValidateAgentSubagentPair("staff-architect-critical-review", "Python Pro")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Plan")
-	assert.Contains(t, err.Error(), "Explore")
-	assert.Contains(t, err.Error(), "Bash")
+	assert.Contains(t, err.Error(), "Staff Architect Critical Review")
+	assert.Contains(t, err.Error(), "Python Pro")
 
-	// Test 6: Schema validation passes
+	// Test 5: Schema validation passes
 	err = schema.Validate()
 	assert.NoError(t, err)
 }

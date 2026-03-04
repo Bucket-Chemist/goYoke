@@ -10,6 +10,7 @@ import { useTeamsPoller } from "../hooks/useTeams.js";
 import { useAgentSync } from "../hooks/useAgentSync.js";
 import { getSessionManager } from "../session/index.js";
 import { createGlobalBindings } from "../config/keybindings.js";
+import { initiateShutdown } from "../lifecycle/shutdown.js";
 import { Banner } from "./Banner.js";
 import { TabBar } from "./TabBar.js";
 import { ClaudePanel } from "./ClaudePanel.js";
@@ -21,13 +22,7 @@ import { AgentConfigView } from "./AgentConfigView.js";
 import { TeamConfigView } from "./TeamConfigView.js";
 import { TelemetryView } from "./TelemetryView.js";
 import { ModalOverlay } from "./Modal.js";
-import type { AskPayload, ModalRequest } from "../store/slices/modal.js";
-
-/** Plan approval modals need a split layout so the conversation remains readable. */
-function isPlanApprovalModal(request: ModalRequest): boolean {
-  if (request.type !== "ask") return false;
-  return (request.payload as AskPayload).header === "Plan";
-}
+import { PlanPreview } from "./PlanPreview.js";
 import { StatusLine } from "./StatusLine.js";
 import { ToastContainer } from "./Toast.js";
 import { TaskBoard } from "./TaskBoard.js";
@@ -36,6 +31,9 @@ import { colors, borders } from "../config/theme.js";
 // Fixed heights
 const BANNER_HEIGHT = 3; // Banner takes 3 rows
 const TAB_BAR_HEIGHT = 1; // TabBar takes 1 row
+const STATUS_LINE_HEIGHT = 2;
+const TASK_BOARD_HEIGHT = 10; // 8 content + 2 borders
+const PANEL_BORDER_OVERHEAD = 4;
 
 /**
  * Layout component - main 2-panel split (70/30) with focus management and tabbed navigation
@@ -71,6 +69,11 @@ export function Layout(): JSX.Element {
 
   // Calculate panel width based on responsive layout
   const claudePanelWidth = Math.floor(terminalWidth * (isVeryNarrow ? 1 : isNarrow ? 0.75 : 0.7)) - 4;
+
+  // Available height for plan preview ScrollView (total minus fixed chrome)
+  const planPreviewHeight = Math.max(4, terminalHeight - BANNER_HEIGHT - TAB_BAR_HEIGHT - STATUS_LINE_HEIGHT - TASK_BOARD_HEIGHT - PANEL_BORDER_OVERHEAD);
+  // Right panel width in columns for PlanPreview separator sizing
+  const rightPanelColumns = Math.floor(terminalWidth * (isNarrow ? 0.25 : 0.3));
 
   // Auto-select the first active agent when nothing is selected yet.
   // Hysteresis: only fires when selectedNode is null — never overrides a manual selection.
@@ -110,7 +113,7 @@ export function Layout(): JSX.Element {
       // Otherwise do nothing
     },
     forceQuit: () => {
-      process.exit(0);
+      void initiateShutdown("forceQuit");
     },
     clearScreen: () => {
       clearMessages();
@@ -144,113 +147,166 @@ export function Layout(): JSX.Element {
         <TabBar enabled={modalQueue.length === 0} />
       </Box>
 
-      {/* Content area: modal handling.
-          Plan approval: split layout so conversation stays readable above the modal.
-          All other modals: full-screen replacement (no bleed-through). */}
+      {/* Content area: universal split layout — conversation stays visible for ALL modals.
+          Modal appears as a compact strip at the bottom of the left panel. */}
       {modalQueue.length > 0 && modalQueue[0] ? (
-        isPlanApprovalModal(modalQueue[0]) ? (
-          <Box flexGrow={1} flexDirection="column">
-            {/* Conversation stays visible so the plan is readable */}
+        <Box flexDirection="row" flexGrow={1}>
+          {/* Left: conversation + modal strip */}
+          <Box width={leftWidth} flexDirection="column">
             <Box flexGrow={1} overflow="hidden">
               <ClaudePanel focused={false} width={claudePanelWidth} />
             </Box>
-            {/* Compact approval strip at the bottom */}
-            <ModalOverlay request={modalQueue[0]} compact />
+            {/* Modal strip at bottom of left panel */}
+            <ModalOverlay
+              request={modalQueue[0]}
+              compact
+              maxHeight={Math.floor((terminalHeight - BANNER_HEIGHT - TAB_BAR_HEIGHT - 3) * 0.5)}
+            />
           </Box>
-        ) : (
-          <ModalOverlay request={modalQueue[0]} />
-        )
-      ) : (
-        <>
-          <Box flexDirection="row" flexGrow={1}>
-            {activeTab === "chat" && (
-              <>
-                {/* Left Panel: Claude conversation */}
-                <Box width={leftWidth} flexDirection="column">
-                  <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
-                </Box>
 
-                {/* Right Panel: Conditional rendering based on mode */}
-                {showRightPanel && (
-                  <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
-                    {rightPanelMode === "agents" && (
-                      <>
-                        {/* Unified Tree (60% via flexGrow) */}
-                        <Box
-                          flexGrow={6}
-                          borderStyle={borders.panel}
-                          borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
-                          flexDirection="column"
-                          overflow="hidden"
-                        >
-                          <UnifiedTree focused={focusedPanel === "agents"} nodes={nodes} selectedNode={selectedNode} />
-                        </Box>
-
-                        {/* Unified Detail (40% via flexGrow) */}
-                        <Box
-                          flexGrow={4}
-                          borderStyle={borders.panel}
-                          borderColor={colors.muted}
-                          flexDirection="column"
-                          overflow="hidden"
-                        >
-                          <UnifiedDetail focused={false} selectedNode={selectedNode} />
-                        </Box>
-                      </>
-                    )}
-                    {rightPanelMode === "dashboard" && (
-                      <Box
-                        flexGrow={1}
-                        borderStyle={borders.panel}
-                        borderColor={colors.muted}
-                        flexDirection="column"
-                        overflow="hidden"
-                      >
-                        <DashboardView />
-                      </Box>
-                    )}
-                    {rightPanelMode === "settings" && (
-                      <Box
-                        flexGrow={1}
-                        borderStyle={borders.panel}
-                        borderColor={colors.muted}
-                        flexDirection="column"
-                        overflow="hidden"
-                      >
-                        <SettingsView />
-                      </Box>
-                    )}
+          {/* Right panel preserved during modals */}
+          {showRightPanel && activeTab === "chat" && (
+            <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
+              {rightPanelMode === "agents" && (
+                <>
+                  <Box
+                    flexGrow={6}
+                    borderStyle={borders.panel}
+                    borderColor={colors.unfocused}
+                    flexDirection="column"
+                    overflow="hidden"
+                  >
+                    <UnifiedTree focused={false} nodes={nodes} selectedNode={selectedNode} />
                   </Box>
-                )}
-              </>
-            )}
-
-            {activeTab === "agent-config" && (
-              <Box flexGrow={1}>
-                <AgentConfigView />
-              </Box>
-            )}
-
-            {activeTab === "team-config" && (
-              <Box flexGrow={1}>
-                <TeamConfigView />
-              </Box>
-            )}
-
-            {activeTab === "telemetry" && (
-              <Box flexGrow={1}>
-                <TelemetryView />
-              </Box>
-            )}
-          </Box>
-
-          {/* TaskBoard - compact strip above status line, chat tab only */}
-          {activeTab === "chat" && (
-            <Box height={8} borderStyle={borders.panel} borderColor={colors.unfocused}>
-              <TaskBoard width={terminalWidth - 2} tab={taskBoardTab} />
+                  <Box
+                    flexGrow={4}
+                    borderStyle={borders.panel}
+                    borderColor={colors.muted}
+                    flexDirection="column"
+                    overflow="hidden"
+                  >
+                    <UnifiedDetail focused={false} selectedNode={selectedNode} />
+                  </Box>
+                </>
+              )}
+              {rightPanelMode === "dashboard" && (
+                <Box flexGrow={1} borderStyle={borders.panel} borderColor={colors.muted} flexDirection="column" overflow="hidden">
+                  <DashboardView />
+                </Box>
+              )}
+              {rightPanelMode === "settings" && (
+                <Box flexGrow={1} borderStyle={borders.panel} borderColor={colors.muted} flexDirection="column" overflow="hidden">
+                  <SettingsView />
+                </Box>
+              )}
+              {rightPanelMode === "planPreview" && (
+                <Box flexGrow={1} borderStyle={borders.panel} borderColor={colors.primary} flexDirection="column" overflow="hidden">
+                  <PlanPreview scrollHeight={planPreviewHeight} width={rightPanelColumns} />
+                </Box>
+              )}
             </Box>
           )}
-        </>
+        </Box>
+      ) : (
+        <Box flexDirection="row" flexGrow={1}>
+          {activeTab === "chat" && (
+            <>
+              {/* Left Panel: Claude conversation */}
+              <Box width={leftWidth} flexDirection="column">
+                <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
+              </Box>
+
+              {/* Right Panel: Conditional rendering based on mode */}
+              {showRightPanel && (
+                <Box width={isNarrow ? "25%" : "30%"} flexDirection="column">
+                  {rightPanelMode === "agents" && (
+                    <>
+                      {/* Unified Tree (60% via flexGrow) */}
+                      <Box
+                        flexGrow={6}
+                        borderStyle={borders.panel}
+                        borderColor={focusedPanel === "agents" ? colors.focused : colors.unfocused}
+                        flexDirection="column"
+                        overflow="hidden"
+                      >
+                        <UnifiedTree focused={focusedPanel === "agents"} nodes={nodes} selectedNode={selectedNode} />
+                      </Box>
+
+                      {/* Unified Detail (40% via flexGrow) */}
+                      <Box
+                        flexGrow={4}
+                        borderStyle={borders.panel}
+                        borderColor={colors.muted}
+                        flexDirection="column"
+                        overflow="hidden"
+                      >
+                        <UnifiedDetail focused={false} selectedNode={selectedNode} />
+                      </Box>
+                    </>
+                  )}
+                  {rightPanelMode === "dashboard" && (
+                    <Box
+                      flexGrow={1}
+                      borderStyle={borders.panel}
+                      borderColor={colors.muted}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <DashboardView />
+                    </Box>
+                  )}
+                  {rightPanelMode === "settings" && (
+                    <Box
+                      flexGrow={1}
+                      borderStyle={borders.panel}
+                      borderColor={colors.muted}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <SettingsView />
+                    </Box>
+                  )}
+                  {rightPanelMode === "planPreview" && (
+                    <Box
+                      flexGrow={1}
+                      borderStyle={borders.panel}
+                      borderColor={colors.primary}
+                      flexDirection="column"
+                      overflow="hidden"
+                    >
+                      <PlanPreview scrollHeight={planPreviewHeight} width={rightPanelColumns} />
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </>
+          )}
+
+          {activeTab === "agent-config" && (
+            <Box flexGrow={1}>
+              <AgentConfigView />
+            </Box>
+          )}
+
+          {activeTab === "team-config" && (
+            <Box flexGrow={1}>
+              <TeamConfigView />
+            </Box>
+          )}
+
+          {activeTab === "telemetry" && (
+            <Box flexGrow={1}>
+              <TelemetryView />
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* TaskBoard - compact strip above status line, chat tab only, visible during modals too */}
+      {activeTab === "chat" && (
+        <Box height={8} borderStyle={borders.panel} borderColor={colors.unfocused}>
+          <TaskBoard width={terminalWidth - 2} tab={taskBoardTab} />
+        </Box>
       )}
 
       {/* Status Line - FIXED at bottom */}

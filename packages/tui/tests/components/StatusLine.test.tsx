@@ -11,6 +11,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { useStore } from "../../src/store/index.js";
+import { truncateEmail } from "../../src/components/StatusLine.js";
 
 describe("StatusLine (store-based)", () => {
   beforeEach(() => {
@@ -126,6 +127,28 @@ describe("StatusLine (store-based)", () => {
       const values = Object.values(agents);
       const running = values.filter(a => a.status === "running" || a.status === "streaming").length;
       expect(running).toBe(0);
+    });
+  });
+
+  describe("truncateEmail", () => {
+    it.each([
+      ["will.klare.nl@gmail.com", "will....@gmail.com"],
+      ["alice@example.com", "alice@example.com"],
+      ["ab@example.com", "ab@example.com"],
+      ["abcde@example.com", "abcde@example.com"],
+      ["abcdef@example.com", "abcde...@example.com"],
+      ["user@sub.domain.org", "user@sub.domain.org"],
+      ["longusername@longdomain.co.uk", "longu...@longdomain.co.uk"],
+    ])("truncates '%s' to '%s'", (input, expected) => {
+      expect(truncateEmail(input)).toBe(expected);
+    });
+
+    it("returns the input unchanged when there is no '@'", () => {
+      expect(truncateEmail("notanemail")).toBe("notanemail");
+    });
+
+    it("handles empty string", () => {
+      expect(truncateEmail("")).toBe("");
     });
   });
 });
