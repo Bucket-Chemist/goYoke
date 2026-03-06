@@ -989,6 +989,14 @@ class SessionManager {
     | { behavior: "allow"; updatedInput?: Record<string, unknown>; toolUseID?: string }
     | { behavior: "deny"; message: string; toolUseID?: string }
   > {
+    // --- Track plan file path when Claude writes during plan mode ---
+    if (useStore.getState().isPlanMode() && toolName === 'Write') {
+      const filePath = (input['file_path'] as string) ?? '';
+      if (filePath.includes('.claude/plans/') && filePath.endsWith('.md')) {
+        useStore.getState().setCurrentPlanFile(filePath);
+      }
+    }
+
     // --- acceptEdits mode: auto-approve execution tools ---
     const currentMode = useStore.getState().permissionMode;
     if (currentMode === 'acceptEdits') {
@@ -1044,29 +1052,54 @@ class SessionManager {
       }
 
       // Await plan load BEFORE showing modal so the user sees the plan content first
+      // Primary: use tracked plan file from Write intercept (avoids stale mtime scan)
+      // Fallback: directory scan by mtime (for edge cases where Write wasn't intercepted)
       try {
-        const { readdir, readFile, stat } = await import("fs/promises");
-        const home = process.env["HOME"] || homedir();
-        const plansDir = join(home, ".claude", "plans");
-        const entries = await readdir(plansDir, { withFileTypes: true });
-        const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith(".md"));
-        if (mdFiles.length > 0) {
-          // Find most recently modified .md file and include size for guard
-          const withStats = await Promise.all(
-            mdFiles.map(async (e) => {
-              const fullPath = join(plansDir, e.name);
-              const s = await stat(fullPath);
-              return { path: fullPath, mtime: s.mtimeMs, size: s.size };
-            })
-          );
-          withStats.sort((a, b) => b.mtime - a.mtime);
-          const newest = withStats[0]!;
-          // Size guard: skip files larger than 500KB to avoid rendering stalls
-          if (newest.size < 500_000) {
-            const content = await readFile(newest.path, "utf-8");
-            useStore.getState().setPlanPreview(content, newest.path);
-            useStore.getState().setRightPanelMode("planPreview");
+        const { readFile, stat } = await import("fs/promises");
+        const trackedPath = useStore.getState().currentPlanFile;
+
+        let planPath: string | null = null;
+        let planContent: string | null = null;
+
+        if (trackedPath) {
+          try {
+            const s = await stat(trackedPath);
+            if (s.size < 500_000) {
+              planContent = await readFile(trackedPath, "utf-8");
+              planPath = trackedPath;
+            }
+          } catch {
+            void logger.debug("[canUseTool] Tracked plan file not found, falling back to directory scan", { trackedPath });
           }
+        }
+
+        // Fallback: directory scan by mtime
+        if (!planPath) {
+          const { readdir } = await import("fs/promises");
+          const home = process.env["HOME"] || homedir();
+          const plansDir = join(home, ".claude", "plans");
+          const entries = await readdir(plansDir, { withFileTypes: true });
+          const mdFiles = entries.filter(e => e.isFile() && e.name.endsWith(".md"));
+          if (mdFiles.length > 0) {
+            const withStats = await Promise.all(
+              mdFiles.map(async (e) => {
+                const fullPath = join(plansDir, e.name);
+                const s = await stat(fullPath);
+                return { path: fullPath, mtime: s.mtimeMs, size: s.size };
+              })
+            );
+            withStats.sort((a, b) => b.mtime - a.mtime);
+            const newest = withStats[0]!;
+            if (newest.size < 500_000) {
+              planContent = await readFile(newest.path, "utf-8");
+              planPath = newest.path;
+            }
+          }
+        }
+
+        if (planContent && planPath) {
+          useStore.getState().setPlanPreview(planContent, planPath);
+          useStore.getState().setRightPanelMode("planPreview");
         }
       } catch (err) {
         void logger.debug("[canUseTool] Plan preview load failed (non-fatal)", { err: String(err) });
@@ -1076,6 +1109,7 @@ class SessionManager {
       const clearPlanPreview = () => {
         const s = useStore.getState();
         s.setPlanPreview(null, null);
+        s.setCurrentPlanFile(null);
         s.setRightPanelMode(s.previousRightPanelMode);
       };
 

@@ -58,12 +58,12 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
   const messages = getActiveMessages();
 
   // Collect tool_use ids for agent-spawning calls so MessageRenderer can suppress their verbose content.
-  // "Task" = Claude Code CLI, "spawn_agent" = Agent SDK (TUI)
+  // "Agent" = Claude Agent SDK tool name, "spawn_agent" = MCP spawn tool
   const taskToolUseIds = useMemo(() => {
     const ids = new Set<string>();
     for (const msg of messages) {
       for (const block of msg.content) {
-        if (block.type === "tool_use" && (block.name === "Task" || block.name === "spawn_agent") && block.id) {
+        if (block.type === "tool_use" && (block.name === "Agent" || block.name === "Task" || block.name === "spawn_agent") && block.id) {
           ids.add(block.id);
         }
       }

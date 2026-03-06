@@ -122,7 +122,7 @@ function makeTaskMessage(toolUseId = "tool-abc"): {
     content: [
       {
         type: "tool_use",
-        name: "Task",
+        name: "Agent",
         id: toolUseId,
         input: {
           description: "Scout codebase",

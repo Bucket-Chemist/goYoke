@@ -1,6 +1,6 @@
 /**
  * useAgentSync hook
- * Syncs Task() tool_use blocks from providerMessages into the agents Zustand store.
+ * Syncs Agent tool_use blocks from providerMessages into the agents Zustand store.
  * Also extracts live intermediate activity from subagent-tagged messages.
  * Called unconditionally in Layout (pure side-effects, no render output).
  */
@@ -35,7 +35,7 @@ function syncTaskAgents(
 
   for (const msg of messages) {
     for (const block of msg.content) {
-      if (block.type === "tool_use" && block.name === "Task") {
+      if (block.type === "tool_use" && (block.name === "Agent" || block.name === "Task")) {
         const toolUseId = block.id;
         const input = block.input as Record<string, unknown>;
         taskInputs.set(toolUseId, input);

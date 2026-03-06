@@ -282,6 +282,8 @@ export interface UISlice {
   // Plan preview state (ephemeral — shown during ExitPlanMode approval)
   planPreviewContent: string | null;
   planPreviewPath: string | null;
+  // Tracked plan file path — captured from Write tool during plan mode
+  currentPlanFile: string | null;
   previousRightPanelMode: "agents" | "dashboard" | "settings";
   setStreaming: (streaming: boolean) => void;
   setFocusedPanel: (panel: "claude" | "agents") => void;
@@ -294,6 +296,7 @@ export interface UISlice {
   setRightPanelMode: (mode: "agents" | "dashboard" | "settings" | "planPreview") => void;
   setSelectedUnifiedId: (id: string | null) => void;
   setPlanPreview: (content: string | null, path: string | null) => void;
+  setCurrentPlanFile: (path: string | null) => void;
   setPreviousRightPanelMode: (mode: "agents" | "dashboard" | "settings") => void;
 }
 

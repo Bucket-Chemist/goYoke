@@ -46,7 +46,7 @@ function useTaskBoardData(): { todos: TodoItem[]; teams: TeamSummary[]; sessionI
     const msg = messages[i];
     if (!msg) continue;
     for (const block of msg.content) {
-      if (block.type === "tool_use" && block.name === "Task") {
+      if (block.type === "tool_use" && (block.name === "Agent" || block.name === "Task")) {
         const prompt = (block.input as Record<string, unknown>)["prompt"];
         if (typeof prompt === "string") {
           const match = prompt.match(/^AGENT:\s*(\S+)/m);

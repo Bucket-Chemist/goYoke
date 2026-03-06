@@ -97,7 +97,7 @@ export function activityFromTaskBlocks(
   return {
     lastText: null,
     currentTool: {
-      name: "Task",
+      name: "Agent",
       target:
         typeof taskInput["description"] === "string"
           ? truncate(taskInput["description"], MAX_TARGET_LENGTH)

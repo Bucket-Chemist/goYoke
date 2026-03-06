@@ -48,7 +48,7 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
   // Detect if this assistant message contains a Task/spawn_agent delegation call.
   // When it does, verbose prompt text in the same message should be suppressed.
   const isTaskDelegationMessage = message.role === "assistant" && message.content.some(
-    (block) => block.type === "tool_use" && (block.name === "Task" || block.name === "spawn_agent")
+    (block) => block.type === "tool_use" && (block.name === "Agent" || block.name === "Task" || block.name === "spawn_agent")
   );
 
   // Extract text content from content blocks (suppressed for task result messages).
@@ -126,8 +126,8 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
         if (isToolUse) {
           // Agent-spawning calls are always rendered as a collapsed single-line indicator,
           // regardless of expansionLevel — they contain verbose agent prompts/params.
-          // "Task" = Claude Code CLI, "spawn_agent" = Agent SDK (TUI)
-          if (block.name === "Task" || block.name === "spawn_agent") {
+          // "Agent" = Claude Agent SDK tool name, "spawn_agent" = MCP spawn tool
+          if (block.name === "Agent" || block.name === "Task" || block.name === "spawn_agent") {
             const desc = typeof block.input?.["description"] === "string"
               ? block.input["description"] : "agent";
             const model = typeof block.input?.["model"] === "string"
@@ -138,7 +138,7 @@ export function MessageRenderer({ message, maxWidth, expansionLevel, allExpanded
             return (
               <Box key={blockId} paddingLeft={2}>
                 <Text color={colors.accent} dimColor>
-                  ◐ [{agent ? agent : "Task"}{model ? ` → ${model}` : ""}] {label.length > 50 ? label.slice(0, 47) + "..." : label}
+                  ◐ [{agent ? agent : "Agent"}{model ? ` → ${model}` : ""}] {label.length > 50 ? label.slice(0, 47) + "..." : label}
                 </Text>
               </Box>
             );
