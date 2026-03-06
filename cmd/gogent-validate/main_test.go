@@ -25,7 +25,7 @@ func TestParseEvent_ValidTaskEvent(t *testing.T) {
 		"session_id": "test-session-123",
 		"tool_input": {
 			"description": "Search for files",
-			"subagent_type": "Explore",
+			"subagent_type": "Codebase Search",
 			"model": "haiku",
 			"prompt": "Find all Go files"
 		}
@@ -379,7 +379,7 @@ func TestIntegration_TaskValidation_ValidAgent(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore"
+			"codebase-search": "Codebase Search"
 		},
 		"escalation_rules": {}
 	}`
@@ -390,7 +390,7 @@ func TestIntegration_TaskValidation_ValidAgent(t *testing.T) {
 		"agents": {
 			"codebase-search": {
 				"tier": "haiku",
-				"subagent_type": "Explore"
+				"subagent_type": "Codebase Search"
 			}
 		}
 	}`
@@ -402,7 +402,7 @@ func TestIntegration_TaskValidation_ValidAgent(t *testing.T) {
 		"session_id": "test-session",
 		"tool_input": {
 			"description": "Search files",
-			"subagent_type": "Explore",
+			"subagent_type": "Codebase Search",
 			"model": "haiku",
 			"prompt": "AGENT: codebase-search\n\nFind Go files"
 		}
@@ -426,7 +426,7 @@ func TestParseEvent_ComplexToolInput(t *testing.T) {
 		"session_id": "complex-test",
 		"tool_input": {
 			"description": "Multi-line task",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 			"model": "sonnet",
 			"prompt": "AGENT: python-pro\n\n1. TASK: Implement feature\n2. EXPECTED: Tests pass"
 		}
@@ -479,7 +479,7 @@ func TestParseEvent_LargePayload(t *testing.T) {
 		"session_id": "large-test",
 		"tool_input": {
 			"description": "Large task",
-			"subagent_type": "Explore",
+			"subagent_type": "Codebase Search",
 			"prompt": "` + largePrompt + `"
 		}
 	}`
@@ -631,7 +631,7 @@ func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore"
+			"codebase-search": "Codebase Search"
 		},
 		"escalation_rules": {}
 	}`
@@ -643,7 +643,7 @@ func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
 		"agents": {
 			"codebase-search": {
 				"tier": "haiku",
-				"subagent_type": "Explore"
+				"subagent_type": "Codebase Search"
 			}
 		}
 	}`
@@ -666,7 +666,7 @@ func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
 		"session_id": "test-main",
 		"tool_input": {
 			"description": "Search files",
-			"subagent_type": "Explore",
+			"subagent_type": "Codebase Search",
 			"model": "haiku",
 			"prompt": "AGENT: codebase-search\n\nFind Go files"
 		}
@@ -833,7 +833,7 @@ func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore"
+			"codebase-search": "Codebase Search"
 		},
 		"escalation_rules": {}
 	}`
@@ -844,7 +844,7 @@ func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
 		"agents": {
 			"codebase-search": {
 				"tier": "haiku",
-				"subagent_type": "Explore"
+				"subagent_type": "Codebase Search"
 			}
 		}
 	}`
@@ -867,7 +867,7 @@ func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
 		"session_id": "test-block",
 		"tool_input": {
 			"description": "Search files",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 			"model": "haiku",
 			"prompt": "AGENT: codebase-search\n\nFind files"
 		}
@@ -922,7 +922,7 @@ func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore"
+			"codebase-search": "Codebase Search"
 		},
 		"escalation_rules": {}
 	}`
@@ -933,7 +933,7 @@ func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
 		"agents": {
 			"codebase-search": {
 				"tier": "haiku",
-				"subagent_type": "Explore"
+				"subagent_type": "Codebase Search"
 			}
 		}
 	}`
@@ -956,7 +956,7 @@ func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
 		"session_id": "test-allow",
 		"tool_input": {
 			"description": "Search files",
-			"subagent_type": "Explore",
+			"subagent_type": "Codebase Search",
 			"model": "haiku",
 			"prompt": "AGENT: codebase-search\n\nFind files"
 		}
@@ -1013,7 +1013,7 @@ func TestMain_ConcurrentInvocation(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore"
+			"codebase-search": "Codebase Search"
 		},
 		"escalation_rules": {}
 	}`
@@ -1023,7 +1023,7 @@ func TestMain_ConcurrentInvocation(t *testing.T) {
 		"agents": {
 			"codebase-search": {
 				"tier": "haiku",
-				"subagent_type": "Explore"
+				"subagent_type": "Codebase Search"
 			}
 		}
 	}`
@@ -1037,7 +1037,7 @@ func TestMain_ConcurrentInvocation(t *testing.T) {
 			"session_id": "concurrent-test",
 			"tool_input": {
 				"description": "Test concurrent",
-				"subagent_type": "Explore",
+				"subagent_type": "Codebase Search",
 				"model": "haiku",
 				"prompt": "AGENT: codebase-search\n\nFind files"
 			}
@@ -1136,7 +1136,7 @@ func TestRoutingDecisionLogging(t *testing.T) {
 	taskInput := map[string]interface{}{
 		"prompt":        "AGENT: codebase-search\n\nFind all Go files",
 		"model":         "haiku",
-		"subagent_type": "Explore",
+		"subagent_type": "Codebase Search",
 		"description":   "Search for files",
 	}
 
@@ -1223,7 +1223,7 @@ func TestRoutingDecisionLogging_ErrorHandling(t *testing.T) {
 	taskInput := map[string]interface{}{
 		"prompt":        "AGENT: python-pro\n\nImplement auth",
 		"model":         "sonnet",
-		"subagent_type": "general-purpose",
+		"subagent_type": "Python Pro",
 		"description":   "Python implementation",
 	}
 
@@ -1254,7 +1254,7 @@ func TestRoutingDecisionLogging_ParseFailure(t *testing.T) {
 	// Invalid task input (missing required prompt field)
 	invalidInput := map[string]interface{}{
 		"model":         "haiku",
-		"subagent_type": "Explore",
+		"subagent_type": "Codebase Search",
 		// Missing prompt field
 	}
 
@@ -1335,7 +1335,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore"
+			"codebase-search": "Codebase Search"
 		},
 		"escalation_rules": {}
 	}`
@@ -1346,7 +1346,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 		"agents": {
 			"codebase-search": {
 				"tier": "haiku",
-				"subagent_type": "Explore"
+				"subagent_type": "Codebase Search"
 			}
 		}
 	}`
@@ -1366,7 +1366,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 		"session_id": "integration-test",
 		"tool_input": {
 			"description": "Search files",
-			"subagent_type": "Explore",
+			"subagent_type": "Codebase Search",
 			"model": "haiku",
 			"prompt": "AGENT: codebase-search\n\nFind all Go files in project"
 		}
@@ -1542,7 +1542,7 @@ func TestTaskModelEnforcement(t *testing.T) {
 			toolInput := map[string]interface{}{
 				"model":         tc.model,
 				"prompt":        "AGENT: test-agent\n\nTest task",
-				"subagent_type": "general-purpose",
+				"subagent_type": "Python Pro",
 				"description":   "Test task",
 			}
 
@@ -1623,7 +1623,7 @@ func TestTaskModelEnforcement_Level0AllowsAll(t *testing.T) {
 			toolInput := map[string]interface{}{
 				"model":         model,
 				"prompt":        "AGENT: test\n\nTest",
-				"subagent_type": "general-purpose",
+				"subagent_type": "Python Pro",
 				"description":   "Test",
 			}
 
@@ -1651,7 +1651,7 @@ func TestTaskModelEnforcement_Integration(t *testing.T) {
 		},
 		"delegation_ceiling": {"default": "sonnet"},
 		"agent_subagent_mapping": {
-			"python-pro": "general-purpose"
+			"python-pro": "Python Pro"
 		},
 		"escalation_rules": {}
 	}`
@@ -1673,7 +1673,7 @@ func TestTaskModelEnforcement_Integration(t *testing.T) {
 		"session_id": "test-nesting-opus",
 		"tool_input": {
 			"description": "Python implementation",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 			"model": "opus",
 			"prompt": "AGENT: python-pro\n\nImplement feature"
 		}
@@ -1702,7 +1702,7 @@ func TestTaskModelEnforcement_Integration(t *testing.T) {
 		"session_id": "test-nesting-sonnet",
 		"tool_input": {
 			"description": "Python implementation",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 			"model": "sonnet",
 			"prompt": "AGENT: python-pro\n\nImplement feature"
 		}

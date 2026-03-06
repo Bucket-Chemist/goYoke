@@ -601,11 +601,11 @@ func setupMLTelemetryProject(t *testing.T, projectDir string) {
 			"sonnet": 3
 		},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore",
-			"python-pro": "general-purpose",
-			"librarian": "Explore",
-			"go-pro": "general-purpose",
-			"orchestrator": "Plan"
+			"codebase-search": "Codebase Search",
+			"python-pro": "Python Pro",
+			"librarian": "Librarian",
+			"go-pro": "GO Pro",
+			"orchestrator": "Orchestrator"
 		}
 	}`
 	schemaPath := filepath.Join(projectDir, ".claude", "routing-schema.json")
@@ -620,7 +620,7 @@ func createMLTelemetryCorpus(t *testing.T, corpusPath, projectDir string, eventC
 
 	// Models to cycle through
 	models := []string{"haiku", "sonnet", "haiku", "sonnet", "haiku"}
-	subagentTypes := []string{"Explore", "general-purpose", "Explore", "general-purpose", "Plan"}
+	subagentTypes := []string{"Codebase Search", "Python Pro", "Librarian", "GO Pro", "Orchestrator"}
 	agents := []string{"codebase-search", "python-pro", "librarian", "go-pro", "orchestrator"}
 
 	for i := 0; i < eventCount; i++ {

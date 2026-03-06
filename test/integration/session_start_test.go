@@ -349,8 +349,8 @@ func TestSessionStart_RoutingSchemaLoad(t *testing.T) {
 			"sonnet": 3
 		},
 		"agent_subagent_mapping": {
-			"codebase-search": "Explore",
-			"tech-docs-writer": "general-purpose"
+			"codebase-search": "Codebase Search",
+			"tech-docs-writer": "Tech Docs Writer"
 		}
 	}`
 	os.WriteFile(schemaPath, []byte(schema), 0644)

@@ -44,12 +44,12 @@ func setupTestRoutingSchema(t *testing.T, projectDir string) {
     "opus": 4
   },
   "agent_subagent_mapping": {
-    "python-pro": "general-purpose",
-    "codebase-search": "Explore",
-    "tech-docs-writer": "general-purpose",
-    "code-reviewer": "Explore",
-    "orchestrator": "Plan",
-    "architect": "Plan"
+    "python-pro": "Python Pro",
+    "codebase-search": "Codebase Search",
+    "tech-docs-writer": "Tech Docs Writer",
+    "code-reviewer": "Code Reviewer",
+    "orchestrator": "Orchestrator",
+    "architect": "Architect"
   }
 }`
 
@@ -95,7 +95,7 @@ func TestEndToEnd_FullMLPipeline(t *testing.T) {
 		"tool_input": map[string]interface{}{
 			"model":         "sonnet",
 			"prompt":        "AGENT: python-pro\n\nImplement feature",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 		},
 		"session_id": sessionID,
 		"timestamp": time.Now().Unix(),
@@ -346,7 +346,7 @@ func TestEndToEnd_SessionStartToValidate(t *testing.T) {
 			"tool_input": map[string]interface{}{
 				"model":         "sonnet",
 				"prompt":        "AGENT: python-pro\n\nReview feedback",
-				"subagent_type": "general-purpose",
+				"subagent_type": "Python Pro",
 			},
 			"session_id":          sessionID,
 			"timestamp": time.Now().Unix(),
@@ -510,7 +510,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 		"tool_input": map[string]interface{}{
 			"model":         "opus",
 			"prompt":        "AGENT: einstein\n\nAnalyze",
-			"subagent_type": "general-purpose",
+			"subagent_type": "Python Pro",
 		},
 		"session_id": "e2e-test",
 	}
@@ -649,7 +649,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 			"tool_input": map[string]interface{}{
 				"model":         "opus",
 				"prompt":        "AGENT: einstein",
-				"subagent_type": "general-purpose",
+				"subagent_type": "Python Pro",
 			},
 			"session_id": "archive-test",
 		},

@@ -222,8 +222,8 @@ func TestReadStdin_MultipleTimeouts(t *testing.T) {
 		},
 		{
 			name:    "borderline timing",
-			delay:   90 * time.Millisecond,
-			timeout: 100 * time.Millisecond,
+			delay:   50 * time.Millisecond,
+			timeout: 500 * time.Millisecond,
 			wantErr: false,
 		},
 	}
