@@ -30,7 +30,7 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume",
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
@@ -52,7 +52,7 @@
         ]
       },
       {
-        "matcher": "Task",
+        "matcher": "Task|Agent",
         "hooks": [
           {
             "type": "command",
@@ -110,10 +110,33 @@
           }
         ]
       }
+    ],
+    "ConfigChange": [
+      {
+        "matcher": "user_settings|project_settings|local_settings",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-config-guard",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gogent-instructions-audit",
+            "timeout": 3
+          }
+        ]
+      }
     ]
   },
   "autoUpdatesChannel": "latest",
-  "minimumVersion": "2.1.25",
+  "minimumVersion": "2.1.69",
   "use_team_pattern": true,
   "trustedDirectories": [
     "/home/doktersmol",

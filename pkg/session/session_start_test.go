@@ -100,25 +100,133 @@ func TestParseSessionStartEvent_DefaultType(t *testing.T) {
 	}
 }
 
-func TestParseSessionStartEvent_InvalidType(t *testing.T) {
+func TestParseSessionStartEvent_UnknownType(t *testing.T) {
+	// v2.1.69+: Unknown types are allowed through with a warning (future-proofing)
 	jsonInput := `{
-		"type": "invalid_type",
-		"session_id": "session-bad-999"
+		"type": "unknown_future_type",
+		"session_id": "session-unknown-999"
 	}`
 
 	reader := strings.NewReader(jsonInput)
-	_, err := ParseSessionStartEvent(reader, 5*time.Second)
+	event, err := ParseSessionStartEvent(reader, 5*time.Second)
 
-	if err == nil {
-		t.Error("Expected error for invalid type")
+	if err != nil {
+		t.Fatalf("Expected no error for unknown type (log-and-pass), got: %v", err)
 	}
 
-	if !strings.Contains(err.Error(), "Invalid type") {
-		t.Errorf("Expected 'Invalid type' in error, got: %v", err)
+	if event.Type != "unknown_future_type" {
+		t.Errorf("Expected type 'unknown_future_type', got: %s", event.Type)
 	}
 
-	if !strings.Contains(err.Error(), "invalid_type") {
-		t.Errorf("Expected 'invalid_type' in error message, got: %v", err)
+	if event.SessionID != "session-unknown-999" {
+		t.Errorf("Expected session_id 'session-unknown-999', got: %s", event.SessionID)
+	}
+}
+
+func TestParseSessionStartEvent_ClearSource(t *testing.T) {
+	jsonInput := `{
+		"type": "clear",
+		"session_id": "session-clear-001"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSessionStartEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error for 'clear' type, got: %v", err)
+	}
+
+	if !event.IsClear() {
+		t.Error("Expected IsClear() to return true")
+	}
+
+	if event.IsStartup() || event.IsResume() || event.IsCompact() {
+		t.Error("Expected only IsClear() to return true")
+	}
+}
+
+func TestParseSessionStartEvent_CompactSource(t *testing.T) {
+	jsonInput := `{
+		"type": "compact",
+		"session_id": "session-compact-001"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSessionStartEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error for 'compact' type, got: %v", err)
+	}
+
+	if !event.IsCompact() {
+		t.Error("Expected IsCompact() to return true")
+	}
+
+	if event.IsStartup() || event.IsResume() || event.IsClear() {
+		t.Error("Expected only IsCompact() to return true")
+	}
+}
+
+func TestParseSessionStartEvent_WithV2169Fields(t *testing.T) {
+	jsonInput := `{
+		"type": "startup",
+		"session_id": "session-v2169",
+		"source": "startup",
+		"model": "claude-sonnet-4-6",
+		"agent_type": "my-agent",
+		"cwd": "/home/user/project",
+		"permission_mode": "default",
+		"transcript_path": "/path/to/transcript.jsonl"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSessionStartEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if event.Source != "startup" {
+		t.Errorf("Expected source 'startup', got: %s", event.Source)
+	}
+	if event.Model != "claude-sonnet-4-6" {
+		t.Errorf("Expected model 'claude-sonnet-4-6', got: %s", event.Model)
+	}
+	if event.AgentType != "my-agent" {
+		t.Errorf("Expected agent_type 'my-agent', got: %s", event.AgentType)
+	}
+	if event.CWD != "/home/user/project" {
+		t.Errorf("Expected cwd '/home/user/project', got: %s", event.CWD)
+	}
+	if event.PermissionMode != "default" {
+		t.Errorf("Expected permission_mode 'default', got: %s", event.PermissionMode)
+	}
+	if event.TranscriptPath != "/path/to/transcript.jsonl" {
+		t.Errorf("Expected transcript_path, got: %s", event.TranscriptPath)
+	}
+}
+
+func TestParseSessionEvent_WithCWD(t *testing.T) {
+	jsonInput := `{
+		"session_id": "session-end-001",
+		"transcript_path": "/path/to/transcript.jsonl",
+		"hook_event_name": "SessionEnd",
+		"cwd": "/home/user/project",
+		"permission_mode": "default"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSessionEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if event.CWD != "/home/user/project" {
+		t.Errorf("Expected cwd '/home/user/project', got: %s", event.CWD)
+	}
+	if event.PermissionMode != "default" {
+		t.Errorf("Expected permission_mode 'default', got: %s", event.PermissionMode)
 	}
 }
 

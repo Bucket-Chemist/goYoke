@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"time"
 )
 
@@ -13,6 +14,10 @@ type SessionEvent struct {
 	TranscriptPath string `json:"transcript_path"`
 	HookEventName  string `json:"hook_event_name"`
 	Timestamp      int64  `json:"timestamp,omitempty"`
+
+	// v2.1.69 common fields
+	CWD            string `json:"cwd,omitempty"`
+	PermissionMode string `json:"permission_mode,omitempty"`
 }
 
 // SessionMetrics represents collected session statistics
@@ -26,10 +31,18 @@ type SessionMetrics struct {
 
 // SessionStartEvent represents SessionStart hook event
 type SessionStartEvent struct {
-	Type          string `json:"type"`           // "startup" or "resume"
+	Type          string `json:"type"`           // "startup", "resume", "clear", or "compact"
 	SessionID     string `json:"session_id"`
 	Timestamp     int64  `json:"timestamp,omitempty"`
 	SchemaVersion string `json:"schema_version"` // Default "1.0"
+
+	// v2.1.69 common + SessionStart-specific fields
+	Source         string `json:"source,omitempty"`          // "startup"|"resume"|"clear"|"compact"
+	Model          string `json:"model,omitempty"`           // Model identifier
+	AgentType      string `json:"agent_type,omitempty"`      // Present with --agent
+	CWD            string `json:"cwd,omitempty"`
+	PermissionMode string `json:"permission_mode,omitempty"`
+	TranscriptPath string `json:"transcript_path,omitempty"`
 }
 
 // IsResume returns true if this is a resume session
@@ -40,6 +53,16 @@ func (e *SessionStartEvent) IsResume() bool {
 // IsStartup returns true if this is a startup session
 func (e *SessionStartEvent) IsStartup() bool {
 	return e.Type == "startup"
+}
+
+// IsClear returns true if this is a clear session (v2.1.69+)
+func (e *SessionStartEvent) IsClear() bool {
+	return e.Type == "clear"
+}
+
+// IsCompact returns true if this is a compact session (v2.1.69+)
+func (e *SessionStartEvent) IsCompact() bool {
+	return e.Type == "compact"
 }
 
 // ParseSessionEvent reads SessionEnd event from STDIN
@@ -119,10 +142,14 @@ func ParseSessionStartEvent(r io.Reader, timeout time.Duration) (*SessionStartEv
 			event.Type = "startup"
 		}
 
-		// Validate type field
-		if event.Type != "startup" && event.Type != "resume" {
-			ch <- result{nil, fmt.Errorf("[session-parser] Invalid type: %s (must be 'startup' or 'resume')", event.Type)}
-			return
+		// Validate type field (v2.1.69 adds "clear" and "compact")
+		validTypes := map[string]bool{
+			"startup": true, "resume": true,
+			"clear": true, "compact": true,
+		}
+		if event.Type != "" && !validTypes[event.Type] {
+			// Log unknown types but allow through (future-proofing)
+			fmt.Fprintf(os.Stderr, "[session-parser] Warning: Unknown session type: %s (allowing)\n", event.Type)
 		}
 
 		// Validate required fields

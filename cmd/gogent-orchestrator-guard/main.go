@@ -22,8 +22,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Extract agent metadata from transcript using EXISTING routing function
-	metadata, parseErr := routing.ParseTranscriptForMetadata(event.TranscriptPath)
+	// Extract agent metadata: uses direct event fields (v2.1.69+) with transcript fallback
+	metadata, parseErr := routing.EnrichMetadataFromEvent(event)
 	if parseErr != nil {
 		// Non-fatal: graceful degradation (allow completion if can't parse)
 		fmt.Fprintf(os.Stderr, "[orchestrator-guard] Warning: Failed to parse transcript: %v\n", parseErr)
@@ -56,7 +56,12 @@ func main() {
 	}
 
 	// Orchestrator-specific: Analyze transcript for background task tracking
-	analyzer := routing.NewTranscriptAnalyzer(event.TranscriptPath)
+	// Use agent_transcript_path when available (v2.1.69+)
+	analyzerPath := event.TranscriptPath
+	if event.AgentTranscriptPath != "" {
+		analyzerPath = event.AgentTranscriptPath
+	}
+	analyzer := routing.NewTranscriptAnalyzer(analyzerPath)
 	if err := analyzer.Analyze(); err != nil {
 		fmt.Fprintf(os.Stderr, "[orchestrator-guard] Warning: Analysis failed: %v\n", err)
 		outputAllow("Analysis failed - allowing by default")

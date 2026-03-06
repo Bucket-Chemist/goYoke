@@ -19,6 +19,13 @@ type ToolEvent struct {
 	SessionID     string                 `json:"session_id"`
 	HookEventName string                 `json:"hook_event_name"`
 	CapturedAt    int64                  `json:"captured_at"`
+
+	// v2.1.69 common fields
+	CWD            string `json:"cwd,omitempty"`
+	PermissionMode string `json:"permission_mode,omitempty"`
+	AgentID        string `json:"agent_id,omitempty"`
+	AgentType      string `json:"agent_type,omitempty"`
+	TranscriptPath string `json:"transcript_path,omitempty"`
 }
 
 // PostToolEvent represents PostToolUse events with execution results.
@@ -31,6 +38,12 @@ type PostToolEvent struct {
 	SessionID     string                 `json:"session_id"`
 	HookEventName string                 `json:"hook_event_name"`
 	CapturedAt    int64                  `json:"captured_at"`
+
+	// v2.1.69 common fields
+	CWD            string `json:"cwd,omitempty"`
+	PermissionMode string `json:"permission_mode,omitempty"`
+	AgentID        string `json:"agent_id,omitempty"`
+	AgentType      string `json:"agent_type,omitempty"`
 
 	// === ML Telemetry Fields (GOgent-086b) ===
 	// All omitempty for backward compatibility
@@ -69,20 +82,23 @@ type PostToolEvent struct {
 	EntitiesFound    int     `json:"entities_found,omitempty"`
 }
 
-// VALIDATION NOTES (GOgent-006):
+// VALIDATION NOTES (GOgent-006, updated GOgent-v2169):
 //
 // Struct validated against 100+ real production events from event-corpus.json.
 // All events conform to this structure. Key validation findings:
 //
-// 1. CWD Field: Not present in any corpus events. Not added to struct.
+// 1. CWD Field: Added in v2.1.69 as a common field on all hook events.
 // 2. Timestamp: All events use "captured_at" (Unix epoch int64). No alternatives found.
 // 3. ToolInput: Always a JSON object (map[string]interface{}). Never null or string.
-// 4. Field Visibility: All 5 fields required and present in 100% of events.
+// 4. Field Visibility: Core 5 fields required and present in 100% of events.
 // 5. PostToolUse: Adds tool_response field (map[string]interface{}) to base structure.
+// 6. v2.1.69: Added common fields: cwd, permission_mode, agent_id, agent_type.
+//    agent_id/agent_type present only when running inside a subagent or with --agent.
 //
 // Corpus coverage: Task, Read, Write, Edit, Bash, Glob, Grep tools.
 // Event types: PreToolUse, PostToolUse.
-// Validation date: 2026-01-16
+// Original validation date: 2026-01-16
+// Schema update: 2026-03-06 (v2.1.69 compatibility)
 
 // ToolEvent Helper Methods (GOgent-080)
 
@@ -251,14 +267,23 @@ func ParseTaskInput(toolInput map[string]interface{}) (*TaskInput, error) {
 	return &taskInput, nil
 }
 
-// SubagentStopEvent represents the ACTUAL Claude Code SubagentStop hook event.
-// Agent metadata is NOT directly available in this event - must parse transcript file.
-// Schema validated via GOgent-063a research.
+// SubagentStopEvent represents the Claude Code SubagentStop hook event.
+// As of v2.1.69, agent metadata is available directly in event fields.
+// For pre-v2.1.69 compatibility, metadata can also be extracted from transcript file.
+// Schema validated via GOgent-063a research, updated GOgent-v2169.
 type SubagentStopEvent struct {
 	HookEventName  string `json:"hook_event_name"` // Always "SubagentStop"
 	SessionID      string `json:"session_id"`
-	TranscriptPath string `json:"transcript_path"` // Path to agent transcript file
+	TranscriptPath string `json:"transcript_path"` // Session transcript path
 	StopHookActive bool   `json:"stop_hook_active"`
+
+	// v2.1.69 common + SubagentStop-specific fields
+	AgentID              string `json:"agent_id,omitempty"`               // Unique subagent identifier
+	AgentType            string `json:"agent_type,omitempty"`             // Agent name (e.g., "Explore", "GO Pro")
+	AgentTranscriptPath  string `json:"agent_transcript_path,omitempty"`  // Subagent's own transcript (separate from session)
+	LastAssistantMessage string `json:"last_assistant_message,omitempty"` // Final response text
+	CWD                  string `json:"cwd,omitempty"`
+	PermissionMode       string `json:"permission_mode,omitempty"`
 }
 
 // ParsedAgentMetadata contains agent information extracted from transcript file.
@@ -280,21 +305,28 @@ const (
 	ClassImplementation AgentClass = "implementation"
 	ClassSpecialist     AgentClass = "specialist"
 	ClassCoordination   AgentClass = "coordination"
+	ClassAnalysis       AgentClass = "analysis"
 	ClassReview         AgentClass = "review"
 	ClassUnknown        AgentClass = "unknown"
 )
 
-// GetAgentClass returns the class of agent based on agent_id
+// GetAgentClass returns the class of agent based on agent_id.
+// Orchestrator-class agents may spawn background tasks and need collection validation.
 func GetAgentClass(agentID string) AgentClass {
 	switch agentID {
-	case "orchestrator", "architect", "einstein":
+	case "orchestrator", "architect", "einstein", "planner", "mozart",
+		"review-orchestrator", "impl-manager", "python-architect":
 		return ClassOrchestrator
-	case "python-pro", "python-ux", "go-pro", "r-pro", "r-shiny-pro":
+	case "python-pro", "python-ux", "go-pro", "go-cli", "go-tui", "go-api",
+		"go-concurrent", "r-pro", "r-shiny-pro", "typescript-pro", "react-pro":
 		return ClassImplementation
-	case "code-reviewer", "librarian", "tech-docs-writer", "scaffolder":
+	case "code-reviewer", "librarian", "tech-docs-writer", "scaffolder",
+		"backend-reviewer", "frontend-reviewer", "standards-reviewer", "memory-archivist":
 		return ClassSpecialist
 	case "codebase-search", "haiku-scout":
 		return ClassCoordination
+	case "beethoven", "staff-architect-critical-review", "gemini-slave":
+		return ClassAnalysis
 	default:
 		return ClassUnknown
 	}
@@ -316,8 +348,8 @@ func ParseSubagentStopEvent(r io.Reader, timeout time.Duration) (*SubagentStopEv
 	if event.SessionID == "" {
 		return nil, fmt.Errorf("[agent-endstate] Missing required field: session_id")
 	}
-	if event.TranscriptPath == "" {
-		return nil, fmt.Errorf("[agent-endstate] Missing required field: transcript_path")
+	if event.TranscriptPath == "" && event.AgentTranscriptPath == "" {
+		return nil, fmt.Errorf("[agent-endstate] Missing required field: transcript_path or agent_transcript_path")
 	}
 	if event.HookEventName != "SubagentStop" {
 		return nil, fmt.Errorf("[agent-endstate] Invalid hook_event_name: %s (expected SubagentStop)", event.HookEventName)
@@ -415,6 +447,70 @@ func deriveTierFromModel(model string) string {
 // IsSuccess returns true if agent completed successfully (derived from metadata)
 func (m *ParsedAgentMetadata) IsSuccess() bool {
 	return m.ExitCode == 0
+}
+
+// EnrichMetadataFromEvent populates agent metadata from direct event fields (v2.1.69+),
+// falling back to transcript parsing when event fields are absent.
+// Always parses transcript for duration, tokens, and exit code (not in event fields).
+func EnrichMetadataFromEvent(event *SubagentStopEvent) (*ParsedAgentMetadata, error) {
+	metadata := &ParsedAgentMetadata{ExitCode: 0}
+	hasDirectFields := false
+
+	// Priority 1: Direct event fields (zero I/O)
+	if event.AgentID != "" {
+		metadata.AgentID = event.AgentID
+		hasDirectFields = true
+	}
+	if event.AgentType != "" && metadata.AgentID == "" {
+		// Normalize human-readable type to kebab-case ID
+		metadata.AgentID = normalizeAgentType(event.AgentType)
+		hasDirectFields = true
+	}
+
+	// Priority 2: Transcript parsing for duration, exit code, and fallback ID
+	// Use agent_transcript_path if available (v2.1.69+), else session transcript_path
+	transcriptPath := event.TranscriptPath
+	if event.AgentTranscriptPath != "" {
+		transcriptPath = event.AgentTranscriptPath
+	}
+
+	fileMetadata, fileErr := ParseTranscriptForMetadata(transcriptPath)
+	if fileErr != nil {
+		if !hasDirectFields {
+			return metadata, fileErr
+		}
+		// Event fields available but transcript missing — return partial metadata
+		return metadata, nil
+	}
+
+	// Merge: event fields take precedence for identity
+	if metadata.AgentID == "" {
+		metadata.AgentID = fileMetadata.AgentID
+	}
+	if metadata.AgentModel == "" {
+		metadata.AgentModel = fileMetadata.AgentModel
+	}
+	if metadata.Tier == "" {
+		metadata.Tier = fileMetadata.Tier
+	}
+
+	// Always use transcript-derived metrics (not available in event fields)
+	metadata.DurationMs = fileMetadata.DurationMs
+	metadata.OutputTokens = fileMetadata.OutputTokens
+	metadata.ExitCode = fileMetadata.ExitCode
+
+	return metadata, nil
+}
+
+// normalizeAgentType converts human-readable agent type to kebab-case ID.
+// Strips parenthetical suffixes before normalization.
+// Examples: "GO Pro" → "go-pro", "GO CLI (Cobra)" → "go-cli", "Python UX (PySide6)" → "python-ux"
+func normalizeAgentType(agentType string) string {
+	// Strip parenthetical suffix: "GO CLI (Cobra)" → "GO CLI"
+	if idx := strings.Index(agentType, "("); idx > 0 {
+		agentType = strings.TrimSpace(agentType[:idx])
+	}
+	return strings.ToLower(strings.ReplaceAll(strings.TrimSpace(agentType), " ", "-"))
 }
 
 // truncate limits data to maxLen for error messages.

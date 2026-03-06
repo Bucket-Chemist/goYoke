@@ -38,8 +38,8 @@ func main() {
 
 // processEvent handles SubagentStop event processing (testable)
 func processEvent(event *routing.SubagentStopEvent) (*workflow.EndstateResponse, error) {
-	// Parse transcript for agent metadata (CRITICAL: metadata not in event directly)
-	metadata, parseErr := routing.ParseTranscriptForMetadata(event.TranscriptPath)
+	// Extract agent metadata: uses direct event fields (v2.1.69+) with transcript fallback
+	metadata, parseErr := routing.EnrichMetadataFromEvent(event)
 	if parseErr != nil {
 		// Non-fatal: transcript parsing failure
 		// Continue with empty metadata - GenerateEndstateResponse will use defaults

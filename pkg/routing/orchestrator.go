@@ -19,12 +19,12 @@ func ParseOrchestratorStopEvent(r io.Reader, timeout time.Duration) (*ParsedAgen
 		return nil, fmt.Errorf("[orchestrator-guard] Failed to parse SubagentStop event: %w", err)
 	}
 
-	// Extract agent metadata from the transcript file
-	// ParseTranscriptForMetadata returns partial metadata even on error (graceful degradation)
-	metadata, err := ParseTranscriptForMetadata(event.TranscriptPath)
+	// Extract agent metadata: uses direct event fields (v2.1.69+) with transcript fallback
+	// EnrichMetadataFromEvent returns partial metadata even on error (graceful degradation)
+	metadata, err := EnrichMetadataFromEvent(event)
 	if err != nil {
 		// Wrap error but still return partial metadata
-		return metadata, fmt.Errorf("[orchestrator-guard] Failed to parse transcript at %s: %w", event.TranscriptPath, err)
+		return metadata, fmt.Errorf("[orchestrator-guard] Failed to enrich metadata: %w", err)
 	}
 
 	return metadata, nil

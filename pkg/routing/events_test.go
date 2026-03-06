@@ -1349,20 +1349,44 @@ func TestGetAgentClass_All(t *testing.T) {
 		agentID       string
 		expectedClass AgentClass
 	}{
+		// Orchestrator class
 		{"orchestrator", ClassOrchestrator},
 		{"architect", ClassOrchestrator},
 		{"einstein", ClassOrchestrator},
+		{"planner", ClassOrchestrator},
+		{"mozart", ClassOrchestrator},
+		{"review-orchestrator", ClassOrchestrator},
+		{"impl-manager", ClassOrchestrator},
+		{"python-architect", ClassOrchestrator},
+		// Implementation class
 		{"python-pro", ClassImplementation},
 		{"python-ux", ClassImplementation},
 		{"go-pro", ClassImplementation},
+		{"go-cli", ClassImplementation},
+		{"go-tui", ClassImplementation},
+		{"go-api", ClassImplementation},
+		{"go-concurrent", ClassImplementation},
 		{"r-pro", ClassImplementation},
 		{"r-shiny-pro", ClassImplementation},
+		{"typescript-pro", ClassImplementation},
+		{"react-pro", ClassImplementation},
+		// Specialist class
 		{"code-reviewer", ClassSpecialist},
 		{"librarian", ClassSpecialist},
 		{"tech-docs-writer", ClassSpecialist},
 		{"scaffolder", ClassSpecialist},
+		{"backend-reviewer", ClassSpecialist},
+		{"frontend-reviewer", ClassSpecialist},
+		{"standards-reviewer", ClassSpecialist},
+		{"memory-archivist", ClassSpecialist},
+		// Coordination class
 		{"codebase-search", ClassCoordination},
 		{"haiku-scout", ClassCoordination},
+		// Analysis class
+		{"beethoven", ClassAnalysis},
+		{"staff-architect-critical-review", ClassAnalysis},
+		{"gemini-slave", ClassAnalysis},
+		// Unknown
 		{"unknown-agent", ClassUnknown},
 		{"", ClassUnknown},
 	}
@@ -1532,6 +1556,272 @@ func TestParseSubagentStopEvent_StopHookActiveVariations(t *testing.T) {
 
 			if event.StopHookActive != tc.expected {
 				t.Errorf("Expected StopHookActive=%v, got %v", tc.expected, event.StopHookActive)
+			}
+		})
+	}
+}
+
+// ============================================================================
+// v2.1.69 Compatibility Tests
+// ============================================================================
+
+// Test SubagentStopEvent with v2.1.69 fields
+func TestParseSubagentStopEvent_WithV2169Fields(t *testing.T) {
+	jsonInput := `{
+		"hook_event_name": "SubagentStop",
+		"session_id": "test-v2169",
+		"transcript_path": "/path/to/session.jsonl",
+		"stop_hook_active": false,
+		"agent_id": "go-pro",
+		"agent_type": "GO Pro",
+		"agent_transcript_path": "/path/to/subagents/agent-abc123.jsonl",
+		"last_assistant_message": "Implementation complete.",
+		"cwd": "/home/user/project",
+		"permission_mode": "default"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if event.AgentID != "go-pro" {
+		t.Errorf("Expected agent_id 'go-pro', got: %s", event.AgentID)
+	}
+	if event.AgentType != "GO Pro" {
+		t.Errorf("Expected agent_type 'GO Pro', got: %s", event.AgentType)
+	}
+	if event.AgentTranscriptPath != "/path/to/subagents/agent-abc123.jsonl" {
+		t.Errorf("Expected agent_transcript_path, got: %s", event.AgentTranscriptPath)
+	}
+	if event.LastAssistantMessage != "Implementation complete." {
+		t.Errorf("Expected last_assistant_message, got: %s", event.LastAssistantMessage)
+	}
+	if event.CWD != "/home/user/project" {
+		t.Errorf("Expected cwd '/home/user/project', got: %s", event.CWD)
+	}
+	if event.PermissionMode != "default" {
+		t.Errorf("Expected permission_mode 'default', got: %s", event.PermissionMode)
+	}
+}
+
+// Test SubagentStopEvent with only agent_transcript_path (no transcript_path)
+func TestParseSubagentStopEvent_AgentTranscriptPathOnly(t *testing.T) {
+	jsonInput := `{
+		"hook_event_name": "SubagentStop",
+		"session_id": "test-atp-only",
+		"agent_transcript_path": "/path/to/subagents/agent-def456.jsonl",
+		"agent_id": "python-pro"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	event, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err != nil {
+		t.Fatalf("Expected no error when agent_transcript_path is present, got: %v", err)
+	}
+
+	if event.TranscriptPath != "" {
+		t.Errorf("Expected empty transcript_path, got: %s", event.TranscriptPath)
+	}
+	if event.AgentTranscriptPath != "/path/to/subagents/agent-def456.jsonl" {
+		t.Errorf("Expected agent_transcript_path, got: %s", event.AgentTranscriptPath)
+	}
+}
+
+// Test SubagentStopEvent missing both transcript paths rejects
+func TestParseSubagentStopEvent_MissingBothTranscriptPaths(t *testing.T) {
+	jsonInput := `{
+		"hook_event_name": "SubagentStop",
+		"session_id": "test-no-paths",
+		"agent_id": "python-pro"
+	}`
+
+	reader := strings.NewReader(jsonInput)
+	_, err := ParseSubagentStopEvent(reader, 5*time.Second)
+
+	if err == nil {
+		t.Fatal("Expected error when both transcript paths are missing")
+	}
+
+	if !strings.Contains(err.Error(), "transcript_path or agent_transcript_path") {
+		t.Errorf("Error should mention both paths, got: %v", err)
+	}
+}
+
+// ============================================================================
+// EnrichMetadataFromEvent Tests (v2.1.69 optimization)
+// ============================================================================
+
+func TestEnrichMetadataFromEvent_DirectFieldsOnly(t *testing.T) {
+	// Event has agent_id but no transcript → returns partial metadata
+	event := &SubagentStopEvent{
+		HookEventName: "SubagentStop",
+		SessionID:     "test-direct",
+		AgentID:       "go-pro",
+		AgentType:     "GO Pro",
+		// No transcript_path → transcript parsing will fail
+	}
+
+	metadata, err := EnrichMetadataFromEvent(event)
+	if err != nil {
+		t.Fatalf("Expected no error with direct fields, got: %v", err)
+	}
+
+	if metadata.AgentID != "go-pro" {
+		t.Errorf("Expected agent_id 'go-pro', got: %s", metadata.AgentID)
+	}
+}
+
+func TestEnrichMetadataFromEvent_FallbackToTranscript(t *testing.T) {
+	// Event has no direct fields → falls back to transcript
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+	transcriptContent := `{"content":"AGENT: python-pro","role":"user","timestamp":1705708800}
+{"model":"claude-sonnet-4-5","timestamp":1705708810}
+{"content":"Done","role":"assistant","timestamp":1705708820}
+`
+	os.WriteFile(transcriptPath, []byte(transcriptContent), 0644)
+
+	event := &SubagentStopEvent{
+		HookEventName:  "SubagentStop",
+		SessionID:      "test-fallback",
+		TranscriptPath: transcriptPath,
+	}
+
+	metadata, err := EnrichMetadataFromEvent(event)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if metadata.AgentID != "python-pro" {
+		t.Errorf("Expected agent_id 'python-pro' from transcript, got: %s", metadata.AgentID)
+	}
+	if metadata.Tier != "sonnet" {
+		t.Errorf("Expected tier 'sonnet' from transcript, got: %s", metadata.Tier)
+	}
+}
+
+func TestEnrichMetadataFromEvent_MixedSources(t *testing.T) {
+	// Event has agent_id, transcript has duration/model → merged
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+	transcriptContent := `{"content":"AGENT: python-pro","role":"user","timestamp":1705708800}
+{"model":"claude-sonnet-4-5","timestamp":1705708810}
+{"content":"Done","role":"assistant","timestamp":1705708820}
+`
+	os.WriteFile(transcriptPath, []byte(transcriptContent), 0644)
+
+	event := &SubagentStopEvent{
+		HookEventName:  "SubagentStop",
+		SessionID:      "test-mixed",
+		TranscriptPath: transcriptPath,
+		AgentID:        "go-pro", // Direct field takes precedence
+	}
+
+	metadata, err := EnrichMetadataFromEvent(event)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Event field wins for AgentID
+	if metadata.AgentID != "go-pro" {
+		t.Errorf("Expected agent_id 'go-pro' from event (precedence), got: %s", metadata.AgentID)
+	}
+	// Transcript provides model/tier
+	if metadata.Tier != "sonnet" {
+		t.Errorf("Expected tier 'sonnet' from transcript, got: %s", metadata.Tier)
+	}
+	// Transcript provides duration
+	if metadata.DurationMs == 0 {
+		t.Error("Expected non-zero duration from transcript")
+	}
+}
+
+func TestEnrichMetadataFromEvent_PrefersAgentTranscriptPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Session transcript (wrong agent)
+	sessionPath := filepath.Join(tmpDir, "session.jsonl")
+	os.WriteFile(sessionPath, []byte(`{"content":"AGENT: wrong-agent","timestamp":1705708800}
+`), 0644)
+
+	// Agent transcript (correct agent)
+	agentPath := filepath.Join(tmpDir, "agent.jsonl")
+	os.WriteFile(agentPath, []byte(`{"content":"AGENT: correct-agent","timestamp":1705708800}
+{"timestamp":1705708810}
+`), 0644)
+
+	event := &SubagentStopEvent{
+		HookEventName:      "SubagentStop",
+		SessionID:          "test-atp",
+		TranscriptPath:     sessionPath,
+		AgentTranscriptPath: agentPath, // Should use this one
+	}
+
+	metadata, err := EnrichMetadataFromEvent(event)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if metadata.AgentID != "correct-agent" {
+		t.Errorf("Expected agent_id from agent_transcript_path, got: %s", metadata.AgentID)
+	}
+}
+
+func TestEnrichMetadataFromEvent_EventAndTranscriptDisagree(t *testing.T) {
+	// Event has agent_id "go-pro", transcript has "AGENT: python-pro" → event wins
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
+	os.WriteFile(transcriptPath, []byte(`{"content":"AGENT: python-pro","timestamp":1705708800}
+{"timestamp":1705708810}
+`), 0644)
+
+	event := &SubagentStopEvent{
+		HookEventName:  "SubagentStop",
+		SessionID:      "test-disagree",
+		TranscriptPath: transcriptPath,
+		AgentID:        "go-pro", // Event field wins
+	}
+
+	metadata, err := EnrichMetadataFromEvent(event)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if metadata.AgentID != "go-pro" {
+		t.Errorf("Expected event agent_id 'go-pro' to take precedence, got: %s", metadata.AgentID)
+	}
+}
+
+func TestNormalizeAgentType(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"GO Pro", "go-pro"},
+		{"Python Pro", "python-pro"},
+		{"Explore", "explore"},
+		{"Codebase Search", "codebase-search"},
+		{"GO TUI (Bubbletea)", "go-tui"},       // parenthetical stripped
+		{"GO CLI (Cobra)", "go-cli"},             // parenthetical stripped
+		{"GO API (HTTP Client)", "go-api"},       // parenthetical stripped
+		{"Python UX (PySide6)", "python-ux"},     // parenthetical stripped
+		{"  Haiku Scout  ", "haiku-scout"},
+		{"R Pro", "r-pro"},
+		{"TypeScript Pro", "typescript-pro"},
+		{"Staff Architect Critical Review", "staff-architect-critical-review"},
+		{"haiku-scout", "haiku-scout"},           // already normalized
+		{"", ""},                                  // empty string
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			result := normalizeAgentType(tc.input)
+			if result != tc.expected {
+				t.Errorf("normalizeAgentType(%q) = %q, want %q", tc.input, result, tc.expected)
 			}
 		})
 	}
