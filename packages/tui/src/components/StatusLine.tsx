@@ -127,23 +127,39 @@ function useGitInfo(cacheTtlMs = 5000): {
  * Context progress bar component
  * Shows token usage as a visual bar with color coding
  */
+function formatCapacity(capacity: number | null): string {
+  if (capacity === null) return "";
+  if (capacity >= 1_000_000) return ` ${(capacity / 1_000_000).toFixed(0)}M`;
+  if (capacity >= 1_000) return ` ${(capacity / 1_000).toFixed(0)}K`;
+  return ` ${capacity}`;
+}
+
 function ContextBar({
   percentage,
+  capacity,
   width = 10,
 }: {
-  percentage: number;
+  percentage: number | null;
+  capacity: number | null;
   width?: number;
 }): JSX.Element {
+  if (percentage === null) {
+    return (
+      <Text color={colors.muted}>{"░".repeat(width)} —</Text>
+    );
+  }
+
   const filled = Math.round((percentage * width) / 100);
   const empty = width - filled;
   const color =
     percentage >= 90 ? colors.error : percentage >= 70 ? colors.warning : colors.success;
+  const cap = formatCapacity(capacity);
 
   return (
     <Text>
       <Text color={color}>{"▓".repeat(filled)}</Text>
       <Text color={colors.muted}>{"░".repeat(empty)}</Text>
-      <Text color={colors.muted}> {Math.round(percentage)}%</Text>
+      <Text color={colors.muted}> {Math.round(percentage)}%{cap}</Text>
     </Text>
   );
 }
@@ -207,7 +223,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
 
   // Calculate context percentage based on actual context window usage
   const contextPct = useMemo(() => {
-    if (contextWindow.totalCapacity === 0) return 0;
+    if (contextWindow.totalCapacity === null || contextWindow.totalCapacity === 0) return null;
     return Math.min(
       100,
       Math.round((contextWindow.usedTokens / contextWindow.totalCapacity) * 100)
@@ -254,8 +270,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     return { aliveCount, furthest, totalSpend };
   }, [teams]);
 
-  // Responsive layout
-  const effectiveHeight = width < 100 ? 1 : height;
+  // Responsive layout — always show both lines
   const showGit = width >= 80;
   const projectName = "GOgent-Fortress";
 
@@ -263,7 +278,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
   const contextBarWidth = Math.max(10, Math.min(30, Math.floor(width * 0.12)));
 
   return (
-    <Box flexDirection="column" width={width}>
+    <Box flexDirection="column" width={width} flexShrink={0}>
       {/* Separator line */}
       <Text color={colors.muted} dimColor>
         {"─".repeat(width)}
@@ -308,11 +323,10 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
       </Box>
 
       {/* Line 2: LEFT = context bar + cost | RIGHT = duration + agents + teams */}
-      {effectiveHeight >= 2 && (
-        <Box width={width} justifyContent="space-between">
+      <Box width={width} justifyContent="space-between">
           {/* Left group */}
           <Box>
-            <ContextBar percentage={contextPct} width={contextBarWidth} />
+            <ContextBar percentage={contextPct} capacity={contextWindow.totalCapacity} width={contextBarWidth} />
             <Text color={colors.muted}> | </Text>
             <Text color={colors.warning}>${cost}</Text>
           </Box>
@@ -354,7 +368,6 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
             )}
           </Box>
         </Box>
-      )}
     </Box>
   );
 }

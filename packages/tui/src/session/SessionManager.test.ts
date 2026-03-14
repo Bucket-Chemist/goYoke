@@ -40,12 +40,12 @@ vi.mock("../store/index.js", () => {
     preferredModel: "sonnet",
     contextWindow: {
       usedTokens: 0,
-      totalCapacity: 200000,
+      totalCapacity: null,
     },
     // Provider namespace (required since multi-provider refactor)
     activeProvider: "anthropic",
     providerSessionIds: { anthropic: null } as Record<string, string | null>,
-    providerModels: { anthropic: "claude-sonnet-4-5" } as Record<string, string>,
+    providerModels: { anthropic: "claude-sonnet-4-6" } as Record<string, string>,
 
     // ── agents slice (backed by mutableState) ─────────────────────────────
     get rootAgentId() { return mutableState.rootAgentId; },

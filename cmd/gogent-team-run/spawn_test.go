@@ -615,6 +615,81 @@ func TestBuildCLIArgs(t *testing.T) {
 	}
 }
 
+// TestBuildCLIArgs1MContextPropagation tests that [1m] suffix is inherited from env vars
+func TestBuildCLIArgs1MContextPropagation(t *testing.T) {
+	tests := []struct {
+		name          string
+		model         string
+		envVar        string
+		envVal        string
+		expectedModel string
+	}{
+		{
+			name:          "sonnet_gets_1m_from_env",
+			model:         "sonnet",
+			envVar:        "ANTHROPIC_DEFAULT_SONNET_MODEL",
+			envVal:        "claude-sonnet-4-6[1m]",
+			expectedModel: "sonnet[1m]",
+		},
+		{
+			name:          "opus_gets_1m_from_env",
+			model:         "opus",
+			envVar:        "ANTHROPIC_DEFAULT_OPUS_MODEL",
+			envVal:        "claude-opus-4-6[1m]",
+			expectedModel: "opus[1m]",
+		},
+		{
+			name:          "haiku_never_gets_1m",
+			model:         "haiku",
+			envVar:        "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+			envVal:        "claude-haiku-4-5[1m]",
+			expectedModel: "haiku",
+		},
+		{
+			name:          "no_1m_when_env_lacks_suffix",
+			model:         "sonnet",
+			envVar:        "ANTHROPIC_DEFAULT_SONNET_MODEL",
+			envVal:        "claude-sonnet-4-6",
+			expectedModel: "sonnet",
+		},
+		{
+			name:          "no_double_1m",
+			model:         "sonnet[1m]",
+			envVar:        "ANTHROPIC_DEFAULT_SONNET_MODEL",
+			envVal:        "claude-sonnet-4-6[1m]",
+			expectedModel: "sonnet[1m]",
+		},
+		{
+			name:          "no_1m_when_env_unset",
+			model:         "sonnet",
+			envVar:        "ANTHROPIC_DEFAULT_SONNET_MODEL",
+			envVal:        "",
+			expectedModel: "sonnet",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Always set the env var (even to empty) to isolate from host env
+			t.Setenv(tc.envVar, tc.envVal)
+			config := &agentCLIConfig{
+				Model:        tc.model,
+				AllowedTools: []string{"Read"},
+			}
+			args := buildCLIArgs(config)
+			modelIdx := -1
+			for i, a := range args {
+				if a == "--model" && i+1 < len(args) {
+					modelIdx = i + 1
+					break
+				}
+			}
+			assert.NotEqual(t, -1, modelIdx, "expected --model flag")
+			assert.Equal(t, tc.expectedModel, args[modelIdx])
+		})
+	}
+}
+
 // TestIsRetryableError tests error classification for retry decisions
 func TestIsRetryableError(t *testing.T) {
 	tests := []struct {
@@ -1552,11 +1627,11 @@ func TestWorkflowTimeout(t *testing.T) {
 		workflow string
 		want     time.Duration
 	}{
-		{"braintrust", 25 * time.Minute},
+		{"braintrust", 30 * time.Minute},
 		{"implementation", 10 * time.Minute},
 		{"review", 5 * time.Minute},
-		{"unknown", 10 * time.Minute},
-		{"", 10 * time.Minute},
+		{"unknown", 15 * time.Minute},
+		{"", 15 * time.Minute},
 	}
 	for _, tt := range tests {
 		t.Run(tt.workflow, func(t *testing.T) {

@@ -186,7 +186,7 @@ export interface SessionSlice {
   tokenCount: TokenCount;
   contextWindow: {
     usedTokens: number;      // input + cache_creation + cache_read from last API call
-    totalCapacity: number;   // contextWindow from ModelUsage (default 200000)
+    totalCapacity: number | null;  // contextWindow from ModelUsage (null = unknown, pending SDK report)
   };
   permissionMode: string;
   isCompacting: boolean;
@@ -209,7 +209,7 @@ export interface SessionSlice {
   updateSession: (data: Partial<SessionData>) => void;
   incrementCost: (cost: number) => void;
   addTokens: (tokens: Partial<TokenCount>) => void;
-  updateContextWindow: (usedTokens: number, totalCapacity: number) => void;
+  updateContextWindow: (usedTokens: number, totalCapacity: number | null) => void;
   setPermissionMode: (mode: string) => void;
   setCompacting: (compacting: boolean) => void;
   isPlanMode: () => boolean;
@@ -246,7 +246,6 @@ export interface ModelDefinition {
   id: string;
   displayName: string;
   description: string;
-  contextWindow: number;
 }
 
 export interface ProviderDefinition {

@@ -429,7 +429,15 @@ export function buildCliArgs(args: {
   const cliArgs = ["-p", "--output-format", "json"];
 
   if (args.model) {
-    cliArgs.push("--model", args.model);
+    // Inherit 1M context from root session — if the root model uses [1m],
+    // propagate it to subagents so they don't fall back to 200K.
+    // Only Opus and Sonnet support 1M context; Haiku does not.
+    let model = args.model;
+    const rootModel = useStore.getState().getActiveModel() ?? "";
+    if (rootModel.includes("[1m]") && !model.includes("[1m]") && !model.includes("haiku")) {
+      model = `${model}[1m]`;
+    }
+    cliArgs.push("--model", model);
   }
 
   // Use delegate mode instead of dangerously-skip-permissions

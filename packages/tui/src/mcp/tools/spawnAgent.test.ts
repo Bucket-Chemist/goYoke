@@ -141,6 +141,57 @@ describe("spawn_agent tool", () => {
       expect(args).toContain("--allowedTools");
       expect(args).toContain("Read,Glob,Grep");
     });
+
+    it("should propagate [1m] from root model to subagent", async () => {
+      // Mock the store to return a root model with [1m]
+      const { useStore } = await import("../../store/index.js");
+      const original = useStore.getState().getActiveModel;
+      useStore.getState().getActiveModel = () => "opus[1m]";
+
+      const args = buildCliArgs({ model: "sonnet" });
+      expect(args).toContain("--model");
+      expect(args).toContain("sonnet[1m]");
+
+      // Restore
+      useStore.getState().getActiveModel = original;
+    });
+
+    it("should not double-append [1m] if subagent already has it", async () => {
+      const { useStore } = await import("../../store/index.js");
+      const original = useStore.getState().getActiveModel;
+      useStore.getState().getActiveModel = () => "opus[1m]";
+
+      const args = buildCliArgs({ model: "sonnet[1m]" });
+      expect(args).toContain("sonnet[1m]");
+      expect(args).not.toContain("sonnet[1m][1m]");
+
+      useStore.getState().getActiveModel = original;
+    });
+
+    it("should not append [1m] to haiku (no 1M support)", async () => {
+      const { useStore } = await import("../../store/index.js");
+      const original = useStore.getState().getActiveModel;
+      useStore.getState().getActiveModel = () => "opus[1m]";
+
+      const args = buildCliArgs({ model: "haiku" });
+      const modelIdx = args.indexOf("--model");
+      expect(args[modelIdx + 1]).toBe("haiku");
+
+      useStore.getState().getActiveModel = original;
+    });
+
+    it("should not append [1m] when root model lacks it", async () => {
+      const { useStore } = await import("../../store/index.js");
+      const original = useStore.getState().getActiveModel;
+      useStore.getState().getActiveModel = () => "opus";
+
+      const args = buildCliArgs({ model: "sonnet" });
+      expect(args).toContain("sonnet");
+      const modelIdx = args.indexOf("--model");
+      expect(args[modelIdx + 1]).toBe("sonnet");
+
+      useStore.getState().getActiveModel = original;
+    });
   });
 
   describe("parseCliOutput", () => {

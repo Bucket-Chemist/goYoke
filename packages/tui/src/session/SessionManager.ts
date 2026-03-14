@@ -18,6 +18,7 @@ import { nanoid } from "nanoid";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
+import { readFileSync } from "fs";
 import {
   SessionState,
   type SessionManagerConfig,
@@ -32,6 +33,7 @@ import { logger } from "../utils/logger.js";
 import { type ClassifiedError, type ErrorType } from "../types/events.js";
 import { onShutdown, isShutdownInProgress } from "../lifecycle/shutdown.js";
 import { PROVIDERS } from "../config/providers.js";
+import { resolveContextWindow } from "../utils/resolveContextWindow.js";
 
 /**
  * SDK tools handled internally by CLI subprocess.
@@ -357,8 +359,24 @@ class SessionManager {
     const store = useStore.getState();
     const activeProvider = store.activeProvider;
     const existingSessionId = store.providerSessionIds[activeProvider];
-    const preferredModel = store.providerModels[activeProvider];
+    let preferredModel = store.providerModels[activeProvider];
     const projectDir = store.providerProjectDirs[activeProvider];
+
+    // If no model preference set, read from settings.json in the active config dir.
+    // The SDK's settingSources loads hooks/permissions but NOT the model key,
+    // so we read it explicitly and pass it via the model option.
+    if (!preferredModel && activeProvider === "anthropic") {
+      try {
+        const configDir = process.env["CLAUDE_CONFIG_DIR"] || join(homedir(), ".claude");
+        const settings = JSON.parse(readFileSync(join(configDir, "settings.json"), "utf-8"));
+        if (settings.model) {
+          preferredModel = settings.model;
+          store.setProviderModel(activeProvider, preferredModel);
+        }
+      } catch {
+        // settings.json missing or invalid — SDK will use its own default
+      }
+    }
 
     // Create Promise that resolves when system.init event received
     const initPromise = new Promise<void>((resolve, reject) => {
@@ -652,7 +670,7 @@ class SessionManager {
     // Eagerly register the root "Router" agent so the agent panel shows
     // immediately on session start, before the first Task() delegation.
     if (!store.rootAgentId) {
-      const realModel = initEvent.model ?? "claude-sonnet-4-5";
+      const realModel = initEvent.model ?? "claude-sonnet-4-6";
       const tier = realModel.includes("haiku")
         ? "haiku"
         : realModel.includes("sonnet")
@@ -808,6 +826,24 @@ class SessionManager {
       }
     }
 
+    // Sync displayed model to the actual resolved model from the API response.
+    // Same field the init event uses — this keeps the display accurate after /model switches.
+    const msgModel = (event.message as { model?: string }).model;
+    if (msgModel) {
+      const activeProvider = store.activeProvider;
+      store.setProviderModel(activeProvider, msgModel);
+
+      // Also sync the root agent node so AgentDetail matches
+      if (store.rootAgentId) {
+        const tier = msgModel.includes("haiku")
+          ? "haiku"
+          : msgModel.includes("sonnet")
+            ? "sonnet"
+            : "opus";
+        store.updateAgent(store.rootAgentId, { model: msgModel, tier });
+      }
+    }
+
     // Update context window usage from per-message token counts
     // BetaMessage.usage reflects the actual context fill for this API call
     if (event.message.usage) {
@@ -935,7 +971,7 @@ class SessionManager {
     if (event.modelUsage) {
       const models = Object.values(event.modelUsage);
       if (models.length > 0) {
-        const capacity = models[0]?.contextWindow || 200000;
+        const capacity = models[0]?.contextWindow || resolveContextWindow(store.getActiveModel() ?? "");
         const { contextWindow } = store;
         store.updateContextWindow(contextWindow.usedTokens, capacity);
       }
@@ -1447,19 +1483,16 @@ class SessionManager {
       return false;
     }
 
+    // Pass plain model alias (e.g. "sonnet") — NOT with [1m] suffix.
+    // The SDK's setModel() routes through the CLI's /model command which
+    // doesn't support [1m]. The env var ANTHROPIC_DEFAULT_SONNET_MODEL
+    // handles 1M resolution at the CLI level instead.
     try {
       await this.eventStream.setModel(modelId);
 
-      // Sync the root agent node's model/tier so AgentDetail stays current.
-      const store = useStore.getState();
-      if (store.rootAgentId) {
-        const tier = modelId.includes("haiku")
-          ? "haiku"
-          : modelId.includes("sonnet")
-            ? "sonnet"
-            : "opus";
-        store.updateAgent(store.rootAgentId, { model: modelId, tier });
-      }
+      // Don't update the agent node here — the next assistant message's
+      // event.message.model will have the resolved model ID, and
+      // handleAssistantEvent syncs it to both providerModel and the agent node.
 
       return true;
     } catch (error) {

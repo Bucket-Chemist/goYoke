@@ -30,7 +30,7 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
   },
   contextWindow: {
     usedTokens: 0,
-    totalCapacity: 200000,
+    totalCapacity: null,
   },
   permissionMode: "default",
   isCompacting: false,
@@ -120,7 +120,7 @@ export const createSessionSlice: StateCreator<Store, [], [], SessionSlice> = (
       },
       contextWindow: {
         usedTokens: 0,
-        totalCapacity: 200000,
+        totalCapacity: null,
       },
       permissionMode: "default",
       isCompacting: false,

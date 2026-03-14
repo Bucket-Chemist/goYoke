@@ -499,7 +499,16 @@ func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 	args := []string{"-p", "--output-format", "stream-json"}
 
 	if agentConfig.Model != "" {
-		args = append(args, "--model", agentConfig.Model)
+		model := agentConfig.Model
+		// Inherit 1M context from env vars — if the user's default model
+		// includes [1m], propagate it to agents (haiku doesn't support 1M).
+		if !strings.Contains(model, "[1m]") && !strings.Contains(model, "haiku") {
+			envVar := "ANTHROPIC_DEFAULT_" + strings.ToUpper(model) + "_MODEL"
+			if val := os.Getenv(envVar); strings.Contains(val, "[1m]") {
+				model += "[1m]"
+			}
+		}
+		args = append(args, "--model", model)
 	}
 
 	if agentConfig.FormalSchema != "" {

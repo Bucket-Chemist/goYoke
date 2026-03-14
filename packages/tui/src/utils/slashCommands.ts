@@ -16,12 +16,12 @@ export interface SlashCommand {
 /** TUI-specific commands (handled in ClaudePanel before reaching Claude) */
 const BUILTIN_COMMANDS: SlashCommand[] = [
   { name: "model", description: "Switch model (haiku/sonnet/opus)", source: "builtin" },
-  { name: "clear", description: "Clear message history", source: "builtin" },
   { name: "help", description: "Show available commands", source: "builtin" },
 ];
 
 /** Native Claude Code CLI commands (passed through to the SDK/CLI process) */
 const NATIVE_COMMANDS: SlashCommand[] = [
+  { name: "clear", description: "Clear conversation history and reset session", source: "native" },
   { name: "compact", description: "Compact conversation with optional focus instructions", source: "native" },
   { name: "config", description: "Open the Settings interface (Config tab)", source: "native" },
   { name: "context", description: "Visualize current context usage as a colored grid", source: "native" },

@@ -283,8 +283,8 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
 
         case "clear":
           useStore.getState().clearMessages();
-          setInput("");
-          return;
+          // Fall through to send /clear to CLI so session resets
+          break;
 
         case "help":
           addSystemMessage(

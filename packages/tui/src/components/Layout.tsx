@@ -150,9 +150,9 @@ export function Layout(): JSX.Element {
       {/* Content area: universal split layout — conversation stays visible for ALL modals.
           Modal appears as a compact strip at the bottom of the left panel. */}
       {modalQueue.length > 0 && modalQueue[0] ? (
-        <Box flexDirection="row" flexGrow={1}>
+        <Box flexDirection="row" flexGrow={1} overflow="hidden">
           {/* Left: conversation + modal strip */}
-          <Box width={leftWidth} flexDirection="column">
+          <Box width={leftWidth} flexDirection="column" overflow="hidden">
             <Box flexGrow={1} overflow="hidden">
               <ClaudePanel focused={false} width={claudePanelWidth} />
             </Box>
@@ -208,11 +208,11 @@ export function Layout(): JSX.Element {
           )}
         </Box>
       ) : (
-        <Box flexDirection="row" flexGrow={1}>
+        <Box flexDirection="row" flexGrow={1} overflow="hidden">
           {activeTab === "chat" && (
             <>
               {/* Left Panel: Claude conversation */}
-              <Box width={leftWidth} flexDirection="column">
+              <Box width={leftWidth} flexDirection="column" overflow="hidden">
                 <ClaudePanel focused={focusedPanel === "claude"} width={claudePanelWidth} />
               </Box>
 
@@ -309,7 +309,7 @@ export function Layout(): JSX.Element {
         </Box>
       )}
 
-      {/* Status Line - FIXED at bottom */}
+      {/* Status Line - FIXED at bottom (separator + 2 content lines) */}
       <StatusLine width={terminalWidth} height={2} />
 
       {/* Toast notifications */}
