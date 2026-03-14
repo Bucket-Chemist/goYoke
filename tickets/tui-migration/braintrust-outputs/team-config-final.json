@@ -1,0 +1,93 @@
+{
+  "team_name": "braintrust",
+  "workflow_type": "braintrust",
+  "project_root": "/home/doktersmol/Documents/GOgent-Fortress",
+  "session_id": "3435f2d5-367a-4162-9922-4a796e49420e",
+  "created_at": "2026-03-14T01:52:55Z",
+  "budget_max_usd": 50,
+  "budget_remaining_usd": 43.3910962,
+  "warning_threshold_usd": 40,
+  "status": "completed",
+  "background_pid": 58935,
+  "started_at": "2026-03-14T02:09:47Z",
+  "completed_at": "2026-03-14T02:29:43Z",
+  "waves": [
+    {
+      "wave_number": 1,
+      "description": "Parallel theoretical and practical analysis",
+      "members": [
+        {
+          "name": "einstein",
+          "agent": "einstein",
+          "model": "opus",
+          "stdin_file": "stdin_einstein.json",
+          "stdout_file": "stdout_einstein.json",
+          "status": "completed",
+          "process_pid": 58944,
+          "exit_code": 0,
+          "cost_usd": 2.6920230000000003,
+          "cost_status": "ok",
+          "error_message": "",
+          "retry_count": 0,
+          "max_retries": 1,
+          "timeout_ms": 1800000,
+          "started_at": null,
+          "completed_at": null,
+          "health_status": "stalled",
+          "last_activity_time": "2026-03-14T02:17:17Z",
+          "stall_count": 3
+        },
+        {
+          "name": "staff-architect",
+          "agent": "staff-architect-critical-review",
+          "model": "opus",
+          "stdin_file": "stdin_staff-architect.json",
+          "stdout_file": "stdout_staff-arch.json",
+          "status": "completed",
+          "process_pid": 58945,
+          "exit_code": 0,
+          "cost_usd": 2.3865377999999997,
+          "cost_status": "ok",
+          "error_message": "",
+          "retry_count": 0,
+          "max_retries": 1,
+          "timeout_ms": 1800000,
+          "started_at": null,
+          "completed_at": null,
+          "health_status": "stalled",
+          "last_activity_time": "2026-03-14T02:18:17Z",
+          "stall_count": 6
+        }
+      ],
+      "on_complete_script": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-team-prepare-synthesis"
+    },
+    {
+      "wave_number": 2,
+      "description": "Synthesis of orthogonal analyses",
+      "members": [
+        {
+          "name": "beethoven",
+          "agent": "beethoven",
+          "model": "opus",
+          "stdin_file": "stdin_beethoven.json",
+          "stdout_file": "stdout_beethoven.json",
+          "status": "completed",
+          "process_pid": 76207,
+          "exit_code": 0,
+          "cost_usd": 1.530343,
+          "cost_status": "ok",
+          "error_message": "",
+          "retry_count": 0,
+          "max_retries": 1,
+          "timeout_ms": 1800000,
+          "started_at": null,
+          "completed_at": null,
+          "health_status": "stall_warning",
+          "last_activity_time": "2026-03-14T02:29:29Z",
+          "stall_count": 2
+        }
+      ],
+      "on_complete_script": null
+    }
+  ]
+}

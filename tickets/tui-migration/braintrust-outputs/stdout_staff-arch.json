@@ -1,0 +1,450 @@
+{
+  "assumption_register": [
+    {
+      "assumption": "createSdkMcpServer from @anthropic-ai/claude-agent-sdk can be exposed as an HTTP/SSE server for out-of-process consumption by Claude Code CLI via --mcp-config",
+      "id": "A-1",
+      "mitigation": "Build proof-of-concept before implementation. Fall back to two-process topology with Go MCP SDK.",
+      "risk_if_false": "Entire three-process topology is infeasible. Phase 3 (6 tickets) blocked, cascading to Phases 4-9.",
+      "source": "Plan Section 1 ('Why this topology') and P3-4 ('Check the SDK docs for createStreamableHTTPServer() or equivalent')",
+      "verification_method": "50-line POC: create MCP server, wrap in HTTP/SSE, verify claude CLI connects via --mcp-config.",
+      "verified": false
+    },
+    {
+      "assumption": "Claude CLI stdin accepts JSON-formatted messages when using --output-format stream-json mode",
+      "id": "A-2",
+      "mitigation": "Test manually before implementation. May need --input-format flag or raw text pipe.",
+      "risk_if_false": "Go TUI cannot send user messages to Claude CLI. Phase 2 blocked.",
+      "source": "Plan P2-6 and Risk Register ('stdin message format')",
+      "verification_method": "Run claude --output-format stream-json interactively, send structured JSON via stdin, observe behavior.",
+      "verified": false
+    },
+    {
+      "assumption": "Bubble Tea v1 API is stable and sufficient for the full TUI feature set",
+      "id": "A-3",
+      "mitigation": "v1 is battle-tested (bubbletea v1.3.10 already in go.mod, used by existing cmd/ binaries). Low risk.",
+      "risk_if_false": "v2 migration needed mid-project, breaking all component models.",
+      "source": "Plan P0-2 and Section 17 ('Pin to Bubble Tea v1')",
+      "verification_method": "Already verified — go.mod shows v1.3.10 in use.",
+      "verified": true
+    },
+    {
+      "assumption": "NDJSON stream-json event types are limited to ~6 types (system, assistant, user, result, stream_event) with stable schema",
+      "id": "A-4",
+      "mitigation": "Log unknown event types for discovery. Test with real long-running sessions.",
+      "risk_if_false": "Missing event types cause state desync, visual glitches, or dropped data.",
+      "source": "Plan P2-1 and Section 17 ('unlikely many more exist')",
+      "verification_method": "Run claude --output-format stream-json through a full session, capture all event types, compare to plan's struct definitions.",
+      "verified": false
+    },
+    {
+      "assumption": "Go MCP SDK v1.2.0 'lags behind' createSdkMcpServer and cannot replace it",
+      "id": "A-5",
+      "mitigation": "Spike: implement one MCP tool (ask_user) in Go using go-sdk, test with Claude CLI.",
+      "risk_if_false": "Two-process topology is viable, eliminating sidecar complexity. Plan is over-engineered by ~12 tickets.",
+      "source": "Plan Section 1 ('Go MCP SDKs lag behind')",
+      "verification_method": "Go MCP SDK spike with tool schema validation, Claude CLI discovery test.",
+      "verified": false
+    },
+    {
+      "assumption": "Process registry can remain in TS sidecar while Go TUI displays the agent tree",
+      "id": "A-6",
+      "mitigation": "Add reverse bridge endpoints (Go→sidecar) for kill, status query, and cleanup.",
+      "risk_if_false": "Split-brain state: Go TUI shows stale/incorrect agent status, cannot kill agents, shutdown leaks processes.",
+      "source": "Plan P3-3 ('keep process registry local to sidecar') and P5-6 (bridge agent registration)",
+      "verification_method": "Integration test: spawn agent via sidecar, verify Go TUI shows correct status, kill from TUI, verify process actually terminated.",
+      "verified": false
+    },
+    {
+      "assumption": "Nine Zustand slices translate cleanly to Elm architecture (single model struct)",
+      "id": "A-7",
+      "mitigation": "Elm architecture is well-suited for this. Channel-based modal resolution is actually cleaner than Promise-based.",
+      "risk_if_false": "State management requires external store or complex coordination between models.",
+      "source": "Plan Section 3 ('State Model Translation')",
+      "verification_method": "Type mapping in Section 3 is comprehensive. Plan's AppModel struct correctly collapses 9 slices. Verified against actual slice code.",
+      "verified": true
+    },
+    {
+      "assumption": "Multi-provider support (4 providers with per-provider state) is a single-ticket effort",
+      "id": "A-8",
+      "mitigation": "Split into 3-4 tickets with explicit acceptance criteria per sub-task.",
+      "risk_if_false": "Provider switching broken or incomplete. Per-provider state management missing, causing cross-provider data leaks.",
+      "source": "Plan P7-7 (one ticket for provider switching)",
+      "verification_method": "Compare P7-7 scope against actual providers.ts (130 lines) and session.ts per-provider code (~180 lines of state management).",
+      "verified": false
+    }
+  ],
+  "commendations": [
+    "Comprehensive state translation mapping (Section 15): Every Zustand slice field is mapped to a specific Go struct location with explicit notes. This is unusually thorough and will save significant implementation time.",
+    "Correct architecture pattern for Bubble Tea: Value receivers, centralized message types in messages.go, tea.Batch for Init(), channel-based modal resolution — all follow established Bubble Tea best practices and avoid common pitfalls.",
+    "Complete keybinding inventory (Section 16): Every keyboard shortcut is documented with current source, action, and Go binding name. This prevents the common 'forgot a keybinding' regression.",
+    "Accurate identification of the modal system as the critical UX path: P4 correctly identifies the canUseTool permission flow as the most complex modal interaction and documents all 5 variants (EnterPlanMode, ExitPlanMode, AskUserQuestion, standard tool, acceptEdits).",
+    "Strong design recommendations (Section 17): The 9 design recommendations are practical, experience-derived, and correct — especially #6 (auto-scroll with manual override), #5 (tea.Program.Send() concurrency safety), and #9 (gate CLI on sidecar readiness).",
+    "Honest risk register: The plan openly acknowledges its own uncertainties (stdin format, NDJSON edge cases, sidecar latency) rather than hand-waving them. This intellectual honesty makes the plan trustworthy."
+  ],
+  "dependency_analysis": {
+    "bottlenecks": [
+      "P3 (sidecar extraction) is the highest-risk phase and blocks P4-P9. If C-1 (MCP transport) fails, ALL subsequent work is blocked until architecture is redesigned.",
+      "P4 (modal system) blocks P5+ because agent spawning and permissions depend on working modals. The modal round-trip latency (HTTP Go→TS→CLI vs current in-process) is untested.",
+      "M-5 (stdin format) blocks P2 — if Claude CLI doesn't accept the proposed stdin format, the CLI driver cannot send user messages."
+    ],
+    "circular_risks": [
+      "Circular IPC dependency in three-process topology: Claude CLI → MCP sidecar (tool execution) → Bridge API (state/modal) → Go TUI (rendering) → Claude CLI (NDJSON events). Each link adds latency and failure modes. If any process crashes, the circle breaks.",
+      "Agent state circular: sidecar spawns agent (writes to processRegistry) → notifies Go TUI via bridge → Go TUI parses NDJSON from CLI (may see same agent via tool_use block) → potential double-registration with no dedup mechanism."
+    ],
+    "critical_path": [
+      "C-1 (MCP transport POC) → P0 (scaffolding) → P1 (core shell) → P2 (CLI driver) → P3 (sidecar+bridge) → P4 (modals) → P5/P6/P7 (parallel) → P8 (persistence) → P9 (testing)"
+    ]
+  },
+  "executive_assessment": {
+    "confidence": "high",
+    "issue_counts": {
+      "critical": 3,
+      "major": 5,
+      "minor": 4
+    },
+    "summary": "The migration plan is thorough in UI component mapping (56 tickets across 10 phases) and correctly identifies the Bubble Tea Elm architecture as superior to Ink/React for terminal UIs. However, the plan's centerpiece — the three-process topology with HTTP bridge — rests on three unverified critical assumptions: (1) that createSdkMcpServer supports HTTP/SSE transport for out-of-process hosting, (2) that unidirectional bridge communication (sidecar→Go only) is sufficient, and (3) that dual-source agent state (NDJSON + bridge) can be reconciled without races. The topology should be challenged: a two-process design (Go TUI + Claude CLI with native Go MCP server) eliminates the sidecar entirely and the Go MCP SDK v1.2.0 is already in go.mod. Recommend revising the architecture decision before cutting implementation tickets.",
+    "verdict": "REVISE"
+  },
+  "failure_mode_analysis": [
+    {
+      "detection": "Bridge API POST /modal/* times out after 60s. Claude CLI tool_use hangs waiting for MCP response. User sees frozen TUI.",
+      "impact": "high",
+      "mitigation": "Plan mentions 'attempt restart' but doesn't specify: (1) re-queue pending modal request after sidecar restart, (2) timeout and auto-deny if sidecar doesn't recover within 10s, (3) surface error to user in status line. Recommend: detect sidecar death via health check failure, show 'MCP sidecar restarting...' toast, auto-deny pending permissions with error message.",
+      "probability": "medium",
+      "scenario": "TS MCP sidecar crashes during active Claude CLI session with pending modal (permission prompt)"
+    },
+    {
+      "detection": "json.Unmarshal succeeds on CLIEvent discriminator but type switch falls through to default case. Event silently dropped.",
+      "impact": "low",
+      "mitigation": "Plan Section 17 correctly recommends logging unknown types. Implementation should: (1) log unknown event type + raw JSON at WARN level, (2) continue processing (don't crash), (3) accumulate unknown types in telemetry for discovery.",
+      "probability": "medium",
+      "scenario": "Claude CLI emits unknown NDJSON event type not covered by plan's struct definitions"
+    },
+    {
+      "detection": "net.Listen returns EADDRINUSE. Sidecar process exits with error. Go TUI logs error but may continue without MCP.",
+      "impact": "medium",
+      "mitigation": "Use dynamic port allocation (port 0) or Unix domain sockets. Pass allocated port via environment variable to child processes. This is a common and solved problem — see internal/lifecycle/process.go socket pattern.",
+      "probability": "high",
+      "scenario": "Go TUI and sidecar start on ports 9198/9199 but another TUI instance is already running"
+    },
+    {
+      "detection": "Users perceive sluggish permission prompts. Each tool_use requiring permission adds 2 HTTP round-trips vs 0 in current in-process architecture.",
+      "impact": "medium",
+      "mitigation": "Measure round-trip latency in P3 integration test. If \u003e200ms, consider: (1) Unix socket instead of TCP (eliminates TCP overhead), (2) persistent HTTP/2 connections to avoid connection setup per request, (3) batch sequential modal calls into single bridge request for multi-step flows (canUseTool).",
+      "probability": "medium",
+      "scenario": "Modal permission prompt adds \u003e500ms latency due to HTTP round-trips (CLI→sidecar→bridge→TUI→user→TUI→bridge→sidecar→CLI)"
+    },
+    {
+      "detection": "Orphaned Claude CLI processes left running after TUI exit. Visible via `ps aux | grep claude`.",
+      "impact": "high",
+      "mitigation": "Sidecar must handle SIGTERM by calling processRegistry.cleanupAll() (SIGTERM→SIGKILL escalation for all spawned agents) before exiting. Go TUI should wait up to 10s for sidecar to confirm cleanup. Add POST /sidecar/shutdown endpoint that triggers cleanup and returns when complete.",
+      "probability": "high",
+      "scenario": "Graceful shutdown with 3 processes: Go TUI sends SIGTERM to sidecar, but sidecar has 5 spawned agents still running"
+    },
+    {
+      "detection": "P3-4 implementation fails to create working HTTP MCP server. Claude CLI cannot discover sidecar tools.",
+      "impact": "high",
+      "mitigation": "This is why C-1 is critical: validate BEFORE starting implementation. If HTTP transport is impossible, pivot to: (1) two-process topology with Go MCP SDK, or (2) stdio transport where sidecar communicates with Claude CLI via stdin/stdout pipes (but this conflicts with Bubble Tea's stdin ownership — would require Go TUI to proxy stdin).",
+      "probability": "medium",
+      "scenario": "Plan Phase 3 implementation discovers createSdkMcpServer cannot be exposed via HTTP — fundamental architecture block"
+    }
+  ],
+  "handoff_notes": "Beethoven should focus on synthesizing the topology decision: Einstein's theoretical analysis likely explores the three-process vs two-process tradeoff from first principles, while this review provides empirical evidence from the codebase (Go MCP SDK present but unused, createSdkMcpServer in-process only, total MCP tool code ~300 lines excluding process management already in Go). The key tension is: the plan's sidecar rationale ('Go MCP SDKs lag behind') vs the empirical fact that go-sdk v1.2.0 exists and the tools are small. The MCP transport POC (C-1) is the gate that resolves this tension — if it passes, three-process is viable; if it fails, two-process is forced. Beethoven should present both paths with clear decision criteria rather than picking a side prematurely. Also note: the plan's UI/component mapping (Sections 3, 14, 15, 16) is excellent and should be preserved regardless of topology decision — these are topology-independent.",
+  "issue_register": [
+    {
+      "affected_files": [
+        "packages/tui/src/mcp/server.ts",
+        "packages/tui/src/session/SessionManager.ts"
+      ],
+      "affected_tickets": [
+        "P3-1",
+        "P3-2",
+        "P3-3",
+        "P3-4",
+        "P3-5",
+        "P3-6"
+      ],
+      "description": "The plan's P3-4 ticket explicitly states 'Check the SDK docs for createStreamableHTTPServer() or equivalent' — meaning the plan author has NOT verified that the Anthropic Agent SDK's createSdkMcpServer() can be exposed as an HTTP/SSE server for out-of-process consumption by Claude Code CLI. Currently, createSdkMcpServer() is used exclusively in-process: the MCP server object is passed directly to query() as a JavaScript object reference (SessionManager.ts:403-405). The sidecar architecture requires this to work over HTTP, discovered via --mcp-config. If this transport doesn't exist or requires substantial SDK changes, the entire three-process topology collapses.",
+      "evidence": "Plan P3-4 line: 'The createSdkMcpServer needs to be configured for HTTP transport rather than in-process. Check the SDK docs for createStreamableHTTPServer() or equivalent.' — This is a TODO, not a verified design decision. Scout verification found zero usage of createStreamableHTTPServer or any HTTP transport configuration in the codebase. The Agent SDK changelog mentions 'Enabled SSE MCP servers on native build' but this refers to Claude Code's ability to connect to SSE servers, not to createSdkMcpServer's ability to expose one.",
+      "id": "C-1",
+      "impact": "If createSdkMcpServer cannot serve over HTTP/SSE, the entire Phase 3 (6 tickets) is blocked, which cascades to Phases 4-9 (44 tickets). The plan becomes architecturally infeasible without a fundamental redesign of the MCP transport layer.",
+      "layer": "assumptions",
+      "recommendation": "BEFORE cutting any implementation tickets: (1) Write a 50-line proof-of-concept that creates an MCP server with createSdkMcpServer(), wraps it in an HTTP/SSE transport, and verifies Claude CLI can discover it via --mcp-config. (2) If this fails, evaluate the two-process topology (see M-1). Budget: 2-4 hours for POC.",
+      "severity": "critical",
+      "title": "createSdkMcpServer HTTP/SSE transport unverified — blocks entire sidecar architecture"
+    },
+    {
+      "affected_files": [
+        "packages/tui/src/spawn/processRegistry.ts",
+        "packages/tui/src/lifecycle/shutdown.ts"
+      ],
+      "affected_tickets": [
+        "P3-6",
+        "P8-3"
+      ],
+      "description": "The bridge API (Section 2, 'Bridge API Endpoints') defines 9 endpoints, ALL of which are sidecar→Go TUI direction (POST /modal/*, POST /agent/*, GET /health). There is NO defined mechanism for the Go TUI to communicate back to the TS sidecar. This creates critical gaps: (1) How does Go TUI tell sidecar to kill a specific spawned agent? (2) How does Go TUI trigger sidecar processRegistry.cleanupAll() during shutdown? (3) How does Go TUI request agent status from the sidecar's ProcessRegistry? The plan says 'Shutdown MCP sidecar' in P8-3 but only via SIGTERM to the Node process — this doesn't cleanly terminate spawned agents with SIGTERM→SIGKILL escalation.",
+      "evidence": "Bridge API table (plan lines 123-133) lists only: POST /modal/ask, /modal/confirm, /modal/input, /modal/select, POST /agent/register, /agent/update, /agent/activity, POST /toast, GET /health. All are called BY the sidecar. No reverse endpoints exist. ProcessRegistry.cleanupAll() (processRegistry.ts:116-146) requires in-process access. Shutdown handler (shutdown.ts:37-88) calls cleanupAll() directly.",
+      "id": "C-2",
+      "impact": "Graceful shutdown will leave orphaned Claude CLI processes spawned by the sidecar. Agent kill operations from TUI will be impossible. Any UI action that requires sidecar-side execution (process management, cost tracking queries) cannot be implemented.",
+      "layer": "failure_modes",
+      "recommendation": "Define reverse bridge endpoints on the sidecar (Go→TS direction): (1) POST /sidecar/kill-agent {id} (2) POST /sidecar/shutdown (3) GET /sidecar/agent-status {id}. Alternatively, use a bidirectional protocol (WebSocket or Unix socket pair) instead of two unidirectional HTTP servers.",
+      "severity": "critical",
+      "title": "No Go TUI → Sidecar communication channel — unidirectional bridge only"
+    },
+    {
+      "affected_files": [
+        "packages/tui/src/hooks/useAgentSync.ts",
+        "packages/tui/src/mcp/tools/spawnAgent.ts"
+      ],
+      "affected_tickets": [
+        "P5-1",
+        "P5-2",
+        "P5-6"
+      ],
+      "description": "Agent data arrives in the Go TUI from two independent, unsynchronized sources: (1) NDJSON stream parsing extracts Task() tool_use blocks from Claude CLI stdout (plan P5-2), and (2) Bridge API receives POST /agent/register from the sidecar when spawn_agent fires (plan P5-6). These create the SAME conceptual agent in the tree but via different mechanisms, different timing, and potentially different data. The plan provides no deduplication, ordering, or reconciliation strategy. A Task()-spawned agent appears first via NDJSON (when the tool_use block is emitted) and may or may not also appear via bridge (if the sidecar's spawn_agent calls bridgeAgentRegister). An MCP-spawned agent appears only via bridge (no NDJSON tool_use for MCP tools). But there's no ID coordination between the two paths.",
+      "evidence": "Plan P5-2: 'In Go, we extract this from the NDJSON stream directly' — handles Task() tool_use blocks. Plan P5-6: 'Handle POST /agent/register from sidecar' — handles spawn_agent notifications. In the current TS architecture, both paths write to the same Zustand store atomically (useAgentSync.ts:38 and spawnAgent.ts:235). In the Go architecture, NDJSON parsing runs in the CLI driver goroutine while bridge API runs in HTTP handler goroutines — no shared mutex or dedup logic is specified.",
+      "id": "C-3",
+      "impact": "Race conditions will cause: (1) duplicate agents in tree (same agent registered twice with different IDs), (2) missing status updates (completion arrives on wrong path), (3) incorrect parent-child relationships (NDJSON path uses tool_use_id as agent ID while bridge path uses UUID). This will manifest as ghost agents, stuck 'running' status, and tree rendering glitches.",
+      "layer": "architecture_smells",
+      "recommendation": "Define a single AgentRegistry with a mutex and a canonical ID strategy: (1) Task()-spawned agents use tool_use_id as canonical ID (matches current TS behavior in useAgentSync.ts:43). (2) MCP-spawned agents use the UUID from spawn_agent. (3) Add an 'agentType' + 'description' dedup key to catch double-registration. (4) All mutations go through the same AppModel.Update() via tea.Msg — never directly from goroutines.",
+      "severity": "critical",
+      "title": "Split-brain agent state — dual sources with no synchronization"
+    },
+    {
+      "affected_files": [
+        "go.mod",
+        "packages/tui/src/mcp/server.ts"
+      ],
+      "affected_tickets": [
+        "P3-1",
+        "P3-2",
+        "P3-3",
+        "P3-4",
+        "P3-5",
+        "P3-6"
+      ],
+      "description": "The plan's primary rationale for keeping the TS sidecar is: 'createSdkMcpServer is an Anthropic primitive that tightly tracks Claude Code CLI updates. Go MCP SDKs lag behind.' (Section 1, 'Why this topology'). However, github.com/modelcontextprotocol/go-sdk v1.2.0 is already in go.mod. A two-process topology (Go TUI with native Go MCP server + Claude Code CLI) would eliminate: the sidecar process, the bridge API, both hardcoded ports, the TS bundling requirement, the Node.js runtime dependency, the startup latency, and all three critical issues above. The 7 MCP tools (askUser, confirmAction, requestInput, selectOption, spawnAgent, teamRun, testMcpPing) are each 40-160 lines of TS that could be reimplemented in Go.",
+      "evidence": "go.mod line 12: github.com/modelcontextprotocol/go-sdk v1.2.0. Scout verification: zero direct usage in Go codebase (dependency installed but unused). Total MCP tool code: askUser.ts (41 lines), confirmAction.ts (~40 lines), requestInput.ts (~40 lines), selectOption.ts (~40 lines), spawnAgent.ts (512 lines — but most is process management already in Go via internal/lifecycle/process.go), teamRun.ts (165 lines — trivial wrapper around gogent-team-run binary already in Go), testMcpPing.ts (~20 lines).",
+      "id": "M-1",
+      "impact": "If the two-process topology is viable, the plan is over-engineered by ~12 tickets (P3-1 through P3-6, bridge-related portions of P4-4/P4-5, P5-6, sidecar startup in P0). This represents ~25% of implementation effort spent on inter-process plumbing that could be eliminated.",
+      "layer": "cost_benefit",
+      "recommendation": "Add a Phase -1 spike: Implement the ask_user MCP tool in Go using go-sdk v1.2.0, verify Claude CLI discovers and calls it via --mcp-config. If successful, redesign as two-process topology. If Go SDK lacks critical features (e.g., tool() schema generation, MCP protocol compliance), document the gaps and proceed with three-process. Budget: 4-8 hours for spike.",
+      "severity": "major",
+      "title": "Two-process topology not evaluated — Go MCP SDK v1.2.0 already available"
+    },
+    {
+      "affected_files": [
+        "packages/tui/src/config/providers.ts",
+        "packages/tui/src/store/slices/session.ts"
+      ],
+      "affected_tickets": [
+        "P7-7"
+      ],
+      "description": "P7-7 ('Provider tabs and switching') is a single ticket covering: provider tab strip UI, Shift+Tab cycling, per-provider message history, per-provider session IDs, per-provider models, and per-provider project dirs. The actual TS implementation spans: providers.ts (130 lines with 4 full provider definitions including adapter paths), session.ts (291 lines with ~60% being per-provider state management), and SessionManager.ts (using providerSessionIds, providerModels, providerProjectDirs in query() calls). This is at minimum 3-4 tickets: (1) provider config types, (2) per-provider state management, (3) provider switching + message isolation, (4) provider tab UI.",
+      "evidence": "providers.ts defines PROVIDERS record with Anthropic (3 models), Google (2 models, adapter path), OpenAI (3 models, adapter path + env vars), Local/Ollama (3 models, adapter path) — total 11 models across 4 providers. session.ts has 5 per-provider state maps: providerMessages, providerSessionIds, providerModels, providerProjectDirs, plus 9 per-provider actions. Plan P7-7 is a single line: 'Provider tab strip (Anthropic | Google | OpenAI | Local) with Shift+Tab cycling. Per-provider message history, session ID, and model.'",
+      "id": "M-2",
+      "impact": "A contractor receiving P7-7 as a single ticket would underestimate scope by 3-4x. The per-provider state management alone is more complex than several complete phases (P0, P1-3). Risk of incomplete implementation leaving multi-provider broken.",
+      "layer": "contractor_readiness",
+      "recommendation": "Split P7-7 into at minimum: (1) P7-7a: ProviderState struct + config types (Go translation of providers.ts + session.ts per-provider fields), (2) P7-7b: Provider switching logic + message isolation in AppModel.Update(), (3) P7-7c: Provider tab bar UI component, (4) P7-7d: Session resume with per-provider session IDs. Add acceptance criteria for each.",
+      "severity": "major",
+      "title": "Multi-provider support grossly underscoped — single ticket for 4-provider system"
+    },
+    {
+      "affected_files": [
+        "internal/lifecycle/process.go"
+      ],
+      "affected_tickets": [
+        "P3-4",
+        "P3-5",
+        "P3-6"
+      ],
+      "description": "The plan hardcodes MCP sidecar to port 9198 and bridge API to port 9199 (Section 2). No port negotiation, discovery, or fallback is specified. Running two TUI instances simultaneously (e.g., two terminal windows) will fail with EADDRINUSE. This also prevents running the TUI alongside other services that may use these ports.",
+      "evidence": "Plan Section 2: 'Spawns TS MCP sidecar on :9198', 'Starts Bridge API on :9199'. P3-4: 'httpServer.listen(parseInt(process.env.MCP_PORT || \"9198\"), \"127.0.0.1\")'. P3-5: 'fmt.Sprintf(\"MCP_PORT=%d\", port)'. Environment variable fallback exists but no dynamic port allocation.",
+      "id": "M-3",
+      "impact": "Users cannot run multiple TUI sessions. CI/test environments with parallel test runs will collide. Port 9198/9199 may conflict with other localhost services.",
+      "layer": "failure_modes",
+      "recommendation": "Use dynamic port allocation: bind to port 0, read the assigned port from the listener, pass it to child processes via environment variables. Alternative: use Unix domain sockets (e.g., $XDG_RUNTIME_DIR/gofortress-{pid}.sock) — this eliminates port collision entirely and is faster than TCP. The existing internal/lifecycle/process.go already uses this pattern for socket management.",
+      "severity": "major",
+      "title": "Hardcoded ports 9198/9199 with no negotiation — multiple instances impossible"
+    },
+    {
+      "affected_files": [],
+      "affected_tickets": [
+        "P9-1",
+        "P9-2",
+        "P9-3",
+        "P9-4",
+        "P9-5",
+        "P9-6",
+        "P9-7"
+      ],
+      "description": "The plan has 49 implementation tickets (P0-P8) and 7 test tickets (P9), all concentrated in the final phase. No implementation ticket includes test requirements. Red flag: the plan's own Section 17 recommends 'Comprehensive logging of unknown event types. Fuzzy-test with real Claude sessions' but no ticket implements fuzzy testing.",
+      "evidence": "Plan 'Ticket Summary by Phase' table: P0(3), P1(7), P2(6), P3(6), P4(5), P5(6), P6(4), P7(7), P8(5) = 49 implementation. P9(7) = all testing. Testing is deferred to end. Compare: old tickets (GOgent-109–121) each specify 'tests_required: true' with dedicated test files.",
+      "id": "M-4",
+      "impact": "Bugs accumulate across 8 phases without detection. Integration issues between phases (especially P2↔P3 bridge, P4↔P3 modal round-trip) will only surface in P9 when rework cost is highest. Contractor estimates will undercount by not including per-ticket testing.",
+      "layer": "testing",
+      "recommendation": "Add test requirements to each implementation ticket. At minimum: (1) P0-3 includes smoke test verifying empty Bubble Tea app renders, (2) P2-3 includes unit test with mock NDJSON input, (3) P3-6 includes integration test for bridge round-trip, (4) P4-4 includes modal queue test with concurrent requests. Add a 'Definition of Done' section requiring tests for each ticket.",
+      "severity": "major",
+      "title": "Testing ratio 7:1 — no per-phase test milestones"
+    },
+    {
+      "affected_files": [],
+      "affected_tickets": [
+        "P2-6"
+      ],
+      "description": "P2-6 proposes sending user messages to Claude CLI stdin as JSON: '{\"type\": \"user\", \"text\": text}'. The plan itself acknowledges uncertainty: 'Verify: may need to send structured JSON or use --input-format flag. Fallback: pipe user text directly.' (Section 17, Risk Register). This is a critical data path — if the format is wrong, users cannot send messages.",
+      "evidence": "Plan P2-6: 'msg := map[string]string{\"type\": \"user\", \"text\": text}'. Risk Register item: 'stdin message format — Claude CLI stdin format for --output-format stream-json may not accept raw text'. Current spawnAgent.ts uses '-p' flag (pipe mode) which accepts raw text on stdin (line 429: cliArgs = [\"-p\", \"--output-format\", \"json\"]). The interactive TUI uses query() from Agent SDK which handles stdin internally. No codebase evidence of JSON-formatted stdin to Claude CLI.",
+      "id": "M-5",
+      "impact": "If the stdin format is wrong, Phase 2 (CLI driver) is blocked. The entire Go TUI cannot send user messages. This is on the critical path — everything after P2 depends on working bidirectional CLI communication.",
+      "layer": "assumptions",
+      "recommendation": "Verify before implementation: (1) Run 'claude --output-format stream-json --verbose' interactively and observe stdin handling. (2) Check Claude Code CLI source/docs for --input-format flag. (3) Test: echo '{\"type\":\"user\",\"text\":\"hello\"}' | claude --output-format stream-json. Add results to plan as verified assumption. Budget: 1 hour.",
+      "severity": "major",
+      "title": "Claude CLI stdin message format for stream-json mode unverified"
+    },
+    {
+      "affected_files": [
+        "dev/will/migration_plan/tickets/TUI/tui-tickets-json-entries.json"
+      ],
+      "affected_tickets": [],
+      "description": "13 old tickets (GOgent-109 to GOgent-121) cover primarily agent tree, CLI subprocess, layout, and session management. The new plan's 56 tickets include 33 tickets with no old-ticket equivalent: P0 scaffolding (3), P3 sidecar+bridge (6), P4 modals (5), P6-3/P6-4 team UI (2), P7-1 through P7-7 settings/tabs (7), P8-3 through P8-5 lifecycle (3), P9 testing (7). Reconciliation guidance is missing — should old tickets be superseded, merged, or kept as sub-tickets?",
+      "evidence": "Old ticket mapping: GOgent-110→P2-2 (strong), GOgent-114→P2-1 (strong), GOgent-115→P5-1 (strong), GOgent-116→P5-4 (strong), GOgent-117→P5-5 (strong), GOgent-118→P1-5+P2 (partial), GOgent-119→P1-5 (strong), GOgent-120→P1-3 (strong), GOgent-121→P8-1/P8-2 (moderate). GOgent-109, GOgent-111, GOgent-112, GOgent-113 have weaker mappings to new plan.",
+      "id": "m-1",
+      "impact": "Without reconciliation, parallel ticket tracking systems create confusion. Developers may reference either old or new ticket IDs. Priority/dependency conflicts between old (week-based) and new (phase-based) ordering.",
+      "layer": "dependencies",
+      "recommendation": "Add a reconciliation appendix: (1) Map each old ticket to its new equivalent(s) with status (superseded/merged/kept). (2) Close old tickets that are fully covered by new plan. (3) Keep old tickets that cover areas the new plan omits (GOgent-113 file watchers differ from new plan's polling approach).",
+      "severity": "minor",
+      "title": "Old ticket reconciliation incomplete — 33 new tickets have no coverage"
+    },
+    {
+      "affected_files": [
+        "packages/tui/src/lifecycle/shutdown.ts",
+        "packages/tui/src/spawn/processRegistry.ts"
+      ],
+      "affected_tickets": [
+        "P8-3"
+      ],
+      "description": "P8-3 lists shutdown steps (save session, interrupt CLI, shutdown CLI, shutdown sidecar, wait for hooks, exit) but doesn't specify: (1) timeout per step, (2) what happens if CLI is mid-response when shutdown starts, (3) how sidecar cleans up its own spawned agents before exiting, (4) whether background team agents (detached processes from teamRun) should be waited for or orphaned.",
+      "evidence": "Plan P8-3 lists 6 steps without timeouts. Current shutdown.ts has a 500ms wait for Go hooks (line 79) and delegates to registered handlers (line 63). ProcessRegistry.cleanupAll() uses gracePeriod (5s) and forceKillDelay (1s) from processRegistry.ts:30-31. These timing constants are not carried into the plan.",
+      "id": "m-2",
+      "impact": "Shutdown may hang indefinitely waiting for stuck processes, or exit too quickly leaving orphaned processes. Background team agents may be killed mid-execution.",
+      "layer": "failure_modes",
+      "recommendation": "Add timing constraints: (1) CLI interrupt: 2s timeout before SIGKILL. (2) Sidecar shutdown: 5s for graceful agent cleanup. (3) Total shutdown budget: 10s max. (4) Background team agents: list as 'running' in status but don't wait (they're detached by design).",
+      "severity": "minor",
+      "title": "Graceful shutdown ordering underspecified for three-process topology"
+    },
+    {
+      "affected_files": [],
+      "affected_tickets": [
+        "P3-1"
+      ],
+      "description": "Section 17 recommends 'Bundle the TS sidecar as a single file. Use the existing esbuild config to produce one .js file.' The sidecar would include: @anthropic-ai/claude-agent-sdk (which imports node:crypto, node:child_process, etc.), zod, nanoid, async-mutex, and all spawn/validation/context injection code. Native Node.js modules (child_process, fs, crypto) cannot be bundled — esbuild handles them as externals, but the resulting bundle still requires a Node.js runtime.",
+      "evidence": "Plan Section 18 lists sidecar dependencies. spawnAgent.ts imports: child_process (spawn), crypto (randomUUID), fs/promises (readFile). contextInjector.ts imports: fs/promises, path, os. These are Node.js built-ins that esbuild marks as external by default.",
+      "id": "m-3",
+      "impact": "The bundled sidecar still requires Node.js installed. The plan's goal of 'Go binary is the primary artifact' is partially defeated. Users still need Node.js runtime. go:embed of the .js bundle works for distribution but doesn't eliminate the runtime dependency.",
+      "layer": "assumptions",
+      "recommendation": "Acknowledge Node.js runtime requirement explicitly in the plan. Consider bun as alternative runtime (faster startup, single binary distribution). Add a P0 spike ticket: 'Validate esbuild bundle of sidecar with all dependencies, measure bundle size and startup time.'",
+      "severity": "minor",
+      "title": "esbuild single-file bundling not validated with full sidecar dependency tree"
+    },
+    {
+      "affected_files": [],
+      "affected_tickets": [],
+      "description": "The plan jumps from implementation tickets directly to Phase 9 (integration testing). No intermediate milestones define what 'Phase N complete' looks like or how to demo progress. This makes it hard to detect drift, validate partial implementations, or demonstrate progress to stakeholders.",
+      "evidence": "Each phase has a 'Goal' statement but no 'Done When' criteria. Phase 1 goal: 'Multi-panel layout with focus cycling, responsive sizing, and themed borders. No data — just the chrome.' — but no acceptance test or screenshot comparison is required.",
+      "id": "m-4",
+      "impact": "Phases may be marked 'complete' with subtle bugs or missing features. Cascading assumptions between phases go unvalidated until end-to-end testing in P9.",
+      "layer": "contractor_readiness",
+      "recommendation": "Add a validation milestone to each phase: P0 'make run shows bordered text', P1 'screenshot matches Layout.tsx at 120x40 terminal', P2 'mock CLI script produces correct messages', P3 'sidecar health check passes within 3s', P4 'modal round-trip completes in \u003c100ms', etc.",
+      "severity": "minor",
+      "title": "No per-phase validation milestones or demo checkpoints"
+    }
+  ],
+  "metadata": {
+    "cost_estimate_usd": 2.5,
+    "review_duration_minutes": 25,
+    "review_layers_applied": 7,
+    "scouts_spawned": 2,
+    "thinking_budget_used": 16000
+  },
+  "recommendations": {
+    "high_priority": [
+      {
+        "action": "Conduct MCP transport proof-of-concept before any implementation work (addresses C-1)",
+        "effort": "2-4 hours for POC, 4-8 hours if Go MCP SDK spike also needed (M-1)",
+        "rationale": "The entire three-process topology depends on createSdkMcpServer supporting HTTP/SSE transport. If this fails, 44 tickets need redesign. A 50-line POC costs 2-4 hours vs. weeks of wasted implementation."
+      },
+      {
+        "action": "Define bidirectional bridge API with Go→sidecar endpoints (addresses C-2)",
+        "effort": "2 hours to design API contract, 4 hours to implement",
+        "rationale": "Current plan only has sidecar→Go communication. Process kill, shutdown cleanup, and status queries all require reverse communication. Add at minimum: POST /sidecar/kill-agent, POST /sidecar/shutdown, GET /sidecar/agents."
+      },
+      {
+        "action": "Design canonical AgentRegistry with dedup and mutex for dual-source agent state (addresses C-3)",
+        "effort": "4 hours to design, implementation folded into P5-1",
+        "rationale": "NDJSON and bridge API both feed agent data into the same tree. Without dedup, races produce ghost agents and incorrect status. All mutations must go through tea.Msg → Update() pipeline."
+      },
+      {
+        "action": "Verify Claude CLI stdin format for stream-json mode (addresses M-5)",
+        "effort": "1 hour",
+        "rationale": "Critical path dependency. 1 hour of manual testing prevents potential Phase 2 block."
+      },
+      {
+        "action": "Split P7-7 into 3-4 sub-tickets for multi-provider support (addresses M-2)",
+        "effort": "1 hour to decompose tickets",
+        "rationale": "Current single ticket covers 4 providers, 11 models, per-provider state management (~180 lines of state code), and provider switching UI. Grossly underscoped for contractor readiness."
+      }
+    ],
+    "low_priority": [
+      {
+        "action": "Create ticket reconciliation appendix mapping old GOgent-109–121 to new plan tickets (addresses m-1)",
+        "effort": "1 hour",
+        "rationale": "Prevents confusion from parallel ticket numbering systems. Low effort, high clarity."
+      },
+      {
+        "action": "Specify shutdown timing constraints for three-process topology (addresses m-2)",
+        "effort": "30 minutes to add to P8-3 ticket",
+        "rationale": "Current plan lists shutdown steps without timeouts. Add: CLI interrupt 2s, sidecar cleanup 5s, total budget 10s."
+      },
+      {
+        "action": "Validate esbuild bundle of sidecar dependencies (addresses m-3)",
+        "effort": "1 hour",
+        "rationale": "Confirm single-file bundling works with native Node.js module externals. Acknowledge Node.js runtime requirement in plan."
+      }
+    ],
+    "medium_priority": [
+      {
+        "action": "Evaluate two-process topology via Go MCP SDK spike (addresses M-1)",
+        "effort": "4-8 hours for spike",
+        "rationale": "github.com/modelcontextprotocol/go-sdk v1.2.0 is already in go.mod but unused. Reimplementing 7 MCP tools in Go eliminates sidecar, bridge, 2 ports, and Node.js dependency. The total MCP tool code (excluding spawnAgent process management which already exists in Go) is ~300 lines of TS."
+      },
+      {
+        "action": "Use Unix domain sockets instead of TCP for IPC (addresses M-3)",
+        "effort": "Minimal if done during initial P3 implementation",
+        "rationale": "Eliminates port collision entirely. Lower latency than TCP. Existing internal/lifecycle/process.go already uses the gofortress-{pid}.sock pattern. Consistent with existing codebase conventions."
+      },
+      {
+        "action": "Add per-phase test requirements and validation milestones (addresses M-4, m-4)",
+        "effort": "2 hours to add test requirements to each phase's tickets",
+        "rationale": "Current 7:1 implementation:test ratio with all testing deferred to P9 is a red flag. Each phase should have a 'Done When' criteria with at minimum a smoke test."
+      }
+    ]
+  },
+  "review_id": "staff-arch-1741945200",
+  "schema_id": "staff-architect",
+  "sign_off": {
+    "conditions": [
+      "C-1 RESOLVED: MCP HTTP/SSE transport POC demonstrates working Claude CLI ↔ sidecar communication, OR architecture pivots to two-process topology with Go MCP SDK",
+      "C-2 RESOLVED: Bidirectional bridge API designed with Go→sidecar endpoints for kill, shutdown, and status query",
+      "C-3 RESOLVED: AgentRegistry design specifies canonical ID strategy, dedup mechanism, and mutex for concurrent NDJSON + bridge API writes",
+      "M-5 RESOLVED: Claude CLI stdin format verified with manual test, results documented in plan"
+    ],
+    "post_approval_monitoring": [
+      "Watch P3 implementation for MCP transport issues — this is the highest-risk phase",
+      "Measure bridge API round-trip latency during P3/P4 — if \u003e200ms per modal, evaluate Unix socket alternative",
+      "Monitor agent tree for ghost agents or missing agents during P5 — indicates C-3 dedup not working",
+      "Track multi-provider state during P7-7 implementation — verify no cross-provider data leaks",
+      "Run concurrent TUI instances test after P3 to verify port collision is handled (M-3)"
+    ]
+  },
+  "status": "complete"
+}

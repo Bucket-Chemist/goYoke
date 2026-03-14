@@ -1,0 +1,464 @@
+{
+  "analysis_id": "braintrust-1773453175",
+  "analysis_perspectives": {
+    "einstein_strengths": [
+      "Process Topology Complexity Analysis framework provides rigorous theoretical foundation",
+      "Precise identification of canUseTool permission mechanism as the architectural linchpin",
+      "Three novel approaches with honest feasibility ratings and tradeoff analysis",
+      "Root cause analysis traces sidecar to historical accident, reframing the decision",
+      "Seven assumptions surfaced with specific validation protocols and impact analysis"
+    ],
+    "einstein_summary": "Einstein argues from distributed systems first principles that the three-process topology is over-engineered and self-contradictory. Process boundaries create multiplicative failure modes (9 vs 3 for two-process). The TS sidecar exists due to historical path dependency, not architectural necessity. Go MCP SDK v1.2.0 is the official implementation already in go.mod. Permission handling (canUseTool to stream-json) is the critical unknown. Recommends two-process with empirical validation as prerequisite.",
+    "staff_architect_strengths": [
+      "C-1 identifies createSdkMcpServer HTTP transport as unverified TODO blocking 44 tickets",
+      "C-2 catches unidirectional bridge gap - no Go-to-sidecar communication channel",
+      "C-3 identifies split-brain agent state race condition with technical specifics",
+      "M-2 correctly scopes P7-7 multi-provider as 3-4 tickets of hidden complexity",
+      "Failure mode analysis with probability/impact ratings shows practical engineering judgment",
+      "Commendations fairly acknowledge plan strengths (state mapping, keybinding inventory)"
+    ],
+    "staff_architect_verdict": "REVISE"
+  },
+  "assumptions_to_validate": [
+    {
+      "assumption": "Claude CLI stream-json mode emits NDJSON events for permission requests and accepts responses via stdin JSON",
+      "blocking": true,
+      "priority": "high",
+      "source": "both",
+      "validation_method": "Run CLI with stream-json, trigger Write tool, capture all NDJSON output and stdin traffic, document protocol"
+    },
+    {
+      "assumption": "Go MCP SDK v1.2.0 can serve tools discoverable by Claude CLI via --mcp-config",
+      "blocking": true,
+      "priority": "high",
+      "source": "both",
+      "validation_method": "Create minimal Go MCP server with go-sdk, configure CLI connection, verify discovery and invocation"
+    },
+    {
+      "assumption": "Claude CLI stdin accepts line-delimited JSON for user messages in stream-json mode",
+      "blocking": true,
+      "priority": "high",
+      "source": "staff-architect",
+      "validation_method": "Run CLI with stream-json, send JSON via stdin, test plain text too, document format"
+    },
+    {
+      "assumption": "NDJSON event catalog has exactly 6 defined types plus stream_event with no other undocumented events",
+      "blocking": true,
+      "priority": "high",
+      "source": "einstein",
+      "validation_method": "Comprehensive CLI session with tee logging, parse and categorize every event type and subtype"
+    },
+    {
+      "assumption": "spawnAgent process management is fully covered by existing Go code in lifecycle and team-run",
+      "blocking": false,
+      "priority": "medium",
+      "source": "einstein",
+      "validation_method": "Line-by-line comparison of spawnAgent.ts with Go equivalents, enumerate any missing features"
+    },
+    {
+      "assumption": "All 13 old TUI tickets are functionally covered by the new plan",
+      "blocking": false,
+      "priority": "medium",
+      "source": "both",
+      "validation_method": "Requirements traceability matrix mapping each old ticket criterion to specific new ticket"
+    },
+    {
+      "assumption": "Bubbles v0.20.0 and Lipgloss v1.1.0 are compatible with planned layout design",
+      "blocking": false,
+      "priority": "low",
+      "source": "synthesis",
+      "validation_method": "Build Phase 2 scaffold with current versions, verify layout, borders, focus, text input"
+    }
+  ],
+  "convergence_points": [
+    {
+      "confidence": "high",
+      "einstein_view": "Three-process contradicts migration goals, creates N-squared failure modes, adds HTTP bridge latency. Sidecar exists due to historical path dependency.",
+      "staff_architect_view": "Three-process rests on three unverified critical assumptions (C-1, C-2, C-3). Go SDK v1.2.0 in go.mod but unused. Total MCP tool code is about 300 lines TS.",
+      "synthesis": "STRONG AGREEMENT. Einstein provides theoretical justification, Staff-Architect provides empirical evidence. The sidecar rationale (Go SDKs lag behind) is factually incorrect.",
+      "topic": "Two-process topology is architecturally superior"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "canUseTool is an Agent SDK callback that does not exist in CLI stream-json mode. Plan assumes MCP tools replace it without verification.",
+      "staff_architect_view": "M-5 identifies stdin format as unverified. C-1 notes transport failure cascades to permission flow. Both point to undefined Go TUI to CLI permission protocol.",
+      "synthesis": "STRONG AGREEMENT. Einstein focuses on mechanism, Staff-Architect on format. Validation must answer both.",
+      "topic": "Permission handling is the critical unknown"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "Plan identifies 6 types but stream_event is undefined. Missing events cause state desync - top cause of TUI bugs.",
+      "staff_architect_view": "Unknown events should be logged at WARN and accumulated in telemetry. Continue processing, never crash.",
+      "synthesis": "COMPLEMENTARY. Einstein identifies the risk, Staff-Architect provides the mitigation pattern. Must be captured before Phase 2.",
+      "topic": "NDJSON event catalog needs empirical capture"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "Nine Zustand slices map naturally to about 8 child models. No semantic loss. Matches Bubble Tea composition.",
+      "staff_architect_view": "Commends comprehensive state translation mapping as unusually thorough.",
+      "synthesis": "STRONG AGREEMENT. Data model translation is the lowest-risk migration area. Topology-independent.",
+      "topic": "State model translation is low risk"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "Architectural danger lies in process coordination and IPC, not data model or UI translation.",
+      "staff_architect_view": "Commends keybinding inventory, modal system identification, and design recommendations.",
+      "synthesis": "STRONG AGREEMENT. Plan Sections 3, 14, 15, 16, 17 should be preserved verbatim.",
+      "topic": "UI component mapping is excellent and topology-independent"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "Three high-importance empirical investigations must complete before designing Phase 4.",
+      "staff_architect_view": "POC before any tickets. Go SDK spike 4-8h. Stdin format test 1h. Sign-off conditions require all criticals resolved.",
+      "synthesis": "STRONG AGREEMENT. Spend 8-12 hours verifying rather than risking weeks on unverified foundations.",
+      "topic": "Prerequisite spike required before implementation"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "v2 shipped 6 weeks ago. Ecosystem may not be v2-compatible. Start v1, add migration ticket later.",
+      "staff_architect_view": "No objection. Commends v1-based Bubble Tea architecture patterns.",
+      "synthesis": "AGREEMENT. Start v1.3.10 already in go.mod. Avoid fighting two battles simultaneously.",
+      "topic": "Bubble Tea v1 over v2"
+    },
+    {
+      "confidence": "high",
+      "einstein_view": "Not directly addressed (focused on topology).",
+      "staff_architect_view": "M-2: 4 providers, 11 models, 5 per-provider state maps in one ticket. Should be 3-4 tickets minimum.",
+      "synthesis": "Staff-Architect finding stands unchallenged. Decompose into provider types, state management, switching logic, and tab UI.",
+      "topic": "P7-7 multi-provider ticket is grossly underscoped"
+    }
+  ],
+  "divergence_resolution": [
+    {
+      "confidence": "high",
+      "einstein_position": "Recommends direct two-process. Phased costs 30% more and risks sidecar becoming permanent.",
+      "reasoning": "The spike directly tests the two-process hypothesis at about 1% of three-process cost. If it passes, direct saves 12+ tickets. If it fails, failure data specifies exactly what three-process needs.",
+      "resolution": "Direct two-process contingent on spike success. Phased approach has 30% overhead, permanence risk, and tech debt leakage. Staff-Architect caution satisfied by the spike itself.",
+      "staff_architect_position": "Recommends POC first then decide. More cautious, frames as MEDIUM priority evaluation.",
+      "topic": "Direct two-process vs phased migration",
+      "unresolved": false
+    },
+    {
+      "confidence": "high",
+      "einstein_position": "Unix domain socket for MCP transport, in-process channels for modals. HTTP is misapplied enterprise pattern.",
+      "reasoning": "Both agree on direction. Einstein provides theory (boundary minimization), Staff-Architect provides practice (existing socket pattern). In two-process topology, modal interactions become channel operations at approximately 0ms vs 2-5ms HTTP.",
+      "resolution": "Unix domain sockets for external IPC, in-process channels for internal. No port conflicts, lower latency, consistent with existing patterns.",
+      "staff_architect_position": "M-3 recommends UDS or dynamic ports. Notes existing gofortress-{pid}.sock pattern in codebase.",
+      "topic": "IPC mechanism selection",
+      "unresolved": false
+    },
+    {
+      "confidence": "high",
+      "einstein_position": "Not directly addressed. Focused on architectural risk.",
+      "reasoning": "Deferred testing is a well-known anti-pattern. Staff-Architect analysis is correct and unchallenged. Per-phase smoke tests have low cost and high return.",
+      "resolution": "Per-phase test requirements with Done When criteria. P9 becomes integration testing, not first testing phase.",
+      "staff_architect_position": "M-4: 7:1 ratio with all testing in P9 is a red flag. Per-phase test requirements needed.",
+      "topic": "Testing strategy",
+      "unresolved": false
+    },
+    {
+      "confidence": "high",
+      "einstein_position": "Five open questions, all high-importance items should be resolved first.",
+      "reasoning": "Individual estimates do not account for shared setup. Running CLI in stream-json mode once answers stdin format, NDJSON catalog, and permission mechanism simultaneously.",
+      "resolution": "Consolidate into single spike (8-12h). Verifications share setup - items 1-3 use same CLI session. Go MCP SDK POC is the only independent effort.",
+      "staff_architect_position": "Four separate verifications totaling 8-14 hours.",
+      "topic": "Spike scope consolidation",
+      "unresolved": false
+    },
+    {
+      "confidence": "high",
+      "einstein_position": "Architecturally obsolete but specific requirements should be traced into new plan.",
+      "reasoning": "Both agree old tickets do not survive as-is. Requirements transcend architecture. Completing the mapping prevents silent requirement loss at low effort.",
+      "resolution": "Old tickets superseded. Requirements traceability matrix verifies no functional loss. Specific attention to GOgent-113 file watchers and GOgent-109 auto-restart.",
+      "staff_architect_position": "Partial mapping provided. Recommends reconciliation appendix.",
+      "topic": "Old ticket reconciliation depth",
+      "unresolved": false
+    }
+  ],
+  "executive_summary": "Both Einstein and Staff-Architect converge decisively: the three-process topology (Go TUI + TS MCP sidecar + Claude Code CLI) is architecturally self-contradictory. The migration goal is single-binary Go distribution, yet the plan retains a permanent Node.js sidecar. A two-process topology (Go TUI with native Go MCP server + Claude CLI) eliminates the HTTP bridge, removes 6 failure modes, and achieves true single-binary distribution. The Go MCP SDK v1.2.0 is already in go.mod. Three critical unknowns must be resolved via an 8-12 hour prerequisite spike before committing: (1) permission handling in stream-json mode, (2) Go MCP SDK transport compatibility, (3) complete NDJSON event catalog. The plan's UI component mapping, state translation, keybinding inventory, and Bubble Tea patterns are excellent and topology-independent.",
+  "metadata": {
+    "contradictions_resolved": 5,
+    "convergence_points_count": 8,
+    "divergence_points_count": 5,
+    "estimated_total_cost_usd": 3.5,
+    "open_questions_count": 5,
+    "recommendation_count": 7,
+    "risks_identified": 8,
+    "thinking_budget_used": 16000,
+    "unresolved_tensions": 0
+  },
+  "open_questions": [
+    {
+      "importance": "high",
+      "question": "What is the exact protocol for permission prompts in Claude CLI stream-json mode?",
+      "source": "both",
+      "suggested_next_step": "Spike: run CLI with stream-json, trigger permission tool, capture all traffic"
+    },
+    {
+      "importance": "high",
+      "question": "Does Go MCP SDK support the transport mode Claude CLI uses for MCP communication?",
+      "source": "both",
+      "suggested_next_step": "Spike: build minimal Go MCP server, connect via --mcp-config, test UDS if stdio conflicts with Bubble Tea"
+    },
+    {
+      "importance": "high",
+      "question": "What is the complete set of NDJSON event types including undocumented streaming events?",
+      "source": "einstein",
+      "suggested_next_step": "Spike: comprehensive session capture, categorize every event type and subtype"
+    },
+    {
+      "importance": "medium",
+      "question": "Should background team agents be waited for during shutdown or continue detached?",
+      "source": "staff-architect",
+      "suggested_next_step": "Design decision in Phase 8. Recommend detached since gogent-team-run manages own process tree."
+    },
+    {
+      "importance": "low",
+      "question": "Is Bubble Tea v2 ecosystem production-ready as of March 2026?",
+      "source": "einstein",
+      "suggested_next_step": "Check after Phase 2. Try v2 import with current Bubbles/Lipgloss."
+    }
+  ],
+  "problem_statement": {
+    "clarified": "The migration plan proposes a thorough UI rewrite (56 tickets, 10 phases) but its architectural centerpiece - a three-process topology with HTTP bridge - rests on unverified assumptions and contradicts migration goals. The core question is whether the three-process topology should exist at all. Resolution requires empirical validation of three critical unknowns before any implementation tickets can be finalized.",
+    "original": "Evaluate the GOgent-Fortress TUI Migration Plan (React/Ink/TypeScript to Go/Bubble Tea) against the existing codebase, with emphasis on architecture risk of the three-process topology and IPC design. The topology is OPEN for challenge.",
+    "success_criteria": [
+      "Architecture recommendation backed by both theoretical and practical evidence",
+      "Three critical unknowns have explicit validation protocols with pass/fail criteria",
+      "Every TS TUI feature accounted for in Go equivalent",
+      "Updated spec implementable by Sonnet-tier agents with valid DAG tickets",
+      "Old tickets GOgent-109 to 121 absorbed or preserved with rationale",
+      "Per-phase test milestones replace deferred P9-only testing"
+    ]
+  },
+  "risk_assessment": [
+    {
+      "impact": "high",
+      "mitigation": "Spike validates in 4-6 hours. If fails, document gaps and fall back to three-process with fixes. The go-sdk is the official MCP implementation.",
+      "owner": "Spike implementer",
+      "probability": "low",
+      "risk": "Go MCP SDK v1.2.0 cannot serve tools to Claude CLI due to transport or handshake incompatibility",
+      "source": "synthesis"
+    },
+    {
+      "impact": "high",
+      "mitigation": "Spike empirical test. If incompatible, consider --permission-mode flag, MCP mediation, or dedicated permission pipe.",
+      "owner": "Spike implementer",
+      "probability": "medium",
+      "risk": "Permission handling in stream-json mode uses undocumented mechanism incompatible with Bubble Tea stdin ownership",
+      "source": "both"
+    },
+    {
+      "impact": "medium",
+      "mitigation": "Spike comprehensive capture. Parser log-and-continue on unknowns. Telemetry accumulates unknown types. Default case with WARN log.",
+      "owner": "Spike and Phase 3 developer",
+      "probability": "medium",
+      "risk": "Incomplete NDJSON event catalog causes state desync or stuck UI elements",
+      "source": "both"
+    },
+    {
+      "impact": "medium",
+      "mitigation": "Single AgentRegistry with mutex. All mutations through tea.Msg to Update pipeline. Dedup key on agentType plus description.",
+      "owner": "Phase 5 developer",
+      "probability": "medium",
+      "risk": "Agent state race conditions between NDJSON parsing and MCP tool handler goroutines",
+      "source": "staff-architect"
+    },
+    {
+      "impact": "medium",
+      "mitigation": "Decompose into 4 tickets with independent acceptance criteria: config types, state management, switching, tab UI.",
+      "owner": "Phase 7 developer",
+      "probability": "high",
+      "risk": "Multi-provider P7-7 underestimated causing broken provider switching",
+      "source": "staff-architect"
+    },
+    {
+      "impact": "medium",
+      "mitigation": "Two-process simplifies to one child. Shutdown budget with SIGTERM escalation. Background team agents detached by design.",
+      "owner": "Phase 8 developer",
+      "probability": "medium",
+      "risk": "Graceful shutdown leaves orphaned processes",
+      "source": "both"
+    },
+    {
+      "impact": "medium",
+      "mitigation": "Parser resilience with log-and-skip unknowns. Version detection at startup. Defensive parsing with optional pointer fields.",
+      "owner": "Ongoing maintenance",
+      "probability": "medium",
+      "risk": "Claude CLI future update changes stream-json format breaking parser",
+      "source": "einstein"
+    },
+    {
+      "impact": "low",
+      "mitigation": "Requirements traceability matrix mapping old to new tickets. Flag unmapped requirements explicitly.",
+      "owner": "Ticket author",
+      "probability": "low",
+      "risk": "Old ticket requirements lost - specifically auto-restart and real-time file watcher telemetry",
+      "source": "both"
+    }
+  ],
+  "schema_id": "beethoven",
+  "status": "complete",
+  "unified_recommendations": {
+    "not_recommended": [
+      {
+        "approach": "Three-process topology as originally planned without fixes",
+        "reason": "Rests on three unverified critical assumptions. createSdkMcpServer transport is a TODO. Unidirectional bridge. No agent state dedup. Risks weeks of wasted work."
+      },
+      {
+        "approach": "Phased migration: build three-process first then eliminate sidecar",
+        "reason": "30% overhead on throwaway bridge code. High permanence risk. Tech debt leakage. Spike provides same risk reduction at 1% cost."
+      },
+      {
+        "approach": "Starting with Bubble Tea v2",
+        "reason": "v2 ecosystem not confirmed production-ready. Fighting two battles simultaneously is unnecessary risk. v1 to v2 migration is incremental."
+      },
+      {
+        "approach": "Deferring all testing to Phase 9",
+        "reason": "7:1 ratio means bugs accumulate 8 phases undetected. Integration issues surface late at highest rework cost."
+      }
+    ],
+    "primary": {
+      "implementation_phases": [
+        {
+          "decision_points": [
+            "Does CLI emit permission events in NDJSON? If yes: native handling. If no: MCP mediation.",
+            "Can Go MCP SDK serve tools to Claude CLI via --mcp-config? If no: evaluate three-process fallback."
+          ],
+          "description": "Prerequisite Spike: Run Claude CLI with stream-json, capture NDJSON catalog, verify stdin format, observe permission mechanism, build Go MCP SDK single-tool POC with Claude CLI.",
+          "phase": 1,
+          "success_criteria": [
+            "Permission mechanism documented with protocol spec",
+            "Go MCP SDK POC: Claude CLI discovers and invokes Go tool",
+            "Complete NDJSON event catalog with struct definitions",
+            "stdin format verified with working example"
+          ]
+        },
+        {
+          "decision_points": [
+            "Confirm Bubbles and Lipgloss compatibility",
+            "Validate responsive breakpoints"
+          ],
+          "description": "Foundation: Bubble Tea scaffold, multi-panel layout, focus cycling, responsive sizing, themed borders. Pure chrome, no data.",
+          "phase": 2,
+          "success_criteria": [
+            "Layout renders at 120x40",
+            "Focus cycling works",
+            "Smoke test passes"
+          ]
+        },
+        {
+          "decision_points": [
+            "Parser error handling strategy",
+            "MCP transport: UDS recommended"
+          ],
+          "description": "CLI Driver + NDJSON Parser + Go MCP Server: Spawn CLI subprocess, parse typed events, send stdin messages, serve all 7 MCP tools via Unix domain socket.",
+          "phase": 3,
+          "success_criteria": [
+            "Mock NDJSON produces correct messages",
+            "User sends and receives through CLI",
+            "Go MCP tools invocable by CLI",
+            "Unit tests cover all event types"
+          ]
+        },
+        {
+          "decision_points": [
+            "Modal queue: sequential vs priority",
+            "Timeout policy for unresponded modals"
+          ],
+          "description": "Modal System: Permission prompts, confirmations, input, selection using mechanism from spike. MCP handler to channel to tea.Msg to Update flow.",
+          "phase": 4,
+          "success_criteria": [
+            "Round-trip under 100ms",
+            "Concurrent modal handling without races",
+            "All 5 variants functional"
+          ]
+        },
+        {
+          "decision_points": [
+            "ID strategy: tool_use_id for Task, UUID for MCP",
+            "Tree rendering format"
+          ],
+          "description": "Agent Tree + Process Management: Hierarchy, lifecycle, process registry with signal escalation. Single AgentRegistry with canonical IDs and mutex.",
+          "phase": 5,
+          "success_criteria": [
+            "Lifecycle renders correctly",
+            "No duplicates from concurrent registration",
+            "No orphaned processes"
+          ]
+        },
+        {
+          "decision_points": [
+            "Markdown renderer choice",
+            "Syntax highlighting approach"
+          ],
+          "description": "Rich Features: Markdown rendering, syntax highlighting, cost tracking, tokens, context compaction, status line.",
+          "phase": 6,
+          "success_criteria": [
+            "Markdown with code blocks renders",
+            "Real-time cost and token counters",
+            "Status line complete"
+          ]
+        },
+        {
+          "decision_points": [
+            "Provider state isolation per decomposed tickets",
+            "Team status format"
+          ],
+          "description": "Settings, Providers, Teams: Decomposed multi-provider (4 tickets from P7-7), team orchestration UI, settings panel.",
+          "phase": 7,
+          "success_criteria": [
+            "Provider switching preserves history",
+            "All 4 providers configurable",
+            "Team states display correctly"
+          ]
+        },
+        {
+          "decision_points": [
+            "Session format",
+            "Background team agent shutdown policy"
+          ],
+          "description": "Lifecycle: Session persistence, graceful shutdown (CLI 2s, agents 5s, total 10s), error recovery, clipboard, search.",
+          "phase": 8,
+          "success_criteria": [
+            "Session resume works",
+            "Shutdown within 10s budget",
+            "All keybindings functional"
+          ]
+        },
+        {
+          "decision_points": [
+            "Test environment configuration",
+            "Regression thresholds"
+          ],
+          "description": "Integration Testing: E2E with live CLI, fuzzy testing, performance benchmarks (startup under 200ms, modal under 100ms), unknown event resilience.",
+          "phase": 9,
+          "success_criteria": [
+            "Full lifecycle test passes",
+            "Startup under 200ms",
+            "No orphans after stress test",
+            "Unknown events handled gracefully"
+          ]
+        }
+      ],
+      "rationale": "Migration goal is single-binary Go. Permanent Node.js sidecar contradicts this while adding 6 failure modes, HTTP latency, port conflicts, startup delay, and dual-language maintenance. Go MCP SDK v1.2.0 is official implementation already in go.mod. Total MCP tool reimplementation is about 300 lines excluding process management already in Go. The 8-12 hour spike validates or provides exact fallback data.",
+      "recommendation": "Adopt two-process topology (Go TUI with native Go MCP server + Claude CLI), contingent on mandatory prerequisite spike. Preserve plan UI mapping, state translation, and keybinding inventory. Restructure phases for two-process, add per-phase tests, decompose P7-7, complete old ticket reconciliation.",
+      "supporting_evidence": {
+        "from_einstein": "Process Topology Complexity Analysis: 9 failure scenarios vs 3 for two-process. IPC tax: 2-5ms per modal vs 0ms in-process. Goal alignment: sidecar contradicts single-binary goal. Root cause: sidecar is historical path dependency, not architectural necessity.",
+        "from_staff_architect": "C-1: createSdkMcpServer HTTP transport is unverified TODO. C-2: bridge is unidirectional. C-3: dual-source agent state races. M-1: Go SDK v1.2.0 in go.mod unused. Eliminating sidecar removes all three critical issues and about 12 tickets of bridge plumbing."
+      }
+    },
+    "secondary": [
+      {
+        "recommendation": "Three-process with Staff-Architect fixes (bidirectional bridge, AgentRegistry, UDS) if spike shows Go MCP SDK cannot serve tools to Claude CLI",
+        "tradeoffs": "Retains Node.js dependency. Adds 12+ bridge tickets. About 30% more total effort. Sidecar permanence risk. But provides working fallback.",
+        "when_to_use": "Spike Go MCP SDK POC fails due to transport incompatibility or missing protocol features"
+      },
+      {
+        "recommendation": "Hybrid: Go MCP for most tools plus minimal TS adapter for permission handling only",
+        "tradeoffs": "Tiny Node.js footprint (50 lines vs 800). Dual MCP config complexity. Temporary architecture needing retirement plan.",
+        "when_to_use": "Spike shows Go SDK works for tools but permission mechanism requires Agent SDK callbacks not replicable in Go"
+      }
+    ]
+  }
+}
