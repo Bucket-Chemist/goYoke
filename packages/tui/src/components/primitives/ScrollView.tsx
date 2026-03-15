@@ -49,6 +49,14 @@ export interface ScrollViewProps {
   focused?: boolean;
 
   /**
+   * Allow scroll input (mouse wheel, PgUp/PgDn, Ctrl+A/E) independently of full focus.
+   * When true, scrolling works even if `focused` is false (e.g., while a modal is active).
+   * Arrow key scrolling still requires `focused` to be true.
+   * @default undefined (follows `focused`)
+   */
+  scrollable?: boolean;
+
+  /**
    * When true, only PageUp/PageDown + Ctrl+A/E are bound (not Up/Down arrows).
    * Use when the parent component owns Up/Down for another purpose (e.g. input history).
    * @default false
@@ -77,10 +85,14 @@ export function ScrollView({
   width,
   autoScroll = true,
   focused = false,
+  scrollable,
   disableArrowKeys = false,
   forceScrollToBottom = 0,
   children,
 }: ScrollViewProps): JSX.Element {
+  // Scroll input (mouse wheel, PgUp/PgDn, Ctrl+A/E) can be enabled independently
+  // of full focus. Arrow keys still require `focused` to be true.
+  const isScrollActive = scrollable ?? focused;
   const [scrollOffset, setScrollOffset] = useState(0);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const contentRef = useRef<any>(null);
@@ -150,18 +162,18 @@ export function ScrollView({
     setUserScrolledUp(clamped < curMax);
   }, []);
 
-  // Keyboard scroll controls (only active when focused)
+  // Keyboard scroll controls
+  // Scroll keys (PgUp/PgDn, Ctrl+A/E) activate when scrollable OR focused.
+  // Arrow keys additionally require focused (they may be owned by the parent for other purposes).
   useInput(
     (input, key) => {
-      if (!focused) return;
-
       let newOffset = scrollOffset;
       let scrolled = false;
 
-      if (!disableArrowKeys && key.upArrow) {
+      if (!disableArrowKeys && focused && key.upArrow) {
         newOffset = Math.max(0, scrollOffset - 1);
         scrolled = true;
-      } else if (!disableArrowKeys && key.downArrow) {
+      } else if (!disableArrowKeys && focused && key.downArrow) {
         newOffset = Math.min(maxOffset, scrollOffset + 1);
         scrolled = true;
       } else if (key.pageUp) {
@@ -192,7 +204,7 @@ export function ScrollView({
         }
       }
     },
-    { isActive: focused }
+    { isActive: isScrollActive }
   );
 
   // Mouse event handler — wheel scroll + click/drag on scrollbar
@@ -233,7 +245,7 @@ export function ScrollView({
     [height, applyScroll]
   );
 
-  useMouse({ isActive: focused, onMouseEvent: handleMouseEvent });
+  useMouse({ isActive: isScrollActive, onMouseEvent: handleMouseEvent });
 
   // Scrollbar geometry
   const showScrollbar = contentHeight > height;

@@ -657,8 +657,20 @@ class SessionManager {
     const activeProvider = store.activeProvider;
 
     if (initEvent.model) {
-      void logger.debug("SDK Init returned model", { model: initEvent.model });
-      store.setProviderModel(activeProvider, initEvent.model);
+      // The SDK strips the [1m] suffix during model resolution (it's a CLI
+      // hint, not an API field). If the user requested [1m] via settings or
+      // /model, preserve it by re-appending to the SDK's resolved model ID.
+      const storedModel = store.getActiveModel();
+      const model = (storedModel?.includes("[1m]") && !initEvent.model.includes("[1m]"))
+        ? `${initEvent.model}[1m]`
+        : initEvent.model;
+
+      void logger.debug("SDK Init returned model", { model, sdkModel: initEvent.model });
+      store.setProviderModel(activeProvider, model);
+
+      // Set initial context window capacity so the bar isn't empty while
+      // waiting for the SDK's modelUsage report (which may never arrive).
+      store.updateContextWindow(0, resolveContextWindow(model));
     }
 
     // Update session with ID and set session dir for child processes
@@ -827,10 +839,16 @@ class SessionManager {
     }
 
     // Sync displayed model to the actual resolved model from the API response.
-    // Same field the init event uses — this keeps the display accurate after /model switches.
-    const msgModel = (event.message as { model?: string }).model;
-    if (msgModel) {
+    // Only for root-level messages — subagent messages carry the subagent's model
+    // (e.g. haiku) which must NOT overwrite the root session's model display.
+    const rawMsgModel = (event.message as { model?: string }).model;
+    if (rawMsgModel && !event.parent_tool_use_id && !rawMsgModel.startsWith("<")) {
       const activeProvider = store.activeProvider;
+      // Preserve [1m] suffix — the API never echoes it back, but the user requested it.
+      const storedModel = store.getActiveModel();
+      const msgModel = (storedModel?.includes("[1m]") && !rawMsgModel.includes("[1m]"))
+        ? `${rawMsgModel}[1m]`
+        : rawMsgModel;
       store.setProviderModel(activeProvider, msgModel);
 
       // Also sync the root agent node so AgentDetail matches
@@ -844,9 +862,9 @@ class SessionManager {
       }
     }
 
-    // Update context window usage from per-message token counts
-    // BetaMessage.usage reflects the actual context fill for this API call
-    if (event.message.usage) {
+    // Update context window usage from per-message token counts.
+    // Only root-level messages — subagent usage reflects a separate CLI context.
+    if (event.message.usage && !event.parent_tool_use_id) {
       const usage = event.message.usage;
       const usedTokens =
         usage.input_tokens +
@@ -965,16 +983,17 @@ class SessionManager {
       });
     }
 
-    // Update context window capacity from modelUsage (token counts are
-    // cumulative here, so we only extract capacity — actual usage is
-    // tracked per-message in handleAssistantEvent)
+    // Update context window capacity from modelUsage.
+    // The SDK reports base model capacity (200K) even for [1m] sessions,
+    // and modelUsage may contain entries for subagent models (haiku at 200K).
+    // Use resolveContextWindow as source of truth for [1m]; fall back to SDK otherwise.
     if (event.modelUsage) {
-      const models = Object.values(event.modelUsage);
-      if (models.length > 0) {
-        const capacity = models[0]?.contextWindow || resolveContextWindow(store.getActiveModel() ?? "");
-        const { contextWindow } = store;
-        store.updateContextWindow(contextWindow.usedTokens, capacity);
-      }
+      const activeModel = store.getActiveModel() ?? "";
+      const capacity = activeModel.includes("[1m]")
+        ? resolveContextWindow(activeModel)
+        : (Object.values(event.modelUsage)[0]?.contextWindow || resolveContextWindow(activeModel));
+      const { contextWindow } = store;
+      store.updateContextWindow(contextWindow.usedTokens, capacity);
     }
 
     // Handle error result

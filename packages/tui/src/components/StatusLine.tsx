@@ -203,7 +203,7 @@ export function StatusLine({ width, height = 2 }: StatusLineProps): JSX.Element 
     const modelId = state.getActiveModel();
     if (!modelId) return "unknown";
     const def = PROVIDERS[provider]?.models.find((m) => m.id === modelId);
-    return def?.displayName ?? modelId.substring(0, 12);
+    return def?.displayName ?? modelId;
   });
 
   const gitInfo = useGitInfo();

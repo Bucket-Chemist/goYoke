@@ -177,6 +177,14 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
     const activeProvider = store.activeProvider;
     const providerConfig = PROVIDERS[activeProvider];
 
+    // Preserve [1m] context window suffix across model switches.
+    // The SDK receives the plain alias; the store keeps [1m] for capacity resolution.
+    const currentModel = store.getActiveModel();
+    const withContext = (id: string): string =>
+      currentModel?.includes("[1m]") && !id.includes("[1m]") && !id.includes("haiku")
+        ? `${id}[1m]`
+        : id;
+
     if (!providerConfig) {
       addSystemMessage(`Error: Unknown provider "${activeProvider}"`);
       return;
@@ -202,12 +210,12 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
       // Try setModel first (works if query active AND in streaming input mode)
       const success = await setModel(modelId);
       if (success) {
-        store.setProviderModel(activeProvider, modelId);
+        store.setProviderModel(activeProvider, withContext(modelId));
         addSystemMessage(`Model switched to: ${validModel.displayName} for ${providerConfig.name}`);
       } else {
         // No active query - store preference for next message
         void logger.debug("No active query, storing preference", { modelId });
-        store.setProviderModel(activeProvider, modelId);
+        store.setProviderModel(activeProvider, withContext(modelId));
         addSystemMessage(
           `Model set to: ${validModel.displayName} for ${providerConfig.name}. ` +
           `Will apply on next message.`
@@ -236,11 +244,11 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
         // Try setModel first (works if query active)
         const success = await setModel(result.selected);
         if (success) {
-          store.setProviderModel(activeProvider, result.selected);
+          store.setProviderModel(activeProvider, withContext(result.selected));
           addSystemMessage(`Model switched to: ${selectedModel.displayName} for ${providerConfig.name}`);
         } else {
           // No active query - store preference for next message
-          store.setProviderModel(activeProvider, result.selected);
+          store.setProviderModel(activeProvider, withContext(result.selected));
           addSystemMessage(
             `Model set to: ${selectedModel.displayName} for ${providerConfig.name}. ` +
             `Will apply on next message.`
@@ -445,6 +453,7 @@ export function ClaudePanel({ focused, width }: ClaudePanelProps): JSX.Element {
           height={scrollHeight}
           width={width}
           focused={focused}
+          scrollable={focused || modalQueue.length > 0}
           disableArrowKeys={true}
           autoScroll={true}
           forceScrollToBottom={modalQueue.length}
