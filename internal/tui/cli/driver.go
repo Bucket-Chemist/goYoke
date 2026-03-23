@@ -1,0 +1,475 @@
+// Package cli provides Go struct definitions for all NDJSON event types
+// emitted by the Claude Code CLI when invoked with --output-format stream-json.
+//
+// driver.go implements CLIDriver, which manages the claude subprocess lifecycle,
+// reads its NDJSON output stream, and bridges parsed events into the Bubbletea
+// command/message loop.
+//
+// The channel-to-Cmd re-subscription pattern keeps the event pump alive:
+// after processing each message the root AppModel must call d.WaitForEvent()
+// to schedule the next read from the internal event channel.
+package cli
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"os/exec"
+	"sync"
+	"syscall"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+// ---------------------------------------------------------------------------
+// DriverState
+// ---------------------------------------------------------------------------
+
+// DriverState represents the subprocess lifecycle state.
+type DriverState int
+
+const (
+	// DriverIdle is the state before Start() is called.
+	DriverIdle DriverState = iota
+
+	// DriverStarting indicates Start() was called and the process is launching.
+	DriverStarting
+
+	// DriverStreaming indicates the process is running and events are being read.
+	DriverStreaming
+
+	// DriverError indicates the process exited with a non-zero status.
+	DriverError
+
+	// DriverDead indicates the process exited cleanly or was killed.
+	DriverDead
+)
+
+// String returns a human-readable name for the state.
+func (s DriverState) String() string {
+	switch s {
+	case DriverIdle:
+		return "idle"
+	case DriverStarting:
+		return "starting"
+	case DriverStreaming:
+		return "streaming"
+	case DriverError:
+		return "error"
+	case DriverDead:
+		return "dead"
+	default:
+		return fmt.Sprintf("DriverState(%d)", int(s))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Message types
+// ---------------------------------------------------------------------------
+
+// CLIStartedMsg is sent when the subprocess starts successfully.
+type CLIStartedMsg struct {
+	PID int
+}
+
+// CLIDisconnectedMsg is sent when the subprocess exits or the stdout pipe
+// breaks. Err is nil for a clean exit.
+type CLIDisconnectedMsg struct {
+	Err error
+}
+
+// ---------------------------------------------------------------------------
+// CLIDriverOpts
+// ---------------------------------------------------------------------------
+
+// CLIDriverOpts configures the CLI subprocess.
+type CLIDriverOpts struct {
+	// SessionID resumes an existing claude session. Empty means new session.
+	SessionID string
+
+	// Model overrides the default model for this session. Empty means default.
+	Model string
+
+	// MCPConfigPath is the path to the MCP configuration file. Empty omits the flag.
+	MCPConfigPath string
+
+	// ProjectDir sets the working directory for the claude process.
+	// Empty means the current working directory.
+	ProjectDir string
+
+	// Verbose enables verbose output from the claude subprocess.
+	Verbose bool
+
+	// PermissionMode sets the permission mode (e.g., "acceptEdits", "plan").
+	// Empty defaults to "acceptEdits".
+	PermissionMode string
+
+	// Debug causes the driver to log debug-level messages via slog.
+	Debug bool
+}
+
+// ---------------------------------------------------------------------------
+// CLIDriver
+// ---------------------------------------------------------------------------
+
+// CLIDriver manages a claude CLI subprocess and bridges its NDJSON output
+// stream into the Bubbletea event loop.
+//
+// The zero value is not usable; use NewCLIDriver instead.
+//
+// Concurrency: all exported methods are goroutine-safe. Internal state is
+// protected by mu. The eventCh is written by the consumeEvents goroutine and
+// read by WaitForEvent commands scheduled by the Bubbletea runtime.
+type CLIDriver struct {
+	cmd     *exec.Cmd
+	stdin   io.WriteCloser
+	stdout  io.ReadCloser
+	eventCh chan any
+	state   DriverState
+	mu      sync.Mutex
+	opts    CLIDriverOpts
+}
+
+// NewCLIDriver creates a CLIDriver configured with the given options.
+// The driver starts in DriverIdle state; call Start() to launch the subprocess.
+func NewCLIDriver(opts CLIDriverOpts) *CLIDriver {
+	return &CLIDriver{
+		opts:    opts,
+		state:   DriverIdle,
+		eventCh: make(chan any, 64),
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+
+// Start builds the claude subprocess command, creates stdio pipes, and
+// launches the process. It returns a tea.Cmd that produces CLIStartedMsg on
+// success or CLIDisconnectedMsg on failure.
+//
+// Start must be called at most once per CLIDriver. Calling Start on an
+// already-started driver returns CLIDisconnectedMsg with an error.
+func (d *CLIDriver) Start() tea.Cmd {
+	return func() tea.Msg {
+		d.mu.Lock()
+		if d.state != DriverIdle {
+			d.mu.Unlock()
+			return CLIDisconnectedMsg{
+				Err: fmt.Errorf("cli driver: Start called in non-idle state %s", d.state),
+			}
+		}
+		d.state = DriverStarting
+		d.mu.Unlock()
+
+		args := d.buildArgs()
+
+		if d.opts.Debug {
+			slog.Debug("cli driver: launching subprocess", "args", args)
+		}
+
+		cmd := exec.Command("claude", args...) //nolint:gosec // args are built from structured opts
+		if d.opts.ProjectDir != "" {
+			cmd.Dir = d.opts.ProjectDir
+		}
+
+		stdinPipe, err := cmd.StdinPipe()
+		if err != nil {
+			d.setState(DriverError)
+			return CLIDisconnectedMsg{Err: fmt.Errorf("cli driver: create stdin pipe: %w", err)}
+		}
+
+		stdoutPipe, err := cmd.StdoutPipe()
+		if err != nil {
+			stdinPipe.Close()
+			d.setState(DriverError)
+			return CLIDisconnectedMsg{Err: fmt.Errorf("cli driver: create stdout pipe: %w", err)}
+		}
+
+		if err := cmd.Start(); err != nil {
+			stdinPipe.Close()
+			stdoutPipe.Close()
+			d.setState(DriverError)
+			return CLIDisconnectedMsg{Err: fmt.Errorf("cli driver: start subprocess: %w", err)}
+		}
+
+		d.mu.Lock()
+		d.cmd = cmd
+		d.stdin = stdinPipe
+		d.stdout = stdoutPipe
+		d.state = DriverStreaming
+		d.mu.Unlock()
+
+		go d.consumeEvents()
+
+		if d.opts.Debug {
+			slog.Debug("cli driver: subprocess started", "pid", cmd.Process.Pid)
+		}
+
+		return CLIStartedMsg{PID: cmd.Process.Pid}
+	}
+}
+
+// buildArgs constructs the argument slice for the claude command.
+func (d *CLIDriver) buildArgs() []string {
+	args := []string{
+		"--input-format", "stream-json",
+		"--output-format", "stream-json",
+		"--include-partial-messages",
+	}
+
+	permMode := d.opts.PermissionMode
+	if permMode == "" {
+		permMode = "acceptEdits"
+	}
+	args = append(args, "--permission-mode", permMode)
+
+	if d.opts.SessionID != "" {
+		args = append(args, "--resume", d.opts.SessionID)
+	}
+
+	if d.opts.Model != "" {
+		args = append(args, "--model", d.opts.Model)
+	}
+
+	if d.opts.MCPConfigPath != "" {
+		args = append(args, "--mcp-config", d.opts.MCPConfigPath)
+		args = append(args, "--allowedTools", "mcp__gofortress__*")
+	}
+
+	if d.opts.Verbose {
+		args = append(args, "--verbose")
+	}
+
+	return args
+}
+
+// ---------------------------------------------------------------------------
+// consumeEvents goroutine
+// ---------------------------------------------------------------------------
+
+// consumeEvents reads NDJSON lines from d.stdout, parses each line with
+// ParseCLIEvent, and sends parsed events to d.eventCh. It runs in its own
+// goroutine for the lifetime of the subprocess.
+//
+// When the stdout pipe closes (either because the process exited or because
+// the pipe was broken), consumeEvents sends a CLIDisconnectedMsg to eventCh,
+// sets the driver state to DriverDead, and waits for the subprocess to exit.
+func (d *CLIDriver) consumeEvents() {
+	scanner := bufio.NewScanner(d.stdout)
+
+	// 1 MB buffer to handle large tool outputs (file reads, etc.).
+	const maxBufSize = 1024 * 1024
+	buf := make([]byte, maxBufSize)
+	scanner.Buffer(buf, maxBufSize)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+
+		event, err := ParseCLIEvent(line)
+		if err != nil {
+			slog.Warn("cli driver: parse error, skipping line",
+				"err", err,
+				"line_len", len(line),
+			)
+			continue
+		}
+
+		if event == nil {
+			// Blank or whitespace-only line — skip silently.
+			continue
+		}
+
+		d.eventCh <- event
+	}
+
+	// Scanner exited: pipe closed or error.
+	scanErr := scanner.Err()
+	if d.opts.Debug && scanErr != nil {
+		slog.Debug("cli driver: scanner error", "err", scanErr)
+	}
+
+	// Signal disconnect before changing state.
+	d.eventCh <- CLIDisconnectedMsg{Err: scanErr}
+
+	d.setState(DriverDead)
+
+	// Reap the child process to avoid zombie processes.
+	if d.cmd != nil {
+		_ = d.cmd.Wait()
+	}
+}
+
+// ---------------------------------------------------------------------------
+// WaitForEvent
+// ---------------------------------------------------------------------------
+
+// WaitForEvent returns a tea.Cmd that blocks until one event is available on
+// the internal channel and returns it as a tea.Msg.
+//
+// IMPORTANT: The root AppModel must call d.WaitForEvent() after processing
+// each CLI event to maintain the subscription. This is the standard Bubbletea
+// channel-to-Cmd re-subscription pattern.
+//
+// When the channel is closed, WaitForEvent returns CLIDisconnectedMsg.
+func (d *CLIDriver) WaitForEvent() tea.Cmd {
+	return func() tea.Msg {
+		event, ok := <-d.eventCh
+		if !ok {
+			return CLIDisconnectedMsg{Err: nil}
+		}
+		// tea.Msg is defined as interface{}/any in Bubbletea, so this cast
+		// always succeeds for any non-nil value.
+		return event.(tea.Msg) //nolint:forcetypeassert
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SendMessage
+// ---------------------------------------------------------------------------
+
+// userMessagePayload is the JSON structure written to claude's stdin.
+type userMessagePayload struct {
+	Type    string             `json:"type"`
+	Message userMessageContent `json:"message"`
+}
+
+type userMessageContent struct {
+	Role    string            `json:"role"`
+	Content []userTextContent `json:"content"`
+}
+
+type userTextContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+// SendMessage writes a user message to the subprocess stdin and returns a
+// tea.Cmd. The command returns nil on success or CLIDisconnectedMsg on error.
+//
+// The message is serialised as:
+//
+//	{"type":"user","message":{"role":"user","content":[{"type":"text","text":"<text>"}]}}
+func (d *CLIDriver) SendMessage(text string) tea.Cmd {
+	return func() tea.Msg {
+		payload := userMessagePayload{
+			Type: "user",
+			Message: userMessageContent{
+				Role: "user",
+				Content: []userTextContent{
+					{Type: "text", Text: text},
+				},
+			},
+		}
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			// json.Marshal on plain structs never errors in practice.
+			return CLIDisconnectedMsg{Err: fmt.Errorf("cli driver: marshal message: %w", err)}
+		}
+
+		d.mu.Lock()
+		stdinPipe := d.stdin
+		d.mu.Unlock()
+
+		if stdinPipe == nil {
+			return CLIDisconnectedMsg{Err: fmt.Errorf("cli driver: stdin not open")}
+		}
+
+		// Write JSON line followed by newline.
+		if _, err := fmt.Fprintf(stdinPipe, "%s\n", data); err != nil {
+			return CLIDisconnectedMsg{Err: fmt.Errorf("cli driver: write to stdin: %w", err)}
+		}
+
+		return nil
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Interrupt
+// ---------------------------------------------------------------------------
+
+// Interrupt sends SIGINT to the subprocess, requesting a graceful
+// cancellation of the current operation. It does not wait for the process
+// to exit.
+func (d *CLIDriver) Interrupt() error {
+	d.mu.Lock()
+	cmd := d.cmd
+	d.mu.Unlock()
+
+	if cmd == nil || cmd.Process == nil {
+		return fmt.Errorf("cli driver: subprocess not running")
+	}
+
+	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
+		return fmt.Errorf("cli driver: send SIGINT: %w", err)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Shutdown
+// ---------------------------------------------------------------------------
+
+// Shutdown terminates the subprocess gracefully. It:
+//  1. Sets the driver state to DriverDead.
+//  2. Sends SIGTERM to the subprocess.
+//  3. After 2 seconds, sends SIGKILL if the process is still running.
+//  4. Closes the stdin pipe.
+//
+// Shutdown returns immediately; the SIGKILL escalation runs in a goroutine.
+func (d *CLIDriver) Shutdown() error {
+	d.setState(DriverDead)
+
+	d.mu.Lock()
+	cmd := d.cmd
+	stdinPipe := d.stdin
+	d.mu.Unlock()
+
+	if stdinPipe != nil {
+		_ = stdinPipe.Close()
+	}
+
+	if cmd == nil || cmd.Process == nil {
+		return nil
+	}
+
+	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		// Process may have already exited; best-effort SIGKILL.
+		_ = cmd.Process.Signal(syscall.SIGKILL)
+		return nil
+	}
+
+	// SIGKILL escalation after 2 seconds if still running.
+	proc := cmd.Process
+	go func() {
+		select {
+		case <-time.After(2 * time.Second):
+			// Best-effort; ignore error if process already exited.
+			_ = proc.Signal(syscall.SIGKILL)
+		}
+	}()
+
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// State accessor
+// ---------------------------------------------------------------------------
+
+// State returns the current lifecycle state of the driver. Thread-safe.
+func (d *CLIDriver) State() DriverState {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.state
+}
+
+// setState updates the driver state under the mutex.
+func (d *CLIDriver) setState(s DriverState) {
+	d.mu.Lock()
+	d.state = s
+	d.mu.Unlock()
+}

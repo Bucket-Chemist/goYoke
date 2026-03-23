@@ -1,5 +1,5 @@
 {
-  "tickets_dir": "tickets/team-coordination/tickets",
+  "tickets_dir": "tickets/tui-migration/tickets",
   "project_name": "gogent-fortress",
   "audit_config": {
     "enabled": true,

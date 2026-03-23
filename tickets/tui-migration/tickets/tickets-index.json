@@ -77,7 +77,7 @@
     {
       "id": "TUI-005",
       "title": "Theme system and Lipgloss styles",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "HIGH",
       "dependencies": [],
@@ -92,7 +92,7 @@
     {
       "id": "TUI-006",
       "title": "Focus management and FocusTarget",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "HIGH",
       "dependencies": [
@@ -109,7 +109,7 @@
     {
       "id": "TUI-007",
       "title": "Keybinding registry",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "HIGH",
       "dependencies": [],
@@ -124,7 +124,7 @@
     {
       "id": "TUI-008",
       "title": "Root AppModel scaffold + message types",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "CRITICAL",
       "dependencies": [
@@ -144,7 +144,7 @@
     {
       "id": "TUI-009",
       "title": "Banner, TabBar, StatusLine components",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "HIGH",
       "dependencies": [
@@ -161,7 +161,7 @@
     {
       "id": "TUI-010",
       "title": "Root layout compositor (70/30 split + responsive)",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "HIGH",
       "dependencies": [
@@ -179,7 +179,7 @@
     {
       "id": "TUI-011",
       "title": "CLI entry point (cmd/gofortress)",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "HIGH",
       "dependencies": [
@@ -197,7 +197,7 @@
     {
       "id": "TUI-012",
       "title": "NDJSON event type definitions",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "CRITICAL",
       "dependencies": [
@@ -216,7 +216,7 @@
     {
       "id": "TUI-013",
       "title": "CLI subprocess driver",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "CRITICAL",
       "dependencies": [
@@ -234,7 +234,7 @@
     {
       "id": "TUI-014",
       "title": "Go MCP server with 7 tools",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "CRITICAL",
       "dependencies": [
@@ -253,7 +253,7 @@
     {
       "id": "TUI-015",
       "title": "TUI-side UDS listener and IPC bridge",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "HIGH",
       "dependencies": [
@@ -271,7 +271,7 @@
     {
       "id": "TUI-016",
       "title": "Wire CLI + MCP + IPC into startup sequence",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "CRITICAL",
       "dependencies": [

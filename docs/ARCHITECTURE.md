@@ -3,7 +3,8 @@
 > **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
 > **Last Updated:** 2026-02-01
 > **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
-> **TUI Implementation:** GOgent-109 through GOgent-121 (13 tickets)
+> **TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets) — superseded by TUI Migration
+> **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). Phase 1 complete, Phase 2 in progress.
 > **Review Telemetry:** GOgent-122 through GOgent-139 (18 tasks)
 
 ---
@@ -1252,7 +1253,11 @@ $XDG_DATA_HOME/gogent/
 
 ---
 
-## 15. TUI System Architecture (GOgent-109 to GOgent-121)
+## 15. TUI System Architecture (GOgent-109 to GOgent-121) — Legacy
+
+> **Status: SUPERSEDED.** This section documents the original TUI implementation (React/Ink-adjacent Go prototype).
+> A complete rewrite is underway — see Section 16 for the TUI Migration (TUI-001 to TUI-042).
+> The old ticket IDs (GOgent-109 to GOgent-121) are mapped to new equivalents in `tickets/tui-migration/tickets/overview.md`.
 
 The TUI system provides a complete terminal interface for Claude Code interaction with real-time telemetry visualization.
 
@@ -1392,10 +1397,133 @@ Telemetry Files (fsnotify)
 
 ---
 
+## 16. TUI Migration: Go/Bubble Tea Rewrite (TUI-001 to TUI-042)
+
+> **Source of truth:** `tickets/tui-migration/tickets/overview.md`
+> **Braintrust analysis:** `tickets/tui-migration/braintrust-handoff-v2.md`
+> **Generated:** 2026-03-16 via /plan-tickets workflow
+> **Review status:** APPROVE_WITH_CONDITIONS (Staff Architect, High Confidence)
+
+### 16.1 Motivation
+
+The original TUI (Section 15) was a functional prototype. Braintrust analysis identified that the planned three-process topology (Go TUI + TS MCP sidecar + CLI) had 9 failure modes and a permanent Node.js dependency. The migration replaces it with a **two-process topology** (Go TUI + Claude Code CLI), with MCP served natively from Go.
+
+### 16.2 Two-Process Architecture
+
+```
+Go TUI Process (single binary)
+  |-- Bubble Tea event loop (owns terminal stdin/stdout)
+  |-- CLI Driver (manages Claude CLI subprocess via pipes)
+  |-- IPC Bridge (UDS listener for MCP server communication)
+  |
+  +--spawns--> Claude Code CLI (--output-format stream-json)
+                  |
+                  +--spawns--> gofortress-mcp (Go MCP server, stdio transport)
+                                  |
+                                  +--connects--> TUI via UDS side channel
+```
+
+### 16.3 Phase Summary
+
+| Phase | Description | Tickets | Status |
+|-------|-------------|---------|--------|
+| 1 | Prerequisite Spikes | TUI-001 to TUI-004 | COMPLETE |
+| 2 | Foundation (theme, focus, keybinds, layout) | TUI-005 to TUI-011 | COMPLETE |
+| 3 | CLI Driver + NDJSON + MCP Server | TUI-012 to TUI-016 | COMPLETE |
+| 4 | Modal System | TUI-017, TUI-018 | Pending |
+| 5 | Agent Tree + Process Management | TUI-019 to TUI-021 | Pending |
+| 6 | Rich Features | TUI-022 to TUI-027 | Pending |
+| 7 | Settings, Providers, Teams | TUI-028 to TUI-032 | Pending |
+| 8 | Lifecycle | TUI-033 to TUI-035 | Pending |
+| 9 | Integration Testing | TUI-036 to TUI-042 | Pending |
+
+### 16.4 Spike Results (Phase 1)
+
+| Spike | Key Finding | Artifact |
+|-------|-------------|----------|
+| TUI-001 (Permission wire format) | No control_request protocol exists. Architecture uses Option D (hybrid): acceptEdits + MCP side-channel | `spike-results/permission-protocol.md` |
+| TUI-002 (Go MCP SDK POC) | v1.2.0 works, full roundtrip confirmed. MCP tools need `--allowedTools` | `spike-results/go-mcp-poc.md` |
+| TUI-003 (NDJSON catalog) | 6 top-level types + stream_event catalogued. Log-and-continue handles unknowns | `spike-results/ndjson-catalog.md` |
+| TUI-004 (UDS IPC POC) | Exponential backoff validated (connected attempt 1). UDS roundtrip 56us | `spike-results/ipc-protocol.md` |
+
+### 16.5 Legacy Ticket Traceability
+
+| Old Ticket | New Ticket(s) | Disposition |
+|-----------|---------------|-------------|
+| GOgent-109 | TUI-019, TUI-021 | SUPERSEDED |
+| GOgent-110 | TUI-013 | SUPERSEDED |
+| GOgent-111 | TUI-010, TUI-032 | SUPERSEDED |
+| GOgent-112 | TUI-013, TUI-016 | PRESERVED |
+| GOgent-113 | TUI-027, TUI-032 | MODIFIED |
+| GOgent-114 | TUI-012 | SUPERSEDED |
+| GOgent-115 | TUI-019 | SUPERSEDED |
+| GOgent-116 | TUI-020 | SUPERSEDED |
+| GOgent-117 | TUI-020 | SUPERSEDED |
+| GOgent-118 | TUI-022 | SUPERSEDED |
+| GOgent-119 | TUI-010 | SUPERSEDED |
+| GOgent-120 | TUI-009 | SUPERSEDED |
+| GOgent-121 | TUI-033, TUI-034 | SUPERSEDED |
+
+### 16.6 Implemented Package Tree (Phase 2 + Phase 3 partial)
+
+```
+internal/tui/
+├── cli/                              # NDJSON event parsing (TUI-012)
+│   ├── events.go                     # 9 event structs, ParseCLIEvent()
+│   ├── events_test.go                # 47 tests, 98.1% coverage
+│   ├── driver.go                     # CLIDriver: subprocess lifecycle, NDJSON streaming (TUI-013)
+│   └── driver_test.go                # 60 tests, 78.6% coverage, race-free
+├── mcp/                              # MCP server tools + IPC protocol (TUI-014)
+│   ├── protocol.go                   # IPCRequest/Response, 6 payload types
+│   ├── tools.go                      # 7 tool handlers + UDSClient
+│   └── tools_test.go                 # 30 tests, 74.4% coverage
+├── bridge/                           # TUI-side UDS listener (TUI-015)
+│   ├── server.go                     # IPCBridge, modal correlation, fire-and-forget
+│   └── server_test.go                # 10 tests, 79% coverage
+├── components/
+│   ├── banner/banner.go              # BannerModel (TUI-009)
+│   ├── statusline/statusline.go      # StatusLineModel (TUI-009)
+│   └── tabbar/tabbar.go              # TabBarModel (TUI-009)
+├── config/
+│   ├── theme.go                      # Colors, styles, icons, Theme struct (TUI-005)
+│   └── keys.go                       # KeyMap, 24 bindings, 5 groups (TUI-007)
+└── model/
+    ├── focus.go                      # FocusTarget, RightPanelMode (TUI-006)
+    ├── app.go                        # AppModel, layout compositor (TUI-008, TUI-010)
+    └── messages.go                   # 16 tea.Msg types (TUI-008)
+
+cmd/
+├── gofortress/main.go                # TUI entry point, stdlib flag (TUI-011)
+└── gofortress-mcp/main.go            # MCP server stub (TUI-011)
+```
+
+274 tests across 9 packages, average ~89% coverage.
+
+### 16.7 Review Conditions (resolved)
+
+- **C-1:** Go version constraint updated from "Go 1.22+" to "Go 1.25+" ✅ Applied to all tickets
+- **C-2:** MCP SDK version v1.2.0 confirmed correct by TUI-002 spike ✅ No upgrade needed
+
+### 16.8 References
+
+| Document | Location |
+|----------|----------|
+| Implementation overview | `tickets/tui-migration/tickets/overview.md` |
+| Ticket index (42 tickets) | `tickets/tui-migration/tickets/tickets-index.json` |
+| Individual tickets | `tickets/tui-migration/tickets/TUI-{001..042}.md` |
+| Strategy plan | `.claude/sessions/20260316-plan-tickets-tui/strategy.md` |
+| Implementation specs | `.claude/sessions/20260316-plan-tickets-tui/specs.md` |
+| Staff architect review | `.claude/sessions/20260316-plan-tickets-tui/review-critique.md` |
+| Braintrust analysis | `tickets/tui-migration/braintrust-handoff-v2.md` |
+| Spike results | `tickets/tui-migration/spike-results/` |
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | 2026-03-23 | Added Section 16: TUI Migration (TUI-001 to TUI-042). Marked Section 15 as legacy/superseded. Updated header to reflect v2 migration status. Fixed `.ticket-config.json` stale reference. |
 | 1.3 | 2026-02-02 | Added `gogent-scout` unified scout binary (Section 9.3): smart backend routing (native Go / Gemini 3 Flash), multi-factor scoring, fallback chain, updated routing-schema.json scout_protocol |
 | 1.2 | 2026-02-01 | Added Review Skill ML Telemetry System (v2.4.0): Section 4.5-4.7, 6 new agents, gogent-log-review/gogent-update-review-outcome binaries, review-findings.jsonl/review-outcomes.jsonl/sharp-edge-hits.jsonl telemetry files |
 | 1.1 | 2026-01-26 | Complete TUI implementation (GOgent-109 through GOgent-121), Section 15 added |
@@ -1403,8 +1531,9 @@ Telemetry Files (fsnotify)
 
 ---
 
-**Version:** 1.3
-**Generated:** 2026-02-01
+**Version:** 1.4
+**Generated:** 2026-03-23
 **Maintainer:** GOgent-Fortress Development Team
-**TUI Complete:** GOgent-109 through GOgent-121 (13 tickets, all tests passing)
+**TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets, all tests passing) — superseded
+**TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, Phase 1 complete, Phase 2 in progress)
 **Review Telemetry Complete:** GOgent-122 through GOgent-139 (18 tasks, all tests passing)

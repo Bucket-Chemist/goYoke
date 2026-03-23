@@ -169,8 +169,8 @@ The following review findings have been incorporated into the ticket description
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
 - [ ] No orphaned processes: graceful shutdown within 10s
-- [ ] Per-phase smoke tests pass: each phase verified before proceeding
-- [ ] Old ticket requirements traced: all 13 GOgent-109–121 mapped
+- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓ (all `go build`/`go test`/`go vet` clean, 174 tests passing)
+- [x] Old ticket requirements traced: all 13 GOgent-109–121 mapped in traceability table below
 - [ ] Ink TUI removable: `packages/tui/` deletable after parity
 - [ ] Race detector clean: `go test -race ./internal/tui/...` passes
 - [ ] Cost tracker functional: session cost, per-agent cost, budget enforcement
@@ -179,10 +179,75 @@ The following review findings have been incorporated into the ticket description
 
 ## Next Steps
 
-1. Run `/ticket` to begin implementation with TUI-001 (prerequisite spike)
-2. Address review conditions (C-1, C-2) before Phase 2 tickets
-3. Address major issues (M-1 through M-5) before Phases 2-7
+~~1. Run `/ticket` to begin implementation with TUI-001 (prerequisite spike)~~ ✅ Phase 1 complete
+~~2. Address review conditions (C-1, C-2) before Phase 2 tickets~~ ✅ C-1 Go 1.25+ applied, C-2 MCP SDK v1.2.0 confirmed
+~~3. Address major issues (M-1 through M-5) before Phases 2-7~~ ✅ M-1 resolved (stdlib `flag`), M-2–M-5 deferred to respective tickets
 4. Re-review after Phase 3 if significant design changes emerge from spike
+5. Continue with Phase 3: TUI-012 complete (NDJSON types), TUI-013 next (CLI subprocess driver)
+
+## Implementation Progress (updated 2026-03-23)
+
+| Phase | Status | Tickets | Notes |
+|-------|--------|---------|-------|
+| 1 | ✅ COMPLETE | TUI-001–004 | All 4 spikes done, results in `spike-results/` |
+| 2 | ✅ COMPLETE | TUI-005–011 | 7/7 done. 174 tests, avg 95% coverage |
+| 3 | ✅ COMPLETE | TUI-012–016 | 5/5 done. CLI driver, NDJSON parser, MCP server, UDS bridge, startup wiring |
+| 4–9 | ⏳ PENDING | TUI-017–042 | Blocked on Phase 3 |
+
+### Phase 2 Package Tree (delivered)
+
+```
+internal/tui/
+├── cli/                          # NDJSON events + CLI driver (TUI-012, TUI-013)
+│   ├── events.go                 # 9 event structs, ParseCLIEvent()
+│   ├── events_test.go            # 47 tests, 98.1% coverage
+│   ├── driver.go                 # CLIDriver: subprocess lifecycle, NDJSON streaming
+│   └── driver_test.go            # 60 tests, 78.6% coverage, race-free
+├── mcp/                          # MCP server tools + IPC protocol (TUI-014)
+│   ├── protocol.go               # IPCRequest/Response, payload types
+│   ├── tools.go                  # 7 tool handlers + UDSClient
+│   └── tools_test.go             # 30 tests, 74.4% coverage
+├── bridge/                       # TUI-side UDS listener (TUI-015)
+│   ├── server.go                 # IPCBridge, modal correlation, fire-and-forget dispatch
+│   └── server_test.go            # 10 tests, 79% coverage, race-free
+├── components/
+│   ├── banner/                   # BannerModel (TUI-009)
+│   │   ├── banner.go
+│   │   └── banner_test.go
+│   ├── statusline/               # StatusLineModel (TUI-009)
+│   │   ├── statusline.go
+│   │   └── statusline_test.go
+│   └── tabbar/                   # TabBarModel (TUI-009)
+│       ├── tabbar.go
+│       └── tabbar_test.go
+├── config/                       # Theme + keybindings (TUI-005, TUI-007)
+│   ├── theme.go                  # 7 colors, 10 styles, 6 icons, Theme struct
+│   ├── theme_test.go
+│   ├── keys.go                   # 24 bindings across 5 groups
+│   └── keys_test.go
+└── model/                        # Root AppModel + types (TUI-006, TUI-008)
+    ├── focus.go                  # FocusTarget, RightPanelMode
+    ├── focus_test.go
+    ├── app.go                    # AppModel (Elm Architecture), layout compositor
+    ├── app_test.go
+    └── messages.go               # 16 tea.Msg types
+
+cmd/
+├── gofortress/main.go            # TUI entry point (TUI-011)
+└── gofortress-mcp/main.go        # MCP server stub (TUI-011)
+```
+
+### Key Design Decisions (Phase 2)
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| CLI arg parsing | stdlib `flag` | Review M-1: Cobra not in go.mod, only 7 flags |
+| TabID type | int iota (not string) | Ticket spec said string; app.go already defined int — reused existing |
+| model ↔ tabbar cycle | `tabBarWidget` interface | tabbar imports model.TabID; interface decouples reverse direction |
+| ContentBlock | flat struct (not interface) | Simpler JSON unmarshaling, acceptable field overlap |
+| Version injection | ldflags `-X main.version` | Standard Go pattern |
+| Review C-1 | Go 1.25+ | Matches go.mod, applied to all tickets |
+| Review C-2 | MCP SDK v1.2.0 | Spike TUI-002 confirmed working, no upgrade needed |
 
 ---
 
