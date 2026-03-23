@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,9 @@ type mockClaudePanel struct {
 	viewOutput      string
 	focused         bool
 	width, height   int
+	streaming       bool
+	savedMessages   []state.DisplayMessage
+	restoredMsgs    []state.DisplayMessage
 }
 
 func (m *mockClaudePanel) HandleMsg(msg tea.Msg) tea.Cmd {
@@ -28,10 +32,18 @@ func (m *mockClaudePanel) HandleMsg(msg tea.Msg) tea.Cmd {
 	m.lastMsg = msg
 	return nil
 }
-func (m *mockClaudePanel) View() string          { return m.viewOutput }
-func (m *mockClaudePanel) SetSize(w, h int)      { m.width = w; m.height = h }
-func (m *mockClaudePanel) SetFocused(f bool)     { m.focused = f }
-func (m *mockClaudePanel) IsStreaming() bool      { return false }
+func (m *mockClaudePanel) View() string      { return m.viewOutput }
+func (m *mockClaudePanel) SetSize(w, h int)  { m.width = w; m.height = h }
+func (m *mockClaudePanel) SetFocused(f bool) { m.focused = f }
+func (m *mockClaudePanel) IsStreaming() bool { return m.streaming }
+func (m *mockClaudePanel) SaveMessages() []state.DisplayMessage {
+	return m.savedMessages
+}
+func (m *mockClaudePanel) RestoreMessages(msgs []state.DisplayMessage) {
+	m.restoredMsgs = msgs
+	// Mirror the restored messages so SaveMessages reflects current panel state.
+	m.savedMessages = msgs
+}
 
 // mockToast satisfies toastWidget for testing.
 type mockToast struct {
@@ -1028,4 +1040,647 @@ func TestUpdate_ResultEvent_ForwardsToClaude(t *testing.T) {
 	if !mock.handleMsgCalled {
 		t.Error("claudePanel.HandleMsg not called for ResultEvent; want forwarding")
 	}
+}
+
+// ---------------------------------------------------------------------------
+// ProviderSwitchMsg + CycleProvider key (TUI-029)
+// ---------------------------------------------------------------------------
+
+// newModelWithProvider returns an AppModel wired with a mock panel and a
+// real ProviderState — the minimal setup needed for provider-switch tests.
+func newModelWithProvider() (AppModel, *mockClaudePanel) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+	m.shared.providerState = state.NewProviderState()
+	return m, mock
+}
+
+func TestProviderSwitchMsg_CyclesProvider(t *testing.T) {
+	m, _ := newModelWithProvider()
+	ps := m.shared.providerState
+
+	initial := ps.GetActiveProvider()
+	if initial != state.ProviderAnthropic {
+		t.Fatalf("precondition: active provider = %q; want Anthropic", initial)
+	}
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	got := result.shared.providerState.GetActiveProvider()
+	if got == initial {
+		t.Errorf("provider unchanged after ProviderSwitchMsg; want next provider, got %q", got)
+	}
+	// The next provider in canonical order after Anthropic is Google.
+	if got != state.ProviderGoogle {
+		t.Errorf("active provider = %q; want Google (second in canonical order)", got)
+	}
+}
+
+func TestProviderSwitchMsg_CyclesThroughAllFour(t *testing.T) {
+	m, _ := newModelWithProvider()
+
+	providers := m.shared.providerState.AllProviders()
+	seen := make(map[state.ProviderID]bool)
+	seen[m.shared.providerState.GetActiveProvider()] = true
+
+	for range len(providers) - 1 {
+		updated, _ := m.Update(ProviderSwitchMsg{})
+		m = updated.(AppModel)
+		seen[m.shared.providerState.GetActiveProvider()] = true
+	}
+
+	if len(seen) != len(providers) {
+		t.Errorf("only %d distinct providers seen after full cycle; want %d", len(seen), len(providers))
+	}
+}
+
+func TestProviderSwitchMsg_WrapAroundToFirst(t *testing.T) {
+	m, _ := newModelWithProvider()
+	providers := m.shared.providerState.AllProviders()
+
+	// Cycle through all providers — should wrap back to the first.
+	for range len(providers) {
+		updated, _ := m.Update(ProviderSwitchMsg{})
+		m = updated.(AppModel)
+	}
+
+	got := m.shared.providerState.GetActiveProvider()
+	if got != providers[0] {
+		t.Errorf("after full cycle, active provider = %q; want %q (wrap-around)", got, providers[0])
+	}
+}
+
+func TestProviderSwitchMsg_SavesCurrentMessages(t *testing.T) {
+	m, mock := newModelWithProvider()
+	mock.savedMessages = []state.DisplayMessage{
+		{Role: "user", Content: "before switch"},
+	}
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	// After switch, active provider is Google; switch back to Anthropic.
+	if err := result.shared.providerState.SwitchProvider(state.ProviderAnthropic); err != nil {
+		t.Fatalf("SwitchProvider: %v", err)
+	}
+	msgs := result.shared.providerState.GetActiveMessages()
+	if len(msgs) == 0 {
+		t.Error("Anthropic messages should have been saved before switch; got none")
+	}
+	if msgs[0].Content != "before switch" {
+		t.Errorf("saved message content = %q; want %q", msgs[0].Content, "before switch")
+	}
+}
+
+func TestProviderSwitchMsg_RestoresNewProviderMessages(t *testing.T) {
+	m, mock := newModelWithProvider()
+
+	// Pre-populate Google's messages in ProviderState.
+	if err := m.shared.providerState.SwitchProvider(state.ProviderGoogle); err != nil {
+		t.Fatalf("SwitchProvider: %v", err)
+	}
+	m.shared.providerState.AppendMessage(state.DisplayMessage{
+		Role:    "assistant",
+		Content: "google historical msg",
+	})
+	// Switch back to Anthropic to simulate current state.
+	if err := m.shared.providerState.SwitchProvider(state.ProviderAnthropic); err != nil {
+		t.Fatalf("SwitchProvider: %v", err)
+	}
+
+	// Now trigger provider switch (Anthropic → Google).
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	_ = updated.(AppModel)
+
+	// The mock panel's RestoreMessages should have been called with Google's history.
+	if len(mock.restoredMsgs) == 0 {
+		t.Error("RestoreMessages not called after provider switch; want Google's history restored")
+	}
+	if mock.restoredMsgs[0].Content != "google historical msg" {
+		t.Errorf("restored message = %q; want %q",
+			mock.restoredMsgs[0].Content, "google historical msg")
+	}
+}
+
+func TestProviderSwitchMsg_ResetsSessionState(t *testing.T) {
+	m, _ := newModelWithProvider()
+	m.sessionID = "old-session-id"
+	m.cliReady = true
+	m.reconnectCount = 2
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	if result.sessionID != "" {
+		t.Errorf("sessionID = %q after switch; want empty", result.sessionID)
+	}
+	if result.cliReady {
+		t.Error("cliReady = true after switch; want false (new driver not yet ready)")
+	}
+	if result.reconnectCount != 0 {
+		t.Errorf("reconnectCount = %d after switch; want 0", result.reconnectCount)
+	}
+}
+
+func TestProviderSwitchMsg_NoProviderState_IsNoop(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+	m.shared.providerState = nil // explicitly nil
+
+	updated, cmd := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	// Should be a no-op — provider state unchanged, no cmd.
+	if result.shared.providerState != nil {
+		t.Error("providerState should remain nil after no-op switch")
+	}
+	if cmd != nil {
+		t.Error("cmd != nil for no-op ProviderSwitchMsg; want nil")
+	}
+}
+
+func TestCycleProvider_Key_EmitsProviderSwitchExecuteMsg(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	// shift+tab is CycleProvider.
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	result := updated.(AppModel)
+
+	if cmd == nil {
+		t.Fatal("CycleProvider key did not emit a command")
+	}
+
+	// The debounce timer fires after 300 ms.  Executing the returned tick
+	// command immediately produces a ProviderSwitchExecuteMsg whose Seq
+	// matches the incremented counter (1 after the first keypress).
+	msg := cmd()
+	execMsg, ok := msg.(ProviderSwitchExecuteMsg)
+	if !ok {
+		t.Errorf("cmd() = %T; want ProviderSwitchExecuteMsg", msg)
+	}
+	if execMsg.Seq != result.providerSwitchSeq {
+		t.Errorf("ProviderSwitchExecuteMsg.Seq = %d; want %d (providerSwitchSeq)",
+			execMsg.Seq, result.providerSwitchSeq)
+	}
+}
+
+func TestCycleProvider_Key_BlockedDuringStreaming(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{streaming: true}
+	m.shared.claudePanel = mock
+
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	if cmd != nil {
+		t.Error("CycleProvider key should be blocked while streaming; got non-nil cmd")
+	}
+}
+
+func TestProviderSwitchMsg_MessageIsolation_ProviderAHasOwnMessages(t *testing.T) {
+	m, mockPanel := newModelWithProvider()
+
+	// Provider A (Anthropic) has two messages.
+	mockPanel.savedMessages = []state.DisplayMessage{
+		{Role: "user", Content: "A-msg-1"},
+		{Role: "assistant", Content: "A-msg-2"},
+	}
+
+	// Switch to Provider B (Google).
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	m = updated.(AppModel)
+
+	// Google had no prior messages, but a handoff system message is injected
+	// because the old provider (Anthropic) had ≥2 messages. RestoreMessages
+	// is called a second time with the handoff appended, so the panel now has
+	// exactly 1 message (the system handoff).
+	if len(mockPanel.restoredMsgs) != 1 {
+		t.Errorf("Google should have 1 handoff system message; got %d", len(mockPanel.restoredMsgs))
+	}
+	if len(mockPanel.restoredMsgs) > 0 && mockPanel.restoredMsgs[0].Role != "system" {
+		t.Errorf("Google's first message should be a system handoff; got role %q",
+			mockPanel.restoredMsgs[0].Role)
+	}
+
+	// Switch back to Anthropic.
+	updated, _ = m.Update(ProviderSwitchMsg{})
+	updated, _ = updated.(AppModel).Update(ProviderSwitchMsg{})
+	updated, _ = updated.(AppModel).Update(ProviderSwitchMsg{})
+	m = updated.(AppModel)
+
+	// After three more switches we arrive back at Anthropic (4 providers total,
+	// starting at Google means 3 hops: Google→OpenAI→Local→Anthropic).
+	got := m.shared.providerState.GetActiveProvider()
+	if got != state.ProviderAnthropic {
+		t.Errorf("after full cycle: active = %q; want Anthropic", got)
+	}
+
+	// Anthropic's original 2 messages should be restored exactly.
+	// Intermediate hops (G→O, O→L, L→A) produce no handoff because the mock
+	// mirrors restored state: after the A→G switch the panel state becomes the
+	// 1-message handoff slice, and subsequent SaveMessages() calls return that
+	// 1-message slice (len < 2 → no handoff generated for any later hop).
+	// Only the L→A hop restores Anthropic's own saved messages from
+	// ProviderState, which are the original 2.
+	if len(mockPanel.restoredMsgs) != 2 {
+		t.Errorf("Anthropic restore: got %d messages; want 2", len(mockPanel.restoredMsgs))
+	}
+	if len(mockPanel.restoredMsgs) >= 1 && mockPanel.restoredMsgs[0].Content != "A-msg-1" {
+		t.Errorf("restored[0].Content = %q; want %q", mockPanel.restoredMsgs[0].Content, "A-msg-1")
+	}
+	if len(mockPanel.restoredMsgs) >= 2 && mockPanel.restoredMsgs[1].Content != "A-msg-2" {
+		t.Errorf("restored[1].Content = %q; want %q", mockPanel.restoredMsgs[1].Content, "A-msg-2")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// R-3: Handoff injection on provider switch
+// ---------------------------------------------------------------------------
+
+// TestHandoffInjected_SwitchWithTwoMessages verifies that switching from a
+// provider with ≥2 messages injects a system handoff message into the new
+// provider's conversation.
+func TestHandoffInjected_SwitchWithTwoMessages(t *testing.T) {
+	m, mockPanel := newModelWithProvider()
+	mockPanel.savedMessages = []state.DisplayMessage{
+		{Role: "user", Content: "What is Go?"},
+		{Role: "assistant", Content: "Go is a compiled language."},
+	}
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	_ = updated.(AppModel)
+
+	// The new provider (Google) should have 1 system message — the handoff.
+	if len(mockPanel.restoredMsgs) != 1 {
+		t.Fatalf("expected 1 handoff message; got %d", len(mockPanel.restoredMsgs))
+	}
+	if mockPanel.restoredMsgs[0].Role != "system" {
+		t.Errorf("handoff message role = %q; want %q", mockPanel.restoredMsgs[0].Role, "system")
+	}
+	if !strings.Contains(mockPanel.restoredMsgs[0].Content, "anthropic") {
+		t.Errorf("handoff content should mention from-provider; got:\n%s",
+			mockPanel.restoredMsgs[0].Content)
+	}
+	if !strings.Contains(mockPanel.restoredMsgs[0].Content, "google") {
+		t.Errorf("handoff content should mention to-provider; got:\n%s",
+			mockPanel.restoredMsgs[0].Content)
+	}
+}
+
+// TestHandoffNotInjected_SwitchWithOneMessage verifies that switching from a
+// provider with fewer than 2 messages does NOT inject a handoff.
+func TestHandoffNotInjected_SwitchWithOneMessage(t *testing.T) {
+	m, mockPanel := newModelWithProvider()
+	mockPanel.savedMessages = []state.DisplayMessage{
+		{Role: "user", Content: "hello"},
+	}
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	_ = updated.(AppModel)
+
+	// Fewer than 2 messages → no handoff.  Google starts empty.
+	if len(mockPanel.restoredMsgs) != 0 {
+		t.Errorf("expected no handoff for 1 message; got %d messages restored",
+			len(mockPanel.restoredMsgs))
+	}
+}
+
+// TestHandoffNotInjected_SwitchWithNoMessages verifies that switching from a
+// provider with no messages does NOT inject a handoff.
+func TestHandoffNotInjected_SwitchWithNoMessages(t *testing.T) {
+	m, mockPanel := newModelWithProvider()
+	mockPanel.savedMessages = nil
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	_ = updated.(AppModel)
+
+	if len(mockPanel.restoredMsgs) != 0 {
+		t.Errorf("expected no handoff for 0 messages; got %d messages restored",
+			len(mockPanel.restoredMsgs))
+	}
+}
+
+// TestHandoffInNewProviderState verifies the handoff is persisted in the NEW
+// provider's ProviderState messages, not the old one.
+func TestHandoffInNewProviderState(t *testing.T) {
+	m, mockPanel := newModelWithProvider()
+	mockPanel.savedMessages = []state.DisplayMessage{
+		{Role: "user", Content: "question"},
+		{Role: "assistant", Content: "answer"},
+	}
+
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	// Active provider is now Google.
+	if result.shared.providerState.GetActiveProvider() != state.ProviderGoogle {
+		t.Fatalf("expected Google active; got %q", result.shared.providerState.GetActiveProvider())
+	}
+
+	// Google's ProviderState messages should contain the handoff.
+	googleMsgs := result.shared.providerState.GetActiveMessages()
+	if len(googleMsgs) != 1 {
+		t.Fatalf("Google ProviderState: got %d messages; want 1 (handoff)", len(googleMsgs))
+	}
+	if googleMsgs[0].Role != "system" {
+		t.Errorf("handoff role = %q; want system", googleMsgs[0].Role)
+	}
+
+	// Anthropic's messages should be unchanged (still the original 2).
+	if err := result.shared.providerState.SwitchProvider(state.ProviderAnthropic); err != nil {
+		t.Fatalf("SwitchProvider: %v", err)
+	}
+	anthropicMsgs := result.shared.providerState.GetActiveMessages()
+	if len(anthropicMsgs) != 2 {
+		t.Errorf("Anthropic ProviderState: got %d messages; want 2 (original)", len(anthropicMsgs))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SystemInitEvent — session ID persistence (TUI-031)
+// ---------------------------------------------------------------------------
+
+func TestSystemInitEvent_PersistsSessionIDToProviderState(t *testing.T) {
+	m, _ := newModelWithProvider()
+
+	updated, _ := m.Update(cli.SystemInitEvent{
+		SessionID: "init-session-123",
+		Model:     "sonnet",
+	})
+	result := updated.(AppModel)
+
+	// m.sessionID must be set.
+	if result.sessionID != "init-session-123" {
+		t.Errorf("sessionID = %q; want %q", result.sessionID, "init-session-123")
+	}
+	// ProviderState must also have it recorded.
+	got := result.shared.providerState.GetActiveSessionID()
+	if got != "init-session-123" {
+		t.Errorf("providerState.GetActiveSessionID() = %q; want %q", got, "init-session-123")
+	}
+}
+
+func TestSystemInitEvent_EmptySessionID_NotPersisted(t *testing.T) {
+	m, _ := newModelWithProvider()
+
+	updated, _ := m.Update(cli.SystemInitEvent{
+		SessionID: "",
+		Model:     "sonnet",
+	})
+	result := updated.(AppModel)
+
+	// Empty session IDs must not be written to ProviderState.
+	got := result.shared.providerState.GetActiveSessionID()
+	if got != "" {
+		t.Errorf("providerState.GetActiveSessionID() = %q; want empty for empty SessionID event", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// handleProviderSwitch — session resume (TUI-031)
+// ---------------------------------------------------------------------------
+
+func TestProviderSwitchMsg_IncludesSessionIDInNewOpts(t *testing.T) {
+	m, _ := newModelWithProvider()
+
+	// Simulate the previous Anthropic session having a stored session ID.
+	// Set it directly on ProviderState as if a SystemInitEvent had fired.
+	m.shared.providerState.SetSessionID("anthropic-prev-session")
+
+	// Cycle to Google — the switch should save Anthropic's session ID and
+	// reset m.sessionID (new provider starts fresh).
+	updated, _ := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	// After the switch the active provider is Google.
+	// m.sessionID is reset to "" — the new driver has not yet connected.
+	if result.sessionID != "" {
+		t.Errorf("sessionID = %q after switch; want empty (new driver not yet ready)", result.sessionID)
+	}
+
+	// Now switch back to Anthropic to verify its session ID is still stored.
+	if err := result.shared.providerState.SwitchProvider(state.ProviderAnthropic); err != nil {
+		t.Fatalf("SwitchProvider: %v", err)
+	}
+	got := result.shared.providerState.GetActiveSessionID()
+	if got != "anthropic-prev-session" {
+		t.Errorf("Anthropic session ID = %q; want %q (must survive provider switch)", got, "anthropic-prev-session")
+	}
+}
+
+func TestProviderSwitchMsg_NoSessionID_EmptyInOpts(t *testing.T) {
+	m, _ := newModelWithProvider()
+
+	// No session ID set for any provider — switch should not panic and new
+	// driver must be started without a --resume flag (empty SessionID).
+	updated, cmd := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+
+	if result.sessionID != "" {
+		t.Errorf("sessionID = %q after switch with no prior session; want empty", result.sessionID)
+	}
+	// A new CLI driver Start() command must still be returned.
+	if cmd == nil {
+		t.Error("cmd = nil after ProviderSwitchMsg; want driver Start command")
+	}
+}
+
+func TestSetProviderState_Setter(t *testing.T) {
+	m := NewAppModel()
+	ps := state.NewProviderState()
+	m.SetProviderState(ps)
+
+	if m.shared.providerState != ps {
+		t.Error("SetProviderState did not store the given ProviderState")
+	}
+}
+
+func TestNewAppModel_ProviderStateInitialised(t *testing.T) {
+	m := NewAppModel()
+	if m.shared.providerState == nil {
+		t.Error("NewAppModel should initialise providerState; got nil")
+	}
+	// Default active provider must be Anthropic.
+	got := m.shared.providerState.GetActiveProvider()
+	if got != state.ProviderAnthropic {
+		t.Errorf("default active provider = %q; want Anthropic", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ProviderState getter (R-1)
+// ---------------------------------------------------------------------------
+
+func TestProviderState_Getter_ReturnsSamePointer(t *testing.T) {
+	m := NewAppModel()
+	// The getter must return the pointer held inside shared state so that
+	// main.go can pass it to NewProviderTabBarModel without duplicating state.
+	got := m.ProviderState()
+	if got == nil {
+		t.Fatal("ProviderState() returned nil; want non-nil pointer")
+	}
+	if got != m.shared.providerState {
+		t.Error("ProviderState() returned a different pointer than shared.providerState")
+	}
+}
+
+func TestProviderState_Getter_NilShared(t *testing.T) {
+	// Constructing AppModel without NewAppModel leaves shared nil.
+	m := AppModel{}
+	got := m.ProviderState()
+	if got != nil {
+		t.Errorf("ProviderState() with nil shared = %v; want nil", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Provider switch debounce (R-2)
+// ---------------------------------------------------------------------------
+
+// mockCLIDriver satisfies cliDriverWidget for debounce tests that exercise
+// handleProviderSwitch (which creates and starts a new driver).
+type mockCLIDriverDebounce struct {
+	startCalls    int
+	shutdownCalls int
+}
+
+func (m *mockCLIDriverDebounce) Start() tea.Cmd {
+	m.startCalls++
+	return func() tea.Msg { return nil }
+}
+func (m *mockCLIDriverDebounce) WaitForEvent() tea.Cmd { return nil }
+func (m *mockCLIDriverDebounce) SendMessage(_ string) tea.Cmd { return nil }
+func (m *mockCLIDriverDebounce) Shutdown() error {
+	m.shutdownCalls++
+	return nil
+}
+
+func TestProviderSwitchDebounce_SeqIncrementsOnKeyPress(t *testing.T) {
+	m := newReadyAppModel(120, 40)
+
+	// Initial seq must be zero.
+	if m.providerSwitchSeq != 0 {
+		t.Fatalf("initial providerSwitchSeq = %d; want 0", m.providerSwitchSeq)
+	}
+
+	// Simulate a CycleProvider key press (Shift+Tab).
+	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	updated, _ := m.Update(msg)
+	result := updated.(AppModel)
+
+	if result.providerSwitchSeq != 1 {
+		t.Errorf("providerSwitchSeq after 1 press = %d; want 1", result.providerSwitchSeq)
+	}
+}
+
+func TestProviderSwitchDebounce_RapidPressesIncrementSeq(t *testing.T) {
+	m := newReadyAppModel(120, 40)
+
+	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	for i := 0; i < 3; i++ {
+		updated, _ := m.Update(msg)
+		m = updated.(AppModel)
+	}
+
+	if m.providerSwitchSeq != 3 {
+		t.Errorf("providerSwitchSeq after 3 presses = %d; want 3", m.providerSwitchSeq)
+	}
+}
+
+func TestProviderSwitchDebounce_StaleSeqIgnored(t *testing.T) {
+	// Set seq to 5 to simulate that 5 keypresses have occurred.
+	m := newReadyAppModel(120, 40)
+	m.providerSwitchSeq = 5
+
+	// Deliver an execute message with stale seq (3 < 5).
+	staleMsg := ProviderSwitchExecuteMsg{Seq: 3}
+	updated, cmd := m.Update(staleMsg)
+	result := updated.(AppModel)
+
+	// seq must not change (no side-effect from a stale message).
+	if result.providerSwitchSeq != 5 {
+		t.Errorf("providerSwitchSeq changed on stale msg: got %d; want 5", result.providerSwitchSeq)
+	}
+	// No command should be emitted for a stale execute message.
+	if cmd != nil {
+		t.Error("cmd != nil for stale ProviderSwitchExecuteMsg; want nil")
+	}
+}
+
+func TestProviderSwitchDebounce_OnlyLatestSeqExecutes(t *testing.T) {
+	// Seq counter is at 3 (three rapid presses simulated).
+	m := newReadyAppModel(120, 40)
+	m.providerSwitchSeq = 3
+
+	// Stale timer (seq 1): must be discarded.
+	_, cmd1 := m.Update(ProviderSwitchExecuteMsg{Seq: 1})
+	if cmd1 != nil {
+		t.Error("stale seq=1 produced a command; want nil")
+	}
+
+	// Stale timer (seq 2): must also be discarded.
+	_, cmd2 := m.Update(ProviderSwitchExecuteMsg{Seq: 2})
+	if cmd2 != nil {
+		t.Error("stale seq=2 produced a command; want nil")
+	}
+
+	// Latest timer (seq 3): must execute the switch and return a command.
+	// handleProviderSwitch requires a providerState; NewAppModel provides one.
+	_, cmd3 := m.Update(ProviderSwitchExecuteMsg{Seq: 3})
+	if cmd3 == nil {
+		t.Error("latest seq=3 returned nil cmd; want a driver Start command")
+	}
+}
+
+func TestProviderSwitchDebounce_StreamingBlocksKeyPress(t *testing.T) {
+	m := newReadyAppModel(120, 40)
+	panel := &mockClaudePanel{streaming: true}
+	m.shared.claudePanel = panel
+
+	seqBefore := m.providerSwitchSeq
+
+	// Attempt CycleProvider while streaming.
+	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	updated, cmd := m.Update(msg)
+	result := updated.(AppModel)
+
+	// The seq counter must NOT have incremented (streaming blocks the press).
+	if result.providerSwitchSeq != seqBefore {
+		t.Errorf("providerSwitchSeq changed while streaming: got %d; want %d",
+			result.providerSwitchSeq, seqBefore)
+	}
+	// No debounce timer should be returned.
+	if cmd != nil {
+		t.Error("cmd != nil when streaming blocks CycleProvider; want nil")
+	}
+}
+
+func TestProviderSwitchExecuteMsg_MatchingSeqCallsSwitch(t *testing.T) {
+	m := newReadyAppModel(120, 40)
+	m.providerSwitchSeq = 1
+
+	// Deliver the matching execute message; handleProviderSwitch must fire.
+	updated, cmd := m.Update(ProviderSwitchExecuteMsg{Seq: 1})
+	result := updated.(AppModel)
+
+	// handleProviderSwitch resets cliReady.
+	if result.cliReady {
+		t.Error("cliReady should be false after provider switch")
+	}
+	// A Start command must be returned by the new driver.
+	if cmd == nil {
+		t.Error("cmd = nil after matching ProviderSwitchExecuteMsg; want Start command")
+	}
+}
+
+// newReadyAppModel returns an AppModel in the ready state (width/height set,
+// ready = true) for use in tests that exercise layout-dependent or
+// provider-switch-dependent behaviour.
+func newReadyAppModel(width, height int) AppModel {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: height})
+	return updated.(AppModel)
 }

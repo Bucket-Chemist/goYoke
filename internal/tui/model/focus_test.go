@@ -162,6 +162,11 @@ func TestRightPanelModeString(t *testing.T) {
 			expected: "Telemetry",
 		},
 		{
+			name:     "RPMPlanPreview",
+			mode:     RPMPlanPreview,
+			expected: "Plan Preview",
+		},
+		{
 			name:     "unknown value",
 			mode:     RightPanelMode(99),
 			expected: "Unknown",
@@ -200,8 +205,13 @@ func TestNextRightPanelMode(t *testing.T) {
 			expected: RPMTelemetry,
 		},
 		{
-			name:     "Telemetry wraps around to Agents",
+			name:     "Telemetry advances to PlanPreview",
 			current:  RPMTelemetry,
+			expected: RPMPlanPreview,
+		},
+		{
+			name:     "PlanPreview wraps around to Agents",
+			current:  RPMPlanPreview,
 			expected: RPMAgents,
 		},
 	}
@@ -238,9 +248,14 @@ func TestPrevRightPanelMode(t *testing.T) {
 			expected: RPMSettings,
 		},
 		{
-			name:     "Agents wraps around to Telemetry",
-			current:  RPMAgents,
+			name:     "PlanPreview steps back to Telemetry",
+			current:  RPMPlanPreview,
 			expected: RPMTelemetry,
+		},
+		{
+			name:     "Agents wraps around to PlanPreview",
+			current:  RPMAgents,
+			expected: RPMPlanPreview,
 		},
 	}
 
@@ -274,7 +289,7 @@ func TestRightPanelModeCycleFullLoop(t *testing.T) {
 
 // TestRightPanelModePrevNextInverse verifies that Prev(Next(x)) == x for all modes.
 func TestRightPanelModePrevNextInverse(t *testing.T) {
-	modes := []RightPanelMode{RPMAgents, RPMDashboard, RPMSettings, RPMTelemetry}
+	modes := []RightPanelMode{RPMAgents, RPMDashboard, RPMSettings, RPMTelemetry, RPMPlanPreview}
 
 	for _, mode := range modes {
 		t.Run(mode.String(), func(t *testing.T) {

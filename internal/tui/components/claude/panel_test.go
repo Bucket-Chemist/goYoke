@@ -7,10 +7,12 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -690,4 +692,264 @@ func TestStreamingGuard_PlainTextDuringStreaming(t *testing.T) {
 	// NOT Glamour-rendered heading (which would strip the # and add bold/color).
 	output := m.View()
 	assert.Contains(t, output, "# Heading", "streaming content should be plain text, not markdown-rendered")
+}
+
+// ---------------------------------------------------------------------------
+// SaveMessages / RestoreMessages (TUI-029)
+// ---------------------------------------------------------------------------
+
+func TestSaveMessages_EmptyPanel_ReturnsNil(t *testing.T) {
+	m := newPanel()
+	got := m.SaveMessages()
+	assert.Nil(t, got, "SaveMessages on empty panel should return nil")
+}
+
+func TestSaveMessages_PreservesRoleAndContent(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(model.AssistantMsg{Text: "hello", Streaming: false})
+	m, _ = sendAndCapture(m, "hi back")
+
+	saved := m.SaveMessages()
+	assert.Len(t, saved, 2)
+
+	// assistant message was added first
+	assert.Equal(t, "assistant", saved[0].Role)
+	assert.Equal(t, "user", saved[1].Role)
+	assert.Equal(t, "hi back", saved[1].Content)
+}
+
+func TestSaveMessages_ToolBlocksPreserved(t *testing.T) {
+	// SaveMessages now preserves ToolBlocks (TUI R-4).
+	// Since ToolBlocks are populated via internal state, we exercise
+	// SaveMessages/RestoreMessages round-trip via RestoreMessages first.
+	m := newPanel()
+
+	// Inject messages with ToolBlocks via RestoreMessages (simulating a
+	// populated panel) and then verify Save preserves them.
+	now := time.Now()
+	m.RestoreMessages([]state.DisplayMessage{
+		{
+			Role:      "assistant",
+			Content:   "I ran a tool",
+			Timestamp: now,
+			ToolBlocks: []state.ToolBlock{
+				{Name: "Read", Input: "main.go", Output: "package main"},
+			},
+		},
+	})
+
+	saved := m.SaveMessages()
+	assert.Len(t, saved, 1)
+	assert.Len(t, saved[0].ToolBlocks, 1, "SaveMessages should preserve ToolBlocks")
+	assert.Equal(t, "Read", saved[0].ToolBlocks[0].Name)
+	assert.Equal(t, "main.go", saved[0].ToolBlocks[0].Input)
+	assert.Equal(t, "package main", saved[0].ToolBlocks[0].Output)
+}
+
+func TestSaveMessages_PreservesTimestamp(t *testing.T) {
+	m := newPanel()
+	before := time.Now()
+	m, _ = m.Update(model.AssistantMsg{Text: "msg", Streaming: false})
+	after := time.Now()
+
+	saved := m.SaveMessages()
+	assert.Len(t, saved, 1)
+	assert.True(t, !saved[0].Timestamp.Before(before),
+		"timestamp should be >= before")
+	assert.True(t, !saved[0].Timestamp.After(after),
+		"timestamp should be <= after")
+}
+
+func TestRestoreMessages_ReplacesHistory(t *testing.T) {
+	m := newPanel()
+	// Load some existing messages.
+	m, _ = m.Update(model.AssistantMsg{Text: "old message", Streaming: false})
+
+	now := time.Now()
+	newMsgs := []state.DisplayMessage{
+		{Role: "user", Content: "restored user msg", Timestamp: now},
+		{Role: "assistant", Content: "restored asst msg", Timestamp: now.Add(time.Second)},
+	}
+	m.RestoreMessages(newMsgs)
+
+	// The old message must no longer appear; the restored ones must.
+	view := m.View()
+	assert.NotContains(t, view, "old message")
+	assert.Contains(t, view, "restored user msg")
+	assert.Contains(t, view, "restored asst msg")
+}
+
+func TestRestoreMessages_ClearsStreamingState(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(model.AssistantMsg{Text: "streaming…", Streaming: true})
+	assert.True(t, m.IsStreaming(), "pre-condition: should be streaming")
+
+	m.RestoreMessages([]state.DisplayMessage{
+		{Role: "user", Content: "hello"},
+	})
+	assert.False(t, m.IsStreaming(), "RestoreMessages should clear streaming state")
+}
+
+func TestRestoreMessages_NilClearsHistory(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(model.AssistantMsg{Text: "existing", Streaming: false})
+
+	m.RestoreMessages(nil)
+
+	view := m.View()
+	assert.NotContains(t, view, "existing")
+	// Empty state placeholder should be visible.
+	assert.Contains(t, view, "No messages")
+}
+
+func TestRestoreMessages_ViewReflectsRestoredContent(t *testing.T) {
+	m := newPanel()
+
+	restored := []state.DisplayMessage{
+		{Role: "assistant", Content: "answer after switch", Timestamp: time.Now()},
+	}
+	m.RestoreMessages(restored)
+
+	view := m.View()
+	assert.Contains(t, view, "answer after switch")
+}
+
+func TestSaveRestore_RoundTrip(t *testing.T) {
+	m := newPanel()
+	// Populate with a couple of messages.
+	m, _ = m.Update(model.AssistantMsg{Text: "first", Streaming: false})
+	m, _ = sendAndCapture(m, "second")
+
+	saved := m.SaveMessages()
+	assert.Len(t, saved, 2)
+
+	// Wipe the conversation then restore.
+	m.RestoreMessages(nil)
+	m.RestoreMessages(saved)
+
+	view := m.View()
+	assert.Contains(t, view, "first")
+	assert.Contains(t, view, "second")
+}
+
+func TestSaveRestore_MessageIsolationAcrossPanelInstances(t *testing.T) {
+	// Simulate the provider-switch scenario: save from panelA, restore into
+	// panelB, verify panelB has the right content and panelA is unaffected.
+	panelA := newPanel()
+	panelA, _ = panelA.Update(model.AssistantMsg{Text: "panel A message", Streaming: false})
+
+	saved := panelA.SaveMessages()
+
+	panelB := newPanel()
+	panelB.RestoreMessages(saved)
+
+	assert.Contains(t, panelB.View(), "panel A message")
+	assert.Contains(t, panelA.View(), "panel A message",
+		"saving must not mutate the source panel")
+}
+
+// ---------------------------------------------------------------------------
+// R-4: ToolBlock preservation across provider switch
+// ---------------------------------------------------------------------------
+
+func TestSaveMessages_ToolBlocksExpandedFieldNotPersisted(t *testing.T) {
+	// Expanded is transient UI state — SaveMessages must NOT store it.
+	// We verify this by injecting an expanded block, saving, and confirming
+	// that RestoreMessages always sets Expanded=false.
+	m := newPanel()
+	m.RestoreMessages([]state.DisplayMessage{
+		{
+			Role:      "assistant",
+			Content:   "result",
+			Timestamp: time.Now(),
+			ToolBlocks: []state.ToolBlock{
+				{Name: "Bash", Input: "ls", Output: "a.go b.go"},
+			},
+		},
+	})
+
+	saved := m.SaveMessages()
+	// The state.ToolBlock has no Expanded field by design.
+	// We just verify the saved block round-trips correctly.
+	assert.Len(t, saved[0].ToolBlocks, 1)
+	assert.Equal(t, "Bash", saved[0].ToolBlocks[0].Name)
+}
+
+func TestRestoreMessages_ToolBlocksRestoredCollapsed(t *testing.T) {
+	// Restored ToolBlocks should always have Expanded=false.
+	m := newPanel()
+	m.RestoreMessages([]state.DisplayMessage{
+		{
+			Role:      "assistant",
+			Content:   "done",
+			Timestamp: time.Now(),
+			ToolBlocks: []state.ToolBlock{
+				{Name: "Edit", Input: "main.go", Output: "ok"},
+			},
+		},
+	})
+
+	msgs := m.Messages()
+	assert.Len(t, msgs, 1)
+	assert.Len(t, msgs[0].ToolBlocks, 1)
+	assert.False(t, msgs[0].ToolBlocks[0].Expanded,
+		"restored ToolBlock should always start collapsed")
+}
+
+func TestSaveRestore_ToolBlockRoundTrip(t *testing.T) {
+	// Full round-trip: save → restore preserves ToolBlock Name, Input, Output.
+	m := newPanel()
+	now := time.Now()
+	m.RestoreMessages([]state.DisplayMessage{
+		{
+			Role:      "assistant",
+			Content:   "I read the file",
+			Timestamp: now,
+			ToolBlocks: []state.ToolBlock{
+				{Name: "Read", Input: "internal/foo.go", Output: "package foo"},
+				{Name: "Grep", Input: "pattern", Output: "3 matches"},
+			},
+		},
+	})
+
+	saved := m.SaveMessages()
+	require.Len(t, saved, 1)
+	require.Len(t, saved[0].ToolBlocks, 2)
+
+	m2 := newPanel()
+	m2.RestoreMessages(saved)
+
+	msgs := m2.Messages()
+	require.Len(t, msgs, 1)
+	require.Len(t, msgs[0].ToolBlocks, 2)
+
+	assert.Equal(t, "Read", msgs[0].ToolBlocks[0].Name)
+	assert.Equal(t, "internal/foo.go", msgs[0].ToolBlocks[0].Input)
+	assert.Equal(t, "package foo", msgs[0].ToolBlocks[0].Output)
+	assert.False(t, msgs[0].ToolBlocks[0].Expanded)
+
+	assert.Equal(t, "Grep", msgs[0].ToolBlocks[1].Name)
+	assert.Equal(t, "pattern", msgs[0].ToolBlocks[1].Input)
+	assert.Equal(t, "3 matches", msgs[0].ToolBlocks[1].Output)
+	assert.False(t, msgs[0].ToolBlocks[1].Expanded)
+}
+
+func TestSaveMessages_EmptyToolBlocks_RoundTrip(t *testing.T) {
+	// Messages with no ToolBlocks should round-trip without panics.
+	m := newPanel()
+	m.RestoreMessages([]state.DisplayMessage{
+		{Role: "user", Content: "hello", Timestamp: time.Now()},
+		{Role: "assistant", Content: "hi", Timestamp: time.Now()},
+	})
+
+	saved := m.SaveMessages()
+	assert.Len(t, saved, 2)
+	assert.Nil(t, saved[0].ToolBlocks)
+	assert.Nil(t, saved[1].ToolBlocks)
+
+	m2 := newPanel()
+	m2.RestoreMessages(saved)
+	msgs := m2.Messages()
+	assert.Nil(t, msgs[0].ToolBlocks)
+	assert.Nil(t, msgs[1].ToolBlocks)
 }

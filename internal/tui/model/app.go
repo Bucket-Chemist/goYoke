@@ -5,6 +5,7 @@ package model
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,6 +16,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/taskboard"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
@@ -91,6 +93,12 @@ type claudePanelWidget interface {
 	SetSize(width, height int)
 	SetFocused(focused bool)
 	IsStreaming() bool
+	// SaveMessages returns a snapshot of the current conversation history.
+	// ToolBlocks are omitted; only the role, content, and timestamp are kept.
+	SaveMessages() []state.DisplayMessage
+	// RestoreMessages replaces the conversation history with the given
+	// messages, resets streaming state, and redraws the viewport.
+	RestoreMessages([]state.DisplayMessage)
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +130,97 @@ type teamListWidget interface {
 }
 
 // ---------------------------------------------------------------------------
+// providerTabBarWidget
+//
+// providerTabBarWidget is the interface satisfied by
+// providers.ProviderTabBarModel. The providers package imports state (for
+// state.ProviderID) but not model, so there is no circular import.  The
+// interface is defined here in model to keep the widget coupling pattern
+// consistent with tabBarWidget, cliDriverWidget, etc.
+// ---------------------------------------------------------------------------
+
+// providerTabBarWidget is the interface satisfied by providers.ProviderTabBarModel.
+type providerTabBarWidget interface {
+	View() string
+	SetActive(state.ProviderID)
+	SetWidth(int)
+	IsVisible() bool
+	Height() int
+}
+
+// ---------------------------------------------------------------------------
+// dashboardWidget
+//
+// dashboardWidget is the interface satisfied by
+// *dashboard.DashboardModel. The dashboard package has no dependency on
+// model, so there is no import cycle; the interface is defined here to keep
+// the widget coupling pattern consistent.
+// ---------------------------------------------------------------------------
+
+// dashboardWidget is the interface satisfied by *dashboard.DashboardModel.
+type dashboardWidget interface {
+	View() string
+	SetSize(w, h int)
+	SetData(cost float64, tokens int64, msgs, agents, teams int, start time.Time)
+}
+
+// ---------------------------------------------------------------------------
+// settingsWidget
+//
+// settingsWidget is the interface satisfied by *settings.SettingsModel.
+// ---------------------------------------------------------------------------
+
+// settingsWidget is the interface satisfied by *settings.SettingsModel.
+type settingsWidget interface {
+	View() string
+	SetSize(w, h int)
+	SetConfig(model, provider, permMode, sessionDir string, mcpServers []string)
+}
+
+// ---------------------------------------------------------------------------
+// telemetryWidget
+//
+// telemetryWidget is the interface satisfied by *telemetry.TelemetryModel.
+// ---------------------------------------------------------------------------
+
+// telemetryWidget is the interface satisfied by *telemetry.TelemetryModel.
+type telemetryWidget interface {
+	HandleMsg(msg tea.Msg) tea.Cmd
+	View() string
+	SetSize(w, h int)
+}
+
+// ---------------------------------------------------------------------------
+// planPreviewWidget
+//
+// planPreviewWidget is the interface satisfied by *planpreview.PlanPreviewModel.
+// ---------------------------------------------------------------------------
+
+// planPreviewWidget is the interface satisfied by *planpreview.PlanPreviewModel.
+type planPreviewWidget interface {
+	View() string
+	SetSize(w, h int)
+	SetContent(markdown string)
+	ClearContent()
+}
+
+// ---------------------------------------------------------------------------
+// taskBoardWidget
+//
+// taskBoardWidget is the interface satisfied by *taskboard.TaskBoardModel.
+// ---------------------------------------------------------------------------
+
+// taskBoardWidget is the interface satisfied by *taskboard.TaskBoardModel.
+type taskBoardWidget interface {
+	View() string
+	SetSize(w, h int)
+	Toggle()
+	IsVisible() bool
+	Height() int
+	SetTasks(tasks []taskboard.TaskEntry)
+}
+
+// ---------------------------------------------------------------------------
 // sharedState
 //
 // sharedState holds the mutable external references that must survive the
@@ -136,15 +235,23 @@ type teamListWidget interface {
 // sharedState holds the external component references shared between main.go
 // and the AppModel copy held inside tea.Program.
 type sharedState struct {
-	cliDriver     cliDriverWidget
-	bridge        bridgeWidget
-	modalQueue    *modals.ModalQueue
-	permHandler   *modals.PermissionHandler
-	agentRegistry *state.AgentRegistry
-	costTracker   *state.CostTracker
-	claudePanel   claudePanelWidget
-	toasts        toastWidget
-	teamList      teamListWidget
+	cliDriver      cliDriverWidget
+	bridge         bridgeWidget
+	modalQueue     *modals.ModalQueue
+	permHandler    *modals.PermissionHandler
+	agentRegistry  *state.AgentRegistry
+	costTracker    *state.CostTracker
+	claudePanel    claudePanelWidget
+	toasts         toastWidget
+	teamList       teamListWidget
+	providerState  *state.ProviderState
+	providerTabBar providerTabBarWidget
+	// Right-panel widgets (TUI-032).
+	dashboard   dashboardWidget
+	settings    settingsWidget
+	telemetry   telemetryWidget
+	planPreview planPreviewWidget
+	taskBoard   taskBoardWidget
 }
 
 // ---------------------------------------------------------------------------
@@ -279,6 +386,12 @@ type AppModel struct {
 	sessionID      string // from SystemInitEvent
 	activeModel    string // from SystemInitEvent
 	reconnectCount int    // number of reconnection attempts made
+
+	// Provider switch debounce (R-2).
+	// providerSwitchSeq increments on every CycleProvider keypress.
+	// Only a ProviderSwitchExecuteMsg whose Seq matches the current counter
+	// triggers the actual switch; all earlier timers are silently discarded.
+	providerSwitchSeq int
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:
@@ -299,6 +412,7 @@ func NewAppModel() AppModel {
 		permHandler:   modals.NewPermissionHandler(&mq),
 		agentRegistry: state.NewAgentRegistry(),
 		costTracker:   state.NewCostTracker(),
+		providerState: state.NewProviderState(),
 	}
 	return AppModel{
 		focus:          FocusClaude,
@@ -350,6 +464,58 @@ func (m *AppModel) SetTeamList(tl teamListWidget) {
 	m.shared.teamList = tl
 }
 
+// SetProviderState injects a pre-configured ProviderState into the shared
+// state. Callers that need to override the default four-provider configuration
+// (e.g. for testing or custom provider lists) should call this setter before
+// the program starts.
+func (m *AppModel) SetProviderState(ps *state.ProviderState) {
+	m.shared.providerState = ps
+}
+
+// ProviderState returns the ProviderState held in shared state.  The
+// main.go entry point calls this to obtain the pointer needed to construct
+// the ProviderTabBarModel without having to duplicate the creation logic.
+// Returns nil when shared state has not been initialised.
+func (m *AppModel) ProviderState() *state.ProviderState {
+	if m.shared == nil {
+		return nil
+	}
+	return m.shared.providerState
+}
+
+// SetProviderTabBar injects the provider tab bar component into the shared
+// state. Because the providers package imports state (for state.ProviderID)
+// but not model, there is no import cycle; the interface is defined in this
+// package and the concrete type is injected from the application entry point.
+func (m *AppModel) SetProviderTabBar(ptb providerTabBarWidget) {
+	m.shared.providerTabBar = ptb
+}
+
+// SetDashboard injects the session dashboard component into the shared state.
+func (m *AppModel) SetDashboard(d dashboardWidget) {
+	m.shared.dashboard = d
+}
+
+// SetSettings injects the settings panel component into the shared state.
+func (m *AppModel) SetSettings(s settingsWidget) {
+	m.shared.settings = s
+}
+
+// SetTelemetry injects the telemetry panel component into the shared state.
+func (m *AppModel) SetTelemetry(t telemetryWidget) {
+	m.shared.telemetry = t
+}
+
+// SetPlanPreview injects the plan preview panel component into the shared state.
+func (m *AppModel) SetPlanPreview(pp planPreviewWidget) {
+	m.shared.planPreview = pp
+}
+
+// SetTaskBoard injects the task board overlay component into the shared state.
+func (m *AppModel) SetTaskBoard(tb taskBoardWidget) {
+	m.shared.taskBoard = tb
+}
+
 // ---------------------------------------------------------------------------
 // tea.Model interface
 // ---------------------------------------------------------------------------
@@ -390,6 +556,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tabBar.SetWidth(msg.Width)
 		}
 		m.statusLine.SetWidth(msg.Width)
+		if m.shared != nil && m.shared.providerTabBar != nil {
+			m.shared.providerTabBar.SetWidth(msg.Width)
+		}
 
 		// Propagate terminal size to modal queue for correct centering.
 		if m.shared != nil && m.shared.modalQueue != nil {
@@ -410,6 +579,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.shared.teamList.SetSize(dims.rightWidth, dims.contentHeight)
 		}
 
+		// Propagate size to right-panel components (TUI-032).
+		if m.shared.dashboard != nil {
+			m.shared.dashboard.SetSize(dims.rightWidth, dims.contentHeight)
+		}
+		if m.shared.settings != nil {
+			m.shared.settings.SetSize(dims.rightWidth, dims.contentHeight)
+		}
+		if m.shared.telemetry != nil {
+			m.shared.telemetry.SetSize(dims.rightWidth, dims.contentHeight)
+		}
+		if m.shared.planPreview != nil {
+			m.shared.planPreview.SetSize(dims.rightWidth, dims.contentHeight)
+		}
+		if m.shared.taskBoard != nil {
+			m.shared.taskBoard.SetSize(msg.Width, msg.Height)
+		}
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -428,6 +614,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cliReady = true
 		m.sessionID = msg.SessionID
 		m.activeModel = msg.Model
+		// Persist session ID to active provider for resume support (TUI-031).
+		if m.shared != nil && m.shared.providerState != nil && msg.SessionID != "" {
+			m.shared.providerState.SetSessionID(msg.SessionID)
+		}
 		return m, m.waitForCLIEvent()
 
 	case cli.AssistantEvent:
@@ -510,6 +700,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case CLIReconnectMsg:
 		// Reconnection timer fired — restart the CLI subprocess.
 		return m, m.startCLI()
+
+	// -----------------------------------------------------------------
+	// Provider switching (TUI-029)
+	// -----------------------------------------------------------------
+
+	case ProviderSwitchMsg:
+		return m.handleProviderSwitch()
+
+	case ProviderSwitchExecuteMsg:
+		// Debounce guard: only the most recent timer executes the switch.
+		// Earlier timers (lower Seq values) are silently discarded, which
+		// prevents rapid Shift+Tab presses from triggering multiple
+		// CLI driver shutdown+restart cycles.
+		if msg.Seq != m.providerSwitchSeq {
+			return m, nil
+		}
+		return m.handleProviderSwitch()
 
 	// -----------------------------------------------------------------
 	// Bridge events (from MCP server via UDS)
@@ -685,6 +892,27 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
 		return m, nil
+
+	case key.Matches(msg, m.keys.Global.CycleProvider):
+		// Block provider switching while an assistant response is streaming.
+		if m.shared != nil && m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
+			return m, nil
+		}
+		// Debounce: increment the sequence counter and fire a 300 ms timer.
+		// Only the timer carrying the latest Seq will execute the switch;
+		// any earlier timers are silently discarded in the
+		// ProviderSwitchExecuteMsg handler.
+		m.providerSwitchSeq++
+		seq := m.providerSwitchSeq
+		return m, tea.Tick(300*time.Millisecond, func(_ time.Time) tea.Msg {
+			return ProviderSwitchExecuteMsg{Seq: seq}
+		})
+
+	case key.Matches(msg, m.keys.Global.ToggleTaskBoard):
+		if m.shared != nil && m.shared.taskBoard != nil {
+			m.shared.taskBoard.Toggle()
+		}
+		return m, nil
 	}
 
 	// Focus-specific routing.
@@ -728,6 +956,119 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// handleProviderSwitch implements the provider-cycling flow (TUI-029):
+//
+//  1. Save the current conversation history to the active provider slot.
+//  2. Save the current session ID to the active provider slot.
+//  3. Cycle to the next provider in the canonical order.
+//  4. Restore the new provider's conversation history into the panel.
+//  5. Shutdown the old CLI driver.
+//  6. Create a new CLI driver configured for the new provider.
+//  7. Start the new CLI driver.
+//
+// The method is a no-op when no ProviderState is wired (e.g. in tests that
+// do not inject one).
+func (m AppModel) handleProviderSwitch() (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.providerState == nil {
+		return m, nil
+	}
+
+	ps := m.shared.providerState
+
+	// 1. Persist current conversation to the active provider slot.
+	// Capture the old provider and its messages BEFORE cycling for handoff generation.
+	oldProvider := ps.GetActiveProvider()
+	var oldMsgs []state.DisplayMessage
+	if m.shared.claudePanel != nil {
+		oldMsgs = m.shared.claudePanel.SaveMessages()
+		ps.SetActiveMessages(oldMsgs)
+	}
+
+	// 2. Persist current session ID to the active provider slot.
+	if m.sessionID != "" {
+		ps.SetSessionID(m.sessionID)
+	}
+
+	// 3. Cycle to the next provider in the canonical ordered list.
+	providers := ps.AllProviders()
+	nextIdx := 0
+	for i, p := range providers {
+		if p == oldProvider {
+			nextIdx = (i + 1) % len(providers)
+			break
+		}
+	}
+	if err := ps.SwitchProvider(providers[nextIdx]); err != nil {
+		// Unknown provider — this should never happen with the hardcoded list.
+		return m, nil
+	}
+
+	// Update provider tab bar highlight to reflect the new active provider.
+	if m.shared.providerTabBar != nil {
+		m.shared.providerTabBar.SetActive(ps.GetActiveProvider())
+	}
+
+	// 4. Restore the new provider's conversation history.
+	if m.shared.claudePanel != nil {
+		newMsgs := ps.GetActiveMessages()
+		m.shared.claudePanel.RestoreMessages(newMsgs)
+	}
+
+	// 4.5. Inject handoff context so the new provider knows what was being discussed.
+	handoff := buildHandoffSummary(oldMsgs, oldProvider, ps.GetActiveProvider())
+	if handoff != "" {
+		ps.AppendMessage(state.DisplayMessage{
+			Role:      "system",
+			Content:   handoff,
+			Timestamp: time.Now(),
+		})
+		// Re-restore so the injected handoff message is visible in the panel.
+		if m.shared.claudePanel != nil {
+			m.shared.claudePanel.RestoreMessages(ps.GetActiveMessages())
+		}
+	}
+
+	// 5. Shutdown the old CLI driver.
+	if m.shared.cliDriver != nil {
+		_ = m.shared.cliDriver.Shutdown()
+	}
+
+	// 6. Build CLI driver options for the new provider.
+	cfg := ps.GetActiveConfig()
+	model := ps.GetActiveModel()
+
+	opts := cli.CLIDriverOpts{
+		Model:          model,
+		SessionID:      ps.GetActiveSessionID(), // Resume if provider was used before (TUI-031)
+		PermissionMode: "acceptEdits",
+		AdapterPath:    cfg.AdapterPath,
+		ProjectDir:     ps.GetActiveProjectDir(),
+	}
+	// Materialise env-var keys for the new provider.  The values are
+	// intentionally left empty here: the actual credentials must be present
+	// in the process environment already (set by the user before launch).
+	// We only pass the map so the driver knows which vars are relevant.
+	if len(cfg.EnvVars) > 0 {
+		envCopy := make(map[string]string, len(cfg.EnvVars))
+		for k := range cfg.EnvVars {
+			envCopy[k] = "" // empty — real value comes from os.Environ()
+		}
+		opts.EnvVars = envCopy
+	}
+
+	// Reset per-session state so the new provider starts fresh.
+	m.cliReady = false
+	m.sessionID = ""
+	m.activeModel = model
+	m.reconnectCount = 0
+
+	// 7. Create, wire, and start the new CLI driver.
+	newDriver := cli.NewCLIDriver(opts)
+	m.shared.cliDriver = newDriver
+
+	return m, newDriver.Start()
+}
+
 // syncFocusState propagates the current focus state to child components.
 func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
@@ -753,7 +1094,15 @@ func (m AppModel) computeLayout() layoutDims {
 	dims := layoutDims{}
 
 	// Content rows available after chrome.
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - statusLineHeight
+	providerTabH := 0
+	if m.shared != nil && m.shared.providerTabBar != nil {
+		providerTabH = m.shared.providerTabBar.Height()
+	}
+	taskBoardH := 0
+	if m.shared != nil && m.shared.taskBoard != nil {
+		taskBoardH = m.shared.taskBoard.Height()
+	}
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}
@@ -825,7 +1174,19 @@ func (m AppModel) renderLayout() string {
 
 	mainArea := m.renderMain(dims)
 
-	parts := []string{bannerView, tabBarView, mainArea}
+	parts := []string{bannerView, tabBarView}
+
+	// Insert provider tab bar between the tab bar and main content area.
+	if m.shared != nil && m.shared.providerTabBar != nil && m.shared.providerTabBar.IsVisible() {
+		parts = append(parts, m.shared.providerTabBar.View())
+	}
+
+	parts = append(parts, mainArea)
+
+	// Task board overlay renders between main area and toast/status line.
+	if m.shared != nil && m.shared.taskBoard != nil && m.shared.taskBoard.IsVisible() {
+		parts = append(parts, m.shared.taskBoard.View())
+	}
 
 	// Toast notifications render between main area and status line.
 	if m.shared != nil && m.shared.toasts != nil && !m.shared.toasts.IsEmpty() {
@@ -884,6 +1245,30 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 		treeView := m.agentTree.View()
 		detailView := m.agentDetail.View()
 		content = lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
+	case RPMDashboard:
+		if m.shared != nil && m.shared.dashboard != nil {
+			content = m.shared.dashboard.View()
+		} else {
+			content = config.StyleSubtle.Render("Dashboard")
+		}
+	case RPMSettings:
+		if m.shared != nil && m.shared.settings != nil {
+			content = m.shared.settings.View()
+		} else {
+			content = config.StyleSubtle.Render("Settings")
+		}
+	case RPMTelemetry:
+		if m.shared != nil && m.shared.telemetry != nil {
+			content = m.shared.telemetry.View()
+		} else {
+			content = config.StyleSubtle.Render("Telemetry")
+		}
+	case RPMPlanPreview:
+		if m.shared != nil && m.shared.planPreview != nil {
+			content = m.shared.planPreview.View()
+		} else {
+			content = config.StyleSubtle.Render("Plan Preview")
+		}
 	default:
 		content = config.StyleSubtle.Render(m.rightPanelMode.String())
 	}

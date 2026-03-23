@@ -169,7 +169,7 @@ The following review findings have been incorporated into the ticket description
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
 - [ ] No orphaned processes: graceful shutdown within 10s
-- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring (750+ tests, ~89% avg coverage across 16 packages)
+- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 TUI-028–032 + remediation ✓ (1108 tests, ~91% avg coverage across 21 packages)
 - [x] Old ticket requirements traced: all 13 GOgent-109–121 mapped in traceability table below
 - [ ] Ink TUI removable: `packages/tui/` deletable after parity
 - [x] Race detector clean: `go test -race ./internal/tui/...` passes ✅ (verified after integration wiring)
@@ -186,7 +186,12 @@ The following review findings have been incorporated into the ticket description
 ~~5. Continue with Phase 3: TUI-012 complete (NDJSON types), TUI-013 next (CLI subprocess driver)~~ ✅ Phase 3 complete
 ~~6. Phase 6 in progress~~ ✅ Phase 6 COMPLETE (TUI-022–027, 6/6 done)
 ~~6.5. Integration wiring~~ ✅ TUI-027.5: Placeholders replaced, components wired, streaming bug fixed, cost tracker unified
-7. Phase 7 next: TUI-028 (multi-provider config), TUI-029–031 (provider switching/tab/resume), TUI-032 (panels)
+~~7. Phase 7 next: TUI-028 (multi-provider config)~~ ✅ TUI-028 COMPLETE
+~~8. Phase 7 continues: TUI-029 (provider switching + message isolation)~~ ✅ TUI-029 COMPLETE
+~~9. Phase 7 continues: TUI-030 (provider tab bar UI)~~ ✅ TUI-030 COMPLETE
+~~10. Phase 7 continues: TUI-031 (provider session resume)~~ ✅ TUI-031 COMPLETE
+~~11. Phase 7 final: TUI-032 (panels)~~ ✅ TUI-032 COMPLETE — **Phase 7 DONE**
+12. Phase 8 next: TUI-033 (session persistence), TUI-034 (graceful shutdown), TUI-035 (clipboard/search/history)
 
 ## Implementation Progress (updated 2026-03-23)
 
@@ -198,7 +203,7 @@ The following review findings have been incorporated into the ticket description
 | 4 | ✅ COMPLETE | TUI-017–018 | 2/2 done. Modal system + permission flow. 107 modals tests, 88.5% coverage |
 | 5 | ✅ COMPLETE | TUI-019–021 | 3/3 done. AgentRegistry, tree/detail views, NDJSON sync. 249 tests across 3 pkgs |
 | 6 | ✅ COMPLETE | TUI-022–027 | 6/6 done + integration wiring (TUI-027.5). All components wired into AppModel. 750+ tests |
-| 7 | ⏳ PENDING | TUI-028–032 | Multi-provider config, switching, tab UI, session resume, panels |
+| 7 | ✅ COMPLETE | TUI-028–032 | 5/5 done + remediation (R-1–R-4). Multi-provider, switching, panels, handoff, debounce. 1108 tests |
 | 8 | ⏳ PENDING | TUI-033–035 | Session persistence, graceful shutdown, clipboard/search/history |
 | 9 | ⏳ PENDING | TUI-036–042 | Testing phase. TUI-036 scope reduced 3-4h (was 6-8h) — TUI-027.5 delivered 60% of coverage |
 
@@ -260,9 +265,13 @@ internal/tui/
 │   ├── theme_test.go
 │   ├── keys.go                   # 24 bindings across 5 groups
 │   └── keys_test.go
-├── state/                        # Shared state (TUI-019)
+├── state/                        # Shared state (TUI-019, TUI-024, TUI-028)
 │   ├── agent.go                  # AgentRegistry: RWMutex, dedup, DFS tree
-│   └── agent_test.go             # 56 tests, 96.1% coverage
+│   ├── agent_test.go             # 56 tests
+│   ├── cost.go                   # CostTracker: session/agent costs, budget (TUI-024)
+│   ├── cost_test.go
+│   ├── provider.go               # ProviderState: 4 providers, per-provider isolation (TUI-028)
+│   └── provider_test.go          # 161 tests (incl subtests), 97.5% coverage
 ├── util/                         # Shared utilities (TUI-023)
 │   ├── markdown.go               # Cached Glamour renderer, RenderMarkdown()
 │   └── markdown_test.go          # 14 tests, 87.0% coverage

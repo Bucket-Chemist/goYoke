@@ -32,8 +32,14 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	claudepkg "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/dashboard"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/planpreview"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/providers"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settings"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/tabbar"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/taskboard"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/teams"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/telemetry"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/toast"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
@@ -97,6 +103,30 @@ func main() {
 	teamList := teams.NewTeamListModel(teamReg)
 	app.SetTeamList(&teamList)
 
+	// Phase 7: Provider tab bar.
+	// ProviderState is created inside NewAppModel() and stored in shared state.
+	// Retrieve it via the getter so both the tab bar and the model reference
+	// the same pointer; this avoids duplicating the four-provider configuration.
+	ps := app.ProviderState()
+	ptb := providers.NewProviderTabBarModel(ps, 0)
+	app.SetProviderTabBar(&ptb)
+
+	// Phase 7: Right-panel components.
+	dashModel := dashboard.NewDashboardModel()
+	app.SetDashboard(&dashModel)
+
+	settingsModel := settings.NewSettingsModel()
+	app.SetSettings(&settingsModel)
+
+	telModel := telemetry.NewTelemetryModel()
+	app.SetTelemetry(&telModel)
+
+	ppModel := planpreview.NewPlanPreviewModel()
+	app.SetPlanPreview(&ppModel)
+
+	tbModel := taskboard.NewTaskBoardModel()
+	app.SetTaskBoard(&tbModel)
+
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
 		SessionID:      *sessionID,
@@ -110,6 +140,15 @@ func main() {
 	app.SetCLIDriver(driver)
 	cp.SetSender(driver) // driver satisfies claude.CLIDriverSender
 	defer driver.Shutdown() //nolint:errcheck
+
+	// Wire initial settings data now that cliOpts is populated.
+	settingsModel.SetConfig(
+		cliOpts.Model,
+		"Anthropic",
+		cliOpts.PermissionMode,
+		cliOpts.ProjectDir,
+		[]string{"gofortress"},
+	)
 
 	// -----------------------------------------------------------------------
 	// Phase 2: Create tea.Program (copies app by value, but shared pointer

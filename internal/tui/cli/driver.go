@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -109,6 +110,19 @@ type CLIDriverOpts struct {
 
 	// Debug causes the driver to log debug-level messages via slog.
 	Debug bool
+
+	// AdapterPath is the adapter binary name for non-Anthropic providers
+	// (e.g. "gemini-adapter", "openai-adapter").  When non-empty the adapter
+	// binary is invoked instead of "claude" and the adapter is responsible
+	// for translating between the provider's API and the Claude stream-json
+	// protocol.  Empty means use the native Anthropic claude binary.
+	AdapterPath string
+
+	// EnvVars are additional environment variables to pass to the subprocess.
+	// Used for provider-specific credentials such as OPENAI_API_KEY or
+	// OLLAMA_ENDPOINT.  The current process environment is always inherited;
+	// EnvVars entries override or extend it.
+	EnvVars map[string]string
 }
 
 // ---------------------------------------------------------------------------
@@ -171,9 +185,23 @@ func (d *CLIDriver) Start() tea.Cmd {
 			slog.Debug("cli driver: launching subprocess", "args", args)
 		}
 
-		cmd := exec.Command("claude", args...) //nolint:gosec // args are built from structured opts
+		binary := "claude"
+		if d.opts.AdapterPath != "" {
+			binary = d.opts.AdapterPath
+		}
+
+		cmd := exec.Command(binary, args...) //nolint:gosec // args are built from structured opts
 		if d.opts.ProjectDir != "" {
 			cmd.Dir = d.opts.ProjectDir
+		}
+
+		// Merge extra env vars into the subprocess environment.
+		if len(d.opts.EnvVars) > 0 {
+			env := os.Environ()
+			for k, v := range d.opts.EnvVars {
+				env = append(env, k+"="+v)
+			}
+			cmd.Env = env
 		}
 
 		stdinPipe, err := cmd.StdinPipe()

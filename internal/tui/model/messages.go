@@ -203,3 +203,29 @@ type BridgeModalRequestMsg struct {
 	// Options lists the selectable button labels. Empty means free-text input.
 	Options []string
 }
+
+// ---------------------------------------------------------------------------
+// Provider messages (TUI-029)
+//
+// ProviderSwitchMsg drives the provider-switching flow wired in app.go.
+// ---------------------------------------------------------------------------
+
+// ProviderSwitchMsg is emitted when the user cycles to the next provider.
+// The handler saves the current conversation state, switches provider,
+// restores the new provider's conversation state, and restarts the CLI driver.
+//
+// This type is retained for programmatic (non-debounced) provider switches.
+// Key-press driven switches go through the ProviderSwitchExecuteMsg path.
+type ProviderSwitchMsg struct{}
+
+// ProviderSwitchExecuteMsg is the debounced execution of a provider switch.
+// It fires 300 ms after the last CycleProvider keypress. The Seq field
+// carries the sequence counter value at the time the timer was created;
+// handlers ignore messages whose Seq does not match the model's current
+// providerSwitchSeq counter, providing natural debounce cancellation without
+// any explicit timer management.
+type ProviderSwitchExecuteMsg struct {
+	// Seq is the sequence counter at the time the debounce timer was created.
+	// Stale timers (from earlier keypresses) have a lower Seq and are discarded.
+	Seq int
+}

@@ -17,6 +17,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
@@ -566,6 +567,72 @@ func (m *ClaudePanelModel) SetSender(sender CLIDriverSender) {
 // IsStreaming returns true while an assistant response is being streamed.
 func (m ClaudePanelModel) IsStreaming() bool {
 	return m.streaming
+}
+
+// refreshViewport rebuilds the viewport content string from the current
+// messages slice.  It is a thin wrapper around syncViewport that is safe to
+// call from pointer-receiver methods.
+func (m *ClaudePanelModel) refreshViewport() {
+	m.syncViewport()
+	if m.autoScroll {
+		m.vp.GotoBottom()
+	}
+}
+
+// SaveMessages returns a snapshot of the current conversation as
+// state.DisplayMessage values. ToolBlocks are preserved so they survive
+// provider switches (TUI R-4). The transient Expanded field is excluded;
+// all blocks start collapsed on restore.
+func (m *ClaudePanelModel) SaveMessages() []state.DisplayMessage {
+	if len(m.messages) == 0 {
+		return nil
+	}
+	result := make([]state.DisplayMessage, len(m.messages))
+	for i, msg := range m.messages {
+		var blocks []state.ToolBlock
+		for _, tb := range msg.ToolBlocks {
+			blocks = append(blocks, state.ToolBlock{
+				Name:   tb.Name,
+				Input:  tb.Input,
+				Output: tb.Output,
+			})
+		}
+		result[i] = state.DisplayMessage{
+			Role:       msg.Role,
+			Content:    msg.Content,
+			Timestamp:  msg.Timestamp,
+			ToolBlocks: blocks,
+		}
+	}
+	return result
+}
+
+// RestoreMessages replaces the conversation history with the given messages,
+// resets streaming state, enables auto-scroll, and redraws the viewport.
+// Passing nil or an empty slice clears the conversation. ToolBlocks are
+// restored with Expanded=false so they always start collapsed (TUI R-4).
+func (m *ClaudePanelModel) RestoreMessages(msgs []state.DisplayMessage) {
+	m.messages = make([]DisplayMessage, len(msgs))
+	for i, msg := range msgs {
+		var blocks []ToolBlock
+		for _, tb := range msg.ToolBlocks {
+			blocks = append(blocks, ToolBlock{
+				Name:     tb.Name,
+				Input:    tb.Input,
+				Output:   tb.Output,
+				Expanded: false, // always start collapsed on restore
+			})
+		}
+		m.messages[i] = DisplayMessage{
+			Role:       msg.Role,
+			Content:    msg.Content,
+			Timestamp:  msg.Timestamp,
+			ToolBlocks: blocks,
+		}
+	}
+	m.streaming = false
+	m.autoScroll = true
+	m.refreshViewport()
 }
 
 // Messages returns a copy of the conversation history. It is intended for

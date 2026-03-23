@@ -14,7 +14,9 @@
 **Phase 3: CLI Driver + NDJSON + MCP** — COMPLETE (5/5)
 **Phase 4: Modal System** — COMPLETE (2/2)
 **Phase 5: Agent Tree** — COMPLETE (3/3)
-**Total: 21/42 tickets complete (50%)**
+**Phase 6: Rich Features** — COMPLETE (6/6 + integration wiring)
+**Phase 7: Multi-Provider** — COMPLETE (5/5)
+**Total: 32/42 tickets complete (76%)**
 
 ---
 
@@ -51,24 +53,58 @@
 - TUI-020: Agent tree view + detail — AgentTreeModel (scrollable, Up/Down/j/k/Enter nav, focus-gated), Unicode box-drawing connectors (├─/└─/│), status icons+colors, AgentSelectedMsg on cursor change, AgentDetailModel (display-only with status/model/tier/duration/cost/tokens/activity/error), comma-formatted tokens, word-wrapped error output, 90.6% coverage, 41 tests
 - TUI-021: Agent sync from NDJSON — SyncAssistantEvent scans tool_use blocks (Task→Register, non-Task+parent→SetActivity), SyncUserEvent matches tool_result→Complete/Error, ParseTaskInput extracts agent metadata from JSON, ExtractToolActivity dispatches per tool (Read/Write/Bash/Grep→target), normaliseAgentType kebab-case, modelToTier inference, orphaned IDs silently ignored, 84.1% cli coverage, 152 cli tests
 
+### Phase 6: Rich Features (complete)
+- TUI-022: Claude conversation panel — ClaudePanelModel with viewport + textinput, streaming content blocks, message grouping, markdown rendering via Glamour, 83.3% coverage, 46 tests
+- TUI-023: Markdown rendering via Glamour — Cached Glamour renderer with sync.Mutex, RenderMarkdown() helper in util package, auto-added to go.mod (resolved M-5), 87.0% coverage, 15 tests
+- TUI-024: Cost tracker — Go port from TS, SessionCost/PerAgentCosts/BudgetUSD with RWMutex, recomputeOverBudget invariant, 97.0% state coverage, 92 state tests (includes agent + cost)
+- TUI-025: Toast notification system — ToastModel with auto-expire timers, max 3 concurrent, level-colored (Info/Warning/Error/Success), disconnect visual feedback resolved, 94.2% coverage, 19 tests
+- TUI-026: Status line data wiring — Real-time cost display, active model, provider info, session duration in statusline, integrated with CostTracker, 87.8% coverage, 29 tests
+- TUI-027: Team polling and team list — TeamRegistry with TeamConfig/Wave/Member types, TeamListModel with filesystem polling, TeamDetailModel with wave-grouped member view, 94.1% coverage, 62 tests
+- TUI-027.5: Integration wiring — All components wired into AppModel, placeholders replaced, streaming pointer bug fixed in claude/panel.go, cost tracker unified, race detector clean
+
+### Phase 7: Multi-Provider (in progress)
+- TUI-028: Multi-provider config types ✅ — ProviderID (4 constants), ProviderConfig/ModelConfig/DisplayMessage types, ProviderState with RWMutex and per-provider isolation (messages, sessionIDs, models, projectDirs), SwitchProvider preserves state, deep-copy returns, all models ported from TS source (NOT architect specs per review M-2), 97.5% coverage, 161 tests (incl. 3 concurrent stress tests), race-free
+- TUI-029: Provider switching logic + message isolation ✅ — Shift+Tab cycles 4 providers, per-provider message save/restore via SaveMessages/RestoreMessages on ClaudePanel, CLIDriver replaced (new instance per provider, single-use pattern), CLIDriverOpts extended with AdapterPath+EnvVars for non-Anthropic, ProviderSwitchMsg→handleProviderSwitch flow (save→cycle→restore→shutdown→start), streaming blocks switch, SetActiveMessages bulk setter, providerState wired into sharedState, 86.5% model coverage, 84.7% claude coverage, 81.7% cli coverage, 953 total tests, race-free
+- TUI-030: Provider tab bar UI ✅ — New package `internal/tui/components/providers/`, ProviderTabBarModel (display-only, no key handling), horizontal tab strip with StyleHighlight/StyleSubtle, hidden when ≤1 provider, providerTabBarWidget interface in model, wired into renderLayout between tabBar and mainArea, computeLayout subtracts Height(), handleProviderSwitch calls SetActive(), 90.6% coverage, 16 tests
+- TUI-031: Provider session resume ✅ — GetActiveSessionID/GetActiveProjectDir read methods, ExportSessionIDs/ImportSessionIDs for persistence (additive, never overwrites), ExportModels/ImportModels with model validation, handleProviderSwitch now passes SessionID+ProjectDir to new CLIDriver opts, SystemInitEvent persists session ID to ProviderState, 97.8% state coverage, 85.4% model coverage, 999 total tests, race-free
+- TUI-032: Dashboard, Settings, Telemetry, PlanPreview, TaskBoard panels ✅ — 5 new packages (dashboard 100%, settings 94.4%, telemetry 91.9%, planpreview 97.4%, taskboard 97.1%), RPMPlanPreview added to RightPanelMode enum, 5 widget interfaces + sharedState fields in model, renderRightPanel expanded with all modes, TaskBoard overlay with Alt+B toggle (visible between mainArea and toasts, height subtracted from computeLayout), telemetry loads from JSONL via tea.Cmd (max 50 entries), planpreview renders via Glamour in SetContent, 79.2% model coverage, 1069 total tests, 21 packages, race-free
+- **Phase 7 COMPLETE** — all 5 multi-provider tickets done
+
+### Phase 7 Remediation (post-completion)
+- R-1: main.go wiring ✅ — All 7 Phase 7 widgets instantiated (provider tab bar, dashboard, settings, telemetry, planpreview, taskboard). ProviderState() getter on AppModel. Settings initialized with CLI opts.
+- R-2: Provider switch debounce ✅ — 300ms tea.Tick with seq counter. Rapid Shift+Tab → only latest fires. Stale ProviderSwitchExecuteMsg discarded via seq mismatch. ProviderSwitchMsg kept for programmatic (non-debounced) switching.
+- R-3: Handoff generation ✅ — New `handoff.go`: buildHandoffSummary scans last 10 msgs, extracts last user request + assistant response + counts. Injected as system message to NEW provider. Returns "" if <2 messages. 16 table-driven tests.
+- R-4: ToolBlock persistence ✅ — state.ToolBlock type (Name/Input/Output, no Expanded). state.DisplayMessage extended with ToolBlocks field. SaveMessages converts claude→state, RestoreMessages converts state→claude with Expanded=false. copyMessages deep-copies ToolBlocks. 8 new tests.
+- **Post-remediation:** model 81.7%, state 97.9%, claude 86.8%. 1108 total tests. All gaps closed except R-5 (deferred: in-session model switch — CLI protocol limitation).
+
 ---
 
 ## Test Coverage
 
 | Package | Tests | Coverage |
 |---------|-------|----------|
-| `internal/tui/config` | 48 | 100% |
-| `internal/tui/model` | 98 | 75.6% |
-| `internal/tui/components/banner` | 8 | 100% |
-| `internal/tui/components/tabbar` | 12 | 100% |
-| `internal/tui/components/statusline` | 15 | 100% |
+| `internal/tui/config` | 100 | 100.0% |
+| `internal/tui/model` | 172 | 81.7% |
+| `internal/tui/components/banner` | 8 | 100.0% |
+| `internal/tui/components/tabbar` | 12 | 100.0% |
+| `internal/tui/components/statusline` | 29 | 87.8% |
 | `internal/tui/components/modals` | 107 | 88.5% |
-| `internal/tui/state` | 56 | 96.1% |
-| `internal/tui/components/agents` | 41 | 90.6% |
-| `internal/tui/cli` (combined) | 152 | 84.1% |
-| `internal/tui/mcp` | 30 | 74.4% |
+| `internal/tui/components/agents` | 45 | 90.6% |
+| `internal/tui/components/claude` | 61 | 86.8% |
+| `internal/tui/components/toast` | 19 | 94.2% |
+| `internal/tui/components/teams` | 62 | 94.1% |
+| `internal/tui/state` | 208 | 97.9% |
+| `internal/tui/util` | 15 | 87.0% |
+| `internal/tui/cli` | 152 | 81.7% |
+| `internal/tui/mcp` | 34 | 74.4% |
+| `internal/tui/components/providers` | 16 | 90.6% |
+| `internal/tui/components/dashboard` | 10 | 100.0% |
+| `internal/tui/components/settings` | 10 | 94.4% |
+| `internal/tui/components/telemetry` | 12 | 91.9% |
+| `internal/tui/components/planpreview` | 10 | 97.4% |
+| `internal/tui/components/taskboard` | 12 | 97.1% |
 | `internal/tui/bridge` | 10 | 76.2% |
-| **Total** | **557** | **avg ~88%** |
+| **Total** | **1108** | **avg ~91%** |
 
 ---
 
@@ -104,6 +140,24 @@ bridgeWidget extended with `ResolveModalSimple(requestID, value string)` instead
 ### PermissionHandler multi-step flow (TUI-018)
 PermissionHandler sits between AppModel and ModalQueue. It classifies bridge requests by heuristic (option content → FlowType), manages multi-step state (ExitPlan: step 0 = Select, step 1 = Input for feedback), and combines step responses into a single PermissionResult. The `rootRequestID()` function strips `:step<N>` suffixes so step responses route to their parent flow. ExitPlan result is JSON: `{"decision":"approve|changes|reject","feedback":"..."}`.
 
+### Glamour cached renderer (TUI-023)
+`RenderMarkdown(content string)` in `internal/tui/util/markdown.go` wraps Glamour with a `sync.Mutex`-protected singleton renderer. Glamour added to go.mod (resolved review M-5). Uses DarkStyle with 80-char word wrap. Renderer created lazily on first call. 87% coverage, 15 tests.
+
+### CostTracker Go port (TUI-024)
+`CostTracker` in `internal/tui/state/cost.go` mirrors TS SessionStore cost fields. SessionCost, PerAgentCosts map, optional BudgetUSD (*float64, nil = no budget). RWMutex-protected. `recomputeOverBudget()` called after every mutation as invariant maintenance. Display formatting via `FormatCost()` utility. 97% coverage.
+
+### Toast auto-expire pattern (TUI-025)
+`ToastModel` manages a FIFO toast queue with max 3 concurrent. Each toast gets a `tea.Tick` Cmd on creation. `ExpireToastMsg{ID}` triggers removal after duration (3s info, 5s warning, 8s error). Level-colored via theme (green success, yellow warning, red error). Disconnect notifications route here from CLI driver reconnection failures.
+
+### Provider switching flow (TUI-029)
+Provider switching is triggered by Shift+Tab → `ProviderSwitchMsg` → `handleProviderSwitch()`. The flow: (1) save current conversation via `claudePanel.SaveMessages()` → `providerState.SetActiveMessages()`, (2) save session ID, (3) cycle to next provider via `AllProviders()` + modular index, (4) restore messages via `providerState.GetActiveMessages()` → `claudePanel.RestoreMessages()`, (5) shutdown old CLIDriver, (6) create new CLIDriver with provider-specific opts (model, adapter path, env vars), (7) start new driver. CLIDriver is single-use (Start once only), so a new instance is created per switch. Streaming blocks the switch (checked via `claudePanel.IsStreaming()`). `claude.DisplayMessage` → `state.DisplayMessage` conversion drops ToolBlocks (transient rendering state — same as TS source). `CLIDriverOpts` extended with `AdapterPath` and `EnvVars` for non-Anthropic providers — Start() uses AdapterPath as binary name when non-empty, merges EnvVars into `cmd.Env`.
+
+### ProviderState thread-safe container (TUI-028)
+`ProviderState` in `internal/tui/state/provider.go` follows the same RWMutex + deep-copy pattern as AgentRegistry. Static configs are immutable after `NewProviderState()` — only mutable state (messages, sessionIDs, models, projectDirs) is written per-provider. `SwitchProvider(id)` simply changes the `active` field without touching any per-provider data. `copyConfig()` deep-copies both `Models []ModelConfig` and `EnvVars map[string]string`. Sentinel errors `ErrProviderNotFound` and `ErrModelNotFound` support `errors.Is()` wrapping. Model/provider data faithfully matches TS `providers.ts`, NOT architect specs (per review M-2).
+
+### TeamRegistry filesystem polling (TUI-027)
+`TeamListModel` polls `$SESSION_DIR/teams/` every 2 seconds via `tea.Tick`. Reads `config.json` + `stdout_*.json` files per team directory. `TeamRegistry` tracks team state in memory with `LoadFromDir()` refresh. Wave-grouped member view in `TeamDetailModel` shows member status, duration, cost.
+
 ### Post-hoc diff extraction (TUI-018)
 `extractDiffs()` on AppModel inspects `cli.UserEvent.ToolUseResult` for `structuredPatch` fields. Two-path unmarshal: try single object, fallback to array. DiffEntry accumulates in `m.diffs []DiffEntry`. TUI-022 (Claude panel) will render these inline.
 
@@ -121,12 +175,13 @@ Update() captures status before applying fn, then checks if the transition is va
 
 ---
 
-## Architectural Risks for Phase 5+
+## Architectural Risks for Phase 7+
 
-- No visual feedback when CLI disconnects (silent after 3 retries) — TUI-025 should fix
+- ~~No visual feedback when CLI disconnects~~ ✅ RESOLVED: TUI-025 toast notifications provide disconnect feedback
 - UDSClient serializes requests (one at a time) — acceptable for current tools but limits parallelism
-- model package coverage dropped to 75.6% (from 86%) due to new untested integration paths — TUI-036 should address
-- DiffEntry rendering not yet implemented — TUI-022 (Claude panel) will consume `m.diffs`
+- model package coverage at 84.5% — TUI-036 should push above 90%
+- ~~DiffEntry rendering not yet implemented~~ ✅ RESOLVED: TUI-022 Claude panel renders inline diffs
+- Multi-provider adapter paths will reference TS scripts initially — Go-native adapters deferred to post-migration
 
 ---
 

@@ -63,11 +63,14 @@ const (
 
 	// RPMTelemetry shows the telemetry / routing-decisions view.
 	RPMTelemetry
+
+	// RPMPlanPreview shows the implementation plan preview.
+	RPMPlanPreview
 )
 
 // rightPanelModeCount is the total number of RightPanelMode values.
 // Update this constant whenever a new RightPanelMode is added.
-const rightPanelModeCount = int(RPMTelemetry) + 1
+const rightPanelModeCount = int(RPMPlanPreview) + 1
 
 // String returns a human-readable name for the RightPanelMode.
 func (r RightPanelMode) String() string {
@@ -80,6 +83,8 @@ func (r RightPanelMode) String() string {
 		return "Settings"
 	case RPMTelemetry:
 		return "Telemetry"
+	case RPMPlanPreview:
+		return "Plan Preview"
 	default:
 		return "Unknown"
 	}

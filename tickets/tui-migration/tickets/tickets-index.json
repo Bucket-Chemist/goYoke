@@ -484,7 +484,7 @@
     {
       "id": "TUI-028",
       "title": "Multi-provider config types (P7-7a)",
-      "status": "pending",
+      "status": "completed",
       "phase": 7,
       "priority": "HIGH",
       "dependencies": [],
@@ -500,7 +500,7 @@
     {
       "id": "TUI-029",
       "title": "Provider switching logic + message isolation (P7-7b)",
-      "status": "pending",
+      "status": "completed",
       "phase": 7,
       "priority": "HIGH",
       "dependencies": [
@@ -519,7 +519,7 @@
     {
       "id": "TUI-030",
       "title": "Provider tab bar UI (P7-7c)",
-      "status": "pending",
+      "status": "completed",
       "phase": 7,
       "priority": "MEDIUM",
       "dependencies": [
@@ -537,7 +537,7 @@
     {
       "id": "TUI-031",
       "title": "Provider session resume (P7-7d)",
-      "status": "pending",
+      "status": "completed",
       "phase": 7,
       "priority": "HIGH",
       "dependencies": [
@@ -555,7 +555,7 @@
     {
       "id": "TUI-032",
       "title": "Dashboard, Settings, Telemetry, PlanPreview, TaskBoard panels",
-      "status": "pending",
+      "status": "completed",
       "phase": 7,
       "priority": "MEDIUM",
       "dependencies": [
