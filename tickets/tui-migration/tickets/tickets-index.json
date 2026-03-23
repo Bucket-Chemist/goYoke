@@ -664,7 +664,7 @@
     {
       "id": "TUI-038",
       "title": "MCP server integration test",
-      "status": "pending",
+      "status": "completed",
       "phase": 9,
       "priority": "HIGH",
       "dependencies": [
@@ -682,7 +682,7 @@
     {
       "id": "TUI-039",
       "title": "E2E smoke test with live CLI",
-      "status": "pending",
+      "status": "completed",
       "phase": 9,
       "priority": "HIGH",
       "dependencies": [
@@ -700,7 +700,7 @@
     {
       "id": "TUI-040",
       "title": "Performance benchmarks",
-      "status": "pending",
+      "status": "completed",
       "phase": 9,
       "priority": "MEDIUM",
       "dependencies": [

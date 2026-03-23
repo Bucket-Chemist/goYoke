@@ -217,7 +217,7 @@ The following review findings have been incorporated into the ticket description
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
 - [ ] No orphaned processes: graceful shutdown within 10s
-- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 TUI-028–032 + remediation ✓, Post-Phase 7 review fixes ✓ (21/21 packages green, race detector clean)
+- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 ✓ + remediation, Post-Phase 7 review ✓ (21/21 packages green, race-clean), Phase 8 ✓ (lifecycle), Phase 9 partial ✓ (TUI-036 component + TUI-037 CLI integration + TUI-038 MCP integration 81.9% + TUI-039 E2E smoke + TUI-040 benchmarks all 5 targets pass)
 - [x] Old ticket requirements traced: all 13 GOgent-109–121 mapped in traceability table below
 - [ ] Ink TUI removable: `packages/tui/` deletable after parity
 - [x] Race detector clean: `go test -race ./internal/tui/...` passes ✅ (verified after integration wiring)
@@ -240,9 +240,14 @@ The following review findings have been incorporated into the ticket description
 ~~10. Phase 7 continues: TUI-031 (provider session resume)~~ ✅ TUI-031 COMPLETE
 ~~11. Phase 7 final: TUI-032 (panels)~~ ✅ TUI-032 COMPLETE — **Phase 7 DONE**
 ~~12. Post-Phase 7 code review + fixes~~ ✅ FIX-1–6 bug fixes + DES-2–6 design refactors complete. 21/21 packages green, race detector clean.
-13. Phase 8 next: TUI-033 (session persistence), TUI-034 (graceful shutdown — see DES-1 prerequisite notes), TUI-035 (clipboard/search/history)
+~~13. Phase 8: TUI-033 (session persistence), TUI-034 (graceful shutdown — DES-1 wired), TUI-035 (clipboard/search/history)~~ ✅ Phase 8 COMPLETE
+~~14. Phase 9 started: TUI-036 (component unit tests), TUI-037 (CLI driver integration test)~~ ✅ TUI-036 + TUI-037 COMPLETE
+~~15. Phase 9 continues: TUI-038 (MCP server integration test)~~ ✅ TUI-038 COMPLETE (10 integration tests, 81.9% mcp coverage, race-clean)
+~~16. Phase 9 continues: TUI-039 (E2E smoke test with live CLI)~~ ✅ TUI-039 COMPLETE (6 E2E tests, //go:build e2e tag, CLIDriver-direct harness, ~$0.05/run)
+~~17. Phase 9 continues: TUI-040 (performance benchmarks)~~ ✅ TUI-040 COMPLETE (4 benchmark packages, all 5 targets pass: startup 0.31ms/200ms, modal 0.002ms/100ms, NDJSON 195K lines/sec vs 10K, view 0.82ms/16ms, UDS 0.009ms/5ms)
+18. Phase 9 continues: TUI-041 (unknown event resilience), TUI-042 (feature parity checklist — now unblocked by TUI-039)
 
-## Implementation Progress (updated 2026-03-23)
+## Implementation Progress (updated 2026-03-23, Phase 9 in progress)
 
 | Phase | Status | Tickets | Notes |
 |-------|--------|---------|-------|
@@ -254,8 +259,8 @@ The following review findings have been incorporated into the ticket description
 | 6 | ✅ COMPLETE | TUI-022–027 | 6/6 done + integration wiring (TUI-027.5). All components wired into AppModel. 750+ tests |
 | 7 | ✅ COMPLETE | TUI-028–032 | 5/5 done + remediation (R-1–R-4). Multi-provider, switching, panels, handoff, debounce. 1108 tests |
 | Post-7 Review | ✅ COMPLETE | FIX-1–6, DES-2–6 | 4-reviewer code review (2026-03-23). 6 bug fixes + 4 design refactors. 21/21 packages green, race-clean. Staff Architect: APPROVE_WITH_CONDITIONS (High Confidence). DES-1 → TUI-034; DES-7 → TUI-036. |
-| 8 | ⏳ PENDING | TUI-033–035 | Session persistence, graceful shutdown, clipboard/search/history |
-| 9 | ⏳ PENDING | TUI-036–042 | Testing phase. TUI-036 scope reduced 3-4h (was 6-8h) — TUI-027.5 delivered 60% of coverage |
+| 8 | ✅ COMPLETE | TUI-033–035 | Session persistence (atomic writes, auto-save), graceful shutdown (5-phase LIFO, DES-1 resolved), clipboard/search/history. ~1153 tests, 23 packages |
+| 9 | 🔧 IN PROGRESS | TUI-036–042 | TUI-036 ✅, TUI-037 ✅, TUI-038 ✅ (MCP integration 81.9%), TUI-039 ✅ (E2E smoke, 6 tests, //go:build e2e), TUI-040 ✅ (benchmarks, all 5 targets pass). TUI-041–042 pending |
 
 ### Phase 2 Package Tree (delivered)
 
@@ -269,7 +274,9 @@ internal/tui/
 ├── mcp/                          # MCP server tools + IPC protocol (TUI-014)
 │   ├── protocol.go               # IPCRequest/Response, payload types
 │   ├── tools.go                  # 7 tool handlers + UDSClient
-│   └── tools_test.go             # 30 tests, 74.4% coverage
+│   ├── tools_test.go             # 42 unit tests
+│   ├── tools_coverage_test.go    # TUI-036 gap-filling tests
+│   └── server_integration_test.go # TUI-038: 10 integration tests, 81.9% total coverage
 ├── bridge/                       # TUI-side UDS listener (TUI-015)
 │   ├── server.go                 # IPCBridge, modal correlation, fire-and-forget dispatch
 │   └── server_test.go            # 10 tests, 79% coverage, race-free
