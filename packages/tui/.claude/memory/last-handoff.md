@@ -1,13 +1,13 @@
-# Session Handoff - 2026-02-25 15:43:26
+# Session Handoff - 2026-03-14 10:52:16
 
 ## Session Context
 
-- **Session ID**: 0dc01c81-1200-4083-852f-0b39212681a0
+- **Session ID**: f4ba60f0-b32e-46a4-9255-3cfb1760ed8b
 - **Project**: /home/doktersmol/Documents/GOgent-Fortress/packages/tui
 
 ## Session Metrics
 
-- **Tool Calls**: 30
+- **Tool Calls**: 0
 - **Errors Logged**: 0
 - **Routing Violations**: 0
 
@@ -16,38 +16,170 @@
 - **Branch**: master
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
-  - claude/agents/agents-index.json
-  - claude/agents/backend-reviewer/backend-reviewer.md
-  - claude/agents/frontend-reviewer/frontend-reviewer.md
-  - claude/agents/standards-reviewer/standards-reviewer.md
-  - claude/backups/.claude.json.backup.1771735120494
-  - claude/backups/.claude.json.backup.1771735195815
-  - claude/backups/.claude.json.backup.1771735323291
-  - claude/backups/.claude.json.backup.1771735600473
-  - claude/backups/.claude.json.backup.1771735662969
   - claude/input-history.json
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
-  - claude/schemas/teams/review.json
+  - claude/sessions/0010d4a7-0942-4265-b492-7fa641f1447d.json
+  - claude/sessions/028cc851-e1d9-49a1-8c44-792b12736f84.json
+  - claude/sessions/0322851c-21b2-4125-a558-961747ea025f.json
+  - claude/sessions/035f248a-5b18-4987-bc44-d397fcec5f3b.json
+  - claude/sessions/038a2675-398d-4e4b-afd4-1a6674a176f2.json
+  - claude/sessions/05d12289-a091-491a-9352-176b9691e2c6.json
+  - claude/sessions/06351b58-3e8f-4a09-8d2a-5083a0ab0deb.json
+  - claude/sessions/064d392f-70a1-48f7-bbe4-8dad15f0fee3.json
+  - claude/sessions/06d04f53-7c6c-4e1b-8518-e8ccc69ea493.json
+  - claude/sessions/079b3609-424b-4dde-9171-33244d14eaa0.json
+  - claude/sessions/087f4eae-1490-44a4-88c2-06638c8379cb.json
+  - claude/sessions/0b71a7d2-9b67-4c70-9283-371cb9490197.json
+  - claude/sessions/0c085aa2-f2ac-4b54-a701-7299d512db76.json
+  - claude/sessions/0c777e0c-7925-4bca-a166-8e0f4bfc1ea5.json
+  - claude/sessions/0dce50dd-fda2-41ee-980e-dfbd15732090.json
+  - claude/sessions/119fd790-d53d-41f7-80e4-b79fc730650b.json
+  - claude/sessions/14ccdcb4-115b-47df-a401-29fd8a3ccf60.json
+  - claude/sessions/14eaaafb-f10a-4087-bbd7-3045701fc6be.json
+  - claude/sessions/168991b9-0b1f-4816-82c0-c3854357e6a5.json
+  - claude/sessions/19320134-9877-4870-8d30-c01a30053fb8.json
+  - claude/sessions/197a646e-c93c-4d81-81a2-307872dba608.json
+  - claude/sessions/1b30a444-cc88-476c-8295-66c7edfb2638.json
+  - claude/sessions/1bd1a61a-dfcb-4205-ae21-81dea9121f24.json
+  - claude/sessions/1bf75a7f-eba3-4fd7-a408-00826dde0b75.json
+  - claude/sessions/1d2cfd34-93d6-4d50-ac47-5e74905de7bf.json
+  - claude/sessions/23f79b62-7a36-4f1b-b1f6-056332b27a1b.json
+  - claude/sessions/241c55f7-0c57-48db-a31f-5a1a68d564ac.json
+  - claude/sessions/24fb0240-bbbf-418a-a0e9-d885538b6e96.json
+  - claude/sessions/255bfb66-f5fb-4022-81b2-37e974d511c0.json
+  - claude/sessions/27c1abea-ff37-43eb-832c-a9b23016a08c.json
+  - claude/sessions/29074430-15d9-40f4-a4ea-2944e27984b1.json
+  - claude/sessions/29502707-402d-4446-b4f1-b66cf2eb2846.json
+  - claude/sessions/2d635fcf-1c2e-43b3-81bb-79dfd5e4be21.json
+  - claude/sessions/30c1d6ad-2697-4f5a-ad79-d5f9b3ab5880.json
+  - claude/sessions/319fdebb-7fe0-4eec-b2d6-02e4e8dd4a5b.json
+  - claude/sessions/32b12fcd-a456-45f9-bc0a-516f7527436a.json
+  - claude/sessions/32f44cd4-ab60-463e-81fd-ab5e2f6798a2.json
+  - claude/sessions/33589147-8fc3-4d13-bb7f-769964471bd5.json
+  - claude/sessions/33b619ab-34e6-49cf-85f0-2b10f388e37f.json
+  - claude/sessions/3464aaea-de03-4ccf-bdbb-2dd8262288b5.json
+  - claude/sessions/34a08509-0797-493e-8473-371c3a471c84.json
+  - claude/sessions/3631eb37-8c2f-4b73-a510-f1d1e05e9277.json
+  - claude/sessions/3c2415ac-5392-4908-a0a7-812b2c54ec13.json
+  - claude/sessions/3c5169fc-c025-44b2-924f-0d976943933c.json
+  - claude/sessions/3c9b4c33-ac75-4f3c-8a27-c882ec138b97.json
+  - claude/sessions/3effe079-169e-4206-8b24-064707d5b9de.json
+  - claude/sessions/3ff4dd23-573e-4612-b6bf-12682486afdd.json
+  - claude/sessions/40a1d364-572e-424c-a56e-28755ec2cf9d.json
+  - claude/sessions/422c0c7b-2ed0-4080-8281-975489db7e5c.json
+  - claude/sessions/466bcdb1-69c7-4578-bba9-24e00b8bbf06.json
+  - claude/sessions/46d06b34-5f1c-4247-8517-6afc2a61e3d5.json
+  - claude/sessions/46dc6a56-18f8-41e2-86e8-bf65f42ae327.json
+  - claude/sessions/48bea56c-c8d6-455d-8bc8-69560c774155.json
+  - claude/sessions/492392e4-e6f9-495f-b8fd-4712958d72d9.json
+  - claude/sessions/4b86f000-34a2-4b08-843e-c8a182c8e8ce.json
+  - claude/sessions/4f2b1da8-0d7a-48ce-b14d-e212f1b08455.json
+  - claude/sessions/52516b80-9f82-4224-85f0-c84ebb52ed5d.json
+  - claude/sessions/5633935c-60ca-404c-a418-01d49e81313c.json
+  - claude/sessions/57058199-df59-45f2-baf2-97b37121e322.json
+  - claude/sessions/5a60284f-54d8-4b17-a194-9c7a47679e3d.json
+  - claude/sessions/5a7607b4-8382-4432-87e8-7df14f4fe2cd.json
+  - claude/sessions/5b05ad93-e36a-47d7-8a9d-021d688eae66.json
+  - claude/sessions/5b40d407-beff-43cf-98d4-e89a8af67b96.json
+  - claude/sessions/5bb3981a-6891-4b32-ab07-9b261e39ea3a.json
+  - claude/sessions/5be71899-9bf0-4c06-a8ef-035c3d854055.json
+  - claude/sessions/5c4e44d4-43e2-4357-8bb0-1952abf754b1.json
+  - claude/sessions/5cb4ed33-8515-41ca-b37c-cc2ed8a59cf5.json
+  - claude/sessions/5d636034-0b18-47dc-8586-da8c412ddc1c.json
+  - claude/sessions/5deb9c7f-18b3-4b20-b44b-e9da5f3e7094.json
+  - claude/sessions/5e74767c-3069-41f4-a8b2-586199b9c5f4.json
+  - claude/sessions/5e8cad3c-6f07-411b-9d4e-ba394bae0575.json
+  - claude/sessions/5f4b5f37-6678-420f-90f3-122010fbdd88.json
+  - claude/sessions/60442d85-21ec-4c28-afb0-1cee1eb1618e.json
+  - claude/sessions/62c134dc-fd8c-4e18-aca8-d68b7c07d56e.json
+  - claude/sessions/6409d3a3-26a1-4646-a115-ee4a47a27b67.json
+  - claude/sessions/68bdf9d9-0dd4-4ada-b376-d8405bcf2cd1.json
+  - claude/sessions/6e0bb641-e732-4bf8-bf93-07538fb08547.json
+  - claude/sessions/6e76a638-880c-49ea-b99c-b58047309a66.json
+  - claude/sessions/6e9b4f2a-6c58-456b-bde7-c8c7fa1cff22.json
+  - claude/sessions/6f184114-9151-45ab-99f2-04ecac22a71c.json
+  - claude/sessions/6ff61070-9b23-4301-b4db-43e0a68e4597.json
+  - claude/sessions/7077f468-840a-4aa4-ad10-7d84e2dc3cff.json
+  - claude/sessions/70ff6062-1c7f-44b5-8df7-744c3b099c11.json
+  - claude/sessions/734030c6-b1a3-487f-8aca-7b570c77dc22.json
+  - claude/sessions/757a082d-69be-4885-8e0a-83362048f4f3.json
+  - claude/sessions/75d5cdc5-c963-4da6-9375-c3e0147a8926.json
+  - claude/sessions/76d36958-7778-42fe-bc20-42408f97a250.json
+  - claude/sessions/76ddfffe-4a61-42fd-aa2b-84e43e270d38.json
+  - claude/sessions/774e0de0-9ed0-45b9-975a-ab9e627e79e9.json
+  - claude/sessions/789e6971-6731-4bea-abad-78cc9a5634b4.json
+  - claude/sessions/7933813f-33ee-4a5d-9cd4-c8c0d9511fa0.json
+  - claude/sessions/79b73e7c-8b34-4316-96b9-6c697a34e2b5.json
+  - claude/sessions/79ba3381-d650-4f0d-8de5-73a35aaf00cd.json
+  - claude/sessions/7d5dbc9f-184b-49a9-bafb-ad25a76f8343.json
+  - claude/sessions/80ca594d-fed7-4a7a-9807-c984e5dc7735.json
+  - claude/sessions/83c3b262-47b4-4ba0-b298-82a1a88e6ba2.json
+  - claude/sessions/844bfa94-7d69-4bdc-ac64-8531f71d86a2.json
+  - claude/sessions/8be26003-474d-42ed-8831-3d910747fbda.json
+  - claude/sessions/8d9ba723-d522-4e87-ba4a-72e47806160d.json
+  - claude/sessions/8dcb6326-aa85-44a9-96d2-773d23db6da4.json
+  - claude/sessions/908748ad-9480-4730-80fc-bd6ccbff859a.json
+  - claude/sessions/90cf5058-61b5-46c4-afe7-c5d7953f6877.json
+  - claude/sessions/91de796f-449a-4136-ae15-3ce93958b01f.json
+  - claude/sessions/9221c7cd-f569-442a-a946-9a620898ca8c.json
+  - claude/sessions/926843fd-3aa5-4cb7-b14c-e1ad8f8967e6.json
+  - claude/sessions/93896ef1-7c4f-49e8-b5e2-e962caa21ca4.json
+  - claude/sessions/94dd6518-0b5d-471d-9a2e-c8acf3b6ebe7.json
+  - claude/sessions/9630b2b4-5571-4c66-b5f9-8db76215df6e.json
+  - claude/sessions/96c946d7-7bfe-486f-a38f-bfeb9002813f.json
+  - claude/sessions/97131a96-8a90-41e9-be4d-5a8d1842354d.json
+  - claude/sessions/9972dcbe-d005-4b68-9d8f-6a20332cb01b.json
   - claude/settings.json
-  - claude/skills/review/SKILL.md
-  - claude/stats-cache.json
-  - ackages/tui/package-lock.json
-  - ackages/tui/package.json
+  - md/gogent-team-run/spawn_test.go
+  - ackages/tui/.claude/current-session
+  - ackages/tui/src/components/ClaudePanel.tsx
+  - ackages/tui/src/components/Layout.tsx
+  - ackages/tui/src/components/StatusLine.tsx
+  - ackages/tui/src/config/providers.ts
+  - ackages/tui/src/session/SessionManager.test.ts
   - ackages/tui/src/session/SessionManager.ts
-  - .claude/backups/.claude.json.backup.1772007976517
-  - .claude/backups/.claude.json.backup.1772008421782
-  - .claude/backups/.claude.json.backup.1772008482070
-  - .claude/backups/.claude.json.backup.1772008555768
-  - .claude/backups/.claude.json.backup.1772008670366
+  - ackages/tui/src/store/slices/session.ts
+  - ackages/tui/src/store/types.ts
+  - ackages/tui/src/utils/slashCommands.ts
+  - kg/routing/identity_loader_test.go
+  - ools/benchmark/__init__.py
+  - ools/benchmark/gogent_adapter.py
+  - ools/benchmark/identity_injector.py
+  - ools/benchmark/pyproject.toml
+  - ools/benchmark/task_matcher.py
+  - .claude/backups/
   - .claude/mcp-needs-auth-cache.json
+  - .claude/memory/session-archive/routing-violations-14859007-1211-4960-8059-abdf5650b764.jsonl
   - .claude/memory/session-archive/routing-violations-9dc0c2e3-68b8-4e93-b4c8-5c89b13bdeae.jsonl
   - .claude/memory/session-archive/routing-violations-d2c9a93d-d813-4ac0-b5f7-f072415ad5bc.jsonl
   - .claude/memory/session-archive/routing-violations-e345fb9b-c758-433e-9ba1-53d7e8ca98e4.jsonl
+  - .claude/sessions/128613.json
+  - .claude/telemetry/1p_failed_events.359ce146-5850-477e-baeb-4a95452eecc3.ebd1c73a-fbb2-460a-bb18-60af0ba0f72f.json
+  - .claude/telemetry/1p_failed_events.83f5b4ec-5aa9-4d9b-9472-3b52a9e76dea.0bbe14f3-c81c-4653-9bc8-c7e7f49ac13b.json
+  - .claude/telemetry/1p_failed_events.954ebfa8-bb37-45ad-a08e-d2f77ac09886.0fe60ae8-8de7-48ab-a683-b7dc852f35d7.json
+  - .claude/telemetry/1p_failed_events.954ebfa8-bb37-45ad-a08e-d2f77ac09886.6a16412e-73de-479f-b402-1b7d19cfd484.json
+  - .claude/telemetry/1p_failed_events.954ebfa8-bb37-45ad-a08e-d2f77ac09886.73baa89b-64cf-4b01-8449-5cd70c38b5dc.json
+  - .claude/telemetry/1p_failed_events.b4405cf2-c4f8-4c26-9175-565386b6e267.052c271f-404e-4c5f-967b-912133edb102.json
+  - .claude/telemetry/1p_failed_events.b4405cf2-c4f8-4c26-9175-565386b6e267.2ee3cc05-88b1-43a6-839d-6c497e809d69.json
+  - .claude/telemetry/1p_failed_events.b4405cf2-c4f8-4c26-9175-565386b6e267.d35273ea-a0d4-44b0-ad8e-b22577b29fd9.json
+  - .claude/telemetry/1p_failed_events.dc7e86e9-5cd0-4f55-b983-3072e286c491.025000df-f0f3-4edf-af25-1fafb43e4d78.json
+  - .claude/telemetry/1p_failed_events.f1b9a34c-0cc7-49a2-b626-5160ae9fb2f0.901c4799-8dfd-4ca4-9586-37b60f16cdf9.json
+  - .claude/telemetry/1p_failed_events.f1b9a34c-0cc7-49a2-b626-5160ae9fb2f0.98a0fd10-8ee0-460d-8206-7a9840d04f0c.json
+  - .claude/telemetry/1p_failed_events.f1cb5ae9-d6d7-413d-a936-1290f628c1e7.55188ad1-6cf3-4886-8cba-cb4727ddd955.json
+  - .claude/telemetry/1p_failed_events.f601683c-dbbf-425e-84ed-34a002560ace.49906cbc-dae3-4e42-88bd-0f0cf381b5ad.json
+  - .claude/telemetry/1p_failed_events.fdc0cb63-f675-4c84-8d57-545debf01ab0.50e6f311-a854-4f12-9c0d-4ff378252f79.json
+  - .claude/telemetry/1p_failed_events.fdc0cb63-f675-4c84-8d57-545debf01ab0.971583ed-6c49-4126-8a31-fafc7c86adf9.json
+  - TEST-INSTRUCTIONS.md
+  - gogent-config-guard
+  - gogent-instructions-audit
   - node_modules/
+  - packages/tui/.claude/review-critique.md
+  - packages/tui/.claude/review-metadata.json
+  - packages/tui/src/utils/resolveContextWindow.ts
   - test-tui-files/
   - test-tui/
   - test_files/
-  - tickets/binf-team/
-  - tools/benchmark/__pycache__/
+  - tickets/tui-agent-upgrade/
+  - tickets/tui-migration/
 

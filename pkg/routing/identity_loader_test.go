@@ -143,6 +143,8 @@ func TestLoadAgentIdentity(t *testing.T) {
 
 func TestBuildFullAgentContext(t *testing.T) {
 	ClearConventionCache()
+	// Isolate from CC session env vars that would inject session markers
+	t.Setenv("GOGENT_SESSION_DIR", "")
 
 	t.Run("full context with identity + rules + conventions", func(t *testing.T) {
 		result, err := BuildFullAgentContext(
@@ -550,7 +552,8 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 func TestBuildFullAgentContext_NoSessionDir(t *testing.T) {
 	ClearConventionCache()
 
-	// Clear all env vars
+	// Clear all env vars (including GOGENT_SESSION_DIR which leaks from CC sessions)
+	t.Setenv("GOGENT_SESSION_DIR", "")
 	t.Setenv("GOGENT_PROJECT_ROOT", "")
 	t.Setenv("GOGENT_PROJECT_DIR", "")
 	t.Setenv("CLAUDE_PROJECT_DIR", "")
