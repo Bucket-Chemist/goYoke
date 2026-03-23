@@ -32,7 +32,7 @@
     {
       "id": "TUI-002",
       "title": "Spike - Go MCP SDK POC with Claude CLI",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "CRITICAL",
       "dependencies": [],

@@ -8,6 +8,8 @@
 > **v2.0 amendment:** Independent research validation of the three blocking unknowns (Section 4), quality assessment of braintrust outputs (Section 12), revised risk levels and next steps. Two of three unknowns substantially de-risked without running the spike.
 >
 > **⚠️ SPIKE CORRECTION (2026-03-23, TUI-001):** This document references `--permission-prompt-tool stdio` and `control_request` messages throughout (Sections 4.1, 8, 10, 12). **These do not exist.** The flag is not a real Claude Code CLI option; there is no interactive permission protocol in stream-json pipe mode. Tools are either auto-approved (`acceptEdits`) or silently denied (`default`), with denied tool inputs captured in `result.permission_denials`. The architecture uses Option D (hybrid): `acceptEdits` for Write/Edit/Bash + MCP side-channel for interactive tools. See `tickets/tui-migration/spike-results/permission-protocol.md` for the complete wire format. No structural changes to the ticket dependency graph were needed — the fallback paths (Options B/C) were already designed.
+>
+> **⚠️ SPIKE CORRECTION (2026-03-23, TUI-002):** Go MCP SDK v1.2.0 is confirmed correct — `mcp.StdioTransport{}` and all required APIs exist. **No v1.3.0 upgrade needed** (resolves Review C-2). Additional finding: `acceptEdits` does NOT auto-approve MCP tools — they require explicit `--allowedTools "mcp__gofortress__*"` in CLI spawn args. See `tickets/tui-migration/spike-results/go-mcp-poc.md`.
 
 ---
 

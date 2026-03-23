@@ -72,8 +72,8 @@ Go TUI Process (single binary)
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Permission wire format undocumented/incompatible | Medium | High | Spike (TUI-001) captures format. Fallback: Options B (MCP-mediated) or C (pre-approve) |
-| Go MCP SDK fails to serve tools to Claude CLI | Very Low | High | Spike (TUI-002) validates. Fallback: three-process topology |
+| Permission wire format undocumented/incompatible | ~~Medium~~ **RESOLVED** | High | TUI-001 spike: no control_request protocol exists. Architecture uses Option D (hybrid): acceptEdits + MCP side-channel. See spike-results/permission-protocol.md |
+| Go MCP SDK fails to serve tools to Claude CLI | ~~Very Low~~ **RESOLVED** | High | TUI-002 spike: v1.2.0 works, full roundtrip confirmed. Key finding: MCP tools need `--allowedTools` (acceptEdits doesn't cover them). See spike-results/go-mcp-poc.md |
 | NDJSON event types expand without notice | Medium | Medium | Log-and-continue parser. Unknown events → CLIUnknownMsg. Telemetry accumulates |
 | Agent state race (NDJSON vs MCP goroutines) | Medium | Medium | AgentRegistry with RWMutex. Dedup on agentType+description. All mutations via tea.Msg |
 | Multi-provider underscoped | High | Medium | Decomposed into 4 tickets (TUI-028 to TUI-031) |
