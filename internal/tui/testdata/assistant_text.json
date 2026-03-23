@@ -1,0 +1,1 @@
+{"type":"assistant","message":{"id":"msg-001","type":"message","role":"assistant","content":[{"type":"text","text":"Hello! How can I help you today?"}],"model":"claude-sonnet-4-20250514","stop_reason":"end_turn"}}

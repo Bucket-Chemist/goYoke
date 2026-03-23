@@ -116,18 +116,18 @@ func TestMaxReconnectAttempts_IsThree(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestReconnectAfterDelay_ReturnsNonNilCmd(t *testing.T) {
-	cmd := reconnectAfterDelay(1)
+	cmd := reconnectAfterDelay(1, 0)
 	if cmd == nil {
-		t.Fatal("reconnectAfterDelay(1) = nil; want non-nil command")
+		t.Fatal("reconnectAfterDelay(1, 0) = nil; want non-nil command")
 	}
 }
 
 func TestReconnectAfterDelay_ProducesCorrectMessage(t *testing.T) {
 	// Use a patched tick function by calling the returned command directly.
 	// tea.Tick schedules via the runtime; we verify the message type only.
-	cmd := reconnectAfterDelay(2)
+	cmd := reconnectAfterDelay(2, 0)
 	if cmd == nil {
-		t.Fatal("reconnectAfterDelay(2) = nil")
+		t.Fatal("reconnectAfterDelay(2, 0) = nil")
 	}
 	// The command is a tea.Tick — we can't easily execute it synchronously,
 	// but we verify that calling it produces a CLIReconnectMsg by using a

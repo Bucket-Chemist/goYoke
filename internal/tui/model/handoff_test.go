@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------
@@ -32,10 +33,10 @@ func makeMsgWithTools(role, content string, toolCount int) state.DisplayMessage 
 }
 
 // ---------------------------------------------------------------------------
-// truncateStr
+// util.Truncate (replaces the deleted truncateStr)
 // ---------------------------------------------------------------------------
 
-func TestTruncateStr(t *testing.T) {
+func TestTruncate_ViaUtil(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -58,7 +59,7 @@ func TestTruncateStr(t *testing.T) {
 			name:     "long string truncated with ellipsis",
 			input:    "hello world this is a long string",
 			maxLen:   10,
-			expected: "hello worl...",
+			expected: "hello worl…",
 		},
 		{
 			name:     "empty string",
@@ -70,7 +71,7 @@ func TestTruncateStr(t *testing.T) {
 			name:     "maxLen one",
 			input:    "ab",
 			maxLen:   1,
-			expected: "a...",
+			expected: "a…",
 		},
 	}
 
@@ -78,9 +79,9 @@ func TestTruncateStr(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := truncateStr(tc.input, tc.maxLen)
+			got := util.Truncate(tc.input, tc.maxLen)
 			if got != tc.expected {
-				t.Errorf("truncateStr(%q, %d) = %q; want %q", tc.input, tc.maxLen, got, tc.expected)
+				t.Errorf("util.Truncate(%q, %d) = %q; want %q", tc.input, tc.maxLen, got, tc.expected)
 			}
 		})
 	}
@@ -214,8 +215,8 @@ func TestBuildHandoffSummary_LongContent_Truncated(t *testing.T) {
 
 	got := buildHandoffSummary(msgs, state.ProviderAnthropic, state.ProviderGoogle)
 
-	// The truncated content plus "..." should appear but not the full 300-char string.
-	expectedTruncated := strings.Repeat("a", maxContentLen) + "..."
+	// The truncated content plus "…" should appear but not the full 300-char string.
+	expectedTruncated := strings.Repeat("a", maxContentLen) + "…"
 	if !strings.Contains(got, expectedTruncated) {
 		t.Errorf("summary should contain truncated content %q; got:\n%s", expectedTruncated, got)
 	}

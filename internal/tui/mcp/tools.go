@@ -88,21 +88,65 @@ func connectWithRetry(sockPath string) (net.Conn, error) {
 	return nil, fmt.Errorf("connect after 5 attempts: %w", lastErr)
 }
 
+// udsReadTimeout is the maximum time SendRequest will wait for a response.
+// Modal tools (ask_user, confirm_action, etc.) can legitimately block for
+// minutes while the user interacts with the TUI, so the deadline is generous.
+// It exists solely to prevent a permanent hang if the TUI process dies.
+const udsReadTimeout = 10 * time.Minute
+
 // SendRequest sends req over the UDS and blocks until the matching response
 // arrives.  The call is serialised by mu so only one in-flight request is
 // supported at a time (sufficient for current tool set — modals are
 // sequential by design).
+//
+// On a transient encode or decode error the connection is reset and the
+// request is retried exactly once before the error is returned to the caller.
 func (c *UDSClient) SendRequest(req IPCRequest) (*IPCResponse, error) {
-	if err := c.Connect(); err != nil {
+	for attempt := range 2 {
+		if err := c.Connect(); err != nil {
+			return nil, err
+		}
+
+		resp, err := c.sendOnce(req)
+		if err == nil {
+			return resp, nil
+		}
+
+		if attempt == 0 {
+			slog.Debug("UDS send failed, resetting connection for retry", "req", req.ID, "err", err)
+			c.mu.Lock()
+			if c.conn != nil {
+				c.conn.Close()
+			}
+			c.conn = nil
+			c.enc = nil
+			c.dec = nil
+			c.mu.Unlock()
+			continue
+		}
+
 		return nil, err
 	}
+	return nil, fmt.Errorf("UDS send: exhausted retries for %s", req.ID)
+}
 
+// sendOnce performs a single encode-send-decode cycle under mu.
+func (c *UDSClient) sendOnce(req IPCRequest) (*IPCResponse, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if err := c.enc.Encode(req); err != nil {
 		return nil, fmt.Errorf("UDS encode request %s: %w", req.ID, err)
 	}
+
+	if err := c.conn.SetReadDeadline(time.Now().Add(udsReadTimeout)); err != nil {
+		slog.Warn("UDS set read deadline failed", "req", req.ID, "err", err)
+	}
+	defer func() {
+		if err := c.conn.SetReadDeadline(time.Time{}); err != nil {
+			slog.Warn("UDS clear read deadline failed", "req", req.ID, "err", err)
+		}
+	}()
 
 	var resp IPCResponse
 	if err := c.dec.Decode(&resp); err != nil {
@@ -651,8 +695,9 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 		args = append(args, "--allowedTools", strings.Join(tools, ","))
 	}
 
-	// Timeout
-	timeout := 300000
+	// Timeout (default: 5 minutes)
+	const defaultAgentTimeoutMS = 300_000
+	timeout := defaultAgentTimeoutMS
 	if input.Timeout > 0 {
 		timeout = input.Timeout
 	}

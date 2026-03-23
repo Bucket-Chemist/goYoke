@@ -5,267 +5,25 @@ package model
 
 import (
 	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/taskboard"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/session"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
-// ---------------------------------------------------------------------------
-// tabBarWidget
-//
-// tabBarWidget is a minimal interface that decouples AppModel from the
-// concrete tabbar.TabBarModel type.  The tabbar package imports the model
-// package (for model.TabID), so a direct import of tabbar here would create
-// a circular dependency.  The interface breaks the cycle while still allowing
-// AppModel to call View() and SetWidth() on the component.
-// ---------------------------------------------------------------------------
-
-// tabBarWidget is the interface satisfied by tabbar.TabBarModel.
-type tabBarWidget interface {
-	View() string
-	SetWidth(int)
-}
-
-// ---------------------------------------------------------------------------
-// cliDriverWidget
-//
-// cliDriverWidget is the interface satisfied by cli.CLIDriver. Defining it
-// here in the model package avoids a circular import: the cli package imports
-// bubbletea but not model; the model package imports bubbletea but must not
-// import cli. The interface breaks the cycle while still allowing AppModel
-// to drive the CLI subprocess lifecycle.
-// ---------------------------------------------------------------------------
-
-// cliDriverWidget is the interface satisfied by cli.CLIDriver.
-type cliDriverWidget interface {
-	Start() tea.Cmd
-	WaitForEvent() tea.Cmd
-	SendMessage(text string) tea.Cmd
-	Shutdown() error
-}
-
-// ---------------------------------------------------------------------------
-// bridgeWidget
-//
-// bridgeWidget is the interface satisfied by bridge.IPCBridge. Defining it
-// here avoids a circular import between the model and bridge packages.
-// ResolveModalSimple accepts a plain string value rather than
-// mcp.ModalResponsePayload so that the model package does not need to import
-// the mcp package.  IPCBridge.ResolveModalSimple wraps ResolveModal.
-// ---------------------------------------------------------------------------
-
-// bridgeWidget is the interface satisfied by bridge.IPCBridge.
-type bridgeWidget interface {
-	Start()
-	SocketPath() string
-	Shutdown()
-	// ResolveModalSimple delivers the user's response to the bridge goroutine
-	// that is blocking on the given requestID.  value is the selected option
-	// label or free-text entered by the user.  An empty value with cancelled
-	// semantics should be represented by calling ResolveModalSimple with an
-	// empty string (the bridge always receives a value; cancellation is
-	// communicated by convention with the empty string or a dedicated sentinel).
-	ResolveModalSimple(requestID string, value string)
-}
-
-// ---------------------------------------------------------------------------
-// claudePanelWidget
-//
-// claudePanelWidget is the interface satisfied by *claude.ClaudePanelModel.
-// claude imports model, so a direct import here would create a cycle.
-// ---------------------------------------------------------------------------
-
-// claudePanelWidget is the interface satisfied by *claude.ClaudePanelModel.
-type claudePanelWidget interface {
-	HandleMsg(msg tea.Msg) tea.Cmd
-	View() string
-	SetSize(width, height int)
-	SetFocused(focused bool)
-	IsStreaming() bool
-	// SaveMessages returns a snapshot of the current conversation history.
-	// ToolBlocks are omitted; only the role, content, and timestamp are kept.
-	SaveMessages() []state.DisplayMessage
-	// RestoreMessages replaces the conversation history with the given
-	// messages, resets streaming state, and redraws the viewport.
-	RestoreMessages([]state.DisplayMessage)
-}
-
-// ---------------------------------------------------------------------------
-// toastWidget
-//
-// toastWidget is the interface satisfied by *toast.ToastModel.
-// ---------------------------------------------------------------------------
-
-// toastWidget is the interface satisfied by *toast.ToastModel.
-type toastWidget interface {
-	HandleMsg(msg tea.Msg) tea.Cmd
-	View() string
-	SetSize(width, height int)
-	IsEmpty() bool
-}
-
-// ---------------------------------------------------------------------------
-// teamListWidget
-//
-// teamListWidget is the interface satisfied by *teams.TeamListModel.
-// ---------------------------------------------------------------------------
-
-// teamListWidget is the interface satisfied by *teams.TeamListModel.
-type teamListWidget interface {
-	HandleMsg(msg tea.Msg) tea.Cmd
-	View() string
-	SetSize(width, height int)
-	StartPolling(teamsDir string) tea.Cmd
-}
-
-// ---------------------------------------------------------------------------
-// providerTabBarWidget
-//
-// providerTabBarWidget is the interface satisfied by
-// providers.ProviderTabBarModel. The providers package imports state (for
-// state.ProviderID) but not model, so there is no circular import.  The
-// interface is defined here in model to keep the widget coupling pattern
-// consistent with tabBarWidget, cliDriverWidget, etc.
-// ---------------------------------------------------------------------------
-
-// providerTabBarWidget is the interface satisfied by providers.ProviderTabBarModel.
-type providerTabBarWidget interface {
-	View() string
-	SetActive(state.ProviderID)
-	SetWidth(int)
-	IsVisible() bool
-	Height() int
-}
-
-// ---------------------------------------------------------------------------
-// dashboardWidget
-//
-// dashboardWidget is the interface satisfied by
-// *dashboard.DashboardModel. The dashboard package has no dependency on
-// model, so there is no import cycle; the interface is defined here to keep
-// the widget coupling pattern consistent.
-// ---------------------------------------------------------------------------
-
-// dashboardWidget is the interface satisfied by *dashboard.DashboardModel.
-type dashboardWidget interface {
-	View() string
-	SetSize(w, h int)
-	SetData(cost float64, tokens int64, msgs, agents, teams int, start time.Time)
-}
-
-// ---------------------------------------------------------------------------
-// settingsWidget
-//
-// settingsWidget is the interface satisfied by *settings.SettingsModel.
-// ---------------------------------------------------------------------------
-
-// settingsWidget is the interface satisfied by *settings.SettingsModel.
-type settingsWidget interface {
-	View() string
-	SetSize(w, h int)
-	SetConfig(model, provider, permMode, sessionDir string, mcpServers []string)
-}
-
-// ---------------------------------------------------------------------------
-// telemetryWidget
-//
-// telemetryWidget is the interface satisfied by *telemetry.TelemetryModel.
-// ---------------------------------------------------------------------------
-
-// telemetryWidget is the interface satisfied by *telemetry.TelemetryModel.
-type telemetryWidget interface {
-	HandleMsg(msg tea.Msg) tea.Cmd
-	View() string
-	SetSize(w, h int)
-}
-
-// ---------------------------------------------------------------------------
-// planPreviewWidget
-//
-// planPreviewWidget is the interface satisfied by *planpreview.PlanPreviewModel.
-// ---------------------------------------------------------------------------
-
-// planPreviewWidget is the interface satisfied by *planpreview.PlanPreviewModel.
-type planPreviewWidget interface {
-	View() string
-	SetSize(w, h int)
-	SetContent(markdown string)
-	ClearContent()
-}
-
-// ---------------------------------------------------------------------------
-// taskBoardWidget
-//
-// taskBoardWidget is the interface satisfied by *taskboard.TaskBoardModel.
-// ---------------------------------------------------------------------------
-
-// taskBoardWidget is the interface satisfied by *taskboard.TaskBoardModel.
-type taskBoardWidget interface {
-	View() string
-	SetSize(w, h int)
-	Toggle()
-	IsVisible() bool
-	Height() int
-	SetTasks(tasks []taskboard.TaskEntry)
-}
-
-// ---------------------------------------------------------------------------
-// sharedState
-//
-// sharedState holds the mutable external references that must survive the
-// value-copy that tea.NewProgram performs on the AppModel. Because AppModel
-// follows the Bubbletea convention of value receivers (Update returns a new
-// copy), any pointer assigned directly to an AppModel field would be lost
-// after the first Update. Placing those pointers in a shared heap-allocated
-// struct solves the problem: both main.go and the program's internal copy
-// point to the same sharedState.
-// ---------------------------------------------------------------------------
-
-// sharedState holds the external component references shared between main.go
-// and the AppModel copy held inside tea.Program.
-type sharedState struct {
-	cliDriver      cliDriverWidget
-	bridge         bridgeWidget
-	modalQueue     *modals.ModalQueue
-	permHandler    *modals.PermissionHandler
-	agentRegistry  *state.AgentRegistry
-	costTracker    *state.CostTracker
-	claudePanel    claudePanelWidget
-	toasts         toastWidget
-	teamList       teamListWidget
-	providerState  *state.ProviderState
-	providerTabBar providerTabBarWidget
-	// Right-panel widgets (TUI-032).
-	dashboard   dashboardWidget
-	settings    settingsWidget
-	telemetry   telemetryWidget
-	planPreview planPreviewWidget
-	taskBoard   taskBoardWidget
-}
-
-// ---------------------------------------------------------------------------
-// Layout constants
-//
-// These define the fixed-height allocations for chrome rows.
-// ---------------------------------------------------------------------------
-
-const (
-	bannerHeight     = 3 // rounded border top + title + border bottom
-	tabBarHeight     = 1 // single-row strip
-	statusLineHeight = 2 // two-row status bar
-	borderFrame      = 2 // border chars on each axis (1 left + 1 right)
-)
+// Widget interfaces are defined in interfaces.go.
+// Layout constants and rendering are in layout.go.
+// Provider switch flow is in provider_switch.go.
 
 // ---------------------------------------------------------------------------
 // TabID
@@ -319,24 +77,53 @@ type DiffEntry struct {
 }
 
 // ---------------------------------------------------------------------------
-// layoutDims
+// sharedState
+//
+// sharedState holds the mutable external references that must survive the
+// value-copy that tea.NewProgram performs on the AppModel. Because AppModel
+// follows the Bubbletea convention of value receivers (Update returns a new
+// copy), any pointer assigned directly to an AppModel field would be lost
+// after the first Update. Placing those pointers in a shared heap-allocated
+// struct solves the problem: both main.go and the program's internal copy
+// point to the same sharedState.
 // ---------------------------------------------------------------------------
 
-// layoutDims holds the pre-computed panel dimensions for the current terminal
-// size.  It is recomputed on every WindowSizeMsg and passed to the rendering
-// helpers so the View method stays free of arithmetic.
-type layoutDims struct {
-	// leftWidth and rightWidth are the inner content widths (without borders).
-	leftWidth  int
-	rightWidth int
+// sharedState holds the external component references shared between main.go
+// and the AppModel copy held inside tea.Program.
+type sharedState struct {
+	cliDriver      cliDriverWidget
+	bridge         bridgeWidget
+	modalQueue     *modals.ModalQueue
+	permHandler    *modals.PermissionHandler
+	agentRegistry  *state.AgentRegistry
+	costTracker    *state.CostTracker
+	claudePanel    claudePanelWidget
+	toasts         toastWidget
+	teamList       teamListWidget
+	providerState  *state.ProviderState
+	providerTabBar providerTabBarWidget
+	// baseCLIOpts holds the CLI driver options supplied at startup (C-2).
+	// handleProviderSwitch copies this struct and overrides only the fields
+	// that change per provider (Model, SessionID, AdapterPath, ProjectDir,
+	// EnvVars), so that Verbose, Debug, PermissionMode, MCPConfigPath, and
+	// any other flags are transparently preserved across provider switches.
+	baseCLIOpts cli.CLIDriverOpts
+	// Right-panel widgets (TUI-032).
+	dashboard   dashboardWidget
+	settings    settingsWidget
+	telemetry   telemetryWidget
+	planPreview planPreviewWidget
+	taskBoard   taskBoardWidget
 
-	// contentHeight is the number of rows available for both panels after
-	// subtracting banner, tab bar, and status line heights.
-	contentHeight int
+	// Session persistence (TUI-033).
+	sessionStore *session.Store
+	sessionData  *session.SessionData
 
-	// showRightPanel is false when the terminal is too narrow to display both
-	// panels side-by-side.
-	showRightPanel bool
+	// Graceful shutdown (TUI-034).
+	// shutdownFunc is called to trigger the sequenced shutdown.  It is a
+	// func() error (ShutdownManager.Shutdown) stored as a closure so the
+	// model package does not import the lifecycle package.
+	shutdownFunc func() error
 }
 
 // ---------------------------------------------------------------------------
@@ -392,6 +179,20 @@ type AppModel struct {
 	// Only a ProviderSwitchExecuteMsg whose Seq matches the current counter
 	// triggers the actual switch; all earlier timers are silently discarded.
 	providerSwitchSeq int
+
+	// reconnectSeq increments on every provider switch so that CLIReconnectMsg
+	// timers created before the switch are silently discarded.
+	reconnectSeq int
+
+	// autoSaveSeq increments on every cost-change event.  Only the
+	// SessionAutoSaveMsg with the highest Seq is executed; earlier timers are
+	// discarded (5 s debounce cooldown, TUI-033).
+	autoSaveSeq int
+
+	// shutdownInProgress is set true on the first Ctrl+C.  A second Ctrl+C
+	// within the shutdown window forces an immediate tea.Quit without waiting
+	// for the graceful sequence to complete (TUI-034).
+	shutdownInProgress bool
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:
@@ -514,6 +315,53 @@ func (m *AppModel) SetPlanPreview(pp planPreviewWidget) {
 // SetTaskBoard injects the task board overlay component into the shared state.
 func (m *AppModel) SetTaskBoard(tb taskBoardWidget) {
 	m.shared.taskBoard = tb
+}
+
+// SetBaseCLIOpts stores the CLI driver options supplied at startup so that
+// handleProviderSwitch can reconstruct a correctly-configured driver for each
+// provider without losing flags (--verbose, --debug, --permission-mode, etc.)
+// that were passed on the command line.
+func (m *AppModel) SetBaseCLIOpts(opts cli.CLIDriverOpts) {
+	m.shared.baseCLIOpts = opts
+}
+
+// SetSessionStore injects the session persistence store into the shared state.
+// The store manages session metadata and conversation history files.
+func (m *AppModel) SetSessionStore(store *session.Store) {
+	m.shared.sessionStore = store
+}
+
+// SetSessionData injects the initial session data into the shared state.
+// On session resume, this is populated from LoadSession; for new sessions,
+// the caller creates a fresh SessionData with NewSessionID().
+func (m *AppModel) SetSessionData(data *session.SessionData) {
+	m.shared.sessionData = data
+}
+
+// SessionData returns the current session data held in shared state.
+// Returns nil when no session data has been set.
+func (m *AppModel) SessionData() *session.SessionData {
+	if m.shared == nil {
+		return nil
+	}
+	return m.shared.sessionData
+}
+
+// SetShutdownManager stores a shutdown function (typically
+// ShutdownManager.Shutdown) in the shared state.  The function is invoked
+// when the user triggers graceful shutdown (Ctrl+C) or when the OS delivers
+// SIGINT/SIGTERM.  Stored as a func() error to avoid importing the lifecycle
+// package from model.
+func (m *AppModel) SetShutdownManager(sm interface{ Shutdown() error }) {
+	m.shared.shutdownFunc = sm.Shutdown
+}
+
+// SaveSessionPublic is the public entry point for session save, used by the
+// ShutdownManager's sessionSaver callback.  It delegates to the private
+// saveSession method which snapshots cost, provider state, and conversation
+// histories to disk.
+func (m *AppModel) SaveSessionPublic() {
+	m.saveSession()
 }
 
 // ---------------------------------------------------------------------------
@@ -643,6 +491,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.shared.agentRegistry != nil {
 			result := cli.SyncAssistantEvent(msg, m.shared.agentRegistry)
 			if len(result.Registered) > 0 || len(result.Activity) > 0 {
+				// C-3: invalidate before reading Tree() so the view reflects
+				// the mutations that SyncAssistantEvent just applied.
+				m.shared.agentRegistry.InvalidateTreeCache()
 				m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 			}
 		}
@@ -658,6 +509,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.shared.agentRegistry != nil {
 			result := cli.SyncUserEvent(msg, m.shared.agentRegistry)
 			if len(result.Updated) > 0 || len(result.Activity) > 0 {
+				// C-3: invalidate before reading Tree() so the view reflects
+				// the mutations that SyncUserEvent just applied.
+				m.shared.agentRegistry.InvalidateTreeCache()
 				m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 			}
 		}
@@ -685,6 +539,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Schedule debounced session auto-save (5 s cooldown, TUI-033).
+		m.autoSaveSeq++
+		seq := m.autoSaveSeq
+		cmds = append(cmds, tea.Tick(5*time.Second, func(_ time.Time) tea.Msg {
+			return SessionAutoSaveMsg{Seq: seq}
+		}))
+
 		cmds = append(cmds, m.waitForCLIEvent())
 		return m, tea.Batch(cmds...)
 
@@ -692,13 +553,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Subprocess exited or pipe broken — attempt reconnection.
 		if msg.Err != nil && m.reconnectCount < maxReconnectAttempts {
 			m.reconnectCount++
-			return m, reconnectAfterDelay(m.reconnectCount)
+			return m, reconnectAfterDelay(m.reconnectCount, m.reconnectSeq)
 		}
 		// Exceeded retries or clean exit — remain disconnected.
 		return m, nil
 
 	case CLIReconnectMsg:
-		// Reconnection timer fired — restart the CLI subprocess.
+		// Discard stale timers created before the last provider switch.
+		if msg.Seq != m.reconnectSeq {
+			return m, nil
+		}
 		return m, m.startCLI()
 
 	// -----------------------------------------------------------------
@@ -763,6 +627,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
 		// Refresh tree view. These are internal UI messages, NOT CLI events.
 		if m.shared.agentRegistry != nil {
+			// C-3: invalidate before reading Tree() so the view reflects any
+			// registry mutations that occurred before this message was dispatched.
+			m.shared.agentRegistry.InvalidateTreeCache()
 			m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 		}
 		return m, nil
@@ -782,6 +649,29 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd := m.shared.toasts.HandleMsg(msg)
 			return m, cmd
 		}
+		return m, nil
+
+	// -----------------------------------------------------------------
+	// Shutdown (TUI-034)
+	// -----------------------------------------------------------------
+
+	case ShutdownCompleteMsg:
+		// Graceful shutdown sequence completed — exit the program.
+		if msg.Err != nil {
+			log.Printf("[shutdown] completed with error: %v", msg.Err)
+		}
+		return m, tea.Quit
+
+	// -----------------------------------------------------------------
+	// Session persistence (TUI-033)
+	// -----------------------------------------------------------------
+
+	case SessionAutoSaveMsg:
+		// Debounce guard: only the most recent timer fires the save.
+		if msg.Seq != m.autoSaveSeq {
+			return m, nil
+		}
+		m.saveSession()
 		return m, nil
 
 	// -----------------------------------------------------------------
@@ -849,6 +739,47 @@ type toolUseResultWithPatch struct {
 	StructuredPatch json.RawMessage `json:"structuredPatch,omitempty"`
 }
 
+// saveSession snapshots the current application state into the session store.
+// It persists both the session metadata (cost, provider IDs, model selections)
+// and conversation histories for all providers that have messages.
+//
+// Errors are logged but not returned because saves happen asynchronously from
+// debounced timers and during shutdown; there is no actionable recovery path.
+func (m AppModel) saveSession() {
+	if m.shared == nil || m.shared.sessionStore == nil || m.shared.sessionData == nil {
+		return
+	}
+
+	sd := m.shared.sessionData
+
+	// Snapshot cost from the tracker.
+	if m.shared.costTracker != nil {
+		sd.Cost = m.shared.costTracker.GetSessionCost()
+	}
+
+	// Snapshot provider state.
+	if m.shared.providerState != nil {
+		sd.ProviderSessionIDs = m.shared.providerState.ExportSessionIDs()
+		sd.ProviderModels = m.shared.providerState.ExportModels()
+		sd.ActiveProvider = m.shared.providerState.GetActiveProvider()
+	}
+
+	// Save session metadata.
+	if err := m.shared.sessionStore.SaveSession(sd); err != nil {
+		log.Printf("[session] save session: %v", err)
+	}
+
+	// Save conversation histories for all providers with messages.
+	if m.shared.providerState != nil {
+		allMsgs := m.shared.providerState.ExportAllMessages()
+		for provider, msgs := range allMsgs {
+			if err := m.shared.sessionStore.SaveConversationHistory(sd.ID, provider, msgs); err != nil {
+				log.Printf("[session] save history provider=%s: %v", provider, err)
+			}
+		}
+	}
+}
+
 // waitForCLIEvent returns the WaitForEvent command from the CLI driver, or
 // nil when no driver is wired.  It is called after every handled CLI event to
 // maintain the re-subscription chain.
@@ -882,6 +813,26 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Global keys are checked before focus-specific routing.
 	switch {
 	case key.Matches(msg, m.keys.Global.ForceQuit):
+		// Double-Ctrl+C: second press forces immediate exit (TUI-034).
+		if m.shutdownInProgress {
+			return m, tea.Quit
+		}
+
+		// First Ctrl+C: initiate graceful shutdown sequence.
+		m.shutdownInProgress = true
+
+		// If ShutdownManager is wired, run sequenced shutdown in background
+		// and quit when it completes. Otherwise, fall back to save + quit.
+		if m.shared != nil && m.shared.shutdownFunc != nil {
+			shutdownFn := m.shared.shutdownFunc
+			return m, func() tea.Msg {
+				err := shutdownFn()
+				return ShutdownCompleteMsg{Err: err}
+			}
+		}
+
+		// Fallback: save session directly and quit (pre-TUI-034 behaviour).
+		m.saveSession()
 		return m, tea.Quit
 
 	case key.Matches(msg, m.keys.Global.ToggleFocus):
@@ -956,332 +907,10 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// handleProviderSwitch implements the provider-cycling flow (TUI-029):
-//
-//  1. Save the current conversation history to the active provider slot.
-//  2. Save the current session ID to the active provider slot.
-//  3. Cycle to the next provider in the canonical order.
-//  4. Restore the new provider's conversation history into the panel.
-//  5. Shutdown the old CLI driver.
-//  6. Create a new CLI driver configured for the new provider.
-//  7. Start the new CLI driver.
-//
-// The method is a no-op when no ProviderState is wired (e.g. in tests that
-// do not inject one).
-func (m AppModel) handleProviderSwitch() (tea.Model, tea.Cmd) {
-	if m.shared == nil || m.shared.providerState == nil {
-		return m, nil
-	}
-
-	ps := m.shared.providerState
-
-	// 1. Persist current conversation to the active provider slot.
-	// Capture the old provider and its messages BEFORE cycling for handoff generation.
-	oldProvider := ps.GetActiveProvider()
-	var oldMsgs []state.DisplayMessage
-	if m.shared.claudePanel != nil {
-		oldMsgs = m.shared.claudePanel.SaveMessages()
-		ps.SetActiveMessages(oldMsgs)
-	}
-
-	// 2. Persist current session ID to the active provider slot.
-	if m.sessionID != "" {
-		ps.SetSessionID(m.sessionID)
-	}
-
-	// 3. Cycle to the next provider in the canonical ordered list.
-	providers := ps.AllProviders()
-	nextIdx := 0
-	for i, p := range providers {
-		if p == oldProvider {
-			nextIdx = (i + 1) % len(providers)
-			break
-		}
-	}
-	if err := ps.SwitchProvider(providers[nextIdx]); err != nil {
-		// Unknown provider — this should never happen with the hardcoded list.
-		return m, nil
-	}
-
-	// Update provider tab bar highlight to reflect the new active provider.
-	if m.shared.providerTabBar != nil {
-		m.shared.providerTabBar.SetActive(ps.GetActiveProvider())
-	}
-
-	// 4. Restore the new provider's conversation history.
-	if m.shared.claudePanel != nil {
-		newMsgs := ps.GetActiveMessages()
-		m.shared.claudePanel.RestoreMessages(newMsgs)
-	}
-
-	// 4.5. Inject handoff context so the new provider knows what was being discussed.
-	handoff := buildHandoffSummary(oldMsgs, oldProvider, ps.GetActiveProvider())
-	if handoff != "" {
-		ps.AppendMessage(state.DisplayMessage{
-			Role:      "system",
-			Content:   handoff,
-			Timestamp: time.Now(),
-		})
-		// Re-restore so the injected handoff message is visible in the panel.
-		if m.shared.claudePanel != nil {
-			m.shared.claudePanel.RestoreMessages(ps.GetActiveMessages())
-		}
-	}
-
-	// 5. Shutdown the old CLI driver.
-	if m.shared.cliDriver != nil {
-		_ = m.shared.cliDriver.Shutdown()
-	}
-
-	// 6. Build CLI driver options for the new provider.
-	cfg := ps.GetActiveConfig()
-	model := ps.GetActiveModel()
-
-	opts := cli.CLIDriverOpts{
-		Model:          model,
-		SessionID:      ps.GetActiveSessionID(), // Resume if provider was used before (TUI-031)
-		PermissionMode: "acceptEdits",
-		AdapterPath:    cfg.AdapterPath,
-		ProjectDir:     ps.GetActiveProjectDir(),
-	}
-	// Materialise env-var keys for the new provider.  The values are
-	// intentionally left empty here: the actual credentials must be present
-	// in the process environment already (set by the user before launch).
-	// We only pass the map so the driver knows which vars are relevant.
-	if len(cfg.EnvVars) > 0 {
-		envCopy := make(map[string]string, len(cfg.EnvVars))
-		for k := range cfg.EnvVars {
-			envCopy[k] = "" // empty — real value comes from os.Environ()
-		}
-		opts.EnvVars = envCopy
-	}
-
-	// Reset per-session state so the new provider starts fresh.
-	m.cliReady = false
-	m.sessionID = ""
-	m.activeModel = model
-	m.reconnectCount = 0
-
-	// 7. Create, wire, and start the new CLI driver.
-	newDriver := cli.NewCLIDriver(opts)
-	m.shared.cliDriver = newDriver
-
-	return m, newDriver.Start()
-}
-
 // syncFocusState propagates the current focus state to child components.
 func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
 		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
 	}
 	m.agentTree.SetFocused(m.focus == FocusAgents)
-}
-
-// ---------------------------------------------------------------------------
-// Layout helpers
-// ---------------------------------------------------------------------------
-
-// computeLayout calculates panel dimensions from the current terminal size.
-//
-// Responsive breakpoints:
-//   - width < 80  → single-column (right panel hidden)
-//   - width < 100 → left 75%, right 25%
-//   - width >= 100 → left 70%, right 30%
-//
-// Border frame (1 char per edge = 2 per axis) is subtracted from each panel
-// inner width so that the borders do not overflow the terminal width.
-func (m AppModel) computeLayout() layoutDims {
-	dims := layoutDims{}
-
-	// Content rows available after chrome.
-	providerTabH := 0
-	if m.shared != nil && m.shared.providerTabBar != nil {
-		providerTabH = m.shared.providerTabBar.Height()
-	}
-	taskBoardH := 0
-	if m.shared != nil && m.shared.taskBoard != nil {
-		taskBoardH = m.shared.taskBoard.Height()
-	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH
-	if dims.contentHeight < 1 {
-		dims.contentHeight = 1
-	}
-
-	if m.width < 80 {
-		// Narrow: single column, right panel hidden.
-		dims.showRightPanel = false
-		dims.leftWidth = m.width - borderFrame
-		if dims.leftWidth < 1 {
-			dims.leftWidth = 1
-		}
-		return dims
-	}
-
-	dims.showRightPanel = true
-
-	var leftRatio float64
-	if m.width < 100 {
-		leftRatio = 0.75
-	} else {
-		leftRatio = 0.70
-	}
-
-	// Compute outer column widths, then subtract border frame for inner.
-	leftOuter := int(float64(m.width) * leftRatio)
-	rightOuter := m.width - leftOuter
-
-	dims.leftWidth = leftOuter - borderFrame
-	dims.rightWidth = rightOuter - borderFrame
-
-	if dims.leftWidth < 1 {
-		dims.leftWidth = 1
-	}
-	if dims.rightWidth < 1 {
-		dims.rightWidth = 1
-	}
-
-	return dims
-}
-
-// renderLayout composes the full Lipgloss layout.
-//
-// Structure (top to bottom):
-//
-//	Banner     (3 rows, full width)
-//	TabBar     (1 row, full width)
-//	Main area  (left + optional right panel)
-//	StatusLine (2 rows, full width)
-//
-// When a modal is active the layout is rendered as normal and then replaced by
-// the modal overlay via lipgloss.Place so the modal appears centered on screen.
-func (m AppModel) renderLayout() string {
-	// Modal overlay takes full precedence: render and return immediately.
-	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
-		m.shared.modalQueue.SetTermSize(m.width, m.height)
-		return m.shared.modalQueue.View()
-	}
-
-	dims := m.computeLayout()
-
-	bannerView := m.banner.View()
-
-	var tabBarView string
-	if m.tabBar != nil {
-		tabBarView = m.tabBar.View()
-	}
-
-	statusLineView := m.statusLine.View()
-
-	mainArea := m.renderMain(dims)
-
-	parts := []string{bannerView, tabBarView}
-
-	// Insert provider tab bar between the tab bar and main content area.
-	if m.shared != nil && m.shared.providerTabBar != nil && m.shared.providerTabBar.IsVisible() {
-		parts = append(parts, m.shared.providerTabBar.View())
-	}
-
-	parts = append(parts, mainArea)
-
-	// Task board overlay renders between main area and toast/status line.
-	if m.shared != nil && m.shared.taskBoard != nil && m.shared.taskBoard.IsVisible() {
-		parts = append(parts, m.shared.taskBoard.View())
-	}
-
-	// Toast notifications render between main area and status line.
-	if m.shared != nil && m.shared.toasts != nil && !m.shared.toasts.IsEmpty() {
-		parts = append(parts, m.shared.toasts.View())
-	}
-
-	parts = append(parts, statusLineView)
-	return lipgloss.JoinVertical(lipgloss.Top, parts...)
-}
-
-// renderMain renders the split content area (left panel + optional right panel).
-func (m AppModel) renderMain(dims layoutDims) string {
-	leftPanel := m.renderLeftPanel(dims)
-
-	if !dims.showRightPanel {
-		return leftPanel
-	}
-
-	rightPanel := m.renderRightPanel(dims)
-	return lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
-}
-
-// renderLeftPanel renders the Claude conversation panel with the appropriate
-// focus border.
-func (m AppModel) renderLeftPanel(dims layoutDims) string {
-	focused := m.focus == FocusClaude
-
-	var content string
-	if m.shared != nil && m.shared.claudePanel != nil {
-		content = m.shared.claudePanel.View()
-	} else {
-		content = config.StyleSubtle.Render("Claude panel  [focus=" + m.focus.String() + "]")
-	}
-
-	var style lipgloss.Style
-	if focused {
-		style = config.StyleFocusedBorder
-	} else {
-		style = config.StyleUnfocusedBorder
-	}
-
-	return style.
-		Width(dims.leftWidth).
-		Height(dims.contentHeight).
-		Render(content)
-}
-
-// renderRightPanel renders the right-side panel whose content depends on the
-// active RightPanelMode.
-func (m AppModel) renderRightPanel(dims layoutDims) string {
-	focused := m.focus == FocusAgents
-
-	var content string
-	switch m.rightPanelMode {
-	case RPMAgents:
-		treeView := m.agentTree.View()
-		detailView := m.agentDetail.View()
-		content = lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
-	case RPMDashboard:
-		if m.shared != nil && m.shared.dashboard != nil {
-			content = m.shared.dashboard.View()
-		} else {
-			content = config.StyleSubtle.Render("Dashboard")
-		}
-	case RPMSettings:
-		if m.shared != nil && m.shared.settings != nil {
-			content = m.shared.settings.View()
-		} else {
-			content = config.StyleSubtle.Render("Settings")
-		}
-	case RPMTelemetry:
-		if m.shared != nil && m.shared.telemetry != nil {
-			content = m.shared.telemetry.View()
-		} else {
-			content = config.StyleSubtle.Render("Telemetry")
-		}
-	case RPMPlanPreview:
-		if m.shared != nil && m.shared.planPreview != nil {
-			content = m.shared.planPreview.View()
-		} else {
-			content = config.StyleSubtle.Render("Plan Preview")
-		}
-	default:
-		content = config.StyleSubtle.Render(m.rightPanelMode.String())
-	}
-
-	var style lipgloss.Style
-	if focused {
-		style = config.StyleFocusedBorder
-	} else {
-		style = config.StyleUnfocusedBorder
-	}
-
-	return style.
-		Width(dims.rightWidth).
-		Height(dims.contentHeight).
-		Render(content)
 }

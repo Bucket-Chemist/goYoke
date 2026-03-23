@@ -1,0 +1,1 @@
+{"type":"assistant","message":{"id":"msg-002","type":"message","role":"assistant","content":[{"type":"tool_use","id":"tu-001","name":"Read","input":{"file_path":"/tmp/test.go"}}],"model":"claude-sonnet-4-20250514","stop_reason":null}}

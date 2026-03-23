@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -759,7 +760,7 @@ func TestTruncate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, truncate(tc.input, tc.max))
+			assert.Equal(t, tc.want, util.Truncate(tc.input, tc.max))
 		})
 	}
 }

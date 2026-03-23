@@ -16,7 +16,9 @@
 **Phase 5: Agent Tree** — COMPLETE (3/3)
 **Phase 6: Rich Features** — COMPLETE (6/6 + integration wiring)
 **Phase 7: Multi-Provider** — COMPLETE (5/5)
-**Total: 32/42 tickets complete (76%)**
+**Phase 8: Lifecycle** — COMPLETE (3/3)
+**Phase 9: Testing** — IN PROGRESS (2/7, TUI-038 next)
+**Total: 37/42 tickets complete (88%)**
 
 ---
 
@@ -70,6 +72,21 @@
 - TUI-032: Dashboard, Settings, Telemetry, PlanPreview, TaskBoard panels ✅ — 5 new packages (dashboard 100%, settings 94.4%, telemetry 91.9%, planpreview 97.4%, taskboard 97.1%), RPMPlanPreview added to RightPanelMode enum, 5 widget interfaces + sharedState fields in model, renderRightPanel expanded with all modes, TaskBoard overlay with Alt+B toggle (visible between mainArea and toasts, height subtracted from computeLayout), telemetry loads from JSONL via tea.Cmd (max 50 entries), planpreview renders via Glamour in SetContent, 79.2% model coverage, 1069 total tests, 21 packages, race-free
 - **Phase 7 COMPLETE** — all 5 multi-provider tickets done
 
+### Phase 8: Lifecycle (complete)
+- TUI-033: Session persistence (load/save) ✅ — New `internal/tui/session/` package (persistence.go + history.go), SessionData struct with provider maps, Store with atomic writes (temp+rename), NewSessionID (YYYYMMDD.UUID), LoadSession/SaveSession/SetupSessionDir, per-provider conversation history (LoadConversationHistory/SaveConversationHistory), auto-save debounced 5s via SessionAutoSaveMsg+seq counter, save-on-shutdown via ForceQuit, session resume via --session-id flag in main.go, ExportAllMessages+GetMessages added to ProviderState, 85.6% coverage, 34 tests, race-free
+- TUI-034: Graceful shutdown with timing budget ✅ — New `internal/tui/lifecycle/` package, ShutdownManager with 10s total budget (5 phases: save→interrupt CLI→shutdown CLI→close bridge→wait hooks), Shutdownable/BridgeShutdownable interfaces for testability, defer-based LIFO shutdown removed from main.go, replaced with explicit sequenced shutdown (driver BEFORE bridge per DES-1), ProcessManager.StartSignalHandler wired for SIGINT/SIGTERM, double-Ctrl+C (shutdownInProgress flag→immediate tea.Quit), ShutdownCompleteMsg message type, SaveSessionPublic() on AppModel, 80.0% coverage, 11 tests, race-free. Integration tests (orphan verification) deferred to TUI-039.
+- TUI-035: Clipboard, search, and input history ✅ — 3 new files (util/clipboard.go, claude/history.go, claude/search.go + tests), CopyToClipboard via atotto/clipboard (indirect dep), InputHistory with JSON persistence (atomic write, max 500, dedup consecutive, resilient load), SearchModel with case-insensitive substring matching + Ctrl+N/P navigation + wraparound + '/' trigger + Esc dismiss, 4 new keybindings (/, ctrl+n, ctrl+p, ctrl+y), SearchQueryChangedMsg for real-time re-search on typing, scrollToSearchResult viewport integration, search-mode guard in handleKey, 78.8% claude coverage, 90.3% util coverage, ~100 claude tests, race-free
+- **Phase 8 COMPLETE** — all 3 lifecycle tickets done
+
+### Phase 9: Testing (in progress)
+- TUI-036: Component unit tests ✅ — testdata/ fixtures (5 NDJSON files + helpers.go), 22 new model tests (SessionAutoSaveMsg, ShutdownCompleteMsg, double-Ctrl+C, toast nil safety, renderRightPanel modes, modal overlay), MCP coverage tests (send/notify/spawn_agent/select_option/request_input), bridge coverage tests. Coverage improvements: model 75→89%, bridge 75→84%, claude 79→91%, mcp 70→79%. All 23 packages pass with race detector. TestHarness (DES-7) deferred — widget interface mocking pattern validated.
+- TUI-037: CLI driver integration test ✅ — mock-claude.sh in testdata/ (env-controlled NDJSON emitter), 5 integration tests (NormalFlow, CrashRecovery, Interrupt, Shutdown, UnknownEvent), AdapterPath injection for mock, waitForMsg helper with 5s deadline, testing.Short() guards, CLI coverage 81→91%, all pass <1s, race-free
+- TUI-038: MCP server integration test — PENDING (depends TUI-014, TUI-015)
+- TUI-039: E2E smoke test with live CLI — PENDING (depends TUI-016, TUI-018)
+- TUI-040: Performance benchmarks — PENDING (depends TUI-016, TUI-017, TUI-020)
+- TUI-041: Unknown event resilience test — PENDING (depends TUI-012, TUI-013)
+- TUI-042: Feature parity checklist verification — PENDING (depends TUI-039)
+
 ### Phase 7 Remediation (post-completion)
 - R-1: main.go wiring ✅ — All 7 Phase 7 widgets instantiated (provider tab bar, dashboard, settings, telemetry, planpreview, taskboard). ProviderState() getter on AppModel. Settings initialized with CLI opts.
 - R-2: Provider switch debounce ✅ — 300ms tea.Tick with seq counter. Rapid Shift+Tab → only latest fires. Stale ProviderSwitchExecuteMsg discarded via seq mismatch. ProviderSwitchMsg kept for programmatic (non-debounced) switching.
@@ -84,27 +101,29 @@
 | Package | Tests | Coverage |
 |---------|-------|----------|
 | `internal/tui/config` | 100 | 100.0% |
-| `internal/tui/model` | 172 | 81.7% |
+| `internal/tui/model` | ~194 | 88.8% |
 | `internal/tui/components/banner` | 8 | 100.0% |
 | `internal/tui/components/tabbar` | 12 | 100.0% |
 | `internal/tui/components/statusline` | 29 | 87.8% |
 | `internal/tui/components/modals` | 107 | 88.5% |
 | `internal/tui/components/agents` | 45 | 90.6% |
-| `internal/tui/components/claude` | 61 | 86.8% |
+| `internal/tui/components/claude` | ~100 | 91.0% |
 | `internal/tui/components/toast` | 19 | 94.2% |
 | `internal/tui/components/teams` | 62 | 94.1% |
 | `internal/tui/state` | 208 | 97.9% |
-| `internal/tui/util` | 15 | 87.0% |
-| `internal/tui/cli` | 152 | 81.7% |
-| `internal/tui/mcp` | 34 | 74.4% |
+| `internal/tui/util` | ~18 | 90.3% |
+| `internal/tui/cli` | ~160 | 91.2% |
+| `internal/tui/mcp` | ~44 | 78.6% |
 | `internal/tui/components/providers` | 16 | 90.6% |
 | `internal/tui/components/dashboard` | 10 | 100.0% |
 | `internal/tui/components/settings` | 10 | 94.4% |
 | `internal/tui/components/telemetry` | 12 | 91.9% |
 | `internal/tui/components/planpreview` | 10 | 97.4% |
 | `internal/tui/components/taskboard` | 12 | 97.1% |
-| `internal/tui/bridge` | 10 | 76.2% |
-| **Total** | **1108** | **avg ~91%** |
+| `internal/tui/bridge` | ~20 | 83.5% |
+| `internal/tui/session` | 34 | 85.6% |
+| `internal/tui/lifecycle` | 11 | 80.0% |
+| **Total** | **~1250+** | **avg ~91%** |
 
 ---
 
@@ -172,6 +191,12 @@ Get() and Tree() return deep copies of Agent structs. Tree() copies each AgentTr
 
 ### Status transition validation with revert (TUI-019)
 Update() captures status before applying fn, then checks if the transition is valid. If invalid (e.g., Complete→Running), the status is reverted to the pre-fn value and ErrInvalidTransition is returned. Valid transitions: Pending→{Running,Killed}, Running→{Complete,Error,Killed}. Complete/Error/Killed are terminal.
+
+### Graceful shutdown with ShutdownManager (TUI-034)
+New `internal/tui/lifecycle/` package provides `ShutdownManager` with configurable timing budgets (10s total, 2s CLI, 500ms hooks). Replaces defer-based LIFO shutdown (which had **wrong ordering**: bridge before driver) with explicit 5-phase sequence: save session → interrupt CLI (SIGINT) → shutdown CLI (SIGTERM→SIGKILL) → close bridge → wait for hooks. `Shutdownable` and `BridgeShutdownable` interfaces decouple from concrete types for testability. `ProcessManager.StartSignalHandler()` wired into main.go for OS-level SIGINT/SIGTERM handling. Double-Ctrl+C pattern: first press sets `shutdownInProgress=true` and runs sequenced shutdown via tea.Cmd; second press immediately calls `tea.Quit`. `ShutdownCompleteMsg` message drives the Quit after graceful completion. `shutdownFunc func() error` stored in sharedState (closure pattern avoids importing lifecycle from model). Post-p.Run() fallback shutdown call ensures cleanup even for menu-based exits.
+
+### Session persistence Store pattern (TUI-033)
+New `internal/tui/session/` package provides `Store` struct with configurable `baseDir` (default `~/.claude/sessions/`). All writes use atomic temp-file-then-rename to prevent corruption on crash. `SessionData` struct holds provider session IDs, model selections, active provider, cost, and tool call count — all serialized to `{baseDir}/{id}/session.json`. Per-provider conversation histories at `{baseDir}/{id}/history-{provider}.json`. Empty histories are removed (no accumulation). `SetupSessionDir` creates session dir + `current-session` marker + `.claude/tmp` symlink. Auto-save debounced with 5s cooldown via `SessionAutoSaveMsg` + seq counter (same pattern as provider switch debounce). `ExportAllMessages()` added to `ProviderState` for bulk history export on save. Session resume via `--session-id` flag restores provider state (ImportSessionIDs, ImportModels, SwitchProvider).
 
 ---
 

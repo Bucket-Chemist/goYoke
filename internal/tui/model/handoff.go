@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // maxHandoffMessages is the number of recent messages to scan for handoff context.
@@ -46,12 +47,12 @@ func buildHandoffSummary(
 		case "user":
 			userCount++
 			if lastUser == "" {
-				lastUser = truncateStr(msg.Content, maxContentLen)
+				lastUser = util.Truncate(msg.Content, maxContentLen)
 			}
 		case "assistant":
 			assistantCount++
 			if lastAssistant == "" {
-				lastAssistant = truncateStr(msg.Content, maxContentLen)
+				lastAssistant = util.Truncate(msg.Content, maxContentLen)
 			}
 			toolCount += len(msg.ToolBlocks)
 		}
@@ -76,11 +77,3 @@ func buildHandoffSummary(
 	return sb.String()
 }
 
-// truncateStr returns s truncated to maxLen characters with "..." appended if
-// the string exceeded that length.
-func truncateStr(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen] + "..."
-}

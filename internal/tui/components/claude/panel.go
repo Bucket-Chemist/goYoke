@@ -21,52 +21,23 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
-// ---------------------------------------------------------------------------
-// CLIDriverSender interface
+// CLIDriverSender is a package-level type alias retained for backward
+// compatibility.  New code should use model.MessageSender directly.
+// The two interfaces are structurally identical; this alias exists so that
+// call sites that already reference claude.CLIDriverSender continue to compile.
 //
-// CLIDriverSender is a minimal interface that decouples ClaudePanelModel from
-// the concrete cli package.  AppModel wires the actual CLI driver into the
-// panel via SetSender.
-// ---------------------------------------------------------------------------
-
-// CLIDriverSender allows the panel to send a user message to the active
-// Claude CLI session without importing the cli package directly.
-type CLIDriverSender interface {
-	// SendMessage submits text to the CLI driver and returns a Cmd that
-	// delivers the result as a tea.Msg when complete.
-	SendMessage(text string) tea.Cmd
-}
+// Deprecated: use model.MessageSender.
+type CLIDriverSender = model.MessageSender
 
 // ---------------------------------------------------------------------------
 // Display types
 // ---------------------------------------------------------------------------
 
-// ToolBlock represents a single tool invocation that is embedded inside a
-// DisplayMessage.  By default it is collapsed; the user can expand it to
-// see the full input/output summaries.
-type ToolBlock struct {
-	// Name is the tool name, e.g. "Read" or "Bash".
-	Name string
-	// Input is a short human-readable summary of the tool arguments.
-	Input string
-	// Output is a short human-readable summary of the tool result.
-	Output string
-	// Expanded controls whether the full Input/Output is shown.
-	Expanded bool
-}
+// ToolBlock is an alias for state.ToolBlock — the canonical definition.
+type ToolBlock = state.ToolBlock
 
-// DisplayMessage is one entry in the conversation history.  It corresponds
-// to a single assistant or user turn.
-type DisplayMessage struct {
-	// Role is "user", "assistant", or "system".
-	Role string
-	// Content is the plain-text body of the message.
-	Content string
-	// ToolBlocks lists any tool calls embedded in an assistant message.
-	ToolBlocks []ToolBlock
-	// Timestamp is when the message was first created or last updated.
-	Timestamp time.Time
-}
+// DisplayMessage is an alias for state.DisplayMessage — the canonical definition.
+type DisplayMessage = state.DisplayMessage
 
 // ---------------------------------------------------------------------------
 // Package-level styles
@@ -145,7 +116,10 @@ type ClaudePanelModel struct {
 
 	// sender is the injected CLI driver used to submit messages.
 	// It is nil until SetSender is called.
-	sender CLIDriverSender
+	sender model.MessageSender
+
+	// search is the in-panel search overlay (TUI-035).
+	search SearchModel
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -164,6 +138,7 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 		historyIdx: -1,
 		autoScroll: true,
 		keys:       keys.Claude,
+		search:     NewSearchModel(),
 	}
 }
 
@@ -279,7 +254,65 @@ func (m ClaudePanelModel) handleAssistantMsg(
 func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	// ---------------------------------------------------------------------------
+	// Search mode — route all keys to the search overlay when active.
+	// ---------------------------------------------------------------------------
+	if m.search.IsActive() {
+		switch msg.String() {
+		case "ctrl+n":
+			m.search.NextResult()
+			m.scrollToSearchResult()
+			return m, nil
+		case "ctrl+p":
+			m.search.PrevResult()
+			m.scrollToSearchResult()
+			return m, nil
+		}
+
+		var searchCmd tea.Cmd
+		prevQuery := m.search.Query()
+		m.search, searchCmd = m.search.Update(msg)
+		cmds = append(cmds, searchCmd)
+
+		// If the search query changed, re-run the search immediately so that
+		// results update in the same frame without a round-trip through the
+		// Bubbletea event loop.
+		if m.search.Query() != prevQuery {
+			m.search.ExecuteSearch(m.messages)
+			m.scrollToSearchResult()
+			m.syncViewport()
+		}
+
+		// If the search was deactivated by Enter/Esc, scroll to the result.
+		if !m.search.IsActive() {
+			m.scrollToSearchResult()
+		}
+
+		return m, tea.Batch(cmds...)
+	}
+
+	// ---------------------------------------------------------------------------
+	// Normal mode key handling.
+	// ---------------------------------------------------------------------------
+
 	switch {
+	case key.Matches(msg, m.keys.Search):
+		// Activate search mode.
+		m.search.Activate()
+		m.search.SetWidth(m.width)
+		m.input.Blur()
+		return m, nil
+
+	case key.Matches(msg, m.keys.CopyLastResponse):
+		// Copy the last assistant message to the clipboard.
+		for i := len(m.messages) - 1; i >= 0; i-- {
+			if m.messages[i].Role == "assistant" && m.messages[i].Content != "" {
+				_ = util.CopyToClipboard(m.messages[i].Content)
+				break
+			}
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keys.Submit):
 		text := strings.TrimSpace(m.input.Value())
 		if text == "" || m.streaming {
@@ -327,6 +360,24 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 	}
 
 	return m, tiCmd
+}
+
+// scrollToSearchResult scrolls the viewport to the message at the current
+// search result index, if one exists.  It is a best-effort scroll: the
+// viewport does not support per-line seeking, so we estimate the target
+// offset from the number of messages above the result.
+func (m *ClaudePanelModel) scrollToSearchResult() {
+	idx := m.search.CurrentResultIndex()
+	if idx < 0 || idx >= len(m.messages) {
+		return
+	}
+	// Re-render so the viewport content is up to date.
+	m.syncViewport()
+	// Approximate position: scroll so the target message is near the top.
+	// Each message occupies at least 2 lines (label + content).
+	const avgLinesPerMsg = 3
+	targetLine := idx * avgLinesPerMsg
+	m.vp.SetYOffset(targetLine)
 }
 
 // navigateHistoryPrev moves one step backward in input history.
@@ -379,14 +430,30 @@ func (m ClaudePanelModel) View() string {
 	inputLine := m.renderInputLine()
 	inputH := lipgloss.Height(inputLine)
 
+	// Reserve a line for the search bar when it is active.
+	var searchBar string
+	searchBarH := 0
+	if m.search.IsActive() {
+		searchBar = m.search.View()
+		searchBarH = lipgloss.Height(searchBar)
+	}
+
 	// The viewport takes all remaining vertical space.
-	vpH := m.height - inputH
+	vpH := m.height - inputH - searchBarH
 	if vpH < 1 {
 		vpH = 1
 	}
 	if m.vp.Height != vpH {
 		// Non-mutating: we only update in SetSize / explicit calls.  A
 		// transient height mismatch here is acceptable.
+	}
+
+	if m.search.IsActive() {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			searchBar,
+			m.vp.View(),
+			inputLine,
+		)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
@@ -538,11 +605,14 @@ func (m *ClaudePanelModel) SetSize(width, height int) {
 }
 
 // SetFocused sets whether the panel accepts keyboard input.  When focused,
-// the textinput cursor is shown.
+// the textinput cursor is shown.  If the search overlay is active, focusing
+// the panel does not steal focus from the search input.
 func (m *ClaudePanelModel) SetFocused(focused bool) {
 	m.focused = focused
 	if focused {
-		m.input.Focus()
+		if !m.search.IsActive() {
+			m.input.Focus()
+		}
 	} else {
 		m.input.Blur()
 	}
@@ -559,8 +629,11 @@ func (m *ClaudePanelModel) Blur() {
 }
 
 // SetSender injects the CLI driver implementation.  This mirrors the
-// SetCLIDriver / SetBridge pattern used in AppModel.
-func (m *ClaudePanelModel) SetSender(sender CLIDriverSender) {
+// SetCLIDriver / SetBridge pattern used in AppModel.  The parameter type is
+// model.MessageSender so that claudePanelWidget (defined in the model package)
+// and this concrete method share the same named type, satisfying Go's strict
+// interface method-signature matching.
+func (m *ClaudePanelModel) SetSender(sender model.MessageSender) {
 	m.sender = sender
 }
 
@@ -587,22 +660,21 @@ func (m *ClaudePanelModel) SaveMessages() []state.DisplayMessage {
 	if len(m.messages) == 0 {
 		return nil
 	}
+	// Types are identical (aliases) — shallow copy is sufficient.
+	// Reset Expanded to false so restored conversations start collapsed.
 	result := make([]state.DisplayMessage, len(m.messages))
-	for i, msg := range m.messages {
-		var blocks []state.ToolBlock
-		for _, tb := range msg.ToolBlocks {
-			blocks = append(blocks, state.ToolBlock{
-				Name:   tb.Name,
-				Input:  tb.Input,
-				Output: tb.Output,
-			})
+	copy(result, m.messages)
+	for i := range result {
+		if len(result[i].ToolBlocks) == 0 {
+			result[i].ToolBlocks = nil // preserve nil semantics
+			continue
 		}
-		result[i] = state.DisplayMessage{
-			Role:       msg.Role,
-			Content:    msg.Content,
-			Timestamp:  msg.Timestamp,
-			ToolBlocks: blocks,
+		blocks := make([]state.ToolBlock, len(result[i].ToolBlocks))
+		copy(blocks, result[i].ToolBlocks)
+		for j := range blocks {
+			blocks[j].Expanded = false
 		}
+		result[i].ToolBlocks = blocks
 	}
 	return result
 }
@@ -612,23 +684,20 @@ func (m *ClaudePanelModel) SaveMessages() []state.DisplayMessage {
 // Passing nil or an empty slice clears the conversation. ToolBlocks are
 // restored with Expanded=false so they always start collapsed (TUI R-4).
 func (m *ClaudePanelModel) RestoreMessages(msgs []state.DisplayMessage) {
+	// Types are identical (aliases) — copy and reset Expanded to false.
 	m.messages = make([]DisplayMessage, len(msgs))
-	for i, msg := range msgs {
-		var blocks []ToolBlock
-		for _, tb := range msg.ToolBlocks {
-			blocks = append(blocks, ToolBlock{
-				Name:     tb.Name,
-				Input:    tb.Input,
-				Output:   tb.Output,
-				Expanded: false, // always start collapsed on restore
-			})
+	copy(m.messages, msgs)
+	for i := range m.messages {
+		if len(m.messages[i].ToolBlocks) == 0 {
+			m.messages[i].ToolBlocks = nil
+			continue
 		}
-		m.messages[i] = DisplayMessage{
-			Role:       msg.Role,
-			Content:    msg.Content,
-			Timestamp:  msg.Timestamp,
-			ToolBlocks: blocks,
+		blocks := make([]state.ToolBlock, len(m.messages[i].ToolBlocks))
+		copy(blocks, m.messages[i].ToolBlocks)
+		for j := range blocks {
+			blocks[j].Expanded = false
 		}
+		m.messages[i].ToolBlocks = blocks
 	}
 	m.streaming = false
 	m.autoScroll = true

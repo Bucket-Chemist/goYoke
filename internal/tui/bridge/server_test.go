@@ -2,7 +2,10 @@ package bridge
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -114,7 +117,7 @@ func TestModalRequestResponseRoundtrip(t *testing.T) {
 	sendRequest(t, enc, req)
 
 	// Wait for the BridgeModalRequestMsg to arrive via program.Send().
-	bridgeMsg, ok := waitFor[BridgeModalRequestMsg](ms, testTimeout)
+	bridgeMsg, ok := waitFor[model.BridgeModalRequestMsg](ms, testTimeout)
 	require.True(t, ok, "timed out waiting for BridgeModalRequestMsg")
 	assert.Equal(t, "req-modal-1", bridgeMsg.RequestID)
 	assert.Equal(t, "Allow Write to /tmp/foo?", bridgeMsg.Message)
@@ -218,7 +221,7 @@ func TestToastDelivery(t *testing.T) {
 	msg, ok := waitFor[model.ToastMsg](ms, testTimeout)
 	require.True(t, ok, "timed out waiting for ToastMsg")
 	assert.Equal(t, "Agent completed", msg.Text)
-	assert.Equal(t, "info", msg.Level)
+	assert.Equal(t, model.ToastLevelInfo, msg.Level)
 }
 
 // TestShutdownCancelsPendingModal verifies that Shutdown unblocks a goroutine
@@ -239,7 +242,7 @@ func TestShutdownCancelsPendingModal(t *testing.T) {
 
 	// Wait until the bridge has sent the BridgeModalRequestMsg (i.e. the
 	// handleModal goroutine is now blocking on the response channel).
-	_, ok := waitFor[BridgeModalRequestMsg](ms, testTimeout)
+	_, ok := waitFor[model.BridgeModalRequestMsg](ms, testTimeout)
 	require.True(t, ok, "timed out waiting for BridgeModalRequestMsg before shutdown")
 
 	// Shutdown the bridge.  The modal handler goroutine should unblock via
@@ -366,4 +369,311 @@ func TestResolveModalNoopOnMissingID(t *testing.T) {
 	assert.NotPanics(t, func() {
 		b.ResolveModal("nonexistent-id", mcp.ModalResponsePayload{Value: "ok"})
 	})
+}
+
+// ---------------------------------------------------------------------------
+// W-4: ResolveModal non-blocking send
+// ---------------------------------------------------------------------------
+
+// TestResolveModal_DuplicateCallDoesNotDeadlock verifies that calling
+// ResolveModal twice for the same requestID does not deadlock.  The buffered
+// channel holds one response; the second call hits the default branch and
+// drops the duplicate, logging a warning instead of blocking while holding
+// b.mu.
+func TestResolveModal_DuplicateCallDoesNotDeadlock(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, dec := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	// Send a modal_request.
+	req := buildRequest(t, mcp.TypeModalRequest, "req-dup-1", mcp.ModalRequestPayload{
+		Message: "Duplicate test?",
+		Options: []string{"Yes", "No"},
+	})
+	sendRequest(t, enc, req)
+
+	// Wait for the BridgeModalRequestMsg so the channel is registered.
+	_, ok := waitFor[model.BridgeModalRequestMsg](ms, testTimeout)
+	require.True(t, ok, "timed out waiting for BridgeModalRequestMsg")
+
+	// First call delivers the response.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		b.ResolveModal("req-dup-1", mcp.ModalResponsePayload{Value: "Yes"})
+		// Second call must not deadlock or panic — the channel is already full
+		// (or the first call already drained it and deleted the entry).
+		b.ResolveModal("req-dup-1", mcp.ModalResponsePayload{Value: "duplicate"})
+	}()
+
+	select {
+	case <-done:
+		// Good — both calls returned without deadlocking.
+	case <-time.After(testTimeout):
+		t.Fatal("ResolveModal deadlocked on duplicate call")
+	}
+
+	// The first response should arrive on the connection.
+	conn.SetReadDeadline(time.Now().Add(testTimeout))
+	var resp mcp.IPCResponse
+	require.NoError(t, dec.Decode(&resp))
+	assert.Equal(t, mcp.TypeModalResponse, resp.Type)
+}
+
+// ---------------------------------------------------------------------------
+// W-5/M-4: acceptLoop continues on transient errors
+// ---------------------------------------------------------------------------
+
+// TestAcceptLoop_ContinuesAfterShutdown verifies that closing the listener
+// via Shutdown causes acceptLoop to return (not retry indefinitely).
+// This is the existing shutdown path — keeping it green after the retry
+// change.
+func TestAcceptLoop_ContinuesAfterShutdown(t *testing.T) {
+	b, _ := startBridge(t)
+
+	shutdownDone := make(chan struct{})
+	go func() {
+		b.Shutdown()
+		close(shutdownDone)
+	}()
+
+	select {
+	case <-shutdownDone:
+		// Good — Shutdown returned, meaning acceptLoop exited.
+	case <-time.After(testTimeout):
+		t.Fatal("Shutdown timed out — acceptLoop may be looping on transient errors")
+	}
+}
+
+// TestAcceptLoop_NewConnectionAfterTransientError verifies that the bridge
+// can still accept new connections after a transient error would have
+// previously caused the acceptLoop to exit.  We test this by starting a
+// bridge, accepting a first connection, and then establishing a second
+// connection to confirm the loop is still running.
+func TestAcceptLoop_NewConnectionAfterTransientError(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	// First connection — verify bridge is working.
+	conn1, enc1, _ := dialBridge(t, b.SocketPath())
+	defer conn1.Close()
+
+	req1 := buildRequest(t, mcp.TypeToast, "req-first", mcp.ToastPayload{
+		Message: "first connection",
+		Level:   "info",
+	})
+	sendRequest(t, enc1, req1)
+
+	_, ok := waitFor[model.ToastMsg](ms, testTimeout)
+	require.True(t, ok, "timed out waiting for first ToastMsg")
+
+	// Second connection — verifies the acceptLoop is still running.
+	conn2, enc2, _ := dialBridge(t, b.SocketPath())
+	defer conn2.Close()
+
+	req2 := buildRequest(t, mcp.TypeToast, "req-second", mcp.ToastPayload{
+		Message: "second connection",
+		Level:   "info",
+	})
+	sendRequest(t, enc2, req2)
+
+	deadline := time.Now().Add(testTimeout)
+	for time.Now().Before(deadline) {
+		ms.mu.Lock()
+		count := 0
+		for _, msg := range ms.msgs {
+			if tm, ok := msg.(model.ToastMsg); ok && tm.Text == "second connection" {
+				count++
+			}
+		}
+		ms.mu.Unlock()
+		if count > 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("second connection message never arrived — acceptLoop may have exited prematurely")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-036: Coverage gap-filling for bridge package
+// ---------------------------------------------------------------------------
+
+// TestResolveModalSimple_RoutesCorrectly verifies that ResolveModalSimple
+// delivers the response to a pending modal goroutine (the 0% function).
+func TestResolveModalSimple_RoutesCorrectly(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, dec := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	req := buildRequest(t, mcp.TypeModalRequest, "req-simple-1", mcp.ModalRequestPayload{
+		Message: "Simple?",
+		Options: []string{"Yes", "No"},
+	})
+	sendRequest(t, enc, req)
+
+	_, ok := waitFor[model.BridgeModalRequestMsg](ms, testTimeout)
+	require.True(t, ok, "timed out waiting for BridgeModalRequestMsg")
+
+	// Use ResolveModalSimple instead of ResolveModal.
+	go b.ResolveModalSimple("req-simple-1", "Yes")
+
+	conn.SetReadDeadline(time.Now().Add(testTimeout))
+	var resp mcp.IPCResponse
+	require.NoError(t, dec.Decode(&resp))
+
+	assert.Equal(t, mcp.TypeModalResponse, resp.Type)
+	assert.Equal(t, "req-simple-1", resp.ID)
+
+	var payload mcp.ModalResponsePayload
+	require.NoError(t, json.Unmarshal(resp.Payload, &payload))
+	assert.Equal(t, "Yes", payload.Value)
+}
+
+// TestHandleAgentRegister_MalformedPayload_NoPanic verifies that a
+// malformed payload in an agent_register request does not crash the handler
+// (the error branch at 60%).
+func TestHandleAgentRegister_MalformedPayload_NoPanic(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, _ := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	// Send a malformed payload (valid JSON but wrong type for AgentRegisterPayload).
+	malformed := mcp.IPCRequest{
+		Type:    mcp.TypeAgentRegister,
+		ID:      "bad-reg-1",
+		Payload: json.RawMessage(`"not an object"`),
+	}
+	require.NoError(t, enc.Encode(malformed))
+
+	// After the error, send a valid toast to confirm the connection is still alive.
+	req := buildRequest(t, mcp.TypeToast, "after-bad-reg", mcp.ToastPayload{
+		Message: "still alive after bad register",
+		Level:   "info",
+	})
+	sendRequest(t, enc, req)
+
+	msg, ok := waitFor[model.ToastMsg](ms, testTimeout)
+	require.True(t, ok, "handler crashed after malformed agent_register")
+	assert.Equal(t, "still alive after bad register", msg.Text)
+}
+
+// TestHandleAgentUpdate_MalformedPayload_NoPanic mirrors the above for
+// agent_update.
+func TestHandleAgentUpdate_MalformedPayload_NoPanic(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, _ := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	malformed := mcp.IPCRequest{
+		Type:    mcp.TypeAgentUpdate,
+		ID:      "bad-upd-1",
+		Payload: json.RawMessage(`"not an object"`),
+	}
+	require.NoError(t, enc.Encode(malformed))
+
+	req := buildRequest(t, mcp.TypeToast, "after-bad-upd", mcp.ToastPayload{
+		Message: "still alive after bad update",
+		Level:   "info",
+	})
+	sendRequest(t, enc, req)
+
+	msg, ok := waitFor[model.ToastMsg](ms, testTimeout)
+	require.True(t, ok, "handler crashed after malformed agent_update")
+	assert.Equal(t, "still alive after bad update", msg.Text)
+}
+
+// TestHandleAgentActivity_MalformedPayload_NoPanic mirrors the above for
+// agent_activity.
+func TestHandleAgentActivity_MalformedPayload_NoPanic(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, _ := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	malformed := mcp.IPCRequest{
+		Type:    mcp.TypeAgentActivity,
+		ID:      "bad-act-1",
+		Payload: json.RawMessage(`"not an object"`),
+	}
+	require.NoError(t, enc.Encode(malformed))
+
+	req := buildRequest(t, mcp.TypeToast, "after-bad-act", mcp.ToastPayload{
+		Message: "still alive after bad activity",
+		Level:   "info",
+	})
+	sendRequest(t, enc, req)
+
+	msg, ok := waitFor[model.ToastMsg](ms, testTimeout)
+	require.True(t, ok, "handler crashed after malformed agent_activity")
+	assert.Equal(t, "still alive after bad activity", msg.Text)
+}
+
+// TestHandleToast_MalformedPayload_NoPanic verifies that a malformed toast
+// payload does not crash the connection handler.
+func TestHandleToast_MalformedPayload_NoPanic(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, _ := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	malformed := mcp.IPCRequest{
+		Type:    mcp.TypeToast,
+		ID:      "bad-toast-1",
+		Payload: json.RawMessage(`"not an object"`),
+	}
+	require.NoError(t, enc.Encode(malformed))
+
+	// Send a second valid toast to confirm the connection stayed alive.
+	req := buildRequest(t, mcp.TypeToast, "after-bad-toast", mcp.ToastPayload{
+		Message: "still alive after bad toast",
+		Level:   "info",
+	})
+	sendRequest(t, enc, req)
+
+	// Wait for the second (valid) toast to arrive.
+	deadline := time.Now().Add(testTimeout)
+	for time.Now().Before(deadline) {
+		ms.mu.Lock()
+		for _, msg := range ms.msgs {
+			if tm, ok := msg.(model.ToastMsg); ok && tm.Text == "still alive after bad toast" {
+				ms.mu.Unlock()
+				return
+			}
+		}
+		ms.mu.Unlock()
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("handler crashed after malformed toast payload")
+}
+
+// TestNewIPCBridge_RemovesStaleSocket verifies that NewIPCBridge succeeds
+// even when a socket file already exists at the target path (stale socket
+// removal code path).
+func TestNewIPCBridge_RemovesStaleSocket(t *testing.T) {
+	// Point XDG_RUNTIME_DIR to a temp dir so we control the socket path.
+	dir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", dir)
+
+	// Pre-create a file at the path the bridge would use.
+	stalePath := filepath.Join(dir, fmt.Sprintf("gofortress-%d.sock", os.Getpid()))
+	require.NoError(t, os.WriteFile(stalePath, []byte("stale"), 0o600))
+
+	// NewIPCBridge should remove the stale file and succeed.
+	ms := &mockSender{}
+	b, err := NewIPCBridge(ms)
+	require.NoError(t, err, "NewIPCBridge must succeed when stale socket exists")
+	defer b.Shutdown()
+
+	assert.NotEmpty(t, b.SocketPath())
 }

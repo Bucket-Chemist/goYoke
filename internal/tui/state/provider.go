@@ -74,11 +74,7 @@ type ProviderConfig struct {
 // ---------------------------------------------------------------------------
 
 // ToolBlock represents a tool invocation stored within a DisplayMessage.
-// This is a cross-package persistence type; the claude package converts
-// between its local ToolBlock type and this for save/restore operations.
-//
-// The Expanded field from claude.ToolBlock is intentionally excluded — it
-// is transient UI state that should always start collapsed on restore.
+// This is the canonical definition used by both the state and claude packages.
 type ToolBlock struct {
 	// Name is the tool name (e.g., "Read", "Bash", "Edit").
 	Name string
@@ -86,6 +82,9 @@ type ToolBlock struct {
 	Input string
 	// Output is a short human-readable summary of the tool result.
 	Output string
+	// Expanded controls whether the full Input/Output is shown in the UI.
+	// Always starts false on restore; transient UI state only.
+	Expanded bool
 }
 
 // DisplayMessage is a single rendered message in a provider's conversation
@@ -408,6 +407,38 @@ func (ps *ProviderState) GetProviderForModel(modelID string) (ProviderID, bool) 
 		}
 	}
 	return "", false
+}
+
+// GetMessages returns a copy of the message history for the specified provider.
+// The returned slice is safe to read without coordination; mutations do not
+// affect the internal history. Returns nil when the provider has no history or
+// is unknown.
+func (ps *ProviderState) GetMessages(provider ProviderID) []DisplayMessage {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	msgs := ps.messages[provider]
+	if len(msgs) == 0 {
+		return nil
+	}
+	return copyMessages(msgs)
+}
+
+// ExportAllMessages returns a deep copy of all per-provider message histories
+// for persistence. Only providers with at least one message are included.
+// The returned map and its slices are safe to mutate; they do not alias
+// internal state.
+func (ps *ProviderState) ExportAllMessages() map[ProviderID][]DisplayMessage {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	result := make(map[ProviderID][]DisplayMessage)
+	for k, msgs := range ps.messages {
+		if len(msgs) > 0 {
+			result[k] = copyMessages(msgs)
+		}
+	}
+	return result
 }
 
 // AllProviders returns the canonical ordered list of all provider IDs.

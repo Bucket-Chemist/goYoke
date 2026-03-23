@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------
@@ -274,7 +275,7 @@ func extractToolTarget(toolName string, input json.RawMessage) string {
 	case "Read", "Write", "Edit":
 		target = fields.FilePath
 	case "Bash":
-		target = truncate(fields.Command, 80)
+		target = util.Truncate(fields.Command, 80)
 	case "Grep":
 		target = fields.Pattern
 	case "Glob":
@@ -290,12 +291,3 @@ func extractToolTarget(toolName string, input json.RawMessage) string {
 	return target
 }
 
-// truncate shortens s to at most max runes, appending "…" when truncation
-// occurs.
-func truncate(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max]) + "…"
-}

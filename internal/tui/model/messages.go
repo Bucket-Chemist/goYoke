@@ -84,18 +84,24 @@ type ModalRequestMsg struct {
 	Options []string
 }
 
-// ModalResponseMsg is sent by the modal component when the user confirms or
-// cancels.  Cancelled is true when the user dismissed without selecting.
-type ModalResponseMsg struct {
-	SelectedIndex int
-	Cancelled     bool
-}
+// ToastLevel is the severity level of a toast notification.
+type ToastLevel string
 
-// ToastMsg requests a transient notification.  Level must be one of "info",
-// "warn", or "error".
+const (
+	// ToastLevelInfo is used for informational notifications.
+	ToastLevelInfo ToastLevel = "info"
+	// ToastLevelWarn is used for warning notifications.
+	ToastLevelWarn ToastLevel = "warn"
+	// ToastLevelError is used for error notifications.
+	ToastLevelError ToastLevel = "error"
+	// ToastLevelSuccess is used for success notifications.
+	ToastLevelSuccess ToastLevel = "success"
+)
+
+// ToastMsg requests a transient notification.
 type ToastMsg struct {
 	Text  string
-	Level string
+	Level ToastLevel
 }
 
 // TickMsg carries the current wall-clock time and is used by any component
@@ -179,6 +185,10 @@ type StartupErrorMsg struct {
 type CLIReconnectMsg struct {
 	// Attempt is the 1-based reconnection attempt number.
 	Attempt int
+	// Seq is the reconnect sequence number at the time the timer was created.
+	// Stale timers (from before a provider switch) carry a lower Seq and are
+	// discarded, preventing ghost reconnections after the CLI driver is replaced.
+	Seq int
 }
 
 // ---------------------------------------------------------------------------
@@ -228,4 +238,28 @@ type ProviderSwitchExecuteMsg struct {
 	// Seq is the sequence counter at the time the debounce timer was created.
 	// Stale timers (from earlier keypresses) have a lower Seq and are discarded.
 	Seq int
+}
+
+// ---------------------------------------------------------------------------
+// Session persistence messages (TUI-033)
+// ---------------------------------------------------------------------------
+
+// SessionAutoSaveMsg is emitted by a debounced timer (5 s cooldown) after a
+// cost-change event.  The Seq field carries the sequence counter at the time
+// the timer was created; stale timers (from earlier events) have a lower Seq
+// and are silently discarded.
+type SessionAutoSaveMsg struct {
+	// Seq is the auto-save sequence counter at timer creation time.
+	Seq int
+}
+
+// ---------------------------------------------------------------------------
+// Shutdown messages (TUI-034)
+// ---------------------------------------------------------------------------
+
+// ShutdownCompleteMsg is sent after the ShutdownManager finishes its
+// sequenced shutdown.  The Err field carries ErrShutdownTimeout if the
+// total budget was exceeded, or nil on success.
+type ShutdownCompleteMsg struct {
+	Err error
 }

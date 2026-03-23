@@ -61,7 +61,7 @@ type ToastItem struct {
 	Message string
 	// Level determines the visual styling. Valid values: "info", "success",
 	// "warning", "error".
-	Level string
+	Level model.ToastLevel
 	// CreatedAt is the wall-clock time when the toast was created.
 	CreatedAt time.Time
 	// Duration is how long the toast remains visible. Defaults to 5s.
@@ -283,7 +283,7 @@ func (m *ToastModel) HandleMsg(msg tea.Msg) tea.Cmd {
 
 // levelStyle returns the icon string, icon lipgloss.Style, and box
 // lipgloss.Style for the given toast level.
-func levelStyle(level string) (string, lipgloss.Style, lipgloss.Style) {
+func levelStyle(level model.ToastLevel) (string, lipgloss.Style, lipgloss.Style) {
 	switch level {
 	case "error":
 		return string(config.IconError), iconErrorStyle, errorBoxStyle

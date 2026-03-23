@@ -80,6 +80,18 @@ type ClaudeKeys struct {
 
 	// CycleExpansion cycles through the expansion levels of tool calls.
 	CycleExpansion key.Binding
+
+	// Search activates the in-panel search overlay (TUI-035).
+	Search key.Binding
+
+	// SearchNext moves to the next search result (TUI-035).
+	SearchNext key.Binding
+
+	// SearchPrev moves to the previous search result (TUI-035).
+	SearchPrev key.Binding
+
+	// CopyLastResponse copies the last assistant message to the clipboard (TUI-035).
+	CopyLastResponse key.Binding
 }
 
 // AgentKeys groups the keybindings that are active when the agent-list panel
@@ -204,6 +216,22 @@ func DefaultKeyMap() KeyMap {
 			CycleExpansion: key.NewBinding(
 				key.WithKeys("alt+E"),
 				key.WithHelp("alt+shift+e", "cycle expansion"),
+			),
+			Search: key.NewBinding(
+				key.WithKeys("/"),
+				key.WithHelp("/", "search"),
+			),
+			SearchNext: key.NewBinding(
+				key.WithKeys("ctrl+n"),
+				key.WithHelp("ctrl+n", "next result"),
+			),
+			SearchPrev: key.NewBinding(
+				key.WithKeys("ctrl+p"),
+				key.WithHelp("ctrl+p", "prev result"),
+			),
+			CopyLastResponse: key.NewBinding(
+				key.WithKeys("ctrl+y"),
+				key.WithHelp("ctrl+y", "copy last response"),
 			),
 		},
 

@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
@@ -25,6 +26,10 @@ type mockClaudePanel struct {
 	streaming       bool
 	savedMessages   []state.DisplayMessage
 	restoredMsgs    []state.DisplayMessage
+	// setSenderCalled tracks how many times SetSender was called (for C-1 tests).
+	setSenderCalled int
+	// lastSender is the most recent sender passed to SetSender.
+	lastSender MessageSender
 }
 
 func (m *mockClaudePanel) HandleMsg(msg tea.Msg) tea.Cmd {
@@ -43,6 +48,10 @@ func (m *mockClaudePanel) RestoreMessages(msgs []state.DisplayMessage) {
 	m.restoredMsgs = msgs
 	// Mirror the restored messages so SaveMessages reflects current panel state.
 	m.savedMessages = msgs
+}
+func (m *mockClaudePanel) SetSender(s MessageSender) {
+	m.setSenderCalled++
+	m.lastSender = s
 }
 
 // mockToast satisfies toastWidget for testing.
@@ -714,7 +723,7 @@ func TestMessageTypes_Constructible(t *testing.T) {
 
 	// UI messages
 	_ = ModalRequestMsg{Title: "Confirm", Options: []string{"Yes", "No"}}
-	_ = ModalResponseMsg{SelectedIndex: 0, Cancelled: false}
+	_ = modals.ModalResponseMsg{}
 	_ = ToastMsg{Text: "done", Level: "info"}
 	_ = TickMsg{Time: time.Now()}
 
@@ -740,7 +749,7 @@ func TestMessageTypes_Count(t *testing.T) {
 		StreamEventMsg{},
 		CLIEventMsg{},
 		ModalRequestMsg{},
-		ModalResponseMsg{},
+		modals.ModalResponseMsg{},
 		ToastMsg{},
 		TickMsg{},
 		AgentRegisteredMsg{},
@@ -1683,4 +1692,649 @@ func newReadyAppModel(width, height int) AppModel {
 	m := NewAppModel()
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: height})
 	return updated.(AppModel)
+}
+
+// ---------------------------------------------------------------------------
+// M-5: TestProviderSwitch_FullRoundtrip
+//
+// Integration test verifying the complete provider-switch contract:
+//   1. Messages are saved from the old provider before the switch.
+//   2. SetSender is called on the panel with the new driver.
+//   3. Original CLI opts (Verbose, Debug, PermissionMode) are preserved.
+//   4. InvalidateTreeCache is not required here (tested in C-3 tests above),
+//      but the tree is refreshed without panicking.
+//   5. Handoff message is injected into the new provider's conversation.
+//   6. A new driver Start command is returned.
+// ---------------------------------------------------------------------------
+
+// mockDriverCapture is a cliDriverWidget that records Start/Shutdown calls
+// and satisfies the MessageSender interface so it can be passed to SetSender.
+type mockDriverCapture struct {
+	startCalls    int
+	shutdownCalls int
+	sendCalls     int
+}
+
+func (d *mockDriverCapture) Start() tea.Cmd {
+	d.startCalls++
+	return func() tea.Msg { return cli.CLIStartedMsg{} }
+}
+func (d *mockDriverCapture) WaitForEvent() tea.Cmd { return nil }
+func (d *mockDriverCapture) SendMessage(_ string) tea.Cmd {
+	d.sendCalls++
+	return nil
+}
+func (d *mockDriverCapture) Shutdown() error {
+	d.shutdownCalls++
+	return nil
+}
+
+// newModelWithProviderAndOpts returns an AppModel wired with a mock panel,
+// a real ProviderState, and baseline CLI opts — the minimal setup for
+// full provider-switch integration tests.
+func newModelWithProviderAndOpts() (AppModel, *mockClaudePanel, *mockDriverCapture) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+	m.shared.providerState = state.NewProviderState()
+
+	// Inject baseline opts with sentinel flag values so we can verify
+	// they are preserved across the switch.
+	baseOpts := cli.CLIDriverOpts{
+		Verbose:        true,
+		Debug:          false,
+		PermissionMode: "acceptEdits",
+	}
+	m.shared.baseCLIOpts = baseOpts
+
+	// Wire a mock driver as the initial CLI driver.
+	oldDriver := &mockDriverCapture{}
+	m.shared.cliDriver = oldDriver
+
+	return m, mock, oldDriver
+}
+
+func TestProviderSwitch_FullRoundtrip(t *testing.T) {
+	tests := []struct {
+		name             string
+		initialMessages  []state.DisplayMessage
+		wantHandoff      bool // whether a system handoff message should be injected
+		wantSavedCount   int  // number of messages that should be saved for old provider
+	}{
+		{
+			name: "switch_with_two_messages_injects_handoff",
+			initialMessages: []state.DisplayMessage{
+				{Role: "user", Content: "what is Go?"},
+				{Role: "assistant", Content: "Go is a compiled language."},
+			},
+			wantHandoff:    true,
+			wantSavedCount: 2,
+		},
+		{
+			name: "switch_with_one_message_no_handoff",
+			initialMessages: []state.DisplayMessage{
+				{Role: "user", Content: "hello"},
+			},
+			wantHandoff:    false,
+			wantSavedCount: 1,
+		},
+		{
+			name:             "switch_with_no_messages_no_handoff",
+			initialMessages:  nil,
+			wantHandoff:      false,
+			wantSavedCount:   0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m, panel, _ := newModelWithProviderAndOpts()
+			panel.savedMessages = tc.initialMessages
+
+			initialProvider := m.shared.providerState.GetActiveProvider()
+
+			// --- Execute the switch ---
+			updated, cmd := m.Update(ProviderSwitchMsg{})
+			result := updated.(AppModel)
+
+			// 1. Messages saved to old provider.
+			if err := result.shared.providerState.SwitchProvider(initialProvider); err != nil {
+				t.Fatalf("SwitchProvider back to %q: %v", initialProvider, err)
+			}
+			savedMsgs := result.shared.providerState.GetActiveMessages()
+			if len(savedMsgs) != tc.wantSavedCount {
+				t.Errorf("old provider messages = %d; want %d", len(savedMsgs), tc.wantSavedCount)
+			}
+
+			// Switch back to the new provider to inspect its state.
+			allProviders := result.shared.providerState.AllProviders()
+			nextIdx := 0
+			for i, p := range allProviders {
+				if p == initialProvider {
+					nextIdx = (i + 1) % len(allProviders)
+					break
+				}
+			}
+			if err := result.shared.providerState.SwitchProvider(allProviders[nextIdx]); err != nil {
+				t.Fatalf("SwitchProvider to new: %v", err)
+			}
+
+			// 2. SetSender called with new driver on the panel (C-1 fix).
+			if panel.setSenderCalled == 0 {
+				t.Error("SetSender was not called after provider switch (C-1 bug)")
+			}
+			if panel.lastSender == nil {
+				t.Error("SetSender was called with nil sender")
+			}
+
+			// 3. Handoff injection (when expected).
+			if tc.wantHandoff {
+				newMsgs := result.shared.providerState.GetActiveMessages()
+				if len(newMsgs) == 0 {
+					t.Fatal("handoff expected but new provider has no messages")
+				}
+				if newMsgs[0].Role != "system" {
+					t.Errorf("first new-provider message role = %q; want %q", newMsgs[0].Role, "system")
+				}
+			} else {
+				newMsgs := result.shared.providerState.GetActiveMessages()
+				if len(newMsgs) != 0 {
+					t.Errorf("no handoff expected but new provider has %d messages", len(newMsgs))
+				}
+			}
+
+			// 4. New driver Start command is returned.
+			if cmd == nil {
+				t.Error("cmd = nil after ProviderSwitchMsg; want driver Start command")
+			}
+
+			// 5. Session state reset.
+			if result.cliReady {
+				t.Error("cliReady = true after switch; want false")
+			}
+			if result.sessionID != "" {
+				t.Errorf("sessionID = %q after switch; want empty", result.sessionID)
+			}
+			if result.reconnectCount != 0 {
+				t.Errorf("reconnectCount = %d after switch; want 0", result.reconnectCount)
+			}
+		})
+	}
+}
+
+func TestProviderSwitch_PreservesBaseCLIOpts(t *testing.T) {
+	m, _, _ := newModelWithProviderAndOpts()
+
+	// Baseline opts have Verbose=true, PermissionMode="acceptEdits".
+	// These should survive the switch because C-2 copies baseCLIOpts.
+	// We verify indirectly: the new driver is created from opts derived from
+	// baseCLIOpts, and SetSender is called (which only happens when newDriver
+	// is wired). The actual opts values are embedded in the concrete CLIDriver
+	// and not exposed, so we verify the observable outcomes:
+	//   - cmd != nil (driver was created and Start returned a command)
+	//   - SetSender was called (C-1 — means the new driver was wired)
+
+	updated, cmd := m.Update(ProviderSwitchMsg{})
+	result := updated.(AppModel)
+	_ = result
+
+	if cmd == nil {
+		t.Error("cmd = nil; expected Start command from new driver created with baseCLIOpts")
+	}
+}
+
+func TestProviderSwitch_SetSender_CalledOncePerSwitch(t *testing.T) {
+	m, panel, _ := newModelWithProviderAndOpts()
+
+	if panel.setSenderCalled != 0 {
+		t.Fatalf("precondition: setSenderCalled = %d; want 0", panel.setSenderCalled)
+	}
+
+	m.Update(ProviderSwitchMsg{})
+
+	if panel.setSenderCalled != 1 {
+		t.Errorf("setSenderCalled = %d after one switch; want 1 (C-1 fix)", panel.setSenderCalled)
+	}
+}
+
+func TestProviderSwitch_SetSender_CalledOnEachSwitch(t *testing.T) {
+	m, panel, _ := newModelWithProviderAndOpts()
+
+	for i := 1; i <= 3; i++ {
+		updated, _ := m.Update(ProviderSwitchMsg{})
+		m = updated.(AppModel)
+
+		if panel.setSenderCalled != i {
+			t.Errorf("after switch %d: setSenderCalled = %d; want %d",
+				i, panel.setSenderCalled, i)
+		}
+	}
+}
+
+func TestProviderSwitch_NilPanel_NoSetSenderPanic(t *testing.T) {
+	m, _, _ := newModelWithProviderAndOpts()
+	m.shared.claudePanel = nil // no panel wired
+
+	// Must not panic when claudePanel is nil.
+	updated, cmd := m.Update(ProviderSwitchMsg{})
+	_ = updated.(AppModel)
+
+	if cmd == nil {
+		t.Error("cmd = nil; want driver Start command even when panel is nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SessionAutoSaveMsg — debounce guard (TUI-033)
+// ---------------------------------------------------------------------------
+
+// TestSessionAutoSaveMsg_MatchingSeq_ExecutesSave verifies that a
+// SessionAutoSaveMsg whose Seq matches the current autoSaveSeq triggers
+// saveSession without error.
+func TestSessionAutoSaveMsg_MatchingSeq_ExecutesSave(t *testing.T) {
+	m := NewAppModel()
+	// Advance autoSaveSeq to 1 to simulate one cost-change event.
+	m.autoSaveSeq = 1
+
+	// Deliver a matching SessionAutoSaveMsg — must not panic.
+	// saveSession is a no-op when sessionStore/sessionData are nil, so we
+	// only verify the Update path itself is exercised (no cmd returned).
+	updated, cmd := m.Update(SessionAutoSaveMsg{Seq: 1})
+	_ = updated.(AppModel)
+
+	if cmd != nil {
+		t.Error("cmd != nil for matching SessionAutoSaveMsg; want nil")
+	}
+}
+
+// TestSessionAutoSaveMsg_StaleSeq_IsDiscarded verifies that a stale
+// SessionAutoSaveMsg (lower Seq than current autoSaveSeq) is a no-op.
+func TestSessionAutoSaveMsg_StaleSeq_IsDiscarded(t *testing.T) {
+	m := NewAppModel()
+	m.autoSaveSeq = 5
+
+	// Deliver a stale SessionAutoSaveMsg (seq 3 < 5).
+	updated, cmd := m.Update(SessionAutoSaveMsg{Seq: 3})
+	result := updated.(AppModel)
+
+	// autoSaveSeq must not change.
+	if result.autoSaveSeq != 5 {
+		t.Errorf("autoSaveSeq changed on stale msg: got %d; want 5", result.autoSaveSeq)
+	}
+	if cmd != nil {
+		t.Error("cmd != nil for stale SessionAutoSaveMsg; want nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ShutdownCompleteMsg (TUI-034)
+// ---------------------------------------------------------------------------
+
+// TestShutdownCompleteMsg_NilErr_ReturnsQuit verifies that a successful
+// shutdown (nil Err) causes the model to return tea.Quit.
+func TestShutdownCompleteMsg_NilErr_ReturnsQuit(t *testing.T) {
+	m := NewAppModel()
+
+	_, cmd := m.Update(ShutdownCompleteMsg{Err: nil})
+
+	if cmd == nil {
+		t.Fatal("cmd = nil for ShutdownCompleteMsg{nil}; want tea.Quit")
+	}
+	msg := cmd()
+	if _, ok := msg.(tea.QuitMsg); !ok {
+		t.Errorf("cmd() = %T; want tea.QuitMsg", msg)
+	}
+}
+
+// TestShutdownCompleteMsg_NonNilErr_AlsoReturnsQuit verifies that a shutdown
+// that completed with an error still causes the model to return tea.Quit
+// (the error is logged but the program exits regardless).
+func TestShutdownCompleteMsg_NonNilErr_AlsoReturnsQuit(t *testing.T) {
+	m := NewAppModel()
+
+	_, cmd := m.Update(ShutdownCompleteMsg{Err: errShutdownTest})
+
+	if cmd == nil {
+		t.Fatal("cmd = nil for ShutdownCompleteMsg with error; want tea.Quit")
+	}
+	msg := cmd()
+	if _, ok := msg.(tea.QuitMsg); !ok {
+		t.Errorf("cmd() = %T; want tea.QuitMsg even when Err != nil", msg)
+	}
+}
+
+// errShutdownTest is a sentinel error used by TestShutdownCompleteMsg_NonNilErr.
+type testError struct{ msg string }
+
+func (e testError) Error() string { return e.msg }
+
+var errShutdownTest = testError{msg: "simulated shutdown timeout"}
+
+// ---------------------------------------------------------------------------
+// ForceQuit — double-press + shutdownFunc wiring (TUI-034)
+// ---------------------------------------------------------------------------
+
+// TestForceQuit_DoublePressWithShutdownInProgress verifies that a second
+// Ctrl+C while shutdownInProgress=true returns tea.Quit immediately without
+// invoking the shutdownFunc again.
+func TestForceQuit_DoublePressWithShutdownInProgress(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	// Simulate that a previous Ctrl+C already started the shutdown sequence.
+	m.shutdownInProgress = true
+
+	// A second Ctrl+C must return tea.Quit immediately.
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+
+	if cmd == nil {
+		t.Fatal("cmd = nil for double-press ForceQuit; want tea.Quit")
+	}
+	msg := cmd()
+	if _, ok := msg.(tea.QuitMsg); !ok {
+		t.Errorf("double-press ForceQuit cmd() = %T; want tea.QuitMsg", msg)
+	}
+}
+
+// TestForceQuit_DoublePressWithShutdownFunc_SkipsFunc verifies that the double-
+// press path (shutdownInProgress=true) does not call shutdownFunc — only the
+// first press invokes it.
+func TestForceQuit_DoublePressWithShutdownFunc_SkipsFunc(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	shutdownCalled := 0
+	m.shared.shutdownFunc = func() error {
+		shutdownCalled++
+		return nil
+	}
+	m.shutdownInProgress = true
+
+	// Second Ctrl+C: must NOT call shutdownFunc (immediate quit branch).
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmd == nil {
+		t.Fatal("cmd = nil for double-press; want tea.Quit")
+	}
+	// Execute the command to confirm it is tea.Quit, not the shutdown fn.
+	msg := cmd()
+	if _, ok := msg.(tea.QuitMsg); !ok {
+		t.Errorf("double-press cmd() = %T; want tea.QuitMsg", msg)
+	}
+	if shutdownCalled != 0 {
+		t.Errorf("shutdownFunc called %d times on double-press; want 0", shutdownCalled)
+	}
+}
+
+// TestForceQuit_WithShutdownFunc_InvokesFunc verifies that the first Ctrl+C
+// when a shutdownFunc is wired returns a Cmd that calls the function and
+// emits a ShutdownCompleteMsg.
+func TestForceQuit_WithShutdownFunc_InvokesFunc(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	shutdownCalled := 0
+	m.shared.shutdownFunc = func() error {
+		shutdownCalled++
+		return nil
+	}
+
+	// First Ctrl+C — shutdownInProgress is false, shutdownFunc is wired.
+	result, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	appResult := result.(AppModel)
+
+	// shutdownInProgress must be set on the model.
+	if !appResult.shutdownInProgress {
+		t.Error("shutdownInProgress = false after first Ctrl+C; want true")
+	}
+
+	// The returned Cmd must invoke the shutdown function.
+	if cmd == nil {
+		t.Fatal("cmd = nil when shutdownFunc wired; want shutdown Cmd")
+	}
+	msg := cmd()
+
+	// shutdownFunc should have been called once.
+	if shutdownCalled != 1 {
+		t.Errorf("shutdownFunc called %d times; want 1", shutdownCalled)
+	}
+
+	// The Cmd must return a ShutdownCompleteMsg.
+	if _, ok := msg.(ShutdownCompleteMsg); !ok {
+		t.Errorf("cmd() = %T; want ShutdownCompleteMsg", msg)
+	}
+}
+
+// TestForceQuit_WithShutdownFunc_ErrorPropagated verifies that if the
+// shutdownFunc returns an error, that error is carried in ShutdownCompleteMsg.
+func TestForceQuit_WithShutdownFunc_ErrorPropagated(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	m.shared.shutdownFunc = func() error {
+		return errShutdownTest
+	}
+
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmd == nil {
+		t.Fatal("cmd = nil; want shutdown Cmd")
+	}
+
+	msg := cmd()
+	shutdownMsg, ok := msg.(ShutdownCompleteMsg)
+	if !ok {
+		t.Fatalf("cmd() = %T; want ShutdownCompleteMsg", msg)
+	}
+	if shutdownMsg.Err == nil {
+		t.Error("ShutdownCompleteMsg.Err = nil; want the error from shutdownFunc")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ToastMsg — nil toasts widget (no panic)
+// ---------------------------------------------------------------------------
+
+// TestToastMsg_NilToasts_NoPanic verifies that sending a ToastMsg when the
+// toasts widget is nil does not panic and returns a nil cmd.
+func TestToastMsg_NilToasts_NoPanic(t *testing.T) {
+	m := NewAppModel()
+	// shared.toasts is nil by default (not set in NewAppModel).
+	if m.shared.toasts != nil {
+		t.Fatal("precondition: toasts should be nil")
+	}
+
+	// Must not panic.
+	updated, cmd := m.Update(ToastMsg{Text: "test", Level: ToastLevelInfo})
+	_ = updated.(AppModel)
+
+	if cmd != nil {
+		t.Error("cmd != nil for ToastMsg with nil toasts widget; want nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// handleModalKey — nil shared / nil modalQueue branches
+// ---------------------------------------------------------------------------
+
+// TestHandleModalKey_NilShared_NoPanic verifies that delivering a key event
+// when there is an active modal but shared is nil is a safe no-op.
+func TestHandleModalKey_NilShared_NoPanic(t *testing.T) {
+	// Constructing AppModel without NewAppModel leaves shared nil.
+	m := AppModel{}
+	// handleModalKey is only reached when modalQueue.IsActive() returns true.
+	// With nil shared, handleKey takes the normal path (no modal active), so
+	// we test handleModalKey directly.
+	_, cmd := m.handleModalKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("cmd != nil from handleModalKey with nil shared; want nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// handleClaudeKey — nil claudePanel branch
+// ---------------------------------------------------------------------------
+
+// TestHandleClaudeKey_NilPanel_NoPanic verifies that delivering a key event
+// when FocusClaude is active but the panel is nil is a safe no-op.
+func TestHandleClaudeKey_NilPanel_NoPanic(t *testing.T) {
+	m := NewAppModel()
+	m.focus = FocusClaude
+	// Do not inject a claude panel — shared.claudePanel remains nil.
+
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	if cmd != nil {
+		t.Error("cmd != nil for key event with nil claudePanel; want nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// renderRightPanel — Settings, Telemetry, PlanPreview, default fallbacks
+// ---------------------------------------------------------------------------
+
+// TestView_RightPanel_ShowsSettingsMode verifies RPMSettings renders the
+// "Settings" placeholder when no settings widget is injected.
+func TestView_RightPanel_ShowsSettingsMode(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(AppModel)
+	m.rightPanelMode = RPMSettings
+
+	view := m.View()
+	if !strings.Contains(view, "Settings") {
+		t.Errorf("View() does not contain %q for RPMSettings; got %q", "Settings", view)
+	}
+}
+
+// TestView_RightPanel_ShowsTelemetryMode verifies RPMTelemetry renders the
+// "Telemetry" placeholder when no telemetry widget is injected.
+func TestView_RightPanel_ShowsTelemetryMode(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(AppModel)
+	m.rightPanelMode = RPMTelemetry
+
+	view := m.View()
+	if !strings.Contains(view, "Telemetry") {
+		t.Errorf("View() does not contain %q for RPMTelemetry; got %q", "Telemetry", view)
+	}
+}
+
+// TestView_RightPanel_ShowsPlanPreviewMode verifies RPMPlanPreview renders the
+// "Plan Preview" placeholder when no planPreview widget is injected.
+func TestView_RightPanel_ShowsPlanPreviewMode(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(AppModel)
+	m.rightPanelMode = RPMPlanPreview
+
+	view := m.View()
+	if !strings.Contains(view, "Plan Preview") {
+		t.Errorf("View() does not contain %q for RPMPlanPreview; got %q", "Plan Preview", view)
+	}
+}
+
+// TestView_RightPanel_DefaultMode_DoesNotPanic verifies that an unknown
+// RightPanelMode value hits the default branch without panicking.
+func TestView_RightPanel_DefaultMode_DoesNotPanic(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(AppModel)
+	// Use a value beyond the defined constants to hit the default branch.
+	m.rightPanelMode = RightPanelMode(99)
+
+	// Must not panic.
+	view := m.View()
+	if view == "" {
+		t.Error("View() returned empty string for unknown RightPanelMode; want non-empty")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// renderLayout — modal overlay path
+// ---------------------------------------------------------------------------
+
+// TestRenderLayout_ModalActive_ReturnsModalView verifies that when the modal
+// queue has an active modal, renderLayout returns the modal's view rather than
+// the normal layout.
+func TestRenderLayout_ModalActive_ReturnsModalView(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(AppModel)
+
+	// Activate a modal by sending a BridgeModalRequestMsg.
+	updated, _ = m.Update(BridgeModalRequestMsg{
+		RequestID: "render-test",
+		Message:   "Do you want to proceed?",
+		Options:   []string{"Yes", "No"},
+	})
+	m = updated.(AppModel)
+
+	if !m.shared.modalQueue.IsActive() {
+		t.Fatal("precondition: modal queue not active after BridgeModalRequestMsg")
+	}
+
+	// renderLayout should delegate to modalQueue.View().
+	view := m.View()
+	// The modal queue renders something non-empty when active.
+	if strings.TrimSpace(view) == "" {
+		t.Error("View() returned empty string while modal is active; want modal overlay content")
+	}
+	// The view must not contain the normal banner text (the full layout is
+	// bypassed when a modal is active).
+	if strings.Contains(view, "GOgent-Fortress") {
+		t.Error("normal layout rendered while modal active; want modal overlay only")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ToggleTaskBoard key (handleKey coverage)
+// ---------------------------------------------------------------------------
+
+// mockTaskBoard satisfies taskBoardWidget for ToggleTaskBoard key tests.
+type mockTaskBoard struct {
+	visible     bool
+	toggleCalls int
+	width, h    int
+}
+
+func (m *mockTaskBoard) Toggle()                       { m.toggleCalls++; m.visible = !m.visible }
+func (m *mockTaskBoard) IsVisible() bool               { return m.visible }
+func (m *mockTaskBoard) View() string                  { return "" }
+func (m *mockTaskBoard) SetSize(w, h int)              { m.width = w; m.h = h }
+func (m *mockTaskBoard) Height() int                   { return 0 }
+func (m *mockTaskBoard) SetTasks(_ []state.TaskEntry)  {}
+
+// TestHandleKey_ToggleTaskBoard_CallsToggle verifies that the ToggleTaskBoard
+// key binding (ctrl+t) calls Toggle() on the taskBoard widget when wired.
+func TestHandleKey_ToggleTaskBoard_CallsToggle(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	tb := &mockTaskBoard{}
+	m.shared.taskBoard = tb
+
+	// alt+b is the ToggleTaskBoard keybinding.
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b"), Alt: true})
+
+	if tb.toggleCalls != 1 {
+		t.Errorf("Toggle called %d times; want 1", tb.toggleCalls)
+	}
+}
+
+// TestHandleKey_ToggleTaskBoard_NilTaskBoard_NoPanic verifies that the
+// ToggleTaskBoard key is a safe no-op when no taskBoard widget is wired.
+func TestHandleKey_ToggleTaskBoard_NilTaskBoard_NoPanic(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+	// shared.taskBoard is nil — must not panic.
+
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b"), Alt: true})
+	if cmd != nil {
+		t.Error("cmd != nil for ToggleTaskBoard with nil taskBoard; want nil")
+	}
 }

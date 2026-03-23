@@ -125,6 +125,54 @@ The following review findings have been incorporated into the ticket description
 
 ---
 
+## Review History
+
+### Review 1: Planning Review (2026-03-16)
+
+**Reviewer:** Staff Architect Critical Review
+**Verdict:** APPROVE_WITH_CONDITIONS (High Confidence)
+**Scope:** Implementation plan + ticket set (Phases 1–9)
+**Outcome:** 2 critical issues, 5 major issues, 8 minor issues. All critical/major findings incorporated into tickets before implementation began. See full critique at `.claude/sessions/20260316-plan-tickets-tui/review-critique.md`.
+
+### Review 2: Post-Phase 7 Code Review (2026-03-23)
+
+**Reviewer:** 4-reviewer panel (backend, standards, Go-TUI specialist, staff architect)
+**Verdict:** APPROVE_WITH_CONDITIONS (High Confidence, 8 commendations)
+**Scope:** All code delivered through Phase 7 (Phases 1–7 + remediation R-1–R-4)
+**Phase 8–9 readiness:** CONDITIONALLY READY
+
+**Bug fixes applied (Wave 1):**
+
+| ID | Fix | Files |
+|----|-----|-------|
+| FIX-1 | Unified 5 duplicate `truncate` helpers → `util.Truncate`; fixed UTF-8 byte-slicing bug in handoff.go | `internal/tui/util/text.go`, `internal/tui/model/handoff.go` |
+| FIX-2 | Fixed `ModalResponseMsg` undefined in app_test.go; removed deprecated aliases (BridgeModalRequestMsg, CLIDriverSender, GetAgentCosts) | `internal/tui/model/app_test.go` |
+| FIX-3 | CLI driver scanner made interruptible via inner goroutine + channel pattern (fixes goroutine leak + TestConsumeEvents_ExitsOnShutdownCh) | `internal/tui/cli/driver.go`, `internal/tui/cli/driver_test.go` |
+| FIX-4 | Bridge Shutdown uses non-blocking send instead of close(ch) to prevent double-close panic; AgentRegistry.Remove uses fresh slice to prevent aliasing | `internal/tui/bridge/server.go`, `internal/tui/state/cost.go` |
+| FIX-5 | UDS SendRequest gets 10-minute read deadline + reconnect-on-error with single retry; magic number 300000 extracted as constant | `internal/tui/bridge/server.go` |
+| FIX-6 | CLIReconnectMsg carries sequence number to prevent ghost reconnections after provider switch; filepath.Join replaces fmt.Sprintf for path construction | `internal/tui/model/messages.go`, `internal/tui/model/app.go` |
+
+**Design refactors applied (Wave 2):**
+
+| ID | Refactor | Outcome |
+|----|----------|---------|
+| DES-2 | Split app.go (1333 lines) into 4 files | app.go (766), interfaces.go (225), layout.go (257), provider_switch.go (135) |
+| DES-3 | Moved TaskEntry from taskboard to state/task.go | Eliminated model→taskboard import (only leaky widget abstraction) |
+| DES-4 | Unified DisplayMessage/ToolBlock: claude package uses state.* aliases | Removed ~50 lines of conversion boilerplate; added Expanded field to state.ToolBlock |
+| DES-6 | Created internal/teamconfig/ shared package for TeamConfig/Wave/Member types | teams package uses aliases; eliminates type duplication |
+
+**Deferred (tracked in existing tickets):**
+
+| ID | Finding | Ticket |
+|----|---------|--------|
+| DES-1 | Shutdown orchestration: ProcessManager.StartSignalHandler wiring, LIFO ordering, SIGKILL escalation | TUI-034 (Phase 8) |
+| DES-5 | CLI message types: moving them doesn't break model→cli import (9 other event types remain) | Not ticketed — low value |
+| DES-7 | Integration test harness: cross-layer TestHarness with pipe-injected CLI + real AppModel | TUI-036 (Phase 9) |
+
+**Post-fix test status:** 21/21 packages green, race detector clean (`go test -race ./internal/tui/...`).
+
+---
+
 ## Requirements Traceability
 
 ### Old Tickets (GOgent-109 to GOgent-121)
@@ -169,7 +217,7 @@ The following review findings have been incorporated into the ticket description
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
 - [ ] No orphaned processes: graceful shutdown within 10s
-- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 TUI-028–032 + remediation ✓ (1108 tests, ~91% avg coverage across 21 packages)
+- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 TUI-028–032 + remediation ✓, Post-Phase 7 review fixes ✓ (21/21 packages green, race detector clean)
 - [x] Old ticket requirements traced: all 13 GOgent-109–121 mapped in traceability table below
 - [ ] Ink TUI removable: `packages/tui/` deletable after parity
 - [x] Race detector clean: `go test -race ./internal/tui/...` passes ✅ (verified after integration wiring)
@@ -191,7 +239,8 @@ The following review findings have been incorporated into the ticket description
 ~~9. Phase 7 continues: TUI-030 (provider tab bar UI)~~ ✅ TUI-030 COMPLETE
 ~~10. Phase 7 continues: TUI-031 (provider session resume)~~ ✅ TUI-031 COMPLETE
 ~~11. Phase 7 final: TUI-032 (panels)~~ ✅ TUI-032 COMPLETE — **Phase 7 DONE**
-12. Phase 8 next: TUI-033 (session persistence), TUI-034 (graceful shutdown), TUI-035 (clipboard/search/history)
+~~12. Post-Phase 7 code review + fixes~~ ✅ FIX-1–6 bug fixes + DES-2–6 design refactors complete. 21/21 packages green, race detector clean.
+13. Phase 8 next: TUI-033 (session persistence), TUI-034 (graceful shutdown — see DES-1 prerequisite notes), TUI-035 (clipboard/search/history)
 
 ## Implementation Progress (updated 2026-03-23)
 
@@ -204,6 +253,7 @@ The following review findings have been incorporated into the ticket description
 | 5 | ✅ COMPLETE | TUI-019–021 | 3/3 done. AgentRegistry, tree/detail views, NDJSON sync. 249 tests across 3 pkgs |
 | 6 | ✅ COMPLETE | TUI-022–027 | 6/6 done + integration wiring (TUI-027.5). All components wired into AppModel. 750+ tests |
 | 7 | ✅ COMPLETE | TUI-028–032 | 5/5 done + remediation (R-1–R-4). Multi-provider, switching, panels, handoff, debounce. 1108 tests |
+| Post-7 Review | ✅ COMPLETE | FIX-1–6, DES-2–6 | 4-reviewer code review (2026-03-23). 6 bug fixes + 4 design refactors. 21/21 packages green, race-clean. Staff Architect: APPROVE_WITH_CONDITIONS (High Confidence). DES-1 → TUI-034; DES-7 → TUI-036. |
 | 8 | ⏳ PENDING | TUI-033–035 | Session persistence, graceful shutdown, clipboard/search/history |
 | 9 | ⏳ PENDING | TUI-036–042 | Testing phase. TUI-036 scope reduced 3-4h (was 6-8h) — TUI-027.5 delivered 60% of coverage |
 
@@ -271,22 +321,33 @@ internal/tui/
 │   ├── cost.go                   # CostTracker: session/agent costs, budget (TUI-024)
 │   ├── cost_test.go
 │   ├── provider.go               # ProviderState: 4 providers, per-provider isolation (TUI-028)
-│   └── provider_test.go          # 161 tests (incl subtests), 97.5% coverage
+│   ├── provider_test.go          # 161 tests (incl subtests), 97.5% coverage
+│   └── task.go                   # TaskEntry type (DES-3: moved from taskboard to break model→taskboard import)
 ├── util/                         # Shared utilities (TUI-023)
 │   ├── markdown.go               # Cached Glamour renderer, RenderMarkdown()
-│   └── markdown_test.go          # 14 tests, 87.0% coverage
+│   ├── markdown_test.go          # 14 tests, 87.0% coverage
+│   ├── text.go                   # util.Truncate: UTF-8-safe truncation (FIX-1: replaces 5 duplicate helpers)
+│   └── text_test.go
 └── model/                        # Root AppModel + types (TUI-006, TUI-008)
     ├── focus.go                  # FocusTarget, RightPanelMode
     ├── focus_test.go
-    ├── app.go                    # AppModel (Elm Architecture), layout compositor, modal wiring
+    ├── app.go                    # AppModel core (DES-2: split 1333→766 lines)
     ├── app_test.go
+    ├── interfaces.go             # Widget interfaces: all mockable (DES-2: extracted, 225 lines)
+    ├── layout.go                 # Layout compositor + sizing logic (DES-2: extracted, 257 lines)
+    ├── provider_switch.go        # Provider switching handlers (DES-2: extracted, 135 lines)
     ├── startup.go                # CLI startup sequence, reconnection logic
     ├── startup_test.go
+    ├── handoff.go                # Session handoff serialization
     └── messages.go               # 20+ tea.Msg types (expanded in TUI-016, TUI-018)
 
 cmd/
 ├── gofortress/main.go            # TUI entry point (TUI-011)
 └── gofortress-mcp/main.go        # MCP server stub (TUI-011)
+
+internal/
+└── teamconfig/
+    └── config.go                 # TeamConfig/Wave/Member shared types (DES-6: moved from teams pkg to break import cycle)
 ```
 
 ### Key Design Decisions (Phase 2)

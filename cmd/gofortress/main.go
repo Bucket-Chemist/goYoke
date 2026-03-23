@@ -20,15 +20,18 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/lifecycle"
+	tuiLifecycle "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	claudepkg "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
@@ -43,6 +46,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/toast"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/session"
 )
 
 // version is injected at build time via:
@@ -111,6 +115,60 @@ func main() {
 	ptb := providers.NewProviderTabBarModel(ps, 0)
 	app.SetProviderTabBar(&ptb)
 
+	// -----------------------------------------------------------------------
+	// Phase 7b: Session persistence (TUI-033).
+	//
+	// If --session-id is provided, load the existing session and restore
+	// provider state (session IDs, model selections, active provider).
+	// Otherwise, generate a fresh session ID, set up the session directory
+	// (including .claude/current-session and .claude/tmp symlink), and
+	// create initial SessionData.
+	// -----------------------------------------------------------------------
+
+	sessionStore := session.NewStore("")
+
+	var sessionData *session.SessionData
+	if *sessionID != "" {
+		sd, err := sessionStore.LoadSession(*sessionID)
+		if err != nil {
+			log.Printf("[gofortress] warning: could not load session %q: %v", *sessionID, err)
+		}
+		if sd != nil {
+			sessionData = sd
+			// Restore provider state from persisted data.
+			if ps != nil {
+				ps.ImportSessionIDs(sd.ProviderSessionIDs)
+				ps.ImportModels(sd.ProviderModels)
+				if sd.ActiveProvider != "" {
+					_ = ps.SwitchProvider(sd.ActiveProvider)
+				}
+			}
+			if *verbose {
+				log.Printf("[gofortress] resumed session %s (cost=$%.4f, providers=%d)",
+					sd.ID, sd.Cost, len(sd.ProviderSessionIDs))
+			}
+		}
+	}
+
+	if sessionData == nil {
+		newID := session.NewSessionID()
+		sessionData = &session.SessionData{
+			ID:             newID,
+			CreatedAt:      time.Now(),
+			LastUsed:       time.Now(),
+			ActiveProvider: "anthropic",
+		}
+		if _, err := sessionStore.SetupSessionDir(newID); err != nil {
+			log.Printf("[gofortress] warning: could not setup session dir: %v", err)
+		}
+		if *verbose {
+			log.Printf("[gofortress] new session %s", newID)
+		}
+	}
+
+	app.SetSessionStore(sessionStore)
+	app.SetSessionData(sessionData)
+
 	// Phase 7: Right-panel components.
 	dashModel := dashboard.NewDashboardModel()
 	app.SetDashboard(&dashModel)
@@ -138,8 +196,8 @@ func main() {
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)
-	cp.SetSender(driver) // driver satisfies claude.CLIDriverSender
-	defer driver.Shutdown() //nolint:errcheck
+	app.SetBaseCLIOpts(cliOpts) // C-2: preserve flags for provider-switch reconstructions
+	cp.SetSender(driver)        // driver satisfies model.MessageSender
 
 	// Wire initial settings data now that cliOpts is populated.
 	settingsModel.SetConfig(
@@ -189,7 +247,6 @@ func main() {
 	}
 	app.SetBridge(ipcBridge)
 	ipcBridge.Start()
-	defer ipcBridge.Shutdown()
 
 	// Expose the UDS path so the MCP server subprocess can connect.
 	if err := os.Setenv("GOFORTRESS_SOCKET", ipcBridge.SocketPath()); err != nil {
@@ -199,12 +256,57 @@ func main() {
 	}
 
 	// -----------------------------------------------------------------------
+	// Phase 4: Create ShutdownManager for sequenced shutdown (TUI-034).
+	//
+	// Replaces the previous defer-based LIFO ordering which was wrong:
+	// bridge.Shutdown ran BEFORE driver.Shutdown. Correct order is driver
+	// first, then bridge (so IPC messages flow during CLI wind-down).
+	//
+	// The session saver captures the AppModel's saveSession via closure.
+	// -----------------------------------------------------------------------
+
+	sm := tuiLifecycle.NewShutdownManager(tuiLifecycle.ShutdownOpts{
+		Driver:       driver,
+		Bridge:       ipcBridge,
+		SessionSaver: func() { app.SaveSessionPublic() },
+		OnStatus: func(msg string) {
+			if *verbose {
+				log.Printf("[gofortress] %s", msg)
+			}
+		},
+	})
+
+	// Wire ShutdownManager into the model so double-Ctrl+C and tea.Quit
+	// trigger the sequenced shutdown instead of the raw defer path.
+	app.SetShutdownManager(sm)
+
+	// Wire OS-level signal handler (SIGINT/SIGTERM) via ProcessManager.
+	// This ensures signals caught at the process level also trigger
+	// graceful shutdown, not just Bubbletea key events.
+	procMgr := lifecycle.NewProcessManager(ipcBridge.SocketPath())
+	procMgr.StartSignalHandler(context.Background(), func() {
+		if *verbose {
+			log.Printf("[gofortress] OS signal received, initiating shutdown")
+		}
+		_ = sm.Shutdown()
+	})
+
+	// -----------------------------------------------------------------------
 	// Run — blocks until the user quits.
 	// -----------------------------------------------------------------------
 
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "[gofortress] error: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Post-run: execute sequenced shutdown if not already done (e.g. user
+	// quit via menu rather than Ctrl+C). The double-call guard in
+	// ShutdownManager ensures this is a no-op if already shut down.
+	if err := sm.Shutdown(); err != nil {
+		if *verbose {
+			log.Printf("[gofortress] shutdown warning: %v", err)
+		}
 	}
 }
 
@@ -213,6 +315,6 @@ func main() {
 // closing it.
 func openDebugLog() (*os.File, error) {
 	name := fmt.Sprintf("gofortress-debug-%s.log", time.Now().Format("20060102-150405"))
-	path := fmt.Sprintf("%s/%s", os.TempDir(), name)
+	path := filepath.Join(os.TempDir(), name)
 	return os.Create(path)
 }

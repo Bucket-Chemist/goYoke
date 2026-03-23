@@ -2,54 +2,25 @@
 // GOgent-Fortress TUI. It polls gogent-team-run config.json files to track
 // team execution state.
 //
-// The TeamConfig, Wave, and Member types are intentionally duplicated from
-// cmd/gogent-team-run (which is package main and cannot be imported). Both
-// representations are JSON-compatible.
+// The TeamConfig, Wave, and Member types are imported from the shared
+// internal/teamconfig package, which both the TUI and cmd/gogent-team-run
+// consume. Changes to the config.json schema produce compile-time errors
+// in both consumers.
 package teams
 
 import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/teamconfig"
 )
 
-// ---------------------------------------------------------------------------
-// TeamConfig types
-//
-// Duplicated from cmd/gogent-team-run/config.go. Both sides use identical
-// JSON tags, so config.json files round-trip correctly.
-// ---------------------------------------------------------------------------
-
-// TeamConfig is the parsed representation of a team's config.json file.
-type TeamConfig struct {
-	TeamName           string  `json:"team_name"`
-	WorkflowType       string  `json:"workflow_type"`
-	Status             string  `json:"status"`         // pending|running|completed|failed
-	CreatedAt          string  `json:"created_at"`     // ISO 8601
-	CompletedAt        *string `json:"completed_at"`   // ISO 8601, nil while running
-	BudgetMaxUSD       float64 `json:"budget_max_usd"`
-	BudgetRemainingUSD float64 `json:"budget_remaining_usd"`
-	Waves              []Wave  `json:"waves"`
-}
-
-// Wave is a single execution wave within a team run.
-type Wave struct {
-	WaveNumber  int      `json:"wave_number"`
-	Description string   `json:"description"`
-	Members     []Member `json:"members"`
-}
-
-// Member is a single agent task within a wave.
-type Member struct {
-	Name         string  `json:"name"`
-	Agent        string  `json:"agent"`
-	Model        string  `json:"model"`
-	Status       string  `json:"status"`       // pending|running|completed|failed
-	CostUSD      float64 `json:"cost_usd"`
-	ErrorMessage string  `json:"error_message"`
-	StartedAt    *string `json:"started_at"`
-	CompletedAt  *string `json:"completed_at"`
-}
+// Re-export types from teamconfig for backward compatibility within this
+// package. New code outside this package should use teamconfig directly.
+type TeamConfig = teamconfig.TeamConfig
+type Wave = teamconfig.Wave
+type Member = teamconfig.Member
 
 // ---------------------------------------------------------------------------
 // TeamState

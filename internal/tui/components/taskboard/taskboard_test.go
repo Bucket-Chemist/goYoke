@@ -3,6 +3,8 @@ package taskboard
 import (
 	"strings"
 	"testing"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 func TestNewTaskBoardModel(t *testing.T) {
@@ -184,20 +186,22 @@ func TestView_TaskCount(t *testing.T) {
 }
 
 func TestTruncate(t *testing.T) {
+	// Tests use util.Truncate which appends "…" beyond maxRunes.
+	// Production code calls util.Truncate(s, truncLen-1) to keep total within truncLen.
 	tests := []struct {
-		s      string
-		maxLen int
-		want   string
+		s        string
+		maxRunes int
+		want     string
 	}{
 		{"hello", 10, "hello"},
-		{"hello world", 5, "hell\u2026"},
-		{"a", 1, "\u2026"},
+		{"hello world", 4, "hell…"},
+		{"a", 1, "a"},
 		{"", 10, ""},
 	}
 	for _, tc := range tests {
-		got := truncate(tc.s, tc.maxLen)
+		got := util.Truncate(tc.s, tc.maxRunes)
 		if got != tc.want {
-			t.Errorf("truncate(%q, %d): want %q, got %q", tc.s, tc.maxLen, tc.want, got)
+			t.Errorf("util.Truncate(%q, %d): want %q, got %q", tc.s, tc.maxRunes, tc.want, got)
 		}
 	}
 }

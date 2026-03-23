@@ -344,7 +344,7 @@ func (r *AgentRegistry) Remove(id string) {
 	// Remove from parent's Children list.
 	if a.ParentID != "" {
 		if parent, exists := r.agents[a.ParentID]; exists {
-			filtered := parent.Children[:0]
+			var filtered []string
 			for _, childID := range parent.Children {
 				if childID != id {
 					filtered = append(filtered, childID)

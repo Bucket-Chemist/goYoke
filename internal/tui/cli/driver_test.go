@@ -36,11 +36,13 @@ func newTestDriver(t *testing.T, opts CLIDriverOpts) (*CLIDriver, *io.PipeWriter
 	stdinBuf := &bytes.Buffer{}
 
 	d := &CLIDriver{
-		opts:    opts,
-		state:   DriverStreaming, // already "started"
-		eventCh: make(chan any, 64),
-		stdin:   &nopWriteCloser{stdinBuf},
-		stdout:  stdoutReader,
+		opts:       opts,
+		state:      DriverStreaming, // already "started"
+		eventCh:    make(chan any, 64),
+		shutdownCh: make(chan struct{}),
+		waitDone:   make(chan struct{}),
+		stdin:      &nopWriteCloser{stdinBuf},
+		stdout:     stdoutReader,
 		// cmd intentionally nil — not launching real subprocess
 	}
 
@@ -564,12 +566,14 @@ func startSleepProcess(t *testing.T) *CLIDriver {
 	require.NoError(t, cmd.Start(), "start sleep")
 
 	d := &CLIDriver{
-		opts:    CLIDriverOpts{},
-		state:   DriverStreaming,
-		eventCh: make(chan any, 64),
-		cmd:     cmd,
-		stdin:   stdinPipe,
-		stdout:  stdoutPipe,
+		opts:       CLIDriverOpts{},
+		state:      DriverStreaming,
+		eventCh:    make(chan any, 64),
+		shutdownCh: make(chan struct{}),
+		waitDone:   make(chan struct{}),
+		cmd:        cmd,
+		stdin:      stdinPipe,
+		stdout:     stdoutPipe,
 	}
 	go d.consumeEvents()
 	return d
@@ -766,4 +770,126 @@ func TestConsumeEvents_LargeLineHandled(t *testing.T) {
 	require.True(t, ok, "expected AssistantEvent for large line, got %T", items[0])
 	require.Len(t, ev.Message.Content, 1)
 	assert.Len(t, ev.Message.Content[0].Text, len(largeText))
+}
+
+// ---------------------------------------------------------------------------
+// W-3/M-1: shutdownCh / waitDone — SIGKILL goroutine cancellation
+// ---------------------------------------------------------------------------
+
+// TestShutdown_SIGKILLGoroutineCancelledWhenProcessExitsCleanly verifies that
+// when a process exits before the 2-second SIGKILL deadline, the escalation
+// goroutine cancels itself via waitDone and does NOT send SIGKILL. We test
+// this indirectly by verifying that waitDone is closed promptly (indicating
+// consumeEvents reached cmd.Wait()) and that the driver reaches DriverDead.
+func TestShutdown_SIGKILLGoroutineCancelledWhenProcessExitsCleanly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping live-process test in short mode")
+	}
+
+	// Use a process that exits quickly on its own (sleep 0).
+	cmd := exec.Command("sleep", "0")
+	stdinPipe, err := cmd.StdinPipe()
+	require.NoError(t, err)
+	stdoutPipe, err := cmd.StdoutPipe()
+	require.NoError(t, err)
+	require.NoError(t, cmd.Start())
+
+	d := &CLIDriver{
+		opts:       CLIDriverOpts{},
+		state:      DriverStreaming,
+		eventCh:    make(chan any, 64),
+		shutdownCh: make(chan struct{}),
+		waitDone:   make(chan struct{}),
+		cmd:        cmd,
+		stdin:      stdinPipe,
+		stdout:     stdoutPipe,
+	}
+	go d.consumeEvents()
+
+	// waitDone must close well before the 2-second SIGKILL deadline.
+	select {
+	case <-d.waitDone:
+		// Good — process exited, consumeEvents closed waitDone.
+	case <-time.After(2 * time.Second):
+		t.Fatal("waitDone was not closed within 2s — process did not exit or consumeEvents stalled")
+	}
+
+	assert.Equal(t, DriverDead, d.State())
+}
+
+// TestShutdown_ShutdownChUnblocksPendingWaitForEvent verifies that a
+// WaitForEvent Cmd that is already blocking on the event channel returns
+// CLIDisconnectedMsg immediately when Shutdown closes shutdownCh.
+func TestShutdown_ShutdownChUnblocksPendingWaitForEvent(t *testing.T) {
+	d := NewCLIDriver(CLIDriverOpts{})
+	// eventCh is empty — WaitForEvent would block indefinitely without shutdownCh.
+
+	resultCh := make(chan tea.Msg, 1)
+	go func() {
+		cmd := d.WaitForEvent()
+		resultCh <- cmd()
+	}()
+
+	// Give the goroutine time to block on WaitForEvent.
+	time.Sleep(20 * time.Millisecond)
+
+	// Shutdown closes shutdownCh, which should unblock the goroutine.
+	require.NoError(t, d.Shutdown())
+
+	select {
+	case msg := <-resultCh:
+		disc, ok := msg.(CLIDisconnectedMsg)
+		require.True(t, ok, "expected CLIDisconnectedMsg, got %T", msg)
+		assert.NoError(t, disc.Err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("WaitForEvent was not unblocked within 2s after Shutdown")
+	}
+}
+
+// TestShutdown_IdempotentDoesNotPanic verifies that calling Shutdown twice on
+// the same driver does not panic (shutdownCh is closed at most once).
+func TestShutdown_IdempotentDoesNotPanic(t *testing.T) {
+	d := NewCLIDriver(CLIDriverOpts{})
+	d.mu.Lock()
+	d.stdin = &nopWriteCloser{&bytes.Buffer{}}
+	d.mu.Unlock()
+
+	assert.NotPanics(t, func() {
+		_ = d.Shutdown()
+		_ = d.Shutdown() // second call must not panic
+	})
+}
+
+// TestConsumeEvents_ExitsOnShutdownCh verifies that consumeEvents stops
+// sending to eventCh and exits promptly when shutdownCh is closed mid-stream.
+func TestConsumeEvents_ExitsOnShutdownCh(t *testing.T) {
+	stdoutReader, stdoutWriter := io.Pipe()
+	stdinBuf := &bytes.Buffer{}
+
+	d := &CLIDriver{
+		opts:       CLIDriverOpts{},
+		state:      DriverStreaming,
+		eventCh:    make(chan any, 2), // small buffer so it fills up
+		shutdownCh: make(chan struct{}),
+		waitDone:   make(chan struct{}),
+		stdin:      &nopWriteCloser{stdinBuf},
+		stdout:     stdoutReader,
+	}
+
+	go d.consumeEvents()
+
+	// Close shutdownCh while stdoutWriter is still open — consumeEvents should
+	// exit via the shutdownCh arm without waiting for EOF.
+	close(d.shutdownCh)
+
+	// waitDone must close promptly (consumeEvents reaches its end).
+	select {
+	case <-d.waitDone:
+		// Good.
+	case <-time.After(2 * time.Second):
+		t.Fatal("consumeEvents did not exit after shutdownCh closed")
+	}
+
+	// Clean up the pipe.
+	stdoutWriter.Close()
 }

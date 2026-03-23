@@ -12,6 +12,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------
@@ -253,7 +254,7 @@ func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) str
 	// ------------------------------------------------------------------
 	var activityStr string
 	if node.Agent.Activity != nil && node.Agent.Activity.Preview != "" {
-		preview := truncate(node.Agent.Activity.Preview, 40)
+		preview := util.Truncate(node.Agent.Activity.Preview, 39)
 		activityStr = " " + config.StyleMuted.Render("["+preview+"]")
 	}
 
@@ -267,7 +268,7 @@ func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) str
 	if available < 1 {
 		available = 1
 	}
-	label = truncate(label, available)
+	label = util.Truncate(label, available-1)
 
 	row := prefixStr + iconStr + " " + label + activityStr
 
@@ -278,14 +279,3 @@ func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) str
 	return row
 }
 
-// truncate shortens s to at most maxLen runes, appending "…" if it was cut.
-func truncate(s string, maxLen int) string {
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	if maxLen <= 1 {
-		return "…"
-	}
-	return string(runes[:maxLen-1]) + "…"
-}

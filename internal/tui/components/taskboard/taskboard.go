@@ -11,24 +11,13 @@ import (
 	"strings"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
-// ---------------------------------------------------------------------------
-// TaskEntry
-// ---------------------------------------------------------------------------
-
-// TaskEntry represents a single task tracked by the task board.
-type TaskEntry struct {
-	// ID is the unique identifier for this task.
-	ID string
-	// Content is the human-readable task description.
-	Content string
-	// Status is the lifecycle state: "pending", "in_progress", or "completed".
-	Status string
-	// ActiveForm is an optional label for the form step currently active
-	// (e.g. the tool name or sub-step in progress).
-	ActiveForm string
-}
+// TaskEntry is re-exported from the state package for backward compatibility.
+// New code should use state.TaskEntry directly.
+type TaskEntry = state.TaskEntry
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -172,7 +161,7 @@ func (m TaskBoardModel) visibleTasks() []TaskEntry {
 // renderTask renders a single task row.
 func (m TaskBoardModel) renderTask(t TaskEntry) string {
 	icon := taskIcon(t.Status)
-	content := truncate(t.Content, truncLen)
+	content := util.Truncate(t.Content, truncLen-1)
 
 	var line string
 	if m.showDone {
@@ -199,29 +188,3 @@ func taskIcon(status string) string {
 	}
 }
 
-// truncate shortens s to at most maxLen runes. If the string fits within
-// maxLen runes, it is returned unchanged. When it exceeds maxLen, the result
-// is (maxLen-1) runes followed by "…". When maxLen <= 1 and the string is
-// non-empty, the ellipsis alone is returned.
-func truncate(s string, maxLen int) string {
-	runes := []rune(s)
-	if len(runes) <= maxLen && maxLen > 1 {
-		return s
-	}
-	if maxLen <= 1 {
-		if len(runes) == 0 {
-			return s
-		}
-		return "\u2026"
-	}
-	return string(runes[:maxLen-1]) + "\u2026"
-}
-
-// min returns the smaller of two ints (stdlib min available in Go 1.21+,
-// but we define it locally to be safe with the module's min Go version).
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

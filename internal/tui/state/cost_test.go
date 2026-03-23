@@ -22,8 +22,8 @@ func TestNewCostTracker_Defaults(t *testing.T) {
 	ct := NewCostTracker()
 	require.NotNil(t, ct)
 	assert.Equal(t, 0.0, ct.GetSessionCost())
-	assert.Nil(t, ct.BudgetUSD)
-	assert.False(t, ct.OverBudget)
+	assert.Nil(t, ct.GetBudgetUSD())
+	assert.False(t, ct.IsOverBudget())
 	assert.Empty(t, ct.GetAgentCosts())
 }
 
@@ -34,10 +34,10 @@ func TestNewCostTracker_Defaults(t *testing.T) {
 func TestNewCostTrackerWithBudget(t *testing.T) {
 	ct := NewCostTrackerWithBudget(5.00)
 	require.NotNil(t, ct)
-	require.NotNil(t, ct.BudgetUSD)
-	assert.Equal(t, 5.00, *ct.BudgetUSD)
+	require.NotNil(t, ct.GetBudgetUSD())
+	assert.Equal(t, 5.00, *ct.GetBudgetUSD())
 	assert.Equal(t, 0.0, ct.GetSessionCost())
-	assert.False(t, ct.OverBudget)
+	assert.False(t, ct.IsOverBudget())
 }
 
 // ---------------------------------------------------------------------------
@@ -180,20 +180,20 @@ func TestGetAgentCosts_ReturnsCopy(t *testing.T) {
 
 func TestSetBudget_Updates(t *testing.T) {
 	ct := NewCostTracker()
-	assert.Nil(t, ct.BudgetUSD)
+	assert.Nil(t, ct.GetBudgetUSD())
 
 	ct.SetBudget(10.00)
-	require.NotNil(t, ct.BudgetUSD)
-	assert.Equal(t, 10.00, *ct.BudgetUSD)
+	require.NotNil(t, ct.GetBudgetUSD())
+	assert.Equal(t, 10.00, *ct.GetBudgetUSD())
 
 	// Update to a lower budget that is now exceeded by the existing cost.
 	ct.UpdateSessionCost(8.00)
 	ct.SetBudget(5.00)
-	assert.True(t, ct.OverBudget)
+	assert.True(t, ct.IsOverBudget())
 
 	// Raise the budget back above cost — OverBudget must clear.
 	ct.SetBudget(20.00)
-	assert.False(t, ct.OverBudget)
+	assert.False(t, ct.IsOverBudget())
 }
 
 // ---------------------------------------------------------------------------
@@ -202,21 +202,21 @@ func TestSetBudget_Updates(t *testing.T) {
 
 func TestReset_ClearsAll(t *testing.T) {
 	ct := NewCostTrackerWithBudget(10.00)
-	ct.UpdateSessionCost(15.00) // sets OverBudget = true
+	ct.UpdateSessionCost(15.00) // sets overBudget = true
 	ct.UpdateAgentCost("agent-A", 5.00)
 	ct.UpdateAgentCost("agent-B", 3.00)
 
-	require.True(t, ct.OverBudget, "pre-condition: should be over budget")
+	require.True(t, ct.IsOverBudget(), "pre-condition: should be over budget")
 
 	ct.Reset()
 
 	assert.Equal(t, 0.0, ct.GetSessionCost())
 	assert.Empty(t, ct.GetAgentCosts())
-	assert.False(t, ct.OverBudget)
+	assert.False(t, ct.IsOverBudget())
 
 	// Budget itself must be preserved after Reset.
-	require.NotNil(t, ct.BudgetUSD)
-	assert.Equal(t, 10.00, *ct.BudgetUSD)
+	require.NotNil(t, ct.GetBudgetUSD())
+	assert.Equal(t, 10.00, *ct.GetBudgetUSD())
 }
 
 // ---------------------------------------------------------------------------
@@ -292,7 +292,7 @@ func TestConcurrentAccess(t *testing.T) {
 	// due to concurrent writes, but the tracker must still be structurally
 	// sound (no nil map, no inconsistent OverBudget when budget is nil).
 	remaining, overBudget := ct.CheckBudget()
-	if ct.BudgetUSD == nil {
+	if ct.GetBudgetUSD() == nil {
 		assert.Equal(t, -1.0, remaining)
 		assert.False(t, overBudget)
 	}

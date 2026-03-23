@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -32,14 +33,6 @@ import (
 type messageSender interface {
 	Send(msg tea.Msg)
 }
-
-// BridgeModalRequestMsg is an alias for model.BridgeModalRequestMsg exported
-// from this package for backward compatibility.  The canonical definition
-// lives in the model package so that AppModel.Update can type-switch on it
-// without creating a circular import between model and bridge.
-//
-// Deprecated: use model.BridgeModalRequestMsg directly.
-type BridgeModalRequestMsg = model.BridgeModalRequestMsg
 
 // IPCBridge is the TUI-side Unix domain socket server.
 // Its zero value is not usable; use NewIPCBridge instead.
@@ -105,6 +98,11 @@ func (b *IPCBridge) Start() {
 }
 
 // acceptLoop blocks on Accept until the listener is closed.
+//
+// Transient accept errors (e.g. EMFILE / ENFILE when the file-descriptor table
+// is momentarily exhausted) are logged and retried after a brief backoff rather
+// than causing the loop to exit permanently. Only a shutdown signal (b.done
+// closed) causes the loop to exit.
 func (b *IPCBridge) acceptLoop() {
 	for {
 		conn, err := b.listener.Accept()
@@ -115,8 +113,10 @@ func (b *IPCBridge) acceptLoop() {
 				return
 			default:
 			}
-			slog.Warn("bridge accept error", "error", err)
-			return
+			// Transient error: log, back off briefly, and retry.
+			slog.Warn("bridge: accept error, retrying", "error", err)
+			time.Sleep(100 * time.Millisecond)
+			continue
 		}
 		go b.handleConnection(conn)
 	}
@@ -176,7 +176,7 @@ func (b *IPCBridge) handleModal(req mcp.IPCRequest, enc *json.Encoder) {
 	b.mu.Unlock()
 
 	// Inject the request into the Bubbletea event loop.
-	b.sender.Send(BridgeModalRequestMsg{
+	b.sender.Send(model.BridgeModalRequestMsg{
 		RequestID: req.ID,
 		Message:   payload.Message,
 		Options:   payload.Options,
@@ -270,18 +270,25 @@ func (b *IPCBridge) handleToast(req mcp.IPCRequest) {
 	}
 	b.sender.Send(model.ToastMsg{
 		Text:  p.Message,
-		Level: p.Level,
+		Level: model.ToastLevel(p.Level),
 	})
 }
 
 // ResolveModal is called by AppModel.Update when the user makes a modal
-// selection.  It delivers the response to the goroutine that is blocking
-// in handleModal and waiting on the channel.
+// selection. It delivers the response to the goroutine blocking in handleModal.
+//
+// The send is non-blocking (select/default): if the buffered channel is already
+// full (e.g. a duplicate call for the same requestID), the response is dropped
+// and a warning is logged instead of deadlocking while holding b.mu.
 func (b *IPCBridge) ResolveModal(requestID string, response mcp.ModalResponsePayload) {
 	b.mu.Lock()
 	ch, ok := b.pendingModals[requestID]
 	if ok {
-		ch <- response
+		select {
+		case ch <- response:
+		default:
+			slog.Warn("bridge: ResolveModal channel full, response dropped", "id", requestID)
+		}
 		delete(b.pendingModals, requestID)
 	}
 	b.mu.Unlock()
@@ -310,12 +317,18 @@ func (b *IPCBridge) Shutdown() {
 		slog.Warn("bridge: remove socket on shutdown", "path", b.socketPath, "error", err)
 	}
 
-	// Close any channels still registered in the pending modal map.
-	// Goroutines blocking on those channels will receive the zero value
-	// and the ok==false signal.
+	// Drain any channels still registered in the pending modal map.
+	// A non-blocking send is used instead of close(ch) to eliminate the
+	// double-close panic window: handleModal may have already received via
+	// <-b.done and deleted its entry, or ResolveModal may have already sent
+	// a value. The buffered channel (size 1) absorbs the signal if handleModal
+	// has not yet read from it; the default branch is a safe no-op if it has.
 	b.mu.Lock()
 	for id, ch := range b.pendingModals {
-		close(ch)
+		select {
+		case ch <- mcp.ModalResponsePayload{}:
+		default:
+		}
 		delete(b.pendingModals, id)
 	}
 	b.mu.Unlock()

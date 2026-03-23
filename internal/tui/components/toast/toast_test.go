@@ -16,7 +16,7 @@ import (
 // ---------------------------------------------------------------------------
 
 // sendToast sends a model.ToastMsg to m and returns the updated model + cmd.
-func sendToast(m ToastModel, text, level string) (ToastModel, tea.Cmd) {
+func sendToast(m ToastModel, text string, level model.ToastLevel) (ToastModel, tea.Cmd) {
 	return m.Update(model.ToastMsg{Text: text, Level: level})
 }
 
@@ -27,7 +27,7 @@ func sendTick(m ToastModel) (ToastModel, tea.Cmd) {
 
 // makeExpiredItem returns a ToastItem that is already past its default
 // expiry window (CreatedAt 6 seconds ago).
-func makeExpiredItem(msg, level string) ToastItem {
+func makeExpiredItem(msg string, level model.ToastLevel) ToastItem {
 	return ToastItem{
 		Message:   msg,
 		Level:     level,
@@ -37,7 +37,7 @@ func makeExpiredItem(msg, level string) ToastItem {
 }
 
 // makeYoungItem returns a ToastItem that was just created (not yet expired).
-func makeYoungItem(msg, level string) ToastItem {
+func makeYoungItem(msg string, level model.ToastLevel) ToastItem {
 	return ToastItem{
 		Message:   msg,
 		Level:     level,
@@ -69,7 +69,7 @@ func TestUpdate_ToastMsg_AddsItem(t *testing.T) {
 
 	assert.Equal(t, 1, m2.Count(), "one item should be present after adding")
 	assert.Equal(t, "hello", m2.items[0].Message)
-	assert.Equal(t, "info", m2.items[0].Level)
+	assert.Equal(t, model.ToastLevelInfo, m2.items[0].Level)
 	require.NotNil(t, cmd, "a tick command should be returned when the first toast is added")
 }
 
@@ -179,8 +179,8 @@ func TestView_SingleToast_ContainsMessage(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestView_LevelColors(t *testing.T) {
-	levels := []string{"info", "success", "warning", "error"}
-	views := make(map[string]string, len(levels))
+	levels := []model.ToastLevel{"info", "success", "warning", "error"}
+	views := make(map[model.ToastLevel]string, len(levels))
 
 	for _, level := range levels {
 		m := NewToastModel()

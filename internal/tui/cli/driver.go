@@ -137,23 +137,35 @@ type CLIDriverOpts struct {
 // Concurrency: all exported methods are goroutine-safe. Internal state is
 // protected by mu. The eventCh is written by the consumeEvents goroutine and
 // read by WaitForEvent commands scheduled by the Bubbletea runtime.
+//
+// Lifecycle channels:
+//   - shutdownCh is closed by Shutdown to signal both consumeEvents (producer)
+//     and WaitForEvent (consumer) to stop selecting on eventCh, preventing
+//     goroutine leaks on provider switch.
+//   - waitDone is closed by consumeEvents after cmd.Wait() returns, indicating
+//     the subprocess has exited. The SIGKILL escalation goroutine in Shutdown
+//     selects on waitDone to cancel itself when the process exits cleanly.
 type CLIDriver struct {
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	stdout  io.ReadCloser
-	eventCh chan any
-	state   DriverState
-	mu      sync.Mutex
-	opts    CLIDriverOpts
+	cmd        *exec.Cmd
+	stdin      io.WriteCloser
+	stdout     io.ReadCloser
+	eventCh    chan any
+	shutdownCh chan struct{} // closed by Shutdown; cancels producer and consumer
+	waitDone   chan struct{} // closed by consumeEvents after cmd.Wait() returns
+	state      DriverState
+	mu         sync.Mutex
+	opts       CLIDriverOpts
 }
 
 // NewCLIDriver creates a CLIDriver configured with the given options.
 // The driver starts in DriverIdle state; call Start() to launch the subprocess.
 func NewCLIDriver(opts CLIDriverOpts) *CLIDriver {
 	return &CLIDriver{
-		opts:    opts,
-		state:   DriverIdle,
-		eventCh: make(chan any, 64),
+		opts:       opts,
+		state:      DriverIdle,
+		eventCh:    make(chan any, 64),
+		shutdownCh: make(chan struct{}),
+		waitDone:   make(chan struct{}),
 	}
 }
 
@@ -279,6 +291,10 @@ func (d *CLIDriver) buildArgs() []string {
 // consumeEvents goroutine
 // ---------------------------------------------------------------------------
 
+// scannerBufSize is the maximum line length accepted by the NDJSON scanner.
+// 1 MB accommodates large tool outputs such as file reads.
+const scannerBufSize = 1024 * 1024
+
 // consumeEvents reads NDJSON lines from d.stdout, parses each line with
 // ParseCLIEvent, and sends parsed events to d.eventCh. It runs in its own
 // goroutine for the lifetime of the subprocess.
@@ -286,48 +302,93 @@ func (d *CLIDriver) buildArgs() []string {
 // When the stdout pipe closes (either because the process exited or because
 // the pipe was broken), consumeEvents sends a CLIDisconnectedMsg to eventCh,
 // sets the driver state to DriverDead, and waits for the subprocess to exit.
+//
+// The scanner runs in a dedicated inner goroutine so that the main loop can
+// select on both scanner output and shutdownCh. This ensures that closing
+// shutdownCh causes consumeEvents to exit immediately even when no data is
+// flowing on stdout — preventing goroutine leaks on provider switch.
 func (d *CLIDriver) consumeEvents() {
+	defer close(d.waitDone)
+
 	scanner := bufio.NewScanner(d.stdout)
+	scanner.Buffer(make([]byte, scannerBufSize), scannerBufSize)
 
-	// 1 MB buffer to handle large tool outputs (file reads, etc.).
-	const maxBufSize = 1024 * 1024
-	buf := make([]byte, maxBufSize)
-	scanner.Buffer(buf, maxBufSize)
-
-	for scanner.Scan() {
-		line := scanner.Bytes()
-
-		event, err := ParseCLIEvent(line)
-		if err != nil {
-			slog.Warn("cli driver: parse error, skipping line",
-				"err", err,
-				"line_len", len(line),
-			)
-			continue
-		}
-
-		if event == nil {
-			// Blank or whitespace-only line — skip silently.
-			continue
-		}
-
-		d.eventCh <- event
+	// scanResult carries one parsed event or the terminal state of the scanner.
+	type scanResult struct {
+		event any
+		done  bool
+		err   error
 	}
 
-	// Scanner exited: pipe closed or error.
-	scanErr := scanner.Err()
-	if d.opts.Debug && scanErr != nil {
-		slog.Debug("cli driver: scanner error", "err", scanErr)
-	}
+	// Buffer of 1 so the inner goroutine never blocks after the main loop exits.
+	scanCh := make(chan scanResult, 1)
 
-	// Signal disconnect before changing state.
-	d.eventCh <- CLIDisconnectedMsg{Err: scanErr}
+	go func() {
+		for scanner.Scan() {
+			line := scanner.Bytes()
 
-	d.setState(DriverDead)
+			event, err := ParseCLIEvent(line)
+			if err != nil {
+				slog.Warn("cli driver: parse error, skipping line",
+					"err", err,
+					"line_len", len(line),
+				)
+				continue
+			}
 
-	// Reap the child process to avoid zombie processes.
-	if d.cmd != nil {
-		_ = d.cmd.Wait()
+			if event == nil {
+				continue
+			}
+
+			select {
+			case scanCh <- scanResult{event: event}:
+			case <-d.shutdownCh:
+				return
+			}
+		}
+		select {
+		case scanCh <- scanResult{done: true, err: scanner.Err()}:
+		case <-d.shutdownCh:
+		}
+	}()
+
+	for {
+		select {
+		case <-d.shutdownCh:
+			d.setState(DriverDead)
+			if d.cmd != nil {
+				_ = d.cmd.Wait()
+			}
+			return
+
+		case result := <-scanCh:
+			if result.done {
+				if d.opts.Debug && result.err != nil {
+					slog.Debug("cli driver: scanner error", "err", result.err)
+				}
+
+				select {
+				case d.eventCh <- CLIDisconnectedMsg{Err: result.err}:
+				case <-d.shutdownCh:
+				}
+
+				d.setState(DriverDead)
+				if d.cmd != nil {
+					_ = d.cmd.Wait()
+				}
+				return
+			}
+
+			select {
+			case d.eventCh <- result.event:
+			case <-d.shutdownCh:
+				d.setState(DriverDead)
+				if d.cmd != nil {
+					_ = d.cmd.Wait()
+				}
+				return
+			}
+		}
 	}
 }
 
@@ -342,16 +403,22 @@ func (d *CLIDriver) consumeEvents() {
 // each CLI event to maintain the subscription. This is the standard Bubbletea
 // channel-to-Cmd re-subscription pattern.
 //
-// When the channel is closed, WaitForEvent returns CLIDisconnectedMsg.
+// When the channel is closed or Shutdown is called, WaitForEvent returns
+// CLIDisconnectedMsg. The shutdownCh select arm prevents a pending
+// WaitForEvent from blocking forever after a provider switch.
 func (d *CLIDriver) WaitForEvent() tea.Cmd {
 	return func() tea.Msg {
-		event, ok := <-d.eventCh
-		if !ok {
+		select {
+		case event, ok := <-d.eventCh:
+			if !ok {
+				return CLIDisconnectedMsg{Err: nil}
+			}
+			// tea.Msg is defined as interface{}/any in Bubbletea, so this cast
+			// always succeeds for any non-nil value.
+			return event.(tea.Msg) //nolint:forcetypeassert
+		case <-d.shutdownCh:
 			return CLIDisconnectedMsg{Err: nil}
 		}
-		// tea.Msg is defined as interface{}/any in Bubbletea, so this cast
-		// always succeeds for any non-nil value.
-		return event.(tea.Msg) //nolint:forcetypeassert
 	}
 }
 
@@ -444,15 +511,28 @@ func (d *CLIDriver) Interrupt() error {
 
 // Shutdown terminates the subprocess gracefully. It:
 //  1. Sets the driver state to DriverDead.
-//  2. Sends SIGTERM to the subprocess.
-//  3. After 2 seconds, sends SIGKILL if the process is still running.
-//  4. Closes the stdin pipe.
+//  2. Closes shutdownCh to unblock any pending WaitForEvent and consumeEvents.
+//  3. Sends SIGTERM to the subprocess.
+//  4. After 2 seconds, sends SIGKILL if the process has not yet exited.
+//     The escalation goroutine is cancelled early via waitDone if the process
+//     exits cleanly before the 2-second deadline.
+//  5. Closes the stdin pipe.
 //
 // Shutdown returns immediately; the SIGKILL escalation runs in a goroutine.
+// Calling Shutdown multiple times is safe: shutdownCh is closed at most once
+// under the driver mutex.
 func (d *CLIDriver) Shutdown() error {
 	d.setState(DriverDead)
 
+	// Close shutdownCh exactly once so that both the consumeEvents goroutine
+	// (producer) and any blocked WaitForEvent Cmd (consumer) exit promptly.
 	d.mu.Lock()
+	select {
+	case <-d.shutdownCh:
+		// Already closed by a previous Shutdown call — nothing to do.
+	default:
+		close(d.shutdownCh)
+	}
 	cmd := d.cmd
 	stdinPipe := d.stdin
 	d.mu.Unlock()
@@ -471,10 +551,17 @@ func (d *CLIDriver) Shutdown() error {
 		return nil
 	}
 
-	// SIGKILL escalation after 2 seconds if still running.
+	// SIGKILL escalation after 2 seconds if the process is still running.
+	// waitDone is closed by consumeEvents once cmd.Wait() returns, so the
+	// goroutine cancels itself when the process exits cleanly before the
+	// deadline — preventing accumulated goroutines on repeated provider
+	// switches.
 	proc := cmd.Process
+	waitDone := d.waitDone
 	go func() {
 		select {
+		case <-waitDone:
+			// Process already exited; SIGKILL not needed.
 		case <-time.After(2 * time.Second):
 			// Best-effort; ignore error if process already exited.
 			_ = proc.Signal(syscall.SIGKILL)

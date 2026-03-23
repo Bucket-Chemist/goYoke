@@ -23,9 +23,9 @@ const maxReconnectAttempts = 3
 //	attempt 1 → 2 s
 //	attempt 2 → 4 s
 //	attempt 3 → 6 s
-func reconnectAfterDelay(attempt int) tea.Cmd {
+func reconnectAfterDelay(attempt int, seq int) tea.Cmd {
 	delay := time.Duration(attempt) * 2 * time.Second
 	return tea.Tick(delay, func(t time.Time) tea.Msg {
-		return CLIReconnectMsg{Attempt: attempt}
+		return CLIReconnectMsg{Attempt: attempt, Seq: seq}
 	})
 }
