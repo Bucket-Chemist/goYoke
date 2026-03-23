@@ -12,6 +12,10 @@
 > **⚠️ SPIKE CORRECTION (2026-03-23, TUI-002):** Go MCP SDK v1.2.0 is confirmed correct — `mcp.StdioTransport{}` and all required APIs exist. **No v1.3.0 upgrade needed** (resolves Review C-2). Additional finding: `acceptEdits` does NOT auto-approve MCP tools — they require explicit `--allowedTools "mcp__gofortress__*"` in CLI spawn args. See `tickets/tui-migration/spike-results/go-mcp-poc.md`.
 >
 > **✅ SPIKE CONFIRMED (2026-03-23, TUI-003):** NDJSON catalog from Section 4.3 is **substantially correct**. 6 top-level types confirmed (+ `stream_event` = 7 with `--include-partial-messages`). New discoveries not in braintrust: `rate_limit_event` as distinct type, `tool_use_result` structured bonus field (diffs, file metadata, bash stdout/stderr), `thinking` + `signature_delta` content blocks, `hook_started`/`hook_response` subtypes, `caller` field on tool_use. Three events known-but-unobserved: `compact_boundary`, `status`, `result:error`. Full catalog at `tickets/tui-migration/spike-results/ndjson-catalog.md`.
+>
+> **✅ SPIKE CONFIRMED (2026-03-23, TUI-004):** UDS side-channel IPC validated at **56µs avg roundtrip** (90x under 5ms target). JSON-over-UDS with `NewEncoder`/`NewDecoder` works perfectly. Socket cleanup (defer + signal + stale detection) and exponential backoff retry both validated. `Program.Send()` injection pattern confirmed for Bubble Tea integration. See `tickets/tui-migration/spike-results/ipc-protocol.md`.
+>
+> **📋 PHASE 1 COMPLETE (2026-03-23):** All 4 prerequisite spikes passed. No architectural changes needed. Two risks resolved (permission protocol, MCP SDK), two confirmed (NDJSON catalog, UDS IPC). Phase 2 foundation unblocked.
 
 ---
 

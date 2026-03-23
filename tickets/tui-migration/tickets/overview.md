@@ -80,7 +80,7 @@ Go TUI Process (single binary)
 | Cost tracker logic lost | Medium | Medium | Explicit Go port (TUI-024). Session cost from result event |
 | CLI update breaks stream-json format | Medium | Medium | Version detection, defensive parsing, optional pointer fields |
 | Graceful shutdown orphans | Medium | Medium | Timing budget (10s), SIGTERM→SIGKILL escalation |
-| UDS startup race | Low | Low | MCP server retries with exponential backoff (5 attempts) |
+| UDS startup race | ~~Low~~ **RESOLVED** | Low | TUI-004 spike: exponential backoff validated (connected on attempt 1). UDS roundtrip 56µs. See spike-results/ipc-protocol.md |
 | Bubble Tea v1 EOL | Low | Low | v1→v2 migration is incremental, deferred to post-migration |
 
 ---
@@ -164,7 +164,7 @@ The following review findings have been incorporated into the ticket description
 
 ## Success Criteria
 
-- [x] Spike passes: permission wire format documented (TUI-001 ✓), Go MCP SDK POC verified (TUI-002 ✓), NDJSON catalog confirmed (TUI-003 ✓)
+- [x] Spike passes: permission wire format documented (TUI-001 ✓), Go MCP SDK POC verified (TUI-002 ✓), NDJSON catalog confirmed (TUI-003 ✓), UDS IPC validated at 56µs (TUI-004 ✓) — **Phase 1 complete**
 - [ ] Two-process topology works: Go TUI → CLI → MCP tools — no Node.js
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
