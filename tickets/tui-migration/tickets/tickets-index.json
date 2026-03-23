@@ -62,7 +62,7 @@
     {
       "id": "TUI-004",
       "title": "Spike - Side channel IPC POC (MCP to TUI)",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "HIGH",
       "dependencies": [],
