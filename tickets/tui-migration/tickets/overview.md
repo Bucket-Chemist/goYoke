@@ -74,7 +74,7 @@ Go TUI Process (single binary)
 |------|-----------|--------|------------|
 | Permission wire format undocumented/incompatible | ~~Medium~~ **RESOLVED** | High | TUI-001 spike: no control_request protocol exists. Architecture uses Option D (hybrid): acceptEdits + MCP side-channel. See spike-results/permission-protocol.md |
 | Go MCP SDK fails to serve tools to Claude CLI | ~~Very Low~~ **RESOLVED** | High | TUI-002 spike: v1.2.0 works, full roundtrip confirmed. Key finding: MCP tools need `--allowedTools` (acceptEdits doesn't cover them). See spike-results/go-mcp-poc.md |
-| NDJSON event types expand without notice | Medium | Medium | Log-and-continue parser. Unknown events → CLIUnknownMsg. Telemetry accumulates |
+| NDJSON event types expand without notice | ~~Medium~~ **MITIGATED** | Medium | TUI-003 spike: 6 top-level types + stream_event catalogued with full schemas. 3 known-but-unobserved types documented. Go type mapping in ndjson-catalog.md §7. Log-and-continue parser handles unknowns. |
 | Agent state race (NDJSON vs MCP goroutines) | Medium | Medium | AgentRegistry with RWMutex. Dedup on agentType+description. All mutations via tea.Msg |
 | Multi-provider underscoped | High | Medium | Decomposed into 4 tickets (TUI-028 to TUI-031) |
 | Cost tracker logic lost | Medium | Medium | Explicit Go port (TUI-024). Session cost from result event |
@@ -164,7 +164,7 @@ The following review findings have been incorporated into the ticket description
 
 ## Success Criteria
 
-- [ ] Spike passes: permission wire format documented, Go MCP SDK POC verified, NDJSON catalog confirmed
+- [x] Spike passes: permission wire format documented (TUI-001 ✓), Go MCP SDK POC verified (TUI-002 ✓), NDJSON catalog confirmed (TUI-003 ✓)
 - [ ] Two-process topology works: Go TUI → CLI → MCP tools — no Node.js
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops

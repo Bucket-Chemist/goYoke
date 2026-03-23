@@ -47,7 +47,7 @@
     {
       "id": "TUI-003",
       "title": "Spike - NDJSON event catalog capture",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "CRITICAL",
       "dependencies": [],
