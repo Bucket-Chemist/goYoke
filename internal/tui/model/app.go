@@ -7,16 +7,18 @@
 //   - AgentTreeModel   — TUI-020 (Agent tree view + detail)
 //   - AgentDetailModel — TUI-020 (Agent tree view + detail)
 //   - ToastModel       — TUI-025 (Toast notification system)
-//   - ModalModel       — TUI-017 (Modal model types and queue)
 package model
 
 import (
+	"encoding/json"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
@@ -60,10 +62,9 @@ type cliDriverWidget interface {
 //
 // bridgeWidget is the interface satisfied by bridge.IPCBridge. Defining it
 // here avoids a circular import between the model and bridge packages.
-// ResolveModal is intentionally absent from this interface: the full modal
-// resolution path (TUI-017) needs the mcp.ModalResponsePayload type, which
-// would require importing mcp or introducing another indirection layer.
-// That indirection is deferred to TUI-017 so the interface stays minimal.
+// ResolveModalSimple accepts a plain string value rather than
+// mcp.ModalResponsePayload so that the model package does not need to import
+// the mcp package.  IPCBridge.ResolveModalSimple wraps ResolveModal.
 // ---------------------------------------------------------------------------
 
 // bridgeWidget is the interface satisfied by bridge.IPCBridge.
@@ -71,6 +72,13 @@ type bridgeWidget interface {
 	Start()
 	SocketPath() string
 	Shutdown()
+	// ResolveModalSimple delivers the user's response to the bridge goroutine
+	// that is blocking on the given requestID.  value is the selected option
+	// label or free-text entered by the user.  An empty value with cancelled
+	// semantics should be represented by calling ResolveModalSimple with an
+	// empty string (the bridge always receives a value; cancellation is
+	// communicated by convention with the empty string or a dedicated sentinel).
+	ResolveModalSimple(requestID string, value string)
 }
 
 // ---------------------------------------------------------------------------
@@ -88,8 +96,10 @@ type bridgeWidget interface {
 // sharedState holds the external component references shared between main.go
 // and the AppModel copy held inside tea.Program.
 type sharedState struct {
-	cliDriver cliDriverWidget
-	bridge    bridgeWidget
+	cliDriver   cliDriverWidget
+	bridge      bridgeWidget
+	modalQueue  *modals.ModalQueue
+	permHandler *modals.PermissionHandler
 }
 
 // ---------------------------------------------------------------------------
@@ -166,18 +176,18 @@ type AgentDetailModel struct{}
 type ToastModel struct{}
 
 // ---------------------------------------------------------------------------
-// Modal types
+// DiffEntry
 // ---------------------------------------------------------------------------
 
-// ModalRequest holds the data needed to display a modal dialog.
-type ModalRequest struct {
-	Title   string
-	Options []string
+// DiffEntry holds a structured diff produced by a Write/Edit/Bash tool call.
+// The Patch field is the raw structuredPatch JSON from the tool_use_result
+// event.  TUI-022 (Claude panel) will render these entries inline.
+type DiffEntry struct {
+	// FilePath is the absolute path of the file that was modified.
+	FilePath string
+	// Patch is the raw structuredPatch value from the CLI event.
+	Patch json.RawMessage
 }
-
-// ModalModel is a placeholder for the modal overlay component.
-// TODO(TUI-017): implement modal with keyboard navigation and selection.
-type ModalModel struct{}
 
 // ---------------------------------------------------------------------------
 // layoutDims
@@ -233,9 +243,9 @@ type AppModel struct {
 	agentDetail AgentDetailModel
 	toasts      ToastModel
 
-	// Modal state
-	modalQueue  []ModalRequest
-	modalActive *ModalModel
+	// Diff history (post-hoc diffs from Write/Edit/Bash tool results).
+	// TUI-022 renders these inline in the Claude panel.
+	diffs []DiffEntry
 
 	// Infrastructure
 	keys config.KeyMap
@@ -263,6 +273,11 @@ type AppModel struct {
 // see the application main.go for the canonical wiring.
 func NewAppModel() AppModel {
 	keys := config.DefaultKeyMap()
+	mq := modals.NewModalQueue(keys)
+	shared := &sharedState{
+		modalQueue:  &mq,
+		permHandler: modals.NewPermissionHandler(&mq),
+	}
 	return AppModel{
 		focus:          FocusClaude,
 		rightPanelMode: RPMAgents,
@@ -270,7 +285,7 @@ func NewAppModel() AppModel {
 		keys:           keys,
 		banner:         banner.NewBannerModel(0),
 		statusLine:     statusline.NewStatusLineModel(0),
-		shared:         &sharedState{},
+		shared:         shared,
 	}
 }
 
@@ -337,6 +352,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.statusLine.SetWidth(msg.Width)
 
+		// Propagate terminal size to modal queue for correct centering.
+		if m.shared != nil && m.shared.modalQueue != nil {
+			m.shared.modalQueue.SetTermSize(msg.Width, msg.Height)
+		}
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -362,7 +382,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitForCLIEvent()
 
 	case cli.UserEvent:
-		// Tool result — placeholder; TUI-022 fills this in.
+		// Extract post-hoc diffs from tool_use_result events.
+		m = m.extractDiffs(msg)
 		return m, m.waitForCLIEvent()
 
 	case cli.ResultEvent:
@@ -388,8 +409,38 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// -----------------------------------------------------------------
 
 	case BridgeModalRequestMsg:
-		// Show modal to user — placeholder; TUI-017 fills this in.
+		// Dispatch to permission handler which enqueues the appropriate modal(s).
+		if m.shared != nil && m.shared.permHandler != nil {
+			cmd := m.shared.permHandler.HandleBridgeRequest(
+				msg.RequestID, msg.Message, msg.Options,
+			)
+			return m, cmd
+		}
 		return m, nil
+
+	case modals.ModalResponseMsg:
+		// A modal step completed — advance the flow via permission handler.
+		if m.shared == nil || m.shared.permHandler == nil {
+			return m, nil
+		}
+
+		// Advance queue: pop active modal and activate next if any.
+		if m.shared.modalQueue != nil {
+			m.shared.modalQueue.Resolve(msg.Response)
+		}
+
+		result, cmd := m.shared.permHandler.HandleResponse(msg)
+		if result != nil {
+			// Flow complete — deliver response to the bridge goroutine.
+			if m.shared.bridge != nil {
+				value := result.Value
+				if result.Cancelled {
+					value = ""
+				}
+				m.shared.bridge.ResolveModalSimple(result.RequestID, value)
+			}
+		}
+		return m, cmd
 
 	// -----------------------------------------------------------------
 	// Agent and team events (from bridge)
@@ -413,6 +464,51 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// extractDiffs inspects a UserEvent for tool_use_result blocks that carry a
+// structuredPatch field and appends any found patches to m.diffs.
+// This implements the post-hoc diff display path for Write/Edit/Bash tools
+// (Path 1 of Option D hybrid permission flow).
+func (m AppModel) extractDiffs(ev cli.UserEvent) AppModel {
+	if len(ev.ToolUseResult) == 0 {
+		return m
+	}
+
+	// tool_use_result can be a single object or an array of objects.
+	// Try single object first.
+	var single toolUseResultWithPatch
+	if err := json.Unmarshal(ev.ToolUseResult, &single); err == nil && single.FilePath != "" {
+		if len(single.StructuredPatch) > 0 {
+			m.diffs = append(m.diffs, DiffEntry{
+				FilePath: single.FilePath,
+				Patch:    single.StructuredPatch,
+			})
+		}
+		return m
+	}
+
+	// Try array variant.
+	var many []toolUseResultWithPatch
+	if err := json.Unmarshal(ev.ToolUseResult, &many); err == nil {
+		for _, r := range many {
+			if r.FilePath != "" && len(r.StructuredPatch) > 0 {
+				m.diffs = append(m.diffs, DiffEntry{
+					FilePath: r.FilePath,
+					Patch:    r.StructuredPatch,
+				})
+			}
+		}
+	}
+	return m
+}
+
+// toolUseResultWithPatch is a partial unmarshal target for the ToolUseResult
+// JSON field on cli.UserEvent.  Only the fields relevant to diff extraction
+// are decoded; all other fields are ignored.
+type toolUseResultWithPatch struct {
+	FilePath        string          `json:"filePath"`
+	StructuredPatch json.RawMessage `json:"structuredPatch,omitempty"`
 }
 
 // waitForCLIEvent returns the WaitForEvent command from the CLI driver, or
@@ -441,7 +537,7 @@ func (m AppModel) View() string {
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// While a modal is open only modal keys are active.
-	if m.modalActive != nil {
+	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
 		return m.handleModalKey(msg)
 	}
 
@@ -470,15 +566,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleModalKey processes key events while a modal overlay is active.
-// Full modal navigation is implemented by TUI-015; this placeholder only
-// handles cancellation so the modal can be dismissed.
+// handleModalKey forwards all key events to the active ModalModel via the
+// ModalQueue.UpdateActive method.  The queue's ModalModel produces a
+// ModalResponseMsg when the user confirms or cancels, which is then handled
+// in Update → modals.ModalResponseMsg case.
 func (m AppModel) handleModalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if key.Matches(msg, m.keys.Modal.ModalCancel) {
-		m.modalActive = nil
+	if m.shared == nil || m.shared.modalQueue == nil {
 		return m, nil
 	}
-	return m, nil
+	cmd := m.shared.modalQueue.UpdateActive(msg)
+	return m, cmd
 }
 
 // handleClaudeKey processes key events when the Claude panel holds focus.
@@ -559,7 +656,16 @@ func (m AppModel) computeLayout() layoutDims {
 //	TabBar     (1 row, full width)
 //	Main area  (left + optional right panel)
 //	StatusLine (2 rows, full width)
+//
+// When a modal is active the layout is rendered as normal and then replaced by
+// the modal overlay via lipgloss.Place so the modal appears centered on screen.
 func (m AppModel) renderLayout() string {
+	// Modal overlay takes full precedence: render and return immediately.
+	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
+		m.shared.modalQueue.SetTermSize(m.width, m.height)
+		return m.shared.modalQueue.View()
+	}
+
 	dims := m.computeLayout()
 
 	bannerView := m.banner.View()

@@ -60,14 +60,23 @@ func (d *mockCLIDriver) Shutdown() error {
 
 // mockBridge is a test double for bridgeWidget.
 type mockBridge struct {
-	started      bool
-	shutdownDone bool
-	socketPath   string
+	started          bool
+	shutdownDone     bool
+	socketPath       string
+	resolvedRequests []resolvedRequest
+}
+
+type resolvedRequest struct {
+	requestID string
+	value     string
 }
 
 func (b *mockBridge) Start()           { b.started = true }
 func (b *mockBridge) SocketPath() string { return b.socketPath }
 func (b *mockBridge) Shutdown()        { b.shutdownDone = true }
+func (b *mockBridge) ResolveModalSimple(requestID, value string) {
+	b.resolvedRequests = append(b.resolvedRequests, resolvedRequest{requestID, value})
+}
 
 // ---------------------------------------------------------------------------
 // Helper: wiredModel builds an AppModel with mock driver + bridge injected.

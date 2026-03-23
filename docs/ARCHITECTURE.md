@@ -1,10 +1,10 @@
-# GOgent-Fortress Systems Architecture v1.2
+# GOgent-Fortress Systems Architecture v1.5
 
 > **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
 > **Last Updated:** 2026-02-01
 > **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
 > **TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets) — superseded by TUI Migration
-> **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). Phase 1 complete, Phase 2 in progress.
+> **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). Phases 1-5 complete (21/42, 50%).
 > **Review Telemetry:** GOgent-122 through GOgent-139 (18 tasks)
 
 ---
@@ -1430,8 +1430,8 @@ Go TUI Process (single binary)
 | 1 | Prerequisite Spikes | TUI-001 to TUI-004 | COMPLETE |
 | 2 | Foundation (theme, focus, keybinds, layout) | TUI-005 to TUI-011 | COMPLETE |
 | 3 | CLI Driver + NDJSON + MCP Server | TUI-012 to TUI-016 | COMPLETE |
-| 4 | Modal System | TUI-017, TUI-018 | Pending |
-| 5 | Agent Tree + Process Management | TUI-019 to TUI-021 | Pending |
+| 4 | Modal System | TUI-017, TUI-018 | COMPLETE |
+| 5 | Agent Tree + Process Management | TUI-019 to TUI-021 | COMPLETE |
 | 6 | Rich Features | TUI-022 to TUI-027 | Pending |
 | 7 | Settings, Providers, Teams | TUI-028 to TUI-032 | Pending |
 | 8 | Lifecycle | TUI-033 to TUI-035 | Pending |
@@ -1464,40 +1464,80 @@ Go TUI Process (single binary)
 | GOgent-120 | TUI-009 | SUPERSEDED |
 | GOgent-121 | TUI-033, TUI-034 | SUPERSEDED |
 
-### 16.6 Implemented Package Tree (Phase 2 + Phase 3 partial)
+### 16.6 Implemented Package Tree (Phases 2-5)
 
 ```
 internal/tui/
-├── cli/                              # NDJSON event parsing (TUI-012)
-│   ├── events.go                     # 9 event structs, ParseCLIEvent()
-│   ├── events_test.go                # 47 tests, 98.1% coverage
+├── cli/                              # NDJSON events + CLI driver + agent sync
+│   ├── events.go                     # 9 event structs, ParseCLIEvent() (TUI-012)
 │   ├── driver.go                     # CLIDriver: subprocess lifecycle, NDJSON streaming (TUI-013)
-│   └── driver_test.go                # 60 tests, 78.6% coverage, race-free
+│   ├── agent_sync.go                 # SyncAssistantEvent/SyncUserEvent, ParseTaskInput (TUI-021)
+│   └── *_test.go                     # 152 tests, 84.1% coverage, race-free
 ├── mcp/                              # MCP server tools + IPC protocol (TUI-014)
 │   ├── protocol.go                   # IPCRequest/Response, 6 payload types
 │   ├── tools.go                      # 7 tool handlers + UDSClient
 │   └── tools_test.go                 # 30 tests, 74.4% coverage
 ├── bridge/                           # TUI-side UDS listener (TUI-015)
-│   ├── server.go                     # IPCBridge, modal correlation, fire-and-forget
-│   └── server_test.go                # 10 tests, 79% coverage
+│   ├── server.go                     # IPCBridge, modal correlation, ResolveModalSimple (TUI-018)
+│   └── server_test.go                # 10 tests, 76.2% coverage
+├── state/                            # Agent state tracking (TUI-019)
+│   ├── agent.go                      # AgentRegistry (RWMutex), Agent, AgentTreeNode, AgentStats
+│   └── agent_test.go                 # 56 tests, 96.1% coverage, race-free
 ├── components/
 │   ├── banner/banner.go              # BannerModel (TUI-009)
 │   ├── statusline/statusline.go      # StatusLineModel (TUI-009)
-│   └── tabbar/tabbar.go              # TabBarModel (TUI-009)
+│   ├── tabbar/tabbar.go              # TabBarModel (TUI-009)
+│   ├── modals/                       # Modal system (TUI-017, TUI-018)
+│   │   ├── types.go                  # ModalType enum, ModalRequest/Response
+│   │   ├── model.go                  # ModalModel (tea.Model), ModalResponseMsg
+│   │   ├── queue.go                  # ModalQueue (sequential FIFO gate)
+│   │   ├── permission.go             # PermissionHandler (6 flow types, multi-step)
+│   │   └── *_test.go                 # 107 tests, 88.5% coverage
+│   └── agents/                       # Agent tree + detail views (TUI-020)
+│       ├── tree.go                   # AgentTreeModel (scrollable, Unicode connectors)
+│       ├── detail.go                 # AgentDetailModel (display-only)
+│       └── *_test.go                 # 41 tests, 90.6% coverage
 ├── config/
 │   ├── theme.go                      # Colors, styles, icons, Theme struct (TUI-005)
 │   └── keys.go                       # KeyMap, 24 bindings, 5 groups (TUI-007)
 └── model/
     ├── focus.go                      # FocusTarget, RightPanelMode (TUI-006)
-    ├── app.go                        # AppModel, layout compositor (TUI-008, TUI-010)
-    └── messages.go                   # 16 tea.Msg types (TUI-008)
+    ├── app.go                        # AppModel, sharedState, layout, permission wiring (TUI-008/010/018)
+    ├── startup.go                    # CLI startup sequence (TUI-016)
+    └── messages.go                   # 18 tea.Msg types (TUI-008/016)
 
 cmd/
 ├── gofortress/main.go                # TUI entry point, stdlib flag (TUI-011)
 └── gofortress-mcp/main.go            # MCP server stub (TUI-011)
 ```
 
-274 tests across 9 packages, average ~89% coverage.
+557 tests across 12 packages, average ~88% coverage.
+
+#### Import Graph (acyclic)
+
+```
+config ←── banner, tabbar, statusline, modals, agents
+state  ←── agents, cli (agent_sync)
+modals ←── model (ModalResponseMsg type-switch)
+model  ←── bridge (BridgeModalRequestMsg)
+mcp    ←── bridge (ModalResponsePayload), pkg/routing
+```
+
+Key cycle-prevention interfaces in `model` package:
+- `tabBarWidget` (breaks model ↔ tabbar)
+- `cliDriverWidget` (breaks model ↔ cli)
+- `bridgeWidget` with `ResolveModalSimple` (breaks model ↔ mcp)
+
+#### sharedState (pointer-based, survives Bubbletea value-copy)
+
+```go
+type sharedState struct {
+    cliDriver   cliDriverWidget           // TUI-016
+    bridge      bridgeWidget              // TUI-016
+    modalQueue  *modals.ModalQueue        // TUI-018
+    permHandler *modals.PermissionHandler // TUI-018
+}
+```
 
 ### 16.7 Review Conditions (resolved)
 
@@ -1523,6 +1563,7 @@ cmd/
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | 2026-03-23 | Updated Section 16 for Phases 4-5 completion: modal system (TUI-017/018), agent tree (TUI-019/020/021). Updated package tree to 12 packages/557 tests. Added import graph, sharedState diagram, cycle-prevention interfaces. Phase status 4+5 → COMPLETE. |
 | 1.4 | 2026-03-23 | Added Section 16: TUI Migration (TUI-001 to TUI-042). Marked Section 15 as legacy/superseded. Updated header to reflect v2 migration status. Fixed `.ticket-config.json` stale reference. |
 | 1.3 | 2026-02-02 | Added `gogent-scout` unified scout binary (Section 9.3): smart backend routing (native Go / Gemini 3 Flash), multi-factor scoring, fallback chain, updated routing-schema.json scout_protocol |
 | 1.2 | 2026-02-01 | Added Review Skill ML Telemetry System (v2.4.0): Section 4.5-4.7, 6 new agents, gogent-log-review/gogent-update-review-outcome binaries, review-findings.jsonl/review-outcomes.jsonl/sharp-edge-hits.jsonl telemetry files |

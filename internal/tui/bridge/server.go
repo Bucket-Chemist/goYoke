@@ -287,6 +287,14 @@ func (b *IPCBridge) ResolveModal(requestID string, response mcp.ModalResponsePay
 	b.mu.Unlock()
 }
 
+// ResolveModalSimple is a convenience wrapper around ResolveModal that accepts
+// a plain string value instead of a mcp.ModalResponsePayload.  It is called by
+// AppModel via the bridgeWidget interface, which cannot reference the mcp
+// package directly without creating a circular import.
+func (b *IPCBridge) ResolveModalSimple(requestID string, value string) {
+	b.ResolveModal(requestID, mcp.ModalResponsePayload{Value: value})
+}
+
 // Shutdown stops the bridge: it signals all blocked modal handlers,
 // closes the listener, removes the socket file, and drains the pending
 // modal map.

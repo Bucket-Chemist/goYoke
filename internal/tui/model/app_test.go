@@ -54,11 +54,15 @@ func TestNewAppModel_Defaults(t *testing.T) {
 	if m.ready {
 		t.Error("ready = true; want false before first WindowSizeMsg")
 	}
-	if m.modalActive != nil {
-		t.Error("modalActive != nil; want nil on construction")
+	// shared state must be initialised by NewAppModel.
+	if m.shared == nil {
+		t.Fatal("shared = nil; want non-nil sharedState")
 	}
-	if m.modalQueue != nil {
-		t.Error("modalQueue != nil; want nil on construction")
+	if m.shared.modalQueue == nil {
+		t.Error("shared.modalQueue = nil; want non-nil ModalQueue")
+	}
+	if m.shared.permHandler == nil {
+		t.Error("shared.permHandler = nil; want non-nil PermissionHandler")
 	}
 }
 
@@ -470,19 +474,35 @@ func TestHandleKey_Modal_CancelDismissesModal(t *testing.T) {
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = updated.(AppModel)
 
-	// Simulate an active modal.
-	stub := &ModalModel{}
-	m.modalActive = stub
+	// Simulate an active modal by injecting a BridgeModalRequestMsg with a
+	// Confirm-style option set (Yes / No).
+	updated, _ = m.Update(BridgeModalRequestMsg{
+		RequestID: "test-cancel",
+		Message:   "Continue?",
+		Options:   []string{"Yes", "No"},
+	})
+	m = updated.(AppModel)
 
-	// Esc triggers ModalCancel.
+	// Verify the modal queue is now active.
+	if !m.shared.modalQueue.IsActive() {
+		t.Fatal("modal queue not active after BridgeModalRequestMsg")
+	}
+
+	// Esc triggers ModalCancel — the modal should emit a ModalResponseMsg
+	// (cancelled) which is handled in Update.
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	result := updated.(AppModel)
 
-	if result.modalActive != nil {
-		t.Error("modalActive != nil after ModalCancel; want nil")
-	}
+	// The Esc key produces a cmd that returns a ModalResponseMsg.
+	// Execute it and feed it back through Update to resolve the modal.
 	if cmd != nil {
-		t.Error("cmd != nil after ModalCancel; want nil")
+		msg := cmd()
+		updated2, _ := result.Update(msg)
+		result = updated2.(AppModel)
+	}
+
+	if result.shared.modalQueue.IsActive() {
+		t.Error("modal queue still active after ModalCancel; want inactive")
 	}
 }
 
@@ -491,9 +511,18 @@ func TestHandleKey_Modal_GlobalKeysNotFiredWhenModalActive(t *testing.T) {
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m = updated.(AppModel)
 
-	stub := &ModalModel{}
-	m.modalActive = stub
+	// Activate a modal via BridgeModalRequestMsg.
+	updated, _ = m.Update(BridgeModalRequestMsg{
+		RequestID: "test-global",
+		Message:   "Proceed?",
+		Options:   []string{"Yes", "No"},
+	})
+	m = updated.(AppModel)
 	initialFocus := m.focus
+
+	if !m.shared.modalQueue.IsActive() {
+		t.Fatal("precondition: modal queue not active")
+	}
 
 	// Tab would normally toggle focus but should be swallowed by modal.
 	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
@@ -504,8 +533,8 @@ func TestHandleKey_Modal_GlobalKeysNotFiredWhenModalActive(t *testing.T) {
 			initialFocus, result.focus)
 	}
 	// Modal should still be active (tab is not ModalCancel).
-	if result.modalActive == nil {
-		t.Error("modalActive = nil after non-cancel key; want modal to remain")
+	if !result.shared.modalQueue.IsActive() {
+		t.Error("modal queue inactive after non-cancel key; want modal to remain active")
 	}
 }
 
@@ -571,20 +600,20 @@ func TestMessageTypes_Count(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// ModalRequest struct
+// DiffEntry struct
 // ---------------------------------------------------------------------------
 
-func TestModalRequest_Fields(t *testing.T) {
-	req := ModalRequest{
-		Title:   "Delete agent?",
-		Options: []string{"Yes", "No"},
+func TestDiffEntry_Fields(t *testing.T) {
+	entry := DiffEntry{
+		FilePath: "/tmp/foo.go",
+		Patch:    []byte(`{"hunks":[]}`),
 	}
 
-	if req.Title != "Delete agent?" {
-		t.Errorf("Title = %q; want %q", req.Title, "Delete agent?")
+	if entry.FilePath != "/tmp/foo.go" {
+		t.Errorf("FilePath = %q; want %q", entry.FilePath, "/tmp/foo.go")
 	}
-	if len(req.Options) != 2 {
-		t.Errorf("Options length = %d; want 2", len(req.Options))
+	if string(entry.Patch) != `{"hunks":[]}` {
+		t.Errorf("Patch = %s; want %s", entry.Patch, `{"hunks":[]}`)
 	}
 }
 
@@ -600,5 +629,4 @@ func TestPlaceholderChildModels_ZeroValue(t *testing.T) {
 	_ = AgentTreeModel{}
 	_ = AgentDetailModel{}
 	_ = ToastModel{}
-	_ = ModalModel{}
 }
