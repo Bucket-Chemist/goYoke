@@ -6,12 +6,42 @@ package statusline
 
 import (
 	"fmt"
+	"os/exec"
+	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
+
+// ---------------------------------------------------------------------------
+// Message types
+// ---------------------------------------------------------------------------
+
+// gitBranchMsg carries the result of `git rev-parse --abbrev-ref HEAD`.
+type gitBranchMsg struct {
+	Branch string
+	Err    error
+}
+
+// authStatusMsg carries the result of `claude auth status`.
+type authStatusMsg struct {
+	Status string
+	Err    error
+}
+
+// gitBranchTickMsg is fired by the periodic git-branch refresh timer.
+type gitBranchTickMsg time.Time
+
+// authStatusTickMsg is fired by the periodic auth-status refresh timer.
+type authStatusTickMsg time.Time
+
+// ---------------------------------------------------------------------------
+// Model
+// ---------------------------------------------------------------------------
 
 // StatusLineModel is the Bubbletea model for the bottom status bar.
 // It holds eight data fields that are rendered into two rows:
@@ -55,17 +85,47 @@ func NewStatusLineModel(width int) StatusLineModel {
 	return StatusLineModel{width: width}
 }
 
+// ---------------------------------------------------------------------------
+// tea.Model interface
+// ---------------------------------------------------------------------------
+
 // Init implements tea.Model. The status line requires no startup commands.
 func (m StatusLineModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update implements tea.Model. It handles tea.WindowSizeMsg to keep the
-// status line width in sync with the terminal size.
-func (m StatusLineModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if msg, ok := msg.(tea.WindowSizeMsg); ok {
+// Update handles status-line messages. It returns a typed StatusLineModel
+// (not tea.Model) so the parent can use it directly without a type assertion.
+//
+// Handled messages:
+//   - tea.WindowSizeMsg   — keeps width in sync
+//   - gitBranchMsg        — updates GitBranch field
+//   - authStatusMsg       — updates AuthStatus field
+//   - gitBranchTickMsg    — fires the next background git fetch
+//   - authStatusTickMsg   — fires the next background auth fetch
+func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
 		m.width = msg.Width
+
+	case gitBranchMsg:
+		if msg.Err == nil {
+			m.GitBranch = msg.Branch
+		} else {
+			m.GitBranch = "N/A"
+		}
+
+	case authStatusMsg:
+		// msg always pre-fills Status with "N/A" on error.
+		m.AuthStatus = msg.Status
+
+	case gitBranchTickMsg:
+		return m, gitBranchCmd()
+
+	case authStatusTickMsg:
+		return m, authStatusCmd()
 	}
+
 	return m, nil
 }
 
@@ -83,7 +143,7 @@ func (m StatusLineModel) View() string {
 	// Row 1: financial / quota fields
 	costField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label("cost:"),
-		value(fmt.Sprintf("$%.4f", m.SessionCost)),
+		value(state.FormatCost(m.SessionCost)),
 	)
 	tokenField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" tokens:"),
@@ -131,7 +191,85 @@ func (m StatusLineModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, row1, row2)
 }
 
+// ---------------------------------------------------------------------------
+// Public helpers
+// ---------------------------------------------------------------------------
+
 // SetWidth updates the status line width for responsive resizing.
 func (m *StatusLineModel) SetWidth(w int) {
 	m.width = w
+}
+
+// StartTicks returns the initial commands to fetch git branch and auth status
+// immediately, plus the periodic tick schedulers. Call from AppModel.Init()
+// or after the CLI driver is ready.
+func (m StatusLineModel) StartTicks() tea.Cmd {
+	return tea.Batch(
+		gitBranchCmd(),
+		authStatusCmd(),
+		scheduleGitBranchTick(),
+		scheduleAuthStatusTick(),
+	)
+}
+
+// ---------------------------------------------------------------------------
+// Background commands (never block Update or View)
+// ---------------------------------------------------------------------------
+
+// binaryExists reports whether the named executable is available on PATH.
+func binaryExists(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
+// gitBranchCmd runs `git rev-parse --abbrev-ref HEAD` in a goroutine and
+// returns the result as a gitBranchMsg. If the git binary is not found or the
+// command fails, the Err field is set and GitBranch will be "N/A".
+func gitBranchCmd() tea.Cmd {
+	return func() tea.Msg {
+		if !binaryExists("git") {
+			return gitBranchMsg{Err: fmt.Errorf("git not found")}
+		}
+		out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+		if err != nil {
+			return gitBranchMsg{Err: err}
+		}
+		return gitBranchMsg{Branch: strings.TrimSpace(string(out))}
+	}
+}
+
+// authStatusCmd runs `claude auth status` in a goroutine and extracts a short
+// status string from the output. If the claude binary is not found or the
+// command fails, Status is set to "N/A".
+func authStatusCmd() tea.Cmd {
+	return func() tea.Msg {
+		if !binaryExists("claude") {
+			return authStatusMsg{Status: "N/A", Err: fmt.Errorf("claude not found")}
+		}
+		out, err := exec.Command("claude", "auth", "status").Output()
+		if err != nil {
+			return authStatusMsg{Status: "N/A", Err: err}
+		}
+		status := strings.TrimSpace(string(out))
+		if len(status) > 30 {
+			status = status[:30] + "..."
+		}
+		return authStatusMsg{Status: status}
+	}
+}
+
+// scheduleGitBranchTick returns a command that fires after 30 seconds,
+// triggering the next background git-branch fetch.
+func scheduleGitBranchTick() tea.Cmd {
+	return tea.Tick(30*time.Second, func(t time.Time) tea.Msg {
+		return gitBranchTickMsg(t)
+	})
+}
+
+// scheduleAuthStatusTick returns a command that fires after 60 seconds,
+// triggering the next background auth-status fetch.
+func scheduleAuthStatusTick() tea.Cmd {
+	return tea.Tick(60*time.Second, func(t time.Time) tea.Msg {
+		return authStatusTickMsg(t)
+	})
 }

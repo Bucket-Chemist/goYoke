@@ -1,0 +1,184 @@
+// Package teams implements the team list and detail views for the
+// GOgent-Fortress TUI. It polls gogent-team-run config.json files to track
+// team execution state.
+//
+// The TeamConfig, Wave, and Member types are intentionally duplicated from
+// cmd/gogent-team-run (which is package main and cannot be imported). Both
+// representations are JSON-compatible.
+package teams
+
+import (
+	"sort"
+	"sync"
+	"time"
+)
+
+// ---------------------------------------------------------------------------
+// TeamConfig types
+//
+// Duplicated from cmd/gogent-team-run/config.go. Both sides use identical
+// JSON tags, so config.json files round-trip correctly.
+// ---------------------------------------------------------------------------
+
+// TeamConfig is the parsed representation of a team's config.json file.
+type TeamConfig struct {
+	TeamName           string  `json:"team_name"`
+	WorkflowType       string  `json:"workflow_type"`
+	Status             string  `json:"status"`         // pending|running|completed|failed
+	CreatedAt          string  `json:"created_at"`     // ISO 8601
+	CompletedAt        *string `json:"completed_at"`   // ISO 8601, nil while running
+	BudgetMaxUSD       float64 `json:"budget_max_usd"`
+	BudgetRemainingUSD float64 `json:"budget_remaining_usd"`
+	Waves              []Wave  `json:"waves"`
+}
+
+// Wave is a single execution wave within a team run.
+type Wave struct {
+	WaveNumber  int      `json:"wave_number"`
+	Description string   `json:"description"`
+	Members     []Member `json:"members"`
+}
+
+// Member is a single agent task within a wave.
+type Member struct {
+	Name         string  `json:"name"`
+	Agent        string  `json:"agent"`
+	Model        string  `json:"model"`
+	Status       string  `json:"status"`       // pending|running|completed|failed
+	CostUSD      float64 `json:"cost_usd"`
+	ErrorMessage string  `json:"error_message"`
+	StartedAt    *string `json:"started_at"`
+	CompletedAt  *string `json:"completed_at"`
+}
+
+// ---------------------------------------------------------------------------
+// TeamState
+// ---------------------------------------------------------------------------
+
+// TeamState is the TUI's cached view of a single team derived from its
+// config.json file.
+type TeamState struct {
+	// Dir is the absolute filesystem path to the team directory.
+	Dir string
+	// Config is the most recently parsed config.json.
+	Config TeamConfig
+	// LastPolled records when the config.json was last successfully read.
+	LastPolled time.Time
+}
+
+// copyOf returns a shallow copy of the TeamState. Config.Waves and their
+// Members slices are duplicated so callers cannot mutate internal state.
+func (ts *TeamState) copyOf() *TeamState {
+	cp := *ts
+	if ts.Config.Waves != nil {
+		cp.Config.Waves = make([]Wave, len(ts.Config.Waves))
+		for i, w := range ts.Config.Waves {
+			wCopy := w
+			if w.Members != nil {
+				wCopy.Members = make([]Member, len(w.Members))
+				copy(wCopy.Members, w.Members)
+			}
+			cp.Config.Waves[i] = wCopy
+		}
+	}
+	return &cp
+}
+
+// TotalCostUSD returns the sum of all member CostUSD values across all waves.
+func (ts *TeamState) TotalCostUSD() float64 {
+	var total float64
+	for _, w := range ts.Config.Waves {
+		for _, m := range w.Members {
+			total += m.CostUSD
+		}
+	}
+	return total
+}
+
+// CurrentWaveNumber returns the 1-based number of the last wave that contains
+// any non-pending member, or 1 when no waves exist. This approximates which
+// wave is currently active.
+func (ts *TeamState) CurrentWaveNumber() int {
+	for i := len(ts.Config.Waves) - 1; i >= 0; i-- {
+		for _, m := range ts.Config.Waves[i].Members {
+			if m.Status != "pending" {
+				return ts.Config.Waves[i].WaveNumber
+			}
+		}
+	}
+	if len(ts.Config.Waves) > 0 {
+		return ts.Config.Waves[0].WaveNumber
+	}
+	return 1
+}
+
+// ---------------------------------------------------------------------------
+// TeamRegistry
+// ---------------------------------------------------------------------------
+
+// TeamRegistry is a thread-safe store for all known team states.
+//
+// The zero value is not usable; use NewTeamRegistry instead.
+type TeamRegistry struct {
+	teams map[string]*TeamState // keyed by team directory path
+	mu    sync.RWMutex
+}
+
+// NewTeamRegistry allocates and returns an empty TeamRegistry.
+func NewTeamRegistry() *TeamRegistry {
+	return &TeamRegistry{
+		teams: make(map[string]*TeamState),
+	}
+}
+
+// Update inserts or replaces the TeamState for the given directory path.
+// It is safe to call from any goroutine.
+func (r *TeamRegistry) Update(dir string, config TeamConfig) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.teams[dir] = &TeamState{
+		Dir:        dir,
+		Config:     config,
+		LastPolled: time.Now(),
+	}
+}
+
+// Get returns a deep copy of the TeamState for the given directory, or nil
+// when no entry exists. The returned value is safe to mutate.
+func (r *TeamRegistry) Get(dir string) *TeamState {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	ts, ok := r.teams[dir]
+	if !ok {
+		return nil
+	}
+	return ts.copyOf()
+}
+
+// All returns deep copies of all registered team states, sorted by CreatedAt
+// descending (newest first). The returned slice is safe to mutate.
+func (r *TeamRegistry) All() []*TeamState {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make([]*TeamState, 0, len(r.teams))
+	for _, ts := range r.teams {
+		result = append(result, ts.copyOf())
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		// Descending: later CreatedAt values sort first.
+		return result[i].Config.CreatedAt > result[j].Config.CreatedAt
+	})
+
+	return result
+}
+
+// Count returns the number of registered teams.
+func (r *TeamRegistry) Count() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.teams)
+}

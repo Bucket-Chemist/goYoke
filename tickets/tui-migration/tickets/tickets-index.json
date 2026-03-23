@@ -377,7 +377,7 @@
     {
       "id": "TUI-022",
       "title": "Claude conversation panel",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "priority": "HIGH",
       "dependencies": [
@@ -395,7 +395,7 @@
     {
       "id": "TUI-023",
       "title": "Markdown rendering via Glamour",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "priority": "MEDIUM",
       "dependencies": [
@@ -413,7 +413,7 @@
     {
       "id": "TUI-024",
       "title": "Cost tracker ported from TS",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "priority": "HIGH",
       "dependencies": [
@@ -430,7 +430,7 @@
     {
       "id": "TUI-025",
       "title": "Toast notification system",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "priority": "MEDIUM",
       "dependencies": [
@@ -449,7 +449,7 @@
     {
       "id": "TUI-026",
       "title": "Status line data wiring",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "priority": "MEDIUM",
       "dependencies": [
@@ -467,7 +467,7 @@
     {
       "id": "TUI-027",
       "title": "Team polling and team list component",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "priority": "MEDIUM",
       "dependencies": [

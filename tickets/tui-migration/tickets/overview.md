@@ -169,11 +169,11 @@ The following review findings have been incorporated into the ticket description
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
 - [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
 - [ ] No orphaned processes: graceful shutdown within 10s
-- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓ (all `go build`/`go test`/`go vet` clean, 174 tests passing)
+- [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring (750+ tests, ~89% avg coverage across 16 packages)
 - [x] Old ticket requirements traced: all 13 GOgent-109–121 mapped in traceability table below
 - [ ] Ink TUI removable: `packages/tui/` deletable after parity
-- [ ] Race detector clean: `go test -race ./internal/tui/...` passes
-- [ ] Cost tracker functional: session cost, per-agent cost, budget enforcement
+- [x] Race detector clean: `go test -race ./internal/tui/...` passes ✅ (verified after integration wiring)
+- [x] Cost tracker functional: session cost, per-agent cost, budget enforcement (TUI-024 ✅, 97% coverage)
 
 ---
 
@@ -182,8 +182,11 @@ The following review findings have been incorporated into the ticket description
 ~~1. Run `/ticket` to begin implementation with TUI-001 (prerequisite spike)~~ ✅ Phase 1 complete
 ~~2. Address review conditions (C-1, C-2) before Phase 2 tickets~~ ✅ C-1 Go 1.25+ applied, C-2 MCP SDK v1.2.0 confirmed
 ~~3. Address major issues (M-1 through M-5) before Phases 2-7~~ ✅ M-1 resolved (stdlib `flag`), M-2–M-5 deferred to respective tickets
-4. Re-review after Phase 3 if significant design changes emerge from spike
-5. Continue with Phase 3: TUI-012 complete (NDJSON types), TUI-013 next (CLI subprocess driver)
+~~4. Re-review after Phase 3 if significant design changes emerge from spike~~ ✅ No design changes; two-process topology validated
+~~5. Continue with Phase 3: TUI-012 complete (NDJSON types), TUI-013 next (CLI subprocess driver)~~ ✅ Phase 3 complete
+~~6. Phase 6 in progress~~ ✅ Phase 6 COMPLETE (TUI-022–027, 6/6 done)
+~~6.5. Integration wiring~~ ✅ TUI-027.5: Placeholders replaced, components wired, streaming bug fixed, cost tracker unified
+7. Phase 7 next: TUI-028 (multi-provider config), TUI-029–031 (provider switching/tab/resume), TUI-032 (panels)
 
 ## Implementation Progress (updated 2026-03-23)
 
@@ -192,7 +195,12 @@ The following review findings have been incorporated into the ticket description
 | 1 | ✅ COMPLETE | TUI-001–004 | All 4 spikes done, results in `spike-results/` |
 | 2 | ✅ COMPLETE | TUI-005–011 | 7/7 done. 174 tests, avg 95% coverage |
 | 3 | ✅ COMPLETE | TUI-012–016 | 5/5 done. CLI driver, NDJSON parser, MCP server, UDS bridge, startup wiring |
-| 4–9 | ⏳ PENDING | TUI-017–042 | Blocked on Phase 3 |
+| 4 | ✅ COMPLETE | TUI-017–018 | 2/2 done. Modal system + permission flow. 107 modals tests, 88.5% coverage |
+| 5 | ✅ COMPLETE | TUI-019–021 | 3/3 done. AgentRegistry, tree/detail views, NDJSON sync. 249 tests across 3 pkgs |
+| 6 | ✅ COMPLETE | TUI-022–027 | 6/6 done + integration wiring (TUI-027.5). All components wired into AppModel. 750+ tests |
+| 7 | ⏳ PENDING | TUI-028–032 | Multi-provider config, switching, tab UI, session resume, panels |
+| 8 | ⏳ PENDING | TUI-033–035 | Session persistence, graceful shutdown, clipboard/search/history |
+| 9 | ⏳ PENDING | TUI-036–042 | Testing phase. TUI-036 scope reduced 3-4h (was 6-8h) — TUI-027.5 delivered 60% of coverage |
 
 ### Phase 2 Package Tree (delivered)
 
@@ -211,26 +219,61 @@ internal/tui/
 │   ├── server.go                 # IPCBridge, modal correlation, fire-and-forget dispatch
 │   └── server_test.go            # 10 tests, 79% coverage, race-free
 ├── components/
+│   ├── agents/                   # Agent tree + detail views (TUI-020)
+│   │   ├── tree.go               # AgentTreeModel: Unicode box-drawing, scrollable
+│   │   ├── tree_test.go          # 23 tests, 90.6% coverage
+│   │   ├── detail.go             # AgentDetailModel: display-only, word-wrapped
+│   │   └── detail_test.go        # 18 tests
+│   ├── claude/                   # Claude conversation panel (TUI-022)
+│   │   ├── panel.go              # ClaudePanelModel: viewport + textinput, streaming
+│   │   └── panel_test.go         # 44 tests, 82.3% coverage
 │   ├── banner/                   # BannerModel (TUI-009)
 │   │   ├── banner.go
 │   │   └── banner_test.go
+│   ├── modals/                   # Modal system (TUI-017, TUI-018)
+│   │   ├── types.go              # ModalType, ModalRequest, ModalResponse
+│   │   ├── types_test.go
+│   │   ├── model.go              # ModalModel: option selection, free-text "Other"
+│   │   ├── model_test.go
+│   │   ├── queue.go              # ModalQueue: FIFO queue, auto-activate next
+│   │   ├── queue_test.go
+│   │   ├── permission.go         # PermissionHandler: 6 flow types, multi-step ExitPlan
+│   │   └── permission_test.go    # 107 total modals tests, 88.5% coverage
 │   ├── statusline/               # StatusLineModel (TUI-009)
 │   │   ├── statusline.go
 │   │   └── statusline_test.go
-│   └── tabbar/                   # TabBarModel (TUI-009)
-│       ├── tabbar.go
-│       └── tabbar_test.go
+│   ├── tabbar/                   # TabBarModel (TUI-009)
+│   │   ├── tabbar.go
+│   │   └── tabbar_test.go
+│   ├── teams/                    # Team orchestration display (TUI-027)
+│   │   ├── state.go              # TeamRegistry, TeamConfig/Wave/Member types
+│   │   ├── state_test.go         # 17 tests
+│   │   ├── list.go               # TeamListModel: polling, navigation, status display
+│   │   ├── list_test.go          # 25 tests
+│   │   ├── detail.go             # TeamDetailModel: wave-grouped member view
+│   │   └── detail_test.go        # 23 tests — 94.0% coverage total
+│   └── toast/                    # Toast notifications (TUI-025)
+│       ├── toast.go              # ToastModel: auto-expire, max 3, level-colored
+│       └── toast_test.go         # 17 tests, 93.9% coverage
 ├── config/                       # Theme + keybindings (TUI-005, TUI-007)
 │   ├── theme.go                  # 7 colors, 10 styles, 6 icons, Theme struct
 │   ├── theme_test.go
 │   ├── keys.go                   # 24 bindings across 5 groups
 │   └── keys_test.go
+├── state/                        # Shared state (TUI-019)
+│   ├── agent.go                  # AgentRegistry: RWMutex, dedup, DFS tree
+│   └── agent_test.go             # 56 tests, 96.1% coverage
+├── util/                         # Shared utilities (TUI-023)
+│   ├── markdown.go               # Cached Glamour renderer, RenderMarkdown()
+│   └── markdown_test.go          # 14 tests, 87.0% coverage
 └── model/                        # Root AppModel + types (TUI-006, TUI-008)
     ├── focus.go                  # FocusTarget, RightPanelMode
     ├── focus_test.go
-    ├── app.go                    # AppModel (Elm Architecture), layout compositor
+    ├── app.go                    # AppModel (Elm Architecture), layout compositor, modal wiring
     ├── app_test.go
-    └── messages.go               # 16 tea.Msg types
+    ├── startup.go                # CLI startup sequence, reconnection logic
+    ├── startup_test.go
+    └── messages.go               # 20+ tea.Msg types (expanded in TUI-016, TUI-018)
 
 cmd/
 ├── gofortress/main.go            # TUI entry point (TUI-011)
@@ -248,6 +291,24 @@ cmd/
 | Version injection | ldflags `-X main.version` | Standard Go pattern |
 | Review C-1 | Go 1.25+ | Matches go.mod, applied to all tickets |
 | Review C-2 | MCP SDK v1.2.0 | Spike TUI-002 confirmed working, no upgrade needed |
+
+### Key Design Decisions (Phases 3-5)
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| NDJSON parsing | Two-pass JSON (discriminator then full) | CLIUnknownEvent for unknown types, forward-compatible |
+| CLI Driver event pump | Channel-to-Cmd re-subscription | Mandatory WaitForEvent() after each event; standard Bubbletea pattern |
+| MCP server binary | Separate `gofortress-mcp` process | Clear identity, spawned by CLI, connects back to TUI via UDS |
+| UDS IPC | json.NewEncoder/Decoder over net.Conn | 56µs roundtrip validated in spike |
+| Permission flow | Option D hybrid (acceptEdits + MCP side-channel) | No control_request protocol; MCP tools need --allowedTools |
+| PermissionHandler | 6 FlowTypes, multi-step ExitPlan | FlowEnterPlan, FlowExitPlan (2-step), FlowAskUser, FlowConfirm, FlowInput, FlowSelect |
+| Modal → bridge response | ResolveModalSimple(requestID, value) | Avoids mcp import in model package |
+| AgentRegistry | Flat map + computed tree cache, RWMutex | O(1) lookups, DFS tree only for View(), dedup on agentType+description |
+| Agent tree rendering | Unicode box-drawing (├─ / └─) | Status icon colors: Green=Complete, Red=Error, Yellow=Running, Gray=Pending |
+| Agent sync from NDJSON | SyncAssistantEvent/SyncUserEvent | Scans ContentBlock for Task tool_use → register; tool_result → complete/error |
+| sharedState pointer | Heap-allocated struct on AppModel | Survives tea.NewProgram value-copy; holds cliDriver, bridge, modalQueue |
+| ModalResponseMsg | Defined in modals package (not model) | Avoids circular import model → modals → model |
+| BridgeModalRequestMsg | Defined in model package | Bridge imports model (not reverse); consistent dependency direction |
 
 ---
 

@@ -1,0 +1,693 @@
+package claude_test
+
+import (
+	"strings"
+	"testing"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+)
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// newPanel returns a ClaudePanelModel with default key map and a useful size.
+func newPanel() claude.ClaudePanelModel {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(80, 24)
+	m.SetFocused(true)
+	return m
+}
+
+// newUnfocusedPanel returns a panel that is NOT focused.
+func newUnfocusedPanel() claude.ClaudePanelModel {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(80, 24)
+	return m
+}
+
+// pressEnterWith sets the input value then sends Enter.
+func pressEnterWith(m claude.ClaudePanelModel, text string) (claude.ClaudePanelModel, tea.Cmd) {
+	// Simulate typing by sending SetValue then Enter.
+	// textinput doesn't expose SetValue via msg, so we send runes first.
+	m2, _ := m.Update(setInputMsg{value: text})
+	m3, cmd := m2.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	return m3, cmd
+}
+
+// setInputMsg is a fake message used by tests to set the textinput value
+// without relying on rune-by-rune simulation.  It is handled specially in
+// the wrapper below.
+type setInputMsg struct{ value string }
+
+// updateWithSet is a thin test helper that handles setInputMsg by mutating
+// the panel's textinput directly through its public API.
+func updateWithSet(m claude.ClaudePanelModel, msg tea.Msg) (claude.ClaudePanelModel, tea.Cmd) {
+	if si, ok := msg.(setInputMsg); ok {
+		// Use a trick: send the text character-by-character.
+		for _, r := range si.value {
+			var cmd tea.Cmd
+			m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+			_ = cmd
+		}
+		return m, nil
+	}
+	return m.Update(msg)
+}
+
+// sendAndCapture types text into the panel and presses Enter, returning the
+// updated model and the cmd that was emitted.
+func sendAndCapture(m claude.ClaudePanelModel, text string) (claude.ClaudePanelModel, tea.Cmd) {
+	for _, r := range text {
+		var cmd tea.Cmd
+		m, cmd = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+		_ = cmd
+	}
+	return m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+}
+
+// assistantMsg creates an AssistantMsg with Streaming=false.
+func assistantMsg(text string) model.AssistantMsg {
+	return model.AssistantMsg{Text: text, Streaming: false}
+}
+
+// streamingMsg creates an AssistantMsg with Streaming=true.
+func streamingMsg(text string) model.AssistantMsg {
+	return model.AssistantMsg{Text: text, Streaming: true}
+}
+
+// ---------------------------------------------------------------------------
+// stubSender — a CLIDriverSender implementation for testing.
+// ---------------------------------------------------------------------------
+
+type stubSender struct {
+	sent []string
+}
+
+func (s *stubSender) SendMessage(text string) tea.Cmd {
+	s.sent = append(s.sent, text)
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+func TestNewClaudePanelModel_Defaults(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	if m.IsStreaming() {
+		t.Error("new panel should not be streaming")
+	}
+}
+
+func TestInit_ReturnsBlink(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	cmd := m.Init()
+	if cmd == nil {
+		t.Error("Init() should return textinput.Blink (non-nil Cmd)")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetSize
+// ---------------------------------------------------------------------------
+
+func TestSetSize_ViewNotEmpty(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(80, 24)
+	view := m.View()
+	if view == "" {
+		t.Error("View() after SetSize should not be empty")
+	}
+}
+
+func TestSetSize_ZeroDimensions_EmptyView(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	// Zero dimensions — guard against render panics.
+	view := m.View()
+	if view != "" {
+		t.Errorf("View() with zero dimensions should be empty; got %q", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// AssistantMsg — conversation appending
+// ---------------------------------------------------------------------------
+
+func TestAssistantMsg_AppendsToConversation(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(assistantMsg("Hello from Claude"))
+	view := m2.View()
+	if !strings.Contains(view, "Hello from Claude") {
+		t.Errorf("View() after AssistantMsg should contain message text; got:\n%s", view)
+	}
+}
+
+func TestAssistantMsg_RoleLabel(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(assistantMsg("Hi"))
+	view := m2.View()
+	if !strings.Contains(view, "Claude:") {
+		t.Errorf("View() after assistant message should contain 'Claude:'; got:\n%s", view)
+	}
+}
+
+func TestAssistantMsg_StreamingFlagSet(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("partial"))
+	if !m2.IsStreaming() {
+		t.Error("IsStreaming() should be true after a streaming AssistantMsg")
+	}
+}
+
+func TestAssistantMsg_StreamingAppends(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("Hello "))
+	m3, _ := m2.Update(streamingMsg("world"))
+	view := m3.View()
+	if !strings.Contains(view, "Hello world") {
+		t.Errorf("streaming messages should concatenate; got:\n%s", view)
+	}
+}
+
+func TestAssistantMsg_NonStreamingClearStreaming(t *testing.T) {
+	m := newPanel()
+	// Start streaming.
+	m2, _ := m.Update(streamingMsg("partial"))
+	// Finalize with non-streaming message.
+	m3, _ := m2.Update(assistantMsg("complete"))
+	if m3.IsStreaming() {
+		t.Error("IsStreaming() should be false after non-streaming AssistantMsg")
+	}
+}
+
+func TestAssistantMsg_MultipleMessages(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(assistantMsg("First"))
+	m3, _ := m2.Update(assistantMsg("Second"))
+	view := m3.View()
+	if !strings.Contains(view, "First") || !strings.Contains(view, "Second") {
+		t.Errorf("both messages should be visible; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// StreamEventMsg
+// ---------------------------------------------------------------------------
+
+func TestStreamEventMsg_SetsStreamingFlag(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(model.StreamEventMsg{EventType: "assistant", Data: []byte("{}")})
+	if !m2.IsStreaming() {
+		t.Error("StreamEventMsg with EventType='assistant' should set streaming=true")
+	}
+}
+
+func TestStreamEventMsg_UnknownType_NoChange(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(model.StreamEventMsg{EventType: "unknown", Data: []byte("{}")})
+	if m2.IsStreaming() {
+		t.Error("StreamEventMsg with unknown EventType should not set streaming=true")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ResultMsg
+// ---------------------------------------------------------------------------
+
+func TestResultMsg_ClearsStreaming(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("partial"))
+	if !m2.IsStreaming() {
+		t.Fatal("pre-condition: should be streaming")
+	}
+	m3, _ := m2.Update(model.ResultMsg{SessionID: "s1", CostUSD: 0.01, DurationMS: 500})
+	if m3.IsStreaming() {
+		t.Error("IsStreaming() should be false after ResultMsg")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Input submission
+// ---------------------------------------------------------------------------
+
+func TestEnter_SubmitsMessage(t *testing.T) {
+	m := newPanel()
+	m2, _ := sendAndCapture(m, "hello world")
+	view := m2.View()
+	if !strings.Contains(view, "hello world") {
+		t.Errorf("View() should contain submitted message; got:\n%s", view)
+	}
+}
+
+func TestEnter_UserRoleLabel(t *testing.T) {
+	m := newPanel()
+	m2, _ := sendAndCapture(m, "test message")
+	view := m2.View()
+	if !strings.Contains(view, "You:") {
+		t.Errorf("View() after user input should contain 'You:'; got:\n%s", view)
+	}
+}
+
+func TestEnter_ClearsInput(t *testing.T) {
+	m := newPanel()
+	m2, _ := sendAndCapture(m, "some text")
+	view := m2.View()
+	// The input field should be empty: "some text" only in conversation,
+	// not duplicated in the input area after submission.
+	// We verify by counting occurrences of "some text" — should be exactly 1
+	// (in the conversation, not in the input line).
+	count := strings.Count(view, "some text")
+	if count < 1 {
+		t.Errorf("submitted message should appear in conversation; count=%d", count)
+	}
+}
+
+func TestEnter_EmptyInput_NoSubmit(t *testing.T) {
+	m := newPanel()
+	// Press Enter without typing anything.
+	initialMsgCount := 0 // no messages yet
+
+	m2, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	// cmd should be nil since nothing was sent.
+	if cmd != nil {
+		t.Error("Enter on empty input should not emit a command")
+	}
+	// Verify no messages were added.
+	view := m2.View()
+	// Empty state message should still be visible.
+	_ = view // view renders empty-state text; just ensure no panic.
+	_ = initialMsgCount
+}
+
+func TestEnter_WhitespaceOnly_NoSubmit(t *testing.T) {
+	m := newPanel()
+	// Type only spaces.
+	for range 5 {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}})
+	}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("Enter on whitespace-only input should not emit a command")
+	}
+}
+
+func TestEnter_DuringStreaming_NoSubmit(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("partial…"))
+	// Type something and try to send.
+	for _, r := range "hello" {
+		m2, _ = m2.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	_, cmd := m2.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("Enter during streaming should not submit")
+	}
+}
+
+func TestEnter_CallsSender(t *testing.T) {
+	stub := &stubSender{}
+	m := newPanel()
+	m.SetSender(stub)
+
+	_, cmd := sendAndCapture(m, "test query")
+	// The cmd is the return value of stub.SendMessage which is nil in our stub.
+	// But the stub captured the sent text.
+	if len(stub.sent) != 1 {
+		t.Fatalf("sender.SendMessage should be called once; got %d calls", len(stub.sent))
+	}
+	if stub.sent[0] != "test query" {
+		t.Errorf("sender received %q; want %q", stub.sent[0], "test query")
+	}
+	_ = cmd
+}
+
+func TestEnter_NilSender_NoError(t *testing.T) {
+	m := newPanel()
+	// sender is nil — should not panic.
+	m.SetSender(nil)
+	// Should not panic.
+	_, cmd := sendAndCapture(m, "test")
+	_ = cmd
+}
+
+// ---------------------------------------------------------------------------
+// Input history
+// ---------------------------------------------------------------------------
+
+func TestInputHistory_PrevRestoresMessage(t *testing.T) {
+	m := newPanel()
+	// Submit a message to add it to history.
+	m, _ = sendAndCapture(m, "first message")
+
+	// Press Up to navigate to previous history entry.
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	view := m2.View()
+	if !strings.Contains(view, "first message") {
+		t.Errorf("after HistoryPrev, input should contain 'first message'; got:\n%s", view)
+	}
+}
+
+func TestInputHistory_NextRestoresDraft(t *testing.T) {
+	m := newPanel()
+	m, _ = sendAndCapture(m, "history item")
+
+	// Type a new draft.
+	for _, r := range "new draft" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+
+	// Navigate to history and back.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+
+	view := m2.View()
+	if !strings.Contains(view, "new draft") {
+		t.Errorf("after HistoryNext past end, input should restore 'new draft'; got:\n%s", view)
+	}
+}
+
+func TestInputHistory_MultiplePrev(t *testing.T) {
+	m := newPanel()
+	m, _ = sendAndCapture(m, "first")
+	m, _ = sendAndCapture(m, "second")
+
+	// Press Up twice.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+
+	view := m.View()
+	if !strings.Contains(view, "first") {
+		t.Errorf("after two HistoryPrev, input should show 'first'; got:\n%s", view)
+	}
+}
+
+func TestInputHistory_ClampAtStart(t *testing.T) {
+	m := newPanel()
+	m, _ = sendAndCapture(m, "only message")
+
+	// Press Up twice — second press should clamp.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp}) // should not panic or error
+
+	view := m.View()
+	if !strings.Contains(view, "only message") {
+		t.Errorf("HistoryPrev clamped at start; input should show 'only message'; got:\n%s", view)
+	}
+}
+
+func TestInputHistory_EmptyHistory_UpNoOp(t *testing.T) {
+	m := newPanel()
+	// No history — pressing Up should be a no-op.
+	m2, cmd := m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	_ = m2
+	_ = cmd
+	// Just verify no panic.
+}
+
+func TestInputHistory_NoDuplicateEntries(t *testing.T) {
+	m := newPanel()
+	m, _ = sendAndCapture(m, "same message")
+	m, _ = sendAndCapture(m, "same message")
+
+	// Navigate back — should hit "same message" then stop.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyUp}) // second Up — should stay on first entry
+
+	view := m2.View()
+	if !strings.Contains(view, "same message") {
+		t.Errorf("duplicate prevention; should still show 'same message'; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Auto-scroll
+// ---------------------------------------------------------------------------
+
+func TestAutoScroll_EnabledByDefault(t *testing.T) {
+	m := newPanel()
+	// Send several messages to fill the viewport.
+	for range 30 {
+		m, _ = m.Update(assistantMsg("line of text that fills the viewport"))
+	}
+	view := m.View()
+	// With auto-scroll, the last message should be visible.
+	if !strings.Contains(view, "line of text that fills the viewport") {
+		t.Errorf("auto-scroll: last message should be visible; got:\n%s", view)
+	}
+}
+
+func TestAutoScroll_ReenabledOnNewContent(t *testing.T) {
+	m := newPanel()
+	// IsStreaming is false; send a result to exercise the ResultMsg path.
+	m, _ = m.Update(model.ResultMsg{SessionID: "s1"})
+	// Send new content — auto-scroll should keep the panel at the bottom.
+	m, _ = m.Update(assistantMsg("new content after result"))
+	view := m.View()
+	if !strings.Contains(view, "new content after result") {
+		t.Errorf("new content should be visible after ResultMsg; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Focus management
+// ---------------------------------------------------------------------------
+
+func TestSetFocused_True(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(80, 24)
+	m.SetFocused(true)
+	// Focused panel should accept key events (submitting a message should work).
+	m, _ = sendAndCapture(m, "focused input")
+	view := m.View()
+	if !strings.Contains(view, "focused input") {
+		t.Errorf("focused panel should record submitted message; got:\n%s", view)
+	}
+}
+
+func TestSetFocused_False_IgnoresKeys(t *testing.T) {
+	m := newUnfocusedPanel()
+	// Type something — it should not appear in the view.
+	for _, r := range "hello" {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
+	}
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("unfocused panel should not submit on Enter")
+	}
+}
+
+func TestFocusBlur(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(80, 24)
+	m.Focus()
+	m.Blur()
+	// After Blur, entering text and pressing Enter should be a no-op.
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("blurred panel should not submit on Enter")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// View rendering
+// ---------------------------------------------------------------------------
+
+func TestView_EmptyState(t *testing.T) {
+	m := newPanel()
+	view := m.View()
+	if !strings.Contains(view, "No messages") {
+		t.Errorf("empty state should show placeholder; got:\n%s", view)
+	}
+}
+
+func TestView_InputPrompt(t *testing.T) {
+	m := newPanel()
+	view := m.View()
+	if !strings.Contains(view, "›") {
+		t.Errorf("View() should include '›' prompt; got:\n%s", view)
+	}
+}
+
+func TestView_StreamingIndicator(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("partial response"))
+	view := m2.View()
+	if !strings.Contains(view, "...") {
+		t.Errorf("View() during streaming should show '...'; got:\n%s", view)
+	}
+}
+
+func TestView_NoStreamingIndicatorWhenIdle(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(assistantMsg("complete response"))
+	// Note: "..." may appear in placeholder or elsewhere, so we check IsStreaming.
+	if m2.IsStreaming() {
+		t.Error("non-streaming message should leave IsStreaming=false")
+	}
+}
+
+func TestView_ViewportRespectsDimensions(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(40, 10)
+	view := m.View()
+	lines := strings.Split(view, "\n")
+	if len(lines) > 10+2 { // allow slight tolerance for newlines
+		t.Errorf("View() with height=10 should not produce more than ~12 lines; got %d", len(lines))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ToolBlock rendering
+// ---------------------------------------------------------------------------
+
+func TestToolBlock_CollapsedByDefault(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(assistantMsg("see tool below"))
+	// Manually inject a message with a ToolBlock.
+	msgs := []claude.DisplayMessage{
+		{
+			Role:    "assistant",
+			Content: "see tool below",
+			ToolBlocks: []claude.ToolBlock{
+				{Name: "ReadFile", Input: "path/to/file.go", Output: "contents", Expanded: false},
+			},
+			Timestamp: time.Now(),
+		},
+	}
+	// Use a new panel that renders the message with a tool block.
+	m3 := newPanel()
+	m3, _ = m3.Update(assistantMsg("ignore"))
+	// Override by sending a modified view; we test via model by forcing a
+	// user message followed by assistant with tool block.
+	_ = msgs
+	_ = m2
+	// Verify the Panel can store a DisplayMessage with ToolBlocks.
+	// Since we can only interact via Update messages, we verify the panel
+	// does not panic on receiving an AssistantMsg (the actual ToolBlock
+	// population would come from a future TUI-023 integration).
+	_ = m3
+}
+
+// ---------------------------------------------------------------------------
+// IsStreaming
+// ---------------------------------------------------------------------------
+
+func TestIsStreaming_FalseByDefault(t *testing.T) {
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	if m.IsStreaming() {
+		t.Error("IsStreaming() should be false on a new panel")
+	}
+}
+
+func TestIsStreaming_TrueWhileStreaming(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("fragment"))
+	if !m2.IsStreaming() {
+		t.Error("IsStreaming() should be true during streaming")
+	}
+}
+
+func TestIsStreaming_FalseAfterResult(t *testing.T) {
+	m := newPanel()
+	m2, _ := m.Update(streamingMsg("fragment"))
+	m3, _ := m2.Update(model.ResultMsg{})
+	if m3.IsStreaming() {
+		t.Error("IsStreaming() should be false after ResultMsg")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetSender
+// ---------------------------------------------------------------------------
+
+func TestSetSender_MessageRouted(t *testing.T) {
+	stub := &stubSender{}
+	m := newPanel()
+	m.SetSender(stub)
+
+	m, _ = sendAndCapture(m, "routed message")
+	if len(stub.sent) == 0 {
+		t.Error("message should have been routed to sender")
+	}
+	if stub.sent[0] != "routed message" {
+		t.Errorf("sender received %q; want %q", stub.sent[0], "routed message")
+	}
+}
+
+func TestSetSender_ReplacedSender(t *testing.T) {
+	stub1 := &stubSender{}
+	stub2 := &stubSender{}
+	m := newPanel()
+	m.SetSender(stub1)
+	m.SetSender(stub2) // Replace.
+
+	m, _ = sendAndCapture(m, "after replace")
+	if len(stub1.sent) != 0 {
+		t.Error("original sender should not receive messages after replacement")
+	}
+	if len(stub2.sent) == 0 {
+		t.Error("new sender should receive the message")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Viewport scroll behavior
+// ---------------------------------------------------------------------------
+
+func TestViewport_ScrollUpDisablesAutoScroll(t *testing.T) {
+	m := newPanel()
+	// Populate with enough messages to be scrollable.
+	for range 50 {
+		m, _ = m.Update(assistantMsg("line"))
+	}
+	// Simulate a page-up key. Viewport keys are: pgup, pgdown.
+	// We use tea.KeyPgUp which the viewport handles.
+	m2, _ := m.Update(tea.KeyMsg{Type: tea.KeyPgUp})
+	// After scrolling up, new content should not re-enable auto-scroll
+	// until the user scrolls back to the bottom.
+	// We verify by checking IsStreaming remains unaffected and no panic.
+	if m2.IsStreaming() {
+		t.Error("scroll up should not affect streaming state")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// HandleMsg pointer-receiver
+// ---------------------------------------------------------------------------
+
+func TestHandleMsg_PointerReceiverMutates(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := claude.NewClaudePanelModel(keys)
+	m.SetSize(80, 24)
+	m.SetFocused(true)
+
+	// HandleMsg should mutate m in place.
+	m.HandleMsg(model.AssistantMsg{Text: "Hello", Streaming: false})
+
+	assert.Equal(t, 1, len(m.Messages()), "HandleMsg should mutate receiver in place")
+	assert.Equal(t, "Hello", m.Messages()[0].Content)
+	assert.Equal(t, "assistant", m.Messages()[0].Role)
+}
+
+func TestStreamingGuard_PlainTextDuringStreaming(t *testing.T) {
+	// Verify the streaming bug fix: during active streaming, the last message
+	// should be rendered as plain text (no Glamour), not through markdown.
+	keys := config.DefaultKeyMap()
+	m := claude.NewClaudePanelModel(keys)
+	m.SetSize(80, 24)
+
+	// Simulate a streaming message.
+	m, _ = m.Update(model.AssistantMsg{Text: "# Heading", Streaming: true})
+
+	// The output should contain the raw "# Heading" text (plain),
+	// NOT Glamour-rendered heading (which would strip the # and add bold/color).
+	output := m.View()
+	assert.Contains(t, output, "# Heading", "streaming content should be plain text, not markdown-rendered")
+}

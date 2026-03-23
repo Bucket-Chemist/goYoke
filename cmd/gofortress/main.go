@@ -31,7 +31,10 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/lifecycle"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	claudepkg "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/tabbar"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/teams"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/toast"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 )
@@ -83,6 +86,17 @@ func main() {
 	tb := tabbar.NewTabBarModel(keys, 0)
 	app.SetTabBar(&tb)
 
+	// Wire Phase 6 child components into shared state.
+	cp := claudepkg.NewClaudePanelModel(keys)
+	app.SetClaudePanel(&cp)
+
+	toastModel := toast.NewToastModel()
+	app.SetToasts(&toastModel)
+
+	teamReg := teams.NewTeamRegistry()
+	teamList := teams.NewTeamListModel(teamReg)
+	app.SetTeamList(&teamList)
+
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
 		SessionID:      *sessionID,
@@ -94,6 +108,7 @@ func main() {
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)
+	cp.SetSender(driver) // driver satisfies claude.CLIDriverSender
 	defer driver.Shutdown() //nolint:errcheck
 
 	// -----------------------------------------------------------------------

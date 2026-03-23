@@ -1,12 +1,6 @@
 // Package model defines shared state types for the GOgent-Fortress TUI.
 // This file contains the root AppModel: the single top-level tea.Model that
 // owns all application state and implements The Elm Architecture.
-//
-// Downstream tickets fill in the placeholder child models:
-//   - ClaudePanelModel — TUI-022 (Claude conversation panel)
-//   - AgentTreeModel   — TUI-020 (Agent tree view + detail)
-//   - AgentDetailModel — TUI-020 (Agent tree view + detail)
-//   - ToastModel       — TUI-025 (Toast notification system)
 package model
 
 import (
@@ -17,10 +11,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -82,6 +78,50 @@ type bridgeWidget interface {
 }
 
 // ---------------------------------------------------------------------------
+// claudePanelWidget
+//
+// claudePanelWidget is the interface satisfied by *claude.ClaudePanelModel.
+// claude imports model, so a direct import here would create a cycle.
+// ---------------------------------------------------------------------------
+
+// claudePanelWidget is the interface satisfied by *claude.ClaudePanelModel.
+type claudePanelWidget interface {
+	HandleMsg(msg tea.Msg) tea.Cmd
+	View() string
+	SetSize(width, height int)
+	SetFocused(focused bool)
+	IsStreaming() bool
+}
+
+// ---------------------------------------------------------------------------
+// toastWidget
+//
+// toastWidget is the interface satisfied by *toast.ToastModel.
+// ---------------------------------------------------------------------------
+
+// toastWidget is the interface satisfied by *toast.ToastModel.
+type toastWidget interface {
+	HandleMsg(msg tea.Msg) tea.Cmd
+	View() string
+	SetSize(width, height int)
+	IsEmpty() bool
+}
+
+// ---------------------------------------------------------------------------
+// teamListWidget
+//
+// teamListWidget is the interface satisfied by *teams.TeamListModel.
+// ---------------------------------------------------------------------------
+
+// teamListWidget is the interface satisfied by *teams.TeamListModel.
+type teamListWidget interface {
+	HandleMsg(msg tea.Msg) tea.Cmd
+	View() string
+	SetSize(width, height int)
+	StartPolling(teamsDir string) tea.Cmd
+}
+
+// ---------------------------------------------------------------------------
 // sharedState
 //
 // sharedState holds the mutable external references that must survive the
@@ -96,10 +136,15 @@ type bridgeWidget interface {
 // sharedState holds the external component references shared between main.go
 // and the AppModel copy held inside tea.Program.
 type sharedState struct {
-	cliDriver   cliDriverWidget
-	bridge      bridgeWidget
-	modalQueue  *modals.ModalQueue
-	permHandler *modals.PermissionHandler
+	cliDriver     cliDriverWidget
+	bridge        bridgeWidget
+	modalQueue    *modals.ModalQueue
+	permHandler   *modals.PermissionHandler
+	agentRegistry *state.AgentRegistry
+	costTracker   *state.CostTracker
+	claudePanel   claudePanelWidget
+	toasts        toastWidget
+	teamList      teamListWidget
 }
 
 // ---------------------------------------------------------------------------
@@ -109,10 +154,10 @@ type sharedState struct {
 // ---------------------------------------------------------------------------
 
 const (
-	bannerHeight    = 3 // rounded border top + title + border bottom
-	tabBarHeight    = 1 // single-row strip
+	bannerHeight     = 3 // rounded border top + title + border bottom
+	tabBarHeight     = 1 // single-row strip
 	statusLineHeight = 2 // two-row status bar
-	borderFrame     = 2 // border chars on each axis (1 left + 1 right)
+	borderFrame      = 2 // border chars on each axis (1 left + 1 right)
 )
 
 // ---------------------------------------------------------------------------
@@ -151,29 +196,6 @@ func (t TabID) String() string {
 		return "Unknown"
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Placeholder child model types
-//
-// Each placeholder is an empty struct.  Later tickets replace these stubs
-// with full implementations.  The TODO comments note the ticket responsible.
-// ---------------------------------------------------------------------------
-
-// ClaudePanelModel is a placeholder for the Claude conversation panel.
-// TODO(TUI-022): implement conversation history + text input.
-type ClaudePanelModel struct{}
-
-// AgentTreeModel is a placeholder for the agent list tree.
-// TODO(TUI-020): implement hierarchical agent list with status icons.
-type AgentTreeModel struct{}
-
-// AgentDetailModel is a placeholder for the agent detail view.
-// TODO(TUI-020): implement agent detail panel with tool history.
-type AgentDetailModel struct{}
-
-// ToastModel is a placeholder for the toast notification overlay.
-// TODO(TUI-025): implement transient toast stack with level colours.
-type ToastModel struct{}
 
 // ---------------------------------------------------------------------------
 // DiffEntry
@@ -237,11 +259,9 @@ type AppModel struct {
 	tabBar     tabBarWidget
 	statusLine statusline.StatusLineModel
 
-	// Child model placeholders (filled by downstream tickets)
-	claudePanel ClaudePanelModel
-	agentTree   AgentTreeModel
-	agentDetail AgentDetailModel
-	toasts      ToastModel
+	// Child models (directly importable — agents doesn't import model)
+	agentTree   agents.AgentTreeModel
+	agentDetail agents.AgentDetailModel
 
 	// Diff history (post-hoc diffs from Write/Edit/Bash tool results).
 	// TUI-022 renders these inline in the Claude panel.
@@ -251,7 +271,7 @@ type AppModel struct {
 	keys config.KeyMap
 
 	// Shared external components (see sharedState for rationale).
-	// Access via m.shared.cliDriver and m.shared.bridge.
+	// Access via m.shared.cliDriver, m.shared.bridge, etc.
 	shared *sharedState
 
 	// Startup / session state (TUI-016).
@@ -275,8 +295,10 @@ func NewAppModel() AppModel {
 	keys := config.DefaultKeyMap()
 	mq := modals.NewModalQueue(keys)
 	shared := &sharedState{
-		modalQueue:  &mq,
-		permHandler: modals.NewPermissionHandler(&mq),
+		modalQueue:    &mq,
+		permHandler:   modals.NewPermissionHandler(&mq),
+		agentRegistry: state.NewAgentRegistry(),
+		costTracker:   state.NewCostTracker(),
 	}
 	return AppModel{
 		focus:          FocusClaude,
@@ -285,6 +307,8 @@ func NewAppModel() AppModel {
 		keys:           keys,
 		banner:         banner.NewBannerModel(0),
 		statusLine:     statusline.NewStatusLineModel(0),
+		agentTree:      agents.NewAgentTreeModel(),
+		agentDetail:    agents.NewAgentDetailModel(),
 		shared:         shared,
 	}
 }
@@ -309,6 +333,21 @@ func (m *AppModel) SetCLIDriver(d cliDriverWidget) {
 // for the rationale behind the shared state pattern.
 func (m *AppModel) SetBridge(b bridgeWidget) {
 	m.shared.bridge = b
+}
+
+// SetClaudePanel injects the Claude conversation panel.
+func (m *AppModel) SetClaudePanel(cp claudePanelWidget) {
+	m.shared.claudePanel = cp
+}
+
+// SetToasts injects the toast notification model.
+func (m *AppModel) SetToasts(t toastWidget) {
+	m.shared.toasts = t
+}
+
+// SetTeamList injects the team list model.
+func (m *AppModel) SetTeamList(tl teamListWidget) {
+	m.shared.teamList = tl
 }
 
 // ---------------------------------------------------------------------------
@@ -357,6 +396,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.shared.modalQueue.SetTermSize(msg.Width, msg.Height)
 		}
 
+		// Propagate size to child components.
+		dims := m.computeLayout()
+		if m.shared.claudePanel != nil {
+			m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight)
+		}
+		m.agentTree.SetSize(dims.rightWidth, dims.contentHeight/2)
+		m.agentDetail.SetSize(dims.rightWidth, dims.contentHeight/2)
+		if m.shared.toasts != nil {
+			m.shared.toasts.SetSize(msg.Width, msg.Height)
+		}
+		if m.shared.teamList != nil {
+			m.shared.teamList.SetSize(dims.rightWidth, dims.contentHeight)
+		}
+
 		return m, nil
 
 	case tea.KeyMsg:
@@ -378,18 +431,72 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitForCLIEvent()
 
 	case cli.AssistantEvent:
-		// Assistant turn fragment — placeholder; TUI-022 fills this in.
-		return m, m.waitForCLIEvent()
+		var cmds []tea.Cmd
+
+		// Forward text content to Claude panel.
+		if m.shared.claudePanel != nil {
+			for _, block := range msg.Message.Content {
+				if block.Type == "text" && block.Text != "" {
+					streaming := msg.Message.StopReason == nil
+					cmd := m.shared.claudePanel.HandleMsg(AssistantMsg{
+						Text:      block.Text,
+						Streaming: streaming,
+					})
+					if cmd != nil {
+						cmds = append(cmds, cmd)
+					}
+				}
+			}
+		}
+
+		// Sync agent registry from Task tool_use blocks.
+		if m.shared.agentRegistry != nil {
+			result := cli.SyncAssistantEvent(msg, m.shared.agentRegistry)
+			if len(result.Registered) > 0 || len(result.Activity) > 0 {
+				m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+			}
+		}
+
+		cmds = append(cmds, m.waitForCLIEvent())
+		return m, tea.Batch(cmds...)
 
 	case cli.UserEvent:
-		// Extract post-hoc diffs from tool_use_result events.
+		// Extract post-hoc diffs.
 		m = m.extractDiffs(msg)
+
+		// Sync agent registry from tool_result blocks.
+		if m.shared.agentRegistry != nil {
+			result := cli.SyncUserEvent(msg, m.shared.agentRegistry)
+			if len(result.Updated) > 0 || len(result.Activity) > 0 {
+				m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+			}
+		}
+
 		return m, m.waitForCLIEvent()
 
 	case cli.ResultEvent:
-		// Session turn complete — update cost display.
+		var cmds []tea.Cmd
+
+		// Update cost tracker (single source of truth).
+		if m.shared.costTracker != nil {
+			m.shared.costTracker.UpdateSessionCost(msg.TotalCostUSD)
+		}
 		m.statusLine.SessionCost = msg.TotalCostUSD
-		return m, m.waitForCLIEvent()
+
+		// Forward to Claude panel to finalize streaming.
+		if m.shared.claudePanel != nil {
+			cmd := m.shared.claudePanel.HandleMsg(ResultMsg{
+				SessionID:  msg.SessionID,
+				CostUSD:    msg.TotalCostUSD,
+				DurationMS: msg.DurationMS,
+			})
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+
+		cmds = append(cmds, m.waitForCLIEvent())
+		return m, tea.Batch(cmds...)
 
 	case cli.CLIDisconnectedMsg:
 		// Subprocess exited or pipe broken — attempt reconnection.
@@ -447,12 +554,28 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// -----------------------------------------------------------------
 
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
-		// Agent lifecycle events — placeholder; TUI-019/020 fills these in.
-		return m, m.waitForCLIEvent()
+		// Refresh tree view. These are internal UI messages, NOT CLI events.
+		if m.shared.agentRegistry != nil {
+			m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+		}
+		return m, nil
+
+	case agents.AgentSelectedMsg:
+		if m.shared.agentRegistry != nil {
+			agent := m.shared.agentRegistry.Get(msg.AgentID)
+			if agent != nil {
+				m.agentDetail.SetAgent(agent)
+			}
+		}
+		return m, nil
 
 	case ToastMsg:
-		// Toast notification — placeholder; TUI-025 fills this in.
-		return m, m.waitForCLIEvent()
+		// Toast notification — forward to toast component.
+		if m.shared != nil && m.shared.toasts != nil {
+			cmd := m.shared.toasts.HandleMsg(msg)
+			return m, cmd
+		}
+		return m, nil
 
 	// -----------------------------------------------------------------
 	// Remaining CLI event types — re-subscribe without side effects.
@@ -461,6 +584,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cli.SystemHookEvent, cli.SystemStatusEvent, cli.RateLimitEvent,
 		cli.StreamEvent, cli.CLIUnknownEvent:
 		return m, m.waitForCLIEvent()
+	}
+
+	// Forward unhandled messages to toast for tick-based expiry.
+	if m.shared != nil && m.shared.toasts != nil {
+		cmd := m.shared.toasts.HandleMsg(msg)
+		if cmd != nil {
+			return m, cmd
+		}
 	}
 
 	return m, nil
@@ -548,6 +679,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Global.ToggleFocus):
 		m.focus = FocusNext(m.focus)
+		m.syncFocusState()
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
@@ -579,15 +711,29 @@ func (m AppModel) handleModalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleClaudeKey processes key events when the Claude panel holds focus.
-// Full implementation deferred to TUI-010.
-func (m AppModel) handleClaudeKey(_ tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m AppModel) handleClaudeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.claudePanel != nil {
+		cmd := m.shared.claudePanel.HandleMsg(msg)
+		return m, cmd
+	}
 	return m, nil
 }
 
 // handleAgentsKey processes key events when the agent tree holds focus.
-// Full implementation deferred to TUI-011.
-func (m AppModel) handleAgentsKey(_ tea.KeyMsg) (tea.Model, tea.Cmd) {
-	return m, nil
+func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	result, cmd := m.agentTree.Update(msg)
+	if updated, ok := result.(agents.AgentTreeModel); ok {
+		m.agentTree = updated
+	}
+	return m, cmd
+}
+
+// syncFocusState propagates the current focus state to child components.
+func (m *AppModel) syncFocusState() {
+	if m.shared != nil && m.shared.claudePanel != nil {
+		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
+	}
+	m.agentTree.SetFocused(m.focus == FocusAgents)
 }
 
 // ---------------------------------------------------------------------------
@@ -679,12 +825,15 @@ func (m AppModel) renderLayout() string {
 
 	mainArea := m.renderMain(dims)
 
-	return lipgloss.JoinVertical(lipgloss.Top,
-		bannerView,
-		tabBarView,
-		mainArea,
-		statusLineView,
-	)
+	parts := []string{bannerView, tabBarView, mainArea}
+
+	// Toast notifications render between main area and status line.
+	if m.shared != nil && m.shared.toasts != nil && !m.shared.toasts.IsEmpty() {
+		parts = append(parts, m.shared.toasts.View())
+	}
+
+	parts = append(parts, statusLineView)
+	return lipgloss.JoinVertical(lipgloss.Top, parts...)
 }
 
 // renderMain renders the split content area (left panel + optional right panel).
@@ -704,8 +853,12 @@ func (m AppModel) renderMain(dims layoutDims) string {
 func (m AppModel) renderLeftPanel(dims layoutDims) string {
 	focused := m.focus == FocusClaude
 
-	// Placeholder content — replaced by TUI-010 ClaudePanelModel.
-	content := config.StyleSubtle.Render("Claude panel  [focus=" + m.focus.String() + "]")
+	var content string
+	if m.shared != nil && m.shared.claudePanel != nil {
+		content = m.shared.claudePanel.View()
+	} else {
+		content = config.StyleSubtle.Render("Claude panel  [focus=" + m.focus.String() + "]")
+	}
 
 	var style lipgloss.Style
 	if focused {
@@ -725,8 +878,15 @@ func (m AppModel) renderLeftPanel(dims layoutDims) string {
 func (m AppModel) renderRightPanel(dims layoutDims) string {
 	focused := m.focus == FocusAgents
 
-	// Placeholder content — replaced by TUI-011 / TUI-012 components.
-	content := config.StyleSubtle.Render(m.rightPanelMode.String() + "  [panel=" + m.rightPanelMode.String() + "]")
+	var content string
+	switch m.rightPanelMode {
+	case RPMAgents:
+		treeView := m.agentTree.View()
+		detailView := m.agentDetail.View()
+		content = lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
+	default:
+		content = config.StyleSubtle.Render(m.rightPanelMode.String())
+	}
 
 	var style lipgloss.Style
 	if focused {

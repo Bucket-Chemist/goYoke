@@ -6,7 +6,48 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 )
+
+// ---------------------------------------------------------------------------
+// Mock types for interface testing
+// ---------------------------------------------------------------------------
+
+// mockClaudePanel satisfies claudePanelWidget for testing.
+type mockClaudePanel struct {
+	handleMsgCalled bool
+	lastMsg         tea.Msg
+	viewOutput      string
+	focused         bool
+	width, height   int
+}
+
+func (m *mockClaudePanel) HandleMsg(msg tea.Msg) tea.Cmd {
+	m.handleMsgCalled = true
+	m.lastMsg = msg
+	return nil
+}
+func (m *mockClaudePanel) View() string          { return m.viewOutput }
+func (m *mockClaudePanel) SetSize(w, h int)      { m.width = w; m.height = h }
+func (m *mockClaudePanel) SetFocused(f bool)     { m.focused = f }
+func (m *mockClaudePanel) IsStreaming() bool      { return false }
+
+// mockToast satisfies toastWidget for testing.
+type mockToast struct {
+	handleMsgCalled bool
+	empty           bool
+	viewOutput      string
+	width, height   int
+}
+
+func (m *mockToast) HandleMsg(msg tea.Msg) tea.Cmd {
+	m.handleMsgCalled = true
+	return nil
+}
+func (m *mockToast) View() string      { return m.viewOutput }
+func (m *mockToast) SetSize(w, h int)  { m.width = w; m.height = h }
+func (m *mockToast) IsEmpty() bool     { return m.empty }
 
 // ---------------------------------------------------------------------------
 // TabID
@@ -63,6 +104,16 @@ func TestNewAppModel_Defaults(t *testing.T) {
 	}
 	if m.shared.permHandler == nil {
 		t.Error("shared.permHandler = nil; want non-nil PermissionHandler")
+	}
+}
+
+func TestNewAppModel_SharedStateRegistries(t *testing.T) {
+	m := NewAppModel()
+	if m.shared.agentRegistry == nil {
+		t.Error("shared.agentRegistry = nil; want non-nil")
+	}
+	if m.shared.costTracker == nil {
+		t.Error("shared.costTracker = nil; want non-nil")
 	}
 }
 
@@ -148,6 +199,18 @@ func TestUpdate_WindowSizeMsg_PropagatesWidthToChildren(t *testing.T) {
 	}
 }
 
+func TestWindowSizeMsg_PropagatesSizeToChildren(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+
+	if mock.width == 0 || mock.height == 0 {
+		t.Errorf("claude panel size not propagated: got %dx%d", mock.width, mock.height)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Update — unknown message
 // ---------------------------------------------------------------------------
@@ -165,6 +228,86 @@ func TestUpdate_UnknownMsg_ReturnsModelUnchanged(t *testing.T) {
 	}
 	if cmd != nil {
 		t.Error("cmd != nil for unknown message; want nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Update — CLI events with component wiring
+// ---------------------------------------------------------------------------
+
+func TestUpdate_AssistantEvent_ForwardsToClaude(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	ev := cli.AssistantEvent{
+		Message: cli.AssistantMessage{
+			Content: []cli.ContentBlock{
+				{Type: "text", Text: "Hello world"},
+			},
+		},
+	}
+	m.Update(ev)
+
+	if !mock.handleMsgCalled {
+		t.Error("claudePanel.HandleMsg not called for AssistantEvent")
+	}
+}
+
+func TestUpdate_ResultEvent_UpdatesCostTracker(t *testing.T) {
+	m := NewAppModel()
+	m.Update(cli.ResultEvent{
+		TotalCostUSD: 1.23,
+		SessionID:    "s1",
+		Subtype:      "success",
+	})
+
+	got := m.shared.costTracker.GetSessionCost()
+	if got != 1.23 {
+		t.Errorf("costTracker.GetSessionCost() = %f; want 1.23", got)
+	}
+}
+
+func TestUpdate_ToastMsg_ForwardsToToast(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockToast{empty: true}
+	m.shared.toasts = mock
+
+	m.Update(ToastMsg{Text: "hello", Level: "info"})
+
+	if !mock.handleMsgCalled {
+		t.Error("toast.HandleMsg not called for ToastMsg")
+	}
+}
+
+func TestHandleClaudeKey_ForwardsToPanel(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+	m.focus = FocusClaude
+
+	// Simulate a key press when Claude panel has focus.
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+
+	if !mock.handleMsgCalled {
+		t.Error("claudePanel.HandleMsg not called for key event with Claude focus")
+	}
+}
+
+func TestRenderLeftPanel_UsesClaudePanelView(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+	mock := &mockClaudePanel{viewOutput: "CLAUDE_PANEL_OUTPUT"}
+	m.shared.claudePanel = mock
+
+	output := m.View()
+	if !strings.Contains(output, "CLAUDE_PANEL_OUTPUT") {
+		t.Error("renderLeftPanel should use claudePanel.View() output")
 	}
 }
 
@@ -232,8 +375,8 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel70_30(t *testing.T) {
 
 	// At width=120, left outer = 84 (70%), right outer = 36 (30%).
 	// Inner widths subtract borderFrame (2).
-	wantLeftInner := int(float64(120)*0.70) - borderFrame   // 84 - 2 = 82
-	wantRightInner := (120 - int(float64(120)*0.70)) - borderFrame // 36 - 2 = 34
+	wantLeftInner := int(float64(120)*0.70) - borderFrame            // 84 - 2 = 82
+	wantRightInner := (120 - int(float64(120)*0.70)) - borderFrame   // 36 - 2 = 34
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -354,8 +497,9 @@ func TestView_RightPanel_ShowsAgentsMode(t *testing.T) {
 	m.rightPanelMode = RPMAgents
 
 	view := m.View()
-	if !strings.Contains(view, "Agents") {
-		t.Errorf("View() does not contain %q for RPMAgents; got %q", "Agents", view)
+	// agentTree.View() renders "No agents" when the tree is empty.
+	if !strings.Contains(view, "agents") {
+		t.Errorf("View() does not contain %q for RPMAgents; got %q", "agents", view)
 	}
 }
 
@@ -618,15 +762,270 @@ func TestDiffEntry_Fields(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Placeholder child models
+// Setter methods
 // ---------------------------------------------------------------------------
 
-func TestPlaceholderChildModels_ZeroValue(t *testing.T) {
-	// Remaining placeholder types must be constructible as zero values.
-	// BannerModel and StatusLineModel are now real components in their own
-	// packages; this test covers only the stubs that remain in the model package.
-	_ = ClaudePanelModel{}
-	_ = AgentTreeModel{}
-	_ = AgentDetailModel{}
-	_ = ToastModel{}
+func TestSetTabBar_StoresWidget(t *testing.T) {
+	m := NewAppModel()
+	if m.tabBar != nil {
+		t.Fatal("precondition: tabBar should be nil before SetTabBar")
+	}
+	// Use a nil tabBarWidget; just verify the assignment doesn't panic.
+	m.SetTabBar(nil)
+	// nil is a valid tabBarWidget — View guards against it.
+}
+
+func TestSetClaudePanel_StoresWidget(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{viewOutput: "panel"}
+	m.SetClaudePanel(mock)
+	if m.shared.claudePanel == nil {
+		t.Error("shared.claudePanel = nil after SetClaudePanel; want non-nil")
+	}
+}
+
+func TestSetToasts_StoresWidget(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockToast{empty: true}
+	m.SetToasts(mock)
+	if m.shared.toasts == nil {
+		t.Error("shared.toasts = nil after SetToasts; want non-nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// extractDiffs
+// ---------------------------------------------------------------------------
+
+func TestExtractDiffs_SingleObjectWithPatch(t *testing.T) {
+	m := NewAppModel()
+	ev := cli.UserEvent{
+		ToolUseResult: []byte(`{"filePath":"/tmp/foo.go","structuredPatch":{"hunks":[]}}`),
+	}
+	result := m.extractDiffs(ev)
+	if len(result.diffs) != 1 {
+		t.Fatalf("diffs count = %d; want 1", len(result.diffs))
+	}
+	if result.diffs[0].FilePath != "/tmp/foo.go" {
+		t.Errorf("FilePath = %q; want /tmp/foo.go", result.diffs[0].FilePath)
+	}
+}
+
+func TestExtractDiffs_ArrayWithPatch(t *testing.T) {
+	m := NewAppModel()
+	ev := cli.UserEvent{
+		ToolUseResult: []byte(`[{"filePath":"/a.go","structuredPatch":{}},{"filePath":"/b.go","structuredPatch":{}}]`),
+	}
+	result := m.extractDiffs(ev)
+	if len(result.diffs) != 2 {
+		t.Fatalf("diffs count = %d; want 2", len(result.diffs))
+	}
+}
+
+func TestExtractDiffs_EmptyToolUseResult_NoChange(t *testing.T) {
+	m := NewAppModel()
+	ev := cli.UserEvent{}
+	result := m.extractDiffs(ev)
+	if len(result.diffs) != 0 {
+		t.Errorf("diffs count = %d; want 0 for empty ToolUseResult", len(result.diffs))
+	}
+}
+
+func TestExtractDiffs_NoPatch_NoEntry(t *testing.T) {
+	m := NewAppModel()
+	ev := cli.UserEvent{
+		ToolUseResult: []byte(`{"filePath":"/tmp/foo.go"}`),
+	}
+	result := m.extractDiffs(ev)
+	if len(result.diffs) != 0 {
+		t.Errorf("diffs count = %d; want 0 when structuredPatch is absent", len(result.diffs))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Agent lifecycle messages
+// ---------------------------------------------------------------------------
+
+func TestUpdate_AgentRegisteredMsg_RefreshesTree(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+
+	// Deliver an AgentRegisteredMsg — should not panic and should return nil cmd.
+	updated, cmd := m.Update(AgentRegisteredMsg{AgentID: "a1", AgentType: "go-pro"})
+	_ = updated.(AppModel)
+	if cmd != nil {
+		t.Error("cmd != nil for AgentRegisteredMsg; want nil")
+	}
+}
+
+func TestUpdate_AgentUpdatedMsg_RefreshesTree(t *testing.T) {
+	m := NewAppModel()
+
+	updated, cmd := m.Update(AgentUpdatedMsg{AgentID: "a1", Status: "running"})
+	_ = updated.(AppModel)
+	if cmd != nil {
+		t.Error("cmd != nil for AgentUpdatedMsg; want nil")
+	}
+}
+
+func TestUpdate_AgentActivityMsg_RefreshesTree(t *testing.T) {
+	m := NewAppModel()
+
+	updated, cmd := m.Update(AgentActivityMsg{AgentID: "a1", ToolName: "Bash"})
+	_ = updated.(AppModel)
+	if cmd != nil {
+		t.Error("cmd != nil for AgentActivityMsg; want nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// handleAgentsKey
+// ---------------------------------------------------------------------------
+
+func TestHandleAgentsKey_NavigationDown(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+	m.focus = FocusAgents
+
+	// With an empty tree, navigation should not panic.
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	_ = updated.(AppModel)
+}
+
+func TestHandleAgentsKey_NavigationUp(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+	m.focus = FocusAgents
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	_ = updated.(AppModel)
+}
+
+// ---------------------------------------------------------------------------
+// syncFocusState
+// ---------------------------------------------------------------------------
+
+func TestSyncFocusState_PropagatesFocusToClaudePanel(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	// Claude has focus by default; syncFocusState should set focused=true.
+	m.syncFocusState()
+	if !mock.focused {
+		t.Error("claudePanel.focused = false after syncFocusState with FocusClaude; want true")
+	}
+
+	// Switch focus to agents; claude panel should become unfocused.
+	m.focus = FocusAgents
+	m.syncFocusState()
+	if mock.focused {
+		t.Error("claudePanel.focused = true after syncFocusState with FocusAgents; want false")
+	}
+}
+
+func TestSyncFocusState_NilClaudePanel_NoPanic(t *testing.T) {
+	m := NewAppModel()
+	// No claude panel wired — should not panic.
+	m.syncFocusState()
+}
+
+// ---------------------------------------------------------------------------
+// Toast forwarding for tick messages
+// ---------------------------------------------------------------------------
+
+func TestUpdate_UnknownMsg_ForwardsToToast(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockToast{empty: true}
+	m.shared.toasts = mock
+
+	// An unknown message type should be forwarded to toast HandleMsg.
+	type someTickMsg struct{}
+	m.Update(someTickMsg{})
+
+	if !mock.handleMsgCalled {
+		t.Error("toast.HandleMsg not called for unknown message; want forwarding for tick-based expiry")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// renderLayout — toast path
+// ---------------------------------------------------------------------------
+
+func TestRenderLayout_ToastVisible_WhenNotEmpty(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+	mock := &mockToast{empty: false, viewOutput: "TOAST_OUTPUT"}
+	m.shared.toasts = mock
+
+	view := m.View()
+	if !strings.Contains(view, "TOAST_OUTPUT") {
+		t.Error("renderLayout should include toast view when toasts are not empty")
+	}
+}
+
+func TestRenderLayout_ToastHidden_WhenEmpty(t *testing.T) {
+	m := NewAppModel()
+	m.width = 120
+	m.height = 40
+	m.ready = true
+	mock := &mockToast{empty: true, viewOutput: "TOAST_OUTPUT"}
+	m.shared.toasts = mock
+
+	view := m.View()
+	if strings.Contains(view, "TOAST_OUTPUT") {
+		t.Error("renderLayout should NOT include toast view when toasts are empty")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// AssistantEvent — no-op when no text blocks
+// ---------------------------------------------------------------------------
+
+func TestUpdate_AssistantEvent_NoTextBlocks_NoForwarding(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	// Tool-use block only; no text content.
+	ev := cli.AssistantEvent{
+		Message: cli.AssistantMessage{
+			Content: []cli.ContentBlock{
+				{Type: "tool_use", Text: ""},
+			},
+		},
+	}
+	m.Update(ev)
+
+	if mock.handleMsgCalled {
+		t.Error("claudePanel.HandleMsg called for tool_use-only AssistantEvent; want no forwarding")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ResultEvent — forwards to claude panel
+// ---------------------------------------------------------------------------
+
+func TestUpdate_ResultEvent_ForwardsToClaude(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	m.Update(cli.ResultEvent{
+		TotalCostUSD: 0.05,
+		SessionID:    "s1",
+		Subtype:      "success",
+	})
+
+	if !mock.handleMsgCalled {
+		t.Error("claudePanel.HandleMsg not called for ResultEvent; want forwarding")
+	}
 }
