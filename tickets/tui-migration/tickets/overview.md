@@ -215,7 +215,7 @@ The following review findings have been incorporated into the ticket description
 - [x] Spike passes: permission wire format documented (TUI-001 ✓), Go MCP SDK POC verified (TUI-002 ✓), NDJSON catalog confirmed (TUI-003 ✓), UDS IPC validated at 56µs (TUI-004 ✓) — **Phase 1 complete**
 - [ ] Two-process topology works: Go TUI → CLI → MCP tools — no Node.js
 - [ ] Feature parity achieved: all 18 features from P9-6 checklist
-- [ ] Performance targets met: startup <200ms, modal <100ms, no frame drops
+- [x] Performance targets met: startup 0.31ms/<200ms, modal 0.002ms/<100ms, view 0.82ms/<16ms (all 5 benchmarks pass, TUI-040 ✅)
 - [ ] No orphaned processes: graceful shutdown within 10s
 - [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 ✓ + remediation, Post-Phase 7 review ✓ (21/21 packages green, race-clean), Phase 8 ✓ (lifecycle), Phase 9 partial ✓ (TUI-036 component + TUI-037 CLI integration + TUI-038 MCP integration 81.9% + TUI-039 E2E smoke + TUI-040 benchmarks all 5 targets pass)
 - [x] Old ticket requirements traced: all 13 GOgent-109–121 mapped in traceability table below
@@ -245,7 +245,8 @@ The following review findings have been incorporated into the ticket description
 ~~15. Phase 9 continues: TUI-038 (MCP server integration test)~~ ✅ TUI-038 COMPLETE (10 integration tests, 81.9% mcp coverage, race-clean)
 ~~16. Phase 9 continues: TUI-039 (E2E smoke test with live CLI)~~ ✅ TUI-039 COMPLETE (6 E2E tests, //go:build e2e tag, CLIDriver-direct harness, ~$0.05/run)
 ~~17. Phase 9 continues: TUI-040 (performance benchmarks)~~ ✅ TUI-040 COMPLETE (4 benchmark packages, all 5 targets pass: startup 0.31ms/200ms, modal 0.002ms/100ms, NDJSON 195K lines/sec vs 10K, view 0.82ms/16ms, UDS 0.009ms/5ms)
-18. Phase 9 continues: TUI-041 (unknown event resilience), TUI-042 (feature parity checklist — now unblocked by TUI-039)
+~~18. Phase 9 continues: TUI-041 (unknown event resilience)~~ ✅ TUI-041 COMPLETE (19 tests, 57 subtests, 91.2% cli coverage, race-clean, stress-tested)
+19. Phase 9 final: TUI-042 (feature parity checklist — now unblocked by TUI-039)
 
 ## Implementation Progress (updated 2026-03-23, Phase 9 in progress)
 
@@ -260,7 +261,7 @@ The following review findings have been incorporated into the ticket description
 | 7 | ✅ COMPLETE | TUI-028–032 | 5/5 done + remediation (R-1–R-4). Multi-provider, switching, panels, handoff, debounce. 1108 tests |
 | Post-7 Review | ✅ COMPLETE | FIX-1–6, DES-2–6 | 4-reviewer code review (2026-03-23). 6 bug fixes + 4 design refactors. 21/21 packages green, race-clean. Staff Architect: APPROVE_WITH_CONDITIONS (High Confidence). DES-1 → TUI-034; DES-7 → TUI-036. |
 | 8 | ✅ COMPLETE | TUI-033–035 | Session persistence (atomic writes, auto-save), graceful shutdown (5-phase LIFO, DES-1 resolved), clipboard/search/history. ~1153 tests, 23 packages |
-| 9 | 🔧 IN PROGRESS | TUI-036–042 | TUI-036 ✅, TUI-037 ✅, TUI-038 ✅ (MCP integration 81.9%), TUI-039 ✅ (E2E smoke, 6 tests, //go:build e2e), TUI-040 ✅ (benchmarks, all 5 targets pass). TUI-041–042 pending |
+| 9 | 🔧 IN PROGRESS | TUI-036–042 | TUI-036 ✅, TUI-037 ✅, TUI-038 ✅ (MCP integration 81.9%), TUI-039 ✅ (E2E smoke, 6 tests, //go:build e2e), TUI-040 ✅ (benchmarks, all 5 targets pass), TUI-041 ✅ (resilience, 19 tests/57 subtests, 91.2% coverage). TUI-042 pending |
 
 ### Phase 2 Package Tree (delivered)
 

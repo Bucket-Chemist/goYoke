@@ -719,7 +719,7 @@
     {
       "id": "TUI-041",
       "title": "Unknown event resilience test",
-      "status": "pending",
+      "status": "completed",
       "phase": 9,
       "priority": "MEDIUM",
       "dependencies": [
