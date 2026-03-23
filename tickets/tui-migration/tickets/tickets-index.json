@@ -737,7 +737,7 @@
     {
       "id": "TUI-042",
       "title": "Feature parity checklist verification",
-      "status": "pending",
+      "status": "completed",
       "phase": 9,
       "priority": "MEDIUM",
       "dependencies": [
