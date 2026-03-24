@@ -303,7 +303,7 @@ The following review findings have been incorporated into the ticket description
 | 10f | ✅ COMPLETE | TUI-063–064 | Breadcrumb trail (98.2%) + harmonica spring animation (94.1%). |
 | 10f–g | ⏳ PENDING | TUI-065–070 | 6 tickets remaining. Skeleton, modals, confirm dialogs, dashboard, docs, parity. |
 
-### Package Tree (updated through Phase 10, TUI-060)
+### Package Tree (updated through Phase 10, TUI-064)
 
 ```
 internal/tui/
@@ -322,19 +322,24 @@ internal/tui/
 │   ├── server.go                 # IPCBridge, modal correlation, fire-and-forget dispatch
 │   └── server_test.go            # 10 tests, 79% coverage, race-free
 ├── components/
-│   ├── agents/                   # Agent tree + detail views (TUI-020)
-│   │   ├── tree.go               # AgentTreeModel: Unicode box-drawing, scrollable
+│   ├── agents/                   # Agent tree + detail views (TUI-020, TUI-059)
+│   │   ├── tree.go               # AgentTreeModel: Unicode box-drawing, scrollable, SearchSource (TUI-059)
 │   │   ├── tree_test.go          # 23 tests, 90.6% coverage
+│   │   ├── search_test.go        # 9 agent search tests (TUI-059)
 │   │   ├── detail.go             # AgentDetailModel: display-only, word-wrapped
 │   │   └── detail_test.go        # 18 tests
+│   ├── breadcrumb/               # Breadcrumb navigation trail (TUI-063)
+│   │   ├── breadcrumb.go         # BreadcrumbModel: arrow-separated, width-truncation, theme-aware
+│   │   └── breadcrumb_test.go    # 17 tests, 98.2% coverage
 │   ├── hintbar/                  # Context-aware keyboard hint bar (TUI-060)
 │   │   ├── hintbar.go            # HintBarModel: 5 context sets, width-adaptive, muted style
 │   │   └── hintbar_test.go       # 22 tests, 86.7% coverage
-│   ├── claude/                   # Claude conversation panel (TUI-022, TUI-054)
-│   │   ├── panel.go              # ClaudePanelModel: viewport + textinput, streaming, slash cmd integration
+│   ├── claude/                   # Claude conversation panel (TUI-022, TUI-054, TUI-059)
+│   │   ├── panel.go              # ClaudePanelModel: viewport + textinput, streaming, slash cmd, SearchSource
 │   │   ├── panel_test.go         # 59+ tests, 84.8% coverage
+│   │   ├── search_unified_test.go # 9 unified search tests (TUI-059)
 │   │   ├── history.go            # InputHistory: JSON persistence, max 500, consecutive dedup
-│   │   └── search.go             # SearchModel: case-insensitive substring, Ctrl+N/P nav
+│   │   └── search.go             # SearchModel: in-panel search, case-insensitive, Ctrl+N/P nav
 │   ├── banner/                   # BannerModel (TUI-009)
 │   │   ├── banner.go
 │   │   └── banner_test.go
@@ -358,13 +363,14 @@ internal/tui/
 │   ├── slashcmd/                 # Slash command dropdown (TUI-053)
 │   │   ├── slashcmd.go           # SlashCmdModel: 18 commands, prefix filter, scroll window
 │   │   └── slashcmd_test.go      # 42 tests, 92.1% coverage
-│   ├── statusline/               # StatusLineModel (TUI-009, TUI-048, TUI-049, TUI-057)
-│   │   ├── statusline.go         # Semantic colors, progress bar, plan mode indicator, uncommitted/agent counts
-│   │   ├── statusline_test.go    # 76 tests, 89.2% coverage (plan mode: 6 tests)
+│   ├── statusline/               # StatusLineModel (TUI-009, TUI-048, TUI-049, TUI-057, TUI-062)
+│   │   ├── statusline.go         # Semantic colors, progress bar, plan mode, vim mode indicator
+│   │   ├── statusline_test.go    # 76+ tests, 89.2% coverage
 │   │   └── export_test.go
-│   ├── tabbar/                   # TabBarModel (TUI-009)
-│   │   ├── tabbar.go
-│   │   └── tabbar_test.go
+│   ├── tabbar/                   # TabBarModel (TUI-009, TUI-061)
+│   │   ├── tabbar.go             # Tab navigation + 300ms flash animation, HandleMsg (TUI-061)
+│   │   ├── tabbar_test.go        # 7 flash tests, 91.5% coverage
+│   │   └── export_test.go        # Exports tabFlashTickMsg for external tests (TUI-061)
 │   ├── teams/                    # Team orchestration display (TUI-027)
 │   │   ├── state.go              # TeamRegistry, TeamConfig/Wave/Member types
 │   │   ├── state_test.go         # 17 tests
@@ -378,43 +384,49 @@ internal/tui/
 │   └── toast/                    # Toast notifications (TUI-025)
 │       ├── toast.go              # ToastModel: auto-expire, max 3, level-colored
 │       └── toast_test.go         # 17 tests, 93.9% coverage
-├── config/                       # Theme + keybindings (TUI-005, TUI-007, TUI-044–046, TUI-051, TUI-052)
+├── config/                       # Theme + keybindings (TUI-005, TUI-007, TUI-044–046, TUI-051, TUI-052, TUI-062)
 │   ├── theme.go                  # Theme, ThemeVariant (Dark/Light/HighContrast), IconSet, ContrastRatio, 96.3%
 │   ├── theme_test.go
-│   ├── keys.go                   # 25 bindings (ReverseToggleFocus, ViewPlan added in Phase 10)
-│   └── keys_test.go
-├── state/                        # Shared state (TUI-019, TUI-024, TUI-028)
+│   ├── keys.go                   # 25+ bindings (ReverseToggleFocus, ViewPlan, Search added in Phase 10)
+│   ├── keys_test.go
+│   ├── vim_keys.go               # VimKeys struct (8 bindings), VimMode enum (Normal/Insert) (TUI-062)
+│   └── vim_keys_test.go          # 8 vim config tests
+├── state/                        # Shared state (TUI-019, TUI-024, TUI-028, TUI-059)
 │   ├── agent.go                  # AgentRegistry: RWMutex, dedup, DFS tree
 │   ├── agent_test.go             # 56 tests
 │   ├── cost.go                   # CostTracker: session/agent costs, budget (TUI-024)
 │   ├── cost_test.go
 │   ├── provider.go               # ProviderState: 4 providers, per-provider isolation (TUI-028)
 │   ├── provider_test.go          # 161 tests (incl subtests), 97.5% coverage
+│   ├── search.go                 # SearchResult + SearchSource interface (TUI-059: import cycle break)
 │   └── task.go                   # TaskEntry type (DES-3: moved from taskboard to break model→taskboard import)
-├── util/                         # Shared utilities (TUI-023, TUI-047)
+├── util/                         # Shared utilities (TUI-023, TUI-047, TUI-064)
 │   ├── markdown.go               # Cached Glamour renderer, RenderMarkdown()
 │   ├── markdown_test.go
 │   ├── text.go                   # util.Truncate: UTF-8-safe truncation (FIX-1)
 │   ├── text_test.go
 │   ├── errors.go                 # ErrorDisplay, FormatError/Warning, ClassifyError (TUI-047)
-│   └── errors_test.go            # 94% util coverage
+│   ├── errors_test.go
+│   ├── animate.go                # SpringAnimation (harmonica v0.2.0), AnimateTickMsg/Cmd (TUI-064)
+│   └── animate_test.go           # 13 convergence tests, 94.1% coverage
 └── model/                        # Root AppModel + types (TUI-006, TUI-008)
     ├── focus.go                  # FocusTarget, RightPanelMode
     ├── focus_test.go
     ├── app.go                    # AppModel: struct + Init + Update dispatcher + View (TUI-043: 994→376 lines)
     ├── app_test.go
-    ├── key_handlers.go           # Keyboard: handleKey, handleModalKey, handleClaudeKey, handleAgentsKey (TUI-043)
-    ├── cli_event_handlers.go     # CLI events: Started, SystemInit, Assistant, User, Result, Disconnected (TUI-043, TUI-057: parsePlanStep)
-    ├── ui_event_handlers.go      # UI events: ProviderSwitch, Modal, Agent, Team, Toast, Shutdown (TUI-043)
-    ├── setters.go                # 17 setter/injector methods on AppModel (TUI-043)
-    ├── interfaces.go             # Widget interfaces: all mockable, SetTier on 7 (DES-2 + TUI-058)
-    ├── layout.go                 # LayoutTier (4-tier), computeLayout, sizing (DES-2 + TUI-058)
+    ├── key_handlers.go           # Keyboard: handleKey, vim overlay, updateHintContext, updateBreadcrumbs (TUI-043+)
+    ├── cli_event_handlers.go     # CLI events: Started, SystemInit, Assistant, User, Result (TUI-043, TUI-057)
+    ├── ui_event_handlers.go      # UI events: ProviderSwitch, Modal, Agent, Team, Toast, Shutdown, WindowSize (TUI-043+)
+    ├── setters.go                # 20+ setter/injector methods on AppModel (TUI-043, expanded Phase 10)
+    ├── interfaces.go             # Widget interfaces: SetTier(7), searchOverlay, hintBar, breadcrumb (DES-2 + Phase 10)
+    ├── layout.go                 # LayoutTier (4-tier), computeLayout, breadcrumb+hint rows (DES-2 + TUI-058/060/063)
     ├── layout_test.go            # 14 boundary subtests, tier selection, dimension arithmetic (TUI-058)
+    ├── vim_keys_test.go          # 14 vim integration tests: mode transitions, key consumption (TUI-062)
     ├── provider_switch.go        # Provider switching handlers (DES-2: extracted, 135 lines)
     ├── startup.go                # CLI startup sequence, reconnection logic
     ├── startup_test.go
     ├── handoff.go                # Session handoff serialization
-    └── messages.go               # 20+ tea.Msg types (expanded in TUI-016, TUI-018, TUI-057: PlanStepMsg)
+    └── messages.go               # 25+ tea.Msg types (PlanStepMsg, TabFlashMsg, AnimateTickMsg et al.)
 
 cmd/
 ├── gofortress/main.go            # TUI entry point (TUI-011)
