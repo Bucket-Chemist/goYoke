@@ -1027,7 +1027,7 @@
     {
       "id": "TUI-059",
       "title": "Unified fuzzy search overlay",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [

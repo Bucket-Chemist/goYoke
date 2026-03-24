@@ -54,6 +54,9 @@ type GlobalKeys struct {
 	// ViewPlan opens the full-screen Glamour plan viewer when the right
 	// panel is in RPMPlanPreview mode.
 	ViewPlan key.Binding
+
+	// Search opens the unified cross-panel fuzzy search overlay (TUI-059).
+	Search key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -191,6 +194,10 @@ func DefaultKeyMap() KeyMap {
 			ViewPlan: key.NewBinding(
 				key.WithKeys("alt+v"),
 				key.WithHelp("alt+v", "view plan"),
+			),
+			Search: key.NewBinding(
+				key.WithKeys("ctrl+f"),
+				key.WithHelp("ctrl+f", "search"),
 			),
 		},
 

@@ -295,3 +295,43 @@ type slashCmdWidget interface {
 	// SetWidth updates the terminal width used for rendering.
 	SetWidth(w int)
 }
+
+// ---------------------------------------------------------------------------
+// searchOverlayWidget  (TUI-059)
+//
+// searchOverlayWidget is the interface satisfied by *search.SearchOverlayModel.
+// Defining it here keeps AppModel decoupled from the concrete search package
+// (model must not import search — that would import cycle: search → state,
+// model → agents → state, model → search → state is fine, but model →
+// search while search imports state and model imports agents which does not
+// import model means there is no cycle; however search does NOT import model,
+// so there is no issue either way).
+//
+// state.SearchResult and state.SearchSource live in the state package so that
+// components (claude, agents) that already import state can implement
+// state.SearchSource without creating a circular import through model.
+//
+// HandleMsg follows the same pointer-receiver mutation pattern used by
+// claudePanelWidget and toastWidget: the concrete type mutates itself in place
+// and returns only the tea.Cmd, avoiding the self-returning interface problem
+// that would arise from returning (searchOverlayWidget, tea.Cmd).
+// ---------------------------------------------------------------------------
+
+// searchOverlayWidget is the interface satisfied by *search.SearchOverlayModel.
+type searchOverlayWidget interface {
+	// HandleMsg processes a tea.Msg, mutates the widget in place, and
+	// returns any Cmd to run.
+	HandleMsg(msg tea.Msg) tea.Cmd
+	// View renders the overlay to a string. Returns "" when not active.
+	View() string
+	// SetSize updates the terminal dimensions used for layout and centering.
+	SetSize(width, height int)
+	// IsActive returns true when the overlay is currently displayed.
+	IsActive() bool
+	// Activate shows the overlay and focuses the query input.
+	Activate()
+	// Deactivate hides the overlay and clears the query input.
+	Deactivate()
+	// SetSources replaces the registered search sources.
+	SetSources(sources []state.SearchSource)
+}

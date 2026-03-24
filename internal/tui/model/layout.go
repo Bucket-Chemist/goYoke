@@ -214,6 +214,16 @@ func (m AppModel) renderLayout() string {
 		)
 	}
 
+	// Search overlay renders over the full layout (lower priority than modals
+	// and plan view, higher than normal content).
+	// If a modal or plan view opened while the search overlay was active,
+	// deactivate the overlay so z-ordering remains correct.
+	if m.shared != nil && m.shared.searchOverlay != nil {
+		if m.shared.searchOverlay.IsActive() {
+			return m.shared.searchOverlay.View()
+		}
+	}
+
 	dims := m.computeLayout()
 
 	bannerView := m.banner.View()

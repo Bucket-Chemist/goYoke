@@ -879,3 +879,45 @@ func (m *ClaudePanelModel) HandleMsg(msg tea.Msg) tea.Cmd {
 	*m = updated
 	return cmd
 }
+
+// Search implements state.SearchSource for the conversation history.
+//
+// It performs a case-insensitive substring search across all message contents
+// and returns matching state.SearchResult values sorted by relevance.
+// An empty query always returns nil.
+func (m *ClaudePanelModel) Search(query string) []state.SearchResult {
+	if query == "" {
+		return nil
+	}
+	q := strings.ToLower(query)
+	var results []state.SearchResult
+	for i, msg := range m.messages {
+		content := strings.ToLower(msg.Content)
+		if !strings.Contains(content, q) {
+			continue
+		}
+		// Score: prefix match scores higher than interior match.
+		score := 100
+		if strings.HasPrefix(content, q) {
+			score = 200
+		}
+		label := truncateForSearch(msg.Content, 60)
+		results = append(results, state.SearchResult{
+			Source: "conversation",
+			Label:  fmt.Sprintf("[%s] %s", msg.Role, label),
+			Detail: fmt.Sprintf("Message %d", i+1),
+			Score:  score,
+		})
+	}
+	return results
+}
+
+// truncateForSearch truncates s to at most max runes, appending "…" when
+// truncated. Used to produce concise search result labels.
+func truncateForSearch(s string, max int) string {
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max-1]) + "…"
+}

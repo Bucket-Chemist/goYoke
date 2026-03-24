@@ -270,11 +270,12 @@ The following review findings have been incorporated into the ticket description
 ~~23. Phase 10 track C: TUI-052~~ ✅ → ~~TUI-053~~ ✅ → ~~TUI-054~~ ✅ TUI-054 COMPLETE (slash exec: /clear local, /help local, rest→CLI, 84.8%) — **Track D (parity) done**
 ~~24. TUI-057 (plan mode UX)~~ ✅ TUI-057 COMPLETE (PlanStepMsg, status bar [PLAN MODE: step N/M], toast, parsePlanStep regex, 89.2% statusline coverage)
 ~~25. TUI-058 (4-tier responsive layout)~~ ✅ TUI-058 COMPLETE (LayoutTier enum, 14 boundary subtests, 60/40 Wide + 50/50 Ultra, SetTier on 7 interfaces, 90.0% computeLayout coverage)
-26. Phase 10 track D: TUI-059, TUI-061 (fuzzy search, tab highlight)
+~~26. TUI-059 (unified fuzzy search)~~ ✅ TUI-059 COMPLETE (search/ pkg, SearchSource in state/, ctrl+f overlay, 43 tests, 89.1% coverage)
+27. Phase 10 track D: TUI-061 (tab highlight)
 27. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
 28. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 16/28 tickets complete (TUI-043–058). 57%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 17/28 tickets complete (TUI-043–059). 61%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -294,10 +295,10 @@ The following review findings have been incorporated into the ticket description
 | 10b | ✅ COMPLETE | TUI-044–047 | Semantic colors + icons (100%) + theme switching infra (88.9%) + error formatting (94%). **Track A + visual foundation done.** |
 | 10c | ✅ COMPLETE | TUI-048–051 | Status line colors + progress bar + settings tree + high-contrast WCAG (ContrastRatio, ValidateContrast, SettingChangedMsg→SetTheme wiring). config 96.3%, model 89.3%. |
 | 10d | ✅ COMPLETE | TUI-052–057 | Shift+Tab + slash dropdown/exec + task board + plan modal + plan mode UX (PlanStepMsg, status bar indicator, toast, 89.2%). |
-| 10e | 🔄 IN PROGRESS | TUI-058 | 4-tier responsive layout: LayoutTier enum, 14 boundary tests, 60/40 Wide + 50/50 Ultra, SetTier on 7 interfaces, 90.0% computeLayout. |
-| 10e–g | ⏳ PENDING | TUI-059–070 | 12 tickets remaining. Fuzzy search, animations, tab highlight, vim keys, modals, breadcrumbs, docs. |
+| 10e | ✅ COMPLETE | TUI-058–059 | 4-tier layout (LayoutTier, 14 tests, SetTier on 7 interfaces) + unified fuzzy search (ctrl+f, SearchSource, 43 tests, 89.1%). New pkg: search/ |
+| 10e–g | ⏳ PENDING | TUI-060–070 | 11 tickets remaining. Tab highlight, vim keys, animations, modals, breadcrumbs, docs. |
 
-### Package Tree (updated through Phase 10, TUI-058)
+### Package Tree (updated through Phase 10, TUI-059)
 
 ```
 internal/tui/
@@ -340,6 +341,9 @@ internal/tui/
 │   │   ├── permission_test.go
 │   │   ├── plan_modal.go         # PlanViewModal: full-screen Glamour viewport (TUI-056)
 │   │   └── plan_modal_test.go    # 129+ total modals tests, 89.0% coverage
+│   ├── search/                   # Unified fuzzy search overlay (TUI-059)
+│   │   ├── overlay.go            # SearchOverlayModel: multi-source, score-sorted, ctrl+f
+│   │   └── overlay_test.go       # 25 tests, 89.1% coverage
 │   ├── settingstree/             # Interactive settings tree (TUI-050)
 │   │   ├── settingstree.go       # SettingsTreeModel: 3 sections, Toggle/Select/Display, navigation
 │   │   └── settingstree_test.go  # 24 tests, 87.4% coverage

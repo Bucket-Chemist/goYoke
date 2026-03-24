@@ -26,6 +26,13 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleModalKey(msg)
 	}
 
+	// While the search overlay is active it captures all key events.
+	// Dismiss the search overlay if a modal opens (handled in renderLayout).
+	if m.shared != nil && m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive() {
+		cmd := m.shared.searchOverlay.HandleMsg(msg)
+		return m, cmd
+	}
+
 	// Global keys are checked before focus-specific routing.
 	switch {
 	case key.Matches(msg, m.keys.Global.ForceQuit):
@@ -97,6 +104,14 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.shared.planViewModal.SetContent(markdown, m.width)
 			m.shared.planViewModal.SetSize(m.width, m.height)
 			m.shared.planViewModal.Show()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.Global.Search):
+		// ctrl+f opens the unified cross-panel search overlay (TUI-059).
+		if m.shared != nil && m.shared.searchOverlay != nil {
+			m.shared.searchOverlay.SetSize(m.width, m.height)
+			m.shared.searchOverlay.Activate()
 		}
 		return m, nil
 	}

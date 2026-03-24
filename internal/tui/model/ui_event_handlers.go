@@ -92,6 +92,11 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		m.shared.taskBoard.SetTier(tier)
 	}
 
+	// Propagate size to the search overlay so centering is correct (TUI-059).
+	if m.shared.searchOverlay != nil {
+		m.shared.searchOverlay.SetSize(msg.Width, msg.Height)
+	}
+
 	return m, nil
 }
 

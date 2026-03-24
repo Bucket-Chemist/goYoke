@@ -218,6 +218,40 @@ func (m AgentTreeModel) View() string {
 	return out
 }
 
+// Search implements state.SearchSource for the agent tree.
+//
+// It performs a case-insensitive substring search across agent type and
+// description fields and returns matching state.SearchResult values.
+// An empty query always returns nil.
+func (m *AgentTreeModel) Search(query string) []state.SearchResult {
+	if query == "" {
+		return nil
+	}
+	q := strings.ToLower(query)
+	var results []state.SearchResult
+	for _, node := range m.treeNodes {
+		agent := node.Agent
+		nameLower := strings.ToLower(agent.AgentType)
+		descLower := strings.ToLower(agent.Description)
+		nameMatch := strings.Contains(nameLower, q)
+		descMatch := strings.Contains(descLower, q)
+		if !nameMatch && !descMatch {
+			continue
+		}
+		score := 100
+		if nameMatch {
+			score = 150
+		}
+		results = append(results, state.SearchResult{
+			Source: "agents",
+			Label:  agent.AgentType,
+			Detail: agent.Description,
+			Score:  score,
+		})
+	}
+	return results
+}
+
 // renderNode renders a single tree row. selected indicates whether this row is
 // the currently highlighted one.
 func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) string {

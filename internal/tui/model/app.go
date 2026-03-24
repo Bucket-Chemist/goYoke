@@ -120,6 +120,10 @@ type sharedState struct {
 	// It is activated by alt+v when rightPanelMode == RPMPlanPreview.
 	planViewModal modals.PlanViewModal
 
+	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
+	// It is activated by ctrl+f and queries all registered SearchSources.
+	searchOverlay searchOverlayWidget
+
 	// Session persistence (TUI-033).
 	sessionStore *session.Store
 	sessionData  *session.SessionData

@@ -146,6 +146,12 @@ func (m *AppModel) SaveSessionPublic() {
 	m.saveSession()
 }
 
+// SetSearchOverlay injects the unified search overlay into the shared state.
+// The overlay is activated by ctrl+f (TUI-059).
+func (m *AppModel) SetSearchOverlay(so searchOverlayWidget) {
+	m.shared.searchOverlay = so
+}
+
 // SetTheme updates the active theme in shared state.  It is called when the
 // user explicitly selects a new color theme (e.g. from the settings panel or
 // via ThemeChangedMsg).  The pointer receiver is required because this method
