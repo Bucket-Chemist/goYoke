@@ -181,9 +181,51 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 	return m, nil
 }
 
+// contextBarWidth is the number of fill characters inside the progress bar brackets.
+const contextBarWidth = 10
+
+// renderContextBar renders a visual progress bar for context window utilization.
+//
+// Wide terminal (>= 80): ctx:[=====     ] 52%
+// Narrow terminal (< 80): ctx:52%
+//
+// The filled portion is colored using the same semantic thresholds as
+// contextStyle (green/yellow/red). Empty space is rendered with StyleMuted.
+func (m StatusLineModel) renderContextBar() string {
+	pct := m.ContextPercent
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 100 {
+		pct = 100
+	}
+
+	// Narrow terminal fallback: text only, no brackets.
+	if m.width < 80 {
+		style := m.contextStyle(pct)
+		return style.Render(fmt.Sprintf("ctx:%.0f%%", pct))
+	}
+
+	// Calculate number of filled characters.
+	fillCount := int(pct / 100 * float64(contextBarWidth))
+	if fillCount > contextBarWidth {
+		fillCount = contextBarWidth
+	}
+
+	filled := strings.Repeat("=", fillCount)
+	empty := strings.Repeat(" ", contextBarWidth-fillCount)
+
+	// Color the filled portion based on threshold; mute the empty portion.
+	style := m.contextStyle(pct)
+	coloredFill := style.Render(filled)
+	mutedEmpty := config.StyleMuted.Render(empty)
+
+	return fmt.Sprintf("ctx:[%s%s] %.0f%%", coloredFill, mutedEmpty, pct)
+}
+
 // View implements tea.Model. It renders the status bar as two rows:
 //
-//	Row 1: $cost  tokens  ctx%  perm-mode  elapsed  [thinking...]
+//	Row 1: $cost  tokens  ctx:[bar] %  perm-mode  elapsed  [thinking...]
 //	Row 2: model  provider  branch  auth  agents:N  [uncommitted:N]
 //
 // Cost, context, permission and auth fields use semantic colors from the
@@ -202,9 +244,10 @@ func (m StatusLineModel) View() string {
 		label(" tokens:"),
 		value(formatTokens(m.TokenCount)),
 	)
+	// Context field uses a visual progress bar (falls back to text on narrow terminals).
 	ctxField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" ctx:"),
-		m.contextStyle(m.ContextPercent).Render(fmt.Sprintf("%.1f%%", m.ContextPercent)),
+		label(" "),
+		m.renderContextBar(),
 	)
 	permField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" perm:"),

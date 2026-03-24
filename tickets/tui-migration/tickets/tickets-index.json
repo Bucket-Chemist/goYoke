@@ -854,7 +854,7 @@
     {
       "id": "TUI-049",
       "title": "Token usage progress bar",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [

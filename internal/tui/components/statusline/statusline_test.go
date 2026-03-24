@@ -66,8 +66,9 @@ func TestStatusLineViewContainsContextPercent(t *testing.T) {
 	if !strings.Contains(view, "ctx:") {
 		t.Errorf("View() missing 'ctx:' label; got:\n%s", view)
 	}
-	if !strings.Contains(view, "75.5%") {
-		t.Errorf("View() missing context percent '75.5%%'; got:\n%s", view)
+	// renderContextBar uses %.0f formatting — 75.5 rounds to "76%".
+	if !strings.Contains(view, "76%") {
+		t.Errorf("View() missing context percent '76%%' (rounded from 75.5); got:\n%s", view)
 	}
 }
 
@@ -193,10 +194,11 @@ func TestStatusLineAllFieldsPopulated(t *testing.T) {
 
 	// FormatCost(0.0042) → "$0.0042" (< $0.01 → 4 decimal places)
 	// formatTokens(8500) → "8.5K"
+	// renderContextBar uses %.0f — 12.3 rounds to "12%"
 	expected := []string{
 		"cost:", "$0.0042",
 		"tokens:", "8.5K",
-		"ctx:", "12.3%",
+		"ctx:", "12%",
 		"perm:", "bypass",
 		"model:", "claude-opus-4-6",
 		"provider:", "anthropic",
@@ -684,4 +686,116 @@ func TestView_TwoRowsWithNewFields(t *testing.T) {
 	view = strings.TrimRight(view, "\n")
 	lines := strings.Split(view, "\n")
 	assert.Equal(t, 2, len(lines), "View() should still produce exactly 2 rows with new fields")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-049: renderContextBar
+// ---------------------------------------------------------------------------
+
+func TestRenderContextBar_ZeroPercent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 0
+	result := m.RenderContextBarForTest()
+	// All 10 chars should be empty fill; percentage should be "0%".
+	assert.Contains(t, result, "ctx:", "should contain 'ctx:' prefix")
+	assert.Contains(t, result, "[", "wide mode should contain opening bracket")
+	assert.Contains(t, result, "]", "wide mode should contain closing bracket")
+	assert.Contains(t, result, "0%", "should contain '0%'")
+}
+
+func TestRenderContextBar_25Percent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 25
+	result := m.RenderContextBarForTest()
+	// 25% of 10 = 2.5 → int truncation = 2 filled chars.
+	assert.Contains(t, result, "ctx:", "should contain 'ctx:' prefix")
+	assert.Contains(t, result, "[", "should contain opening bracket")
+	assert.Contains(t, result, "]", "should contain closing bracket")
+	assert.Contains(t, result, "25%", "should contain '25%'")
+	// Verify the fill: 2 filled + 8 empty = 10 chars between brackets.
+	// Strip ANSI escapes: count raw '=' characters.
+	assert.Contains(t, result, "==", "should have at least 2 filled chars at 25%")
+}
+
+func TestRenderContextBar_50Percent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 50
+	result := m.RenderContextBarForTest()
+	// 50% of 10 = 5 filled chars (warning threshold boundary).
+	assert.Contains(t, result, "ctx:", "should contain 'ctx:' prefix")
+	assert.Contains(t, result, "[", "should contain opening bracket")
+	assert.Contains(t, result, "]", "should contain closing bracket")
+	assert.Contains(t, result, "50%", "should contain '50%'")
+}
+
+func TestRenderContextBar_75Percent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 75
+	result := m.RenderContextBarForTest()
+	// 75% of 10 = 7 filled chars (warning color zone).
+	assert.Contains(t, result, "ctx:", "should contain 'ctx:' prefix")
+	assert.Contains(t, result, "[", "should contain opening bracket")
+	assert.Contains(t, result, "]", "should contain closing bracket")
+	assert.Contains(t, result, "75%", "should contain '75%'")
+}
+
+func TestRenderContextBar_100Percent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 100
+	result := m.RenderContextBarForTest()
+	// 100% → all 10 chars filled.
+	assert.Contains(t, result, "ctx:", "should contain 'ctx:' prefix")
+	assert.Contains(t, result, "[", "should contain opening bracket")
+	assert.Contains(t, result, "]", "should contain closing bracket")
+	assert.Contains(t, result, "100%", "should contain '100%'")
+	// At 100%, there should be 10 '=' characters in the bar segment.
+	assert.Contains(t, result, "==========", "full bar should have 10 '=' chars")
+}
+
+func TestRenderContextBar_NarrowFallback(t *testing.T) {
+	m := statusline.NewStatusLineModel(79) // below the 80-char threshold
+	m.ContextPercent = 52
+	result := m.RenderContextBarForTest()
+	// Narrow mode: no brackets, just text.
+	assert.Contains(t, result, "ctx:", "narrow fallback should contain 'ctx:' prefix")
+	assert.Contains(t, result, "52%", "narrow fallback should contain percentage")
+	assert.NotContains(t, result, "[", "narrow fallback should not contain opening bracket")
+	assert.NotContains(t, result, "]", "narrow fallback should not contain closing bracket")
+}
+
+func TestRenderContextBar_NegativePercent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = -10
+	result := m.RenderContextBarForTest()
+	// Clamped to 0: empty bar, "0%".
+	assert.Contains(t, result, "0%", "negative percent should be clamped to 0%")
+	assert.NotContains(t, result, "-", "negative percent should not appear in output")
+}
+
+func TestRenderContextBar_OverPercent(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 150
+	result := m.RenderContextBarForTest()
+	// Clamped to 100: full bar, "100%".
+	assert.Contains(t, result, "100%", "over-100 percent should be clamped to 100%")
+	assert.Contains(t, result, "==========", "clamped full bar should have 10 '=' chars")
+}
+
+func TestRenderContextBar_ContainsBarChars(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 60
+	result := m.RenderContextBarForTest()
+	// Wide mode must contain both bracket characters.
+	assert.Contains(t, result, "[", "wide mode must contain '['")
+	assert.Contains(t, result, "]", "wide mode must contain ']'")
+}
+
+func TestView_ContextBar_Integration(t *testing.T) {
+	// Verify the progress bar is visible in the full View output for wide terminal.
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 40
+	view := m.View()
+	assert.Contains(t, view, "ctx:", "View() should include 'ctx:' from renderContextBar")
+	assert.Contains(t, view, "[", "View() should include bar brackets in wide mode")
+	assert.Contains(t, view, "40%", "View() should include percentage from renderContextBar")
 }

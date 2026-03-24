@@ -110,3 +110,8 @@ func (m StatusLineModel) ContextStyleForTest(pct float64) lipgloss.Style {
 func (m StatusLineModel) PermStyleForTest(mode string) lipgloss.Style {
 	return m.permStyle(mode)
 }
+
+// RenderContextBarForTest exposes renderContextBar for unit testing.
+func (m StatusLineModel) RenderContextBarForTest() string {
+	return m.renderContextBar()
+}
