@@ -265,14 +265,14 @@ The following review findings have been incorporated into the ticket description
 ~~18. Phase 9 continues: TUI-041 (unknown event resilience)~~ ✅ TUI-041 COMPLETE (19 tests, 57 subtests, 91.2% cli coverage, race-clean, stress-tested)
 ~~19. Phase 9 final: TUI-042 (feature parity checklist)~~ ✅ TUI-042 COMPLETE (18 features verified: 16 pass, 2 partial stubs; verify-parity.sh: 75/77 pass, 2 skip)
 ~~20. Phase 10: Begin with TUI-043 (app.go decomposition)~~ ✅ TUI-043 COMPLETE (994→376 lines, 4 new files, all 24 packages green)
-~~21. Phase 10 track A: TUI-044~~ ✅ TUI-044 COMPLETE (ThemeVariant enum, 3 themes, 5 semantic styles, 100% coverage) → TUI-045 → TUI-047
+~~21. Phase 10 track A: TUI-044~~ ✅ TUI-044 COMPLETE → ~~TUI-045~~ ✅ TUI-045 COMPLETE (IconSet dual-mode, 12 icons, Unicode+ASCII, 100% coverage) → TUI-047
 22. Phase 10 track B: TUI-046 → TUI-050 → TUI-051 (theme switching, settings tree, high-contrast)
 23. Phase 10 track C: TUI-052, TUI-053 → TUI-054 (keybindings, slash commands)
 24. Phase 10 track D: TUI-058, TUI-059, TUI-061 (responsive layout, search, tab highlight)
 25. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
 26. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 2/28 tickets complete (TUI-043, TUI-044).**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 3/28 tickets complete (TUI-043, TUI-044, TUI-045).**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -289,8 +289,8 @@ The following review findings have been incorporated into the ticket description
 | 8 | ✅ COMPLETE | TUI-033–035 | Session persistence (atomic writes, auto-save), graceful shutdown (5-phase LIFO, DES-1 resolved), clipboard/search/history. ~1153 tests, 23 packages |
 | 9 | ✅ COMPLETE | TUI-036–042 | 7/7 done. Component tests, CLI integration, MCP integration (81.9%), E2E smoke (6 tests), benchmarks (all 5 pass), resilience (19 tests/57 subtests, 91.2%), feature parity (16/18 pass, 2 partial stubs). verify-parity.sh: 75 pass, 0 fail, 2 skip |
 | 10a | ✅ COMPLETE | TUI-043 | app.go decomposition: 994→376 lines. 4 new files (key_handlers, cli_event_handlers, ui_event_handlers, setters). All 24 packages green. |
-| 10b | 🔄 IN PROGRESS | TUI-044 | Semantic color system: ThemeVariant enum, NewTheme factory (Dark/Light/HighContrast), 5 semantic style methods, 100% coverage. |
-| 10b–g | ⏳ PENDING | TUI-045–070 | 26 tickets remaining. Icon library, theme switching, settings tree, slash commands, responsive layout, fuzzy search, spring animations, rich modals. |
+| 10b | ✅ COMPLETE | TUI-044, TUI-045 | Semantic colors (ThemeVariant, 3 themes, 5 styles) + icon library (IconSet, 12 icons, Unicode/ASCII dual-mode). Both 100% coverage. |
+| 10b–g | ⏳ PENDING | TUI-046–070 | 25 tickets remaining. Theme switching, settings tree, slash commands, responsive layout, fuzzy search, spring animations, rich modals. |
 
 ### Phase 2 Package Tree (delivered)
 

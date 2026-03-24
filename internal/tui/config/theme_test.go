@@ -426,6 +426,199 @@ func TestDangerStyle_IsBoldAndUnderline(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// IconSet — UnicodeIcons
+// ---------------------------------------------------------------------------
+
+func TestUnicodeIcons_AllFieldsNonEmpty(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{"Running", UnicodeIcons.Running},
+		{"Complete", UnicodeIcons.Complete},
+		{"Error", UnicodeIcons.Error},
+		{"Pending", UnicodeIcons.Pending},
+		{"Cancelled", UnicodeIcons.Cancelled},
+		{"Paused", UnicodeIcons.Paused},
+		{"Info", UnicodeIcons.Info},
+		{"Warning", UnicodeIcons.Warning},
+		{"Success", UnicodeIcons.Success},
+		{"Search", UnicodeIcons.Search},
+		{"Settings", UnicodeIcons.Settings},
+		{"Arrow", UnicodeIcons.Arrow},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.NotEmpty(t, tc.value, "UnicodeIcons.%s must not be empty", tc.name)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// IconSet — ASCIIIcons
+// ---------------------------------------------------------------------------
+
+func TestASCIIIcons_AllFieldsNonEmpty(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{"Running", ASCIIIcons.Running},
+		{"Complete", ASCIIIcons.Complete},
+		{"Error", ASCIIIcons.Error},
+		{"Pending", ASCIIIcons.Pending},
+		{"Cancelled", ASCIIIcons.Cancelled},
+		{"Paused", ASCIIIcons.Paused},
+		{"Info", ASCIIIcons.Info},
+		{"Warning", ASCIIIcons.Warning},
+		{"Success", ASCIIIcons.Success},
+		{"Search", ASCIIIcons.Search},
+		{"Settings", ASCIIIcons.Settings},
+		{"Arrow", ASCIIIcons.Arrow},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.NotEmpty(t, tc.value, "ASCIIIcons.%s must not be empty", tc.name)
+		})
+	}
+}
+
+func TestASCIIIcons_AllPrintableASCII(t *testing.T) {
+	values := []struct {
+		name  string
+		value string
+	}{
+		{"Running", ASCIIIcons.Running},
+		{"Complete", ASCIIIcons.Complete},
+		{"Error", ASCIIIcons.Error},
+		{"Pending", ASCIIIcons.Pending},
+		{"Cancelled", ASCIIIcons.Cancelled},
+		{"Paused", ASCIIIcons.Paused},
+		{"Info", ASCIIIcons.Info},
+		{"Warning", ASCIIIcons.Warning},
+		{"Success", ASCIIIcons.Success},
+		{"Search", ASCIIIcons.Search},
+		{"Settings", ASCIIIcons.Settings},
+		{"Arrow", ASCIIIcons.Arrow},
+	}
+
+	for _, tc := range values {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, r := range tc.value {
+				assert.True(t, r >= 0x20 && r <= 0x7E,
+					"ASCIIIcons.%s contains non-printable-ASCII rune %U", tc.name, r)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// IconSet — both sets have the same number of populated fields (structural parity)
+// ---------------------------------------------------------------------------
+
+func TestIconSets_HaveSameNonEmptyFieldCount(t *testing.T) {
+	countNonEmpty := func(s IconSet) int {
+		n := 0
+		for _, v := range []string{
+			s.Running, s.Complete, s.Error, s.Pending, s.Cancelled,
+			s.Paused, s.Info, s.Warning, s.Success, s.Search, s.Settings, s.Arrow,
+		} {
+			if v != "" {
+				n++
+			}
+		}
+		return n
+	}
+
+	uCount := countNonEmpty(UnicodeIcons)
+	aCount := countNonEmpty(ASCIIIcons)
+	assert.Equal(t, uCount, aCount,
+		"UnicodeIcons and ASCIIIcons must have the same number of non-empty fields")
+	// All 12 fields should be populated.
+	assert.Equal(t, 12, uCount, "UnicodeIcons must have all 12 fields populated")
+}
+
+// ---------------------------------------------------------------------------
+// Theme.Icons() — returns correct set based on UseASCII flag
+// ---------------------------------------------------------------------------
+
+func TestTheme_Icons_DefaultReturnUnicode(t *testing.T) {
+	theme := DefaultTheme()
+	assert.False(t, theme.UseASCII, "DefaultTheme must have UseASCII=false")
+	icons := theme.Icons()
+	assert.Equal(t, UnicodeIcons, icons, "Icons() must return UnicodeIcons when UseASCII=false")
+}
+
+func TestTheme_Icons_ASCIIFlagReturnASCII(t *testing.T) {
+	theme := DefaultTheme()
+	theme.UseASCII = true
+	icons := theme.Icons()
+	assert.Equal(t, ASCIIIcons, icons, "Icons() must return ASCIIIcons when UseASCII=true")
+}
+
+func TestTheme_Icons_NewThemeVariantsDefaultUnicode(t *testing.T) {
+	for _, variant := range []ThemeVariant{ThemeDark, ThemeLight, ThemeHighContrast} {
+		t.Run("variant", func(t *testing.T) {
+			theme := NewTheme(variant)
+			assert.False(t, theme.UseASCII,
+				"NewTheme(%d) must have UseASCII=false by default", variant)
+			assert.Equal(t, UnicodeIcons, theme.Icons(),
+				"Icons() must return UnicodeIcons for variant %d", variant)
+		})
+	}
+}
+
+func TestTheme_Icons_ToggleBehavior(t *testing.T) {
+	theme := DefaultTheme()
+
+	// Default: Unicode.
+	assert.Equal(t, UnicodeIcons, theme.Icons())
+
+	// After enabling ASCII: ASCII.
+	theme.UseASCII = true
+	assert.Equal(t, ASCIIIcons, theme.Icons())
+
+	// After disabling ASCII again: back to Unicode.
+	theme.UseASCII = false
+	assert.Equal(t, UnicodeIcons, theme.Icons())
+}
+
+// ---------------------------------------------------------------------------
+// Regression: old Icon* const values still accessible and unchanged
+// ---------------------------------------------------------------------------
+
+func TestLegacyIconConsts_StillAccessible(t *testing.T) {
+	// These values must never change; existing consumers rely on them.
+	assert.Equal(t, rune('>'), IconRunning, "IconRunning regression")
+	assert.Equal(t, rune('*'), IconComplete, "IconComplete regression")
+	assert.Equal(t, rune('!'), IconError, "IconError regression")
+	assert.Equal(t, rune('.'), IconPending, "IconPending regression")
+	assert.Equal(t, rune('x'), IconCancelled, "IconCancelled regression")
+	assert.Equal(t, rune('~'), IconPaused, "IconPaused regression")
+}
+
+func TestLegacyIconConsts_NonZero(t *testing.T) {
+	icons := []struct {
+		name string
+		icon rune
+	}{
+		{"IconRunning", IconRunning},
+		{"IconComplete", IconComplete},
+		{"IconError", IconError},
+		{"IconPending", IconPending},
+		{"IconCancelled", IconCancelled},
+		{"IconPaused", IconPaused},
+	}
+	for _, tc := range icons {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.NotEqual(t, rune(0), tc.icon, "%s must not be zero rune", tc.name)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Regression: DefaultTheme returns same values as before
 // ---------------------------------------------------------------------------
 

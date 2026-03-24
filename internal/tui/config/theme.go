@@ -59,28 +59,108 @@ var ColorMuted = lipgloss.AdaptiveColor{Light: "8", Dark: "8"}
 // ---------------------------------------------------------------------------
 // Icon constants
 //
-// ASCII-safe runes that work on every terminal encoding.
+// Deprecated: These rune constants predate the IconSet system. Prefer
+// Theme.Icons() which returns the correct IconSet for the configured locale.
+// These constants remain for backward compatibility with existing consumers.
 // ---------------------------------------------------------------------------
 
 const (
+	// Deprecated: Use Theme.Icons().Running instead.
 	// IconRunning is shown next to an agent that is currently executing.
 	IconRunning = '>'
 
+	// Deprecated: Use Theme.Icons().Complete instead.
 	// IconComplete is shown next to an agent that finished successfully.
 	IconComplete = '*'
 
+	// Deprecated: Use Theme.Icons().Error instead.
 	// IconError is shown next to an agent that finished with an error.
 	IconError = '!'
 
+	// Deprecated: Use Theme.Icons().Pending instead.
 	// IconPending is shown next to an agent that is waiting to start.
 	IconPending = '.'
 
+	// Deprecated: Use Theme.Icons().Cancelled instead.
 	// IconCancelled is shown next to an agent that was cancelled.
 	IconCancelled = 'x'
 
+	// Deprecated: Use Theme.Icons().Paused instead.
 	// IconPaused is shown next to an agent that is paused / blocked.
 	IconPaused = '~'
 )
+
+// ---------------------------------------------------------------------------
+// IconSet
+//
+// IconSet bundles all UI icon strings for a single rendering mode. Use
+// UnicodeIcons for rich terminal environments and ASCIIIcons for narrow or
+// legacy terminals that lack Unicode support. Select the appropriate set at
+// runtime via Theme.Icons().
+// ---------------------------------------------------------------------------
+
+// IconSet holds all icon strings used across TUI components.
+type IconSet struct {
+	// Running is shown next to an agent that is currently executing.
+	Running string
+	// Complete is shown next to an agent that finished successfully.
+	Complete string
+	// Error is shown next to an agent that finished with an error.
+	Error string
+	// Pending is shown next to an agent that is waiting to start.
+	Pending string
+	// Cancelled is shown next to an agent that was cancelled or killed.
+	Cancelled string
+	// Paused is shown next to an agent that is paused or blocked.
+	Paused string
+	// Info is used for informational status indicators.
+	Info string
+	// Warning is used for warning status indicators.
+	Warning string
+	// Success is used for success status indicators.
+	Success string
+	// Search is used for search or filter UI elements.
+	Search string
+	// Settings is used for configuration or settings UI elements.
+	Settings string
+	// Arrow is used as a directional indicator or selection marker.
+	Arrow string
+}
+
+// UnicodeIcons is the default icon set using Unicode characters that render
+// well on modern terminals with full Unicode support.
+var UnicodeIcons = IconSet{
+	Running:   "▶",
+	Complete:  "✓",
+	Error:     "✗",
+	Pending:   "○",
+	Cancelled: "✕",
+	Paused:    "⏸",
+	Info:      "ℹ",
+	Warning:   "⚠",
+	Success:   "✔",
+	Search:    "\U0001F50D",
+	Settings:  "⚙",
+	Arrow:     "›",
+}
+
+// ASCIIIcons is the fallback icon set using only printable ASCII characters.
+// Use this set on terminals that cannot reliably render Unicode, or when the
+// operator has explicitly requested plain-text output.
+var ASCIIIcons = IconSet{
+	Running:   ">",
+	Complete:  "*",
+	Error:     "!",
+	Pending:   ".",
+	Cancelled: "x",
+	Paused:    "~",
+	Info:      "i",
+	Warning:   "!",
+	Success:   "*",
+	Search:    "/",
+	Settings:  "@",
+	Arrow:     ">",
+}
 
 // ---------------------------------------------------------------------------
 // Styles
@@ -171,6 +251,11 @@ type Theme struct {
 	Success         lipgloss.Style
 	Warning         lipgloss.Style
 	Muted           lipgloss.Style
+
+	// UseASCII, when true, causes Icons() to return ASCIIIcons instead of
+	// UnicodeIcons. Set this on terminals that cannot reliably render Unicode.
+	// Defaults to false.
+	UseASCII bool
 }
 
 // ---------------------------------------------------------------------------
@@ -207,6 +292,17 @@ func (t Theme) InfoStyle() lipgloss.Style {
 // or critical alerts.
 func (t Theme) DangerStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Bold(true).Underline(true).Foreground(t.ColorError)
+}
+
+// Icons returns the appropriate IconSet for this Theme. When UseASCII is true
+// ASCIIIcons is returned; otherwise UnicodeIcons is returned. Components
+// should call this method rather than referencing the package-level icon set
+// variables directly so that the ASCII preference is honoured automatically.
+func (t Theme) Icons() IconSet {
+	if t.UseASCII {
+		return ASCIIIcons
+	}
+	return UnicodeIcons
 }
 
 // ---------------------------------------------------------------------------
