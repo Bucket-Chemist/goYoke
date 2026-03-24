@@ -694,6 +694,7 @@ func (m *mockPlanPreviewWidget) View() string          { return "" }
 func (m *mockPlanPreviewWidget) SetSize(_, _ int)       {}
 func (m *mockPlanPreviewWidget) SetContent(_ string)   {}
 func (m *mockPlanPreviewWidget) ClearContent()         {}
+func (m *mockPlanPreviewWidget) Content() string       { return "" }
 
 // mockTaskBoardWidget satisfies taskBoardWidget.
 type mockTaskBoardWidget struct{}

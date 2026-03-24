@@ -116,6 +116,10 @@ type sharedState struct {
 	planPreview planPreviewWidget
 	taskBoard   taskBoardWidget
 
+	// planViewModal is the full-screen plan viewer overlay (TUI-056).
+	// It is activated by alt+v when rightPanelMode == RPMPlanPreview.
+	planViewModal modals.PlanViewModal
+
 	// Session persistence (TUI-033).
 	sessionStore *session.Store
 	sessionData  *session.SessionData
@@ -229,6 +233,7 @@ func NewAppModel() AppModel {
 		providerState: state.NewProviderState(),
 		activeTheme:   &defaultTheme,
 		themeVariant:  config.ThemeDark,
+		planViewModal: modals.NewPlanViewModal(),
 	}
 	return AppModel{
 		focus:          FocusClaude,
@@ -364,6 +369,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case settingstree.SettingChangedMsg:
 		return m.handleSettingChanged(msg)
+
+	// -----------------------------------------------------------------
+	// Plan view modal (TUI-056)
+	// -----------------------------------------------------------------
+
+	case modals.PlanViewClosedMsg:
+		// Nothing extra to do; the modal deactivated itself on Esc/q.
+		// The renderLayout guard already checks IsActive before rendering.
+		return m, nil
 
 	// -----------------------------------------------------------------
 	// Remaining CLI event types — re-subscribe without side effects.

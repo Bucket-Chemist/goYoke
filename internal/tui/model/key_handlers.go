@@ -14,6 +14,13 @@ import (
 
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// While the plan view modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.planViewModal.IsActive() {
+		updated, cmd := m.shared.planViewModal.Update(msg)
+		m.shared.planViewModal = updated
+		return m, cmd
+	}
+
 	// While a modal is open only modal keys are active.
 	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
 		return m.handleModalKey(msg)
@@ -77,6 +84,19 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Global.ToggleTaskBoard):
 		if m.shared != nil && m.shared.taskBoard != nil {
 			m.shared.taskBoard.Toggle()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.Global.ViewPlan):
+		// Only open the plan viewer when the right panel is showing the plan.
+		if m.rightPanelMode == RPMPlanPreview && m.shared != nil {
+			markdown := ""
+			if m.shared.planPreview != nil {
+				markdown = m.shared.planPreview.Content()
+			}
+			m.shared.planViewModal.SetContent(markdown, m.width)
+			m.shared.planViewModal.SetSize(m.width, m.height)
+			m.shared.planViewModal.Show()
 		}
 		return m, nil
 	}

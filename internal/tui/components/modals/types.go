@@ -21,6 +21,9 @@ const (
 
 	// Permission presents a tool-use permission request with allow/deny options.
 	Permission
+
+	// PlanView presents a full-screen Glamour-rendered plan viewer.
+	PlanView
 )
 
 // String returns the human-readable name of the ModalType.
@@ -36,6 +39,8 @@ func (t ModalType) String() string {
 		return "Select"
 	case Permission:
 		return "Permission"
+	case PlanView:
+		return "PlanView"
 	default:
 		return "Unknown"
 	}

@@ -131,6 +131,16 @@ func (m AppModel) renderLayout() string {
 		return m.shared.modalQueue.View()
 	}
 
+	// Plan view modal renders as a full-screen overlay (lower priority than
+	// ModalQueue but higher than the normal layout).
+	if m.shared != nil && m.shared.planViewModal.IsActive() {
+		return lipgloss.Place(
+			m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			m.shared.planViewModal.View(),
+		)
+	}
+
 	dims := m.computeLayout()
 
 	bannerView := m.banner.View()

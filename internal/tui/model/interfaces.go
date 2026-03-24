@@ -206,6 +206,9 @@ type planPreviewWidget interface {
 	SetSize(w, h int)
 	SetContent(markdown string)
 	ClearContent()
+	// Content returns the raw markdown string currently loaded in the panel.
+	// Returns "" when no plan has been set.
+	Content() string
 }
 
 // ---------------------------------------------------------------------------

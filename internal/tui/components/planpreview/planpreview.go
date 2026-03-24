@@ -70,6 +70,13 @@ func (m *PlanPreviewModel) SetContent(markdown string) {
 	}
 }
 
+// Content returns the raw markdown currently loaded in the panel. Returns ""
+// when no plan has been set. This method satisfies the planPreviewWidget
+// interface so the AppModel can pass the markdown to PlanViewModal.SetContent.
+func (m *PlanPreviewModel) Content() string {
+	return m.content
+}
+
 // ClearContent resets the panel to the empty state.
 func (m *PlanPreviewModel) ClearContent() {
 	m.content = ""

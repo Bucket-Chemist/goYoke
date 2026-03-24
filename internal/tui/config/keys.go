@@ -50,6 +50,10 @@ type GlobalKeys struct {
 
 	// ToggleTaskBoard shows or hides the task-board overlay.
 	ToggleTaskBoard key.Binding
+
+	// ViewPlan opens the full-screen Glamour plan viewer when the right
+	// panel is in RPMPlanPreview mode.
+	ViewPlan key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -183,6 +187,10 @@ func DefaultKeyMap() KeyMap {
 			ToggleTaskBoard: key.NewBinding(
 				key.WithKeys("alt+b"),
 				key.WithHelp("alt+b", "toggle task board"),
+			),
+			ViewPlan: key.NewBinding(
+				key.WithKeys("alt+v"),
+				key.WithHelp("alt+v", "view plan"),
 			),
 		},
 
