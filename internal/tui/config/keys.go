@@ -23,8 +23,12 @@ import "github.com/charmbracelet/bubbles/key"
 // GlobalKeys groups the keybindings that are always active when no modal is
 // open, regardless of which panel or tab has focus.
 type GlobalKeys struct {
-	// ToggleFocus moves focus between the major UI panes.
+	// ToggleFocus moves focus between the major UI panes (forward direction).
 	ToggleFocus key.Binding
+
+	// ReverseToggleFocus moves focus between the major UI panes in reverse.
+	// TUI-052: Shift+Tab rebind from CycleProvider to ReverseToggleFocus (standard keyboard convention)
+	ReverseToggleFocus key.Binding
 
 	// CycleProvider rotates through the available LLM providers.
 	CycleProvider key.Binding
@@ -147,9 +151,14 @@ func DefaultKeyMap() KeyMap {
 				key.WithKeys("tab"),
 				key.WithHelp("tab", "toggle focus"),
 			),
-			CycleProvider: key.NewBinding(
+			// TUI-052: Shift+Tab rebind from CycleProvider to ReverseToggleFocus (standard keyboard convention)
+			ReverseToggleFocus: key.NewBinding(
 				key.WithKeys("shift+tab"),
-				key.WithHelp("shift+tab", "cycle provider"),
+				key.WithHelp("shift+tab", "reverse focus"),
+			),
+			CycleProvider: key.NewBinding(
+				key.WithKeys("alt+P"),
+				key.WithHelp("alt+shift+p", "cycle provider"),
 			),
 			CycleRightPanel: key.NewBinding(
 				key.WithKeys("alt+r"),

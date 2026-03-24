@@ -57,7 +57,8 @@ func TestGlobalKeys_KeyStrings(t *testing.T) {
 		wantKeys []string
 	}{
 		{"ToggleFocus", km.Global.ToggleFocus, []string{"tab"}},
-		{"CycleProvider", km.Global.CycleProvider, []string{"shift+tab"}},
+		{"ReverseToggleFocus", km.Global.ReverseToggleFocus, []string{"shift+tab"}},
+		{"CycleProvider", km.Global.CycleProvider, []string{"alt+P"}},
 		{"CycleRightPanel", km.Global.CycleRightPanel, []string{"alt+r"}},
 		{"CyclePermMode", km.Global.CyclePermMode, []string{"alt+p"}},
 		{"Interrupt", km.Global.Interrupt, []string{"esc"}},
@@ -82,6 +83,7 @@ func TestGlobalKeys_HelpTextNonEmpty(t *testing.T) {
 		binding key.Binding
 	}{
 		{"ToggleFocus", km.Global.ToggleFocus},
+		{"ReverseToggleFocus", km.Global.ReverseToggleFocus},
 		{"CycleProvider", km.Global.CycleProvider},
 		{"CycleRightPanel", km.Global.CycleRightPanel},
 		{"CyclePermMode", km.Global.CyclePermMode},
@@ -336,10 +338,11 @@ func TestDefaultKeyMap_IsIdempotent(t *testing.T) {
 
 func TestKeyMap_TotalBindingCount(t *testing.T) {
 	// Counts are derived from the spec:
-	//   Global: 8, Tab: 4, Claude: 5, Agent: 3, Modal: 4 → total 24
+	//   Global: 9, Tab: 4, Claude: 5, Agent: 3, Modal: 4 → total 25
+	// TUI-052: ReverseToggleFocus added to Global (+1)
 	km := DefaultKeyMap()
 
-	globalCount := 8
+	globalCount := 9
 	tabCount := 4
 	claudeCount := 5
 	agentCount := 3
@@ -347,6 +350,7 @@ func TestKeyMap_TotalBindingCount(t *testing.T) {
 
 	globalBindings := []key.Binding{
 		km.Global.ToggleFocus,
+		km.Global.ReverseToggleFocus,
 		km.Global.CycleProvider,
 		km.Global.CycleRightPanel,
 		km.Global.CyclePermMode,

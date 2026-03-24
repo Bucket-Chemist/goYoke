@@ -908,7 +908,7 @@
     {
       "id": "TUI-052",
       "title": "Shift+Tab reverse navigation",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [

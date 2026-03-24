@@ -609,6 +609,118 @@ func TestHandleKey_ToggleFocus_WrapsAround(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TUI-052: ReverseToggleFocus — Shift+Tab cycles focus in reverse direction
+// ---------------------------------------------------------------------------
+
+// TestHandleKey_ReverseToggleFocus_RetreatsFromAgentsToClaude verifies that
+// shift+tab moves focus from FocusAgents back to FocusClaude (reverse of tab).
+func TestHandleKey_ReverseToggleFocus_RetreatsFromAgentsToClaude(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	// Advance to FocusAgents first.
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	m = updated.(AppModel)
+	if m.focus != FocusAgents {
+		t.Fatalf("precondition: focus = %v; want FocusAgents", m.focus)
+	}
+
+	// Shift+Tab should go back to FocusClaude.
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	result := updated.(AppModel)
+
+	if result.focus != FocusClaude {
+		t.Errorf("focus after shift+tab = %v; want FocusClaude", result.focus)
+	}
+	if cmd != nil {
+		t.Error("cmd != nil after ReverseToggleFocus; want nil")
+	}
+}
+
+// TestHandleKey_ReverseToggleFocus_WrapsAroundToLast verifies that shift+tab
+// from the first focus target wraps to the last target.
+func TestHandleKey_ReverseToggleFocus_WrapsAroundToLast(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	if m.focus != FocusClaude {
+		t.Fatalf("precondition: focus = %v; want FocusClaude", m.focus)
+	}
+
+	// Shift+Tab from FocusClaude (first) should wrap to FocusAgents (last).
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	result := updated.(AppModel)
+
+	if result.focus != FocusAgents {
+		t.Errorf("focus after shift+tab from first = %v; want FocusAgents (wrap-around)", result.focus)
+	}
+	if cmd != nil {
+		t.Error("cmd != nil after ReverseToggleFocus wrap; want nil")
+	}
+}
+
+// TestHandleKey_ReverseToggleFocus_IsOppositeOfTab verifies that tab and
+// shift+tab are exact inverses: tab → shift+tab returns to start.
+func TestHandleKey_ReverseToggleFocus_IsOppositeOfTab(t *testing.T) {
+	m := NewAppModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+
+	initial := m.focus
+
+	// Tab forward, then shift+tab back — must return to initial focus.
+	updated, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	updated, _ = updated.(AppModel).Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	result := updated.(AppModel)
+
+	if result.focus != initial {
+		t.Errorf("focus after tab+shift+tab = %v; want %v (should return to start)", result.focus, initial)
+	}
+}
+
+// TestHandleKey_ShiftTab_DoesNotTriggerCycleProvider verifies that shift+tab
+// no longer triggers provider switching after TUI-052.
+func TestHandleKey_ShiftTab_DoesNotTriggerCycleProvider(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	m = updated.(AppModel)
+	m.shared.claudePanel = mock
+
+	seqBefore := m.providerSwitchSeq
+
+	// shift+tab must NOT increment the provider-switch sequence counter.
+	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+
+	// providerSwitchSeq checked on the pre-update model; the Update returns
+	// new model — re-check on result.
+	updated2, _ := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	result := updated2.(AppModel)
+
+	if result.providerSwitchSeq != seqBefore {
+		t.Errorf("providerSwitchSeq changed on shift+tab = %d; want %d (shift+tab is no longer CycleProvider)",
+			result.providerSwitchSeq, seqBefore)
+	}
+}
+
+// TestHandleKey_AltShiftP_StillTriggersCycleProvider verifies that the new
+// CycleProvider binding (alt+P) still triggers provider switching after TUI-052.
+func TestHandleKey_AltShiftP_StillTriggersCycleProvider(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockClaudePanel{}
+	m.shared.claudePanel = mock
+
+	// alt+P is the new CycleProvider binding (TUI-052).
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true})
+	if cmd == nil {
+		t.Error("alt+P (new CycleProvider) did not emit a command; want debounce timer")
+	}
+}
+
 func TestHandleKey_CycleRightPanel_AdvancesMode(t *testing.T) {
 	m := NewAppModel()
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
@@ -1216,8 +1328,8 @@ func TestCycleProvider_Key_EmitsProviderSwitchExecuteMsg(t *testing.T) {
 	mock := &mockClaudePanel{}
 	m.shared.claudePanel = mock
 
-	// shift+tab is CycleProvider.
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	// alt+shift+p (alt+P) is CycleProvider (TUI-052: rebound from shift+tab).
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true})
 	result := updated.(AppModel)
 
 	if cmd == nil {
@@ -1243,7 +1355,8 @@ func TestCycleProvider_Key_BlockedDuringStreaming(t *testing.T) {
 	mock := &mockClaudePanel{streaming: true}
 	m.shared.claudePanel = mock
 
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	// alt+shift+p (alt+P) is CycleProvider (TUI-052: rebound from shift+tab).
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true})
 	if cmd != nil {
 		t.Error("CycleProvider key should be blocked while streaming; got non-nil cmd")
 	}
@@ -1575,8 +1688,9 @@ func TestProviderSwitchDebounce_SeqIncrementsOnKeyPress(t *testing.T) {
 		t.Fatalf("initial providerSwitchSeq = %d; want 0", m.providerSwitchSeq)
 	}
 
-	// Simulate a CycleProvider key press (Shift+Tab).
-	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	// Simulate a CycleProvider key press (alt+shift+p / alt+P).
+	// TUI-052: Shift+Tab rebound to ReverseToggleFocus; CycleProvider moved to alt+P.
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true}
 	updated, _ := m.Update(msg)
 	result := updated.(AppModel)
 
@@ -1588,7 +1702,8 @@ func TestProviderSwitchDebounce_SeqIncrementsOnKeyPress(t *testing.T) {
 func TestProviderSwitchDebounce_RapidPressesIncrementSeq(t *testing.T) {
 	m := newReadyAppModel(120, 40)
 
-	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	// TUI-052: CycleProvider rebound from shift+tab to alt+P.
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true}
 	for i := 0; i < 3; i++ {
 		updated, _ := m.Update(msg)
 		m = updated.(AppModel)
@@ -1652,7 +1767,8 @@ func TestProviderSwitchDebounce_StreamingBlocksKeyPress(t *testing.T) {
 	seqBefore := m.providerSwitchSeq
 
 	// Attempt CycleProvider while streaming.
-	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	// TUI-052: CycleProvider rebound from shift+tab to alt+P.
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true}
 	updated, cmd := m.Update(msg)
 	result := updated.(AppModel)
 

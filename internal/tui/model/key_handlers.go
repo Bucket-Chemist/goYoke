@@ -49,6 +49,12 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.syncFocusState()
 		return m, nil
 
+	// TUI-052: Shift+Tab triggers reverse focus cycling.
+	case key.Matches(msg, m.keys.Global.ReverseToggleFocus):
+		m.focus = FocusPrev(m.focus)
+		m.syncFocusState()
+		return m, nil
+
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
 		return m, nil
