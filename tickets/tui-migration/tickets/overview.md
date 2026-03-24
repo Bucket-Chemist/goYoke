@@ -264,7 +264,7 @@ The following review findings have been incorporated into the ticket description
 ~~17. Phase 9 continues: TUI-040 (performance benchmarks)~~ ✅ TUI-040 COMPLETE (4 benchmark packages, all 5 targets pass: startup 0.31ms/200ms, modal 0.002ms/100ms, NDJSON 195K lines/sec vs 10K, view 0.82ms/16ms, UDS 0.009ms/5ms)
 ~~18. Phase 9 continues: TUI-041 (unknown event resilience)~~ ✅ TUI-041 COMPLETE (19 tests, 57 subtests, 91.2% cli coverage, race-clean, stress-tested)
 ~~19. Phase 9 final: TUI-042 (feature parity checklist)~~ ✅ TUI-042 COMPLETE (18 features verified: 16 pass, 2 partial stubs; verify-parity.sh: 75/77 pass, 2 skip)
-20. Phase 10: Begin with TUI-043 (app.go decomposition) — structural prerequisite for all Phase 10 features
+~~20. Phase 10: Begin with TUI-043 (app.go decomposition)~~ ✅ TUI-043 COMPLETE (994→376 lines, 4 new files, all 24 packages green)
 21. Phase 10 track A: TUI-044 → TUI-045 → TUI-047 (semantic colors, icons, error formatting)
 22. Phase 10 track B: TUI-046 → TUI-050 → TUI-051 (theme switching, settings tree, high-contrast)
 23. Phase 10 track C: TUI-052, TUI-053 → TUI-054 (keybindings, slash commands)
@@ -272,7 +272,7 @@ The following review findings have been incorporated into the ticket description
 25. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
 26. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 28 tickets PENDING.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 1/28 tickets complete (TUI-043).**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -288,7 +288,8 @@ The following review findings have been incorporated into the ticket description
 | Post-7 Review | ✅ COMPLETE | FIX-1–6, DES-2–6 | 4-reviewer code review (2026-03-23). 6 bug fixes + 4 design refactors. 21/21 packages green, race-clean. Staff Architect: APPROVE_WITH_CONDITIONS (High Confidence). DES-1 → TUI-034; DES-7 → TUI-036. |
 | 8 | ✅ COMPLETE | TUI-033–035 | Session persistence (atomic writes, auto-save), graceful shutdown (5-phase LIFO, DES-1 resolved), clipboard/search/history. ~1153 tests, 23 packages |
 | 9 | ✅ COMPLETE | TUI-036–042 | 7/7 done. Component tests, CLI integration, MCP integration (81.9%), E2E smoke (6 tests), benchmarks (all 5 pass), resilience (19 tests/57 subtests, 91.2%), feature parity (16/18 pass, 2 partial stubs). verify-parity.sh: 75 pass, 0 fail, 2 skip |
-| 10 | ⏳ PENDING | TUI-043–070 | 28 tickets. UX Overhaul: semantic colors, icon library, theme switching, settings tree, slash commands, responsive layout, fuzzy search, spring animations, rich modals, breadcrumbs. Review: APPROVE_WITH_CONDITIONS (2026-03-24). Est. ~450 new tests. |
+| 10a | 🔄 IN PROGRESS | TUI-043 | app.go decomposition: 994→376 lines. 4 new files (key_handlers, cli_event_handlers, ui_event_handlers, setters). All 24 packages green. |
+| 10b–g | ⏳ PENDING | TUI-044–070 | 27 tickets. UX Overhaul: semantic colors, icon library, theme switching, settings tree, slash commands, responsive layout, fuzzy search, spring animations, rich modals, breadcrumbs. Review: APPROVE_WITH_CONDITIONS (2026-03-24). Est. ~450 new tests. |
 
 ### Phase 2 Package Tree (delivered)
 
@@ -366,8 +367,12 @@ internal/tui/
 └── model/                        # Root AppModel + types (TUI-006, TUI-008)
     ├── focus.go                  # FocusTarget, RightPanelMode
     ├── focus_test.go
-    ├── app.go                    # AppModel core (DES-2: split 1333→766 lines)
+    ├── app.go                    # AppModel: struct + Init + Update dispatcher + View (TUI-043: 994→376 lines)
     ├── app_test.go
+    ├── key_handlers.go           # Keyboard: handleKey, handleModalKey, handleClaudeKey, handleAgentsKey (TUI-043)
+    ├── cli_event_handlers.go     # CLI events: Started, SystemInit, Assistant, User, Result, Disconnected (TUI-043)
+    ├── ui_event_handlers.go      # UI events: ProviderSwitch, Modal, Agent, Team, Toast, Shutdown (TUI-043)
+    ├── setters.go                # 17 setter/injector methods on AppModel (TUI-043)
     ├── interfaces.go             # Widget interfaces: all mockable (DES-2: extracted, 225 lines)
     ├── layout.go                 # Layout compositor + sizing logic (DES-2: extracted, 257 lines)
     ├── provider_switch.go        # Provider switching handlers (DES-2: extracted, 135 lines)

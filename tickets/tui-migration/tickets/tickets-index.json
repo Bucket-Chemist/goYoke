@@ -754,13 +754,17 @@
     {
       "id": "TUI-043",
       "title": "Extract key handlers from app.go",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [],
       "time_estimate": "4-6 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10a", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10a",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-044",
@@ -771,7 +775,11 @@
       "dependencies": [],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10b",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-045",
@@ -779,10 +787,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-044"],
+      "dependencies": [
+        "TUI-044"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10b",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-046",
@@ -790,10 +804,17 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043", "TUI-044"],
+      "dependencies": [
+        "TUI-043",
+        "TUI-044"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10b",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-047",
@@ -801,10 +822,17 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-044", "TUI-045"],
+      "dependencies": [
+        "TUI-044",
+        "TUI-045"
+      ],
       "time_estimate": "2-3 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10b",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-048",
@@ -812,10 +840,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-044"],
+      "dependencies": [
+        "TUI-044"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10c",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-049",
@@ -823,10 +857,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-048"],
+      "dependencies": [
+        "TUI-048"
+      ],
       "time_estimate": "2-3 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10c",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-050",
@@ -834,10 +874,18 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-044", "TUI-045", "TUI-046"],
+      "dependencies": [
+        "TUI-044",
+        "TUI-045",
+        "TUI-046"
+      ],
       "time_estimate": "6-8 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10c",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-051",
@@ -845,10 +893,17 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-046", "TUI-050"],
+      "dependencies": [
+        "TUI-046",
+        "TUI-050"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10c",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-052",
@@ -856,10 +911,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043"],
+      "dependencies": [
+        "TUI-043"
+      ],
       "time_estimate": "2-3 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10d",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-053",
@@ -867,10 +928,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043"],
+      "dependencies": [
+        "TUI-043"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10d",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-054",
@@ -878,10 +945,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-053"],
+      "dependencies": [
+        "TUI-053"
+      ],
       "time_estimate": "2-3 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10d",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-055",
@@ -889,10 +962,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-044"],
+      "dependencies": [
+        "TUI-044"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10d",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-056",
@@ -900,10 +979,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043"],
+      "dependencies": [
+        "TUI-043"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10d",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-057",
@@ -911,10 +996,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-048"],
+      "dependencies": [
+        "TUI-048"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10d",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-058",
@@ -922,10 +1013,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043"],
+      "dependencies": [
+        "TUI-043"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10e",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-059",
@@ -933,10 +1030,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043"],
+      "dependencies": [
+        "TUI-043"
+      ],
       "time_estimate": "6-8 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10e",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-060",
@@ -944,10 +1047,18 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-043", "TUI-058", "TUI-050"],
+      "dependencies": [
+        "TUI-043",
+        "TUI-058",
+        "TUI-050"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10e",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-061",
@@ -958,7 +1069,11 @@
       "dependencies": [],
       "time_estimate": "2-3 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10e",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-062",
@@ -966,10 +1081,17 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-043", "TUI-050"],
+      "dependencies": [
+        "TUI-043",
+        "TUI-050"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10e",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-063",
@@ -977,10 +1099,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-045"],
+      "dependencies": [
+        "TUI-045"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10f",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-064",
@@ -991,7 +1119,11 @@
       "dependencies": [],
       "time_estimate": "3-4 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10f",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-065",
@@ -999,10 +1131,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "LOW",
-      "dependencies": ["TUI-064"],
+      "dependencies": [
+        "TUI-064"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10f",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-066",
@@ -1010,10 +1148,17 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-044", "TUI-045"],
+      "dependencies": [
+        "TUI-044",
+        "TUI-045"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10f",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-067",
@@ -1021,10 +1166,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-066"],
+      "dependencies": [
+        "TUI-066"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10f",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-068",
@@ -1032,10 +1183,16 @@
       "status": "pending",
       "phase": 10,
       "priority": "MEDIUM",
-      "dependencies": ["TUI-045"],
+      "dependencies": [
+        "TUI-045"
+      ],
       "time_estimate": "3-4 hours",
       "agent": "go-tui",
-      "tags": ["ux-overhaul", "phase-10g", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10g",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-069",
@@ -1046,7 +1203,11 @@
       "dependencies": [],
       "time_estimate": "3-4 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10g", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10g",
+        "plan-generated"
+      ]
     },
     {
       "id": "TUI-070",
@@ -1054,10 +1215,42 @@
       "status": "pending",
       "phase": 10,
       "priority": "HIGH",
-      "dependencies": ["TUI-043", "TUI-044", "TUI-045", "TUI-046", "TUI-047", "TUI-048", "TUI-049", "TUI-050", "TUI-051", "TUI-052", "TUI-053", "TUI-054", "TUI-055", "TUI-056", "TUI-057", "TUI-058", "TUI-059", "TUI-060", "TUI-061", "TUI-062", "TUI-063", "TUI-064", "TUI-065", "TUI-066", "TUI-067", "TUI-068", "TUI-069"],
+      "dependencies": [
+        "TUI-043",
+        "TUI-044",
+        "TUI-045",
+        "TUI-046",
+        "TUI-047",
+        "TUI-048",
+        "TUI-049",
+        "TUI-050",
+        "TUI-051",
+        "TUI-052",
+        "TUI-053",
+        "TUI-054",
+        "TUI-055",
+        "TUI-056",
+        "TUI-057",
+        "TUI-058",
+        "TUI-059",
+        "TUI-060",
+        "TUI-061",
+        "TUI-062",
+        "TUI-063",
+        "TUI-064",
+        "TUI-065",
+        "TUI-066",
+        "TUI-067",
+        "TUI-068",
+        "TUI-069"
+      ],
       "time_estimate": "4-6 hours",
       "agent": "go-pro",
-      "tags": ["ux-overhaul", "phase-10g", "plan-generated"]
+      "tags": [
+        "ux-overhaul",
+        "phase-10g",
+        "plan-generated"
+      ]
     }
   ]
 }
