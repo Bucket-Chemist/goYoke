@@ -272,7 +272,7 @@ The following review findings have been incorporated into the ticket description
 25. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
 26. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 7/28 tickets complete (TUI-043–049).**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 8/28 tickets complete (TUI-043–050).**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -290,8 +290,8 @@ The following review findings have been incorporated into the ticket description
 | 9 | ✅ COMPLETE | TUI-036–042 | 7/7 done. Component tests, CLI integration, MCP integration (81.9%), E2E smoke (6 tests), benchmarks (all 5 pass), resilience (19 tests/57 subtests, 91.2%), feature parity (16/18 pass, 2 partial stubs). verify-parity.sh: 75 pass, 0 fail, 2 skip |
 | 10a | ✅ COMPLETE | TUI-043 | app.go decomposition: 994→376 lines. 4 new files (key_handlers, cli_event_handlers, ui_event_handlers, setters). All 24 packages green. |
 | 10b | ✅ COMPLETE | TUI-044–047 | Semantic colors + icons (100%) + theme switching infra (88.9%) + error formatting (94%). **Track A + visual foundation done.** |
-| 10c | ✅ COMPLETE | TUI-048, TUI-049 | Status line semantic colors (88.1%) + token progress bar `[=====     ]` with narrow fallback (88.7%). 70 statusline tests. |
-| 10c–g | ⏳ PENDING | TUI-050–070 | 21 tickets remaining. Settings tree, high-contrast, slash commands, responsive layout, fuzzy search, spring animations, rich modals. |
+| 10c | ✅ COMPLETE | TUI-048–050 | Status line colors (88.1%) + progress bar (88.7%) + interactive settings tree (87.4%, 24 tests, 3 sections). 24 TUI packages. |
+| 10c–g | ⏳ PENDING | TUI-051–070 | 20 tickets remaining. High-contrast, slash commands, responsive layout, fuzzy search, spring animations, rich modals. |
 
 ### Phase 2 Package Tree (delivered)
 

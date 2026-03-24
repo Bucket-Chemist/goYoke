@@ -223,3 +223,29 @@ type taskBoardWidget interface {
 	Height() int
 	SetTasks(tasks []state.TaskEntry)
 }
+
+// ---------------------------------------------------------------------------
+// settingsTreeWidget
+//
+// settingsTreeWidget is the interface satisfied by
+// settingstree.SettingsTreeModel. The settingstree package has no dependency
+// on the model package, so the interface is defined here to keep the widget
+// coupling pattern consistent with the other widget interfaces and to avoid
+// any future circular import.
+// ---------------------------------------------------------------------------
+
+// settingsTreeWidget is the interface satisfied by settingstree.SettingsTreeModel.
+type settingsTreeWidget interface {
+	// Init returns the initial command (nil for this component).
+	Init() tea.Cmd
+	// View renders the settings tree to a string.
+	View() string
+	// SetSize updates the viewport dimensions.
+	SetSize(w, h int)
+	// SetFocused sets keyboard-focus state.
+	SetFocused(bool)
+	// SetValue updates the value of the node identified by key.
+	// Intended for Display nodes whose values originate outside the component
+	// (model name, git branch, etc.). A no-op when key is not found.
+	SetValue(key, value string)
+}
