@@ -819,7 +819,7 @@
     {
       "id": "TUI-047",
       "title": "Contextual error message formatting",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [
