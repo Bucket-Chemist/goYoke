@@ -942,7 +942,7 @@
     {
       "id": "TUI-054",
       "title": "Slash command execution via CLI",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [

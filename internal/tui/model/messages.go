@@ -269,6 +269,22 @@ type ShutdownCompleteMsg struct {
 }
 
 // ---------------------------------------------------------------------------
+// Slash command messages (TUI-054)
+// ---------------------------------------------------------------------------
+
+// SlashExecutedMsg is emitted when a slash command is executed from the input
+// bar. IsLocal is true for commands handled directly in the TUI (/clear,
+// /help); false for commands forwarded to the CLI subprocess.
+type SlashExecutedMsg struct {
+	// Command is the slash command name including the "/" prefix, e.g. "/explore".
+	Command string
+	// Args is the text following the command name, trimmed of leading whitespace.
+	Args string
+	// IsLocal is true when the command was handled locally (no CLI call made).
+	IsLocal bool
+}
+
+// ---------------------------------------------------------------------------
 // Theme messages (TUI-046)
 // ---------------------------------------------------------------------------
 

@@ -118,6 +118,18 @@ func DefaultCommands() []SlashCommand {
 	}
 }
 
+// HelpText returns a formatted string listing all available slash commands,
+// suitable for display as a system message in the Claude panel.
+func HelpText() string {
+	var sb strings.Builder
+	sb.WriteString("Available slash commands:\n")
+	for _, cmd := range DefaultCommands() {
+		sb.WriteString("  /" + cmd.Name + " — " + cmd.Description + "\n")
+	}
+	sb.WriteString("\nLocal commands: /clear (clear conversation), /help (this message)")
+	return sb.String()
+}
+
 // ---------------------------------------------------------------------------
 // SlashCmdModel
 // ---------------------------------------------------------------------------

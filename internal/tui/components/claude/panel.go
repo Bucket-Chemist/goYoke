@@ -15,6 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/slashcmd"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
@@ -120,6 +121,9 @@ type ClaudePanelModel struct {
 
 	// search is the in-panel search overlay (TUI-035).
 	search SearchModel
+
+	// slashCmd is the slash-command autocomplete dropdown (TUI-054).
+	slashCmd slashcmd.SlashCmdModel
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -139,6 +143,7 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 		autoScroll: true,
 		keys:       keys.Claude,
 		search:     NewSearchModel(),
+		slashCmd:   slashcmd.NewSlashCmdModel(),
 	}
 }
 
@@ -177,6 +182,13 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 			m.vp.GotoBottom()
 		}
 		return m, nil
+
+	case slashcmd.SlashCmdSelectedMsg:
+		// User selected a command from the dropdown via Enter.
+		// Execute the command immediately (no args appended).
+		m.slashCmd.Hide()
+		m.input.Reset()
+		return m.executeSlashCommand(msg.Command)
 
 	case tea.KeyMsg:
 		if !m.focused {
@@ -292,16 +304,52 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 	}
 
 	// ---------------------------------------------------------------------------
+	// Slash command dropdown — intercept navigation keys when visible.
+	// ---------------------------------------------------------------------------
+	if m.slashCmd.IsVisible() {
+		switch msg.String() {
+		case "up", "k", "down", "j", "enter":
+			// Forward navigation/selection to the dropdown.
+			var scCmd tea.Cmd
+			m.slashCmd, scCmd = m.slashCmd.Update(msg)
+			return m, scCmd
+
+		case "escape", "esc":
+			// Dismiss the dropdown and let the input keep the "/" text.
+			m.slashCmd.Hide()
+			return m, nil
+
+		case "tab":
+			// Tab-complete: insert the selected command name into the input
+			// and let the user add args before pressing Enter.
+			sel := m.slashCmd.Selected()
+			if sel.Name != "" {
+				m.slashCmd.Hide()
+				newVal := "/" + sel.Name + " "
+				m.input.SetValue(newVal)
+				m.input.CursorEnd()
+			}
+			return m, nil
+		}
+		// All other keys (printable chars, backspace) fall through to normal
+		// input handling below, then re-evaluate the dropdown filter.
+	}
+
+	// ---------------------------------------------------------------------------
 	// Normal mode key handling.
 	// ---------------------------------------------------------------------------
 
 	switch {
 	case key.Matches(msg, m.keys.Search):
-		// Activate search mode.
-		m.search.Activate()
-		m.search.SetWidth(m.width)
-		m.input.Blur()
-		return m, nil
+		// "/" activates search mode ONLY when the textinput is not focused.
+		// When the textinput is focused the "/" rune should go to the input
+		// so the slash-command dropdown can engage.
+		if !m.input.Focused() {
+			m.search.Activate()
+			m.search.SetWidth(m.width)
+			return m, nil
+		}
+		// Input is focused: forward "/" to the textinput below.
 
 	case key.Matches(msg, m.keys.CopyLastResponse):
 		// Copy the last assistant message to the clipboard.
@@ -318,6 +366,18 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		if text == "" || m.streaming {
 			return m, nil
 		}
+		// If the dropdown is still somehow visible (shouldn't happen after
+		// Enter interception above), hide it.
+		m.slashCmd.Hide()
+
+		// If this looks like a slash command, execute it.
+		if strings.HasPrefix(text, "/") {
+			m.historyIdx = -1
+			m.draftInput = ""
+			m.input.Reset()
+			return m.executeSlashCommand(text)
+		}
+
 		// Record in history (avoid duplicates at the top).
 		if len(m.inputHistory) == 0 || m.inputHistory[len(m.inputHistory)-1] != text {
 			m.inputHistory = append(m.inputHistory, text)
@@ -353,6 +413,9 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 	// Forward all other key events to the textinput.
 	var tiCmd tea.Cmd
 	m.input, tiCmd = m.input.Update(msg)
+
+	// After any text change, update the slash-command dropdown state.
+	m.updateSlashDropdown()
 
 	// Check if the viewport was scrolled by user (not textinput key).
 	if !m.vp.AtBottom() {
@@ -417,6 +480,81 @@ func (m ClaudePanelModel) navigateHistoryNext() ClaudePanelModel {
 }
 
 // ---------------------------------------------------------------------------
+// Slash command helpers (TUI-054)
+// ---------------------------------------------------------------------------
+
+// updateSlashDropdown checks the current input value and shows, filters, or
+// hides the slash command dropdown accordingly. It is called after every
+// key event that may have changed the input text.
+func (m *ClaudePanelModel) updateSlashDropdown() {
+	val := m.input.Value()
+	if !strings.HasPrefix(val, "/") {
+		m.slashCmd.Hide()
+		return
+	}
+	// Strip the leading "/" for the filter query.
+	query := strings.TrimPrefix(val, "/")
+	if m.slashCmd.IsVisible() {
+		m.slashCmd.Filter(query)
+	} else {
+		m.slashCmd.Show(query)
+	}
+	// Propagate the current width so the dropdown renders at the right size.
+	m.slashCmd.SetWidth(m.width)
+}
+
+// executeSlashCommand parses and executes the given slash command string.
+// cmd may include optional arguments after the command name (e.g. "/explore foo").
+// It returns the updated model and any commands to run.
+func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea.Cmd) {
+	parts := strings.SplitN(strings.TrimSpace(cmd), " ", 2)
+	command := parts[0] // includes the "/" prefix
+	args := ""
+	if len(parts) > 1 {
+		args = strings.TrimSpace(parts[1])
+	}
+
+	switch command {
+	case "/clear":
+		m.messages = nil
+		m.syncViewport()
+		return m, func() tea.Msg {
+			return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: true}
+		}
+
+	case "/help":
+		helpText := slashcmd.HelpText()
+		m.messages = append(m.messages, DisplayMessage{
+			Role:      "system",
+			Content:   helpText,
+			Timestamp: time.Now(),
+		})
+		m.syncViewport()
+		if m.autoScroll {
+			m.vp.GotoBottom()
+		}
+		return m, func() tea.Msg {
+			return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: true}
+		}
+
+	default:
+		// Remote command — forward the full slash invocation to the CLI.
+		text := command
+		if args != "" {
+			text = command + " " + args
+		}
+		var cmds []tea.Cmd
+		if m.sender != nil {
+			cmds = append(cmds, m.sender.SendMessage(text))
+		}
+		cmds = append(cmds, func() tea.Msg {
+			return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: false}
+		})
+		return m, tea.Batch(cmds...)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // View
 // ---------------------------------------------------------------------------
 
@@ -438,8 +576,16 @@ func (m ClaudePanelModel) View() string {
 		searchBarH = lipgloss.Height(searchBar)
 	}
 
+	// Render the slash-command dropdown above the input line when visible.
+	var dropdownView string
+	dropdownH := 0
+	if m.slashCmd.IsVisible() {
+		dropdownView = m.slashCmd.View()
+		dropdownH = lipgloss.Height(dropdownView)
+	}
+
 	// The viewport takes all remaining vertical space.
-	vpH := m.height - inputH - searchBarH
+	vpH := m.height - inputH - searchBarH - dropdownH
 	if vpH < 1 {
 		vpH = 1
 	}
@@ -452,6 +598,14 @@ func (m ClaudePanelModel) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left,
 			searchBar,
 			m.vp.View(),
+			inputLine,
+		)
+	}
+
+	if m.slashCmd.IsVisible() {
+		return lipgloss.JoinVertical(lipgloss.Left,
+			m.vp.View(),
+			dropdownView,
 			inputLine,
 		)
 	}
