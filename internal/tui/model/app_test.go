@@ -2455,3 +2455,131 @@ func TestHandleKey_ToggleTaskBoard_NilTaskBoard_NoPanic(t *testing.T) {
 		t.Error("cmd != nil for ToggleTaskBoard with nil taskBoard; want nil")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// PlanStepMsg — plan mode tracking (TUI-057)
+// ---------------------------------------------------------------------------
+
+// TestUpdate_PlanStepMsg_SetsFieldsOnStatusLine verifies that PlanStepMsg
+// correctly flows through AppModel.Update and sets the plan mode fields on the
+// status line.
+func TestUpdate_PlanStepMsg_SetsFieldsOnStatusLine(t *testing.T) {
+	tests := []struct {
+		name           string
+		msg            PlanStepMsg
+		wantActive     bool
+		wantStep       int
+		wantTotal      int
+	}{
+		{
+			name:      "activate with known steps",
+			msg:       PlanStepMsg{Active: true, Step: 2, Total: 5},
+			wantActive: true,
+			wantStep:  2,
+			wantTotal: 5,
+		},
+		{
+			name:      "activate with unknown steps",
+			msg:       PlanStepMsg{Active: true, Step: 0, Total: 0},
+			wantActive: true,
+			wantStep:  0,
+			wantTotal: 0,
+		},
+		{
+			name:      "deactivate plan mode",
+			msg:       PlanStepMsg{Active: false, Step: 0, Total: 0},
+			wantActive: false,
+			wantStep:  0,
+			wantTotal: 0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := NewAppModel()
+			updated, _ := m.Update(tc.msg)
+			result := updated.(AppModel)
+
+			if result.statusLine.PlanActive != tc.wantActive {
+				t.Errorf("PlanActive = %v; want %v", result.statusLine.PlanActive, tc.wantActive)
+			}
+			if result.statusLine.PlanStep != tc.wantStep {
+				t.Errorf("PlanStep = %d; want %d", result.statusLine.PlanStep, tc.wantStep)
+			}
+			if result.statusLine.PlanTotalSteps != tc.wantTotal {
+				t.Errorf("PlanTotalSteps = %d; want %d", result.statusLine.PlanTotalSteps, tc.wantTotal)
+			}
+		})
+	}
+}
+
+// TestUpdate_PlanStepMsg_ActiveTransition_EmitsToast verifies that the
+// first inactive→active transition emits a toast notification when a toasts
+// widget is wired.
+func TestUpdate_PlanStepMsg_ActiveTransition_EmitsToast(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockToast{empty: true}
+	m.shared.toasts = mock
+
+	// Transition: inactive → active.
+	m.Update(PlanStepMsg{Active: true, Step: 1, Total: 3})
+
+	if !mock.handleMsgCalled {
+		t.Error("toast.HandleMsg not called on plan mode activation transition; want toast notification")
+	}
+}
+
+// TestUpdate_PlanStepMsg_AlreadyActive_NoToast verifies that subsequent
+// PlanStepMsg events when plan mode is already active do NOT emit additional
+// toast notifications.
+func TestUpdate_PlanStepMsg_AlreadyActive_NoToast(t *testing.T) {
+	m := NewAppModel()
+	mock := &mockToast{empty: true}
+	m.shared.toasts = mock
+
+	// First activation.
+	updated, _ := m.Update(PlanStepMsg{Active: true, Step: 1, Total: 3})
+	m = updated.(AppModel)
+
+	// Reset the mock to detect further calls.
+	mock.handleMsgCalled = false
+
+	// Second message while already active — must NOT trigger another toast.
+	m.Update(PlanStepMsg{Active: true, Step: 2, Total: 3})
+
+	if mock.handleMsgCalled {
+		t.Error("toast.HandleMsg called on second PlanStepMsg while already active; want no duplicate toast")
+	}
+}
+
+// TestParsePlanStep_DetectsPatterns verifies that the internal plan-step regex
+// correctly identifies supported step marker patterns.
+func TestParsePlanStep_DetectsPatterns(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantStep  int
+		wantTotal int
+	}{
+		{"step N of M", "Step 2 of 5", 2, 5},
+		{"step N/M", "Step 1/3", 1, 3},
+		{"phase N of M", "Phase 3 of 7", 3, 7},
+		{"phase N/M", "Phase 2/4", 2, 4},
+		{"case insensitive", "step 1 of 3", 1, 3},
+		{"embedded in sentence", "Now executing Step 2 of 5 in the plan.", 2, 5},
+		{"no match", "Hello world", 0, 0},
+		{"no total", "Step 2", 0, 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			step, total := parsePlanStep(tc.input)
+			if step != tc.wantStep {
+				t.Errorf("parsePlanStep(%q) step = %d; want %d", tc.input, step, tc.wantStep)
+			}
+			if total != tc.wantTotal {
+				t.Errorf("parsePlanStep(%q) total = %d; want %d", tc.input, total, tc.wantTotal)
+			}
+		})
+	}
+}

@@ -182,6 +182,29 @@ func (m AppModel) handleSessionAutoSave(msg SessionAutoSaveMsg) (tea.Model, tea.
 	return m, nil
 }
 
+// handlePlanStep handles PlanStepMsg: updates the plan mode fields on the
+// status line and, on the transition from inactive to active, emits a toast
+// informing the user about the alt+v shortcut.
+func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
+	wasActive := m.statusLine.PlanActive
+	m.statusLine.PlanActive = msg.Active
+	m.statusLine.PlanStep = msg.Step
+	m.statusLine.PlanTotalSteps = msg.Total
+
+	// Emit a toast only on the inactive → active transition.
+	if msg.Active && !wasActive {
+		if m.shared != nil && m.shared.toasts != nil {
+			cmd := m.shared.toasts.HandleMsg(ToastMsg{
+				Text:  "Plan mode active — press alt+v to view plan",
+				Level: ToastLevelInfo,
+			})
+			return m, cmd
+		}
+	}
+
+	return m, nil
+}
+
 // handleThemeChanged handles ThemeChangedMsg: builds a new Theme for the
 // requested variant, stores it in sharedState, and records the variant for
 // session persistence.

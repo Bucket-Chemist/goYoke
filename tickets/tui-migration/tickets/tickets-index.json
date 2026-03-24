@@ -993,7 +993,7 @@
     {
       "id": "TUI-057",
       "title": "Plan mode UX improvements",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [

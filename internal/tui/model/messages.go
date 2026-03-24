@@ -285,6 +285,22 @@ type SlashExecutedMsg struct {
 }
 
 // ---------------------------------------------------------------------------
+// Plan mode messages (TUI-057)
+// ---------------------------------------------------------------------------
+
+// PlanStepMsg signals plan mode state changes including step tracking.
+// It is emitted when plan mode becomes active or inactive, and whenever
+// the current step number changes (detected from assistant streaming text).
+type PlanStepMsg struct {
+	// Active is true when plan mode is active, false when exiting.
+	Active bool
+	// Step is the current step number (0 = unknown).
+	Step int
+	// Total is the total number of steps (0 = unknown).
+	Total int
+}
+
+// ---------------------------------------------------------------------------
 // Theme messages (TUI-046)
 // ---------------------------------------------------------------------------
 

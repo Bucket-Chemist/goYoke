@@ -799,3 +799,68 @@ func TestView_ContextBar_Integration(t *testing.T) {
 	assert.Contains(t, view, "[", "View() should include bar brackets in wide mode")
 	assert.Contains(t, view, "40%", "View() should include percentage from renderContextBar")
 }
+
+// ---------------------------------------------------------------------------
+// TUI-057: Plan mode rendering
+// ---------------------------------------------------------------------------
+
+func TestView_PlanMode_Inactive_NoLabel(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	// PlanActive is false by default.
+	view := m.View()
+	assert.NotContains(t, view, "[PLAN MODE", "inactive plan mode must not show [PLAN MODE] label")
+}
+
+func TestView_PlanMode_Active_StepsUnknown(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	statusline.SetPlanFieldsForTest(&m, true, 0, 0)
+	view := m.View()
+	assert.Contains(t, view, "[PLAN MODE]", "active plan mode with unknown steps must show [PLAN MODE]")
+	assert.NotContains(t, view, "step", "plan mode with unknown steps must not show step counter")
+}
+
+func TestView_PlanMode_Active_StepsKnown(t *testing.T) {
+	tests := []struct {
+		name    string
+		step    int
+		total   int
+		wantSub string
+	}{
+		{"first step", 1, 5, "[PLAN MODE: step 1/5]"},
+		{"middle step", 2, 5, "[PLAN MODE: step 2/5]"},
+		{"last step", 5, 5, "[PLAN MODE: step 5/5]"},
+		{"single step plan", 1, 1, "[PLAN MODE: step 1/1]"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := statusline.NewStatusLineModel(200)
+			statusline.SetPlanFieldsForTest(&m, true, tc.step, tc.total)
+			view := m.View()
+			assert.Contains(t, view, tc.wantSub,
+				"View() step %d/%d should contain %q", tc.step, tc.total, tc.wantSub)
+		})
+	}
+}
+
+func TestView_PlanMode_Deactivated_LabelDisappears(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	// Activate plan mode.
+	statusline.SetPlanFieldsForTest(&m, true, 3, 5)
+	activeView := m.View()
+	assert.Contains(t, activeView, "[PLAN MODE", "active plan mode should show label")
+
+	// Deactivate.
+	statusline.SetPlanFieldsForTest(&m, false, 0, 0)
+	inactiveView := m.View()
+	assert.NotContains(t, inactiveView, "[PLAN MODE", "deactivated plan mode must not show label")
+}
+
+func TestView_PlanMode_TwoRowsPreserved(t *testing.T) {
+	// Plan mode must not break the two-row layout.
+	m := statusline.NewStatusLineModel(200)
+	statusline.SetPlanFieldsForTest(&m, true, 2, 7)
+	view := m.View()
+	view = strings.TrimRight(view, "\n")
+	lines := strings.Split(view, "\n")
+	assert.Equal(t, 2, len(lines), "View() must still produce exactly 2 rows in plan mode")
+}

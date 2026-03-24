@@ -268,11 +268,12 @@ The following review findings have been incorporated into the ticket description
 ~~21. Phase 10 track A: TUI-044~~ ✅ → ~~TUI-045~~ ✅ → ~~TUI-047~~ ✅ TUI-047 COMPLETE (ErrorDisplay, FormatError/Warning, ClassifyError, 94% coverage) — **Track A done**
 ~~22. Phase 10 track B: TUI-046~~ ✅ → ~~TUI-050~~ ✅ → ~~TUI-051~~ ✅ TUI-051 COMPLETE (WCAG ContrastRatio, ValidateContrast, SettingChangedMsg wiring) — **Track B done**
 ~~23. Phase 10 track C: TUI-052~~ ✅ → ~~TUI-053~~ ✅ → ~~TUI-054~~ ✅ TUI-054 COMPLETE (slash exec: /clear local, /help local, rest→CLI, 84.8%) — **Track D (parity) done**
-24. Phase 10 track D: TUI-058, TUI-059, TUI-061 (responsive layout, search, tab highlight)
-25. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
-26. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
+~~24. TUI-057 (plan mode UX)~~ ✅ TUI-057 COMPLETE (PlanStepMsg, status bar [PLAN MODE: step N/M], toast, parsePlanStep regex, 89.2% statusline coverage)
+25. Phase 10 track D: TUI-058, TUI-059, TUI-061 (responsive layout, search, tab highlight)
+26. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
+27. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 14/28 tickets complete (TUI-043–056). 50%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 15/28 tickets complete (TUI-043–057). 54%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -291,10 +292,10 @@ The following review findings have been incorporated into the ticket description
 | 10a | ✅ COMPLETE | TUI-043 | app.go decomposition: 994→376 lines. 4 new files (key_handlers, cli_event_handlers, ui_event_handlers, setters). All 24 packages green. |
 | 10b | ✅ COMPLETE | TUI-044–047 | Semantic colors + icons (100%) + theme switching infra (88.9%) + error formatting (94%). **Track A + visual foundation done.** |
 | 10c | ✅ COMPLETE | TUI-048–051 | Status line colors + progress bar + settings tree + high-contrast WCAG (ContrastRatio, ValidateContrast, SettingChangedMsg→SetTheme wiring). config 96.3%, model 89.3%. |
-| 10d | ✅ COMPLETE | TUI-052–056 | Shift+Tab + slash dropdown/exec + task board + plan modal (Glamour viewport, alt+v guard, 89.0%). |
-| 10e–g | ⏳ PENDING | TUI-057–070 | 14 tickets remaining. Plan UX, responsive layout, fuzzy search, animations, tab highlight, vim keys, modals, breadcrumbs, docs. |
+| 10d | ✅ COMPLETE | TUI-052–057 | Shift+Tab + slash dropdown/exec + task board + plan modal + plan mode UX (PlanStepMsg, status bar indicator, toast, 89.2%). |
+| 10e–g | ⏳ PENDING | TUI-058–070 | 13 tickets remaining. Responsive layout, fuzzy search, animations, tab highlight, vim keys, modals, breadcrumbs, docs. |
 
-### Package Tree (updated through Phase 10, TUI-056)
+### Package Tree (updated through Phase 10, TUI-057)
 
 ```
 internal/tui/
@@ -343,9 +344,9 @@ internal/tui/
 │   ├── slashcmd/                 # Slash command dropdown (TUI-053)
 │   │   ├── slashcmd.go           # SlashCmdModel: 18 commands, prefix filter, scroll window
 │   │   └── slashcmd_test.go      # 42 tests, 92.1% coverage
-│   ├── statusline/               # StatusLineModel (TUI-009, TUI-048, TUI-049)
-│   │   ├── statusline.go         # Semantic colors, progress bar, uncommitted/agent counts
-│   │   ├── statusline_test.go    # 70 tests, 88.7% coverage
+│   ├── statusline/               # StatusLineModel (TUI-009, TUI-048, TUI-049, TUI-057)
+│   │   ├── statusline.go         # Semantic colors, progress bar, plan mode indicator, uncommitted/agent counts
+│   │   ├── statusline_test.go    # 76 tests, 89.2% coverage (plan mode: 6 tests)
 │   │   └── export_test.go
 │   ├── tabbar/                   # TabBarModel (TUI-009)
 │   │   ├── tabbar.go
@@ -389,7 +390,7 @@ internal/tui/
     ├── app.go                    # AppModel: struct + Init + Update dispatcher + View (TUI-043: 994→376 lines)
     ├── app_test.go
     ├── key_handlers.go           # Keyboard: handleKey, handleModalKey, handleClaudeKey, handleAgentsKey (TUI-043)
-    ├── cli_event_handlers.go     # CLI events: Started, SystemInit, Assistant, User, Result, Disconnected (TUI-043)
+    ├── cli_event_handlers.go     # CLI events: Started, SystemInit, Assistant, User, Result, Disconnected (TUI-043, TUI-057: parsePlanStep)
     ├── ui_event_handlers.go      # UI events: ProviderSwitch, Modal, Agent, Team, Toast, Shutdown (TUI-043)
     ├── setters.go                # 17 setter/injector methods on AppModel (TUI-043)
     ├── interfaces.go             # Widget interfaces: all mockable (DES-2: extracted, 225 lines)
@@ -398,7 +399,7 @@ internal/tui/
     ├── startup.go                # CLI startup sequence, reconnection logic
     ├── startup_test.go
     ├── handoff.go                # Session handoff serialization
-    └── messages.go               # 20+ tea.Msg types (expanded in TUI-016, TUI-018)
+    └── messages.go               # 20+ tea.Msg types (expanded in TUI-016, TUI-018, TUI-057: PlanStepMsg)
 
 cmd/
 ├── gofortress/main.go            # TUI entry point (TUI-011)

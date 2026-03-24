@@ -100,6 +100,15 @@ type StatusLineModel struct {
 	// AgentCount is the number of currently active agents.
 	AgentCount int
 
+	// PlanActive is true while the assistant is operating in plan mode.
+	PlanActive bool
+
+	// PlanStep is the current step number within the plan (0 = unknown).
+	PlanStep int
+
+	// PlanTotalSteps is the total number of steps in the plan (0 = unknown).
+	PlanTotalSteps int
+
 	// theme holds the active theme for semantic coloring.
 	theme config.Theme
 
@@ -276,7 +285,22 @@ func (m StatusLineModel) View() string {
 		)
 	}
 
+	// Plan mode indicator: shown before cost when plan mode is active.
+	planField := ""
+	if m.PlanActive {
+		var planText string
+		if m.PlanTotalSteps > 0 {
+			planText = fmt.Sprintf("[PLAN MODE: step %d/%d]", m.PlanStep, m.PlanTotalSteps)
+		} else {
+			planText = "[PLAN MODE]"
+		}
+		planField = m.theme.WarningStyle().Render(planText)
+	}
+
 	row1Parts := []string{costField, tokenField, ctxField, permField}
+	if planField != "" {
+		row1Parts = append([]string{planField, " "}, row1Parts...)
+	}
 	if elapsedField != "" {
 		row1Parts = append(row1Parts, elapsedField)
 	}

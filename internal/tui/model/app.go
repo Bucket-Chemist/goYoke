@@ -371,6 +371,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleSettingChanged(msg)
 
 	// -----------------------------------------------------------------
+	// Plan mode tracking (TUI-057)
+	// -----------------------------------------------------------------
+
+	case PlanStepMsg:
+		return m.handlePlanStep(msg)
+
+	// -----------------------------------------------------------------
 	// Plan view modal (TUI-056)
 	// -----------------------------------------------------------------
 

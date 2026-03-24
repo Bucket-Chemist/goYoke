@@ -5,6 +5,8 @@ package model
 
 import (
 	"encoding/json"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +15,28 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
+
+// planStepPattern matches common plan step markers in assistant text.
+// Supported forms:
+//   - "Step N of M" / "Step N/M"
+//   - "Phase N of M" / "Phase N/M"
+//   - "step N of M" (case-insensitive via regexp flag (?i))
+var planStepPattern = regexp.MustCompile(`(?i)\b(?:step|phase)\s+(\d+)\s*(?:of|/)\s*(\d+)\b`)
+
+// parsePlanStep attempts to extract a (step, total) pair from text.
+// Returns (0, 0) when no step marker is found.
+func parsePlanStep(text string) (step, total int) {
+	m := planStepPattern.FindStringSubmatch(text)
+	if m == nil {
+		return 0, 0
+	}
+	s, err1 := strconv.Atoi(m[1])
+	t, err2 := strconv.Atoi(m[2])
+	if err1 != nil || err2 != nil {
+		return 0, 0
+	}
+	return s, t
+}
 
 // handleCLIStarted handles cli.CLIStartedMsg: the subprocess started — begin
 // listening for NDJSON events.
@@ -106,6 +130,18 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 			cmd := m.statusLine.SetStreaming(true)
 			if cmd != nil {
 				cmds = append(cmds, cmd)
+			}
+		}
+	}
+
+	// Detect plan step markers in streaming text and emit PlanStepMsg when
+	// a "Step N of M" / "Phase N/M" pattern is found (TUI-057).
+	for _, block := range msg.Message.Content {
+		if block.Type == "text" && block.Text != "" {
+			if step, total := parsePlanStep(block.Text); total > 0 {
+				cmds = append(cmds, func() tea.Msg {
+					return PlanStepMsg{Active: true, Step: step, Total: total}
+				})
 			}
 		}
 	}

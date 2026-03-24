@@ -115,3 +115,12 @@ func (m StatusLineModel) PermStyleForTest(mode string) lipgloss.Style {
 func (m StatusLineModel) RenderContextBarForTest() string {
 	return m.renderContextBar()
 }
+
+// PlanActiveMsgForTest constructs the field values used to exercise plan mode
+// rendering without requiring an import of the model package.
+// Call SetPlanFields on a StatusLineModel then call View() to observe output.
+func SetPlanFieldsForTest(m *StatusLineModel, active bool, step, total int) {
+	m.PlanActive = active
+	m.PlanStep = step
+	m.PlanTotalSteps = total
+}
