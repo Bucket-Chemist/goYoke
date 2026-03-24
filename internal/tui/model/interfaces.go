@@ -301,6 +301,30 @@ type slashCmdWidget interface {
 }
 
 // ---------------------------------------------------------------------------
+// breadcrumbWidget  (TUI-063)
+//
+// breadcrumbWidget is the interface satisfied by *breadcrumb.BreadcrumbModel.
+// Defining it here avoids a circular import: breadcrumb imports config but not
+// model; model must not import breadcrumb directly.  The interface breaks the
+// cycle while still allowing AppModel to drive the breadcrumb trail.
+//
+// SetCrumbs accepts plain label strings so that the model package does not
+// need to reference breadcrumb.BreadcrumbItem.  The concrete implementation
+// wraps each label into a BreadcrumbItem internally.
+// ---------------------------------------------------------------------------
+
+// breadcrumbWidget is the interface satisfied by *breadcrumb.BreadcrumbModel.
+type breadcrumbWidget interface {
+	// View renders the breadcrumb trail to a string.
+	// Returns "" when no crumbs are set (no row should be allocated).
+	View() string
+	// SetCrumbs replaces the current navigation trail with label-only items.
+	SetCrumbs(labels []string)
+	// SetWidth updates the terminal width used for left-truncation.
+	SetWidth(width int)
+}
+
+// ---------------------------------------------------------------------------
 // hintBarWidget  (TUI-060)
 //
 // hintBarWidget is the interface satisfied by *hintbar.HintBarModel.

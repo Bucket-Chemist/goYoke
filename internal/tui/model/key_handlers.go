@@ -89,6 +89,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focus = FocusNext(m.focus)
 		m.syncFocusState()
 		m.updateHintContext()
+		m.updateBreadcrumbs()
 		// Flash the active tab to acknowledge the focus change (TUI-061).
 		return m, tabFlashCmd(int(m.activeTab))
 
@@ -97,12 +98,14 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focus = FocusPrev(m.focus)
 		m.syncFocusState()
 		m.updateHintContext()
+		m.updateBreadcrumbs()
 		// Flash the active tab to acknowledge the focus change (TUI-061).
 		return m, tabFlashCmd(int(m.activeTab))
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
 		m.updateHintContext()
+		m.updateBreadcrumbs()
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleProvider):
@@ -286,6 +289,7 @@ func (m AppModel) handleVimNormalKey(msg tea.KeyMsg) (consumed bool, model tea.M
 		m.focus = FocusNext(m.focus)
 		m.syncFocusState()
 		m.updateHintContext()
+		m.updateBreadcrumbs()
 		return true, m, tabFlashCmd(int(m.activeTab))
 
 	case key.Matches(msg, m.keys.Vim.Left):
@@ -293,6 +297,7 @@ func (m AppModel) handleVimNormalKey(msg tea.KeyMsg) (consumed bool, model tea.M
 		m.focus = FocusPrev(m.focus)
 		m.syncFocusState()
 		m.updateHintContext()
+		m.updateBreadcrumbs()
 		return true, m, tabFlashCmd(int(m.activeTab))
 
 	case key.Matches(msg, m.keys.Vim.Top):
@@ -330,6 +335,58 @@ func (m AppModel) handleVimNormalKey(msg tea.KeyMsg) (consumed bool, model tea.M
 
 	// Key not recognised as a vim binding — fall through to standard routing.
 	return false, m, nil
+}
+
+// updateBreadcrumbs updates the breadcrumb trail based on the current focus
+// and right-panel mode.  It is called after focus changes and panel mode
+// changes to keep the trail in sync with the visible UI (TUI-063).
+//
+// Crumb mappings:
+//
+//	FocusClaude + not streaming → ["Claude", "Conversation"]
+//	FocusClaude + streaming     → ["Claude", "Streaming..."]
+//	FocusAgents + RPMAgents     → ["Agents", "Tree"]
+//	FocusAgents + RPMDashboard  → ["Dashboard", "Overview"]
+//	FocusAgents + RPMSettings   → ["Settings", "Display"]
+//	FocusAgents + RPMPlanPreview → ["Plan", "Preview"]
+//	FocusAgents + RPMTelemetry  → ["Telemetry", "Overview"]
+func (m *AppModel) updateBreadcrumbs() {
+	if m.shared == nil || m.shared.breadcrumb == nil {
+		return
+	}
+
+	var crumbs []string
+
+	switch m.focus {
+	case FocusClaude:
+		streaming := m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming()
+		if streaming {
+			crumbs = []string{"Claude", "Streaming..."}
+		} else {
+			crumbs = []string{"Claude", "Conversation"}
+		}
+
+	case FocusAgents:
+		switch m.rightPanelMode {
+		case RPMAgents:
+			crumbs = []string{"Agents", "Tree"}
+		case RPMDashboard:
+			crumbs = []string{"Dashboard", "Overview"}
+		case RPMSettings:
+			crumbs = []string{"Settings", "Display"}
+		case RPMPlanPreview:
+			crumbs = []string{"Plan", "Preview"}
+		case RPMTelemetry:
+			crumbs = []string{"Telemetry", "Overview"}
+		default:
+			crumbs = []string{"Agents", m.rightPanelMode.String()}
+		}
+
+	default:
+		crumbs = []string{m.focus.String()}
+	}
+
+	m.shared.breadcrumb.SetCrumbs(crumbs)
 }
 
 // updateHintContext updates the hint bar context based on the current

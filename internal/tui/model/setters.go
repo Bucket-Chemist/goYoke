@@ -159,6 +159,13 @@ func (m *AppModel) SetHintBar(hb hintBarWidget) {
 	m.shared.hintBar = hb
 }
 
+// SetBreadcrumb injects the navigation breadcrumb trail into the shared
+// state. The breadcrumb renders a single row between the tab bar and the
+// main content area showing the current navigation context (TUI-063).
+func (m *AppModel) SetBreadcrumb(bc breadcrumbWidget) {
+	m.shared.breadcrumb = bc
+}
+
 // SetTheme updates the active theme in shared state.  It is called when the
 // user explicitly selects a new color theme (e.g. from the settings panel or
 // via ThemeChangedMsg).  The pointer receiver is required because this method

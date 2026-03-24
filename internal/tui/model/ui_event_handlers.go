@@ -102,6 +102,15 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		m.shared.hintBar.SetWidth(msg.Width)
 	}
 
+	// Propagate terminal width to the breadcrumb trail for truncation (TUI-063).
+	if m.shared.breadcrumb != nil {
+		m.shared.breadcrumb.SetWidth(msg.Width)
+		// Set initial breadcrumb state based on the current focus and panel mode.
+		// WindowSizeMsg is the first message after startup, so this ensures crumbs
+		// are populated before the first render rather than waiting for a key press.
+		m.updateBreadcrumbs()
+	}
+
 	return m, nil
 }
 

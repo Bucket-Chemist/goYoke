@@ -16,11 +16,12 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	bannerHeight     = 3 // rounded border top + title + border bottom
-	tabBarHeight     = 1 // single-row strip
-	statusLineHeight = 2 // two-row status bar
-	hintBarHeight    = 1 // single-row keyboard hint bar (TUI-060)
-	borderFrame      = 2 // border chars on each axis (1 left + 1 right)
+	bannerHeight      = 3 // rounded border top + title + border bottom
+	tabBarHeight      = 1 // single-row strip
+	statusLineHeight  = 2 // two-row status bar
+	hintBarHeight     = 1 // single-row keyboard hint bar (TUI-060)
+	breadcrumbHeight  = 1 // single-row breadcrumb trail (TUI-063)
+	borderFrame       = 2 // border chars on each axis (1 left + 1 right)
 )
 
 // ---------------------------------------------------------------------------
@@ -123,7 +124,15 @@ func (m AppModel) computeLayout() layoutDims {
 	if m.shared != nil && m.shared.hintBar != nil && m.shared.hintBar.IsVisible() {
 		hintH = hintBarHeight
 	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH
+	bcH := 0
+	if m.shared != nil && m.shared.breadcrumb != nil {
+		// The breadcrumb row is only allocated when there are crumbs to show.
+		// View() returns "" when empty; we still subtract the row to avoid a
+		// layout reflow on the first navigation event.  Components that set
+		// crumbs on startup ensure the row is always present.
+		bcH = breadcrumbHeight
+	}
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH - bcH
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}
@@ -247,6 +256,15 @@ func (m AppModel) renderLayout() string {
 	// Insert provider tab bar between the tab bar and main content area.
 	if m.shared != nil && m.shared.providerTabBar != nil && m.shared.providerTabBar.IsVisible() {
 		parts = append(parts, m.shared.providerTabBar.View())
+	}
+
+	// Insert breadcrumb trail below the provider tab bar and above the main
+	// content area (TUI-063).  View() returns "" when no crumbs are set, in
+	// which case no empty row is emitted.
+	if m.shared != nil && m.shared.breadcrumb != nil {
+		if view := m.shared.breadcrumb.View(); view != "" {
+			parts = append(parts, view)
+		}
 	}
 
 	parts = append(parts, mainArea)

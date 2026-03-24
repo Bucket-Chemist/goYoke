@@ -1096,7 +1096,7 @@
     {
       "id": "TUI-063",
       "title": "Breadcrumb navigation trail",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [

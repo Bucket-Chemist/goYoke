@@ -129,6 +129,11 @@ type sharedState struct {
 	// task board / toasts and the status line.
 	hintBar hintBarWidget
 
+	// breadcrumb is the navigation breadcrumb trail (TUI-063).
+	// It renders a single row between the tab bar / provider bar and the
+	// main content area showing the current navigation context.
+	breadcrumb breadcrumbWidget
+
 	// Session persistence (TUI-033).
 	sessionStore *session.Store
 	sessionData  *session.SessionData
