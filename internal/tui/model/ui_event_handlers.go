@@ -239,6 +239,16 @@ func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleTabFlash handles TabFlashMsg: forwards the flash request to the tab
+// bar widget so it can schedule its tick-based accent animation (TUI-061).
+func (m AppModel) handleTabFlash(msg TabFlashMsg) (tea.Model, tea.Cmd) {
+	if m.tabBar == nil {
+		return m, nil
+	}
+	cmd := m.tabBar.HandleMsg(msg)
+	return m, cmd
+}
+
 // handleThemeChanged handles ThemeChangedMsg: builds a new Theme for the
 // requested variant, stores it in sharedState, and records the variant for
 // session persistence.

@@ -1063,7 +1063,7 @@
     {
       "id": "TUI-061",
       "title": "Tab highlight on focus change",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [],

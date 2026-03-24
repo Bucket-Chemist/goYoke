@@ -25,6 +25,10 @@ import (
 type tabBarWidget interface {
 	View() string
 	SetWidth(int)
+	// HandleMsg forwards a tea.Msg to the tab bar for internal processing.
+	// It mutates the receiver in place and returns any Cmd to schedule.
+	// Currently used to deliver TabFlashMsg (TUI-061) to the flash animation.
+	HandleMsg(msg tea.Msg) tea.Cmd
 }
 
 // ---------------------------------------------------------------------------

@@ -592,8 +592,9 @@ func TestHandleKey_ToggleFocus_AdvancesFocus(t *testing.T) {
 	if result.focus != FocusAgents {
 		t.Errorf("focus after tab = %v; want FocusAgents", result.focus)
 	}
-	if cmd != nil {
-		t.Error("cmd != nil after ToggleFocus; want nil")
+	// ToggleFocus emits a TabFlashMsg cmd (TUI-061) to animate the active tab.
+	if cmd == nil {
+		t.Error("cmd = nil after ToggleFocus; want TabFlashMsg cmd")
 	}
 }
 
@@ -637,8 +638,9 @@ func TestHandleKey_ReverseToggleFocus_RetreatsFromAgentsToClaude(t *testing.T) {
 	if result.focus != FocusClaude {
 		t.Errorf("focus after shift+tab = %v; want FocusClaude", result.focus)
 	}
-	if cmd != nil {
-		t.Error("cmd != nil after ReverseToggleFocus; want nil")
+	// ReverseToggleFocus emits a TabFlashMsg cmd (TUI-061) to animate the active tab.
+	if cmd == nil {
+		t.Error("cmd = nil after ReverseToggleFocus; want TabFlashMsg cmd")
 	}
 }
 
@@ -660,8 +662,9 @@ func TestHandleKey_ReverseToggleFocus_WrapsAroundToLast(t *testing.T) {
 	if result.focus != FocusAgents {
 		t.Errorf("focus after shift+tab from first = %v; want FocusAgents (wrap-around)", result.focus)
 	}
-	if cmd != nil {
-		t.Error("cmd != nil after ReverseToggleFocus wrap; want nil")
+	// ReverseToggleFocus emits a TabFlashMsg cmd (TUI-061) to animate the active tab.
+	if cmd == nil {
+		t.Error("cmd = nil after ReverseToggleFocus wrap; want TabFlashMsg cmd")
 	}
 }
 

@@ -78,14 +78,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focus = FocusNext(m.focus)
 		m.syncFocusState()
 		m.updateHintContext()
-		return m, nil
+		// Flash the active tab to acknowledge the focus change (TUI-061).
+		return m, tabFlashCmd(int(m.activeTab))
 
 	// TUI-052: Shift+Tab triggers reverse focus cycling.
 	case key.Matches(msg, m.keys.Global.ReverseToggleFocus):
 		m.focus = FocusPrev(m.focus)
 		m.syncFocusState()
 		m.updateHintContext()
-		return m, nil
+		// Flash the active tab to acknowledge the focus change (TUI-061).
+		return m, tabFlashCmd(int(m.activeTab))
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
@@ -188,6 +190,15 @@ func (m *AppModel) syncFocusState() {
 		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
 	}
 	m.agentTree.SetFocused(m.focus == FocusAgents)
+}
+
+// tabFlashCmd returns a Cmd that immediately delivers a TabFlashMsg for the
+// given tab index.  It is used after focus changes to trigger the 300 ms
+// accent flash on the active tab (TUI-061).
+func tabFlashCmd(tabIndex int) tea.Cmd {
+	return func() tea.Msg {
+		return TabFlashMsg{TabIndex: tabIndex}
+	}
 }
 
 // updateHintContext updates the hint bar context based on the current

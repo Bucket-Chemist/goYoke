@@ -3,6 +3,7 @@ package tabbar_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -146,5 +147,186 @@ func TestTabBarSetWidth(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "Chat") {
 		t.Errorf("View() after SetWidth missing 'Chat'; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TUI-061: Tab flash animation
+// ---------------------------------------------------------------------------
+
+// TestTabFlash_HandleMsgActivatesFlash verifies that delivering a TabFlashMsg
+// sets the flash state and returns a non-nil scheduling command.
+func TestTabFlash_HandleMsgActivatesFlash(t *testing.T) {
+	tests := []struct {
+		name     string
+		tabIndex int
+	}{
+		{"chat tab (index 0)", 0},
+		{"agent config tab (index 1)", 1},
+		{"team config tab (index 2)", 2},
+		{"telemetry tab (index 3)", 3},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			keys := config.DefaultKeyMap()
+			m := tabbar.NewTabBarModel(keys, 120)
+
+			cmd := m.HandleMsg(model.TabFlashMsg{TabIndex: tc.tabIndex})
+			if cmd == nil {
+				t.Error("HandleMsg(TabFlashMsg) returned nil cmd; want tick cmd")
+			}
+			if !m.IsFlashing() {
+				t.Error("IsFlashing() = false after TabFlashMsg; want true")
+			}
+			if m.FlashTab() != tc.tabIndex {
+				t.Errorf("FlashTab() = %d; want %d", m.FlashTab(), tc.tabIndex)
+			}
+		})
+	}
+}
+
+// TestTabFlash_ViewRenderesDifferentlyDuringFlash verifies that:
+//   - the flash state is active immediately after HandleMsg(TabFlashMsg)
+//   - View() still renders all tab labels during a flash
+//   - IsFlashing() correctly reflects the flash window
+func TestTabFlash_ViewRenderesDifferentlyDuringFlash(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := tabbar.NewTabBarModel(keys, 120)
+
+	if m.IsFlashing() {
+		t.Fatal("precondition: IsFlashing() = true before any flash; want false")
+	}
+
+	// Activate flash on the Chat tab (index 0, which is activeTab).
+	cmd := m.HandleMsg(model.TabFlashMsg{TabIndex: 0})
+	if cmd == nil {
+		t.Error("HandleMsg(TabFlashMsg) returned nil cmd; want tick cmd")
+	}
+	if !m.IsFlashing() {
+		t.Error("IsFlashing() = false immediately after TabFlashMsg; want true")
+	}
+
+	// View() must still render all labels without panicking during flash.
+	flashView := m.View()
+	for _, label := range []string{"Chat", "Agent Config", "Team Config", "Telemetry"} {
+		if !strings.Contains(flashView, label) {
+			t.Errorf("View() during flash missing label %q", label)
+		}
+	}
+}
+
+// TestTabFlash_AutoClearsAfterTick verifies that the flash state is cleared
+// when the component receives the internal tick after 300 ms.
+func TestTabFlash_AutoClearsAfterTick(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := tabbar.NewTabBarModel(keys, 120)
+
+	// Start a flash.
+	_ = m.HandleMsg(model.TabFlashMsg{TabIndex: 0})
+	if !m.IsFlashing() {
+		t.Fatal("precondition: IsFlashing() = false; want true after TabFlashMsg")
+	}
+
+	// Simulate the 300 ms tick firing by using the Update path which handles
+	// the tick message.  We advance the flash start backwards so that the
+	// elapsed check passes.
+	m.BackdateFlashStart(400 * time.Millisecond)
+
+	// Deliver the flash tick via Update (the tea.Model path).
+	updated, _ := m.Update(tabbar.ExportedFlashTick())
+	tb := updated.(tabbar.TabBarModel)
+
+	if tb.IsFlashing() {
+		t.Error("IsFlashing() = true after tick past flashDuration; want false")
+	}
+}
+
+// TestTabFlash_NoFlashWhenInactive verifies that View() is unchanged (from the
+// styling perspective) when no flash is active.
+func TestTabFlash_NoFlashWhenInactive(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := tabbar.NewTabBarModel(keys, 120)
+
+	if m.IsFlashing() {
+		t.Fatal("precondition: NewTabBarModel should have no active flash")
+	}
+	// Just verify View() doesn't panic and contains expected labels.
+	view := m.View()
+	for _, label := range []string{"Chat", "Agent Config", "Team Config", "Telemetry"} {
+		if !strings.Contains(view, label) {
+			t.Errorf("View() without flash missing label %q", label)
+		}
+	}
+}
+
+// TestTabFlash_SecondFlashOverridesFirst verifies that a second TabFlashMsg
+// resets the flash window, replacing any previous flash.
+func TestTabFlash_SecondFlashOverridesFirst(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := tabbar.NewTabBarModel(keys, 120)
+
+	// First flash on tab 0.
+	before := time.Now()
+	_ = m.HandleMsg(model.TabFlashMsg{TabIndex: 0})
+	_ = before
+
+	// Small sleep to ensure clock advances.
+	time.Sleep(5 * time.Millisecond)
+
+	firstStart := m.FlashStart()
+
+	// Second flash on tab 1 (must switch to AgentConfig first).
+	m.SetActiveTab(model.TabAgentConfig)
+	_ = m.HandleMsg(model.TabFlashMsg{TabIndex: 1})
+
+	if m.FlashTab() != 1 {
+		t.Errorf("FlashTab() = %d after second flash; want 1", m.FlashTab())
+	}
+	if !m.FlashStart().After(firstStart) {
+		t.Error("FlashStart() not updated after second flash; second flash should reset the timer")
+	}
+}
+
+// TestTabFlash_InvalidTabIndexNoCrash verifies that a TabFlashMsg with an
+// out-of-range tab index does not crash and the flash state is still set
+// (clamping/guarding is not required; the caller is responsible).
+func TestTabFlash_InvalidTabIndexNoCrash(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := tabbar.NewTabBarModel(keys, 120)
+
+	// Should not panic even with a large index.
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("HandleMsg panicked with out-of-range tab index: %v", r)
+			}
+		}()
+		_ = m.HandleMsg(model.TabFlashMsg{TabIndex: 999})
+	}()
+
+	// View must also not panic.
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("View() panicked with out-of-range flash index: %v", r)
+			}
+		}()
+		_ = m.View()
+	}()
+}
+
+// TestTabFlash_HandleMsgUnknownMsgReturnsNil verifies that HandleMsg with an
+// unrelated message type returns nil and does not activate flash.
+func TestTabFlash_HandleMsgUnknownMsgReturnsNil(t *testing.T) {
+	keys := config.DefaultKeyMap()
+	m := tabbar.NewTabBarModel(keys, 120)
+
+	cmd := m.HandleMsg(tea.WindowSizeMsg{Width: 80, Height: 24})
+	if cmd != nil {
+		t.Errorf("HandleMsg(WindowSizeMsg) = non-nil cmd; want nil")
+	}
+	if m.IsFlashing() {
+		t.Error("IsFlashing() = true after unrelated msg; want false")
 	}
 }

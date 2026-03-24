@@ -387,6 +387,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handlePlanStep(msg)
 
 	// -----------------------------------------------------------------
+	// Tab flash animation (TUI-061)
+	// -----------------------------------------------------------------
+
+	case TabFlashMsg:
+		return m.handleTabFlash(msg)
+
+	// -----------------------------------------------------------------
 	// Plan view modal (TUI-056)
 	// -----------------------------------------------------------------
 
@@ -417,6 +424,17 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Forward unhandled messages to toast for tick-based expiry.
 	if m.shared != nil && m.shared.toasts != nil {
 		cmd := m.shared.toasts.HandleMsg(msg)
+		if cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Forward unhandled messages to the tab bar for flash tick processing
+	// (TUI-061).  The tabFlashTickMsg type is unexported from the tabbar
+	// package, so AppModel cannot type-switch on it; forwarding all
+	// unhandled messages here ensures the tick clears the flash state.
+	if m.tabBar != nil {
+		cmd := m.tabBar.HandleMsg(msg)
 		if cmd != nil {
 			return m, cmd
 		}

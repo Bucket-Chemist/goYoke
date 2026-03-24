@@ -301,6 +301,18 @@ type PlanStepMsg struct {
 }
 
 // ---------------------------------------------------------------------------
+// Tab flash messages (TUI-061)
+// ---------------------------------------------------------------------------
+
+// TabFlashMsg triggers a 300 ms accent flash on the specified tab index.
+// It is emitted by AppModel whenever the keyboard focus changes so that the
+// active tab visually acknowledges the transition.
+type TabFlashMsg struct {
+	// TabIndex is the zero-based position of the tab that should flash.
+	TabIndex int
+}
+
+// ---------------------------------------------------------------------------
 // Theme messages (TUI-046)
 // ---------------------------------------------------------------------------
 

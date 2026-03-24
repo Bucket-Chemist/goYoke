@@ -197,5 +197,6 @@ func (tl *benchTeamList) StartPolling(_ string) tea.Cmd { return nil }
 // benchTabBar satisfies tabBarWidget.
 type benchTabBar struct{}
 
-func (tb *benchTabBar) View() string   { return "Chat | Agent Config | Team Config | Telemetry" }
-func (tb *benchTabBar) SetWidth(_ int) {}
+func (tb *benchTabBar) View() string            { return "Chat | Agent Config | Team Config | Telemetry" }
+func (tb *benchTabBar) SetWidth(_ int)          {}
+func (tb *benchTabBar) HandleMsg(_ tea.Msg) tea.Cmd { return nil }
