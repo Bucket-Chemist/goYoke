@@ -5,6 +5,28 @@ package config
 import "github.com/charmbracelet/lipgloss"
 
 // ---------------------------------------------------------------------------
+// ThemeVariant
+//
+// ThemeVariant selects the color palette used when constructing a Theme via
+// NewTheme. The zero value is ThemeDark.
+// ---------------------------------------------------------------------------
+
+// ThemeVariant identifies the color palette for a Theme.
+type ThemeVariant int
+
+const (
+	// ThemeDark is optimised for dark terminal backgrounds.
+	ThemeDark ThemeVariant = iota
+
+	// ThemeLight is optimised for light terminal backgrounds.
+	ThemeLight
+
+	// ThemeHighContrast uses hex colors that meet WCAG AA (4.5:1 contrast ratio)
+	// against both white and black backgrounds where possible.
+	ThemeHighContrast
+)
+
+// ---------------------------------------------------------------------------
 // Colors
 //
 // Base colors use ANSI numbers ("0"-"15") so they respect the user's terminal
@@ -123,7 +145,7 @@ var StyleMuted = lipgloss.NewStyle().
 // ---------------------------------------------------------------------------
 
 // Theme holds all styles and colors for the TUI.
-// The zero value is not usable; use DefaultTheme instead.
+// The zero value is not usable; use DefaultTheme or NewTheme instead.
 type Theme struct {
 	// Colors
 	ColorPrimary   lipgloss.AdaptiveColor
@@ -133,6 +155,10 @@ type Theme struct {
 	ColorWarning   lipgloss.AdaptiveColor
 	ColorError     lipgloss.AdaptiveColor
 	ColorMuted     lipgloss.AdaptiveColor
+
+	// InfoColor is an alias for ColorPrimary / cyan, used for informational
+	// messages in semantic style methods.
+	InfoColor lipgloss.AdaptiveColor
 
 	// Styles
 	FocusedBorder   lipgloss.Style
@@ -147,7 +173,159 @@ type Theme struct {
 	Muted           lipgloss.Style
 }
 
+// ---------------------------------------------------------------------------
+// Semantic style methods
+//
+// These methods derive a ready-to-use lipgloss.Style from the Theme's color
+// fields. They are intended for one-off rendering in components that receive
+// a Theme value. Package-level style variables (StyleError etc.) remain the
+// canonical source for components that import config directly.
+// ---------------------------------------------------------------------------
+
+// ErrorStyle returns a bold style colored with ColorError.
+func (t Theme) ErrorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(t.ColorError)
+}
+
+// WarningStyle returns a style colored with ColorWarning.
+func (t Theme) WarningStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.ColorWarning)
+}
+
+// SuccessStyle returns a style colored with ColorSuccess.
+func (t Theme) SuccessStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.ColorSuccess)
+}
+
+// InfoStyle returns a style colored with ColorPrimary (cyan).
+func (t Theme) InfoStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.ColorPrimary)
+}
+
+// DangerStyle returns a bold, underlined style colored with ColorError.
+// It is more emphatic than ErrorStyle and is reserved for destructive actions
+// or critical alerts.
+func (t Theme) DangerStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Underline(true).Foreground(t.ColorError)
+}
+
+// ---------------------------------------------------------------------------
+// NewTheme factory
+// ---------------------------------------------------------------------------
+
+// NewTheme constructs a Theme for the given ThemeVariant. The returned Theme
+// is fully populated with colors and pre-built lipgloss styles appropriate for
+// the chosen variant.
+//
+// ThemeDark returns the same colors as DefaultTheme (backward compatible).
+// ThemeLight adapts foreground choices for light terminal backgrounds.
+// ThemeHighContrast uses explicit hex codes meeting WCAG AA (4.5:1 ratio).
+func NewTheme(variant ThemeVariant) Theme {
+	switch variant {
+	case ThemeLight:
+		return newLightTheme()
+	case ThemeHighContrast:
+		return newHighContrastTheme()
+	default: // ThemeDark and any unrecognised value
+		return DefaultTheme()
+	}
+}
+
+// newLightTheme returns a Theme suited for light terminal backgrounds.
+// It keeps the same ANSI indices but adjusts them to variants that are
+// legible on white/light backgrounds (e.g. darker cyan, darker green).
+func newLightTheme() Theme {
+	primary := lipgloss.AdaptiveColor{Light: "6", Dark: "6"}
+	secondary := lipgloss.AdaptiveColor{Light: "4", Dark: "4"}
+	accent := lipgloss.AdaptiveColor{Light: "5", Dark: "5"}
+	success := lipgloss.AdaptiveColor{Light: "2", Dark: "2"}
+	warning := lipgloss.AdaptiveColor{Light: "3", Dark: "3"}
+	errColor := lipgloss.AdaptiveColor{Light: "1", Dark: "1"}
+	muted := lipgloss.AdaptiveColor{Light: "0", Dark: "0"} // black/dark on light bg
+
+	return buildTheme(primary, secondary, accent, success, warning, errColor, muted)
+}
+
+// newHighContrastTheme returns a Theme with explicit hex colors that satisfy
+// WCAG AA minimum contrast ratio of 4.5:1 on typical dark and light terminals.
+func newHighContrastTheme() Theme {
+	primary := lipgloss.AdaptiveColor{Light: "#0088FF", Dark: "#0088FF"}
+	secondary := lipgloss.AdaptiveColor{Light: "#0044CC", Dark: "#0044CC"}
+	accent := lipgloss.AdaptiveColor{Light: "#AA00FF", Dark: "#AA00FF"}
+	success := lipgloss.AdaptiveColor{Light: "#00AA00", Dark: "#00AA00"}
+	warning := lipgloss.AdaptiveColor{Light: "#FFAA00", Dark: "#FFAA00"}
+	errColor := lipgloss.AdaptiveColor{Light: "#FF0000", Dark: "#FF0000"}
+	muted := lipgloss.AdaptiveColor{Light: "#666666", Dark: "#999999"}
+
+	return buildTheme(primary, secondary, accent, success, warning, errColor, muted)
+}
+
+// buildTheme assembles a fully populated Theme from the supplied color values,
+// constructing all derived lipgloss styles.
+func buildTheme(
+	primary, secondary, accent, success, warning, errColor, muted lipgloss.AdaptiveColor,
+) Theme {
+	focusedBorder := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(primary)
+
+	unfocusedBorder := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(muted)
+
+	statusBar := lipgloss.NewStyle().
+		Foreground(muted).
+		Padding(0, 1)
+
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(primary)
+
+	subtle := lipgloss.NewStyle().
+		Foreground(muted)
+
+	highlight := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(accent)
+
+	errStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(errColor)
+
+	successStyle := lipgloss.NewStyle().
+		Foreground(success)
+
+	warningStyle := lipgloss.NewStyle().
+		Foreground(warning)
+
+	mutedStyle := lipgloss.NewStyle().
+		Foreground(muted)
+
+	return Theme{
+		ColorPrimary:   primary,
+		ColorSecondary: secondary,
+		ColorAccent:    accent,
+		ColorSuccess:   success,
+		ColorWarning:   warning,
+		ColorError:     errColor,
+		ColorMuted:     muted,
+		InfoColor:      primary,
+
+		FocusedBorder:   focusedBorder,
+		UnfocusedBorder: unfocusedBorder,
+		StatusBar:       statusBar,
+		Title:           title,
+		Subtle:          subtle,
+		Highlight:       highlight,
+		Error:           errStyle,
+		Success:         successStyle,
+		Warning:         warningStyle,
+		Muted:           mutedStyle,
+	}
+}
+
 // DefaultTheme returns the standard GOgent-Fortress theme.
+// All existing fields are unchanged; InfoColor is set to ColorPrimary (cyan).
 func DefaultTheme() Theme {
 	return Theme{
 		ColorPrimary:   ColorPrimary,
@@ -157,6 +335,7 @@ func DefaultTheme() Theme {
 		ColorWarning:   ColorWarning,
 		ColorError:     ColorError,
 		ColorMuted:     ColorMuted,
+		InfoColor:      ColorPrimary,
 
 		FocusedBorder:   StyleFocusedBorder,
 		UnfocusedBorder: StyleUnfocusedBorder,

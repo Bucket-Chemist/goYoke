@@ -769,7 +769,7 @@
     {
       "id": "TUI-044",
       "title": "Semantic color system",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [],
