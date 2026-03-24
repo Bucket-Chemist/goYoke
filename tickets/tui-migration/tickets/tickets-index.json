@@ -1113,7 +1113,7 @@
     {
       "id": "TUI-064",
       "title": "Spring animation framework (harmonica)",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [],

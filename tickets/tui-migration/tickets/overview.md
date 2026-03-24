@@ -275,10 +275,11 @@ The following review findings have been incorporated into the ticket description
 ~~28. TUI-061 (tab highlight)~~ ✅ TUI-061 COMPLETE (flashTab/flashStart, TabFlashMsg, 300ms tick animation, 7 tests, 91.5% tabbar)
 ~~29. TUI-062 (vim keybindings)~~ ✅ TUI-062 COMPLETE (VimKeys/VimMode, normal/insert modes, h/j/k/l, settings wire, status indicator, 22 tests)
 ~~30. TUI-063 (breadcrumb trail)~~ ✅ TUI-063 COMPLETE (breadcrumb/ pkg, arrow separator, 7 context trails, width truncation, 17 tests, 98.2%)
-31. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
-32. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
+~~31. TUI-064 (animation framework)~~ ✅ TUI-064 COMPLETE (harmonica v0.2.0, SpringAnimation, AnimateTickCmd, 13 tests, 94.1%)
+32. Phase 10: TUI-065 (skeleton screens)
+33. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 21/28 tickets complete (TUI-043–063). 75%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 22/28 tickets complete (TUI-043–064). 79%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -299,8 +300,8 @@ The following review findings have been incorporated into the ticket description
 | 10c | ✅ COMPLETE | TUI-048–051 | Status line colors + progress bar + settings tree + high-contrast WCAG (ContrastRatio, ValidateContrast, SettingChangedMsg→SetTheme wiring). config 96.3%, model 89.3%. |
 | 10d | ✅ COMPLETE | TUI-052–057 | Shift+Tab + slash dropdown/exec + task board + plan modal + plan mode UX (PlanStepMsg, status bar indicator, toast, 89.2%). |
 | 10e | ✅ COMPLETE | TUI-058–062 | 4-tier layout + search + hints + tab flash + vim keys. |
-| 10f | 🔄 IN PROGRESS | TUI-063 | Breadcrumb trail: arrow-separated, 7 context trails, 98.2%. New pkg: breadcrumb/. |
-| 10f–g | ⏳ PENDING | TUI-064–070 | 7 tickets remaining. Animations, skeleton, modals, dashboard, docs. |
+| 10f | ✅ COMPLETE | TUI-063–064 | Breadcrumb trail (98.2%) + harmonica spring animation (94.1%). |
+| 10f–g | ⏳ PENDING | TUI-065–070 | 6 tickets remaining. Skeleton, modals, confirm dialogs, dashboard, docs, parity. |
 
 ### Package Tree (updated through Phase 10, TUI-060)
 
