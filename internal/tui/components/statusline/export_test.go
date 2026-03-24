@@ -28,6 +28,16 @@ func AuthStatusTickMsgForTest(t time.Time) authStatusTickMsg {
 	return authStatusTickMsg(t)
 }
 
+// SessionTimerTickMsgForTest constructs a sessionTimerTickMsg for use in tests.
+func SessionTimerTickMsgForTest(t time.Time) sessionTimerTickMsg {
+	return sessionTimerTickMsg(t)
+}
+
+// SpinnerTickMsgForTest constructs a spinnerTickMsg for use in tests.
+func SpinnerTickMsgForTest(t time.Time) spinnerTickMsg {
+	return spinnerTickMsg(t)
+}
+
 // ExecuteGitBranchCmdForTest calls gitBranchCmd() and executes the returned
 // closure, returning the resulting tea.Msg. Used to cover the subprocess path.
 func ExecuteGitBranchCmdForTest() tea.Msg {
@@ -50,4 +60,24 @@ func ScheduleGitBranchTickForTest() tea.Cmd {
 // ScheduleAuthStatusTickForTest returns the tea.Cmd from scheduleAuthStatusTick.
 func ScheduleAuthStatusTickForTest() tea.Cmd {
 	return scheduleAuthStatusTick()
+}
+
+// ScheduleSessionTimerTickForTest returns the tea.Cmd from scheduleSessionTimerTick.
+func ScheduleSessionTimerTickForTest() tea.Cmd {
+	return scheduleSessionTimerTick()
+}
+
+// ScheduleSpinnerTickForTest returns the tea.Cmd from scheduleSpinnerTick.
+func ScheduleSpinnerTickForTest() tea.Cmd {
+	return scheduleSpinnerTick()
+}
+
+// ParseAuthStatusForTest exposes parseAuthStatus for unit testing.
+func ParseAuthStatusForTest(raw string) string {
+	return parseAuthStatus(raw)
+}
+
+// FormatTokensForTest exposes formatTokens for unit testing.
+func FormatTokensForTest(n int) string {
+	return formatTokens(n)
 }
