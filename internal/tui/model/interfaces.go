@@ -249,3 +249,28 @@ type settingsTreeWidget interface {
 	// (model name, git branch, etc.). A no-op when key is not found.
 	SetValue(key, value string)
 }
+
+// ---------------------------------------------------------------------------
+// slashCmdWidget
+//
+// slashCmdWidget is the interface satisfied by *slashcmd.SlashCmdModel.
+// The slashcmd package has no dependency on the model package, so there is no
+// circular import. The interface is defined here to keep the widget coupling
+// pattern consistent with the other widget interfaces.
+// ---------------------------------------------------------------------------
+
+// slashCmdWidget is the interface satisfied by *slashcmd.SlashCmdModel.
+type slashCmdWidget interface {
+	// Show makes the dropdown visible and applies an initial filter query.
+	Show(query string)
+	// Hide closes the dropdown without emitting a selection message.
+	Hide()
+	// IsVisible returns true when the dropdown is currently shown.
+	IsVisible() bool
+	// Filter updates the filter query; hides the dropdown when no matches exist.
+	Filter(query string)
+	// View renders the dropdown to a string. Returns "" when not visible.
+	View() string
+	// SetWidth updates the terminal width used for rendering.
+	SetWidth(w int)
+}
