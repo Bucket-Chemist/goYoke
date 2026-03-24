@@ -4,7 +4,11 @@
 // components can import without circular dependencies.
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+)
 
 // ---------------------------------------------------------------------------
 // CLI event messages
@@ -262,4 +266,21 @@ type SessionAutoSaveMsg struct {
 // total budget was exceeded, or nil on success.
 type ShutdownCompleteMsg struct {
 	Err error
+}
+
+// ---------------------------------------------------------------------------
+// Theme messages (TUI-046)
+// ---------------------------------------------------------------------------
+
+// ThemeChangedMsg is sent when the user selects a different color theme.
+// The handler in AppModel.Update calls config.NewTheme(Variant) to build
+// the full Theme value and stores it in sharedState.activeTheme.
+//
+// Components that hold a pointer to sharedState read activeTheme directly
+// (no additional message dispatch needed). Components without sharedState
+// access continue using package-level config defaults until TUI-048/050
+// add SetTheme() to their widget interfaces.
+type ThemeChangedMsg struct {
+	// Variant is the color palette to activate.
+	Variant config.ThemeVariant
 }

@@ -801,7 +801,7 @@
     {
       "id": "TUI-046",
       "title": "Theme switching infrastructure",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [

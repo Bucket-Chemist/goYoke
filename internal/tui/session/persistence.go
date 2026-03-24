@@ -51,6 +51,13 @@ type SessionData struct {
 	ProviderModels map[state.ProviderID]string `json:"provider_models,omitempty"`
 	// ActiveProvider is the provider that was active when the session was saved.
 	ActiveProvider state.ProviderID `json:"active_provider"`
+	// ThemeVariant is the active color theme at the time the session was saved.
+	// Stored as int to avoid an import cycle (session → config would introduce
+	// a cycle because config is a foundational package; session builds on top
+	// of state, not config). The caller (model package) converts between
+	// config.ThemeVariant and int at the save/restore boundary.
+	// ThemeDark (0) is the default and is omitted from JSON by omitempty.
+	ThemeVariant int `json:"theme_variant,omitempty"`
 }
 
 // ---------------------------------------------------------------------------

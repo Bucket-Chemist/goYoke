@@ -5,6 +5,7 @@ package model
 
 import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/session"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
@@ -143,4 +144,28 @@ func (m *AppModel) SetShutdownManager(sm interface{ Shutdown() error }) {
 // histories to disk.
 func (m *AppModel) SaveSessionPublic() {
 	m.saveSession()
+}
+
+// SetTheme updates the active theme in shared state.  It is called when the
+// user explicitly selects a new color theme (e.g. from the settings panel or
+// via ThemeChangedMsg).  The pointer receiver is required because this method
+// mutates the shared heap-allocated state.
+//
+// Components that hold a reference to sharedState will see the new theme on
+// their next render cycle without any additional message dispatch.
+func (m *AppModel) SetTheme(t config.Theme) {
+	if m.shared != nil {
+		m.shared.activeTheme = &t
+	}
+}
+
+// Theme returns the current active theme.  It uses a value receiver because
+// it is read-only.  If shared state has not been initialised or activeTheme
+// is nil (should not occur after NewAppModel), DefaultTheme is returned as a
+// safe fallback.
+func (m AppModel) Theme() config.Theme {
+	if m.shared != nil && m.shared.activeTheme != nil {
+		return *m.shared.activeTheme
+	}
+	return config.DefaultTheme()
 }

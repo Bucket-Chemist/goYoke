@@ -124,6 +124,17 @@ type sharedState struct {
 	// func() error (ShutdownManager.Shutdown) stored as a closure so the
 	// model package does not import the lifecycle package.
 	shutdownFunc func() error
+
+	// Theme (TUI-046).
+	// activeTheme is the current color theme.  It is always non-nil after
+	// NewAppModel() runs; the zero value of Theme is unusable (styles are
+	// empty lipgloss.Style values), so we store a pointer and initialise it
+	// in NewAppModel with DefaultTheme().
+	activeTheme *config.Theme
+	// themeVariant tracks which variant produced activeTheme so it can be
+	// persisted to SessionData without re-deriving the variant from the Theme
+	// value (which would require a reverse lookup).
+	themeVariant config.ThemeVariant
 }
 
 // ---------------------------------------------------------------------------
@@ -208,12 +219,15 @@ type AppModel struct {
 func NewAppModel() AppModel {
 	keys := config.DefaultKeyMap()
 	mq := modals.NewModalQueue(keys)
+	defaultTheme := config.DefaultTheme()
 	shared := &sharedState{
 		modalQueue:    &mq,
 		permHandler:   modals.NewPermissionHandler(&mq),
 		agentRegistry: state.NewAgentRegistry(),
 		costTracker:   state.NewCostTracker(),
 		providerState: state.NewProviderState(),
+		activeTheme:   &defaultTheme,
+		themeVariant:  config.ThemeDark,
 	}
 	return AppModel{
 		focus:          FocusClaude,
@@ -335,6 +349,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case SessionAutoSaveMsg:
 		return m.handleSessionAutoSave(msg)
+
+	// -----------------------------------------------------------------
+	// Theme switching (TUI-046)
+	// -----------------------------------------------------------------
+
+	case ThemeChangedMsg:
+		return m.handleThemeChanged(msg)
 
 	// -----------------------------------------------------------------
 	// Remaining CLI event types — re-subscribe without side effects.

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
 // handleWindowSize handles tea.WindowSizeMsg: updates terminal dimensions,
@@ -180,6 +181,25 @@ func (m AppModel) handleSessionAutoSave(msg SessionAutoSaveMsg) (tea.Model, tea.
 	return m, nil
 }
 
+// handleThemeChanged handles ThemeChangedMsg: builds a new Theme for the
+// requested variant, stores it in sharedState, and records the variant for
+// session persistence.
+//
+// Propagation strategy: components that hold a pointer to sharedState read
+// activeTheme directly on their next render cycle — no additional dispatch is
+// needed.  Components without sharedState access continue using package-level
+// config defaults until TUI-048/TUI-050 add SetTheme() to their widget
+// interfaces.
+func (m AppModel) handleThemeChanged(msg ThemeChangedMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil {
+		return m, nil
+	}
+	newTheme := config.NewTheme(msg.Variant)
+	m.shared.activeTheme = &newTheme
+	m.shared.themeVariant = msg.Variant
+	return m, nil
+}
+
 // saveSession snapshots the current application state into the session store.
 // It persists both the session metadata (cost, provider IDs, model selections)
 // and conversation histories for all providers that have messages.
@@ -204,6 +224,10 @@ func (m AppModel) saveSession() {
 		sd.ProviderModels = m.shared.providerState.ExportModels()
 		sd.ActiveProvider = m.shared.providerState.GetActiveProvider()
 	}
+
+	// Snapshot theme variant.  ThemeDark (0) is the default and is omitted
+	// from the JSON output by the omitempty tag on SessionData.ThemeVariant.
+	sd.ThemeVariant = int(m.shared.themeVariant)
 
 	// Save session metadata.
 	if err := m.shared.sessionStore.SaveSession(sd); err != nil {

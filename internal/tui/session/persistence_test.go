@@ -447,3 +447,87 @@ func TestSaveLoadSession_AllFieldsPopulated(t *testing.T) {
 	assert.Equal(t, 4, len(loaded.ProviderModels))
 	assert.Equal(t, state.ProviderGoogle, loaded.ActiveProvider)
 }
+
+// ---------------------------------------------------------------------------
+// ThemeVariant field (TUI-046)
+// ---------------------------------------------------------------------------
+
+// TestSessionData_ThemeVariantField verifies that the ThemeVariant int field
+// round-trips correctly through JSON save/load.  The field uses int (not
+// config.ThemeVariant) to avoid an import cycle between the session and config
+// packages; callers in the model package perform the int↔ThemeVariant cast.
+func TestSessionData_ThemeVariantField(t *testing.T) {
+	store := NewStore(t.TempDir())
+
+	tests := []struct {
+		name    string
+		variant int
+	}{
+		{"dark (default, omitempty)", 0},
+		{"light", 1},
+		{"high_contrast", 2},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			sd := &SessionData{
+				ID:           "20260323.theme-" + tc.name,
+				ThemeVariant: tc.variant,
+			}
+			require.NoError(t, store.SaveSession(sd))
+
+			loaded, err := store.LoadSession(sd.ID)
+			require.NoError(t, err)
+			require.NotNil(t, loaded)
+
+			assert.Equal(t, tc.variant, loaded.ThemeVariant,
+				"ThemeVariant=%d should round-trip through JSON", tc.variant)
+		})
+	}
+}
+
+// TestSessionData_ThemeVariantOmitEmpty verifies that the ThemeVariant field
+// is absent from the serialized JSON when its value is 0 (ThemeDark default),
+// keeping session files compact for the common case.
+func TestSessionData_ThemeVariantOmitEmpty(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(dir)
+
+	sd := &SessionData{
+		ID:           "20260323.omitempty-theme",
+		ThemeVariant: 0, // ThemeDark — should be omitted by omitempty
+	}
+	require.NoError(t, store.SaveSession(sd))
+
+	path := store.sessionFilePath(sd.ID)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(data), `"theme_variant"`,
+		"ThemeVariant=0 should be omitted from JSON by omitempty")
+}
+
+// TestSessionData_ThemeVariantNonZeroPresent verifies that a non-zero
+// ThemeVariant IS written to JSON (omitempty only suppresses the zero value).
+func TestSessionData_ThemeVariantNonZeroPresent(t *testing.T) {
+	dir := t.TempDir()
+	store := NewStore(dir)
+
+	sd := &SessionData{
+		ID:           "20260323.theme-present",
+		ThemeVariant: 2, // ThemeHighContrast
+	}
+	require.NoError(t, store.SaveSession(sd))
+
+	path := store.sessionFilePath(sd.ID)
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	assert.Contains(t, string(data), `"theme_variant"`,
+		"non-zero ThemeVariant must be written to JSON")
+	assert.Contains(t, string(data), `2`,
+		"ThemeVariant value 2 must appear in JSON")
+}
