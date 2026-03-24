@@ -1044,7 +1044,7 @@
     {
       "id": "TUI-060",
       "title": "Keyboard hint bar",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [

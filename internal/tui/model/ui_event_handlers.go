@@ -97,6 +97,11 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		m.shared.searchOverlay.SetSize(msg.Width, msg.Height)
 	}
 
+	// Propagate terminal width to the hint bar for truncation (TUI-060).
+	if m.shared.hintBar != nil {
+		m.shared.hintBar.SetWidth(msg.Width)
+	}
+
 	return m, nil
 }
 

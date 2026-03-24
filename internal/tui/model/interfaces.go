@@ -297,6 +297,33 @@ type slashCmdWidget interface {
 }
 
 // ---------------------------------------------------------------------------
+// hintBarWidget  (TUI-060)
+//
+// hintBarWidget is the interface satisfied by *hintbar.HintBarModel.
+// Defining it here avoids a circular import: hintbar imports config but not
+// model; model must not import hintbar directly.  The interface breaks the
+// cycle while still allowing AppModel to drive the hint bar lifecycle.
+// ---------------------------------------------------------------------------
+
+// hintBarWidget is the interface satisfied by *hintbar.HintBarModel.
+type hintBarWidget interface {
+	// View renders the hint bar to a string. Returns "" when not visible.
+	View() string
+	// SetContext switches the active hint set by context name.
+	// Recognised values: "main", "settings", "search", "modal", "plan".
+	// Unknown values fall back to "main".
+	SetContext(context string)
+	// SetWidth updates the terminal width used for truncation.
+	SetWidth(width int)
+	// IsVisible returns true when the hint bar is currently shown.
+	IsVisible() bool
+	// Show makes the hint bar visible.
+	Show()
+	// Hide hides the hint bar.
+	Hide()
+}
+
+// ---------------------------------------------------------------------------
 // searchOverlayWidget  (TUI-059)
 //
 // searchOverlayWidget is the interface satisfied by *search.SearchOverlayModel.

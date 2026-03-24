@@ -16,13 +16,25 @@ import (
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// While the plan view modal is open, forward all keys to it.
 	if m.shared != nil && m.shared.planViewModal.IsActive() {
+		// Set hint context to "plan" while plan modal is active (TUI-060).
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("plan")
+		}
 		updated, cmd := m.shared.planViewModal.Update(msg)
 		m.shared.planViewModal = updated
+		// Restore main context when plan modal closes.
+		if !m.shared.planViewModal.IsActive() {
+			m.updateHintContext()
+		}
 		return m, cmd
 	}
 
 	// While a modal is open only modal keys are active.
 	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
+		// Set hint context to "modal" while a permission modal is active (TUI-060).
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("modal")
+		}
 		return m.handleModalKey(msg)
 	}
 
@@ -30,6 +42,10 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Dismiss the search overlay if a modal opens (handled in renderLayout).
 	if m.shared != nil && m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive() {
 		cmd := m.shared.searchOverlay.HandleMsg(msg)
+		// Restore main context when search overlay deactivates (TUI-060).
+		if !m.shared.searchOverlay.IsActive() {
+			m.updateHintContext()
+		}
 		return m, cmd
 	}
 
@@ -61,16 +77,19 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Global.ToggleFocus):
 		m.focus = FocusNext(m.focus)
 		m.syncFocusState()
+		m.updateHintContext()
 		return m, nil
 
 	// TUI-052: Shift+Tab triggers reverse focus cycling.
 	case key.Matches(msg, m.keys.Global.ReverseToggleFocus):
 		m.focus = FocusPrev(m.focus)
 		m.syncFocusState()
+		m.updateHintContext()
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
+		m.updateHintContext()
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleProvider):
@@ -104,6 +123,9 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.shared.planViewModal.SetContent(markdown, m.width)
 			m.shared.planViewModal.SetSize(m.width, m.height)
 			m.shared.planViewModal.Show()
+			if m.shared.hintBar != nil {
+				m.shared.hintBar.SetContext("plan")
+			}
 		}
 		return m, nil
 
@@ -112,6 +134,9 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.shared != nil && m.shared.searchOverlay != nil {
 			m.shared.searchOverlay.SetSize(m.width, m.height)
 			m.shared.searchOverlay.Activate()
+			if m.shared.hintBar != nil {
+				m.shared.hintBar.SetContext("search")
+			}
 		}
 		return m, nil
 	}
@@ -163,4 +188,32 @@ func (m *AppModel) syncFocusState() {
 		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
 	}
 	m.agentTree.SetFocused(m.focus == FocusAgents)
+}
+
+// updateHintContext updates the hint bar context based on the current
+// application state.  It is called after focus changes and after overlays
+// close to keep the hint bar in sync with the visible UI (TUI-060).
+//
+// Priority (highest to lowest):
+//  1. Plan view modal active → "plan"
+//  2. Modal queue active     → "modal"
+//  3. Search overlay active  → "search"
+//  4. Settings panel focused → "settings"
+//  5. Default               → "main"
+func (m *AppModel) updateHintContext() {
+	if m.shared == nil || m.shared.hintBar == nil {
+		return
+	}
+	switch {
+	case m.shared.planViewModal.IsActive():
+		m.shared.hintBar.SetContext("plan")
+	case m.shared.modalQueue != nil && m.shared.modalQueue.IsActive():
+		m.shared.hintBar.SetContext("modal")
+	case m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive():
+		m.shared.hintBar.SetContext("search")
+	case m.rightPanelMode == RPMSettings:
+		m.shared.hintBar.SetContext("settings")
+	default:
+		m.shared.hintBar.SetContext("main")
+	}
 }

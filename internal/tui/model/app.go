@@ -124,6 +124,11 @@ type sharedState struct {
 	// It is activated by ctrl+f and queries all registered SearchSources.
 	searchOverlay searchOverlayWidget
 
+	// hintBar is the context-aware keyboard hint bar (TUI-060).
+	// It renders a single muted row of key:description pairs between the
+	// task board / toasts and the status line.
+	hintBar hintBarWidget
+
 	// Session persistence (TUI-033).
 	sessionStore *session.Store
 	sessionData  *session.SessionData

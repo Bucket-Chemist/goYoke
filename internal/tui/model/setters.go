@@ -152,6 +152,13 @@ func (m *AppModel) SetSearchOverlay(so searchOverlayWidget) {
 	m.shared.searchOverlay = so
 }
 
+// SetHintBar injects the context-aware keyboard hint bar into the shared
+// state. The hint bar renders a single muted row of shortcuts below the
+// main content area (TUI-060).
+func (m *AppModel) SetHintBar(hb hintBarWidget) {
+	m.shared.hintBar = hb
+}
+
 // SetTheme updates the active theme in shared state.  It is called when the
 // user explicitly selects a new color theme (e.g. from the settings panel or
 // via ThemeChangedMsg).  The pointer receiver is required because this method

@@ -19,6 +19,7 @@ const (
 	bannerHeight     = 3 // rounded border top + title + border bottom
 	tabBarHeight     = 1 // single-row strip
 	statusLineHeight = 2 // two-row status bar
+	hintBarHeight    = 1 // single-row keyboard hint bar (TUI-060)
 	borderFrame      = 2 // border chars on each axis (1 left + 1 right)
 )
 
@@ -118,7 +119,11 @@ func (m AppModel) computeLayout() layoutDims {
 	if m.shared != nil && m.shared.taskBoard != nil {
 		taskBoardH = m.shared.taskBoard.Height()
 	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH
+	hintH := 0
+	if m.shared != nil && m.shared.hintBar != nil && m.shared.hintBar.IsVisible() {
+		hintH = hintBarHeight
+	}
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}
@@ -254,6 +259,11 @@ func (m AppModel) renderLayout() string {
 	// Toast notifications render between main area and status line.
 	if m.shared != nil && m.shared.toasts != nil && !m.shared.toasts.IsEmpty() {
 		parts = append(parts, m.shared.toasts.View())
+	}
+
+	// Hint bar renders between toasts and status line (TUI-060).
+	if m.shared != nil && m.shared.hintBar != nil && m.shared.hintBar.IsVisible() {
+		parts = append(parts, m.shared.hintBar.View())
 	}
 
 	parts = append(parts, statusLineView)
