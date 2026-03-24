@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ---------------------------------------------------------------------------
@@ -633,4 +634,139 @@ func TestDefaultTheme_RegressionColorsUnchanged(t *testing.T) {
 	assert.Equal(t, lipgloss.AdaptiveColor{Light: "3", Dark: "3"}, theme.ColorWarning)
 	assert.Equal(t, lipgloss.AdaptiveColor{Light: "1", Dark: "1"}, theme.ColorError)
 	assert.Equal(t, lipgloss.AdaptiveColor{Light: "8", Dark: "8"}, theme.ColorMuted)
+}
+
+// ---------------------------------------------------------------------------
+// ContrastRatio — table-driven tests
+// ---------------------------------------------------------------------------
+
+func TestContrastRatio_BlackOnWhite(t *testing.T) {
+	// WCAG defines the maximum possible contrast ratio as 21:1 (black on white).
+	ratio := ContrastRatio("#000000", "#FFFFFF")
+	assert.InDelta(t, 21.0, ratio, 0.05,
+		"black on white must be ~21:1")
+}
+
+func TestContrastRatio_WhiteOnBlack(t *testing.T) {
+	// Contrast is symmetric — order of fg/bg should not matter.
+	ratio := ContrastRatio("#FFFFFF", "#000000")
+	assert.InDelta(t, 21.0, ratio, 0.05,
+		"white on black must equal black on white (~21:1)")
+}
+
+func TestContrastRatio_SameColor(t *testing.T) {
+	// Same foreground and background → contrast ratio of exactly 1.0.
+	ratio := ContrastRatio("#3C3C3C", "#3C3C3C")
+	assert.InDelta(t, 1.0, ratio, 0.001,
+		"same fg and bg must produce a 1:1 contrast ratio")
+}
+
+func TestContrastRatio_KnownPair(t *testing.T) {
+	// #FF0000 (pure red) on #000000 (black).
+	// Computed per WCAG 2.1:
+	//   Luminance(#FF0000) = 0.2126 * 1.0 = 0.2126
+	//   Ratio = (0.2126 + 0.05) / (0.0 + 0.05) = 0.2626 / 0.05 ≈ 5.25
+	ratio := ContrastRatio("#FF0000", "#000000")
+	assert.InDelta(t, 5.25, ratio, 0.05,
+		"#FF0000 on #000000 must be approximately 5.25:1")
+}
+
+func TestContrastRatio_InvalidHex(t *testing.T) {
+	tests := []struct {
+		name string
+		fg   string
+		bg   string
+	}{
+		{"empty fg", "", "#000000"},
+		{"empty bg", "#FFFFFF", ""},
+		{"both empty", "", ""},
+		{"too short", "#FFF", "#000000"},
+		{"non-hex chars", "#GGGGGG", "#000000"},
+		{"seven chars", "#FFFFFFF", "#000000"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			ratio := ContrastRatio(tc.fg, tc.bg)
+			assert.Equal(t, 1.0, ratio,
+				"invalid hex must return 1.0 (safe default)")
+		})
+	}
+}
+
+func TestContrastRatio_WithHash(t *testing.T) {
+	// #RRGGBB format (with leading hash) must work.
+	ratio := ContrastRatio("#FFFFFF", "#000000")
+	assert.Greater(t, ratio, 20.0, "with-hash format must produce a high ratio")
+}
+
+func TestContrastRatio_WithoutHash(t *testing.T) {
+	// RRGGBB format (without leading hash) must work.
+	ratio := ContrastRatio("FFFFFF", "000000")
+	assert.Greater(t, ratio, 20.0, "without-hash format must produce a high ratio")
+}
+
+func TestContrastRatio_IsCommutative(t *testing.T) {
+	// ContrastRatio(a, b) == ContrastRatio(b, a).
+	pairs := [][2]string{
+		{"#FF0000", "#000000"},
+		{"#0088FF", "#1a1a2e"},
+		{"#FFAA00", "#222222"},
+	}
+	for _, p := range pairs {
+		t.Run(p[0]+"/"+p[1], func(t *testing.T) {
+			r1 := ContrastRatio(p[0], p[1])
+			r2 := ContrastRatio(p[1], p[0])
+			assert.InDelta(t, r1, r2, 0.0001,
+				"ContrastRatio must be commutative")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ValidateContrast — high-contrast theme must pass WCAG AA
+// ---------------------------------------------------------------------------
+
+func TestValidateContrast_HighContrastPasses(t *testing.T) {
+	theme := NewTheme(ThemeHighContrast)
+
+	_, err := theme.ValidateContrast()
+	assert.NoError(t, err,
+		"ThemeHighContrast must pass WCAG AA (4.5:1) for all semantic text colors")
+}
+
+func TestValidateContrast_AllRatiosAboveMinimum(t *testing.T) {
+	theme := NewTheme(ThemeHighContrast)
+
+	ratios, err := theme.ValidateContrast()
+	require.NoError(t, err, "ThemeHighContrast must have no WCAG failures")
+
+	for name, ratio := range ratios {
+		assert.GreaterOrEqual(t, ratio, 4.5,
+			"color %s must have contrast ratio >= 4.5:1, got %.2f", name, ratio)
+	}
+}
+
+func TestValidateContrast_ReturnsRatioMap(t *testing.T) {
+	theme := NewTheme(ThemeHighContrast)
+
+	ratios, _ := theme.ValidateContrast()
+	// Must have entries for the checked colors (hex-coded colors only).
+	assert.NotEmpty(t, ratios, "ValidateContrast must return a non-empty ratio map")
+}
+
+func TestValidateContrast_DarkTheme_SkipsAnsiColors(t *testing.T) {
+	// The default dark theme uses ANSI color indices (e.g. "6", "1") which
+	// cannot be measured against a specific hex background. ValidateContrast
+	// must skip these entries gracefully without panicking.
+	theme := DefaultTheme()
+
+	ratios, _ := theme.ValidateContrast()
+	// All ANSI-index colors are skipped → ratios map may be empty or contain
+	// only hex-coded entries.
+	for _, ratio := range ratios {
+		assert.GreaterOrEqual(t, ratio, 1.0,
+			"every returned ratio must be at least 1.0")
+	}
 }

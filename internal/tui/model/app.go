@@ -12,6 +12,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/session"
@@ -356,6 +357,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ThemeChangedMsg:
 		return m.handleThemeChanged(msg)
+
+	// -----------------------------------------------------------------
+	// Settings panel changes (TUI-051)
+	// -----------------------------------------------------------------
+
+	case settingstree.SettingChangedMsg:
+		return m.handleSettingChanged(msg)
 
 	// -----------------------------------------------------------------
 	// Remaining CLI event types — re-subscribe without side effects.

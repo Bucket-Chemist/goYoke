@@ -6,6 +6,7 @@ package model
 import (
 	"testing"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -189,6 +190,144 @@ func TestThemeChangedMsg_NilSharedStateIsNoop(t *testing.T) {
 
 	// Should not panic.
 	updated, cmd := m.Update(ThemeChangedMsg{Variant: config.ThemeLight})
+	assert.Nil(t, cmd)
+	assert.NotNil(t, updated)
+}
+
+// ---------------------------------------------------------------------------
+// TestSettingChangedMsg — settings panel wiring (TUI-051)
+// ---------------------------------------------------------------------------
+
+// TestSettingChangedMsg_ThemeDark verifies that a "theme" SettingChangedMsg
+// with value "Dark" activates the dark theme.
+func TestSettingChangedMsg_ThemeDark(t *testing.T) {
+	m := NewAppModel()
+
+	// Start with high-contrast so we can verify it was replaced.
+	m.SetTheme(config.NewTheme(config.ThemeHighContrast))
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "theme", Value: "Dark"})
+	assert.Nil(t, cmd, "SettingChangedMsg should not return a Cmd")
+
+	appModel, ok := updated.(AppModel)
+	require.True(t, ok)
+
+	got := appModel.Theme()
+	want := config.NewTheme(config.ThemeDark)
+
+	assert.Equal(t, want.ColorPrimary, got.ColorPrimary,
+		"theme should have switched to ThemeDark")
+	assert.Equal(t, want.ColorError, got.ColorError)
+}
+
+// TestSettingChangedMsg_ThemeHighContrast verifies that a "theme"
+// SettingChangedMsg with value "High Contrast" activates the high-contrast
+// palette.
+func TestSettingChangedMsg_ThemeHighContrast(t *testing.T) {
+	m := NewAppModel()
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "theme", Value: "High Contrast"})
+	assert.Nil(t, cmd)
+
+	appModel, ok := updated.(AppModel)
+	require.True(t, ok)
+
+	got := appModel.Theme()
+	want := config.NewTheme(config.ThemeHighContrast)
+
+	assert.Equal(t, want.ColorError, got.ColorError,
+		"theme should have switched to ThemeHighContrast")
+	assert.Equal(t, want.ColorPrimary, got.ColorPrimary)
+
+	// The sharedState variant must also be updated.
+	require.NotNil(t, appModel.shared)
+	assert.Equal(t, config.ThemeHighContrast, appModel.shared.themeVariant)
+}
+
+// TestSettingChangedMsg_ThemeLight verifies the Light variant.
+func TestSettingChangedMsg_ThemeLight(t *testing.T) {
+	m := NewAppModel()
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "theme", Value: "Light"})
+	assert.Nil(t, cmd)
+
+	appModel, ok := updated.(AppModel)
+	require.True(t, ok)
+
+	got := appModel.Theme()
+	want := config.NewTheme(config.ThemeLight)
+	assert.Equal(t, want.ColorMuted, got.ColorMuted,
+		"theme should have switched to ThemeLight")
+}
+
+// TestSettingChangedMsg_ThemeUnknownValue verifies that an unrecognised theme
+// value is a no-op (theme is unchanged, no panic, no Cmd).
+func TestSettingChangedMsg_ThemeUnknownValue(t *testing.T) {
+	m := NewAppModel()
+	original := m.Theme()
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "theme", Value: "Solarized"})
+	assert.Nil(t, cmd)
+
+	appModel, ok := updated.(AppModel)
+	require.True(t, ok)
+
+	assert.Equal(t, original.ColorPrimary, appModel.Theme().ColorPrimary,
+		"unknown theme value must not change the active theme")
+}
+
+// TestSettingChangedMsg_ASCIIIconsOn verifies that "ascii_icons" = "on"
+// sets UseASCII on the active theme.
+func TestSettingChangedMsg_ASCIIIconsOn(t *testing.T) {
+	m := NewAppModel()
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "ascii_icons", Value: "on"})
+	assert.Nil(t, cmd)
+
+	appModel, ok := updated.(AppModel)
+	require.True(t, ok)
+
+	assert.True(t, appModel.Theme().UseASCII,
+		"ascii_icons=on should set Theme.UseASCII = true")
+}
+
+// TestSettingChangedMsg_ASCIIIconsOff verifies that "ascii_icons" = "off"
+// clears UseASCII on the active theme.
+func TestSettingChangedMsg_ASCIIIconsOff(t *testing.T) {
+	m := NewAppModel()
+	// Set ascii first.
+	m.Update(settingstree.SettingChangedMsg{Key: "ascii_icons", Value: "on"}) //nolint:errcheck
+	if m.shared != nil && m.shared.activeTheme != nil {
+		m.shared.activeTheme.UseASCII = true
+	}
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "ascii_icons", Value: "off"})
+	assert.Nil(t, cmd)
+
+	appModel, ok := updated.(AppModel)
+	require.True(t, ok)
+
+	assert.False(t, appModel.Theme().UseASCII,
+		"ascii_icons=off should set Theme.UseASCII = false")
+}
+
+// TestSettingChangedMsg_UnknownKey verifies that an unrecognised key is a
+// no-op (no crash, no Cmd).
+func TestSettingChangedMsg_UnknownKey(t *testing.T) {
+	m := NewAppModel()
+
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "unknown_key", Value: "val"})
+	assert.Nil(t, cmd)
+	assert.NotNil(t, updated)
+}
+
+// TestSettingChangedMsg_NilSharedState verifies that handleSettingChanged is
+// safe when sharedState is nil.
+func TestSettingChangedMsg_NilSharedState(t *testing.T) {
+	m := AppModel{} // zero value, shared is nil
+
+	// Must not panic.
+	updated, cmd := m.Update(settingstree.SettingChangedMsg{Key: "theme", Value: "Dark"})
 	assert.Nil(t, cmd)
 	assert.NotNil(t, updated)
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
@@ -197,6 +198,44 @@ func (m AppModel) handleThemeChanged(msg ThemeChangedMsg) (tea.Model, tea.Cmd) {
 	newTheme := config.NewTheme(msg.Variant)
 	m.shared.activeTheme = &newTheme
 	m.shared.themeVariant = msg.Variant
+	return m, nil
+}
+
+// handleSettingChanged handles settingstree.SettingChangedMsg: translates
+// settings panel changes into the appropriate model mutations. Currently wires:
+//   - "theme"      → builds and activates a new config.Theme via NewTheme()
+//   - "ascii_icons" → toggles UseASCII on the active theme
+//
+// Unknown keys are silently ignored to keep the handler forward-compatible.
+func (m AppModel) handleSettingChanged(msg settingstree.SettingChangedMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil {
+		return m, nil
+	}
+
+	switch msg.Key {
+	case "theme":
+		var variant config.ThemeVariant
+		switch msg.Value {
+		case "Dark":
+			variant = config.ThemeDark
+		case "Light":
+			variant = config.ThemeLight
+		case "High Contrast":
+			variant = config.ThemeHighContrast
+		default:
+			// Unrecognised theme value — no-op.
+			return m, nil
+		}
+		newTheme := config.NewTheme(variant)
+		m.shared.activeTheme = &newTheme
+		m.shared.themeVariant = variant
+
+	case "ascii_icons":
+		if m.shared.activeTheme != nil {
+			m.shared.activeTheme.UseASCII = msg.Value == "on"
+		}
+	}
+
 	return m, nil
 }
 

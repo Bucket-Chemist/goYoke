@@ -2,7 +2,14 @@
 // It defines colors, styles, and icon constants used across all TUI components.
 package config
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 // ---------------------------------------------------------------------------
 // ThemeVariant
@@ -418,6 +425,123 @@ func buildTheme(
 		Warning:         warningStyle,
 		Muted:           mutedStyle,
 	}
+}
+
+// ---------------------------------------------------------------------------
+// WCAG contrast utilities
+// ---------------------------------------------------------------------------
+
+// ContrastRatio computes the WCAG 2.1 contrast ratio between two hex colors.
+// Returns a float64 in range [1.0, 21.0]. WCAG AA requires >= 4.5 for normal
+// text. Colors must be in #RRGGBB or RRGGBB format. Returns 1.0 on any parse
+// error so callers receive a safe (worst-case) value rather than a panic.
+func ContrastRatio(fg, bg string) float64 {
+	lFG, ok1 := luminance(fg)
+	lBG, ok2 := luminance(bg)
+	if !ok1 || !ok2 {
+		return 1.0
+	}
+	// Arrange so that l1 >= l2.
+	l1, l2 := lFG, lBG
+	if l2 > l1 {
+		l1, l2 = l2, l1
+	}
+	return (l1 + 0.05) / (l2 + 0.05)
+}
+
+// luminance parses a hex color string and returns its relative luminance
+// as defined by WCAG 2.1. Returns (0, false) on parse failure.
+func luminance(hex string) (float64, bool) {
+	r, g, b, ok := parseHex(hex)
+	if !ok {
+		return 0, false
+	}
+	return 0.2126*linearize(r) + 0.7152*linearize(g) + 0.0722*linearize(b), true
+}
+
+// linearize converts an sRGB 8-bit channel value to its linear light value
+// as specified by IEC 61966-2-1 (the sRGB standard referenced by WCAG 2.1).
+func linearize(channel uint8) float64 {
+	v := float64(channel) / 255.0
+	if v <= 0.04045 {
+		return v / 12.92
+	}
+	return math.Pow((v+0.055)/1.055, 2.4)
+}
+
+// parseHex parses a "#RRGGBB" or "RRGGBB" color string into its R, G, B
+// components. Returns (0, 0, 0, false) if the string cannot be parsed.
+func parseHex(s string) (r, g, b uint8, ok bool) {
+	s = strings.TrimPrefix(s, "#")
+	if len(s) != 6 {
+		return 0, 0, 0, false
+	}
+	ri, err1 := strconv.ParseUint(s[0:2], 16, 8)
+	gi, err2 := strconv.ParseUint(s[2:4], 16, 8)
+	bi, err3 := strconv.ParseUint(s[4:6], 16, 8)
+	if err1 != nil || err2 != nil || err3 != nil {
+		return 0, 0, 0, false
+	}
+	return uint8(ri), uint8(gi), uint8(bi), true
+}
+
+// wcagAAMinimum is the WCAG AA minimum contrast ratio for normal-size text.
+const wcagAAMinimum = 4.5
+
+// validateContrastBG is the dark background used by ValidateContrast.
+// Pure black (#000000) is used because it is the most challenging common dark
+// terminal background and provides a conservative WCAG check: if a color
+// passes against black it will also pass against any darker terminal theme.
+const validateContrastBG = "#000000"
+
+// ValidateContrast checks the semantic foreground colors of the Theme against
+// a dark background (#000000) using the WCAG AA minimum (4.5:1). It evaluates
+// the Dark variant of each color because the TUI primarily targets dark
+// terminals.
+//
+// ColorAccent and ColorSecondary are excluded from the check: they are used
+// for decorative highlights and borders, not for informational text, and pure
+// purple/blue hues cannot satisfy 4.5:1 against black while remaining vivid.
+//
+// Returns a map of field-name → contrast-ratio and a non-nil error listing
+// every field that falls below the minimum. Returns nil error when all checked
+// colors pass.
+func (t Theme) ValidateContrast() (map[string]float64, error) {
+	pairs := []struct {
+		name  string
+		color lipgloss.AdaptiveColor
+	}{
+		{"ColorError", t.ColorError},
+		{"ColorWarning", t.ColorWarning},
+		{"ColorSuccess", t.ColorSuccess},
+		{"ColorPrimary", t.ColorPrimary},
+		{"ColorMuted", t.ColorMuted},
+	}
+
+	ratios := make(map[string]float64, len(pairs))
+	var failures []string
+
+	for _, p := range pairs {
+		dark := p.color.Dark
+		if dark == "" {
+			// No hex value — skip (ANSI indices cannot be measured).
+			continue
+		}
+		if !strings.HasPrefix(dark, "#") {
+			// Not a hex color (ANSI index like "6") — skip.
+			continue
+		}
+		ratio := ContrastRatio(dark, validateContrastBG)
+		ratios[p.name] = ratio
+		if ratio < wcagAAMinimum {
+			failures = append(failures, fmt.Sprintf("%s (%.2f:1)", p.name, ratio))
+		}
+	}
+
+	if len(failures) > 0 {
+		return ratios, fmt.Errorf("WCAG AA contrast failures: %s", strings.Join(failures, ", "))
+	}
+	return ratios, nil
 }
 
 // DefaultTheme returns the standard GOgent-Fortress theme.

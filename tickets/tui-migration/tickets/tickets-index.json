@@ -890,7 +890,7 @@
     {
       "id": "TUI-051",
       "title": "High-contrast mode",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [
