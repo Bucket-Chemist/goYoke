@@ -5,7 +5,7 @@
 > **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
 > **TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets) — superseded by TUI Migration
 > **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). ✅ ALL COMPLETE (42/42, 100%). Feature parity verified.
-> **TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, Phase 10). ⏳ PENDING. Review: APPROVE_WITH_CONDITIONS (2026-03-24).
+> **TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, Phase 10). 🔄 14/28 COMPLETE (50%). 25 packages, 1270 tests. Review: APPROVE_WITH_CONDITIONS (2026-03-24).
 > **Review Telemetry:** GOgent-122 through GOgent-139 (18 tasks)
 
 ---
@@ -91,7 +91,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │  │     GLOBAL SCOPE (~/.gogent/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
 │  │  │                                │  │                  CONFIGURATION (~/.claude/)                        │ │    │
 │  │  │ • failure-tracker.jsonl        │  │                                                                    │ │    │
-│  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.2.0)    • agents/*.yaml                │ │    │
+│  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.5.0)    • agents/*.yaml                │ │    │
 │  │  │ • escalations.jsonl            │  │  • conventions/*.md                 • skills/*/SKILL.md           │ │    │
 │  │  │ • scout-recommendations.jsonl  │  │  • CLAUDE.md                        • rules/*.md                   │ │    │
 │  │  │                                │  │                                                                    │ │    │
@@ -813,7 +813,7 @@ flowchart TD
     parse --> check1{Tool == Task?}
 
     check1 -->|No| pass1[Pass through]
-    check1 -->|Yes| load[Load Schema v2.2.0]
+    check1 -->|Yes| load[Load Schema v2.5.0]
 
     load --> v1[Check 1: Einstein/Opus Blocking]
     v1 -->|task_invocation_blocked| block1[BLOCK: Use /einstein instead]
@@ -845,7 +845,7 @@ flowchart TD
 
 ### 6.2 Agent-Subagent Mapping (routing-schema v2.4.0)
 
-#### Core System Agents (v2.2.0)
+#### Core System Agents (v2.5.0)
 
 | Agent | Required subagent_type | Rationale |
 |-------|------------------------|-----------|
@@ -1186,7 +1186,7 @@ $XDG_DATA_HOME/gogent/
 └── claude-error-patterns.jsonl      # Session error patterns
 │
 ~/.claude/
-├── routing-schema.json              # v2.2.0 - Source of truth
+├── routing-schema.json              # v2.5.0 - Source of truth
 ├── CLAUDE.md                        # Global configuration
 ├── conventions/                     # Language conventions
 │   ├── python.md

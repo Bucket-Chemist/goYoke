@@ -294,7 +294,7 @@ The following review findings have been incorporated into the ticket description
 | 10d | ✅ COMPLETE | TUI-052–056 | Shift+Tab + slash dropdown/exec + task board + plan modal (Glamour viewport, alt+v guard, 89.0%). |
 | 10e–g | ⏳ PENDING | TUI-057–070 | 14 tickets remaining. Plan UX, responsive layout, fuzzy search, animations, tab highlight, vim keys, modals, breadcrumbs, docs. |
 
-### Phase 2 Package Tree (delivered)
+### Package Tree (updated through Phase 10, TUI-056)
 
 ```
 internal/tui/
@@ -318,24 +318,35 @@ internal/tui/
 │   │   ├── tree_test.go          # 23 tests, 90.6% coverage
 │   │   ├── detail.go             # AgentDetailModel: display-only, word-wrapped
 │   │   └── detail_test.go        # 18 tests
-│   ├── claude/                   # Claude conversation panel (TUI-022)
-│   │   ├── panel.go              # ClaudePanelModel: viewport + textinput, streaming
-│   │   └── panel_test.go         # 44 tests, 82.3% coverage
+│   ├── claude/                   # Claude conversation panel (TUI-022, TUI-054)
+│   │   ├── panel.go              # ClaudePanelModel: viewport + textinput, streaming, slash cmd integration
+│   │   ├── panel_test.go         # 59+ tests, 84.8% coverage
+│   │   ├── history.go            # InputHistory: JSON persistence, max 500, consecutive dedup
+│   │   └── search.go             # SearchModel: case-insensitive substring, Ctrl+N/P nav
 │   ├── banner/                   # BannerModel (TUI-009)
 │   │   ├── banner.go
 │   │   └── banner_test.go
-│   ├── modals/                   # Modal system (TUI-017, TUI-018)
-│   │   ├── types.go              # ModalType, ModalRequest, ModalResponse
+│   ├── modals/                   # Modal system (TUI-017, TUI-018, TUI-056)
+│   │   ├── types.go              # ModalType (Confirm/Permission/Ask/PlanView), ModalRequest, ModalResponse
 │   │   ├── types_test.go
 │   │   ├── model.go              # ModalModel: option selection, free-text "Other"
 │   │   ├── model_test.go
 │   │   ├── queue.go              # ModalQueue: FIFO queue, auto-activate next
 │   │   ├── queue_test.go
 │   │   ├── permission.go         # PermissionHandler: 6 flow types, multi-step ExitPlan
-│   │   └── permission_test.go    # 107 total modals tests, 88.5% coverage
-│   ├── statusline/               # StatusLineModel (TUI-009)
-│   │   ├── statusline.go
-│   │   └── statusline_test.go
+│   │   ├── permission_test.go
+│   │   ├── plan_modal.go         # PlanViewModal: full-screen Glamour viewport (TUI-056)
+│   │   └── plan_modal_test.go    # 129+ total modals tests, 89.0% coverage
+│   ├── settingstree/             # Interactive settings tree (TUI-050)
+│   │   ├── settingstree.go       # SettingsTreeModel: 3 sections, Toggle/Select/Display, navigation
+│   │   └── settingstree_test.go  # 24 tests, 87.4% coverage
+│   ├── slashcmd/                 # Slash command dropdown (TUI-053)
+│   │   ├── slashcmd.go           # SlashCmdModel: 18 commands, prefix filter, scroll window
+│   │   └── slashcmd_test.go      # 42 tests, 92.1% coverage
+│   ├── statusline/               # StatusLineModel (TUI-009, TUI-048, TUI-049)
+│   │   ├── statusline.go         # Semantic colors, progress bar, uncommitted/agent counts
+│   │   ├── statusline_test.go    # 70 tests, 88.7% coverage
+│   │   └── export_test.go
 │   ├── tabbar/                   # TabBarModel (TUI-009)
 │   │   ├── tabbar.go
 │   │   └── tabbar_test.go
@@ -346,13 +357,16 @@ internal/tui/
 │   │   ├── list_test.go          # 25 tests
 │   │   ├── detail.go             # TeamDetailModel: wave-grouped member view
 │   │   └── detail_test.go        # 23 tests — 94.0% coverage total
+│   ├── taskboard/                # Interactive task board (TUI-032, TUI-055)
+│   │   ├── taskboard.go          # TaskBoardModel: HandleMsg, filters a/r/p/d, progress summary
+│   │   └── taskboard_test.go     # 33 tests, 94.0% coverage
 │   └── toast/                    # Toast notifications (TUI-025)
 │       ├── toast.go              # ToastModel: auto-expire, max 3, level-colored
 │       └── toast_test.go         # 17 tests, 93.9% coverage
-├── config/                       # Theme + keybindings (TUI-005, TUI-007)
-│   ├── theme.go                  # 7 colors, 10 styles, 6 icons, Theme struct
+├── config/                       # Theme + keybindings (TUI-005, TUI-007, TUI-044–046, TUI-051, TUI-052)
+│   ├── theme.go                  # Theme, ThemeVariant (Dark/Light/HighContrast), IconSet, ContrastRatio, 96.3%
 │   ├── theme_test.go
-│   ├── keys.go                   # 24 bindings across 5 groups
+│   ├── keys.go                   # 25 bindings (ReverseToggleFocus, ViewPlan added in Phase 10)
 │   └── keys_test.go
 ├── state/                        # Shared state (TUI-019, TUI-024, TUI-028)
 │   ├── agent.go                  # AgentRegistry: RWMutex, dedup, DFS tree
@@ -362,11 +376,13 @@ internal/tui/
 │   ├── provider.go               # ProviderState: 4 providers, per-provider isolation (TUI-028)
 │   ├── provider_test.go          # 161 tests (incl subtests), 97.5% coverage
 │   └── task.go                   # TaskEntry type (DES-3: moved from taskboard to break model→taskboard import)
-├── util/                         # Shared utilities (TUI-023)
+├── util/                         # Shared utilities (TUI-023, TUI-047)
 │   ├── markdown.go               # Cached Glamour renderer, RenderMarkdown()
-│   ├── markdown_test.go          # 14 tests, 87.0% coverage
-│   ├── text.go                   # util.Truncate: UTF-8-safe truncation (FIX-1: replaces 5 duplicate helpers)
-│   └── text_test.go
+│   ├── markdown_test.go
+│   ├── text.go                   # util.Truncate: UTF-8-safe truncation (FIX-1)
+│   ├── text_test.go
+│   ├── errors.go                 # ErrorDisplay, FormatError/Warning, ClassifyError (TUI-047)
+│   └── errors_test.go            # 94% util coverage
 └── model/                        # Root AppModel + types (TUI-006, TUI-008)
     ├── focus.go                  # FocusTarget, RightPanelMode
     ├── focus_test.go
