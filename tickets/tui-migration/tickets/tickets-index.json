@@ -1010,7 +1010,7 @@
     {
       "id": "TUI-058",
       "title": "4-tier responsive layout",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [

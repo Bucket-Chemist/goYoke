@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -47,6 +48,10 @@ func (m *DashboardModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 }
+
+// SetTier satisfies the dashboardWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *DashboardModel) SetTier(_ model.LayoutTier) {}
 
 // SetData updates all dashboard metrics in a single call. sessionStart should
 // be the wall-clock time the session began; pass a zero time.Time when the

@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
@@ -40,6 +41,10 @@ func NewPlanPreviewModel() PlanPreviewModel {
 		viewport: vp,
 	}
 }
+
+// SetTier satisfies the planPreviewWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *PlanPreviewModel) SetTier(_ model.LayoutTier) {}
 
 // SetSize updates the rendering dimensions and resizes the viewport. Call
 // this on every tea.WindowSizeMsg.

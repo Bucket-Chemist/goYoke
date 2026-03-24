@@ -175,6 +175,7 @@ func (p *benchClaudePanel) IsStreaming() bool                        { return fa
 func (p *benchClaudePanel) SaveMessages() []state.DisplayMessage     { return nil }
 func (p *benchClaudePanel) RestoreMessages(_ []state.DisplayMessage) {}
 func (p *benchClaudePanel) SetSender(_ MessageSender)                {}
+func (p *benchClaudePanel) SetTier(_ LayoutTier)                     {}
 
 // benchToast satisfies toastWidget.
 type benchToast struct{}
@@ -183,6 +184,7 @@ func (t *benchToast) HandleMsg(_ tea.Msg) tea.Cmd { return nil }
 func (t *benchToast) View() string                 { return "" }
 func (t *benchToast) SetSize(_, _ int)             {}
 func (t *benchToast) IsEmpty() bool                { return true }
+func (t *benchToast) SetTier(_ LayoutTier)         {}
 
 // benchTeamList satisfies teamListWidget.
 type benchTeamList struct{}

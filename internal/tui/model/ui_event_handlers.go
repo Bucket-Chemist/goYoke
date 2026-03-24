@@ -68,6 +68,30 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		m.shared.taskBoard.SetSize(msg.Width, msg.Height)
 	}
 
+	// Propagate responsive layout tier to all tier-aware widgets (TUI-058).
+	tier := dims.tier
+	if m.shared.claudePanel != nil {
+		m.shared.claudePanel.SetTier(tier)
+	}
+	if m.shared.toasts != nil {
+		m.shared.toasts.SetTier(tier)
+	}
+	if m.shared.dashboard != nil {
+		m.shared.dashboard.SetTier(tier)
+	}
+	if m.shared.settings != nil {
+		m.shared.settings.SetTier(tier)
+	}
+	if m.shared.telemetry != nil {
+		m.shared.telemetry.SetTier(tier)
+	}
+	if m.shared.planPreview != nil {
+		m.shared.planPreview.SetTier(tier)
+	}
+	if m.shared.taskBoard != nil {
+		m.shared.taskBoard.SetTier(tier)
+	}
+
 	return m, nil
 }
 

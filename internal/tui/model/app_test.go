@@ -53,6 +53,7 @@ func (m *mockClaudePanel) SetSender(s MessageSender) {
 	m.setSenderCalled++
 	m.lastSender = s
 }
+func (m *mockClaudePanel) SetTier(_ LayoutTier) {}
 
 // mockToast satisfies toastWidget for testing.
 type mockToast struct {
@@ -69,6 +70,7 @@ func (m *mockToast) HandleMsg(msg tea.Msg) tea.Cmd {
 func (m *mockToast) View() string      { return m.viewOutput }
 func (m *mockToast) SetSize(w, h int)  { m.width = w; m.height = h }
 func (m *mockToast) IsEmpty() bool     { return m.empty }
+func (m *mockToast) SetTier(_ LayoutTier) {}
 
 // ---------------------------------------------------------------------------
 // TabID
@@ -383,7 +385,7 @@ func TestView_AfterReady_NonEmpty(t *testing.T) {
 // Layout — responsive breakpoints
 // ---------------------------------------------------------------------------
 
-func TestComputeLayout_WideTerminal_ShowsRightPanel70_30(t *testing.T) {
+func TestComputeLayout_WideTerminal_ShowsRightPanel60_40(t *testing.T) {
 	m := NewAppModel()
 	m.width = 120
 	m.height = 40
@@ -394,10 +396,11 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel70_30(t *testing.T) {
 		t.Error("showRightPanel = false at width 120; want true")
 	}
 
-	// At width=120, left outer = 84 (70%), right outer = 36 (30%).
+	// TUI-058: width 120 falls in LayoutWide (60/40 split).
+	// At width=120, left outer = 72 (60%), right outer = 48 (40%).
 	// Inner widths subtract borderFrame (2).
-	wantLeftInner := int(float64(120)*0.70) - borderFrame            // 84 - 2 = 82
-	wantRightInner := (120 - int(float64(120)*0.70)) - borderFrame   // 36 - 2 = 34
+	wantLeftInner := int(float64(120)*0.60) - borderFrame            // 72 - 2 = 70
+	wantRightInner := (120 - int(float64(120)*0.60)) - borderFrame   // 48 - 2 = 46
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -2423,6 +2426,7 @@ func (m *mockTaskBoard) SetSize(w, h int)              { m.width = w; m.h = h }
 func (m *mockTaskBoard) Height() int                   { return 0 }
 func (m *mockTaskBoard) SetTasks(_ []state.TaskEntry)  {}
 func (m *mockTaskBoard) HandleMsg(_ tea.Msg) tea.Cmd   { return nil }
+func (m *mockTaskBoard) SetTier(_ LayoutTier)          {}
 
 // TestHandleKey_ToggleTaskBoard_CallsToggle verifies that the ToggleTaskBoard
 // key binding (ctrl+t) calls Toggle() on the taskBoard widget when wired.

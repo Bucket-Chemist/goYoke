@@ -18,6 +18,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,10 @@ func (m *TelemetryModel) SetSize(w, h int) {
 		m.viewport.SetContent(m.renderEntries())
 	}
 }
+
+// SetTier satisfies the telemetryWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *TelemetryModel) SetTier(_ model.LayoutTier) {}
 
 // HandleMsg handles TelemetryLoadedMsg and viewport scroll messages. It
 // satisfies the telemetryWidget interface used by AppModel.

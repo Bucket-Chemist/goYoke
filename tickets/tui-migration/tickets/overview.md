@@ -269,11 +269,12 @@ The following review findings have been incorporated into the ticket description
 ~~22. Phase 10 track B: TUI-046~~ ✅ → ~~TUI-050~~ ✅ → ~~TUI-051~~ ✅ TUI-051 COMPLETE (WCAG ContrastRatio, ValidateContrast, SettingChangedMsg wiring) — **Track B done**
 ~~23. Phase 10 track C: TUI-052~~ ✅ → ~~TUI-053~~ ✅ → ~~TUI-054~~ ✅ TUI-054 COMPLETE (slash exec: /clear local, /help local, rest→CLI, 84.8%) — **Track D (parity) done**
 ~~24. TUI-057 (plan mode UX)~~ ✅ TUI-057 COMPLETE (PlanStepMsg, status bar [PLAN MODE: step N/M], toast, parsePlanStep regex, 89.2% statusline coverage)
-25. Phase 10 track D: TUI-058, TUI-059, TUI-061 (responsive layout, search, tab highlight)
-26. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
-27. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
+~~25. TUI-058 (4-tier responsive layout)~~ ✅ TUI-058 COMPLETE (LayoutTier enum, 14 boundary subtests, 60/40 Wide + 50/50 Ultra, SetTier on 7 interfaces, 90.0% computeLayout coverage)
+26. Phase 10 track D: TUI-059, TUI-061 (fuzzy search, tab highlight)
+27. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
+28. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 15/28 tickets complete (TUI-043–057). 54%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 16/28 tickets complete (TUI-043–058). 57%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -293,9 +294,10 @@ The following review findings have been incorporated into the ticket description
 | 10b | ✅ COMPLETE | TUI-044–047 | Semantic colors + icons (100%) + theme switching infra (88.9%) + error formatting (94%). **Track A + visual foundation done.** |
 | 10c | ✅ COMPLETE | TUI-048–051 | Status line colors + progress bar + settings tree + high-contrast WCAG (ContrastRatio, ValidateContrast, SettingChangedMsg→SetTheme wiring). config 96.3%, model 89.3%. |
 | 10d | ✅ COMPLETE | TUI-052–057 | Shift+Tab + slash dropdown/exec + task board + plan modal + plan mode UX (PlanStepMsg, status bar indicator, toast, 89.2%). |
-| 10e–g | ⏳ PENDING | TUI-058–070 | 13 tickets remaining. Responsive layout, fuzzy search, animations, tab highlight, vim keys, modals, breadcrumbs, docs. |
+| 10e | 🔄 IN PROGRESS | TUI-058 | 4-tier responsive layout: LayoutTier enum, 14 boundary tests, 60/40 Wide + 50/50 Ultra, SetTier on 7 interfaces, 90.0% computeLayout. |
+| 10e–g | ⏳ PENDING | TUI-059–070 | 12 tickets remaining. Fuzzy search, animations, tab highlight, vim keys, modals, breadcrumbs, docs. |
 
-### Package Tree (updated through Phase 10, TUI-057)
+### Package Tree (updated through Phase 10, TUI-058)
 
 ```
 internal/tui/
@@ -393,8 +395,9 @@ internal/tui/
     ├── cli_event_handlers.go     # CLI events: Started, SystemInit, Assistant, User, Result, Disconnected (TUI-043, TUI-057: parsePlanStep)
     ├── ui_event_handlers.go      # UI events: ProviderSwitch, Modal, Agent, Team, Toast, Shutdown (TUI-043)
     ├── setters.go                # 17 setter/injector methods on AppModel (TUI-043)
-    ├── interfaces.go             # Widget interfaces: all mockable (DES-2: extracted, 225 lines)
-    ├── layout.go                 # Layout compositor + sizing logic (DES-2: extracted, 257 lines)
+    ├── interfaces.go             # Widget interfaces: all mockable, SetTier on 7 (DES-2 + TUI-058)
+    ├── layout.go                 # LayoutTier (4-tier), computeLayout, sizing (DES-2 + TUI-058)
+    ├── layout_test.go            # 14 boundary subtests, tier selection, dimension arithmetic (TUI-058)
     ├── provider_switch.go        # Provider switching handlers (DES-2: extracted, 135 lines)
     ├── startup.go                # CLI startup sequence, reconnection logic
     ├── startup_test.go

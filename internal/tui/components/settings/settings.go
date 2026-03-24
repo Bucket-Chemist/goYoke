@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -44,6 +45,10 @@ func (m *SettingsModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 }
+
+// SetTier satisfies the settingsWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *SettingsModel) SetTier(_ model.LayoutTier) {}
 
 // SetConfig sets all configuration fields in a single call. mcpServers may be
 // nil or empty when no MCP servers are configured.

@@ -167,6 +167,10 @@ func (m ToastModel) IsEmpty() bool {
 	return len(m.items) == 0
 }
 
+// SetTier satisfies the toastWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *ToastModel) SetTier(_ model.LayoutTier) {}
+
 // ---------------------------------------------------------------------------
 // tea.Model interface
 // ---------------------------------------------------------------------------

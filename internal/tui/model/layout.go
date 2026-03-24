@@ -23,6 +23,50 @@ const (
 )
 
 // ---------------------------------------------------------------------------
+// LayoutTier
+// ---------------------------------------------------------------------------
+
+// LayoutTier describes the responsive breakpoint tier for the current terminal
+// width.  It is stored in layoutDims so that components can adapt their
+// rendering to the available horizontal space without re-computing breakpoints.
+type LayoutTier int
+
+const (
+	// LayoutCompact is used when the terminal is narrower than 80 columns.
+	// Only a single column is shown; the right panel is hidden.
+	LayoutCompact LayoutTier = iota
+
+	// LayoutStandard covers 80–119 columns.  Both panels are visible with a
+	// 75/25 (80–99) or 70/30 (100–119) split — matching the pre-TUI-058
+	// behaviour exactly.
+	LayoutStandard
+
+	// LayoutWide covers 120–179 columns.  The right panel receives a larger
+	// share of the available space (60/40 split).
+	LayoutWide
+
+	// LayoutUltra covers terminals that are 180 columns or wider.  Both
+	// panels receive an equal share (50/50 split).
+	LayoutUltra
+)
+
+// String returns the human-readable tier name.
+func (t LayoutTier) String() string {
+	switch t {
+	case LayoutCompact:
+		return "compact"
+	case LayoutStandard:
+		return "standard"
+	case LayoutWide:
+		return "wide"
+	case LayoutUltra:
+		return "ultra"
+	default:
+		return "unknown"
+	}
+}
+
+// ---------------------------------------------------------------------------
 // layoutDims
 // ---------------------------------------------------------------------------
 
@@ -41,6 +85,10 @@ type layoutDims struct {
 	// showRightPanel is false when the terminal is too narrow to display both
 	// panels side-by-side.
 	showRightPanel bool
+
+	// tier identifies the responsive breakpoint tier computed from the current
+	// terminal width.
+	tier LayoutTier
 }
 
 // ---------------------------------------------------------------------------
@@ -50,9 +98,11 @@ type layoutDims struct {
 // computeLayout calculates panel dimensions from the current terminal size.
 //
 // Responsive breakpoints:
-//   - width < 80  → single-column (right panel hidden)
-//   - width < 100 → left 75%, right 25%
-//   - width >= 100 → left 70%, right 30%
+//   - width < 80   → LayoutCompact:  single-column (right panel hidden)
+//   - width 80–99  → LayoutStandard: left 75%, right 25%
+//   - width 100–119 → LayoutStandard: left 70%, right 30%
+//   - width 120–179 → LayoutWide:    left 60%, right 40%
+//   - width >= 180  → LayoutUltra:   left 50%, right 50%
 //
 // Border frame (1 char per edge = 2 per axis) is subtracted from each panel
 // inner width so that the borders do not overflow the terminal width.
@@ -73,7 +123,21 @@ func (m AppModel) computeLayout() layoutDims {
 		dims.contentHeight = 1
 	}
 
-	if m.width < 80 {
+	// Determine the responsive tier from terminal width.
+	var tier LayoutTier
+	switch {
+	case m.width < 80:
+		tier = LayoutCompact
+	case m.width < 120:
+		tier = LayoutStandard
+	case m.width < 180:
+		tier = LayoutWide
+	default:
+		tier = LayoutUltra
+	}
+	dims.tier = tier
+
+	if tier == LayoutCompact {
 		// Narrow: single column, right panel hidden.
 		dims.showRightPanel = false
 		dims.leftWidth = m.width - borderFrame
@@ -85,11 +149,20 @@ func (m AppModel) computeLayout() layoutDims {
 
 	dims.showRightPanel = true
 
+	// Per-tier left-panel ratio.
 	var leftRatio float64
-	if m.width < 100 {
-		leftRatio = 0.75
-	} else {
-		leftRatio = 0.70
+	switch tier {
+	case LayoutStandard:
+		// Preserve exact pre-TUI-058 sub-breakpoints within Standard.
+		if m.width < 100 {
+			leftRatio = 0.75
+		} else {
+			leftRatio = 0.70
+		}
+	case LayoutWide:
+		leftRatio = 0.60
+	case LayoutUltra:
+		leftRatio = 0.50
 	}
 
 	// Compute outer column widths, then subtract border frame for inner.

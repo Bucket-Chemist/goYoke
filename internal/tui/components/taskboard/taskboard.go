@@ -14,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
@@ -85,6 +86,10 @@ func (m *TaskBoardModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 }
+
+// SetTier satisfies the taskBoardWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *TaskBoardModel) SetTier(_ model.LayoutTier) {}
 
 // SetTheme replaces the theme used for status badge styling.
 func (m *TaskBoardModel) SetTheme(t config.Theme) {

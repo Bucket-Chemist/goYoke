@@ -103,6 +103,9 @@ type claudePanelWidget interface {
 	// SetSender updates the CLI driver used to submit user messages.
 	// Called after a provider switch to wire the new driver into the panel.
 	SetSender(s MessageSender)
+	// SetTier notifies the component of the current responsive layout tier.
+	// Components may use this to adapt their rendering in future tickets.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +120,8 @@ type toastWidget interface {
 	View() string
 	SetSize(width, height int)
 	IsEmpty() bool
+	// SetTier notifies the component of the current responsive layout tier.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +171,8 @@ type dashboardWidget interface {
 	View() string
 	SetSize(w, h int)
 	SetData(cost float64, tokens int64, msgs, agents, teams int, start time.Time)
+	// SetTier notifies the component of the current responsive layout tier.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +186,8 @@ type settingsWidget interface {
 	View() string
 	SetSize(w, h int)
 	SetConfig(model, provider, permMode, sessionDir string, mcpServers []string)
+	// SetTier notifies the component of the current responsive layout tier.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +201,8 @@ type telemetryWidget interface {
 	HandleMsg(msg tea.Msg) tea.Cmd
 	View() string
 	SetSize(w, h int)
+	// SetTier notifies the component of the current responsive layout tier.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +220,8 @@ type planPreviewWidget interface {
 	// Content returns the raw markdown string currently loaded in the panel.
 	// Returns "" when no plan has been set.
 	Content() string
+	// SetTier notifies the component of the current responsive layout tier.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +241,8 @@ type taskBoardWidget interface {
 	// HandleMsg forwards keyboard messages to the task board when it is
 	// visible, enabling cursor navigation and filter mode switching.
 	HandleMsg(msg tea.Msg) tea.Cmd
+	// SetTier notifies the component of the current responsive layout tier.
+	SetTier(tier LayoutTier)
 }
 
 // ---------------------------------------------------------------------------

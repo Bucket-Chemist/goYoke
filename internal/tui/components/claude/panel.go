@@ -791,6 +791,10 @@ func (m *ClaudePanelModel) SetSender(sender model.MessageSender) {
 	m.sender = sender
 }
 
+// SetTier satisfies the claudePanelWidget interface.  Tier-specific rendering
+// adaptations are reserved for a future ticket; this is a no-op placeholder.
+func (m *ClaudePanelModel) SetTier(_ model.LayoutTier) {}
+
 // IsStreaming returns true while an assistant response is being streamed.
 func (m ClaudePanelModel) IsStreaming() bool {
 	return m.streaming

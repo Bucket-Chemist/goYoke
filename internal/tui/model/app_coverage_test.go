@@ -669,40 +669,45 @@ func (m *mockProviderTabBarWidget) Height() int               { return 0 }
 // mockDashboardWidget satisfies dashboardWidget.
 type mockDashboardWidget struct{}
 
-func (m *mockDashboardWidget) View() string { return "" }
-func (m *mockDashboardWidget) SetSize(_, _ int) {}
+func (m *mockDashboardWidget) View() string                                         { return "" }
+func (m *mockDashboardWidget) SetSize(_, _ int)                                     {}
 func (m *mockDashboardWidget) SetData(_ float64, _ int64, _, _, _ int, _ time.Time) {}
+func (m *mockDashboardWidget) SetTier(_ LayoutTier)                                 {}
 
 // mockSettingsWidget satisfies settingsWidget.
 type mockSettingsWidget struct{}
 
-func (m *mockSettingsWidget) View() string { return "" }
-func (m *mockSettingsWidget) SetSize(_, _ int) {}
-func (m *mockSettingsWidget) SetConfig(_, _, _, _ string, _ []string) {}
+func (m *mockSettingsWidget) View() string                               { return "" }
+func (m *mockSettingsWidget) SetSize(_, _ int)                           {}
+func (m *mockSettingsWidget) SetConfig(_, _, _, _ string, _ []string)    {}
+func (m *mockSettingsWidget) SetTier(_ LayoutTier)                       {}
 
 // mockTelemetryWidget satisfies telemetryWidget.
 type mockTelemetryWidget struct{}
 
 func (m *mockTelemetryWidget) HandleMsg(_ tea.Msg) tea.Cmd { return nil }
-func (m *mockTelemetryWidget) View() string               { return "" }
+func (m *mockTelemetryWidget) View() string                { return "" }
 func (m *mockTelemetryWidget) SetSize(_, _ int)            {}
+func (m *mockTelemetryWidget) SetTier(_ LayoutTier)        {}
 
 // mockPlanPreviewWidget satisfies planPreviewWidget.
 type mockPlanPreviewWidget struct{}
 
 func (m *mockPlanPreviewWidget) View() string          { return "" }
-func (m *mockPlanPreviewWidget) SetSize(_, _ int)       {}
+func (m *mockPlanPreviewWidget) SetSize(_, _ int)      {}
 func (m *mockPlanPreviewWidget) SetContent(_ string)   {}
 func (m *mockPlanPreviewWidget) ClearContent()         {}
 func (m *mockPlanPreviewWidget) Content() string       { return "" }
+func (m *mockPlanPreviewWidget) SetTier(_ LayoutTier)  {}
 
 // mockTaskBoardWidget satisfies taskBoardWidget.
 type mockTaskBoardWidget struct{}
 
 func (m *mockTaskBoardWidget) View() string                   { return "" }
-func (m *mockTaskBoardWidget) SetSize(_, _ int)                {}
-func (m *mockTaskBoardWidget) Toggle()                         {}
-func (m *mockTaskBoardWidget) IsVisible() bool                 { return false }
-func (m *mockTaskBoardWidget) Height() int                     { return 0 }
-func (m *mockTaskBoardWidget) SetTasks(_ []state.TaskEntry)    {}
-func (m *mockTaskBoardWidget) HandleMsg(_ tea.Msg) tea.Cmd     { return nil }
+func (m *mockTaskBoardWidget) SetSize(_, _ int)               {}
+func (m *mockTaskBoardWidget) Toggle()                        {}
+func (m *mockTaskBoardWidget) IsVisible() bool                { return false }
+func (m *mockTaskBoardWidget) Height() int                    { return 0 }
+func (m *mockTaskBoardWidget) SetTasks(_ []state.TaskEntry)   {}
+func (m *mockTaskBoardWidget) HandleMsg(_ tea.Msg) tea.Cmd    { return nil }
+func (m *mockTaskBoardWidget) SetTier(_ LayoutTier)           {}
