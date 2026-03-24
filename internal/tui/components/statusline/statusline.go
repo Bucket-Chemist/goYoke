@@ -109,6 +109,14 @@ type StatusLineModel struct {
 	// PlanTotalSteps is the total number of steps in the plan (0 = unknown).
 	PlanTotalSteps int
 
+	// VimEnabled is true when the vim keybinding overlay is active (TUI-062).
+	// When true, VimMode is rendered in the status bar.
+	VimEnabled bool
+
+	// VimMode is the current vim input mode ("NORMAL" or "INSERT").
+	// Only displayed when VimEnabled is true.
+	VimMode string
+
 	// theme holds the active theme for semantic coloring.
 	theme config.Theme
 
@@ -285,6 +293,23 @@ func (m StatusLineModel) View() string {
 		)
 	}
 
+	// Vim mode indicator: shown when vim keybindings are enabled (TUI-062).
+	// Renders [NORMAL] in muted style or [INSERT] in info/accent style.
+	vimField := ""
+	if m.VimEnabled {
+		mode := m.VimMode
+		if mode == "" {
+			mode = "NORMAL"
+		}
+		var vimStyle lipgloss.Style
+		if mode == "INSERT" {
+			vimStyle = m.theme.InfoStyle()
+		} else {
+			vimStyle = config.StyleMuted
+		}
+		vimField = vimStyle.Render("[" + mode + "]")
+	}
+
 	// Plan mode indicator: shown before cost when plan mode is active.
 	planField := ""
 	if m.PlanActive {
@@ -298,6 +323,9 @@ func (m StatusLineModel) View() string {
 	}
 
 	row1Parts := []string{costField, tokenField, ctxField, permField}
+	if vimField != "" {
+		row1Parts = append([]string{vimField, " "}, row1Parts...)
+	}
 	if planField != "" {
 		row1Parts = append([]string{planField, " "}, row1Parts...)
 	}

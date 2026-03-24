@@ -1078,7 +1078,7 @@
     {
       "id": "TUI-062",
       "title": "Vim-style keybindings (optional)",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [

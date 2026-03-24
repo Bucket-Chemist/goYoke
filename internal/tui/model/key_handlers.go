@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
 // handleKey routes a KeyMsg based on modal and focus state.
@@ -47,6 +48,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.updateHintContext()
 		}
 		return m, cmd
+	}
+
+	// Vim mode overlay (TUI-062).
+	// In VimNormal mode j/k/h/l are consumed as navigation commands and do
+	// NOT fall through to the standard handlers below.  In VimInsert mode all
+	// keys pass through unchanged so text input works normally.
+	if m.keys.VimEnabled {
+		if consumed, model, cmd := m.handleVimKey(msg); consumed {
+			return model, cmd
+		}
 	}
 
 	// Global keys are checked before focus-specific routing.
@@ -199,6 +210,126 @@ func tabFlashCmd(tabIndex int) tea.Cmd {
 	return func() tea.Msg {
 		return TabFlashMsg{TabIndex: tabIndex}
 	}
+}
+
+// handleVimKey processes a key event when vim mode is enabled.  It returns
+// (consumed, model, cmd).  When consumed is true the caller must return the
+// supplied model and cmd immediately and skip standard key routing.
+//
+// VimInsert mode: only Esc is intercepted (to return to VimNormal); all other
+// keys are NOT consumed so they pass through to the standard handlers.
+//
+// VimNormal mode: navigation keys (j/k/h/l/g/G) are consumed and mapped to
+// their standard TUI equivalents; i enters VimInsert; Esc is left to the
+// standard handler (it maps to Global.Interrupt) so interrupts still work.
+func (m AppModel) handleVimKey(msg tea.KeyMsg) (consumed bool, model tea.Model, cmd tea.Cmd) {
+	switch m.keys.VimMode {
+	case config.VimInsert:
+		if key.Matches(msg, m.keys.Vim.Normal) {
+			m.keys.VimMode = config.VimNormal
+			m.statusLine.VimMode = config.VimNormal.String()
+			return true, m, nil
+		}
+		// All other keys pass through in insert mode.
+		return false, m, nil
+
+	case config.VimNormal:
+		return m.handleVimNormalKey(msg)
+	}
+
+	return false, m, nil
+}
+
+// handleVimNormalKey processes navigation keys in VimNormal mode.  It maps
+// vim bindings to the standard TUI actions without duplicating their logic:
+//
+//   - j  → same as pressing ↓ (focus-specific down action)
+//   - k  → same as pressing ↑ (focus-specific up action)
+//   - h  → same as shift+tab (reverse focus / left panel)
+//   - l  → same as tab (forward focus / right panel)
+//   - g  → scroll to top (sent as "home" equivalent via synthetic key)
+//   - G  → scroll to bottom (sent as "end" equivalent via synthetic key)
+//   - i  → enter VimInsert mode
+//
+// Returns (true, ...) when the key was consumed, (false, ...) otherwise so
+// unrecognised keys fall through to global/focus-specific handlers.
+func (m AppModel) handleVimNormalKey(msg tea.KeyMsg) (consumed bool, model tea.Model, cmd tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keys.Vim.Down):
+		// j → down: route to the focused panel.
+		synth := tea.KeyMsg{Type: tea.KeyDown}
+		switch m.focus {
+		case FocusClaude:
+			result, c := m.handleClaudeKey(synth)
+			return true, result, c
+		case FocusAgents:
+			result, c := m.handleAgentsKey(synth)
+			return true, result, c
+		}
+		return true, m, nil
+
+	case key.Matches(msg, m.keys.Vim.Up):
+		// k → up: route to the focused panel.
+		synth := tea.KeyMsg{Type: tea.KeyUp}
+		switch m.focus {
+		case FocusClaude:
+			result, c := m.handleClaudeKey(synth)
+			return true, result, c
+		case FocusAgents:
+			result, c := m.handleAgentsKey(synth)
+			return true, result, c
+		}
+		return true, m, nil
+
+	case key.Matches(msg, m.keys.Vim.Right):
+		// l → forward focus (same as tab).
+		m.focus = FocusNext(m.focus)
+		m.syncFocusState()
+		m.updateHintContext()
+		return true, m, tabFlashCmd(int(m.activeTab))
+
+	case key.Matches(msg, m.keys.Vim.Left):
+		// h → reverse focus (same as shift+tab).
+		m.focus = FocusPrev(m.focus)
+		m.syncFocusState()
+		m.updateHintContext()
+		return true, m, tabFlashCmd(int(m.activeTab))
+
+	case key.Matches(msg, m.keys.Vim.Top):
+		// g → scroll to top: send synthetic Home key to the focused panel.
+		synth := tea.KeyMsg{Type: tea.KeyHome}
+		switch m.focus {
+		case FocusClaude:
+			result, c := m.handleClaudeKey(synth)
+			return true, result, c
+		case FocusAgents:
+			result, c := m.handleAgentsKey(synth)
+			return true, result, c
+		}
+		return true, m, nil
+
+	case key.Matches(msg, m.keys.Vim.Bottom):
+		// G → scroll to bottom: send synthetic End key to the focused panel.
+		synth := tea.KeyMsg{Type: tea.KeyEnd}
+		switch m.focus {
+		case FocusClaude:
+			result, c := m.handleClaudeKey(synth)
+			return true, result, c
+		case FocusAgents:
+			result, c := m.handleAgentsKey(synth)
+			return true, result, c
+		}
+		return true, m, nil
+
+	case key.Matches(msg, m.keys.Vim.Insert):
+		// i → enter insert mode.
+		m.keys.VimMode = config.VimInsert
+		m.statusLine.VimMode = config.VimInsert.String()
+		return true, m, nil
+	}
+
+	// Key not recognised as a vim binding — fall through to standard routing.
+	return false, m, nil
 }
 
 // updateHintContext updates the hint bar context based on the current

@@ -142,6 +142,17 @@ type KeyMap struct {
 	Claude ClaudeKeys
 	Agent  AgentKeys
 	Modal  ModalKeys
+
+	// VimEnabled controls whether the vim keybinding overlay is active.
+	// Off by default; toggled via the settings panel (TUI-062).
+	VimEnabled bool
+
+	// VimMode is the current mode when VimEnabled is true.
+	// The zero value VimNormal is the initial resting state.
+	VimMode VimMode
+
+	// Vim holds the vim key bindings used when VimEnabled is true.
+	Vim VimKeys
 }
 
 // ---------------------------------------------------------------------------
@@ -292,5 +303,11 @@ func DefaultKeyMap() KeyMap {
 				key.WithHelp("esc", "cancel"),
 			),
 		},
+
+		// VimEnabled is false by default; the Vim bindings are pre-populated so
+		// they are ready to use the moment the user enables vim mode.
+		VimEnabled: false,
+		VimMode:    VimNormal,
+		Vim:        DefaultVimKeys(),
 	}
 }

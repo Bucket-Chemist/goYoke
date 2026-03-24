@@ -301,6 +301,18 @@ func (m AppModel) handleSettingChanged(msg settingstree.SettingChangedMsg) (tea.
 		if m.shared.activeTheme != nil {
 			m.shared.activeTheme.UseASCII = msg.Value == "on"
 		}
+
+	case "vim_keys":
+		enabled := msg.Value == "on"
+		m.keys.VimEnabled = enabled
+		if !enabled {
+			// Reset mode so the next enable starts in NORMAL.
+			m.keys.VimMode = config.VimNormal
+			m.statusLine.VimMode = ""
+		} else {
+			m.statusLine.VimMode = m.keys.VimMode.String()
+		}
+		m.statusLine.VimEnabled = enabled
 	}
 
 	return m, nil
