@@ -39,14 +39,23 @@ type gitBranchTickMsg time.Time
 // authStatusTickMsg is fired by the periodic auth-status refresh timer.
 type authStatusTickMsg time.Time
 
+// sessionTimerTickMsg is fired by the 1-second session elapsed timer.
+type sessionTimerTickMsg time.Time
+
+// spinnerTickMsg is fired during streaming to animate the thinking indicator.
+type spinnerTickMsg time.Time
+
+// spinnerFrames are the Braille spinner animation frames.
+var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+
 // ---------------------------------------------------------------------------
 // Model
 // ---------------------------------------------------------------------------
 
 // StatusLineModel is the Bubbletea model for the bottom status bar.
-// It holds eight data fields that are rendered into two rows:
+// It holds data fields rendered into two rows:
 //
-//	Row 1: SessionCost  TokenCount  ContextPercent  PermissionMode
+//	Row 1: SessionCost  TokenCount  ContextPercent  PermissionMode  Elapsed  [thinking...]
 //	Row 2: ActiveModel  Provider    GitBranch       AuthStatus
 //
 // The zero value is not usable; use NewStatusLineModel instead.
@@ -75,6 +84,16 @@ type StatusLineModel struct {
 	// AuthStatus is a short human-readable authentication status string.
 	AuthStatus string
 
+	// SessionStart is the time the session was initialized. Zero until the
+	// first SystemInitEvent is received.
+	SessionStart time.Time
+
+	// Streaming is true while the assistant is generating a response.
+	Streaming bool
+
+	// spinnerIdx is the current frame index for the thinking spinner animation.
+	spinnerIdx int
+
 	// width is updated via tea.WindowSizeMsg or SetWidth.
 	width int
 }
@@ -98,11 +117,13 @@ func (m StatusLineModel) Init() tea.Cmd {
 // (not tea.Model) so the parent can use it directly without a type assertion.
 //
 // Handled messages:
-//   - tea.WindowSizeMsg   — keeps width in sync
-//   - gitBranchMsg        — updates GitBranch field
-//   - authStatusMsg       — updates AuthStatus field
-//   - gitBranchTickMsg    — fires the next background git fetch
-//   - authStatusTickMsg   — fires the next background auth fetch
+//   - tea.WindowSizeMsg      — keeps width in sync
+//   - gitBranchMsg           — updates GitBranch field
+//   - authStatusMsg          — updates AuthStatus field
+//   - gitBranchTickMsg       — fires the next background git fetch
+//   - authStatusTickMsg      — fires the next background auth fetch
+//   - sessionTimerTickMsg    — fires the next 1s session elapsed tick
+//   - spinnerTickMsg         — advances the thinking spinner animation
 func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -124,6 +145,18 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 
 	case authStatusTickMsg:
 		return m, authStatusCmd()
+
+	case sessionTimerTickMsg:
+		// Always reschedule the session timer — it runs for the lifetime of the session.
+		return m, scheduleSessionTimerTick()
+
+	case spinnerTickMsg:
+		m.spinnerIdx = (m.spinnerIdx + 1) % len(spinnerFrames)
+		if m.Streaming {
+			// Continue animating as long as we are still streaming.
+			return m, scheduleSpinnerTick()
+		}
+		// Streaming stopped between ticks — let the animation trail off.
 	}
 
 	return m, nil
@@ -131,7 +164,7 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 
 // View implements tea.Model. It renders the status bar as two rows:
 //
-//	Row 1: $cost  tokens  ctx%  perm-mode
+//	Row 1: $cost  tokens  ctx%  perm-mode  elapsed  [thinking...]
 //	Row 2: model  provider  branch  auth
 //
 // Each field is labelled and styled with config.StyleMuted for labels and
@@ -147,7 +180,7 @@ func (m StatusLineModel) View() string {
 	)
 	tokenField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" tokens:"),
-		value(fmt.Sprintf("%d", m.TokenCount)),
+		value(formatTokens(m.TokenCount)),
 	)
 	ctxField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" ctx:"),
@@ -158,11 +191,39 @@ func (m StatusLineModel) View() string {
 		value(m.PermissionMode),
 	)
 
+	// Elapsed time since session started.
+	elapsedField := ""
+	if !m.SessionStart.IsZero() {
+		elapsed := time.Since(m.SessionStart)
+		mins := int(elapsed.Minutes())
+		secs := int(elapsed.Seconds()) % 60
+		elapsedField = lipgloss.JoinHorizontal(lipgloss.Top,
+			label(" ⏱"),
+			value(fmt.Sprintf("%dm%ds", mins, secs)),
+		)
+	}
+
+	// Streaming / thinking indicator.
+	thinkingField := ""
+	if m.Streaming {
+		frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
+		thinkingField = lipgloss.JoinHorizontal(lipgloss.Top,
+			label(" "),
+			value(frame+" thinking..."),
+		)
+	}
+
+	row1Parts := []string{costField, tokenField, ctxField, permField}
+	if elapsedField != "" {
+		row1Parts = append(row1Parts, elapsedField)
+	}
+	if thinkingField != "" {
+		row1Parts = append(row1Parts, thinkingField)
+	}
+
 	row1 := lipgloss.NewStyle().
 		Width(m.width).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top,
-			costField, tokenField, ctxField, permField,
-		))
+		Render(lipgloss.JoinHorizontal(lipgloss.Top, row1Parts...))
 
 	// Row 2: identity / environment fields
 	modelField := lipgloss.JoinHorizontal(lipgloss.Top,
@@ -200,6 +261,18 @@ func (m *StatusLineModel) SetWidth(w int) {
 	m.width = w
 }
 
+// SetStreaming sets the Streaming flag and, when transitioning to true,
+// returns a command to start the spinner animation. When transitioning to
+// false, returns nil — the spinner halts naturally on the next spinnerTickMsg.
+func (m *StatusLineModel) SetStreaming(v bool) tea.Cmd {
+	m.Streaming = v
+	if v {
+		m.spinnerIdx = 0
+		return scheduleSpinnerTick()
+	}
+	return nil
+}
+
 // StartTicks returns the initial commands to fetch git branch and auth status
 // immediately, plus the periodic tick schedulers. Call from AppModel.Init()
 // or after the CLI driver is ready.
@@ -209,7 +282,38 @@ func (m StatusLineModel) StartTicks() tea.Cmd {
 		authStatusCmd(),
 		scheduleGitBranchTick(),
 		scheduleAuthStatusTick(),
+		scheduleSessionTimerTick(),
 	)
+}
+
+// ---------------------------------------------------------------------------
+// Token formatting
+// ---------------------------------------------------------------------------
+
+// formatTokens returns a compact human-readable representation of a token count:
+//   - 0       → "0"
+//   - 1500    → "1.5K"
+//   - 150000  → "150K"
+//   - 1500000 → "1.5M"
+func formatTokens(n int) string {
+	switch {
+	case n == 0:
+		return "0"
+	case n < 1000:
+		return fmt.Sprintf("%d", n)
+	case n < 1_000_000:
+		k := float64(n) / 1000.0
+		if k == float64(int(k)) {
+			return fmt.Sprintf("%dK", int(k))
+		}
+		return fmt.Sprintf("%.1fK", k)
+	default:
+		m := float64(n) / 1_000_000.0
+		if m == float64(int(m)) {
+			return fmt.Sprintf("%dM", int(m))
+		}
+		return fmt.Sprintf("%.1fM", m)
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -239,8 +343,8 @@ func gitBranchCmd() tea.Cmd {
 }
 
 // authStatusCmd runs `claude auth status` in a goroutine and extracts a short
-// status string from the output. If the claude binary is not found or the
-// command fails, Status is set to "N/A".
+// status string from the output. It parses for email and login method.
+// If the claude binary is not found or the command fails, Status is "N/A".
 func authStatusCmd() tea.Cmd {
 	return func() tea.Msg {
 		if !binaryExists("claude") {
@@ -250,11 +354,84 @@ func authStatusCmd() tea.Cmd {
 		if err != nil {
 			return authStatusMsg{Status: "N/A", Err: err}
 		}
-		status := strings.TrimSpace(string(out))
-		if len(status) > 30 {
-			status = status[:30] + "..."
-		}
+		status := parseAuthStatus(strings.TrimSpace(string(out)))
 		return authStatusMsg{Status: status}
+	}
+}
+
+// parseAuthStatus extracts a compact auth description from the raw output of
+// `claude auth status`. It looks for an email address (contains "@") and a
+// login method ("Logged in via ..."). The result is formatted as
+// "method • email" or just the email/method if only one is found. Falls back
+// to the first non-empty line truncated to 50 chars.
+func parseAuthStatus(raw string) string {
+	if raw == "" {
+		return "N/A"
+	}
+
+	var email, method string
+	for _, line := range strings.Split(raw, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// Extract email: any line with "@" that doesn't look like a URL.
+		if email == "" && strings.Contains(line, "@") && !strings.HasPrefix(line, "http") {
+			// Remove label prefixes like "Account: " or "Email: ".
+			if idx := strings.LastIndex(line, " "); idx >= 0 {
+				candidate := line[idx+1:]
+				if strings.Contains(candidate, "@") {
+					email = candidate
+					continue
+				}
+			}
+			email = line
+		}
+		// Extract login method.
+		lower := strings.ToLower(line)
+		if method == "" && (strings.Contains(lower, "logged in") || strings.Contains(lower, "login method")) {
+			// Try to extract the method from "Logged in via X" or "Login method: X".
+			for _, sep := range []string{" via ", ": "} {
+				if idx := strings.Index(lower, sep); idx >= 0 {
+					method = strings.TrimSpace(line[idx+len(sep):])
+					break
+				}
+			}
+			if method == "" {
+				method = "claude.ai"
+			}
+		}
+	}
+
+	switch {
+	case email != "" && method != "":
+		result := method + " • " + email
+		if len(result) > 50 {
+			result = result[:50] + "..."
+		}
+		return result
+	case email != "":
+		if len(email) > 50 {
+			email = email[:50] + "..."
+		}
+		return email
+	case method != "":
+		if len(method) > 50 {
+			method = method[:50] + "..."
+		}
+		return method
+	default:
+		// Fall back to first non-empty line.
+		for _, line := range strings.Split(raw, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				if len(line) > 50 {
+					return line[:50] + "..."
+				}
+				return line
+			}
+		}
+		return "N/A"
 	}
 }
 
@@ -271,5 +448,21 @@ func scheduleGitBranchTick() tea.Cmd {
 func scheduleAuthStatusTick() tea.Cmd {
 	return tea.Tick(60*time.Second, func(t time.Time) tea.Msg {
 		return authStatusTickMsg(t)
+	})
+}
+
+// scheduleSessionTimerTick returns a command that fires after 1 second to
+// refresh the elapsed session time display.
+func scheduleSessionTimerTick() tea.Cmd {
+	return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+		return sessionTimerTickMsg(t)
+	})
+}
+
+// scheduleSpinnerTick returns a command that fires after 100ms to advance the
+// thinking spinner animation.
+func scheduleSpinnerTick() tea.Cmd {
+	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
+		return spinnerTickMsg(t)
 	})
 }

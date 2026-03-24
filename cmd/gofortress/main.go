@@ -13,6 +13,8 @@
 //	--permission-mode Initial permission mode: default, acceptEdits, plan
 //	--version         Print version and exit
 //	--mcp-server      Run MCP server mode (redirects to gofortress-mcp)
+//	--config-dir      Override Claude config directory (e.g. ~/.claude-em)
+//	--resume          Resume the most recent session
 //
 // Version is injected at build time:
 //
@@ -62,6 +64,8 @@ func main() {
 	permMode := flag.String("permission-mode", "default", "initial permission mode: default, acceptEdits, plan")
 	printVersion := flag.Bool("version", false, "print version and exit")
 	mcpServer := flag.Bool("mcp-server", false, "run MCP server mode instead of TUI (use gofortress-mcp binary)")
+	configDir := flag.String("config-dir", "", "override Claude config directory (e.g. ~/.claude-em)")
+	resume := flag.Bool("resume", false, "resume most recent session")
 
 	flag.Parse()
 
@@ -73,6 +77,14 @@ func main() {
 	if *mcpServer {
 		fmt.Fprintln(os.Stderr, "MCP server mode not yet implemented. Use gofortress-mcp binary.")
 		os.Exit(1)
+	}
+
+	// If --config-dir is set, propagate to environment so the claude subprocess
+	// and session store both use the correct config directory.
+	if *configDir != "" {
+		if err := os.Setenv("CLAUDE_CONFIG_DIR", *configDir); err != nil {
+			log.Printf("[gofortress] warning: could not set CLAUDE_CONFIG_DIR: %v", err)
+		}
 	}
 
 	// Clean up any socket files left by crashed sessions.
@@ -126,6 +138,23 @@ func main() {
 	// -----------------------------------------------------------------------
 
 	sessionStore := session.NewStore("")
+
+	// If --resume is set and no explicit --session-id was given, resolve the
+	// most recent session from the store and treat it as the target session ID.
+	if *resume && *sessionID == "" {
+		sessions, err := sessionStore.ListSessions()
+		if err != nil {
+			log.Printf("[gofortress] warning: could not list sessions for --resume: %v", err)
+		} else if len(sessions) > 0 {
+			*sessionID = sessions[0].ID
+			if *verbose {
+				log.Printf("[gofortress] --resume: selected session %s (last used %s)",
+					sessions[0].ID, sessions[0].LastUsed.Format(time.RFC3339))
+			}
+		} else if *verbose {
+			log.Printf("[gofortress] --resume: no existing sessions found, starting new session")
+		}
+	}
 
 	var sessionData *session.SessionData
 	if *sessionID != "" {
@@ -193,6 +222,7 @@ func main() {
 		PermissionMode: *permMode,
 		Verbose:        *verbose,
 		Debug:          *debug,
+		ConfigDir:      *configDir,
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)

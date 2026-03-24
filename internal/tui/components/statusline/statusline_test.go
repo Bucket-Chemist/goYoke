@@ -52,8 +52,9 @@ func TestStatusLineViewContainsTokenField(t *testing.T) {
 	if !strings.Contains(view, "tokens:") {
 		t.Errorf("View() missing 'tokens:' label; got:\n%s", view)
 	}
-	if !strings.Contains(view, "42000") {
-		t.Errorf("View() missing token count '42000'; got:\n%s", view)
+	// formatTokens(42000) → "42K"
+	if !strings.Contains(view, "42K") {
+		t.Errorf("View() missing token count '42K'; got:\n%s", view)
 	}
 }
 
@@ -190,9 +191,10 @@ func TestStatusLineAllFieldsPopulated(t *testing.T) {
 	view := m.View()
 
 	// FormatCost(0.0042) → "$0.0042" (< $0.01 → 4 decimal places)
+	// formatTokens(8500) → "8.5K"
 	expected := []string{
 		"cost:", "$0.0042",
-		"tokens:", "8500",
+		"tokens:", "8.5K",
 		"ctx:", "12.3%",
 		"perm:", "bypass",
 		"model:", "claude-opus-4-6",
@@ -305,9 +307,9 @@ func TestScheduleTicksCmdExecution(t *testing.T) {
 
 func TestView_ShowsCost_ViaFormatCost(t *testing.T) {
 	tests := []struct {
-		name     string
-		cost     float64
-		wantSub  string
+		name    string
+		cost    float64
+		wantSub string
 	}{
 		{name: "zero cost", cost: 0, wantSub: "$0.00"},
 		{name: "sub-cent cost", cost: 0.0042, wantSub: "$0.0042"},
@@ -322,4 +324,173 @@ func TestView_ShowsCost_ViaFormatCost(t *testing.T) {
 				"View() should render cost via FormatCost; want %q in:\n%s", tc.wantSub, view)
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// New: formatTokens
+// ---------------------------------------------------------------------------
+
+func TestFormatTokens(t *testing.T) {
+	tests := []struct {
+		n    int
+		want string
+	}{
+		{0, "0"},
+		{500, "500"},
+		{999, "999"},
+		{1000, "1K"},
+		{1500, "1.5K"},
+		{42000, "42K"},
+		{150000, "150K"},
+		{1000000, "1M"},
+		{1500000, "1.5M"},
+	}
+	for _, tc := range tests {
+		got := statusline.FormatTokensForTest(tc.n)
+		assert.Equal(t, tc.want, got, "formatTokens(%d)", tc.n)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// New: sessionTimerTickMsg schedules next tick
+// ---------------------------------------------------------------------------
+
+func TestUpdate_SessionTimerTickMsg_ReturnsCmd(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	_, cmd := m.Update(statusline.SessionTimerTickMsgForTest(time.Now()))
+	assert.NotNil(t, cmd, "sessionTimerTickMsg should return a non-nil command")
+}
+
+// ---------------------------------------------------------------------------
+// New: spinnerTickMsg advances frame, reschedules only when Streaming
+// ---------------------------------------------------------------------------
+
+func TestUpdate_SpinnerTickMsg_Streaming_ReturnsCmd(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.Streaming = true
+	_, cmd := m.Update(statusline.SpinnerTickMsgForTest(time.Now()))
+	assert.NotNil(t, cmd, "spinnerTickMsg while Streaming should return a non-nil command")
+}
+
+func TestUpdate_SpinnerTickMsg_NotStreaming_ReturnsNil(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.Streaming = false
+	_, cmd := m.Update(statusline.SpinnerTickMsgForTest(time.Now()))
+	assert.Nil(t, cmd, "spinnerTickMsg while not Streaming should return nil")
+}
+
+// ---------------------------------------------------------------------------
+// New: SetStreaming
+// ---------------------------------------------------------------------------
+
+func TestSetStreaming_TrueReturnsCmd(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	cmd := m.SetStreaming(true)
+	assert.NotNil(t, cmd, "SetStreaming(true) should return a spinner command")
+	assert.True(t, m.Streaming)
+}
+
+func TestSetStreaming_FalseReturnsNil(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.Streaming = true
+	cmd := m.SetStreaming(false)
+	assert.Nil(t, cmd, "SetStreaming(false) should return nil")
+	assert.False(t, m.Streaming)
+}
+
+// ---------------------------------------------------------------------------
+// New: View shows thinking indicator when Streaming
+// ---------------------------------------------------------------------------
+
+func TestView_ThinkingIndicator_WhenStreaming(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.Streaming = true
+	view := m.View()
+	assert.Contains(t, view, "thinking...", "View() should show 'thinking...' when Streaming")
+}
+
+func TestView_NoThinkingIndicator_WhenNotStreaming(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.Streaming = false
+	view := m.View()
+	assert.NotContains(t, view, "thinking...", "View() should not show 'thinking...' when not Streaming")
+}
+
+// ---------------------------------------------------------------------------
+// New: View shows elapsed time when SessionStart is set
+// ---------------------------------------------------------------------------
+
+func TestView_ShowsElapsedTime_WhenSessionStartSet(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.SessionStart = time.Now().Add(-90 * time.Second) // 1m 30s ago
+	view := m.View()
+	assert.Contains(t, view, "1m", "View() should show elapsed minutes")
+}
+
+func TestView_NoElapsedTime_WhenSessionStartZero(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	// SessionStart is zero value — no elapsed display expected.
+	view := m.View()
+	assert.NotContains(t, view, "⏱", "View() should not show elapsed timer before session starts")
+}
+
+// ---------------------------------------------------------------------------
+// New: parseAuthStatus
+// ---------------------------------------------------------------------------
+
+func TestParseAuthStatus(t *testing.T) {
+	tests := []struct {
+		name  string
+		raw   string
+		wantC string // substring that must appear in result
+	}{
+		{
+			name:  "empty string",
+			raw:   "",
+			wantC: "N/A",
+		},
+		{
+			name:  "email and method",
+			raw:   "Logged in via claude.ai\nAccount: admin@exactmass.org",
+			wantC: "claude.ai",
+		},
+		{
+			name:  "email present",
+			raw:   "admin@exactmass.org",
+			wantC: "admin@exactmass.org",
+		},
+		{
+			name:  "fallback to first line",
+			raw:   "Authenticated",
+			wantC: "Authenticated",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := statusline.ParseAuthStatusForTest(tc.raw)
+			assert.Contains(t, got, tc.wantC, "parseAuthStatus(%q)", tc.raw)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// New: StartTicks includes session timer
+// ---------------------------------------------------------------------------
+
+func TestStartTicks_IncludesSessionTimer(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	cmd := m.StartTicks()
+	assert.NotNil(t, cmd, "StartTicks() should return a non-nil batch command")
+	// We cannot easily inspect what tea.Batch contains, but the non-nil check
+	// is sufficient to verify the function path.
+}
+
+func TestScheduleSessionTimerTick_ReturnsCmd(t *testing.T) {
+	cmd := statusline.ScheduleSessionTimerTickForTest()
+	assert.NotNil(t, cmd, "scheduleSessionTimerTick() should return a non-nil command")
+}
+
+func TestScheduleSpinnerTick_ReturnsCmd(t *testing.T) {
+	cmd := statusline.ScheduleSpinnerTickForTest()
+	assert.NotNil(t, cmd, "scheduleSpinnerTick() should return a non-nil command")
 }

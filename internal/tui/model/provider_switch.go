@@ -63,6 +63,9 @@ func (m AppModel) handleProviderSwitch() (tea.Model, tea.Cmd) {
 		m.shared.providerTabBar.SetActive(ps.GetActiveProvider())
 	}
 
+	// Sync status line provider name.
+	m.statusLine.Provider = string(ps.GetActiveProvider())
+
 	// 4. Restore the new provider's conversation history.
 	if m.shared.claudePanel != nil {
 		newMsgs := ps.GetActiveMessages()

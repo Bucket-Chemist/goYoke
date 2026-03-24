@@ -1,10 +1,11 @@
-# GOgent-Fortress Systems Architecture v1.5
+# GOgent-Fortress Systems Architecture v1.8
 
 > **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
-> **Last Updated:** 2026-02-01
+> **Last Updated:** 2026-03-24
 > **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
 > **TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets) — superseded by TUI Migration
 > **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). ✅ ALL COMPLETE (42/42, 100%). Feature parity verified.
+> **TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, Phase 10). ⏳ PENDING. Review: APPROVE_WITH_CONDITIONS (2026-03-24).
 > **Review Telemetry:** GOgent-122 through GOgent-139 (18 tasks)
 
 ---
@@ -1436,6 +1437,7 @@ Go TUI Process (single binary)
 | 7 | Settings, Providers, Teams | TUI-028 to TUI-032 | COMPLETE |
 | 8 | Lifecycle | TUI-033 to TUI-035 | COMPLETE |
 | 9 | Integration Testing | TUI-036 to TUI-042 | COMPLETE |
+| 10 | UX Overhaul (semantic colors, theme switching, settings tree, slash commands, responsive layout, fuzzy search, animations, rich modals) | TUI-043 to TUI-070 | PENDING |
 
 ### 16.4 Spike Results (Phase 1)
 
@@ -1549,13 +1551,46 @@ type sharedState struct {
 | Document | Location |
 |----------|----------|
 | Implementation overview | `tickets/tui-migration/tickets/overview.md` |
-| Ticket index (42 tickets) | `tickets/tui-migration/tickets/tickets-index.json` |
-| Individual tickets | `tickets/tui-migration/tickets/TUI-{001..042}.md` |
-| Strategy plan | `.claude/sessions/20260316-plan-tickets-tui/strategy.md` |
-| Implementation specs | `.claude/sessions/20260316-plan-tickets-tui/specs.md` |
-| Staff architect review | `.claude/sessions/20260316-plan-tickets-tui/review-critique.md` |
+| Ticket index (70 tickets) | `tickets/tui-migration/tickets/tickets-index.json` |
+| Individual tickets (Phases 1-9) | `tickets/tui-migration/tickets/TUI-{001..042}.md` |
+| Individual tickets (Phase 10) | `tickets/tui-migration/tickets/TUI-{043..070}.md` |
+| Strategy plan (Phases 1-9) | `.claude/sessions/20260316-plan-tickets-tui/strategy.md` |
+| Implementation specs (Phases 1-9) | `.claude/sessions/20260316-plan-tickets-tui/specs.md` |
+| Staff architect review (Phases 1-9) | `.claude/sessions/20260316-plan-tickets-tui/review-critique.md` |
+| Strategy plan (Phase 10) | `.claude/sessions/20260323-plan-tickets-tui-phase10/strategy.md` |
+| Implementation specs (Phase 10) | `.claude/sessions/20260323-plan-tickets-tui-phase10/specs.md` |
+| Staff architect review (Phase 10) | `.claude/sessions/20260323-plan-tickets-tui-phase10/review-critique.md` |
 | Braintrust analysis | `tickets/tui-migration/braintrust-handoff-v2.md` |
 | Spike results | `tickets/tui-migration/spike-results/` |
+
+### 16.9 Phase 10 UX Overhaul (TUI-043 to TUI-070)
+
+**Status:** PENDING — 28 tickets, 7 sub-phases (10a–10g)
+**Review:** APPROVE_WITH_CONDITIONS (Staff Architect, 2026-03-24, High Confidence)
+**Estimated:** ~450 new tests, ~4,000-5,500 new LOC, 6 new packages
+
+**Sub-phases:**
+- **10a (Structural):** TUI-043 — `app.go` decomposition (prerequisite for all Phase 10)
+- **10b (Visual Foundation):** TUI-044–TUI-047 — semantic colors, icon library, theme switching, error formatting
+- **10c (Settings/Accessibility):** TUI-048–TUI-051 — status line colors, progress bar, interactive settings, high-contrast mode
+- **10d (Parity Features):** TUI-052–TUI-057 — Shift+Tab navigation, slash commands, task board, plan modal, plan mode UX
+- **10e (Navigation):** TUI-058–TUI-062 — 4-tier responsive layout, fuzzy search, keyboard hints, tab highlight, vim bindings
+- **10f (Polish):** TUI-063–TUI-067 — breadcrumbs, spring animations, skeleton screens, rich modals, two-step confirm
+- **10g (Integration):** TUI-068–TUI-070 — dashboard collapse, documentation, integration tests
+
+**New packages added in Phase 10:**
+- `internal/tui/components/settingstree/` — interactive settings panel
+- `internal/tui/components/slashcmd/` — slash command dropdown
+- `internal/tui/components/search/` — fuzzy search overlay
+- `internal/tui/components/hintbar/` — keyboard hint bar
+- `internal/tui/components/breadcrumb/` — navigation breadcrumbs
+- `internal/tui/components/skeleton/` — skeleton loading screens
+
+**Review conditions (all incorporated into ticket descriptions):**
+- C-1: TUI-052 includes migration plan for 5 existing `shift+tab` tests
+- M-1: TUI-055 extends `taskBoardWidget` with `HandleMsg(tea.Msg) tea.Cmd`
+- M-3: TUI-059 defines `SearchSource` in `model/interfaces.go`
+- M-5: TUI-046 specifies propagation via `activeTheme` in `sharedState`
 
 ---
 
@@ -1563,6 +1598,7 @@ type sharedState struct {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8 | 2026-03-24 | **Phase 10 UX Overhaul planned.** 28 tickets (TUI-043–TUI-070) across 7 sub-phases (10a–10g). Review: APPROVE_WITH_CONDITIONS (2026-03-24). 4 approval conditions incorporated. 6 new packages: settingstree, slashcmd, search, hintbar, breadcrumb, skeleton. New dependency: charmbracelet/harmonica. Updated header, Section 16.3, 16.8, added Section 16.9. |
 | 1.7 | 2026-03-23 | **TUI MIGRATION COMPLETE.** All 42 tickets done (42/42). Phase 9 finished: TUI-041 resilience tests (91.2%), TUI-042 feature parity (16/18 pass, 2 partial stubs). verify-parity.sh: 75 pass, 0 fail, 2 skip. Updated all status to COMPLETE. |
 | 1.6 | 2026-03-23 | Updated Section 16 for Phases 6-9 progress: Phases 6-8 COMPLETE, Phase 9 IN PROGRESS (5/7: TUI-036–040 done, TUI-041–042 pending). Updated test counts (~1153+ tests, 23+ packages). Added reference to overview.md for full package tree. Performance benchmarks all pass (TUI-040). |
 | 1.5 | 2026-03-23 | Updated Section 16 for Phases 4-5 completion: modal system (TUI-017/018), agent tree (TUI-019/020/021). Updated package tree to 12 packages/557 tests. Added import graph, sharedState diagram, cycle-prevention interfaces. Phase status 4+5 → COMPLETE. |
@@ -1574,9 +1610,10 @@ type sharedState struct {
 
 ---
 
-**Version:** 1.7
-**Generated:** 2026-03-23
+**Version:** 1.8
+**Generated:** 2026-03-24
 **Maintainer:** GOgent-Fortress Development Team
 **TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets, all tests passing) — superseded
 **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 42/42 COMPLETE ✅). Feature parity verified.
+**TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, Phase 10 ⏳ PENDING). Review APPROVED with conditions (2026-03-24).
 **Review Telemetry Complete:** GOgent-122 through GOgent-139 (18 tasks, all tests passing)

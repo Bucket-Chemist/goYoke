@@ -1,10 +1,11 @@
 # Implementation Plan: TUI Migration (React/Ink/TypeScript to Go/Bubble Tea)
 
-> **Generated:** 2026-03-16
+> **Generated:** 2026-03-16 (Phases 1-9) | 2026-03-24 (Phase 10)
 > **Workflow:** /plan-tickets v1.0
 > **Planning cost:** ~$8.50 (Planner $2.50 + Architect $3.50 + Staff-Architect $2.50)
 > **Braintrust cost (prior):** $6.61 (Einstein $2.69 + Staff-Architect $2.39 + Beethoven $1.53)
 > **Review Status:** APPROVE_WITH_CONDITIONS (High Confidence)
+> **Total Tickets:** 70 (TUI-001 to TUI-070) | **Phases:** 10
 
 ---
 
@@ -14,7 +15,7 @@ Migrate the GOgent-Fortress TUI from React/Ink/TypeScript to Go/Bubble Tea using
 
 The Go TUI serves MCP tools natively via the official Go MCP SDK (v1.2.0+, stdio transport), eliminating the TS sidecar entirely. A prerequisite spike (4-6h) resolves the permission wire format unknown before implementation commits.
 
-**42 tickets across 9 phases. Estimated 10-16 weeks serial, 7-10 weeks parallel.**
+**70 tickets across 10 phases. Estimated 10-16 weeks serial (Phases 1-9, complete), 2-3 weeks parallel (Phase 10).**
 
 ---
 
@@ -63,8 +64,9 @@ Go TUI Process (single binary)
 | 7 | **Settings, Providers, Teams** | TUI-028 to TUI-032 | Phase 3+6 | 1-2 weeks |
 | 8 | **Lifecycle** | TUI-033 to TUI-035 | Phase 3+5 | 1 week |
 | 9 | **Integration Testing** | TUI-036 to TUI-042 | All previous | 1-2 weeks |
+| 10 | **UX Overhaul** | TUI-043 to TUI-070 | Phase 9 (complete) | 2-3 weeks |
 
-**Parallelizable:** Phases 5, 6, 7 can run concurrently after Phase 3 completes.
+**Parallelizable:** Phases 5, 6, 7 can run concurrently after Phase 3 completes. Phase 10 has 5 parallel tracks after TUI-043.
 
 ---
 
@@ -133,6 +135,21 @@ The following review findings have been incorporated into the ticket description
 **Verdict:** APPROVE_WITH_CONDITIONS (High Confidence)
 **Scope:** Implementation plan + ticket set (Phases 1–9)
 **Outcome:** 2 critical issues, 5 major issues, 8 minor issues. All critical/major findings incorporated into tickets before implementation began. See full critique at `.claude/sessions/20260316-plan-tickets-tui/review-critique.md`.
+
+### Review 3: Phase 10 Planning Review (2026-03-24)
+
+**Reviewer:** Staff Architect Critical Review
+**Verdict:** APPROVE_WITH_CONDITIONS (High Confidence)
+**Scope:** Phase 10 UX Overhaul implementation plan (28 tickets, TUI-043–TUI-070)
+**Outcome:** 1 critical, 5 major, 6 minor issues. All 4 approval conditions incorporated into ticket descriptions before implementation begins. See full critique at `.claude/sessions/20260323-plan-tickets-tui-phase10/review-critique.md`.
+
+**Approval conditions (incorporated into tickets):**
+- **C-1 → TUI-052:** Shift+Tab rebinding includes explicit list of 5 tests to migrate (`config/keys_test.go:60`, `app_test.go` lines 1214/1241/1578/1654)
+- **M-1 → TUI-055:** `taskBoardWidget` interface extended with `HandleMsg(tea.Msg) tea.Cmd`; package doc updated from "display-only" to "interactive"
+- **M-3 → TUI-059:** `SearchSource` interface defined in `model/interfaces.go`, not in `search/` package
+- **M-5 → TUI-046:** Theme propagation via `activeTheme` in `sharedState`; components with `HandleMsg` pointer receiver read from shared state
+
+---
 
 ### Review 2: Post-Phase 7 Code Review (2026-03-23)
 
@@ -247,10 +264,17 @@ The following review findings have been incorporated into the ticket description
 ~~17. Phase 9 continues: TUI-040 (performance benchmarks)~~ ✅ TUI-040 COMPLETE (4 benchmark packages, all 5 targets pass: startup 0.31ms/200ms, modal 0.002ms/100ms, NDJSON 195K lines/sec vs 10K, view 0.82ms/16ms, UDS 0.009ms/5ms)
 ~~18. Phase 9 continues: TUI-041 (unknown event resilience)~~ ✅ TUI-041 COMPLETE (19 tests, 57 subtests, 91.2% cli coverage, race-clean, stress-tested)
 ~~19. Phase 9 final: TUI-042 (feature parity checklist)~~ ✅ TUI-042 COMPLETE (18 features verified: 16 pass, 2 partial stubs; verify-parity.sh: 75/77 pass, 2 skip)
+20. Phase 10: Begin with TUI-043 (app.go decomposition) — structural prerequisite for all Phase 10 features
+21. Phase 10 track A: TUI-044 → TUI-045 → TUI-047 (semantic colors, icons, error formatting)
+22. Phase 10 track B: TUI-046 → TUI-050 → TUI-051 (theme switching, settings tree, high-contrast)
+23. Phase 10 track C: TUI-052, TUI-053 → TUI-054 (keybindings, slash commands)
+24. Phase 10 track D: TUI-058, TUI-059, TUI-061 (responsive layout, search, tab highlight)
+25. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
+26. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 28 tickets PENDING.**
 
-## Implementation Progress (updated 2026-03-23, Phase 9 in progress)
+## Implementation Progress (updated 2026-03-24)
 
 | Phase | Status | Tickets | Notes |
 |-------|--------|---------|-------|
@@ -264,6 +288,7 @@ The following review findings have been incorporated into the ticket description
 | Post-7 Review | ✅ COMPLETE | FIX-1–6, DES-2–6 | 4-reviewer code review (2026-03-23). 6 bug fixes + 4 design refactors. 21/21 packages green, race-clean. Staff Architect: APPROVE_WITH_CONDITIONS (High Confidence). DES-1 → TUI-034; DES-7 → TUI-036. |
 | 8 | ✅ COMPLETE | TUI-033–035 | Session persistence (atomic writes, auto-save), graceful shutdown (5-phase LIFO, DES-1 resolved), clipboard/search/history. ~1153 tests, 23 packages |
 | 9 | ✅ COMPLETE | TUI-036–042 | 7/7 done. Component tests, CLI integration, MCP integration (81.9%), E2E smoke (6 tests), benchmarks (all 5 pass), resilience (19 tests/57 subtests, 91.2%), feature parity (16/18 pass, 2 partial stubs). verify-parity.sh: 75 pass, 0 fail, 2 skip |
+| 10 | ⏳ PENDING | TUI-043–070 | 28 tickets. UX Overhaul: semantic colors, icon library, theme switching, settings tree, slash commands, responsive layout, fuzzy search, spring animations, rich modals, breadcrumbs. Review: APPROVE_WITH_CONDITIONS (2026-03-24). Est. ~450 new tests. |
 
 ### Phase 2 Package Tree (delivered)
 
@@ -397,12 +422,17 @@ internal/
 | File | Purpose |
 |------|---------|
 | `tickets/tui-migration/tickets/overview.md` | This file — executive summary |
-| `tickets/tui-migration/tickets/tickets-index.json` | Machine-readable ticket registry |
-| `tickets/tui-migration/tickets/TUI-001.md` through `TUI-042.md` | Individual ticket files |
-| `.claude/sessions/20260316-plan-tickets-tui/strategy.md` | Strategic plan |
-| `.claude/sessions/20260316-plan-tickets-tui/specs.md` | Detailed implementation specs |
-| `.claude/sessions/20260316-plan-tickets-tui/review-critique.md` | Staff-architect review |
-| `.claude/sessions/20260316-plan-tickets-tui/review-metadata.json` | Review verdict and counts |
+| `tickets/tui-migration/tickets/tickets-index.json` | Machine-readable ticket registry (70 tickets) |
+| `tickets/tui-migration/tickets/TUI-001.md` through `TUI-042.md` | Phase 1-9 individual ticket files |
+| `tickets/tui-migration/tickets/TUI-043.md` through `TUI-070.md` | Phase 10 individual ticket files |
+| `.claude/sessions/20260316-plan-tickets-tui/strategy.md` | Strategic plan (Phases 1-9) |
+| `.claude/sessions/20260316-plan-tickets-tui/specs.md` | Implementation specs (Phases 1-9) |
+| `.claude/sessions/20260316-plan-tickets-tui/review-critique.md` | Staff-architect review (Phases 1-9) |
+| `.claude/sessions/20260316-plan-tickets-tui/review-metadata.json` | Review verdict (Phases 1-9) |
+| `.claude/sessions/20260323-plan-tickets-tui-phase10/strategy.md` | Strategic plan (Phase 10) |
+| `.claude/sessions/20260323-plan-tickets-tui-phase10/specs.md` | Implementation specs (Phase 10) |
+| `.claude/sessions/20260323-plan-tickets-tui-phase10/review-critique.md` | Staff-architect review (Phase 10) |
+| `.claude/sessions/20260323-plan-tickets-tui-phase10/review-metadata.json` | Review verdict (Phase 10) |
 | `tickets/tui-migration/braintrust-handoff-v2.md` | Braintrust analysis (foundation) |
 
 ---

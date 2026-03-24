@@ -9,8 +9,8 @@
     "C-1: Update Go version constraint from 1.22+ to 1.25+",
     "C-2: Resolve MCP SDK version (v1.2.0 vs v1.3.0)"
   ],
-  "total_tickets": 42,
-  "phases": 9,
+  "total_tickets": 70,
+  "phases": 10,
   "estimated_weeks_serial": "10-16",
   "estimated_weeks_parallel": "7-10",
   "tickets": [
@@ -750,6 +750,314 @@
         "phase-9",
         "plan-generated"
       ]
+    },
+    {
+      "id": "TUI-043",
+      "title": "Extract key handlers from app.go",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": [],
+      "time_estimate": "4-6 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10a", "plan-generated"]
+    },
+    {
+      "id": "TUI-044",
+      "title": "Semantic color system",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": [],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+    },
+    {
+      "id": "TUI-045",
+      "title": "Icon library with Unicode and ASCII fallback",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-044"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+    },
+    {
+      "id": "TUI-046",
+      "title": "Theme switching infrastructure",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043", "TUI-044"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+    },
+    {
+      "id": "TUI-047",
+      "title": "Contextual error message formatting",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-044", "TUI-045"],
+      "time_estimate": "2-3 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10b", "plan-generated"]
+    },
+    {
+      "id": "TUI-048",
+      "title": "Status line semantic colors and context-aware display",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-044"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+    },
+    {
+      "id": "TUI-049",
+      "title": "Token usage progress bar",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-048"],
+      "time_estimate": "2-3 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+    },
+    {
+      "id": "TUI-050",
+      "title": "Interactive settings panel with tree navigation",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-044", "TUI-045", "TUI-046"],
+      "time_estimate": "6-8 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+    },
+    {
+      "id": "TUI-051",
+      "title": "High-contrast mode",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-046", "TUI-050"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10c", "plan-generated"]
+    },
+    {
+      "id": "TUI-052",
+      "title": "Shift+Tab reverse navigation",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043"],
+      "time_estimate": "2-3 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+    },
+    {
+      "id": "TUI-053",
+      "title": "Slash command dropdown",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+    },
+    {
+      "id": "TUI-054",
+      "title": "Slash command execution via CLI",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-053"],
+      "time_estimate": "2-3 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+    },
+    {
+      "id": "TUI-055",
+      "title": "Task board enhancement",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-044"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+    },
+    {
+      "id": "TUI-056",
+      "title": "Plan preview modal with Glamour",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+    },
+    {
+      "id": "TUI-057",
+      "title": "Plan mode UX improvements",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-048"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10d", "plan-generated"]
+    },
+    {
+      "id": "TUI-058",
+      "title": "4-tier responsive layout",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+    },
+    {
+      "id": "TUI-059",
+      "title": "Unified fuzzy search overlay",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043"],
+      "time_estimate": "6-8 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+    },
+    {
+      "id": "TUI-060",
+      "title": "Keyboard hint bar",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-043", "TUI-058", "TUI-050"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+    },
+    {
+      "id": "TUI-061",
+      "title": "Tab highlight on focus change",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": [],
+      "time_estimate": "2-3 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+    },
+    {
+      "id": "TUI-062",
+      "title": "Vim-style keybindings (optional)",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-043", "TUI-050"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10e", "plan-generated"]
+    },
+    {
+      "id": "TUI-063",
+      "title": "Breadcrumb navigation trail",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-045"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+    },
+    {
+      "id": "TUI-064",
+      "title": "Spring animation framework (harmonica)",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": [],
+      "time_estimate": "3-4 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+    },
+    {
+      "id": "TUI-065",
+      "title": "Skeleton loading screens",
+      "status": "pending",
+      "phase": 10,
+      "priority": "LOW",
+      "dependencies": ["TUI-064"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+    },
+    {
+      "id": "TUI-066",
+      "title": "Rich modal styling",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-044", "TUI-045"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+    },
+    {
+      "id": "TUI-067",
+      "title": "Two-step confirmation dialogs",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-066"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10f", "plan-generated"]
+    },
+    {
+      "id": "TUI-068",
+      "title": "Dashboard metrics collapse/expand",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": ["TUI-045"],
+      "time_estimate": "3-4 hours",
+      "agent": "go-tui",
+      "tags": ["ux-overhaul", "phase-10g", "plan-generated"]
+    },
+    {
+      "id": "TUI-069",
+      "title": "Obsidian vault documentation",
+      "status": "pending",
+      "phase": 10,
+      "priority": "MEDIUM",
+      "dependencies": [],
+      "time_estimate": "3-4 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10g", "plan-generated"]
+    },
+    {
+      "id": "TUI-070",
+      "title": "Verify-parity refresh and integration test",
+      "status": "pending",
+      "phase": 10,
+      "priority": "HIGH",
+      "dependencies": ["TUI-043", "TUI-044", "TUI-045", "TUI-046", "TUI-047", "TUI-048", "TUI-049", "TUI-050", "TUI-051", "TUI-052", "TUI-053", "TUI-054", "TUI-055", "TUI-056", "TUI-057", "TUI-058", "TUI-059", "TUI-060", "TUI-061", "TUI-062", "TUI-063", "TUI-064", "TUI-065", "TUI-066", "TUI-067", "TUI-068", "TUI-069"],
+      "time_estimate": "4-6 hours",
+      "agent": "go-pro",
+      "tags": ["ux-overhaul", "phase-10g", "plan-generated"]
     }
   ]
 }

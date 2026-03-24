@@ -123,6 +123,9 @@ type CLIDriverOpts struct {
 	// OLLAMA_ENDPOINT.  The current process environment is always inherited;
 	// EnvVars entries override or extend it.
 	EnvVars map[string]string
+
+	// ConfigDir overrides the Claude config directory (e.g. ~/.claude-em). Empty means default.
+	ConfigDir string
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +262,10 @@ func (d *CLIDriver) buildArgs() []string {
 		"--input-format", "stream-json",
 		"--output-format", "stream-json",
 		"--include-partial-messages",
+	}
+
+	if d.opts.ConfigDir != "" {
+		args = append(args, "--config-dir", d.opts.ConfigDir)
 	}
 
 	permMode := d.opts.PermissionMode

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
@@ -71,10 +72,14 @@ func NewStore(baseDir string) *Store {
 	return &Store{baseDir: baseDir}
 }
 
-// DefaultBaseDir returns the canonical base directory for session persistence:
-// $HOME/.claude/sessions. It panics if HOME is not set (should never happen on
-// a fully initialised system).
+// DefaultBaseDir returns the canonical base directory for session persistence.
+// If the CLAUDE_CONFIG_DIR environment variable is set, it returns
+// $CLAUDE_CONFIG_DIR/sessions. Otherwise it falls back to $HOME/.claude/sessions.
+// It panics if HOME is not set (should never happen on a fully initialised system).
 func DefaultBaseDir() string {
+	if configDir := os.Getenv("CLAUDE_CONFIG_DIR"); configDir != "" {
+		return filepath.Join(configDir, "sessions")
+	}
 	home := os.Getenv("HOME")
 	if home == "" {
 		panic("session: HOME environment variable is not set")
@@ -213,6 +218,55 @@ func (s *Store) SetupSessionDir(sessionID string) (string, error) {
 	}
 
 	return sessionDir, nil
+}
+
+// ---------------------------------------------------------------------------
+// ListSessions
+// ---------------------------------------------------------------------------
+
+// ListSessions reads all session metadata files from the store's base directory
+// and returns them sorted by LastUsed descending (most recent first).
+// Returns an empty slice (not error) when no sessions exist.
+func (s *Store) ListSessions() ([]*SessionData, error) {
+	entries, err := os.ReadDir(s.baseDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*SessionData{}, nil
+		}
+		return nil, fmt.Errorf("list sessions: read dir %q: %w", s.baseDir, err)
+	}
+
+	var sessions []*SessionData
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(s.baseDir, entry.Name(), "session.json")
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			// Skip missing or unreadable files (corrupted sessions).
+			continue
+		}
+
+		var sd SessionData
+		if err := json.Unmarshal(data, &sd); err != nil {
+			// Skip JSON decode failures (corrupted sessions).
+			continue
+		}
+
+		if sd.ID == "" {
+			continue
+		}
+
+		sessions = append(sessions, &sd)
+	}
+
+	sort.Slice(sessions, func(i, j int) bool {
+		return sessions[i].LastUsed.After(sessions[j].LastUsed)
+	})
+
+	return sessions, nil
 }
 
 // ---------------------------------------------------------------------------

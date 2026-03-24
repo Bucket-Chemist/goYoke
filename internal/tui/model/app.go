@@ -6,6 +6,7 @@ package model
 import (
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -376,6 +377,7 @@ func (m AppModel) Init() tea.Cmd {
 	return tea.Batch(
 		tea.EnterAltScreen,
 		m.startCLI(),
+		m.statusLine.StartTicks(),
 	)
 }
 
@@ -466,6 +468,39 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.shared != nil && m.shared.providerState != nil && msg.SessionID != "" {
 			m.shared.providerState.SetSessionID(msg.SessionID)
 		}
+		// Sync status line with session metadata.
+		m.statusLine.ActiveModel = msg.Model
+		m.statusLine.PermissionMode = msg.PermissionMode
+		if m.shared != nil && m.shared.providerState != nil {
+			m.statusLine.Provider = string(m.shared.providerState.GetActiveProvider())
+		}
+		if m.statusLine.SessionStart.IsZero() {
+			m.statusLine.SessionStart = time.Now()
+		}
+
+		// Register the root "Router" agent so the agent tree shows the
+		// session immediately (matching Node.js TUI behaviour).
+		if m.shared != nil && m.shared.agentRegistry != nil {
+			tier := "sonnet"
+			modelLower := strings.ToLower(msg.Model)
+			if strings.Contains(modelLower, "haiku") {
+				tier = "haiku"
+			} else if strings.Contains(modelLower, "opus") {
+				tier = "opus"
+			}
+			_ = m.shared.agentRegistry.Register(state.Agent{
+				ID:          "router-root",
+				AgentType:   "router",
+				Description: "Router",
+				Model:       msg.Model,
+				Tier:        tier,
+				Status:      state.StatusRunning,
+				StartedAt:   time.Now(),
+			})
+			m.shared.agentRegistry.InvalidateTreeCache()
+			m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+		}
+
 		return m, m.waitForCLIEvent()
 
 	case cli.AssistantEvent:
@@ -498,6 +533,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Update streaming indicator: if content is present and stop_reason is
+		// nil, the assistant is still generating (streaming=true).
+		if len(msg.Message.Content) > 0 {
+			streaming := msg.Message.StopReason == nil
+			if streaming && !m.statusLine.Streaming {
+				cmd := m.statusLine.SetStreaming(true)
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			}
+		}
+
 		cmds = append(cmds, m.waitForCLIEvent())
 		return m, tea.Batch(cmds...)
 
@@ -516,6 +563,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// The CLI has echoed back a user message — the assistant is about to
+		// respond. Show the thinking indicator if not already streaming.
+		if !m.statusLine.Streaming {
+			cmd := m.statusLine.SetStreaming(true)
+			if cmd != nil {
+				return m, tea.Batch(m.waitForCLIEvent(), cmd)
+			}
+		}
+
 		return m, m.waitForCLIEvent()
 
 	case cli.ResultEvent:
@@ -526,6 +582,18 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.shared.costTracker.UpdateSessionCost(msg.TotalCostUSD)
 		}
 		m.statusLine.SessionCost = msg.TotalCostUSD
+
+		// Accumulate session token counts from aggregate usage.
+		m.statusLine.TokenCount += msg.Usage.InputTokens + msg.Usage.OutputTokens
+
+		// Update context window percentage from per-model usage if available.
+		if entry, ok := msg.ModelUsage[m.activeModel]; ok && entry.ContextWindow > 0 {
+			used := entry.InputTokens + entry.CacheReadInputTokens + entry.CacheCreationInputTokens
+			m.statusLine.ContextPercent = float64(used) / float64(entry.ContextWindow) * 100
+		}
+
+		// Clear streaming indicator — the turn is complete.
+		m.statusLine.Streaming = false
 
 		// Forward to Claude panel to finalize streaming.
 		if m.shared.claudePanel != nil {
@@ -681,6 +749,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case cli.SystemHookEvent, cli.SystemStatusEvent, cli.RateLimitEvent,
 		cli.StreamEvent, cli.CLIUnknownEvent:
 		return m, m.waitForCLIEvent()
+	}
+
+	// Forward unhandled messages to status line (handles its own tick types).
+	{
+		updated, cmd := m.statusLine.Update(msg)
+		if cmd != nil {
+			m.statusLine = updated
+			return m, cmd
+		}
+		m.statusLine = updated
 	}
 
 	// Forward unhandled messages to toast for tick-based expiry.
