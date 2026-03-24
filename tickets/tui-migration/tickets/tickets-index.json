@@ -837,7 +837,7 @@
     {
       "id": "TUI-048",
       "title": "Status line semantic colors and context-aware display",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [

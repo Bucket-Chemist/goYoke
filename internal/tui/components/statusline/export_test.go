@@ -4,8 +4,10 @@
 package statusline
 
 import (
-	tea "github.com/charmbracelet/bubbletea"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // GitBranchMsgForTest constructs a gitBranchMsg for use in tests.
@@ -80,4 +82,31 @@ func ParseAuthStatusForTest(raw string) string {
 // FormatTokensForTest exposes formatTokens for unit testing.
 func FormatTokensForTest(n int) string {
 	return formatTokens(n)
+}
+
+// UncommittedCountMsgForTest constructs an uncommittedCountMsg for use in tests.
+func UncommittedCountMsgForTest(n int) uncommittedCountMsg {
+	return uncommittedCountMsg(n)
+}
+
+// ExecuteUncommittedCountCmdForTest calls uncommittedCountCmd() and executes
+// the returned closure, returning the resulting tea.Msg.
+func ExecuteUncommittedCountCmdForTest() tea.Msg {
+	cmd := uncommittedCountCmd()
+	return cmd()
+}
+
+// CostStyleForTest exposes costStyle for unit testing.
+func (m StatusLineModel) CostStyleForTest(cost float64) lipgloss.Style {
+	return m.costStyle(cost)
+}
+
+// ContextStyleForTest exposes contextStyle for unit testing.
+func (m StatusLineModel) ContextStyleForTest(pct float64) lipgloss.Style {
+	return m.contextStyle(pct)
+}
+
+// PermStyleForTest exposes permStyle for unit testing.
+func (m StatusLineModel) PermStyleForTest(mode string) lipgloss.Style {
+	return m.permStyle(mode)
 }

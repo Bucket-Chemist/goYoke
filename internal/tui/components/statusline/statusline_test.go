@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -493,4 +494,194 @@ func TestScheduleSessionTimerTick_ReturnsCmd(t *testing.T) {
 func TestScheduleSpinnerTick_ReturnsCmd(t *testing.T) {
 	cmd := statusline.ScheduleSpinnerTickForTest()
 	assert.NotNil(t, cmd, "scheduleSpinnerTick() should return a non-nil command")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-048: Semantic color helpers
+// ---------------------------------------------------------------------------
+
+func TestCostStyle_Thresholds(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	theme := config.DefaultTheme()
+	m.SetTheme(theme)
+
+	tests := []struct {
+		name      string
+		cost      float64
+		wantStyle string // "success", "warning", or "error"
+	}{
+		{"below warning threshold", 0.05, "success"},
+		{"at warning threshold", 0.10, "warning"},
+		{"below error threshold", 0.99, "warning"},
+		{"at error threshold", 1.00, "error"},
+		{"above error threshold", 5.00, "error"},
+	}
+
+	successStyle := theme.SuccessStyle()
+	warningStyle := theme.WarningStyle()
+	errorStyle := theme.ErrorStyle()
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := m.CostStyleForTest(tc.cost)
+			switch tc.wantStyle {
+			case "success":
+				assert.Equal(t, successStyle, got, "cost %.2f should use SuccessStyle", tc.cost)
+			case "warning":
+				assert.Equal(t, warningStyle, got, "cost %.2f should use WarningStyle", tc.cost)
+			case "error":
+				assert.Equal(t, errorStyle, got, "cost %.2f should use ErrorStyle", tc.cost)
+			}
+		})
+	}
+}
+
+func TestContextStyle_Thresholds(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	theme := config.DefaultTheme()
+	m.SetTheme(theme)
+
+	tests := []struct {
+		name      string
+		pct       float64
+		wantStyle string
+	}{
+		{"low context", 30, "success"},
+		{"at warning threshold", 50, "warning"},
+		{"below error threshold", 79, "warning"},
+		{"at error threshold", 80, "error"},
+		{"above error threshold", 95, "error"},
+	}
+
+	successStyle := theme.SuccessStyle()
+	warningStyle := theme.WarningStyle()
+	errorStyle := theme.ErrorStyle()
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := m.ContextStyleForTest(tc.pct)
+			switch tc.wantStyle {
+			case "success":
+				assert.Equal(t, successStyle, got, "ctx %.1f%% should use SuccessStyle", tc.pct)
+			case "warning":
+				assert.Equal(t, warningStyle, got, "ctx %.1f%% should use WarningStyle", tc.pct)
+			case "error":
+				assert.Equal(t, errorStyle, got, "ctx %.1f%% should use ErrorStyle", tc.pct)
+			}
+		})
+	}
+}
+
+func TestPermStyle_Modes(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	theme := config.DefaultTheme()
+	m.SetTheme(theme)
+
+	tests := []struct {
+		name      string
+		mode      string
+		wantStyle string
+	}{
+		{"default mode", "default", "success"},
+		{"plan mode", "plan", "warning"},
+		{"allow-all mode", "allow-all", "error"},
+		{"empty mode", "", "success"},
+		{"delegate mode", "delegate", "success"},
+	}
+
+	successStyle := theme.SuccessStyle()
+	warningStyle := theme.WarningStyle()
+	errorStyle := theme.ErrorStyle()
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := m.PermStyleForTest(tc.mode)
+			switch tc.wantStyle {
+			case "success":
+				assert.Equal(t, successStyle, got, "perm %q should use SuccessStyle", tc.mode)
+			case "warning":
+				assert.Equal(t, warningStyle, got, "perm %q should use WarningStyle", tc.mode)
+			case "error":
+				assert.Equal(t, errorStyle, got, "perm %q should use ErrorStyle", tc.mode)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TUI-048: SetTheme
+// ---------------------------------------------------------------------------
+
+func TestSetTheme_UpdatesTheme(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	lightTheme := config.NewTheme(config.ThemeLight)
+	m.SetTheme(lightTheme)
+	// Verify the theme was stored by checking that style helpers use it.
+	// The SuccessStyle from the light theme should match what costStyle returns
+	// for a low-cost value.
+	got := m.CostStyleForTest(0.01)
+	assert.Equal(t, lightTheme.SuccessStyle(), got,
+		"after SetTheme, costStyle should reflect the new theme")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-048: UncommittedCount message
+// ---------------------------------------------------------------------------
+
+func TestUncommittedCountMsg_Updates(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	assert.Equal(t, 0, m.UncommittedCount, "initial UncommittedCount should be 0")
+
+	newModel, cmd := m.Update(statusline.UncommittedCountMsgForTest(7))
+	assert.Nil(t, cmd, "uncommittedCountMsg should return nil command")
+	assert.Equal(t, 7, newModel.UncommittedCount, "UncommittedCount should be updated to 7")
+}
+
+func TestUncommittedCountCmd_Execution(t *testing.T) {
+	msg := statusline.ExecuteUncommittedCountCmdForTest()
+	assert.NotNil(t, msg, "uncommittedCountCmd() should return a non-nil message")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-048: View includes agent count and uncommitted count
+// ---------------------------------------------------------------------------
+
+func TestView_IncludesAgentCount(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentCount = 3
+	view := m.View()
+	assert.Contains(t, view, "agents:", "View() should include 'agents:' label")
+	assert.Contains(t, view, "3", "View() should include the agent count value")
+}
+
+func TestView_IncludesUncommittedCount_WhenPositive(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.UncommittedCount = 5
+	view := m.View()
+	assert.Contains(t, view, "uncommitted:", "View() should include 'uncommitted:' label when count > 0")
+	assert.Contains(t, view, "5", "View() should include the uncommitted count value")
+}
+
+func TestView_ExcludesUncommittedCount_WhenZero(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.UncommittedCount = 0
+	view := m.View()
+	assert.NotContains(t, view, "uncommitted:", "View() should not show 'uncommitted:' label when count is 0")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-048: View still renders two rows after new fields
+// ---------------------------------------------------------------------------
+
+func TestView_TwoRowsWithNewFields(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	m.AgentCount = 2
+	m.UncommittedCount = 4
+	m.SessionCost = 1.50
+	m.ContextPercent = 85
+	m.PermissionMode = "allow-all"
+	view := m.View()
+	view = strings.TrimRight(view, "\n")
+	lines := strings.Split(view, "\n")
+	assert.Equal(t, 2, len(lines), "View() should still produce exactly 2 rows with new fields")
 }

@@ -33,6 +33,9 @@ type authStatusMsg struct {
 	Err    error
 }
 
+// uncommittedCountMsg carries the result of `git status --porcelain | wc -l`.
+type uncommittedCountMsg int
+
 // gitBranchTickMsg is fired by the periodic git-branch refresh timer.
 type gitBranchTickMsg time.Time
 
@@ -56,7 +59,7 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 // It holds data fields rendered into two rows:
 //
 //	Row 1: SessionCost  TokenCount  ContextPercent  PermissionMode  Elapsed  [thinking...]
-//	Row 2: ActiveModel  Provider    GitBranch       AuthStatus
+//	Row 2: ActiveModel  Provider    GitBranch       AuthStatus  AgentCount  [UncommittedCount]
 //
 // The zero value is not usable; use NewStatusLineModel instead.
 type StatusLineModel struct {
@@ -91,6 +94,15 @@ type StatusLineModel struct {
 	// Streaming is true while the assistant is generating a response.
 	Streaming bool
 
+	// UncommittedCount is the number of git uncommitted files in the working tree.
+	UncommittedCount int
+
+	// AgentCount is the number of currently active agents.
+	AgentCount int
+
+	// theme holds the active theme for semantic coloring.
+	theme config.Theme
+
 	// spinnerIdx is the current frame index for the thinking spinner animation.
 	spinnerIdx int
 
@@ -101,7 +113,10 @@ type StatusLineModel struct {
 // NewStatusLineModel returns a StatusLineModel with the given terminal width
 // and sensible empty defaults for all data fields.
 func NewStatusLineModel(width int) StatusLineModel {
-	return StatusLineModel{width: width}
+	return StatusLineModel{
+		width: width,
+		theme: config.DefaultTheme(),
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +135,7 @@ func (m StatusLineModel) Init() tea.Cmd {
 //   - tea.WindowSizeMsg      — keeps width in sync
 //   - gitBranchMsg           — updates GitBranch field
 //   - authStatusMsg          — updates AuthStatus field
+//   - uncommittedCountMsg    — updates UncommittedCount field
 //   - gitBranchTickMsg       — fires the next background git fetch
 //   - authStatusTickMsg      — fires the next background auth fetch
 //   - sessionTimerTickMsg    — fires the next 1s session elapsed tick
@@ -139,6 +155,9 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 	case authStatusMsg:
 		// msg always pre-fills Status with "N/A" on error.
 		m.AuthStatus = msg.Status
+
+	case uncommittedCountMsg:
+		m.UncommittedCount = int(msg)
 
 	case gitBranchTickMsg:
 		return m, gitBranchCmd()
@@ -165,10 +184,11 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 // View implements tea.Model. It renders the status bar as two rows:
 //
 //	Row 1: $cost  tokens  ctx%  perm-mode  elapsed  [thinking...]
-//	Row 2: model  provider  branch  auth
+//	Row 2: model  provider  branch  auth  agents:N  [uncommitted:N]
 //
-// Each field is labelled and styled with config.StyleMuted for labels and
-// config.StyleStatusBar for values. The two rows are joined vertically.
+// Cost, context, permission and auth fields use semantic colors from the
+// active theme (green/yellow/red based on thresholds). The two rows are
+// joined vertically.
 func (m StatusLineModel) View() string {
 	label := config.StyleMuted.Render
 	value := config.StyleStatusBar.Render
@@ -176,7 +196,7 @@ func (m StatusLineModel) View() string {
 	// Row 1: financial / quota fields
 	costField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label("cost:"),
-		value(state.FormatCost(m.SessionCost)),
+		m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost)),
 	)
 	tokenField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" tokens:"),
@@ -184,11 +204,11 @@ func (m StatusLineModel) View() string {
 	)
 	ctxField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" ctx:"),
-		value(fmt.Sprintf("%.1f%%", m.ContextPercent)),
+		m.contextStyle(m.ContextPercent).Render(fmt.Sprintf("%.1f%%", m.ContextPercent)),
 	)
 	permField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" perm:"),
-		value(m.PermissionMode),
+		m.permStyle(m.PermissionMode).Render(m.PermissionMode),
 	)
 
 	// Elapsed time since session started.
@@ -203,13 +223,13 @@ func (m StatusLineModel) View() string {
 		)
 	}
 
-	// Streaming / thinking indicator.
+	// Streaming / thinking indicator uses InfoStyle (cyan).
 	thinkingField := ""
 	if m.Streaming {
 		frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
 		thinkingField = lipgloss.JoinHorizontal(lipgloss.Top,
 			label(" "),
-			value(frame+" thinking..."),
+			m.theme.InfoStyle().Render(frame+" thinking..."),
 		)
 	}
 
@@ -238,16 +258,39 @@ func (m StatusLineModel) View() string {
 		label(" branch:"),
 		value(m.GitBranch),
 	)
+
+	// Auth field: green for authenticated, red for "N/A".
+	var authValue string
+	if m.AuthStatus == "N/A" || m.AuthStatus == "" {
+		authValue = m.theme.ErrorStyle().Render(m.AuthStatus)
+	} else {
+		authValue = m.theme.SuccessStyle().Render(m.AuthStatus)
+	}
 	authField := lipgloss.JoinHorizontal(lipgloss.Top,
 		label(" auth:"),
-		value(m.AuthStatus),
+		authValue,
 	)
+
+	// Agent count field.
+	agentField := lipgloss.JoinHorizontal(lipgloss.Top,
+		label(" agents:"),
+		value(fmt.Sprintf("%d", m.AgentCount)),
+	)
+
+	row2Parts := []string{modelField, providerField, branchField, authField, agentField}
+
+	// Uncommitted count field: only shown when > 0, styled with warning color.
+	if m.UncommittedCount > 0 {
+		uncommittedField := lipgloss.JoinHorizontal(lipgloss.Top,
+			label(" uncommitted:"),
+			m.theme.WarningStyle().Render(fmt.Sprintf("%d", m.UncommittedCount)),
+		)
+		row2Parts = append(row2Parts, uncommittedField)
+	}
 
 	row2 := lipgloss.NewStyle().
 		Width(m.width).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top,
-			modelField, providerField, branchField, authField,
-		))
+		Render(lipgloss.JoinHorizontal(lipgloss.Top, row2Parts...))
 
 	return lipgloss.JoinVertical(lipgloss.Left, row1, row2)
 }
@@ -259,6 +302,11 @@ func (m StatusLineModel) View() string {
 // SetWidth updates the status line width for responsive resizing.
 func (m *StatusLineModel) SetWidth(w int) {
 	m.width = w
+}
+
+// SetTheme updates the active theme used for semantic coloring.
+func (m *StatusLineModel) SetTheme(t config.Theme) {
+	m.theme = t
 }
 
 // SetStreaming sets the Streaming flag and, when transitioning to true,
@@ -280,10 +328,60 @@ func (m StatusLineModel) StartTicks() tea.Cmd {
 	return tea.Batch(
 		gitBranchCmd(),
 		authStatusCmd(),
+		uncommittedCountCmd(),
 		scheduleGitBranchTick(),
 		scheduleAuthStatusTick(),
 		scheduleSessionTimerTick(),
 	)
+}
+
+// ---------------------------------------------------------------------------
+// Semantic color helpers
+// ---------------------------------------------------------------------------
+
+// costStyle returns a lipgloss.Style based on session cost thresholds:
+//   - >= $1.00  → ErrorStyle  (red)
+//   - >= $0.10  → WarningStyle (yellow)
+//   - < $0.10   → SuccessStyle (green)
+func (m StatusLineModel) costStyle(cost float64) lipgloss.Style {
+	switch {
+	case cost >= 1.00:
+		return m.theme.ErrorStyle()
+	case cost >= 0.10:
+		return m.theme.WarningStyle()
+	default:
+		return m.theme.SuccessStyle()
+	}
+}
+
+// contextStyle returns a lipgloss.Style based on context window usage thresholds:
+//   - >= 80%  → ErrorStyle   (red)
+//   - >= 50%  → WarningStyle (yellow)
+//   - < 50%   → SuccessStyle (green)
+func (m StatusLineModel) contextStyle(pct float64) lipgloss.Style {
+	switch {
+	case pct >= 80:
+		return m.theme.ErrorStyle()
+	case pct >= 50:
+		return m.theme.WarningStyle()
+	default:
+		return m.theme.SuccessStyle()
+	}
+}
+
+// permStyle returns a lipgloss.Style based on the permission mode:
+//   - "allow-all" → ErrorStyle   (red)
+//   - "plan"      → WarningStyle (yellow)
+//   - other       → SuccessStyle (green)
+func (m StatusLineModel) permStyle(mode string) lipgloss.Style {
+	switch mode {
+	case "allow-all":
+		return m.theme.ErrorStyle()
+	case "plan":
+		return m.theme.WarningStyle()
+	default:
+		return m.theme.SuccessStyle()
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -339,6 +437,29 @@ func gitBranchCmd() tea.Cmd {
 			return gitBranchMsg{Err: err}
 		}
 		return gitBranchMsg{Branch: strings.TrimSpace(string(out))}
+	}
+}
+
+// uncommittedCountCmd runs `git status --porcelain | wc -l` in a goroutine
+// and returns the line count as an uncommittedCountMsg. If git is not found
+// or the command fails, 0 is returned.
+func uncommittedCountCmd() tea.Cmd {
+	return func() tea.Msg {
+		if !binaryExists("git") {
+			return uncommittedCountMsg(0)
+		}
+		// Run git status --porcelain and count non-empty lines.
+		out, err := exec.Command("git", "status", "--porcelain").Output()
+		if err != nil {
+			return uncommittedCountMsg(0)
+		}
+		count := 0
+		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			if strings.TrimSpace(line) != "" {
+				count++
+			}
+		}
+		return uncommittedCountMsg(count)
 	}
 }
 
