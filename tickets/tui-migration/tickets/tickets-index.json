@@ -1145,7 +1145,7 @@
     {
       "id": "TUI-066",
       "title": "Rich modal styling",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [

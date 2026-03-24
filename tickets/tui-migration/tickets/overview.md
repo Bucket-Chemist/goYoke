@@ -277,9 +277,10 @@ The following review findings have been incorporated into the ticket description
 ~~30. TUI-063 (breadcrumb trail)~~ ✅ TUI-063 COMPLETE (breadcrumb/ pkg, arrow separator, 7 context trails, width truncation, 17 tests, 98.2%)
 ~~31. TUI-064 (animation framework)~~ ✅ TUI-064 COMPLETE (harmonica v0.2.0, SpringAnimation, AnimateTickCmd, 13 tests, 94.1%)
 ~~32. TUI-065 (skeleton screens)~~ ✅ TUI-065 COMPLETE (skeleton/ pkg, 4 variants, shimmer animation via AnimateTickMsg, 500ms threshold guard, 37 tests, 94.6%)
-33. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
+~~33. TUI-066 (rich modal styling)~~ ✅ TUI-066 COMPLETE (type-specific borders, header icons, shadow effect, radio buttons, 24 new tests, 89.8%)
+34. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 23/28 tickets complete (TUI-043–065). 82%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 24/28 tickets complete (TUI-043–066). 86%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -302,7 +303,8 @@ The following review findings have been incorporated into the ticket description
 | 10e | ✅ COMPLETE | TUI-058–062 | 4-tier layout + search + hints + tab flash + vim keys. |
 | 10f | ✅ COMPLETE | TUI-063–064 | Breadcrumb trail (98.2%) + harmonica spring animation (94.1%). |
 | 10f | ✅ COMPLETE | TUI-065 | Skeleton loading screens (94.6%): 4 variants, shimmer animation, 500ms threshold guard. |
-| 10g | ⏳ PENDING | TUI-066–070 | 5 tickets remaining. Modals, confirm dialogs, dashboard, docs, parity. |
+| 10g | ✅ COMPLETE | TUI-066 | Rich modal styling (89.8%): type-specific borders, header icons, shadow effect, radio buttons. |
+| 10g | ⏳ PENDING | TUI-067–070 | 4 tickets remaining. Confirm dialogs, dashboard, docs, parity. |
 
 ### Package Tree (updated through Phase 10, TUI-065)
 

@@ -12,6 +12,9 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
+// shadowChar is the Unicode block element used to render the drop shadow.
+const shadowChar = "░"
+
 // ---------------------------------------------------------------------------
 // ModalResponseMsg
 //
@@ -53,11 +56,11 @@ const (
 // ---------------------------------------------------------------------------
 
 var (
-	// modalBorderStyle is the outer box rendered as a double border.
-	modalBorderStyle = lipgloss.NewStyle().
-				Border(lipgloss.DoubleBorder()).
-				BorderForeground(config.ColorPrimary).
-				Padding(1, 2)
+	// modalBorderBase is the base outer box style (border type and padding).
+	// Border color is applied dynamically per modal type in View().
+	modalBorderBase = lipgloss.NewStyle().
+			Border(lipgloss.DoubleBorder()).
+			Padding(1, 2)
 
 	// modalHeaderStyle is applied to the modal heading row.
 	modalHeaderStyle = config.StyleTitle.Copy()
@@ -74,6 +77,10 @@ var (
 
 	// modalHintStyle renders the keyboard hint line at the bottom.
 	modalHintStyle = config.StyleSubtle.Copy()
+
+	// modalShadowStyle renders the drop-shadow strip.
+	modalShadowStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "8", Dark: "0"})
 )
 
 // ---------------------------------------------------------------------------
@@ -314,6 +321,31 @@ func (m ModalModel) emitResponse(resp ModalResponse) tea.Cmd {
 // View
 // ---------------------------------------------------------------------------
 
+// modalBorderColor returns the border color appropriate for the given modal type.
+func modalBorderColor(t ModalType) lipgloss.AdaptiveColor {
+	switch t {
+	case Permission:
+		return config.ColorWarning
+	default:
+		// Confirm, Ask, Select, Input all use cyan (ColorPrimary / ColorInfo).
+		return config.ColorPrimary
+	}
+}
+
+// renderShadow builds a 1-character drop-shadow string beneath and to the
+// right of a box that has the given rendered width (in terminal columns).
+func renderShadow(boxWidth int) string {
+	if boxWidth <= 0 {
+		return ""
+	}
+	// Bottom strip: one space of offset on the left, then shadow characters
+	// covering the box width, plus one extra column on the right.
+	bottomStrip := " " + strings.Repeat(shadowChar, boxWidth)
+	// Right strip is rendered as part of each box line; here we only need the
+	// standalone bottom row.
+	return modalShadowStyle.Render(bottomStrip)
+}
+
 // View renders the modal as a centered overlay using lipgloss.Place.
 // The overlay is always rendered on top of whatever background exists; the
 // caller (AppModel) is responsible for rendering the background first and
@@ -330,13 +362,57 @@ func (m ModalModel) View() string {
 		maxW = modalMinWidth
 	}
 
-	box := modalBorderStyle.Copy().Width(maxW).Render(content)
+	// Apply per-type border color dynamically.
+	borderColor := modalBorderColor(m.request.Type)
+	box := modalBorderBase.Copy().
+		BorderForeground(borderColor).
+		Width(maxW).
+		Render(content)
+
+	// Attach drop-shadow: one row below, one column to the right.
+	// lipgloss.Width gives the rendered column width of the box.
+	boxRenderedWidth := lipgloss.Width(box)
+	shadow := renderShadow(boxRenderedWidth)
+	// Append a right-shadow character to each line of the box, then add the
+	// bottom shadow strip.
+	shadowedBox := appendRightShadow(box) + "\n" + shadow
 
 	return lipgloss.Place(
 		m.termWidth, m.termHeight,
 		lipgloss.Center, lipgloss.Center,
-		box,
+		shadowedBox,
 	)
+}
+
+// appendRightShadow adds a single shadow character to the right of each line
+// in the rendered box string, producing a right-edge shadow effect.
+func appendRightShadow(box string) string {
+	lines := strings.Split(box, "\n")
+	shadowChar1 := modalShadowStyle.Render(shadowChar)
+	for i, line := range lines {
+		if line != "" {
+			lines[i] = line + shadowChar1
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// headerIcon returns the appropriate icon string for the modal's type and
+// header text. It checks for an error keyword in the header before falling
+// back to the per-type icon.
+func headerIcon(t ModalType, header string) string {
+	icons := config.UnicodeIcons
+	// Error keyword takes precedence regardless of modal type.
+	if strings.Contains(strings.ToLower(header), "error") {
+		return icons.Error
+	}
+	switch t {
+	case Permission:
+		return icons.Warning
+	default:
+		// Confirm, Ask, Select, Input.
+		return icons.Info
+	}
 }
 
 // renderContent builds the string that goes inside the border box.
@@ -348,7 +424,8 @@ func (m ModalModel) renderContent() string {
 	if header == "" {
 		header = m.request.Type.String()
 	}
-	sb.WriteString(modalHeaderStyle.Render(header))
+	icon := headerIcon(m.request.Type, header)
+	sb.WriteString(modalHeaderStyle.Render(icon + " " + header))
 	sb.WriteString("\n\n")
 
 	// Body message.
@@ -373,7 +450,8 @@ func (m ModalModel) renderContent() string {
 }
 
 // renderOptionList renders the selectable option rows for Ask, Confirm,
-// Select, and Permission modals.
+// Select, and Permission modals. Selected items use a filled radio button
+// `(*) ` prefix; unselected items use `( ) `.
 func (m ModalModel) renderOptionList() string {
 	if len(m.effectiveOptions) == 0 {
 		return ""
@@ -381,18 +459,18 @@ func (m ModalModel) renderOptionList() string {
 
 	var sb strings.Builder
 	for i, opt := range m.effectiveOptions {
-		cursor := "  "
+		radio := "( ) "
 		if i == m.selectedIdx {
-			cursor = "> "
+			radio = "(*) "
 		}
 
-		line := cursor + opt
+		line := radio + opt
 
 		if i == m.selectedIdx {
 			// If we are in inputMode and this is the "Other..." entry, show
 			// the text input inline.
 			if m.inputMode && m.request.Type == Ask && opt == "Other..." {
-				line = cursor + m.textInput.View()
+				line = radio + m.textInput.View()
 			}
 			sb.WriteString(modalSelectedStyle.Render(line))
 		} else {

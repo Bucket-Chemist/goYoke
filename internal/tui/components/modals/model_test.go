@@ -1,6 +1,7 @@
 package modals
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -342,8 +343,163 @@ func TestModalModelViewSelectCursor(t *testing.T) {
 	})
 	m.SetTermSize(100, 30)
 	view := m.View()
-	// The cursor indicator for the first (selected) option.
-	assert.Contains(t, view, "> Foo")
+	// The radio-button cursor indicator for the first (selected) option.
+	assert.Contains(t, view, "(*) Foo")
+	// Unselected options use the empty radio button.
+	assert.Contains(t, view, "( ) Bar")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-066: Type-specific border colors
+// ---------------------------------------------------------------------------
+
+func TestModalBorderColor_Permission_IsWarning(t *testing.T) {
+	color := modalBorderColor(Permission)
+	assert.Equal(t, config.ColorWarning, color, "Permission modals must use ColorWarning (yellow)")
+}
+
+func TestModalBorderColor_Confirm_IsPrimary(t *testing.T) {
+	color := modalBorderColor(Confirm)
+	assert.Equal(t, config.ColorPrimary, color, "Confirm modals must use ColorPrimary (cyan)")
+}
+
+func TestModalBorderColor_Ask_IsPrimary(t *testing.T) {
+	assert.Equal(t, config.ColorPrimary, modalBorderColor(Ask))
+}
+
+func TestModalBorderColor_Select_IsPrimary(t *testing.T) {
+	assert.Equal(t, config.ColorPrimary, modalBorderColor(Select))
+}
+
+func TestModalBorderColor_Input_IsPrimary(t *testing.T) {
+	assert.Equal(t, config.ColorPrimary, modalBorderColor(Input))
+}
+
+// ---------------------------------------------------------------------------
+// TUI-066: Header icons
+// ---------------------------------------------------------------------------
+
+func TestHeaderIcon_Permission_UsesWarningIcon(t *testing.T) {
+	icon := headerIcon(Permission, "Allow tool access?")
+	assert.Equal(t, config.UnicodeIcons.Warning, icon)
+}
+
+func TestHeaderIcon_Confirm_UsesInfoIcon(t *testing.T) {
+	icon := headerIcon(Confirm, "Proceed?")
+	assert.Equal(t, config.UnicodeIcons.Info, icon)
+}
+
+func TestHeaderIcon_Ask_UsesInfoIcon(t *testing.T) {
+	icon := headerIcon(Ask, "Choose an option")
+	assert.Equal(t, config.UnicodeIcons.Info, icon)
+}
+
+func TestHeaderIcon_Input_UsesInfoIcon(t *testing.T) {
+	icon := headerIcon(Input, "Enter value")
+	assert.Equal(t, config.UnicodeIcons.Info, icon)
+}
+
+func TestHeaderIcon_ErrorKeyword_UsesErrorIcon(t *testing.T) {
+	// "error" in header overrides the type icon for any modal type.
+	assert.Equal(t, config.UnicodeIcons.Error, headerIcon(Confirm, "An Error occurred"))
+	assert.Equal(t, config.UnicodeIcons.Error, headerIcon(Permission, "Tool Error"))
+}
+
+func TestHeaderIcon_ErrorCaseInsensitive(t *testing.T) {
+	assert.Equal(t, config.UnicodeIcons.Error, headerIcon(Ask, "ERROR: something went wrong"))
+}
+
+func TestModalViewContainsHeaderIcon_Permission(t *testing.T) {
+	m := newTestModal(ModalRequest{Type: Permission, Header: "Allow access?"})
+	m.SetTermSize(100, 30)
+	view := m.View()
+	assert.Contains(t, view, config.UnicodeIcons.Warning)
+}
+
+func TestModalViewContainsHeaderIcon_Confirm(t *testing.T) {
+	m := newTestModal(ModalRequest{Type: Confirm, Header: "Are you sure?"})
+	m.SetTermSize(100, 30)
+	view := m.View()
+	assert.Contains(t, view, config.UnicodeIcons.Info)
+}
+
+// ---------------------------------------------------------------------------
+// TUI-066: Radio button option rendering
+// ---------------------------------------------------------------------------
+
+func TestRadioButton_SelectedItem_HasFilledRadio(t *testing.T) {
+	m := newTestModal(ModalRequest{
+		Type:    Select,
+		Options: []string{"Alpha", "Beta", "Gamma"},
+	})
+	m.SetTermSize(100, 30)
+	view := m.View()
+	// First item is selected by default.
+	assert.Contains(t, view, "(*) Alpha")
+	// Others are unselected.
+	assert.Contains(t, view, "( ) Beta")
+	assert.Contains(t, view, "( ) Gamma")
+}
+
+func TestRadioButton_AfterNavigation(t *testing.T) {
+	m := newTestModal(ModalRequest{
+		Type:    Select,
+		Options: []string{"One", "Two"},
+	})
+	m, _ = pressSpecialKey(m, tea.KeyDown) // move to "Two"
+	m.SetTermSize(100, 30)
+	view := m.View()
+	assert.Contains(t, view, "( ) One")
+	assert.Contains(t, view, "(*) Two")
+}
+
+func TestRadioButton_ConfirmModal(t *testing.T) {
+	m := newTestModal(ModalRequest{Type: Confirm})
+	m.SetTermSize(100, 30)
+	view := m.View()
+	assert.Contains(t, view, "(*) Yes")
+	assert.Contains(t, view, "( ) No")
+}
+
+func TestRadioButton_PermissionModal(t *testing.T) {
+	m := newTestModal(ModalRequest{Type: Permission})
+	m.SetTermSize(100, 30)
+	view := m.View()
+	assert.Contains(t, view, "(*) Allow")
+	assert.Contains(t, view, "( ) Deny")
+}
+
+// ---------------------------------------------------------------------------
+// TUI-066: Shadow rendering
+// ---------------------------------------------------------------------------
+
+func TestRenderShadow_NonEmpty(t *testing.T) {
+	shadow := renderShadow(50)
+	assert.NotEmpty(t, shadow, "renderShadow must produce non-empty output for width > 0")
+	assert.Contains(t, shadow, shadowChar)
+}
+
+func TestRenderShadow_ZeroWidth(t *testing.T) {
+	shadow := renderShadow(0)
+	assert.Empty(t, shadow, "renderShadow must return empty string for zero width")
+}
+
+func TestAppendRightShadow_AddsCharToEachLine(t *testing.T) {
+	input := "line1\nline2\nline3"
+	result := appendRightShadow(input)
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if line != "" {
+			assert.Contains(t, line, shadowChar)
+		}
+	}
+}
+
+func TestModalViewContainsShadow(t *testing.T) {
+	m := newTestModal(ModalRequest{Type: Confirm, Message: "Shadow test"})
+	m.SetTermSize(100, 30)
+	view := m.View()
+	assert.Contains(t, view, shadowChar, "View must contain shadow character")
 }
 
 // ---------------------------------------------------------------------------
