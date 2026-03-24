@@ -276,10 +276,10 @@ The following review findings have been incorporated into the ticket description
 ~~29. TUI-062 (vim keybindings)~~ ✅ TUI-062 COMPLETE (VimKeys/VimMode, normal/insert modes, h/j/k/l, settings wire, status indicator, 22 tests)
 ~~30. TUI-063 (breadcrumb trail)~~ ✅ TUI-063 COMPLETE (breadcrumb/ pkg, arrow separator, 7 context trails, width truncation, 17 tests, 98.2%)
 ~~31. TUI-064 (animation framework)~~ ✅ TUI-064 COMPLETE (harmonica v0.2.0, SpringAnimation, AnimateTickCmd, 13 tests, 94.1%)
-32. Phase 10: TUI-065 (skeleton screens)
+~~32. TUI-065 (skeleton screens)~~ ✅ TUI-065 COMPLETE (skeleton/ pkg, 4 variants, shimmer animation via AnimateTickMsg, 500ms threshold guard, 37 tests, 94.6%)
 33. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 22/28 tickets complete (TUI-043–064). 79%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 23/28 tickets complete (TUI-043–065). 82%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -301,9 +301,10 @@ The following review findings have been incorporated into the ticket description
 | 10d | ✅ COMPLETE | TUI-052–057 | Shift+Tab + slash dropdown/exec + task board + plan modal + plan mode UX (PlanStepMsg, status bar indicator, toast, 89.2%). |
 | 10e | ✅ COMPLETE | TUI-058–062 | 4-tier layout + search + hints + tab flash + vim keys. |
 | 10f | ✅ COMPLETE | TUI-063–064 | Breadcrumb trail (98.2%) + harmonica spring animation (94.1%). |
-| 10f–g | ⏳ PENDING | TUI-065–070 | 6 tickets remaining. Skeleton, modals, confirm dialogs, dashboard, docs, parity. |
+| 10f | ✅ COMPLETE | TUI-065 | Skeleton loading screens (94.6%): 4 variants, shimmer animation, 500ms threshold guard. |
+| 10g | ⏳ PENDING | TUI-066–070 | 5 tickets remaining. Modals, confirm dialogs, dashboard, docs, parity. |
 
-### Package Tree (updated through Phase 10, TUI-064)
+### Package Tree (updated through Phase 10, TUI-065)
 
 ```
 internal/tui/
@@ -354,6 +355,9 @@ internal/tui/
 │   │   ├── permission_test.go
 │   │   ├── plan_modal.go         # PlanViewModal: full-screen Glamour viewport (TUI-056)
 │   │   └── plan_modal_test.go    # 129+ total modals tests, 89.0% coverage
+│   ├── skeleton/                 # Skeleton loading screens (TUI-065)
+│   │   ├── skeleton.go           # SkeletonModel: 4 variants, shimmer animation, 500ms threshold guard
+│   │   └── skeleton_test.go      # 37 tests, 94.6% coverage
 │   ├── search/                   # Unified fuzzy search overlay (TUI-059)
 │   │   ├── overlay.go            # SearchOverlayModel: multi-source, score-sorted, ctrl+f
 │   │   └── overlay_test.go       # 25 tests, 89.1% coverage

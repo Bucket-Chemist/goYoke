@@ -1128,7 +1128,7 @@
     {
       "id": "TUI-065",
       "title": "Skeleton loading screens",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "LOW",
       "dependencies": [
