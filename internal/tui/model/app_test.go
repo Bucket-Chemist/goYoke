@@ -2422,6 +2422,7 @@ func (m *mockTaskBoard) View() string                  { return "" }
 func (m *mockTaskBoard) SetSize(w, h int)              { m.width = w; m.h = h }
 func (m *mockTaskBoard) Height() int                   { return 0 }
 func (m *mockTaskBoard) SetTasks(_ []state.TaskEntry)  {}
+func (m *mockTaskBoard) HandleMsg(_ tea.Msg) tea.Cmd   { return nil }
 
 // TestHandleKey_ToggleTaskBoard_CallsToggle verifies that the ToggleTaskBoard
 // key binding (ctrl+t) calls Toggle() on the taskBoard widget when wired.

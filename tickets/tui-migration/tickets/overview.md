@@ -272,7 +272,7 @@ The following review findings have been incorporated into the ticket description
 25. Phase 10 track E: TUI-064 → TUI-065 (animation framework, skeleton screens)
 26. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 12/28 tickets complete (TUI-043–054). 43%.**
+**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 13/28 tickets complete (TUI-043–055). 46%.**
 
 ## Implementation Progress (updated 2026-03-24)
 
@@ -291,8 +291,8 @@ The following review findings have been incorporated into the ticket description
 | 10a | ✅ COMPLETE | TUI-043 | app.go decomposition: 994→376 lines. 4 new files (key_handlers, cli_event_handlers, ui_event_handlers, setters). All 24 packages green. |
 | 10b | ✅ COMPLETE | TUI-044–047 | Semantic colors + icons (100%) + theme switching infra (88.9%) + error formatting (94%). **Track A + visual foundation done.** |
 | 10c | ✅ COMPLETE | TUI-048–051 | Status line colors + progress bar + settings tree + high-contrast WCAG (ContrastRatio, ValidateContrast, SettingChangedMsg→SetTheme wiring). config 96.3%, model 89.3%. |
-| 10d | ✅ COMPLETE | TUI-052–054 | Shift+Tab rebind (C-1) + slash dropdown (18 cmds, 92.1%) + slash execution (/clear local, /help local, rest→CLI, 84.8%). |
-| 10d–g | ⏳ PENDING | TUI-055–070 | 16 tickets remaining. Task board, plan modal, responsive layout, fuzzy search, animations, modals, breadcrumbs. |
+| 10d | ✅ COMPLETE | TUI-052–055 | Shift+Tab rebind + slash dropdown/execution + interactive task board (HandleMsg, filters a/r/p/d, progress summary, 94.0%). |
+| 10d–g | ⏳ PENDING | TUI-056–070 | 15 tickets remaining. Plan modal, plan UX, responsive layout, fuzzy search, animations, modals, breadcrumbs, docs. |
 
 ### Phase 2 Package Tree (delivered)
 

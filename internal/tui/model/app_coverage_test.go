@@ -704,3 +704,4 @@ func (m *mockTaskBoardWidget) Toggle()                         {}
 func (m *mockTaskBoardWidget) IsVisible() bool                 { return false }
 func (m *mockTaskBoardWidget) Height() int                     { return 0 }
 func (m *mockTaskBoardWidget) SetTasks(_ []state.TaskEntry)    {}
+func (m *mockTaskBoardWidget) HandleMsg(_ tea.Msg) tea.Cmd     { return nil }

@@ -222,6 +222,9 @@ type taskBoardWidget interface {
 	IsVisible() bool
 	Height() int
 	SetTasks(tasks []state.TaskEntry)
+	// HandleMsg forwards keyboard messages to the task board when it is
+	// visible, enabling cursor navigation and filter mode switching.
+	HandleMsg(msg tea.Msg) tea.Cmd
 }
 
 // ---------------------------------------------------------------------------
