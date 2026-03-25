@@ -124,6 +124,13 @@ func (m AgentTreeModel) SelectedID() string {
 	return m.treeNodes[m.selectedIdx].Agent.ID
 }
 
+// TreeNodes returns the cached flat tree node slice. The returned slice is
+// the same backing array used internally; callers must not modify it.
+// This accessor is intended for testing and should not be used in View().
+func (m AgentTreeModel) TreeNodes() []*state.AgentTreeNode {
+	return m.treeNodes
+}
+
 // clampScroll adjusts scrollOffset so that selectedIdx is always visible
 // within the viewport.
 func (m *AgentTreeModel) clampScroll() {

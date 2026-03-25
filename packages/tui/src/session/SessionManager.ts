@@ -12,13 +12,13 @@
  * Based on test-async-iterable.ts coordination pattern.
  */
 
-import { query, type SDKUserMessage, type SDKMessage, type SDKSystemMessage, type SDKAssistantMessage, type SDKResultMessage } from "@anthropic-ai/claude-agent-sdk";
+import { query, type SDKUserMessage, type SDKMessage, type SDKSystemMessage, type SDKAssistantMessage, type SDKResultMessage, type McpServerConfig } from "@anthropic-ai/claude-agent-sdk";
 import type { MessageParam, ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import { nanoid } from "nanoid";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { homedir } from "os";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import {
   SessionState,
   type SessionManagerConfig,
@@ -158,6 +158,77 @@ class SessionManager {
         MODEL: model, // Generic env var for all adapters
       },
     };
+  }
+
+  /**
+   * Load standalone MCP server config from settings.json.
+   *
+   * Reads mcpServers["gofortress-standalone"] from the active Claude config dir
+   * and validates that the binary exists on disk before returning the config.
+   *
+   * @returns Stdio server config, or null if missing / binary not found / parse failure
+   */
+  private loadStandaloneMcpConfig(): {
+    type: "stdio";
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+  } | null {
+    try {
+      const configDir = process.env["CLAUDE_CONFIG_DIR"] || join(homedir(), ".claude");
+      const settings = JSON.parse(readFileSync(join(configDir, "settings.json"), "utf-8")) as {
+        mcpServers?: Record<string, { command?: string; args?: string[]; env?: Record<string, string> }>;
+      };
+      const standalone = settings.mcpServers?.["gofortress-standalone"];
+      if (!standalone || !standalone.command) {
+        void logger.warn("gofortress-standalone MCP config missing from settings.json — standalone spawn_agent unavailable");
+        return null;
+      }
+      if (!existsSync(standalone.command)) {
+        void logger.warn("gofortress-standalone binary not found — standalone spawn_agent unavailable", {
+          command: standalone.command,
+        });
+        return null;
+      }
+      void logger.info("gofortress-standalone MCP server registered", { command: standalone.command });
+      return {
+        type: "stdio" as const,
+        command: standalone.command,
+        ...(standalone.args ? { args: standalone.args } : {}),
+        ...(standalone.env ? { env: standalone.env } : {}),
+      };
+    } catch {
+      // settings.json missing, unreadable, or invalid JSON — proceed without standalone
+      return null;
+    }
+  }
+
+  /**
+   * Build the mcpServers map for the SDK query options.
+   *
+   * Always includes the in-process gofortress-interactive server.
+   * Conditionally adds gofortress-standalone when the binary is available.
+   *
+   * @returns Record of server name → server config
+   */
+  private buildMcpServers(): Record<string, McpServerConfig> {
+    const servers: Record<string, McpServerConfig> = {
+      [mcpServer.name]: mcpServer,
+    };
+
+    const standaloneConfig = this.loadStandaloneMcpConfig();
+    if (standaloneConfig !== null) {
+      servers["gofortress-standalone"] = standaloneConfig;
+      void logger.info("MCP servers registered", {
+        servers: [mcpServer.name, "gofortress-standalone"],
+      });
+    } else {
+      void logger.info("MCP servers registered", {
+        servers: [mcpServer.name],
+      });
+    }
+
+    return servers;
   }
 
   /**
@@ -417,10 +488,8 @@ class SessionManager {
           model: preferredModel || undefined,
           // Load GOgent-Fortress settings (hooks, CLAUDE.md, etc.)
           settingSources: ["user", "project", "local"],
-          // Register MCP server - SDK expects Record<string, McpServerConfig>
-          mcpServers: {
-            [mcpServer.name]: mcpServer,
-          },
+          // Register MCP servers - in-process interactive + optional standalone spawn_agent
+          mcpServers: this.buildMcpServers(),
           // Permission callback - prompts user before tool execution
           canUseTool: this.handleCanUseTool.bind(this),
           // Enable partial message streaming for better UX

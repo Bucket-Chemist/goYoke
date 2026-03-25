@@ -23,10 +23,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -61,11 +63,12 @@ func main() {
 	verbose := flag.Bool("verbose", false, "enable verbose logging to stderr")
 	debug := flag.Bool("debug", false, "write all tea.Msg values to a debug log file")
 	modelOverride := flag.String("model", "", "initial model override (e.g. claude-opus-4-6)")
-	permMode := flag.String("permission-mode", "default", "initial permission mode: default, acceptEdits, plan")
+	permMode := flag.String("permission-mode", "acceptEdits", "initial permission mode: default, acceptEdits, plan")
 	printVersion := flag.Bool("version", false, "print version and exit")
 	mcpServer := flag.Bool("mcp-server", false, "run MCP server mode instead of TUI (use gofortress-mcp binary)")
 	configDir := flag.String("config-dir", "", "override Claude config directory (e.g. ~/.claude-em)")
 	resume := flag.Bool("resume", false, "resume most recent session")
+	mcpBinaryFlag := flag.String("mcp-binary", "", "explicit path to gofortress-mcp binary (overrides auto-discovery)")
 
 	flag.Parse()
 
@@ -214,6 +217,35 @@ func main() {
 	tbModel := taskboard.NewTaskBoardModel()
 	app.SetTaskBoard(&tbModel)
 
+	// -----------------------------------------------------------------------
+	// Phase 1b: Locate gofortress-mcp binary and generate MCP config.
+	//
+	// The gofortress-mcp binary bridges Claude CLI's MCP tool calls to the
+	// TUI's IPC bridge via Unix domain socket.  We generate a temporary
+	// mcp-config.json and pass it via --mcp-config so the Claude subprocess
+	// spawns the MCP server automatically.
+	// -----------------------------------------------------------------------
+
+	mcpConfigPath := ""
+	mcpBinary, mcpFound := findMCPBinary(*mcpBinaryFlag)
+	if mcpFound {
+		path, err := writeMCPConfig(mcpBinary)
+		if err != nil {
+			// Always warn — a broken MCP config means spawn_agent silently fails.
+			fmt.Fprintf(os.Stderr, "[gofortress] warning: could not write MCP config: %v\n", err)
+		} else {
+			mcpConfigPath = path
+			if *verbose {
+				log.Printf("[gofortress] MCP config: %s (binary: %s)", path, mcpBinary)
+			}
+		}
+	} else {
+		// Always emit this warning regardless of --verbose; silent degradation is
+		// the root cause of spawn_agent appearing broken.
+		fmt.Fprintf(os.Stderr, "[gofortress] warning: gofortress-mcp binary not found; MCP tools (spawn_agent, ask_user, etc.) will be unavailable\n")
+		fmt.Fprintf(os.Stderr, "[gofortress] hint: run 'make build-go-mcp' to build it, or pass --mcp-binary=/path/to/gofortress-mcp\n")
+	}
+
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
 		SessionID:      *sessionID,
@@ -223,6 +255,7 @@ func main() {
 		Verbose:        *verbose,
 		Debug:          *debug,
 		ConfigDir:      *configDir,
+		MCPConfigPath:  mcpConfigPath,
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)
@@ -347,4 +380,98 @@ func openDebugLog() (*os.File, error) {
 	name := fmt.Sprintf("gofortress-debug-%s.log", time.Now().Format("20060102-150405"))
 	path := filepath.Join(os.TempDir(), name)
 	return os.Create(path)
+}
+
+// findMCPBinary searches for the gofortress-mcp binary.
+//
+// Resolution order:
+//  1. explicit override (non-empty explicitPath is used as-is)
+//  2. filesystem candidates relative to the running binary
+//  3. exec.LookPath (searches $PATH)
+//
+// Returns the absolute path and true if found, or ("", false) otherwise.
+func findMCPBinary(explicitPath string) (string, bool) {
+	// 1. Honour explicit --mcp-binary flag.
+	if explicitPath != "" {
+		abs, err := filepath.Abs(explicitPath)
+		if err != nil {
+			return "", false
+		}
+		if info, err := os.Stat(abs); err == nil && !info.IsDir() {
+			return abs, true
+		}
+		// Explicit path provided but not found — report the problem clearly.
+		fmt.Fprintf(os.Stderr, "[gofortress] warning: --mcp-binary path not found: %s\n", abs)
+		return "", false
+	}
+
+	exe, _ := os.Executable()
+	exeDir := filepath.Dir(exe)
+
+	// 2. Filesystem candidates (ordered by likelihood in dev and installed layouts).
+	candidates := []string{
+		filepath.Join(exeDir, "gofortress-mcp"),              // same dir as TUI binary
+		filepath.Join(exeDir, "bin", "gofortress-mcp"),       // bin/ subdir
+		filepath.Join(exeDir, "..", "bin", "gofortress-mcp"), // parent/bin (dev layout)
+	}
+
+	for _, path := range candidates {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			continue
+		}
+		if info, err := os.Stat(abs); err == nil && !info.IsDir() {
+			return abs, true
+		}
+	}
+
+	// 3. Fall back to $PATH search.
+	if path, err := exec.LookPath("gofortress-mcp"); err == nil {
+		return path, true
+	}
+
+	return "", false
+}
+
+// mcpConfig is the JSON structure expected by claude --mcp-config.
+type mcpConfig struct {
+	MCPServers map[string]mcpServerEntry `json:"mcpServers"`
+}
+
+type mcpServerEntry struct {
+	Command string            `json:"command"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
+}
+
+// writeMCPConfig writes a temporary MCP configuration JSON file pointing at
+// the given gofortress-mcp binary.  Returns the path to the created file.
+// The file is created in os.TempDir and will be cleaned up by the OS.
+func writeMCPConfig(mcpBinaryPath string) (string, error) {
+	cfg := mcpConfig{
+		MCPServers: map[string]mcpServerEntry{
+			"gofortress-interactive": {
+				Command: mcpBinaryPath,
+				Env:     map[string]string{},
+			},
+		},
+	}
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal MCP config: %w", err)
+	}
+
+	f, err := os.CreateTemp("", "gofortress-mcp-*.json")
+	if err != nil {
+		return "", fmt.Errorf("create temp file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(data); err != nil {
+		os.Remove(f.Name())
+		return "", fmt.Errorf("write MCP config: %w", err)
+	}
+
+	return f.Name(), nil
 }

@@ -167,6 +167,10 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		m, cmds = m.handleAssistantMsg(msg, cmds)
 		return m, tea.Batch(cmds...)
 
+	case model.ToolUseMsg:
+		m = m.handleToolUseMsg(msg)
+		return m, nil
+
 	case model.StreamEventMsg:
 		// Raw stream events are currently handled via AssistantMsg; preserve
 		// the streaming flag only.
@@ -214,16 +218,30 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 }
 
 // handleAssistantMsg appends or updates the last assistant message.
+//
+// The Claude CLI with --include-partial-messages emits multiple AssistantEvent
+// messages per turn while streaming. Each partial event carries the FULL
+// accumulated text so far (a snapshot), not an incremental delta. The final
+// event has stop_reason set and Streaming=false.
+//
+// Streaming path: replace (not append) the last assistant message so that
+// each snapshot overwrites the previous partial view rather than concatenating
+// all snapshots into garbled output.
+//
+// Non-streaming path: if we were previously streaming, replace the last
+// assistant message with the clean complete text. If no streaming was
+// in progress, append a new message (fresh turn with no prior partial).
 func (m ClaudePanelModel) handleAssistantMsg(
 	msg model.AssistantMsg,
 	cmds []tea.Cmd,
 ) (ClaudePanelModel, []tea.Cmd) {
 	if msg.Streaming {
 		m.streaming = true
-		// If the last message is already an in-progress assistant fragment,
-		// append to it; otherwise start a new one.
+		// Replace (not append) the last assistant message with the latest
+		// snapshot. The CLI sends cumulative snapshots, so each event
+		// supersedes the previous one rather than extending it.
 		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" {
-			m.messages[len(m.messages)-1].Content += msg.Text
+			m.messages[len(m.messages)-1].Content = msg.Text
 		} else {
 			m.messages = append(m.messages, DisplayMessage{
 				Role:      "assistant",
@@ -232,14 +250,17 @@ func (m ClaudePanelModel) handleAssistantMsg(
 			})
 		}
 	} else {
-		// Complete (non-streaming) assistant message.
+		// Complete (non-streaming) assistant message. Track whether we were
+		// previously streaming so we know whether to replace or append.
+		wasStreaming := m.streaming
 		m.streaming = false
-		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" &&
-			m.messages[len(m.messages)-1].Content == "" {
-			// Patch empty streaming stub.
+		if wasStreaming && len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" {
+			// Replace the in-progress streaming fragment with the final,
+			// complete text. This clears any partial snapshot.
 			m.messages[len(m.messages)-1].Content = msg.Text
 			m.messages[len(m.messages)-1].Timestamp = time.Now()
 		} else {
+			// Fresh turn: no prior streaming message to replace.
 			m.messages = append(m.messages, DisplayMessage{
 				Role:      "assistant",
 				Content:   msg.Text,
@@ -260,6 +281,30 @@ func (m ClaudePanelModel) handleAssistantMsg(
 	}
 
 	return m, cmds
+}
+
+// handleToolUseMsg appends a collapsed tool block to the current assistant
+// message so the user can see what tools the router is invoking.
+func (m ClaudePanelModel) handleToolUseMsg(msg model.ToolUseMsg) ClaudePanelModel {
+	// Append to the last assistant message, or create one if none exists.
+	if len(m.messages) == 0 || m.messages[len(m.messages)-1].Role != "assistant" {
+		m.messages = append(m.messages, DisplayMessage{
+			Role:      "assistant",
+			Content:   "",
+			Timestamp: time.Now(),
+		})
+	}
+	last := &m.messages[len(m.messages)-1]
+	last.ToolBlocks = append(last.ToolBlocks, ToolBlock{
+		Name:  msg.ToolName,
+		Input: msg.Input,
+	})
+
+	m.syncViewport()
+	if m.autoScroll {
+		m.vp.GotoBottom()
+	}
+	return m
 }
 
 // handleKey processes keyboard input while the panel is focused.
@@ -695,6 +740,8 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 
 		if msg.Role == "assistant" && !(m.streaming && isLastMsg) {
 			// Completed assistant message — render markdown.
+			// RenderMarkdown logs warnings internally when Glamour fails and
+			// gracefully falls back to the original plain text.
 			rendered, _ := util.RenderMarkdown(msg.Content, m.width)
 			sb.WriteString(rendered)
 		} else {

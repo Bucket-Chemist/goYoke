@@ -123,6 +123,14 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return ProviderSwitchExecuteMsg{Seq: seq}
 		})
 
+	case key.Matches(msg, m.keys.Global.CyclePermMode):
+		// Block mode switching while streaming — the CLI driver restart would
+		// interrupt the active response.
+		if m.shared != nil && m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
+			return m, nil
+		}
+		return m.handlePermModeCycle()
+
 	case key.Matches(msg, m.keys.Global.ToggleTaskBoard):
 		if m.shared != nil && m.shared.taskBoard != nil {
 			m.shared.taskBoard.Toggle()
@@ -190,12 +198,23 @@ func (m AppModel) handleClaudeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleAgentsKey processes key events when the agent tree holds focus.
+// When the right panel is showing the dashboard it forwards events to the
+// dashboard component instead of the agent tree.
 func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	result, cmd := m.agentTree.Update(msg)
-	if updated, ok := result.(agents.AgentTreeModel); ok {
-		m.agentTree = updated
+	switch m.rightPanelMode {
+	case RPMDashboard:
+		if m.shared != nil && m.shared.dashboard != nil {
+			cmd := m.shared.dashboard.Update(msg)
+			return m, cmd
+		}
+		return m, nil
+	default:
+		result, cmd := m.agentTree.Update(msg)
+		if updated, ok := result.(agents.AgentTreeModel); ok {
+			m.agentTree = updated
+		}
+		return m, cmd
 	}
-	return m, cmd
 }
 
 // syncFocusState propagates the current focus state to child components.
@@ -203,7 +222,10 @@ func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
 		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
 	}
-	m.agentTree.SetFocused(m.focus == FocusAgents)
+	m.agentTree.SetFocused(m.focus == FocusAgents && m.rightPanelMode == RPMAgents)
+	if m.shared != nil && m.shared.dashboard != nil {
+		m.shared.dashboard.SetFocused(m.focus == FocusAgents && m.rightPanelMode == RPMDashboard)
+	}
 }
 
 // tabFlashCmd returns a Cmd that immediately delivers a TabFlashMsg for the

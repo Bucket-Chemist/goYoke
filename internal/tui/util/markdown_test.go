@@ -1,11 +1,22 @@
 package util_test
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
+
+// ansiRe matches ANSI escape sequences so they can be stripped for content assertions.
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// stripANSI removes all ANSI escape sequences from s, returning plain text.
+// Used by content assertions that need to check rendered text independently
+// of the active glamour style (which may insert per-word escape codes).
+func stripANSI(s string) string {
+	return ansiRe.ReplaceAllString(s, "")
+}
 
 // ---------------------------------------------------------------------------
 // RenderMarkdown — table-driven tests
@@ -35,7 +46,7 @@ func TestRenderMarkdown(t *testing.T) {
 			width:   80,
 			check: func(t *testing.T, result string) {
 				t.Helper()
-				if !strings.Contains(result, "Hello, world!") {
+				if !strings.Contains(stripANSI(result), "Hello, world!") {
 					t.Errorf("plain text should be present in output; got %q", result)
 				}
 			},
@@ -49,10 +60,10 @@ func TestRenderMarkdown(t *testing.T) {
 				// Glamour renders headings with ANSI styling and padding.
 				// We verify the heading text survives rendering and the output
 				// is not just an empty string.
-				if !strings.Contains(result, "My Title") {
+				if !strings.Contains(stripANSI(result), "My Title") {
 					t.Errorf("heading text 'My Title' should be present in output; got:\n%s", result)
 				}
-				if !strings.Contains(result, "Some body text") {
+				if !strings.Contains(stripANSI(result), "Some body text") {
 					t.Errorf("body text should be present in output; got:\n%s", result)
 				}
 				// Output should not be identical to input — glamour adds
@@ -68,7 +79,7 @@ func TestRenderMarkdown(t *testing.T) {
 			width:   80,
 			check: func(t *testing.T, result string) {
 				t.Helper()
-				if !strings.Contains(result, "fmt.Println") {
+				if !strings.Contains(stripANSI(result), "fmt.Println") {
 					t.Errorf("code block content should appear in output; got:\n%s", result)
 				}
 			},
@@ -79,10 +90,10 @@ func TestRenderMarkdown(t *testing.T) {
 			width:  80,
 			check: func(t *testing.T, result string) {
 				t.Helper()
-				if !strings.Contains(result, "func main") {
+				if !strings.Contains(stripANSI(result), "func main") {
 					t.Errorf("nested code should appear; got:\n%s", result)
 				}
-				if !strings.Contains(result, "More text") {
+				if !strings.Contains(stripANSI(result), "More text") {
 					t.Errorf("text after code block should appear; got:\n%s", result)
 				}
 			},
@@ -94,7 +105,7 @@ func TestRenderMarkdown(t *testing.T) {
 			check: func(t *testing.T, result string) {
 				t.Helper()
 				// Should render without error and contain the text.
-				if !strings.Contains(result, "Some content") {
+				if !strings.Contains(stripANSI(result), "Some content") {
 					t.Errorf("width=0 should use default width and render content; got:\n%s", result)
 				}
 			},
@@ -105,7 +116,7 @@ func TestRenderMarkdown(t *testing.T) {
 			width:   -5,
 			check: func(t *testing.T, result string) {
 				t.Helper()
-				if !strings.Contains(result, "Negative width test") {
+				if !strings.Contains(stripANSI(result), "Negative width test") {
 					t.Errorf("negative width should use default and render content; got:\n%s", result)
 				}
 			},
@@ -116,10 +127,11 @@ func TestRenderMarkdown(t *testing.T) {
 			width:   80,
 			check: func(t *testing.T, result string) {
 				t.Helper()
-				if !strings.Contains(result, "item one") {
+				plain := stripANSI(result)
+				if !strings.Contains(plain, "item one") {
 					t.Errorf("list item 'item one' should appear; got:\n%s", result)
 				}
-				if !strings.Contains(result, "item two") {
+				if !strings.Contains(plain, "item two") {
 					t.Errorf("list item 'item two' should appear; got:\n%s", result)
 				}
 			},
@@ -130,7 +142,7 @@ func TestRenderMarkdown(t *testing.T) {
 			width:   80,
 			check: func(t *testing.T, result string) {
 				t.Helper()
-				if !strings.Contains(result, "fmt.Println") {
+				if !strings.Contains(stripANSI(result), "fmt.Println") {
 					t.Errorf("inline code 'fmt.Println' should appear; got:\n%s", result)
 				}
 			},

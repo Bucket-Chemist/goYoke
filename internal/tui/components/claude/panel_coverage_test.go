@@ -404,7 +404,7 @@ func TestSaveRestoreMessages_RoundTrip(t *testing.T) {
 	m2 := newPanel()
 	m2.RestoreMessages(saved)
 
-	view := m2.View()
+	view := stripANSI(m2.View())
 	assert.Contains(t, view, "first message")
 	assert.Contains(t, view, "second message")
 }

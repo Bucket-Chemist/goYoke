@@ -2,7 +2,7 @@
 // GOgent-Fortress TUI. It renders a single-row strip of provider names and
 // highlights the currently active provider.
 //
-// This component is display-only: key handling (Shift+Tab cycling) is wired
+// This component is display-only: key handling (Alt+] cycling) is wired
 // in model/app.go and communicated back via SetActive.
 package providers
 

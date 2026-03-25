@@ -1,6 +1,7 @@
 package claude_test
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,13 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
+
+// ansiRe matches ANSI escape sequences for stripping in test assertions.
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// stripANSI removes ANSI escape codes so content assertions work
+// regardless of whether Glamour rendered the output.
+func stripANSI(s string) string { return ansiRe.ReplaceAllString(s, "") }
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -146,7 +154,7 @@ func TestSetSize_ZeroDimensions_EmptyView(t *testing.T) {
 func TestAssistantMsg_AppendsToConversation(t *testing.T) {
 	m := newPanel()
 	m2, _ := m.Update(assistantMsg("Hello from Claude"))
-	view := m2.View()
+	view := stripANSI(m2.View())
 	if !strings.Contains(view, "Hello from Claude") {
 		t.Errorf("View() after AssistantMsg should contain message text; got:\n%s", view)
 	}
@@ -169,13 +177,27 @@ func TestAssistantMsg_StreamingFlagSet(t *testing.T) {
 	}
 }
 
-func TestAssistantMsg_StreamingAppends(t *testing.T) {
+func TestAssistantMsg_StreamingReplaces(t *testing.T) {
+	// The Claude CLI sends full accumulated snapshots (not deltas) for each
+	// partial AssistantEvent. Each streaming message should REPLACE the
+	// previous partial view so the displayed text matches the latest snapshot.
 	m := newPanel()
 	m2, _ := m.Update(streamingMsg("Hello "))
-	m3, _ := m2.Update(streamingMsg("world"))
+	m3, _ := m2.Update(streamingMsg("Hello world"))
 	view := m3.View()
+	// The latest snapshot ("Hello world") should be visible.
 	if !strings.Contains(view, "Hello world") {
-		t.Errorf("streaming messages should concatenate; got:\n%s", view)
+		t.Errorf("streaming messages should show latest snapshot; got:\n%s", view)
+	}
+	// The earlier snapshot ("Hello ") should NOT be doubled up.
+	// The view should not contain "Hello Hello world" (old append behaviour).
+	if strings.Contains(view, "Hello Hello") {
+		t.Errorf("streaming messages should replace, not concatenate snapshots; got:\n%s", view)
+	}
+	// Only one assistant message should be present.
+	msgs := m3.Messages()
+	if len(msgs) != 1 {
+		t.Errorf("expected 1 message after two streaming snapshots; got %d", len(msgs))
 	}
 }
 
@@ -183,10 +205,19 @@ func TestAssistantMsg_NonStreamingClearStreaming(t *testing.T) {
 	m := newPanel()
 	// Start streaming.
 	m2, _ := m.Update(streamingMsg("partial"))
-	// Finalize with non-streaming message.
+	// Finalize with non-streaming message: replaces the partial, no duplication.
 	m3, _ := m2.Update(assistantMsg("complete"))
 	if m3.IsStreaming() {
 		t.Error("IsStreaming() should be false after non-streaming AssistantMsg")
+	}
+	// The final non-streaming message should REPLACE the streaming partial,
+	// not create a second assistant message.
+	msgs := m3.Messages()
+	if len(msgs) != 1 {
+		t.Errorf("expected 1 message after streaming→complete; got %d (duplicate prevention)", len(msgs))
+	}
+	if len(msgs) > 0 && msgs[0].Content != "complete" {
+		t.Errorf("expected content %q; got %q", "complete", msgs[0].Content)
 	}
 }
 
@@ -441,7 +472,7 @@ func TestAutoScroll_EnabledByDefault(t *testing.T) {
 	}
 	view := m.View()
 	// With auto-scroll, the last message should be visible.
-	if !strings.Contains(view, "line of text that fills the viewport") {
+	if !strings.Contains(stripANSI(view), "line of text that fills the viewport") {
 		t.Errorf("auto-scroll: last message should be visible; got:\n%s", view)
 	}
 }
@@ -453,7 +484,7 @@ func TestAutoScroll_ReenabledOnNewContent(t *testing.T) {
 	// Send new content — auto-scroll should keep the panel at the bottom.
 	m, _ = m.Update(assistantMsg("new content after result"))
 	view := m.View()
-	if !strings.Contains(view, "new content after result") {
+	if !strings.Contains(stripANSI(view), "new content after result") {
 		t.Errorf("new content should be visible after ResultMsg; got:\n%s", view)
 	}
 }
@@ -695,6 +726,57 @@ func TestStreamingGuard_PlainTextDuringStreaming(t *testing.T) {
 	assert.Contains(t, output, "# Heading", "streaming content should be plain text, not markdown-rendered")
 }
 
+func TestGlamour_CompletedMessageDropsRawMarkdown(t *testing.T) {
+	// A completed (non-streaming) assistant message must be rendered through
+	// Glamour. The raw "# " heading marker should NOT appear verbatim in the
+	// output — Glamour strips it and applies styling.
+	keys := config.DefaultKeyMap()
+	m := claude.NewClaudePanelModel(keys)
+	m.SetSize(80, 24)
+
+	// Send a complete (non-streaming) message containing markdown.
+	m, _ = m.Update(model.AssistantMsg{Text: "# Heading\n\nSome paragraph text.", Streaming: false})
+
+	output := m.View()
+	// Glamour transforms "# Heading" → styled heading without the "#" prefix.
+	// If Glamour is working, the raw "# Heading" string should not appear
+	// (the "#" is consumed and replaced with ANSI styling).
+	assert.NotContains(t, output, "# Heading",
+		"completed assistant message should be Glamour-rendered; raw '# Heading' should not appear")
+	// The plain text content should still be present in some form.
+	assert.Contains(t, output, "Heading",
+		"heading text should remain in Glamour output even without the '#' prefix")
+}
+
+func TestGlamour_StreamingThenComplete_NoRawMarkdown(t *testing.T) {
+	// A streaming sequence followed by a complete message must result in a
+	// single Glamour-rendered message, not plain text or duplicate content.
+	keys := config.DefaultKeyMap()
+	m := claude.NewClaudePanelModel(keys)
+	m.SetSize(80, 24)
+
+	// Simulate the streaming sequence: partial snapshots then final complete.
+	m, _ = m.Update(model.AssistantMsg{Text: "# Head", Streaming: true})
+	m, _ = m.Update(model.AssistantMsg{Text: "# Heading\n\nText.", Streaming: true})
+	m, _ = m.Update(model.AssistantMsg{Text: "# Heading\n\nFull text.", Streaming: false})
+
+	// After the complete message, only one assistant message should exist
+	// (the streaming snapshots were replaced, not accumulated).
+	msgs := m.Messages()
+	assert.Len(t, msgs, 1, "streaming+complete should yield exactly 1 message")
+
+	// The final complete text should be the message content.
+	if len(msgs) > 0 {
+		assert.Equal(t, "# Heading\n\nFull text.", msgs[0].Content)
+	}
+
+	output := m.View()
+	// After the non-streaming final message, Glamour renders and the raw "#"
+	// prefix should not appear in the view.
+	assert.NotContains(t, output, "# Heading",
+		"after streaming+complete, Glamour should render and remove raw '#' prefix")
+}
+
 // ---------------------------------------------------------------------------
 // SaveMessages / RestoreMessages (TUI-029)
 // ---------------------------------------------------------------------------
@@ -774,7 +856,7 @@ func TestRestoreMessages_ReplacesHistory(t *testing.T) {
 	m.RestoreMessages(newMsgs)
 
 	// The old message must no longer appear; the restored ones must.
-	view := m.View()
+	view := stripANSI(m.View())
 	assert.NotContains(t, view, "old message")
 	assert.Contains(t, view, "restored user msg")
 	assert.Contains(t, view, "restored asst msg")
@@ -797,7 +879,7 @@ func TestRestoreMessages_NilClearsHistory(t *testing.T) {
 
 	m.RestoreMessages(nil)
 
-	view := m.View()
+	view := stripANSI(m.View())
 	assert.NotContains(t, view, "existing")
 	// Empty state placeholder should be visible.
 	assert.Contains(t, view, "No messages")
@@ -811,7 +893,7 @@ func TestRestoreMessages_ViewReflectsRestoredContent(t *testing.T) {
 	}
 	m.RestoreMessages(restored)
 
-	view := m.View()
+	view := stripANSI(m.View())
 	assert.Contains(t, view, "answer after switch")
 }
 
@@ -828,7 +910,7 @@ func TestSaveRestore_RoundTrip(t *testing.T) {
 	m.RestoreMessages(nil)
 	m.RestoreMessages(saved)
 
-	view := m.View()
+	view := stripANSI(m.View())
 	assert.Contains(t, view, "first")
 	assert.Contains(t, view, "second")
 }
@@ -844,8 +926,8 @@ func TestSaveRestore_MessageIsolationAcrossPanelInstances(t *testing.T) {
 	panelB := newPanel()
 	panelB.RestoreMessages(saved)
 
-	assert.Contains(t, panelB.View(), "panel A message")
-	assert.Contains(t, panelA.View(), "panel A message",
+	assert.Contains(t, stripANSI(panelB.View()), "panel A message")
+	assert.Contains(t, stripANSI(panelA.View()), "panel A message",
 		"saving must not mutate the source panel")
 }
 

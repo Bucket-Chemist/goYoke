@@ -24,6 +24,10 @@ const (
 
 	// PlanView presents a full-screen Glamour-rendered plan viewer.
 	PlanView
+
+	// TwoStepConfirm requires the user to type a confirmation phrase before
+	// executing a destructive action.
+	TwoStepConfirm
 )
 
 // String returns the human-readable name of the ModalType.
@@ -41,6 +45,8 @@ func (t ModalType) String() string {
 		return "Permission"
 	case PlanView:
 		return "PlanView"
+	case TwoStepConfirm:
+		return "TwoStepConfirm"
 	default:
 		return "Unknown"
 	}

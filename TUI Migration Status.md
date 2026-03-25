@@ -7,18 +7,21 @@
 
 ---
 
-## Current Status (2026-03-23)
+## Current Status (2026-03-24)
 
-**Phase 1: Spikes** — COMPLETE (4/4)
-**Phase 2: Foundation** — COMPLETE (7/7)
-**Phase 3: CLI Driver + NDJSON + MCP** — COMPLETE (5/5)
-**Phase 4: Modal System** — COMPLETE (2/2)
-**Phase 5: Agent Tree** — COMPLETE (3/3)
-**Phase 6: Rich Features** — COMPLETE (6/6 + integration wiring)
-**Phase 7: Multi-Provider** — COMPLETE (5/5)
-**Phase 8: Lifecycle** — COMPLETE (3/3)
-**Phase 9: Testing** — IN PROGRESS (2/7, TUI-038 next)
-**Total: 37/42 tickets complete (88%)**
+**Phase 1: Spikes** — ✅ COMPLETE (4/4)
+**Phase 2: Foundation** — ✅ COMPLETE (7/7)
+**Phase 3: CLI Driver + NDJSON + MCP** — ✅ COMPLETE (5/5)
+**Phase 4: Modal System** — ✅ COMPLETE (2/2)
+**Phase 5: Agent Tree** — ✅ COMPLETE (3/3)
+**Phase 6: Rich Features** — ✅ COMPLETE (6/6 + integration wiring)
+**Phase 7: Multi-Provider** — ✅ COMPLETE (5/5 + remediation R-1–R-4)
+**Phase 8: Lifecycle** — ✅ COMPLETE (3/3)
+**Phase 9: Testing** — ✅ COMPLETE (7/7)
+**🎉 TUI Migration: 42/42 tickets COMPLETE (100%)**
+
+**Phase 10: UX Overhaul** — ⏳ PENDING (0/28, TUI-043–TUI-070)
+**Review:** APPROVE_WITH_CONDITIONS (Staff Architect, 2026-03-24)
 
 ---
 
@@ -78,14 +81,55 @@
 - TUI-035: Clipboard, search, and input history ✅ — 3 new files (util/clipboard.go, claude/history.go, claude/search.go + tests), CopyToClipboard via atotto/clipboard (indirect dep), InputHistory with JSON persistence (atomic write, max 500, dedup consecutive, resilient load), SearchModel with case-insensitive substring matching + Ctrl+N/P navigation + wraparound + '/' trigger + Esc dismiss, 4 new keybindings (/, ctrl+n, ctrl+p, ctrl+y), SearchQueryChangedMsg for real-time re-search on typing, scrollToSearchResult viewport integration, search-mode guard in handleKey, 78.8% claude coverage, 90.3% util coverage, ~100 claude tests, race-free
 - **Phase 8 COMPLETE** — all 3 lifecycle tickets done
 
-### Phase 9: Testing (in progress)
+### Phase 9: Testing (complete)
 - TUI-036: Component unit tests ✅ — testdata/ fixtures (5 NDJSON files + helpers.go), 22 new model tests (SessionAutoSaveMsg, ShutdownCompleteMsg, double-Ctrl+C, toast nil safety, renderRightPanel modes, modal overlay), MCP coverage tests (send/notify/spawn_agent/select_option/request_input), bridge coverage tests. Coverage improvements: model 75→89%, bridge 75→84%, claude 79→91%, mcp 70→79%. All 23 packages pass with race detector. TestHarness (DES-7) deferred — widget interface mocking pattern validated.
 - TUI-037: CLI driver integration test ✅ — mock-claude.sh in testdata/ (env-controlled NDJSON emitter), 5 integration tests (NormalFlow, CrashRecovery, Interrupt, Shutdown, UnknownEvent), AdapterPath injection for mock, waitForMsg helper with 5s deadline, testing.Short() guards, CLI coverage 81→91%, all pass <1s, race-free
-- TUI-038: MCP server integration test — PENDING (depends TUI-014, TUI-015)
-- TUI-039: E2E smoke test with live CLI — PENDING (depends TUI-016, TUI-018)
-- TUI-040: Performance benchmarks — PENDING (depends TUI-016, TUI-017, TUI-020)
-- TUI-041: Unknown event resilience test — PENDING (depends TUI-012, TUI-013)
-- TUI-042: Feature parity checklist verification — PENDING (depends TUI-039)
+- TUI-038: MCP server integration test ✅ — 10 integration tests (real MCP client↔server, UDS round-trip, permission flow, spawn_agent, team_run), 81.9% mcp coverage, race-free
+- TUI-039: E2E smoke test with live CLI ✅ — 6 E2E tests (//go:build e2e tag), CLIDriver-direct harness, real Claude subprocess spawning, permission prompt validation, ~$0.05/run
+- TUI-040: Performance benchmarks ✅ — 12 benchmarks across 4 packages. All 5 targets pass: startup 0.31ms (target <200ms, 645x margin), modal round-trip 0.002ms (<100ms, 48,000x margin), NDJSON parsing 195K lines/sec (target 10K, 19x over), view rendering 0.82ms (<16ms, 20x margin), UDS round-trip 0.009ms (<5ms, 550x margin)
+- TUI-041: Unknown event resilience tests ✅ — 19 tests with 57 subtests, 91.2% cli coverage, race-free. Covers: unknown top-level types, unknown subtypes, malformed JSON, nil fields, empty arrays, concurrent event injection, stress-test with 1000 unknown events
+- TUI-042: Feature parity checklist ✅ — 18 features verified: 18 PASS (spawn_agent + team_run subprocess management fully implemented). `verify-parity.sh`: 75 pass, 0 fail, 2 skip. See [[tickets/tui-migration/parity-checklist|parity-checklist.md]]
+- **Phase 9 COMPLETE** — all 7 testing tickets done. 🎉 **ALL 42 TICKETS COMPLETE**
+
+### Phase 10: UX Overhaul (pending — planned 2026-03-24)
+
+**Scope:** 28 tickets (TUI-043 to TUI-070) across 7 sub-phases
+**Planning:** /plan-tickets workflow (Scout → Planner → Architect → Staff Architect Review → Synthesis)
+**Review:** APPROVE_WITH_CONDITIONS (High Confidence). 1 critical, 5 major, 6 minor, 7 commendations.
+**Estimate:** 95–135 hours, 2–3 weeks parallel
+**New packages planned:** settingstree, slashcmd, search, hintbar, breadcrumb, skeleton
+
+See [[tickets/tui-migration/phase-10-breakdown|Phase 10 Breakdown]] for sub-phase details and ticket listing.
+
+**Sub-phases:**
+
+| Sub-phase | Tickets | Focus |
+|-----------|---------|-------|
+| 10a: Structural | TUI-043 | app.go decomposition (prerequisite for all) |
+| 10b: Visual | TUI-044–049 | Semantic colors, icon library, theme switching, error formatting, status line, token progress |
+| 10c: Interaction | TUI-050–057 | Settings tree, high-contrast, keybindings, slash commands, task board, plan preview/mode |
+| 10d: Layout | TUI-058–063 | 4-tier responsive, fuzzy search, hint bar, tab highlight, vim keys, breadcrumbs |
+| 10e: Polish | TUI-064–065 | Spring animations (harmonica), skeleton loading screens |
+| 10f: Modals | TUI-066–068 | Rich modal styling, two-step confirm, dashboard collapse/expand |
+| 10g: Verification | TUI-069–070 | Obsidian vault docs update, verify-parity refresh + integration test |
+
+**Review conditions incorporated into tickets:**
+- C-1 → TUI-052: Shift+Tab test migration plan (5 specific tests listed)
+- M-1 → TUI-055: TaskBoard interface extended with `HandleMsg(tea.Msg) tea.Cmd`
+- M-3 → TUI-059: `SearchSource` interface in `model/interfaces.go`
+- M-5 → TUI-046: Theme propagation via `activeTheme` in sharedState
+
+### Cutover Fixes (from first real test, 2026-03-24)
+
+Applied alongside Phase 10 planning as the Go TUI ran for the first time:
+- Status line now shows model, provider, permission mode, tokens, context%, timer
+- Thinking spinner (⠋ thinking...) during streaming/waiting states
+- Router agent registered in agent tree on SystemInitEvent
+- `--config-dir` and `--resume` flags added to Go binary
+- Session `ListSessions()` for `--resume` support
+- `ConfigDir` propagated to Claude CLI subprocess
+- Parallel launch: `gofortress-go` / `gofortress-EM-go` bash functions
+- New zellij layout (`gofortress-go.kdl`) and wrapper script
 
 ### Phase 7 Remediation (post-completion)
 - R-1: main.go wiring ✅ — All 7 Phase 7 widgets instantiated (provider tab bar, dashboard, settings, telemetry, planpreview, taskboard). ProviderState() getter on AppModel. Settings initialized with CLI opts.
@@ -96,34 +140,34 @@
 
 ---
 
-## Test Coverage
+## Test Coverage (as of 2026-03-24)
 
-| Package | Tests | Coverage |
-|---------|-------|----------|
-| `internal/tui/config` | 100 | 100.0% |
-| `internal/tui/model` | ~194 | 88.8% |
-| `internal/tui/components/banner` | 8 | 100.0% |
-| `internal/tui/components/tabbar` | 12 | 100.0% |
-| `internal/tui/components/statusline` | 29 | 87.8% |
-| `internal/tui/components/modals` | 107 | 88.5% |
-| `internal/tui/components/agents` | 45 | 90.6% |
-| `internal/tui/components/claude` | ~100 | 91.0% |
-| `internal/tui/components/toast` | 19 | 94.2% |
-| `internal/tui/components/teams` | 62 | 94.1% |
-| `internal/tui/state` | 208 | 97.9% |
-| `internal/tui/util` | ~18 | 90.3% |
-| `internal/tui/cli` | ~160 | 91.2% |
-| `internal/tui/mcp` | ~44 | 78.6% |
-| `internal/tui/components/providers` | 16 | 90.6% |
-| `internal/tui/components/dashboard` | 10 | 100.0% |
-| `internal/tui/components/settings` | 10 | 94.4% |
-| `internal/tui/components/telemetry` | 12 | 91.9% |
-| `internal/tui/components/planpreview` | 10 | 97.4% |
-| `internal/tui/components/taskboard` | 12 | 97.1% |
-| `internal/tui/bridge` | ~20 | 83.5% |
-| `internal/tui/session` | 34 | 85.6% |
-| `internal/tui/lifecycle` | 11 | 80.0% |
-| **Total** | **~1250+** | **avg ~91%** |
+| Package | Coverage |
+|---------|----------|
+| `internal/tui/config` | 100.0% |
+| `internal/tui/model` | 88.4% |
+| `internal/tui/components/banner` | 100.0% |
+| `internal/tui/components/tabbar` | 100.0% |
+| `internal/tui/components/statusline` | 86.5% |
+| `internal/tui/components/modals` | 88.5% |
+| `internal/tui/components/agents` | 91.9% |
+| `internal/tui/components/claude` | 91.0% |
+| `internal/tui/components/toast` | 94.2% |
+| `internal/tui/components/teams` | 94.1% |
+| `internal/tui/components/providers` | 90.6% |
+| `internal/tui/components/dashboard` | 100.0% |
+| `internal/tui/components/settings` | 94.4% |
+| `internal/tui/components/telemetry` | 91.9% |
+| `internal/tui/components/planpreview` | 97.4% |
+| `internal/tui/components/taskboard` | 98.2% |
+| `internal/tui/state` | 94.3% |
+| `internal/tui/util` | 90.3% |
+| `internal/tui/cli` | 90.9% |
+| `internal/tui/mcp` | 81.9% |
+| `internal/tui/bridge` | 85.4% |
+| `internal/tui/session` | 68.4% |
+| `internal/tui/lifecycle` | 80.0% |
+| **Total: 23 packages** | **1067 test functions, avg 91.2%** |
 
 ---
 
@@ -142,7 +186,7 @@ NDJSON content blocks have 4 variants (text, tool_use, tool_result, thinking). U
 First unmarshal discriminator (type/subtype), then unmarshal full struct. Unknown types return CLIUnknownEvent with raw JSON preserved (log-and-continue pattern).
 
 ### Go MCP server import alias + jsonschema tag (TUI-014)
-Internal package is also named `mcp` — uses import alias `mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"`. Sharp edge: `jsonschema` struct tag takes a bare description string (NOT `description=...`), wrong format panics at AddTool registration time. UDS client uses lazy connect with exponential backoff (100ms base, 5 attempts). spawn_agent and team_run are validated stubs (check configs/paths, return structured responses) — full subprocess management deferred.
+Internal package is also named `mcp` — uses import alias `mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"`. Sharp edge: `jsonschema` struct tag takes a bare description string (NOT `description=...`), wrong format panics at AddTool registration time. UDS client uses lazy connect with exponential backoff (100ms base, 5 attempts). spawn_agent and team_run are fully implemented with subprocess management (spawner.go).
 
 ### CLI subprocess driver channel-to-Cmd pattern (TUI-013)
 `WaitForEvent()` returns a `tea.Cmd` that blocks on `<-eventCh`. After processing each CLI event in Update(), the AppModel must return `d.WaitForEvent()` as a Cmd to maintain the subscription. 1MB scanner buffer for large tool outputs. `consumeEvents` goroutine logs+continues on parse errors (never crashes). Shutdown: SIGTERM → 2s → SIGKILL in goroutine. Tests use `io.Pipe` injection + live `sleep 60` subprocess for signal tests.
@@ -200,13 +244,18 @@ New `internal/tui/session/` package provides `Store` struct with configurable `b
 
 ---
 
-## Architectural Risks for Phase 7+
+## Architectural Risks
 
-- ~~No visual feedback when CLI disconnects~~ ✅ RESOLVED: TUI-025 toast notifications provide disconnect feedback
+### Resolved
+- ~~No visual feedback when CLI disconnects~~ ✅ TUI-025 toast notifications
+- ~~DiffEntry rendering not yet implemented~~ ✅ TUI-022 inline diffs
+- ~~model package coverage at 84.5%~~ ✅ Now 88.4% (TUI-036 pushed it above target)
+
+### Active
 - UDSClient serializes requests (one at a time) — acceptable for current tools but limits parallelism
-- model package coverage at 84.5% — TUI-036 should push above 90%
-- ~~DiffEntry rendering not yet implemented~~ ✅ RESOLVED: TUI-022 Claude panel renders inline diffs
-- Multi-provider adapter paths will reference TS scripts initially — Go-native adapters deferred to post-migration
+- Multi-provider adapter paths reference TS scripts initially — Go-native adapters deferred to post-Phase 10
+- session package coverage at 68.4% — lowest of all packages, new `ListSessions()` added for cutover
+- spawn_agent + team_run are fully implemented with subprocess management (spawner.go)
 
 ---
 
@@ -223,5 +272,11 @@ New `internal/tui/session/` package provides `Store` struct with configurable `b
 ## Links
 
 - Spike results: `tickets/tui-migration/spike-results/`
-- Ticket index: `tickets/tui-migration/tickets/tickets-index.json`
-- Staff architect review: `.claude/sessions/20260316-plan-tickets-tui/review-critique.md`
+- Ticket index: `tickets/tui-migration/tickets/tickets-index.json` (70 tickets)
+- Overview: [[tickets/tui-migration/tickets/overview|overview.md]]
+- Feature parity: [[tickets/tui-migration/parity-checklist|parity-checklist.md]]
+- Phase 10 breakdown: [[tickets/tui-migration/phase-10-breakdown|Phase 10 Breakdown]]
+- Staff architect review (Phases 1–9): `.claude/sessions/20260316-plan-tickets-tui/review-critique.md`
+- Staff architect review (Phase 10): `.claude/sessions/20260323-plan-tickets-tui-phase10/review-critique.md`
+- Architecture: [[docs/ARCHITECTURE|ARCHITECTURE.md]] Section 16
+- Braintrust analysis: [[tickets/tui-migration/braintrust-handoff-v2|braintrust-handoff-v2.md]]

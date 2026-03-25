@@ -6,7 +6,7 @@
 // When the TUI is running it sets GOFORTRESS_SOCKET to the path of a Unix
 // domain socket.  Interactive tools (ask_user, confirm_action, etc.) connect
 // to this socket to relay user prompts through the TUI.  Non-interactive tools
-// (test_mcp_ping, spawn_agent stub, team_run stub) work without the TUI.
+// (test_mcp_ping, spawn_agent, team_run) work without the TUI.
 //
 // Usage (managed by TUI — not intended for direct invocation):
 //

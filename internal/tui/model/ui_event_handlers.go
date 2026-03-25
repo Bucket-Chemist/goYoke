@@ -6,6 +6,7 @@ package model
 
 import (
 	"log"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // handleWindowSize handles tea.WindowSizeMsg: updates terminal dimensions,
@@ -172,15 +174,66 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 }
 
 // handleAgentRegistryMsg handles AgentRegisteredMsg, AgentUpdatedMsg, and
-// AgentActivityMsg: refreshes the agent tree view.
-func (m AppModel) handleAgentRegistryMsg() (tea.Model, tea.Cmd) {
-	if m.shared.agentRegistry != nil {
-		// C-3: invalidate before reading Tree() so the view reflects any
-		// registry mutations that occurred before this message was dispatched.
-		m.shared.agentRegistry.InvalidateTreeCache()
-		m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+// AgentActivityMsg: writes the incoming data to the registry, then refreshes
+// the agent tree view and status line agent count.
+//
+// C-1 fix (2026-03-25): previous version discarded the message data and only
+// refreshed the view from an empty registry. Now each message type is
+// type-switched and the corresponding registry method is called.
+func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.shared.agentRegistry == nil {
+		return m, nil
 	}
+
+	switch msg := msg.(type) {
+	case AgentRegisteredMsg:
+		// Default empty ParentID to the registry's root agent (matches TS TUI
+		// spawnAgent.ts:232 which defaults to zustand.rootAgentId). Without
+		// this, agents arrive as orphans — counted but invisible in the tree
+		// because buildTree() DFS from root never reaches them.
+		parentID := msg.ParentID
+		rootID := m.shared.agentRegistry.RootID()
+		if parentID == "" && rootID != "" && rootID != msg.AgentID {
+			parentID = rootID
+		}
+		_ = m.shared.agentRegistry.Register(state.Agent{
+			ID:        msg.AgentID,
+			AgentType: msg.AgentType,
+			ParentID:  parentID,
+			Status:    state.StatusRunning,
+			StartedAt: time.Now(),
+		})
+	case AgentUpdatedMsg:
+		_ = m.shared.agentRegistry.Update(msg.AgentID, func(a *state.Agent) {
+			a.Status = parseAgentStatus(msg.Status)
+		})
+	case AgentActivityMsg:
+		m.shared.agentRegistry.SetActivity(msg.AgentID, state.AgentActivity{
+			Type:      "tool_use",
+			Target:    msg.ToolName,
+			Timestamp: time.Now(),
+		})
+	}
+
+	m.shared.agentRegistry.InvalidateTreeCache()
+	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+	m.statusLine.AgentCount = m.shared.agentRegistry.Count().Total
 	return m, nil
+}
+
+// parseAgentStatus maps a status string from IPC messages to the typed
+// AgentStatus enum. Unknown values default to StatusPending.
+func parseAgentStatus(s string) state.AgentStatus {
+	switch s {
+	case "running":
+		return state.StatusRunning
+	case "complete":
+		return state.StatusComplete
+	case "error":
+		return state.StatusError
+	default:
+		return state.StatusPending
+	}
 }
 
 // handleAgentSelected handles agents.AgentSelectedMsg: loads the selected

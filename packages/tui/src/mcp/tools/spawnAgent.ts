@@ -440,8 +440,11 @@ export function buildCliArgs(args: {
     cliArgs.push("--model", model);
   }
 
-  // Use delegate mode instead of dangerously-skip-permissions
-  cliArgs.push("--permission-mode", "delegate");
+  // NOTE: --permission-mode is intentionally NOT passed. "delegate" is not a valid
+  // CLI mode (valid: default, acceptEdits, plan, dontAsk, bypassPermissions, auto).
+  // The spawned subprocess inherits the default mode from settings.json.
+  // Tool access is controlled via --allowedTools instead.
+  // This matches the Go spawner (gofortress-mcp-standalone/spawner.go:buildSpawnArgs).
 
   // Resolve allowed tools: caller > config > fallback
   let resolvedTools: string[] | undefined = args.allowedTools;

@@ -2,6 +2,7 @@
 package util
 
 import (
+	"log/slog"
 	"sync"
 
 	"github.com/charmbracelet/glamour"
@@ -38,12 +39,22 @@ func RenderMarkdown(content string, width int) (string, error) {
 	r, err := cachedRenderer(width)
 	if err != nil {
 		// Graceful degradation: renderer could not be created.
+		// Log so failures are visible in application logs rather than silent.
+		slog.Warn("glamour renderer creation failed; falling back to plain text",
+			"err", err,
+			"width", width,
+		)
 		return content, nil
 	}
 
 	rendered, err := r.Render(content)
 	if err != nil {
 		// Graceful degradation: render failed (e.g. malformed content).
+		// Log so failures are visible in application logs rather than silent.
+		slog.Warn("glamour render failed; falling back to plain text",
+			"err", err,
+			"content_len", len(content),
+		)
 		return content, nil
 	}
 
@@ -69,8 +80,14 @@ func cachedRenderer(width int) (*glamour.TermRenderer, error) {
 		return r, nil
 	}
 
+	// Use the explicit "dark" style instead of WithAutoStyle().
+	// WithAutoStyle() relies on terminal background detection which fails in
+	// many terminal+multiplexer combos (zellij, tmux, alacritty), causing
+	// glamour to pick the wrong palette or fall back to basic 16-color ANSI.
+	// The "dark" preset uses 256-color values that render correctly
+	// regardless of terminal theme.
 	r, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStandardStyle("dark"),
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {

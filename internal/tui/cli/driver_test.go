@@ -136,10 +136,11 @@ func TestBuildArgs(t *testing.T) {
 			contains: []string{
 				"--input-format", "stream-json",
 				"--output-format", "stream-json",
+				"--verbose",
 				"--include-partial-messages",
 				"--permission-mode", "acceptEdits",
 			},
-			absent: []string{"--resume", "--model", "--mcp-config", "--allowedTools", "--verbose"},
+			absent: []string{"--resume", "--model", "--mcp-config", "--allowedTools"},
 		},
 		{
 			name: "all opts populated",
@@ -154,7 +155,7 @@ func TestBuildArgs(t *testing.T) {
 				"--resume", "sess-abc",
 				"--model", "claude-opus-4-6",
 				"--mcp-config", "/etc/mcp.json",
-				"--allowedTools", "mcp__gofortress__*",
+				"--allowedTools", "mcp__gofortress-interactive__*",
 				"--permission-mode", "plan",
 				"--verbose",
 			},
@@ -163,6 +164,11 @@ func TestBuildArgs(t *testing.T) {
 			name: "mcp-config omits allowedTools when path empty",
 			opts: CLIDriverOpts{MCPConfigPath: ""},
 			absent: []string{"--allowedTools"},
+		},
+		{
+			name: "config-dir is never passed as CLI flag (not supported by claude CLI)",
+			opts: CLIDriverOpts{ConfigDir: "/home/user/.claude-em"},
+			absent: []string{"--config-dir"},
 		},
 	}
 

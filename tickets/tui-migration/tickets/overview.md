@@ -231,7 +231,7 @@ The following review findings have been incorporated into the ticket description
 
 - [x] Spike passes: permission wire format documented (TUI-001 ✓), Go MCP SDK POC verified (TUI-002 ✓), NDJSON catalog confirmed (TUI-003 ✓), UDS IPC validated at 56µs (TUI-004 ✓) — **Phase 1 complete**
 - [ ] Two-process topology works: Go TUI → CLI → MCP tools — no Node.js
-- [x] Feature parity achieved: 16/18 pass, 2 partial (spawn_agent + team_run validated stubs — tool registration and TUI notification work, subprocess launch deferred) (TUI-042 ✅)
+- [x] Feature parity achieved: 18/18 pass (spawn_agent + team_run fully implemented with subprocess management) (TUI-042 ✅)
 - [x] Performance targets met: startup 0.31ms/<200ms, modal 0.002ms/<100ms, view 0.82ms/<16ms (all 5 benchmarks pass, TUI-040 ✅)
 - [ ] No orphaned processes: graceful shutdown within 10s
 - [x] Per-phase smoke tests pass: Phase 1 ✓, Phase 2 ✓, Phase 3 ✓, Phase 4 ✓, Phase 5 ✓, Phase 6 ✓ + integration wiring, Phase 7 ✓ + remediation, Post-Phase 7 review ✓ (21/21 packages green, race-clean), Phase 8 ✓ (lifecycle), Phase 9 partial ✓ (TUI-036 component + TUI-037 CLI integration + TUI-038 MCP integration 81.9% + TUI-039 E2E smoke + TUI-040 benchmarks all 5 targets pass)
@@ -278,11 +278,14 @@ The following review findings have been incorporated into the ticket description
 ~~31. TUI-064 (animation framework)~~ ✅ TUI-064 COMPLETE (harmonica v0.2.0, SpringAnimation, AnimateTickCmd, 13 tests, 94.1%)
 ~~32. TUI-065 (skeleton screens)~~ ✅ TUI-065 COMPLETE (skeleton/ pkg, 4 variants, shimmer animation via AnimateTickMsg, 500ms threshold guard, 37 tests, 94.6%)
 ~~33. TUI-066 (rich modal styling)~~ ✅ TUI-066 COMPLETE (type-specific borders, header icons, shadow effect, radio buttons, 24 new tests, 89.8%)
-34. Phase 10 final: TUI-070 (integration test + ARCHITECTURE.md update)
+~~34. TUI-068 (dashboard collapse/expand)~~ ✅ TUI-068 COMPLETE (4 collapsible sections, cursor nav, enter toggle, icons from theme.Icons(), 35 new tests, 94.9%)
+~~35. TUI-069 (Obsidian vault documentation)~~ ✅ TUI-069 COMPLETE (6 docs in docs/tui/, dev-vault updates, memory updates, cross-reference audit)
+~~36. TUI-067 (two-step confirm dialogs)~~ ✅ TUI-067 COMPLETE (type-to-confirm, progress rendering, DangerStyle border, 24 new tests, 91.2% modals coverage)
+~~37. TUI-070 (integration test + ARCHITECTURE.md update)~~ ✅ TUI-070 COMPLETE (13 integration tests, ARCHITECTURE.md v1.9, 1542 total tests)
 
-**🎉 ALL 42 TICKETS COMPLETE — TUI MIGRATION DONE. Phase 10 UX Overhaul: 24/28 tickets complete (TUI-043–066). 86%.**
+**🎉 ALL 70 TICKETS COMPLETE — TUI MIGRATION + PHASE 10 UX OVERHAUL DONE. 28/28 Phase 10 tickets complete. 29 packages, 1542 tests. 🎉**
 
-## Implementation Progress (updated 2026-03-24)
+## Implementation Progress (updated 2026-03-25)
 
 | Phase | Status | Tickets | Notes |
 |-------|--------|---------|-------|
@@ -304,9 +307,12 @@ The following review findings have been incorporated into the ticket description
 | 10f | ✅ COMPLETE | TUI-063–064 | Breadcrumb trail (98.2%) + harmonica spring animation (94.1%). |
 | 10f | ✅ COMPLETE | TUI-065 | Skeleton loading screens (94.6%): 4 variants, shimmer animation, 500ms threshold guard. |
 | 10g | ✅ COMPLETE | TUI-066 | Rich modal styling (89.8%): type-specific borders, header icons, shadow effect, radio buttons. |
-| 10g | ⏳ PENDING | TUI-067–070 | 4 tickets remaining. Confirm dialogs, dashboard, docs, parity. |
+| 10g | ✅ COMPLETE | TUI-068 | Dashboard collapse/expand (94.9%): 4 collapsible sections, cursor nav, enter toggle, theme icons, interface extension. |
+| 10f | ✅ COMPLETE | TUI-067 | Two-step confirmation dialogs (91.2%): type-to-confirm, progress rendering, DangerStyle border, 24 new tests. |
+| 10g | ✅ COMPLETE | TUI-069 | Obsidian vault documentation: 6 docs in docs/tui/, dev-vault updates, cross-reference audit. |
+| 10g | ✅ COMPLETE | TUI-070 | Integration tests (13 functions), ARCHITECTURE.md v1.9, tickets-index verified. 1542 total tests. **PHASE 10 DONE.** |
 
-### Package Tree (updated through Phase 10, TUI-065)
+### Package Tree (updated through Phase 10, TUI-068)
 
 ```
 internal/tui/
@@ -337,6 +343,9 @@ internal/tui/
 │   ├── hintbar/                  # Context-aware keyboard hint bar (TUI-060)
 │   │   ├── hintbar.go            # HintBarModel: 5 context sets, width-adaptive, muted style
 │   │   └── hintbar_test.go       # 22 tests, 86.7% coverage
+│   ├── dashboard/                # Session dashboard panel (TUI-032, TUI-068)
+│   │   ├── dashboard.go          # DashboardModel: 4 collapsible sections, cursor nav, Update/SetFocused
+│   │   └── dashboard_test.go     # 47 tests (12 original + 35 new), 94.9% coverage
 │   ├── claude/                   # Claude conversation panel (TUI-022, TUI-054, TUI-059)
 │   │   ├── panel.go              # ClaudePanelModel: viewport + textinput, streaming, slash cmd, SearchSource
 │   │   ├── panel_test.go         # 59+ tests, 84.8% coverage

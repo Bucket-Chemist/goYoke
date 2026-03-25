@@ -175,8 +175,8 @@ func DefaultKeyMap() KeyMap {
 				key.WithHelp("shift+tab", "reverse focus"),
 			),
 			CycleProvider: key.NewBinding(
-				key.WithKeys("alt+P"),
-				key.WithHelp("alt+shift+p", "cycle provider"),
+				key.WithKeys("alt+]"),
+				key.WithHelp("alt+]", "cycle provider"),
 			),
 			CycleRightPanel: key.NewBinding(
 				key.WithKeys("alt+r"),

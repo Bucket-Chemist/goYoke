@@ -58,7 +58,7 @@ func TestGlobalKeys_KeyStrings(t *testing.T) {
 	}{
 		{"ToggleFocus", km.Global.ToggleFocus, []string{"tab"}},
 		{"ReverseToggleFocus", km.Global.ReverseToggleFocus, []string{"shift+tab"}},
-		{"CycleProvider", km.Global.CycleProvider, []string{"alt+P"}},
+		{"CycleProvider", km.Global.CycleProvider, []string{"alt+]"}},
 		{"CycleRightPanel", km.Global.CycleRightPanel, []string{"alt+r"}},
 		{"CyclePermMode", km.Global.CyclePermMode, []string{"alt+p"}},
 		{"Interrupt", km.Global.Interrupt, []string{"esc"}},

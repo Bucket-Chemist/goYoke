@@ -46,6 +46,7 @@ vi.mock("../store/index.js", () => {
     activeProvider: "anthropic",
     providerSessionIds: { anthropic: null } as Record<string, string | null>,
     providerModels: { anthropic: "claude-sonnet-4-6" } as Record<string, string>,
+    providerProjectDirs: { anthropic: undefined } as Record<string, string | undefined>,
 
     // ── agents slice (backed by mutableState) ─────────────────────────────
     get rootAgentId() { return mutableState.rootAgentId; },
@@ -98,10 +99,26 @@ vi.mock("../store/index.js", () => {
 });
 
 /**
+ * Mock fs module — required for readFileSync/existsSync calls in connect() and
+ * loadStandaloneMcpConfig(). Spread actual module so all other fs functions remain
+ * intact; only readFileSync and existsSync are replaced with vi.fn() stubs.
+ * Default implementation returns an empty settings object (no mcpServers entry);
+ * individual tests override via vi.mocked().
+ */
+vi.mock("fs", async () => {
+  const actual = await vi.importActual<typeof import("fs")>("fs");
+  return {
+    ...actual,
+    readFileSync: vi.fn(() => JSON.stringify({})),
+    existsSync: vi.fn(() => false),
+  };
+});
+
+/**
  * Mock MCP server
  */
 vi.mock("../mcp/server.js", () => ({
-  mcpServer: {},
+  mcpServer: { name: "gofortress-interactive" },
 }));
 
 /**
@@ -2049,5 +2066,124 @@ describe("SessionManager handleSystemEvent — eager root agent registration", (
         tier: "sonnet",
       })
     );
+  });
+});
+
+describe("buildMcpServers", () => {
+  beforeEach(() => {
+    resetSessionManager();
+    vi.clearAllMocks();
+  });
+
+  it("includes gofortress-standalone when settings.json has the entry", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { readFileSync, existsSync } = await import("fs");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    // Settings.json contains a gofortress-standalone entry
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        mcpServers: {
+          "gofortress-standalone": {
+            command: "/usr/local/bin/gofortress-mcp-standalone",
+            args: ["--port", "8080"],
+          },
+        },
+      }) as unknown as Buffer
+    );
+
+    // Binary exists on disk
+    vi.mocked(existsSync).mockReturnValue(true);
+
+    const manager = getSessionManager();
+    pushEvent({
+      type: "system",
+      subtype: "init",
+      session_id: "test-standalone-included",
+      model: "claude-sonnet-4-6",
+    } as any);
+    await manager.connect();
+
+    const queryCall = vi.mocked(query).mock.calls[0]![0];
+    const mcpServers = queryCall.options?.mcpServers as Record<string, unknown>;
+
+    // gofortress-interactive (in-process) must be present
+    expect(mcpServers).toHaveProperty("gofortress-interactive");
+    // gofortress-standalone must also be present when settings.json has the entry
+    expect(mcpServers).toHaveProperty("gofortress-standalone");
+    // Verify the standalone entry has the correct shape
+    expect(mcpServers["gofortress-standalone"]).toEqual(
+      expect.objectContaining({
+        type: "stdio",
+        command: "/usr/local/bin/gofortress-mcp-standalone",
+      })
+    );
+
+    await manager.shutdown().catch(() => {});
+  });
+
+  it("omits gofortress-standalone when settings.json has no entry", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { readFileSync } = await import("fs");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    // Settings.json exists but has no mcpServers section
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({}) as unknown as Buffer
+    );
+
+    const manager = getSessionManager();
+    pushEvent({
+      type: "system",
+      subtype: "init",
+      session_id: "test-standalone-omitted",
+      model: "claude-sonnet-4-6",
+    } as any);
+    await manager.connect();
+
+    const queryCall = vi.mocked(query).mock.calls[0]![0];
+    const mcpServers = queryCall.options?.mcpServers as Record<string, unknown>;
+
+    // Only the in-process server should be present
+    expect(mcpServers).toHaveProperty("gofortress-interactive");
+    // gofortress-standalone must NOT be present
+    expect(mcpServers).not.toHaveProperty("gofortress-standalone");
+
+    await manager.shutdown().catch(() => {});
+  });
+
+  it("omits gofortress-standalone when settings.json read fails", async () => {
+    const { query } = await import("@anthropic-ai/claude-agent-sdk");
+    const { readFileSync } = await import("fs");
+    const { mockQueryFn, pushEvent } = createControllableMockSDK();
+    vi.mocked(query).mockImplementation(mockQueryFn);
+
+    // Simulate settings.json being unreadable
+    vi.mocked(readFileSync).mockImplementation(() => {
+      throw new Error("ENOENT: no such file or directory");
+    });
+
+    const manager = getSessionManager();
+    pushEvent({
+      type: "system",
+      subtype: "init",
+      session_id: "test-standalone-error",
+      model: "claude-sonnet-4-6",
+    } as any);
+
+    // connect() should NOT throw even when readFileSync fails
+    await expect(manager.connect()).resolves.toBeUndefined();
+
+    const queryCall = vi.mocked(query).mock.calls[0]![0];
+    const mcpServers = queryCall.options?.mcpServers as Record<string, unknown>;
+
+    // Only the in-process server should be present
+    expect(mcpServers).toHaveProperty("gofortress-interactive");
+    // gofortress-standalone must NOT be present
+    expect(mcpServers).not.toHaveProperty("gofortress-standalone");
+
+    await manager.shutdown().catch(() => {});
   });
 });

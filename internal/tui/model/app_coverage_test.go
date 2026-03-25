@@ -673,6 +673,8 @@ func (m *mockDashboardWidget) View() string                                     
 func (m *mockDashboardWidget) SetSize(_, _ int)                                     {}
 func (m *mockDashboardWidget) SetData(_ float64, _ int64, _, _, _ int, _ time.Time) {}
 func (m *mockDashboardWidget) SetTier(_ LayoutTier)                                 {}
+func (m *mockDashboardWidget) Update(_ tea.Msg) tea.Cmd                             { return nil }
+func (m *mockDashboardWidget) SetFocused(_ bool)                                    {}
 
 // mockSettingsWidget satisfies settingsWidget.
 type mockSettingsWidget struct{}

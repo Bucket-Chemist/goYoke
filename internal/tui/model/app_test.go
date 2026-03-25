@@ -713,17 +713,17 @@ func TestHandleKey_ShiftTab_DoesNotTriggerCycleProvider(t *testing.T) {
 	}
 }
 
-// TestHandleKey_AltShiftP_StillTriggersCycleProvider verifies that the new
-// CycleProvider binding (alt+P) still triggers provider switching after TUI-052.
-func TestHandleKey_AltShiftP_StillTriggersCycleProvider(t *testing.T) {
+// TestHandleKey_AltBracket_TriggersCycleProvider verifies that the
+// CycleProvider binding (alt+]) triggers provider switching.
+func TestHandleKey_AltBracket_TriggersCycleProvider(t *testing.T) {
 	m := NewAppModel()
 	mock := &mockClaudePanel{}
 	m.shared.claudePanel = mock
 
-	// alt+P is the new CycleProvider binding (TUI-052).
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true})
+	// alt+] is the CycleProvider binding (remapped from alt+P to avoid terminal ambiguity).
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]"), Alt: true})
 	if cmd == nil {
-		t.Error("alt+P (new CycleProvider) did not emit a command; want debounce timer")
+		t.Error("alt+] (CycleProvider) did not emit a command; want debounce timer")
 	}
 }
 
@@ -1334,8 +1334,8 @@ func TestCycleProvider_Key_EmitsProviderSwitchExecuteMsg(t *testing.T) {
 	mock := &mockClaudePanel{}
 	m.shared.claudePanel = mock
 
-	// alt+shift+p (alt+P) is CycleProvider (TUI-052: rebound from shift+tab).
-	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true})
+	// alt+] is CycleProvider (remapped from alt+P to avoid terminal ambiguity).
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]"), Alt: true})
 	result := updated.(AppModel)
 
 	if cmd == nil {
@@ -1361,8 +1361,8 @@ func TestCycleProvider_Key_BlockedDuringStreaming(t *testing.T) {
 	mock := &mockClaudePanel{streaming: true}
 	m.shared.claudePanel = mock
 
-	// alt+shift+p (alt+P) is CycleProvider (TUI-052: rebound from shift+tab).
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true})
+	// alt+] is CycleProvider (remapped from alt+P to avoid terminal ambiguity).
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]"), Alt: true})
 	if cmd != nil {
 		t.Error("CycleProvider key should be blocked while streaming; got non-nil cmd")
 	}
@@ -1568,6 +1568,74 @@ func TestSystemInitEvent_EmptySessionID_NotPersisted(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// SystemInitEvent — agent tree and detail panel population
+// ---------------------------------------------------------------------------
+
+// TestSystemInitEvent_PopulatesAgentTree verifies that handling a
+// SystemInitEvent registers the root "router-root" agent and makes it visible
+// in the agent tree (treeNodes non-empty) immediately — without requiring
+// any further user interaction.
+func TestSystemInitEvent_PopulatesAgentTree(t *testing.T) {
+	m := NewAppModel()
+	// Simulate a window-size event so the model is in the ready state.
+	sized, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = sized.(AppModel)
+
+	updated, _ := m.Update(cli.SystemInitEvent{
+		SessionID: "tree-test-session",
+		Model:     "claude-sonnet-4-6",
+	})
+	result := updated.(AppModel)
+
+	// The agent registry must contain the root agent.
+	rootAgent := result.shared.agentRegistry.Get("router-root")
+	if rootAgent == nil {
+		t.Fatal("agentRegistry missing router-root after SystemInitEvent")
+	}
+
+	// The tree cache must be rebuilt: Tree() must return at least one node.
+	nodes := result.shared.agentRegistry.Tree()
+	if len(nodes) == 0 {
+		t.Fatal("agentRegistry.Tree() returned empty after SystemInitEvent; InvalidateTreeCache may not have been called")
+	}
+
+	// The agentTree component must have the nodes so View() can render them.
+	if len(result.agentTree.TreeNodes()) == 0 {
+		t.Error("agentTree.TreeNodes() is empty after SystemInitEvent; SetNodes was not called or nodes were discarded")
+	}
+
+	// The agentDetail component must have an agent set (auto-select on first population).
+	if !result.agentDetail.HasAgent() {
+		t.Error("agentDetail.HasAgent() is false after SystemInitEvent; auto-select did not fire")
+	}
+}
+
+// TestSystemInitEvent_DetailShowsRootAgent verifies the detail panel renders
+// the root agent's data rather than the "Select an agent" placeholder.
+func TestSystemInitEvent_DetailShowsRootAgent(t *testing.T) {
+	m := NewAppModel()
+	sized, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = sized.(AppModel)
+
+	updated, _ := m.Update(cli.SystemInitEvent{
+		SessionID: "detail-test-session",
+		Model:     "claude-sonnet-4-6",
+	})
+	result := updated.(AppModel)
+
+	view := result.agentDetail.View()
+	// The placeholder is "Select an agent" rendered with lipgloss ANSI codes.
+	// Check via strings.Contains to be style-agnostic.
+	if strings.Contains(view, "Select an agent") {
+		t.Errorf("agentDetail.View() contains placeholder %q; want router agent data", "Select an agent")
+	}
+	// The view should contain "router" (the agent type).
+	if !strings.Contains(view, "router") {
+		t.Errorf("agentDetail.View() does not contain %q; full view: %q", "router", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // handleProviderSwitch — session resume (TUI-031)
 // ---------------------------------------------------------------------------
 
@@ -1694,9 +1762,8 @@ func TestProviderSwitchDebounce_SeqIncrementsOnKeyPress(t *testing.T) {
 		t.Fatalf("initial providerSwitchSeq = %d; want 0", m.providerSwitchSeq)
 	}
 
-	// Simulate a CycleProvider key press (alt+shift+p / alt+P).
-	// TUI-052: Shift+Tab rebound to ReverseToggleFocus; CycleProvider moved to alt+P.
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true}
+	// Simulate a CycleProvider key press (alt+]).
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]"), Alt: true}
 	updated, _ := m.Update(msg)
 	result := updated.(AppModel)
 
@@ -1708,8 +1775,8 @@ func TestProviderSwitchDebounce_SeqIncrementsOnKeyPress(t *testing.T) {
 func TestProviderSwitchDebounce_RapidPressesIncrementSeq(t *testing.T) {
 	m := newReadyAppModel(120, 40)
 
-	// TUI-052: CycleProvider rebound from shift+tab to alt+P.
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true}
+	// CycleProvider bound to alt+].
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]"), Alt: true}
 	for i := 0; i < 3; i++ {
 		updated, _ := m.Update(msg)
 		m = updated.(AppModel)
@@ -1772,9 +1839,8 @@ func TestProviderSwitchDebounce_StreamingBlocksKeyPress(t *testing.T) {
 
 	seqBefore := m.providerSwitchSeq
 
-	// Attempt CycleProvider while streaming.
-	// TUI-052: CycleProvider rebound from shift+tab to alt+P.
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("P"), Alt: true}
+	// Attempt CycleProvider while streaming (alt+]).
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("]"), Alt: true}
 	updated, cmd := m.Update(msg)
 	result := updated.(AppModel)
 

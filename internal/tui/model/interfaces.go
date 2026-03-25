@@ -177,6 +177,13 @@ type dashboardWidget interface {
 	SetData(cost float64, tokens int64, msgs, agents, teams int, start time.Time)
 	// SetTier notifies the component of the current responsive layout tier.
 	SetTier(tier LayoutTier)
+	// Update processes a tea.Msg when the dashboard holds keyboard focus.
+	// The concrete type mutates itself in place and returns only the Cmd,
+	// following the same pointer-receiver mutation pattern used by other
+	// widget interfaces (claudePanelWidget, toastWidget, etc.).
+	Update(msg tea.Msg) tea.Cmd
+	// SetFocused controls whether the dashboard processes keyboard events.
+	SetFocused(focused bool)
 }
 
 // ---------------------------------------------------------------------------

@@ -258,15 +258,19 @@ func (d *CLIDriver) Start() tea.Cmd {
 
 // buildArgs constructs the argument slice for the claude command.
 func (d *CLIDriver) buildArgs() []string {
+	// --verbose is REQUIRED: claude CLI 2.1.81+ requires --verbose when
+	// using --output-format stream-json, even in interactive (non-print) mode.
 	args := []string{
 		"--input-format", "stream-json",
 		"--output-format", "stream-json",
+		"--verbose",
 		"--include-partial-messages",
 	}
 
-	if d.opts.ConfigDir != "" {
-		args = append(args, "--config-dir", d.opts.ConfigDir)
-	}
+	// NOTE: --config-dir is NOT a valid claude CLI flag. The config directory
+	// override is propagated via the CLAUDE_CONFIG_DIR environment variable,
+	// which is set in cmd/gofortress/main.go when --config-dir is passed to
+	// the TUI. The claude subprocess inherits this env var automatically.
 
 	permMode := d.opts.PermissionMode
 	if permMode == "" {
@@ -284,12 +288,12 @@ func (d *CLIDriver) buildArgs() []string {
 
 	if d.opts.MCPConfigPath != "" {
 		args = append(args, "--mcp-config", d.opts.MCPConfigPath)
-		args = append(args, "--allowedTools", "mcp__gofortress__*")
+		args = append(args, "--allowedTools", "mcp__gofortress-interactive__*")
 	}
 
-	if d.opts.Verbose {
-		args = append(args, "--verbose")
-	}
+	// NOTE: --verbose is already unconditionally included above (required by
+	// claude CLI 2.1.81+ for stream-json output). The d.opts.Verbose flag
+	// controls debug logging in the TUI itself, not the CLI subprocess.
 
 	return args
 }

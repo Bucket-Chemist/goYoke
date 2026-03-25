@@ -38,6 +38,12 @@ func (m *AgentDetailModel) SetAgent(agent *state.Agent) {
 	m.agent = agent
 }
 
+// HasAgent reports whether an agent is currently set. Returns false when the
+// detail pane is in its empty state (showing the "Select an agent" placeholder).
+func (m AgentDetailModel) HasAgent() bool {
+	return m.agent != nil
+}
+
 // SetSize updates the viewport dimensions for responsive rendering.
 func (m *AgentDetailModel) SetSize(width, height int) {
 	m.width = width

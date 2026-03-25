@@ -348,7 +348,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// -----------------------------------------------------------------
 
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
-		return m.handleAgentRegistryMsg()
+		return m.handleAgentRegistryMsg(msg)
 
 	case agents.AgentSelectedMsg:
 		return m.handleAgentSelected(msg)

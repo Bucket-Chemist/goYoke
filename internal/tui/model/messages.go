@@ -44,6 +44,15 @@ type AssistantMsg struct {
 	Streaming bool
 }
 
+// ToolUseMsg signals that the assistant invoked a tool.  The Claude panel
+// renders it as a collapsed tool block in the conversation so the user
+// can see what tools the router is calling (spawn_agent, Read, etc.).
+type ToolUseMsg struct {
+	ToolName string
+	ToolID   string
+	Input    string // truncated JSON input for display
+}
+
 // ToolResultMsg carries the result of a single tool invocation.
 type ToolResultMsg struct {
 	ToolName string

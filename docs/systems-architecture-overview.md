@@ -1,8 +1,8 @@
 # GOgent-Fortress Systems Architecture v1.0
 
-> **Schema Versions:** routing-schema v2.2.0 | handoff v1.3 | ML telemetry v1.0
-> **Last Updated:** 2026-01-26
-> **Status:** Production Ready - Complete Implementation
+> **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1
+> **Last Updated:** 2026-03-24
+> **Status:** Production Ready - Complete Implementation (Hooks + Go TUI v2.0.0-rc1)
 
 ---
 
@@ -87,7 +87,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │  │     GLOBAL SCOPE (~/.gogent/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
 │  │  │                                │  │                  CONFIGURATION (~/.claude/)                        │ │    │
 │  │  │ • failure-tracker.jsonl        │  │                                                                    │ │    │
-│  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.2.0)    • agents/*.yaml                │ │    │
+│  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.5.0)    • agents/*.yaml                │ │    │
 │  │  │ • escalations.jsonl            │  │  • conventions/*.md                 • skills/*/SKILL.md           │ │    │
 │  │  │ • scout-recommendations.jsonl  │  │  • CLAUDE.md                        • rules/*.md                   │ │    │
 │  │  │                                │  │                                                                    │ │    │
@@ -599,7 +599,7 @@ flowchart TD
     parse --> check1{Tool == Task?}
 
     check1 -->|No| pass1[Pass through]
-    check1 -->|Yes| load[Load Schema v2.2.0]
+    check1 -->|Yes| load[Load Schema v2.5.0]
 
     load --> v1[Check 1: Einstein/Opus Blocking]
     v1 -->|task_invocation_blocked| block1[BLOCK: Use /einstein instead]
@@ -629,7 +629,7 @@ flowchart TD
 | Subagent Type | Yes | Yes | Ensure agent-subagent_type pairing matches schema |
 | Model Mismatch | No | No | Warn if requested model differs from agents-index |
 
-### 6.2 Agent-Subagent Mapping (routing-schema v2.2.0)
+### 6.2 Agent-Subagent Mapping (routing-schema v2.5.0)
 
 | Agent | Required subagent_type | Rationale |
 |-------|------------------------|-----------|
@@ -890,7 +890,7 @@ $XDG_DATA_HOME/gogent/
 └── claude-error-patterns.jsonl      # Session error patterns
 │
 ~/.claude/
-├── routing-schema.json              # v2.2.0 - Source of truth
+├── routing-schema.json              # v2.5.0 - Source of truth
 ├── CLAUDE.md                        # Global configuration
 ├── conventions/                     # Language conventions
 │   ├── python.md

@@ -85,6 +85,13 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 		})
 		m.shared.agentRegistry.InvalidateTreeCache()
 		m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+		// Auto-select the root agent in the detail panel so the right panel
+		// shows live data immediately instead of "Select an agent".
+		if id := m.agentTree.SelectedID(); id != "" {
+			if agent := m.shared.agentRegistry.Get(id); agent != nil {
+				m.agentDetail.SetAgent(agent)
+			}
+		}
 	}
 
 	return m, m.waitForCLIEvent()
@@ -95,14 +102,30 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
-	// Forward text content to Claude panel.
+	// Forward text and tool_use content to Claude panel.
 	if m.shared.claudePanel != nil {
 		for _, block := range msg.Message.Content {
-			if block.Type == "text" && block.Text != "" {
+			switch {
+			case block.Type == "text" && block.Text != "":
 				streaming := msg.Message.StopReason == nil
 				cmd := m.shared.claudePanel.HandleMsg(AssistantMsg{
 					Text:      block.Text,
 					Streaming: streaming,
+				})
+				if cmd != nil {
+					cmds = append(cmds, cmd)
+				}
+			case block.Type == "tool_use" && block.Name != "":
+				// Show tool calls in the chat so the user has visibility
+				// into what the router is doing (spawn_agent, Read, etc.).
+				input := string(block.Input)
+				if len(input) > 120 {
+					input = input[:120] + "…"
+				}
+				cmd := m.shared.claudePanel.HandleMsg(ToolUseMsg{
+					ToolName: block.Name,
+					ToolID:   block.ID,
+					Input:    input,
 				})
 				if cmd != nil {
 					cmds = append(cmds, cmd)
@@ -119,6 +142,13 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 			// the mutations that SyncAssistantEvent just applied.
 			m.shared.agentRegistry.InvalidateTreeCache()
 			m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+			// Sync detail panel with the currently highlighted tree node so
+			// that activity updates are reflected without requiring navigation.
+			if id := m.agentTree.SelectedID(); id != "" {
+				if agent := m.shared.agentRegistry.Get(id); agent != nil {
+					m.agentDetail.SetAgent(agent)
+				}
+			}
 		}
 	}
 
@@ -164,6 +194,13 @@ func (m AppModel) handleUserEvent(msg cli.UserEvent) (tea.Model, tea.Cmd) {
 			// the mutations that SyncUserEvent just applied.
 			m.shared.agentRegistry.InvalidateTreeCache()
 			m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+			// Sync detail panel with the currently highlighted tree node so
+			// that status changes (complete / error) are reflected immediately.
+			if id := m.agentTree.SelectedID(); id != "" {
+				if agent := m.shared.agentRegistry.Get(id); agent != nil {
+					m.agentDetail.SetAgent(agent)
+				}
+			}
 		}
 	}
 

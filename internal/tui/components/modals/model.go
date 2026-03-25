@@ -326,6 +326,8 @@ func modalBorderColor(t ModalType) lipgloss.AdaptiveColor {
 	switch t {
 	case Permission:
 		return config.ColorWarning
+	case TwoStepConfirm:
+		return config.ColorError
 	default:
 		// Confirm, Ask, Select, Input all use cyan (ColorPrimary / ColorInfo).
 		return config.ColorPrimary
