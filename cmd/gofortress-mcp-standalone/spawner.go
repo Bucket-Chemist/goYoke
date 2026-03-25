@@ -299,7 +299,37 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 		})
 	})
 
+	// done is closed when the subprocess I/O goroutines have drained and
+	// wg.Wait() returns. It lets the ctx-watcher below exit cleanly.
+	done := make(chan struct{})
+
+	// Context-cancellation watcher: exec.CommandContext kills only the direct
+	// process (SIGKILL to the PID) when ctx expires. Because Setsid is set,
+	// claude's child processes (MCP servers, etc.) are in the same process
+	// group but are NOT killed by the direct-PID SIGKILL. Those children hold
+	// the stdout/stderr pipes open, blocking wg.Wait() until the 5-minute
+	// timer fires. Sending SIGTERM to the process group (-pid) closes all
+	// descendants promptly.
+	go func() {
+		select {
+		case <-ctx.Done():
+			killProcess(syscall.SIGTERM)
+			time.AfterFunc(time.Duration(sigkillGraceMS)*time.Millisecond, func() {
+				select {
+				case <-done:
+					// process group already exited
+				default:
+					if cmd.Process != nil {
+						syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) //nolint:errcheck
+					}
+				}
+			})
+		case <-done:
+		}
+	}()
+
 	wg.Wait()
+	close(done)
 	timer.Stop()
 
 	waitErr := cmd.Wait()
