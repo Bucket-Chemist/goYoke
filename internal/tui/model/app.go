@@ -353,6 +353,24 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case agents.AgentSelectedMsg:
 		return m.handleAgentSelected(msg)
 
+	case agents.AgentDetailFocusMsg:
+		// Transfer focus from tree to detail panel.
+		m.agentTree.SetFocused(false)
+		m.agentDetail.SetFocused(true)
+		// Also select the agent.
+		if m.shared.agentRegistry != nil {
+			if a := m.shared.agentRegistry.Get(msg.AgentID); a != nil {
+				m.agentDetail.SetAgent(a)
+			}
+		}
+		return m, nil
+
+	case agents.AgentTreeFocusMsg:
+		// Transfer focus back from detail to tree.
+		m.agentDetail.SetFocused(false)
+		m.agentTree.SetFocused(true)
+		return m, nil
+
 	case ToastMsg:
 		return m.handleToastMsg(msg)
 

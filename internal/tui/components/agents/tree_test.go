@@ -199,13 +199,37 @@ func TestEnterEmitsAgentSelectedMsg(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("Enter should return a non-nil command")
 	}
+	// Enter emits a batched command (AgentSelectedMsg + AgentDetailFocusMsg).
+	// tea.Batch returns a BatchMsg which is a []Cmd.
 	msg := cmd()
-	sel, ok := msg.(agents.AgentSelectedMsg)
+	batch, ok := msg.(tea.BatchMsg)
 	if !ok {
-		t.Fatalf("Enter command produced %T; want AgentSelectedMsg", msg)
+		t.Fatalf("Enter command produced %T; want tea.BatchMsg", msg)
 	}
-	if sel.AgentID != "root" {
-		t.Errorf("AgentSelectedMsg.AgentID = %q; want %q", sel.AgentID, "root")
+
+	// Find AgentSelectedMsg in the batch.
+	foundSelected := false
+	foundFocus := false
+	for _, c := range batch {
+		if c == nil {
+			continue
+		}
+		m := c()
+		if sel, ok := m.(agents.AgentSelectedMsg); ok {
+			foundSelected = true
+			if sel.AgentID != "root" {
+				t.Errorf("AgentSelectedMsg.AgentID = %q; want %q", sel.AgentID, "root")
+			}
+		}
+		if _, ok := m.(agents.AgentDetailFocusMsg); ok {
+			foundFocus = true
+		}
+	}
+	if !foundSelected {
+		t.Error("Enter batch missing AgentSelectedMsg")
+	}
+	if !foundFocus {
+		t.Error("Enter batch missing AgentDetailFocusMsg")
 	}
 }
 

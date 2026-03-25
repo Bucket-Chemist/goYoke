@@ -26,6 +26,16 @@ type AgentSelectedMsg struct {
 	AgentID string
 }
 
+// AgentDetailFocusMsg is emitted when the user presses Enter on a tree node.
+// The parent model should transfer keyboard focus from the tree to the detail panel.
+type AgentDetailFocusMsg struct {
+	AgentID string
+}
+
+// AgentTreeFocusMsg is emitted when the user presses Escape in the detail panel.
+// The parent model should transfer keyboard focus back to the tree.
+type AgentTreeFocusMsg struct{}
+
 // ---------------------------------------------------------------------------
 // Status styling helpers
 // ---------------------------------------------------------------------------
@@ -183,7 +193,11 @@ func (m AgentTreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "enter":
 		id := m.SelectedID()
 		if id != "" {
-			return m, emitSelected(id)
+			// Emit both: select the agent AND focus the detail panel.
+			return m, tea.Batch(
+				emitSelected(id),
+				func() tea.Msg { return AgentDetailFocusMsg{AgentID: id} },
+			)
 		}
 	}
 

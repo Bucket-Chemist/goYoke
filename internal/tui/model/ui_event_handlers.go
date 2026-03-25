@@ -113,6 +113,11 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		m.updateBreadcrumbs()
 	}
 
+	// Ensure focus state is propagated on startup. WindowSizeMsg is the first
+	// message delivered by Bubbletea, so this is the earliest point where we
+	// can focus the Claude panel's text input for immediate typing.
+	m.syncFocusState()
+
 	return m, nil
 }
 
@@ -197,11 +202,16 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 			parentID = rootID
 		}
 		_ = m.shared.agentRegistry.Register(state.Agent{
-			ID:        msg.AgentID,
-			AgentType: msg.AgentType,
-			ParentID:  parentID,
-			Status:    state.StatusRunning,
-			StartedAt: time.Now(),
+			ID:          msg.AgentID,
+			AgentType:   msg.AgentType,
+			ParentID:    parentID,
+			Model:       msg.Model,
+			Tier:        msg.Tier,
+			Description: msg.Description,
+			Conventions: msg.Conventions,
+			Prompt:      msg.Prompt,
+			Status:      state.StatusRunning,
+			StartedAt:   time.Now(),
 		})
 	case AgentUpdatedMsg:
 		_ = m.shared.agentRegistry.Update(msg.AgentID, func(a *state.Agent) {

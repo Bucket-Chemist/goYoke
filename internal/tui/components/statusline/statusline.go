@@ -240,62 +240,30 @@ func (m StatusLineModel) renderContextBar() string {
 	return fmt.Sprintf("ctx:[%s%s] %.0f%%", coloredFill, mutedEmpty, pct)
 }
 
-// View implements tea.Model. It renders the status bar as two rows:
+// View implements tea.Model. It renders the status bar as two rows matching
+// the TS TUI layout:
 //
-//	Row 1: $cost  tokens  ctx:[bar] %  perm-mode  elapsed  [thinking...]
-//	Row 2: model  provider  branch  auth  agents:N  [uncommitted:N]
+//	Row 1: [model] [perm] 📁 project | 🌿 branch              auth · email
+//	Row 2: ▓▓▓░░ 41% | $0.45                       ⏱ 5m 12s | ↻ streaming
 //
-// Cost, context, permission and auth fields use semantic colors from the
-// active theme (green/yellow/red based on thresholds). The two rows are
-// joined vertically.
+// Cost, context, permission and auth fields use semantic colors.
 func (m StatusLineModel) View() string {
-	label := config.StyleMuted.Render
-	value := config.StyleStatusBar.Render
+	muted := config.StyleMuted.Render
 
-	// Row 1: financial / quota fields
-	costField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label("cost:"),
-		m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost)),
-	)
-	tokenField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" tokens:"),
-		value(formatTokens(m.TokenCount)),
-	)
-	// Context field uses a visual progress bar (falls back to text on narrow terminals).
-	ctxField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" "),
-		m.renderContextBar(),
-	)
-	permField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" perm:"),
-		m.permStyle(m.PermissionMode).Render(m.PermissionMode),
-	)
+	// ===== ROW 1: identity line =====
 
-	// Elapsed time since session started.
-	elapsedField := ""
-	if !m.SessionStart.IsZero() {
-		elapsed := time.Since(m.SessionStart)
-		mins := int(elapsed.Minutes())
-		secs := int(elapsed.Seconds()) % 60
-		elapsedField = lipgloss.JoinHorizontal(lipgloss.Top,
-			label(" ⏱"),
-			value(fmt.Sprintf("%dm%ds", mins, secs)),
-		)
+	// Model badge: [claude-opus-4-6[1m]]
+	modelBadge := m.theme.InfoStyle().Render("[" + m.ActiveModel + "]")
+
+	// Permission badge: [acceptEdits]
+	permLabel := m.PermissionMode
+	if permLabel == "" {
+		permLabel = "default"
 	}
+	permBadge := m.permStyle(permLabel).Render("[" + permLabel + "]")
 
-	// Streaming / thinking indicator uses InfoStyle (cyan).
-	thinkingField := ""
-	if m.Streaming {
-		frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
-		thinkingField = lipgloss.JoinHorizontal(lipgloss.Top,
-			label(" "),
-			m.theme.InfoStyle().Render(frame+" thinking..."),
-		)
-	}
-
-	// Vim mode indicator: shown when vim keybindings are enabled (TUI-062).
-	// Renders [NORMAL] in muted style or [INSERT] in info/accent style.
-	vimField := ""
+	// Vim mode badge (optional)
+	vimBadge := ""
 	if m.VimEnabled {
 		mode := m.VimMode
 		if mode == "" {
@@ -307,87 +275,95 @@ func (m StatusLineModel) View() string {
 		} else {
 			vimStyle = config.StyleMuted
 		}
-		vimField = vimStyle.Render("[" + mode + "]")
+		vimBadge = vimStyle.Render("["+mode+"]") + " "
 	}
 
-	// Plan mode indicator: shown before cost when plan mode is active.
-	planField := ""
+	// Plan mode badge (optional)
+	planBadge := ""
 	if m.PlanActive {
 		var planText string
 		if m.PlanTotalSteps > 0 {
-			planText = fmt.Sprintf("[PLAN MODE: step %d/%d]", m.PlanStep, m.PlanTotalSteps)
+			planText = fmt.Sprintf("[PLAN %d/%d]", m.PlanStep, m.PlanTotalSteps)
 		} else {
-			planText = "[PLAN MODE]"
+			planText = "[PLAN]"
 		}
-		planField = m.theme.WarningStyle().Render(planText)
+		planBadge = m.theme.WarningStyle().Render(planText) + " "
 	}
 
-	row1Parts := []string{costField, tokenField, ctxField, permField}
-	if vimField != "" {
-		row1Parts = append([]string{vimField, " "}, row1Parts...)
-	}
-	if planField != "" {
-		row1Parts = append([]string{planField, " "}, row1Parts...)
-	}
-	if elapsedField != "" {
-		row1Parts = append(row1Parts, elapsedField)
-	}
-	if thinkingField != "" {
-		row1Parts = append(row1Parts, thinkingField)
+	// Project name: extract from working directory or use provider name
+	projectName := m.Provider
+	if projectName == "" {
+		projectName = "—"
 	}
 
-	row1 := lipgloss.NewStyle().
-		Width(m.width).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top, row1Parts...))
+	// Git branch
+	branchField := ""
+	if m.GitBranch != "" && m.GitBranch != "N/A" {
+		branchField = muted(" | 🌿 ") + config.StyleStatusBar.Render(m.GitBranch)
+		if m.UncommittedCount > 0 {
+			branchField += m.theme.WarningStyle().Render(fmt.Sprintf(" ~%d", m.UncommittedCount))
+		}
+	}
 
-	// Row 2: identity / environment fields
-	modelField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label("model:"),
-		value(m.ActiveModel),
-	)
-	providerField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" provider:"),
-		value(m.Provider),
-	)
-	branchField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" branch:"),
-		value(m.GitBranch),
-	)
+	row1Left := vimBadge + planBadge + modelBadge + " " + permBadge +
+		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + branchField
 
-	// Auth field: green for authenticated, red for "N/A".
+	// Auth: right-aligned
 	var authValue string
 	if m.AuthStatus == "N/A" || m.AuthStatus == "" {
-		authValue = m.theme.ErrorStyle().Render(m.AuthStatus)
+		authValue = m.theme.ErrorStyle().Render("N/A")
 	} else {
 		authValue = m.theme.SuccessStyle().Render(m.AuthStatus)
 	}
-	authField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" auth:"),
-		authValue,
-	)
+	row1Right := authValue
 
-	// Agent count field.
-	agentField := lipgloss.JoinHorizontal(lipgloss.Top,
-		label(" agents:"),
-		value(fmt.Sprintf("%d", m.AgentCount)),
-	)
-
-	row2Parts := []string{modelField, providerField, branchField, authField, agentField}
-
-	// Uncommitted count field: only shown when > 0, styled with warning color.
-	if m.UncommittedCount > 0 {
-		uncommittedField := lipgloss.JoinHorizontal(lipgloss.Top,
-			label(" uncommitted:"),
-			m.theme.WarningStyle().Render(fmt.Sprintf("%d", m.UncommittedCount)),
-		)
-		row2Parts = append(row2Parts, uncommittedField)
+	// Agents count (only if > 0)
+	if m.AgentCount > 0 {
+		row1Right = muted(fmt.Sprintf("agents:%d · ", m.AgentCount)) + row1Right
 	}
 
-	row2 := lipgloss.NewStyle().
-		Width(m.width).
-		Render(lipgloss.JoinHorizontal(lipgloss.Top, row2Parts...))
+	row1 := m.joinLeftRight(row1Left, row1Right)
+
+	// ===== ROW 2: metrics line =====
+
+	// Context bar + cost
+	ctxBar := m.renderContextBar()
+	costValue := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
+	row2Left := ctxBar + muted(" | ") + costValue
+
+	// Elapsed + streaming status: right-aligned
+	var row2RightParts []string
+
+	if !m.SessionStart.IsZero() {
+		elapsed := time.Since(m.SessionStart)
+		mins := int(elapsed.Minutes())
+		secs := int(elapsed.Seconds()) % 60
+		row2RightParts = append(row2RightParts,
+			muted("⏱ ")+config.StyleStatusBar.Render(fmt.Sprintf("%dm %ds", mins, secs)))
+	}
+
+	if m.Streaming {
+		frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
+		row2RightParts = append(row2RightParts,
+			m.theme.InfoStyle().Render(frame+" streaming"))
+	}
+
+	row2Right := strings.Join(row2RightParts, muted(" | "))
+	row2 := m.joinLeftRight(row2Left, row2Right)
 
 	return lipgloss.JoinVertical(lipgloss.Left, row1, row2)
+}
+
+// joinLeftRight renders a left-aligned and right-aligned string on one line,
+// filling the gap with spaces to span the full terminal width.
+func (m StatusLineModel) joinLeftRight(left, right string) string {
+	leftW := lipgloss.Width(left)
+	rightW := lipgloss.Width(right)
+	gap := m.width - leftW - rightW
+	if gap < 1 {
+		gap = 1
+	}
+	return left + strings.Repeat(" ", gap) + right
 }
 
 // ---------------------------------------------------------------------------

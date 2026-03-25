@@ -229,9 +229,14 @@ func (b *IPCBridge) handleAgentRegister(req mcp.IPCRequest) {
 		return
 	}
 	b.sender.Send(model.AgentRegisteredMsg{
-		AgentID:   p.AgentID,
-		AgentType: p.AgentType,
-		ParentID:  p.ParentID,
+		AgentID:     p.AgentID,
+		AgentType:   p.AgentType,
+		ParentID:    p.ParentID,
+		Model:       p.Model,
+		Tier:        p.Tier,
+		Description: p.Description,
+		Conventions: p.Conventions,
+		Prompt:      p.Prompt,
 	})
 }
 

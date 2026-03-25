@@ -30,11 +30,13 @@ func fullyPopulatedAgent() *state.Agent {
 			Preview:   "Read /internal/auth/handler.go",
 			Timestamp: time.Now(),
 		},
-		StartedAt: time.Now().Add(-2*time.Minute - 15*time.Second),
-		Duration:  0,
-		Cost:      0.045,
-		Tokens:    12450,
-		Children:  []string{},
+		StartedAt:   time.Now().Add(-2*time.Minute - 15*time.Second),
+		Duration:    0,
+		Cost:        0.045,
+		Tokens:      12450,
+		Children:    []string{},
+		Conventions: []string{"go.md", "go-bubbletea.md"},
+		Prompt:      "AGENT: go-pro\n\nTASK: Implement OAuth flow",
 	}
 }
 
@@ -325,11 +327,74 @@ func TestView_AllFieldLabelsPresent(t *testing.T) {
 	m.SetAgent(fullyPopulatedAgent())
 	view := m.View()
 
-	labels := []string{"Status", "Type", "Model", "Tier", "Duration", "Cost", "Tokens", "Activity"}
+	labels := []string{"Status", "Type", "Model", "Tier", "Duration", "Cost", "Tokens"}
 	for _, label := range labels {
 		if !strings.Contains(view, label) {
 			t.Errorf("View() missing field label %q; got:\n%s", label, view)
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible sections
+// ---------------------------------------------------------------------------
+
+func TestView_SectionHeaders(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent())
+	view := m.View()
+
+	// Overview and Activity start expanded (▼), Context starts collapsed (▸).
+	if !strings.Contains(view, "▼ Overview") {
+		t.Errorf("View() should show '▼ Overview' (expanded); got:\n%s", view)
+	}
+	if !strings.Contains(view, "▸ Context") {
+		t.Errorf("View() should show '▸ Context' (collapsed); got:\n%s", view)
+	}
+}
+
+func TestView_ConventionsShownWhenContextExpanded(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+
+	// By default Context is collapsed — conventions should NOT appear.
+	view := m.View()
+	if strings.Contains(view, "go.md") {
+		t.Errorf("collapsed Context section should NOT show 'go.md'; got:\n%s", view)
+	}
+}
+
+func TestView_PromptSectionVisible(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "Prompt") {
+		t.Errorf("View() should show 'Prompt' section header; got:\n%s", view)
+	}
+}
+
+func TestView_ErrorSectionHiddenForRunning(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent()) // StatusRunning, no error
+	view := m.View()
+	if strings.Contains(view, "▸ Error") || strings.Contains(view, "▼ Error") {
+		t.Errorf("running agent should NOT show Error section; got:\n%s", view)
+	}
+}
+
+func TestView_ErrorSectionVisibleForError(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(errorAgent())
+	view := m.View()
+	if !strings.Contains(view, "Error") {
+		t.Errorf("error agent should show Error section; got:\n%s", view)
 	}
 }
 

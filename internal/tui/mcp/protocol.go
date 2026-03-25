@@ -79,6 +79,16 @@ type AgentRegisterPayload struct {
 	AgentType string `json:"agentType"`
 	// ParentID optionally identifies the spawning agent.
 	ParentID string `json:"parentId,omitempty"`
+	// Model is the LLM model used (e.g. "sonnet", "opus", "haiku").
+	Model string `json:"model,omitempty"`
+	// Tier is the cost tier (e.g. "1", "1.5", "2", "3", "external").
+	Tier string `json:"tier,omitempty"`
+	// Description is a short human-readable label for the agent.
+	Description string `json:"description,omitempty"`
+	// Conventions lists convention files loaded for this agent.
+	Conventions []string `json:"conventions,omitempty"`
+	// Prompt is the augmented prompt sent to the agent (truncated to 2000 chars).
+	Prompt string `json:"prompt,omitempty"`
 }
 
 // AgentUpdatePayload is the payload for a TypeAgentUpdate message.

@@ -163,6 +163,21 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+
+	// Tab switching keys (Alt+C, Alt+A, Alt+T, Alt+Y).
+	// These must be in the global section so they work regardless of focus.
+	case key.Matches(msg, m.keys.Tab.TabChat),
+		key.Matches(msg, m.keys.Tab.TabAgentConfig),
+		key.Matches(msg, m.keys.Tab.TabTeamConfig),
+		key.Matches(msg, m.keys.Tab.TabTelemetry):
+		if m.tabBar != nil {
+			cmd := m.tabBar.HandleMsg(msg)
+			m.activeTab = m.tabBar.ActiveTab()
+			m.updateHintContext()
+			m.updateBreadcrumbs()
+			return m, cmd
+		}
+		return m, nil
 	}
 
 	// Focus-specific routing.
@@ -209,6 +224,18 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
+		// Forward keys to detail panel when it has focus, otherwise to tree.
+		if m.agentDetail.HasAgent() {
+			result, cmd := m.agentDetail.Update(msg)
+			if updated, ok := result.(tea.Model); ok {
+				if detail, ok := updated.(agents.AgentDetailModel); ok {
+					m.agentDetail = detail
+				}
+			}
+			if cmd != nil {
+				return m, cmd
+			}
+		}
 		result, cmd := m.agentTree.Update(msg)
 		if updated, ok := result.(agents.AgentTreeModel); ok {
 			m.agentTree = updated

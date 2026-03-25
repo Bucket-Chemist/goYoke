@@ -615,21 +615,35 @@ func handleSpawnAgent(
 	// 5. Generate a unique agent instance ID.
 	agentID := uuid.New().String()
 
-	// 6. Notify the TUI that a new agent has been registered.
-	// m-3 fix: include ParentID from GOGENT_PARENT_AGENT env var for tree hierarchy.
-	uds.notify(TypeAgentRegister, AgentRegisterPayload{
-		AgentID:   agentID,
-		AgentType: agent.ID,
-		ParentID:  parentType,
-	})
-
-	// 7. Build the augmented prompt with agent identity and context.
+	// 6. Build the augmented prompt with agent identity and context.
 	// m-1 fix: pass agent.ContextRequirements (was nil, parity with standalone).
 	augmented, err := routing.BuildFullAgentContext(agent.ID, agent.ContextRequirements, nil, input.Prompt)
 	if err != nil {
 		slog.Warn("failed to build agent context", "err", err, "agent", agent.ID)
 		augmented = input.Prompt
 	}
+
+	// 7. Notify the TUI that a new agent has been registered.
+	// Includes rich metadata (model, tier, conventions, prompt) for the detail panel.
+	promptPreview := augmented
+	if len(promptPreview) > 2000 {
+		promptPreview = promptPreview[:2000] + "\n[TRUNCATED]"
+	}
+	tierStr := fmt.Sprintf("%v", agent.Tier) // agent.Tier is any (float64 or string)
+	modelStr := input.Model
+	if modelStr == "" {
+		modelStr = agent.Model
+	}
+	uds.notify(TypeAgentRegister, AgentRegisterPayload{
+		AgentID:     agentID,
+		AgentType:   agent.ID,
+		ParentID:    parentType,
+		Model:       modelStr,
+		Tier:        tierStr,
+		Description: input.Description,
+		Conventions: agent.ConventionsRequired,
+		Prompt:      promptPreview,
+	})
 
 	// 8. Notify the TUI that the agent is now running.
 	uds.notify(TypeAgentUpdate, AgentUpdatePayload{

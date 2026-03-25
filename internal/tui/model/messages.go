@@ -133,9 +133,14 @@ type TickMsg struct {
 // AgentRegisteredMsg is emitted when a new agent process is first detected.
 // ParentID is empty for root-level agents.
 type AgentRegisteredMsg struct {
-	AgentID   string
-	AgentType string
-	ParentID  string
+	AgentID     string
+	AgentType   string
+	ParentID    string
+	Model       string
+	Tier        string
+	Description string
+	Conventions []string
+	Prompt      string
 }
 
 // AgentUpdatedMsg is emitted when an existing agent's status changes.

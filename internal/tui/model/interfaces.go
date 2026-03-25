@@ -27,8 +27,11 @@ type tabBarWidget interface {
 	SetWidth(int)
 	// HandleMsg forwards a tea.Msg to the tab bar for internal processing.
 	// It mutates the receiver in place and returns any Cmd to schedule.
-	// Currently used to deliver TabFlashMsg (TUI-061) to the flash animation.
+	// Currently used to deliver TabFlashMsg (TUI-061) to the flash animation
+	// and to process tab-switching keys (Alt+C, Alt+A, Alt+T, Alt+Y).
 	HandleMsg(msg tea.Msg) tea.Cmd
+	// ActiveTab returns the currently active tab ID.
+	ActiveTab() TabID
 }
 
 // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -13,111 +14,357 @@ import (
 )
 
 // ---------------------------------------------------------------------------
+// Detail Section
+// ---------------------------------------------------------------------------
+
+// DetailSection represents one collapsible section in the agent detail panel.
+type DetailSection struct {
+	Title    string
+	Expanded bool
+	render   func(a *state.Agent, w int) string // renders section content
+	visible  func(a *state.Agent) bool          // returns false to hide section entirely
+}
+
+// ---------------------------------------------------------------------------
 // AgentDetailModel
 // ---------------------------------------------------------------------------
 
-// AgentDetailModel renders the full details of a single agent. It is
-// display-only: Update is a no-op and the model never emits commands.
-//
-// The zero value is usable and renders the empty-state placeholder.
+// AgentDetailModel renders the full details of a single agent with collapsible
+// sections. Navigation: Up/Down move between sections, Enter toggles collapse.
+// Content is scrollable via a viewport.
 type AgentDetailModel struct {
-	agent  *state.Agent
-	width  int
-	height int
+	agent       *state.Agent
+	sections    []DetailSection
+	selectedIdx int
+	width       int
+	height      int
+	vp          viewport.Model
+	focused     bool
 }
 
-// NewAgentDetailModel returns an AgentDetailModel in the empty state.
+// NewAgentDetailModel returns an AgentDetailModel with default sections.
 func NewAgentDetailModel() AgentDetailModel {
-	return AgentDetailModel{}
+	m := AgentDetailModel{
+		vp: viewport.New(40, 10),
+	}
+	m.sections = m.defaultSections()
+	return m
 }
 
-// SetAgent sets the agent whose details are displayed. Passing nil clears the
-// detail pane and shows the empty-state placeholder. This must be called from
-// the parent model's Update method — never from View.
+// defaultSections builds the standard section list.
+func (m AgentDetailModel) defaultSections() []DetailSection {
+	return []DetailSection{
+		{
+			Title:    "Overview",
+			Expanded: true,
+			render:   renderOverview,
+			visible:  alwaysVisible,
+		},
+		{
+			Title:    "Context",
+			Expanded: false,
+			render:   renderContext,
+			visible:  alwaysVisible,
+		},
+		{
+			Title:    "Prompt",
+			Expanded: false,
+			render:   renderPrompt,
+			visible:  hasPrompt,
+		},
+		{
+			Title:    "Activity",
+			Expanded: true,
+			render:   renderActivity,
+			visible:  isRunningOrHasActivity,
+		},
+		{
+			Title:    "Error",
+			Expanded: true, // errors always start expanded for immediate visibility
+			render:   renderError,
+			visible:  hasError,
+		},
+	}
+}
+
+// SetAgent sets the agent whose details are displayed.
 func (m *AgentDetailModel) SetAgent(agent *state.Agent) {
 	m.agent = agent
+	m.syncViewport()
 }
 
-// HasAgent reports whether an agent is currently set. Returns false when the
-// detail pane is in its empty state (showing the "Select an agent" placeholder).
+// HasAgent reports whether an agent is currently set.
 func (m AgentDetailModel) HasAgent() bool {
 	return m.agent != nil
 }
 
-// SetSize updates the viewport dimensions for responsive rendering.
+// SetSize updates the viewport dimensions.
 func (m *AgentDetailModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
+	m.vp.Width = width
+	m.vp.Height = height
+	m.syncViewport()
 }
 
-// Init implements tea.Model. The detail view requires no startup commands.
+// SetFocused enables or disables keyboard input for section navigation.
+func (m *AgentDetailModel) SetFocused(focused bool) {
+	m.focused = focused
+}
+
+// Init implements tea.Model.
 func (m AgentDetailModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update implements tea.Model. The detail pane is display-only; all messages
-// are ignored and no commands are emitted.
-func (m AgentDetailModel) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
-	return m, nil
+// Update implements tea.Model. Handles keyboard navigation for sections.
+func (m AgentDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if !m.focused || m.agent == nil {
+		return m, nil
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		visible := m.visibleSections()
+		if len(visible) == 0 {
+			return m, nil
+		}
+
+		switch msg.String() {
+		case "up", "k":
+			if m.selectedIdx > 0 {
+				m.selectedIdx--
+			}
+			m.syncViewport()
+		case "down", "j":
+			if m.selectedIdx < len(visible)-1 {
+				m.selectedIdx++
+			}
+			m.syncViewport()
+		case "enter", " ":
+			idx := m.resolveVisibleIndex(m.selectedIdx)
+			if idx >= 0 && idx < len(m.sections) {
+				m.sections[idx].Expanded = !m.sections[idx].Expanded
+				m.syncViewport()
+			}
+		case "backspace", "left", "h":
+			// Return focus to the agent tree. Esc is reserved for global
+			// interrupt (CLI process SIGINT).
+			m.focused = false
+			return m, func() tea.Msg { return AgentTreeFocusMsg{} }
+		}
+	}
+
+	// Let viewport handle scroll (pgup/pgdn/mousewheel).
+	var cmd tea.Cmd
+	m.vp, cmd = m.vp.Update(msg)
+	return m, cmd
 }
 
-// View implements tea.Model. It renders the full detail view for the currently
-// set agent, or a placeholder when no agent is selected.
+// View implements tea.Model.
 func (m AgentDetailModel) View() string {
 	if m.agent == nil {
 		return config.StyleMuted.Render("Select an agent")
 	}
+	return m.vp.View()
+}
 
+// ---------------------------------------------------------------------------
+// Internal rendering
+// ---------------------------------------------------------------------------
+
+// syncViewport rebuilds the full content and sets it on the viewport.
+func (m *AgentDetailModel) syncViewport() {
+	if m.agent == nil {
+		m.vp.SetContent("")
+		return
+	}
+
+	var sb strings.Builder
+	visIdx := 0
+	for i, sec := range m.sections {
+		if sec.visible != nil && !sec.visible(m.agent) {
+			continue
+		}
+
+		// Section header with collapse indicator.
+		indicator := "▸"
+		if sec.Expanded {
+			indicator = "▼"
+		}
+		header := fmt.Sprintf("%s %s", indicator, sec.Title)
+		if m.focused && visIdx == m.selectedIdx {
+			sb.WriteString(config.StyleHighlight.Render(header))
+		} else {
+			sb.WriteString(lipgloss.NewStyle().Bold(true).Render(header))
+		}
+		sb.WriteByte('\n')
+
+		// Section content (only if expanded).
+		if sec.Expanded {
+			content := m.sections[i].render(m.agent, m.contentWidth())
+			if content != "" {
+				sb.WriteString(content)
+				sb.WriteByte('\n')
+			}
+		}
+
+		visIdx++
+	}
+
+	m.vp.SetContent(strings.TrimRight(sb.String(), "\n"))
+}
+
+// visibleSections returns indices of sections visible for the current agent.
+func (m AgentDetailModel) visibleSections() []int {
+	var indices []int
+	for i, sec := range m.sections {
+		if sec.visible == nil || sec.visible(m.agent) {
+			indices = append(indices, i)
+		}
+	}
+	return indices
+}
+
+// resolveVisibleIndex maps a visual selection index to the actual section index.
+func (m AgentDetailModel) resolveVisibleIndex(visIdx int) int {
+	visible := m.visibleSections()
+	if visIdx >= 0 && visIdx < len(visible) {
+		return visible[visIdx]
+	}
+	return -1
+}
+
+// contentWidth returns the usable text width inside the detail pane.
+func (m AgentDetailModel) contentWidth() int {
+	w := m.width - 4 // indent margin
+	if w < 20 {
+		return 20
+	}
+	return w
+}
+
+// ---------------------------------------------------------------------------
+// Section visibility predicates
+// ---------------------------------------------------------------------------
+
+func alwaysVisible(_ *state.Agent) bool { return true }
+
+func hasPrompt(a *state.Agent) bool {
+	return a.Prompt != ""
+}
+
+func hasActivity(a *state.Agent) bool {
+	return a.Activity != nil
+}
+
+func isRunningOrHasActivity(a *state.Agent) bool {
+	return a.Status == state.StatusRunning || a.Activity != nil
+}
+
+func hasError(a *state.Agent) bool {
+	return a.Status == state.StatusError && a.ErrorOutput != ""
+}
+
+// ---------------------------------------------------------------------------
+// Section renderers
+// ---------------------------------------------------------------------------
+
+func renderOverview(a *state.Agent, _ int) string {
 	labelStyle := config.StyleSubtle
 	valueStyle := lipgloss.NewStyle()
 
 	var sb strings.Builder
-
-	// Helper: render one key/value row.
 	row := func(label, value string, valStyle lipgloss.Style) {
-		sb.WriteString(labelStyle.Render(fmt.Sprintf("%-10s", label+":")))
 		sb.WriteString("  ")
+		sb.WriteString(labelStyle.Render(fmt.Sprintf("%-10s", label+":")))
+		sb.WriteString(" ")
 		sb.WriteString(valStyle.Render(value))
 		sb.WriteByte('\n')
 	}
 
-	// Status — colored by lifecycle state (title-case, e.g. "Running").
-	row("Status", capitalise(m.agent.Status.String()), m.statusValueStyle())
-
-	// Type / Model / Tier.
-	row("Type", m.agent.AgentType, valueStyle)
-	row("Model", m.agent.Model, valueStyle)
-	row("Tier", m.agent.Tier, valueStyle)
-
-	// Duration — show elapsed if still running, final duration otherwise.
-	row("Duration", m.formatDuration(), valueStyle)
-
-	// Cost.
-	row("Cost", fmt.Sprintf("$%.3f", m.agent.Cost), valueStyle)
-
-	// Tokens — formatted with thousands separator.
-	row("Tokens", formatTokens(m.agent.Tokens), valueStyle)
-
-	// Activity — most recent fine-grained action.
-	if m.agent.Activity != nil && m.agent.Activity.Preview != "" {
-		row("Activity", m.agent.Activity.Preview, valueStyle)
-	}
-
-	// Error — only shown for error status.
-	if m.agent.Status == state.StatusError && m.agent.ErrorOutput != "" {
-		sb.WriteString(labelStyle.Render(fmt.Sprintf("%-10s", "Error:")) + "\n")
-		wrapped := wordWrap(m.agent.ErrorOutput, m.contentWidth())
-		sb.WriteString(config.StyleError.Render(wrapped))
-		sb.WriteByte('\n')
-	}
+	// Status — colored.
+	statusStyle := statusStyleFor(a.Status)
+	row("Status", capitalise(a.Status.String()), statusStyle)
+	row("Type", a.AgentType, valueStyle)
+	row("Model", a.Model, valueStyle)
+	row("Tier", a.Tier, valueStyle)
+	row("Duration", formatAgentDuration(a), valueStyle)
+	row("Cost", fmt.Sprintf("$%.3f", a.Cost), valueStyle)
+	row("Tokens", formatTokens(a.Tokens), valueStyle)
 
 	return strings.TrimRight(sb.String(), "\n")
 }
 
-// statusValueStyle returns the appropriate lipgloss style for the status
-// value string.
-func (m AgentDetailModel) statusValueStyle() lipgloss.Style {
-	switch m.agent.Status {
+func renderContext(a *state.Agent, w int) string {
+	var sb strings.Builder
+	if len(a.Conventions) > 0 {
+		sb.WriteString("  Conventions:\n")
+		for _, c := range a.Conventions {
+			sb.WriteString(fmt.Sprintf("    • %s\n", c))
+		}
+	} else {
+		sb.WriteString("  No conventions loaded\n")
+	}
+	if a.Description != "" {
+		sb.WriteString(fmt.Sprintf("  Description: %s\n", a.Description))
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+func renderPrompt(a *state.Agent, w int) string {
+	if a.Prompt == "" {
+		return "  (no prompt available)"
+	}
+	// Indent each line of the prompt.
+	lines := strings.Split(a.Prompt, "\n")
+	var sb strings.Builder
+	for _, line := range lines {
+		if len(line) > w {
+			line = line[:w-1] + "…"
+		}
+		sb.WriteString("  ")
+		sb.WriteString(config.StyleMuted.Render(line))
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+func renderActivity(a *state.Agent, _ int) string {
+	if a.Activity == nil {
+		if a.Status == state.StatusRunning {
+			return config.StyleMuted.Render("  ⏳ Subprocess running...")
+		}
+		return "  (idle)"
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("  [%s] %s", a.Activity.Type, a.Activity.Target))
+	if a.Activity.Preview != "" {
+		sb.WriteString(fmt.Sprintf(" — %s", a.Activity.Preview))
+	}
+	return sb.String()
+}
+
+func renderError(a *state.Agent, w int) string {
+	if a.ErrorOutput == "" {
+		return ""
+	}
+	wrapped := wordWrap(a.ErrorOutput, w-2)
+	var sb strings.Builder
+	for _, line := range strings.Split(wrapped, "\n") {
+		sb.WriteString("  ")
+		sb.WriteString(config.StyleError.Render(line))
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+func statusStyleFor(s state.AgentStatus) lipgloss.Style {
+	switch s {
 	case state.StatusRunning:
 		return config.StyleWarning
 	case state.StatusComplete:
@@ -129,28 +376,18 @@ func (m AgentDetailModel) statusValueStyle() lipgloss.Style {
 	}
 }
 
-// formatDuration returns a human-readable elapsed/final duration string.
-func (m AgentDetailModel) formatDuration() string {
-	switch m.agent.Status {
+func formatAgentDuration(a *state.Agent) string {
+	switch a.Status {
 	case state.StatusComplete, state.StatusError, state.StatusKilled:
-		if m.agent.Duration > 0 {
-			return fmtDuration(m.agent.Duration)
+		if a.Duration > 0 {
+			return fmtDuration(a.Duration)
 		}
 	case state.StatusRunning:
-		if !m.agent.StartedAt.IsZero() {
-			return fmtDuration(time.Since(m.agent.StartedAt))
+		if !a.StartedAt.IsZero() {
+			return fmtDuration(time.Since(a.StartedAt))
 		}
 	}
 	return "—"
-}
-
-// contentWidth returns the usable text width inside the detail pane.
-func (m AgentDetailModel) contentWidth() int {
-	w := m.width - 14 // approximate label + spacing overhead
-	if w < 20 {
-		return 20
-	}
-	return w
 }
 
 // fmtDuration formats a duration as "Xm Ys" or "Xs".
@@ -169,7 +406,6 @@ func formatTokens(n int) string {
 	if n < 1000 {
 		return fmt.Sprintf("%d", n)
 	}
-	// Build from right, inserting commas every three digits.
 	s := fmt.Sprintf("%d", n)
 	var result []byte
 	for i, ch := range s {
@@ -181,8 +417,7 @@ func formatTokens(n int) string {
 	return string(result)
 }
 
-// capitalise returns s with the first Unicode letter uppercased and the rest
-// lowercased (title-case for single-word status strings like "running" → "Running").
+// capitalise returns s with the first letter uppercased.
 func capitalise(s string) string {
 	if s == "" {
 		return s
@@ -192,7 +427,7 @@ func capitalise(s string) string {
 	return string(runes)
 }
 
-// wordWrap wraps text at maxWidth rune-columns, preserving existing newlines.
+// wordWrap wraps text at maxWidth, preserving existing newlines.
 func wordWrap(text string, maxWidth int) string {
 	if maxWidth <= 0 {
 		return text

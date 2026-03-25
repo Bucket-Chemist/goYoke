@@ -127,6 +127,10 @@ type Agent struct {
 	ErrorOutput string
 	// Children lists the IDs of direct child agents spawned by this agent.
 	Children []string
+	// Conventions lists the convention files loaded for this agent (e.g. "go.md").
+	Conventions []string
+	// Prompt is the augmented prompt sent to the agent (may be truncated).
+	Prompt string
 }
 
 // dedupKey returns the deduplication key for this agent: agentType + ":" + description.
@@ -141,6 +145,10 @@ func (a *Agent) copyOf() Agent {
 	if a.Children != nil {
 		cp.Children = make([]string, len(a.Children))
 		copy(cp.Children, a.Children)
+	}
+	if a.Conventions != nil {
+		cp.Conventions = make([]string, len(a.Conventions))
+		copy(cp.Conventions, a.Conventions)
 	}
 	if a.Activity != nil {
 		act := *a.Activity
