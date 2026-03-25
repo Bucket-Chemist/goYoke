@@ -9,7 +9,7 @@
     "C-1: Update Go version constraint from 1.22+ to 1.25+",
     "C-2: Resolve MCP SDK version (v1.2.0 vs v1.3.0)"
   ],
-  "total_tickets": 70,
+  "total_tickets": 74,
   "phases": 10,
   "estimated_weeks_serial": "10-16",
   "estimated_weeks_parallel": "7-10",
@@ -1163,7 +1163,7 @@
     {
       "id": "TUI-067",
       "title": "Two-step confirmation dialogs",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [
@@ -1180,7 +1180,7 @@
     {
       "id": "TUI-068",
       "title": "Dashboard metrics collapse/expand",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [
@@ -1197,7 +1197,7 @@
     {
       "id": "TUI-069",
       "title": "Obsidian vault documentation",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "MEDIUM",
       "dependencies": [],
@@ -1212,7 +1212,7 @@
     {
       "id": "TUI-070",
       "title": "Verify-parity refresh and integration test",
-      "status": "pending",
+      "status": "completed",
       "phase": 10,
       "priority": "HIGH",
       "dependencies": [
@@ -1249,6 +1249,72 @@
       "tags": [
         "ux-overhaul",
         "phase-10g",
+        "plan-generated"
+      ]
+    },
+    {
+      "id": "MCP-001",
+      "title": "Standalone MCP server binary scaffold with ping tool",
+      "status": "completed",
+      "phase": 11,
+      "priority": "CRITICAL",
+      "dependencies": [],
+      "time_estimate": "3-4 hours",
+      "agent": "go-pro",
+      "tags": [
+        "mcp-standalone",
+        "phase-11",
+        "plan-generated"
+      ]
+    },
+    {
+      "id": "MCP-002",
+      "title": "Subprocess spawner with stream-json parsing and SIGTERM/SIGKILL lifecycle",
+      "status": "completed",
+      "phase": 11,
+      "priority": "CRITICAL",
+      "dependencies": [
+        "MCP-001"
+      ],
+      "time_estimate": "4-6 hours",
+      "agent": "go-pro",
+      "tags": [
+        "mcp-standalone",
+        "phase-11",
+        "plan-generated"
+      ]
+    },
+    {
+      "id": "MCP-003",
+      "title": "Relationship validation (spawned_by / can_spawn bidirectional check)",
+      "status": "completed",
+      "phase": 11,
+      "priority": "HIGH",
+      "dependencies": [
+        "MCP-002"
+      ],
+      "time_estimate": "3-4 hours",
+      "agent": "go-pro",
+      "tags": [
+        "mcp-standalone",
+        "phase-11",
+        "plan-generated"
+      ]
+    },
+    {
+      "id": "MCP-004",
+      "title": "Integration test, settings.json docs, tickets-index append",
+      "status": "completed",
+      "phase": 11,
+      "priority": "HIGH",
+      "dependencies": [
+        "MCP-003"
+      ],
+      "time_estimate": "3-4 hours",
+      "agent": "go-pro",
+      "tags": [
+        "mcp-standalone",
+        "phase-11",
         "plan-generated"
       ]
     }

@@ -398,12 +398,19 @@ func TestHandleTeamRun_NonexistentDir(t *testing.T) {
 		TeamRunInput{TeamDir: "/nonexistent/path/to/team"}, uds)
 	require.NoError(t, err) // structured failure, not an error
 	assert.False(t, out.Success)
-	assert.Contains(t, out.Result, "team_dir not found")
+	// The handler checks for config.json; the directory does not exist so the
+	// error message reports that config.json was not found.
+	assert.Contains(t, out.Result, "config.json not found")
 }
 
 func TestHandleTeamRun_ExistingDir(t *testing.T) {
 	dir := t.TempDir()
 	uds := &UDSClient{}
+
+	// Write a minimal config.json so the handler progresses past the
+	// config-presence check to the binary-lookup step.
+	configData := []byte(`{"background_pid": 0}`)
+	require.NoError(t, os.WriteFile(dir+"/config.json", configData, 0o644))
 
 	_, out, err := handleTeamRun(context.Background(), nil,
 		TeamRunInput{TeamDir: dir}, uds)
@@ -492,7 +499,8 @@ func TestBuildSpawnArgs_Defaults(t *testing.T) {
 	args := buildSpawnArgs(agent, input)
 	assert.Contains(t, args, "-p")
 	assert.Contains(t, args, "--model")
-	assert.Contains(t, args, "--timeout")
+	// --timeout is NOT passed as a CLI flag; managed by spawner's time.AfterFunc.
+	assert.NotContains(t, args, "--timeout")
 }
 
 func TestBuildSpawnArgs_ModelOverride(t *testing.T) {
@@ -544,18 +552,12 @@ func TestBuildSpawnArgs_AllowedToolsOverride(t *testing.T) {
 }
 
 func TestBuildSpawnArgs_CustomTimeout(t *testing.T) {
+	// Timeout is managed by the spawner's time.AfterFunc, NOT as a CLI flag.
+	// Verify it does NOT appear in args.
 	agent := &routing.Agent{ID: "go-pro", Model: "sonnet"}
 	input := SpawnAgentInput{Prompt: "p", Timeout: 60000}
 	args := buildSpawnArgs(agent, input)
-
-	timeoutIdx := -1
-	for i, a := range args {
-		if a == "--timeout" {
-			timeoutIdx = i
-		}
-	}
-	require.NotEqual(t, -1, timeoutIdx)
-	assert.Equal(t, "60000", args[timeoutIdx+1])
+	assert.NotContains(t, args, "--timeout")
 }
 
 // -----------------------------------------------------------------------------

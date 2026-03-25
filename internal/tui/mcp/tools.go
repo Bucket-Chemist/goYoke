@@ -8,9 +8,9 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -551,15 +551,26 @@ func registerSpawnAgent(server *mcpsdk.Server, uds *UDSClient) {
 }
 
 // handleSpawnAgent handles the spawn_agent tool call.
-// Currently implemented as a validated stub — agent config is loaded and
-// validated but the CLI subprocess is not spawned.  Full subprocess
-// management is tracked in a follow-up ticket.
+// It validates the request, loads agent config, injects identity context, and
+// runs a claude CLI subprocess.  All subprocess errors are returned as soft
+// errors in SpawnAgentOutput (not as Go errors) so the MCP caller can inspect
+// them without a protocol-level failure.
 func handleSpawnAgent(
-	_ context.Context,
+	ctx context.Context,
 	_ *mcpsdk.CallToolRequest,
 	input SpawnAgentInput,
 	uds *UDSClient,
 ) (*mcpsdk.CallToolResult, SpawnAgentOutput, error) {
+	// 1. Validate nesting depth.
+	if err := validateNestingDepth(); err != nil {
+		return nil, SpawnAgentOutput{
+			Agent:   input.Agent,
+			Success: false,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	// 2. Validate required fields.
 	if input.Agent == "" {
 		return nil, SpawnAgentOutput{}, fmt.Errorf("spawn_agent: agent is required")
 	}
@@ -570,11 +581,13 @@ func handleSpawnAgent(
 		return nil, SpawnAgentOutput{}, fmt.Errorf("spawn_agent: prompt is required")
 	}
 
-	// Validate the agent exists in agents-index.json.
+	// 3. Load agent index.
 	index, err := routing.LoadAgentIndex()
 	if err != nil {
 		return nil, SpawnAgentOutput{}, fmt.Errorf("spawn_agent: load agent index: %w", err)
 	}
+
+	// 4. Verify the requested agent exists.
 	agent, err := index.GetAgentByID(input.Agent)
 	if err != nil {
 		return nil, SpawnAgentOutput{
@@ -585,34 +598,91 @@ func handleSpawnAgent(
 		}, nil
 	}
 
+	// 4b. Validate relationship constraints (M-3 fix: parity with standalone).
+	parentType := os.Getenv("GOGENT_PARENT_AGENT")
+	vr := validateRelationship(index, parentType, input.Agent, input.CallerType)
+	if !vr.Valid {
+		return nil, SpawnAgentOutput{
+			Agent:   input.Agent,
+			Success: false,
+			Error:   "spawn validation failed: " + fmt.Sprintf("%v", vr.Errors),
+		}, nil
+	}
+	if len(vr.Warnings) > 0 {
+		slog.Warn("spawn_agent relationship warnings", "warnings", vr.Warnings, "agent", input.Agent)
+	}
+
+	// 5. Generate a unique agent instance ID.
 	agentID := uuid.New().String()
 
-	// Notify the TUI that a new agent has been registered.
+	// 6. Notify the TUI that a new agent has been registered.
+	// m-3 fix: include ParentID from GOGENT_PARENT_AGENT env var for tree hierarchy.
 	uds.notify(TypeAgentRegister, AgentRegisterPayload{
 		AgentID:   agentID,
 		AgentType: agent.ID,
+		ParentID:  parentType,
 	})
 
-	// Stub: return a placeholder result without spawning the subprocess.
-	// Full implementation will build the `claude -p` command, set env vars,
-	// stream NDJSON output, and parse cost/turn telemetry.
-	slog.Info("spawn_agent stub invoked — subprocess not launched",
+	// 7. Build the augmented prompt with agent identity and context.
+	// m-1 fix: pass agent.ContextRequirements (was nil, parity with standalone).
+	augmented, err := routing.BuildFullAgentContext(agent.ID, agent.ContextRequirements, nil, input.Prompt)
+	if err != nil {
+		slog.Warn("failed to build agent context", "err", err, "agent", agent.ID)
+		augmented = input.Prompt
+	}
+
+	// 8. Notify the TUI that the agent is now running.
+	uds.notify(TypeAgentUpdate, AgentUpdatePayload{
+		AgentID: agentID,
+		Status:  "running",
+	})
+
+	slog.Info("spawn_agent: launching subprocess",
 		"agent", input.Agent,
 		"agentId", agentID,
 		"description", input.Description,
 	)
 
+	// 9. Run the subprocess.
+	start := time.Now()
+	result, runErr := runSubprocess(ctx, agent, input, augmented, agentID)
+	duration := time.Since(start).Round(time.Millisecond).String()
+
+	// 10. Build response — subprocess errors are soft.
+	success := runErr == nil
+	errMsg := ""
+	if runErr != nil {
+		errMsg = runErr.Error()
+	}
+
+	output := ""
+	cost := 0.0
+	turns := 0
+	if result != nil {
+		output = result.Result
+		cost = result.TotalCostUSD
+		turns = result.NumTurns
+	}
+
+	// 11. Notify the TUI that the agent has completed.
+	status := "complete"
+	if !success {
+		status = "error"
+	}
 	uds.notify(TypeAgentUpdate, AgentUpdatePayload{
 		AgentID: agentID,
-		Status:  "stub",
+		Status:  status,
 	})
 
 	return nil, SpawnAgentOutput{
 		AgentID:  agentID,
 		Agent:    agent.ID,
-		Success:  true,
-		Output:   fmt.Sprintf("[stub] spawn_agent called for %s — subprocess management not yet implemented", agent.ID),
-		Duration: "0s",
+		Success:  success,
+		Output:   output,
+		Error:    errMsg,
+		Cost:     cost,
+		Turns:    turns,
+		Duration: duration,
 	}, nil
 }
 
@@ -626,30 +696,48 @@ func registerTeamRun(server *mcpsdk.Server, uds *UDSClient) {
 	})
 }
 
+// teamRunPollInterval is the initial backoff delay when polling config.json
+// for the background_pid written by gogent-team-run on startup.
+const teamRunPollInterval = 100 * time.Millisecond
+
+// teamRunMaxPollInterval caps the exponential backoff used during polling.
+const teamRunMaxPollInterval = 500 * time.Millisecond
+
+// teamRunDefaultWaitTimeoutMs is used when WaitForStart is true but
+// TimeoutMs is not specified by the caller.
+const teamRunDefaultWaitTimeoutMs = 5_000
+
+// teamRunConfig is the minimal subset of gogent-team-run's config.json that
+// team_run needs to read after launch.
+type teamRunConfig struct {
+	BackgroundPID int `json:"background_pid"`
+}
+
 // handleTeamRun handles the team_run tool call.
-// Currently implemented as a validated stub — team_dir existence is checked
-// but gogent-team-run is not launched.  Full background-process management
-// is tracked in a follow-up ticket.
+// It launches gogent-team-run as a detached background process, registers
+// a toast notification with the TUI, and optionally polls config.json for
+// the background_pid written by the daemon on startup.
 func handleTeamRun(
-	_ context.Context,
+	ctx context.Context,
 	_ *mcpsdk.CallToolRequest,
 	input TeamRunInput,
-	_ *UDSClient,
+	uds *UDSClient,
 ) (*mcpsdk.CallToolResult, TeamRunOutput, error) {
 	if input.TeamDir == "" {
 		return nil, TeamRunOutput{}, fmt.Errorf("team_run: team_dir is required")
 	}
 
-	// Validate the team directory exists.
-	if _, err := os.Stat(input.TeamDir); err != nil {
+	// 1. Validate the team directory exists and contains config.json.
+	configPath := input.TeamDir + "/config.json"
+	if _, err := os.Stat(configPath); err != nil {
 		return nil, TeamRunOutput{
 			Success: false,
 			TeamDir: input.TeamDir,
-			Result:  fmt.Sprintf("team_dir not found: %s", input.TeamDir),
+			Result:  fmt.Sprintf("config.json not found in %s", input.TeamDir),
 		}, nil
 	}
 
-	// Locate the gogent-team-run binary.
+	// 2. Locate the gogent-team-run binary.
 	binary, err := exec.LookPath("gogent-team-run")
 	if err != nil {
 		return nil, TeamRunOutput{
@@ -659,49 +747,167 @@ func handleTeamRun(
 		}, nil
 	}
 
-	slog.Info("team_run stub invoked — subprocess not launched",
+	// 3. Build the command.  Use CommandContext so the process inherits any
+	//    deadline from the caller's context, but we detach the process group
+	//    so TUI shutdown does not kill the team run mid-flight.
+	cmd := exec.CommandContext(ctx, binary, input.TeamDir) //nolint:gosec // binary path from LookPath, team_dir validated
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setsid: true, // Detach: create new process group so signals don't cascade.
+	}
+	// Discard stdout/stderr; gogent-team-run writes its own logs.
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	cmd.Stdin = nil
+
+	// 4. Start the subprocess (non-blocking).
+	if err := cmd.Start(); err != nil {
+		slog.Error("team_run: failed to start subprocess",
+			"binary", binary,
+			"team_dir", input.TeamDir,
+			"err", err,
+		)
+		uds.notify(TypeToast, ToastPayload{
+			Message: fmt.Sprintf("team_run failed to start: %v", err),
+			Level:   "error",
+		})
+		return nil, TeamRunOutput{
+			Success: false,
+			TeamDir: input.TeamDir,
+			Result:  fmt.Sprintf("failed to start gogent-team-run: %v", err),
+		}, nil
+	}
+
+	pid := cmd.Process.Pid
+	slog.Info("team_run: subprocess started",
+		"pid", pid,
 		"team_dir", input.TeamDir,
-		"binary", binary,
+	)
+
+	// 5. Reap the process in a background goroutine to prevent zombies.
+	//    The process is detached (Setsid), so this goroutine only waits for
+	//    the process table entry — it does not affect the team run itself.
+	go func() {
+		waitErr := cmd.Wait()
+		if waitErr != nil {
+			slog.Info("team_run: subprocess exited", "pid", pid, "err", waitErr)
+			uds.notify(TypeToast, ToastPayload{
+				Message: fmt.Sprintf("team_run (pid %d) exited: %v", pid, waitErr),
+				Level:   "warn",
+			})
+		} else {
+			slog.Info("team_run: subprocess exited cleanly", "pid", pid)
+			uds.notify(TypeToast, ToastPayload{
+				Message: fmt.Sprintf("team_run (pid %d) completed", pid),
+				Level:   "info",
+			})
+		}
+	}()
+
+	// 6. Notify the TUI immediately that the team has started.
+	uds.notify(TypeToast, ToastPayload{
+		Message: fmt.Sprintf("team_run started (pid %d): %s", pid, input.TeamDir),
+		Level:   "info",
+	})
+
+	// 7. If the caller does not want to wait for startup verification, return
+	//    immediately with the process PID.
+	waitForStart := input.WaitForStart
+	if !waitForStart {
+		return nil, TeamRunOutput{
+			Success:       true,
+			TeamDir:       input.TeamDir,
+			BackgroundPID: pid,
+			Monitor:       "/team-status",
+			Result:        fmt.Sprintf("gogent-team-run started (pid %d)", pid),
+			Cancel:        "/team-cancel",
+		}, nil
+	}
+
+	// 8. Poll config.json for the background_pid written by the daemon.
+	//    gogent-team-run writes its background PID to config.json after
+	//    forking to the background; we poll until it appears or we time out.
+	timeoutMs := input.TimeoutMs
+	if timeoutMs <= 0 {
+		timeoutMs = teamRunDefaultWaitTimeoutMs
+	}
+	deadline := time.Now().Add(time.Duration(timeoutMs) * time.Millisecond)
+	delay := teamRunPollInterval
+	backgroundPID := 0
+
+	for time.Now().Before(deadline) {
+		time.Sleep(delay)
+		delay *= 2
+		if delay > teamRunMaxPollInterval {
+			delay = teamRunMaxPollInterval
+		}
+
+		data, readErr := os.ReadFile(configPath)
+		if readErr != nil {
+			// config.json may be mid-write; retry.
+			continue
+		}
+
+		var cfg teamRunConfig
+		if jsonErr := json.Unmarshal(data, &cfg); jsonErr != nil {
+			// Partial write in progress; retry.
+			continue
+		}
+
+		if cfg.BackgroundPID > 0 {
+			backgroundPID = cfg.BackgroundPID
+			break
+		}
+	}
+
+	slog.Info("team_run: startup poll complete",
+		"pid", pid,
+		"background_pid", backgroundPID,
+		"team_dir", input.TeamDir,
 	)
 
 	return nil, TeamRunOutput{
 		Success:       true,
 		TeamDir:       input.TeamDir,
-		BackgroundPID: 0,
-		Monitor:       fmt.Sprintf("gogent-team-run %s &  # not launched (stub)", input.TeamDir),
-		Result:        "[stub] team_run called — background process management not yet implemented",
-		Cancel:        "kill 0  # no process to kill (stub)",
+		BackgroundPID: backgroundPID,
+		Monitor:       "/team-status",
+		Result:        fmt.Sprintf("gogent-team-run started (pid %d, background_pid %d)", pid, backgroundPID),
+		Cancel:        "/team-cancel",
 	}, nil
 }
 
 // buildSpawnArgs constructs the claude CLI arguments for an agent spawn.
-// This is exported for testability even though the stub does not call it yet.
+// Timeout is NOT passed as a CLI flag (not supported by claude CLI).
+// The spawner manages timeout via time.AfterFunc in runSubprocess().
 func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
-	args := []string{"-p", "--output-format", "stream-json", "--no-cache"}
+	// Use --output-format json (NOT stream-json) for spawned agents:
+	// - json produces a single JSON result object, simpler to parse
+	// - stream-json requires --verbose (claude CLI 2.1.81+) and produces
+	//   NDJSON which is harder to parse for one-shot -p invocations
+	// - Matches the TS TUI's spawnAgent.ts which also uses json
+	// --permission-mode bypassPermissions is required because -p (print mode)
+	// has no interactive terminal to approve permissions.
+	args := []string{"-p", "--output-format", "json", "--permission-mode", "bypassPermissions"}
 
-	// Model
-	model := agent.Model
-	if input.Model != "" {
-		model = input.Model
+	// Model: prefer explicit override, fall back to agent config.
+	model := input.Model
+	if model == "" {
+		model = agent.Model
 	}
 	args = append(args, "--model", model)
 
-	// Allowed tools
-	tools := agent.GetAllowedTools()
-	if len(input.AllowedTools) > 0 {
-		tools = input.AllowedTools
+	// Allowed tools: prefer explicit override, fall back to agent config.
+	tools := input.AllowedTools
+	if len(tools) == 0 {
+		tools = agent.GetAllowedTools()
 	}
 	if len(tools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(tools, ","))
 	}
 
-	// Timeout (default: 5 minutes)
-	const defaultAgentTimeoutMS = 300_000
-	timeout := defaultAgentTimeoutMS
-	if input.Timeout > 0 {
-		timeout = input.Timeout
+	// Optional cost ceiling.
+	if input.MaxBudget > 0 {
+		args = append(args, "--max-budget-usd", fmt.Sprintf("%.4f", input.MaxBudget))
 	}
-	args = append(args, "--timeout", strconv.Itoa(timeout))
 
 	return args
 }

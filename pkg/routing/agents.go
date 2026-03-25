@@ -64,8 +64,9 @@ type Agent struct {
 	OutputFile            string          `json:"output_file,omitempty"`
 	CostCeilingUSD        float64         `json:"cost_ceiling_usd,omitempty"`
 	FallbackFor           string          `json:"fallback_for,omitempty"`
-	SpawnedBy             []string        `json:"spawned_by,omitempty"`
-	CanSpawn              []string        `json:"can_spawn,omitempty"`
+	SpawnedBy             []string             `json:"spawned_by,omitempty"`
+	CanSpawn              []string             `json:"can_spawn,omitempty"`
+	ContextRequirements   *ContextRequirements `json:"context_requirements,omitempty"`
 }
 
 // AutoActivate defines conditions for agent auto-activation.
