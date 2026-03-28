@@ -4,10 +4,29 @@
 package model
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
+
+// truncateHeight truncates s to at most maxLines newline-delimited lines.
+// This is necessary because lipgloss.Height() only pads shorter content — it
+// does NOT clip content that exceeds the specified height. Without explicit
+// truncation, any overflow (stale panel dimensions, unaccounted chrome rows,
+// phantom JoinVertical blank lines) propagates to the final render and pushes
+// content off-screen.
+func truncateHeight(s string, maxLines int) string {
+	if maxLines <= 0 {
+		return ""
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) <= maxLines {
+		return s
+	}
+	return strings.Join(lines[:maxLines], "\n")
+}
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -288,7 +307,14 @@ func (m AppModel) renderLayout() string {
 	}
 
 	parts = append(parts, statusLineView)
-	return lipgloss.JoinVertical(lipgloss.Top, parts...)
+
+	output := lipgloss.JoinVertical(lipgloss.Top, parts...)
+
+	// Final safety net: clip the composed layout to the terminal height.
+	// This catches any overflow from toasts (whose height is not subtracted
+	// from contentHeight), phantom blank lines from JoinVertical with "",
+	// or stale component dimensions after a missed propagateContentSizes call.
+	return truncateHeight(output, m.height)
 }
 
 // renderMain renders the split content area (left panel + optional right panel).
@@ -314,6 +340,9 @@ func (m AppModel) renderLeftPanel(dims layoutDims) string {
 	} else {
 		content = config.StyleSubtle.Render("Claude panel  [focus=" + m.focus.String() + "]")
 	}
+
+	// Clip inner content — lipgloss.Height() pads but does NOT truncate.
+	content = truncateHeight(content, dims.contentHeight)
 
 	var style lipgloss.Style
 	if focused {
@@ -418,6 +447,9 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 			)
 		}
 	}
+
+	// Clip inner content — lipgloss.Height() pads but does NOT truncate.
+	content = truncateHeight(content, dims.contentHeight)
 
 	var style lipgloss.Style
 	if focused {

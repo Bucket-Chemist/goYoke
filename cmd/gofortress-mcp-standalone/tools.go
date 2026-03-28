@@ -107,6 +107,8 @@ func RegisterAll(server *mcpsdk.Server) {
 	registerTestMcpPing(server)
 	registerSpawnAgent(server)
 	registerGetSpawnResult(server)
+	registerSandboxWrite(server)
+	registerSandboxStatus(server)
 }
 
 // registerTestMcpPing registers the test_mcp_ping tool.

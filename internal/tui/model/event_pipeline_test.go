@@ -175,10 +175,11 @@ func TestEventPipeline_ResultEvent_UpdatesCostAndTokens(t *testing.T) {
 		t.Errorf("statusLine.TokenCount = %d; want %d", result.statusLine.TokenCount, wantTokens)
 	}
 
-	// ContextPercent must be computed from per-model usage.
-	// used = inputTokens (5000), contextWindow = 200000 → 2.5%
-	if result.statusLine.ContextPercent <= 0 {
-		t.Errorf("statusLine.ContextPercent = %f; want > 0", result.statusLine.ContextPercent)
+	// ContextCapacity must be set from per-model usage (capacity discovery).
+	// Context usage (percent, used tokens) is now updated per-message in
+	// handleAssistantEvent, not from cumulative modelUsage.
+	if result.statusLine.ContextCapacity != 200000 {
+		t.Errorf("statusLine.ContextCapacity = %d; want 200000", result.statusLine.ContextCapacity)
 	}
 
 	// Cost tracker (single source of truth) must also reflect the new cost.
@@ -411,6 +412,90 @@ func TestEventPipeline_AssistantEvent_ToolUseBlocksForwarded(t *testing.T) {
 	// Panel SHOULD have received a HandleMsg call for the tool_use block.
 	if !mock.handleMsgCalled {
 		t.Error("claudePanel.HandleMsg not called for tool_use event; want ToolUseMsg forwarded")
+	}
+}
+
+// TestEventPipeline_AssistantEvent_UpdatesContextWindow verifies that
+// AssistantEvent updates context window usage from per-message token counts,
+// not cumulative session totals.
+//
+// Bug class guarded: using cumulative modelUsage from ResultEvent inflates
+// context percentage ~10x because it sums tokens across all turns rather than
+// reflecting the current turn's actual context fill.
+func TestEventPipeline_AssistantEvent_UpdatesContextWindow(t *testing.T) {
+	m := newReadyAppModel(120, 40)
+	m.activeModel = "claude-opus-4-6[1m]"
+
+	usage := &cli.MessageUsage{
+		InputTokens:              5000,
+		CacheReadInputTokens:     55000,
+		CacheCreationInputTokens: 2000,
+	}
+	stopReason := "end_turn"
+
+	ev := cli.AssistantEvent{
+		Type: "assistant",
+		Message: cli.AssistantMessage{
+			ID:         "msg-ctx-1",
+			Role:       "assistant",
+			StopReason: &stopReason,
+			Content:    []cli.ContentBlock{{Type: "text", Text: "hello"}},
+			Usage:      usage,
+		},
+	}
+
+	updated, _ := m.Update(ev)
+	result := updated.(AppModel)
+
+	// Total context used = input + cache_read + cache_creation = 62000.
+	wantUsed := 5000 + 55000 + 2000
+	if result.statusLine.ContextUsedTokens != wantUsed {
+		t.Errorf("ContextUsedTokens = %d; want %d", result.statusLine.ContextUsedTokens, wantUsed)
+	}
+
+	// Capacity resolved from model name ([1m] → 1M).
+	if result.statusLine.ContextCapacity != 1_000_000 {
+		t.Errorf("ContextCapacity = %d; want 1000000", result.statusLine.ContextCapacity)
+	}
+
+	// Percent = 62000 / 1000000 * 100 = 6.2%.
+	wantPct := float64(wantUsed) / 1_000_000.0 * 100
+	if result.statusLine.ContextPercent != wantPct {
+		t.Errorf("ContextPercent = %f; want %f", result.statusLine.ContextPercent, wantPct)
+	}
+}
+
+// TestEventPipeline_AssistantEvent_ContextWindow_IgnoresSubagent verifies that
+// subagent messages (ParentToolUseID != nil) do not update context window.
+func TestEventPipeline_AssistantEvent_ContextWindow_IgnoresSubagent(t *testing.T) {
+	m := newReadyAppModel(120, 40)
+	m.activeModel = "claude-sonnet-4-6"
+
+	parentID := "tu-parent-123"
+	usage := &cli.MessageUsage{
+		InputTokens:          50000,
+		CacheReadInputTokens: 100000,
+	}
+	stopReason := "end_turn"
+
+	ev := cli.AssistantEvent{
+		Type:            "assistant",
+		ParentToolUseID: &parentID,
+		Message: cli.AssistantMessage{
+			ID:         "msg-subagent",
+			Role:       "assistant",
+			StopReason: &stopReason,
+			Content:    []cli.ContentBlock{{Type: "text", Text: "subagent output"}},
+			Usage:      usage,
+		},
+	}
+
+	updated, _ := m.Update(ev)
+	result := updated.(AppModel)
+
+	// Subagent messages must NOT update context window.
+	if result.statusLine.ContextUsedTokens != 0 {
+		t.Errorf("ContextUsedTokens = %d; want 0 (subagent should be ignored)", result.statusLine.ContextUsedTokens)
 	}
 }
 

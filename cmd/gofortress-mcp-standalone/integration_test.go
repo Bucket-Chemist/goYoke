@@ -5,6 +5,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -73,8 +75,8 @@ func extractResultInteg(t *testing.T, result *mcpsdk.CallToolResult, dst any) {
 // TestIntegration_ToolManifest
 // ---------------------------------------------------------------------------
 
-// TestIntegration_ToolManifest verifies that ListTools returns exactly 3 tools:
-// spawn_agent, test_mcp_ping, and get_spawn_result.
+// TestIntegration_ToolManifest verifies that ListTools returns exactly 5 tools:
+// spawn_agent, test_mcp_ping, get_spawn_result, sandbox_write, and sandbox_status.
 func TestIntegration_ToolManifest(t *testing.T) {
 	session, _ := newTestServer(t)
 
@@ -86,10 +88,105 @@ func TestIntegration_ToolManifest(t *testing.T) {
 		names[i] = tool.Name
 	}
 
-	assert.Len(t, names, 3, "expected exactly 3 tools")
+	assert.Len(t, names, 5, "expected exactly 5 tools")
 	assert.Contains(t, names, "spawn_agent")
 	assert.Contains(t, names, "test_mcp_ping")
 	assert.Contains(t, names, "get_spawn_result")
+	assert.Contains(t, names, "sandbox_write")
+	assert.Contains(t, names, "sandbox_status")
+}
+
+// ---------------------------------------------------------------------------
+// TestIntegration_SandboxWrite_Success
+// ---------------------------------------------------------------------------
+
+// TestIntegration_SandboxWrite_Success verifies that sandbox_write writes a file
+// to an allowed path and returns success with byte count.
+func TestIntegration_SandboxWrite_Success(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GOFORTRESS_PROJECT_ROOT", dir)
+
+	session, _ := newTestServer(t)
+
+	destPath := filepath.Join(dir, "integration_sandbox_output.txt")
+	content := "integration test sandbox content"
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "sandbox_write",
+		Arguments: map[string]any{
+			"content":   content,
+			"dest_path": destPath,
+		},
+	})
+	require.NoError(t, err, "sandbox_write must not return a protocol error")
+	assert.False(t, result.IsError, "result must not be flagged as protocol error")
+
+	var out SandboxWriteOutput
+	extractResultInteg(t, result, &out)
+
+	assert.True(t, out.Success, "expected success, got: %s", out.Error)
+	assert.Equal(t, len(content), out.BytesWritten)
+
+	// Verify file on disk.
+	data, readErr := os.ReadFile(destPath)
+	require.NoError(t, readErr)
+	assert.Equal(t, content, string(data))
+}
+
+// ---------------------------------------------------------------------------
+// TestIntegration_SandboxStatus_AfterWrite
+// ---------------------------------------------------------------------------
+
+// TestIntegration_SandboxStatus_AfterWrite verifies that sandbox_status returns
+// the written file in its history after a successful sandbox_write call.
+func TestIntegration_SandboxStatus_AfterWrite(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("GOFORTRESS_PROJECT_ROOT", dir)
+
+	// Reset state for a clean baseline.
+	sandboxState.mu.Lock()
+	sandboxState.writeHistory = nil
+	sandboxState.mu.Unlock()
+
+	session, _ := newTestServer(t)
+
+	destPath := filepath.Join(dir, "integration_status_test.txt")
+	content := "status integration test content"
+
+	// Write a file via MCP.
+	writeResult, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "sandbox_write",
+		Arguments: map[string]any{
+			"content":   content,
+			"dest_path": destPath,
+		},
+	})
+	require.NoError(t, err)
+	var writeOut SandboxWriteOutput
+	extractResultInteg(t, writeResult, &writeOut)
+	require.True(t, writeOut.Success, "write must succeed: %s", writeOut.Error)
+
+	// Check status via MCP.
+	statusResult, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name:      "sandbox_status",
+		Arguments: map[string]any{},
+	})
+	require.NoError(t, err)
+	var statusOut SandboxStatusOutput
+	extractResultInteg(t, statusResult, &statusOut)
+
+	require.NotEmpty(t, statusOut.WriteHistory, "write history must not be empty after a write")
+
+	found := false
+	for _, entry := range statusOut.WriteHistory {
+		if entry.Path == filepath.Clean(destPath) {
+			found = true
+			assert.Equal(t, len(content), entry.Bytes)
+			assert.NotEmpty(t, entry.Timestamp)
+			break
+		}
+	}
+	assert.True(t, found, "written file path must appear in sandbox write history")
 }
 
 // ---------------------------------------------------------------------------

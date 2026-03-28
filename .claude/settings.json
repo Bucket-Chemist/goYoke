@@ -18,7 +18,10 @@
       "Bash(git log:*)",
       "Bash(go test:*)",
       "Bash(go build:*)",
-      "Bash(make:*)"
+      "Bash(git:*)",
+      "Bash(make:*)",
+      "Write(**)",
+      "Edit(**)"
     ],
     "deny": [
       "Write(.env*)",

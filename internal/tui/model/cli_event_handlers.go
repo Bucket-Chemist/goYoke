@@ -40,6 +40,16 @@ func parsePlanStep(text string) (step, total int) {
 	return s, t
 }
 
+// resolveContextWindow derives context window capacity from a model ID string.
+// Used as a fallback before the first ResultEvent reports the actual capacity.
+// Mirrors packages/tui/src/utils/resolveContextWindow.ts.
+func resolveContextWindow(modelID string) int {
+	if strings.Contains(modelID, "[1m]") {
+		return 1_000_000
+	}
+	return 200_000
+}
+
 // handleCLIStarted handles cli.CLIStartedMsg: the subprocess started — begin
 // listening for NDJSON events.
 func (m AppModel) handleCLIStarted() (tea.Model, tea.Cmd) {
@@ -207,6 +217,27 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 		}
 	}
 
+	// Update context window usage from per-message token counts.
+	// Only root-level messages — subagent usage reflects a separate CLI context.
+	// Mirrors TS TUI SessionManager.ts:934-944.
+	if msg.Message.Usage != nil && msg.ParentToolUseID == nil {
+		usage := msg.Message.Usage
+		used := usage.InputTokens + usage.CacheReadInputTokens + usage.CacheCreationInputTokens
+		capacity := m.statusLine.ContextCapacity
+		if capacity == 0 {
+			capacity = resolveContextWindow(m.activeModel)
+		}
+		if capacity > 0 {
+			pct := float64(used) / float64(capacity) * 100
+			if pct > 100 {
+				pct = 100
+			}
+			m.statusLine.ContextPercent = pct
+			m.statusLine.ContextUsedTokens = used
+			m.statusLine.ContextCapacity = capacity
+		}
+	}
+
 	cmds = append(cmds, m.waitForCLIEvent())
 	return m, tea.Batch(cmds...)
 }
@@ -275,21 +306,14 @@ func (m AppModel) handleResultEvent(msg cli.ResultEvent) (tea.Model, tea.Cmd) {
 	// Accumulate session token counts from aggregate usage.
 	m.statusLine.TokenCount += msg.Usage.InputTokens + msg.Usage.OutputTokens
 
-	// Update context window percentage from per-model usage if available.
+	// Update context window capacity from per-model usage if available.
+	// The actual context usage (used tokens, percent) is updated per-message in
+	// handleAssistantEvent — here we only learn/refine the capacity.
 	if entry, ok := msg.ModelUsage[m.activeModel]; ok && entry.ContextWindow > 0 {
-		used := entry.InputTokens + entry.CacheReadInputTokens + entry.CacheCreationInputTokens
-		// The SDK reports 200K for all Anthropic models, even [1m] variants.
-		// Override to the actual 1M context window when the model suffix is present.
 		capacity := entry.ContextWindow
 		if strings.Contains(m.activeModel, "[1m]") {
 			capacity = 1_000_000
 		}
-		pct := float64(used) / float64(capacity) * 100
-		if pct > 100 {
-			pct = 100
-		}
-		m.statusLine.ContextPercent = pct
-		m.statusLine.ContextUsedTokens = used
 		m.statusLine.ContextCapacity = capacity
 	}
 

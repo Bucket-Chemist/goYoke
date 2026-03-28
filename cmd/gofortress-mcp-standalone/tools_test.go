@@ -178,14 +178,14 @@ func extractResult(t *testing.T, result *mcpsdk.CallToolResult, dst any) {
 // TestRegisterAll
 // ---------------------------------------------------------------------------
 
-// TestRegisterAll verifies that RegisterAll registers exactly 3 tools:
-// spawn_agent, test_mcp_ping, and get_spawn_result.
+// TestRegisterAll verifies that RegisterAll registers exactly 5 tools:
+// spawn_agent, test_mcp_ping, get_spawn_result, sandbox_write, and sandbox_status.
 func TestRegisterAll(t *testing.T) {
 	session := newTestSession(t)
 
 	tools, err := session.ListTools(context.Background(), nil)
 	require.NoError(t, err, "ListTools")
-	require.Len(t, tools.Tools, 3, "expected exactly 3 tools")
+	require.Len(t, tools.Tools, 5, "expected exactly 5 tools")
 
 	names := make([]string, len(tools.Tools))
 	for i, tool := range tools.Tools {
@@ -195,6 +195,8 @@ func TestRegisterAll(t *testing.T) {
 	assert.Contains(t, names, "spawn_agent")
 	assert.Contains(t, names, "test_mcp_ping")
 	assert.Contains(t, names, "get_spawn_result")
+	assert.Contains(t, names, "sandbox_write")
+	assert.Contains(t, names, "sandbox_status")
 }
 
 // ---------------------------------------------------------------------------

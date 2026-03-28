@@ -101,6 +101,7 @@ func DefaultCommands() []SlashCommand {
 		{"braintrust", "Multi-perspective deep analysis"},
 		{"review", "Multi-domain code review"},
 		{"review-plan", "Critical 7-layer review of plans"},
+		{"sandbox", "Manage sandbox permissions and write protected files"},
 		{"ticket", "Ticket-driven implementation"},
 		{"implement", "Plan + implement a feature"},
 		{"init-auto", "Initialize project config"},
