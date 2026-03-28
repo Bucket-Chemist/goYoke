@@ -48,6 +48,17 @@ func (ts *TeamState) copyOf() *TeamState {
 			if w.Members != nil {
 				wCopy.Members = make([]Member, len(w.Members))
 				copy(wCopy.Members, w.Members)
+				for j := range wCopy.Members {
+					m := &wCopy.Members[j]
+					if m.ProcessPID != nil {
+						v := *m.ProcessPID
+						m.ProcessPID = &v
+					}
+					if m.LastActivityTime != nil {
+						v := *m.LastActivityTime
+						m.LastActivityTime = &v
+					}
+				}
 			}
 			cp.Config.Waves[i] = wCopy
 		}

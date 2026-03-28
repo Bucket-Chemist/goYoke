@@ -34,4 +34,11 @@ type Member struct {
 	ErrorMessage string  `json:"error_message"`
 	StartedAt    *string `json:"started_at"`
 	CompletedAt  *string `json:"completed_at"`
+
+	// Health monitoring fields — written by gogent-team-run, read by TUI.
+	ProcessPID       *int    `json:"process_pid"`                  // PID of spawned CLI process
+	HealthStatus     string  `json:"health_status,omitempty"`      // healthy|stall_warning|stalled
+	LastActivityTime *string `json:"last_activity_time,omitempty"` // ISO 8601
+	StallCount       int     `json:"stall_count,omitempty"`
+	KillReason       string  `json:"kill_reason,omitempty"`
 }
