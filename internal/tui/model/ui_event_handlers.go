@@ -83,33 +83,39 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 // banner and tab bar to be pushed off the top of the screen.
 func (m *AppModel) propagateContentSizes() {
 	dims := m.computeLayout()
-	if m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight)
+	drawerH, _ := m.computeDrawerLayout(dims)
+	mainH := dims.contentHeight - drawerH
+	if mainH < 1 {
+		mainH = 1
 	}
-	m.agentTree.SetSize(dims.rightWidth, dims.contentHeight/2)
-	m.agentDetail.SetSize(dims.rightWidth, dims.contentHeight/2)
+
+	if m.shared.claudePanel != nil {
+		m.shared.claudePanel.SetSize(dims.leftWidth, mainH)
+	}
+	m.agentTree.SetSize(dims.rightWidth, mainH/2)
+	m.agentDetail.SetSize(dims.rightWidth, mainH/2)
 	if m.shared.toasts != nil {
 		m.shared.toasts.SetSize(m.width, m.height)
 	}
 	if m.shared.teamList != nil {
-		m.shared.teamList.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.teamList.SetSize(dims.rightWidth, mainH)
 	}
 
 	// Right-panel components (TUI-032).
 	if m.shared.dashboard != nil {
-		m.shared.dashboard.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.dashboard.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.settings != nil {
-		m.shared.settings.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.settings.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.telemetry != nil {
-		m.shared.telemetry.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.telemetry.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.planPreview != nil {
-		m.shared.planPreview.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.planPreview.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.drawerStack != nil {
-		m.shared.drawerStack.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.drawerStack.SetSize(m.width, drawerH)
 	}
 	if m.shared.taskBoard != nil {
 		m.shared.taskBoard.SetSize(m.width, m.height)

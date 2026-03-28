@@ -215,6 +215,46 @@ func (m AppModel) computeLayout() layoutDims {
 	return dims
 }
 
+// computeDrawerLayout returns the height and width for the full-width drawer
+// rendered below both panels.
+//
+// Rules:
+//   - Compact tier: always (0, 0) — drawers suppressed
+//   - nil drawerStack: (0, 0)
+//   - Expanded (has content): 30% of contentHeight, capped at 12, minimum 5
+//   - Minimized (no content): 2-row tab strip at full terminal width
+func (m AppModel) computeDrawerLayout(dims layoutDims) (height, width int) {
+	if dims.tier == LayoutCompact || m.shared == nil || m.shared.drawerStack == nil {
+		return 0, 0
+	}
+	drawerWidth := m.width
+	hasContent := m.shared.drawerStack.OptionsHasContent() || m.shared.drawerStack.PlanHasContent()
+	if hasContent {
+		h := dims.contentHeight * 30 / 100
+		if h > 12 {
+			h = 12
+		}
+		if h < 5 {
+			h = 5
+		}
+		if h > dims.contentHeight-5 {
+			h = dims.contentHeight - 5
+		}
+		if h < 1 {
+			h = 1
+		}
+		return h, drawerWidth
+	}
+	tabH := 2
+	if tabH > dims.contentHeight-1 {
+		tabH = dims.contentHeight - 1
+	}
+	if tabH < 1 {
+		tabH = 1
+	}
+	return tabH, drawerWidth
+}
+
 // ---------------------------------------------------------------------------
 // Layout rendering
 // ---------------------------------------------------------------------------
@@ -323,16 +363,28 @@ func (m AppModel) renderLayout() string {
 	return truncateHeight(output, m.height)
 }
 
-// renderMain renders the split content area (left panel + optional right panel).
+// renderMain renders the split content area (left panel + optional right panel),
+// then appends the full-width drawer stack below both panels (TUI-002).
 func (m AppModel) renderMain(dims layoutDims) string {
 	leftPanel := m.renderLeftPanel(dims)
 
+	var panelsRow string
 	if !dims.showRightPanel {
-		return leftPanel
+		panelsRow = leftPanel
+	} else {
+		rightPanel := m.renderRightPanel(dims)
+		panelsRow = lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 	}
 
-	rightPanel := m.renderRightPanel(dims)
-	return lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
+	// Drawer renders at full terminal width below both panels.
+	drawerH, drawerW := m.computeDrawerLayout(dims)
+	if drawerH > 0 && m.shared != nil && m.shared.drawerStack != nil {
+		m.shared.drawerStack.SetSize(drawerW, drawerH)
+		drawerView := m.shared.drawerStack.View()
+		return lipgloss.JoinVertical(lipgloss.Top, panelsRow, drawerView)
+	}
+
+	return panelsRow
 }
 
 // renderLeftPanel renders the Claude conversation panel with the appropriate
@@ -400,58 +452,6 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 		}
 	default:
 		content = config.StyleSubtle.Render(m.rightPanelMode.String())
-	}
-
-	// Drawer stack compositing (TDS-005).
-	// Always render drawer tabs at bottom of right panel for discoverability.
-	// When drawers have content, they expand and consume up to 40% of height.
-	// Compact tier suppresses drawers entirely.
-	if dims.tier != LayoutCompact && m.shared != nil && m.shared.drawerStack != nil {
-		hasContent := m.shared.drawerStack.OptionsHasContent() || m.shared.drawerStack.PlanHasContent()
-
-		if hasContent {
-			// Expanded: drawer gets up to 40% of content height, capped at 15 rows, min 5.
-			drawerH := dims.contentHeight * 40 / 100
-			if drawerH > 15 {
-				drawerH = 15
-			}
-			if drawerH < 5 {
-				drawerH = 5
-			}
-			if drawerH > dims.contentHeight-5 {
-				drawerH = dims.contentHeight - 5
-			}
-			if drawerH < 1 {
-				drawerH = 1
-			}
-
-			mainH := dims.contentHeight - drawerH
-			m.shared.drawerStack.SetSize(dims.rightWidth, drawerH)
-
-			mainStyle := lipgloss.NewStyle().Width(dims.rightWidth).Height(mainH)
-			drawerView := m.shared.drawerStack.View()
-
-			content = lipgloss.JoinVertical(lipgloss.Left,
-				mainStyle.Render(content),
-				drawerView,
-			)
-		} else {
-			// Minimized: show compact tabs (1 row each) at the bottom.
-			tabH := 2 // 1 row per minimized drawer tab
-			mainH := dims.contentHeight - tabH
-			if mainH < 1 {
-				mainH = 1
-			}
-			m.shared.drawerStack.SetSize(dims.rightWidth, tabH)
-
-			mainStyle := lipgloss.NewStyle().Width(dims.rightWidth).Height(mainH)
-			drawerView := m.shared.drawerStack.View()
-
-			content = lipgloss.JoinVertical(lipgloss.Left,
-				mainStyle.Render(content),
-				drawerView,
-			)
-		}
 	}
 
 	// Clip inner content — lipgloss.Height() pads but does NOT truncate.

@@ -7,6 +7,8 @@ package model
 import (
 	"math"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // ---------------------------------------------------------------------------
@@ -249,5 +251,165 @@ func TestComputeLayout_Standard_70_30_At100(t *testing.T) {
 	}
 	if dims.rightWidth != wantRightInner {
 		t.Errorf("rightWidth at 100 = %d; want %d", dims.rightWidth, wantRightInner)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// computeDrawerLayout — TUI-002 full-width drawer layout tests
+// ---------------------------------------------------------------------------
+
+// stubDrawerStack is a minimal drawerStackWidget implementation for testing.
+type stubDrawerStack struct {
+	optionsHasContent bool
+	planHasContent    bool
+}
+
+func (s *stubDrawerStack) View() string                    { return "" }
+func (s *stubDrawerStack) SetSize(w, h int)                {}
+func (s *stubDrawerStack) ExpandedDrawers() []string       { return nil }
+func (s *stubDrawerStack) HandleKey(_ string, _ tea.KeyMsg) tea.Cmd { return nil }
+func (s *stubDrawerStack) SetOptionsContent(_ string)      {}
+func (s *stubDrawerStack) ClearOptionsContent()            {}
+func (s *stubDrawerStack) OptionsHasContent() bool         { return s.optionsHasContent }
+func (s *stubDrawerStack) SetPlanContent(_ string)         {}
+func (s *stubDrawerStack) ClearPlanContent()               {}
+func (s *stubDrawerStack) PlanHasContent() bool            { return s.planHasContent }
+func (s *stubDrawerStack) SetOptionsFocused(_ bool)        {}
+func (s *stubDrawerStack) SetPlanFocused(_ bool)           {}
+func (s *stubDrawerStack) SetActiveModal(_ string, _ string, _ []string) {}
+func (s *stubDrawerStack) HasActiveModal() bool            { return false }
+func (s *stubDrawerStack) OptionsActiveRequestID() string  { return "" }
+func (s *stubDrawerStack) OptionsSelectedOption() string   { return "" }
+
+func TestComputeDrawerLayout(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		termWidth     int
+		tier          LayoutTier
+		contentHeight int
+		drawerStack   drawerStackWidget // nil means no drawer
+		wantH         int
+		wantW         int
+	}{
+		// Compact tier: drawer always suppressed regardless of content.
+		{
+			name:          "compact_no_content",
+			termWidth:     60, tier: LayoutCompact, contentHeight: 30,
+			drawerStack: &stubDrawerStack{},
+			wantH: 0, wantW: 0,
+		},
+		{
+			name:          "compact_has_content",
+			termWidth:     60, tier: LayoutCompact, contentHeight: 30,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 0, wantW: 0,
+		},
+		// nil drawerStack: always (0, 0).
+		{
+			name:          "standard_nil_drawerstack",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 40,
+			drawerStack: nil,
+			wantH: 0, wantW: 0,
+		},
+		// Standard — minimized (no content): 2-row tab strip.
+		{
+			name:          "standard_no_content",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 40,
+			drawerStack: &stubDrawerStack{},
+			wantH: 2, wantW: 120,
+		},
+		// Standard — has options content: 30% cH, capped at 12.
+		// cH=40 → 40*30/100=12 → exactly at cap → 12.
+		{
+			name:          "standard_has_options_content_cH40",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 40,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 12, wantW: 120,
+		},
+		// Standard — has plan content: same cap logic.
+		{
+			name:          "standard_has_plan_content_cH40",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 40,
+			drawerStack: &stubDrawerStack{planHasContent: true},
+			wantH: 12, wantW: 120,
+		},
+		// Wide — minimized.
+		{
+			name:          "wide_no_content",
+			termWidth:     150, tier: LayoutWide, contentHeight: 40,
+			drawerStack: &stubDrawerStack{},
+			wantH: 2, wantW: 150,
+		},
+		// Wide — has content.
+		{
+			name:          "wide_has_content_cH40",
+			termWidth:     150, tier: LayoutWide, contentHeight: 40,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 12, wantW: 150,
+		},
+		// Ultra — minimized.
+		{
+			name:          "ultra_no_content",
+			termWidth:     200, tier: LayoutUltra, contentHeight: 40,
+			drawerStack: &stubDrawerStack{},
+			wantH: 2, wantW: 200,
+		},
+		// Ultra — has content.
+		{
+			name:          "ultra_has_content_cH40",
+			termWidth:     200, tier: LayoutUltra, contentHeight: 40,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 12, wantW: 200,
+		},
+		// Small terminal (cH=8, has content):
+		// 8*30/100=2 → floor to 5 → cap to contentHeight-5=3 → 3.
+		{
+			name:          "small_terminal_cH8_has_content",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 8,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 3, wantW: 120,
+		},
+		// Large terminal (cH=60, has content):
+		// 60*30/100=18 → cap to 12.
+		{
+			name:          "large_terminal_cH60_has_content",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 60,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 12, wantW: 120,
+		},
+		// Mid-range (cH=20, has content):
+		// 20*30/100=6 → 6 >= 5 → 6 <= 15 → 6.
+		{
+			name:          "mid_terminal_cH20_has_content",
+			termWidth:     120, tier: LayoutStandard, contentHeight: 20,
+			drawerStack: &stubDrawerStack{optionsHasContent: true},
+			wantH: 6, wantW: 120,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := NewAppModel()
+			m.width = tc.termWidth
+			m.shared.drawerStack = tc.drawerStack
+
+			dims := layoutDims{
+				tier:          tc.tier,
+				contentHeight: tc.contentHeight,
+			}
+
+			gotH, gotW := m.computeDrawerLayout(dims)
+
+			if gotH != tc.wantH {
+				t.Errorf("height = %d; want %d", gotH, tc.wantH)
+			}
+			if gotW != tc.wantW {
+				t.Errorf("width = %d; want %d", gotW, tc.wantW)
+			}
+		})
 	}
 }
