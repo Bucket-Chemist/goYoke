@@ -416,6 +416,10 @@ func (m *AppModel) syncTaskBoard(input json.RawMessage) {
 		}
 	}
 	m.shared.taskBoard.SetTasks(entries)
+	// Taskboard height changes when tasks arrive (auto-show) or are cleared.
+	// Re-propagate layout so the Claude panel and other content components
+	// shrink to accommodate the new taskboard height.
+	m.propagateContentSizes()
 }
 
 // syncPlanPreview reads the most recently modified .claude/plans/*.md file

@@ -40,63 +40,7 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		m.shared.modalQueue.SetTermSize(msg.Width, msg.Height)
 	}
 
-	// Propagate size to child components.
-	dims := m.computeLayout()
-	if m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight)
-	}
-	m.agentTree.SetSize(dims.rightWidth, dims.contentHeight/2)
-	m.agentDetail.SetSize(dims.rightWidth, dims.contentHeight/2)
-	if m.shared.toasts != nil {
-		m.shared.toasts.SetSize(msg.Width, msg.Height)
-	}
-	if m.shared.teamList != nil {
-		m.shared.teamList.SetSize(dims.rightWidth, dims.contentHeight)
-	}
-
-	// Propagate size to right-panel components (TUI-032).
-	if m.shared.dashboard != nil {
-		m.shared.dashboard.SetSize(dims.rightWidth, dims.contentHeight)
-	}
-	if m.shared.settings != nil {
-		m.shared.settings.SetSize(dims.rightWidth, dims.contentHeight)
-	}
-	if m.shared.telemetry != nil {
-		m.shared.telemetry.SetSize(dims.rightWidth, dims.contentHeight)
-	}
-	if m.shared.planPreview != nil {
-		m.shared.planPreview.SetSize(dims.rightWidth, dims.contentHeight)
-	}
-	if m.shared.drawerStack != nil {
-		m.shared.drawerStack.SetSize(dims.rightWidth, dims.contentHeight)
-	}
-	if m.shared.taskBoard != nil {
-		m.shared.taskBoard.SetSize(msg.Width, msg.Height)
-	}
-
-	// Propagate responsive layout tier to all tier-aware widgets (TUI-058).
-	tier := dims.tier
-	if m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetTier(tier)
-	}
-	if m.shared.toasts != nil {
-		m.shared.toasts.SetTier(tier)
-	}
-	if m.shared.dashboard != nil {
-		m.shared.dashboard.SetTier(tier)
-	}
-	if m.shared.settings != nil {
-		m.shared.settings.SetTier(tier)
-	}
-	if m.shared.telemetry != nil {
-		m.shared.telemetry.SetTier(tier)
-	}
-	if m.shared.planPreview != nil {
-		m.shared.planPreview.SetTier(tier)
-	}
-	if m.shared.taskBoard != nil {
-		m.shared.taskBoard.SetTier(tier)
-	}
+	m.propagateContentSizes()
 
 	// Propagate size to the search overlay so centering is correct (TUI-059).
 	if m.shared.searchOverlay != nil {
@@ -123,6 +67,76 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.syncFocusState()
 
 	return m, nil
+}
+
+// propagateContentSizes recomputes the layout dimensions from the current
+// terminal size and propagates the new content heights to all child components.
+//
+// This MUST be called whenever the layout geometry changes — not just on
+// tea.WindowSizeMsg but also when the taskboard appears/disappears, because
+// the taskboard's dynamic height affects the available content area for the
+// Claude panel, agent tree, and all right-panel components.
+//
+// Without this re-propagation, components retain stale heights from the last
+// WindowSizeMsg and render more rows than the layout expects, causing the
+// banner and tab bar to be pushed off the top of the screen.
+func (m *AppModel) propagateContentSizes() {
+	dims := m.computeLayout()
+	if m.shared.claudePanel != nil {
+		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight)
+	}
+	m.agentTree.SetSize(dims.rightWidth, dims.contentHeight/2)
+	m.agentDetail.SetSize(dims.rightWidth, dims.contentHeight/2)
+	if m.shared.toasts != nil {
+		m.shared.toasts.SetSize(m.width, m.height)
+	}
+	if m.shared.teamList != nil {
+		m.shared.teamList.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+
+	// Right-panel components (TUI-032).
+	if m.shared.dashboard != nil {
+		m.shared.dashboard.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+	if m.shared.settings != nil {
+		m.shared.settings.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+	if m.shared.telemetry != nil {
+		m.shared.telemetry.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+	if m.shared.planPreview != nil {
+		m.shared.planPreview.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+	if m.shared.drawerStack != nil {
+		m.shared.drawerStack.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+	if m.shared.taskBoard != nil {
+		m.shared.taskBoard.SetSize(m.width, m.height)
+	}
+
+	// Responsive layout tier to all tier-aware widgets (TUI-058).
+	tier := dims.tier
+	if m.shared.claudePanel != nil {
+		m.shared.claudePanel.SetTier(tier)
+	}
+	if m.shared.toasts != nil {
+		m.shared.toasts.SetTier(tier)
+	}
+	if m.shared.dashboard != nil {
+		m.shared.dashboard.SetTier(tier)
+	}
+	if m.shared.settings != nil {
+		m.shared.settings.SetTier(tier)
+	}
+	if m.shared.telemetry != nil {
+		m.shared.telemetry.SetTier(tier)
+	}
+	if m.shared.planPreview != nil {
+		m.shared.planPreview.SetTier(tier)
+	}
+	if m.shared.taskBoard != nil {
+		m.shared.taskBoard.SetTier(tier)
+	}
 }
 
 // handleProviderSwitchMsg handles ProviderSwitchMsg: delegates to the

@@ -150,6 +150,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Global.ToggleTaskBoard):
 		if m.shared != nil && m.shared.taskBoard != nil {
 			m.shared.taskBoard.Toggle()
+			m.propagateContentSizes()
 		}
 		return m, nil
 

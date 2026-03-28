@@ -405,6 +405,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Shutdown (TUI-034)
 	// -----------------------------------------------------------------
 
+	case ShutdownRequestMsg:
+		// /exit or /quit from the ClaudePanel — same path as first Ctrl+C.
+		if m.shutdownInProgress {
+			return m, nil
+		}
+		m.shutdownInProgress = true
+		if m.shared != nil && m.shared.shutdownFunc != nil {
+			shutdownFn := m.shared.shutdownFunc
+			return m, func() tea.Msg {
+				err := shutdownFn()
+				return ShutdownCompleteMsg{Err: err}
+			}
+		}
+		m.saveSession()
+		return m, tea.Quit
+
 	case ShutdownCompleteMsg:
 		return m.handleShutdownComplete(msg)
 

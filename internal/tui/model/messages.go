@@ -280,6 +280,11 @@ type SessionAutoSaveMsg struct {
 // Shutdown messages (TUI-034)
 // ---------------------------------------------------------------------------
 
+// ShutdownRequestMsg is emitted by the ClaudePanel when the user types
+// /exit or /quit.  The AppModel handles it identically to Ctrl+C: it
+// initiates the graceful shutdown sequence (save session → quit).
+type ShutdownRequestMsg struct{}
+
 // ShutdownCompleteMsg is sent after the ShutdownManager finishes its
 // sequenced shutdown.  The Err field carries ErrShutdownTimeout if the
 // total budget was exceeded, or nil on success.

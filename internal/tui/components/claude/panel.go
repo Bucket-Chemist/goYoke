@@ -615,6 +615,11 @@ func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea
 	}
 
 	switch command {
+	case "/exit", "/quit":
+		return m, func() tea.Msg {
+			return model.ShutdownRequestMsg{}
+		}
+
 	case "/clear":
 		m.messages = nil
 		m.syncViewport()
