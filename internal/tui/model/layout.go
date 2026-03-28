@@ -425,7 +425,21 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 	case RPMAgents:
 		treeView := m.agentTree.View()
 		detailView := m.agentDetail.View()
-		content = lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
+		agentContent := lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
+
+		if dims.tier >= LayoutWide && m.shared != nil && m.shared.teamsHealth != nil {
+			// 50/50 split: agents left, health right
+			leftSubW := dims.rightWidth / 2
+			rightSubW := dims.rightWidth - leftSubW
+			agentCol := lipgloss.NewStyle().Width(leftSubW).Height(dims.contentHeight).Render(agentContent)
+			healthCol := lipgloss.NewStyle().Width(rightSubW).Height(dims.contentHeight).Render(m.shared.teamsHealth.View())
+			content = lipgloss.JoinHorizontal(lipgloss.Top, agentCol, healthCol)
+		} else if m.showHealthInAgents && m.shared != nil && m.shared.teamsHealth != nil {
+			// Standard tier with health toggle active — full-width health only
+			content = m.shared.teamsHealth.View()
+		} else {
+			content = agentContent
+		}
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {
 			content = m.shared.dashboard.View()

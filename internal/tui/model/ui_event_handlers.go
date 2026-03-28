@@ -114,6 +114,10 @@ func (m *AppModel) propagateContentSizes() {
 	if m.shared.planPreview != nil {
 		m.shared.planPreview.SetSize(dims.rightWidth, mainH)
 	}
+	if m.shared.teamsHealth != nil {
+		m.shared.teamsHealth.SetSize(dims.rightWidth, mainH)
+		m.shared.teamsHealth.SetTier(dims.tier)
+	}
 	if m.shared.drawerStack != nil {
 		m.shared.drawerStack.SetSize(m.width, drawerH)
 	}

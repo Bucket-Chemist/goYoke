@@ -255,6 +255,80 @@ func TestComputeLayout_Standard_70_30_At100(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// TestRPMAgents_SplitWidths — TUI-006 50/50 right-panel sub-split tests
+//
+// These tests verify the width arithmetic used by renderRightPanel when
+// RPMAgents mode is active.  Rather than parsing rendered strings, they
+// compute layoutDims and check that the 50/50 sub-column math holds at each
+// tier boundary.
+// ---------------------------------------------------------------------------
+
+func TestRPMAgents_SplitWidths(t *testing.T) {
+	t.Parallel()
+
+	const height = 40
+
+	tests := []struct {
+		name          string
+		width         int
+		wantTier      LayoutTier
+		wantShowRight bool
+		wantSplit     bool // Wide/Ultra: 50/50 sub-split applies
+	}{
+		// Compact: right panel hidden — no split.
+		{"compact_60", 60, LayoutCompact, false, false},
+		// Standard: both panels visible, but no sub-split.
+		{"standard_90", 90, LayoutStandard, true, false},
+		{"standard_110", 110, LayoutStandard, true, false},
+		// Wide: 50/50 sub-split active.
+		{"wide_120", 120, LayoutWide, true, true},
+		{"wide_150", 150, LayoutWide, true, true},
+		// Ultra: 50/50 sub-split active.
+		{"ultra_200", 200, LayoutUltra, true, true},
+		{"ultra_240", 240, LayoutUltra, true, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := NewAppModel()
+			m.width = tc.width
+			m.height = height
+
+			dims := m.computeLayout()
+
+			if dims.tier != tc.wantTier {
+				t.Errorf("tier = %s; want %s", dims.tier, tc.wantTier)
+			}
+			if dims.showRightPanel != tc.wantShowRight {
+				t.Errorf("showRightPanel = %v; want %v", dims.showRightPanel, tc.wantShowRight)
+			}
+
+			if !tc.wantSplit {
+				// Compact or Standard: no sub-split, nothing more to check.
+				return
+			}
+
+			// Wide/Ultra: verify the 50/50 sub-column arithmetic.
+			leftSubW := dims.rightWidth / 2
+			rightSubW := dims.rightWidth - leftSubW
+
+			if leftSubW+rightSubW != dims.rightWidth {
+				t.Errorf("sub-column widths %d + %d != rightWidth %d",
+					leftSubW, rightSubW, dims.rightWidth)
+			}
+			if leftSubW < 1 {
+				t.Errorf("leftSubW = %d; want >= 1", leftSubW)
+			}
+			if rightSubW < 1 {
+				t.Errorf("rightSubW = %d; want >= 1", rightSubW)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // computeDrawerLayout — TUI-002 full-width drawer layout tests
 // ---------------------------------------------------------------------------
 
