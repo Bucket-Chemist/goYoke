@@ -45,6 +45,15 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleModalKey(msg)
 	}
 
+	// While the CWD selector is active it captures all key events.
+	if m.shared != nil && m.shared.cwdSelector != nil && m.shared.cwdSelector.IsActive() {
+		cmd := m.shared.cwdSelector.HandleMsg(msg)
+		if !m.shared.cwdSelector.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
 	// While the search overlay is active it captures all key events.
 	// Dismiss the search overlay if a modal opens (handled in renderLayout).
 	if m.shared != nil && m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive() {
@@ -201,6 +210,14 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.shared.hintBar != nil {
 				m.shared.hintBar.SetContext("search")
 			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.Global.ChangeCWD):
+		// ctrl+d opens the CWD selector modal.
+		if m.shared != nil && m.shared.cwdSelector != nil {
+			m.shared.cwdSelector.SetSize(m.width, m.height)
+			m.shared.cwdSelector.Show()
 		}
 		return m, nil
 

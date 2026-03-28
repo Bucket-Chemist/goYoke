@@ -6,6 +6,7 @@ package model
 
 import (
 	"log"
+	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -380,6 +381,22 @@ func (m AppModel) handleToastMsg(msg ToastMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 	return m, nil
+}
+
+// handleCWDChanged applies the new working directory: calls os.Chdir, sets
+// the GOGENT_CWD env var (read by spawner.go for cmd.Dir), and updates the
+// status line display.
+func (m AppModel) handleCWDChanged(msg CWDChangedMsg) (tea.Model, tea.Cmd) {
+	if err := os.Chdir(msg.Path); err != nil {
+		log.Printf("[cwd] chdir failed: %v", err)
+		return m, nil
+	}
+	os.Setenv("GOGENT_CWD", msg.Path)
+	m.statusLine.CWD = msg.Path
+	log.Printf("[cwd] changed to %s", msg.Path)
+	return m, func() tea.Msg {
+		return ToastMsg{Text: "CWD: " + msg.Path, Level: ToastLevelInfo}
+	}
 }
 
 // handleShutdownComplete handles ShutdownCompleteMsg: logs any shutdown error

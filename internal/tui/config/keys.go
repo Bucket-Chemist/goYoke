@@ -57,6 +57,9 @@ type GlobalKeys struct {
 
 	// Search opens the unified cross-panel fuzzy search overlay (TUI-059).
 	Search key.Binding
+
+	// ChangeCWD opens the CWD selector modal to change the working directory.
+	ChangeCWD key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -209,6 +212,10 @@ func DefaultKeyMap() KeyMap {
 			Search: key.NewBinding(
 				key.WithKeys("ctrl+f"),
 				key.WithHelp("ctrl+f", "search"),
+			),
+			ChangeCWD: key.NewBinding(
+				key.WithKeys("ctrl+d"),
+				key.WithHelp("ctrl+d", "change cwd"),
 			),
 		},
 

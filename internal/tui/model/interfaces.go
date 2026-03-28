@@ -435,3 +435,28 @@ type drawerStackWidget interface {
 	OptionsActiveRequestID() string
 	OptionsSelectedOption() string
 }
+
+// ---------------------------------------------------------------------------
+// cwdSelectorWidget
+//
+// cwdSelectorWidget is the interface satisfied by *cwdselector.Model.
+// Defining it here avoids a circular import: cwdselector imports config
+// but not model; model must not import cwdselector directly.
+// ---------------------------------------------------------------------------
+
+// cwdSelectorWidget is the interface satisfied by *cwdselector.Model.
+// It follows the pointer-receiver mutation pattern: the concrete type
+// mutates itself in place and returns only the tea.Cmd.
+type cwdSelectorWidget interface {
+	// IsActive returns true when the modal is visible.
+	IsActive() bool
+	// Show makes the modal visible and resets selection state.
+	Show()
+	// SetSize updates the terminal dimensions for centering.
+	SetSize(w, h int)
+	// View renders the modal overlay. Returns "" when not active.
+	View() string
+	// HandleMsg processes a tea.Msg, mutates the widget in place, and
+	// returns any Cmd to run.
+	HandleMsg(msg tea.Msg) tea.Cmd
+}

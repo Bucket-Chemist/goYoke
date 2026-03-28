@@ -247,6 +247,12 @@ func (m AppModel) renderLayout() string {
 		)
 	}
 
+	// CWD selector renders as a full-screen overlay (lower priority than
+	// plan view, higher than search overlay and normal content).
+	if m.shared != nil && m.shared.cwdSelector != nil && m.shared.cwdSelector.IsActive() {
+		return m.shared.cwdSelector.View()
+	}
+
 	// Search overlay renders over the full layout (lower priority than modals
 	// and plan view, higher than normal content).
 	// If a modal or plan view opened while the search overlay was active,

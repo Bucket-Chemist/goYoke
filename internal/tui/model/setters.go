@@ -173,6 +173,13 @@ func (m *AppModel) SetBreadcrumb(bc breadcrumbWidget) {
 	m.shared.breadcrumb = bc
 }
 
+// SetCWDSelector injects the CWD selector modal into the shared state.
+// The selector is activated by ctrl+d or /cwd to change the working
+// directory scope for Claude Code sessions.
+func (m *AppModel) SetCWDSelector(cs cwdSelectorWidget) {
+	m.shared.cwdSelector = cs
+}
+
 // SetTheme updates the active theme in shared state.  It is called when the
 // user explicitly selects a new color theme (e.g. from the settings panel or
 // via ThemeChangedMsg).  The pointer receiver is required because this method

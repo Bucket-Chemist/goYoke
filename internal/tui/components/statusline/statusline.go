@@ -6,6 +6,7 @@ package statusline
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -114,6 +115,11 @@ type StatusLineModel struct {
 
 	// PlanTotalSteps is the total number of steps in the plan (0 = unknown).
 	PlanTotalSteps int
+
+	// CWD is the current working directory, set via the CWD selector modal.
+	// Empty string means the default (process CWD). Displayed in Row 1 with
+	// safety coloring: green (project), yellow (home), red (root).
+	CWD string
 
 	// VimEnabled is true when the vim keybinding overlay is active (TUI-062).
 	// When true, VimMode is rendered in the status bar.
@@ -318,6 +324,25 @@ func (m StatusLineModel) View() string {
 		projectName = "—"
 	}
 
+	// CWD scope indicator (safety coloring)
+	cwdField := ""
+	if m.CWD != "" {
+		cwdLabel := shortenCWD(m.CWD)
+		var cwdStyle lipgloss.Style
+		switch m.CWD {
+		case "/":
+			cwdStyle = m.theme.ErrorStyle()
+		default:
+			home, _ := os.UserHomeDir()
+			if m.CWD == home {
+				cwdStyle = m.theme.WarningStyle()
+			} else {
+				cwdStyle = m.theme.SuccessStyle()
+			}
+		}
+		cwdField = muted(" 📂 ") + cwdStyle.Render(cwdLabel)
+	}
+
 	// Git branch
 	branchField := ""
 	if m.GitBranch != "" && m.GitBranch != "N/A" {
@@ -328,7 +353,7 @@ func (m StatusLineModel) View() string {
 	}
 
 	row1Left := vimBadge + planBadge + modelBadge + " " + permBadge +
-		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + branchField
+		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + cwdField + branchField
 
 	// Auth: right-aligned
 	var authValue string
@@ -679,4 +704,22 @@ func scheduleSpinnerTick() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return spinnerTickMsg(t)
 	})
+}
+
+// shortenCWD shortens a CWD path for status bar display.
+func shortenCWD(path string) string {
+	if path == "/" {
+		return "/ (root)"
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path
+	}
+	if path == home {
+		return "~ (home)"
+	}
+	if strings.HasPrefix(path, home) {
+		return "~" + path[len(home):]
+	}
+	return path
 }

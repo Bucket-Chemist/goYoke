@@ -138,6 +138,11 @@ type sharedState struct {
 	// main content area showing the current navigation context.
 	breadcrumb breadcrumbWidget
 
+	// cwdSelector is the modal overlay for changing the working directory.
+	// It propagates CWD changes to os.Chdir and GOGENT_CWD env var so that
+	// spawned Claude CLI subprocesses inherit the desired scope.
+	cwdSelector cwdSelectorWidget
+
 	// Session persistence (TUI-033).
 	sessionStore *session.Store
 	sessionData  *session.SessionData
@@ -369,6 +374,20 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case modals.ModalResponseMsg:
 		return m.handleModalResponse(msg)
+
+	// -----------------------------------------------------------------
+	// CWD selector
+	// -----------------------------------------------------------------
+
+	case OpenCWDSelectorMsg:
+		if m.shared != nil && m.shared.cwdSelector != nil {
+			m.shared.cwdSelector.SetSize(m.width, m.height)
+			m.shared.cwdSelector.Show()
+		}
+		return m, nil
+
+	case CWDChangedMsg:
+		return m.handleCWDChanged(msg)
 
 	// -----------------------------------------------------------------
 	// Agent and team events (from bridge)

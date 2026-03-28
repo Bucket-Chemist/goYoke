@@ -368,3 +368,17 @@ type DrawerContentMsg struct {
 type DrawerMinimizeMsg struct {
 	DrawerID string
 }
+
+// ---------------------------------------------------------------------------
+// CWD selector messages
+// ---------------------------------------------------------------------------
+
+// CWDChangedMsg is emitted when the user selects a new working directory
+// via the CWD selector modal. The AppModel handles this by calling
+// os.Chdir and setting the GOGENT_CWD env var for subprocess propagation.
+type CWDChangedMsg struct {
+	Path string
+}
+
+// OpenCWDSelectorMsg requests that the CWD selector modal be shown.
+type OpenCWDSelectorMsg struct{}

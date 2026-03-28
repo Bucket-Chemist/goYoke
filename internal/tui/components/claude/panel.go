@@ -627,6 +627,11 @@ func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea
 			return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: true}
 		}
 
+	case "/cwd":
+		return m, func() tea.Msg {
+			return model.OpenCWDSelectorMsg{}
+		}
+
 	case "/help":
 		helpText := slashcmd.HelpText()
 		m.messages = append(m.messages, DisplayMessage{

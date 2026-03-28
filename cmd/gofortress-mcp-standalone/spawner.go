@@ -214,6 +214,12 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	cmd.Env = env
 	cmd.Stdin = strings.NewReader(augmentedPrompt)
 
+	// Inherit CWD from the GOGENT_CWD env var if set. This controls the scope
+	// of CC's hardcoded write restrictions (CC can write to CWD and subdirs).
+	if cwdOverride := os.Getenv("GOGENT_CWD"); cwdOverride != "" {
+		cmd.Dir = cwdOverride
+	}
+
 	// Create a new process group so that SIGTERM/SIGKILL targets the entire
 	// tree (claude parent + any MCP server children), not just the direct child.
 	cmd.SysProcAttr = &syscall.SysProcAttr{

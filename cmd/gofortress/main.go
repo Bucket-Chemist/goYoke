@@ -39,6 +39,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	claudepkg "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/cwdselector"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/dashboard"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/planpreview"
@@ -234,6 +235,9 @@ func main() {
 
 	drawerStack := drawer.NewDrawerStack()
 	app.SetDrawerStack(&drawerStack)
+
+	cwdSel := cwdselector.New()
+	app.SetCWDSelector(cwdSel)
 
 	// -----------------------------------------------------------------------
 	// Phase 1b: Locate gofortress-mcp binary and generate MCP config.
