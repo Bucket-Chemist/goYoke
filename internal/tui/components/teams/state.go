@@ -35,6 +35,8 @@ type TeamState struct {
 	Config TeamConfig
 	// LastPolled records when the config.json was last successfully read.
 	LastPolled time.Time
+	// StreamSizes maps agent name to the size of its stream_{agent}.ndjson file in bytes.
+	StreamSizes map[string]int64
 }
 
 // copyOf returns a shallow copy of the TeamState. Config.Waves and their
@@ -61,6 +63,12 @@ func (ts *TeamState) copyOf() *TeamState {
 				}
 			}
 			cp.Config.Waves[i] = wCopy
+		}
+	}
+	if ts.StreamSizes != nil {
+		cp.StreamSizes = make(map[string]int64, len(ts.StreamSizes))
+		for k, v := range ts.StreamSizes {
+			cp.StreamSizes[k] = v
 		}
 	}
 	return &cp
@@ -115,14 +123,15 @@ func NewTeamRegistry() *TeamRegistry {
 
 // Update inserts or replaces the TeamState for the given directory path.
 // It is safe to call from any goroutine.
-func (r *TeamRegistry) Update(dir string, config TeamConfig) {
+func (r *TeamRegistry) Update(dir string, config TeamConfig, streamSizes map[string]int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.teams[dir] = &TeamState{
-		Dir:        dir,
-		Config:     config,
-		LastPolled: time.Now(),
+		Dir:         dir,
+		Config:      config,
+		LastPolled:  time.Now(),
+		StreamSizes: streamSizes,
 	}
 }
 
@@ -163,4 +172,31 @@ func (r *TeamRegistry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return len(r.teams)
+}
+
+// MostRecentRunning returns a deep copy of the running team, or the most
+// recently created team as a fallback when no team is running. It returns
+// nil when the registry is empty.
+func (r *TeamRegistry) MostRecentRunning() *TeamState {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// First pass: find a running team.
+	for _, ts := range r.teams {
+		if ts.Config.Status == "running" {
+			return ts.copyOf()
+		}
+	}
+
+	// Fallback: return most recent by CreatedAt.
+	var best *TeamState
+	for _, ts := range r.teams {
+		if best == nil || ts.Config.CreatedAt > best.Config.CreatedAt {
+			best = ts
+		}
+	}
+	if best != nil {
+		return best.copyOf()
+	}
+	return nil
 }

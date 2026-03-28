@@ -180,7 +180,7 @@ func TestTeamListModel_Update_PollTick_IgnoresInvalidJSON(t *testing.T) {
 
 func TestTeamListModel_Update_TeamUpdateMsg_RefreshesSnapshot(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	// Before TeamUpdateMsg, snapshot is empty.
@@ -207,8 +207,8 @@ func TestTeamListModel_View_EmptyState(t *testing.T) {
 
 func TestTeamListModel_View_WithTeams(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/alpha", makeConfig("alpha-team", "running", "2026-06-01T00:00:00Z"))
-	r.Update("/sessions/beta", makeConfig("beta-team", "completed", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/alpha", makeConfig("alpha-team", "running", "2026-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/beta", makeConfig("beta-team", "completed", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	// Refresh snapshot via TeamUpdateMsg.
@@ -222,10 +222,10 @@ func TestTeamListModel_View_WithTeams(t *testing.T) {
 
 func TestTeamListModel_View_ShowsStatusIcons(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/run", makeConfig("run-team", "running", "2026-06-01T00:00:00Z"))
-	r.Update("/sessions/done", makeConfig("done-team", "completed", "2026-01-01T00:00:00Z"))
-	r.Update("/sessions/fail", makeConfig("fail-team", "failed", "2025-06-01T00:00:00Z"))
-	r.Update("/sessions/pend", makeConfig("pend-team", "pending", "2025-01-01T00:00:00Z"))
+	r.Update("/sessions/run", makeConfig("run-team", "running", "2026-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/done", makeConfig("done-team", "completed", "2026-01-01T00:00:00Z"), nil)
+	r.Update("/sessions/fail", makeConfig("fail-team", "failed", "2025-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/pend", makeConfig("pend-team", "pending", "2025-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -251,7 +251,7 @@ func TestTeamListModel_View_ShowsWaveProgress(t *testing.T) {
 		},
 	}
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/wave-team", cfg)
+	r.Update("/sessions/wave-team", cfg, nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -269,8 +269,8 @@ func TestTeamListModel_View_ShowsWaveProgress(t *testing.T) {
 func TestTeamListModel_Navigation_DownMovesSelection(t *testing.T) {
 	r := teams.NewTeamRegistry()
 	// Add two teams — newest first after sort.
-	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"))
-	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -284,8 +284,8 @@ func TestTeamListModel_Navigation_DownMovesSelection(t *testing.T) {
 
 func TestTeamListModel_Navigation_UpMovesSelection(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"))
-	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -301,7 +301,7 @@ func TestTeamListModel_Navigation_UpMovesSelection(t *testing.T) {
 
 func TestTeamListModel_Navigation_DownClampsAtEnd(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/only", makeConfig("only-team", "running", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/only", makeConfig("only-team", "running", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -313,7 +313,7 @@ func TestTeamListModel_Navigation_DownClampsAtEnd(t *testing.T) {
 
 func TestTeamListModel_Navigation_UpClampsAtStart(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/only", makeConfig("only-team", "running", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/only", makeConfig("only-team", "running", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -325,8 +325,8 @@ func TestTeamListModel_Navigation_UpClampsAtStart(t *testing.T) {
 
 func TestTeamListModel_Navigation_ViKeys(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"))
-	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -346,7 +346,7 @@ func TestTeamListModel_Navigation_ViKeys(t *testing.T) {
 
 func TestTeamListModel_Enter_EmitsTeamSelectedMsg(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})
@@ -429,8 +429,8 @@ func TestTeamListModel_PollTick_EmptyTeamsDirHandled(t *testing.T) {
 func TestTeamListModel_View_OrderMatchesRegistryAll(t *testing.T) {
 	// Verify newest-first ordering is reflected in View rows.
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"))
-	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"))
+	r.Update("/sessions/old", makeConfig("old-team", "completed", "2026-01-01T00:00:00Z"), nil)
+	r.Update("/sessions/new", makeConfig("new-team", "running", "2026-06-01T00:00:00Z"), nil)
 
 	m := teams.NewTeamListModel(r)
 	m, _ = m.Update(model.TeamUpdateMsg{})

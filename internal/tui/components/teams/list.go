@@ -311,6 +311,21 @@ func scanTeamsDir(dir string, reg *TeamRegistry) {
 			continue
 		}
 
-		reg.Update(teamDir, cfg)
+		// Stat stream files for activity tracking.
+		var streamSizes map[string]int64
+		streamEntries, _ := filepath.Glob(filepath.Join(teamDir, "stream_*.ndjson"))
+		if len(streamEntries) > 0 {
+			streamSizes = make(map[string]int64, len(streamEntries))
+			for _, path := range streamEntries {
+				base := filepath.Base(path)
+				name := strings.TrimPrefix(base, "stream_")
+				name = strings.TrimSuffix(name, ".ndjson")
+				if info, err := os.Stat(path); err == nil {
+					streamSizes[name] = info.Size()
+				}
+			}
+		}
+
+		reg.Update(teamDir, cfg, streamSizes)
 	}
 }
