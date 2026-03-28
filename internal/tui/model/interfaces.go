@@ -405,6 +405,21 @@ type searchOverlayWidget interface {
 }
 
 // ---------------------------------------------------------------------------
+// teamsHealthWidget  (TUI-003)
+//
+// teamsHealthWidget is the interface satisfied by the concrete health
+// dashboard component (implemented in TUI-005). Defining it here decouples
+// AppModel from the concrete type and avoids a circular import.
+// ---------------------------------------------------------------------------
+
+// teamsHealthWidget is the interface for the team health dashboard component.
+type teamsHealthWidget interface {
+	View() string
+	SetSize(w, h int)
+	SetTier(tier LayoutTier)
+}
+
+// ---------------------------------------------------------------------------
 // drawerStackWidget  (TDS-004)
 //
 // drawerStackWidget is the interface satisfied by drawer.DrawerStack.

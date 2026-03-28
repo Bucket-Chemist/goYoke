@@ -118,6 +118,9 @@ type sharedState struct {
 	// drawerStack is the collapsible drawer stack (TDS-004).
 	// It manages the options and plan drawers in the right panel.
 	drawerStack drawerStackWidget
+	// teamsHealth is the team health dashboard widget (TUI-003).
+	// Concrete implementation lives in the teams package (TUI-005).
+	teamsHealth teamsHealthWidget
 	taskBoard   taskBoardWidget
 
 	// planViewModal is the full-screen plan viewer overlay (TUI-056).
@@ -195,6 +198,10 @@ type AppModel struct {
 	// Child models (directly importable — agents doesn't import model)
 	agentTree   agents.AgentTreeModel
 	agentDetail agents.AgentDetailModel
+
+	// showHealthInAgents toggles the health dashboard in the agents panel
+	// area (TUI-003). Toggled by Alt+H on Standard tier (TUI-007).
+	showHealthInAgents bool
 
 	// Diff history (post-hoc diffs from Write/Edit/Bash tool results).
 	// TUI-022 renders these inline in the Claude panel.

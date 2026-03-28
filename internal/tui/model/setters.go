@@ -101,6 +101,13 @@ func (m *AppModel) SetDrawerStack(ds drawerStackWidget) {
 	}
 }
 
+// SetTeamsHealth injects the team health dashboard widget (TUI-003).
+func (m *AppModel) SetTeamsHealth(th teamsHealthWidget) {
+	if m.shared != nil {
+		m.shared.teamsHealth = th
+	}
+}
+
 // SetTaskBoard injects the task board overlay component into the shared state.
 func (m *AppModel) SetTaskBoard(tb taskBoardWidget) {
 	m.shared.taskBoard = tb
