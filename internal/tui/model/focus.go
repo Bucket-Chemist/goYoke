@@ -14,11 +14,17 @@ const (
 
 	// FocusAgents indicates that the right-panel stack holds focus.
 	FocusAgents
+
+	// FocusPlanDrawer indicates that the plan drawer holds focus (TDS-008).
+	FocusPlanDrawer
+
+	// FocusOptionsDrawer indicates that the options drawer holds focus (TDS-008).
+	FocusOptionsDrawer
 )
 
 // focusTargetCount is the total number of FocusTarget values.
 // Update this constant whenever a new FocusTarget is added.
-const focusTargetCount = int(FocusAgents) + 1
+const focusTargetCount = int(FocusOptionsDrawer) + 1
 
 // String returns a human-readable name for the FocusTarget.
 func (f FocusTarget) String() string {
@@ -27,6 +33,10 @@ func (f FocusTarget) String() string {
 		return "Claude"
 	case FocusAgents:
 		return "Agents"
+	case FocusPlanDrawer:
+		return "Plan Drawer"
+	case FocusOptionsDrawer:
+		return "Options Drawer"
 	default:
 		return "Unknown"
 	}
@@ -42,6 +52,50 @@ func FocusNext(current FocusTarget) FocusTarget {
 // around from the first target back to the last.
 func FocusPrev(current FocusTarget) FocusTarget {
 	return FocusTarget((int(current) - 1 + focusTargetCount) % focusTargetCount)
+}
+
+// FocusRing builds the current focus ring based on which drawers are expanded.
+// The base ring is always [FocusClaude, FocusAgents]. Expanded drawers are
+// appended: plan first, then options (TDS-008).
+func FocusRing(expandedDrawers []string) []FocusTarget {
+	ring := []FocusTarget{FocusClaude, FocusAgents}
+	for _, id := range expandedDrawers {
+		switch id {
+		case "plan":
+			ring = append(ring, FocusPlanDrawer)
+		case "options":
+			ring = append(ring, FocusOptionsDrawer)
+		}
+	}
+	return ring
+}
+
+// FocusNextInRing returns the next FocusTarget in the given ring.
+// If current is not in the ring, returns ring[0] (snap behavior).
+func FocusNextInRing(current FocusTarget, ring []FocusTarget) FocusTarget {
+	if len(ring) == 0 {
+		return FocusClaude
+	}
+	for i, t := range ring {
+		if t == current {
+			return ring[(i+1)%len(ring)]
+		}
+	}
+	return ring[0] // snap to first
+}
+
+// FocusPrevInRing returns the previous FocusTarget in the given ring.
+// If current is not in the ring, returns ring[0] (snap behavior).
+func FocusPrevInRing(current FocusTarget, ring []FocusTarget) FocusTarget {
+	if len(ring) == 0 {
+		return FocusClaude
+	}
+	for i, t := range ring {
+		if t == current {
+			return ring[(i-1+len(ring))%len(ring)]
+		}
+	}
+	return ring[0]
 }
 
 // ---------------------------------------------------------------------------

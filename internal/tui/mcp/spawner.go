@@ -21,6 +21,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
@@ -154,8 +155,10 @@ func parseCLIOutput(output []byte) (*cliResult, error) {
 }
 
 // runSubprocess starts a claude CLI subprocess, applies a SIGTERM/SIGKILL
-// timeout lifecycle, and returns the parsed result.
-func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentInput, augmentedPrompt string, agentID string) (*cliResult, error) {
+// timeout lifecycle, and returns the parsed result. When uds is non-nil,
+// live tool_use events are parsed from the NDJSON stream and forwarded as
+// AgentActivity IPC notifications for real-time TUI display.
+func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentInput, augmentedPrompt string, agentID string, uds *UDSClient) (*cliResult, error) {
 	args := buildSpawnArgs(agent, input)
 	nestingLevel := getCurrentNestingLevel()
 	env := buildSpawnEnv(nestingLevel, agentID)
@@ -183,6 +186,18 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 
 	pid := cmd.Process.Pid
 
+	// Notify TUI with the subprocess PID for interrupt support.
+	// This is a second "running" notification (the first is sent by
+	// handleSpawnAgent before runSubprocess is called) but this one
+	// carries the PID which is only available after cmd.Start().
+	if uds != nil {
+		uds.notify(TypeAgentUpdate, AgentUpdatePayload{
+			AgentID: agentID,
+			Status:  "running",
+			PID:     pid,
+		})
+	}
+
 	var (
 		stdoutBuf bytes.Buffer
 		stderrBuf bytes.Buffer
@@ -193,20 +208,39 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		buf := make([]byte, 4096)
-		for {
-			n, readErr := stdoutPipe.Read(buf)
-			if n > 0 {
-				if !truncated && stdoutBuf.Len() < maxBufferBytes {
-					stdoutBuf.Write(buf[:n])
-					if stdoutBuf.Len() >= maxBufferBytes {
-						truncated = true
-						stdoutBuf.WriteString("\n[OUTPUT TRUNCATED]")
-					}
+		scanner := bufio.NewScanner(stdoutPipe)
+		scanner.Buffer(make([]byte, 0, 512*1024), maxBufferBytes)
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			// Buffer raw lines for final result parsing by parseCLIOutput.
+			if !truncated && stdoutBuf.Len() < maxBufferBytes {
+				stdoutBuf.Write(line)
+				stdoutBuf.WriteByte('\n')
+				if stdoutBuf.Len() >= maxBufferBytes {
+					truncated = true
+					stdoutBuf.WriteString("[OUTPUT TRUNCATED]")
 				}
 			}
-			if readErr != nil {
-				break
+			// Live NDJSON parsing: extract tool_use events and forward
+			// as AgentActivity IPC notifications for the TUI detail panel.
+			if uds != nil {
+				event, parseErr := cli.ParseCLIEvent(line)
+				if parseErr != nil {
+					continue
+				}
+				if ae, ok := event.(cli.AssistantEvent); ok {
+					for _, block := range ae.Message.Content {
+						if block.Type == "tool_use" && block.Name != "" {
+							act := cli.ExtractToolActivity(block)
+							uds.notify(TypeAgentActivity, AgentActivityPayload{
+								AgentID: agentID,
+								Tool:    block.Name,
+								Target:  act.Target,
+								Preview: act.Preview,
+							})
+						}
+					}
+				}
 			}
 		}
 	}()

@@ -414,43 +414,38 @@ func TestSaveRestoreMessages_RoundTrip(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestInputHistory_Save_RoundTrip(t *testing.T) {
-
 	dir := t.TempDir()
-	h := claude.NewInputHistory(10)
+	h := claude.NewInputHistory(dir)
 	h.Add("first entry")
 	h.Add("second entry")
 
-	require.NoError(t, h.Save(dir))
+	require.NoError(t, h.Save())
 
-	loaded, err := claude.LoadInputHistory(dir)
-	require.NoError(t, err)
+	loaded := claude.LoadInputHistory(dir)
 	entries := loaded.All()
 	require.Len(t, entries, 2)
-	assert.Equal(t, "first entry", entries[0])
-	assert.Equal(t, "second entry", entries[1])
+	// newest first
+	assert.Equal(t, "second entry", entries[0])
+	assert.Equal(t, "first entry", entries[1])
 }
 
 func TestInputHistory_Save_EmptyHistory(t *testing.T) {
-
 	dir := t.TempDir()
-	h := claude.NewInputHistory(5)
+	h := claude.NewInputHistory(dir)
 
-	require.NoError(t, h.Save(dir))
+	require.NoError(t, h.Save())
 
-	loaded, err := claude.LoadInputHistory(dir)
-	require.NoError(t, err)
+	loaded := claude.LoadInputHistory(dir)
 	assert.Empty(t, loaded.All())
 }
 
 func TestInputHistory_Save_CreatesDirIfMissing(t *testing.T) {
-
 	dir := t.TempDir()
 	nestedDir := dir + "/nested/subdir"
-	h := claude.NewInputHistory(5)
+	h := claude.NewInputHistory(nestedDir)
 	h.Add("an entry")
 
-	// nestedDir does not exist yet — Save must create it.
-	require.NoError(t, h.Save(nestedDir))
+	require.NoError(t, h.Save())
 }
 
 // ---------------------------------------------------------------------------

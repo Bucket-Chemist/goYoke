@@ -74,7 +74,8 @@ type TaskBoardModel struct {
 }
 
 // NewTaskBoardModel returns a TaskBoardModel in the hidden state with the
-// default theme applied.
+// default theme applied. The board auto-shows when SetTasks is called with
+// a non-empty task list. Toggle manually with Alt+B.
 func NewTaskBoardModel() TaskBoardModel {
 	return TaskBoardModel{
 		theme: config.DefaultTheme(),
@@ -108,7 +109,7 @@ func (m *TaskBoardModel) CycleView() {
 }
 
 // SetTasks replaces the current task list with a defensive copy of tasks and
-// refreshes the filtered view.
+// refreshes the filtered view. Auto-shows the board when tasks arrive.
 func (m *TaskBoardModel) SetTasks(tasks []TaskEntry) {
 	if len(tasks) == 0 {
 		m.tasks = nil
@@ -120,32 +121,40 @@ func (m *TaskBoardModel) SetTasks(tasks []TaskEntry) {
 	copy(cp, tasks)
 	m.tasks = cp
 	m.applyFilter()
+	// Auto-show the board when tasks are populated for the first time.
+	// The user can still hide it with Alt+B.
+	m.visible = true
 }
 
-// IsVisible returns true when the task board overlay is shown.
+// IsVisible returns true when the task board toggle is on. Height() and View()
+// independently guard against rendering when there are no tasks, so IsVisible
+// reflects the user's toggle intent without coupling to task state.
 func (m TaskBoardModel) IsVisible() bool {
 	return m.visible
 }
 
 // Height returns the number of terminal rows the task board occupies.
-// Returns 0 when not visible.
+// Returns 0 when not visible or when there are no tasks.
+// MUST match View() line count exactly or the layout overflows and clips
+// the banner/tab bar off the top of the screen.
 func (m TaskBoardModel) Height() int {
-	if !m.visible {
+	if !m.visible || len(m.tasks) == 0 {
 		return 0
 	}
 	tasks := m.displayTasks()
 	// 1 progress summary + 1 filter bar + min(len(tasks), maxRows) task rows.
-	rows := 2 + min(len(tasks), maxRows)
-	if rows < 2 {
-		rows = 2
+	h := 2 + min(len(tasks), maxRows)
+	// +1 for the "Form: ..." detail row when the selected task has an ActiveForm.
+	if m.cursor < len(tasks) && tasks[m.cursor].ActiveForm != "" {
+		h++
 	}
-	return rows
+	return h
 }
 
 // HandleMsg handles keyboard messages when the task board is visible. It
 // satisfies the taskBoardWidget interface extension added in TUI-055.
 func (m *TaskBoardModel) HandleMsg(msg tea.Msg) tea.Cmd {
-	if !m.visible {
+	if !m.visible || len(m.tasks) == 0 {
 		return nil
 	}
 	switch msg := msg.(type) {
@@ -212,7 +221,7 @@ func (m TaskBoardModel) matchesFilter(t TaskEntry) bool {
 // board is not visible. It is a pure function of the model state — no I/O is
 // performed here.
 func (m TaskBoardModel) View() string {
-	if !m.visible {
+	if !m.visible || len(m.tasks) == 0 {
 		return ""
 	}
 
@@ -229,7 +238,8 @@ func (m TaskBoardModel) View() string {
 	sb.WriteByte('\n')
 
 	if len(tasks) == 0 {
-		sb.WriteString(config.StyleSubtle.Render("  (none)"))
+		// All tasks filtered out — show nothing rather than "(none)" to keep
+		// Height() and View() line counts consistent.
 		return sb.String()
 	}
 

@@ -97,6 +97,10 @@ type AgentUpdatePayload struct {
 	AgentID string `json:"agentId"`
 	// Status is the new lifecycle status (e.g. "running", "done", "error").
 	Status string `json:"status"`
+	// PID is the OS process ID of the spawned subprocess. Sent with the
+	// "running" status update after the subprocess starts. Zero if not
+	// applicable.
+	PID int `json:"pid,omitempty"`
 }
 
 // AgentActivityPayload is the payload for a TypeAgentActivity message.
@@ -105,6 +109,10 @@ type AgentActivityPayload struct {
 	AgentID string `json:"agentId"`
 	// Tool is the name of the tool being invoked.
 	Tool string `json:"tool"`
+	// Target is the key parameter (file path, command, pattern, etc.).
+	Target string `json:"target,omitempty"`
+	// Preview is a short human-readable summary (e.g. "Read: /path/to/file").
+	Preview string `json:"preview,omitempty"`
 }
 
 // ToastPayload is the payload for a TypeToast message.

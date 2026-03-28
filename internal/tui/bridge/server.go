@@ -250,6 +250,7 @@ func (b *IPCBridge) handleAgentUpdate(req mcp.IPCRequest) {
 	b.sender.Send(model.AgentUpdatedMsg{
 		AgentID: p.AgentID,
 		Status:  p.Status,
+		PID:     p.PID,
 	})
 }
 
@@ -263,6 +264,8 @@ func (b *IPCBridge) handleAgentActivity(req mcp.IPCRequest) {
 	b.sender.Send(model.AgentActivityMsg{
 		AgentID:  p.AgentID,
 		ToolName: p.Tool,
+		Target:   p.Target,
+		Preview:  p.Preview,
 	})
 }
 

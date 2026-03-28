@@ -10,8 +10,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
+
+// interruptConfirmRequestID is the modal request ID used for the ESC-while-streaming
+// interrupt confirmation dialog. It is matched in handleModalResponse to execute
+// the actual CLI interrupt only after the user selects "Yes".
+const interruptConfirmRequestID = "interrupt-confirm"
 
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -86,7 +92,12 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case key.Matches(msg, m.keys.Global.ToggleFocus):
-		m.focus = FocusNext(m.focus)
+		var expanded []string
+		if m.shared != nil && m.shared.drawerStack != nil {
+			expanded = m.shared.drawerStack.ExpandedDrawers()
+		}
+		ring := FocusRing(expanded)
+		m.focus = FocusNextInRing(m.focus, ring)
 		m.syncFocusState()
 		m.updateHintContext()
 		m.updateBreadcrumbs()
@@ -95,7 +106,12 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// TUI-052: Shift+Tab triggers reverse focus cycling.
 	case key.Matches(msg, m.keys.Global.ReverseToggleFocus):
-		m.focus = FocusPrev(m.focus)
+		var expanded []string
+		if m.shared != nil && m.shared.drawerStack != nil {
+			expanded = m.shared.drawerStack.ExpandedDrawers()
+		}
+		ring := FocusRing(expanded)
+		m.focus = FocusPrevInRing(m.focus, ring)
 		m.syncFocusState()
 		m.updateHintContext()
 		m.updateBreadcrumbs()
@@ -138,20 +154,43 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.ViewPlan):
-		// Only open the plan viewer when the right panel is showing the plan.
-		if m.rightPanelMode == RPMPlanPreview && m.shared != nil {
-			markdown := ""
-			if m.shared.planPreview != nil {
-				markdown = m.shared.planPreview.Content()
-			}
-			m.shared.planViewModal.SetContent(markdown, m.width)
-			m.shared.planViewModal.SetSize(m.width, m.height)
-			m.shared.planViewModal.Show()
-			if m.shared.hintBar != nil {
-				m.shared.hintBar.SetContext("plan")
+		// Open the full-screen plan viewer when plan content is available.
+		if m.shared != nil && m.shared.planPreview != nil {
+			markdown := m.shared.planPreview.Content()
+			if markdown != "" {
+				m.shared.planViewModal.SetContent(markdown, m.width)
+				m.shared.planViewModal.SetSize(m.width, m.height)
+				m.shared.planViewModal.Show()
+				if m.shared.hintBar != nil {
+					m.shared.hintBar.SetContext("plan")
+				}
 			}
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keys.Global.Interrupt):
+		// Escape while a turn is active: show a confirmation modal before
+		// sending SIGINT to the CLI subprocess.  We check statusLine.Streaming
+		// (not claudePanel.IsStreaming()) because the latter is only true during
+		// LLM text generation (~100ms bursts) and false during tool execution
+		// (seconds to minutes), making the interrupt window effectively zero
+		// for a router that primarily calls tools.  statusLine.Streaming stays
+		// true for the entire turn and clears only on ResultEvent.
+		if m.statusLine.Streaming {
+			if m.shared.modalQueue != nil {
+				m.shared.modalQueue.Push(modals.ModalRequest{
+					ID:      interruptConfirmRequestID,
+					Type:    modals.Confirm,
+					Header:  "Interrupt Agent",
+					Message: "Interrupt the active agent?",
+				})
+				if !m.shared.modalQueue.IsActive() {
+					m.shared.modalQueue.Activate()
+				}
+			}
+			return m, nil
+		}
+		// Not streaming — fall through to focus-specific routing.
 
 	case key.Matches(msg, m.keys.Global.Search):
 		// ctrl+f opens the unified cross-panel search overlay (TUI-059).
@@ -186,6 +225,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleClaudeKey(msg)
 	case FocusAgents:
 		return m.handleAgentsKey(msg)
+	case FocusPlanDrawer, FocusOptionsDrawer:
+		return m.handleDrawerKey(msg)
 	}
 
 	return m, nil
@@ -244,6 +285,46 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// handleDrawerKey routes keyboard events to the focused drawer via the drawer
+// stack. The focusedDrawer ID is derived from the current FocusTarget.
+// If the focused drawer is minimized (no longer in the expanded ring) after
+// handling the key, focus snaps back to FocusClaude (TDS-008).
+func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.drawerStack == nil {
+		return m, nil
+	}
+	var drawerID string
+	switch m.focus {
+	case FocusPlanDrawer:
+		drawerID = "plan"
+	case FocusOptionsDrawer:
+		drawerID = "options"
+	default:
+		return m, nil
+	}
+	cmd := m.shared.drawerStack.HandleKey(drawerID, msg)
+
+	// Edge case: if the focused drawer was just minimized (Esc), snap focus
+	// back to FocusClaude.
+	expanded := m.shared.drawerStack.ExpandedDrawers()
+	ring := FocusRing(expanded)
+	found := false
+	for _, t := range ring {
+		if t == m.focus {
+			found = true
+			break
+		}
+	}
+	if !found {
+		m.focus = FocusClaude
+		m.syncFocusState()
+		m.updateHintContext()
+		m.updateBreadcrumbs()
+	}
+
+	return m, cmd
+}
+
 // syncFocusState propagates the current focus state to child components.
 func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
@@ -252,6 +333,11 @@ func (m *AppModel) syncFocusState() {
 	m.agentTree.SetFocused(m.focus == FocusAgents && m.rightPanelMode == RPMAgents)
 	if m.shared != nil && m.shared.dashboard != nil {
 		m.shared.dashboard.SetFocused(m.focus == FocusAgents && m.rightPanelMode == RPMDashboard)
+	}
+	// Drawer focus (TDS-008).
+	if m.shared != nil && m.shared.drawerStack != nil {
+		m.shared.drawerStack.SetPlanFocused(m.focus == FocusPlanDrawer)
+		m.shared.drawerStack.SetOptionsFocused(m.focus == FocusOptionsDrawer)
 	}
 }
 
@@ -431,6 +517,12 @@ func (m *AppModel) updateBreadcrumbs() {
 			crumbs = []string{"Agents", m.rightPanelMode.String()}
 		}
 
+	case FocusPlanDrawer:
+		crumbs = []string{"Drawer", "Plan"}
+
+	case FocusOptionsDrawer:
+		crumbs = []string{"Drawer", "Options"}
+
 	default:
 		crumbs = []string{m.focus.String()}
 	}
@@ -461,6 +553,8 @@ func (m *AppModel) updateHintContext() {
 		m.shared.hintBar.SetContext("search")
 	case m.rightPanelMode == RPMSettings:
 		m.shared.hintBar.SetContext("settings")
+	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer:
+		m.shared.hintBar.SetContext("drawer")
 	default:
 		m.shared.hintBar.SetContext("main")
 	}

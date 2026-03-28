@@ -54,10 +54,10 @@ type ToolUseMsg struct {
 }
 
 // ToolResultMsg carries the result of a single tool invocation.
+// ToolID is matched against ToolBlock.ToolID to update the correct block.
 type ToolResultMsg struct {
-	ToolName string
-	Result   string
-	Success  bool
+	ToolID  string
+	Success bool
 }
 
 // ResultMsg is emitted at the end of a CLI session turn and summarises cost
@@ -148,6 +148,9 @@ type AgentRegisteredMsg struct {
 type AgentUpdatedMsg struct {
 	AgentID string
 	Status  string
+	// PID is the OS process ID of the spawned subprocess, used for
+	// interrupt/kill support. Zero if not applicable.
+	PID int
 }
 
 // AgentActivityMsg is emitted when an agent starts or finishes streaming a
@@ -155,6 +158,8 @@ type AgentUpdatedMsg struct {
 type AgentActivityMsg struct {
 	AgentID   string
 	ToolName  string
+	Target    string // key param: file path, command, pattern
+	Preview   string // human-readable summary
 	Streaming bool
 }
 
@@ -341,4 +346,20 @@ type TabFlashMsg struct {
 type ThemeChangedMsg struct {
 	// Variant is the color palette to activate.
 	Variant config.ThemeVariant
+}
+
+// ---------------------------------------------------------------------------
+// Drawer messages (TDS-004)
+// ---------------------------------------------------------------------------
+
+// DrawerContentMsg requests that a drawer's content be updated.
+// The DrawerID identifies which drawer ("options" or "plan").
+type DrawerContentMsg struct {
+	DrawerID string
+	Content  string
+}
+
+// DrawerMinimizeMsg requests that a drawer be minimized.
+type DrawerMinimizeMsg struct {
+	DrawerID string
 }

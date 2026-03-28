@@ -92,7 +92,7 @@ func SyncAssistantEvent(ev AssistantEvent, registry *state.AgentRegistry) AgentS
 		}
 
 		activity := ExtractToolActivity(block)
-		registry.SetActivity(*ev.ParentToolUseID, activity)
+		registry.AppendActivity(*ev.ParentToolUseID, activity)
 		result.Activity = append(result.Activity, *ev.ParentToolUseID)
 	}
 
@@ -156,7 +156,7 @@ func SyncUserEvent(ev UserEvent, registry *state.AgentRegistry) AgentSyncResult 
 	if ev.ParentToolUseID != nil {
 		parentID := *ev.ParentToolUseID
 		if registry.Get(parentID) != nil {
-			registry.SetActivity(parentID, state.AgentActivity{
+			registry.AppendActivity(parentID, state.AgentActivity{
 				Type:      "idle",
 				Timestamp: time.Now(),
 			})

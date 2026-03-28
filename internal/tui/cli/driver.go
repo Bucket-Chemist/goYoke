@@ -210,6 +210,10 @@ func (d *CLIDriver) Start() tea.Cmd {
 			cmd.Dir = d.opts.ProjectDir
 		}
 
+		// Run in a dedicated process group so Interrupt() can signal the
+		// entire tree (claude CLI + MCP servers + API calls) via Kill(-pgid).
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 		// Merge extra env vars into the subprocess environment.
 		if len(d.opts.EnvVars) > 0 {
 			env := os.Environ()
@@ -290,6 +294,13 @@ func (d *CLIDriver) buildArgs() []string {
 		args = append(args, "--mcp-config", d.opts.MCPConfigPath)
 		args = append(args, "--allowedTools", "mcp__gofortress-interactive__*")
 	}
+
+	// Block the built-in Agent tool — all agent spawning must go through
+	// mcp__gofortress-interactive__spawn_agent which injects identity,
+	// conventions, and rules via buildFullAgentContext().
+	// Agent() bypasses all PreToolUse hooks and fires no context injection.
+	// Enforcement: routing-schema.json → this CLI flag → CLAUDE.md reference.
+	args = append(args, "--disallowedTools", "Agent")
 
 	// NOTE: --verbose is already unconditionally included above (required by
 	// claude CLI 2.1.81+ for stream-json output). The d.opts.Verbose flag
@@ -510,8 +521,15 @@ func (d *CLIDriver) Interrupt() error {
 		return fmt.Errorf("cli driver: subprocess not running")
 	}
 
-	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
-		return fmt.Errorf("cli driver: send SIGINT: %w", err)
+	// Send SIGINT to the entire process group (negative PID) so that all
+	// child processes (MCP servers, spawned agents, API calls) also receive
+	// the signal.  Matches the spawner pattern in mcp/spawner.go:244.
+	pid := cmd.Process.Pid
+	if err := syscall.Kill(-pid, syscall.SIGINT); err != nil {
+		// Fallback: try single-process signal if group signal fails.
+		if err2 := cmd.Process.Signal(syscall.SIGINT); err2 != nil {
+			return fmt.Errorf("cli driver: send SIGINT (group=%v, proc=%v)", err, err2)
+		}
 	}
 	return nil
 }

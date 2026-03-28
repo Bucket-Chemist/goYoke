@@ -5,6 +5,8 @@ package model
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -118,19 +120,48 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 			case block.Type == "tool_use" && block.Name != "":
 				// Show tool calls in the chat so the user has visibility
 				// into what the router is doing (spawn_agent, Read, etc.).
-				input := string(block.Input)
-				if len(input) > 120 {
-					input = input[:120] + "…"
-				}
+				// Extract a human-readable target (file path, command, pattern)
+				// instead of showing raw JSON.
+				activity := cli.ExtractToolActivity(block)
 				cmd := m.shared.claudePanel.HandleMsg(ToolUseMsg{
 					ToolName: block.Name,
 					ToolID:   block.ID,
-					Input:    input,
+					Input:    activity.Target,
 				})
 				if cmd != nil {
 					cmds = append(cmds, cmd)
 				}
 			}
+		}
+	}
+
+	// Wire TodoWrite tool_use blocks to the TaskBoard so the todo overlay
+	// reflects the current task list. The last TodoWrite wins (matches the
+	// TS TUI's useTaskBoardData hook pattern).
+	if m.shared.taskBoard != nil {
+		for _, block := range msg.Message.Content {
+			if block.Type == "tool_use" && block.Name == "TodoWrite" && len(block.Input) > 0 {
+				m.syncTaskBoard(block.Input)
+			}
+		}
+	}
+
+	// Wire plan mode tool calls to the plan preview panel and drawer.
+	// EnterPlanMode → activate plan mode indicator on status line.
+	// ExitPlanMode  → read the plan file from disk, populate the plan
+	//                 preview widget + drawer, switch right panel to show it.
+	// Mirrors TS TUI SessionManager.ts:1117-1230.
+	for _, block := range msg.Message.Content {
+		if block.Type != "tool_use" {
+			continue
+		}
+		switch block.Name {
+		case "EnterPlanMode":
+			m.statusLine.PlanActive = true
+
+		case "ExitPlanMode":
+			m.syncPlanPreview()
+			m.statusLine.PlanActive = false
 		}
 	}
 
@@ -186,6 +217,19 @@ func (m AppModel) handleUserEvent(msg cli.UserEvent) (tea.Model, tea.Cmd) {
 	// Extract post-hoc diffs.
 	m = m.extractDiffs(msg)
 
+	// Dispatch tool_result blocks to the Claude panel so it can show ✓/✗
+	// on the matching tool_use block in the conversation view.
+	if m.shared != nil && m.shared.claudePanel != nil {
+		for _, block := range msg.Message.Content {
+			if block.Type == "tool_result" && block.ToolUseID != "" {
+				m.shared.claudePanel.HandleMsg(ToolResultMsg{
+					ToolID:  block.ToolUseID,
+					Success: !block.IsError,
+				})
+			}
+		}
+	}
+
 	// Sync agent registry from tool_result blocks.
 	if m.shared.agentRegistry != nil {
 		result := cli.SyncUserEvent(msg, m.shared.agentRegistry)
@@ -234,7 +278,19 @@ func (m AppModel) handleResultEvent(msg cli.ResultEvent) (tea.Model, tea.Cmd) {
 	// Update context window percentage from per-model usage if available.
 	if entry, ok := msg.ModelUsage[m.activeModel]; ok && entry.ContextWindow > 0 {
 		used := entry.InputTokens + entry.CacheReadInputTokens + entry.CacheCreationInputTokens
-		m.statusLine.ContextPercent = float64(used) / float64(entry.ContextWindow) * 100
+		// The SDK reports 200K for all Anthropic models, even [1m] variants.
+		// Override to the actual 1M context window when the model suffix is present.
+		capacity := entry.ContextWindow
+		if strings.Contains(m.activeModel, "[1m]") {
+			capacity = 1_000_000
+		}
+		pct := float64(used) / float64(capacity) * 100
+		if pct > 100 {
+			pct = 100
+		}
+		m.statusLine.ContextPercent = pct
+		m.statusLine.ContextUsedTokens = used
+		m.statusLine.ContextCapacity = capacity
 	}
 
 	// Clear streaming indicator — the turn is complete.
@@ -328,6 +384,95 @@ func (m AppModel) extractDiffs(ev cli.UserEvent) AppModel {
 type toolUseResultWithPatch struct {
 	FilePath        string          `json:"filePath"`
 	StructuredPatch json.RawMessage `json:"structuredPatch,omitempty"`
+}
+
+// syncTaskBoard parses the TodoWrite input JSON and feeds the resulting
+// task entries to the TaskBoard widget. The input is expected to be:
+//
+//	{"todos": [{"content":"...","status":"...","activeForm":"..."}]}
+//
+// Malformed or empty input is silently ignored.
+func (m *AppModel) syncTaskBoard(input json.RawMessage) {
+	var payload struct {
+		Todos []struct {
+			Content    string `json:"content"`
+			Status     string `json:"status"`
+			ActiveForm string `json:"activeForm"`
+		} `json:"todos"`
+	}
+	if err := json.Unmarshal(input, &payload); err != nil {
+		return
+	}
+	if len(payload.Todos) == 0 {
+		return
+	}
+	entries := make([]state.TaskEntry, len(payload.Todos))
+	for i, t := range payload.Todos {
+		entries[i] = state.TaskEntry{
+			ID:         strconv.Itoa(i + 1),
+			Content:    t.Content,
+			Status:     t.Status,
+			ActiveForm: t.ActiveForm,
+		}
+	}
+	m.shared.taskBoard.SetTasks(entries)
+}
+
+// syncPlanPreview reads the most recently modified .claude/plans/*.md file
+// and populates the plan drawer. The right panel stays on agents view —
+// the drawer is the correct place for plan content. Alt+V opens the
+// full-screen plan modal for detailed viewing.
+// Called when an ExitPlanMode tool_use block is detected in the assistant
+// event stream.
+func (m *AppModel) syncPlanPreview() {
+	planPath := findLatestPlanFile()
+	if planPath == "" {
+		return
+	}
+	data, err := os.ReadFile(planPath)
+	if err != nil || len(data) == 0 {
+		return
+	}
+	content := string(data)
+	// Populate the plan preview for Alt+V full-screen modal.
+	if m.shared.planPreview != nil {
+		m.shared.planPreview.SetContent(content)
+	}
+	// Populate the plan drawer — auto-expands to show the plan.
+	// The right panel stays on agents (RPMAgents), not switched.
+	if m.shared.drawerStack != nil {
+		m.shared.drawerStack.SetPlanContent(content)
+	}
+}
+
+// findLatestPlanFile scans ~/.claude/plans/ for the most recently modified
+// .md file and returns its absolute path. Returns "" if no plan files exist.
+func findLatestPlanFile() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	dir := filepath.Join(home, ".claude", "plans")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	var latest string
+	var latestTime time.Time
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if info.ModTime().After(latestTime) {
+			latestTime = info.ModTime()
+			latest = filepath.Join(dir, e.Name())
+		}
+	}
+	return latest
 }
 
 // waitForCLIEvent returns the WaitForEvent command from the CLI driver, or

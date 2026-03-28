@@ -659,7 +659,7 @@ func handleSpawnAgent(
 
 	// 9. Run the subprocess.
 	start := time.Now()
-	result, runErr := runSubprocess(ctx, agent, input, augmented, agentID)
+	result, runErr := runSubprocess(ctx, agent, input, augmented, agentID, uds)
 	duration := time.Since(start).Round(time.Millisecond).String()
 
 	// 10. Build response — subprocess errors are soft.
@@ -893,14 +893,13 @@ func handleTeamRun(
 // Timeout is NOT passed as a CLI flag (not supported by claude CLI).
 // The spawner manages timeout via time.AfterFunc in runSubprocess().
 func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
-	// Use --output-format json (NOT stream-json) for spawned agents:
-	// - json produces a single JSON result object, simpler to parse
-	// - stream-json requires --verbose (claude CLI 2.1.81+) and produces
-	//   NDJSON which is harder to parse for one-shot -p invocations
-	// - Matches the TS TUI's spawnAgent.ts which also uses json
+	// Use --output-format stream-json for spawned agents so we can parse
+	// NDJSON in real-time and report live tool activity to the TUI.
+	// --verbose is required for stream-json with -p (claude CLI 2.1.81+).
+	// parseCLIOutput already handles NDJSON by scanning for type=="result".
 	// --permission-mode bypassPermissions is required because -p (print mode)
 	// has no interactive terminal to approve permissions.
-	args := []string{"-p", "--output-format", "json", "--permission-mode", "bypassPermissions"}
+	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--permission-mode", "bypassPermissions"}
 
 	// Model: prefer explicit override, fall back to agent config.
 	model := input.Model

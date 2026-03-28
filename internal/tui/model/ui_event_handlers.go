@@ -10,6 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
@@ -65,6 +66,9 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.shared.planPreview != nil {
 		m.shared.planPreview.SetSize(dims.rightWidth, dims.contentHeight)
+	}
+	if m.shared.drawerStack != nil {
+		m.shared.drawerStack.SetSize(dims.rightWidth, dims.contentHeight)
 	}
 	if m.shared.taskBoard != nil {
 		m.shared.taskBoard.SetSize(msg.Width, msg.Height)
@@ -140,9 +144,19 @@ func (m AppModel) handleProviderSwitchExecuteMsg(msg ProviderSwitchExecuteMsg) (
 	return m.handleProviderSwitch()
 }
 
-// handleBridgeModalRequest handles BridgeModalRequestMsg: dispatches to the
-// permission handler which enqueues the appropriate modal(s).
+// handleBridgeModalRequest handles BridgeModalRequestMsg: routes to the options
+// drawer on Standard+ tiers, or falls back to the ModalQueue overlay on Compact.
 func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model, tea.Cmd) {
+	// TDS-006: Route to options drawer when available and not Compact tier.
+	dims := m.computeLayout()
+	if dims.tier != LayoutCompact &&
+		m.shared != nil && m.shared.drawerStack != nil &&
+		len(msg.Options) > 0 {
+		m.shared.drawerStack.SetActiveModal(msg.RequestID, msg.Message, msg.Options)
+		return m, nil
+	}
+
+	// Fallback: existing ModalQueue/PermissionHandler path.
 	if m.shared != nil && m.shared.permHandler != nil {
 		cmd := m.shared.permHandler.HandleBridgeRequest(
 			msg.RequestID, msg.Message, msg.Options,
@@ -162,6 +176,68 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 	// Advance queue: pop active modal and activate next if any.
 	if m.shared.modalQueue != nil {
 		m.shared.modalQueue.Resolve(msg.Response)
+	}
+
+	// Interrupt confirmation: fire the CLI interrupt only when the user
+	// selected "Yes" (not cancelled and value == "Yes").
+	if msg.RequestID == interruptConfirmRequestID {
+		if !msg.Response.Cancelled && msg.Response.Value == "Yes" {
+			// Clear streaming state immediately — don't wait for ResultEvent
+			// which may never arrive if the CLI is stuck on an MCP tool call
+			// (e.g. spawn_agent blocked on cmd.Wait for a Setsid subprocess).
+			m.statusLine.Streaming = false
+
+			// Tell claude panel streaming is done so input unblocks.
+			// panel.go:448 gates Enter on m.streaming; sending ResultMsg{}
+			// sets it to false.
+			if m.shared.claudePanel != nil {
+				m.shared.claudePanel.HandleMsg(ResultMsg{})
+			}
+
+			// Kill all running spawned agent processes whose PIDs are
+			// tracked in the registry. Spawned agents use Setsid: true
+			// and are unreachable by SIGINT to the CLI process group.
+			m.killRunningAgents()
+
+			var toastCmd tea.Cmd
+			if m.shared.toasts != nil {
+				toastCmd = m.shared.toasts.HandleMsg(ToastMsg{
+					Text:  "Interrupted active agent",
+					Level: ToastLevelWarn,
+				})
+			}
+
+			// Restart the CLI driver. SIGINT to the process group kills
+			// both the claude subprocess and gofortress-mcp (Go default
+			// SIGINT = exit). The old driver is in DriverDead state and
+			// Start() requires DriverIdle, so we must create a fresh one.
+			// This mirrors the provider_switch.go and perm_mode.go patterns.
+			var startCmd tea.Cmd
+			if m.shared.cliDriver != nil {
+				_ = m.shared.cliDriver.Shutdown()
+
+				opts := m.shared.baseCLIOpts // value copy preserves Verbose, Debug, MCPConfigPath, etc.
+				opts.SessionID = m.sessionID // resume same session
+				opts.Model = m.activeModel
+				if m.shared.providerState != nil {
+					cfg := m.shared.providerState.GetActiveConfig()
+					opts.AdapterPath = cfg.AdapterPath
+					opts.ProjectDir = m.shared.providerState.GetActiveProjectDir()
+				}
+
+				newDriver := cli.NewCLIDriver(opts)
+				m.shared.cliDriver = newDriver
+				if m.shared.claudePanel != nil {
+					m.shared.claudePanel.SetSender(newDriver)
+				}
+				m.reconnectCount = 0
+				m.reconnectSeq++
+				startCmd = newDriver.Start()
+			}
+
+			return m, tea.Batch(toastCmd, startCmd)
+		}
+		return m, nil
 	}
 
 	result, cmd := m.shared.permHandler.HandleResponse(msg)
@@ -217,10 +293,17 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		_ = m.shared.agentRegistry.Update(msg.AgentID, func(a *state.Agent) {
 			a.Status = parseAgentStatus(msg.Status)
 		})
+		// Store PID separately — the second "running" notification from
+		// runSubprocess carries the PID but would be rejected by
+		// isValidTransition (Running→Running is not valid).
+		if msg.PID > 0 {
+			m.shared.agentRegistry.SetPID(msg.AgentID, msg.PID)
+		}
 	case AgentActivityMsg:
-		m.shared.agentRegistry.SetActivity(msg.AgentID, state.AgentActivity{
+		m.shared.agentRegistry.AppendActivity(msg.AgentID, state.AgentActivity{
 			Type:      "tool_use",
 			Target:    msg.ToolName,
+			Preview:   msg.Preview,
 			Timestamp: time.Now(),
 		})
 	}
@@ -241,9 +324,26 @@ func parseAgentStatus(s string) state.AgentStatus {
 		return state.StatusComplete
 	case "error":
 		return state.StatusError
+	case "killed":
+		return state.StatusKilled
 	default:
 		return state.StatusPending
 	}
+}
+
+// killRunningAgents sends SIGTERM to all spawned agent process groups that
+// are still in StatusRunning and have a known PID. Called when the user
+// confirms the ESC interrupt to clean up subprocesses that use Setsid: true
+// and are therefore unreachable by SIGINT to the parent CLI process group.
+func (m *AppModel) killRunningAgents() {
+	if m.shared == nil || m.shared.agentRegistry == nil {
+		return
+	}
+	m.shared.agentRegistry.KillRunning()
+	// Refresh the tree view so killed agents show their new status.
+	m.shared.agentRegistry.InvalidateTreeCache()
+	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+	m.statusLine.AgentCount = m.shared.agentRegistry.Count().Total
 }
 
 // handleAgentSelected handles agents.AgentSelectedMsg: loads the selected
@@ -296,6 +396,20 @@ func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
 	m.statusLine.PlanActive = msg.Active
 	m.statusLine.PlanStep = msg.Step
 	m.statusLine.PlanTotalSteps = msg.Total
+
+	// Push plan content to drawer if available (TDS-007).
+	if msg.Active && m.shared != nil && m.shared.drawerStack != nil {
+		if m.shared.planPreview != nil {
+			planContent := m.shared.planPreview.Content()
+			if planContent != "" {
+				m.shared.drawerStack.SetPlanContent(planContent)
+			}
+		}
+	}
+	// Clear plan drawer when plan mode deactivates.
+	if !msg.Active && m.shared != nil && m.shared.drawerStack != nil {
+		m.shared.drawerStack.ClearPlanContent()
+	}
 
 	// Emit a toast only on the inactive → active transition.
 	if msg.Active && !wasActive {

@@ -72,6 +72,12 @@ type StatusLineModel struct {
 	// ContextPercent is the percentage of the context window currently used.
 	ContextPercent float64
 
+	// ContextUsedTokens is the number of tokens currently consumed in the context window.
+	ContextUsedTokens int
+
+	// ContextCapacity is the total context window size in tokens for the active model.
+	ContextCapacity int
+
 	// PermissionMode is the current permission escalation mode label.
 	PermissionMode string
 
@@ -203,11 +209,12 @@ const contextBarWidth = 10
 
 // renderContextBar renders a visual progress bar for context window utilization.
 //
-// Wide terminal (>= 80): ctx:[=====     ] 52%
-// Narrow terminal (< 80): ctx:52%
+// Wide terminal (>= 100): ▓▓▓▓▓░░░░░ 45% 234K/1M
+// Medium terminal (80-99): ▓▓▓▓▓░░░░░ 45% 234K/1M  (shorter bar)
+// Narrow terminal (< 80):  45% 234K/1M
 //
-// The filled portion is colored using the same semantic thresholds as
-// contextStyle (green/yellow/red). Empty space is rendered with StyleMuted.
+// The filled portion is colored using semantic thresholds (green/yellow/red).
+// Empty space is rendered with StyleMuted. Exact token counts always shown.
 func (m StatusLineModel) renderContextBar() string {
 	pct := m.ContextPercent
 	if pct < 0 {
@@ -217,27 +224,42 @@ func (m StatusLineModel) renderContextBar() string {
 		pct = 100
 	}
 
-	// Narrow terminal fallback: text only, no brackets.
-	if m.width < 80 {
-		style := m.contextStyle(pct)
-		return style.Render(fmt.Sprintf("ctx:%.0f%%", pct))
+	// Format token counts: "234K/1M" or "—" if no data yet.
+	var tokenLabel string
+	if m.ContextCapacity > 0 {
+		tokenLabel = formatTokens(m.ContextUsedTokens) + "/" + formatTokens(m.ContextCapacity)
 	}
 
-	// Calculate number of filled characters.
+	style := m.contextStyle(pct)
+
+	// Narrow terminal fallback: text only, no bar.
+	if m.width < 80 {
+		if tokenLabel != "" {
+			return style.Render(fmt.Sprintf("%.0f%%", pct)) + config.StyleMuted.Render(" "+tokenLabel)
+		}
+		return config.StyleMuted.Render("ctx:—")
+	}
+
+	// No data yet — show empty bar with dash.
+	if m.ContextCapacity == 0 {
+		emptyBar := config.StyleMuted.Render(strings.Repeat("░", contextBarWidth))
+		return emptyBar + config.StyleMuted.Render(" —")
+	}
+
+	// Calculate fill from percentage.
 	fillCount := int(pct / 100 * float64(contextBarWidth))
 	if fillCount > contextBarWidth {
 		fillCount = contextBarWidth
 	}
 
-	filled := strings.Repeat("=", fillCount)
-	empty := strings.Repeat(" ", contextBarWidth-fillCount)
+	filled := strings.Repeat("▓", fillCount)
+	empty := strings.Repeat("░", contextBarWidth-fillCount)
 
-	// Color the filled portion based on threshold; mute the empty portion.
-	style := m.contextStyle(pct)
 	coloredFill := style.Render(filled)
 	mutedEmpty := config.StyleMuted.Render(empty)
+	pctStr := style.Render(fmt.Sprintf("%.0f%%", pct))
 
-	return fmt.Sprintf("ctx:[%s%s] %.0f%%", coloredFill, mutedEmpty, pct)
+	return coloredFill + mutedEmpty + " " + pctStr + config.StyleMuted.Render(" "+tokenLabel)
 }
 
 // View implements tea.Model. It renders the status bar as two rows matching
@@ -426,14 +448,14 @@ func (m StatusLineModel) costStyle(cost float64) lipgloss.Style {
 }
 
 // contextStyle returns a lipgloss.Style based on context window usage thresholds:
-//   - >= 80%  → ErrorStyle   (red)
-//   - >= 50%  → WarningStyle (yellow)
-//   - < 50%   → SuccessStyle (green)
+//   - >= 90%  → ErrorStyle   (red)
+//   - >= 70%  → WarningStyle (yellow)
+//   - < 70%   → SuccessStyle (green)
 func (m StatusLineModel) contextStyle(pct float64) lipgloss.Style {
 	switch {
-	case pct >= 80:
+	case pct >= 90:
 		return m.theme.ErrorStyle()
-	case pct >= 50:
+	case pct >= 70:
 		return m.theme.WarningStyle()
 	default:
 		return m.theme.SuccessStyle()

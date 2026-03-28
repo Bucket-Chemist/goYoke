@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "project": "TUI",
+  "generated_by": "/plan-tickets v1.0",
+  "generated_at": "2026-03-27T07:45:00Z",
+  "review_verdict": "APPROVE_WITH_CONDITIONS",
+  "tickets": [
+    {
+      "id": "TUI-001",
+      "title": "Extend teamconfig.Member with health monitoring fields",
+      "status": "pending",
+      "phase": 1,
+      "dependencies": [],
+      "agent": "go-pro",
+      "file": "tickets/tui-agent-upgrade/TUI-001.md"
+    },
+    {
+      "id": "TUI-002",
+      "title": "Promote drawers from right-panel to full-width layout",
+      "status": "pending",
+      "phase": 2,
+      "dependencies": [],
+      "agent": "go-tui",
+      "file": "tickets/tui-agent-upgrade/TUI-002.md"
+    },
+    {
+      "id": "TUI-003",
+      "title": "Add teamsHealthWidget interface and sharedState wiring",
+      "status": "pending",
+      "phase": 3,
+      "dependencies": [],
+      "agent": "go-tui",
+      "file": "tickets/tui-agent-upgrade/TUI-003.md"
+    },
+    {
+      "id": "TUI-004",
+      "title": "Extend team polling to capture stream file sizes",
+      "status": "pending",
+      "phase": 4,
+      "dependencies": ["TUI-001"],
+      "agent": "go-pro",
+      "file": "tickets/tui-agent-upgrade/TUI-004.md"
+    },
+    {
+      "id": "TUI-005",
+      "title": "Implement TeamsHealthModel component",
+      "status": "pending",
+      "phase": 4,
+      "dependencies": ["TUI-001", "TUI-003", "TUI-004"],
+      "agent": "go-tui",
+      "file": "tickets/tui-agent-upgrade/TUI-005.md"
+    },
+    {
+      "id": "TUI-006",
+      "title": "Implement right panel 50/50 split for Wide/Ultra tiers",
+      "status": "pending",
+      "phase": 5,
+      "dependencies": ["TUI-002", "TUI-003", "TUI-005"],
+      "agent": "go-tui",
+      "file": "tickets/tui-agent-upgrade/TUI-006.md"
+    },
+    {
+      "id": "TUI-007",
+      "title": "Add Standard tier tab-toggle (Alt+H) for health view",
+      "status": "pending",
+      "phase": 5,
+      "dependencies": ["TUI-006"],
+      "agent": "go-tui",
+      "file": "tickets/tui-agent-upgrade/TUI-007.md"
+    },
+    {
+      "id": "TUI-008",
+      "title": "Wire health dashboard in main.go and extend layout tests",
+      "status": "pending",
+      "phase": 6,
+      "dependencies": ["TUI-002", "TUI-005", "TUI-006"],
+      "agent": "go-tui",
+      "file": "tickets/tui-agent-upgrade/TUI-008.md"
+    }
+  ]
+}

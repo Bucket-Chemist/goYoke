@@ -11,6 +11,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
@@ -114,6 +115,9 @@ type sharedState struct {
 	settings    settingsWidget
 	telemetry   telemetryWidget
 	planPreview planPreviewWidget
+	// drawerStack is the collapsible drawer stack (TDS-004).
+	// It manages the options and plan drawers in the right panel.
+	drawerStack drawerStackWidget
 	taskBoard   taskBoardWidget
 
 	// planViewModal is the full-screen plan viewer overlay (TUI-056).
@@ -340,6 +344,29 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case BridgeModalRequestMsg:
 		return m.handleBridgeModalRequest(msg)
 
+	case drawer.ModalResponseMsg:
+		// TDS-006: Drawer resolved a modal — deliver response to the bridge.
+		if m.shared != nil && m.shared.bridge != nil {
+			value := msg.Value
+			if msg.Cancelled {
+				value = ""
+			}
+			m.shared.bridge.ResolveModalSimple(msg.RequestID, value)
+		}
+		return m, nil
+
+	case drawer.PlanViewRequestMsg:
+		// TDS-007: Open full-screen plan view modal (same as alt+v from RPMPlanPreview).
+		if m.shared != nil && m.shared.planPreview != nil {
+			content := m.shared.planPreview.Content()
+			if content != "" {
+				m.shared.planViewModal.SetContent(content, m.width)
+				m.shared.planViewModal.SetSize(m.width, m.height)
+				m.shared.planViewModal.Show()
+			}
+		}
+		return m, nil
+
 	case modals.ModalResponseMsg:
 		return m.handleModalResponse(msg)
 
@@ -408,6 +435,32 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PlanStepMsg:
 		return m.handlePlanStep(msg)
+
+	// -----------------------------------------------------------------
+	// Drawer messages (TDS-005)
+	// -----------------------------------------------------------------
+
+	case DrawerContentMsg:
+		if m.shared != nil && m.shared.drawerStack != nil {
+			switch msg.DrawerID {
+			case "options":
+				m.shared.drawerStack.SetOptionsContent(msg.Content)
+			case "plan":
+				m.shared.drawerStack.SetPlanContent(msg.Content)
+			}
+		}
+		return m, nil
+
+	case DrawerMinimizeMsg:
+		if m.shared != nil && m.shared.drawerStack != nil {
+			switch msg.DrawerID {
+			case "options":
+				m.shared.drawerStack.ClearOptionsContent()
+			case "plan":
+				m.shared.drawerStack.ClearPlanContent()
+			}
+		}
+		return m, nil
 
 	// -----------------------------------------------------------------
 	// Tab flash animation (TUI-061)

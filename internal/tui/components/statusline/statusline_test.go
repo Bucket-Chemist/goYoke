@@ -46,6 +46,8 @@ func TestStatusLineViewContainsCostField(t *testing.T) {
 func TestStatusLineViewContainsContextPercent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 75.5
+	m.ContextCapacity = 200_000
+	m.ContextUsedTokens = 151_000
 	view := m.View()
 	// renderContextBar uses %.0f formatting — 75.5 rounds to "76%".
 	if !strings.Contains(view, "76%") {
@@ -150,6 +152,8 @@ func TestStatusLineAllFieldsPopulated(t *testing.T) {
 	m.SessionCost = 0.0042
 	m.TokenCount = 8500
 	m.ContextPercent = 12.3
+	m.ContextCapacity = 200_000
+	m.ContextUsedTokens = 24_600
 	m.PermissionMode = "bypass"
 	m.ActiveModel = "claude-opus-4-6"
 	m.Provider = "anthropic"
@@ -162,6 +166,7 @@ func TestStatusLineAllFieldsPopulated(t *testing.T) {
 	expected := []string{
 		"$0.0042",          // cost value
 		"12%",              // context percent
+		"24.6K/200K",       // token count / capacity
 		"[bypass]",         // permission badge
 		"[claude-opus-4-6]", // model badge
 		"anthropic",        // project/provider
@@ -469,9 +474,9 @@ func TestContextStyle_Thresholds(t *testing.T) {
 		wantStyle string
 	}{
 		{"low context", 30, "success"},
-		{"at warning threshold", 50, "warning"},
-		{"below error threshold", 79, "warning"},
-		{"at error threshold", 80, "error"},
+		{"at warning threshold", 70, "warning"},
+		{"below error threshold", 89, "warning"},
+		{"at error threshold", 90, "error"},
 		{"above error threshold", 95, "error"},
 	}
 
@@ -612,52 +617,70 @@ func TestView_TwoRowsWithNewFields(t *testing.T) {
 func TestRenderContextBar_ZeroPercent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 0
+	m.ContextCapacity = 1_000_000
+	m.ContextUsedTokens = 0
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "0%")
+	assert.Contains(t, result, "0/1M")
 }
 
 func TestRenderContextBar_25Percent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 25
+	m.ContextCapacity = 1_000_000
+	m.ContextUsedTokens = 250_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "25%")
-	assert.Contains(t, result, "==")
+	assert.Contains(t, result, "250K/1M")
+	assert.Contains(t, result, "▓")
 }
 
 func TestRenderContextBar_50Percent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 50
+	m.ContextCapacity = 200_000
+	m.ContextUsedTokens = 100_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "50%")
+	assert.Contains(t, result, "100K/200K")
 }
 
 func TestRenderContextBar_75Percent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 75
+	m.ContextCapacity = 200_000
+	m.ContextUsedTokens = 150_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "75%")
+	assert.Contains(t, result, "150K/200K")
 }
 
 func TestRenderContextBar_100Percent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 100
+	m.ContextCapacity = 1_000_000
+	m.ContextUsedTokens = 1_000_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "100%")
-	assert.Contains(t, result, "==========")
+	assert.Contains(t, result, "▓▓▓▓▓▓▓▓▓▓")
+	assert.Contains(t, result, "1M/1M")
 }
 
 func TestRenderContextBar_NarrowFallback(t *testing.T) {
 	m := statusline.NewStatusLineModel(79)
 	m.ContextPercent = 52
+	m.ContextCapacity = 1_000_000
+	m.ContextUsedTokens = 520_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "52%")
-	assert.NotContains(t, result, "[")
-	assert.NotContains(t, result, "]")
+	assert.Contains(t, result, "520K/1M")
+	assert.NotContains(t, result, "▓")
 }
 
 func TestRenderContextBar_NegativePercent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = -10
+	m.ContextCapacity = 200_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "0%")
 }
@@ -665,25 +688,41 @@ func TestRenderContextBar_NegativePercent(t *testing.T) {
 func TestRenderContextBar_OverPercent(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 150
+	m.ContextCapacity = 200_000
+	m.ContextUsedTokens = 300_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "100%")
-	assert.Contains(t, result, "==========")
+	assert.Contains(t, result, "▓▓▓▓▓▓▓▓▓▓")
 }
 
 func TestRenderContextBar_ContainsBarChars(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 60
+	m.ContextCapacity = 1_000_000
+	m.ContextUsedTokens = 600_000
 	result := m.RenderContextBarForTest()
-	assert.Contains(t, result, "[")
-	assert.Contains(t, result, "]")
+	assert.Contains(t, result, "▓")
+	assert.Contains(t, result, "░")
+	assert.Contains(t, result, "600K/1M")
+}
+
+func TestRenderContextBar_NoCapacity(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ContextPercent = 0
+	m.ContextCapacity = 0
+	result := m.RenderContextBarForTest()
+	assert.Contains(t, result, "░░░░░░░░░░")
+	assert.Contains(t, result, "—")
 }
 
 func TestView_ContextBar_Integration(t *testing.T) {
 	m := statusline.NewStatusLineModel(120)
 	m.ContextPercent = 40
+	m.ContextCapacity = 1_000_000
+	m.ContextUsedTokens = 400_000
 	view := m.View()
-	assert.Contains(t, view, "[")
 	assert.Contains(t, view, "40%")
+	assert.Contains(t, view, "400K/1M")
 }
 
 // ---------------------------------------------------------------------------

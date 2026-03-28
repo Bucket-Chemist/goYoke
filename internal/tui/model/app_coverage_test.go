@@ -62,7 +62,8 @@ func (d *coverageCLIDriver) SendMessage(_ string) tea.Cmd {
 	return nil
 }
 
-func (d *coverageCLIDriver) Shutdown() error { d.shutdownCalled++; return nil }
+func (d *coverageCLIDriver) Interrupt() error { return nil }
+func (d *coverageCLIDriver) Shutdown() error  { d.shutdownCalled++; return nil }
 
 // ---------------------------------------------------------------------------
 // Helpers

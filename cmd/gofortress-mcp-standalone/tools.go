@@ -51,6 +51,29 @@ type SpawnAgentInput struct {
 	MaxBudget float64 `json:"maxBudget,omitempty"`
 	// CallerType self-identifies the spawning agent for validation.
 	CallerType string `json:"caller_type,omitempty"`
+	// Background, when true, starts the subprocess and returns immediately
+	// with the agentId. Use get_spawn_result to collect the result later.
+	Background bool `json:"background,omitempty"`
+}
+
+// GetSpawnResultInput is the input for the get_spawn_result tool.
+type GetSpawnResultInput struct {
+	// SpawnID is the agentId returned by a background spawn_agent call.
+	SpawnID string `json:"spawn_id"`
+	// Block, when true, waits for the spawn to complete (up to Timeout).
+	// When false, returns the current status immediately.
+	Block bool `json:"block,omitempty"`
+	// Timeout is the maximum wait time in milliseconds when Block is true.
+	// Defaults to 300000 (5 minutes).
+	Timeout int `json:"timeout,omitempty"`
+}
+
+// GetSpawnResultOutput is the response from get_spawn_result.
+type GetSpawnResultOutput struct {
+	SpawnID  string           `json:"spawn_id"`
+	Status   SpawnStatus      `json:"status"`
+	Result   *SpawnAgentOutput `json:"result,omitempty"` // nil while running
+	Error    string           `json:"error,omitempty"`
 }
 
 // SpawnAgentOutput is the response from spawn_agent.
@@ -68,6 +91,14 @@ type SpawnAgentOutput struct {
 }
 
 // -----------------------------------------------------------------------------
+// Global state
+// -----------------------------------------------------------------------------
+
+// bgStore holds results from background spawn_agent calls. It is initialised
+// once at tool registration time and shared across all tool handlers.
+var bgStore = NewBackgroundSpawnStore()
+
+// -----------------------------------------------------------------------------
 // Tool registration
 // -----------------------------------------------------------------------------
 
@@ -75,6 +106,7 @@ type SpawnAgentOutput struct {
 func RegisterAll(server *mcpsdk.Server) {
 	registerTestMcpPing(server)
 	registerSpawnAgent(server)
+	registerGetSpawnResult(server)
 }
 
 // registerTestMcpPing registers the test_mcp_ping tool.
@@ -179,12 +211,45 @@ func handleSpawnAgent(
 		augmented = input.Prompt
 	}
 
-	// 8. Run the subprocess.
+	// 8. Background mode: launch subprocess in a goroutine and return immediately.
+	if input.Background {
+		bgStore.Register(agentID, agent.ID)
+		slog.Info("spawn_agent: background spawn started", "agent", agent.ID, "agentId", agentID)
+
+		// Use context.Background() — the MCP request context is cancelled when
+		// this handler returns, which would kill the subprocess immediately.
+		go func() {
+			bgCtx := context.Background()
+			start := time.Now()
+			result, runErr := runSubprocess(bgCtx, agent, input, augmented, agentID)
+			duration := time.Since(start).Round(time.Millisecond).String()
+
+			out := buildSpawnOutput(agentID, agent.ID, result, runErr, duration)
+			bgStore.Complete(agentID, &out)
+			slog.Info("spawn_agent: background spawn finished",
+				"agent", agent.ID, "agentId", agentID, "success", out.Success, "duration", duration)
+		}()
+
+		return nil, SpawnAgentOutput{
+			AgentID: agentID,
+			Agent:   agent.ID,
+			Success: true,
+			Output:  fmt.Sprintf("Background spawn started. Use get_spawn_result with spawn_id=%q to collect the result.", agentID),
+		}, nil
+	}
+
+	// 9. Synchronous mode (default): run subprocess and wait for completion.
 	start := time.Now()
 	result, runErr := runSubprocess(ctx, agent, input, augmented, agentID)
 	duration := time.Since(start).Round(time.Millisecond).String()
 
-	// 9. Build response — subprocess errors are soft (returned in output, not propagated).
+	return nil, buildSpawnOutput(agentID, agent.ID, result, runErr, duration), nil
+}
+
+// buildSpawnOutput constructs a SpawnAgentOutput from subprocess results.
+// Extracted to avoid duplicating the response-building logic between
+// synchronous and background code paths.
+func buildSpawnOutput(agentID, agentType string, result *cliResult, runErr error, duration string) SpawnAgentOutput {
 	success := runErr == nil
 	errMsg := ""
 	if runErr != nil {
@@ -202,9 +267,9 @@ func handleSpawnAgent(
 		truncated = result.Truncated
 	}
 
-	return nil, SpawnAgentOutput{
+	return SpawnAgentOutput{
 		AgentID:   agentID,
-		Agent:     agent.ID,
+		Agent:     agentType,
 		Success:   success,
 		Output:    output,
 		Error:     errMsg,
@@ -212,5 +277,73 @@ func handleSpawnAgent(
 		Turns:     turns,
 		Duration:  duration,
 		Truncated: truncated,
+	}
+}
+
+// -----------------------------------------------------------------------------
+// get_spawn_result tool
+// -----------------------------------------------------------------------------
+
+// registerGetSpawnResult registers the get_spawn_result tool.
+func registerGetSpawnResult(server *mcpsdk.Server) {
+	mcpsdk.AddTool(server, &mcpsdk.Tool{
+		Name:        "get_spawn_result",
+		Description: "Retrieve the result of a background spawn_agent call. Use block=true to wait for completion, or block=false to poll current status.",
+	}, handleGetSpawnResult)
+}
+
+// handleGetSpawnResult handles the get_spawn_result tool call.
+func handleGetSpawnResult(
+	_ context.Context,
+	_ *mcpsdk.CallToolRequest,
+	input GetSpawnResultInput,
+) (*mcpsdk.CallToolResult, GetSpawnResultOutput, error) {
+	if input.SpawnID == "" {
+		return nil, GetSpawnResultOutput{}, fmt.Errorf("get_spawn_result: spawn_id is required")
+	}
+
+	// Non-blocking: return current snapshot.
+	if !input.Block {
+		snap, ok := bgStore.Get(input.SpawnID)
+		if !ok {
+			return nil, GetSpawnResultOutput{
+				SpawnID: input.SpawnID,
+				Error:   fmt.Sprintf("unknown spawn_id: %s", input.SpawnID),
+			}, nil
+		}
+		return nil, GetSpawnResultOutput{
+			SpawnID: input.SpawnID,
+			Status:  snap.Status,
+			Result:  snap.Result,
+		}, nil
+	}
+
+	// Blocking: wait for completion.
+	timeoutMS := defaultTimeoutMS
+	if input.Timeout > 0 {
+		timeoutMS = input.Timeout
+	}
+	timeout := time.Duration(timeoutMS) * time.Millisecond
+
+	result, err := bgStore.Wait(input.SpawnID, timeout)
+	if err != nil {
+		return nil, GetSpawnResultOutput{
+			SpawnID: input.SpawnID,
+			Status:  SpawnStatusRunning,
+			Error:   err.Error(),
+		}, nil
+	}
+
+	// Determine final status from the store snapshot.
+	status := SpawnStatusCompleted
+	snap, ok := bgStore.Get(input.SpawnID)
+	if ok {
+		status = snap.Status
+	}
+
+	return nil, GetSpawnResultOutput{
+		SpawnID: input.SpawnID,
+		Status:  status,
+		Result:  result,
 	}, nil
 }

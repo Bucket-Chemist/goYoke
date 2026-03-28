@@ -78,10 +78,15 @@ type ProviderConfig struct {
 type ToolBlock struct {
 	// Name is the tool name (e.g., "Read", "Bash", "Edit").
 	Name string
+	// ToolID is the unique identifier for this tool invocation (tool_use id).
+	// Used to match incoming ToolResultMsg to the correct block.
+	ToolID string
 	// Input is a short human-readable summary of the tool input.
 	Input string
 	// Output is a short human-readable summary of the tool result.
 	Output string
+	// Success indicates tool result status: nil=pending, true=✓, false=✗.
+	Success *bool
 	// Expanded controls whether the full Input/Output is shown in the UI.
 	// Always starts false on restore; transient UI state only.
 	Expanded bool

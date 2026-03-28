@@ -255,11 +255,11 @@ func hasPrompt(a *state.Agent) bool {
 }
 
 func hasActivity(a *state.Agent) bool {
-	return a.Activity != nil
+	return a.Activity != nil || len(a.RecentActivity) > 0
 }
 
 func isRunningOrHasActivity(a *state.Agent) bool {
-	return a.Status == state.StatusRunning || a.Activity != nil
+	return a.Status == state.StatusRunning || a.Activity != nil || len(a.RecentActivity) > 0
 }
 
 func hasError(a *state.Agent) bool {
@@ -331,12 +331,35 @@ func renderPrompt(a *state.Agent, w int) string {
 }
 
 func renderActivity(a *state.Agent, _ int) string {
-	if a.Activity == nil {
+	if len(a.RecentActivity) == 0 && a.Activity == nil {
 		if a.Status == state.StatusRunning {
 			return config.StyleMuted.Render("  ⏳ Subprocess running...")
 		}
 		return "  (idle)"
 	}
+
+	// When we have a rolling buffer, render each entry.
+	if len(a.RecentActivity) > 0 {
+		var sb strings.Builder
+		for i, act := range a.RecentActivity {
+			isLast := i == len(a.RecentActivity)-1
+			label := act.Target
+			if label == "" {
+				label = act.Type
+			}
+			if act.Preview != "" {
+				label += " " + act.Preview
+			}
+			if isLast && a.Status == state.StatusRunning {
+				sb.WriteString(fmt.Sprintf("  ⏳ [%s]\n", label))
+			} else {
+				sb.WriteString(config.StyleMuted.Render(fmt.Sprintf("  ✓ [%s]", label)) + "\n")
+			}
+		}
+		return strings.TrimRight(sb.String(), "\n")
+	}
+
+	// Fallback: single Activity set (e.g. from SDK agent sync, no rolling buffer).
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("  [%s] %s", a.Activity.Type, a.Activity.Target))
 	if a.Activity.Preview != "" {

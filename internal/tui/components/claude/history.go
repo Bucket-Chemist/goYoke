@@ -15,12 +15,12 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	// historyFileName is the file name used for persisting input history.
-	historyFileName = "inputhistory.json"
+	// historyFileName matches the TS TUI's file name so both TUIs share
+	// the same cross-session prompt history.
+	historyFileName = "input-history.json"
 
-	// defaultMaxSize is the default maximum number of entries retained by
-	// InputHistory when the caller does not provide an explicit value.
-	defaultMaxSize = 500
+	// maxHistorySize matches the TS TUI's MAX_HISTORY_SIZE (100).
+	maxHistorySize = 100
 )
 
 // ---------------------------------------------------------------------------
@@ -30,79 +30,89 @@ const (
 // InputHistory is a bounded list of previously submitted input strings that
 // can be saved to and loaded from a JSON file for cross-session persistence.
 //
+// Storage format is a plain JSON array of strings (newest first), compatible
+// with the TS TUI's ~/.claude/input-history.json.
+//
 // The zero value is not usable; use NewInputHistory instead.
 type InputHistory struct {
-	// Entries holds the history entries, oldest first.
-	Entries []string `json:"entries"`
-	// MaxSize is the maximum number of entries retained. When exceeded, the
-	// oldest entries are removed from the front of the slice.
-	MaxSize int `json:"max_size"`
+	// entries holds history items, newest first (index 0 = most recent).
+	entries []string
+	// dir is the directory containing the history file (e.g. ~/.claude).
+	dir string
 }
 
-// NewInputHistory allocates and returns an InputHistory with the specified
-// maximum capacity.  If maxSize is ≤ 0, defaultMaxSize (500) is used.
-func NewInputHistory(maxSize int) *InputHistory {
-	if maxSize <= 0 {
-		maxSize = defaultMaxSize
-	}
-	return &InputHistory{
-		Entries: nil,
-		MaxSize: maxSize,
-	}
+// NewInputHistory allocates and returns an empty InputHistory that will
+// save to {dir}/input-history.json.
+func NewInputHistory(dir string) *InputHistory {
+	return &InputHistory{dir: dir}
 }
 
-// Add appends entry to the history.
+// Add prepends entry to the history (newest first).
 //
-// Consecutive duplicates are not added: if the last entry in the history is
-// identical to entry, the call is a no-op.
+// Any-position deduplication: if entry already exists anywhere in the
+// history, it is removed from its old position and re-inserted at the
+// front. This matches the TS TUI's dedup behavior.
 //
-// When the history exceeds MaxSize after the append, the oldest entries are
-// trimmed from the front so that exactly MaxSize entries remain.
+// When the history exceeds maxHistorySize, the oldest entries (at the
+// end of the slice) are trimmed.
 func (h *InputHistory) Add(entry string) {
 	if entry == "" {
 		return
 	}
-	// Skip consecutive duplicate.
-	if len(h.Entries) > 0 && h.Entries[len(h.Entries)-1] == entry {
-		return
+	// Remove any existing occurrence (any-position dedup).
+	for i, e := range h.entries {
+		if e == entry {
+			h.entries = append(h.entries[:i], h.entries[i+1:]...)
+			break
+		}
 	}
-	h.Entries = append(h.Entries, entry)
-	// Trim from the front when over capacity.
-	if len(h.Entries) > h.MaxSize {
-		excess := len(h.Entries) - h.MaxSize
-		h.Entries = h.Entries[excess:]
+	// Prepend (newest first).
+	h.entries = append([]string{entry}, h.entries...)
+	// Trim oldest (from the end) when over capacity.
+	if len(h.entries) > maxHistorySize {
+		h.entries = h.entries[:maxHistorySize]
 	}
 }
 
-// All returns a copy of the current entries slice. Callers may safely modify
-// the returned slice without affecting the history.
+// All returns a copy of entries, newest first.
 func (h *InputHistory) All() []string {
-	if len(h.Entries) == 0 {
+	if len(h.entries) == 0 {
 		return nil
 	}
-	out := make([]string, len(h.Entries))
-	copy(out, h.Entries)
+	out := make([]string, len(h.entries))
+	copy(out, h.entries)
 	return out
 }
 
-// Save atomically writes the history to {dir}/inputhistory.json.
-//
-// The write is atomic: data is written to a temporary file alongside the
-// target, then renamed into place so that a crash mid-write does not corrupt
-// an existing history file.
-//
-// Save creates the directory if it does not exist.
-func (h *InputHistory) Save(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("inputhistory: mkdir %q: %w", dir, err)
+// Len returns the number of entries.
+func (h *InputHistory) Len() int {
+	return len(h.entries)
+}
+
+// Get returns the entry at index i (0 = newest). Returns "" if out of range.
+func (h *InputHistory) Get(i int) string {
+	if i < 0 || i >= len(h.entries) {
+		return ""
+	}
+	return h.entries[i]
+}
+
+// Save atomically writes the history to {dir}/input-history.json as a plain
+// JSON array (newest first), matching the TS TUI format.
+func (h *InputHistory) Save() error {
+	if h.dir == "" {
+		return nil
+	}
+	if err := os.MkdirAll(h.dir, 0o700); err != nil {
+		return fmt.Errorf("inputhistory: mkdir %q: %w", h.dir, err)
 	}
 
-	data, err := json.MarshalIndent(h, "", "  ")
+	data, err := json.Marshal(h.entries)
 	if err != nil {
 		return fmt.Errorf("inputhistory: marshal: %w", err)
 	}
 
-	target := filepath.Join(dir, historyFileName)
+	target := filepath.Join(h.dir, historyFileName)
 	tmp := target + ".tmp"
 
 	if err := os.WriteFile(tmp, data, 0o600); err != nil {
@@ -110,7 +120,6 @@ func (h *InputHistory) Save(dir string) error {
 	}
 
 	if err := os.Rename(tmp, target); err != nil {
-		// Best-effort cleanup of the temp file.
 		_ = os.Remove(tmp)
 		return fmt.Errorf("inputhistory: rename to %q: %w", target, err)
 	}
@@ -118,32 +127,49 @@ func (h *InputHistory) Save(dir string) error {
 	return nil
 }
 
-// LoadInputHistory reads input history from {dir}/inputhistory.json.
+// LoadInputHistory reads input history from {dir}/input-history.json.
 //
-// If the file does not exist, an empty history with defaultMaxSize is returned
-// (no error).  If the file exists but contains invalid JSON, a warning is
-// logged and an empty history is returned (no error), so that a corrupted
-// history file does not prevent the TUI from starting.
-func LoadInputHistory(dir string) (*InputHistory, error) {
+// Supports two formats:
+//  1. Plain JSON array (TS TUI format): ["newest", "older", ...]
+//  2. Object with entries field (legacy Go format): {"entries": [...], "max_size": N}
+//
+// If the file does not exist, an empty history is returned (no error).
+// If the file contains invalid JSON, a warning is logged and an empty
+// history is returned so that a corrupted file does not prevent startup.
+func LoadInputHistory(dir string) *InputHistory {
+	h := NewInputHistory(dir)
 	path := filepath.Join(dir, historyFileName)
 
 	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return NewInputHistory(defaultMaxSize), nil
-	}
 	if err != nil {
-		return NewInputHistory(defaultMaxSize), fmt.Errorf("inputhistory: read %q: %w", path, err)
+		// Also try the legacy filename for backward compat.
+		legacyPath := filepath.Join(dir, "inputhistory.json")
+		data, err = os.ReadFile(legacyPath)
+		if err != nil {
+			return h // no history file — start fresh
+		}
 	}
 
-	var h InputHistory
-	if err := json.Unmarshal(data, &h); err != nil {
-		log.Printf("[inputhistory] warning: %q contains invalid JSON, starting fresh: %v", path, err)
-		return NewInputHistory(defaultMaxSize), nil
+	// Try plain JSON array first (TS TUI format, newest-first).
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err == nil {
+		h.entries = arr
+		return h
 	}
 
-	if h.MaxSize <= 0 {
-		h.MaxSize = defaultMaxSize
+	// Fall back to legacy Go object format (oldest-first).
+	var legacy struct {
+		Entries []string `json:"entries"`
+	}
+	if err := json.Unmarshal(data, &legacy); err == nil && len(legacy.Entries) > 0 {
+		// Reverse to newest-first.
+		for i, j := 0, len(legacy.Entries)-1; i < j; i, j = i+1, j-1 {
+			legacy.Entries[i], legacy.Entries[j] = legacy.Entries[j], legacy.Entries[i]
+		}
+		h.entries = legacy.Entries
+		return h
 	}
 
-	return &h, nil
+	log.Printf("[inputhistory] warning: %q contains invalid JSON, starting fresh", path)
+	return h
 }

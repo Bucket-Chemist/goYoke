@@ -5,8 +5,10 @@ package state
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -115,6 +117,9 @@ type Agent struct {
 	Status AgentStatus
 	// Activity is the most recent fine-grained activity, or nil when idle.
 	Activity *AgentActivity
+	// RecentActivity holds the rolling buffer of last N tool calls for this
+	// agent, providing visibility into what spawned subprocesses are doing.
+	RecentActivity []AgentActivity
 	// StartedAt is the wall-clock time when the agent began executing.
 	StartedAt time.Time
 	// Duration is the elapsed time for a completed agent; zero for in-progress.
@@ -125,6 +130,9 @@ type Agent struct {
 	Tokens int
 	// ErrorOutput holds the captured stderr/error text for StatusError agents.
 	ErrorOutput string
+	// PID is the OS process ID of the spawned subprocess, used for
+	// interrupt/kill support. Zero if not yet started or not tracked.
+	PID int
 	// Children lists the IDs of direct child agents spawned by this agent.
 	Children []string
 	// Conventions lists the convention files loaded for this agent (e.g. "go.md").
@@ -153,6 +161,10 @@ func (a *Agent) copyOf() Agent {
 	if a.Activity != nil {
 		act := *a.Activity
 		cp.Activity = &act
+	}
+	if a.RecentActivity != nil {
+		cp.RecentActivity = make([]AgentActivity, len(a.RecentActivity))
+		copy(cp.RecentActivity, a.RecentActivity)
 	}
 	return cp
 }
@@ -337,6 +349,27 @@ func (r *AgentRegistry) SetActivity(id string, activity AgentActivity) {
 	}
 }
 
+// maxRecentActivities is the rolling buffer cap for per-agent tool history.
+const maxRecentActivities = 5
+
+// AppendActivity sets the current activity AND appends it to the rolling
+// buffer of recent tool calls (capped at maxRecentActivities).
+func (r *AgentRegistry) AppendActivity(id string, activity AgentActivity) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[id]
+	if !ok {
+		return
+	}
+	act := activity
+	a.Activity = &act
+	a.RecentActivity = append(a.RecentActivity, activity)
+	if len(a.RecentActivity) > maxRecentActivities {
+		a.RecentActivity = a.RecentActivity[len(a.RecentActivity)-maxRecentActivities:]
+	}
+}
+
 // Remove deletes the agent identified by id from the registry and removes its
 // ID from its parent's Children slice. If the agent does not exist, Remove is
 // a no-op.
@@ -368,6 +401,38 @@ func (r *AgentRegistry) Remove(id string) {
 	}
 
 	delete(r.agents, id)
+}
+
+// SetPID records the OS process ID for the agent identified by id.
+// Thread-safe. No-op if the agent does not exist.
+func (r *AgentRegistry) SetPID(id string, pid int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if a, ok := r.agents[id]; ok {
+		a.PID = pid
+	}
+}
+
+// KillRunning sends SIGTERM to the process group of every agent that is
+// currently StatusRunning and has a known PID. It transitions each to
+// StatusKilled. This is called when the user interrupts the active session
+// via ESC to clean up spawned subprocesses that use Setsid: true and are
+// therefore unreachable by SIGINT to the parent CLI process group.
+func (r *AgentRegistry) KillRunning() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, a := range r.agents {
+		if a.Status == StatusRunning && a.PID > 0 {
+			// Send SIGTERM to the process group (-pid) since spawned agents
+			// use Setsid: true and are session leaders.
+			if err := syscall.Kill(-a.PID, syscall.SIGTERM); err != nil {
+				slog.Warn("kill running agent: SIGTERM failed",
+					"agent", a.ID, "pid", a.PID, "err", err)
+			}
+			a.Status = StatusKilled
+		}
+	}
 }
 
 // SetSelected records the ID of the currently selected agent for UI

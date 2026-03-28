@@ -53,8 +53,18 @@ func TestFocusNext(t *testing.T) {
 			expected: FocusAgents,
 		},
 		{
-			name:     "Agents wraps around to Claude",
+			name:     "Agents advances to PlanDrawer",
 			current:  FocusAgents,
+			expected: FocusPlanDrawer,
+		},
+		{
+			name:     "PlanDrawer advances to OptionsDrawer",
+			current:  FocusPlanDrawer,
+			expected: FocusOptionsDrawer,
+		},
+		{
+			name:     "OptionsDrawer wraps around to Claude",
+			current:  FocusOptionsDrawer,
 			expected: FocusClaude,
 		},
 	}
@@ -76,14 +86,24 @@ func TestFocusPrev(t *testing.T) {
 		expected FocusTarget
 	}{
 		{
+			name:     "OptionsDrawer steps back to PlanDrawer",
+			current:  FocusOptionsDrawer,
+			expected: FocusPlanDrawer,
+		},
+		{
+			name:     "PlanDrawer steps back to Agents",
+			current:  FocusPlanDrawer,
+			expected: FocusAgents,
+		},
+		{
 			name:     "Agents steps back to Claude",
 			current:  FocusAgents,
 			expected: FocusClaude,
 		},
 		{
-			name:     "Claude wraps around to Agents",
+			name:     "Claude wraps around to OptionsDrawer",
 			current:  FocusClaude,
-			expected: FocusAgents,
+			expected: FocusOptionsDrawer,
 		},
 	}
 
@@ -126,6 +146,252 @@ func TestFocusPrevNextInverse(t *testing.T) {
 			}
 			if got := FocusNext(FocusPrev(target)); got != target {
 				t.Errorf("FocusNext(FocusPrev(%v)) = %v; want %v", target, got, target)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TDS-008: FocusRing, FocusNextInRing, FocusPrevInRing tests
+// ---------------------------------------------------------------------------
+
+func TestFocusTargetStringDrawers(t *testing.T) {
+	tests := []struct {
+		name     string
+		target   FocusTarget
+		expected string
+	}{
+		{
+			name:     "FocusPlanDrawer",
+			target:   FocusPlanDrawer,
+			expected: "Plan Drawer",
+		},
+		{
+			name:     "FocusOptionsDrawer",
+			target:   FocusOptionsDrawer,
+			expected: "Options Drawer",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.target.String()
+			if got != tc.expected {
+				t.Errorf("FocusTarget(%d).String() = %q; want %q", int(tc.target), got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestFocusRing(t *testing.T) {
+	tests := []struct {
+		name     string
+		expanded []string
+		expected []FocusTarget
+	}{
+		{
+			name:     "no expanded drawers",
+			expanded: []string{},
+			expected: []FocusTarget{FocusClaude, FocusAgents},
+		},
+		{
+			name:     "nil expanded drawers",
+			expanded: nil,
+			expected: []FocusTarget{FocusClaude, FocusAgents},
+		},
+		{
+			name:     "plan drawer expanded",
+			expanded: []string{"plan"},
+			expected: []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer},
+		},
+		{
+			name:     "options drawer expanded",
+			expanded: []string{"options"},
+			expected: []FocusTarget{FocusClaude, FocusAgents, FocusOptionsDrawer},
+		},
+		{
+			name:     "both drawers expanded",
+			expanded: []string{"plan", "options"},
+			expected: []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer, FocusOptionsDrawer},
+		},
+		{
+			name:     "unknown drawer IDs ignored",
+			expanded: []string{"unknown", "plan"},
+			expected: []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := FocusRing(tc.expanded)
+			if len(got) != len(tc.expected) {
+				t.Fatalf("FocusRing(%v) len = %d; want %d", tc.expanded, len(got), len(tc.expected))
+			}
+			for i, g := range got {
+				if g != tc.expected[i] {
+					t.Errorf("FocusRing(%v)[%d] = %v; want %v", tc.expanded, i, g, tc.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestFocusNextInRing(t *testing.T) {
+	baseRing := []FocusTarget{FocusClaude, FocusAgents}
+	fullRing := []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer, FocusOptionsDrawer}
+
+	tests := []struct {
+		name     string
+		current  FocusTarget
+		ring     []FocusTarget
+		expected FocusTarget
+	}{
+		{
+			name:     "Claude → Agents (base ring)",
+			current:  FocusClaude,
+			ring:     baseRing,
+			expected: FocusAgents,
+		},
+		{
+			name:     "Agents wraps to Claude (base ring)",
+			current:  FocusAgents,
+			ring:     baseRing,
+			expected: FocusClaude,
+		},
+		{
+			name:     "Claude → Agents (full ring)",
+			current:  FocusClaude,
+			ring:     fullRing,
+			expected: FocusAgents,
+		},
+		{
+			name:     "Agents → PlanDrawer (full ring)",
+			current:  FocusAgents,
+			ring:     fullRing,
+			expected: FocusPlanDrawer,
+		},
+		{
+			name:     "PlanDrawer → OptionsDrawer (full ring)",
+			current:  FocusPlanDrawer,
+			ring:     fullRing,
+			expected: FocusOptionsDrawer,
+		},
+		{
+			name:     "OptionsDrawer wraps to Claude (full ring)",
+			current:  FocusOptionsDrawer,
+			ring:     fullRing,
+			expected: FocusClaude,
+		},
+		{
+			name:     "current not in ring snaps to ring[0]",
+			current:  FocusPlanDrawer,
+			ring:     baseRing,
+			expected: FocusClaude,
+		},
+		{
+			name:     "empty ring returns FocusClaude",
+			current:  FocusAgents,
+			ring:     []FocusTarget{},
+			expected: FocusClaude,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := FocusNextInRing(tc.current, tc.ring)
+			if got != tc.expected {
+				t.Errorf("FocusNextInRing(%v, %v) = %v; want %v", tc.current, tc.ring, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestFocusPrevInRing(t *testing.T) {
+	baseRing := []FocusTarget{FocusClaude, FocusAgents}
+	fullRing := []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer, FocusOptionsDrawer}
+
+	tests := []struct {
+		name     string
+		current  FocusTarget
+		ring     []FocusTarget
+		expected FocusTarget
+	}{
+		{
+			name:     "Agents → Claude (base ring)",
+			current:  FocusAgents,
+			ring:     baseRing,
+			expected: FocusClaude,
+		},
+		{
+			name:     "Claude wraps to Agents (base ring)",
+			current:  FocusClaude,
+			ring:     baseRing,
+			expected: FocusAgents,
+		},
+		{
+			name:     "OptionsDrawer → PlanDrawer (full ring)",
+			current:  FocusOptionsDrawer,
+			ring:     fullRing,
+			expected: FocusPlanDrawer,
+		},
+		{
+			name:     "PlanDrawer → Agents (full ring)",
+			current:  FocusPlanDrawer,
+			ring:     fullRing,
+			expected: FocusAgents,
+		},
+		{
+			name:     "Claude wraps to OptionsDrawer (full ring)",
+			current:  FocusClaude,
+			ring:     fullRing,
+			expected: FocusOptionsDrawer,
+		},
+		{
+			name:     "current not in ring snaps to ring[0]",
+			current:  FocusOptionsDrawer,
+			ring:     baseRing,
+			expected: FocusClaude,
+		},
+		{
+			name:     "empty ring returns FocusClaude",
+			current:  FocusAgents,
+			ring:     []FocusTarget{},
+			expected: FocusClaude,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := FocusPrevInRing(tc.current, tc.ring)
+			if got != tc.expected {
+				t.Errorf("FocusPrevInRing(%v, %v) = %v; want %v", tc.current, tc.ring, got, tc.expected)
+			}
+		})
+	}
+}
+
+// TestFocusRingNextPrevInverse verifies that PrevInRing(NextInRing(x, ring), ring) == x
+// for all elements in a ring.
+func TestFocusRingNextPrevInverse(t *testing.T) {
+	rings := []struct {
+		name string
+		ring []FocusTarget
+	}{
+		{"base ring", []FocusTarget{FocusClaude, FocusAgents}},
+		{"plan ring", []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer}},
+		{"full ring", []FocusTarget{FocusClaude, FocusAgents, FocusPlanDrawer, FocusOptionsDrawer}},
+	}
+
+	for _, r := range rings {
+		r := r
+		t.Run(r.name, func(t *testing.T) {
+			for _, target := range r.ring {
+				if got := FocusPrevInRing(FocusNextInRing(target, r.ring), r.ring); got != target {
+					t.Errorf("PrevInRing(NextInRing(%v)) = %v; want %v", target, got, target)
+				}
+				if got := FocusNextInRing(FocusPrevInRing(target, r.ring), r.ring); got != target {
+					t.Errorf("NextInRing(PrevInRing(%v)) = %v; want %v", target, got, target)
+				}
 			}
 		})
 	}

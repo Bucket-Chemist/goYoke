@@ -73,8 +73,8 @@ func extractResultInteg(t *testing.T, result *mcpsdk.CallToolResult, dst any) {
 // TestIntegration_ToolManifest
 // ---------------------------------------------------------------------------
 
-// TestIntegration_ToolManifest verifies that ListTools returns exactly 2 tools:
-// spawn_agent and test_mcp_ping.
+// TestIntegration_ToolManifest verifies that ListTools returns exactly 3 tools:
+// spawn_agent, test_mcp_ping, and get_spawn_result.
 func TestIntegration_ToolManifest(t *testing.T) {
 	session, _ := newTestServer(t)
 
@@ -86,9 +86,10 @@ func TestIntegration_ToolManifest(t *testing.T) {
 		names[i] = tool.Name
 	}
 
-	assert.Len(t, names, 2, "expected exactly 2 tools")
+	assert.Len(t, names, 3, "expected exactly 3 tools")
 	assert.Contains(t, names, "spawn_agent")
 	assert.Contains(t, names, "test_mcp_ping")
+	assert.Contains(t, names, "get_spawn_result")
 }
 
 // ---------------------------------------------------------------------------
@@ -149,4 +150,155 @@ func TestIntegration_SpawnAgent_UnknownAgent(t *testing.T) {
 
 	assert.False(t, out.Success, "success must be false for unknown agent")
 	assert.Contains(t, out.Error, "unknown agent", "error must mention 'unknown agent'")
+}
+
+// ---------------------------------------------------------------------------
+// TestIntegration_GetSpawnResult_UnknownID
+// ---------------------------------------------------------------------------
+
+// TestIntegration_GetSpawnResult_UnknownID verifies that get_spawn_result with
+// an unknown spawn_id returns an error message without a protocol-level failure.
+func TestIntegration_GetSpawnResult_UnknownID(t *testing.T) {
+	session, _ := newTestServer(t)
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "get_spawn_result",
+		Arguments: map[string]any{
+			"spawn_id": "nonexistent-id",
+			"block":    false,
+		},
+	})
+	require.NoError(t, err, "get_spawn_result must not return a protocol error")
+	assert.False(t, result.IsError, "result must not be flagged as protocol error")
+
+	var out GetSpawnResultOutput
+	extractResultInteg(t, result, &out)
+
+	assert.Equal(t, "nonexistent-id", out.SpawnID)
+	assert.Contains(t, out.Error, "unknown spawn_id")
+}
+
+// ---------------------------------------------------------------------------
+// TestIntegration_GetSpawnResult_NonBlocking
+// ---------------------------------------------------------------------------
+
+// TestIntegration_GetSpawnResult_NonBlocking verifies that a registered
+// background spawn can be polled with block=false and returns the running status
+// before completion, then the completed status after.
+func TestIntegration_GetSpawnResult_NonBlocking(t *testing.T) {
+	session, _ := newTestServer(t)
+
+	// Manually register a background spawn in the store.
+	agentID := "test-bg-nonblock"
+	bgStore.Register(agentID, "go-pro")
+
+	// Poll while running.
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "get_spawn_result",
+		Arguments: map[string]any{
+			"spawn_id": agentID,
+			"block":    false,
+		},
+	})
+	require.NoError(t, err)
+
+	var out GetSpawnResultOutput
+	extractResultInteg(t, result, &out)
+	assert.Equal(t, SpawnStatusRunning, out.Status)
+	assert.Nil(t, out.Result, "result must be nil while running")
+
+	// Complete it.
+	bgStore.Complete(agentID, &SpawnAgentOutput{
+		AgentID: agentID,
+		Agent:   "go-pro",
+		Success: true,
+		Output:  "background result",
+		Cost:    0.03,
+	})
+
+	// Poll again — should be completed now.
+	result2, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "get_spawn_result",
+		Arguments: map[string]any{
+			"spawn_id": agentID,
+			"block":    false,
+		},
+	})
+	require.NoError(t, err)
+
+	var out2 GetSpawnResultOutput
+	extractResultInteg(t, result2, &out2)
+	assert.Equal(t, SpawnStatusCompleted, out2.Status)
+	require.NotNil(t, out2.Result, "result must be populated after completion")
+	assert.Equal(t, "background result", out2.Result.Output)
+	assert.Equal(t, 0.03, out2.Result.Cost)
+}
+
+// ---------------------------------------------------------------------------
+// TestIntegration_GetSpawnResult_Blocking
+// ---------------------------------------------------------------------------
+
+// TestIntegration_GetSpawnResult_Blocking verifies that block=true waits for
+// the spawn to complete and returns the result.
+func TestIntegration_GetSpawnResult_Blocking(t *testing.T) {
+	session, _ := newTestServer(t)
+
+	agentID := "test-bg-blocking"
+	bgStore.Register(agentID, "go-pro")
+
+	// Complete after a delay.
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		bgStore.Complete(agentID, &SpawnAgentOutput{
+			AgentID: agentID,
+			Agent:   "go-pro",
+			Success: true,
+			Output:  "waited for this",
+		})
+	}()
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "get_spawn_result",
+		Arguments: map[string]any{
+			"spawn_id": agentID,
+			"block":    true,
+			"timeout":  5000,
+		},
+	})
+	require.NoError(t, err)
+
+	var out GetSpawnResultOutput
+	extractResultInteg(t, result, &out)
+	assert.Equal(t, SpawnStatusCompleted, out.Status)
+	require.NotNil(t, out.Result)
+	assert.Equal(t, "waited for this", out.Result.Output)
+}
+
+// ---------------------------------------------------------------------------
+// TestIntegration_GetSpawnResult_BlockTimeout
+// ---------------------------------------------------------------------------
+
+// TestIntegration_GetSpawnResult_BlockTimeout verifies that block=true with a
+// short timeout returns an error when the spawn doesn't complete in time.
+func TestIntegration_GetSpawnResult_BlockTimeout(t *testing.T) {
+	session, _ := newTestServer(t)
+
+	agentID := "test-bg-timeout"
+	bgStore.Register(agentID, "go-pro")
+	// Never complete — should hit timeout.
+
+	result, err := session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "get_spawn_result",
+		Arguments: map[string]any{
+			"spawn_id": agentID,
+			"block":    true,
+			"timeout":  100, // 100ms
+		},
+	})
+	require.NoError(t, err, "must not be a protocol error")
+
+	var out GetSpawnResultOutput
+	extractResultInteg(t, result, &out)
+	assert.Equal(t, SpawnStatusRunning, out.Status)
+	assert.Contains(t, out.Error, "timeout")
 }

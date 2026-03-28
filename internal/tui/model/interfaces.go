@@ -49,6 +49,9 @@ type cliDriverWidget interface {
 	Start() tea.Cmd
 	WaitForEvent() tea.Cmd
 	SendMessage(text string) tea.Cmd
+	// Interrupt sends SIGINT to the CLI subprocess, requesting it to stop
+	// the current streaming response. Called by the Escape key handler.
+	Interrupt() error
 	Shutdown() error
 }
 
@@ -399,4 +402,36 @@ type searchOverlayWidget interface {
 	Deactivate()
 	// SetSources replaces the registered search sources.
 	SetSources(sources []state.SearchSource)
+}
+
+// ---------------------------------------------------------------------------
+// drawerStackWidget  (TDS-004)
+//
+// drawerStackWidget is the interface satisfied by drawer.DrawerStack.
+// Defining it here avoids a circular import: the drawer package imports
+// config but not model; model must not import drawer directly.  Proxy
+// methods (SetOptionsContent, etc.) avoid returning concrete drawer types
+// through the interface, which would create import cycles.
+// ---------------------------------------------------------------------------
+
+// drawerStackWidget is the interface satisfied by drawer.DrawerStack.
+type drawerStackWidget interface {
+	View() string
+	SetSize(w, h int)
+	ExpandedDrawers() []string
+	HandleKey(focusedDrawer string, msg tea.KeyMsg) tea.Cmd
+	// Proxy methods avoid returning concrete types and import cycles.
+	SetOptionsContent(content string)
+	ClearOptionsContent()
+	OptionsHasContent() bool
+	SetPlanContent(content string)
+	ClearPlanContent()
+	PlanHasContent() bool
+	SetOptionsFocused(focused bool)
+	SetPlanFocused(focused bool)
+	// Modal routing (TDS-006).
+	SetActiveModal(requestID string, message string, options []string)
+	HasActiveModal() bool
+	OptionsActiveRequestID() string
+	OptionsSelectedOption() string
 }

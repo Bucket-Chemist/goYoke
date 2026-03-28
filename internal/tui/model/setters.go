@@ -94,6 +94,13 @@ func (m *AppModel) SetPlanPreview(pp planPreviewWidget) {
 	m.shared.planPreview = pp
 }
 
+// SetDrawerStack injects the drawer stack implementation.
+func (m *AppModel) SetDrawerStack(ds drawerStackWidget) {
+	if m.shared != nil {
+		m.shared.drawerStack = ds
+	}
+}
+
 // SetTaskBoard injects the task board overlay component into the shared state.
 func (m *AppModel) SetTaskBoard(tb taskBoardWidget) {
 	m.shared.taskBoard = tb

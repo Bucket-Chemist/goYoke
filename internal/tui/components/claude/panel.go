@@ -5,6 +5,7 @@
 package claude
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/scrollbar"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/slashcmd"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
@@ -89,8 +91,9 @@ type ClaudePanelModel struct {
 	// input is the text-input widget for composing messages.
 	input textinput.Model
 
-	// inputHistory holds previously submitted messages, oldest first.
-	inputHistory []string
+	// history holds previously submitted messages with cross-session
+	// persistence to ~/.claude/input-history.json (shared with TS TUI).
+	history *InputHistory
 	// historyIdx is the current position when navigating history.
 	// -1 means "not currently in history mode" (showing the live draft).
 	historyIdx int
@@ -171,6 +174,10 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		m = m.handleToolUseMsg(msg)
 		return m, nil
 
+	case model.ToolResultMsg:
+		m = m.handleToolResultMsg(msg)
+		return m, nil
+
 	case model.StreamEventMsg:
 		// Raw stream events are currently handled via AssistantMsg; preserve
 		// the streaming flag only.
@@ -201,14 +208,27 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		return m.handleKey(msg)
 	}
 
-	// Forward remaining messages to the viewport (scroll key handling) and
-	// the textinput (cursor blink).
+	// Forward mouse events to the viewport unconditionally so scroll wheel
+	// works even when the text input is focused.  Key events only go to the
+	// viewport when the input is blurred (to avoid stealing arrow keys etc.).
 	var vpCmd, tiCmd tea.Cmd
 
-	// Only forward to viewport when the input is NOT capturing keys.
-	if !m.input.Focused() {
+	switch msg.(type) {
+	case tea.MouseMsg:
+		// Mouse wheel scroll → viewport always.
 		m.vp, vpCmd = m.vp.Update(msg)
 		cmds = append(cmds, vpCmd)
+		if !m.vp.AtBottom() {
+			m.autoScroll = false
+		} else {
+			m.autoScroll = true
+		}
+	default:
+		// Non-mouse messages: only forward to viewport when input is blurred.
+		if !m.input.Focused() {
+			m.vp, vpCmd = m.vp.Update(msg)
+			cmds = append(cmds, vpCmd)
+		}
 	}
 
 	m.input, tiCmd = m.input.Update(msg)
@@ -296,13 +316,31 @@ func (m ClaudePanelModel) handleToolUseMsg(msg model.ToolUseMsg) ClaudePanelMode
 	}
 	last := &m.messages[len(m.messages)-1]
 	last.ToolBlocks = append(last.ToolBlocks, ToolBlock{
-		Name:  msg.ToolName,
-		Input: msg.Input,
+		Name:   msg.ToolName,
+		ToolID: msg.ToolID,
+		Input:  msg.Input,
 	})
 
 	m.syncViewport()
 	if m.autoScroll {
 		m.vp.GotoBottom()
+	}
+	return m
+}
+
+// handleToolResultMsg finds the ToolBlock matching the given ToolID and sets
+// its Success field so the collapsed view can show ✓ or ✗.
+func (m ClaudePanelModel) handleToolResultMsg(msg model.ToolResultMsg) ClaudePanelModel {
+	// Walk messages backwards — the matching tool_use is almost always recent.
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		for j := range m.messages[i].ToolBlocks {
+			if m.messages[i].ToolBlocks[j].ToolID == msg.ToolID {
+				s := msg.Success
+				m.messages[i].ToolBlocks[j].Success = &s
+				m.syncViewport()
+				return m
+			}
+		}
 	}
 	return m
 }
@@ -423,9 +461,10 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 			return m.executeSlashCommand(text)
 		}
 
-		// Record in history (avoid duplicates at the top).
-		if len(m.inputHistory) == 0 || m.inputHistory[len(m.inputHistory)-1] != text {
-			m.inputHistory = append(m.inputHistory, text)
+		// Record in history and persist to disk (shared with TS TUI).
+		if m.history != nil {
+			m.history.Add(text)
+			_ = m.history.Save()
 		}
 		m.historyIdx = -1
 		m.draftInput = ""
@@ -452,6 +491,21 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 
 	case key.Matches(msg, m.keys.HistoryNext):
 		m = m.navigateHistoryNext()
+		return m, nil
+	}
+
+	// PgUp/PgDown scroll the viewport even when the input is focused.
+	// This provides scroll access without conflicting with text editing.
+	switch msg.String() {
+	case "pgup":
+		m.vp.HalfViewUp()
+		m.autoScroll = false
+		return m, nil
+	case "pgdown":
+		m.vp.HalfViewDown()
+		if m.vp.AtBottom() {
+			m.autoScroll = true
+		}
 		return m, nil
 	}
 
@@ -489,34 +543,35 @@ func (m *ClaudePanelModel) scrollToSearchResult() {
 }
 
 // navigateHistoryPrev moves one step backward in input history.
+// History is stored newest-first (index 0 = most recent).
 func (m ClaudePanelModel) navigateHistoryPrev() ClaudePanelModel {
-	if len(m.inputHistory) == 0 {
+	if m.history == nil || m.history.Len() == 0 {
 		return m
 	}
 	// Capture the current draft on first navigation.
 	if m.historyIdx == -1 {
 		m.draftInput = m.input.Value()
-		m.historyIdx = len(m.inputHistory) - 1
-	} else if m.historyIdx > 0 {
-		m.historyIdx--
+		m.historyIdx = 0 // newest entry
+	} else if m.historyIdx < m.history.Len()-1 {
+		m.historyIdx++ // move toward older entries
 	}
-	m.input.SetValue(m.inputHistory[m.historyIdx])
+	m.input.SetValue(m.history.Get(m.historyIdx))
 	m.input.CursorEnd()
 	return m
 }
 
-// navigateHistoryNext moves one step forward in input history (or restores
-// the draft when past the end of history).
+// navigateHistoryNext moves one step forward in input history (toward newer,
+// or restores the draft when past the newest entry).
 func (m ClaudePanelModel) navigateHistoryNext() ClaudePanelModel {
 	if m.historyIdx == -1 {
 		return m
 	}
-	if m.historyIdx < len(m.inputHistory)-1 {
-		m.historyIdx++
-		m.input.SetValue(m.inputHistory[m.historyIdx])
+	if m.historyIdx > 0 {
+		m.historyIdx-- // move toward newer entries
+		m.input.SetValue(m.history.Get(m.historyIdx))
 		m.input.CursorEnd()
 	} else {
-		// Past the end: restore draft.
+		// Past the newest: restore draft.
 		m.historyIdx = -1
 		m.input.SetValue(m.draftInput)
 		m.input.CursorEnd()
@@ -642,23 +697,34 @@ func (m ClaudePanelModel) View() string {
 	if m.search.IsActive() {
 		return lipgloss.JoinVertical(lipgloss.Left,
 			searchBar,
-			m.vp.View(),
+			m.viewportWithScrollbar(),
 			inputLine,
 		)
 	}
 
 	if m.slashCmd.IsVisible() {
 		return lipgloss.JoinVertical(lipgloss.Left,
-			m.vp.View(),
+			m.viewportWithScrollbar(),
 			dropdownView,
 			inputLine,
 		)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left,
-		m.vp.View(),
+		m.viewportWithScrollbar(),
 		inputLine,
 	)
+}
+
+// viewportWithScrollbar renders the viewport and, when content overflows,
+// joins a single-column scrollbar on the right edge.
+func (m ClaudePanelModel) viewportWithScrollbar() string {
+	vpView := m.vp.View()
+	sb := scrollbar.Render(m.vp.Height, m.vp.TotalLineCount(), m.vp.YOffset)
+	if sb == "" {
+		return vpView
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, vpView, sb)
 }
 
 // renderInputLine builds the single-line input area including the "› " prompt.
@@ -758,14 +824,68 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 	return sb.String()
 }
 
+// extractToolDisplayInput parses rawInput as JSON and returns a meaningful
+// single-line summary of the key parameter in priority order:
+// file_path > path > command > pattern > query > url > description.
+// Falls back to rawInput unchanged when parsing fails or no known field exists.
+func extractToolDisplayInput(rawInput string) string {
+	if rawInput == "" {
+		return ""
+	}
+	var fields struct {
+		FilePath    string `json:"file_path"`
+		Path        string `json:"path"`
+		Command     string `json:"command"`
+		Pattern     string `json:"pattern"`
+		Query       string `json:"query"`
+		URL         string `json:"url"`
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal([]byte(rawInput), &fields); err != nil {
+		return rawInput
+	}
+	switch {
+	case fields.FilePath != "":
+		return fields.FilePath
+	case fields.Path != "":
+		return fields.Path
+	case fields.Command != "":
+		return util.Truncate(fields.Command, 80)
+	case fields.Pattern != "":
+		return fields.Pattern
+	case fields.Query != "":
+		return fields.Query
+	case fields.URL != "":
+		return fields.URL
+	case fields.Description != "":
+		return util.Truncate(fields.Description, 80)
+	}
+	return rawInput
+}
+
 // renderToolBlock renders a ToolBlock either collapsed (just the name) or
 // expanded (name + input + output).
 func renderToolBlock(tb ToolBlock, _ int) string {
+	// Status prefix: ✓ for success, ✗ for failure, empty while pending.
+	prefix := "  "
+	if tb.Success != nil {
+		if *tb.Success {
+			prefix = "  ✓ "
+		} else {
+			prefix = "  ✗ "
+		}
+	}
+
 	if !tb.Expanded {
-		return toolNameStyle.Render(fmt.Sprintf("  [tool: %s]", tb.Name)) + "\n"
+		if tb.Input != "" {
+			display := extractToolDisplayInput(tb.Input)
+			return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) +
+				" " + config.StyleSubtle.Render(display) + "\n"
+		}
+		return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) + "\n"
 	}
 	var sb strings.Builder
-	sb.WriteString(toolNameStyle.Render(fmt.Sprintf("  [tool: %s]", tb.Name)))
+	sb.WriteString(prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)))
 	sb.WriteByte('\n')
 	if tb.Input != "" {
 		sb.WriteString(config.StyleSubtle.Render("    in:  "+tb.Input) + "\n")
@@ -793,7 +913,11 @@ func (m *ClaudePanelModel) SetSize(width, height int) {
 		vpH = 1
 	}
 
-	m.vp.Width = width
+	vpW := width
+	if width > 20 {
+		vpW = width - 1 // reserve one column for the scrollbar
+	}
+	m.vp.Width = vpW
 	m.vp.Height = vpH
 	m.input.Width = width - 3 // subtract prompt width ("› ")
 
@@ -836,6 +960,12 @@ func (m *ClaudePanelModel) Blur() {
 // interface method-signature matching.
 func (m *ClaudePanelModel) SetSender(sender model.MessageSender) {
 	m.sender = sender
+}
+
+// SetHistory injects a loaded InputHistory for cross-session prompt
+// persistence. Called from main.go after loading from disk.
+func (m *ClaudePanelModel) SetHistory(h *InputHistory) {
+	m.history = h
 }
 
 // SetTier satisfies the claudePanelWidget interface.  Tier-specific rendering

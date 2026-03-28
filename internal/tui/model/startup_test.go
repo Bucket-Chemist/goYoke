@@ -53,6 +53,8 @@ func (d *mockCLIDriver) SendMessage(_ string) tea.Cmd {
 	return func() tea.Msg { return nil }
 }
 
+func (d *mockCLIDriver) Interrupt() error { return nil }
+
 func (d *mockCLIDriver) Shutdown() error {
 	d.shutdownCalled++
 	return nil

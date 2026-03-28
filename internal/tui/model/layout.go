@@ -132,7 +132,7 @@ func (m AppModel) computeLayout() layoutDims {
 		// crumbs on startup ensure the row is always present.
 		bcH = breadcrumbHeight
 	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH - bcH
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH - bcH - borderFrame
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}
@@ -269,7 +269,10 @@ func (m AppModel) renderLayout() string {
 
 	parts = append(parts, mainArea)
 
-	// Task board overlay renders between main area and toast/status line.
+	// Task board renders between main area and toast/status line.
+	// Its height is already subtracted from contentHeight in computeLayout,
+	// so the main area (chat + agents) shrinks to accommodate it while
+	// the banner, tab bar, and status line remain unaffected.
 	if m.shared != nil && m.shared.taskBoard != nil && m.shared.taskBoard.IsVisible() {
 		parts = append(parts, m.shared.taskBoard.View())
 	}
@@ -362,6 +365,58 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 		}
 	default:
 		content = config.StyleSubtle.Render(m.rightPanelMode.String())
+	}
+
+	// Drawer stack compositing (TDS-005).
+	// Always render drawer tabs at bottom of right panel for discoverability.
+	// When drawers have content, they expand and consume up to 40% of height.
+	// Compact tier suppresses drawers entirely.
+	if dims.tier != LayoutCompact && m.shared != nil && m.shared.drawerStack != nil {
+		hasContent := m.shared.drawerStack.OptionsHasContent() || m.shared.drawerStack.PlanHasContent()
+
+		if hasContent {
+			// Expanded: drawer gets up to 40% of content height, capped at 15 rows, min 5.
+			drawerH := dims.contentHeight * 40 / 100
+			if drawerH > 15 {
+				drawerH = 15
+			}
+			if drawerH < 5 {
+				drawerH = 5
+			}
+			if drawerH > dims.contentHeight-5 {
+				drawerH = dims.contentHeight - 5
+			}
+			if drawerH < 1 {
+				drawerH = 1
+			}
+
+			mainH := dims.contentHeight - drawerH
+			m.shared.drawerStack.SetSize(dims.rightWidth, drawerH)
+
+			mainStyle := lipgloss.NewStyle().Width(dims.rightWidth).Height(mainH)
+			drawerView := m.shared.drawerStack.View()
+
+			content = lipgloss.JoinVertical(lipgloss.Left,
+				mainStyle.Render(content),
+				drawerView,
+			)
+		} else {
+			// Minimized: show compact tabs (1 row each) at the bottom.
+			tabH := 2 // 1 row per minimized drawer tab
+			mainH := dims.contentHeight - tabH
+			if mainH < 1 {
+				mainH = 1
+			}
+			m.shared.drawerStack.SetSize(dims.rightWidth, tabH)
+
+			mainStyle := lipgloss.NewStyle().Width(dims.rightWidth).Height(mainH)
+			drawerView := m.shared.drawerStack.View()
+
+			content = lipgloss.JoinVertical(lipgloss.Left,
+				mainStyle.Render(content),
+				drawerView,
+			)
+		}
 	}
 
 	var style lipgloss.Style

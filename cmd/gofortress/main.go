@@ -40,6 +40,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	claudepkg "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/dashboard"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/planpreview"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/providers"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settings"
@@ -114,6 +115,20 @@ func main() {
 	// Wire Phase 6 child components into shared state.
 	cp := claudepkg.NewClaudePanelModel(keys)
 	app.SetClaudePanel(&cp)
+
+	// Load cross-session prompt history (shared with TS TUI via
+	// ~/.claude/input-history.json). The config dir respects --config-dir
+	// and CLAUDE_CONFIG_DIR for multi-config setups.
+	histDir := os.Getenv("CLAUDE_CONFIG_DIR")
+	if histDir == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			histDir = filepath.Join(home, ".claude")
+		}
+	}
+	if histDir != "" {
+		history := claudepkg.LoadInputHistory(histDir)
+		cp.SetHistory(history)
+	}
 
 	toastModel := toast.NewToastModel()
 	app.SetToasts(&toastModel)
@@ -216,6 +231,9 @@ func main() {
 
 	tbModel := taskboard.NewTaskBoardModel()
 	app.SetTaskBoard(&tbModel)
+
+	drawerStack := drawer.NewDrawerStack()
+	app.SetDrawerStack(&drawerStack)
 
 	// -----------------------------------------------------------------------
 	// Phase 1b: Locate gofortress-mcp binary and generate MCP config.

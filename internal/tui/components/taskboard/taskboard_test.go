@@ -32,16 +32,19 @@ func TestSetSize(t *testing.T) {
 
 func TestToggle(t *testing.T) {
 	m := NewTaskBoardModel()
-	if m.IsVisible() {
-		t.Error("expected invisible initially")
-	}
-	m.Toggle()
+	// IsVisible requires both visible flag AND tasks.
+	m.SetTasks([]TaskEntry{{ID: "1", Status: "pending"}})
+	// SetTasks auto-shows → visible=true, tasks non-empty → IsVisible=true.
 	if !m.IsVisible() {
-		t.Error("expected visible after first Toggle")
+		t.Error("expected visible after SetTasks")
 	}
-	m.Toggle()
+	m.Toggle() // hide
 	if m.IsVisible() {
-		t.Error("expected invisible after second Toggle")
+		t.Error("expected invisible after Toggle")
+	}
+	m.Toggle() // show again
+	if !m.IsVisible() {
+		t.Error("expected visible after second Toggle")
 	}
 }
 
@@ -168,10 +171,12 @@ func TestView_DoneFilter_ShowsOnlyCompleted(t *testing.T) {
 func TestView_EmptyActiveTasks(t *testing.T) {
 	m := NewTaskBoardModel()
 	m.Toggle()
-	// No tasks set — should show (none).
-	view := m.View()
-	if !strings.Contains(view, "(none)") {
-		t.Errorf("expected '(none)' for empty task list, got:\n%s", view)
+	// Toggled on but no tasks — View/Height return empty/0, IsVisible reflects toggle.
+	if m.View() != "" {
+		t.Errorf("expected empty view with no tasks, got:\n%s", m.View())
+	}
+	if m.Height() != 0 {
+		t.Errorf("expected height 0 with no tasks, got %d", m.Height())
 	}
 }
 
@@ -455,6 +460,8 @@ func TestHandleMsg_NotVisibleIsNoop(t *testing.T) {
 		{ID: "1", Status: "pending"},
 		{ID: "2", Status: "pending"},
 	})
+	// SetTasks auto-shows; toggle off so we can test the hidden state.
+	m.Toggle()
 	// Board is hidden — down key must not move cursor.
 	m.HandleMsg(tea.KeyMsg{Type: tea.KeyDown})
 	if m.cursor != 0 {

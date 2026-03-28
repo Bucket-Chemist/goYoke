@@ -490,8 +490,8 @@ func TestComputeLayout_ContentHeight(t *testing.T) {
 
 	dims := m.computeLayout()
 
-	// contentHeight = height - bannerHeight(3) - tabBarHeight(1) - statusLineHeight(2)
-	wantHeight := 40 - bannerHeight - tabBarHeight - statusLineHeight // 34
+	// contentHeight = height - bannerHeight(3) - tabBarHeight(1) - statusLineHeight(2) - borderFrame(2)
+	wantHeight := 40 - bannerHeight - tabBarHeight - statusLineHeight - borderFrame // 32
 	if dims.contentHeight != wantHeight {
 		t.Errorf("contentHeight = %d; want %d", dims.contentHeight, wantHeight)
 	}
@@ -834,7 +834,7 @@ func TestMessageTypes_Constructible(t *testing.T) {
 	_ = StatusUpdateMsg{Status: "Thinking"}
 	_ = CompactMsg{Text: "summary"}
 	_ = AssistantMsg{Text: "hello", Streaming: true}
-	_ = ToolResultMsg{ToolName: "Read", Result: "...", Success: true}
+	_ = ToolResultMsg{ToolID: "tool-1", Success: true}
 	_ = ResultMsg{SessionID: "sess-1", CostUSD: 0.01, DurationMS: 1234}
 	_ = StreamEventMsg{EventType: "text", Data: []byte(`{}`)}
 	_ = CLIEventMsg{RawType: "unknown", Data: []byte(`{}`)}
@@ -1749,6 +1749,7 @@ func (m *mockCLIDriverDebounce) Start() tea.Cmd {
 }
 func (m *mockCLIDriverDebounce) WaitForEvent() tea.Cmd { return nil }
 func (m *mockCLIDriverDebounce) SendMessage(_ string) tea.Cmd { return nil }
+func (m *mockCLIDriverDebounce) Interrupt() error              { return nil }
 func (m *mockCLIDriverDebounce) Shutdown() error {
 	m.shutdownCalls++
 	return nil
@@ -1912,6 +1913,7 @@ func (d *mockDriverCapture) SendMessage(_ string) tea.Cmd {
 	d.sendCalls++
 	return nil
 }
+func (d *mockDriverCapture) Interrupt() error { return nil }
 func (d *mockDriverCapture) Shutdown() error {
 	d.shutdownCalls++
 	return nil

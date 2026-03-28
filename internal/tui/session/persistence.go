@@ -215,9 +215,14 @@ func (s *Store) SetupSessionDir(sessionID string) (string, error) {
 	tmpLink := filepath.Join(claudeDir, "tmp")
 
 	// Remove any existing symlink or directory at the tmp path so we can
-	// re-create it unconditionally.
+	// re-create it unconditionally.  os.Remove handles symlinks and empty
+	// dirs.  Fall back to os.RemoveAll for non-empty directories left by
+	// previous sessions, Claude Code, or other tools that wrote into
+	// ~/.claude/tmp/ when it was a real directory rather than a symlink.
 	if err := os.Remove(tmpLink); err != nil && !os.IsNotExist(err) {
-		return "", fmt.Errorf("setup session dir %q: remove existing tmp link: %w", sessionID, err)
+		if err2 := os.RemoveAll(tmpLink); err2 != nil {
+			return "", fmt.Errorf("setup session dir %q: remove existing tmp: %w", sessionID, err2)
+		}
 	}
 
 	if err := os.Symlink(sessionDir, tmpLink); err != nil {
