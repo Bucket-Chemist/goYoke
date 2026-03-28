@@ -70,9 +70,11 @@ test/audit/**
 # Completed tickets (archived)
 tickets/completed/
 
+# Archived TS TUI (deprecated — Go TUI is canonical)
+.archive/
+
 # TypeScript/Node.js
-packages/tui/node_modules/
-packages/tui/dist/
+node_modules/
 
 # Claude memory
 .claude/memory/ml-tool-events.jsonl

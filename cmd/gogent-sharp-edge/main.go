@@ -143,6 +143,34 @@ func main() {
 		}
 	}
 
+	// === SANDBOX BLOCK DETECTION ===
+	if sandboxMsg := detectSandboxBlock(event); sandboxMsg != "" {
+		resp := buildCombinedResponse(nil, sandboxMsg, "")
+		if reminderMsg != "" || flushMsg != "" {
+			// Merge attention-gate messages into sandbox response.
+			existing := ""
+			if ctx, ok := resp.HookSpecificOutput["additionalContext"].(string); ok {
+				existing = ctx
+			}
+			var parts []string
+			if existing != "" {
+				parts = append(parts, existing)
+			}
+			if reminderMsg != "" {
+				parts = append(parts, reminderMsg)
+			}
+			if flushMsg != "" {
+				parts = append(parts, flushMsg)
+			}
+			resp.AddField("additionalContext", strings.Join(parts, "\n\n"))
+		}
+		if err := resp.Marshal(os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling sandbox response: %v\n", err)
+			fmt.Println("{}")
+		}
+		return
+	}
+
 	// === EXISTING: SHARP-EDGE LOGIC ===
 	// Detect failure
 	failure := routing.DetectFailure(event)
@@ -407,6 +435,58 @@ func cleanupVitestProcesses(event *routing.PostToolEvent) {
 
 	// Log cleanup for debugging
 	fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Cleaned up vitest processes\n")
+}
+
+// detectSandboxBlock returns a suggestion message when a Write or Edit tool call
+// targeting a .claude/ path appears to have been blocked by CC's sandbox.
+// Returns an empty string when the event does not match the pattern.
+func detectSandboxBlock(event *routing.PostToolEvent) string {
+	// Only inspect Write and Edit tool calls.
+	if event.ToolName != "Write" && event.ToolName != "Edit" {
+		return ""
+	}
+
+	if event.ToolResponse == nil {
+		return ""
+	}
+
+	// Extract file path from tool input.
+	filePath := ""
+	if fp, ok := event.ToolInput["file_path"].(string); ok {
+		filePath = fp
+	}
+	if filePath == "" {
+		return ""
+	}
+
+	// Only fire for paths under .claude/.
+	if !strings.Contains(filePath, ".claude/") && !strings.Contains(filePath, "/.claude/") {
+		return ""
+	}
+
+	// Detect an error/block in the tool response.
+	isError := false
+	if errFlag, ok := event.ToolResponse["is_error"].(bool); ok && errFlag {
+		isError = true
+	}
+	if errStr, ok := event.ToolResponse["error"].(string); ok && errStr != "" {
+		isError = true
+	}
+	if output, ok := event.ToolResponse["output"].(string); ok {
+		lower := strings.ToLower(output)
+		if strings.Contains(lower, "sensitive") || strings.Contains(lower, "permission") {
+			isError = true
+		}
+	}
+
+	if !isError {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"[sandbox] Write blocked on sensitive path %q. Use mcp__gofortress-standalone__sandbox_write instead:\n\nmcp__gofortress-standalone__sandbox_write({\n  content: <file content>,\n  dest_path: %q,\n  make_executable: false\n})",
+		filePath, filePath,
+	)
 }
 
 // getProjectDir returns the project directory from environment or cwd.

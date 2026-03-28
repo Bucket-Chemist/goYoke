@@ -18,7 +18,10 @@
       "Bash(git log:*)",
       "Bash(go test:*)",
       "Bash(go build:*)",
-      "Bash(make:*)"
+      "Bash(git:*)",
+      "Bash(make:*)",
+      "Write(**)",
+      "Edit(**)"
     ],
     "deny": [
       "Write(.env*)",
@@ -35,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-load-context",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-load-context",
             "timeout": 10
           }
         ]
@@ -47,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-skill-guard",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-skill-guard",
             "timeout": 5
           }
         ]
@@ -57,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-validate",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-validate",
             "timeout": 10
           }
         ]
@@ -67,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-direct-impl-check",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-direct-impl-check",
             "timeout": 5
           }
         ]
@@ -79,7 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-sharp-edge",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-sharp-edge",
             "timeout": 5
           }
         ]
@@ -90,12 +93,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-agent-endstate",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-agent-endstate",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "gogent-orchestrator-guard",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-orchestrator-guard",
             "timeout": 10
           }
         ]
@@ -106,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-archive",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-archive",
             "timeout": 30
           }
         ]
@@ -118,7 +121,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-config-guard",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-config-guard",
             "timeout": 5
           }
         ]
@@ -129,12 +132,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-instructions-audit",
+            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-instructions-audit",
             "timeout": 3
           }
         ]
       }
     ]
+  },
+  "mcpServers": {
+    "gofortress-standalone": {
+      "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-mcp-standalone",
+      "env": {
+        "GOGENT_PROJECT_ROOT": "/home/doktersmol/Documents/GOgent-Fortress"
+      }
+    }
   },
   "effortLevel": "high",
   "autoUpdatesChannel": "latest",

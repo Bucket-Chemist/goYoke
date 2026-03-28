@@ -87,9 +87,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Only validate Task tool
-	if event.ToolName != "Task" {
-		// Pass through for non-Task tools
+	// Only validate Task/Agent tools
+	if event.ToolName != "Task" && event.ToolName != "Agent" {
+		// Pass through for non-Task/Agent tools
 		fmt.Println("{}")
 		return
 	}

@@ -255,19 +255,51 @@ Request arrives
 ### TUI Context (Claude Agent SDK)
 
 **CRITICAL**: The TUI uses Claude Agent SDK's `query()` function, NOT Claude Code CLI.
-The Agent SDK does **NOT** have the `Task` tool. ALL agent spawning in TUI must use `mcp__gofortress__spawn_agent`.
+The Agent SDK does **NOT** have the `Task` tool. ALL agent spawning in TUI must use `mcp__gofortress-interactive__spawn_agent`.
 
-| Context                   | Task() Available    | spawn_agent Available |
-| ------------------------- | ------------------- | --------------------- |
-| **Router (Root Session)** | **YES** (Exclusive) | YES                   |
-| **Sub-Agents (Level 1+)** | **NO** (Blocked)    | **YES** (Required)    |
+| Context                   | Task() Available | spawn_agent Available             | Preferred for Agent Delegation                    |
+| ------------------------- | ---------------- | --------------------------------- | ------------------------------------------------- |
+| **Router (Root Session)** | YES              | YES (`gofortress-interactive`)    | `mcp__gofortress-interactive__spawn_agent`         |
+| **Sub-Agents (Level 1+)** | NO (Blocked)     | YES (Required)                    | `mcp__gofortress-interactive__spawn_agent`         |
+
+**IMPORTANT**: The router MUST use `mcp__gofortress-interactive__spawn_agent` instead of the built-in
+`Agent`/`Task` tool for agent delegation. The `Agent` tool fires NO PreToolUse hooks, so no conventions,
+rules, or agent identity are injected. The MCP spawn_agent calls `buildFullAgentContext()` to inject
+full context (identity, conventions, rules) before spawning `claude -p`.
+
+### MCP Servers
+
+Two MCP servers provide complementary functionality:
+
+| MCP Server | Tool Prefix | spawn_agent | Interactive Tools | Requires TUI |
+| --- | --- | --- | --- | --- |
+| `gofortress-interactive` | `mcp__gofortress-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, etc. | Yes |
+| `gofortress-standalone` | `mcp__gofortress-standalone__` | **Functional** (Go, lightweight) | test_mcp_ping | No |
+
+**`gofortress-interactive`** (TS, runs inside TUI process):
+- Primary spawn_agent with `buildFullAgentContext()`, relationship validation, Zustand store, cost tracking
+- Interactive tools (ask_user, confirm_action, select_option, request_input, team_run)
+- Source: `packages/tui/src/mcp/tools/spawnAgent.ts`
+
+**`gofortress-standalone`** (Go, separate binary):
+- Lightweight spawn_agent with `BuildFullAgentContext()` and relationship validation
+- No TUI dependency — works in headless/CI contexts
+- Binary: `bin/gofortress-mcp-standalone`
+- Source: `cmd/gofortress-mcp-standalone/`
+
+Both call `buildFullAgentContext()` (TS) / `BuildFullAgentContext()` (Go) to inject identity, conventions, and rules.
+Both enforce `spawned_by`/`can_spawn` constraints from `agents-index.json`.
+Both manage subprocess lifecycle with SIGTERM→SIGKILL escalation.
+
+**When TUI is running**, prefer `gofortress-interactive` — it integrates with the agent tree, cost tracker, and store.
+**In headless/CI contexts**, `gofortress-standalone` provides spawn_agent without TUI dependency.
 
 ### spawn_agent MCP Tool
 
 **Tool Signature:**
 
 ```typescript
-mcp__gofortress__spawn_agent({
+mcp__gofortress-interactive__spawn_agent({
   agent: string,        // Agent ID from agents-index.json
   description: string,  // Brief description for logging
   prompt: string,       // Task prompt for the agent
@@ -280,12 +312,13 @@ mcp__gofortress__spawn_agent({
 **Router (Root Session) spawns Mozart:**
 
 ```javascript
-// Router uses Task() to spawn the initial orchestrator.
-// This keeps the TUI stdin/stdout connected for interactivity.
-Task({
-  model: "opus",
-  description: "Mozart: Braintrust problem decomposition",
+// Router uses spawn_agent to spawn the initial orchestrator.
+// This ensures buildFullAgentContext() injects identity + conventions.
+mcp__gofortress-interactive__spawn_agent({
+  agent: "mozart",
+  description: "Braintrust problem decomposition",
   prompt: "AGENT: mozart\n\nBRAINTRUST INVOCATION...",
+  model: "opus",
 });
 ```
 
@@ -293,8 +326,8 @@ Task({
 
 ```javascript
 // Mozart runs as a sub-agent (Level 1). Task() is BLOCKED.
-// It MUST use mcp__gofortress__spawn_agent for children (Einstein, Beethoven).
-mcp__gofortress__spawn_agent({
+// It MUST use spawn_agent for children (Einstein, Beethoven).
+mcp__gofortress-interactive__spawn_agent({
   agent: "einstein",
   caller_type: "mozart", // Mozart self-identifies
   description: "Theoretical analysis",
@@ -324,8 +357,11 @@ Costs from spawned agents are extracted from CLI output and rolled up to the par
 
 | Agent Tier | Mechanism | Examples |
 |------------|-----------|----------|
-| **Level 0 (Router)** | `Task()` | Spawning Orchestrator, Mozart, or Scout |
-| **Level 1+ (Sub-agents)** | `mcp__gofortress__spawn_agent` | Orchestrator -> Scout, Mozart -> Einstein |
+| **Level 0 (Router)** | `mcp__gofortress-interactive__spawn_agent` | Spawning Orchestrator, Mozart, or Scout |
+| **Level 1+ (Sub-agents)** | `mcp__gofortress-interactive__spawn_agent` | Orchestrator -> Scout, Mozart -> Einstein |
+
+**DO NOT use the built-in `Agent`/`Task` tool for agent delegation.** It bypasses all hooks — no conventions, rules, or identity injection.
+Blocked by `gogent-validate` (PreToolUse hook). Use `spawn_agent` MCP tool instead.
 
 **Troubleshooting:**
 If spawn_agent fails, see `~/.claude/docs/mcp-spawning-troubleshooting.md`

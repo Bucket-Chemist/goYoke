@@ -1,0 +1,400 @@
+package agents_test
+
+import (
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+)
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// fullyPopulatedAgent returns a state.Agent with every field set for thorough
+// detail-pane testing.
+func fullyPopulatedAgent() *state.Agent {
+	return &state.Agent{
+		ID:          "agent-xyz",
+		ParentID:    "",
+		AgentType:   "go-pro",
+		Description: "Implement OAuth flow",
+		Model:       "sonnet",
+		Tier:        "sonnet",
+		Status:      state.StatusRunning,
+		Activity: &state.AgentActivity{
+			Type:      "tool_use",
+			Target:    "Read",
+			Preview:   "Read /internal/auth/handler.go",
+			Timestamp: time.Now(),
+		},
+		StartedAt:   time.Now().Add(-2*time.Minute - 15*time.Second),
+		Duration:    0,
+		Cost:        0.045,
+		Tokens:      12450,
+		Children:    []string{},
+		Conventions: []string{"go.md", "go-bubbletea.md"},
+		Prompt:      "AGENT: go-pro\n\nTASK: Implement OAuth flow",
+	}
+}
+
+func errorAgent() *state.Agent {
+	a := fullyPopulatedAgent()
+	a.Status = state.StatusError
+	a.ErrorOutput = "panic: runtime error: index out of range [5] with length 3\ngoroutine 1 [running]"
+	a.Duration = 45 * time.Second
+	a.StartedAt = time.Time{} // zero to force Duration path
+	return a
+}
+
+func completeAgent() *state.Agent {
+	a := fullyPopulatedAgent()
+	a.Status = state.StatusComplete
+	a.Duration = 2*time.Minute + 15*time.Second
+	return a
+}
+
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+func TestNewAgentDetailModel(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	cmd := m.Init()
+	if cmd != nil {
+		t.Error("Init() should return nil")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+func TestView_EmptyStateDetail(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	view := m.View()
+	if !strings.Contains(view, "Select an agent") {
+		t.Errorf("empty detail View() should contain 'Select an agent'; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetAgent
+// ---------------------------------------------------------------------------
+
+func TestSetAgent_ShowsAgentType(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "go-pro") {
+		t.Errorf("View() should contain AgentType 'go-pro'; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ShowsModel(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "sonnet") {
+		t.Errorf("View() should contain Model 'sonnet'; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ShowsTier(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+	view := m.View()
+	// Tier label
+	if !strings.Contains(view, "Tier") {
+		t.Errorf("View() should contain 'Tier' label; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ShowsCost(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	a.Cost = 0.045
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "0.045") {
+		t.Errorf("View() should contain cost '0.045'; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ShowsTokens(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	a.Tokens = 12450
+	m.SetAgent(a)
+	view := m.View()
+	// Formatted as 12,450
+	if !strings.Contains(view, "12,450") {
+		t.Errorf("View() should contain tokens '12,450'; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ShowsActivity(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "Read /internal/auth/handler.go") {
+		t.Errorf("View() should contain activity preview; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ShowsStatus(t *testing.T) {
+	tests := []struct {
+		status state.AgentStatus
+		want   string
+	}{
+		{state.StatusRunning, "Running"},
+		{state.StatusComplete, "Complete"},
+		{state.StatusError, "Error"},
+		{state.StatusPending, "Pending"},
+		{state.StatusKilled, "Killed"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.want, func(t *testing.T) {
+			m := agents.NewAgentDetailModel()
+			m.SetSize(80, 40)
+			a := fullyPopulatedAgent()
+			a.Status = tc.status
+			m.SetAgent(a)
+			view := m.View()
+			if !strings.Contains(view, tc.want) {
+				t.Errorf("View() should contain status %q; got:\n%s", tc.want, view)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Error output
+// ---------------------------------------------------------------------------
+
+func TestSetAgent_ErrorOutputDisplayed(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := errorAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "index out of range") {
+		t.Errorf("error agent View() should contain error output; got:\n%s", view)
+	}
+}
+
+func TestSetAgent_ErrorOutputNotShownForRunning(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent() // StatusRunning
+	a.ErrorOutput = "should not appear"
+	m.SetAgent(a)
+	view := m.View()
+	if strings.Contains(view, "should not appear") {
+		t.Errorf("running agent View() should NOT show ErrorOutput; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Duration formatting
+// ---------------------------------------------------------------------------
+
+func TestView_DurationRunning(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent() // StatusRunning, StartedAt ~2m15s ago
+	m.SetAgent(a)
+	view := m.View()
+	// Should show something with minutes and seconds (e.g. "2m 15s")
+	if !strings.Contains(view, "m ") && !strings.Contains(view, "s") {
+		t.Errorf("running agent View() should contain duration; got:\n%s", view)
+	}
+}
+
+func TestView_DurationComplete(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := completeAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "2m") {
+		t.Errorf("complete agent View() should contain '2m' duration; got:\n%s", view)
+	}
+}
+
+func TestView_DurationPendingShowsDash(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	a.Status = state.StatusPending
+	a.StartedAt = time.Time{} // zero
+	a.Duration = 0
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "—") {
+		t.Errorf("pending agent View() should contain '—' for duration; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Update is a no-op
+// ---------------------------------------------------------------------------
+
+func TestUpdate_NoOp(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetAgent(fullyPopulatedAgent())
+
+	newM, cmd := m.Update(nil)
+	if cmd != nil {
+		t.Error("Update() should return nil command")
+	}
+	_ = newM
+}
+
+// ---------------------------------------------------------------------------
+// SetAgent nil clears the detail
+// ---------------------------------------------------------------------------
+
+func TestSetAgent_Nil_ShowsEmptyState(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetAgent(fullyPopulatedAgent())
+	m.SetAgent(nil)
+	view := m.View()
+	if !strings.Contains(view, "Select an agent") {
+		t.Errorf("View() after SetAgent(nil) should show empty state; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Token formatting edge cases
+// ---------------------------------------------------------------------------
+
+func TestFormatTokens_SmallNumber(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	a.Tokens = 999
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "999") {
+		t.Errorf("View() should contain '999' tokens; got:\n%s", view)
+	}
+}
+
+func TestFormatTokens_MillionPlus(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	a.Tokens = 1234567
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "1,234,567") {
+		t.Errorf("View() should contain '1,234,567' tokens; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetSize
+// ---------------------------------------------------------------------------
+
+func TestSetSize_DoesNotPanic(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(0, 0)
+	m.SetAgent(fullyPopulatedAgent())
+	// Should not panic when width is 0.
+	_ = m.View()
+}
+
+// ---------------------------------------------------------------------------
+// Field labels presence
+// ---------------------------------------------------------------------------
+
+func TestView_AllFieldLabelsPresent(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent())
+	view := m.View()
+
+	labels := []string{"Status", "Type", "Model", "Tier", "Duration", "Cost", "Tokens"}
+	for _, label := range labels {
+		if !strings.Contains(view, label) {
+			t.Errorf("View() missing field label %q; got:\n%s", label, view)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Collapsible sections
+// ---------------------------------------------------------------------------
+
+func TestView_SectionHeaders(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent())
+	view := m.View()
+
+	// Overview and Activity start expanded (▼), Context starts collapsed (▸).
+	if !strings.Contains(view, "▼ Overview") {
+		t.Errorf("View() should show '▼ Overview' (expanded); got:\n%s", view)
+	}
+	if !strings.Contains(view, "▸ Context") {
+		t.Errorf("View() should show '▸ Context' (collapsed); got:\n%s", view)
+	}
+}
+
+func TestView_ConventionsShownWhenContextExpanded(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+
+	// By default Context is collapsed — conventions should NOT appear.
+	view := m.View()
+	if strings.Contains(view, "go.md") {
+		t.Errorf("collapsed Context section should NOT show 'go.md'; got:\n%s", view)
+	}
+}
+
+func TestView_PromptSectionVisible(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+	view := m.View()
+	if !strings.Contains(view, "Prompt") {
+		t.Errorf("View() should show 'Prompt' section header; got:\n%s", view)
+	}
+}
+
+func TestView_ErrorSectionHiddenForRunning(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent()) // StatusRunning, no error
+	view := m.View()
+	if strings.Contains(view, "▸ Error") || strings.Contains(view, "▼ Error") {
+		t.Errorf("running agent should NOT show Error section; got:\n%s", view)
+	}
+}
+
+func TestView_ErrorSectionVisibleForError(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(errorAgent())
+	view := m.View()
+	if !strings.Contains(view, "Error") {
+		t.Errorf("error agent should show Error section; got:\n%s", view)
+	}
+}
+

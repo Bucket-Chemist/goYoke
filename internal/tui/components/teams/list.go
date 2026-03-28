@@ -1,0 +1,316 @@
+package teams
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+)
+
+// ---------------------------------------------------------------------------
+// Messages
+// ---------------------------------------------------------------------------
+
+// TeamSelectedMsg is emitted when the user moves the cursor to a team or
+// explicitly selects one (Enter). The parent model should update
+// TeamDetailModel in response.
+type TeamSelectedMsg struct {
+	// Dir is the filesystem path for the selected team directory.
+	Dir string
+}
+
+// pollTickMsg is a package-private message that drives the 2-second polling
+// cycle. It carries the tick time for diagnostic purposes.
+type pollTickMsg time.Time
+
+// ---------------------------------------------------------------------------
+// pollCmd
+// ---------------------------------------------------------------------------
+
+// pollCmd returns a tea.Cmd that fires after 2 seconds with a pollTickMsg.
+func pollCmd() tea.Cmd {
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return pollTickMsg(t)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TeamListModel
+// ---------------------------------------------------------------------------
+
+// TeamListModel is the Bubbletea sub-model for the scrollable team list. It
+// polls the filesystem every 2 seconds and renders each known team as a
+// single summary row.
+//
+// The zero value is not usable; use NewTeamListModel instead.
+type TeamListModel struct {
+	registry *TeamRegistry
+	selected int        // cursor index into teams snapshot
+	teams    []*TeamState // snapshot refreshed on every poll/update
+	width    int
+	height   int
+	teamsDir string // directory containing team subdirectories
+	polling  bool   // true once polling has been started
+}
+
+// NewTeamListModel returns a TeamListModel backed by the given registry.
+func NewTeamListModel(registry *TeamRegistry) TeamListModel {
+	return TeamListModel{
+		registry: registry,
+	}
+}
+
+// Init implements tea.Model. Init returns nil; polling starts via
+// StartPolling so the caller can supply teamsDir before ticks begin.
+func (m TeamListModel) Init() tea.Cmd {
+	return nil
+}
+
+// StartPolling sets the directory to poll and returns a tea.Cmd that
+// immediately fires a pollTickMsg to kick off the 2-second polling cycle.
+// It uses a pointer receiver so that teamsDir is stored on the actual model
+// instance and is visible in subsequent Update calls.
+func (m *TeamListModel) StartPolling(teamsDir string) tea.Cmd {
+	m.teamsDir = teamsDir
+	m.polling = true
+	return func() tea.Msg {
+		return pollTickMsg(time.Now())
+	}
+}
+
+// SetSize updates the width and height used for rendering.
+func (m *TeamListModel) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+}
+
+// SetTeamsDir sets the directory that will be scanned during poll ticks.
+// This is a low-level setter used by tests; production code uses StartPolling.
+func (m *TeamListModel) SetTeamsDir(dir string) {
+	m.teamsDir = dir
+}
+
+// SelectedTeam returns the directory path of the currently selected team, or
+// an empty string when the list is empty.
+func (m TeamListModel) SelectedTeam() string {
+	if len(m.teams) == 0 || m.selected < 0 || m.selected >= len(m.teams) {
+		return ""
+	}
+	return m.teams[m.selected].Dir
+}
+
+// Update implements tea.Model. It handles:
+//   - model.TeamUpdateMsg  — refreshes the snapshot from the registry.
+//   - pollTickMsg           — scans teamsDir, updates registry, schedules next tick.
+//   - tea.KeyMsg            — j/k/up/down navigate the list; enter emits TeamSelectedMsg.
+func (m TeamListModel) Update(msg tea.Msg) (TeamListModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case model.TeamUpdateMsg:
+		m.teams = m.registry.All()
+		m.clampSelected()
+		return m, nil
+
+	case pollTickMsg:
+		// Scan the directory and update the registry for each team found.
+		if m.teamsDir != "" {
+			scanTeamsDir(m.teamsDir, m.registry)
+		}
+		// Refresh the local snapshot.
+		m.teams = m.registry.All()
+		m.clampSelected()
+		// Schedule the next poll.
+		return m, pollCmd()
+
+	case tea.KeyMsg:
+		return m.handleKey(msg)
+	}
+
+	return m, nil
+}
+
+// handleKey processes keyboard input for list navigation.
+func (m TeamListModel) handleKey(msg tea.KeyMsg) (TeamListModel, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		if m.selected > 0 {
+			m.selected--
+			return m, emitTeamSelected(m.SelectedTeam())
+		}
+
+	case "down", "j":
+		if m.selected < len(m.teams)-1 {
+			m.selected++
+			return m, emitTeamSelected(m.SelectedTeam())
+		}
+
+	case "enter":
+		dir := m.SelectedTeam()
+		if dir != "" {
+			return m, emitTeamSelected(dir)
+		}
+	}
+
+	return m, nil
+}
+
+// emitTeamSelected returns a Cmd that emits TeamSelectedMsg for the given dir.
+func emitTeamSelected(dir string) tea.Cmd {
+	return func() tea.Msg {
+		return TeamSelectedMsg{Dir: dir}
+	}
+}
+
+// clampSelected ensures selected stays within bounds after the teams slice
+// changes size.
+func (m *TeamListModel) clampSelected() {
+	if len(m.teams) == 0 {
+		m.selected = 0
+		return
+	}
+	if m.selected >= len(m.teams) {
+		m.selected = len(m.teams) - 1
+	}
+	if m.selected < 0 {
+		m.selected = 0
+	}
+}
+
+// View implements tea.Model. It renders the team list as a scrollable set of
+// summary rows. The view is a pure function of the model state — no I/O.
+func (m TeamListModel) View() string {
+	if len(m.teams) == 0 {
+		return config.StyleMuted.Render("No teams")
+	}
+
+	var sb strings.Builder
+	for i, ts := range m.teams {
+		row := m.renderRow(ts, i == m.selected)
+		sb.WriteString(row)
+		sb.WriteByte('\n')
+	}
+
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderRow renders a single team summary row.
+//
+// Format:  [icon] team_name  workflow_type  $cost  Wn/total
+func (m TeamListModel) renderRow(ts *TeamState, selected bool) string {
+	icon := statusIcon(ts.Config.Status)
+	iconStr := statusStyleFor(ts.Config.Status).Render(string(icon))
+
+	name := ts.Config.TeamName
+	if name == "" {
+		name = filepath.Base(ts.Dir)
+	}
+
+	workflow := ts.Config.WorkflowType
+	if workflow == "" {
+		workflow = "—"
+	}
+
+	cost := fmt.Sprintf("$%.2f", ts.TotalCostUSD())
+
+	totalWaves := len(ts.Config.Waves)
+	waveProg := "—"
+	if totalWaves > 0 {
+		cur := ts.CurrentWaveNumber()
+		waveProg = fmt.Sprintf("W%d/%d", cur, totalWaves)
+	}
+
+	line := fmt.Sprintf("%s %-24s  %-16s  %6s  %s",
+		iconStr, name, workflow, cost, waveProg)
+
+	if selected {
+		// Highlight selected row.
+		plainLine := fmt.Sprintf("%s %-24s  %-16s  %6s  %s",
+			string(icon), name, workflow, cost, waveProg)
+		return config.StyleHighlight.Render(plainLine)
+	}
+
+	return line
+}
+
+// ---------------------------------------------------------------------------
+// Status icon + style helpers (team-level, based on string status)
+// ---------------------------------------------------------------------------
+
+// statusIcon returns the ASCII icon for a string status value from config.json.
+func statusIcon(status string) rune {
+	switch status {
+	case "running":
+		return config.IconRunning
+	case "completed":
+		return config.IconComplete
+	case "failed":
+		return config.IconError
+	default: // "pending" and anything unknown
+		return config.IconPending
+	}
+}
+
+// statusStyleFor returns the lipgloss style for the given string status.
+func statusStyleFor(status string) lipgloss.Style {
+	switch status {
+	case "running":
+		return config.StyleWarning
+	case "completed":
+		return config.StyleSuccess
+	case "failed":
+		return config.StyleError
+	default:
+		return config.StyleMuted
+	}
+}
+
+// ---------------------------------------------------------------------------
+// scanTeamsDir
+// ---------------------------------------------------------------------------
+
+// HandleMsg is the pointer-receiver equivalent of Update. It mutates the
+// model in place and returns only the tea.Cmd. This satisfies the
+// teamListWidget interface defined in the model package.
+func (m *TeamListModel) HandleMsg(msg tea.Msg) tea.Cmd {
+	updated, cmd := m.Update(msg)
+	*m = updated
+	return cmd
+}
+
+// scanTeamsDir reads every subdirectory of dir, attempts to parse
+// config.json, and calls registry.Update for any successfully parsed team.
+// Errors are silently ignored so a single corrupt config.json does not block
+// the rest of the poll.
+func scanTeamsDir(dir string, reg *TeamRegistry) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		teamDir := filepath.Join(dir, entry.Name())
+		cfgPath := filepath.Join(teamDir, "config.json")
+
+		data, err := os.ReadFile(cfgPath)
+		if err != nil {
+			continue
+		}
+
+		var cfg TeamConfig
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			continue
+		}
+
+		reg.Update(teamDir, cfg)
+	}
+}

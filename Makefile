@@ -102,6 +102,28 @@ build-tui:
 	@chmod +x packages/tui/bin/gofortress-tui.js
 	@echo "✓ TypeScript TUI built at packages/tui/dist/index.js"
 
+# Build Go TUI + MCP server
+build-go-tui:
+	@echo "Building Go TUI..."
+	@mkdir -p bin
+	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
+		-o bin/gofortress ./cmd/gofortress
+	@echo "✓ Go TUI built at bin/gofortress"
+
+build-go-mcp:
+	@echo "Building Go MCP server..."
+	@mkdir -p bin
+	@go build -o bin/gofortress-mcp ./cmd/gofortress-mcp
+	@echo "✓ Go MCP server built at bin/gofortress-mcp"
+
+build-go: build-go-tui build-go-mcp
+	@echo "✓ All Go TUI binaries built"
+
+# Remove stale binaries from project root (C-2 fix: all outputs go to bin/)
+clean-stale:
+	@rm -f gofortress gofortress-mcp gofortress-mcp-standalone
+	@echo "✓ Stale root binaries removed"
+
 # Build legacy Go TUI
 build-legacy:
 	@echo "Building legacy Go TUI..."
