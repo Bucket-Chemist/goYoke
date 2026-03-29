@@ -60,6 +60,10 @@ type GlobalKeys struct {
 
 	// ChangeCWD opens the CWD selector modal to change the working directory.
 	ChangeCWD key.Binding
+
+	// ToggleHealth switches between agent detail and health dashboard
+	// in the right panel at Standard tier (TUI-007).
+	ToggleHealth key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -216,6 +220,10 @@ func DefaultKeyMap() KeyMap {
 			ChangeCWD: key.NewBinding(
 				key.WithKeys("ctrl+d"),
 				key.WithHelp("ctrl+d", "change cwd"),
+			),
+			ToggleHealth: key.NewBinding(
+				key.WithKeys("alt+h"),
+				key.WithHelp("alt+h", "toggle health"),
 			),
 		},
 

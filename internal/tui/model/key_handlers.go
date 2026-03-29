@@ -129,8 +129,15 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
+		m.showHealthInAgents = false // TUI-007: reset on mode change
 		m.updateHintContext()
 		m.updateBreadcrumbs()
+		return m, nil
+
+	case key.Matches(msg, m.keys.Global.ToggleHealth):
+		if m.rightPanelMode == RPMAgents {
+			m.showHealthInAgents = !m.showHealthInAgents
+		}
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleProvider):

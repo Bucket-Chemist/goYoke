@@ -440,6 +440,17 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 		} else {
 			content = agentContent
 		}
+
+		// Tab indicator for Standard tier (TUI-007)
+		if dims.tier == LayoutStandard && m.shared != nil && m.shared.teamsHealth != nil {
+			var indicator string
+			if m.showHealthInAgents {
+				indicator = config.StyleMuted.Render("Agents") + "  " + config.StyleHighlight.Render("[Health]")
+			} else {
+				indicator = config.StyleHighlight.Render("[Agents]") + "  " + config.StyleMuted.Render("Health")
+			}
+			content = lipgloss.JoinVertical(lipgloss.Left, indicator, content)
+		}
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {
 			content = m.shared.dashboard.View()
