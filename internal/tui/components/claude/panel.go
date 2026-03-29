@@ -391,8 +391,10 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 	// ---------------------------------------------------------------------------
 	if m.slashCmd.IsVisible() {
 		switch msg.String() {
-		case "up", "k", "down", "j", "enter":
+		case "up", "down", "enter":
 			// Forward navigation/selection to the dropdown.
+			// Note: "k"/"j" are NOT intercepted — they must reach the text
+			// input so the user can type commands like "/ticket".
 			var scCmd tea.Cmd
 			m.slashCmd, scCmd = m.slashCmd.Update(msg)
 			return m, scCmd
@@ -686,22 +688,10 @@ func (m ClaudePanelModel) View() string {
 		searchBarH = lipgloss.Height(searchBar)
 	}
 
-	// Render the slash-command dropdown above the input line when visible.
-	var dropdownView string
-	dropdownH := 0
-	if m.slashCmd.IsVisible() {
-		dropdownView = m.slashCmd.View()
-		dropdownH = lipgloss.Height(dropdownView)
-	}
-
 	// The viewport takes all remaining vertical space.
-	vpH := m.height - inputH - searchBarH - dropdownH
+	vpH := m.height - inputH - searchBarH
 	if vpH < 1 {
 		vpH = 1
-	}
-	if m.vp.Height != vpH {
-		// Non-mutating: we only update in SetSize / explicit calls.  A
-		// transient height mismatch here is acceptable.
 	}
 
 	if m.search.IsActive() {
@@ -712,18 +702,43 @@ func (m ClaudePanelModel) View() string {
 		)
 	}
 
-	if m.slashCmd.IsVisible() {
-		return lipgloss.JoinVertical(lipgloss.Left,
-			m.viewportWithScrollbar(),
-			dropdownView,
-			inputLine,
-		)
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left,
+	// Base layout: viewport + input line.
+	base := lipgloss.JoinVertical(lipgloss.Left,
 		m.viewportWithScrollbar(),
 		inputLine,
 	)
+
+	// Overlay the slash-command dropdown above the input line.
+	// The dropdown floats over the viewport content rather than
+	// pushing the input line down (which made it look like the
+	// dropdown appeared below the text entry).
+	if m.slashCmd.IsVisible() {
+		dropdownView := m.slashCmd.View()
+		dropdownH := lipgloss.Height(dropdownView)
+
+		// Split the base into lines and overlay the dropdown on the
+		// lines just above the input line.
+		lines := strings.Split(base, "\n")
+		totalLines := len(lines)
+		// The dropdown replaces lines ending at (totalLines - inputH - 1),
+		// i.e. the bottom of the viewport region.
+		overlayEnd := totalLines - inputH
+		overlayStart := overlayEnd - dropdownH
+		if overlayStart < 0 {
+			overlayStart = 0
+		}
+
+		dropdownLines := strings.Split(dropdownView, "\n")
+		for i, dl := range dropdownLines {
+			idx := overlayStart + i
+			if idx >= 0 && idx < overlayEnd {
+				lines[idx] = dl
+			}
+		}
+		return strings.Join(lines, "\n")
+	}
+
+	return base
 }
 
 // viewportWithScrollbar renders the viewport and, when content overflows,
