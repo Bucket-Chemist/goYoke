@@ -8,7 +8,7 @@
     {
       "id": "TUI-001",
       "title": "Extend teamconfig.Member with health monitoring fields",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "dependencies": [],
       "agent": "go-pro",
@@ -17,7 +17,7 @@
     {
       "id": "TUI-002",
       "title": "Promote drawers from right-panel to full-width layout",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "dependencies": [],
       "agent": "go-tui",
@@ -26,7 +26,7 @@
     {
       "id": "TUI-003",
       "title": "Add teamsHealthWidget interface and sharedState wiring",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "dependencies": [],
       "agent": "go-tui",
@@ -35,7 +35,7 @@
     {
       "id": "TUI-004",
       "title": "Extend team polling to capture stream file sizes",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "dependencies": ["TUI-001"],
       "agent": "go-pro",
@@ -44,7 +44,7 @@
     {
       "id": "TUI-005",
       "title": "Implement TeamsHealthModel component",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "dependencies": ["TUI-001", "TUI-003", "TUI-004"],
       "agent": "go-tui",
@@ -53,7 +53,7 @@
     {
       "id": "TUI-006",
       "title": "Implement right panel 50/50 split for Wide/Ultra tiers",
-      "status": "pending",
+      "status": "completed",
       "phase": 5,
       "dependencies": ["TUI-002", "TUI-003", "TUI-005"],
       "agent": "go-tui",
@@ -62,7 +62,7 @@
     {
       "id": "TUI-007",
       "title": "Add Standard tier tab-toggle (Alt+H) for health view",
-      "status": "pending",
+      "status": "completed",
       "phase": 5,
       "dependencies": ["TUI-006"],
       "agent": "go-tui",
@@ -71,7 +71,7 @@
     {
       "id": "TUI-008",
       "title": "Wire health dashboard in main.go and extend layout tests",
-      "status": "pending",
+      "status": "completed",
       "phase": 6,
       "dependencies": ["TUI-002", "TUI-005", "TUI-006"],
       "agent": "go-tui",
