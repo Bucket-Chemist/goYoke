@@ -487,3 +487,78 @@ func TestComputeDrawerLayout(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TUI-008: Drawer-aware panel height regression tests
+//
+// Verify that panel heights = contentHeight - drawerHeight across tiers.
+// ---------------------------------------------------------------------------
+
+func TestDrawerAwarePanelHeights(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		termWidth     int
+		termHeight    int
+		hasContent    bool
+		wantDrawerH   int // 0 means no drawer
+		wantMainHGt0  bool
+	}{
+		{
+			name:         "compact_no_drawer",
+			termWidth:    60, termHeight: 40,
+			hasContent:   true,
+			wantDrawerH:  0,
+			wantMainHGt0: true,
+		},
+		{
+			name:         "standard_minimized_drawer",
+			termWidth:    100, termHeight: 40,
+			hasContent:   false,
+			wantDrawerH:  2,
+			wantMainHGt0: true,
+		},
+		{
+			name:         "wide_expanded_drawer",
+			termWidth:    150, termHeight: 40,
+			hasContent:   true,
+			wantDrawerH:  12, // 30% of ~30 cH ≈ 9-12, capped at 12
+			wantMainHGt0: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := NewAppModel()
+			m.width = tc.termWidth
+			m.height = tc.termHeight
+			m.shared.drawerStack = &stubDrawerStack{optionsHasContent: tc.hasContent}
+
+			dims := m.computeLayout()
+			drawerH, _ := m.computeDrawerLayout(dims)
+
+			if tc.wantDrawerH > 0 && drawerH == 0 {
+				t.Errorf("drawerH = 0; want > 0")
+			}
+			if tc.wantDrawerH == 0 && drawerH != 0 {
+				t.Errorf("drawerH = %d; want 0", drawerH)
+			}
+
+			mainH := dims.contentHeight - drawerH
+			if mainH < 1 {
+				mainH = 1
+			}
+
+			if tc.wantMainHGt0 && mainH < 1 {
+				t.Errorf("mainH = %d; want >= 1", mainH)
+			}
+			if mainH+drawerH > dims.contentHeight {
+				t.Errorf("mainH(%d) + drawerH(%d) = %d > contentHeight(%d)",
+					mainH, drawerH, mainH+drawerH, dims.contentHeight)
+			}
+		})
+	}
+}

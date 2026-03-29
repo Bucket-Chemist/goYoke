@@ -137,6 +137,8 @@ func main() {
 	teamReg := teams.NewTeamRegistry()
 	teamList := teams.NewTeamListModel(teamReg)
 	app.SetTeamList(&teamList)
+	teamsHealth := teams.NewTeamsHealthModel(teamReg)
+	app.SetTeamsHealth(teamsHealth)
 
 	// Phase 7: Provider tab bar.
 	// ProviderState is created inside NewAppModel() and stored in shared state.
