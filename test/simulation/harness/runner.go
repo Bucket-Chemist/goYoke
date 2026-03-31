@@ -95,8 +95,8 @@ func (r *DefaultRunner) RunScenario(s Scenario) SimulationResult {
 	// Clean up temp directory for test isolation
 	// Each scenario starts with a clean slate
 	if r.config.TempDir != "" {
-		claudeDir := filepath.Join(r.config.TempDir, ".claude")
-		os.RemoveAll(claudeDir)
+		gogentDir := filepath.Join(r.config.TempDir, ".gogent")
+		os.RemoveAll(gogentDir)
 
 		// Clean project indicator files to prevent cross-test contamination
 		// These files affect project type detection and must be removed between tests
@@ -369,7 +369,7 @@ func (r *DefaultRunner) validateSharpEdgeSchema(expectedFields map[string]interf
 	var issues []string
 
 	// Read the pending-learnings.jsonl file
-	pendingPath := filepath.Join(r.config.TempDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(r.config.TempDir, ".gogent", "memory", "pending-learnings.jsonl")
 	content, err := os.ReadFile(pendingPath)
 	if err != nil {
 		issues = append(issues, fmt.Sprintf("validate_sharp_edge: cannot read pending-learnings.jsonl: %v", err))
@@ -697,7 +697,7 @@ func (r *DefaultRunner) createSetupFunc(setup *FixtureSetup) SetupFunc {
 
 			if key == "GOGENT_DELEGATION_CEILING" {
 				// Write ceiling to the file the CLI reads
-				ceilingPath := filepath.Join(baseDir, ".claude", "tmp", "max_delegation")
+				ceilingPath := filepath.Join(baseDir, ".gogent", "tmp", "max_delegation")
 				ceilingDir := filepath.Dir(ceilingPath)
 				if err := os.MkdirAll(ceilingDir, 0755); err != nil {
 					return fmt.Errorf("create ceiling dir: %w", err)

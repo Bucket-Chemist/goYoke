@@ -844,17 +844,17 @@ func TestDefaultHandoffConfig_NewPaths(t *testing.T) {
 	projectDir := "/test/project"
 	config := DefaultHandoffConfig(projectDir)
 
-	expectedDecisionsPath := "/test/project/.claude/memory/decisions.jsonl"
+	expectedDecisionsPath := "/test/project/.gogent/memory/decisions.jsonl"
 	if config.DecisionsPath != expectedDecisionsPath {
 		t.Errorf("Expected DecisionsPath '%s', got: '%s'", expectedDecisionsPath, config.DecisionsPath)
 	}
 
-	expectedPreferencesPath := "/test/project/.claude/memory/preferences.jsonl"
+	expectedPreferencesPath := "/test/project/.gogent/memory/preferences.jsonl"
 	if config.PreferencesPath != expectedPreferencesPath {
 		t.Errorf("Expected PreferencesPath '%s', got: '%s'", expectedPreferencesPath, config.PreferencesPath)
 	}
 
-	expectedPerformancePath := "/test/project/.claude/memory/performance.jsonl"
+	expectedPerformancePath := "/test/project/.gogent/memory/performance.jsonl"
 	if config.PerformancePath != expectedPerformancePath {
 		t.Errorf("Expected PerformancePath '%s', got: '%s'", expectedPerformancePath, config.PerformancePath)
 	}
@@ -1006,7 +1006,7 @@ func TestLoadAllUserIntents_MinimalFields(t *testing.T) {
 func TestLoadEndstates_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
 
 	// Create directory structure
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
@@ -1085,7 +1085,7 @@ func TestLoadEndstates_MissingFile(t *testing.T) {
 func TestLoadEndstates_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
 
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 	os.WriteFile(endstatesPath, []byte(""), 0644)
@@ -1104,7 +1104,7 @@ func TestLoadEndstates_EmptyFile(t *testing.T) {
 func TestLoadEndstates_Malformed(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
 
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 
@@ -1133,7 +1133,7 @@ func TestLoadEndstates_Malformed(t *testing.T) {
 func TestLoadEndstates_WithBlankLines(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
 
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 
@@ -1168,7 +1168,7 @@ func TestLoadArtifacts_WithEndstates(t *testing.T) {
 	config.ErrorPatternsPath = filepath.Join(tmpDir, "errors.jsonl")
 
 	// Create endstates file
-	endstatesPath := filepath.Join(tmpDir, ".claude", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(tmpDir, ".gogent", "memory", "agent-endstates.jsonl")
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 	endstatesData := `{"timestamp":"2026-01-24T10:00:00Z","agent_id":"python-pro","agent_class":"implementation","tier":"sonnet","exit_code":0,"duration_ms":1500,"output_tokens":500,"decision":"prompt","recommendations":["test"]}
 {"timestamp":"2026-01-24T11:00:00Z","agent_id":"codebase-search","agent_class":"search","tier":"haiku","exit_code":0,"duration_ms":250,"output_tokens":100,"decision":"silent","recommendations":[]}`

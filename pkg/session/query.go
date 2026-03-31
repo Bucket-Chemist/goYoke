@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 // Query provides programmatic access to session learning artifacts
@@ -42,7 +44,7 @@ type SharpEdgeFilters struct {
 //	    Unresolved: true,
 //	})
 func (q *Query) QuerySharpEdges(filters SharpEdgeFilters) ([]SharpEdge, error) {
-	edgesPath := filepath.Join(q.ProjectDir, ".claude", "memory", "pending-learnings.jsonl")
+	edgesPath := filepath.Join(config.ProjectMemoryDir(q.ProjectDir), "pending-learnings.jsonl")
 
 	file, err := os.Open(edgesPath)
 	if err != nil {
@@ -124,7 +126,7 @@ type UserIntentFilters struct {
 //	    HasAction: true,
 //	})
 func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error) {
-	intentsPath := filepath.Join(q.ProjectDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(config.ProjectMemoryDir(q.ProjectDir), "user-intents.jsonl")
 
 	file, err := os.Open(intentsPath)
 	if err != nil {
@@ -233,7 +235,7 @@ type DecisionFilters struct {
 //	    Impact:   ptr("high"),
 //	})
 func (q *Query) QueryDecisions(filters DecisionFilters) ([]Decision, error) {
-	decisionsPath := filepath.Join(q.ProjectDir, ".claude", "memory", "decisions.jsonl")
+	decisionsPath := filepath.Join(config.ProjectMemoryDir(q.ProjectDir), "decisions.jsonl")
 
 	file, err := os.Open(decisionsPath)
 	if err != nil {
@@ -303,7 +305,7 @@ type PreferenceFilters struct {
 //	    Scope: &scope,
 //	})
 func (q *Query) QueryPreferences(filters PreferenceFilters) ([]PreferenceOverride, error) {
-	preferencesPath := filepath.Join(q.ProjectDir, ".claude", "memory", "preferences.jsonl")
+	preferencesPath := filepath.Join(config.ProjectMemoryDir(q.ProjectDir), "preferences.jsonl")
 
 	file, err := os.Open(preferencesPath)
 	if err != nil {
@@ -377,7 +379,7 @@ const SlowThresholdMs = 1000
 //	    SlowOnly: true,
 //	})
 func (q *Query) QueryPerformance(filters PerformanceFilters) ([]PerformanceMetric, error) {
-	performancePath := filepath.Join(q.ProjectDir, ".claude", "memory", "performance.jsonl")
+	performancePath := filepath.Join(config.ProjectMemoryDir(q.ProjectDir), "performance.jsonl")
 
 	file, err := os.Open(performancePath)
 	if err != nil {

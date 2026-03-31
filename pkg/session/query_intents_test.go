@@ -11,7 +11,7 @@ import (
 func TestQueryUserIntents_CategoryFilter(t *testing.T) {
 	// Setup test data
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestQueryUserIntents_CategoryFilter(t *testing.T) {
 // TestQueryUserIntents_KeywordFilter verifies keyword filtering
 func TestQueryUserIntents_KeywordFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestQueryUserIntents_KeywordFilter(t *testing.T) {
 // TestQueryUserIntents_KeywordFilter_CaseInsensitive verifies case-insensitive keyword matching
 func TestQueryUserIntents_KeywordFilter_CaseInsensitive(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +202,7 @@ func TestQueryUserIntents_KeywordFilter_CaseInsensitive(t *testing.T) {
 // TestQueryUserIntents_MultipleKeywords verifies ANY keyword matching
 func TestQueryUserIntents_MultipleKeywords(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +257,7 @@ func TestQueryUserIntents_MultipleKeywords(t *testing.T) {
 // TestQueryUserIntents_CategoryAndKeyword verifies combined filters
 func TestQueryUserIntents_CategoryAndKeyword(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +320,7 @@ func TestQueryUserIntents_CategoryAndKeyword(t *testing.T) {
 // TestQueryUserIntents_BackwardCompatibility verifies empty category/keywords don't break queries
 func TestQueryUserIntents_BackwardCompatibility(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +370,7 @@ func TestQueryUserIntents_BackwardCompatibility(t *testing.T) {
 // TestQueryUserIntents_EmptyKeywordsNoMatch verifies intents with no keywords don't match keyword filter
 func TestQueryUserIntents_EmptyKeywordsNoMatch(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {
 		t.Fatal(err)
 	}

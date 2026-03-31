@@ -1,6 +1,6 @@
 // Package session provides session persistence for the GOgent-Fortress TUI.
 // It handles saving and loading session metadata, conversation history, and
-// managing the session directory layout under ~/.claude/sessions/.
+// managing the session directory layout under ~/.gogent/sessions/.
 //
 // All writes are atomic (temp file + rename) to prevent partial writes on
 // crash or power loss. Missing files are handled gracefully (nil, nil return).
@@ -80,10 +80,12 @@ func NewStore(baseDir string) *Store {
 }
 
 // DefaultBaseDir returns the canonical base directory for session persistence.
-// If the CLAUDE_CONFIG_DIR environment variable is set, it returns
-// $CLAUDE_CONFIG_DIR/sessions. Otherwise it falls back to $HOME/.claude/sessions.
+// Priority: GOGENT_CONFIG_DIR → CLAUDE_CONFIG_DIR → $HOME/.gogent/sessions.
 // It panics if HOME is not set (should never happen on a fully initialised system).
 func DefaultBaseDir() string {
+	if configDir := os.Getenv("GOGENT_CONFIG_DIR"); configDir != "" {
+		return filepath.Join(configDir, "sessions")
+	}
 	if configDir := os.Getenv("CLAUDE_CONFIG_DIR"); configDir != "" {
 		return filepath.Join(configDir, "sessions")
 	}
@@ -91,7 +93,7 @@ func DefaultBaseDir() string {
 	if home == "" {
 		panic("session: HOME environment variable is not set")
 	}
-	return filepath.Join(home, ".claude", "sessions")
+	return filepath.Join(home, ".gogent", "sessions")
 }
 
 // NewSessionID generates a time-stamped unique session identifier with the
@@ -184,9 +186,9 @@ func (s *Store) SaveSession(data *SessionData) error {
 // SetupSessionDir creates the session directory for sessionID and configures
 // two filesystem conveniences:
 //
-//  1. {claudeDir}/current-session — a plain text file containing the absolute
+//  1. {gogentDir}/current-session — a plain text file containing the absolute
 //     path to the session directory (overwrites any existing file).
-//  2. {claudeDir}/tmp — a symbolic link pointing to the session directory
+//  2. {gogentDir}/tmp — a symbolic link pointing to the session directory
 //     (removes and recreates any existing symlink or directory at that path).
 //
 // Returns the absolute path to the created session directory, or an error if
@@ -201,24 +203,24 @@ func (s *Store) SetupSessionDir(sessionID string) (string, error) {
 		return "", fmt.Errorf("setup session dir %q: create session dir: %w", sessionID, err)
 	}
 
-	// claudeDir is the parent of baseDir, e.g. ~/.claude when baseDir is
-	// ~/.claude/sessions.
-	claudeDir := filepath.Dir(s.baseDir)
+	// gogentDir is the parent of baseDir, e.g. ~/.gogent when baseDir is
+	// ~/.gogent/sessions.
+	gogentDir := filepath.Dir(s.baseDir)
 
 	// Write current-session marker file.
-	markerPath := filepath.Join(claudeDir, "current-session")
+	markerPath := filepath.Join(gogentDir, "current-session")
 	if err := os.WriteFile(markerPath, []byte(sessionDir), 0o644); err != nil {
 		return "", fmt.Errorf("setup session dir %q: write current-session marker: %w", sessionID, err)
 	}
 
-	// Create/update .claude/tmp symlink pointing to the session directory.
-	tmpLink := filepath.Join(claudeDir, "tmp")
+	// Create/update .gogent/tmp symlink pointing to the session directory.
+	tmpLink := filepath.Join(gogentDir, "tmp")
 
 	// Remove any existing symlink or directory at the tmp path so we can
 	// re-create it unconditionally.  os.Remove handles symlinks and empty
 	// dirs.  Fall back to os.RemoveAll for non-empty directories left by
 	// previous sessions, Claude Code, or other tools that wrote into
-	// ~/.claude/tmp/ when it was a real directory rather than a symlink.
+	// ~/.gogent/tmp/ when it was a real directory rather than a symlink.
 	if err := os.Remove(tmpLink); err != nil && !os.IsNotExist(err) {
 		if err2 := os.RemoveAll(tmpLink); err2 != nil {
 			return "", fmt.Errorf("setup session dir %q: remove existing tmp: %w", sessionID, err2)

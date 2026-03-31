@@ -16,7 +16,7 @@ func setupJSONLTestDir(t *testing.T) func() {
 	t.Setenv("GOGENT_PROJECT_DIR", dir)
 
 	// Create minimal .claude structure
-	os.MkdirAll(filepath.Join(dir, ".claude", "memory"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".gogent", "memory"), 0755)
 	os.MkdirAll(filepath.Join(dir, ".claude", "agents"), 0755)
 	os.MkdirAll(filepath.Join(dir, ".gogent"), 0755)
 

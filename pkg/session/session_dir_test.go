@@ -17,7 +17,7 @@ func TestCreateSessionDir_Basic(t *testing.T) {
 	sessionDir, err := CreateSessionDir(projectDir, sessionID)
 	require.NoError(t, err)
 
-	expectedPath := filepath.Join(projectDir, ".claude", "sessions", sessionID)
+	expectedPath := filepath.Join(projectDir, ".gogent", "sessions", sessionID)
 	assert.Equal(t, expectedPath, sessionDir)
 
 	// Verify directory exists
@@ -67,20 +67,20 @@ func TestCreateSessionDir_AlreadyExists(t *testing.T) {
 
 func TestWriteCurrentSession(t *testing.T) {
 	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".claude", "sessions", "test-123")
+	sessionDir := filepath.Join(projectDir, ".gogent", "sessions", "test-123")
 
 	err := WriteCurrentSession(projectDir, sessionDir)
 	require.NoError(t, err)
 
 	// Verify file contents
-	content, err := os.ReadFile(filepath.Join(projectDir, ".claude", "current-session"))
+	content, err := os.ReadFile(filepath.Join(projectDir, ".gogent", "current-session"))
 	require.NoError(t, err)
 	assert.Equal(t, sessionDir+"\n", string(content))
 }
 
 func TestReadCurrentSession_Exists(t *testing.T) {
 	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".claude", "sessions", "test-456")
+	sessionDir := filepath.Join(projectDir, ".gogent", "sessions", "test-456")
 
 	// Write first
 	err := WriteCurrentSession(projectDir, sessionDir)
@@ -102,7 +102,7 @@ func TestReadCurrentSession_Missing(t *testing.T) {
 
 func TestReadCurrentSessionFromEnv(t *testing.T) {
 	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".claude", "sessions", "env-test")
+	sessionDir := filepath.Join(projectDir, ".gogent", "sessions", "env-test")
 
 	// Write current session
 	err := WriteCurrentSession(projectDir, sessionDir)

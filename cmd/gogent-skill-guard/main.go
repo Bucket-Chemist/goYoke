@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
@@ -162,12 +163,12 @@ func resolveSessionDir() string {
 		projectDir, _ = os.Getwd()
 	}
 	if projectDir != "" {
-		data, err := os.ReadFile(filepath.Join(projectDir, ".claude", "current-session"))
+		data, err := os.ReadFile(filepath.Join(config.RuntimeDir(projectDir), "current-session"))
 		if err == nil {
 			return strings.TrimSpace(string(data))
 		}
 	}
-	return filepath.Join(".claude", "sessions", "unknown")
+	return filepath.Join(".gogent", "sessions", "unknown")
 }
 
 func extractSkillName(toolInput map[string]interface{}) string {

@@ -79,3 +79,6 @@ node_modules/
 # Claude memory
 .claude/memory/ml-tool-events.jsonl
 /.claude/memory/*.jsonl
+
+# GOgent runtime state (sessions, memory, teams)
+.gogent/

@@ -189,7 +189,7 @@ func TestIntegration_ValidResumeSession(t *testing.T) {
 
 	// Setup project directory with handoff file
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	handoffContent := "# Previous Session\n\nImplemented feature X.\n\nNext: Test feature X."
@@ -369,7 +369,7 @@ func TestIntegration_PendingLearnings(t *testing.T) {
 
 	// Setup project with pending learnings
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	learnings := `{"timestamp":"2024-01-20","learning":"Fixed bug in parser"}
@@ -566,7 +566,7 @@ func TestIntegration_NoPendingLearnings(t *testing.T) {
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 	// No pending-learnings.jsonl file created
 

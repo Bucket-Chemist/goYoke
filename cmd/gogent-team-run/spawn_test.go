@@ -1516,12 +1516,12 @@ func TestSessionDirEnvInjection(t *testing.T) {
 	t.Parallel()
 	// Create temporary project directory
 	projectRoot := t.TempDir()
-	sessionDir := filepath.Join(projectRoot, ".claude", "sessions", "test-session-123")
+	sessionDir := filepath.Join(projectRoot, ".gogent", "sessions", "test-session-123")
 
 	// Create .claude directory and write current-session marker
-	claudeDir := filepath.Join(projectRoot, ".claude")
-	require.NoError(t, os.MkdirAll(claudeDir, 0755))
-	currentSessionPath := filepath.Join(claudeDir, "current-session")
+	gogentDir := filepath.Join(projectRoot, ".gogent")
+	require.NoError(t, os.MkdirAll(gogentDir, 0755))
+	currentSessionPath := filepath.Join(gogentDir, "current-session")
 	require.NoError(t, os.WriteFile(currentSessionPath, []byte(sessionDir+"\n"), 0644))
 
 	// Verify ReadCurrentSession returns the expected path

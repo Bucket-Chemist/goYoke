@@ -274,7 +274,7 @@ func TestEndToEnd_FullMLPipeline(t *testing.T) {
 	}
 
 	// Phase 6: Verify artifacts
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Handoff not created: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestEndToEnd_SessionStartToValidate(t *testing.T) {
 	sessionID := "context-injection-test"
 
 	// Create previous handoff
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	previousHandoff := `# Previous Session Handoff
@@ -477,7 +477,7 @@ func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
 	}
 
 	// Verify handoff created
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Handoff not created: %v", err)
 	}
@@ -602,7 +602,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 	}
 
 	// Verify sharp edge captured
-	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings not created: %v", err)
 	}
@@ -632,8 +632,15 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
+	// Set GOGENT_PROJECT_DIR so validate/archive binaries use project-scoped paths
+	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
+	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+
 	gogentDir := filepath.Join(runtimeDir, "gogent")
 	os.MkdirAll(gogentDir, 0755)
+
+	// Create project-scoped .gogent/memory for archive to find
+	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
 
 	// Step 1: Run validation creating violations
 	validateEvents := []map[string]interface{}{
@@ -731,9 +738,16 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	sharpEdgeHarness.RunHookBatch(sharpEdgeBinary, "PostToolUse")
 
 	// Verify pending learnings created
-	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings not created: %v", err)
+	}
+
+	// Copy violations from XDG path to project path so archive can find them
+	xdgViolations := filepath.Join(gogentDir, "routing-violations.jsonl")
+	projectViolations := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
+	if data, err := os.ReadFile(xdgViolations); err == nil {
+		os.WriteFile(projectViolations, data, 0644)
 	}
 
 	// Step 3: Run session archive
@@ -766,7 +780,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	}
 
 	// Step 4: Verify handoff file created with all sections
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Handoff not created: %v", err)
 	}
@@ -785,10 +799,10 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	}
 
 	// Step 5: Verify files archived
-	archiveDir := filepath.Join(projectDir, ".claude", "memory", "session-archive")
+	archiveDir := filepath.Join(projectDir, ".gogent", "memory", "session-archive")
 
 	// Violations should be moved (from project dir, not runtime dir)
-	projectViolationsPath := filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
+	projectViolationsPath := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
 	if _, err := os.Stat(projectViolationsPath); !os.IsNotExist(err) {
 		t.Error("Violations file should be removed after archival")
 	}
@@ -856,7 +870,7 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 	}
 
 	// Verify handoff created
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Session 1 handoff not created: %v", err)
 	}

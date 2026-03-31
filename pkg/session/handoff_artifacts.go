@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 // UserIntent captures user decision inputs and expressed preferences
@@ -495,7 +497,7 @@ func loadPerformance(path string) ([]PerformanceMetric, error) {
 
 // loadEndstates reads agent endstate logs from project-scoped agent-endstates.jsonl (v1.3)
 func loadEndstates(projectDir string) ([]EndstateLog, error) {
-	path := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	path := filepath.Join(config.ProjectMemoryDir(projectDir), "agent-endstates.jsonl")
 
 	file, err := os.Open(path)
 	if err != nil {

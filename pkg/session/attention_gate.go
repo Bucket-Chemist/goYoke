@@ -9,6 +9,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 // ReminderContext represents routing reminder context
@@ -66,7 +68,7 @@ See routing-schema.json for complete tier mappings.`,
 // Returns the count as int for use in threshold comparisons.
 // This complements the existing CheckPendingLearnings() which returns a formatted warning string.
 func CountPendingLearnings(projectDir string) (int, error) {
-	pendingPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(config.ProjectMemoryDir(projectDir), "pending-learnings.jsonl")
 
 	data, err := os.ReadFile(pendingPath)
 	if os.IsNotExist(err) {
@@ -95,8 +97,8 @@ func ShouldFlushLearnings(projectDir string) (bool, int, error) {
 
 // ArchivePendingLearnings moves entries to timestamped archive
 func ArchivePendingLearnings(projectDir string) (*FlushContext, error) {
-	pendingPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
-	sharpEdgesDir := filepath.Join(projectDir, ".claude", "memory", "sharp-edges")
+	pendingPath := filepath.Join(config.ProjectMemoryDir(projectDir), "pending-learnings.jsonl")
+	sharpEdgesDir := filepath.Join(config.ProjectMemoryDir(projectDir), "sharp-edges")
 
 	// Check if pending file exists before acquiring lock
 	data, err := os.ReadFile(pendingPath)

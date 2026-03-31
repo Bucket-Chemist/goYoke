@@ -289,8 +289,8 @@ func TestBehavioralInvariant_B7_JSONLValidity(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 
-		os.MkdirAll(filepath.Join(tmpDir, ".claude", "memory"), 0755)
-		os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl"),
+		os.MkdirAll(filepath.Join(tmpDir, ".gogent", "memory"), 0755)
+		os.WriteFile(filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl"),
 			[]byte(`{"valid":"json"}`+"\n"), 0644)
 
 		ctx := &BehavioralContext{
@@ -311,8 +311,8 @@ func TestBehavioralInvariant_B7_JSONLValidity(t *testing.T) {
 		}
 		defer os.RemoveAll(tmpDir)
 
-		os.MkdirAll(filepath.Join(tmpDir, ".claude", "memory"), 0755)
-		os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl"),
+		os.MkdirAll(filepath.Join(tmpDir, ".gogent", "memory"), 0755)
+		os.WriteFile(filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl"),
 			[]byte(`{not valid json}`+"\n"), 0644)
 
 		ctx := &BehavioralContext{
@@ -353,13 +353,13 @@ func TestLoadBehavioralContext(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Create test files
-	os.MkdirAll(filepath.Join(tmpDir, ".claude", "memory"), 0755)
+	os.MkdirAll(filepath.Join(tmpDir, ".gogent", "memory"), 0755)
 	os.MkdirAll(filepath.Join(tmpDir, ".gogent"), 0755)
 
-	os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl"),
+	os.WriteFile(filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl"),
 		[]byte(`{"file":"a.py","error_type":"Error"}`+"\n"+`{"file":"b.py","error_type":"Error"}`+"\n"), 0644)
 
-	os.WriteFile(filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl"),
+	os.WriteFile(filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl"),
 		[]byte(`{"schema_version":"1.0"}`+"\n"+`{"schema_version":"1.3"}`+"\n"), 0644)
 
 	os.WriteFile(filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl"),

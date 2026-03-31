@@ -376,7 +376,7 @@ func (c *ChaosRunner) buildEnv() []string {
 // setupTempDir creates required directories for the chaos test.
 func (c *ChaosRunner) setupTempDir() error {
 	dirs := []string{
-		filepath.Join(c.tempDir, ".claude", "memory"),
+		filepath.Join(c.tempDir, ".gogent", "memory"),
 		filepath.Join(c.tempDir, ".gogent"),
 	}
 	for _, dir := range dirs {
@@ -480,7 +480,7 @@ func (c *ChaosRunner) validateJSONL() (*JSONLCheckResult, error) {
 	result := &JSONLCheckResult{}
 
 	jsonlFiles := []string{
-		filepath.Join(c.tempDir, ".claude", "memory", "pending-learnings.jsonl"),
+		filepath.Join(c.tempDir, ".gogent", "memory", "pending-learnings.jsonl"),
 		filepath.Join(c.tempDir, ".gogent", "failure-tracker.jsonl"),
 	}
 

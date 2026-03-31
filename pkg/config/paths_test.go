@@ -233,17 +233,17 @@ func TestGetProjectViolationsLogPath(t *testing.T) {
 		{
 			name:       "absolute path",
 			projectDir: "/home/user/my-project",
-			expected:   "/home/user/my-project/.claude/memory/routing-violations.jsonl",
+			expected:   "/home/user/my-project/.gogent/memory/routing-violations.jsonl",
 		},
 		{
 			name:       "relative path",
 			projectDir: "my-project",
-			expected:   "my-project/.claude/memory/routing-violations.jsonl",
+			expected:   "my-project/.gogent/memory/routing-violations.jsonl",
 		},
 		{
 			name:       "nested project",
 			projectDir: "/home/user/workspace/nested/project",
-			expected:   "/home/user/workspace/nested/project/.claude/memory/routing-violations.jsonl",
+			expected:   "/home/user/workspace/nested/project/.gogent/memory/routing-violations.jsonl",
 		},
 	}
 
@@ -259,9 +259,9 @@ func TestGetProjectViolationsLogPath(t *testing.T) {
 				t.Error("Expected path to end with .jsonl")
 			}
 
-			// Verify path contains .claude/memory
-			if !strings.Contains(result, ".claude/memory") {
-				t.Error("Expected path to contain .claude/memory")
+			// Verify path contains .gogent/memory
+			if !strings.Contains(result, ".gogent/memory") {
+				t.Error("Expected path to contain .gogent/memory")
 			}
 		})
 	}
@@ -1307,5 +1307,119 @@ func TestMLPathHelpers_Fallback(t *testing.T) {
 		if tc.path != expected {
 			t.Errorf("%s with fallback: expected %s, got %s", tc.name, expected, tc.path)
 		}
+	}
+}
+
+func TestRuntimeDir_Default(t *testing.T) {
+	orig := os.Getenv("GOGENT_RUNTIME_DIR")
+	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOGENT_RUNTIME_DIR")
+
+	projectDir := t.TempDir()
+	result := RuntimeDir(projectDir)
+	expected := filepath.Join(projectDir, ".gogent")
+
+	if result != expected {
+		t.Errorf("Expected %s, got %s", expected, result)
+	}
+	if _, err := os.Stat(result); os.IsNotExist(err) {
+		t.Error("Expected RuntimeDir to create directory")
+	}
+}
+
+func TestRuntimeDir_EnvOverride(t *testing.T) {
+	orig := os.Getenv("GOGENT_RUNTIME_DIR")
+	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+
+	overrideDir := t.TempDir()
+	os.Setenv("GOGENT_RUNTIME_DIR", overrideDir)
+
+	projectDir := t.TempDir()
+	result := RuntimeDir(projectDir)
+
+	if result != overrideDir {
+		t.Errorf("Expected GOGENT_RUNTIME_DIR override %s, got %s", overrideDir, result)
+	}
+}
+
+func TestProjectMemoryDir(t *testing.T) {
+	orig := os.Getenv("GOGENT_RUNTIME_DIR")
+	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOGENT_RUNTIME_DIR")
+
+	projectDir := t.TempDir()
+	result := ProjectMemoryDir(projectDir)
+	expected := filepath.Join(projectDir, ".gogent", "memory")
+
+	if result != expected {
+		t.Errorf("Expected %s, got %s", expected, result)
+	}
+	if _, err := os.Stat(result); os.IsNotExist(err) {
+		t.Error("Expected ProjectMemoryDir to create directory")
+	}
+}
+
+func TestGetProjectViolationsLogPath_UsesGogentMemory(t *testing.T) {
+	orig := os.Getenv("GOGENT_RUNTIME_DIR")
+	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOGENT_RUNTIME_DIR")
+
+	projectDir := t.TempDir()
+	result := GetProjectViolationsLogPath(projectDir)
+	expected := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
+
+	if result != expected {
+		t.Errorf("Expected %s, got %s", expected, result)
+	}
+}
+
+// TestRuntimeDir_WriteCanary validates that .gogent/ paths are writable.
+// This is the migration canary — if .gogent/ writes fail, the .claude/ → .gogent/
+// runtime I/O migration is broken.
+func TestRuntimeDir_WriteCanary(t *testing.T) {
+	orig := os.Getenv("GOGENT_RUNTIME_DIR")
+	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOGENT_RUNTIME_DIR")
+
+	projectDir := t.TempDir()
+
+	// Write to RuntimeDir
+	runtimeDir := RuntimeDir(projectDir)
+	testFile := filepath.Join(runtimeDir, "canary.txt")
+	if err := os.WriteFile(testFile, []byte("canary"), 0644); err != nil {
+		t.Fatalf("Failed to write to RuntimeDir: %v", err)
+	}
+
+	// Write to ProjectMemoryDir
+	memDir := ProjectMemoryDir(projectDir)
+	memFile := filepath.Join(memDir, "canary.jsonl")
+	if err := os.WriteFile(memFile, []byte(`{"test":true}`+"\n"), 0644); err != nil {
+		t.Fatalf("Failed to write to ProjectMemoryDir: %v", err)
+	}
+
+	// Verify reads back
+	data, err := os.ReadFile(memFile)
+	if err != nil {
+		t.Fatalf("Failed to read back canary file: %v", err)
+	}
+	if string(data) != `{"test":true}`+"\n" {
+		t.Errorf("Canary data mismatch: got %q", string(data))
+	}
+}
+
+func TestRuntimeDir_Idempotent(t *testing.T) {
+	orig := os.Getenv("GOGENT_RUNTIME_DIR")
+	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOGENT_RUNTIME_DIR")
+
+	projectDir := t.TempDir()
+	result1 := RuntimeDir(projectDir)
+	result2 := RuntimeDir(projectDir)
+
+	if result1 != result2 {
+		t.Errorf("Expected idempotent results, got %s and %s", result1, result2)
+	}
+	if _, err := os.Stat(result1); os.IsNotExist(err) {
+		t.Error("Expected directory to exist after second call")
 	}
 }

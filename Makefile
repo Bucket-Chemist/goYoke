@@ -6,7 +6,7 @@ BINARY_NAME=gogent
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes all
 
 help:
 	@echo "GOgent Fortress - Available targets:"
@@ -471,3 +471,7 @@ test-simulation-behavioral-all: test-simulation-deterministic test-simulation-re
 # Full simulation suite including chaos (use sparingly - takes longer)
 test-simulation-all: test-simulation-deterministic test-simulation-fuzz test-simulation-replay test-simulation-behavioral
 	@echo "✅ All simulation tests passed (excluding chaos)"
+
+# CI check: ensure no residual .claude/ runtime write paths in production code
+check-claude-writes:
+	@scripts/check-claude-writes.sh

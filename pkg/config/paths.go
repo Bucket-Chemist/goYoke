@@ -77,10 +77,31 @@ func GetViolationsLogPath() string {
 	return filepath.Join(GetGOgentDir(), "routing-violations.jsonl")
 }
 
+// RuntimeDir returns the project-scoped runtime directory.
+// Priority: GOGENT_RUNTIME_DIR env var > {projectDir}/.gogent
+// Creates the directory if it does not exist (idempotent via os.MkdirAll).
+func RuntimeDir(projectDir string) string {
+	if override := os.Getenv("GOGENT_RUNTIME_DIR"); override != "" {
+		os.MkdirAll(override, 0755)
+		return override
+	}
+	dir := filepath.Join(projectDir, ".gogent")
+	os.MkdirAll(dir, 0755)
+	return dir
+}
+
+// ProjectMemoryDir returns the memory subdirectory within the project runtime dir.
+// Creates the directory if it does not exist.
+func ProjectMemoryDir(projectDir string) string {
+	dir := filepath.Join(RuntimeDir(projectDir), "memory")
+	os.MkdirAll(dir, 0755)
+	return dir
+}
+
 // GetProjectViolationsLogPath returns project-scoped violation log path.
 // Used for dual-write pattern - integrates with session archive.
 func GetProjectViolationsLogPath(projectDir string) string {
-	return filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
+	return filepath.Join(ProjectMemoryDir(projectDir), "routing-violations.jsonl")
 }
 
 // GetToolCounterPath returns path to tool counter file.

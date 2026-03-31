@@ -71,7 +71,7 @@ func GetScoutLogPath() string {
 
 // GetProjectScoutLogPath returns project-scoped scout log path.
 func GetProjectScoutLogPath(projectDir string) string {
-	return filepath.Join(projectDir, ".claude", "memory", "scout-recommendations.jsonl")
+	return filepath.Join(config.ProjectMemoryDir(projectDir), "scout-recommendations.jsonl")
 }
 
 // LogScoutRecommendation appends scout recommendation to BOTH global and project logs.

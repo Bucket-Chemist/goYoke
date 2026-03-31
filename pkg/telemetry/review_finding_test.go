@@ -16,7 +16,7 @@ func setupReviewTestDir(t *testing.T) func() {
 
 	// Create minimal structure
 	os.MkdirAll(filepath.Join(dir, ".gogent"), 0755)
-	os.MkdirAll(filepath.Join(dir, ".claude", "memory"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".gogent", "memory"), 0755)
 
 	return func() { /* TempDir auto-cleans */ }
 }

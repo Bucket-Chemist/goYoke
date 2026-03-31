@@ -18,7 +18,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	teamDir := os.Args[1]
+	teamDir, _ := filepath.Abs(os.Args[1])
 
 	// Validate team directory exists
 	if stat, err := os.Stat(teamDir); err != nil || !stat.IsDir() {

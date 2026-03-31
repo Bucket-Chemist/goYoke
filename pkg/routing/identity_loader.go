@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 const (
@@ -124,9 +126,9 @@ func GetSessionDir() string {
 	if projectDir == "" {
 		return ""
 	}
-	data, err := os.ReadFile(filepath.Join(projectDir, ".claude", "current-session"))
+	data, err := os.ReadFile(filepath.Join(config.RuntimeDir(projectDir), "current-session"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.claude/current-session\n", projectDir)
+		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.gogent/current-session\n", projectDir)
 		return ""
 	}
 	return strings.TrimSpace(string(data))

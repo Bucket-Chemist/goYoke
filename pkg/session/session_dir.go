@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
-// CreateSessionDir creates the session directory at {projectDir}/.claude/sessions/{sessionID}/
+// CreateSessionDir creates the session directory at {projectDir}/.gogent/sessions/{sessionID}/
 // If sessionID is "unknown" or empty, generates a timestamp-based fallback.
 // Returns the absolute path to the created directory.
 func CreateSessionDir(projectDir, sessionID string) (string, error) {
@@ -16,7 +18,7 @@ func CreateSessionDir(projectDir, sessionID string) (string, error) {
 		sessionID = time.Now().Format("20060102-150405")
 	}
 
-	sessionDir := filepath.Join(projectDir, ".claude", "sessions", sessionID)
+	sessionDir := filepath.Join(config.RuntimeDir(projectDir), "sessions", sessionID)
 	if err := os.MkdirAll(sessionDir, 0755); err != nil {
 		return "", fmt.Errorf("create session dir: %w", err)
 	}
@@ -24,14 +26,11 @@ func CreateSessionDir(projectDir, sessionID string) (string, error) {
 	return sessionDir, nil
 }
 
-// WriteCurrentSession writes the session directory path to {projectDir}/.claude/current-session
+// WriteCurrentSession writes the session directory path to {projectDir}/.gogent/current-session
 func WriteCurrentSession(projectDir, sessionDir string) error {
-	claudeDir := filepath.Join(projectDir, ".claude")
-	if err := os.MkdirAll(claudeDir, 0755); err != nil {
-		return fmt.Errorf("create .claude dir: %w", err)
-	}
+	runtimeDir := config.RuntimeDir(projectDir)
 
-	currentSessionPath := filepath.Join(claudeDir, "current-session")
+	currentSessionPath := filepath.Join(runtimeDir, "current-session")
 	content := sessionDir + "\n"
 	if err := os.WriteFile(currentSessionPath, []byte(content), 0644); err != nil {
 		return fmt.Errorf("write current-session: %w", err)
@@ -39,10 +38,10 @@ func WriteCurrentSession(projectDir, sessionDir string) error {
 	return nil
 }
 
-// ReadCurrentSession reads the current session directory path from {projectDir}/.claude/current-session
+// ReadCurrentSession reads the current session directory path from {projectDir}/.gogent/current-session
 // Returns empty string (no error) if the file doesn't exist.
 func ReadCurrentSession(projectDir string) (string, error) {
-	currentSessionPath := filepath.Join(projectDir, ".claude", "current-session")
+	currentSessionPath := filepath.Join(config.RuntimeDir(projectDir), "current-session")
 	content, err := os.ReadFile(currentSessionPath)
 	if err != nil {
 		if os.IsNotExist(err) {

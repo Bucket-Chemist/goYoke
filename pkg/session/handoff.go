@@ -145,15 +145,15 @@ type GitInfo struct {
 // HandoffConfig contains paths for handoff generation
 type HandoffConfig struct {
 	ProjectDir        string
-	HandoffPath       string // .claude/memory/handoffs.jsonl
-	PendingPath       string // .claude/memory/pending-learnings.jsonl
-	ViolationsPath    string // .claude/memory/routing-violations.jsonl
+	HandoffPath       string // .gogent/memory/handoffs.jsonl
+	PendingPath       string // .gogent/memory/pending-learnings.jsonl
+	ViolationsPath    string // .gogent/memory/routing-violations.jsonl
 	ErrorPatternsPath string // /tmp/claude-error-patterns.jsonl
 	TranscriptPath    string // Optional: session transcript for archival
-	UserIntentsPath   string // .claude/memory/user-intents.jsonl
-	DecisionsPath     string // .claude/memory/decisions.jsonl
-	PreferencesPath   string // .claude/memory/preferences.jsonl
-	PerformancePath   string // .claude/memory/performance.jsonl
+	UserIntentsPath   string // .gogent/memory/user-intents.jsonl
+	DecisionsPath     string // .gogent/memory/decisions.jsonl
+	PreferencesPath   string // .gogent/memory/preferences.jsonl
+	PerformancePath   string // .gogent/memory/performance.jsonl
 }
 
 // HandoffMetrics captures timing and artifact counts from handoff generation
@@ -177,18 +177,18 @@ func countPatterns(violations []RoutingViolation) int {
 
 // DefaultHandoffConfig creates default paths for handoff generation
 func DefaultHandoffConfig(projectDir string) *HandoffConfig {
-	claudeDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := config.ProjectMemoryDir(projectDir)
 
 	return &HandoffConfig{
 		ProjectDir:        projectDir,
-		HandoffPath:       filepath.Join(claudeDir, "handoffs.jsonl"),
-		PendingPath:       filepath.Join(claudeDir, "pending-learnings.jsonl"),
+		HandoffPath:       filepath.Join(memoryDir, "handoffs.jsonl"),
+		PendingPath:       filepath.Join(memoryDir, "pending-learnings.jsonl"),
 		ViolationsPath:    config.GetProjectViolationsLogPath(projectDir),
 		ErrorPatternsPath: "/tmp/claude-error-patterns.jsonl",
-		UserIntentsPath:   filepath.Join(claudeDir, "user-intents.jsonl"),
-		DecisionsPath:     filepath.Join(claudeDir, "decisions.jsonl"),
-		PreferencesPath:   filepath.Join(claudeDir, "preferences.jsonl"),
-		PerformancePath:   filepath.Join(claudeDir, "performance.jsonl"),
+		UserIntentsPath:   filepath.Join(memoryDir, "user-intents.jsonl"),
+		DecisionsPath:     filepath.Join(memoryDir, "decisions.jsonl"),
+		PreferencesPath:   filepath.Join(memoryDir, "preferences.jsonl"),
+		PerformancePath:   filepath.Join(memoryDir, "performance.jsonl"),
 	}
 }
 

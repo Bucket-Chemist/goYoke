@@ -245,7 +245,7 @@ func TestInvariant_HandoffCreated(t *testing.T) {
 	}
 
 	// Create the file
-	memoryDir := filepath.Join(tempDir, ".claude", "memory")
+	memoryDir := filepath.Join(tempDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 	os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte("{}"), 0644)
 
@@ -259,7 +259,7 @@ func TestInvariant_SchemaVersionCurrent(t *testing.T) {
 	inv := SessionEndInvariants[2] // S3: schema_version_current
 
 	tempDir := t.TempDir()
-	memoryDir := filepath.Join(tempDir, ".claude", "memory")
+	memoryDir := filepath.Join(tempDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	tests := []struct {
@@ -304,7 +304,7 @@ func TestInvariant_SchemaVersionCurrent_EdgeCases(t *testing.T) {
 	inv := SessionEndInvariants[2] // S3: schema_version_current
 
 	tempDir := t.TempDir()
-	memoryDir := filepath.Join(tempDir, ".claude", "memory")
+	memoryDir := filepath.Join(tempDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Empty file
@@ -353,7 +353,7 @@ func TestInvariant_MarkdownCreated(t *testing.T) {
 	}
 
 	// Create the file
-	memoryDir := filepath.Join(tempDir, ".claude", "memory")
+	memoryDir := filepath.Join(tempDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 	os.WriteFile(filepath.Join(memoryDir, "last-handoff.md"), []byte("# Handoff"), 0644)
 

@@ -177,7 +177,7 @@ func (r *SessionReplayer) ReplaySession(session ReplaySession) ReplayResult {
 
 	// Initialize required directories for CLIs to write to
 	requiredDirs := []string{
-		filepath.Join(sessionTempDir, ".claude", "memory"),
+		filepath.Join(sessionTempDir, ".gogent", "memory"),
 		filepath.Join(sessionTempDir, ".gogent"),
 	}
 	for _, dir := range requiredDirs {
@@ -213,7 +213,7 @@ func (r *SessionReplayer) ReplaySession(session ReplaySession) ReplayResult {
 
 		// Check for sharp edge creation after PostToolUse events
 		if event.HookType == "PostToolUse" {
-			pendingPath := filepath.Join(sessionTempDir, ".claude", "memory", "pending-learnings.jsonl")
+			pendingPath := filepath.Join(sessionTempDir, ".gogent", "memory", "pending-learnings.jsonl")
 			if content, err := os.ReadFile(pendingPath); err == nil {
 				sharpEdgesCreated = countJSONLLines(content)
 			}
@@ -385,7 +385,7 @@ func (r *SessionReplayer) validateExpectations(expected ReplayExpectations, temp
 
 	// Check handoff creation
 	if expected.HandoffCreated {
-		handoffPath := filepath.Join(tempDir, ".claude", "memory", "handoffs.jsonl")
+		handoffPath := filepath.Join(tempDir, ".gogent", "memory", "handoffs.jsonl")
 		if _, err := os.Stat(handoffPath); os.IsNotExist(err) {
 			errors = append(errors, "handoff_created: expected handoffs.jsonl to exist")
 		}

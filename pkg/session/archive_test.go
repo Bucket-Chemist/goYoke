@@ -9,7 +9,7 @@ import (
 
 func TestArchiveArtifacts_Success(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create artifacts
@@ -80,7 +80,7 @@ func TestArchiveArtifacts_Success(t *testing.T) {
 
 func TestArchiveArtifacts_MissingFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	cfg := HandoffConfig{
@@ -97,7 +97,7 @@ func TestArchiveArtifacts_MissingFiles(t *testing.T) {
 
 func TestArchiveArtifacts_TranscriptCopy(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
@@ -133,7 +133,7 @@ func TestArchiveArtifacts_ErrorFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Use non-writable directory to trigger error
-	memoryDir := filepath.Join(tmpDir, "readonly", ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, "readonly", ".gogent", "memory")
 	os.MkdirAll(filepath.Dir(memoryDir), 0755)
 	os.Chmod(filepath.Dir(memoryDir), 0444) // Read-only
 	defer os.Chmod(filepath.Dir(memoryDir), 0755)
@@ -313,7 +313,7 @@ func TestCopyFile_WriteError(t *testing.T) {
 
 func TestArchiveArtifacts_CopyFileError(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create a transcript that exists but is inaccessible for copy

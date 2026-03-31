@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
@@ -143,7 +144,7 @@ func appendIntent(intent *session.UserIntent) error {
 		projectDir = cwd
 	}
 
-	intentsPath := filepath.Join(projectDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(config.ProjectMemoryDir(projectDir), "user-intents.jsonl")
 
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(intentsPath), 0755); err != nil {

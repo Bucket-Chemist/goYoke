@@ -52,7 +52,7 @@ func TestSessionArchive_Integration(t *testing.T) {
 	}
 
 	// Verify handoff file created
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Errorf("Handoff file not created: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 	}
 
 	// Verify handoff contains correct counts
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
 	handoffData, _ := os.ReadFile(handoffPath)
 	handoffContent := string(handoffData)
 
@@ -185,9 +185,9 @@ func TestSessionArchive_FileArchival(t *testing.T) {
 
 	projectDir := t.TempDir()
 
-	// Create files to archive (both in .claude/memory)
-	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
-	violationsPath := filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
+	// Create files to archive (both in .gogent/memory)
+	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	violationsPath := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
 
 	os.MkdirAll(filepath.Dir(learningsPath), 0755)
 
@@ -218,7 +218,7 @@ func TestSessionArchive_FileArchival(t *testing.T) {
 	}
 
 	// Verify files archived
-	archiveDir := filepath.Join(projectDir, ".claude", "memory", "session-archive")
+	archiveDir := filepath.Join(projectDir, ".gogent", "memory", "session-archive")
 
 	// Learnings should be moved (deleted from original location)
 	if _, err := os.Stat(learningsPath); !os.IsNotExist(err) {

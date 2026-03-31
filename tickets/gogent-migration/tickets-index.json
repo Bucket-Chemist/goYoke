@@ -1,0 +1,282 @@
+{
+  "version": "1.0",
+  "project": "MIG",
+  "generated_by": "/plan-tickets v1.0 (braintrust-sourced)",
+  "generated_at": "2026-03-31T09:44:00Z",
+  "tickets": [
+    {
+      "id": "MIG-001",
+      "title": "Implement RuntimeDir() and ProjectMemoryDir() in pkg/config/paths.go",
+      "status": "completed",
+      "phase": 1,
+      "dependencies": [],
+      "file": "tickets/gogent-migration/tickets/MIG-001.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-002",
+      "title": "Add .gogent/ to .gitignore",
+      "status": "completed",
+      "phase": 1,
+      "dependencies": [],
+      "file": "tickets/gogent-migration/tickets/MIG-002.md",
+      "size": "S"
+    },
+    {
+      "id": "MIG-003",
+      "title": "Migrate pkg/session/session_dir.go to .gogent/",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-003.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-004",
+      "title": "Migrate pkg/session/handoff.go to .gogent/",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-004.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-005",
+      "title": "Migrate pkg/session/query.go to .gogent/",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-005.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-006",
+      "title": "Migrate pkg/session/attention_gate.go and context_loader.go to .gogent/",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-006.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-007",
+      "title": "Migrate pkg/session/archive.go and handoff_artifacts tests",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-004"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-007.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-008",
+      "title": "Migrate pkg/telemetry/ project-scoped paths",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-008.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-009",
+      "title": "Migrate pkg/workflow/logging.go to .gogent/",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-009.md",
+      "size": "S"
+    },
+    {
+      "id": "MIG-010",
+      "title": "Migrate pkg/telemetry/sharp_edge_registry.go (read-only .claude/ → keep)",
+      "status": "completed",
+      "phase": 2,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-010.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-011",
+      "title": "Migrate cmd/gogent-archive/ to .gogent/ paths",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-011.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-012",
+      "title": "Migrate cmd/gogent-sharp-edge/ and cmd/gogent-capture-intent/",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-012.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-013",
+      "title": "Migrate cmd/gogent-skill-guard/ and cmd/gogent-aggregate/",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-013.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-014",
+      "title": "Migrate TUI DefaultBaseDir() to ~/.gogent/sessions/",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [],
+      "file": "tickets/gogent-migration/tickets/MIG-014.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-015",
+      "title": "Migrate pkg/routing/ read paths (identity_loader, schema, agents)",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [
+        "MIG-001",
+        "MIG-003"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-015.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-016",
+      "title": "Migrate pkg/routing/validator_test.go and pkg/enforcement/ test fixtures",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-016.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-017",
+      "title": "Migrate cmd/gofortress/main.go TUI history path",
+      "status": "completed",
+      "phase": 3,
+      "dependencies": [],
+      "file": "tickets/gogent-migration/tickets/MIG-017.md",
+      "size": "S"
+    },
+    {
+      "id": "MIG-018",
+      "title": "Migrate test/simulation/harness/ fixtures",
+      "status": "completed",
+      "phase": 4,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-018.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-019",
+      "title": "Update context_response.go session info string",
+      "status": "completed",
+      "phase": 4,
+      "dependencies": [],
+      "file": "tickets/gogent-migration/tickets/MIG-019.md",
+      "size": "S"
+    },
+    {
+      "id": "MIG-020",
+      "title": "Update CLAUDE.md and skill definitions for .gogent/ paths",
+      "status": "completed",
+      "phase": 4,
+      "dependencies": [
+        "MIG-003",
+        "MIG-014"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-020.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-021",
+      "title": "CI grep check for residual .claude/ write paths",
+      "status": "completed",
+      "phase": 5,
+      "dependencies": [
+        "MIG-003",
+        "MIG-004",
+        "MIG-005",
+        "MIG-006",
+        "MIG-008",
+        "MIG-009",
+        "MIG-011",
+        "MIG-012",
+        "MIG-013"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-021.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-022",
+      "title": "Integration canary test for sandbox behavior",
+      "status": "completed",
+      "phase": 5,
+      "dependencies": [
+        "MIG-001"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-022.md",
+      "size": "M"
+    },
+    {
+      "id": "MIG-023",
+      "title": "Full build verification and ARCHITECTURE.md update",
+      "status": "completed",
+      "phase": 5,
+      "dependencies": [
+        "MIG-001",
+        "MIG-002",
+        "MIG-003",
+        "MIG-004",
+        "MIG-005",
+        "MIG-006",
+        "MIG-007",
+        "MIG-008",
+        "MIG-009",
+        "MIG-010",
+        "MIG-011",
+        "MIG-012",
+        "MIG-013",
+        "MIG-014",
+        "MIG-015",
+        "MIG-016",
+        "MIG-017",
+        "MIG-018",
+        "MIG-019",
+        "MIG-020",
+        "MIG-021",
+        "MIG-022"
+      ],
+      "file": "tickets/gogent-migration/tickets/MIG-023.md",
+      "size": "M"
+    }
+  ]
+}

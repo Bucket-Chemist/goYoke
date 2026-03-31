@@ -254,7 +254,7 @@ func TestSessionStart_HandoffInjection(t *testing.T) {
 	os.WriteFile(filepath.Join(projectDir, "go.mod"), []byte("module github.com/test/project\n"), 0644)
 
 	// Create previous session handoff
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	handoff := `# Last Handoff

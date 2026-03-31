@@ -1,4 +1,4 @@
-# Claude Code - GOgent-Fortress Configuration
+    # Claude Code - GOgent-Fortress Configuration
 
 ```
 #            WELCOME TO THE GOgent-Fortress ROUTER
@@ -484,7 +484,7 @@ For unknown scope:
 
 ```
 1. [SCOUTING] Spawn haiku-scout (or gogent-scout for native metrics)
-2. Read .claude/tmp/scout_metrics.json
+2. Read .gogent/tmp/scout_metrics.json
 3. Route based on recommended_tier
 4. Execute via appropriate agent
 ```

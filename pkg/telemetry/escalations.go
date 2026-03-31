@@ -69,7 +69,7 @@ func GetEscalationsLogPath() string {
 
 // GetProjectEscalationsLogPath returns project-scoped escalations log path.
 func GetProjectEscalationsLogPath(projectDir string) string {
-	return filepath.Join(projectDir, ".claude", "memory", "escalations.jsonl")
+	return filepath.Join(config.ProjectMemoryDir(projectDir), "escalations.jsonl")
 }
 
 // LogEscalation appends escalation event to BOTH global and project logs.

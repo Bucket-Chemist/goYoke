@@ -13,7 +13,7 @@ import (
 func TestLoadHandoffSummary_Exists(t *testing.T) {
 	// Setup: Create temp directory with handoff file
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".claude", "memory")
+	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	handoffPath := filepath.Join(claudeDir, "last-handoff.md")
@@ -58,7 +58,7 @@ func TestLoadHandoffSummary_Missing(t *testing.T) {
 func TestLoadHandoffSummary_Truncation(t *testing.T) {
 	// Setup: Create handoff file with 40 lines (should truncate to 30)
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".claude", "memory")
+	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	handoffPath := filepath.Join(claudeDir, "last-handoff.md")
@@ -94,7 +94,7 @@ func TestLoadHandoffSummary_Truncation(t *testing.T) {
 func TestLoadHandoffSummary_TooLarge(t *testing.T) {
 	// Setup: Create file larger than 50KB
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".claude", "memory")
+	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	handoffPath := filepath.Join(claudeDir, "last-handoff.md")
@@ -116,7 +116,7 @@ func TestLoadHandoffSummary_TooLarge(t *testing.T) {
 func TestCheckPendingLearnings_HasLearnings(t *testing.T) {
 	// Setup: Create pending learnings file with 3 sharp edges
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".claude", "memory")
+	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	learningsPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -151,7 +151,7 @@ func TestCheckPendingLearnings_None(t *testing.T) {
 func TestCheckPendingLearnings_EmptyFile(t *testing.T) {
 	// Setup: Empty pending learnings file
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".claude", "memory")
+	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	learningsPath := filepath.Join(claudeDir, "pending-learnings.jsonl")

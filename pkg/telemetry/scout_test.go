@@ -705,7 +705,7 @@ func TestGetProjectScoutLogPath(t *testing.T) {
 	projectDir := "/home/user/my-project"
 	path := GetProjectScoutLogPath(projectDir)
 
-	expected := filepath.Join(projectDir, ".claude", "memory", "scout-recommendations.jsonl")
+	expected := filepath.Join(projectDir, ".gogent", "memory", "scout-recommendations.jsonl")
 	if path != expected {
 		t.Errorf("Expected path %s, got: %s", expected, path)
 	}
