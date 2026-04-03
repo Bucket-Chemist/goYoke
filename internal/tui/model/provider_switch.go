@@ -113,10 +113,11 @@ func (m AppModel) restartCLIDriver() (tea.Model, tea.Cmd) {
 
 	// Preserve the [1m] context window suffix from the previous session.
 	// The CLI uses this suffix to request 1M context; without it the session
-	// falls back to 200K.  Haiku does not support 1M context so we skip it.
+	// falls back to 200K.  Only opus supports [1m] on Max subscriptions;
+	// sonnet[1m] requires extra usage that is not available to all plans.
 	if strings.Contains(m.activeModel, "[1m]") &&
 		!strings.Contains(activeModel, "[1m]") &&
-		!strings.Contains(strings.ToLower(activeModel), "haiku") {
+		strings.Contains(strings.ToLower(activeModel), "opus") {
 		activeModel = activeModel + "[1m]"
 	}
 
