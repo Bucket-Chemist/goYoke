@@ -214,6 +214,7 @@ type AppModel struct {
 	cliReady       bool   // true after SystemInitEvent processed
 	sessionID      string // from SystemInitEvent
 	activeModel    string // from SystemInitEvent
+	context1M      bool   // true if initial session resolved to a [1m] model
 	reconnectCount int    // number of reconnection attempts made
 
 	// Provider switch debounce (R-2).

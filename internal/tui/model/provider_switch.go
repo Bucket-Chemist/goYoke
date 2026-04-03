@@ -111,11 +111,11 @@ func (m AppModel) restartCLIDriver() (tea.Model, tea.Cmd) {
 	cfg := ps.GetActiveConfig()
 	activeModel := ps.GetActiveModel()
 
-	// Preserve the [1m] context window suffix from the previous session.
-	// The CLI uses this suffix to request 1M context; without it the session
-	// falls back to 200K.  Only opus supports [1m] on Max subscriptions;
+	// Preserve the [1m] context window suffix when the session has 1M access.
+	// The context1M flag is latched on the first SystemInitEvent and survives
+	// across model switches.  Only opus supports [1m] on Max subscriptions;
 	// sonnet[1m] requires extra usage that is not available to all plans.
-	if strings.Contains(m.activeModel, "[1m]") &&
+	if m.context1M &&
 		!strings.Contains(activeModel, "[1m]") &&
 		strings.Contains(strings.ToLower(activeModel), "opus") {
 		activeModel = activeModel + "[1m]"

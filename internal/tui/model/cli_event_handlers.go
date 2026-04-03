@@ -62,6 +62,12 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 	m.cliReady = true
 	m.sessionID = msg.SessionID
 	m.activeModel = msg.Model
+	// Latch the 1M context flag on the first session init so it survives
+	// model switches. Once set, it is never cleared — the user's account
+	// capability does not change mid-session.
+	if strings.Contains(msg.Model, "[1m]") {
+		m.context1M = true
+	}
 	// Persist session ID to active provider for resume support (TUI-031).
 	if m.shared != nil && m.shared.providerState != nil && msg.SessionID != "" {
 		m.shared.providerState.SetSessionID(msg.SessionID)
