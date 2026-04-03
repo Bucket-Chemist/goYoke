@@ -322,6 +322,146 @@ func TestSetActivity_GetReturnsCopy(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// AppendActivity / FullActivityLog / UpdateActivityResult
+// ---------------------------------------------------------------------------
+
+func TestAppendActivity_WritesToBothBuffers(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	act := AgentActivity{Type: "tool_use", Target: "Read", ToolID: "tool-1"}
+	r.AppendActivity("a1", act)
+
+	a := r.Get("a1")
+	require.Len(t, a.RecentActivity, 1)
+	assert.Equal(t, "tool-1", a.RecentActivity[0].ToolID)
+	require.Len(t, a.FullActivityLog, 1)
+	assert.Equal(t, "tool-1", a.FullActivityLog[0].ToolID)
+}
+
+func TestAppendActivity_RecentActivityCappedAt5(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	for i := range 7 {
+		r.AppendActivity("a1", AgentActivity{
+			Type:   "tool_use",
+			Target: fmt.Sprintf("tool-%d", i),
+			ToolID: fmt.Sprintf("id-%d", i),
+		})
+	}
+
+	a := r.Get("a1")
+	assert.Len(t, a.RecentActivity, 5, "RecentActivity must cap at 5")
+	// Oldest two evicted; last 5 remain.
+	assert.Equal(t, "id-2", a.RecentActivity[0].ToolID)
+	assert.Equal(t, "id-6", a.RecentActivity[4].ToolID)
+}
+
+func TestAppendActivity_FullActivityLogCappedAt500(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	for i := range 502 {
+		r.AppendActivity("a1", AgentActivity{
+			Type:   "tool_use",
+			ToolID: fmt.Sprintf("id-%d", i),
+		})
+	}
+
+	a := r.Get("a1")
+	assert.Len(t, a.FullActivityLog, 500, "FullActivityLog must cap at 500")
+	// First two evicted; entry at index 0 should be id-2.
+	assert.Equal(t, "id-2", a.FullActivityLog[0].ToolID)
+	assert.Equal(t, "id-501", a.FullActivityLog[499].ToolID)
+}
+
+func TestAppendActivity_FullActivityLogDeepCopied(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+
+	a := r.Get("a1")
+	require.Len(t, a.FullActivityLog, 1)
+	a.FullActivityLog[0].Target = "mutated"
+
+	// Registry must not be affected.
+	a2 := r.Get("a1")
+	assert.Equal(t, "", a2.FullActivityLog[0].Target)
+}
+
+func TestUpdateActivityResult_SetsSuccessOnBothBuffers(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.UpdateActivityResult("a1", "t1", true)
+
+	a := r.Get("a1")
+	require.NotNil(t, a.RecentActivity[0].Success)
+	assert.True(t, *a.RecentActivity[0].Success)
+	require.NotNil(t, a.FullActivityLog[0].Success)
+	assert.True(t, *a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_SuccessFalse(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.UpdateActivityResult("a1", "t1", false)
+
+	a := r.Get("a1")
+	require.NotNil(t, a.FullActivityLog[0].Success)
+	assert.False(t, *a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_PendingBeforeUpdate(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+
+	a := r.Get("a1")
+	// Before UpdateActivityResult, Success must be nil (pending).
+	assert.Nil(t, a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_UnknownAgentNoOp(t *testing.T) {
+	r := NewAgentRegistry()
+	// Should not panic.
+	r.UpdateActivityResult("nope", "t1", true)
+}
+
+func TestUpdateActivityResult_UnknownToolIDNoOp(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.UpdateActivityResult("a1", "no-such-tool", true)
+
+	// Original entry unchanged.
+	a := r.Get("a1")
+	assert.Nil(t, a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_MatchesCorrectEntry(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t2"})
+	r.UpdateActivityResult("a1", "t2", false)
+
+	a := r.Get("a1")
+	// t1 untouched, t2 updated.
+	assert.Nil(t, a.FullActivityLog[0].Success)
+	require.NotNil(t, a.FullActivityLog[1].Success)
+	assert.False(t, *a.FullActivityLog[1].Success)
+}
+
+// ---------------------------------------------------------------------------
 // Remove
 // ---------------------------------------------------------------------------
 

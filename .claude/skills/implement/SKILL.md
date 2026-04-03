@@ -162,14 +162,17 @@ echo "[implement] Team config: $team_dir"
 
 ### 6. Launch Background Execution
 
-```bash
-gogent-team-run "$team_dir"
-sleep 2
-
-# Verify launch
-background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
-
-if [[ -n "$background_pid" && "$background_pid" != "null" ]]; then
+```
+result = mcp__gofortress-interactive__team_run({
+    team_dir: "$team_dir",
+    wait_for_start: true,
+    timeout_ms: 10000
+})
+if !result.success:
+    echo "[implement] ERROR: ${result.result}"
+    echo "[implement] Check: $team_dir/runner.log"
+else:
+    background_pid = result.background_pid
     # Read wave structure for display
     wave_summary=$(jq -r '.waves[] | "  Wave \(.wave_number): \(.members | length) workers [\(.members | map(.agent) | unique | join(", "))]"' "$team_dir/config.json")
     budget=$(jq -r '.budget_max_usd' "$team_dir/config.json")
@@ -182,10 +185,6 @@ if [[ -n "$background_pid" && "$background_pid" != "null" ]]; then
     echo "[implement] Monitor:  /team-status"
     echo "[implement] Results:  /team-result"
     echo "[implement] Cancel:   /team-cancel"
-else
-    echo "[implement] ERROR: Team failed to start"
-    echo "[implement] Check: $team_dir/runner.log"
-fi
 ```
 
 ### 7. Remove Skill Guard

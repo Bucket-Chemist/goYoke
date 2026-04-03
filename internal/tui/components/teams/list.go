@@ -86,6 +86,19 @@ func (m *TeamListModel) StartPolling(teamsDir string) tea.Cmd {
 	}
 }
 
+// PollNow returns a Cmd that immediately fires a pollTickMsg.  It is used
+// by AppModel.Init() to kick the first poll cycle after main.go has called
+// StartPolling to set the teams directory.  Returns nil when polling has not
+// been started.
+func (m *TeamListModel) PollNow() tea.Cmd {
+	if !m.polling {
+		return nil
+	}
+	return func() tea.Msg {
+		return pollTickMsg(time.Now())
+	}
+}
+
 // SetSize updates the width and height used for rendering.
 func (m *TeamListModel) SetSize(width, height int) {
 	m.width = width

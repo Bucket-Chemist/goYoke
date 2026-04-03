@@ -46,12 +46,19 @@ const (
 
 	// TypeToast requests a transient notification toast in the TUI.
 	TypeToast = "toast"
+
+	// TypePermGateRequest asks the TUI to display a permission gate modal
+	// for a tool invocation and return the user's decision.
+	TypePermGateRequest = "permission_gate_request"
 )
 
 // Response type constants — sent from TUI back to MCP server.
 const (
 	// TypeModalResponse carries the user's selection from a modal dialog.
 	TypeModalResponse = "modal_response"
+
+	// TypePermGateResponse carries the user's permission decision.
+	TypePermGateResponse = "permission_gate_response"
 )
 
 // ModalRequestPayload is the payload for a TypeModalRequest message.

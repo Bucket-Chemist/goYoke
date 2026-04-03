@@ -496,7 +496,7 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 // for interactive contexts (TUI/MCP), but pipe mode (-p) has no interactive approval.
 // We replace "delegate" with "auto-edit" so workers can write files within the project.
 func buildCLIArgs(agentConfig *agentCLIConfig) []string {
-	args := []string{"-p", "--output-format", "stream-json"}
+	args := []string{"-p", "--verbose", "--output-format", "stream-json"}
 
 	if agentConfig.Model != "" {
 		model := agentConfig.Model

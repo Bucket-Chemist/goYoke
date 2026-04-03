@@ -5,8 +5,11 @@
 package model
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -90,7 +93,10 @@ func (m *AppModel) propagateContentSizes() {
 	}
 
 	if m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetSize(dims.leftWidth, mainH)
+		// Subtract separatorHeight so the panel's internal viewport is sized to
+		// contentHeight-2 (one row for the separator, one for the input line),
+		// leaving the layout composition in renderLeftPanel to fill all rows.
+		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight-separatorHeight)
 	}
 	m.agentTree.SetSize(dims.rightWidth, mainH/2)
 	m.agentDetail.SetSize(dims.rightWidth, mainH/2)
@@ -114,12 +120,18 @@ func (m *AppModel) propagateContentSizes() {
 	if m.shared.planPreview != nil {
 		m.shared.planPreview.SetSize(dims.rightWidth, mainH)
 	}
-	if m.shared.teamsHealth != nil {
-		m.shared.teamsHealth.SetSize(dims.rightWidth, mainH)
-		m.shared.teamsHealth.SetTier(dims.tier)
-	}
 	if m.shared.drawerStack != nil {
-		m.shared.drawerStack.SetSize(m.width, drawerH)
+		// Size the teams health widget and refresh the teams drawer content.
+		if m.shared.teamsHealth != nil {
+			m.shared.teamsHealth.SetSize(dims.rightWidth-4, drawerH-5) // inner: -4 width (drawer+panel borders), -5 height (borders+header+divider+footer)
+			m.shared.teamsHealth.SetTier(dims.tier)
+			if m.shared.teamsHealth.HasData() {
+				m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+			} else {
+				m.shared.drawerStack.ClearTeamsContent()
+			}
+		}
+		m.shared.drawerStack.SetSize(dims.rightWidth, drawerH)
 	}
 	if m.shared.taskBoard != nil {
 		m.shared.taskBoard.SetSize(m.width, m.height)
@@ -189,6 +201,34 @@ func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model
 		return m, cmd
 	}
 	return m, nil
+}
+
+// handleCLIPermissionRequest handles CLIPermissionRequestMsg: presents a
+// permission modal with Allow/Deny/Allow for Session options.
+func (m AppModel) handleCLIPermissionRequest(msg CLIPermissionRequestMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.permHandler == nil {
+		return m, nil
+	}
+
+	// Build a human-readable message showing the tool name and input.
+	message := fmt.Sprintf("Tool Permission Required\n\nTool: %s", msg.ToolName)
+	if len(msg.ToolInput) > 0 {
+		// Try to extract "command" field for Bash, fall back to raw JSON.
+		var input map[string]interface{}
+		if err := json.Unmarshal(msg.ToolInput, &input); err == nil {
+			if cmd, ok := input["command"].(string); ok {
+				message += fmt.Sprintf("\nCommand: %s", cmd)
+			}
+		}
+	}
+
+	options := []string{"Allow", "Deny", "Allow for Session"}
+
+	// Route through PermissionHandler using the FlowToolPermission type.
+	cmd := m.shared.permHandler.HandlePermGateRequest(
+		msg.RequestID, message, options, msg.TimeoutMS,
+	)
+	return m, cmd
 }
 
 // handleModalResponse handles modals.ModalResponseMsg: advances the permission
@@ -267,16 +307,39 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 
 	result, cmd := m.shared.permHandler.HandleResponse(msg)
 	if result != nil {
-		// Flow complete — deliver response to the bridge goroutine.
-		if m.shared.bridge != nil {
-			value := result.Value
-			if result.Cancelled {
-				value = ""
+		// Check if this was a permission gate flow.
+		if m.shared.permHandler.WasPermGateFlow(result.RequestID) {
+			if m.shared.bridge != nil {
+				decision := mapPermGateDecision(result.Value, result.Cancelled)
+				m.shared.bridge.ResolvePermGate(result.RequestID, decision)
 			}
-			m.shared.bridge.ResolveModalSimple(result.RequestID, value)
+		} else {
+			// Existing modal flow — deliver via ResolveModalSimple.
+			if m.shared.bridge != nil {
+				value := result.Value
+				if result.Cancelled {
+					value = ""
+				}
+				m.shared.bridge.ResolveModalSimple(result.RequestID, value)
+			}
 		}
 	}
 	return m, cmd
+}
+
+// mapPermGateDecision converts modal option labels to permission decisions.
+func mapPermGateDecision(value string, cancelled bool) string {
+	if cancelled {
+		return "deny"
+	}
+	switch value {
+	case "Allow":
+		return "allow"
+	case "Allow for Session":
+		return "allow_session"
+	default:
+		return "deny"
+	}
 }
 
 // handleAgentRegistryMsg handles AgentRegisteredMsg, AgentUpdatedMsg, and
@@ -327,7 +390,8 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AgentActivityMsg:
 		m.shared.agentRegistry.AppendActivity(msg.AgentID, state.AgentActivity{
 			Type:      "tool_use",
-			Target:    msg.ToolName,
+			ToolName:  msg.ToolName,
+			Target:    msg.Target,
 			Preview:   msg.Preview,
 			Timestamp: time.Now(),
 		})
@@ -543,6 +607,113 @@ func (m AppModel) handleSettingChanged(msg settingstree.SettingChangedMsg) (tea.
 	}
 
 	return m, nil
+}
+
+// handleModelSwitchRequest processes a /model command from the Claude panel.
+//
+// When ModelID is empty it lists available models as a system message.
+// When ModelID is set it validates the model against the active provider,
+// guards against switching while streaming, updates ProviderState, and
+// restarts the CLI driver.
+func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.providerState == nil {
+		return m, nil
+	}
+
+	ps := m.shared.providerState
+	cfg := ps.GetActiveConfig()
+
+	// No arg: list available models for the active provider.
+	if msg.ModelID == "" {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("Available models for %s:\n", cfg.Name))
+		currentModel := ps.GetActiveModel()
+		for _, mc := range cfg.Models {
+			marker := "  "
+			if mc.ID == currentModel {
+				marker = "▸ "
+			}
+			sb.WriteString(fmt.Sprintf("%s%s — %s\n", marker, mc.ID, mc.Description))
+		}
+		sb.WriteString("\nUsage: /model <name>")
+
+		if m.shared.claudePanel != nil {
+			m.shared.claudePanel.AppendSystemMessage(sb.String())
+		}
+		return m, nil
+	}
+
+	// Guard: refuse while streaming — the CLI restart would kill the active response.
+	if m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  "Cannot switch model while streaming. Wait for the response to finish.",
+				Level: ToastLevelWarn,
+			}
+		}
+	}
+
+	// Validate that the requested model belongs to the active provider.
+	var found bool
+	var displayName string
+	for _, mc := range cfg.Models {
+		if mc.ID == msg.ModelID {
+			found = true
+			displayName = mc.DisplayName
+			break
+		}
+	}
+	if !found {
+		ids := make([]string, 0, len(cfg.Models))
+		for _, mc := range cfg.Models {
+			ids = append(ids, mc.ID)
+		}
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Unknown model %q for %s. Valid: %s", msg.ModelID, cfg.Name, strings.Join(ids, ", ")),
+				Level: ToastLevelError,
+			}
+		}
+	}
+
+	// Already on this model — no-op.
+	if ps.GetActiveModel() == msg.ModelID {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Already using %s.", displayName),
+				Level: ToastLevelInfo,
+			}
+		}
+	}
+
+	// Persist current session ID so the new driver can resume.
+	if m.sessionID != "" {
+		ps.SetSessionID(m.sessionID)
+	}
+
+	// Set the new model in provider state.
+	if err := ps.SetActiveModel(msg.ModelID); err != nil {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Model switch failed: %v", err),
+				Level: ToastLevelError,
+			}
+		}
+	}
+
+	// Restart the CLI driver with the new model.
+	model, cmd := m.restartCLIDriver()
+	appModel := model.(AppModel)
+
+	// Emit a toast confirming the switch.
+	toastCmd := func() tea.Msg {
+		return ToastMsg{
+			Text:  fmt.Sprintf("Switched to %s for %s.", displayName, cfg.Name),
+			Level: ToastLevelSuccess,
+		}
+	}
+
+	return appModel, tea.Batch(cmd, toastCmd)
 }
 
 // saveSession snapshots the current application state into the session store.

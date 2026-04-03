@@ -5,50 +5,76 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// DrawerStack manages two DrawerModels (options and plan) as a vertical stack.
-// The zero value is not usable; use NewDrawerStack instead.
+// DrawerStack manages three DrawerModels (options, plan, teams) as a vertical
+// stack rendered at the bottom of the right panel. The zero value is not usable;
+// use NewDrawerStack instead.
 type DrawerStack struct {
 	options DrawerModel
 	plan    DrawerModel
+	teams   DrawerModel
 	width   int
 	height  int
 }
 
-// NewDrawerStack creates a DrawerStack with an options drawer and a plan drawer,
-// both starting in the minimised state.
+// NewDrawerStack creates a DrawerStack with options, plan, and teams drawers,
+// all starting in the minimised state.
 func NewDrawerStack() DrawerStack {
 	return DrawerStack{
 		options: NewDrawerModel(DrawerOptions, "Options", "⚙"),
 		plan:    NewDrawerModel(DrawerPlan, "Plan", "📋"),
+		teams:   NewDrawerModel(DrawerTeams, "Teams", "📊"),
 	}
 }
 
-// SetSize distributes the available width and height between the two drawers
-// based on their current expansion states:
-//   - Both expanded: 50/50 height split
-//   - One expanded: that drawer gets height-1, the other gets 1 row (tab)
-//   - Neither expanded: each gets 1 row
+// MinimizedRowHeight is the rendered height of a minimized drawer (border
+// top + label + border bottom).
+const MinimizedRowHeight = 3
+
+// SetSize distributes the available width and height among the drawers.
+// Each minimized drawer takes 3 rows (bordered label). Expanded drawers
+// split the remaining height evenly. All drawers get the full width.
 func (s *DrawerStack) SetSize(w, h int) {
 	s.width = w
 	s.height = h
 
-	optExpanded := s.options.State() == DrawerExpanded
-	planExpanded := s.plan.State() == DrawerExpanded
+	drawers := []*DrawerModel{&s.options, &s.plan, &s.teams}
 
-	switch {
-	case optExpanded && planExpanded:
-		half := h / 2
-		s.options.SetSize(w, half)
-		s.plan.SetSize(w, h-half)
-	case optExpanded:
-		s.options.SetSize(w, h-1)
-		s.plan.SetSize(w, 1)
-	case planExpanded:
-		s.options.SetSize(w, 1)
-		s.plan.SetSize(w, h-1)
-	default:
-		s.options.SetSize(w, 1)
-		s.plan.SetSize(w, 1)
+	var expandedCount int
+	minimizedRows := 0
+	for _, d := range drawers {
+		if d.State() == DrawerExpanded {
+			expandedCount++
+		} else {
+			minimizedRows += MinimizedRowHeight
+		}
+	}
+
+	if expandedCount == 0 {
+		for _, d := range drawers {
+			d.SetSize(w, MinimizedRowHeight)
+		}
+		return
+	}
+
+	expandedH := h - minimizedRows
+	if expandedH < expandedCount {
+		expandedH = expandedCount
+	}
+	perExpanded := expandedH / expandedCount
+	remainder := expandedH - perExpanded*expandedCount
+
+	expandedIdx := 0
+	for _, d := range drawers {
+		if d.State() != DrawerExpanded {
+			d.SetSize(w, MinimizedRowHeight)
+		} else {
+			dh := perExpanded
+			if expandedIdx == 0 && remainder > 0 {
+				dh += remainder
+			}
+			d.SetSize(w, dh)
+			expandedIdx++
+		}
 	}
 }
 
@@ -57,6 +83,9 @@ func (s *DrawerStack) Options() *DrawerModel { return &s.options }
 
 // Plan returns a pointer to the plan DrawerModel.
 func (s *DrawerStack) Plan() *DrawerModel { return &s.plan }
+
+// Teams returns a pointer to the teams DrawerModel.
+func (s *DrawerStack) Teams() *DrawerModel { return &s.teams }
 
 // ExpandedDrawers returns the DrawerID strings for all currently expanded drawers.
 func (s DrawerStack) ExpandedDrawers() []string {
@@ -67,33 +96,20 @@ func (s DrawerStack) ExpandedDrawers() []string {
 	if s.plan.State() == DrawerExpanded {
 		ids = append(ids, string(DrawerPlan))
 	}
+	if s.teams.State() == DrawerExpanded {
+		ids = append(ids, string(DrawerTeams))
+	}
 	return ids
 }
 
-// View renders the stack. Expanded drawers are stacked vertically; minimised
-// drawers appear as horizontal tabs at the bottom.
+// View renders the stack. All drawers are stacked vertically, each with its
+// own border — expanded drawers show content, minimized drawers show a
+// compact label.
 func (s DrawerStack) View() string {
 	var parts []string
-
-	if s.options.State() == DrawerExpanded {
-		parts = append(parts, s.options.ViewExpanded())
+	for _, d := range []DrawerModel{s.options, s.plan, s.teams} {
+		parts = append(parts, d.View())
 	}
-	if s.plan.State() == DrawerExpanded {
-		parts = append(parts, s.plan.ViewExpanded())
-	}
-
-	var tabs []string
-	if s.options.State() == DrawerMinimized {
-		tabs = append(tabs, s.options.ViewMinimized())
-	}
-	if s.plan.State() == DrawerMinimized {
-		tabs = append(tabs, s.plan.ViewMinimized())
-	}
-
-	if len(tabs) > 0 {
-		parts = append(parts, lipgloss.JoinHorizontal(lipgloss.Top, tabs...))
-	}
-
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
@@ -104,6 +120,8 @@ func (s *DrawerStack) HandleKey(focusedDrawer string, msg tea.KeyMsg) tea.Cmd {
 		return s.options.HandleKey(msg)
 	case DrawerPlan:
 		return s.plan.HandleKey(msg)
+	case DrawerTeams:
+		return s.teams.HandleKey(msg)
 	}
 	return nil
 }
@@ -145,3 +163,20 @@ func (s *DrawerStack) OptionsActiveRequestID() string { return s.options.ActiveR
 
 // OptionsSelectedOption returns the currently highlighted option label from the options drawer.
 func (s *DrawerStack) OptionsSelectedOption() string { return s.options.SelectedOption() }
+
+// SetTeamsContent sets content in the teams drawer (auto-expands it).
+func (s *DrawerStack) SetTeamsContent(content string) { s.teams.SetContent(content) }
+
+// ClearTeamsContent clears teams drawer content (auto-minimises it).
+func (s *DrawerStack) ClearTeamsContent() { s.teams.ClearContent() }
+
+// TeamsHasContent reports whether the teams drawer holds any content.
+func (s *DrawerStack) TeamsHasContent() bool { return s.teams.HasContent() }
+
+// RefreshTeamsContent updates the teams drawer content without changing
+// expansion state when content already exists. Used for live-updating the
+// teams health display on each poll tick.
+func (s *DrawerStack) RefreshTeamsContent(content string) { s.teams.RefreshContent(content) }
+
+// SetTeamsFocused marks the teams drawer as focused or unfocused.
+func (s *DrawerStack) SetTeamsFocused(focused bool) { s.teams.SetFocused(focused) }

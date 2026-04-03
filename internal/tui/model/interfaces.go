@@ -77,6 +77,10 @@ type bridgeWidget interface {
 	// empty string (the bridge always receives a value; cancellation is
 	// communicated by convention with the empty string or a dedicated sentinel).
 	ResolveModalSimple(requestID string, value string)
+	// ResolvePermGate delivers the user's permission decision to the bridge
+	// goroutine blocking on the given requestID. decision is one of "allow",
+	// "deny", or "allow_session".
+	ResolvePermGate(requestID string, decision string)
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +105,16 @@ type MessageSender interface {
 type claudePanelWidget interface {
 	HandleMsg(msg tea.Msg) tea.Cmd
 	View() string
+	// ViewConversation returns the scrollable viewport with optional search
+	// bar and streaming indicator — everything above the input line.
+	ViewConversation() string
+	// ViewInput returns the input prompt and text input only, without the
+	// streaming indicator or slash command dropdown.
+	ViewInput() string
+	// ApplyOverlay takes a fully composed panel string and applies the slash
+	// command dropdown overlay when it is active. Returns the string unchanged
+	// when no dropdown is visible.
+	ApplyOverlay(composed string) string
 	SetSize(width, height int)
 	SetFocused(focused bool)
 	IsStreaming() bool
@@ -113,6 +127,9 @@ type claudePanelWidget interface {
 	// SetSender updates the CLI driver used to submit user messages.
 	// Called after a provider switch to wire the new driver into the panel.
 	SetSender(s MessageSender)
+	// AppendSystemMessage adds a system-role message to the conversation
+	// and scrolls to bottom. Used by AppModel for /model listing output.
+	AppendSystemMessage(text string)
 	// SetTier notifies the component of the current responsive layout tier.
 	// Components may use this to adapt their rendering in future tickets.
 	SetTier(tier LayoutTier)
@@ -146,6 +163,9 @@ type teamListWidget interface {
 	View() string
 	SetSize(width, height int)
 	StartPolling(teamsDir string) tea.Cmd
+	// PollNow returns a Cmd that immediately fires a poll tick.  It is used
+	// by Init() to kick the first poll after StartPolling has set the dir.
+	PollNow() tea.Cmd
 }
 
 // ---------------------------------------------------------------------------
@@ -417,6 +437,8 @@ type teamsHealthWidget interface {
 	View() string
 	SetSize(w, h int)
 	SetTier(tier LayoutTier)
+	// HasData returns true when there is at least one running team to display.
+	HasData() bool
 }
 
 // ---------------------------------------------------------------------------
@@ -442,8 +464,13 @@ type drawerStackWidget interface {
 	SetPlanContent(content string)
 	ClearPlanContent()
 	PlanHasContent() bool
+	SetTeamsContent(content string)
+	ClearTeamsContent()
+	TeamsHasContent() bool
+	RefreshTeamsContent(content string)
 	SetOptionsFocused(focused bool)
 	SetPlanFocused(focused bool)
+	SetTeamsFocused(focused bool)
 	// Modal routing (TDS-006).
 	SetActiveModal(requestID string, message string, options []string)
 	HasActiveModal() bool

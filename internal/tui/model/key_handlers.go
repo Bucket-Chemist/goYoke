@@ -129,15 +129,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
 		m.rightPanelMode = NextRightPanelMode(m.rightPanelMode)
-		m.showHealthInAgents = false // TUI-007: reset on mode change
 		m.updateHintContext()
 		m.updateBreadcrumbs()
-		return m, nil
-
-	case key.Matches(msg, m.keys.Global.ToggleHealth):
-		if m.rightPanelMode == RPMAgents {
-			m.showHealthInAgents = !m.showHealthInAgents
-		}
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleProvider):
@@ -250,7 +243,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleClaudeKey(msg)
 	case FocusAgents:
 		return m.handleAgentsKey(msg)
-	case FocusPlanDrawer, FocusOptionsDrawer:
+	case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
 		return m.handleDrawerKey(msg)
 	}
 
@@ -269,11 +262,20 @@ func (m AppModel) handleModalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// handleClaudeKey processes key events when the Claude panel holds focus.
+// handleClaudeKey processes key events when the left panel holds focus.
+// The target widget depends on the active tab.
 func (m AppModel) handleClaudeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.shared != nil && m.shared.claudePanel != nil {
-		cmd := m.shared.claudePanel.HandleMsg(msg)
-		return m, cmd
+	switch m.activeTab {
+	case TabChat:
+		if m.shared != nil && m.shared.claudePanel != nil {
+			cmd := m.shared.claudePanel.HandleMsg(msg)
+			return m, cmd
+		}
+	case TabTeamConfig:
+		if m.shared != nil && m.shared.teamList != nil {
+			cmd := m.shared.teamList.HandleMsg(msg)
+			return m, cmd
+		}
 	}
 	return m, nil
 }
@@ -324,6 +326,8 @@ func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		drawerID = "plan"
 	case FocusOptionsDrawer:
 		drawerID = "options"
+	case FocusTeamsDrawer:
+		drawerID = "teams"
 	default:
 		return m, nil
 	}
@@ -353,7 +357,7 @@ func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // syncFocusState propagates the current focus state to child components.
 func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
+		m.shared.claudePanel.SetFocused(m.focus == FocusClaude && m.activeTab == TabChat)
 	}
 	m.agentTree.SetFocused(m.focus == FocusAgents && m.rightPanelMode == RPMAgents)
 	if m.shared != nil && m.shared.dashboard != nil {
@@ -363,6 +367,7 @@ func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.drawerStack != nil {
 		m.shared.drawerStack.SetPlanFocused(m.focus == FocusPlanDrawer)
 		m.shared.drawerStack.SetOptionsFocused(m.focus == FocusOptionsDrawer)
+		m.shared.drawerStack.SetTeamsFocused(m.focus == FocusTeamsDrawer)
 	}
 }
 
@@ -548,6 +553,9 @@ func (m *AppModel) updateBreadcrumbs() {
 	case FocusOptionsDrawer:
 		crumbs = []string{"Drawer", "Options"}
 
+	case FocusTeamsDrawer:
+		crumbs = []string{"Drawer", "Teams"}
+
 	default:
 		crumbs = []string{m.focus.String()}
 	}
@@ -578,7 +586,7 @@ func (m *AppModel) updateHintContext() {
 		m.shared.hintBar.SetContext("search")
 	case m.rightPanelMode == RPMSettings:
 		m.shared.hintBar.SetContext("settings")
-	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer:
+	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer || m.focus == FocusTeamsDrawer:
 		m.shared.hintBar.SetContext("drawer")
 	default:
 		m.shared.hintBar.SetContext("main")

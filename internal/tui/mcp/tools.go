@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -353,12 +354,15 @@ type TeamRunOutput struct {
 
 // RegisterAll registers all 7 MCP tools on server.
 func RegisterAll(server *mcpsdk.Server, uds *UDSClient) {
+	store := NewAgentStore()
+
 	registerTestMcpPing(server)
 	registerAskUser(server, uds)
 	registerConfirmAction(server, uds)
 	registerRequestInput(server, uds)
 	registerSelectOption(server, uds)
-	registerSpawnAgent(server, uds)
+	registerSpawnAgent(server, uds, store)
+	registerGetAgentResult(server, store)
 	registerTeamRun(server, uds)
 }
 
@@ -541,25 +545,30 @@ func handleSelectOption(
 }
 
 // registerSpawnAgent registers the spawn_agent tool.
-func registerSpawnAgent(server *mcpsdk.Server, uds *UDSClient) {
+func registerSpawnAgent(server *mcpsdk.Server, uds *UDSClient, store *AgentStore) {
 	mcpsdk.AddTool(server, &mcpsdk.Tool{
 		Name:        "spawn_agent",
-		Description: "Spawn a GOgent-Fortress subagent by ID. Validates the agent configuration and runs the claude CLI subprocess. Returns the agent output and cost information.",
+		Description: "Spawn a GOgent-Fortress subagent by ID. Launches the subprocess asynchronously and returns immediately with an agentId. Use get_agent_result to poll for the result.",
 	}, func(ctx context.Context, req *mcpsdk.CallToolRequest, input SpawnAgentInput) (*mcpsdk.CallToolResult, SpawnAgentOutput, error) {
-		return handleSpawnAgent(ctx, req, input, uds)
+		return handleSpawnAgent(ctx, req, input, uds, store)
 	})
 }
 
 // handleSpawnAgent handles the spawn_agent tool call.
 // It validates the request, loads agent config, injects identity context, and
-// runs a claude CLI subprocess.  All subprocess errors are returned as soft
-// errors in SpawnAgentOutput (not as Go errors) so the MCP caller can inspect
-// them without a protocol-level failure.
+// launches a claude CLI subprocess ASYNCHRONOUSLY.  Returns immediately with
+// the agentId.  The caller uses get_agent_result to poll for completion.
+//
+// CRITICAL: The subprocess goroutine uses context.Background(), NOT the MCP
+// request context.  The MCP request context is cancelled when handleSpawnAgent
+// returns, which would kill the subprocess.  runSubprocess manages its own
+// timeout via time.AfterFunc.
 func handleSpawnAgent(
-	ctx context.Context,
+	_ context.Context,
 	_ *mcpsdk.CallToolRequest,
 	input SpawnAgentInput,
 	uds *UDSClient,
+	store *AgentStore,
 ) (*mcpsdk.CallToolResult, SpawnAgentOutput, error) {
 	// 1. Validate nesting depth.
 	if err := validateNestingDepth(); err != nil {
@@ -624,12 +633,11 @@ func handleSpawnAgent(
 	}
 
 	// 7. Notify the TUI that a new agent has been registered.
-	// Includes rich metadata (model, tier, conventions, prompt) for the detail panel.
 	promptPreview := augmented
 	if len(promptPreview) > 2000 {
 		promptPreview = promptPreview[:2000] + "\n[TRUNCATED]"
 	}
-	tierStr := fmt.Sprintf("%v", agent.Tier) // agent.Tier is any (float64 or string)
+	tierStr := fmt.Sprintf("%v", agent.Tier)
 	modelStr := input.Model
 	if modelStr == "" {
 		modelStr = agent.Model
@@ -645,59 +653,202 @@ func handleSpawnAgent(
 		Prompt:      promptPreview,
 	})
 
-	// 8. Notify the TUI that the agent is now running.
+	// 8. Notify the TUI that the agent is queued (will become "running"
+	//    once it acquires a concurrency slot).
 	uds.notify(TypeAgentUpdate, AgentUpdatePayload{
 		AgentID: agentID,
-		Status:  "running",
+		Status:  "queued",
 	})
 
-	slog.Info("spawn_agent: launching subprocess",
+	// 9. Register in the store and launch the subprocess asynchronously.
+	store.Register(agentID, agent.ID)
+
+	slog.Info("spawn_agent: queued subprocess (async)",
 		"agent", input.Agent,
 		"agentId", agentID,
 		"description", input.Description,
+		"maxConcurrent", maxConcurrentSpawns,
 	)
 
-	// 9. Run the subprocess.
-	start := time.Now()
-	result, runErr := runSubprocess(ctx, agent, input, augmented, agentID, uds)
-	duration := time.Since(start).Round(time.Millisecond).String()
+	// Capture values needed by the goroutine (avoid closure over mutable state).
+	capturedAgent := agent
+	capturedInput := input
+	capturedAugmented := augmented
 
-	// 10. Build response — subprocess errors are soft.
-	success := runErr == nil
-	errMsg := ""
-	if runErr != nil {
-		errMsg = runErr.Error()
-	}
+	go func() {
+		// Acquire a concurrency slot. Blocks if maxConcurrentSpawns are
+		// already running. This prevents Anthropic API 429 rate-limit
+		// errors when multiple agents are spawned in parallel.
+		store.SpawnSem <- struct{}{}
+		defer func() { <-store.SpawnSem }()
 
-	output := ""
-	cost := 0.0
-	turns := 0
-	if result != nil {
-		output = result.Result
-		cost = result.TotalCostUSD
-		turns = result.NumTurns
-	}
+		// Now running — update TUI status from "queued" to "running".
+		uds.notify(TypeAgentUpdate, AgentUpdatePayload{
+			AgentID: agentID,
+			Status:  "running",
+		})
+		slog.Info("spawn_agent: acquired slot, launching subprocess",
+			"agent", capturedInput.Agent, "agentId", agentID)
 
-	// 11. Notify the TUI that the agent has completed.
-	status := "complete"
-	if !success {
-		status = "error"
-	}
-	uds.notify(TypeAgentUpdate, AgentUpdatePayload{
-		AgentID: agentID,
-		Status:  status,
-	})
+		// CRITICAL: use context.Background() — the MCP request context is
+		// already cancelled by the time this goroutine runs.  runSubprocess
+		// manages its own timeout internally via time.AfterFunc.
+		bgCtx := context.Background()
+		start := time.Now()
+		result, runErr := runSubprocess(bgCtx, capturedAgent, capturedInput, capturedAugmented, agentID, uds)
+		duration := time.Since(start).Round(time.Millisecond).String()
 
+		errMsg := ""
+		if runErr != nil {
+			errMsg = runErr.Error()
+		}
+
+		output := ""
+		cost := 0.0
+		turns := 0
+		if result != nil {
+			output = result.Result
+			cost = result.TotalCostUSD
+			turns = result.NumTurns
+		}
+
+		// Update the store — this signals any waiters on get_agent_result.
+		store.Complete(agentID, output, errMsg, cost, turns, duration)
+
+		// Notify the TUI that the agent has completed.
+		status := "complete"
+		if errMsg != "" {
+			status = "error"
+		}
+		uds.notify(TypeAgentUpdate, AgentUpdatePayload{
+			AgentID: agentID,
+			Status:  status,
+		})
+
+		slog.Info("spawn_agent: subprocess finished",
+			"agent", capturedInput.Agent,
+			"agentId", agentID,
+			"success", errMsg == "",
+			"duration", duration,
+			"cost", cost,
+		)
+	}()
+
+	// 10. Return immediately — subprocess runs in background.
 	return nil, SpawnAgentOutput{
 		AgentID:  agentID,
 		Agent:    agent.ID,
-		Success:  success,
-		Output:   output,
-		Error:    errMsg,
-		Cost:     cost,
-		Turns:    turns,
-		Duration: duration,
+		Success:  true,
+		Output:   "Agent launched asynchronously. Use get_agent_result to poll for the result.",
+		Duration: "0ms",
 	}, nil
+}
+
+// GetAgentResultInput is the input for the get_agent_result tool.
+type GetAgentResultInput struct {
+	// AgentID is the ID returned by spawn_agent.
+	AgentID string `json:"agentId" jsonschema:"Agent ID returned by spawn_agent"`
+	// Wait blocks until the agent completes or timeout is reached.
+	// If false, returns immediately with current status.
+	Wait bool `json:"wait,omitempty" jsonschema:"Block until agent completes (default: false)"`
+	// TimeoutMs is the max time to wait when Wait=true (default: 300000 = 5min).
+	TimeoutMs int `json:"timeout_ms,omitempty" jsonschema:"Max wait time in ms (default 300000)"`
+}
+
+// GetAgentResultOutput is the response from get_agent_result.
+type GetAgentResultOutput struct {
+	AgentID  string  `json:"agentId"`
+	Agent    string  `json:"agent"`
+	Status   string  `json:"status"` // "running", "complete", "error"
+	Success  bool    `json:"success"`
+	Output   string  `json:"output,omitempty"`
+	Error    string  `json:"error,omitempty"`
+	Cost     float64 `json:"cost,omitempty"`
+	Turns    int     `json:"turns,omitempty"`
+	Duration string  `json:"duration,omitempty"`
+}
+
+// registerGetAgentResult registers the get_agent_result tool.
+func registerGetAgentResult(server *mcpsdk.Server, store *AgentStore) {
+	mcpsdk.AddTool(server, &mcpsdk.Tool{
+		Name:        "get_agent_result",
+		Description: "Get the result of an async spawn_agent call. Returns immediately with status, or blocks until completion if wait=true.",
+	}, func(ctx context.Context, _ *mcpsdk.CallToolRequest, input GetAgentResultInput) (*mcpsdk.CallToolResult, GetAgentResultOutput, error) {
+		return handleGetAgentResult(ctx, input, store)
+	})
+}
+
+// handleGetAgentResult handles the get_agent_result tool call.
+func handleGetAgentResult(
+	ctx context.Context,
+	input GetAgentResultInput,
+	store *AgentStore,
+) (*mcpsdk.CallToolResult, GetAgentResultOutput, error) {
+	if input.AgentID == "" {
+		return nil, GetAgentResultOutput{}, fmt.Errorf("get_agent_result: agentId is required")
+	}
+
+	entry := store.Get(input.AgentID)
+	if entry == nil {
+		return nil, GetAgentResultOutput{
+			AgentID: input.AgentID,
+			Status:  "not_found",
+			Error:   "no agent with this ID (may have expired or wrong ID)",
+		}, nil
+	}
+
+	// If already done or caller doesn't want to wait, return immediately.
+	if entry.State != AgentStateRunning || !input.Wait {
+		return nil, entryToOutput(entry), nil
+	}
+
+	// Block until done or timeout.
+	timeoutMs := input.TimeoutMs
+	if timeoutMs <= 0 {
+		timeoutMs = 300_000 // 5 minutes default
+	}
+
+	doneCh := store.DoneChan(input.AgentID)
+	if doneCh == nil {
+		// Race: completed between Get and DoneChan.
+		entry = store.Get(input.AgentID)
+		return nil, entryToOutput(entry), nil
+	}
+
+	timer := time.NewTimer(time.Duration(timeoutMs) * time.Millisecond)
+	defer timer.Stop()
+
+	select {
+	case <-doneCh:
+		entry = store.Get(input.AgentID)
+		return nil, entryToOutput(entry), nil
+	case <-timer.C:
+		entry = store.Get(input.AgentID)
+		out := entryToOutput(entry)
+		out.Error = "wait timed out, agent still running"
+		return nil, out, nil
+	case <-ctx.Done():
+		entry = store.Get(input.AgentID)
+		return nil, entryToOutput(entry), nil
+	}
+}
+
+// entryToOutput converts an agentEntry to GetAgentResultOutput.
+func entryToOutput(entry *agentEntry) GetAgentResultOutput {
+	if entry == nil {
+		return GetAgentResultOutput{Status: "not_found"}
+	}
+	return GetAgentResultOutput{
+		AgentID:  entry.AgentID,
+		Agent:    entry.Agent,
+		Status:   string(entry.State),
+		Success:  entry.State == AgentStateComplete,
+		Output:   entry.Output,
+		Error:    entry.Error,
+		Cost:     entry.Cost,
+		Turns:    entry.Turns,
+		Duration: entry.Duration,
+	}
 }
 
 // registerTeamRun registers the team_run tool.
@@ -817,6 +968,13 @@ func handleTeamRun(
 		}
 	}()
 
+	// 5a. Ensure the team is visible to the TUI's team poller.
+	//     The TUI polls {tuiSessionDir}/teams/ every 2s. If the team_dir
+	//     lives under a different session tree (e.g. the Claude Code CLI
+	//     session at ~/.claude/sessions/), the poller won't find it.
+	//     We symlink into the TUI's teams dir so both systems see the team.
+	ensureTeamVisible(input.TeamDir)
+
 	// 6. Notify the TUI immediately that the team has started.
 	uds.notify(TypeToast, ToastPayload{
 		Message: fmt.Sprintf("team_run started (pid %d): %s", pid, input.TeamDir),
@@ -908,10 +1066,22 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	}
 	args = append(args, "--model", model)
 
+	// MCP config: only for interactive agents when the config path is available.
+	mcpConfigPath := os.Getenv("GOFORTRESS_MCP_CONFIG")
+	hasMCP := agent.Interactive && mcpConfigPath != ""
+	if hasMCP {
+		args = append(args, "--mcp-config", mcpConfigPath)
+	}
+
 	// Allowed tools: prefer explicit override, fall back to agent config.
 	tools := input.AllowedTools
 	if len(tools) == 0 {
 		tools = agent.GetAllowedTools()
+	}
+	// Merge MCP tool glob for interactive agents so spawned Claude can call
+	// ask_user, confirm_action, spawn_agent, etc.
+	if hasMCP {
+		tools = append(tools, "mcp__gofortress-interactive__*")
 	}
 	if len(tools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(tools, ","))
@@ -923,4 +1093,59 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	}
 
 	return args
+}
+
+// ensureTeamVisible creates a symlink in the TUI's teams directory if the
+// team_dir is outside the TUI's session tree.  This bridges the gap between
+// Claude Code CLI sessions (~/.claude/sessions/) and TUI sessions
+// (~/.gogent/sessions/) so the TUI's 2-second poller discovers teams created
+// by the router regardless of which session system created them.
+//
+// Errors are logged but never returned — team visibility in the drawer is
+// a nice-to-have, not a launch blocker.
+func ensureTeamVisible(teamDir string) {
+	// Read the TUI's current session from ~/.gogent/current-session.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		slog.Warn("ensureTeamVisible: cannot resolve home dir", "err", err)
+		return
+	}
+	markerPath := filepath.Join(home, ".gogent", "current-session")
+	data, err := os.ReadFile(markerPath)
+	if err != nil {
+		slog.Info("ensureTeamVisible: no TUI session marker", "path", markerPath, "err", err)
+		return
+	}
+	tuiSessionDir := strings.TrimSpace(string(data))
+	if tuiSessionDir == "" {
+		return
+	}
+
+	tuiTeamsDir := filepath.Join(tuiSessionDir, "teams")
+	teamBase := filepath.Base(teamDir)
+	symlinkPath := filepath.Join(tuiTeamsDir, teamBase)
+
+	// If the team_dir is already inside the TUI's teams directory, nothing to do.
+	if filepath.Dir(teamDir) == tuiTeamsDir {
+		return
+	}
+
+	// If the symlink already exists (idempotent), skip.
+	if _, err := os.Lstat(symlinkPath); err == nil {
+		return
+	}
+
+	// Create the teams dir if needed and place the symlink.
+	if err := os.MkdirAll(tuiTeamsDir, 0o755); err != nil {
+		slog.Warn("ensureTeamVisible: cannot create TUI teams dir", "path", tuiTeamsDir, "err", err)
+		return
+	}
+	if err := os.Symlink(teamDir, symlinkPath); err != nil {
+		slog.Warn("ensureTeamVisible: symlink failed", "target", teamDir, "link", symlinkPath, "err", err)
+		return
+	}
+	slog.Info("ensureTeamVisible: symlinked team into TUI session",
+		"team_dir", teamDir,
+		"symlink", symlinkPath,
+	)
 }

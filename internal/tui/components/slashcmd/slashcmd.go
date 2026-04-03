@@ -117,6 +117,7 @@ func DefaultCommands() []SlashCommand {
 		{"team-cancel", "Stop running team"},
 		{"plan-tickets", "Comprehensive planning workflow"},
 		{"teams", "List all teams"},
+		{"model", "Switch model (e.g. /model haiku)"},
 	}
 }
 
@@ -128,7 +129,7 @@ func HelpText() string {
 	for _, cmd := range DefaultCommands() {
 		sb.WriteString("  /" + cmd.Name + " — " + cmd.Description + "\n")
 	}
-	sb.WriteString("\nLocal commands: /clear (clear conversation), /help (this message)")
+	sb.WriteString("\nLocal commands: /clear (clear conversation), /model [name] (switch model), /help (this message)")
 	return sb.String()
 }
 

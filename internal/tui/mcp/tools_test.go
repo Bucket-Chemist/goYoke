@@ -71,6 +71,69 @@ func TestIPCResponseRoundtrip(t *testing.T) {
 	assert.Equal(t, "Allow", mp.Value)
 }
 
+func TestPermGateRequestRoundtrip(t *testing.T) {
+	toolInput := json.RawMessage(`{"path":"/tmp/secret.txt"}`)
+	payload := PermGateRequestPayload{
+		ToolName:  "Write",
+		ToolInput: toolInput,
+		SessionID: "sess-42",
+		TimeoutMS: 30000,
+	}
+	raw, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	req := IPCRequest{
+		Type:    TypePermGateRequest,
+		ID:      "perm-req-1",
+		Payload: raw,
+	}
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var got IPCRequest
+	require.NoError(t, json.Unmarshal(data, &got))
+	assert.Equal(t, req.Type, got.Type)
+	assert.Equal(t, req.ID, got.ID)
+
+	var gotPayload PermGateRequestPayload
+	require.NoError(t, json.Unmarshal(got.Payload, &gotPayload))
+	assert.Equal(t, payload.ToolName, gotPayload.ToolName)
+	assert.Equal(t, payload.SessionID, gotPayload.SessionID)
+	assert.Equal(t, payload.TimeoutMS, gotPayload.TimeoutMS)
+	assert.JSONEq(t, string(toolInput), string(gotPayload.ToolInput))
+}
+
+func TestPermGateResponseRoundtrip(t *testing.T) {
+	decisions := []string{"allow", "deny", "allow_session"}
+
+	for _, decision := range decisions {
+		t.Run(decision, func(t *testing.T) {
+			payload := PermGateResponsePayload{Decision: decision}
+			raw, err := json.Marshal(payload)
+			require.NoError(t, err)
+
+			resp := IPCResponse{
+				Type:    TypePermGateResponse,
+				ID:      "perm-req-1",
+				Payload: raw,
+			}
+
+			data, err := json.Marshal(resp)
+			require.NoError(t, err)
+
+			var got IPCResponse
+			require.NoError(t, json.Unmarshal(data, &got))
+			assert.Equal(t, resp.Type, got.Type)
+			assert.Equal(t, resp.ID, got.ID)
+
+			var gotPayload PermGateResponsePayload
+			require.NoError(t, json.Unmarshal(got.Payload, &gotPayload))
+			assert.Equal(t, decision, gotPayload.Decision)
+		})
+	}
+}
+
 func TestAllPayloadTypesSerialise(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -80,6 +143,8 @@ func TestAllPayloadTypesSerialise(t *testing.T) {
 		{"AgentUpdatePayload", AgentUpdatePayload{AgentID: "a1", Status: "running"}},
 		{"AgentActivityPayload", AgentActivityPayload{AgentID: "a1", Tool: "Read"}},
 		{"ToastPayload", ToastPayload{Message: "hello", Level: "info"}},
+		{"PermGateRequestPayload", PermGateRequestPayload{ToolName: "Read", ToolInput: json.RawMessage(`{}`), SessionID: "s1", TimeoutMS: 5000}},
+		{"PermGateResponsePayload", PermGateResponsePayload{Decision: "allow"}},
 	}
 
 	for _, tc := range tests {
@@ -340,7 +405,7 @@ func TestHandleSelectOption_EmptyOptions(t *testing.T) {
 func TestHandleSpawnAgent_MissingAgent(t *testing.T) {
 	uds := &UDSClient{}
 	_, _, err := handleSpawnAgent(context.Background(), nil,
-		SpawnAgentInput{Description: "d", Prompt: "p"}, uds)
+		SpawnAgentInput{Description: "d", Prompt: "p"}, uds, NewAgentStore())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "agent is required")
 }
@@ -348,7 +413,7 @@ func TestHandleSpawnAgent_MissingAgent(t *testing.T) {
 func TestHandleSpawnAgent_MissingDescription(t *testing.T) {
 	uds := &UDSClient{}
 	_, _, err := handleSpawnAgent(context.Background(), nil,
-		SpawnAgentInput{Agent: "go-pro", Prompt: "p"}, uds)
+		SpawnAgentInput{Agent: "go-pro", Prompt: "p"}, uds, NewAgentStore())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "description is required")
 }
@@ -356,7 +421,7 @@ func TestHandleSpawnAgent_MissingDescription(t *testing.T) {
 func TestHandleSpawnAgent_MissingPrompt(t *testing.T) {
 	uds := &UDSClient{}
 	_, _, err := handleSpawnAgent(context.Background(), nil,
-		SpawnAgentInput{Agent: "go-pro", Description: "d"}, uds)
+		SpawnAgentInput{Agent: "go-pro", Description: "d"}, uds, NewAgentStore())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "prompt is required")
 }
@@ -375,7 +440,7 @@ func TestHandleSpawnAgent_UnknownAgent(t *testing.T) {
 
 	uds := &UDSClient{} // no TUI needed — stub returns before UDS call
 	_, out, err := handleSpawnAgent(context.Background(), nil,
-		SpawnAgentInput{Agent: "totally-unknown", Description: "d", Prompt: "p"}, uds)
+		SpawnAgentInput{Agent: "totally-unknown", Description: "d", Prompt: "p"}, uds, NewAgentStore())
 	require.NoError(t, err) // structured failure, not an error
 	assert.False(t, out.Success)
 	assert.Contains(t, out.Error, "unknown agent")
@@ -418,6 +483,98 @@ func TestHandleTeamRun_ExistingDir(t *testing.T) {
 	assert.Equal(t, dir, out.TeamDir)
 	// Binary presence is environment-dependent; both outcomes are valid.
 	assert.NotEmpty(t, out.Result)
+}
+
+// -----------------------------------------------------------------------------
+// ensureTeamVisible — symlink bridge
+// -----------------------------------------------------------------------------
+
+func TestEnsureTeamVisible_CreatesSymlink(t *testing.T) {
+	// Set up a fake ~/.gogent/current-session pointing to a temp TUI session.
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+
+	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
+	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
+
+	markerDir := filepath.Join(fakeHome, ".gogent")
+	require.NoError(t, os.WriteFile(
+		filepath.Join(markerDir, "current-session"),
+		[]byte(tuiSessionDir),
+		0o644,
+	))
+
+	// Create a team dir outside the TUI session tree (simulating CC CLI session).
+	ccTeamDir := filepath.Join(t.TempDir(), "teams", "20260331_120000.braintrust")
+	require.NoError(t, os.MkdirAll(ccTeamDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(ccTeamDir, "config.json"),
+		[]byte(`{"status":"running"}`),
+		0o644,
+	))
+
+	// Call ensureTeamVisible — should create symlink.
+	ensureTeamVisible(ccTeamDir)
+
+	symlinkPath := filepath.Join(tuiSessionDir, "teams", "20260331_120000.braintrust")
+	info, err := os.Lstat(symlinkPath)
+	require.NoError(t, err, "symlink should exist")
+	assert.NotZero(t, info.Mode()&os.ModeSymlink, "should be a symlink")
+
+	target, err := os.Readlink(symlinkPath)
+	require.NoError(t, err)
+	assert.Equal(t, ccTeamDir, target)
+}
+
+func TestEnsureTeamVisible_SkipsWhenAlreadyInTUITree(t *testing.T) {
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+
+	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
+	tuiTeamsDir := filepath.Join(tuiSessionDir, "teams")
+	require.NoError(t, os.MkdirAll(tuiTeamsDir, 0o755))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(fakeHome, ".gogent", "current-session"),
+		[]byte(tuiSessionDir),
+		0o644,
+	))
+
+	// Team dir is already inside the TUI's teams dir.
+	teamDir := filepath.Join(tuiTeamsDir, "20260331_120000.braintrust")
+	require.NoError(t, os.MkdirAll(teamDir, 0o755))
+
+	// Should not create a symlink to itself.
+	ensureTeamVisible(teamDir)
+
+	entries, err := os.ReadDir(tuiTeamsDir)
+	require.NoError(t, err)
+	assert.Len(t, entries, 1, "no extra symlink should be created")
+}
+
+func TestEnsureTeamVisible_IdempotentOnRerun(t *testing.T) {
+	fakeHome := t.TempDir()
+	t.Setenv("HOME", fakeHome)
+
+	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
+	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(fakeHome, ".gogent", "current-session"),
+		[]byte(tuiSessionDir),
+		0o644,
+	))
+
+	ccTeamDir := filepath.Join(t.TempDir(), "teams", "20260331_120000.braintrust")
+	require.NoError(t, os.MkdirAll(ccTeamDir, 0o755))
+
+	// Call twice — second call should not error.
+	ensureTeamVisible(ccTeamDir)
+	ensureTeamVisible(ccTeamDir)
+
+	symlinkPath := filepath.Join(tuiSessionDir, "teams", "20260331_120000.braintrust")
+	_, err := os.Lstat(symlinkPath)
+	assert.NoError(t, err, "symlink should still exist after idempotent call")
 }
 
 // -----------------------------------------------------------------------------
@@ -474,11 +631,151 @@ func TestRegisterAll_ToolsDiscoverable(t *testing.T) {
 		"request_input",
 		"select_option",
 		"spawn_agent",
+		"get_agent_result",
 		"team_run",
 	}
 	for _, name := range expected {
 		assert.Contains(t, names, name, "tool %s should be registered", name)
 	}
+}
+
+// -----------------------------------------------------------------------------
+// get_agent_result handler
+// -----------------------------------------------------------------------------
+
+func TestHandleGetAgentResult_MissingAgentID(t *testing.T) {
+	store := NewAgentStore()
+	_, _, err := handleGetAgentResult(context.Background(), GetAgentResultInput{}, store)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "agentId is required")
+}
+
+func TestHandleGetAgentResult_NotFound(t *testing.T) {
+	store := NewAgentStore()
+	_, out, err := handleGetAgentResult(context.Background(), GetAgentResultInput{
+		AgentID: "nonexistent",
+	}, store)
+	require.NoError(t, err)
+	assert.Equal(t, "not_found", out.Status)
+}
+
+func TestHandleGetAgentResult_RunningNoWait(t *testing.T) {
+	store := NewAgentStore()
+	store.Register("agent-1", "go-pro")
+
+	_, out, err := handleGetAgentResult(context.Background(), GetAgentResultInput{
+		AgentID: "agent-1",
+	}, store)
+	require.NoError(t, err)
+	assert.Equal(t, "running", out.Status)
+	assert.False(t, out.Success)
+}
+
+func TestHandleGetAgentResult_CompletedImmediate(t *testing.T) {
+	store := NewAgentStore()
+	store.Register("agent-1", "go-pro")
+	store.Complete("agent-1", "result text", "", 0.25, 10, "2s")
+
+	_, out, err := handleGetAgentResult(context.Background(), GetAgentResultInput{
+		AgentID: "agent-1",
+	}, store)
+	require.NoError(t, err)
+	assert.Equal(t, "complete", out.Status)
+	assert.True(t, out.Success)
+	assert.Equal(t, "result text", out.Output)
+	assert.Equal(t, 0.25, out.Cost)
+}
+
+func TestHandleGetAgentResult_WaitForCompletion(t *testing.T) {
+	store := NewAgentStore()
+	store.Register("agent-1", "go-pro")
+
+	// Complete in background after 50ms.
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		store.Complete("agent-1", "async result", "", 0.10, 5, "50ms")
+	}()
+
+	_, out, err := handleGetAgentResult(context.Background(), GetAgentResultInput{
+		AgentID:   "agent-1",
+		Wait:      true,
+		TimeoutMs: 5000,
+	}, store)
+	require.NoError(t, err)
+	assert.Equal(t, "complete", out.Status)
+	assert.Equal(t, "async result", out.Output)
+}
+
+func TestHandleGetAgentResult_WaitTimeout(t *testing.T) {
+	store := NewAgentStore()
+	store.Register("agent-1", "go-pro")
+	// Never complete — should timeout.
+
+	_, out, err := handleGetAgentResult(context.Background(), GetAgentResultInput{
+		AgentID:   "agent-1",
+		Wait:      true,
+		TimeoutMs: 100,
+	}, store)
+	require.NoError(t, err)
+	assert.Equal(t, "running", out.Status)
+	assert.Contains(t, out.Error, "timed out")
+}
+
+// -----------------------------------------------------------------------------
+// AgentStore
+// -----------------------------------------------------------------------------
+
+func TestAgentStore_EvictExpired(t *testing.T) {
+	store := NewAgentStore()
+	defer store.Stop()
+
+	store.Register("old-1", "go-pro")
+	store.Register("old-2", "go-pro")
+	store.Register("still-running", "go-pro")
+
+	// Complete two entries, then backdate their DoneAt.
+	store.Complete("old-1", "done", "", 0, 0, "1s")
+	store.Complete("old-2", "", "failed", 0, 0, "2s")
+
+	// Backdate DoneAt to exceed TTL.
+	store.mu.Lock()
+	store.entries["old-1"].DoneAt = time.Now().Add(-31 * time.Minute)
+	store.entries["old-2"].DoneAt = time.Now().Add(-31 * time.Minute)
+	store.mu.Unlock()
+
+	// Run eviction manually.
+	store.evictExpired()
+
+	assert.Nil(t, store.Get("old-1"), "old-1 should be evicted")
+	assert.Nil(t, store.Get("old-2"), "old-2 should be evicted")
+	assert.NotNil(t, store.Get("still-running"), "running entry must not be evicted")
+	assert.Equal(t, 1, store.Len())
+}
+
+func TestAgentStore_RecentCompletedNotEvicted(t *testing.T) {
+	store := NewAgentStore()
+	defer store.Stop()
+
+	store.Register("recent", "go-pro")
+	store.Complete("recent", "done", "", 0, 0, "1s")
+
+	store.evictExpired()
+
+	assert.NotNil(t, store.Get("recent"), "recently completed entry must not be evicted")
+}
+
+func TestAgentStore_DoubleCompleteNoPanic(t *testing.T) {
+	store := NewAgentStore()
+	defer store.Stop()
+
+	store.Register("agent-1", "go-pro")
+	store.Complete("agent-1", "first", "", 0.1, 5, "1s")
+	// Second complete should not panic or overwrite.
+	store.Complete("agent-1", "second", "", 0.2, 10, "2s")
+
+	entry := store.Get("agent-1")
+	assert.Equal(t, "first", entry.Output, "second Complete should be ignored")
+	assert.Equal(t, 0.1, entry.Cost)
 }
 
 // -----------------------------------------------------------------------------
@@ -558,6 +855,103 @@ func TestBuildSpawnArgs_CustomTimeout(t *testing.T) {
 	input := SpawnAgentInput{Prompt: "p", Timeout: 60000}
 	args := buildSpawnArgs(agent, input)
 	assert.NotContains(t, args, "--timeout")
+}
+
+func TestBuildSpawnArgs_MCPConfig_InteractiveWithEnv(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	agent := &routing.Agent{ID: "spawn-agent", Model: "sonnet", Interactive: true}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	assert.Contains(t, args, "--mcp-config")
+	assert.Contains(t, args, "/tmp/mcp-config.json")
+
+	// --mcp-config must appear before --allowedTools
+	mcpIdx, toolsIdx := -1, -1
+	for i, a := range args {
+		if a == "--mcp-config" {
+			mcpIdx = i
+		}
+		if a == "--allowedTools" {
+			toolsIdx = i
+		}
+	}
+	if toolsIdx != -1 {
+		assert.Less(t, mcpIdx, toolsIdx, "--mcp-config must appear before --allowedTools")
+	}
+
+	// MCP glob must be in the allowedTools value
+	for i, a := range args {
+		if a == "--allowedTools" && i+1 < len(args) {
+			assert.Contains(t, args[i+1], "mcp__gofortress-interactive__*")
+		}
+	}
+}
+
+func TestBuildSpawnArgs_MCPConfig_NonInteractiveAgent(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	agent := &routing.Agent{ID: "go-pro", Model: "sonnet", Interactive: false}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	assert.NotContains(t, args, "--mcp-config")
+	// MCP glob must NOT appear for non-interactive agents
+	for _, a := range args {
+		assert.NotContains(t, a, "mcp__gofortress-interactive__*")
+	}
+}
+
+func TestBuildSpawnArgs_MCPConfig_InteractiveNoEnv(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	agent := &routing.Agent{ID: "spawn-agent", Model: "sonnet", Interactive: true}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	assert.NotContains(t, args, "--mcp-config")
+	for _, a := range args {
+		assert.NotContains(t, a, "mcp__gofortress-interactive__*")
+	}
+}
+
+func TestBuildSpawnArgs_MCPConfig_InteractiveWithExplicitAllowedTools(t *testing.T) {
+	// MCP glob must be appended even when caller provides an explicit AllowedTools override.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/test-mcp.json")
+	agent := &routing.Agent{ID: "spawn-agent", Model: "sonnet", Interactive: true}
+	input := SpawnAgentInput{
+		Prompt:       "p",
+		AllowedTools: []string{"Read", "Write", "Bash"},
+	}
+	args := buildSpawnArgs(agent, input)
+
+	assert.Contains(t, args, "--mcp-config")
+	assert.Contains(t, args, "/tmp/test-mcp.json")
+
+	toolsIdx := -1
+	for i, a := range args {
+		if a == "--allowedTools" {
+			toolsIdx = i
+		}
+	}
+	require.NotEqual(t, -1, toolsIdx, "--allowedTools must be present")
+	require.Less(t, toolsIdx+1, len(args))
+	toolsVal := args[toolsIdx+1]
+	assert.Contains(t, toolsVal, "mcp__gofortress-interactive__*", "MCP glob must be appended even with explicit AllowedTools")
+	assert.Contains(t, toolsVal, "Read", "explicit tools must be preserved")
+	assert.Contains(t, toolsVal, "Write", "explicit tools must be preserved")
+	assert.Contains(t, toolsVal, "Bash", "explicit tools must be preserved")
+}
+
+func TestBuildSpawnArgs_MCPConfig_NonInteractiveNoEnv(t *testing.T) {
+	// Baseline: non-interactive agent with no env var — no --mcp-config, no MCP tools.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	agent := &routing.Agent{ID: "go-pro", Model: "sonnet", Interactive: false}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	assert.NotContains(t, args, "--mcp-config")
+	for _, a := range args {
+		assert.NotContains(t, a, "mcp__gofortress-interactive__*")
+	}
 }
 
 // -----------------------------------------------------------------------------

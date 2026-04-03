@@ -292,7 +292,10 @@ func (d *CLIDriver) buildArgs() []string {
 
 	if d.opts.MCPConfigPath != "" {
 		args = append(args, "--mcp-config", d.opts.MCPConfigPath)
-		args = append(args, "--allowedTools", "mcp__gofortress-interactive__*")
+		args = append(args, "--allowedTools",
+			"Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch,NotebookEdit,"+
+				"TodoWrite,EnterPlanMode,ExitPlanMode,Skill,ToolSearch,AskUserQuestion,"+
+				"mcp__gofortress-interactive__*")
 	}
 
 	// Block the built-in Agent tool — all agent spawning must go through

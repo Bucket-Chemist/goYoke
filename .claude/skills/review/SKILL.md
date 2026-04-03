@@ -259,30 +259,20 @@ Write each stdin file to `$team_dir/stdin_{reviewer-name}.json`.
 
 #### Step 3: Launch
 
-```bash
-gogent-team-run "$team_dir"
 ```
-
-No output redirection. No config.json path argument. The binary handles:
-- PID file creation
-- Log redirection to `runner.log`
-- Session leadership (setsid)
-- Writing `background_pid` to config.json
-
-#### Step 4: Verify Launch
-
-```bash
-sleep 2
-background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
-if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
-    echo "[review] ERROR: Team launch failed. Check $team_dir/runner.log"
+result = mcp__gofortress-interactive__team_run({
+    team_dir: "$team_dir",
+    wait_for_start: true,
+    timeout_ms: 10000
+})
+if !result.success:
+    echo "[review] ERROR: ${result.result}"
     rm -f "$session_dir/active-skill.json"
     exit 1
-else
-    echo "[review] Team launched (PID $background_pid)"
-    echo "[review] Use /team-status to track progress"
-    echo "[review] Use /team-result when complete to see findings"
-fi
+background_pid = result.background_pid
+echo "[review] Team launched (PID $background_pid)"
+echo "[review] Use /team-status to track progress"
+echo "[review] Use /team-result when complete to see findings"
 ```
 
 #### Step 5: Remove Skill Guard

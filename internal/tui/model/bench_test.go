@@ -175,7 +175,11 @@ func (p *benchClaudePanel) IsStreaming() bool                        { return fa
 func (p *benchClaudePanel) SaveMessages() []state.DisplayMessage     { return nil }
 func (p *benchClaudePanel) RestoreMessages(_ []state.DisplayMessage) {}
 func (p *benchClaudePanel) SetSender(_ MessageSender)                {}
+func (p *benchClaudePanel) AppendSystemMessage(_ string)             {}
 func (p *benchClaudePanel) SetTier(_ LayoutTier)                     {}
+func (p *benchClaudePanel) ViewConversation() string                 { return p.content }
+func (p *benchClaudePanel) ViewInput() string                        { return "" }
+func (p *benchClaudePanel) ApplyOverlay(composed string) string      { return composed }
 
 // benchToast satisfies toastWidget.
 type benchToast struct{}
@@ -193,6 +197,7 @@ func (tl *benchTeamList) HandleMsg(_ tea.Msg) tea.Cmd   { return nil }
 func (tl *benchTeamList) View() string                   { return "" }
 func (tl *benchTeamList) SetSize(_, _ int)               {}
 func (tl *benchTeamList) StartPolling(_ string) tea.Cmd { return nil }
+func (tl *benchTeamList) PollNow() tea.Cmd              { return nil }
 
 // benchTabBar satisfies tabBarWidget.
 type benchTabBar struct{}

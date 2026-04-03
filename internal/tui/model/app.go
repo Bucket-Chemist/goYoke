@@ -199,10 +199,6 @@ type AppModel struct {
 	agentTree   agents.AgentTreeModel
 	agentDetail agents.AgentDetailModel
 
-	// showHealthInAgents toggles the health dashboard in the agents panel
-	// area (TUI-003). Toggled by Alt+H on Standard tier (TUI-007).
-	showHealthInAgents bool
-
 	// Diff history (post-hoc diffs from Write/Edit/Bash tool results).
 	// TUI-022 renders these inline in the Claude panel.
 	diffs []DiffEntry
@@ -291,6 +287,7 @@ func (m AppModel) Init() tea.Cmd {
 		tea.EnterAltScreen,
 		m.startCLI(),
 		m.statusLine.StartTicks(),
+		m.startTeamPolling(),
 	)
 }
 
@@ -301,6 +298,17 @@ func (m AppModel) startCLI() tea.Cmd {
 		return nil
 	}
 	return m.shared.cliDriver.Start()
+}
+
+// startTeamPolling returns the initial team-list poll command, or nil when
+// no team list is wired or StartPolling has not been called yet.  The poll
+// fires a package-private pollTickMsg that must be forwarded to the team
+// list via the unhandled-message fallthrough in Update().
+func (m AppModel) startTeamPolling() tea.Cmd {
+	if m.shared == nil || m.shared.teamList == nil {
+		return nil
+	}
+	return m.shared.teamList.PollNow()
 }
 
 // Update is the sole mutation point for AppModel state.  It dispatches all
@@ -350,11 +358,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleProviderSwitchExecuteMsg(msg)
 
 	// -----------------------------------------------------------------
+	// Model switching
+	// -----------------------------------------------------------------
+
+	case ModelSwitchRequestMsg:
+		return m.handleModelSwitchRequest(msg)
+
+	// -----------------------------------------------------------------
 	// Bridge events (from MCP server via UDS)
 	// -----------------------------------------------------------------
 
 	case BridgeModalRequestMsg:
 		return m.handleBridgeModalRequest(msg)
+
+	case CLIPermissionRequestMsg:
+		return m.handleCLIPermissionRequest(msg)
 
 	case drawer.ModalResponseMsg:
 		// TDS-006: Drawer resolved a modal — deliver response to the bridge.
@@ -558,6 +576,24 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// Forward unhandled messages to the team list for autonomous 2-second
+	// poll ticks.  pollTickMsg is unexported from the teams package, so
+	// AppModel cannot type-switch on it; forwarding here ensures the poll
+	// cycle is self-sustaining once started by Init → startTeamPolling.
+	if m.shared != nil && m.shared.teamList != nil {
+		cmd := m.shared.teamList.HandleMsg(msg)
+		if cmd != nil {
+			// Poll tick processed — refresh teams drawer with latest health data.
+			if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
+				if m.shared.teamsHealth.HasData() {
+					m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+				} else {
+					m.shared.drawerStack.ClearTeamsContent()
+				}
+			}
+			return m, cmd
+		}
+	}
 	return m, nil
 }
 

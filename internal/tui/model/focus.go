@@ -20,11 +20,14 @@ const (
 
 	// FocusOptionsDrawer indicates that the options drawer holds focus (TDS-008).
 	FocusOptionsDrawer
+
+	// FocusTeamsDrawer indicates that the teams health drawer holds focus.
+	FocusTeamsDrawer
 )
 
 // focusTargetCount is the total number of FocusTarget values.
 // Update this constant whenever a new FocusTarget is added.
-const focusTargetCount = int(FocusOptionsDrawer) + 1
+const focusTargetCount = int(FocusTeamsDrawer) + 1
 
 // String returns a human-readable name for the FocusTarget.
 func (f FocusTarget) String() string {
@@ -37,6 +40,8 @@ func (f FocusTarget) String() string {
 		return "Plan Drawer"
 	case FocusOptionsDrawer:
 		return "Options Drawer"
+	case FocusTeamsDrawer:
+		return "Teams Drawer"
 	default:
 		return "Unknown"
 	}
@@ -65,6 +70,8 @@ func FocusRing(expandedDrawers []string) []FocusTarget {
 			ring = append(ring, FocusPlanDrawer)
 		case "options":
 			ring = append(ring, FocusOptionsDrawer)
+		case "teams":
+			ring = append(ring, FocusTeamsDrawer)
 		}
 	}
 	return ring

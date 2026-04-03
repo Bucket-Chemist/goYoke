@@ -86,12 +86,20 @@ func isValidTransition(from, to AgentStatus) bool {
 type AgentActivity struct {
 	// Type classifies the activity, e.g. "tool_use" or "thinking".
 	Type string
-	// Target is the subject of the activity, e.g. the tool name.
+	// ToolName is the tool that was invoked (e.g. "Read", "Grep", "Bash").
+	ToolName string
+	// Target is the subject of the activity, e.g. a file path or pattern.
 	Target string
 	// Preview is a short human-readable summary suitable for one-line display.
 	Preview string
 	// Timestamp records when this activity started.
 	Timestamp time.Time
+	// ToolID is the block ID from tool_use events, used to match tool_result
+	// responses back to this activity entry.
+	ToolID string
+	// Success is nil while the tool call is pending, true when the tool
+	// returned successfully, and false when it returned an error.
+	Success *bool
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +128,9 @@ type Agent struct {
 	// RecentActivity holds the rolling buffer of last N tool calls for this
 	// agent, providing visibility into what spawned subprocesses are doing.
 	RecentActivity []AgentActivity
+	// FullActivityLog is an unbounded (capped at maxFullActivityLog) log of
+	// ALL tool calls for this agent, preserving the complete history.
+	FullActivityLog []AgentActivity
 	// StartedAt is the wall-clock time when the agent began executing.
 	StartedAt time.Time
 	// Duration is the elapsed time for a completed agent; zero for in-progress.
@@ -165,6 +176,10 @@ func (a *Agent) copyOf() Agent {
 	if a.RecentActivity != nil {
 		cp.RecentActivity = make([]AgentActivity, len(a.RecentActivity))
 		copy(cp.RecentActivity, a.RecentActivity)
+	}
+	if a.FullActivityLog != nil {
+		cp.FullActivityLog = make([]AgentActivity, len(a.FullActivityLog))
+		copy(cp.FullActivityLog, a.FullActivityLog)
 	}
 	return cp
 }
@@ -352,8 +367,12 @@ func (r *AgentRegistry) SetActivity(id string, activity AgentActivity) {
 // maxRecentActivities is the rolling buffer cap for per-agent tool history.
 const maxRecentActivities = 5
 
-// AppendActivity sets the current activity AND appends it to the rolling
-// buffer of recent tool calls (capped at maxRecentActivities).
+// maxFullActivityLog is the cap for the unbounded full activity log.
+const maxFullActivityLog = 500
+
+// AppendActivity sets the current activity AND appends it to both the rolling
+// buffer of recent tool calls (capped at maxRecentActivities) and the full
+// activity log (capped at maxFullActivityLog, oldest evicted when full).
 func (r *AgentRegistry) AppendActivity(id string, activity AgentActivity) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -367,6 +386,40 @@ func (r *AgentRegistry) AppendActivity(id string, activity AgentActivity) {
 	a.RecentActivity = append(a.RecentActivity, activity)
 	if len(a.RecentActivity) > maxRecentActivities {
 		a.RecentActivity = a.RecentActivity[len(a.RecentActivity)-maxRecentActivities:]
+	}
+	a.FullActivityLog = append(a.FullActivityLog, activity)
+	if len(a.FullActivityLog) > maxFullActivityLog {
+		a.FullActivityLog = a.FullActivityLog[len(a.FullActivityLog)-maxFullActivityLog:]
+	}
+}
+
+// UpdateActivityResult finds the activity entry with the given toolID in both
+// RecentActivity and FullActivityLog for the agent identified by id, and sets
+// its Success field to the provided value. No-op if the agent or toolID is not
+// found.
+func (r *AgentRegistry) UpdateActivityResult(agentID, toolID string, success bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[agentID]
+	if !ok {
+		return
+	}
+
+	for i := range a.RecentActivity {
+		if a.RecentActivity[i].ToolID == toolID {
+			v := success
+			a.RecentActivity[i].Success = &v
+			break
+		}
+	}
+
+	for i := range a.FullActivityLog {
+		if a.FullActivityLog[i].ToolID == toolID {
+			v := success
+			a.FullActivityLog[i].Success = &v
+			break
+		}
 	}
 }
 

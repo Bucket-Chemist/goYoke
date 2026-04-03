@@ -13,7 +13,7 @@
 //
 // Wires real components end-to-end:
 //   - Real IPCBridge (TUI-side UDS listener)
-//   - Real MCP server (mcpsdk.Server) with all 7 tools registered
+//   - Real MCP server (mcpsdk.Server) with all 8 tools registered
 //   - Real UDSClient connecting to the bridge
 //   - In-memory MCP transport (no stdin/stdout pipes required)
 //   - integrationMockSender captures Bubbletea messages for assertion
@@ -123,7 +123,7 @@ func newIntegrationHarness(t *testing.T) *integrationHarness {
 	// 3. Create the real UDSClient (reads GOFORTRESS_SOCKET from env).
 	uds := tuimcp.NewUDSClient()
 
-	// 4. Build the real MCP server with all 7 tools registered.
+	// 4. Build the real MCP server with all 8 tools registered.
 	server := mcpsdk.NewServer(
 		&mcpsdk.Implementation{Name: "gofortress-mcp-test", Version: "1.0.0"},
 		nil,
@@ -407,11 +407,11 @@ func TestIntegration_SpawnAgent(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// (d) TestIntegration_ToolManifest — all 7 tools present
+// (d) TestIntegration_ToolManifest — all 8 tools present
 // ---------------------------------------------------------------------------
 
 // TestIntegration_ToolManifest verifies that the MCP server exposes exactly
-// the 7 expected tools.
+// the 8 expected tools.
 func TestIntegration_ToolManifest(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -434,6 +434,7 @@ func TestIntegration_ToolManifest(t *testing.T) {
 		"request_input",
 		"select_option",
 		"spawn_agent",
+		"get_agent_result",
 		"team_run",
 	}
 

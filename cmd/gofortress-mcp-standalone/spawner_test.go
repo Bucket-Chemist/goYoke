@@ -109,6 +109,89 @@ func TestBuildSpawnArgs_AllowedToolsFallback(t *testing.T) {
 	assert.Equal(t, "Read,Glob,Grep", toolsVal, "should fall back to default tools when both agent and input are empty")
 }
 
+func TestBuildSpawnArgs_MCPConfig_Interactive(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	agent := makeAgent("sonnet", []string{"Read", "Write"})
+	agent.Interactive = true
+
+	args := buildSpawnArgs(agent, SpawnAgentInput{})
+
+	assert.True(t, argsContainsSeq(args, "--mcp-config", "/tmp/mcp-config.json"),
+		"--mcp-config must be present for interactive agents when env var is set")
+
+	toolsVal := argAfter(args, "--allowedTools")
+	assert.Contains(t, toolsVal, "mcp__gofortress-interactive__*",
+		"interactive MCP tool glob must be merged into allowedTools")
+	assert.Contains(t, toolsVal, "Read",
+		"original agent tools must be preserved")
+}
+
+func TestBuildSpawnArgs_MCPConfig_NonInteractive(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	agent := makeAgent("sonnet", []string{"Read", "Write"})
+	agent.Interactive = false
+
+	args := buildSpawnArgs(agent, SpawnAgentInput{})
+
+	assert.NotContains(t, args, "--mcp-config",
+		"--mcp-config must be absent for non-interactive agents")
+
+	toolsVal := argAfter(args, "--allowedTools")
+	assert.NotContains(t, toolsVal, "mcp__gofortress-interactive__*",
+		"MCP tool glob must not be added for non-interactive agents")
+}
+
+func TestBuildSpawnArgs_MCPConfig_EnvVarAbsent(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	agent := makeAgent("sonnet", []string{"Read"})
+	agent.Interactive = true
+
+	args := buildSpawnArgs(agent, SpawnAgentInput{})
+
+	assert.NotContains(t, args, "--mcp-config",
+		"--mcp-config must be absent when GOFORTRESS_MCP_CONFIG is not set")
+
+	toolsVal := argAfter(args, "--allowedTools")
+	assert.NotContains(t, toolsVal, "mcp__gofortress-interactive__*",
+		"MCP tool glob must not be added when env var is absent")
+}
+
+func TestBuildSpawnArgs_MCPConfig_InteractiveWithAllowedToolsOverride(t *testing.T) {
+	// MCP glob must be appended even when caller provides an explicit AllowedTools override.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/test-mcp.json")
+	agent := makeAgent("sonnet", nil)
+	agent.Interactive = true
+
+	args := buildSpawnArgs(agent, SpawnAgentInput{AllowedTools: []string{"Read", "Bash"}})
+
+	assert.True(t, argsContainsSeq(args, "--mcp-config", "/tmp/test-mcp.json"),
+		"--mcp-config must be present for interactive agents when env var is set")
+
+	toolsVal := argAfter(args, "--allowedTools")
+	assert.Contains(t, toolsVal, "mcp__gofortress-interactive__*",
+		"MCP glob must be appended to explicit AllowedTools override")
+	assert.Contains(t, toolsVal, "Read",
+		"explicit tools must be preserved in override case")
+	assert.Contains(t, toolsVal, "Bash",
+		"explicit tools must be preserved in override case")
+}
+
+func TestBuildSpawnArgs_MCPConfig_NonInteractiveNoEnv(t *testing.T) {
+	// Baseline: non-interactive agent with no env var — no --mcp-config, no MCP tools.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	agent := makeAgent("sonnet", []string{"Read", "Write"})
+	agent.Interactive = false
+
+	args := buildSpawnArgs(agent, SpawnAgentInput{})
+
+	assert.NotContains(t, args, "--mcp-config",
+		"--mcp-config must be absent for non-interactive agents with no env var")
+
+	toolsVal := argAfter(args, "--allowedTools")
+	assert.NotContains(t, toolsVal, "mcp__gofortress-interactive__*",
+		"MCP tool glob must not be present for non-interactive agents with no env var")
+}
+
 func TestBuildSpawnArgs_NoTimeoutFlag(t *testing.T) {
 	// --timeout is NOT a valid claude CLI flag. Timeout is managed by
 	// runSubprocess() via time.AfterFunc.

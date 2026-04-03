@@ -5,6 +5,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
@@ -237,6 +238,19 @@ type BridgeModalRequestMsg struct {
 	Options []string
 }
 
+// CLIPermissionRequestMsg is sent by the IPC bridge when a hook binary
+// requests user permission to execute a tool (e.g. Bash).
+type CLIPermissionRequestMsg struct {
+	// RequestID is the IPC request identifier used to route the response.
+	RequestID string
+	// ToolName is the name of the tool awaiting permission (e.g. "Bash").
+	ToolName string
+	// ToolInput is the raw JSON arguments for display to the user.
+	ToolInput json.RawMessage
+	// TimeoutMS is the permission request timeout in milliseconds.
+	TimeoutMS int
+}
+
 // ---------------------------------------------------------------------------
 // Provider messages (TUI-029)
 //
@@ -261,6 +275,21 @@ type ProviderSwitchExecuteMsg struct {
 	// Seq is the sequence counter at the time the debounce timer was created.
 	// Stale timers (from earlier keypresses) have a lower Seq and are discarded.
 	Seq int
+}
+
+// ---------------------------------------------------------------------------
+// Model switching messages
+// ---------------------------------------------------------------------------
+
+// ModelSwitchRequestMsg is emitted by the Claude panel when the user types
+// /model [name]. AppModel validates the model, guards against streaming, and
+// restarts the CLI driver with the new model.
+//
+// When ModelID is empty the handler lists available models as a system message.
+type ModelSwitchRequestMsg struct {
+	// ModelID is the requested model identifier (e.g. "haiku", "sonnet").
+	// Empty means "show available models".
+	ModelID string
 }
 
 // ---------------------------------------------------------------------------

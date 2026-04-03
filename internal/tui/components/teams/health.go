@@ -40,6 +40,11 @@ func (m *TeamsHealthModel) SetTier(tier model.LayoutTier) {
 	m.tier = tier
 }
 
+// HasData returns true when there is at least one running team to display.
+func (m *TeamsHealthModel) HasData() bool {
+	return m.registry.MostRecentRunning() != nil
+}
+
 // View renders the health dashboard as a pure string. It is safe to call
 // from a Bubbletea View() method: data is obtained via MostRecentRunning()
 // which holds only an RLock internally.
@@ -167,24 +172,44 @@ func (m *TeamsHealthModel) renderMember(member Member, waveNum int, streamSizes 
 	icon := healthIcon(member)
 	statusCol := config.StyleMuted.Render(fmt.Sprintf("%-12s", member.Status))
 
+	// Adapt name column width and format to available column width.
+	narrow := m.width > 0 && m.width < 60
+	nameWidth := 14
+	if narrow {
+		nameWidth = 10
+	}
+	name := member.Name
+	if len(name) > nameWidth {
+		name = name[:nameWidth]
+	}
+
 	switch member.Status {
 	case "failed":
 		msg := member.ErrorMessage
 		if member.KillReason != "" {
 			msg = member.KillReason
 		}
-		return fmt.Sprintf("  %s %-14s %s  %s",
-			icon, member.Name, statusCol, config.StyleError.Render(msg))
+		return fmt.Sprintf("  %s %-*s %s  %s",
+			icon, nameWidth, name, statusCol, config.StyleError.Render(msg))
 
 	case "pending":
 		waitMsg := "waiting to start"
 		if waveNum > 1 {
 			waitMsg = fmt.Sprintf("waiting for Wave %d", waveNum-1)
 		}
-		return fmt.Sprintf("  %s %-14s %s  %s",
-			icon, member.Name, statusCol, config.StyleMuted.Render(waitMsg))
+		return fmt.Sprintf("  %s %-*s %s  %s",
+			icon, nameWidth, name, statusCol, config.StyleMuted.Render(waitMsg))
 
 	default:
+		if narrow {
+			// Compact format for narrow columns: omit stalls, activity, bytes.
+			pidStr := ""
+			if member.ProcessPID != nil {
+				pidStr = fmt.Sprintf("  PID %d", *member.ProcessPID)
+			}
+			return fmt.Sprintf("  %s %-*s %s%s", icon, nameWidth, name, statusCol, pidStr)
+		}
+
 		pidStr := fmt.Sprintf("%-10s", "")
 		if member.ProcessPID != nil {
 			pidStr = fmt.Sprintf("PID %-6d", *member.ProcessPID)
@@ -200,8 +225,8 @@ func (m *TeamsHealthModel) renderMember(member Member, waveNum int, streamSizes 
 			streamSize = streamSizes[member.Name]
 		}
 
-		return fmt.Sprintf("  %s %-14s %s  %s  %d stalls  %-12s  %s",
-			icon, member.Name, statusCol,
+		return fmt.Sprintf("  %s %-*s %s  %s  %d stalls  %-12s  %s",
+			icon, nameWidth, name, statusCol,
 			pidStr,
 			member.StallCount,
 			config.StyleMuted.Render(activity),

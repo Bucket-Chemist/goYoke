@@ -31,7 +31,8 @@ type Schema struct {
 	AgentSubagentMapping AgentSubagentMapping  `json:"agent_subagent_mapping"`
 	BlockedPatterns      BlockedPatternsConfig `json:"blocked_patterns"`
 	DirectImplCheck      DirectImplCheckConfig `json:"direct_impl_check"`
-	MetaRules            MetaRules             `json:"meta_rules"`
+	MetaRules            MetaRules                     `json:"meta_rules"`
+	BashBlockedBinaries  map[string]BashBlockedBinary  `json:"bash_blocked_binaries"`
 }
 
 // TierConfig defines configuration for each routing tier (haiku, sonnet, opus, etc.).
@@ -333,6 +334,12 @@ type DirectImplCheckConfig struct {
 // MetaRules defines meta-enforcement rules.
 type MetaRules struct {
 	DocumentationTheater DocumentationTheater `json:"documentation_theater"`
+}
+
+// BashBlockedBinary defines a binary that must not be invoked directly via Bash.
+type BashBlockedBinary struct {
+	Reason   string `json:"reason"`
+	Redirect string `json:"redirect"`
 }
 
 // DocumentationTheater defines detection of unenforceable imperatives.

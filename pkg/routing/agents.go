@@ -60,6 +60,7 @@ type Agent struct {
 	CostPerInvocation     string          `json:"cost_per_invocation,omitempty"`
 	ParallelSafe          bool            `json:"parallel_safe,omitempty"`
 	SwarmCompatible       bool            `json:"swarm_compatible,omitempty"`
+	Interactive           bool            `json:"interactive,omitempty"`
 	OutputFormat          string          `json:"output_format,omitempty"`
 	OutputFile            string          `json:"output_file,omitempty"`
 	CostCeilingUSD        float64         `json:"cost_ceiling_usd,omitempty"`

@@ -13,16 +13,24 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
+// activityToolStyle renders the tool name badge in activity entries with a
+// subtle background to visually separate it from the target path.
+var activityToolStyle = lipgloss.NewStyle().
+	Background(lipgloss.AdaptiveColor{Light: "7", Dark: "236"}).
+	Padding(0, 1)
+
 // ---------------------------------------------------------------------------
 // Detail Section
 // ---------------------------------------------------------------------------
 
 // DetailSection represents one collapsible section in the agent detail panel.
 type DetailSection struct {
-	Title    string
-	Expanded bool
-	render   func(a *state.Agent, w int) string // renders section content
-	visible  func(a *state.Agent) bool          // returns false to hide section entirely
+	Title         string
+	Expanded      bool
+	render        func(a *state.Agent, w int) string // renders section content (compact)
+	renderFocused func(a *state.Agent, w int) string // renders section content when focused+expanded (optional)
+	titleFunc     func(a *state.Agent) string        // dynamic title override (optional)
+	visible       func(a *state.Agent) bool          // returns false to hide section entirely
 }
 
 // ---------------------------------------------------------------------------
@@ -73,10 +81,12 @@ func (m AgentDetailModel) defaultSections() []DetailSection {
 			visible:  hasPrompt,
 		},
 		{
-			Title:    "Activity",
-			Expanded: true,
-			render:   renderActivity,
-			visible:  isRunningOrHasActivity,
+			Title:         "Activity",
+			Expanded:      true,
+			render:        renderActivity,
+			renderFocused: renderActivityExpanded,
+			titleFunc:     activitySectionTitle,
+			visible:       isRunningOrHasActivity,
 		},
 		{
 			Title:    "Error",
@@ -174,11 +184,15 @@ func (m AgentDetailModel) View() string {
 // ---------------------------------------------------------------------------
 
 // syncViewport rebuilds the full content and sets it on the viewport.
+// If the viewport was already at the bottom before the update, it stays
+// scrolled to the bottom after new content is set (auto-follow).
 func (m *AgentDetailModel) syncViewport() {
 	if m.agent == nil {
 		m.vp.SetContent("")
 		return
 	}
+
+	atBottom := m.vp.AtBottom()
 
 	var sb strings.Builder
 	visIdx := 0
@@ -192,8 +206,13 @@ func (m *AgentDetailModel) syncViewport() {
 		if sec.Expanded {
 			indicator = "▼"
 		}
-		header := fmt.Sprintf("%s %s", indicator, sec.Title)
-		if m.focused && visIdx == m.selectedIdx {
+		title := sec.Title
+		if sec.titleFunc != nil {
+			title = sec.titleFunc(m.agent)
+		}
+		header := fmt.Sprintf("%s %s", indicator, title)
+		isFocusedSection := m.focused && visIdx == m.selectedIdx
+		if isFocusedSection {
 			sb.WriteString(config.StyleHighlight.Render(header))
 		} else {
 			sb.WriteString(lipgloss.NewStyle().Bold(true).Render(header))
@@ -202,7 +221,11 @@ func (m *AgentDetailModel) syncViewport() {
 
 		// Section content (only if expanded).
 		if sec.Expanded {
-			content := m.sections[i].render(m.agent, m.contentWidth())
+			renderFn := m.sections[i].render
+			if isFocusedSection && m.sections[i].renderFocused != nil {
+				renderFn = m.sections[i].renderFocused
+			}
+			content := renderFn(m.agent, m.contentWidth())
 			if content != "" {
 				sb.WriteString(content)
 				sb.WriteByte('\n')
@@ -213,6 +236,9 @@ func (m *AgentDetailModel) syncViewport() {
 	}
 
 	m.vp.SetContent(strings.TrimRight(sb.String(), "\n"))
+	if atBottom {
+		m.vp.GotoBottom()
+	}
 }
 
 // visibleSections returns indices of sections visible for the current agent.
@@ -338,23 +364,12 @@ func renderActivity(a *state.Agent, _ int) string {
 		return "  (idle)"
 	}
 
-	// When we have a rolling buffer, render each entry.
+	// When we have a rolling buffer, render each entry with status icons.
 	if len(a.RecentActivity) > 0 {
 		var sb strings.Builder
-		for i, act := range a.RecentActivity {
-			isLast := i == len(a.RecentActivity)-1
-			label := act.Target
-			if label == "" {
-				label = act.Type
-			}
-			if act.Preview != "" {
-				label += " " + act.Preview
-			}
-			if isLast && a.Status == state.StatusRunning {
-				sb.WriteString(fmt.Sprintf("  ⏳ [%s]\n", label))
-			} else {
-				sb.WriteString(config.StyleMuted.Render(fmt.Sprintf("  ✓ [%s]", label)) + "\n")
-			}
+		for _, act := range a.RecentActivity {
+			sb.WriteString(renderActivityEntry(act))
+			sb.WriteByte('\n')
 		}
 		return strings.TrimRight(sb.String(), "\n")
 	}
@@ -366,6 +381,92 @@ func renderActivity(a *state.Agent, _ int) string {
 		sb.WriteString(fmt.Sprintf(" — %s", a.Activity.Preview))
 	}
 	return sb.String()
+}
+
+// renderActivityExpanded renders the full FullActivityLog when the Activity
+// section is focused and expanded. Most recent entries appear at the bottom.
+// Uses the existing viewport for scrolling — no nested viewport.
+func renderActivityExpanded(a *state.Agent, _ int) string {
+	if len(a.FullActivityLog) == 0 {
+		if a.Status == state.StatusRunning {
+			return config.StyleMuted.Render("  ⏳ Subprocess running...")
+		}
+		return "  (idle)"
+	}
+
+	now := time.Now()
+	var sb strings.Builder
+	for _, act := range a.FullActivityLog {
+		icon := activityIcon(act.Success)
+		toolBadge := act.ToolName
+		if toolBadge == "" {
+			toolBadge = act.Type
+		}
+		target := act.Target
+		ts := ""
+		if !act.Timestamp.IsZero() {
+			ts = "  " + config.StyleMuted.Render(fmtRelativeTime(now, act.Timestamp))
+		}
+		if target != "" {
+			sb.WriteString(fmt.Sprintf("  %s %s %s", icon, activityToolStyle.Render(toolBadge), config.StyleMuted.Render(target)))
+		} else {
+			sb.WriteString(fmt.Sprintf("  %s %s", icon, activityToolStyle.Render(toolBadge)))
+		}
+		sb.WriteString(ts)
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderActivityEntry formats a single AgentActivity for the compact view.
+// Format: icon [ToolName] target
+func renderActivityEntry(act state.AgentActivity) string {
+	icon := activityIcon(act.Success)
+	toolBadge := act.ToolName
+	if toolBadge == "" {
+		toolBadge = act.Type
+	}
+	target := act.Target
+	if target == "" {
+		return fmt.Sprintf("  %s %s", icon, activityToolStyle.Render(toolBadge))
+	}
+	return fmt.Sprintf("  %s %s %s", icon, activityToolStyle.Render(toolBadge), config.StyleMuted.Render(target))
+}
+
+// activityIcon returns the display icon for an activity based on its Success field.
+// nil → ⏳ (pending), true → ✓ (success), false → ✗ (failure).
+func activityIcon(success *bool) string {
+	if success == nil {
+		return "⏳"
+	}
+	if *success {
+		return "✓"
+	}
+	return "✗"
+}
+
+// activitySectionTitle returns a dynamic title for the Activity section,
+// appending the total count when the full log exceeds the compact view size.
+func activitySectionTitle(a *state.Agent) string {
+	if len(a.FullActivityLog) > 5 {
+		return fmt.Sprintf("Activity (%d)", len(a.FullActivityLog))
+	}
+	return "Activity"
+}
+
+// fmtRelativeTime returns a short human-readable relative time string.
+func fmtRelativeTime(now, t time.Time) string {
+	d := now.Sub(t)
+	if d < time.Second {
+		return "just now"
+	}
+	if d < time.Minute {
+		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	}
+	return fmt.Sprintf("%dh ago", int(d.Hours()))
 }
 
 func renderError(a *state.Agent, w int) string {

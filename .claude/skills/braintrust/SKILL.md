@@ -226,15 +226,17 @@ fi
 
 ### Step 4: Launch Team-Run
 
-```bash
-gogent-team-run "$team_dir"
-sleep 2
-background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
-if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
-    echo "[braintrust] ERROR: Team launch failed. Check $team_dir/runner.log"
+```
+result = mcp__gofortress-interactive__team_run({
+    team_dir: "$team_dir",
+    wait_for_start: true,
+    timeout_ms: 10000
+})
+if !result.success:
+    echo "[braintrust] ERROR: ${result.result}"
     rm -f "$session_dir/active-skill.json"
     exit 1
-fi
+background_pid = result.background_pid
 ```
 
 ### Step 5: Remove Skill Guard

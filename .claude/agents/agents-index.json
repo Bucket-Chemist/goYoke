@@ -651,6 +651,84 @@
       }
     },
     {
+      "id": "rust-pro",
+      "parallelization_template": "D",
+      "name": "Rust Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 14000,
+      "thinking_budget_refactor": 18000,
+      "thinking_budget_debug": 24000,
+      "tier": 2,
+      "category": "language",
+      "path": "rust-pro",
+      "triggers": [
+        "implement",
+        "refactor",
+        "optimize",
+        "create struct",
+        "add function",
+        "write test",
+        "rust code",
+        "cargo",
+        "crate",
+        "trait",
+        "lifetime",
+        "borrow"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Bash"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": {
+        "languages": [
+          "Rust"
+        ],
+        "file_patterns": [
+          "Cargo.toml",
+          "*.rs"
+        ]
+      },
+      "spawned_by": [
+        "router",
+        "orchestrator",
+        "impl-manager",
+        "architect"
+      ],
+      "conventions_required": [
+        "rust.md"
+      ],
+      "sharp_edges_count": 17,
+      "description": "Expert Rust development with modern patterns. Auto-activated for Rust projects. Single-binary desktop distribution focus with edition 2024.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {
+          "base": [
+            "rust.md"
+          ],
+          "conditional": []
+        }
+      }
+    },
+    {
       "id": "go-cli",
       "parallelization_template": "D",
       "name": "GO CLI (Cobra)",
@@ -976,7 +1054,8 @@
         "go-pro",
         "python-pro",
         "typescript-pro",
-        "react-pro"
+        "react-pro",
+        "rust-pro"
       ],
       "must_delegate": false,
       "scout_first": true,
@@ -1999,7 +2078,8 @@
         "typescript-pro",
         "react-pro",
         "codebase-search",
-        "code-reviewer"
+        "code-reviewer",
+        "rust-pro"
       ],
       "must_delegate": true,
       "min_delegations": 1,
@@ -2097,7 +2177,8 @@
       "implementation_go_cli": "go-cli",
       "implementation_go_tui": "go-tui",
       "pyside6_detected": "python-ux",
-      "high_context_detected": "gemini-slave"
+      "high_context_detected": "gemini-slave",
+      "implementation_rust": "rust-pro"
     },
     "model_tiers": {
       "haiku": [
@@ -2128,7 +2209,8 @@
         "typescript-pro",
         "react-pro",
         "review-orchestrator",
-        "architect-reviewer"
+        "architect-reviewer",
+        "rust-pro"
       ],
       "opus": [
         "einstein",

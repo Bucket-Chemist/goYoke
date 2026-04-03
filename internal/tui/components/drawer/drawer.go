@@ -43,6 +43,8 @@ const (
 	DrawerOptions DrawerID = "options"
 	// DrawerPlan is the id for the plan-preview drawer.
 	DrawerPlan DrawerID = "plan"
+	// DrawerTeams is the id for the teams health drawer.
+	DrawerTeams DrawerID = "teams"
 )
 
 // DrawerModel is the Bubbletea model for a single drawer pane.
@@ -87,12 +89,13 @@ func (m *DrawerModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 
-	// Inner dimensions: borders take 2 cols wide, header+divider+footer = 3 rows.
+	// Inner dimensions: borders take 2 cols wide and 2 rows tall,
+	// header+divider+footer = 3 rows.  Total overhead = 5 rows.
 	innerW := w - 2
 	if innerW < 1 {
 		innerW = 1
 	}
-	innerH := h - 3 // header row + divider row + footer row
+	innerH := h - 5 // 2 (border top+bottom) + 1 header + 1 divider + 1 footer
 	if innerH < 1 {
 		innerH = 1
 	}
@@ -110,6 +113,27 @@ func (m *DrawerModel) SetContent(content string) {
 	if m.hasContent {
 		m.state = DrawerExpanded
 	}
+}
+
+// RefreshContent updates the drawer content without changing expansion state
+// when the drawer already has content. On first content arrival it auto-expands;
+// when content becomes empty it auto-minimises. Used for live-updating drawers
+// (e.g. teams health) where the content changes every poll tick.
+func (m *DrawerModel) RefreshContent(content string) {
+	if content == "" {
+		if m.hasContent {
+			m.ClearContent()
+		}
+		return
+	}
+	if !m.hasContent {
+		// First content — auto-expand.
+		m.SetContent(content)
+		return
+	}
+	// Update existing content without changing expansion state.
+	m.content = content
+	m.viewport.SetContent(content)
 }
 
 // ClearContent empties the drawer content and auto-minimises it.
@@ -204,13 +228,18 @@ func (m DrawerModel) formatModalContent(message string, options []string, select
 	return sb.String()
 }
 
-// ViewMinimized renders the compact single-row tab: icon + label.
+// ViewMinimized renders a compact bordered row: icon + label.
 func (m DrawerModel) ViewMinimized() string {
 	tab := config.StyleSubtle.Render(m.icon + " " + m.label)
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Padding(0, 1).
-		Render(tab)
+	borderStyle := config.StyleUnfocusedBorder
+	if m.focused {
+		borderStyle = config.StyleFocusedBorder
+	}
+	innerW := m.width - 2
+	if innerW < 1 {
+		innerW = 1
+	}
+	return borderStyle.Width(innerW).Render(tab)
 }
 
 // ViewExpanded renders the full bordered content pane with:

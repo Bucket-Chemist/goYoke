@@ -353,6 +353,15 @@ func main() {
 		}
 	}
 
+	// Expose the MCP config path so spawned Claude subprocesses can load MCP tools.
+	if mcpConfigPath != "" {
+		if err := os.Setenv("GOFORTRESS_MCP_CONFIG", mcpConfigPath); err != nil {
+			if *verbose {
+				log.Printf("[gofortress] warning: could not set GOFORTRESS_MCP_CONFIG: %v", err)
+			}
+		}
+	}
+
 	// -----------------------------------------------------------------------
 	// Phase 4: Create ShutdownManager for sequenced shutdown (TUI-034).
 	//

@@ -52,7 +52,7 @@
 
 ## Multi-Agent Workflows
 
-- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `gogent-team-run`, and spawn agents through the standard team folder/config process.
+- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `mcp__gofortress-interactive__team_run` (direct Bash invocation blocked by gogent-validate), and spawn agents through the standard team folder/config process.
 
 ---
 
@@ -107,7 +107,7 @@ These Go binaries run automatically. You cannot bypass them.
 | Event                 | Binary                  | What It Does                                                                                            |
 | --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------- |
 | **SessionStart**      | `gogent-load-context`   | Detects language, loads conventions, restores handoff, injects git context                              |
-| **PreToolUse (Task)** | `gogent-validate`       | Blocks Task(opus), validates subagent_type, checks delegation ceiling, logs violations                  |
+| **PreToolUse (Task)** | `gogent-validate`       | Blocks Task(opus), validates subagent_type, checks delegation ceiling, blocks direct binary invocations (Bash), logs violations                  |
 | **PostToolUse**       | `gogent-sharp-edge`     | Counts tools, reminds routing (every 10), tracks failures, captures sharp edges (3+), logs ML telemetry |
 | **SubagentStop**      | `gogent-agent-endstate` | Records decision outcomes, logs agent collaborations                                                    |
 | **SessionEnd**        | `gogent-archive`        | Generates handoff, archives metrics, captures learnings                                                 |
@@ -219,6 +219,7 @@ Request arrives
 | Shiny, reactive, module                      | `r-shiny-pro`                     | R Shiny Pro                      |
 | typescript, ts code, type system, generics   | `typescript-pro`                  | TypeScript Pro                   |
 | react, component, hook, useState, ink        | `react-pro`                       | React Pro                        |
+| Rust: implement, cargo, crate, trait, lifetime | `rust-pro`                        | Rust Pro                         |
 | code review, full review, review changes     | `review-orchestrator`             | Review Orchestrator              |
 | Ambiguous scope, synthesize, think through   | `orchestrator`                    | Orchestrator                     |
 | Create plan, break down, dependency analysis | `architect`                       | Architect                        |
@@ -389,6 +390,13 @@ Python agents load conventions based on file context:
 | `python-datasci.md` | Data pipelines, preprocessing | VST transforms, binning, baseline correction, noise estimation, pyOpenMS |
 | `python-ml.md`      | ML/NN implementation          | PyTorch patterns, attention mechanisms, loss functions, training, ONNX   |
 
+### Rust Convention Auto-Loading
+
+| File Pattern               | Conventions Loaded |
+| -------------------------- | ------------------ |
+| `**/src/**/*.rs`           | rust.md            |
+| `**/Cargo.toml`           | rust.md            |
+
 ---
 
 ## Internal Escalation
@@ -416,6 +424,7 @@ When multiple agents match a request, resolution follows this order:
    - `.tsx` files → react-pro
    - `.go` files → go-pro
    - `.R` files → r-pro
+   - `.rs` files → rust-pro
 
 2. **Language-qualified triggers** take precedence over generic
    - "Go implement" → go-pro (not python-pro)

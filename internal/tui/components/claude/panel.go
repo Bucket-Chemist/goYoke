@@ -127,6 +127,10 @@ type ClaudePanelModel struct {
 
 	// slashCmd is the slash-command autocomplete dropdown (TUI-054).
 	slashCmd slashcmd.SlashCmdModel
+
+	// tier tracks the current layout tier so renderMessage can suppress
+	// inline tool blocks when the Activity panel is visible (TUI-L05).
+	tier model.LayoutTier
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -634,6 +638,13 @@ func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea
 			return model.OpenCWDSelectorMsg{}
 		}
 
+	case "/model":
+		// Emit a message for AppModel to handle — it owns ProviderState and
+		// the CLI driver restart flow. The panel stays decoupled.
+		return m, func() tea.Msg {
+			return model.ModelSwitchRequestMsg{ModelID: args}
+		}
+
 	case "/help":
 		helpText := slashcmd.HelpText()
 		m.messages = append(m.messages, DisplayMessage{
@@ -677,68 +688,65 @@ func (m ClaudePanelModel) View() string {
 		return ""
 	}
 
-	inputLine := m.renderInputLine()
-	inputH := lipgloss.Height(inputLine)
+	conv := m.ViewConversation()
+	input := m.ViewInput()
+	composed := lipgloss.JoinVertical(lipgloss.Left, conv, input)
+	return m.ApplyOverlay(composed)
+}
 
-	// Reserve a line for the search bar when it is active.
-	var searchBar string
-	searchBarH := 0
-	if m.search.IsActive() {
-		searchBar = m.search.View()
-		searchBarH = lipgloss.Height(searchBar)
-	}
-
-	// The viewport takes all remaining vertical space.
-	vpH := m.height - inputH - searchBarH
-	if vpH < 1 {
-		vpH = 1
-	}
-
+// ViewConversation returns the scrollable viewport with optional search bar.
+// It includes the streaming indicator ("...") appended to viewport content
+// when a response is being streamed. This is everything above the input line.
+func (m ClaudePanelModel) ViewConversation() string {
 	if m.search.IsActive() {
 		return lipgloss.JoinVertical(lipgloss.Left,
-			searchBar,
+			m.search.View(),
 			m.viewportWithScrollbar(),
-			inputLine,
 		)
 	}
+	return m.viewportWithScrollbar()
+}
 
-	// Base layout: viewport + input line.
-	base := lipgloss.JoinVertical(lipgloss.Left,
-		m.viewportWithScrollbar(),
-		inputLine,
-	)
+// ViewInput returns the input prompt and text input only.
+// It does not include the streaming indicator or the slash command dropdown.
+func (m ClaudePanelModel) ViewInput() string {
+	prompt := inputPromptStyle.Render("› ")
+	return prompt + m.input.View()
+}
 
-	// Overlay the slash-command dropdown above the input line.
-	// The dropdown floats over the viewport content rather than
-	// pushing the input line down (which made it look like the
-	// dropdown appeared below the text entry).
-	if m.slashCmd.IsVisible() {
-		dropdownView := m.slashCmd.View()
-		dropdownH := lipgloss.Height(dropdownView)
-
-		// Split the base into lines and overlay the dropdown on the
-		// lines just above the input line.
-		lines := strings.Split(base, "\n")
-		totalLines := len(lines)
-		// The dropdown replaces lines ending at (totalLines - inputH - 1),
-		// i.e. the bottom of the viewport region.
-		overlayEnd := totalLines - inputH
-		overlayStart := overlayEnd - dropdownH
-		if overlayStart < 0 {
-			overlayStart = 0
-		}
-
-		dropdownLines := strings.Split(dropdownView, "\n")
-		for i, dl := range dropdownLines {
-			idx := overlayStart + i
-			if idx >= 0 && idx < overlayEnd {
-				lines[idx] = dl
-			}
-		}
-		return strings.Join(lines, "\n")
+// ApplyOverlay takes a fully composed panel string (conversation joined with
+// input) and applies the slash command dropdown overlay when it is visible.
+// The dropdown floats over the viewport content just above the input line.
+// When no dropdown is active the composed string is returned unchanged.
+func (m ClaudePanelModel) ApplyOverlay(composed string) string {
+	if !m.slashCmd.IsVisible() {
+		return composed
 	}
 
-	return base
+	dropdownView := m.slashCmd.View()
+	dropdownH := lipgloss.Height(dropdownView)
+	inputH := lipgloss.Height(m.ViewInput())
+
+	// Split the composed string into lines and overlay the dropdown on the
+	// lines just above the input line.
+	lines := strings.Split(composed, "\n")
+	totalLines := len(lines)
+	// The dropdown replaces lines ending at (totalLines - inputH - 1),
+	// i.e. the bottom of the viewport region.
+	overlayEnd := totalLines - inputH
+	overlayStart := overlayEnd - dropdownH
+	if overlayStart < 0 {
+		overlayStart = 0
+	}
+
+	dropdownLines := strings.Split(dropdownView, "\n")
+	for i, dl := range dropdownLines {
+		idx := overlayStart + i
+		if idx >= 0 && idx < overlayEnd {
+			lines[idx] = dl
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // viewportWithScrollbar renders the viewport and, when content overflows,
@@ -841,9 +849,13 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 		}
 	}
 
-	// Collapsed tool blocks.
-	for _, tb := range msg.ToolBlocks {
-		sb.WriteString(renderToolBlock(tb, m.width))
+	// Render tool blocks inline only in compact mode (width < 80).
+	// In standard/wide/ultra tiers the Activity panel is visible and
+	// tool blocks are shown there instead (TUI-L05).
+	if m.tier == model.LayoutCompact {
+		for _, tb := range msg.ToolBlocks {
+			sb.WriteString(renderToolBlock(tb, m.width))
+		}
 	}
 
 	return sb.String()
@@ -993,9 +1005,11 @@ func (m *ClaudePanelModel) SetHistory(h *InputHistory) {
 	m.history = h
 }
 
-// SetTier satisfies the claudePanelWidget interface.  Tier-specific rendering
-// adaptations are reserved for a future ticket; this is a no-op placeholder.
-func (m *ClaudePanelModel) SetTier(_ model.LayoutTier) {}
+// SetTier stores the current layout tier so renderMessage can conditionally
+// render inline tool blocks only in compact mode (TUI-L05).
+func (m *ClaudePanelModel) SetTier(tier model.LayoutTier) {
+	m.tier = tier
+}
 
 // IsStreaming returns true while an assistant response is being streamed.
 func (m ClaudePanelModel) IsStreaming() bool {
@@ -1062,6 +1076,21 @@ func (m *ClaudePanelModel) RestoreMessages(msgs []state.DisplayMessage) {
 	m.streaming = false
 	m.autoScroll = true
 	m.refreshViewport()
+}
+
+// AppendSystemMessage adds a system-role message to the conversation history
+// and scrolls to bottom. Used by AppModel for informational output such as
+// the /model listing.
+func (m *ClaudePanelModel) AppendSystemMessage(text string) {
+	m.messages = append(m.messages, DisplayMessage{
+		Role:      "system",
+		Content:   text,
+		Timestamp: time.Now(),
+	})
+	m.syncViewport()
+	if m.autoScroll {
+		m.vp.GotoBottom()
+	}
 }
 
 // Messages returns a copy of the conversation history. It is intended for

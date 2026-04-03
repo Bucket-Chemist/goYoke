@@ -84,10 +84,22 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	}
 	args = append(args, "--model", model)
 
+	// MCP config: only for interactive agents when the config path is available.
+	mcpConfigPath := os.Getenv("GOFORTRESS_MCP_CONFIG")
+	hasMCP := agent.Interactive && mcpConfigPath != ""
+	if hasMCP {
+		args = append(args, "--mcp-config", mcpConfigPath)
+	}
+
 	// Allowed tools: prefer explicit override, fall back to agent config.
 	tools := input.AllowedTools
 	if len(tools) == 0 {
 		tools = agent.GetAllowedTools()
+	}
+	// Merge MCP tool glob for interactive agents so spawned Claude can call
+	// ask_user, confirm_action, spawn_agent, etc.
+	if hasMCP {
+		tools = append(tools, "mcp__gofortress-interactive__*")
 	}
 	if len(tools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(tools, ","))

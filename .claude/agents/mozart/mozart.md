@@ -364,6 +364,8 @@ After interview confirmation, generate team configuration files from interview o
 | Q4 response | `budget_remaining_usd` | float | `5.0` |
 | Q3 response | `waves[0].members[].name` | string | `"einstein"`, `"staff-architect-critical-review"` ← **REQUIRED: member name must be set** |
 | Q3 response | `waves[0].members[].agent` | string | same as name |
+| (computed) | `waves[0].members[].stdin_file` | string | `"stdin_einstein.json"` ← **REQUIRED: gogent-team-run reads this field, NOT `stdin`** |
+| (computed) | `waves[0].members[].stdout_file` | string | `"stdout_einstein.json"` ← **REQUIRED: gogent-team-run reads this field, NOT `stdout`** |
 | (computed) | `waves[0].outputs_to` | string | `"wave1-synthesis.md"` |
 | Q3 response | `waves[1].members[].name` | string | `"beethoven"` (if full team) |
 
@@ -751,7 +753,7 @@ Write({
 
 ### Step 3: Generate config.json
 
-Write team configuration to `{team_dir}/config.json`. Use the same template as the existing Phase 6A config:
+Write team configuration to `{team_dir}/config.json`. **Read `~/.claude/schemas/teams/braintrust.json` first** — it is the canonical template with all required fields. Use it as the base structure:
 
 - 2 waves: Einstein + Staff-Architect in Wave 1, Beethoven in Wave 2
 - `on_complete_script: "gogent-team-prepare-synthesis"` on Wave 1
