@@ -231,6 +231,73 @@ func TestAssistantMsg_MultipleMessages(t *testing.T) {
 	}
 }
 
+func TestAssistantMsg_MultiTurnStreaming_AppendNotOverwrite(t *testing.T) {
+	// Multi-tool requests produce multiple assistant turns:
+	//   turn 1: stream partial → finalize
+	//   turn 2: stream partial → finalize
+	// The bug was that turn 2's first streaming event found the last message
+	// was role "assistant" and overwrote it instead of appending.
+	m := newPanel()
+	// Turn 1: stream then finalize.
+	m, _ = m.Update(streamingMsg("Turn 1 partial"))
+	m, _ = m.Update(assistantMsg("Turn 1 complete"))
+	// Turn 2: first streaming event — must append, not overwrite.
+	m, _ = m.Update(streamingMsg("Turn 2 partial"))
+	msgs := m.Messages()
+	if len(msgs) != 2 {
+		t.Errorf("expected 2 assistant messages after two turns; got %d", len(msgs))
+	}
+	if len(msgs) >= 1 && msgs[0].Content != "Turn 1 complete" {
+		t.Errorf("turn 1 content overwritten; got %q, want %q", msgs[0].Content, "Turn 1 complete")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MessageID-based replace-vs-append
+// ---------------------------------------------------------------------------
+
+// msgWithID creates an AssistantMsg with a stable MessageID.
+func msgWithID(text, id string, streaming bool) model.AssistantMsg {
+	return model.AssistantMsg{Text: text, Streaming: streaming, MessageID: id}
+}
+
+func TestAssistantMsg_MessageID_SameIDReplaces(t *testing.T) {
+	// Streaming snapshots with the same MessageID must replace, not duplicate.
+	m := newPanel()
+	m, _ = m.Update(msgWithID("partial A", "msg-1", true))
+	m, _ = m.Update(msgWithID("partial A extended", "msg-1", true))
+	m, _ = m.Update(msgWithID("complete A", "msg-1", false))
+	msgs := m.Messages()
+	if len(msgs) != 1 {
+		t.Errorf("same MessageID: expected 1 message, got %d", len(msgs))
+	}
+	if len(msgs) > 0 && msgs[0].Content != "complete A" {
+		t.Errorf("same MessageID: expected %q, got %q", "complete A", msgs[0].Content)
+	}
+}
+
+func TestAssistantMsg_MessageID_DifferentIDAppends(t *testing.T) {
+	// Two consecutive streaming sequences with different MessageIDs must
+	// produce two separate assistant messages, not one overwritten message.
+	m := newPanel()
+	// Turn 1.
+	m, _ = m.Update(msgWithID("Turn 1 partial", "msg-1", true))
+	m, _ = m.Update(msgWithID("Turn 1 complete", "msg-1", false))
+	// Turn 2 — different MessageID.
+	m, _ = m.Update(msgWithID("Turn 2 partial", "msg-2", true))
+	m, _ = m.Update(msgWithID("Turn 2 complete", "msg-2", false))
+	msgs := m.Messages()
+	if len(msgs) != 2 {
+		t.Errorf("different MessageIDs: expected 2 messages, got %d", len(msgs))
+	}
+	if len(msgs) >= 1 && msgs[0].Content != "Turn 1 complete" {
+		t.Errorf("turn 1 content wrong: got %q, want %q", msgs[0].Content, "Turn 1 complete")
+	}
+	if len(msgs) >= 2 && msgs[1].Content != "Turn 2 complete" {
+		t.Errorf("turn 2 content wrong: got %q, want %q", msgs[1].Content, "Turn 2 complete")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // StreamEventMsg
 // ---------------------------------------------------------------------------

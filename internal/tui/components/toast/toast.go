@@ -167,6 +167,15 @@ func (m ToastModel) IsEmpty() bool {
 	return len(m.items) == 0
 }
 
+// Height returns the number of terminal rows the toast block occupies.
+// Returns 0 when there are no active toasts.
+func (m ToastModel) Height() int {
+	if len(m.items) == 0 {
+		return 0
+	}
+	return lipgloss.Height(m.View())
+}
+
 // SetTier satisfies the toastWidget interface.  Tier-specific rendering
 // adaptations are reserved for a future ticket; this is a no-op placeholder.
 func (m *ToastModel) SetTier(_ model.LayoutTier) {}

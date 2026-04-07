@@ -422,6 +422,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
 		return m.handleAgentRegistryMsg(msg)
 
+	case AgentTodoUpdateMsg:
+		return m.handleAgentTodoUpdate(msg)
+
 	case agents.AgentSelectedMsg:
 		return m.handleAgentSelected(msg)
 
@@ -560,7 +563,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward unhandled messages to toast for tick-based expiry.
 	if m.shared != nil && m.shared.toasts != nil {
+		prevToastH := m.shared.toasts.Height()
 		cmd := m.shared.toasts.HandleMsg(msg)
+		if m.shared.toasts.Height() != prevToastH {
+			m.propagateContentSizes()
+		}
 		if cmd != nil {
 			return m, cmd
 		}

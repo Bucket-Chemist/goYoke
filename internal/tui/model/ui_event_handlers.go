@@ -31,6 +31,7 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	// Propagate width to all chrome components.
 	m.banner.SetWidth(msg.Width)
+	m.banner.SetCompact(msg.Width < 80)
 	if m.tabBar != nil {
 		m.tabBar.SetWidth(msg.Width)
 	}
@@ -365,17 +366,22 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if parentID == "" && rootID != "" && rootID != msg.AgentID {
 			parentID = rootID
 		}
+		var ac []state.AcceptanceCriterion
+		for _, text := range msg.AcceptanceCriteria {
+			ac = append(ac, state.AcceptanceCriterion{Text: text})
+		}
 		_ = m.shared.agentRegistry.Register(state.Agent{
-			ID:          msg.AgentID,
-			AgentType:   msg.AgentType,
-			ParentID:    parentID,
-			Model:       msg.Model,
-			Tier:        msg.Tier,
-			Description: msg.Description,
-			Conventions: msg.Conventions,
-			Prompt:      msg.Prompt,
-			Status:      state.StatusRunning,
-			StartedAt:   time.Now(),
+			ID:                 msg.AgentID,
+			AgentType:          msg.AgentType,
+			ParentID:           parentID,
+			Model:              msg.Model,
+			Tier:               msg.Tier,
+			Description:        msg.Description,
+			Conventions:        msg.Conventions,
+			Prompt:             msg.Prompt,
+			AcceptanceCriteria: ac,
+			Status:             state.StatusRunning,
+			StartedAt:          time.Now(),
 		})
 	case AgentUpdatedMsg:
 		_ = m.shared.agentRegistry.Update(msg.AgentID, func(a *state.Agent) {
@@ -400,6 +406,32 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.shared.agentRegistry.InvalidateTreeCache()
 	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 	m.statusLine.AgentCount = m.shared.agentRegistry.Count().Total
+	return m, nil
+}
+
+// handleAgentTodoUpdate handles AgentTodoUpdateMsg: matches the todo items from
+// a subagent's TodoWrite call against its acceptance criteria and refreshes the
+// agent tree and detail panel.
+//
+// This is the sole writer to AgentRegistry.AcceptanceCriteria (M-1 enforcement).
+// The NDJSON goroutine (spawner.go) only sends UDS notifications; it never
+// writes to the registry directly.
+func (m AppModel) handleAgentTodoUpdate(msg AgentTodoUpdateMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.agentRegistry == nil {
+		return m, nil
+	}
+	todos := make([]state.TodoUpdate, len(msg.Todos))
+	for i, t := range msg.Todos {
+		todos[i] = state.TodoUpdate{Content: t.Content, Status: t.Status}
+	}
+	m.shared.agentRegistry.UpdateAcceptanceCriteria(msg.AgentID, todos)
+	m.shared.agentRegistry.InvalidateTreeCache()
+	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+	if id := m.agentTree.SelectedID(); id != "" {
+		if agent := m.shared.agentRegistry.Get(id); agent != nil {
+			m.agentDetail.SetAgent(agent)
+		}
+	}
 	return m, nil
 }
 
@@ -452,6 +484,9 @@ func (m AppModel) handleAgentSelected(msg agents.AgentSelectedMsg) (tea.Model, t
 func (m AppModel) handleToastMsg(msg ToastMsg) (tea.Model, tea.Cmd) {
 	if m.shared != nil && m.shared.toasts != nil {
 		cmd := m.shared.toasts.HandleMsg(msg)
+		// Toast height changed (empty → visible); re-propagate so the Claude
+		// panel viewport shrinks to accommodate the new toast rows.
+		m.propagateContentSizes()
 		return m, cmd
 	}
 	return m, nil

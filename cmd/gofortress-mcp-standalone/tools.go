@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -51,6 +53,10 @@ type SpawnAgentInput struct {
 	MaxBudget float64 `json:"maxBudget,omitempty"`
 	// CallerType self-identifies the spawning agent for validation.
 	CallerType string `json:"caller_type,omitempty"`
+	// AcceptanceCriteria is an optional list of criteria the agent must satisfy.
+	// For Sonnet+ tier agents (tier >= 2) these are appended to the prompt as a
+	// TodoWrite task list.  Haiku agents (tier < 2) ignore this field.
+	AcceptanceCriteria []string `json:"acceptance_criteria,omitempty"`
 	// Background, when true, starts the subprocess and returns immediately
 	// with the agentId. Use get_spawn_result to collect the result later.
 	Background bool `json:"background,omitempty"`
@@ -213,6 +219,25 @@ func handleSpawnAgent(
 		augmented = input.Prompt
 	}
 
+	// 7b. Merge and inject acceptance criteria for Sonnet+ tier agents.
+	// Haiku agents (tier < 2) are skipped — they lack the TodoWrite tool.
+	mergedAC := mergeAcceptanceCriteria(nil, input.AcceptanceCriteria)
+	if len(mergedAC) > 0 && agentTierNumber(agent.Tier) >= 2 {
+		var sb strings.Builder
+		sb.WriteString(augmented)
+		sb.WriteString("\n\n## Acceptance Criteria\n")
+		sb.WriteString("You MUST use the TodoWrite tool to create a task list from these criteria and mark each as completed when done.\n")
+		for _, criterion := range mergedAC {
+			sb.WriteString("- [ ] ")
+			sb.WriteString(criterion)
+			sb.WriteString("\n")
+		}
+		augmented = sb.String()
+		writeInitialACSidecar(agentID, mergedAC)
+	} else {
+		mergedAC = nil
+	}
+
 	// 8. Background mode: launch subprocess in a goroutine and return immediately.
 	if input.Background {
 		bgStore.Register(agentID, agent.ID)
@@ -348,4 +373,84 @@ func handleGetSpawnResult(
 		Status:  status,
 		Result:  result,
 	}, nil
+}
+
+// -----------------------------------------------------------------------------
+// Acceptance criteria helpers
+// -----------------------------------------------------------------------------
+
+// acSidecarEntry mirrors state.AcceptanceCriterion for the standalone sidecar
+// file format. Using a local type avoids importing the TUI internal package.
+type acSidecarEntry struct {
+	Text      string `json:"Text"`
+	Completed bool   `json:"Completed"`
+}
+
+// agentTierNumber converts a routing.Agent.Tier value (any — float64 or string)
+// to a float64 for numeric comparison.  Non-numeric tiers (e.g. "external")
+// return 0.
+func agentTierNumber(tier any) float64 {
+	switch v := tier.(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case int64:
+		return float64(v)
+	}
+	return 0
+}
+
+// mergeAcceptanceCriteria combines defaults and caller-provided criteria,
+// returning a deduplicated list (case-insensitive comparison).  Either argument
+// may be nil.
+func mergeAcceptanceCriteria(defaults, caller []string) []string {
+	seen := make(map[string]struct{}, len(defaults)+len(caller))
+	var merged []string
+	for _, ac := range append(defaults, caller...) {
+		key := strings.ToLower(strings.TrimSpace(ac))
+		if key == "" {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		merged = append(merged, ac)
+	}
+	return merged
+}
+
+// writeInitialACSidecar writes the initial AC state (all Completed=false) to
+// SESSION_DIR/ac/{agentID}.json.  Called immediately after AC injection so
+// downstream tools can observe the criteria before the agent runs.
+func writeInitialACSidecar(agentID string, criteria []string) {
+	sessionDir := os.Getenv("GOGENT_SESSION_DIR")
+	if sessionDir == "" {
+		slog.Warn("writeInitialACSidecar: GOGENT_SESSION_DIR not set, skipping sidecar write",
+			"agentID", agentID)
+		return
+	}
+
+	acDir := filepath.Join(sessionDir, "ac")
+	if err := os.MkdirAll(acDir, 0o755); err != nil {
+		slog.Warn("writeInitialACSidecar: failed to create ac dir", "err", err, "dir", acDir)
+		return
+	}
+
+	entries := make([]acSidecarEntry, len(criteria))
+	for i, c := range criteria {
+		entries[i] = acSidecarEntry{Text: c, Completed: false}
+	}
+
+	data, err := json.Marshal(entries)
+	if err != nil {
+		slog.Warn("writeInitialACSidecar: failed to marshal AC state", "err", err, "agentID", agentID)
+		return
+	}
+
+	sidecarPath := filepath.Join(acDir, agentID+".json")
+	if err := os.WriteFile(sidecarPath, data, 0o644); err != nil {
+		slog.Warn("writeInitialACSidecar: failed to write sidecar", "err", err, "path", sidecarPath)
+	}
 }

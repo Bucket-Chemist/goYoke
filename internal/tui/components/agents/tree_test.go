@@ -394,6 +394,88 @@ func TestView_MultipleRows(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// AC progress display
+// ---------------------------------------------------------------------------
+
+func TestView_ACProgress_Incomplete(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "root task", state.StatusRunning), 0, true)
+	node.Agent.AcceptanceCriteria = []state.AcceptanceCriterion{
+		{Text: "ac1", Completed: true},
+		{Text: "ac2", Completed: true},
+		{Text: "ac3", Completed: false},
+		{Text: "ac4", Completed: false},
+	}
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(120, 20)
+	view := m.View()
+
+	if !strings.Contains(view, "2/4 AC") {
+		t.Errorf("View() with 2/4 complete AC should contain '2/4 AC'; got:\n%s", view)
+	}
+}
+
+func TestView_ACProgress_Complete(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "root task", state.StatusRunning), 0, true)
+	node.Agent.AcceptanceCriteria = []state.AcceptanceCriterion{
+		{Text: "ac1", Completed: true},
+		{Text: "ac2", Completed: true},
+		{Text: "ac3", Completed: true},
+		{Text: "ac4", Completed: true},
+	}
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(120, 20)
+	view := m.View()
+
+	if !strings.Contains(view, "4/4 AC") {
+		t.Errorf("View() with 4/4 complete AC should contain '4/4 AC'; got:\n%s", view)
+	}
+}
+
+func TestView_NoAC(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "root task", state.StatusRunning), 0, true)
+	// AcceptanceCriteria is nil by default — no AC text should appear.
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(120, 20)
+	view := m.View()
+
+	if strings.Contains(view, "AC") {
+		t.Errorf("View() without AC should not contain 'AC'; got:\n%s", view)
+	}
+}
+
+func TestView_ACBeforeActivity(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "root task", state.StatusRunning), 0, true)
+	node.Agent.AcceptanceCriteria = []state.AcceptanceCriterion{
+		{Text: "ac1", Completed: true},
+		{Text: "ac2", Completed: false},
+	}
+	node.Agent.Activity = &state.AgentActivity{
+		Type:    "tool_use",
+		Target:  "Read",
+		Preview: "Reading file.go",
+	}
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(120, 20)
+	view := m.View()
+
+	acPos := strings.Index(view, "AC")
+	actPos := strings.Index(view, "Reading file.go")
+	if acPos == -1 {
+		t.Fatalf("View() missing AC progress; got:\n%s", view)
+	}
+	if actPos == -1 {
+		t.Fatalf("View() missing activity preview; got:\n%s", view)
+	}
+	if acPos > actPos {
+		t.Errorf("AC progress (pos %d) should appear before activity preview (pos %d); got:\n%s", acPos, actPos, view)
+	}
+}
+
 func TestAlternativeKeys(t *testing.T) {
 	m := agents.NewAgentTreeModel()
 	m.SetNodes(threeNodeTree())

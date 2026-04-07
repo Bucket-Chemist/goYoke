@@ -305,6 +305,26 @@ func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) str
 	label := fmt.Sprintf("%s: %s", node.Agent.AgentType, node.Agent.Description)
 
 	// ------------------------------------------------------------------
+	// AC progress (rendered before activity preview)
+	// ------------------------------------------------------------------
+	var acStr string
+	if len(node.Agent.AcceptanceCriteria) > 0 {
+		done := 0
+		for _, ac := range node.Agent.AcceptanceCriteria {
+			if ac.Completed {
+				done++
+			}
+		}
+		total := len(node.Agent.AcceptanceCriteria)
+		progress := fmt.Sprintf(" %d/%d AC", done, total)
+		if done == total {
+			acStr = config.StyleSuccess.Render(progress)
+		} else {
+			acStr = config.StyleWarning.Render(progress)
+		}
+	}
+
+	// ------------------------------------------------------------------
 	// Activity preview (dimmed, appended in brackets)
 	// ------------------------------------------------------------------
 	var activityStr string
@@ -317,19 +337,24 @@ func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) str
 	// Assemble full row, truncating to fit width
 	// ------------------------------------------------------------------
 	prefixStr := prefix.String()
-	// Calculate available width for label (rough: subtract prefix, icon, spaces)
+	// Calculate available width for label (rough: subtract prefix, icon, spaces, AC text)
 	overhead := len(prefixStr) + 2 // icon + one space
 	available := m.width - overhead
 	if available < 1 {
 		available = 1
 	}
-	label = util.Truncate(label, available-1)
+	acWidth := lipgloss.Width(acStr)
+	labelAvailable := available - 1 - acWidth
+	if labelAvailable < 1 {
+		labelAvailable = 1
+	}
+	label = util.Truncate(label, labelAvailable)
 
-	row := prefixStr + iconStr + " " + label + activityStr
+	row := prefixStr + iconStr + " " + label + acStr + activityStr
 
 	if selected {
 		// Highlight the entire row.
-		return config.StyleHighlight.Render(prefixStr+icon+" "+label) + activityStr
+		return config.StyleHighlight.Render(prefixStr+icon+" "+label) + acStr + activityStr
 	}
 	return row
 }

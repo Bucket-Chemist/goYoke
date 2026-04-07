@@ -30,9 +30,9 @@ Usage: /team-result <team-name>
 ### 2. Discover Session Directory
 
 1. Check environment variable `GOGENT_SESSION_DIR`
-2. If unset, read `.claude/current-session` marker file
-3. Fallback: `.claude/sessions/$(date +%Y%m%d-%H%M%S)`
-4. Team directory path: `{session_dir}/teams/{team_name}/`
+2. If unset, read `{project_root}/.gogent/current-session` marker file
+3. Fallback: `.gogent/sessions/$(date +%Y%m%d-%H%M%S)`
+4. Team directory path: `{gogent_session_dir}/teams/{team_name}/`
 
 If no session found:
 ```

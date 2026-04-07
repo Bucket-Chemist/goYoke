@@ -140,6 +140,10 @@ func (m AppModel) computeLayout() layoutDims {
 	if m.shared != nil && m.shared.taskBoard != nil {
 		taskBoardH = m.shared.taskBoard.Height()
 	}
+	toastH := 0
+	if m.shared != nil && m.shared.toasts != nil {
+		toastH = m.shared.toasts.Height()
+	}
 	hintH := 0
 	if m.shared != nil && m.shared.hintBar != nil && m.shared.hintBar.IsVisible() {
 		hintH = hintBarHeight
@@ -152,7 +156,7 @@ func (m AppModel) computeLayout() layoutDims {
 		// crumbs on startup ensure the row is always present.
 		bcH = breadcrumbHeight
 	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH - bcH - borderFrame
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - toastH - hintH - bcH - borderFrame
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}
@@ -321,7 +325,10 @@ func (m AppModel) renderLayout() string {
 
 	mainArea := m.renderMain(dims)
 
-	parts := []string{bannerView, tabBarView}
+	parts := []string{bannerView}
+	if tabBarView != "" {
+		parts = append(parts, tabBarView)
+	}
 
 	// Insert provider tab bar between the tab bar and main content area.
 	if m.shared != nil && m.shared.providerTabBar != nil && m.shared.providerTabBar.IsVisible() {

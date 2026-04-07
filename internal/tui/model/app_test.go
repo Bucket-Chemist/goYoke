@@ -71,9 +71,10 @@ func (m *mockToast) HandleMsg(msg tea.Msg) tea.Cmd {
 	m.handleMsgCalled = true
 	return nil
 }
-func (m *mockToast) View() string      { return m.viewOutput }
-func (m *mockToast) SetSize(w, h int)  { m.width = w; m.height = h }
-func (m *mockToast) IsEmpty() bool     { return m.empty }
+func (m *mockToast) View() string         { return m.viewOutput }
+func (m *mockToast) SetSize(w, h int)     { m.width = w; m.height = h }
+func (m *mockToast) IsEmpty() bool        { return m.empty }
+func (m *mockToast) Height() int          { return 0 }
 func (m *mockToast) SetTier(_ LayoutTier) {}
 
 // ---------------------------------------------------------------------------

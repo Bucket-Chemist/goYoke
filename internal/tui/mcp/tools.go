@@ -305,14 +305,18 @@ type SpawnAgentInput struct {
 	Prompt string `json:"prompt" jsonschema:"Task prompt for the agent"`
 	// Model overrides the agent's default model.
 	Model string `json:"model,omitempty" jsonschema:"Optional model override"`
-	// Timeout is the deadline in milliseconds (default: 300000).
-	Timeout int `json:"timeout,omitempty" jsonschema:"Timeout in ms (default 300000)"`
+	// Timeout is the deadline in milliseconds (default: 600000).
+	Timeout int `json:"timeout,omitempty" jsonschema:"Timeout in ms (default 600000)"`
 	// AllowedTools overrides the agent's cli_flags.allowed_tools list.
 	AllowedTools []string `json:"allowedTools,omitempty" jsonschema:"Tool allowlist override"`
 	// MaxBudget is a soft cost ceiling in USD.
 	MaxBudget float64 `json:"maxBudget,omitempty" jsonschema:"Soft cost ceiling in USD"`
 	// CallerType self-identifies the spawning agent for validation.
 	CallerType string `json:"caller_type,omitempty" jsonschema:"Spawning agent ID for validation"`
+	// AcceptanceCriteria is an optional list of criteria the agent must satisfy.
+	// For Sonnet+ tier agents these are appended to the prompt as a TodoWrite
+	// task list.  Haiku agents (<tier 2) ignore this field.
+	AcceptanceCriteria []string `json:"acceptance_criteria,omitempty" jsonschema:"Acceptance criteria to inject into prompt"`
 }
 
 // SpawnAgentOutput is the response from spawn_agent.
@@ -632,6 +636,25 @@ func handleSpawnAgent(
 		augmented = input.Prompt
 	}
 
+	// 6b. Merge and inject acceptance criteria for Sonnet+ tier agents.
+	// Haiku agents (tier < 2) are skipped — they lack the TodoWrite tool.
+	mergedAC := mergeAcceptanceCriteria(nil, input.AcceptanceCriteria)
+	if len(mergedAC) > 0 && agentTierNumber(agent.Tier) >= 2 {
+		var sb strings.Builder
+		sb.WriteString(augmented)
+		sb.WriteString("\n\n## Acceptance Criteria\n")
+		sb.WriteString("You MUST use the TodoWrite tool to create a task list from these criteria and mark each as completed when done.\n")
+		for _, criterion := range mergedAC {
+			sb.WriteString("- [ ] ")
+			sb.WriteString(criterion)
+			sb.WriteString("\n")
+		}
+		augmented = sb.String()
+	} else {
+		// Tier < 2 or no AC — clear merged list so it is not sent to TUI.
+		mergedAC = nil
+	}
+
 	// 7. Notify the TUI that a new agent has been registered.
 	promptPreview := augmented
 	if len(promptPreview) > 2000 {
@@ -643,14 +666,15 @@ func handleSpawnAgent(
 		modelStr = agent.Model
 	}
 	uds.notify(TypeAgentRegister, AgentRegisterPayload{
-		AgentID:     agentID,
-		AgentType:   agent.ID,
-		ParentID:    parentType,
-		Model:       modelStr,
-		Tier:        tierStr,
-		Description: input.Description,
-		Conventions: agent.ConventionsRequired,
-		Prompt:      promptPreview,
+		AgentID:            agentID,
+		AgentType:          agent.ID,
+		ParentID:           parentType,
+		Model:              modelStr,
+		Tier:               tierStr,
+		Description:        input.Description,
+		Conventions:        agent.ConventionsRequired,
+		Prompt:             promptPreview,
+		AcceptanceCriteria: mergedAC,
 	})
 
 	// 8. Notify the TUI that the agent is queued (will become "running"
@@ -744,6 +768,41 @@ func handleSpawnAgent(
 	}, nil
 }
 
+// agentTierNumber converts a routing.Agent.Tier value (any — float64 or string)
+// to a float64 for numeric comparison.  Non-numeric tiers (e.g. "external")
+// return 0.
+func agentTierNumber(tier any) float64 {
+	switch v := tier.(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case int64:
+		return float64(v)
+	}
+	return 0
+}
+
+// mergeAcceptanceCriteria combines defaults and caller-provided criteria,
+// returning a deduplicated list (case-insensitive comparison).  Either argument
+// may be nil.
+func mergeAcceptanceCriteria(defaults, caller []string) []string {
+	seen := make(map[string]struct{}, len(defaults)+len(caller))
+	var merged []string
+	for _, ac := range append(defaults, caller...) {
+		key := strings.ToLower(strings.TrimSpace(ac))
+		if key == "" {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		merged = append(merged, ac)
+	}
+	return merged
+}
+
 // GetAgentResultInput is the input for the get_agent_result tool.
 type GetAgentResultInput struct {
 	// AgentID is the ID returned by spawn_agent.
@@ -751,8 +810,8 @@ type GetAgentResultInput struct {
 	// Wait blocks until the agent completes or timeout is reached.
 	// If false, returns immediately with current status.
 	Wait bool `json:"wait,omitempty" jsonschema:"Block until agent completes (default: false)"`
-	// TimeoutMs is the max time to wait when Wait=true (default: 300000 = 5min).
-	TimeoutMs int `json:"timeout_ms,omitempty" jsonschema:"Max wait time in ms (default 300000)"`
+	// TimeoutMs is the max time to wait when Wait=true (default: 600000 = 10min).
+	TimeoutMs int `json:"timeout_ms,omitempty" jsonschema:"Max wait time in ms (default 600000)"`
 }
 
 // GetAgentResultOutput is the response from get_agent_result.
@@ -805,7 +864,7 @@ func handleGetAgentResult(
 	// Block until done or timeout.
 	timeoutMs := input.TimeoutMs
 	if timeoutMs <= 0 {
-		timeoutMs = 300_000 // 5 minutes default
+		timeoutMs = 600_000 // 10 minutes default
 	}
 
 	doneCh := store.DoneChan(input.AgentID)
@@ -912,10 +971,18 @@ func handleTeamRun(
 		}, nil
 	}
 
-	// 3. Build the command.  Use CommandContext so the process inherits any
-	//    deadline from the caller's context, but we detach the process group
-	//    so TUI shutdown does not kill the team run mid-flight.
-	cmd := exec.CommandContext(ctx, binary, input.TeamDir) //nolint:gosec // binary path from LookPath, team_dir validated
+	// 3. Build the command.  Use exec.Command (NOT CommandContext) because
+	//    gogent-team-run is a long-lived daemon that must outlive this MCP call.
+	//    exec.CommandContext would send SIGKILL when the handler's ctx is cancelled
+	//    (which happens as soon as handleTeamRun returns), killing the runner
+	//    mid-flight even though Setsid:true detaches it from the terminal.
+	//    The daemon manages its own lifecycle via context + signal handling.
+	cmd := exec.Command(binary, input.TeamDir) //nolint:gosec // binary path from LookPath, team_dir validated
+	// Explicitly inherit environment so GOFORTRESS_SOCKET reaches the daemon
+	// for UDS bridge agent notifications. When cmd.Env is nil Go inherits
+	// os.Environ() implicitly, but making this explicit prevents silent
+	// breakage if Env is set to a filtered list in the future.
+	cmd.Env = os.Environ()
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true, // Detach: create new process group so signals don't cascade.
 	}

@@ -159,6 +159,7 @@ type TeamRunner struct {
 	writeMu    sync.Mutex    // Serializes config writes (acquire FIRST when both locks needed)
 
 	spawner    Spawner              // Injected spawn implementation
+	uds        *TeamRunUDSClient    // UDS client for TUI notifications (noop when nil)
 	childPIDs  map[int]struct{}     // Track spawned child PIDs
 	childrenMu sync.Mutex           // Protect childPIDs map
 }

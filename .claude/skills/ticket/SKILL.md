@@ -269,8 +269,8 @@ if [[ "$use_team" == "true" ]] && [[ -f "$plan_file" ]]; then
     echo "[ticket] Team-run dispatch: implementation-plan.json found"
 
     # Determine team directory
-    session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-    session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
+    gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
+    gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
     team_dir="$session_dir/teams/$(date +%s).implementation"
 
     # Generate config + stdin files

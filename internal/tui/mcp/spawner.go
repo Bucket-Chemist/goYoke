@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,11 +23,12 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 const (
-	defaultTimeoutMS = 300_000          // 5 minutes
+	defaultTimeoutMS = 600_000          // 10 minutes
 	sigkillGraceMS   = 5_000            // 5s between SIGTERM and SIGKILL
 	maxBufferBytes   = 10 * 1024 * 1024 // 10MB stdout buffer limit
 	maxNestingDepth  = 10
@@ -208,6 +210,11 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
+		// acState tracks the goroutine-local AC state updated on each TodoWrite.
+		// It starts empty and is populated as the agent calls TodoWrite. The TUI
+		// Update() handler (task-005) is the sole registry writer; this goroutine
+		// only sends UDS notifications and writes the AC sidecar file (M-1, M-3).
+		var acState []state.AcceptanceCriterion
 		scanner := bufio.NewScanner(stdoutPipe)
 		scanner.Buffer(make([]byte, 0, 512*1024), maxBufferBytes)
 		for scanner.Scan() {
@@ -238,6 +245,19 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 								Target:  act.Target,
 								Preview: act.Preview,
 							})
+							// Detect TodoWrite and forward full todo state to TUI.
+							// Also write the AC sidecar file from this goroutine to
+							// avoid a race with the endstate hook (M-3).
+							if block.Name == "TodoWrite" {
+								todos := parseTodoWriteInput(block.Input)
+								if len(todos) > 0 {
+									uds.notify(TypeAgentTodoUpdate, AgentTodoUpdatePayload{
+										AgentID: agentID,
+										Todos:   todos,
+									})
+									acState = writeACSidecar(agentID, todos, acState)
+								}
+							}
 						}
 					}
 				}
@@ -305,4 +325,71 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	}
 
 	return result, nil
+}
+
+// parseTodoWriteInput parses the JSON input of a TodoWrite tool_use block and
+// returns the list of todo items. Returns nil for empty or malformed input
+// without panicking (M-2).
+func parseTodoWriteInput(input json.RawMessage) []TodoItem {
+	if len(input) == 0 {
+		return nil
+	}
+	var payload struct {
+		Todos []struct {
+			Content string `json:"content"`
+			Status  string `json:"status"`
+		} `json:"todos"`
+	}
+	if err := json.Unmarshal(input, &payload); err != nil {
+		slog.Warn("parseTodoWriteInput: malformed input", "err", err)
+		return nil
+	}
+	if len(payload.Todos) == 0 {
+		return nil
+	}
+	items := make([]TodoItem, len(payload.Todos))
+	for i, t := range payload.Todos {
+		items[i] = TodoItem{Content: t.Content, Status: t.Status}
+	}
+	return items
+}
+
+// writeACSidecar matches todos against the current AC state using
+// state.MatchTodosToAC, writes the updated state to
+// SESSION_DIR/ac/{agentID}.json, and returns the updated AC slice.
+//
+// Called from the NDJSON scanner goroutine — before wg.Wait() and before
+// the endstate hook fires — which eliminates the race condition (M-3).
+func writeACSidecar(agentID string, todos []TodoItem, acState []state.AcceptanceCriterion) []state.AcceptanceCriterion {
+	updates := make([]state.TodoUpdate, len(todos))
+	for i, t := range todos {
+		updates[i] = state.TodoUpdate{Content: t.Content, Status: t.Status}
+	}
+	updated := state.MatchTodosToAC(acState, updates)
+
+	sessionDir := os.Getenv("GOGENT_SESSION_DIR")
+	if sessionDir == "" {
+		slog.Warn("writeACSidecar: GOGENT_SESSION_DIR not set, skipping sidecar write",
+			"agentID", agentID)
+		return updated
+	}
+
+	acDir := filepath.Join(sessionDir, "ac")
+	if err := os.MkdirAll(acDir, 0o755); err != nil {
+		slog.Warn("writeACSidecar: failed to create ac dir", "err", err, "dir", acDir)
+		return updated
+	}
+
+	data, err := json.Marshal(updated)
+	if err != nil {
+		slog.Warn("writeACSidecar: failed to marshal AC state", "err", err, "agentID", agentID)
+		return updated
+	}
+
+	sidecarPath := filepath.Join(acDir, agentID+".json")
+	if err := os.WriteFile(sidecarPath, data, 0o644); err != nil {
+		slog.Warn("writeACSidecar: failed to write sidecar", "err", err, "path", sidecarPath)
+	}
+
+	return updated
 }

@@ -50,6 +50,10 @@ const (
 	// TypePermGateRequest asks the TUI to display a permission gate modal
 	// for a tool invocation and return the user's decision.
 	TypePermGateRequest = "permission_gate_request"
+
+	// TypeAgentTodoUpdate reports a TodoWrite update from a subagent, used to
+	// match todo items against the agent's acceptance criteria.
+	TypeAgentTodoUpdate = "agent_todo_update"
 )
 
 // Response type constants — sent from TUI back to MCP server.
@@ -96,6 +100,25 @@ type AgentRegisterPayload struct {
 	Conventions []string `json:"conventions,omitempty"`
 	// Prompt is the augmented prompt sent to the agent (truncated to 2000 chars).
 	Prompt string `json:"prompt,omitempty"`
+	// AcceptanceCriteria lists the criteria the agent must satisfy, injected
+	// into the prompt for Sonnet+ tier agents.
+	AcceptanceCriteria []string `json:"acceptanceCriteria,omitempty"`
+}
+
+// TodoItem is a single item from an agent's TodoWrite call.
+type TodoItem struct {
+	// Content is the text of the todo item.
+	Content string `json:"content"`
+	// Status is the completion state (e.g. "pending", "in_progress", "completed").
+	Status string `json:"status"`
+}
+
+// AgentTodoUpdatePayload is the payload for a TypeAgentTodoUpdate message.
+type AgentTodoUpdatePayload struct {
+	// AgentID identifies the agent whose todos changed.
+	AgentID string `json:"agentId"`
+	// Todos is the updated list of todo items from a TodoWrite call.
+	Todos []TodoItem `json:"todos"`
 }
 
 // AgentUpdatePayload is the payload for a TypeAgentUpdate message.

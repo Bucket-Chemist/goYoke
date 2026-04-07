@@ -374,7 +374,12 @@
             }
           ]
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "python-ux",
@@ -443,7 +448,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "r-pro",
@@ -508,7 +518,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "r-shiny-pro",
@@ -580,7 +595,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "go-pro",
@@ -648,7 +668,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "rust-pro",
@@ -726,7 +751,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "go-cli",
@@ -796,7 +826,12 @@
             }
           ]
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "go-tui",
@@ -865,7 +900,12 @@
             }
           ]
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "go-api",
@@ -929,7 +969,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "go-concurrent",
@@ -994,7 +1039,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "orchestrator",
@@ -1066,7 +1116,12 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "architect",
@@ -1716,7 +1771,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "react-pro",
@@ -1784,7 +1844,12 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "backend-reviewer",
@@ -1831,7 +1896,12 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "frontend-reviewer",
@@ -1876,7 +1946,12 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "standards-reviewer",
@@ -1917,7 +1992,12 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "architect-reviewer",
@@ -1964,7 +2044,12 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "review-orchestrator",
@@ -2021,7 +2106,12 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     },
     {
       "id": "impl-manager",
@@ -2099,7 +2189,12 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ]
     }
   ],
   "routing_rules": {

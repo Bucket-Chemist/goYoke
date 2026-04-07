@@ -103,6 +103,22 @@ type AgentActivity struct {
 }
 
 // ---------------------------------------------------------------------------
+// AcceptanceCriterion / TodoUpdate
+// ---------------------------------------------------------------------------
+
+// AcceptanceCriterion tracks a single acceptance criterion and its completion status.
+type AcceptanceCriterion struct {
+	Text      string
+	Completed bool
+}
+
+// TodoUpdate represents a todo item from an agent's TodoWrite call.
+type TodoUpdate struct {
+	Content string
+	Status  string
+}
+
+// ---------------------------------------------------------------------------
 // Agent
 // ---------------------------------------------------------------------------
 
@@ -150,6 +166,9 @@ type Agent struct {
 	Conventions []string
 	// Prompt is the augmented prompt sent to the agent (may be truncated).
 	Prompt string
+	// AcceptanceCriteria holds the list of acceptance criteria for this agent
+	// invocation and tracks their completion state.
+	AcceptanceCriteria []AcceptanceCriterion
 }
 
 // dedupKey returns the deduplication key for this agent: agentType + ":" + description.
@@ -180,6 +199,10 @@ func (a *Agent) copyOf() Agent {
 	if a.FullActivityLog != nil {
 		cp.FullActivityLog = make([]AgentActivity, len(a.FullActivityLog))
 		copy(cp.FullActivityLog, a.FullActivityLog)
+	}
+	if a.AcceptanceCriteria != nil {
+		cp.AcceptanceCriteria = make([]AcceptanceCriterion, len(a.AcceptanceCriteria))
+		copy(cp.AcceptanceCriteria, a.AcceptanceCriteria)
 	}
 	return cp
 }
@@ -421,6 +444,21 @@ func (r *AgentRegistry) UpdateActivityResult(agentID, toolID string, success boo
 			break
 		}
 	}
+}
+
+// UpdateAcceptanceCriteria matches todos to the acceptance criteria of the
+// agent identified by agentID and updates their completion state. It is a
+// no-op when the agent does not exist or has no acceptance criteria.
+func (r *AgentRegistry) UpdateAcceptanceCriteria(agentID string, todos []TodoUpdate) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[agentID]
+	if !ok {
+		return
+	}
+
+	a.AcceptanceCriteria = MatchTodosToAC(a.AcceptanceCriteria, todos)
 }
 
 // Remove deletes the agent identified by id from the registry and removes its

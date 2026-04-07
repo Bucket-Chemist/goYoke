@@ -147,6 +147,9 @@ type toastWidget interface {
 	View() string
 	SetSize(width, height int)
 	IsEmpty() bool
+	// Height returns the number of terminal rows the toast block occupies.
+	// Returns 0 when there are no active toasts.
+	Height() int
 	// SetTier notifies the component of the current responsive layout tier.
 	SetTier(tier LayoutTier)
 }

@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	defaultTimeoutMS = 300_000          // 5 minutes
+	defaultTimeoutMS = 600_000          // 10 minutes
 	sigkillGraceMS   = 5_000            // 5s between SIGTERM and SIGKILL
 	maxBufferBytes   = 10 * 1024 * 1024 // 10MB stdout buffer limit
 	maxNestingDepth  = 10

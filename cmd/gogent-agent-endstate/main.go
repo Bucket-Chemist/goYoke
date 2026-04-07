@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
@@ -80,7 +83,52 @@ func processEvent(event *routing.SubagentStopEvent) (*workflow.EndstateResponse,
 		// Don't exit - logging failure is non-fatal
 	}
 
+	// AC check — entirely defensive, must never crash the hook.
+	// TODO: AC sidecar cleanup (removing SESSION_DIR/ac/{agentID}.json) should happen
+	// in gogent-archive (SessionEnd hook) after all endstate hooks have run.
+	checkAcceptanceCriteria(metadata.AgentID)
+
 	return response, nil
+}
+
+// checkAcceptanceCriteria reads the AC sidecar written by the NDJSON goroutine
+// (task-004) at SESSION_DIR/ac/{agentID}.json and warns on unmet criteria.
+// Entirely defensive: file-not-found and parse errors are logged but never fatal.
+func checkAcceptanceCriteria(agentID string) {
+	sessionDir := routing.GetSessionDir()
+	if sessionDir == "" || agentID == "" {
+		slog.Debug("AC check skipped: no session dir or agent ID", "agentID", agentID)
+		return
+	}
+
+	acPath := filepath.Join(sessionDir, "ac", agentID+".json")
+	acData, err := os.ReadFile(acPath)
+	if err != nil {
+		// No sidecar = no AC = skip (backward compatible)
+		slog.Debug("no AC sidecar", "path", acPath, "err", err)
+		return
+	}
+
+	var criteria []struct {
+		Text      string `json:"text"`
+		Completed bool   `json:"completed"`
+	}
+	if jsonErr := json.Unmarshal(acData, &criteria); jsonErr != nil {
+		slog.Warn("malformed AC sidecar", "path", acPath, "err", jsonErr)
+		// Continue without AC check — do NOT panic
+		return
+	}
+
+	incomplete := 0
+	for _, c := range criteria {
+		if !c.Completed {
+			incomplete++
+		}
+	}
+	if incomplete > 0 {
+		fmt.Fprintf(os.Stderr, "[agent-endstate] WARN: %d/%d acceptance criteria unmet for %s\n",
+			incomplete, len(criteria), agentID)
+	}
 }
 
 // logCollaboration records agent delegation patterns for ML analysis.

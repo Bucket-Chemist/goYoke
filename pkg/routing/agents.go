@@ -65,9 +65,10 @@ type Agent struct {
 	OutputFile            string          `json:"output_file,omitempty"`
 	CostCeilingUSD        float64         `json:"cost_ceiling_usd,omitempty"`
 	FallbackFor           string          `json:"fallback_for,omitempty"`
-	SpawnedBy             []string             `json:"spawned_by,omitempty"`
-	CanSpawn              []string             `json:"can_spawn,omitempty"`
-	ContextRequirements   *ContextRequirements `json:"context_requirements,omitempty"`
+	SpawnedBy                  []string             `json:"spawned_by,omitempty"`
+	CanSpawn                   []string             `json:"can_spawn,omitempty"`
+	ContextRequirements        *ContextRequirements `json:"context_requirements,omitempty"`
+	DefaultAcceptanceCriteria  []string             `json:"default_acceptance_criteria,omitempty"`
 }
 
 // AutoActivate defines conditions for agent auto-activation.
@@ -508,4 +509,20 @@ func (ag *Agent) GetAllowedTools() []string {
 		return ag.CliFlags.AllowedTools
 	}
 	return []string{"Read", "Glob", "Grep"}
+}
+
+// TierNumber returns the numeric tier value for an agent tier field.
+// Handles float64 (JSON default), int, string ("external" → 0), and nil → 0.
+func TierNumber(tier any) float64 {
+	switch v := tier.(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case string:
+		// Only "external" is a valid string tier; treat as 0.
+		return 0
+	default:
+		return 0
+	}
 }

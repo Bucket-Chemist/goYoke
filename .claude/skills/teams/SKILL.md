@@ -23,9 +23,9 @@ Follow these steps to generate the team listing:
 ### Step 1: Discover Session Directory
 
 1. Check environment variable `GOGENT_SESSION_DIR` first
-2. If unset, read `.claude/current-session` marker file
-3. If neither exists, fallback to `.claude/sessions/$(date +%Y%m%d-%H%M%S)`
-4. Team directories are located at: `{session_dir}/teams/*/config.json`
+2. If unset, read `{project_root}/.gogent/current-session` marker file
+3. If neither exists, fallback to `{project_root}/.gogent/sessions/unknown`
+4. Team directories are located at: `{gogent_session_dir}/teams/*/config.json`
 
 If no session directory found:
 ```
@@ -41,7 +41,7 @@ No teams found in current session.
 
 Use Bash to enumerate team directories:
 ```bash
-find $SESSION_DIR/teams -mindepth 1 -maxdepth 1 -type d -name '*.*'
+find $GOGENT_SESSION_DIR/teams -mindepth 1 -maxdepth 1 -type d -name '*.*'
 ```
 
 Expected format: `{timestamp}.{name}/config.json`

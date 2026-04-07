@@ -130,6 +130,7 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 				cmd := m.shared.claudePanel.HandleMsg(AssistantMsg{
 					Text:      block.Text,
 					Streaming: streaming,
+					MessageID: msg.Message.ID,
 				})
 				if cmd != nil {
 					cmds = append(cmds, cmd)

@@ -89,6 +89,12 @@ func (m AgentDetailModel) defaultSections() []DetailSection {
 			visible:       isRunningOrHasActivity,
 		},
 		{
+			Title:    "Acceptance Criteria",
+			Expanded: true,
+			render:   renderAcceptanceCriteria,
+			visible:  hasAcceptanceCriteria,
+		},
+		{
 			Title:    "Error",
 			Expanded: true, // errors always start expanded for immediate visibility
 			render:   renderError,
@@ -292,6 +298,10 @@ func hasError(a *state.Agent) bool {
 	return a.Status == state.StatusError && a.ErrorOutput != ""
 }
 
+func hasAcceptanceCriteria(a *state.Agent) bool {
+	return len(a.AcceptanceCriteria) > 0
+}
+
 // ---------------------------------------------------------------------------
 // Section renderers
 // ---------------------------------------------------------------------------
@@ -467,6 +477,34 @@ func fmtRelativeTime(now, t time.Time) string {
 		return fmt.Sprintf("%dm ago", int(d.Minutes()))
 	}
 	return fmt.Sprintf("%dh ago", int(d.Hours()))
+}
+
+func renderAcceptanceCriteria(a *state.Agent, w int) string {
+	if len(a.AcceptanceCriteria) == 0 {
+		return ""
+	}
+	const prefixLen = 6 // "  [x] " or "  [ ] "
+	wrapWidth := w - prefixLen
+	if wrapWidth < 10 {
+		wrapWidth = 10
+	}
+	var sb strings.Builder
+	for _, ac := range a.AcceptanceCriteria {
+		text := wordWrap(ac.Text, wrapWidth)
+		if ac.Completed {
+			sb.WriteString("  ")
+			sb.WriteString(config.StyleSuccess.Render("[x]"))
+			sb.WriteString(" ")
+			sb.WriteString(config.StyleMuted.Render(text))
+		} else {
+			sb.WriteString("  ")
+			sb.WriteString(config.StyleMuted.Render("[ ]"))
+			sb.WriteString(" ")
+			sb.WriteString(lipgloss.NewStyle().Render(text))
+		}
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 func renderError(a *state.Agent, w int) string {

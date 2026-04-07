@@ -158,6 +158,8 @@ func (b *IPCBridge) dispatch(req mcp.IPCRequest, enc *json.Encoder) {
 		b.handleToast(req)
 	case mcp.TypePermGateRequest:
 		b.handlePermGate(req, enc)
+	case mcp.TypeAgentTodoUpdate:
+		b.handleAgentTodoUpdate(req)
 	default:
 		slog.Warn("bridge: unknown request type", "type", req.Type, "id", req.ID)
 	}
@@ -233,14 +235,15 @@ func (b *IPCBridge) handleAgentRegister(req mcp.IPCRequest) {
 		return
 	}
 	b.sender.Send(model.AgentRegisteredMsg{
-		AgentID:     p.AgentID,
-		AgentType:   p.AgentType,
-		ParentID:    p.ParentID,
-		Model:       p.Model,
-		Tier:        p.Tier,
-		Description: p.Description,
-		Conventions: p.Conventions,
-		Prompt:      p.Prompt,
+		AgentID:            p.AgentID,
+		AgentType:          p.AgentType,
+		ParentID:           p.ParentID,
+		Model:              p.Model,
+		Tier:               p.Tier,
+		Description:        p.Description,
+		Conventions:        p.Conventions,
+		Prompt:             p.Prompt,
+		AcceptanceCriteria: p.AcceptanceCriteria,
 	})
 }
 
@@ -270,6 +273,23 @@ func (b *IPCBridge) handleAgentActivity(req mcp.IPCRequest) {
 		ToolName: p.Tool,
 		Target:   p.Target,
 		Preview:  p.Preview,
+	})
+}
+
+// handleAgentTodoUpdate processes an agent_todo_update request (fire-and-forget).
+func (b *IPCBridge) handleAgentTodoUpdate(req mcp.IPCRequest) {
+	var p mcp.AgentTodoUpdatePayload
+	if err := json.Unmarshal(req.Payload, &p); err != nil {
+		slog.Error("bridge: unmarshal agent_todo_update payload", "id", req.ID, "error", err)
+		return
+	}
+	todos := make([]model.AgentTodoItem, len(p.Todos))
+	for i, t := range p.Todos {
+		todos[i] = model.AgentTodoItem{Content: t.Content, Status: t.Status}
+	}
+	b.sender.Send(model.AgentTodoUpdateMsg{
+		AgentID: p.AgentID,
+		Todos:   todos,
 	})
 }
 

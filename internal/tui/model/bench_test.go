@@ -188,6 +188,7 @@ func (t *benchToast) HandleMsg(_ tea.Msg) tea.Cmd { return nil }
 func (t *benchToast) View() string                 { return "" }
 func (t *benchToast) SetSize(_, _ int)             {}
 func (t *benchToast) IsEmpty() bool                { return true }
+func (t *benchToast) Height() int                  { return 0 }
 func (t *benchToast) SetTier(_ LayoutTier)         {}
 
 // benchTeamList satisfies teamListWidget.

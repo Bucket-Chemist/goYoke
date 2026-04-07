@@ -103,7 +103,15 @@ type ClaudePanelModel struct {
 	draftInput string
 
 	// streaming is true while an assistant response is being streamed.
+	// Used for the "..." display indicator and as a fallback replace/append
+	// decision when MessageID is not available.
 	streaming bool
+
+	// currentMsgID is the Message.ID of the assistant message currently being
+	// streamed.  It is set when the first fragment of a new turn arrives and
+	// cleared on ResultMsg.  When non-empty, replace-vs-append decisions use
+	// this ID rather than the streaming boolean to avoid cross-turn overwrites.
+	currentMsgID string
 
 	// autoScroll is true when the viewport should follow new content.
 	autoScroll bool
@@ -192,6 +200,7 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 
 	case model.ResultMsg:
 		m.streaming = false
+		m.currentMsgID = ""
 		m.syncViewport()
 		if m.autoScroll {
 			m.vp.GotoBottom()
@@ -248,23 +257,50 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 // accumulated text so far (a snapshot), not an incremental delta. The final
 // event has stop_reason set and Streaming=false.
 //
-// Streaming path: replace (not append) the last assistant message so that
-// each snapshot overwrites the previous partial view rather than concatenating
-// all snapshots into garbled output.
+// Replace-vs-append decision (in priority order):
 //
-// Non-streaming path: if we were previously streaming, replace the last
-// assistant message with the clean complete text. If no streaming was
-// in progress, append a new message (fresh turn with no prior partial).
+//  1. MessageID-based (preferred): when msg.MessageID is non-empty, replace
+//     the last assistant message only when its ID matches m.currentMsgID.
+//     A new or different ID always appends, preventing cross-turn overwrites.
+//
+//  2. Streaming-bool fallback: when MessageID is empty (legacy / test paths),
+//     the original Streaming-boolean logic is used so existing callers and
+//     tests that do not set MessageID continue to work unchanged.
 func (m ClaudePanelModel) handleAssistantMsg(
 	msg model.AssistantMsg,
 	cmds []tea.Cmd,
 ) (ClaudePanelModel, []tea.Cmd) {
-	if msg.Streaming {
+	if msg.MessageID != "" {
+		// --- MessageID-based path (preferred) ---
+		m.streaming = msg.Streaming
+		sameMsg := msg.MessageID == m.currentMsgID &&
+			len(m.messages) > 0 &&
+			m.messages[len(m.messages)-1].Role == "assistant"
+		if sameMsg {
+			// Same turn: replace snapshot.
+			m.messages[len(m.messages)-1].Content = msg.Text
+			if !msg.Streaming {
+				m.messages[len(m.messages)-1].Timestamp = time.Now()
+			}
+		} else {
+			// New turn (different or first ID): append.
+			m.currentMsgID = msg.MessageID
+			m.messages = append(m.messages, DisplayMessage{
+				Role:      "assistant",
+				Content:   msg.Text,
+				Timestamp: time.Now(),
+			})
+		}
+		if !msg.Streaming {
+			m.currentMsgID = ""
+		}
+	} else if msg.Streaming {
+		// --- Legacy streaming-bool path ---
+		alreadyStreaming := m.streaming
 		m.streaming = true
-		// Replace (not append) the last assistant message with the latest
-		// snapshot. The CLI sends cumulative snapshots, so each event
-		// supersedes the previous one rather than extending it.
-		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" {
+		// Replace only if we were already streaming (same turn, cumulative
+		// snapshot). If we weren't streaming, this is a new turn — append.
+		if alreadyStreaming && len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" {
 			m.messages[len(m.messages)-1].Content = msg.Text
 		} else {
 			m.messages = append(m.messages, DisplayMessage{
@@ -274,6 +310,7 @@ func (m ClaudePanelModel) handleAssistantMsg(
 			})
 		}
 	} else {
+		// --- Legacy non-streaming path ---
 		// Complete (non-streaming) assistant message. Track whether we were
 		// previously streaming so we know whether to replace or append.
 		wasStreaming := m.streaming
@@ -699,10 +736,18 @@ func (m ClaudePanelModel) View() string {
 // when a response is being streamed. This is everything above the input line.
 func (m ClaudePanelModel) ViewConversation() string {
 	if m.search.IsActive() {
-		return lipgloss.JoinVertical(lipgloss.Left,
-			m.search.View(),
-			m.viewportWithScrollbar(),
-		)
+		searchView := m.search.View()
+		searchH := lipgloss.Height(searchView)
+		vpCopy := m.vp
+		if vpCopy.Height > searchH {
+			vpCopy.Height -= searchH
+		}
+		vpView := vpCopy.View()
+		sb := scrollbar.Render(vpCopy.Height, vpCopy.TotalLineCount(), vpCopy.YOffset)
+		if sb != "" {
+			vpView = lipgloss.JoinHorizontal(lipgloss.Top, vpView, sb)
+		}
+		return lipgloss.JoinVertical(lipgloss.Left, searchView, vpView)
 	}
 	return m.viewportWithScrollbar()
 }
@@ -841,7 +886,8 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 			// Completed assistant message — render markdown.
 			// RenderMarkdown logs warnings internally when Glamour fails and
 			// gracefully falls back to the original plain text.
-			rendered, _ := util.RenderMarkdown(msg.Content, m.width)
+			rendered, _ := util.RenderMarkdown(msg.Content, m.vp.Width)
+			rendered = strings.TrimRight(rendered, "\n") + "\n"
 			sb.WriteString(rendered)
 		} else {
 			sb.WriteString(msg.Content)
@@ -854,7 +900,7 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 	// tool blocks are shown there instead (TUI-L05).
 	if m.tier == model.LayoutCompact {
 		for _, tb := range msg.ToolBlocks {
-			sb.WriteString(renderToolBlock(tb, m.width))
+			sb.WriteString(renderToolBlock(tb, m.vp.Width))
 		}
 	}
 

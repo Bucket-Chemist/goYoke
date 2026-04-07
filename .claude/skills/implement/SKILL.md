@@ -31,7 +31,7 @@ Single command to go from feature description to working code:
 ## Workflow
 
 When `/implement` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{session_dir}/teams/{timestamp}.implementation/`)
+- Created the team directory (`{gogent_session_dir}/teams/{timestamp}.implementation/`)
 - Written `active-skill.json` with guard restrictions + `team_dir` path
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
@@ -65,11 +65,11 @@ Output:
 ### 2. Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${session_dir}/active-skill.json` })
+Read({ file_path: `${gogent_session_dir}/active-skill.json` })
 // Extract team_dir from JSON response
 ```
 
-The `session_dir` is available from the `.claude/current-session` marker file or `GOGENT_SESSION_DIR` env var.
+The `gogent_session_dir` is resolved by reading `{project_root}/.gogent/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOGENT_PROJECT_ROOT` env var.
 
 ### 3. Spawn Architect
 
@@ -121,14 +121,14 @@ After architect completes:
 ### 4. Validate Plan Exists
 
 ```bash
-session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
-plan_file="$session_dir/implementation-plan.json"
+gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
+gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
+plan_file="$gogent_session_dir/implementation-plan.json"
 
 if [[ ! -f "$plan_file" ]]; then
     echo "[implement] ERROR: Architect did not produce implementation-plan.json"
-    echo "[implement] Check $session_dir/specs.md for details"
-    rm -f "$session_dir/active-skill.json"
+    echo "[implement] Check $gogent_session_dir/specs.md for details"
+    rm -f "$gogent_session_dir/active-skill.json"
     # STOP — do not proceed
 fi
 
@@ -153,7 +153,7 @@ gogent-plan-impl \
 if [[ $? -ne 0 ]]; then
     echo "[implement] ERROR: gogent-plan-impl failed"
     echo "[implement] Check plan validity: jq . $plan_file"
-    rm -f "$session_dir/active-skill.json"
+    rm -f "$gogent_session_dir/active-skill.json"
     # STOP
 fi
 
@@ -190,7 +190,7 @@ else:
 ### 7. Remove Skill Guard
 
 ```bash
-rm -f "$session_dir/active-skill.json"
+rm -f "$gogent_session_dir/active-skill.json"
 ```
 
 ---
@@ -209,7 +209,7 @@ rm -f "$session_dir/active-skill.json"
 [implement] Specs: SESSION_DIR/specs.md
 [implement] Plan: 2 tasks
 
-[implement] Team config: .claude/sessions/20260209-143000/teams/1770551000.implementation
+[implement] Team config: .gogent/sessions/20260209-143000/teams/1770551000.implementation
 
 [implement] Team launched (PID 12345)
 [implement] Budget: $10.00

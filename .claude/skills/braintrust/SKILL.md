@@ -166,7 +166,7 @@ When user responds "scout" or "don't know" to Q2:
 ## Execution
 
 When `/braintrust` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{session_dir}/teams/{timestamp}.braintrust/`)
+- Created the team directory (`{gogent_session_dir}/teams/{timestamp}.braintrust/`)
 - Written `active-skill.json` with guard restrictions + `team_dir` path
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
@@ -179,7 +179,7 @@ Read({ file_path: `${session_dir}/active-skill.json` })
 // Extract team_dir from JSON response
 ```
 
-The `session_dir` is available from the `.claude/current-session` marker file.
+The `gogent_session_dir` is resolved by reading `{project_root}/.gogent/current-session`.
 
 ### Step 2: Spawn Mozart via Task(opus)
 
@@ -322,7 +322,7 @@ The final Braintrust Analysis document includes:
 | `{team_dir}/stdout_beethoven.json`     | gogent-team-run                  | /team-result           | Final synthesis output       |
 | `{team_dir}/runner.log`               | gogent-team-run                  | /team-status           | Execution log                |
 
-`{team_dir}` = `{session_dir}/teams/{timestamp}.braintrust/` (session_dir resolved via env var → `.claude/current-session` → `.claude/sessions/` fallback)
+`{team_dir}` = `{gogent_session_dir}/teams/{timestamp}.braintrust/` (gogent_session_dir resolved via `{project_root}/.gogent/current-session`)
 
 ---
 

@@ -40,9 +40,16 @@ type CompactMsg struct {
 // AssistantMsg carries a fragment of assistant output text.  When Streaming
 // is true the fragment is an in-progress delta; when false it is a complete
 // turn.
+//
+// MessageID is stable within a single assistant turn and changes between
+// turns.  When non-empty it is used (instead of the Streaming boolean) to
+// decide whether to replace the last assistant message or append a new one.
+// Empty MessageID falls back to the legacy Streaming-bool logic so that
+// existing tests that do not set the field continue to work.
 type AssistantMsg struct {
 	Text      string
 	Streaming bool
+	MessageID string // stable within a turn, changes between turns
 }
 
 // ToolUseMsg signals that the assistant invoked a tool.  The Claude panel
@@ -134,14 +141,15 @@ type TickMsg struct {
 // AgentRegisteredMsg is emitted when a new agent process is first detected.
 // ParentID is empty for root-level agents.
 type AgentRegisteredMsg struct {
-	AgentID     string
-	AgentType   string
-	ParentID    string
-	Model       string
-	Tier        string
-	Description string
-	Conventions []string
-	Prompt      string
+	AgentID            string
+	AgentType          string
+	ParentID           string
+	Model              string
+	Tier               string
+	Description        string
+	Conventions        []string
+	Prompt             string
+	AcceptanceCriteria []string
 }
 
 // AgentUpdatedMsg is emitted when an existing agent's status changes.
@@ -162,6 +170,21 @@ type AgentActivityMsg struct {
 	Target    string // key param: file path, command, pattern
 	Preview   string // human-readable summary
 	Streaming bool
+}
+
+// AgentTodoItem is a single todo item from an agent's TodoWrite call.
+// Used to update acceptance criteria match state in the registry.
+type AgentTodoItem struct {
+	Content string
+	Status  string
+}
+
+// AgentTodoUpdateMsg is emitted when a subagent reports a TodoWrite update.
+// The handler matches todo items against the agent's acceptance criteria.
+// This is the sole writer path for AgentRegistry.AcceptanceCriteria (M-1).
+type AgentTodoUpdateMsg struct {
+	AgentID string
+	Todos   []AgentTodoItem
 }
 
 // ---------------------------------------------------------------------------
