@@ -659,11 +659,13 @@ type stubTeamList struct {
 	viewContent string
 }
 
-func (s *stubTeamList) HandleMsg(_ tea.Msg) tea.Cmd      { return nil }
-func (s *stubTeamList) View() string                     { return s.viewContent }
-func (s *stubTeamList) SetSize(_, _ int)                 {}
-func (s *stubTeamList) StartPolling(_ string) tea.Cmd    { return nil }
-func (s *stubTeamList) PollNow() tea.Cmd                 { return nil }
+func (s *stubTeamList) HandleMsg(_ tea.Msg) tea.Cmd                                       { return nil }
+func (s *stubTeamList) View() string                                                       { return s.viewContent }
+func (s *stubTeamList) SetSize(_, _ int)                                                   {}
+func (s *stubTeamList) StartPolling(_ string) tea.Cmd                                     { return nil }
+func (s *stubTeamList) PollNow() tea.Cmd                                                  { return nil }
+func (s *stubTeamList) SelectedTeam() string                                              { return "" }
+func (s *stubTeamList) CreateDetailModel(_ *state.AgentRegistry) TeamDetailWidget         { return nil }
 
 func TestRenderLeftPanel_TabSwitching(t *testing.T) {
 	t.Parallel()

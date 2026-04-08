@@ -127,11 +127,14 @@ const (
 
 	// RPMPlanPreview shows the implementation plan preview.
 	RPMPlanPreview
+
+	// RPMTeams shows the team detail panel for the selected team.
+	RPMTeams
 )
 
 // rightPanelModeCount is the total number of RightPanelMode values.
 // Update this constant whenever a new RightPanelMode is added.
-const rightPanelModeCount = int(RPMPlanPreview) + 1
+const rightPanelModeCount = int(RPMTeams) + 1
 
 // String returns a human-readable name for the RightPanelMode.
 func (r RightPanelMode) String() string {
@@ -146,6 +149,8 @@ func (r RightPanelMode) String() string {
 		return "Telemetry"
 	case RPMPlanPreview:
 		return "Plan Preview"
+	case RPMTeams:
+		return "Teams"
 	default:
 		return "Unknown"
 	}

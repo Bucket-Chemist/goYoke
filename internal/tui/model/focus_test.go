@@ -481,8 +481,13 @@ func TestNextRightPanelMode(t *testing.T) {
 			expected: RPMPlanPreview,
 		},
 		{
-			name:     "PlanPreview wraps around to Agents",
+			name:     "PlanPreview advances to Teams",
 			current:  RPMPlanPreview,
+			expected: RPMTeams,
+		},
+		{
+			name:     "Teams wraps around to Agents",
+			current:  RPMTeams,
 			expected: RPMAgents,
 		},
 	}
@@ -524,9 +529,14 @@ func TestPrevRightPanelMode(t *testing.T) {
 			expected: RPMTelemetry,
 		},
 		{
-			name:     "Agents wraps around to PlanPreview",
-			current:  RPMAgents,
+			name:     "Teams steps back to PlanPreview",
+			current:  RPMTeams,
 			expected: RPMPlanPreview,
+		},
+		{
+			name:     "Agents wraps around to Teams",
+			current:  RPMAgents,
+			expected: RPMTeams,
 		},
 	}
 

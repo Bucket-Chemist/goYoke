@@ -238,7 +238,12 @@ Your output MUST be valid JSON matching this structure:
 
 ## Workflow
 
-1. **Read Strategy Document**: Load `SESSION_DIR/strategy.md` from planner phase - this is your primary input
+**Step 0 — Determine input mode:**
+- If your prompt contains explicit CONTEXT/TASK sections with file listings and code snippets: **the prompt IS your strategy document.** Skip step 1. Do NOT explore the codebase beyond files named in the prompt. Do NOT read git history or uncommitted changes.
+- If your prompt references a strategy.md or scout report: proceed to step 1.
+- If SESSION_DIR contains specs.md or implementation-plan.json from a previous run: check whether their content matches your current TASK. If not, treat them as stale — overwrite unconditionally.
+
+1. **Read Strategy Document**: Load `SESSION_DIR/strategy.md` from planner phase - this is your primary input (SKIP if prompt contains full context — see step 0)
 2. **Parse Scout Report**: Extract key metrics and recommendations
 3. **Check Confidence**:
    - If `routing_recommendation.confidence == "low"`: Ask 1-2 clarifying questions FIRST

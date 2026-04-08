@@ -495,6 +495,13 @@ func (m AppModel) renderRightPanel(dims layoutDims, panelH int) string {
 		} else {
 			content = config.StyleSubtle.Render("Plan Preview")
 		}
+	case RPMTeams:
+		if m.shared != nil && m.shared.teamDetail != nil {
+			m.shared.teamDetail.SetSize(dims.rightWidth, contentH)
+			content = m.shared.teamDetail.View()
+		} else {
+			content = config.StyleSubtle.Render("Teams")
+		}
 	default:
 		content = config.StyleSubtle.Render(m.rightPanelMode.String())
 	}

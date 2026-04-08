@@ -115,6 +115,7 @@ type sharedState struct {
 	settings    settingsWidget
 	telemetry   telemetryWidget
 	planPreview planPreviewWidget
+	teamDetail  TeamDetailWidget
 	// drawerStack is the collapsible drawer stack (TDS-004).
 	// It manages the options and plan drawers in the right panel.
 	drawerStack drawerStackWidget
@@ -599,9 +600,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.shared.drawerStack.ClearTeamsContent()
 				}
 			}
+			// Refresh the team detail panel so it shows up-to-date member state.
+			if m.shared.teamDetail != nil {
+				m.shared.teamDetail.Refresh()
+			}
 			return m, cmd
 		}
 	}
+
+	// Forward unhandled messages to the team detail for TeamSelectedMsg
+	// (emitted as a tea.Cmd result by the team list when the cursor moves).
+	// TeamSelectedMsg is unexported from the teams package so AppModel cannot
+	// type-switch on it directly; the detail model handles it internally.
+	if m.shared != nil && m.shared.teamDetail != nil {
+		m.shared.teamDetail.HandleMsg(msg)
+	}
+
 	return m, nil
 }
 

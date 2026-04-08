@@ -13,6 +13,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -295,6 +296,14 @@ func (m *TeamListModel) HandleMsg(msg tea.Msg) tea.Cmd {
 	updated, cmd := m.Update(msg)
 	*m = updated
 	return cmd
+}
+
+// CreateDetailModel returns a preconfigured TeamDetailModel backed by the
+// same registry as this list. agentReg may be nil. The concrete type
+// satisfies model.TeamDetailWidget without importing the model package.
+func (m *TeamListModel) CreateDetailModel(agentReg *state.AgentRegistry) model.TeamDetailWidget {
+	td := NewTeamDetailModel(m.registry, agentReg)
+	return &td
 }
 
 // scanTeamsDir reads every subdirectory of dir, attempts to parse

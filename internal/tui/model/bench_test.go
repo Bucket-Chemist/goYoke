@@ -194,11 +194,13 @@ func (t *benchToast) SetTier(_ LayoutTier)         {}
 // benchTeamList satisfies teamListWidget.
 type benchTeamList struct{}
 
-func (tl *benchTeamList) HandleMsg(_ tea.Msg) tea.Cmd   { return nil }
-func (tl *benchTeamList) View() string                   { return "" }
-func (tl *benchTeamList) SetSize(_, _ int)               {}
-func (tl *benchTeamList) StartPolling(_ string) tea.Cmd { return nil }
-func (tl *benchTeamList) PollNow() tea.Cmd              { return nil }
+func (tl *benchTeamList) HandleMsg(_ tea.Msg) tea.Cmd                                        { return nil }
+func (tl *benchTeamList) View() string                                                        { return "" }
+func (tl *benchTeamList) SetSize(_, _ int)                                                    {}
+func (tl *benchTeamList) StartPolling(_ string) tea.Cmd                                      { return nil }
+func (tl *benchTeamList) PollNow() tea.Cmd                                                   { return nil }
+func (tl *benchTeamList) SelectedTeam() string                                               { return "" }
+func (tl *benchTeamList) CreateDetailModel(_ *state.AgentRegistry) TeamDetailWidget          { return nil }
 
 // benchTabBar satisfies tabBarWidget.
 type benchTabBar struct{}

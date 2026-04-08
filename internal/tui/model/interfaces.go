@@ -160,6 +160,21 @@ type toastWidget interface {
 // teamListWidget is the interface satisfied by *teams.TeamListModel.
 // ---------------------------------------------------------------------------
 
+// TeamDetailWidget is the interface satisfied by *teams.TeamDetailModel.
+// It is exported so that the teams package can reference it as a return type
+// in CreateDetailModel without creating a circular import.
+type TeamDetailWidget interface {
+	View() string
+	SetSize(w, h int)
+	// HandleMsg forwards a tea.Msg to the detail model. The concrete
+	// implementation handles teams.TeamSelectedMsg to update the displayed team.
+	// All other messages are ignored. Never emits commands.
+	HandleMsg(msg tea.Msg) tea.Cmd
+	// Refresh re-reads the currently displayed team from the registry.
+	// Called after every poll tick to keep the detail view up-to-date.
+	Refresh()
+}
+
 // teamListWidget is the interface satisfied by *teams.TeamListModel.
 type teamListWidget interface {
 	HandleMsg(msg tea.Msg) tea.Cmd
@@ -169,6 +184,12 @@ type teamListWidget interface {
 	// PollNow returns a Cmd that immediately fires a poll tick.  It is used
 	// by Init() to kick the first poll after StartPolling has set the dir.
 	PollNow() tea.Cmd
+	// SelectedTeam returns the directory path of the currently selected team,
+	// or "" when the list is empty.
+	SelectedTeam() string
+	// CreateDetailModel returns a preconfigured TeamDetailWidget backed by
+	// the same registry as this list. agentReg may be nil.
+	CreateDetailModel(agentReg *state.AgentRegistry) TeamDetailWidget
 }
 
 // ---------------------------------------------------------------------------

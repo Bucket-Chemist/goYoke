@@ -31,3 +31,31 @@ edges:
       Changing a data model without planning how to migrate existing data.
     mitigation: >
       If persistence is involved (DB, files), always add a "Migration" phase to the plan.
+
+  - name: prompt_override_by_codebase_exploration
+    severity: critical
+    description: >
+      When spawned with an explicit prompt containing CONTEXT/TASK sections,
+      architect explores the codebase with Glob/Grep/Read and anchors on
+      discovered changes (e.g. uncommitted diffs, recent commits) instead of
+      the provided prompt. This causes the plan to address the wrong task
+      entirely while appearing well-structured.
+    mitigation: >
+      When the prompt contains explicit CONTEXT sections with file listings
+      and code snippets, treat the prompt AS the strategy document. Do NOT
+      explore beyond the files named in the prompt. Skip workflow step 1
+      (Read Strategy Document) — the prompt IS your input. Only use
+      Glob/Grep/Read to verify details about files explicitly mentioned in
+      the prompt context.
+
+  - name: stale_session_artifacts
+    severity: high
+    description: >
+      SESSION_DIR may contain specs.md and implementation-plan.json from a
+      previous architect invocation on a DIFFERENT task. Reading these files
+      as context causes the new plan to be contaminated by the old task scope.
+    mitigation: >
+      Before writing specs.md or implementation-plan.json, check if they
+      already exist. If they do and their content does not match the current
+      prompt's TASK description, treat them as stale. Overwrite them
+      unconditionally with the new plan — do not merge or append.

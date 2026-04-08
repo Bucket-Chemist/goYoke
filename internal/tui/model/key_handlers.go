@@ -230,6 +230,13 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.tabBar != nil {
 			cmd := m.tabBar.HandleMsg(msg)
 			m.activeTab = m.tabBar.ActiveTab()
+			// Auto-switch right panel: Teams tab shows team detail, all others
+			// revert to agents view (unless another mode was previously chosen).
+			if m.activeTab == TabTeamConfig {
+				m.rightPanelMode = RPMTeams
+			} else if m.rightPanelMode == RPMTeams {
+				m.rightPanelMode = RPMAgents
+			}
 			m.updateHintContext()
 			m.updateBreadcrumbs()
 			return m, cmd
@@ -543,6 +550,8 @@ func (m *AppModel) updateBreadcrumbs() {
 			crumbs = []string{"Plan", "Preview"}
 		case RPMTelemetry:
 			crumbs = []string{"Telemetry", "Overview"}
+		case RPMTeams:
+			crumbs = []string{"Teams", "Detail"}
 		default:
 			crumbs = []string{"Agents", m.rightPanelMode.String()}
 		}
