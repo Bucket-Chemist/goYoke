@@ -198,7 +198,8 @@
         "python-architect",
         "mozart",
         "einstein",
-        "beethoven"
+        "beethoven",
+        "llm-inference-architect"
       ],
       "escalation_protocol": "escalate_to_einstein",
       "thresholds": {
@@ -213,7 +214,8 @@
         "staff-architect-critical-review",
         "python-architect",
         "mozart",
-        "beethoven"
+        "beethoven",
+        "llm-inference-architect"
       ]
     },
     "external": {
@@ -408,7 +410,8 @@
     "ml_architecture_decision": "python-architect",
     "nn_design_question": "python-architect",
     "training_strategy_question": "python-architect",
-    "implementation_rust": "rust-pro"
+    "implementation_rust": "rust-pro",
+    "implementation_llm_inference": "llm-inference-architect"
   },
   "cost_thresholds": {
     "scout_max_cost": 0.01,
@@ -526,7 +529,8 @@
       "agents": [
         "einstein",
         "beethoven",
-        "staff-architect-critical-review"
+        "staff-architect-critical-review",
+        "llm-inference-architect"
       ],
       "rationale": "Analysts produce thought work and documents"
     }
@@ -583,7 +587,8 @@
     "beethoven": "Beethoven",
     "gemini-slave": "Gemini Slave",
     "staff-architect-critical-review": "Staff Architect Critical Review",
-    "rust-pro": "Rust Pro"
+    "rust-pro": "Rust Pro",
+    "llm-inference-architect": "LLM Inference Architect"
   },
   "blocked_patterns": {
     "description": "Patterns that should NEVER be used",

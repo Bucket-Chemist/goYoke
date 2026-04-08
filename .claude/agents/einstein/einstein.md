@@ -33,6 +33,7 @@ delegation:
     - haiku-scout
     - codebase-search
     - librarian
+    - llm-inference-architect
   cannot_spawn:
     - einstein
     - mozart

@@ -9,7 +9,7 @@ import (
 )
 
 // EXPECTED_AGENT_INDEX_VERSION is the version this code is built for.
-const EXPECTED_AGENT_INDEX_VERSION = "2.6.0"
+const EXPECTED_AGENT_INDEX_VERSION = "2.7.0"
 
 // AgentIndex represents the complete agents-index.json v2.2.0 structure.
 // This defines the agent catalog for Claude Code routing and auto-activation.
@@ -36,6 +36,7 @@ type Agent struct {
 	Thinking              bool            `json:"thinking"`
 	ThinkingBudget        int             `json:"thinking_budget,omitempty"`
 	ThinkingBudgetComplex int             `json:"thinking_budget_complex,omitempty"`
+	EffortLevel           string          `json:"effortLevel,omitempty"`
 	Tier                  any             `json:"tier"` // Can be float64 (1.5) or string ("external")
 	Category              string          `json:"category"`
 	Path                  string          `json:"path"`

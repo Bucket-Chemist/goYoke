@@ -13,7 +13,7 @@ import (
 // to these tests. Only the Agents slice is used by GetAgentByID.
 func testValidationIndex() *routing.AgentIndex {
 	return &routing.AgentIndex{
-		Version:     "2.6.0",
+		Version:     "2.7.0",
 		GeneratedAt: "2026-03-24T00:00:00Z",
 		Description: "test validation index",
 		Agents: []routing.Agent{

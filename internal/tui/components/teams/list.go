@@ -308,8 +308,17 @@ func scanTeamsDir(dir string, reg *TeamRegistry) {
 	}
 
 	for _, entry := range entries {
+		// Accept both real directories and symlinks that resolve to directories
+		// (ensureTeamVisible creates symlinks for cross-session team visibility).
 		if !entry.IsDir() {
-			continue
+			if entry.Type()&os.ModeSymlink == 0 {
+				continue
+			}
+			target := filepath.Join(dir, entry.Name())
+			info, err := os.Stat(target) // Stat follows symlinks
+			if err != nil || !info.IsDir() {
+				continue
+			}
 		}
 		teamDir := filepath.Join(dir, entry.Name())
 		cfgPath := filepath.Join(teamDir, "config.json")

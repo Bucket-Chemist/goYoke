@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0",
+  "version": "2.7.0",
   "generated_at": "2026-02-01T00:00:00Z",
   "description": "Agent index for Intent Gate routing and auto-activation.",
   "agents": [
@@ -1105,7 +1105,8 @@
         "python-pro",
         "typescript-pro",
         "react-pro",
-        "rust-pro"
+        "rust-pro",
+        "llm-inference-architect"
       ],
       "must_delegate": false,
       "scout_first": true,
@@ -1336,7 +1337,10 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "can_spawn": [
+        "llm-inference-architect"
+      ]
     },
     {
       "id": "einstein",
@@ -1391,7 +1395,13 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "can_spawn": [
+        "haiku-scout",
+        "codebase-search",
+        "librarian",
+        "llm-inference-architect"
+      ]
     },
     {
       "id": "mozart",
@@ -1612,7 +1622,10 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "can_spawn": [
+        "llm-inference-architect"
+      ]
     },
     {
       "id": "haiku-scout",
@@ -2195,6 +2208,93 @@
         "All existing tests pass",
         "Conventions followed"
       ]
+    },
+    {
+      "id": "llm-inference-architect",
+      "parallelization_template": "E",
+      "name": "LLM Inference Architect",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "architecture",
+      "path": "llm-inference-architect",
+      "subagent_type": "Analyst",
+      "triggers": [
+        "llm deployment feasibility",
+        "kv cache optimization",
+        "vulkan inference",
+        "cpu inference optimization",
+        "model memory analysis",
+        "inference architecture",
+        "amd gpu inference",
+        "igpu llm",
+        "uma memory",
+        "gguf deployment",
+        "llama.cpp integration",
+        "kv compression strategy",
+        "hardware feasibility",
+        "rope implementation",
+        "attention backend"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash",
+        "WebFetch",
+        "AskUserQuestion"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Write",
+          "Glob",
+          "Grep",
+          "Bash",
+          "WebFetch",
+          "AskUserQuestion"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "spawned_by": [
+        "orchestrator",
+        "planner",
+        "einstein",
+        "staff-architect-critical-review"
+      ],
+      "can_spawn": [
+        "codebase-search",
+        "haiku-scout",
+        "librarian"
+      ],
+      "inputs": [
+        "Hardware specification (CPU, GPU, RAM, VRAM)",
+        "Model config.json or GGUF metadata",
+        "Deployment plan (.md)",
+        "llama.cpp source tree (optional, for verification)",
+        "Benchmark results (optional)"
+      ],
+      "outputs": [
+        "SESSION_DIR/inference-feasibility.md",
+        "SESSION_DIR/inference-metadata.json",
+        "SESSION_DIR/preflight-checks.sh"
+      ],
+      "sharp_edges_count": 18,
+      "cost_per_invocation": "0.40-1.13",
+      "description": "Opus-tier LLM inference systems architect specializing in llama.cpp ecosystem, Vulkan/CPU backends on AMD hardware, KV cache optimization, memory arithmetic, and hardware feasibility analysis. Performs adversarial review of deployment plans, generates preflight verification scripts, and produces hardware-grounded architectural decisions. Expert in RoPE mechanics, KV compression techniques (TriAttention, TurboQuant, KVTC), UMA/iGPU zero-copy optimization, and the full GGML tensor pipeline.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      }
     }
   ],
   "routing_rules": {
@@ -2314,7 +2414,8 @@
         "staff-architect-critical-review",
         "python-architect",
         "mozart",
-        "beethoven"
+        "beethoven",
+        "llm-inference-architect"
       ],
       "external": [
         "gemini-slave"

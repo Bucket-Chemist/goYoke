@@ -101,7 +101,7 @@ These Go binaries run automatically. You cannot bypass them.
 
 **What hooks enforce:**
 
-- Task(opus) is blocked → use `/braintrust` instead (allowlisted agents: planner, architect, staff-architect-critical-review, python-architect, mozart, einstein, beethoven)
+- Task(opus) is blocked → use `/braintrust` instead (allowlisted agents: planner, architect, staff-architect-critical-review, python-architect, mozart, einstein, beethoven, llm-inference-architect)
 - Wrong subagent_type → blocked with corrective message
 - Direct implementation by router (>50 lines Write, >30 lines Edit) → warned by `gogent-direct-impl-check`
 - 3+ consecutive failures → sharp edge captured, execution blocked
@@ -224,6 +224,7 @@ Request arrives
 | Create plan, break down, dependency analysis                                                             | `architect`                       | Architect                       |
 | Comprehensive planning, scope breakdown, ticket generation                                               | `planner`                         | Planner                         |
 | Review plan, critical review                                                                             | `staff-architect-critical-review` | Staff Architect Critical Review |
+| llm deployment feasibility, kv cache, vulkan inference, hardware feasibility, inference architecture, model memory analysis | `llm-inference-architect` | LLM Inference Architect         |
 
 | Trigger                               | Handler             | Notes                                              |
 | ------------------------------------- | ------------------- | -------------------------------------------------- |
@@ -698,7 +699,7 @@ DELEGATION:
 ✗ Never use built-in Agent/Task tool (bypasses hooks)
 
 BLOCKED BY HOOKS:
-✗ Task(opus) → use /braintrust (allowlisted: planner, architect, staff-architect, python-architect, mozart, einstein, beethoven)
+✗ Task(opus) → use /braintrust (allowlisted: planner, architect, staff-architect, python-architect, mozart, einstein, beethoven, llm-inference-architect)
 ✗ Wrong subagent_type → check dispatch table
 ✗ 3+ failures → stop, sharp edge captured
 ✗ Router writing >50 lines → gogent-direct-impl-check warns

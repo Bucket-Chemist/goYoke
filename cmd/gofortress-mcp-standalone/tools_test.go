@@ -72,7 +72,7 @@ func testAgentsIndex(agentIDs ...string) []byte {
 	}
 
 	return []byte(`{
-  "version": "2.6.0",
+  "version": "2.7.0",
   "generated_at": "2026-03-24T00:00:00Z",
   "description": "test index",
   "agents": [` + agents + `

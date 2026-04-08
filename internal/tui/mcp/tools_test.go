@@ -962,7 +962,7 @@ func TestBuildSpawnArgs_MCPConfig_NonInteractiveNoEnv(t *testing.T) {
 // agents-index.json with one agent of the given ID.
 func minimalAgentsIndex(agentID string) []byte {
 	data := `{
-  "version": "2.6.0",
+  "version": "2.7.0",
   "generated_at": "2026-03-23T00:00:00Z",
   "description": "test index",
   "agents": [
