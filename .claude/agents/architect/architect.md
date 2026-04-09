@@ -1,15 +1,18 @@
 ---
+id: architect
 name: Architect
 description: >
   Implementation planner for multi-file changes. Creates phased execution plans
   with dependency mapping and risk assessment. Mandatory outputs: specs.md + write_todos.
 model: opus
+effort: high
 thinking:
   enabled: true
   budget: 32000
   budget_complex: 48000
 tier: 3
 category: planning
+subagent_type: Architect
 triggers:
   - "create a plan"
   - "implementation plan"
@@ -88,6 +91,8 @@ integration:
       - mapper
       - architect
 ---
+id: architect
+id: architect
 
 # Architect Agent
 
@@ -302,6 +307,7 @@ If you cannot produce a viable plan:
 - ❌ Missing risk assessment for complex changes
 
 ---
+id: architect
 
 ## PARALLELIZATION: CONSTRAINED
 
@@ -338,6 +344,7 @@ After gathering context, planning MUST be sequential:
 - [ ] specs.md written before write_todos called
 
 ---
+id: architect
 
 ## Integration with Gemini
 

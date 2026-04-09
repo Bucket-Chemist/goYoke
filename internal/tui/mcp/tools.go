@@ -642,8 +642,12 @@ func handleSpawnAgent(
 	if len(mergedAC) > 0 && agentTierNumber(agent.Tier) >= 2 {
 		var sb strings.Builder
 		sb.WriteString(augmented)
-		sb.WriteString("\n\n## Acceptance Criteria\n")
-		sb.WriteString("You MUST use the TodoWrite tool to create a task list from these criteria and mark each as completed when done.\n")
+		sb.WriteString("\n\n## Acceptance Criteria (MANDATORY)\n\n")
+		sb.WriteString("You MUST use the TodoWrite tool to track these criteria. Rules:\n")
+		sb.WriteString("1. Create your TodoWrite task list using the EXACT text below as task content — do NOT paraphrase or abbreviate.\n")
+		sb.WriteString("2. Mark each criterion as completed (status: \"completed\") when satisfied.\n")
+		sb.WriteString("3. If you cannot satisfy a criterion, mark it as status \"in_progress\" with a note — never silently skip.\n")
+		sb.WriteString("4. Before finishing, call TodoWrite one final time with ALL criteria to confirm their status.\n\n")
 		for _, criterion := range mergedAC {
 			sb.WriteString("- [ ] ")
 			sb.WriteString(criterion)

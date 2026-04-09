@@ -1,9 +1,11 @@
 ---
+id: tech-docs-writer
 name: Tech Docs Writer
 description: >
   Documentation creation and updates. README, guides, API docs, system-guide.
   Uses thinking to plan document structure and ensure completeness.
 model: haiku
+subagent_type: Tech Docs Writer
 thinking:
   enabled: true
   budget: 6000

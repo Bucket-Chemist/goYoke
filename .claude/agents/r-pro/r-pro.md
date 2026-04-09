@@ -1,4 +1,5 @@
 ---
+id: r-pro
 name: R Pro
 description: >
   Expert R development with S4 OOP, tidyverse, and bioinformatics patterns.
@@ -6,6 +7,7 @@ description: >
   Specializes in clean, vectorized, production-quality R code.
 
 model: sonnet
+subagent_type: R Pro
 thinking:
   enabled: true
   budget: 10000

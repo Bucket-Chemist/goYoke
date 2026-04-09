@@ -1,4 +1,5 @@
 ---
+id: review-orchestrator
 name: Review Orchestrator
 description: >
   Coordinates comprehensive code reviews by spawning specialist reviewers
@@ -12,7 +13,7 @@ thinking:
 
 tier: 2
 category: review
-subagent_type: Plan
+subagent_type: Review Orchestrator
 
 triggers:
   - "code review"

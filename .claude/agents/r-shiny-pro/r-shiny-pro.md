@@ -1,4 +1,5 @@
 ---
+id: r-shiny-pro
 name: R Shiny Pro
 description: >
   Shiny application expert with module architecture and R6/S4 state management.
@@ -6,6 +7,7 @@ description: >
   Specializes in production-quality Shiny applications.
 
 model: sonnet
+subagent_type: R Shiny Pro
 thinking:
   enabled: true
   budget: 10000

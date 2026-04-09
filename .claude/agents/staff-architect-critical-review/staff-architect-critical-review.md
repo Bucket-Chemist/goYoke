@@ -2,11 +2,12 @@
 id: staff-architect-critical-review
 name: Staff Architect Critical Review
 model: opus
+effort: high
 thinking: true
 thinking_budget: 32000
 tier: 3
 category: review
-subagent_type: Plan  # Also accepts "Explore" for read-only analysis
+subagent_type: Staff Architect Critical Review
 
 triggers:
   - review plan

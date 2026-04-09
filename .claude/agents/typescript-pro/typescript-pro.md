@@ -1,4 +1,5 @@
 ---
+id: typescript-pro
 name: TypeScript Pro
 description: >
   Expert TypeScript development with strict type safety. Auto-activated for TypeScript projects.
@@ -6,6 +7,7 @@ description: >
   type-safe, production-ready TypeScript with zero any types.
 
 model: sonnet
+subagent_type: TypeScript Pro
 thinking:
   enabled: true
   budget: 10000

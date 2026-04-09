@@ -1,4 +1,5 @@
 ---
+id: go-pro
 name: GO Pro
 description: >
   Expert GO development with modern patterns. Auto-activated for GO projects.
@@ -6,6 +7,7 @@ description: >
   idiomatic, production-ready GO targeting single-binary desktop distribution.
 
 model: sonnet
+subagent_type: GO Pro
 thinking:
   enabled: true
   budget: 10000

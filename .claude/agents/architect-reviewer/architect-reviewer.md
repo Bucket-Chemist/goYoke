@@ -1,4 +1,5 @@
 ---
+id: architect-reviewer
 name: Architect Reviewer
 description: >
   Architectural code reviewer specializing in structural patterns, module
@@ -12,7 +13,7 @@ thinking:
 
 tier: 2
 category: review
-subagent_type: Explore
+subagent_type: Architect Reviewer
 
 triggers:
   - "review architecture"
@@ -64,6 +65,8 @@ failure_tracking:
 
 cost_ceiling: 0.15
 ---
+id: architect-reviewer
+id: architect-reviewer
 
 # Architect Reviewer Agent
 
@@ -283,6 +286,7 @@ You answer: "Is this code structurally sound? Will it cause maintenance pain?"
 - **Tone**: Constructive - explain WHY patterns cause pain
 
 ---
+id: architect-reviewer
 
 ## PARALLELIZATION: TIERED
 
@@ -334,6 +338,7 @@ Read(src/test/auth_test.go)         # OPTIONAL: Testability context
 - [ ] Prepared to caveat if context incomplete
 
 ---
+id: architect-reviewer
 
 ## Quick Detection Patterns
 
@@ -382,6 +387,7 @@ return wrapError("...", err)
 ```
 
 ---
+id: architect-reviewer
 
 ## Sharp Edge Correlation
 
@@ -403,6 +409,7 @@ When identifying issues, correlate with known sharp edges from `sharp-edges.yaml
 - `missing-interface` - Concrete type where interface would help
 
 ---
+id: architect-reviewer
 
 ## Escalation Triggers
 

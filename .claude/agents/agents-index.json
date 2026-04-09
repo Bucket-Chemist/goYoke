@@ -56,7 +56,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Memory Archivist"
     },
     {
       "id": "codebase-search",
@@ -98,7 +99,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Codebase Search"
     },
     {
       "id": "librarian",
@@ -150,7 +152,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Librarian"
     },
     {
       "id": "scaffolder",
@@ -195,7 +198,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Scaffolder"
     },
     {
       "id": "tech-docs-writer",
@@ -249,7 +253,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Tech Docs Writer"
     },
     {
       "id": "code-reviewer",
@@ -290,7 +295,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Code Reviewer"
     },
     {
       "id": "python-pro",
@@ -379,7 +385,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Python Pro"
     },
     {
       "id": "python-ux",
@@ -453,7 +460,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Python UX (PySide6)"
     },
     {
       "id": "r-pro",
@@ -523,7 +531,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "R Pro"
     },
     {
       "id": "r-shiny-pro",
@@ -600,7 +609,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "R Shiny Pro"
     },
     {
       "id": "go-pro",
@@ -673,7 +683,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "GO Pro"
     },
     {
       "id": "rust-pro",
@@ -756,7 +767,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Rust Pro"
     },
     {
       "id": "go-cli",
@@ -831,7 +843,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "GO CLI (Cobra)"
     },
     {
       "id": "go-tui",
@@ -905,7 +918,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "GO TUI (Bubbletea)"
     },
     {
       "id": "go-api",
@@ -974,7 +988,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "GO API (HTTP Client)"
     },
     {
       "id": "go-concurrent",
@@ -1044,7 +1059,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "GO Concurrent"
     },
     {
       "id": "orchestrator",
@@ -1122,7 +1138,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Orchestrator"
     },
     {
       "id": "architect",
@@ -1188,7 +1205,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Architect"
     },
     {
       "id": "python-architect",
@@ -1279,7 +1297,8 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "subagent_type": "Python ML Architect"
     },
     {
       "id": "planner",
@@ -1340,7 +1359,8 @@
       },
       "can_spawn": [
         "llm-inference-architect"
-      ]
+      ],
+      "subagent_type": "Planner"
     },
     {
       "id": "einstein",
@@ -1353,7 +1373,7 @@
       "tier": 3,
       "category": "analysis",
       "path": "einstein",
-      "subagent_type": "Analyst",
+      "subagent_type": "Einstein",
       "triggers": [
         "escalate to einstein",
         "deep theoretical analysis"
@@ -1414,7 +1434,7 @@
       "tier": 3,
       "category": "orchestration",
       "path": "mozart",
-      "subagent_type": "Plan",
+      "subagent_type": "Mozart",
       "triggers": [],
       "tools": [
         "Read",
@@ -1475,7 +1495,7 @@
       "tier": 3,
       "category": "synthesis",
       "path": "beethoven",
-      "subagent_type": "Analyst",
+      "subagent_type": "Beethoven",
       "triggers": [],
       "tools": [
         "Read",
@@ -1566,7 +1586,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Gemini Slave"
     },
     {
       "id": "staff-architect-critical-review",
@@ -1625,7 +1646,8 @@
       },
       "can_spawn": [
         "llm-inference-architect"
-      ]
+      ],
+      "subagent_type": "Staff Architect Critical Review"
     },
     {
       "id": "haiku-scout",
@@ -1676,7 +1698,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Haiku Scout"
     },
     {
       "id": "gogent-scout",
@@ -1716,7 +1739,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "GOgent Smart Scout"
     },
     {
       "id": "typescript-pro",
@@ -1789,7 +1813,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "TypeScript Pro"
     },
     {
       "id": "react-pro",
@@ -1862,7 +1887,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "React Pro"
     },
     {
       "id": "backend-reviewer",
@@ -1914,7 +1940,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Backend Reviewer"
     },
     {
       "id": "frontend-reviewer",
@@ -1964,7 +1991,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Frontend Reviewer"
     },
     {
       "id": "standards-reviewer",
@@ -2010,7 +2038,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Standards Reviewer"
     },
     {
       "id": "architect-reviewer",
@@ -2062,7 +2091,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Architect Reviewer"
     },
     {
       "id": "review-orchestrator",
@@ -2124,7 +2154,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Review Orchestrator"
     },
     {
       "id": "impl-manager",
@@ -2207,7 +2238,8 @@
         "Code compiles without errors",
         "All existing tests pass",
         "Conventions followed"
-      ]
+      ],
+      "subagent_type": "Implementation Manager"
     },
     {
       "id": "llm-inference-architect",
@@ -2220,7 +2252,7 @@
       "tier": 3,
       "category": "architecture",
       "path": "llm-inference-architect",
-      "subagent_type": "Analyst",
+      "subagent_type": "LLM Inference Architect",
       "triggers": [
         "llm deployment feasibility",
         "kv cache optimization",
@@ -2295,6 +2327,379 @@
         ],
         "conventions": {}
       }
+    },
+    {
+      "id": "genomics-reviewer",
+      "parallelization_template": "C",
+      "name": "Genomics Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "genomics-reviewer",
+      "triggers": [
+        "review genomics",
+        "alignment review",
+        "variant calling review",
+        "genome assembly review",
+        "VCF review",
+        "sequencing review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Genome assembly, variant calling, alignment, and sequence data format review. BWA/Bowtie2/STAR, GATK/bcftools, VCF/BAM/FASTA/FASTQ/GFF/GTF/BED.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Genomics Reviewer"
+    },
+    {
+      "id": "proteomics-reviewer",
+      "parallelization_template": "C",
+      "name": "Proteomics Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "proteomics-reviewer",
+      "triggers": [
+        "review proteomics",
+        "protein identification review",
+        "quantification review",
+        "FDR review",
+        "search engine review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Mass spectrometry proteomics data processing review. Search engine config, FDR control, quantification (TMT/iTRAQ/LFQ/SILAC), mzML/mzXML, PSM scoring.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Proteomics Reviewer"
+    },
+    {
+      "id": "proteogenomics-reviewer",
+      "parallelization_template": "C",
+      "name": "Proteogenomics Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "proteogenomics-reviewer",
+      "triggers": [
+        "review proteogenomics",
+        "custom database review",
+        "novel peptide review",
+        "variant peptide review",
+        "splice junction review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Proteogenomics pipeline review. Custom protein DB construction, novel peptide ID, variant peptides, splice junction peptides, ORF prediction.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Proteogenomics Reviewer"
+    },
+    {
+      "id": "proteoform-reviewer",
+      "parallelization_template": "C",
+      "name": "Proteoform Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "proteoform-reviewer",
+      "triggers": [
+        "review proteoform",
+        "top-down review",
+        "PTM analysis review",
+        "intact mass review",
+        "deconvolution review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Top-down proteomics and proteoform analysis review. Intact mass, PTM combinatorics, proteoform families, deconvolution, sequence coverage.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Proteoform Reviewer"
+    },
+    {
+      "id": "mass-spec-reviewer",
+      "parallelization_template": "C",
+      "name": "Mass Spectrometry Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "mass-spec-reviewer",
+      "triggers": [
+        "review mass spec",
+        "instrument review",
+        "acquisition review",
+        "raw data quality review",
+        "spectral processing review",
+        "DIA review",
+        "DDA review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "MS instrumentation and data acquisition review. DDA/DIA/PRM methods, calibration, raw data quality, vendor formats (Thermo/Bruker/SCIEX/Waters), spectral processing.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Mass Spectrometry Reviewer"
+    },
+    {
+      "id": "bioinformatician-reviewer",
+      "parallelization_template": "C",
+      "name": "Bioinformatician Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "bioinformatician-reviewer",
+      "triggers": [
+        "review bioinformatics",
+        "pipeline review",
+        "workflow review",
+        "reproducibility review",
+        "statistical methods review",
+        "Nextflow review",
+        "Snakemake review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Pipeline architecture and methodology review. Nextflow/Snakemake/WDL workflows, Docker/Singularity/Conda reproducibility, statistics, data provenance.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Bioinformatician Reviewer"
+    },
+    {
+      "id": "pasteur",
+      "parallelization_template": "E",
+      "name": "Pasteur",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "pasteur",
+      "triggers": [],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "sharp_edges_count": 0,
+      "description": "Bioinformatics review synthesizer. Deduplicates findings across domain reviewers, identifies cross-domain contradictions, produces unified BLOCK/WARNING/APPROVE verdict.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All reviewer stdout files read",
+        "Findings deduplicated across reviewers",
+        "Cross-domain issues identified",
+        "Unified verdict with justification"
+      ],
+      "subagent_type": "Pasteur"
     }
   ],
   "routing_rules": {
@@ -2415,7 +2820,14 @@
         "python-architect",
         "mozart",
         "beethoven",
-        "llm-inference-architect"
+        "llm-inference-architect",
+        "genomics-reviewer",
+        "proteomics-reviewer",
+        "proteogenomics-reviewer",
+        "proteoform-reviewer",
+        "mass-spec-reviewer",
+        "bioinformatician-reviewer",
+        "pasteur"
       ],
       "external": [
         "gemini-slave"

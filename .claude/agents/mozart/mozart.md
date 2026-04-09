@@ -8,13 +8,14 @@ description: >
   Only invoked via /braintrust skill.
 
 model: opus
+effort: high
 thinking:
   enabled: true
   budget: 32000
 
 tier: 3
 category: orchestration
-subagent_type: Plan
+subagent_type: Mozart
 
 triggers:
   # Mozart is ONLY invoked via /braintrust skill - no direct triggers

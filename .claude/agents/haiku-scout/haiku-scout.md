@@ -1,4 +1,5 @@
 ---
+id: haiku-scout
 name: Haiku Scout
 description: >
   Fallback reconnaissance agent when Gemini is unavailable. Gathers scope metrics
@@ -10,6 +11,7 @@ thinking:
   budget: 2000
 tier: 1
 category: reconnaissance
+subagent_type: Haiku Scout
 triggers:
   - assess scope
   - count lines

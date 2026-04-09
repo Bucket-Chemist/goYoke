@@ -239,3 +239,136 @@ func TestUpdateAcceptanceCriteria_UnknownAgent_NoOp(t *testing.T) {
 		{Content: "some todo", Status: "completed"},
 	})
 }
+
+// ---------------------------------------------------------------------------
+// Pass 2: case-insensitive substring matching
+// ---------------------------------------------------------------------------
+
+func TestMatchTodosToAC_CaseInsensitiveSubstring(t *testing.T) {
+	criteria := []AcceptanceCriterion{
+		{Text: "Implement Feature A"},
+	}
+	todos := []TodoUpdate{
+		{Content: "implement feature a with tests", Status: "completed"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.True(t, result[0].Completed, "case-insensitive substring should match")
+}
+
+func TestMatchTodosToAC_CaseInsensitiveSubstring_NotCompleted(t *testing.T) {
+	criteria := []AcceptanceCriterion{
+		{Text: "Implement Feature A"},
+	}
+	todos := []TodoUpdate{
+		{Content: "implement feature a with tests", Status: "in-progress"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.False(t, result[0].Completed, "case-insensitive match with non-completed status should not complete AC")
+}
+
+// ---------------------------------------------------------------------------
+// Pass 3: word-overlap scoring
+// ---------------------------------------------------------------------------
+
+func TestMatchTodosToAC_WordOverlap_Paraphrase(t *testing.T) {
+	// Positional and substring passes won't fire; word overlap should.
+	criteria := []AcceptanceCriterion{
+		{Text: "analyze routing architecture performance bottlenecks"},
+	}
+	todos := []TodoUpdate{
+		{Content: "routing architecture performance bottlenecks analysis", Status: "completed"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.True(t, result[0].Completed, "word overlap should match paraphrased content")
+}
+
+func TestMatchTodosToAC_WordOverlap_StopwordsFiltered(t *testing.T) {
+	// Criterion is heavy on stopwords; only "implementation" and "feature"
+	// are meaningful. The todo reproduces them → should match.
+	criteria := []AcceptanceCriterion{
+		{Text: "the implementation of the feature is done"},
+	}
+	todos := []TodoUpdate{
+		{Content: "feature implementation finished", Status: "completed"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.True(t, result[0].Completed, "stopwords should be filtered before overlap computation")
+}
+
+func TestMatchTodosToAC_WordOverlap_ThresholdAtExactlyHalf(t *testing.T) {
+	// Criterion meaningful words: routing, architecture, analysis, deep (4)
+	// Todo meaningful words:      routing, architecture, implementation, plan (4)
+	// Intersection: routing, architecture (2) → 2/4 = 0.5 → should match.
+	criteria := []AcceptanceCriterion{
+		{Text: "routing architecture analysis deep"},
+	}
+	todos := []TodoUpdate{
+		{Content: "routing architecture implementation plan", Status: "completed"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.True(t, result[0].Completed, "overlap ratio 0.5 should match")
+}
+
+func TestMatchTodosToAC_WordOverlap_ThresholdBelowHalf(t *testing.T) {
+	// Criterion meaningful words: routing, architecture, analysis, deep (4)
+	// Todo meaningful words:      routing, implementation, plan, review (4)
+	// Intersection: routing (1) → 1/4 = 0.25 → should NOT match.
+	criteria := []AcceptanceCriterion{
+		{Text: "routing architecture analysis deep"},
+	}
+	todos := []TodoUpdate{
+		{Content: "routing implementation plan review", Status: "completed"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.False(t, result[0].Completed, "overlap ratio 0.25 should not match")
+}
+
+func TestMatchTodosToAC_WordOverlap_OnlyMatchesCompletedTodos(t *testing.T) {
+	// Word overlap would succeed on text alone, but todo is not completed.
+	criteria := []AcceptanceCriterion{
+		{Text: "analyze routing performance bottlenecks"},
+	}
+	todos := []TodoUpdate{
+		{Content: "routing performance bottlenecks analysis", Status: "in_progress"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.False(t, result[0].Completed, "word overlap pass must not match non-completed todos")
+}
+
+// ---------------------------------------------------------------------------
+// Regression: existing passes unaffected by new passes
+// ---------------------------------------------------------------------------
+
+func TestMatchTodosToAC_Regression_ExactMatch(t *testing.T) {
+	criteria := []AcceptanceCriterion{
+		{Text: "implement feature A"},
+		{Text: "write tests"},
+	}
+	todos := []TodoUpdate{
+		{Content: "implement feature A", Status: "completed"},
+		{Content: "write tests", Status: "done"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 2)
+	assert.True(t, result[0].Completed, "exact match should still work")
+	assert.True(t, result[1].Completed, "exact match with 'done' status should still work")
+}
+
+func TestMatchTodosToAC_Regression_SubstringMatch(t *testing.T) {
+	criteria := []AcceptanceCriterion{
+		{Text: "feature A"},
+	}
+	todos := []TodoUpdate{
+		{Content: "implement feature A with tests", Status: "completed"},
+	}
+	result := MatchTodosToAC(criteria, todos)
+	require.Len(t, result, 1)
+	assert.True(t, result[0].Completed, "substring match should still work")
+}

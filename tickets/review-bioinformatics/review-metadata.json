@@ -1,0 +1,95 @@
+{
+  "review_id": "review-bioinformatics-20260409-001",
+  "timestamp": "2026-04-09T12:00:00Z",
+  "input_files": [
+    "tickets/review-bioinformatics/specs.md",
+    "tickets/review-bioinformatics/implementation-plan.json"
+  ],
+  "output_file": "tickets/review-bioinformatics/review-critique.md",
+  "verdict": "APPROVE_WITH_CONDITIONS",
+  "confidence": "HIGH",
+  "issue_counts": {
+    "critical": 1,
+    "major": 4,
+    "minor": 3
+  },
+  "issues": {
+    "critical": [
+      {
+        "id": "C-1",
+        "layer": "Assumptions + Dependencies",
+        "location": "specs.md Decision Table + task-006",
+        "summary": "Contradictory spawn path: task_invocation_allowlist added for leaf-only agents",
+        "recommendation": "Remove 6 bioinformatics reviewers from task_invocation_allowlist in task-006"
+      }
+    ],
+    "major": [
+      {
+        "id": "M-1",
+        "layer": "Assumptions",
+        "location": "specs.md shared fields",
+        "summary": "effort: high is a phantom field with no consumer in the system",
+        "recommendation": "Remove from specs.md shared fields"
+      },
+      {
+        "id": "M-2",
+        "layer": "Architecture Smells",
+        "location": "task-001",
+        "summary": "Scaffolder (Haiku+Thinking) writing 6 Opus-tier agent body content with domain expertise",
+        "recommendation": "Acknowledge as boilerplate or upgrade agent to tech-docs-writer"
+      },
+      {
+        "id": "M-3",
+        "layer": "Cost-Benefit",
+        "location": "task-004 referencing /review SKILL.md",
+        "summary": "Inherited budget/timeout documentation mismatch from /review",
+        "recommendation": "Use review.json template values as authoritative, not SKILL.md hardcoded values"
+      },
+      {
+        "id": "M-4",
+        "layer": "Contractor Readiness",
+        "location": "task-001",
+        "summary": "6 agents in single task with ~3000-word description risks scaffolder context overflow",
+        "recommendation": "Split into 2 tasks of 3 agents each"
+      }
+    ],
+    "minor": [
+      {
+        "id": "m-1",
+        "layer": "Contractor Readiness",
+        "location": "task-005",
+        "summary": "Fragile positional insertion instruction for agents-index.json",
+        "recommendation": "Anchor on unique JSON key instead of relative position"
+      },
+      {
+        "id": "m-2",
+        "layer": "Testing",
+        "location": "task-008",
+        "summary": "Haiku code-reviewer for 20-point schema validation may miss subtle errors",
+        "recommendation": "Consider upgrading validation gate agent tier"
+      },
+      {
+        "id": "m-3",
+        "layer": "Failure Modes",
+        "location": "Team config + SKILL.md",
+        "summary": "No graceful degradation documented when 1 of N reviewers fails",
+        "recommendation": "Document partial-success handling in new SKILL.md"
+      }
+    ]
+  },
+  "assumptions_count": 7,
+  "assumptions_unverified": 3,
+  "commendations_count": 5,
+  "specific_concerns_addressed": 8,
+  "scouts_spawned": [],
+  "reference_files_read": [
+    "tickets/review-bioinformatics/specs.md",
+    "tickets/review-bioinformatics/implementation-plan.json",
+    ".claude/skills/review/SKILL.md",
+    ".claude/schemas/teams/review.json",
+    ".claude/agents/agents-index.json (partial: backend-reviewer entry, routing_rules)",
+    ".claude/routing-schema.json (partial: task_invocation_allowlist)"
+  ],
+  "cost_estimate_usd": 0.18,
+  "review_duration_minutes": 15
+}

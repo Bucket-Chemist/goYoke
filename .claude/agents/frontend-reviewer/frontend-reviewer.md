@@ -1,4 +1,5 @@
 ---
+id: frontend-reviewer
 name: Frontend Reviewer
 description: >
   Frontend/UI code quality reviewer. Specializes in React components,
@@ -12,7 +13,7 @@ thinking:
 
 tier: 2
 category: review
-subagent_type: Explore
+subagent_type: Frontend Reviewer
 
 triggers:
   - "review frontend"

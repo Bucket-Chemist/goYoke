@@ -1,4 +1,5 @@
 ---
+id: rust-pro
 name: Rust Pro
 description: >
   Expert Rust development with modern patterns. Auto-activated for Rust projects.
@@ -7,6 +8,7 @@ description: >
   with the 2024 edition.
 
 model: sonnet
+subagent_type: Rust Pro
 thinking:
   enabled: true
   budget: 14000

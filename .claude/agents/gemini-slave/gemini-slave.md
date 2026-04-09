@@ -1,4 +1,5 @@
 ---
+id: gemini-slave
 name: Gemini Slave
 description: >
   Large-context analysis subagent with 1M+ token context window.
@@ -6,6 +7,7 @@ description: >
   Use for tasks requiring multiple files, deep call-stack tracing, or full-module analysis.
 
 model: external # Not Claude - uses Gemini 3 via CLI
+subagent_type: Gemini Slave
 model_routing:
   flash: ["mapper", "memory-drift", "benchmark-score", "deps", "api-surface"]  # gemini-3-flash-preview
   pro: ["architect", "debugger", "memory-audit", "benchmark-audit"]  # gemini-3-pro-preview

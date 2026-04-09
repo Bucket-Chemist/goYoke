@@ -1,9 +1,11 @@
 ---
+id: scaffolder
 name: Scaffolder
 description: >
   Boilerplate and template generation. New class, new module, project structure.
   Uses thinking to reason through structure decisions while keeping costs low.
 model: haiku
+subagent_type: Scaffolder
 thinking:
   enabled: true
   budget: 4000

@@ -6,25 +6,10 @@ thinking:
   enabled: true
   budget: 32000
 
-effort:
-  default: high             # high = deep reasoning on every request (Opus 4.6 default)
-  feasibility_analysis: high
-  memory_arithmetic: medium # Arithmetic is mechanical, doesn't need deep reasoning
-  preflight_generation: medium
-  adversarial_review: max   # max = highest capability, Opus 4.6 only
-  parameter_verification: low # Simple config.json fetch + extract
-max_tokens: 16000           # Sufficient for feasibility reports; can increase to 128K for exhaustive analysis
-context_window: 200000      # Standard pricing. 1M available at premium (beta, $10/$37.50 per MTok)
+effort: high
 tier: 3
 category: architecture
-subagent_type: ["Plan", "Explore"]
-
-# Opus 4.6 specific capabilities
-interleaved_thinking: auto  # Enabled automatically with adaptive thinking, no beta header needed
-compaction: true            # Context compaction available for long-running sessions
-structured_outputs: true    # GA on Opus 4.6, no beta header needed — use output_config.format
-fast_mode: false            # 2.5x speed at 6x cost — not worth it for this agent's analytical work
-
+subagent_type: LLM Inference Architect
 triggers:
   - llm deployment feasibility
   - kv cache optimization

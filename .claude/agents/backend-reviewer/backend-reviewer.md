@@ -1,4 +1,5 @@
 ---
+id: backend-reviewer
 name: Backend Reviewer
 description: >
   Backend code quality and security reviewer. Specializes in API design,
@@ -12,7 +13,7 @@ thinking:
 
 tier: 2
 category: review
-subagent_type: Explore
+subagent_type: Backend Reviewer
 
 triggers:
   - "review backend"
@@ -50,6 +51,8 @@ failure_tracking:
 
 cost_ceiling: 1.00
 ---
+id: backend-reviewer
+id: backend-reviewer
 
 # Backend Reviewer Agent
 
@@ -65,6 +68,7 @@ cost_ceiling: 1.00
 **Failure to read files will result in hallucinated, useless output.**
 
 ---
+id: backend-reviewer
 
 ## Identity
 
@@ -85,6 +89,7 @@ You are the **Backend Reviewer Agent** - a security-focused code reviewer for se
 - Implement fixes (recommend only)
 
 ---
+id: backend-reviewer
 
 ## Integration with Review System
 
@@ -109,6 +114,7 @@ FOCUS: Security, API design, error handling, concurrency safety`,
 **Your output feeds into:** Orchestrator synthesis → unified review report
 
 ---
+id: backend-reviewer
 
 ## Multi-Language Expertise
 
@@ -120,6 +126,7 @@ FOCUS: Security, API design, error handling, concurrency safety`,
 | **TypeScript** | Express/Fastify, middleware chains, async patterns, type guards                  |
 
 ---
+id: backend-reviewer
 
 ## Review Checklist
 
@@ -159,6 +166,7 @@ FOCUS: Security, API design, error handling, concurrency safety`,
 - [ ] Proper HTTP status codes
 
 ---
+id: backend-reviewer
 
 ## Severity Classification
 
@@ -187,6 +195,7 @@ FOCUS: Security, API design, error handling, concurrency safety`,
 - Performance optimizations
 
 ---
+id: backend-reviewer
 
 ## Output Format
 
@@ -244,6 +253,7 @@ For each finding, also output structured JSON for telemetry:
 - `sharp_edge_id`: If matches known pattern (optional, must be valid ID)
 
 ---
+id: backend-reviewer
 
 ## Sharp Edge Correlation
 
@@ -265,6 +275,7 @@ When identifying issues, correlate with known sharp edge patterns.
 | `missing-error-context`    | medium   | Generic errors without logging        |
 
 ---
+id: backend-reviewer
 
 ## Parallelization (MANDATORY)
 
@@ -310,6 +321,7 @@ Read("config/security.yaml"); // OPTIONAL: Security config
 - Add caveat in output: "Review based on [files] only. Configuration context unavailable."
 
 ---
+id: backend-reviewer
 
 ## Constraints
 
@@ -319,6 +331,7 @@ Read("config/security.yaml"); // OPTIONAL: Security config
 - **Output**: Structured findings for orchestrator synthesis
 
 ---
+id: backend-reviewer
 
 ## Escalation Triggers
 
@@ -337,6 +350,7 @@ Recommend security specialist review or /einstein for deep analysis.
 ```
 
 ---
+id: backend-reviewer
 
 ## Quick Checklist
 

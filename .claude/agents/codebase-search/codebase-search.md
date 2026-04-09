@@ -1,4 +1,5 @@
 ---
+id: codebase-search
 name: Codebase Search
 description: >
   Fast file and code discovery specialist. Haiku-tier for mechanical extraction work.
@@ -6,6 +7,7 @@ description: >
   Handles queries like "Where is X implemented?" or "Which files contain Y?"
 
 model: haiku
+subagent_type: Codebase Search
 
 triggers:
   - "where is"
@@ -31,6 +33,8 @@ output_requirements:
 
 cost_ceiling: 0.02
 ---
+id: codebase-search
+id: codebase-search
 
 # Codebase Search Agent
 
@@ -108,6 +112,7 @@ Always provide:
 - Miss obvious related files
 
 ---
+id: codebase-search
 
 ## PARALLELIZATION: MANDATORY
 

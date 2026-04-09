@@ -1,0 +1,212 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "language": "config",
+    "conventions_file": "none",
+    "build_verification": "jq . .claude/agents/agents-index.json > /dev/null && jq . .claude/routing-schema.json > /dev/null",
+    "error_handling": "JSON validation via jq, YAML front-matter validation via grep",
+    "test_pattern": "Schema validation + bidirectional relationship checks",
+    "architecture_notes": "Mirror existing /review skill architecture for bioinformatics domain. 6 Opus-tier reviewer agents dispatched via team-run from /review-bioinformatics skill. No orchestrator agent — skill handles orchestration directly (same as /review SKILL.md pattern). Bioinformatics reviewers use Read/Glob/Grep tools only (review agents do not write code).",
+    "patterns_to_follow": [
+      "backend-reviewer.md frontmatter structure (id, name, model, thinking, tier, category, subagent_type, triggers, tools, conventions_required, focus_areas, failure_tracking, cost_ceiling)",
+      "/review SKILL.md workflow phases (Detect → Classify → Select → Execute → Launch)",
+      "review.json team config template (waves with member entries)",
+      "reviewer.json stdin schema (agent, workflow, context, review_scope, git_context, focus_areas, project_conventions)",
+      "agents-index.json entry structure (all fields from backend-reviewer entry)"
+    ],
+    "anti_patterns": [
+      "Dead frontmatter fields: max_tokens, context_window, interleaved_thinking, compaction, structured_outputs, fast_mode",
+      "Unidirectional spawn relationships (spawned_by without matching can_spawn)",
+      "Missing agent_subagent_mapping entries in routing-schema.json",
+      "Hardcoded file lists in skill (must dynamically detect bioinformatics files)"
+    ]
+  },
+  "tasks": [
+    {
+      "task_id": "task-001",
+      "subject": "Create 6 bioinformatics reviewer agent frontmatter files",
+      "description": "Create 6 agent frontmatter files under .claude/agents/. Each agent gets its own directory and .md file. All agents share: model=opus, thinking={enabled: true, budget: 32000}, tier=3, category=bioinformatics-review, tools=[Read, Glob, Grep], failure_tracking={max_attempts: 2, on_max_reached: 'report_incomplete'}, cost_ceiling=5.00. Each file must include the CRITICAL file-reading warning section (copied from backend-reviewer.md) and boilerplate body sections (Identity, Review Checklist, Severity Classification, Output Format, Parallelization, Constraints). Use multiple `id: {agent-id}` section separators as in backend-reviewer.md.\n\nAgent 1: .claude/agents/genomics-reviewer/genomics-reviewer.md\n  id: genomics-reviewer\n  name: Genomics Reviewer\n  description: Genome assembly, variant calling, alignment, and sequence data format review. Specializes in BWA/Bowtie2/STAR aligners, GATK/bcftools variant callers, VCF/BAM/FASTA/FASTQ/GFF/GTF/BED format compliance.\n  subagent_type: Genomics Reviewer\n  triggers: ['review genomics', 'alignment review', 'variant calling review', 'genome assembly review', 'VCF review', 'sequencing review']\n  conventions_required: ['python.md', 'R.md']\n  focus_areas: [Alignment accuracy (mapping quality thresholds, multimapping handling, duplicate marking), Variant calling methodology (germline vs somatic pipelines, caller selection, joint calling vs single-sample), Reference genome handling (build consistency hg19/hg38/T2T, liftover correctness, alt contig handling), File format compliance (VCF spec 4.3+, BAM flag correctness, index file presence), Annotation pipeline correctness (VEP/SnpEff configuration, transcript selection, HGVS nomenclature)]\n  severity_mapping: Critical=wrong reference build used across pipeline, variant filter removing true positives, BAM files missing read groups. Warning=suboptimal aligner parameters, missing QC steps, hardcoded paths to reference files. Info=newer tool versions available, minor format style issues.\n\nAgent 2: .claude/agents/proteomics-reviewer/proteomics-reviewer.md\n  id: proteomics-reviewer\n  name: Proteomics Reviewer\n  description: Mass spectrometry-based proteomics data processing review. Specializes in search engine configuration, FDR control, quantification methods (TMT/iTRAQ/LFQ/SILAC), mzML/mzXML format handling, PSM scoring.\n  subagent_type: Proteomics Reviewer\n  triggers: ['review proteomics', 'protein identification review', 'quantification review', 'FDR review', 'search engine review']\n  conventions_required: ['python.md', 'R.md']\n  focus_areas: [Search engine parameters (enzyme specificity, missed cleavages, mass tolerance, modification selection, decoy database generation), FDR control methodology (target-decoy approach, protein-level vs peptide-level FDR, parsimony principle), Quantification design (normalization method, missing value imputation, batch effect correction, ratio compression awareness for isobaric labels), Statistical testing (appropriate test selection, multiple testing correction method, effect size reporting, sample size adequacy)]\n  severity_mapping: Critical=no FDR control applied, protein-level inference without parsimony, wrong enzyme/modification settings. Warning=lenient FDR threshold (>5%), missing normalization step, no batch correction with known batches. Info=alternative search engines available, minor parameter tuning suggestions.\n\nAgent 3: .claude/agents/proteogenomics-reviewer/proteogenomics-reviewer.md\n  id: proteogenomics-reviewer\n  name: Proteogenomics Reviewer\n  description: Proteogenomics pipeline review for custom protein database construction, novel peptide identification, variant peptides, splice junction peptides, and ORF prediction. Cross-domain review spanning genomics and proteomics.\n  subagent_type: Proteogenomics Reviewer\n  triggers: ['review proteogenomics', 'custom database review', 'novel peptide review', 'variant peptide review', 'splice junction review']\n  conventions_required: ['python.md', 'R.md']\n  focus_areas: [Database construction methodology (source data selection, redundancy removal, decoy generation for custom DBs, size inflation control), Novel peptide validation stringency (orthogonal evidence requirements, genomic coordinate mapping, conservation scoring), Variant peptide identification (VCF integration correctness, SAAV vs indel handling, heterozygous variant representation), Splice junction peptide detection (junction database generation from RNA-seq, minimum read support thresholds), ORF prediction quality (start codon selection, minimum length thresholds, reading frame consistency)]\n  severity_mapping: Critical=database contains duplicate entries inflating FDR, no size-aware FDR correction for inflated search space, variant peptides not validated against genomic coordinates. Warning=missing orthogonal validation for novel peptides, RNA-seq/WGS version mismatch with proteomics sample, database search space >10x standard. Info=newer ORF prediction tools available, alternative junction database strategies.\n\nAgent 4: .claude/agents/proteoform-reviewer/proteoform-reviewer.md\n  id: proteoform-reviewer\n  name: Proteoform Reviewer\n  description: Top-down proteomics and proteoform analysis review. Specializes in intact mass analysis, PTM combinatorics, proteoform family assignment, spectral deconvolution, and sequence coverage assessment.\n  subagent_type: Proteoform Reviewer\n  triggers: ['review proteoform', 'top-down review', 'PTM analysis review', 'intact mass review', 'deconvolution review']\n  conventions_required: ['python.md', 'R.md']\n  focus_areas: [Deconvolution algorithm selection and parameters (charge state determination, isotope fitting quality, signal-to-noise thresholds, algorithm choice justification), PTM localization confidence (fragment ion coverage around modification sites, localization probability scores, ambiguity reporting), Proteoform family assignment (mass shift tolerance, combinatorial PTM enumeration, family grouping logic), Intact mass accuracy (calibration verification, mass accuracy across mass range, adduct identification), Sequence coverage assessment (fragment type coverage, terminal ion series completeness, internal fragment consideration)]\n  severity_mapping: Critical=deconvolution artifacts reported as real proteoforms, PTM localization claimed without sufficient fragment coverage, mass accuracy exceeds instrument specification. Warning=single charge state deconvolution, incomplete proteoform family enumeration, no internal calibrant used. Info=alternative deconvolution parameters, additional fragmentation methods suggested.\n\nAgent 5: .claude/agents/mass-spec-reviewer/mass-spec-reviewer.md\n  id: mass-spec-reviewer\n  name: Mass Spectrometry Reviewer\n  description: Mass spectrometry instrumentation and data acquisition review. Specializes in instrument parameters, acquisition methods (DDA/DIA/PRM), calibration, raw data quality assessment, vendor format handling (Thermo/Bruker/SCIEX/Waters), and spectral processing.\n  subagent_type: Mass Spectrometry Reviewer\n  triggers: ['review mass spec', 'instrument review', 'acquisition review', 'raw data quality review', 'spectral processing review', 'DIA review', 'DDA review']\n  conventions_required: ['python.md']\n  focus_areas: [Acquisition method suitability (DDA vs DIA vs PRM selection rationale, scan speed vs resolution tradeoffs, isolation window design for DIA), Instrument parameter optimization (resolution settings, AGC targets, injection times, dynamic exclusion parameters, collision energy optimization), Calibration and quality control (mass accuracy verification, retention time stability, intensity reproducibility, system suitability criteria), Vendor-specific data handling (raw file conversion fidelity, centroiding parameters, vendor lock-in avoidance, format interoperability), Spectral processing parameters (peak picking algorithm, noise estimation, smoothing effects, baseline correction methodology)]\n  severity_mapping: Critical=wrong acquisition method for experimental goal, no calibration performed, raw data conversion losing spectral information. Warning=suboptimal isolation windows, missing QC samples in sequence, hardcoded vendor-specific paths. Info=newer acquisition strategies available, alternative spectral processing parameters.\n\nAgent 6: .claude/agents/bioinformatician-reviewer/bioinformatician-reviewer.md\n  id: bioinformatician-reviewer\n  name: Bioinformatician Reviewer\n  description: Bioinformatics pipeline architecture and methodology review. Specializes in workflow managers (Nextflow/Snakemake/WDL), reproducibility (Docker/Singularity/Conda), statistical methods, multiple testing correction, data provenance, and computational resource management.\n  subagent_type: Bioinformatician Reviewer\n  triggers: ['review bioinformatics', 'pipeline review', 'workflow review', 'reproducibility review', 'statistical methods review', 'Nextflow review', 'Snakemake review']\n  conventions_required: ['python.md', 'R.md']\n  focus_areas: [Workflow reproducibility (container pinning with SHA digests not tags, conda environment locking, workflow manager version specification, random seed setting), Pipeline architecture (modularity and reusability, error handling and retry logic, checkpoint/resume capability, input validation), Statistical methodology (appropriate test selection for data distribution, multiple testing correction method and scope, effect size interpretation, confounding variable handling), Resource management (memory estimation accuracy, parallelization efficiency, storage lifecycle management, cloud cost optimization), Data provenance (input/output tracking, parameter logging, software version recording, audit trail completeness)]\n  severity_mapping: Critical=no container/environment pinning (irreproducible), statistical test assumptions violated, no multiple testing correction applied. Warning=container tags instead of SHA digests, missing error handling in pipeline steps, no input validation. Info=workflow manager style improvements, alternative statistical approaches, resource optimization suggestions.\n\nEach agent file body MUST include these sections (adapt from backend-reviewer.md pattern):\n1. CRITICAL: File Reading Required (mandatory warning)\n2. Identity (role statement, what they focus on, what they do NOT do)\n3. Integration with Review System (spawned by team-run, output format)\n4. Review Checklist (domain-specific, organized by priority)\n5. Severity Classification (Critical/Warning/Info with examples)\n6. Output Format (Human-Readable Report + Telemetry JSON matching backend-reviewer format)\n7. Parallelization (MANDATORY section — batch all file reads)\n8. Constraints (scope boundaries)\n9. Quick Checklist (pre-completion verification)\n\nAlso create an empty sharp-edges.yaml file for each agent at .claude/agents/{id}/sharp-edges.yaml with content: '# Sharp edges for {agent-name} - none captured yet\nedges: []'",
+      "agent": "scaffolder",
+      "target_packages": [
+        ".claude/agents/genomics-reviewer",
+        ".claude/agents/proteomics-reviewer",
+        ".claude/agents/proteogenomics-reviewer",
+        ".claude/agents/proteoform-reviewer",
+        ".claude/agents/mass-spec-reviewer",
+        ".claude/agents/bioinformatician-reviewer"
+      ],
+      "related_files": [
+        {"path": ".claude/agents/backend-reviewer/backend-reviewer.md", "relevance": "Reference pattern for reviewer agent frontmatter and body structure"},
+        {"path": ".claude/agents/frontend-reviewer/frontend-reviewer.md", "relevance": "Additional reviewer pattern reference"}
+      ],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "6 agent directories created under .claude/agents/",
+        "Each .md file has valid YAML frontmatter with all required fields",
+        "No dead fields present (max_tokens, context_window, interleaved_thinking, compaction, structured_outputs, fast_mode)",
+        "id in frontmatter matches directory name exactly",
+        "subagent_type matches the Agent Name (e.g., Genomics Reviewer)",
+        "Each file contains the CRITICAL file-reading warning section",
+        "Each file has all 9 body sections",
+        "6 empty sharp-edges.yaml files created"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-002",
+      "subject": "Create bioinformatics review team config template",
+      "description": "Create .claude/schemas/teams/review-bioinformatics.json — a team config template for bioinformatics review. Mirror the exact structure of .claude/schemas/teams/review.json but with these differences:\n\n1. team_name template: 'review-bioinformatics-{timestamp}'\n2. workflow_type: 'review-bioinformatics'\n3. budget_max_usd: 25.0 (higher — 6 Opus reviewers)\n4. budget_remaining_usd: 25.0\n5. warning_threshold_usd: 20.0\n6. Single wave with 6 members (all Opus reviewers)\n\nMember entries (one per reviewer):\n{\n  \"name\": \"{agent-id}\",\n  \"agent\": \"{agent-id}\",\n  \"model\": \"opus\",\n  \"stdin_file\": \"stdin_{agent-id}.json\",\n  \"stdout_file\": \"stdout_{agent-id}.json\",\n  \"status\": \"pending\",\n  \"process_pid\": null,\n  \"exit_code\": null,\n  \"cost_usd\": 0.0,\n  \"cost_status\": \"\",\n  \"error_message\": \"\",\n  \"retry_count\": 0,\n  \"max_retries\": 1,\n  \"timeout_ms\": 900000,\n  \"started_at\": null,\n  \"completed_at\": null\n}\n\nNote: max_retries=1 (not 2) because Opus retries are expensive ($5+/retry). timeout_ms=900000 (15 minutes) because Opus reviewers need more time for deep analysis.\n\nThe 6 agents in order: genomics-reviewer, proteomics-reviewer, proteogenomics-reviewer, proteoform-reviewer, mass-spec-reviewer, bioinformatician-reviewer.\n\nKeep $schema reference pointing to ./team-config.json (same as review.json).",
+      "agent": "scaffolder",
+      "target_packages": [".claude/schemas/teams"],
+      "related_files": [
+        {"path": ".claude/schemas/teams/review.json", "relevance": "Exact template to mirror with bioinformatics adaptations"}
+      ],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "File created at .claude/schemas/teams/review-bioinformatics.json",
+        "Valid JSON matching review.json structure exactly",
+        "6 member entries in waves[0].members",
+        "All members use model: opus",
+        "Budget set to 25.0 USD",
+        "timeout_ms set to 900000 (15 min)",
+        "max_retries set to 1"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-003",
+      "subject": "Create bioinformatics reviewer stdin schema",
+      "description": "Create .claude/schemas/stdin/bioinformatics-reviewer.json — a JSON Schema for bioinformatics reviewer stdin. Mirror .claude/schemas/stdin/reviewer.json structure but extend for bioinformatics domain.\n\nKey differences from reviewer.json:\n\n1. agent enum: ['genomics-reviewer', 'proteomics-reviewer', 'proteogenomics-reviewer', 'proteoform-reviewer', 'mass-spec-reviewer', 'bioinformatician-reviewer']\n2. workflow const: 'review-bioinformatics'\n3. Add new required field 'omics_context' (object) with properties:\n   - primary_domain: string enum ['genomics', 'proteomics', 'proteogenomics', 'proteoform', 'mass-spectrometry', 'pipeline', 'mixed']\n   - data_formats_detected: array of strings (e.g., ['FASTA', 'VCF', 'mzML', 'BAM'])\n   - pipeline_tools_detected: array of strings (e.g., ['BWA', 'GATK', 'MaxQuant', 'Nextflow'])\n   - workflow_manager: string or null (e.g., 'nextflow', 'snakemake', 'wdl', null)\n4. Add optional field 'pipeline_context' (object) with properties:\n   - container_technology: string or null ('docker', 'singularity', 'conda', null)\n   - execution_environment: string or null ('local', 'hpc', 'cloud', null)\n   - sample_count: integer or null\n   - organisms: array of strings (e.g., ['Homo sapiens', 'Mus musculus'])\n5. Keep all shared fields from reviewer.json: context (project_root, team_dir), review_scope (files, total_files, languages_detected), git_context, focus_areas, project_conventions\n6. Extend file category enum in review_scope.files[].category to include: 'pipeline', 'config', 'data-processing', 'statistical-analysis', 'visualization'\n7. $id: 'https://gogent-fortress/schemas/stdin/bioinformatics-reviewer.json'\n8. title: 'Bioinformatics Reviewer Stdin Schema'\n9. additionalProperties: false\n\nMake required: ['agent', 'workflow', 'context', 'review_scope', 'git_context', 'focus_areas', 'project_conventions', 'omics_context']",
+      "agent": "scaffolder",
+      "target_packages": [".claude/schemas/stdin"],
+      "related_files": [
+        {"path": ".claude/schemas/stdin/reviewer.json", "relevance": "Base schema to extend with bioinformatics-specific fields"}
+      ],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "File created at .claude/schemas/stdin/bioinformatics-reviewer.json",
+        "Valid JSON Schema (draft 2020-12)",
+        "Agent enum contains exactly 6 bioinformatics reviewer IDs",
+        "workflow const is 'review-bioinformatics'",
+        "omics_context field present with all 4 properties",
+        "pipeline_context optional field present",
+        "Shared fields from reviewer.json preserved",
+        "additionalProperties: false"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-004",
+      "subject": "Create /review-bioinformatics skill SKILL.md",
+      "description": "Create .claude/skills/review-bioinformatics/SKILL.md — the skill definition for bioinformatics code review. Mirror .claude/skills/review/SKILL.md structure exactly but adapted for bioinformatics domain.\n\nFrontmatter:\n---\nname: review-bioinformatics\ndescription: Bioinformatics pipeline and omics data processing review with domain-specialist Opus reviewers\n---\n\nKey adaptations from /review SKILL.md:\n\n1. TITLE: 'Review Bioinformatics Skill v1.0'\n\n2. PURPOSE: Same 5-step pattern (Detect → Classify → Select → Execute → Launch) but for bioinformatics files.\n\n3. INVOCATION:\n   - /review-bioinformatics — Review all staged changes (bioinformatics files only)\n   - /review-bioinformatics --all — All uncommitted changes\n   - /review-bioinformatics --scope=<glob> — Specific files\n   - /review-bioinformatics path/to/pipeline — Specific path\n\n4. FILE CLASSIFICATION (Phase 1 — replace the /review extension map):\n   | Extension | Language | Category |\n   | .nf | nextflow | pipeline |\n   | .smk | snakemake | pipeline |\n   | .wdl | wdl | pipeline |\n   | .cwl | cwl | pipeline |\n   | .py | python | data-processing (if bioinformatics imports detected) |\n   | .R | r | statistical-analysis (if bioinformatics imports detected) |\n   | .config | config | config (nextflow config) |\n   | .yaml/.yml | yaml | config |\n   | .sh | bash | pipeline |\n   | .toml | toml | config |\n\n   Bioinformatics import detection heuristics (scan first 50 lines):\n   Python: biopython, pyteomics, pyopenms, pysam, HTSeq, scanpy, anndata, snakemake\n   R: Bioconductor, DESeq2, edgeR, limma, GenomicRanges, MSnbase, MSstats, Spectra\n\n5. REVIEWER SELECTION (Phase 2 — completely new logic):\n   Detect omics domains from file content and select relevant reviewers:\n\n   genomics-reviewer: Files contain alignment references (BWA, Bowtie2, STAR, samtools, bcftools, GATK, picard) OR data formats (FASTA, FASTQ, BAM, CRAM, VCF, BED, GFF, GTF)\n   proteomics-reviewer: Files contain proteomics references (MaxQuant, Comet, MSFragger, Percolator, mzML, mzXML, pepXML, protXML, PSM, FDR, peptide, protein identification)\n   proteogenomics-reviewer: Files contain proteogenomics references (custom database, novel peptide, variant peptide, splice junction, ORF prediction, SAAV) AND (genomics OR proteomics indicators)\n   proteoform-reviewer: Files contain top-down references (intact mass, deconvolution, proteoform, top-down, PTM combinatorial, TopPIC, ProSight)\n   mass-spec-reviewer: Files contain instrument references (DDA, DIA, PRM, SRM, MRM, Thermo, Bruker, SCIEX, Waters, Orbitrap, TOF, calibration, acquisition)\n   bioinformatician-reviewer: ALWAYS included (like standards-reviewer in /review). Covers pipeline architecture, reproducibility, statistics.\n\n   Selection rule: Include bioinformatician-reviewer always. Include domain-specific reviewers only when their indicators are detected. Minimum 2 reviewers, maximum 4 (to control cost). If >4 would be selected, prioritize by number of indicator matches.\n\n6. TEAM-RUN DISPATCH (Phase 3):\n   Same pattern as /review: generate config.json from review-bioinformatics.json template, generate stdin files per bioinformatics-reviewer.json schema, launch via mcp__gofortress-interactive__team_run.\n\n   Per-reviewer focus_areas (in stdin):\n   genomics-reviewer: {alignment: true, variant_calling: true, reference_handling: true, format_compliance: true, annotation: true}\n   proteomics-reviewer: {search_parameters: true, fdr_control: true, quantification: true, statistics: true}\n   proteogenomics-reviewer: {database_construction: true, novel_peptide_validation: true, variant_peptides: true, coordinate_mapping: true}\n   proteoform-reviewer: {deconvolution: true, ptm_localization: true, proteoform_families: true, intact_mass: true, sequence_coverage: true}\n   mass-spec-reviewer: {acquisition_method: true, instrument_parameters: true, calibration: true, data_conversion: true, spectral_processing: true}\n   bioinformatician-reviewer: {reproducibility: true, pipeline_architecture: true, statistics: true, resource_management: true, provenance: true}\n\n7. COST MODEL:\n   | Phase | Model | Est. Tokens | Cost |\n   | Detection | Bash | 0 | $0.000 |\n   | Classification | Bash | 0 | $0.000 |\n   | Config generation | Router | ~2K | $0.000 (inline) |\n   | Per Opus Reviewer | Opus | 30-60K | $2.50-$5.00 |\n   | Total (2-4 reviewers) | | 60-240K | $5.00-$20.00 |\n   Note: bioinformatician-reviewer always runs. Typically 2-3 domain reviewers selected. Budget cap: $25.00.\n\n8. Include same sections as /review: State Files, Troubleshooting, Example Session, ML Telemetry, Integration with /ticket.\n\n9. Team directory pattern: {gogent_session_dir}/teams/{timestamp}.bioinformatics-review/\n\n10. Skill Version: 1.0, Last Updated: 2026-04-09",
+      "agent": "tech-docs-writer",
+      "target_packages": [".claude/skills/review-bioinformatics"],
+      "related_files": [
+        {"path": ".claude/skills/review/SKILL.md", "relevance": "Exact structural template to mirror"},
+        {"path": ".claude/schemas/teams/review-bioinformatics.json", "relevance": "Team config template referenced by skill"},
+        {"path": ".claude/schemas/stdin/bioinformatics-reviewer.json", "relevance": "Stdin schema referenced by skill"}
+      ],
+      "blocked_by": ["task-001", "task-002", "task-003"],
+      "acceptance_criteria": [
+        "File created at .claude/skills/review-bioinformatics/SKILL.md",
+        "Valid YAML frontmatter with name and description",
+        "All 6 workflow phases present (Detect, Classify, Select, Execute, Launch, Return)",
+        "File classification table covers .nf, .smk, .wdl, .cwl, .py, .R, .config, .yaml, .sh",
+        "Reviewer selection logic documented with detection heuristics",
+        "bioinformatician-reviewer always included",
+        "Maximum 4 reviewers per invocation documented",
+        "Cost model table present with Opus pricing",
+        "Team directory pattern uses .bioinformatics-review/ suffix",
+        "Troubleshooting section present"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-005",
+      "subject": "Wire 6 agents into agents-index.json",
+      "description": "Add 6 bioinformatics reviewer entries to .claude/agents/agents-index.json in the agents[] array. Each entry must match the exact field structure of the backend-reviewer entry (lines 1894-1944 of agents-index.json). Insert AFTER the architect-reviewer entry (currently the last reviewer) and BEFORE the review-orchestrator entry.\n\nTemplate for each entry (fill in per-agent values):\n{\n  \"id\": \"{agent-id}\",\n  \"parallelization_template\": \"C\",\n  \"name\": \"{Agent Name}\",\n  \"model\": \"opus\",\n  \"thinking\": true,\n  \"thinking_budget\": 32000,\n  \"tier\": 3,\n  \"category\": \"bioinformatics-review\",\n  \"path\": \"{agent-id}\",\n  \"triggers\": [{agent-specific triggers}],\n  \"tools\": [\"Read\", \"Glob\", \"Grep\"],\n  \"cli_flags\": {\n    \"allowed_tools\": [\"Read\", \"Glob\", \"Grep\"],\n    \"additional_flags\": [\"--permission-mode\", \"delegate\"]\n  },\n  \"auto_activate\": null,\n  \"conventions_required\": [{agent-specific conventions}],\n  \"sharp_edges_count\": 0,\n  \"description\": \"{agent-specific description}\",\n  \"context_requirements\": {\n    \"rules\": [\"agent-guidelines.md\"],\n    \"conventions\": {}\n  },\n  \"default_acceptance_criteria\": [\n    \"All files read before generating findings\",\n    \"Findings include file:line references\",\n    \"Severity classification follows bioinformatics review standards\"\n  ],\n  \"subagent_type\": \"{Agent Name}\"\n}\n\nPer-agent triggers:\n- genomics-reviewer: ['review genomics', 'alignment review', 'variant calling review', 'genome assembly review', 'VCF review', 'sequencing review']\n- proteomics-reviewer: ['review proteomics', 'protein identification review', 'quantification review', 'FDR review', 'search engine review']\n- proteogenomics-reviewer: ['review proteogenomics', 'custom database review', 'novel peptide review', 'variant peptide review']\n- proteoform-reviewer: ['review proteoform', 'top-down review', 'PTM analysis review', 'intact mass review', 'deconvolution review']\n- mass-spec-reviewer: ['review mass spec', 'instrument review', 'acquisition review', 'raw data quality review', 'DIA review']\n- bioinformatician-reviewer: ['review bioinformatics', 'pipeline review', 'workflow review', 'reproducibility review', 'statistical methods review']\n\nPer-agent conventions_required:\n- genomics-reviewer: ['python.md', 'R.md']\n- proteomics-reviewer: ['python.md', 'R.md']\n- proteogenomics-reviewer: ['python.md', 'R.md']\n- proteoform-reviewer: ['python.md', 'R.md']\n- mass-spec-reviewer: ['python.md']\n- bioinformatician-reviewer: ['python.md', 'R.md']\n\nAlso add bidirectional spawn relationships:\n- Each reviewer gets: NO spawned_by or can_spawn fields (they are leaf agents spawned by team-run, not by spawn_agent)\n\nAlso update routing_rules.model_tiers.opus array to include all 6 new agent IDs.\n\nIMPORTANT: Read the current agents-index.json first, then use Edit to add entries. Do NOT overwrite the entire file. Verify JSON validity after editing with: jq . .claude/agents/agents-index.json > /dev/null",
+      "agent": "scaffolder",
+      "target_packages": [".claude/agents"],
+      "related_files": [
+        {"path": ".claude/agents/agents-index.json", "relevance": "Target file — add 6 entries to agents[] array and update routing_rules.model_tiers.opus"}
+      ],
+      "blocked_by": ["task-001"],
+      "acceptance_criteria": [
+        "6 new entries added to agents[] array",
+        "Each entry has all required fields matching backend-reviewer structure",
+        "No dead fields (max_tokens, context_window, etc.)",
+        "id matches directory name for each agent",
+        "subagent_type matches Agent Name exactly",
+        "routing_rules.model_tiers.opus includes all 6 new agent IDs",
+        "JSON remains valid (jq parses without error)",
+        "Existing entries unchanged"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-006",
+      "subject": "Wire 6 agents into routing-schema.json",
+      "description": "Update .claude/routing-schema.json to register all 6 bioinformatics reviewer agents. FOUR locations must be updated:\n\n1. agent_subagent_mapping (around line 556): Add 6 new entries:\n   \"genomics-reviewer\": \"Genomics Reviewer\",\n   \"proteomics-reviewer\": \"Proteomics Reviewer\",\n   \"proteogenomics-reviewer\": \"Proteogenomics Reviewer\",\n   \"proteoform-reviewer\": \"Proteoform Reviewer\",\n   \"mass-spec-reviewer\": \"Mass Spectrometry Reviewer\",\n   \"bioinformatician-reviewer\": \"Bioinformatician Reviewer\"\n\n2. tiers.opus.agents (around line 210): Add all 6 agent IDs to the array.\n\n3. tiers.opus.task_invocation_allowlist (around line 194): Add all 6 agent IDs. This is needed because opus tier has task_invocation_blocked: true, and these agents may be spawned via Task() or spawn_agent in addition to team-run.\n\n4. subagent_types: Add a new 'bioinformatics_review' category (around line 433, after existing categories):\n   \"bioinformatics_review\": {\n     \"description\": \"Opus-tier bioinformatics domain review — read-only analysis of omics pipelines and data processing code\",\n     \"tools\": [\"Read\", \"Glob\", \"Grep\"],\n     \"can_write\": false,\n     \"cost_per_invocation\": \"$2.50-$5.00\"\n   }\n\nIMPORTANT: Read the current routing-schema.json first, then use Edit for each location. Do NOT overwrite the entire file. Verify JSON validity after ALL edits with: jq . .claude/routing-schema.json > /dev/null\n\nNote: The subagent_type value in agent_subagent_mapping MUST match the subagent_type field in each agent's frontmatter and agents-index.json entry EXACTLY (case-sensitive).",
+      "agent": "scaffolder",
+      "target_packages": [".claude"],
+      "related_files": [
+        {"path": ".claude/routing-schema.json", "relevance": "Target file — update 4 locations"}
+      ],
+      "blocked_by": ["task-001"],
+      "acceptance_criteria": [
+        "agent_subagent_mapping has 6 new entries",
+        "tiers.opus.agents includes all 6 agent IDs",
+        "tiers.opus.task_invocation_allowlist includes all 6 agent IDs",
+        "subagent_types has bioinformatics_review category",
+        "subagent_type values match frontmatter exactly (case-sensitive)",
+        "JSON remains valid (jq parses without error)",
+        "Existing entries unchanged"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-007",
+      "subject": "Update CLAUDE.md dispatch table with bioinformatics reviewers",
+      "description": "Update .claude/CLAUDE.md to add the 6 bioinformatics reviewer agents to the Agent Dispatch Table. Add a new subsection under Tier 3: Opus after the existing Tier 3 table:\n\n### Tier 3: Opus (Bioinformatics Review)\n\n| Trigger Patterns | Agent | subagent_type |\n| --- | --- | --- |\n| review genomics, alignment, variant calling, VCF | `genomics-reviewer` | Genomics Reviewer |\n| review proteomics, FDR, quantification, search engine | `proteomics-reviewer` | Proteomics Reviewer |\n| review proteogenomics, custom database, novel peptide, variant peptide | `proteogenomics-reviewer` | Proteogenomics Reviewer |\n| review proteoform, top-down, PTM, intact mass, deconvolution | `proteoform-reviewer` | Proteoform Reviewer |\n| review mass spec, instrument, acquisition, DDA, DIA, spectral | `mass-spec-reviewer` | Mass Spectrometry Reviewer |\n| review bioinformatics, pipeline, workflow, reproducibility, statistics | `bioinformatician-reviewer` | Bioinformatician Reviewer |\n\nAlso add /review-bioinformatics to the Slash Commands table:\n| `/review-bioinformatics` | Bioinformatics domain review with Opus specialist reviewers |\n\nIMPORTANT: Use Edit to insert the new sections. Do NOT overwrite unrelated content. Note that CLAUDE.md appears in TWO locations (symlinked): .claude/CLAUDE.md and ~/.claude/CLAUDE.md — only edit .claude/CLAUDE.md (the canonical location).",
+      "agent": "tech-docs-writer",
+      "target_packages": [".claude"],
+      "related_files": [
+        {"path": ".claude/CLAUDE.md", "relevance": "Target file — add dispatch table entries and slash command"}
+      ],
+      "blocked_by": ["task-001"],
+      "acceptance_criteria": [
+        "New Tier 3 subsection for bioinformatics review added",
+        "All 6 agents listed with triggers and subagent_type",
+        "/review-bioinformatics added to Slash Commands table",
+        "Existing dispatch table entries unchanged",
+        "Markdown formatting valid"
+      ],
+      "tests_required": false
+    },
+    {
+      "task_id": "task-008",
+      "subject": "Validation gate — verify all integration points",
+      "description": "Perform comprehensive validation of all 54 integration points (9 per agent × 6 agents) plus skill, schemas, and CLAUDE.md.\n\nValidation checks:\n\n1. FILE EXISTENCE: Verify all 6 agent .md files exist at .claude/agents/{id}/{id}.md\n2. FILE EXISTENCE: Verify all 6 sharp-edges.yaml files exist\n3. FILE EXISTENCE: Verify .claude/schemas/teams/review-bioinformatics.json exists\n4. FILE EXISTENCE: Verify .claude/schemas/stdin/bioinformatics-reviewer.json exists\n5. FILE EXISTENCE: Verify .claude/skills/review-bioinformatics/SKILL.md exists\n6. JSON VALIDITY: Run jq . on agents-index.json and routing-schema.json\n7. ID CONSISTENCY: For each agent, verify id in frontmatter matches directory name\n8. SUBAGENT_TYPE CONSISTENCY: For each agent, verify subagent_type in frontmatter matches agent_subagent_mapping in routing-schema.json\n9. AGENTS-INDEX COMPLETENESS: Verify all 6 agents appear in agents[] array\n10. ROUTING-SCHEMA agent_subagent_mapping: Verify all 6 mappings present\n11. ROUTING-SCHEMA tiers.opus.agents: Verify all 6 agent IDs present\n12. ROUTING-SCHEMA task_invocation_allowlist: Verify all 6 agent IDs present\n13. ROUTING-SCHEMA subagent_types: Verify bioinformatics_review category exists\n14. ROUTING_RULES model_tiers.opus: Verify all 6 agent IDs in agents-index.json routing_rules.model_tiers.opus\n15. CLAUDE.MD: Verify dispatch table contains all 6 agents\n16. CLAUDE.MD: Verify /review-bioinformatics in slash commands\n17. TEAM CONFIG: Verify review-bioinformatics.json has 6 members in waves[0]\n18. STDIN SCHEMA: Verify agent enum has 6 values\n19. STDIN SCHEMA: Verify omics_context field present\n20. NO DEAD FIELDS: Grep all 6 agent .md files for forbidden fields (max_tokens, context_window, interleaved_thinking, compaction, structured_outputs, fast_mode)\n\nOutput a validation report listing each check with PASS/FAIL status.\n\nRollback guidance if validation fails:\n- Agent files: Delete the directory (.claude/agents/{id}/)\n- agents-index.json: Restore from git (git checkout .claude/agents/agents-index.json)\n- routing-schema.json: Restore from git (git checkout .claude/routing-schema.json)\n- CLAUDE.md: Restore from git (git checkout .claude/CLAUDE.md)\n- Schemas: Delete the files\n- Skill: Delete the directory",
+      "agent": "code-reviewer",
+      "target_packages": [
+        ".claude/agents",
+        ".claude/schemas",
+        ".claude/skills/review-bioinformatics",
+        ".claude"
+      ],
+      "related_files": [
+        {"path": ".claude/agents/agents-index.json", "relevance": "Verify 6 entries added correctly"},
+        {"path": ".claude/routing-schema.json", "relevance": "Verify 4 locations updated correctly"},
+        {"path": ".claude/CLAUDE.md", "relevance": "Verify dispatch table and slash commands updated"}
+      ],
+      "blocked_by": ["task-004", "task-005", "task-006", "task-007"],
+      "acceptance_criteria": [
+        "All 20 validation checks executed",
+        "Validation report generated with PASS/FAIL per check",
+        "Zero FAIL results (all checks pass)",
+        "Rollback instructions documented for any failures"
+      ],
+      "tests_required": false
+    }
+  ]
+}
