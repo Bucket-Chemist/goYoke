@@ -1389,7 +1389,8 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
+          "Grep",
+          "Write"
         ],
         "additional_flags": [
           "--permission-mode",
@@ -1421,7 +1422,8 @@
         "codebase-search",
         "librarian",
         "llm-inference-architect"
-      ]
+      ],
+      "interactive": true
     },
     {
       "id": "mozart",
@@ -1452,7 +1454,8 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
+          "Grep",
+          "Write"
         ],
         "additional_flags": [
           "--permission-mode",
@@ -1482,7 +1485,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "interactive": true
     },
     {
       "id": "beethoven",
@@ -1507,7 +1511,8 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
+          "Grep",
+          "Write"
         ],
         "additional_flags": [
           "--permission-mode",
@@ -1616,7 +1621,8 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
+          "Grep",
+          "Write"
         ],
         "additional_flags": [
           "--permission-mode",
@@ -1647,7 +1653,8 @@
       "can_spawn": [
         "llm-inference-architect"
       ],
-      "subagent_type": "Staff Architect Critical Review"
+      "subagent_type": "Staff Architect Critical Review",
+      "interactive": true
     },
     {
       "id": "haiku-scout",
