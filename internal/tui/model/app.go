@@ -127,6 +127,7 @@ type sharedState struct {
 	// planViewModal is the full-screen plan viewer overlay (TUI-056).
 	// It is activated by alt+v when rightPanelMode == RPMPlanPreview.
 	planViewModal modals.PlanViewModal
+	helpModal     modals.HelpModal // full-screen keyboard shortcut reference (alt+h)
 
 	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
 	// It is activated by ctrl+f and queries all registered SearchSources.
@@ -237,6 +238,9 @@ type AppModel struct {
 	// within the shutdown window forces an immediate tea.Quit without waiting
 	// for the graceful sequence to complete (TUI-034).
 	shutdownInProgress bool
+
+	// mouseEnabled tracks whether tea mouse capture is active; true at startup.
+	mouseEnabled bool
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:
@@ -262,8 +266,9 @@ func NewAppModel() AppModel {
 		activeTheme:   &defaultTheme,
 		themeVariant:  config.ThemeDark,
 		planViewModal: modals.NewPlanViewModal(),
+		helpModal:     modals.NewHelpModal(),
 	}
-	return AppModel{
+	m := AppModel{
 		focus:          FocusClaude,
 		rightPanelMode: RPMAgents,
 		activeTab:      TabChat,
@@ -273,7 +278,10 @@ func NewAppModel() AppModel {
 		agentTree:      agents.NewAgentTreeModel(),
 		agentDetail:    agents.NewAgentDetailModel(),
 		shared:         shared,
+		mouseEnabled:   true,
 	}
+	m.statusLine.MouseEnabled = true
+	return m
 }
 
 // ---------------------------------------------------------------------------
@@ -535,12 +543,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTabFlash(msg)
 
 	// -----------------------------------------------------------------
-	// Plan view modal (TUI-056)
+	// Plan view / help modals — deactivate themselves on Esc/q.
 	// -----------------------------------------------------------------
 
-	case modals.PlanViewClosedMsg:
-		// Nothing extra to do; the modal deactivated itself on Esc/q.
-		// The renderLayout guard already checks IsActive before rendering.
+	case modals.PlanViewClosedMsg, modals.HelpClosedMsg:
 		return m, nil
 
 	// -----------------------------------------------------------------

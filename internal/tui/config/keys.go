@@ -61,9 +61,12 @@ type GlobalKeys struct {
 	// ChangeCWD opens the CWD selector modal to change the working directory.
 	ChangeCWD key.Binding
 
-	// ToggleHealth switches between agent detail and health dashboard
-	// in the right panel at Standard tier (TUI-007).
-	ToggleHealth key.Binding
+	// ShowHelp opens the full-screen keyboard shortcut reference overlay.
+	ShowHelp key.Binding
+
+	// ToggleMouse enables or disables mouse capture. When disabled, native
+	// terminal text selection works; when enabled, scroll wheel forwarding works.
+	ToggleMouse key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -221,9 +224,13 @@ func DefaultKeyMap() KeyMap {
 				key.WithKeys("ctrl+d"),
 				key.WithHelp("ctrl+d", "change cwd"),
 			),
-			ToggleHealth: key.NewBinding(
+			ShowHelp: key.NewBinding(
 				key.WithKeys("alt+h"),
-				key.WithHelp("alt+h", "toggle health"),
+				key.WithHelp("alt+h", "help"),
+			),
+			ToggleMouse: key.NewBinding(
+				key.WithKeys("alt+m"),
+				key.WithHelp("alt+m", "toggle mouse"),
 			),
 		},
 

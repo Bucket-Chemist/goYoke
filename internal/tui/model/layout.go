@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
@@ -372,7 +373,61 @@ func (m AppModel) renderLayout() string {
 	// This catches any overflow from toasts (whose height is not subtracted
 	// from contentHeight), phantom blank lines from JoinVertical with "",
 	// or stale component dimensions after a missed propagateContentSizes call.
-	return truncateHeight(output, m.height)
+	result := truncateHeight(output, m.height)
+
+	// Help modal: composite the help box on top of the rendered layout.
+	if m.shared != nil && m.shared.helpModal.IsActive() {
+		result = overlayCenter(result, m.shared.helpModal.View(), m.width, m.height)
+	}
+
+	return result
+}
+
+// overlayCenter composites fg centered on top of bg. Background content
+// outside the fg region is preserved. Uses charmbracelet/x/ansi for
+// ANSI-aware string slicing.
+func overlayCenter(bg, fg string, termW, termH int) string {
+	bgLines := strings.Split(bg, "\n")
+	fgLines := strings.Split(fg, "\n")
+
+	fgH := len(fgLines)
+	fgW := lipgloss.Width(fg)
+
+	startY := (termH - fgH) / 2
+	if startY < 0 {
+		startY = 0
+	}
+	startX := (termW - fgW) / 2
+	if startX < 0 {
+		startX = 0
+	}
+
+	for len(bgLines) < termH {
+		bgLines = append(bgLines, strings.Repeat(" ", termW))
+	}
+
+	for i, fgLine := range fgLines {
+		row := startY + i
+		if row >= len(bgLines) {
+			break
+		}
+
+		bgLine := bgLines[row]
+		// Pad bg line so ansi.TruncateLeft has enough columns to work with.
+		if lipgloss.Width(bgLine) < termW {
+			bgLine += strings.Repeat(" ", termW-lipgloss.Width(bgLine))
+		}
+
+		left := ansi.Truncate(bgLine, startX, "")
+		right := ansi.TruncateLeft(bgLine, startX+fgW, "")
+
+		bgLines[row] = left + fgLine + right
+	}
+
+	if len(bgLines) > termH {
+		bgLines = bgLines[:termH]
+	}
+	return strings.Join(bgLines, "\n")
 }
 
 // renderMain renders the split content area (left panel + optional right panel).

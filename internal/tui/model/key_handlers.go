@@ -21,6 +21,19 @@ const interruptConfirmRequestID = "interrupt-confirm"
 
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// While the help modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.helpModal.IsActive() {
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("help")
+		}
+		updated, cmd := m.shared.helpModal.Update(msg)
+		m.shared.helpModal = updated
+		if !m.shared.helpModal.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
 	// While the plan view modal is open, forward all keys to it.
 	if m.shared != nil && m.shared.planViewModal.IsActive() {
 		// Set hint context to "plan" while plan modal is active (TUI-060).
@@ -218,6 +231,24 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.shared != nil && m.shared.cwdSelector != nil {
 			m.shared.cwdSelector.SetSize(m.width, m.height)
 			m.shared.cwdSelector.Show()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.Global.ToggleMouse):
+		m.mouseEnabled = !m.mouseEnabled
+		m.statusLine.MouseEnabled = m.mouseEnabled
+		if m.mouseEnabled {
+			return m, tea.EnableMouseCellMotion
+		}
+		return m, tea.DisableMouse
+
+	case key.Matches(msg, m.keys.Global.ShowHelp):
+		if m.shared != nil {
+			m.shared.helpModal.SetSize(m.width, m.height)
+			m.shared.helpModal.Show()
+			if m.shared.hintBar != nil {
+				m.shared.hintBar.SetContext("help")
+			}
 		}
 		return m, nil
 
@@ -587,6 +618,8 @@ func (m *AppModel) updateHintContext() {
 		return
 	}
 	switch {
+	case m.shared.helpModal.IsActive():
+		m.shared.hintBar.SetContext("help")
 	case m.shared.planViewModal.IsActive():
 		m.shared.hintBar.SetContext("plan")
 	case m.shared.modalQueue != nil && m.shared.modalQueue.IsActive():
