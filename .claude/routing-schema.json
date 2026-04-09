@@ -222,7 +222,8 @@
         "proteoform-reviewer",
         "mass-spec-reviewer",
         "bioinformatician-reviewer",
-        "pasteur"
+        "pasteur",
+        "schema-architect"
       ]
     },
     "external": {
@@ -537,7 +538,8 @@
         "einstein",
         "beethoven",
         "staff-architect-critical-review",
-        "llm-inference-architect"
+        "llm-inference-architect",
+        "schema-architect"
       ],
       "rationale": "Analysts produce thought work and documents"
     },
@@ -623,7 +625,8 @@
     "proteoform-reviewer": "Proteoform Reviewer",
     "mass-spec-reviewer": "Mass Spectrometry Reviewer",
     "bioinformatician-reviewer": "Bioinformatician Reviewer",
-    "pasteur": "Pasteur"
+    "pasteur": "Pasteur",
+    "schema-architect": "Schema Architect"
   },
   "blocked_patterns": {
     "description": "Patterns that should NEVER be used",

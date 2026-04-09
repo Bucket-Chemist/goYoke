@@ -44,6 +44,8 @@ failure_tracking:
   on_max_reached: "report_incomplete"
 
 cost_ceiling: 5.00
+spawned_by:
+  - router
 ---
 
 # Proteoform Reviewer Agent

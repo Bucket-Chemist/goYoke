@@ -222,11 +222,11 @@ Output:
 
 #### Refine Mode
 
-Spawn a single Opus agent (use architect for analytical depth):
+Spawn the schema-architect agent (domain specialist for agent content refinement, replacing the generic architect for targeted schema improvements):
 
 ```javascript
 mcp__gofortress-interactive__spawn_agent({
-    agent: "architect",
+    agent: "schema-architect",
     description: `Schema refinement: ${agentId}`,
     prompt: assembledPrompt,
     model: "opus",

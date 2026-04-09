@@ -1657,6 +1657,68 @@
       "interactive": true
     },
     {
+      "id": "schema-architect",
+      "parallelization_template": "E",
+      "name": "Schema Architect",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "thinking_budget_complex": 48000,
+      "tier": 3,
+      "category": "analysis",
+      "path": "schema-architect",
+      "triggers": [
+        "extend agent",
+        "expand agent schema",
+        "schema-extend",
+        "refine agent definition",
+        "upgrade agent content",
+        "from domain research",
+        "agent expansion"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Write",
+          "Glob",
+          "Grep"
+        ],
+        "additional_flags": [
+          "--permission-mode",
+          "delegate"
+        ]
+      },
+      "auto_activate": null,
+      "output_artifacts": {
+        "required": [
+          "expanded-body.md",
+          "expansion-report.md"
+        ],
+        "specs_location": "SESSION_DIR/expanded-body.md"
+      },
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "sharp_edges_count": 12,
+      "cost_per_invocation": "0.20-0.40",
+      "description": "Opus-tier schema extension specialist. Transforms boilerplate agent .md files into production-quality agents with deep domain expertise. Produces expanded body content and expansion reports. Leaf agent with no spawning capability.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Schema Architect"
+    },
+    {
       "id": "haiku-scout",
       "parallelization_template": "A",
       "name": "Haiku Scout",
@@ -2388,7 +2450,10 @@
         "Findings include file:line references",
         "Severity classification follows bioinformatics review standards"
       ],
-      "subagent_type": "Genomics Reviewer"
+      "subagent_type": "Genomics Reviewer",
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "proteomics-reviewer",
@@ -2442,7 +2507,10 @@
         "Findings include file:line references",
         "Severity classification follows bioinformatics review standards"
       ],
-      "subagent_type": "Proteomics Reviewer"
+      "subagent_type": "Proteomics Reviewer",
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "proteogenomics-reviewer",
@@ -2496,7 +2564,10 @@
         "Findings include file:line references",
         "Severity classification follows bioinformatics review standards"
       ],
-      "subagent_type": "Proteogenomics Reviewer"
+      "subagent_type": "Proteogenomics Reviewer",
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "proteoform-reviewer",
@@ -2550,7 +2621,10 @@
         "Findings include file:line references",
         "Severity classification follows bioinformatics review standards"
       ],
-      "subagent_type": "Proteoform Reviewer"
+      "subagent_type": "Proteoform Reviewer",
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "mass-spec-reviewer",
@@ -2605,7 +2679,10 @@
         "Findings include file:line references",
         "Severity classification follows bioinformatics review standards"
       ],
-      "subagent_type": "Mass Spectrometry Reviewer"
+      "subagent_type": "Mass Spectrometry Reviewer",
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "bioinformatician-reviewer",
@@ -2661,7 +2738,10 @@
         "Findings include file:line references",
         "Severity classification follows bioinformatics review standards"
       ],
-      "subagent_type": "Bioinformatician Reviewer"
+      "subagent_type": "Bioinformatician Reviewer",
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "pasteur",
@@ -2706,7 +2786,10 @@
         "Cross-domain issues identified",
         "Unified verdict with justification"
       ],
-      "subagent_type": "Pasteur"
+      "subagent_type": "Pasteur",
+      "spawned_by": [
+        "router"
+      ]
     }
   ],
   "routing_rules": {

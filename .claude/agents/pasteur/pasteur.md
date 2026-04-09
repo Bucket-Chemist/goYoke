@@ -38,6 +38,8 @@ failure_tracking:
   on_max_reached: "output_raw_findings_with_caveat"
 
 cost_ceiling: 5.00
+spawned_by:
+  - router
 ---
 
 # Pasteur Agent

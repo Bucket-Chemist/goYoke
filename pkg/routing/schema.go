@@ -304,6 +304,7 @@ type AgentSubagentMapping struct {
 	Beethoven                    FlexibleSubagentType  `json:"beethoven"`
 	GeminiSlave                  FlexibleSubagentType  `json:"gemini-slave"`
 	StaffArchitectCriticalReview FlexibleSubagentType  `json:"staff-architect-critical-review"`
+	SchemaArchitect             FlexibleSubagentType  `json:"schema-architect"`
 }
 
 // BlockedPatternsConfig contains patterns that should never be used.
@@ -464,6 +465,7 @@ func (s *Schema) Validate() error {
 		"Beethoven":                     true,
 		"Gemini Slave":                  true,
 		"Staff Architect Critical Review": true,
+		"Schema Architect":               true,
 	}
 
 	// Check all agent mappings (each field is now FlexibleSubagentType)
@@ -500,6 +502,7 @@ func (s *Schema) Validate() error {
 		s.AgentSubagentMapping.Beethoven,
 		s.AgentSubagentMapping.GeminiSlave,
 		s.AgentSubagentMapping.StaffArchitectCriticalReview,
+		s.AgentSubagentMapping.SchemaArchitect,
 	}
 
 	// Validate each FlexibleSubagentType's allowed types
@@ -565,6 +568,7 @@ func (s *Schema) agentMapping() map[string]*FlexibleSubagentType {
 		"beethoven":                       &s.AgentSubagentMapping.Beethoven,
 		"gemini-slave":                    &s.AgentSubagentMapping.GeminiSlave,
 		"staff-architect-critical-review": &s.AgentSubagentMapping.StaffArchitectCriticalReview,
+		"schema-architect":               &s.AgentSubagentMapping.SchemaArchitect,
 	}
 }
 

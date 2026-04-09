@@ -227,6 +227,7 @@ Request arrives
 | Comprehensive planning, scope breakdown, ticket generation                                               | `planner`                         | Planner                         |
 | Review plan, critical review                                                                             | `staff-architect-critical-review` | Staff Architect Critical Review |
 | llm deployment feasibility, kv cache, vulkan inference, hardware feasibility, inference architecture, model memory analysis | `llm-inference-architect` | LLM Inference Architect         |
+| extend agent, expand agent schema, schema-extend, refine agent definition                                                    | `schema-architect`        | Schema Architect                |
 
 ### Tier 3: Opus (Bioinformatics Review — team-run only)
 
