@@ -169,6 +169,7 @@ Request arrives
 | `/teams`              | List all teams in current session with summary status                             |
 | `/benchmark-agent`    | Evaluate GOgent agents against SkillsBench benchmarks via Harbor                  |
 | `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
+| `/schema-extend`          | Extend boilerplate agent with domain expertise via braintrust, or refine expanded agent |
 
 ---
 
