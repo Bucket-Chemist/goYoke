@@ -595,7 +595,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// Poll tick processed — refresh teams drawer with latest health data.
 			if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
 				if m.shared.teamsHealth.HasData() {
-					m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+					if !m.shared.drawerStack.TeamsHasContent() {
+						// First team discovered — force-expand the drawer.
+						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+					} else {
+						m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+					}
 				} else {
 					m.shared.drawerStack.ClearTeamsContent()
 				}
