@@ -236,6 +236,10 @@ func buildSchemaCandidates(workflowType, agentID string) []string {
 	for _, suffix := range suffixes {
 		if stripped, ok := strings.CutSuffix(agentID, suffix); ok {
 			candidates = append(candidates, fmt.Sprintf("%s-%s.json", workflowType, stripped))
+			// 2b. Role fallback: try workflow + suffix-as-role
+			// e.g., genomics-reviewer → review-bioinformatics-reviewer.json
+			role := strings.TrimPrefix(suffix, "-")
+			candidates = append(candidates, fmt.Sprintf("%s-%s.json", workflowType, role))
 		}
 	}
 

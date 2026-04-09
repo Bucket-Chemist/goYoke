@@ -480,8 +480,9 @@ func TestSpawnAndWaitWithBudget_InvalidIndices(t *testing.T) {
 	assert.Equal(t, "pending", status, "Original member should be unchanged")
 }
 
-// TestRunWaves_FailurePropagation tests that failures in one wave skip subsequent waves
-func TestRunWaves_FailurePropagation(t *testing.T) {
+// TestRunWaves_PartialFailureContinues tests that partial wave failure (some members fail,
+// some succeed) continues to the next wave rather than aborting.
+func TestRunWaves_PartialFailureContinues(t *testing.T) {
 	config := &TeamConfig{
 		TeamName:           "test-team",
 		WorkflowType:       "test",
@@ -503,7 +504,7 @@ func TestRunWaves_FailurePropagation(t *testing.T) {
 				WaveNumber:  2,
 				Description: "Wave 2",
 				Members: []Member{
-					{Name: "agent-blocked", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+					{Name: "agent-synthesizer", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
 				},
 			},
 		},
@@ -528,13 +529,63 @@ func TestRunWaves_FailurePropagation(t *testing.T) {
 
 	ctx := context.Background()
 	err := runWaves(ctx, runner)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "failed member")
+	// Partial failure should NOT return an error — next wave continues.
+	require.NoError(t, err)
 
 	runner.configMu.RLock()
 	defer runner.configMu.RUnlock()
 	assert.Equal(t, "failed", runner.config.Waves[0].Members[0].Status)
 	assert.Equal(t, "completed", runner.config.Waves[0].Members[1].Status)
+	// Wave 2 should have run (not skipped).
+	assert.Equal(t, "completed", runner.config.Waves[1].Members[0].Status)
+}
+
+// TestRunWaves_TotalFailureSkipsWaves tests that when ALL members of a wave fail,
+// subsequent waves are skipped and an error is returned.
+func TestRunWaves_TotalFailureSkipsWaves(t *testing.T) {
+	config := &TeamConfig{
+		TeamName:           "test-team",
+		WorkflowType:       "test",
+		ProjectRoot:        "/tmp/test",
+		SessionID:          "test-session",
+		Status:             "running",
+		BudgetMaxUSD:       10.00,
+		BudgetRemainingUSD: 10.00,
+		Waves: []Wave{
+			{
+				WaveNumber:  1,
+				Description: "Wave 1",
+				Members: []Member{
+					{Name: "agent-fail-1", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+					{Name: "agent-fail-2", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+				},
+			},
+			{
+				WaveNumber:  2,
+				Description: "Wave 2",
+				Members: []Member{
+					{Name: "agent-blocked", Agent: "test", Model: "haiku", Status: "pending", MaxRetries: 0},
+				},
+			},
+		},
+	}
+
+	runner, _ := setupTestRunner(t, config, &fakeSpawner{
+		fn: func(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int) error {
+			return fmt.Errorf("simulated failure")
+		},
+	})
+
+	ctx := context.Background()
+	err := runWaves(ctx, runner)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "all")
+	assert.Contains(t, err.Error(), "failed")
+
+	runner.configMu.RLock()
+	defer runner.configMu.RUnlock()
+	assert.Equal(t, "failed", runner.config.Waves[0].Members[0].Status)
+	assert.Equal(t, "failed", runner.config.Waves[0].Members[1].Status)
 	assert.Equal(t, "skipped", runner.config.Waves[1].Members[0].Status)
 }
 

@@ -127,7 +127,7 @@
           "completed_at": null
         }
       ],
-      "on_complete_script": null
+      "on_complete_script": "gogent-team-prepare-synthesis"
     },
     {
       "wave_number": 2,

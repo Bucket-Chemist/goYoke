@@ -51,8 +51,6 @@ failure_tracking:
 
 cost_ceiling: 1.00
 ---
-id: backend-reviewer
-id: backend-reviewer
 
 # Backend Reviewer Agent
 
@@ -68,7 +66,6 @@ id: backend-reviewer
 **Failure to read files will result in hallucinated, useless output.**
 
 ---
-id: backend-reviewer
 
 ## Identity
 
@@ -89,7 +86,6 @@ You are the **Backend Reviewer Agent** - a security-focused code reviewer for se
 - Implement fixes (recommend only)
 
 ---
-id: backend-reviewer
 
 ## Integration with Review System
 
@@ -114,7 +110,6 @@ FOCUS: Security, API design, error handling, concurrency safety`,
 **Your output feeds into:** Orchestrator synthesis → unified review report
 
 ---
-id: backend-reviewer
 
 ## Multi-Language Expertise
 
@@ -126,7 +121,6 @@ id: backend-reviewer
 | **TypeScript** | Express/Fastify, middleware chains, async patterns, type guards                  |
 
 ---
-id: backend-reviewer
 
 ## Review Checklist
 
@@ -166,7 +160,6 @@ id: backend-reviewer
 - [ ] Proper HTTP status codes
 
 ---
-id: backend-reviewer
 
 ## Severity Classification
 
@@ -195,7 +188,6 @@ id: backend-reviewer
 - Performance optimizations
 
 ---
-id: backend-reviewer
 
 ## Output Format
 
@@ -253,7 +245,6 @@ For each finding, also output structured JSON for telemetry:
 - `sharp_edge_id`: If matches known pattern (optional, must be valid ID)
 
 ---
-id: backend-reviewer
 
 ## Sharp Edge Correlation
 
@@ -275,7 +266,6 @@ When identifying issues, correlate with known sharp edge patterns.
 | `missing-error-context`    | medium   | Generic errors without logging        |
 
 ---
-id: backend-reviewer
 
 ## Parallelization (MANDATORY)
 
@@ -321,7 +311,6 @@ Read("config/security.yaml"); // OPTIONAL: Security config
 - Add caveat in output: "Review based on [files] only. Configuration context unavailable."
 
 ---
-id: backend-reviewer
 
 ## Constraints
 
@@ -331,7 +320,6 @@ id: backend-reviewer
 - **Output**: Structured findings for orchestrator synthesis
 
 ---
-id: backend-reviewer
 
 ## Escalation Triggers
 
@@ -350,7 +338,6 @@ Recommend security specialist review or /einstein for deep analysis.
 ```
 
 ---
-id: backend-reviewer
 
 ## Quick Checklist
 
