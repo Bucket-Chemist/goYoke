@@ -22,6 +22,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 // CLIDriverSender is a package-level type alias retained for backward
@@ -107,6 +108,16 @@ type ClaudePanelModel struct {
 	// decision when MessageID is not available.
 	streaming bool
 
+	// thinkingActive is true while the assistant is in its reasoning
+	// (extended thinking) phase. Set by ThinkingActiveMsg{Active: true} and
+	// cleared by ThinkingActiveMsg{Active: false} or ResultMsg.
+	thinkingActive bool
+
+	// ultrathinkActive is true when the submitted message contained the word
+	// "ultrathink" (case-insensitive). It enables the rainbow gradient thinking
+	// indicator during extended thinking. Cleared on ResultMsg.
+	ultrathinkActive bool
+
 	// currentMsgID is the Message.ID of the assistant message currently being
 	// streamed.  It is set when the first fragment of a new turn arrives and
 	// cleared on ResultMsg.  When non-empty, replace-vs-append decisions use
@@ -136,9 +147,17 @@ type ClaudePanelModel struct {
 	// slashCmd is the slash-command autocomplete dropdown (TUI-054).
 	slashCmd slashcmd.SlashCmdModel
 
+	// skillCmds holds dynamically loaded skill commands from ~/.claude/skills/.
+	// Stored so executeSlashCommand can include them in HelpText output.
+	skillCmds []slashcmd.SlashCommand
+
 	// tier tracks the current layout tier so renderMessage can suppress
 	// inline tool blocks when the Activity panel is visible (TUI-L05).
 	tier model.LayoutTier
+
+	// effortLevel holds the current --effort level for display in the input
+	// line. Empty string or "auto" means default (no indicator shown).
+	effortLevel string
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -151,6 +170,11 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 
 	vp := viewport.New(0, 0)
 
+	var skillCmds []slashcmd.SlashCommand
+	if configDir, err := routing.GetClaudeConfigDir(); err == nil {
+		skillCmds = slashcmd.LoadSkillCommands(configDir)
+	}
+
 	return ClaudePanelModel{
 		vp:         vp,
 		input:      ti,
@@ -158,7 +182,8 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 		autoScroll: true,
 		keys:       keys.Claude,
 		search:     NewSearchModel(),
-		slashCmd:   slashcmd.NewSlashCmdModel(),
+		slashCmd:   slashcmd.NewSlashCmdModel(skillCmds...),
+		skillCmds:  skillCmds,
 	}
 }
 
@@ -198,8 +223,19 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		}
 		return m, nil
 
+	case model.ThinkingActiveMsg:
+		m.thinkingActive = msg.Active
+		m.syncViewport()
+		return m, nil
+
+	case model.EffortChangedMsg:
+		m.effortLevel = msg.Level
+		return m, nil
+
 	case model.ResultMsg:
 		m.streaming = false
+		m.thinkingActive = false
+		m.ultrathinkActive = false
 		m.currentMsgID = ""
 		m.syncViewport()
 		if m.autoScroll {
@@ -523,6 +559,8 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		m.autoScroll = true
 		m.vp.GotoBottom()
 
+		m.ultrathinkActive = strings.Contains(strings.ToLower(text), "ultrathink")
+
 		if m.sender != nil {
 			cmds = append(cmds, m.sender.SendMessage(text))
 		}
@@ -682,8 +720,15 @@ func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea
 			return model.ModelSwitchRequestMsg{ModelID: args}
 		}
 
+	case "/effort":
+		// Emit a message for AppModel to handle — it owns the activeEffort
+		// field and the CLI driver restart flow. The panel stays decoupled.
+		return m, func() tea.Msg {
+			return model.EffortChangeRequestMsg{Level: args}
+		}
+
 	case "/help":
-		helpText := slashcmd.HelpText()
+		helpText := slashcmd.HelpText(m.skillCmds...)
 		m.messages = append(m.messages, DisplayMessage{
 			Role:      "system",
 			Content:   helpText,
@@ -817,6 +862,10 @@ func (m ClaudePanelModel) renderInputLine() string {
 		line += indicator
 	}
 
+	if m.effortLevel != "" && m.effortLevel != "auto" {
+		line += config.StyleMuted.Render("  effort:" + m.effortLevel)
+	}
+
 	return line
 }
 
@@ -845,7 +894,12 @@ func (m ClaudePanelModel) renderMessages() string {
 		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1))
 	}
 
-	if m.streaming {
+	switch {
+	case m.thinkingActive && m.ultrathinkActive:
+		sb.WriteString("\n" + config.RainbowGradient("Thinking..."))
+	case m.thinkingActive:
+		sb.WriteString("\n" + config.StyleMuted.Render("thinking..."))
+	case m.streaming:
 		sb.WriteString("\n" + streamingStyle.Render("..."))
 	}
 
@@ -1060,6 +1114,13 @@ func (m *ClaudePanelModel) SetTier(tier model.LayoutTier) {
 // IsStreaming returns true while an assistant response is being streamed.
 func (m ClaudePanelModel) IsStreaming() bool {
 	return m.streaming
+}
+
+// IsUltrathinkActive reports whether the last submitted message contained
+// "ultrathink" (case-insensitive). Used by the thinking indicator renderer
+// to select the rainbow gradient variant.
+func (m ClaudePanelModel) IsUltrathinkActive() bool {
+	return m.ultrathinkActive
 }
 
 // refreshViewport rebuilds the viewport content string from the current

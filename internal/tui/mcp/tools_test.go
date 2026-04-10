@@ -954,6 +954,81 @@ func TestBuildSpawnArgs_MCPConfig_NonInteractiveNoEnv(t *testing.T) {
 	}
 }
 
+func TestBuildSpawnArgs_DisallowedTools_InteractiveWithMCP(t *testing.T) {
+	// Interactive agent + GOFORTRESS_MCP_CONFIG → must have --disallowedTools blocking
+	// built-in equivalents that are replaced by MCP tools.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	agent := &routing.Agent{ID: "mozart", Model: "opus", Interactive: true}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	disallowIdx := -1
+	for i, a := range args {
+		if a == "--disallowedTools" {
+			disallowIdx = i
+		}
+	}
+	require.NotEqual(t, -1, disallowIdx, "--disallowedTools must be present for interactive+MCP")
+	require.Less(t, disallowIdx+1, len(args))
+	assert.Contains(t, args[disallowIdx+1], "Task")
+	assert.Contains(t, args[disallowIdx+1], "AskUserQuestion")
+}
+
+func TestBuildSpawnArgs_DisallowedTools_InteractiveNoMCP(t *testing.T) {
+	// Interactive agent WITHOUT GOFORTRESS_MCP_CONFIG → no --disallowedTools.
+	// Built-ins must remain available when MCP bridge is absent.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	agent := &routing.Agent{ID: "mozart", Model: "opus", Interactive: true}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	assert.NotContains(t, args, "--disallowedTools")
+}
+
+func TestBuildSpawnArgs_DisallowedTools_NonInteractiveWithMCP(t *testing.T) {
+	// Non-interactive agent even with GOFORTRESS_MCP_CONFIG → no --disallowedTools.
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	agent := &routing.Agent{ID: "go-pro", Model: "sonnet", Interactive: false}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	assert.NotContains(t, args, "--disallowedTools")
+}
+
+func TestBuildSpawnArgs_AdditionalFlags(t *testing.T) {
+	// additional_flags from agent config are applied (except --permission-mode).
+	agent := &routing.Agent{
+		ID:    "test-agent",
+		Model: "sonnet",
+		CliFlags: &routing.AgentCliFlags{
+			AllowedTools:    []string{"Read", "Glob"},
+			AdditionalFlags: []string{"--permission-mode", "delegate", "--effort", "high"},
+		},
+	}
+	input := SpawnAgentInput{Prompt: "p"}
+	args := buildSpawnArgs(agent, input)
+
+	// --effort high should be present.
+	effortIdx := -1
+	for i, a := range args {
+		if a == "--effort" {
+			effortIdx = i
+		}
+	}
+	require.NotEqual(t, -1, effortIdx, "--effort from additional_flags must be present")
+	assert.Equal(t, "high", args[effortIdx+1])
+
+	// --permission-mode from additional_flags must be filtered out
+	// (buildSpawnArgs already sets bypassPermissions).
+	permCount := 0
+	for _, a := range args {
+		if a == "--permission-mode" {
+			permCount++
+		}
+	}
+	assert.Equal(t, 1, permCount, "only the hardcoded --permission-mode should be present")
+}
+
 // -----------------------------------------------------------------------------
 // helpers
 // -----------------------------------------------------------------------------

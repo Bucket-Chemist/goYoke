@@ -129,6 +129,9 @@ type sharedState struct {
 	planViewModal modals.PlanViewModal
 	helpModal     modals.HelpModal // full-screen keyboard shortcut reference (alt+h)
 
+	// optionsViewModal is the full-screen options viewer overlay (alt+o).
+	optionsViewModal modals.OptionsViewModal
+
 	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
 	// It is activated by ctrl+f and queries all registered SearchSources.
 	searchOverlay searchOverlayWidget
@@ -216,6 +219,7 @@ type AppModel struct {
 	cliReady       bool   // true after SystemInitEvent processed
 	sessionID      string // from SystemInitEvent
 	activeModel    string // from SystemInitEvent
+	activeEffort   string // current --effort value; empty omits the flag
 	context1M      bool   // true if initial session resolved to a [1m] model
 	reconnectCount int    // number of reconnection attempts made
 
@@ -265,8 +269,9 @@ func NewAppModel() AppModel {
 		providerState: state.NewProviderState(),
 		activeTheme:   &defaultTheme,
 		themeVariant:  config.ThemeDark,
-		planViewModal: modals.NewPlanViewModal(),
-		helpModal:     modals.NewHelpModal(),
+		planViewModal:    modals.NewPlanViewModal(),
+		helpModal:        modals.NewHelpModal(),
+		optionsViewModal: modals.NewOptionsViewModal(),
 	}
 	m := AppModel{
 		focus:          FocusClaude,
@@ -375,6 +380,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleModelSwitchRequest(msg)
 
 	// -----------------------------------------------------------------
+	// Effort switching
+	// -----------------------------------------------------------------
+
+	case EffortChangeRequestMsg:
+		return m.handleEffortChangeRequest(msg)
+
+	// -----------------------------------------------------------------
 	// Bridge events (from MCP server via UDS)
 	// -----------------------------------------------------------------
 
@@ -405,6 +417,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.shared.planViewModal.Show()
 			}
 		}
+		return m, nil
+
+	case drawer.OptionsViewRequestMsg:
+		return m.handleOptionsViewRequest(msg)
+
+	case modals.OptionsViewClosedMsg:
 		return m, nil
 
 	case modals.ModalResponseMsg:
@@ -534,6 +552,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+
+	// -----------------------------------------------------------------
+	// Team update (immediate scan + drawer expand)
+	// -----------------------------------------------------------------
+
+	case TeamUpdateMsg:
+		return m.handleTeamUpdate(msg)
 
 	// -----------------------------------------------------------------
 	// Tab flash animation (TUI-061)

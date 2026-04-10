@@ -297,6 +297,16 @@ func (m AppModel) renderLayout() string {
 		)
 	}
 
+	// Options view modal renders as a full-screen overlay (same priority as
+	// plan view modal).
+	if m.shared != nil && m.shared.optionsViewModal.IsActive() {
+		return lipgloss.Place(
+			m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			m.shared.optionsViewModal.View(),
+		)
+	}
+
 	// CWD selector renders as a full-screen overlay (lower priority than
 	// plan view, higher than search overlay and normal content).
 	if m.shared != nil && m.shared.cwdSelector != nil && m.shared.cwdSelector.IsActive() {

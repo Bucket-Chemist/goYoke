@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
@@ -44,6 +45,20 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.shared.planViewModal = updated
 		// Restore main context when plan modal closes.
 		if !m.shared.planViewModal.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
+	// While the options view modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.optionsViewModal.IsActive() {
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("options")
+		}
+		updated, cmd := m.shared.optionsViewModal.Update(msg)
+		m.shared.optionsViewModal = updated
+		// Restore main context when options modal closes.
+		if !m.shared.optionsViewModal.IsActive() {
 			m.updateHintContext()
 		}
 		return m, cmd
@@ -188,6 +203,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.shared.hintBar.SetContext("plan")
 				}
 			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keys.Global.ViewOptions):
+		// Route alt+o to the options drawer's HandleKey so it emits
+		// OptionsViewRequestMsg with the full drawer state (content or
+		// interactive modal data). The message is then handled in Update.
+		if m.shared != nil && m.shared.drawerStack != nil {
+			cmd := m.shared.drawerStack.HandleKey(string(drawer.DrawerOptions), msg)
+			return m, cmd
 		}
 		return m, nil
 
@@ -622,6 +647,8 @@ func (m *AppModel) updateHintContext() {
 		m.shared.hintBar.SetContext("help")
 	case m.shared.planViewModal.IsActive():
 		m.shared.hintBar.SetContext("plan")
+	case m.shared.optionsViewModal.IsActive():
+		m.shared.hintBar.SetContext("options")
 	case m.shared.modalQueue != nil && m.shared.modalQueue.IsActive():
 		m.shared.hintBar.SetContext("modal")
 	case m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive():

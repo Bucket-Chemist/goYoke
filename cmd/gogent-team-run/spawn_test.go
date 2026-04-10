@@ -565,7 +565,7 @@ func TestBuildCLIArgs(t *testing.T) {
 			config: &agentCLIConfig{
 				AllowedTools: []string{"Read", "Write"},
 			},
-			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--allowedTools", "Read,Write"},
+			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--allowedTools", "Read,Write", "--disallowedTools", "Task,AskUserQuestion"},
 		},
 		{
 			name: "with_additional_flags_permission_mode_stripped",
@@ -573,7 +573,7 @@ func TestBuildCLIArgs(t *testing.T) {
 				AllowedTools:    []string{"Read", "Glob", "Grep"},
 				AdditionalFlags: []string{"--permission-mode", "delegate"},
 			},
-			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--allowedTools", "Read,Glob,Grep"},
+			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--allowedTools", "Read,Glob,Grep", "--disallowedTools", "Task,AskUserQuestion"},
 		},
 		{
 			name: "non_permission_flags_preserved",
@@ -581,21 +581,21 @@ func TestBuildCLIArgs(t *testing.T) {
 				AllowedTools:    []string{"Read"},
 				AdditionalFlags: []string{"--max-tokens", "4000", "--permission-mode", "delegate"},
 			},
-			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--allowedTools", "Read", "--max-tokens", "4000"},
+			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--allowedTools", "Read", "--disallowedTools", "Task,AskUserQuestion", "--max-tokens", "4000"},
 		},
 		{
 			name: "no_tools",
 			config: &agentCLIConfig{
 				AllowedTools: []string{},
 			},
-			expected: []string{"-p", "--verbose", "--output-format", "stream-json"},
+			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--disallowedTools", "Task,AskUserQuestion"},
 		},
 		{
 			name: "only_additional_flags",
 			config: &agentCLIConfig{
 				AdditionalFlags: []string{"--max-tokens", "4000"},
 			},
-			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--max-tokens", "4000"},
+			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--disallowedTools", "Task,AskUserQuestion", "--max-tokens", "4000"},
 		},
 		{
 			name: "with_formal_schema",
@@ -603,7 +603,7 @@ func TestBuildCLIArgs(t *testing.T) {
 				AllowedTools: []string{"Read", "Write"},
 				FormalSchema: `{"type":"object","required":["status"],"properties":{"status":{"type":"string"}}}`,
 			},
-			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--json-schema", `{"type":"object","required":["status"],"properties":{"status":{"type":"string"}}}`, "--allowedTools", "Read,Write"},
+			expected: []string{"-p", "--verbose", "--output-format", "stream-json", "--json-schema", `{"type":"object","required":["status"],"properties":{"status":{"type":"string"}}}`, "--allowedTools", "Read,Write", "--disallowedTools", "Task,AskUserQuestion"},
 		},
 	}
 

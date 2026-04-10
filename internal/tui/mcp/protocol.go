@@ -54,6 +54,10 @@ const (
 	// TypeAgentTodoUpdate reports a TodoWrite update from a subagent, used to
 	// match todo items against the agent's acceptance criteria.
 	TypeAgentTodoUpdate = "agent_todo_update"
+
+	// TypeTeamUpdate notifies the TUI that a team has been launched or updated.
+	// Triggers an immediate filesystem scan and drawer expansion.
+	TypeTeamUpdate = "team_update"
 )
 
 // Response type constants — sent from TUI back to MCP server.
@@ -151,4 +155,12 @@ type ToastPayload struct {
 	Message string `json:"message"`
 	// Level is the severity: "info", "warn", or "error".
 	Level string `json:"level"`
+}
+
+// TeamUpdatePayload is the payload for a TypeTeamUpdate message.
+type TeamUpdatePayload struct {
+	// TeamDir is the absolute path to the team directory.
+	TeamDir string `json:"team_dir"`
+	// Status is the team's current status (e.g. "running", "completed").
+	Status string `json:"status"`
 }

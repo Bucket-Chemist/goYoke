@@ -1333,3 +1333,56 @@ func TestSlashHelp_AddsSystemMessage(t *testing.T) {
 	}
 	assert.True(t, found, "/help should add a 'system' role message")
 }
+
+// ---------------------------------------------------------------------------
+// /effort slash command
+// ---------------------------------------------------------------------------
+
+func TestSlashEffort_WithLevel_EmitsEffortChangeRequestMsg(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"low", "/effort low", "low"},
+		{"medium", "/effort medium", "medium"},
+		{"high", "/effort high", "high"},
+		{"max", "/effort max", "max"},
+		{"auto maps to empty", "/effort auto", "auto"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			m := newPanel()
+			m = typeIntoPanel(m, tc.input)
+			_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+			msg := drainCmd(cmd)
+			req, ok := msg.(model.EffortChangeRequestMsg)
+			require.True(t, ok, "expected EffortChangeRequestMsg; got %T", msg)
+			assert.Equal(t, tc.want, req.Level)
+		})
+	}
+}
+
+func TestSlashEffort_NoArgs_EmitsEmptyLevel(t *testing.T) {
+	m := newPanel()
+	_, cmd := m.Update(slashcmd.SlashCmdSelectedMsg{Command: "/effort"})
+
+	msg := drainCmd(cmd)
+	req, ok := msg.(model.EffortChangeRequestMsg)
+	require.True(t, ok, "expected EffortChangeRequestMsg; got %T", msg)
+	assert.Equal(t, "", req.Level, "/effort with no args should emit empty Level")
+}
+
+func TestSlashEffort_ViaDropdown_EmitsEffortChangeRequestMsg(t *testing.T) {
+	m := newPanel()
+	// Simulate selecting from the dropdown (no args).
+	_, cmd := m.Update(slashcmd.SlashCmdSelectedMsg{Command: "/effort"})
+
+	msg := drainCmd(cmd)
+	_, ok := msg.(model.EffortChangeRequestMsg)
+	require.True(t, ok, "expected EffortChangeRequestMsg from dropdown selection; got %T", msg)
+}

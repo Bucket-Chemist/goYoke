@@ -25,6 +25,25 @@ type ModalResponseMsg struct {
 // to request the full-screen plan view modal.
 type PlanViewRequestMsg struct{}
 
+// OptionsViewRequestMsg is emitted when the user presses Alt+O in the options
+// drawer to request the full-screen options view modal.
+// It carries all drawer state the modal needs so no additional accessors are
+// required at the call site.
+type OptionsViewRequestMsg struct {
+	// Content is the plain-text drawer content (view mode).
+	Content string
+	// Interactive indicates the drawer has an active modal selection.
+	Interactive bool
+	// RequestID is the bridge request ID (interactive mode only).
+	RequestID string
+	// Message is the modal prompt message (interactive mode only).
+	Message string
+	// Options is the list of selectable options (interactive mode only).
+	Options []string
+	// SelectedIdx is the currently highlighted option index (interactive mode only).
+	SelectedIdx int
+}
+
 // DrawerState describes whether a drawer is currently collapsed or open.
 type DrawerState int
 
@@ -211,6 +230,18 @@ func (m *DrawerModel) SelectedOption() string {
 // ActiveRequestID returns the current modal request ID.
 func (m *DrawerModel) ActiveRequestID() string { return m.activeRequestID }
 
+// Content returns the current plain-text content of the drawer.
+func (m DrawerModel) Content() string { return m.content }
+
+// ActiveMessage returns the modal prompt message when a modal is active.
+func (m DrawerModel) ActiveMessage() string { return m.activeMessage }
+
+// ActiveOptions returns the list of selectable options when a modal is active.
+func (m DrawerModel) ActiveOptions() []string { return m.activeOptions }
+
+// SelectedIdx returns the currently highlighted option index when a modal is active.
+func (m DrawerModel) SelectedIdx() int { return m.selectedIdx }
+
 // formatModalContent renders the modal prompt and options list with a cursor
 // indicator on the currently selected option.
 func (m DrawerModel) formatModalContent(message string, options []string, selectedIdx int) string {
@@ -267,6 +298,8 @@ func (m DrawerModel) ViewExpanded() string {
 	hint := "↑/↓ scroll • esc minimize"
 	if m.id == DrawerPlan {
 		hint = "↑/↓ scroll • alt+v full view • esc minimize"
+	} else if m.id == DrawerOptions {
+		hint = "↑/↓ scroll • alt+o full view • esc minimize"
 	}
 	hint = config.StyleMuted.Render(hint)
 
@@ -335,6 +368,29 @@ func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 	// Plan drawer: Alt+V opens full-screen plan view (TDS-007).
 	if msg.String() == "alt+v" && m.id == DrawerPlan {
 		return func() tea.Msg { return PlanViewRequestMsg{} }
+	}
+
+	// Options drawer: Alt+O opens full-screen options view.
+	if msg.String() == "alt+o" && m.id == DrawerOptions {
+		if m.HasActiveModal() {
+			reqID := m.activeRequestID
+			message := m.activeMessage
+			opts := m.activeOptions
+			idx := m.selectedIdx
+			return func() tea.Msg {
+				return OptionsViewRequestMsg{
+					Interactive: true,
+					RequestID:   reqID,
+					Message:     message,
+					Options:     opts,
+					SelectedIdx: idx,
+				}
+			}
+		}
+		content := m.content
+		return func() tea.Msg {
+			return OptionsViewRequestMsg{Content: content}
+		}
 	}
 
 	// Normal (non-modal) key handling.

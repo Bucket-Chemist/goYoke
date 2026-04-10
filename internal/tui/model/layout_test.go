@@ -664,6 +664,7 @@ func (s *stubTeamList) View() string                                            
 func (s *stubTeamList) SetSize(_, _ int)                                                   {}
 func (s *stubTeamList) StartPolling(_ string) tea.Cmd                                     { return nil }
 func (s *stubTeamList) PollNow() tea.Cmd                                                  { return nil }
+func (s *stubTeamList) ScanNow()                                                          {}
 func (s *stubTeamList) SelectedTeam() string                                              { return "" }
 func (s *stubTeamList) CreateDetailModel(_ *state.AgentRegistry) TeamDetailWidget         { return nil }
 

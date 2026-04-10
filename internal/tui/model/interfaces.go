@@ -184,6 +184,10 @@ type teamListWidget interface {
 	// PollNow returns a Cmd that immediately fires a poll tick.  It is used
 	// by Init() to kick the first poll after StartPolling has set the dir.
 	PollNow() tea.Cmd
+	// ScanNow performs an immediate filesystem scan without scheduling a
+	// follow-up tick. Use when a TeamUpdateMsg arrives so the registry is
+	// populated before reading drawer content.
+	ScanNow()
 	// SelectedTeam returns the directory path of the currently selected team,
 	// or "" when the list is empty.
 	SelectedTeam() string

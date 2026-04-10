@@ -603,6 +603,13 @@ func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 		args = append(args, "--allowedTools", strings.Join(agentConfig.AllowedTools, ","))
 	}
 
+	// Block built-in tools that cannot work in team-run's pipe mode.
+	// Task: spawns unconstrained subprocesses bypassing the fortress architecture.
+	// AskUserQuestion: requires an interactive terminal — hangs or fails in -p mode.
+	// A future "convoy listener" daemon could bridge team-run to the TUI's UDS
+	// socket and provide MCP equivalents (ask_user, spawn_agent) instead.
+	args = append(args, "--disallowedTools", "Task,AskUserQuestion")
+
 	// Filter additional flags, replacing permission-mode for pipe-mode compatibility
 	for i := 0; i < len(agentConfig.AdditionalFlags); i++ {
 		flag := agentConfig.AdditionalFlags[i]

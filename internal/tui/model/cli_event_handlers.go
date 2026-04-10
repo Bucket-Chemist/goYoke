@@ -121,6 +121,34 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 	var cmds []tea.Cmd
 	var rootActivityAppended bool
 
+	// Pre-scan: detect thinking blocks and emit ThinkingActiveMsg before
+	// forwarding text content. Emitting first means text content (AssistantMsg)
+	// is delivered after, preserving the lastMsg order expected by the panel.
+	// If any block is "thinking", the assistant is in its reasoning phase.
+	// If only text blocks are present, it has transitioned to responding.
+	if m.shared.claudePanel != nil && len(msg.Message.Content) > 0 {
+		hasThinking := false
+		hasText := false
+		for _, block := range msg.Message.Content {
+			if block.Type == "thinking" {
+				hasThinking = true
+			} else if block.Type == "text" && block.Text != "" {
+				hasText = true
+			}
+		}
+		if hasThinking {
+			cmd := m.shared.claudePanel.HandleMsg(ThinkingActiveMsg{Active: true})
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		} else if hasText {
+			cmd := m.shared.claudePanel.HandleMsg(ThinkingActiveMsg{Active: false})
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
+
 	// Forward text and tool_use content to Claude panel.
 	if m.shared.claudePanel != nil {
 		for _, block := range msg.Message.Content {

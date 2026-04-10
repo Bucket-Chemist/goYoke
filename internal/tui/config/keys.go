@@ -55,6 +55,10 @@ type GlobalKeys struct {
 	// panel is in RPMPlanPreview mode.
 	ViewPlan key.Binding
 
+	// ViewOptions opens the full-screen options viewer when the options drawer
+	// has content or an active modal selection.
+	ViewOptions key.Binding
+
 	// Search opens the unified cross-panel fuzzy search overlay (TUI-059).
 	Search key.Binding
 
@@ -215,6 +219,10 @@ func DefaultKeyMap() KeyMap {
 			ViewPlan: key.NewBinding(
 				key.WithKeys("alt+v"),
 				key.WithHelp("alt+v", "view plan"),
+			),
+			ViewOptions: key.NewBinding(
+				key.WithKeys("alt+o"),
+				key.WithHelp("alt+o", "view options"),
 			),
 			Search: key.NewBinding(
 				key.WithKeys("ctrl+f"),

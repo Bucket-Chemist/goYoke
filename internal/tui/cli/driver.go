@@ -94,6 +94,11 @@ type CLIDriverOpts struct {
 	// Model overrides the default model for this session. Empty means default.
 	Model string
 
+	// Effort sets the thinking effort level for the claude process.
+	// Valid values: "low", "medium", "high", "max". Empty omits the flag.
+	// "auto" is treated as empty (flag omitted).
+	Effort string
+
 	// MCPConfigPath is the path to the MCP configuration file. Empty omits the flag.
 	MCPConfigPath string
 
@@ -288,6 +293,10 @@ func (d *CLIDriver) buildArgs() []string {
 
 	if d.opts.Model != "" {
 		args = append(args, "--model", d.opts.Model)
+	}
+
+	if d.opts.Effort != "" && d.opts.Effort != "auto" {
+		args = append(args, "--effort", d.opts.Effort)
 	}
 
 	if d.opts.MCPConfigPath != "" {

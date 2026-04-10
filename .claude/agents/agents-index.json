@@ -1324,14 +1324,15 @@
         "Read",
         "Glob",
         "Grep",
-        "Write",
-        "AskUserQuestion"
+        "Write"
       ],
       "cli_flags": {
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__ask_user"
         ],
         "additional_flags": [
           "--permission-mode",
@@ -1360,7 +1361,11 @@
       "can_spawn": [
         "llm-inference-architect"
       ],
-      "subagent_type": "Planner"
+      "subagent_type": "Planner",
+      "interactive": true,
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "einstein",
@@ -1382,8 +1387,7 @@
         "Read",
         "Write",
         "Glob",
-        "Grep",
-        "TaskGet"
+        "Grep"
       ],
       "cli_flags": {
         "allowed_tools": [
@@ -1442,20 +1446,17 @@
         "Read",
         "Glob",
         "Grep",
-        "Write",
-        "AskUserQuestion",
-        "Task",
-        "TaskList",
-        "TaskCreate",
-        "TaskUpdate",
-        "TaskGet"
+        "Write"
       ],
       "cli_flags": {
         "allowed_tools": [
           "Read",
           "Glob",
           "Grep",
-          "Write"
+          "Write",
+          "mcp__gofortress-interactive__ask_user",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ],
         "additional_flags": [
           "--permission-mode",

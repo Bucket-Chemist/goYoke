@@ -170,6 +170,21 @@ func TestBuildArgs(t *testing.T) {
 			opts: CLIDriverOpts{ConfigDir: "/home/user/.claude-em"},
 			absent: []string{"--config-dir"},
 		},
+		{
+			name: "effort flag included when set",
+			opts: CLIDriverOpts{Effort: "high"},
+			contains: []string{"--effort", "high"},
+		},
+		{
+			name: "effort flag omitted when empty",
+			opts: CLIDriverOpts{},
+			absent: []string{"--effort"},
+		},
+		{
+			name: "effort flag omitted when auto",
+			opts: CLIDriverOpts{Effort: "auto"},
+			absent: []string{"--effort"},
+		},
 	}
 
 	for _, tc := range tests {

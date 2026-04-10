@@ -100,6 +100,18 @@ func (m *TeamListModel) PollNow() tea.Cmd {
 	}
 }
 
+// ScanNow performs an immediate filesystem scan of the teams directory and
+// refreshes the local snapshot. Unlike PollNow it does NOT schedule a follow-up
+// tick, so it cannot create duplicate poll chains. Use this when a TeamUpdateMsg
+// arrives and you need the registry populated before reading drawer content.
+func (m *TeamListModel) ScanNow() {
+	if m.teamsDir != "" {
+		scanTeamsDir(m.teamsDir, m.registry)
+	}
+	m.teams = m.registry.All()
+	m.clampSelected()
+}
+
 // SetSize updates the width and height used for rendering.
 func (m *TeamListModel) SetSize(width, height int) {
 	m.width = width

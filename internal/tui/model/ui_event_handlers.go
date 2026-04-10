@@ -16,6 +16,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
@@ -567,6 +568,30 @@ func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
 
 // handleTabFlash handles TabFlashMsg: forwards the flash request to the tab
 // bar widget so it can schedule its tick-based accent animation (TUI-061).
+// handleTeamUpdate handles a TeamUpdateMsg from the IPC bridge. It triggers
+// an immediate filesystem scan (so the registry is populated before we read
+// drawer content) and auto-expands the teams drawer. This avoids relying on
+// the 2-second poll tick chain which may not have fired yet.
+func (m AppModel) handleTeamUpdate(_ TeamUpdateMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.teamList == nil {
+		return m, nil
+	}
+	// Scan immediately — populates the registry before HasData() check.
+	m.shared.teamList.ScanNow()
+	// Refresh the team list's local snapshot.
+	m.shared.teamList.HandleMsg(TeamUpdateMsg{})
+	// Auto-expand the drawer if we have data.
+	if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
+		if m.shared.teamsHealth.HasData() {
+			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		}
+	}
+	if m.shared.teamDetail != nil {
+		m.shared.teamDetail.Refresh()
+	}
+	return m, nil
+}
+
 func (m AppModel) handleTabFlash(msg TabFlashMsg) (tea.Model, tea.Cmd) {
 	if m.tabBar == nil {
 		return m, nil
@@ -751,6 +776,98 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 	return appModel, tea.Batch(cmd, toastCmd)
 }
 
+// handleEffortChangeRequest processes a /effort command from the Claude panel.
+//
+// When Level is empty it shows the current effort level as a system message.
+// When Level is set it stores the level in AppModel.activeEffort and restarts
+// the CLI driver with the new --effort flag.
+// "auto" is mapped to empty string (omits the flag, reverting to CLI default).
+func (m AppModel) handleEffortChangeRequest(msg EffortChangeRequestMsg) (tea.Model, tea.Cmd) {
+	level := strings.TrimSpace(msg.Level)
+
+	// Normalize "auto" → "" so the --effort flag is omitted.
+	if strings.EqualFold(level, "auto") {
+		level = ""
+	}
+
+	// No arg: show current effort level.
+	if msg.Level == "" {
+		current := m.activeEffort
+		if current == "" {
+			current = "default (not set)"
+		}
+		if m.shared != nil && m.shared.claudePanel != nil {
+			m.shared.claudePanel.AppendSystemMessage(fmt.Sprintf("Current effort level: %s\nUsage: /effort <low|medium|high|max>", current))
+		}
+		return m, nil
+	}
+
+	// Guard: refuse while streaming — the CLI restart would kill the active response.
+	if m.shared != nil && m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  "Cannot change effort while streaming. Wait for the response to finish.",
+				Level: ToastLevelWarn,
+			}
+		}
+	}
+
+	// Validate the effort level (empty is allowed — it resets to default).
+	validLevels := map[string]bool{"low": true, "medium": true, "high": true, "max": true, "": true}
+	if !validLevels[strings.ToLower(level)] {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Unknown effort level %q. Valid values: low, medium, high, max", level),
+				Level: ToastLevelError,
+			}
+		}
+	}
+
+	// Already at this level — no-op.
+	if m.activeEffort == level {
+		display := level
+		if display == "" {
+			display = "default"
+		}
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Already using effort level: %s.", display),
+				Level: ToastLevelInfo,
+			}
+		}
+	}
+
+	// Persist the new effort level.
+	m.activeEffort = level
+
+	// Confirm to the user via system message and update the panel's indicator.
+	if m.shared != nil && m.shared.claudePanel != nil {
+		display := level
+		if display == "" {
+			display = "default"
+		}
+		m.shared.claudePanel.AppendSystemMessage(fmt.Sprintf("Effort level set to: %s", display))
+		m.shared.claudePanel.HandleMsg(EffortChangedMsg{Level: level})
+	}
+
+	// Restart the CLI driver with the updated effort flag.
+	newModel, cmd := m.restartCLIDriver()
+	appModel := newModel.(AppModel)
+
+	display := level
+	if display == "" {
+		display = "default"
+	}
+	toastCmd := func() tea.Msg {
+		return ToastMsg{
+			Text:  fmt.Sprintf("Effort level set to: %s.", display),
+			Level: ToastLevelSuccess,
+		}
+	}
+
+	return appModel, tea.Batch(cmd, toastCmd)
+}
+
 // saveSession snapshots the current application state into the session store.
 // It persists both the session metadata (cost, provider IDs, model selections)
 // and conversation histories for all providers that have messages.
@@ -794,4 +911,21 @@ func (m AppModel) saveSession() {
 			}
 		}
 	}
+}
+
+// handleOptionsViewRequest opens the full-screen options view modal.
+// Called from Update when drawer.OptionsViewRequestMsg is received.
+func (m AppModel) handleOptionsViewRequest(msg drawer.OptionsViewRequestMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil {
+		return m, nil
+	}
+	if msg.Interactive {
+		m.shared.optionsViewModal.ShowInteractive(
+			msg.RequestID, msg.Message, msg.Options, msg.SelectedIdx,
+			m.width, m.height,
+		)
+	} else if msg.Content != "" {
+		m.shared.optionsViewModal.ShowContent(msg.Content, m.width, m.height)
+	}
+	return m, nil
 }

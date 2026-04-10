@@ -160,6 +160,8 @@ func (b *IPCBridge) dispatch(req mcp.IPCRequest, enc *json.Encoder) {
 		b.handlePermGate(req, enc)
 	case mcp.TypeAgentTodoUpdate:
 		b.handleAgentTodoUpdate(req)
+	case mcp.TypeTeamUpdate:
+		b.handleTeamUpdate(req)
 	default:
 		slog.Warn("bridge: unknown request type", "type", req.Type, "id", req.ID)
 	}
@@ -303,6 +305,21 @@ func (b *IPCBridge) handleToast(req mcp.IPCRequest) {
 	b.sender.Send(model.ToastMsg{
 		Text:  p.Message,
 		Level: model.ToastLevel(p.Level),
+	})
+}
+
+// handleTeamUpdate processes a team_update notification (fire-and-forget).
+// It sends a TeamUpdateMsg to the Bubbletea event loop so the teams drawer
+// can scan immediately and auto-expand.
+func (b *IPCBridge) handleTeamUpdate(req mcp.IPCRequest) {
+	var p mcp.TeamUpdatePayload
+	if err := json.Unmarshal(req.Payload, &p); err != nil {
+		slog.Error("bridge: unmarshal team_update payload", "id", req.ID, "error", err)
+		return
+	}
+	b.sender.Send(model.TeamUpdateMsg{
+		TeamDir: p.TeamDir,
+		Status:  p.Status,
 	})
 }
 

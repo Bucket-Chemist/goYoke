@@ -75,6 +75,17 @@ var hintSets = map[string][]HintItem{
 		{Key: "Enter", Desc: "status"},
 		{Key: "x", Desc: "cancel"},
 	},
+	"drawer": {
+		{Key: "↑/↓", Desc: "scroll"},
+		{Key: "alt+o", Desc: "full options"},
+		{Key: "alt+v", Desc: "full plan"},
+		{Key: "Esc", Desc: "minimize"},
+	},
+	"options": {
+		{Key: "↑/↓", Desc: "navigate"},
+		{Key: "Enter", Desc: "select"},
+		{Key: "Esc", Desc: "close"},
+	},
 }
 
 // separator is the string used between hint items in the rendered row.

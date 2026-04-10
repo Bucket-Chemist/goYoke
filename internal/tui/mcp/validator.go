@@ -12,8 +12,7 @@ import (
 // not block the spawn; they arise when a claimed (unverified) identity
 // violates a can_spawn constraint.
 //
-// Ported from cmd/gofortress-mcp-standalone/validator.go to ensure parity
-// between the interactive and standalone MCP servers (M-3 fix).
+// Enforces spawned_by and can_spawn constraints from the agent index.
 type ValidationResult struct {
 	Valid    bool
 	Errors   []string

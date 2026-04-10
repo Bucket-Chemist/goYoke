@@ -316,6 +316,30 @@ type ModelSwitchRequestMsg struct {
 }
 
 // ---------------------------------------------------------------------------
+// Effort switching messages
+// ---------------------------------------------------------------------------
+
+// EffortChangeRequestMsg is emitted by the Claude panel when the user types
+// /effort [level]. AppModel persists the level and restarts the CLI driver
+// with the new --effort flag.
+//
+// Valid Level values: "low", "medium", "high", "max".
+// "auto" is treated as empty (omits the flag, reverting to CLI default).
+// When Level is empty the handler shows the current effort level as a system message.
+type EffortChangeRequestMsg struct {
+	// Level is the requested effort level (e.g. "low", "medium", "high", "max").
+	// Empty means "show current effort level".
+	Level string
+}
+
+// EffortChangedMsg is emitted by AppModel after a successful effort level
+// change, so the Claude panel can update its status indicator.
+// Level is the new effort level; empty string means "default (not set)".
+type EffortChangedMsg struct {
+	Level string
+}
+
+// ---------------------------------------------------------------------------
 // Session persistence messages (TUI-033)
 // ---------------------------------------------------------------------------
 
@@ -363,6 +387,15 @@ type SlashExecutedMsg struct {
 // ---------------------------------------------------------------------------
 // Plan mode messages (TUI-057)
 // ---------------------------------------------------------------------------
+
+// ThinkingActiveMsg is emitted when thinking blocks start or stop within
+// an assistant turn. Active is true when at least one thinking block is
+// present in the current content; false when only text blocks remain.
+// This allows the Claude panel to distinguish the "thinking" phase from
+// the "responding" phase of a single assistant turn.
+type ThinkingActiveMsg struct {
+	Active bool
+}
 
 // PlanStepMsg signals plan mode state changes including step tracking.
 // It is emitted when plan mode becomes active or inactive, and whenever

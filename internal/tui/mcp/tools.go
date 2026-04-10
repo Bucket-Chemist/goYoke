@@ -1051,6 +1051,13 @@ func handleTeamRun(
 		Message: fmt.Sprintf("team_run started (pid %d): %s", pid, input.TeamDir),
 		Level:   "info",
 	})
+	// 6b. Send a team update so the TUI scans immediately and auto-expands
+	// the teams drawer. Without this, discovery depends on the 2s poll tick
+	// chain which may not have fired yet (or may have died).
+	uds.notify(TypeTeamUpdate, TeamUpdatePayload{
+		TeamDir: input.TeamDir,
+		Status:  "running",
+	})
 
 	// 7. If the caller does not want to wait for startup verification, return
 	//    immediately with the process PID.
@@ -1138,6 +1145,8 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	args = append(args, "--model", model)
 
 	// MCP config: only for interactive agents when the config path is available.
+	// GOFORTRESS_MCP_CONFIG is set exclusively by the TUI (cmd/gofortress/main.go),
+	// so hasMCP is true only in TUI context — never for gogent-team-run or plain CLI.
 	mcpConfigPath := os.Getenv("GOFORTRESS_MCP_CONFIG")
 	hasMCP := agent.Interactive && mcpConfigPath != ""
 	if hasMCP {
@@ -1149,13 +1158,30 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	if len(tools) == 0 {
 		tools = agent.GetAllowedTools()
 	}
-	// Merge MCP tool glob for interactive agents so spawned Claude can call
-	// ask_user, confirm_action, spawn_agent, etc.
 	if hasMCP {
+		// Merge MCP tool glob for interactive agents so spawned Claude can call
+		// ask_user, confirm_action, spawn_agent, etc.
 		tools = append(tools, "mcp__gofortress-interactive__*")
+		// Block built-in equivalents — MCP provides these via the TUI bridge.
+		// --disallowedTools removes them from the model's context entirely,
+		// preventing the LLM from reaching for tools that don't work in -p mode.
+		args = append(args, "--disallowedTools", "Task,AskUserQuestion")
 	}
 	if len(tools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(tools, ","))
+	}
+
+	// Apply additional CLI flags from agent config (e.g. future per-agent flags).
+	// --permission-mode is filtered since buildSpawnArgs already sets bypassPermissions.
+	if agent.CliFlags != nil {
+		for i := 0; i < len(agent.CliFlags.AdditionalFlags); i++ {
+			flag := agent.CliFlags.AdditionalFlags[i]
+			if flag == "--permission-mode" && i+1 < len(agent.CliFlags.AdditionalFlags) {
+				i++ // skip value — already set above
+				continue
+			}
+			args = append(args, flag)
+		}
 	}
 
 	// Optional cost ceiling.

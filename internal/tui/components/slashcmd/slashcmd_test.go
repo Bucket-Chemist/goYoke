@@ -1,6 +1,8 @@
 package slashcmd
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -68,6 +70,55 @@ func TestNewSlashCmdModel_FilteredEqualsAll(t *testing.T) {
 	m := NewSlashCmdModel()
 	if len(m.filtered) != len(m.commands) {
 		t.Errorf("expected filtered len %d == commands len %d", len(m.filtered), len(m.commands))
+	}
+}
+
+func TestNewSlashCmdModel_WithExtraCommands(t *testing.T) {
+	extra := []SlashCommand{
+		{Name: "custom-one", Description: "First custom command"},
+		{Name: "custom-two", Description: "Second custom command"},
+	}
+	base := len(DefaultCommands())
+	m := NewSlashCmdModel(extra...)
+	if len(m.commands) != base+2 {
+		t.Errorf("expected %d commands (defaults + 2 extra), got %d", base+2, len(m.commands))
+	}
+	// Verify extra commands appear in the list.
+	names := make(map[string]bool, len(m.commands))
+	for _, c := range m.commands {
+		names[c.Name] = true
+	}
+	for _, e := range extra {
+		if !names[e.Name] {
+			t.Errorf("expected extra command %q in model commands", e.Name)
+		}
+	}
+}
+
+func TestNewSlashCmdModel_NoExtraBackwardCompat(t *testing.T) {
+	// Calling with no args must behave exactly as before.
+	m := NewSlashCmdModel()
+	if len(m.commands) != len(DefaultCommands()) {
+		t.Errorf("expected %d default commands when called with no args, got %d",
+			len(DefaultCommands()), len(m.commands))
+	}
+}
+
+func TestHelpText_IncludesExtraCommands(t *testing.T) {
+	extra := SlashCommand{Name: "my-skill", Description: "My custom skill"}
+	text := HelpText(extra)
+	if !strings.Contains(text, "/my-skill") {
+		t.Error("HelpText with extra commands should include /my-skill")
+	}
+	if !strings.Contains(text, "My custom skill") {
+		t.Error("HelpText with extra commands should include description")
+	}
+}
+
+func TestHelpText_NoExtraBackwardCompat(t *testing.T) {
+	text := HelpText()
+	if !strings.Contains(text, "/explore") {
+		t.Error("HelpText() with no args should still include /explore")
 	}
 }
 
@@ -513,6 +564,238 @@ func TestScrollIndicator_ShowsUpWhenMoreAbove(t *testing.T) {
 	got := m.scrollIndicator(start, end)
 	if !strings.Contains(got, "↑") {
 		t.Errorf("expected '↑' when items exist above window, got %q", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LoadSkillCommands
+// ---------------------------------------------------------------------------
+
+// makeSkillsDir creates a temporary config directory structure for testing.
+// skills is a map of skill name → SKILL.md content ("" means no SKILL.md).
+func makeSkillsDir(t *testing.T, skills map[string]string) string {
+	t.Helper()
+	configDir := t.TempDir()
+	skillsDir := filepath.Join(configDir, "skills")
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		t.Fatalf("makeSkillsDir: %v", err)
+	}
+	for name, content := range skills {
+		dir := filepath.Join(skillsDir, name)
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatalf("makeSkillsDir mkdir %s: %v", name, err)
+		}
+		if content != "" {
+			if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(content), 0o644); err != nil {
+				t.Fatalf("makeSkillsDir write SKILL.md for %s: %v", name, err)
+			}
+		}
+	}
+	return configDir
+}
+
+func skillNames(cmds []SlashCommand) []string {
+	names := make([]string, len(cmds))
+	for i, c := range cmds {
+		names[i] = c.Name
+	}
+	return names
+}
+
+func TestLoadSkillCommands_TableDriven(t *testing.T) {
+	tests := []struct {
+		name       string
+		skills     map[string]string // name → SKILL.md content ("" means no SKILL.md)
+		noSkipsDir bool              // if true, don't create skills/ dir at all
+		wantNames  []string
+		wantDescs  map[string]string // name → expected description
+		wantAbsent []string          // names that must NOT appear
+	}{
+		{
+			name:       "no skills directory returns nil",
+			noSkipsDir: true,
+			wantNames:  nil,
+		},
+		{
+			name:      "skill without SKILL.md gets default description",
+			skills:    map[string]string{"my-skill": ""},
+			wantNames: []string{"my-skill"},
+			wantDescs: map[string]string{"my-skill": "Skill: my-skill"},
+		},
+		{
+			name: "skill with frontmatter description extracted",
+			skills: map[string]string{
+				"scout": "---\nname: Scout\ndescription: Fast file metrics\n---\n\nBody.",
+			},
+			wantNames: []string{"scout"},
+			wantDescs: map[string]string{"scout": "Fast file metrics"},
+		},
+		{
+			name: "skill with quoted description strips quotes",
+			skills: map[string]string{
+				"planner": "---\ndescription: \"Plan a feature end-to-end\"\n---\n",
+			},
+			wantNames: []string{"planner"},
+			wantDescs: map[string]string{"planner": "Plan a feature end-to-end"},
+		},
+		{
+			name: "skill with no frontmatter uses default description",
+			skills: map[string]string{
+				"nofront": "Just plain markdown, no frontmatter.",
+			},
+			wantNames: []string{"nofront"},
+			wantDescs: map[string]string{"nofront": "Skill: nofront"},
+		},
+		{
+			name: "local command names are filtered out",
+			skills: map[string]string{
+				"clear": "", "exit": "", "quit": "", "help": "",
+				"cwd": "", "model": "", "effort": "",
+				"safe-skill": "",
+			},
+			wantNames:  []string{"safe-skill"},
+			wantAbsent: []string{"clear", "exit", "quit", "help", "cwd", "model", "effort"},
+		},
+		{
+			name: "multiple skills all returned",
+			skills: map[string]string{
+				"alpha": "---\ndescription: Alpha skill\n---\n",
+				"beta":  "",
+				"gamma": "---\ndescription: Gamma skill\n---\n",
+			},
+			wantNames: []string{"alpha", "beta", "gamma"},
+			wantDescs: map[string]string{
+				"alpha": "Alpha skill",
+				"beta":  "Skill: beta",
+				"gamma": "Gamma skill",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var configDir string
+			if tc.noSkipsDir {
+				configDir = t.TempDir()
+			} else {
+				configDir = makeSkillsDir(t, tc.skills)
+			}
+
+			cmds := LoadSkillCommands(configDir)
+
+			names := make(map[string]bool, len(cmds))
+			descs := make(map[string]string, len(cmds))
+			for _, c := range cmds {
+				names[c.Name] = true
+				descs[c.Name] = c.Description
+			}
+
+			for _, want := range tc.wantNames {
+				if !names[want] {
+					t.Errorf("expected skill %q in result, got %v", want, skillNames(cmds))
+				}
+			}
+			for skillName, wantDesc := range tc.wantDescs {
+				got := descs[skillName]
+				if got != wantDesc {
+					t.Errorf("skill %q: want description %q, got %q", skillName, wantDesc, got)
+				}
+			}
+			for _, absent := range tc.wantAbsent {
+				if names[absent] {
+					t.Errorf("skill %q should be filtered out but was present", absent)
+				}
+			}
+		})
+	}
+}
+
+func TestLoadSkillCommands_NonDirEntriesIgnored(t *testing.T) {
+	configDir := t.TempDir()
+	skillsDir := filepath.Join(configDir, "skills")
+	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillsDir, "not-a-dir.md"), []byte("hi"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(skillsDir, "real-skill"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmds := LoadSkillCommands(configDir)
+	names := make(map[string]bool, len(cmds))
+	for _, c := range cmds {
+		names[c.Name] = true
+	}
+
+	if names["not-a-dir.md"] {
+		t.Error("regular file 'not-a-dir.md' should not appear as a command")
+	}
+	if !names["real-skill"] {
+		t.Error("expected 'real-skill' directory to appear as a command")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// parseFrontmatterDescription
+// ---------------------------------------------------------------------------
+
+func TestParseFrontmatterDescription_TableDriven(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "no frontmatter returns empty",
+			content: "# Just markdown",
+			want:    "",
+		},
+		{
+			name:    "frontmatter with description",
+			content: "---\nname: foo\ndescription: My description\n---\n",
+			want:    "My description",
+		},
+		{
+			name:    "double-quoted description strips quotes",
+			content: "---\ndescription: \"Quoted value\"\n---\n",
+			want:    "Quoted value",
+		},
+		{
+			name:    "single-quoted description strips quotes",
+			content: "---\ndescription: 'Single quoted'\n---\n",
+			want:    "Single quoted",
+		},
+		{
+			name:    "frontmatter without description returns empty",
+			content: "---\nname: foo\nauthor: bar\n---\n",
+			want:    "",
+		},
+		{
+			name:    "unclosed frontmatter returns empty",
+			content: "---\ndescription: orphan\n",
+			want:    "",
+		},
+		{
+			name:    "empty description field returns empty string",
+			content: "---\ndescription:\n---\n",
+			want:    "",
+		},
+		{
+			name:    "description with extra whitespace trimmed",
+			content: "---\ndescription:   padded value   \n---\n",
+			want:    "padded value",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseFrontmatterDescription(tc.content)
+			if got != tc.want {
+				t.Errorf("want %q, got %q", tc.want, got)
+			}
+		})
 	}
 }
 

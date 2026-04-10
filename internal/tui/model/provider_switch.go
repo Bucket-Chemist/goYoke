@@ -123,6 +123,7 @@ func (m AppModel) restartCLIDriver() (tea.Model, tea.Cmd) {
 
 	opts := m.shared.baseCLIOpts // value copy preserves Verbose, Debug, PermissionMode, MCPConfigPath, etc.
 	opts.Model = activeModel
+	opts.Effort = m.activeEffort // Carry forward the current effort level across restarts.
 	opts.SessionID = ps.GetActiveSessionID() // Resume if provider was used before (TUI-031)
 	opts.AdapterPath = cfg.AdapterPath
 	opts.ProjectDir = ps.GetActiveProjectDir()

@@ -658,6 +658,7 @@ func (m *mockTeamListWidget) View() string                                      
 func (m *mockTeamListWidget) SetSize(_, _ int)                                                {}
 func (m *mockTeamListWidget) StartPolling(_ string) tea.Cmd                                  { return nil }
 func (m *mockTeamListWidget) PollNow() tea.Cmd                                               { return nil }
+func (m *mockTeamListWidget) ScanNow()                                                       {}
 func (m *mockTeamListWidget) SelectedTeam() string                                           { return "" }
 func (m *mockTeamListWidget) CreateDetailModel(_ *state.AgentRegistry) TeamDetailWidget      { return nil }
 
