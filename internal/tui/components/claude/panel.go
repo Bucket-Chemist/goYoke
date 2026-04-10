@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/scrollbar"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/slashcmd"
@@ -944,7 +945,9 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 			rendered = strings.TrimRight(rendered, "\n") + "\n"
 			sb.WriteString(rendered)
 		} else {
-			sb.WriteString(msg.Content)
+			// Wrap to viewport width so long lines (markdown tables, URLs)
+			// don't overflow the viewport height when the terminal wraps them.
+			sb.WriteString(wordwrap.String(msg.Content, m.vp.Width))
 			sb.WriteByte('\n')
 		}
 	}
