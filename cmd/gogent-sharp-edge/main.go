@@ -485,8 +485,8 @@ func detectSandboxBlock(event *routing.PostToolEvent) string {
 	}
 
 	return fmt.Sprintf(
-		"[sandbox] Write blocked on sensitive path %q. Use mcp__gofortress-standalone__sandbox_write instead:\n\nmcp__gofortress-standalone__sandbox_write({\n  content: <file content>,\n  dest_path: %q,\n  make_executable: false\n})",
-		filePath, filePath,
+		"[sandbox] Write blocked on sensitive path %q. Use the /sandbox skill or write the file manually.",
+		filePath,
 	)
 }
 
