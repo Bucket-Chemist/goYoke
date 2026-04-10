@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
@@ -990,4 +991,80 @@ func TestCleanupPermCache_NoFile(t *testing.T) {
 	wErr.Close()
 	os.Stderr = oldStderr
 	// Reaching here without panic is sufficient.
+}
+
+// --- cleanupSkillGuard() Tests ---
+
+func TestCleanupSkillGuard_RemovesBothFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	sessionID := "test-skill-guard-cleanup"
+	guardPath := config.GetGuardFilePath(sessionID)
+	lockPath := config.GetGuardLockPath(sessionID)
+
+	// Create guard JSON without a holder PID.
+	guardData := config.ActiveSkill{
+		FormatVersion: 2,
+		Skill:         "test-skill",
+		SessionID:     sessionID,
+	}
+	data, err := json.Marshal(guardData)
+	if err != nil {
+		t.Fatalf("Failed to marshal guard data: %v", err)
+	}
+	if err := os.WriteFile(guardPath, data, 0600); err != nil {
+		t.Fatalf("Failed to write guard file: %v", err)
+	}
+	if err := os.WriteFile(lockPath, []byte{}, 0600); err != nil {
+		t.Fatalf("Failed to write lock file: %v", err)
+	}
+
+	cleanupSkillGuard(sessionID)
+
+	if _, err := os.Stat(guardPath); !os.IsNotExist(err) {
+		t.Errorf("Expected guard file to be removed, but os.Stat returned: %v", err)
+	}
+	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
+		t.Errorf("Expected lock file to be removed, but os.Stat returned: %v", err)
+	}
+}
+
+func TestCleanupSkillGuard_NoFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	// Should not panic or error when no guard files exist.
+	cleanupSkillGuard("nonexistent-skill-guard-session")
+	// Reaching here without panic is sufficient.
+}
+
+func TestCleanupSkillGuard_DeadPID(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	sessionID := "test-skill-guard-dead-pid"
+	guardPath := config.GetGuardFilePath(sessionID)
+
+	// Write guard file with a PID that is certainly not running.
+	guardData := config.ActiveSkill{
+		FormatVersion: 2,
+		Skill:         "test-skill",
+		SessionID:     sessionID,
+		HolderPID:     2147483647, // max int32, certainly not a real PID
+	}
+	data, err := json.Marshal(guardData)
+	if err != nil {
+		t.Fatalf("Failed to marshal guard data: %v", err)
+	}
+	if err := os.WriteFile(guardPath, data, 0600); err != nil {
+		t.Fatalf("Failed to write guard file: %v", err)
+	}
+
+	// Should handle ESRCH gracefully and still remove the file.
+	cleanupSkillGuard(sessionID)
+
+	if _, err := os.Stat(guardPath); !os.IsNotExist(err) {
+		t.Errorf("Expected guard file to be removed after dead-PID cleanup, but os.Stat returned: %v", err)
+	}
 }

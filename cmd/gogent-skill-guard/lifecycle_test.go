@@ -13,14 +13,14 @@ import (
 // assertToolAllowed verifies that a tool is allowed through the guard.
 func assertToolAllowed(t *testing.T, guardPath, tool string) {
 	t.Helper()
-	output := handleGuardMode(tool, guardPath)
+	output := legacyCheckGuard(tool, guardPath)
 	assert.Equal(t, "{}", output, "tool %s should be allowed", tool)
 }
 
 // assertToolBlocked verifies that a tool is blocked by the guard.
 func assertToolBlocked(t *testing.T, guardPath, tool, skill string) {
 	t.Helper()
-	output := handleGuardMode(tool, guardPath)
+	output := legacyCheckGuard(tool, guardPath)
 	assert.Contains(t, output, "blocked", "tool %s should be blocked during /%s", tool, skill)
 	assert.Contains(t, output, skill)
 }
@@ -226,8 +226,8 @@ func TestLifecycle_StalenessAutoCleanup(t *testing.T) {
 	_, err := os.Stat(guardPath)
 	require.NoError(t, err, "guard file should exist before staleness check")
 
-	// Phase 3: Call handleGuardMode - should auto-delete stale guard
-	output := handleGuardMode("Write", guardPath)
+	// Phase 3: Call legacyCheckGuard - should auto-delete stale guard
+	output := legacyCheckGuard("Write", guardPath)
 	assert.Equal(t, "{}", output, "stale guard should be deleted, tool allowed")
 
 	// Phase 4: Verify guard file was deleted
@@ -235,9 +235,9 @@ func TestLifecycle_StalenessAutoCleanup(t *testing.T) {
 	assert.True(t, os.IsNotExist(err), "stale guard file should be deleted")
 
 	// Phase 5: Verify subsequent calls still return {} (no guard)
-	output = handleGuardMode("Write", guardPath)
+	output = legacyCheckGuard("Write", guardPath)
 	assert.Equal(t, "{}", output, "after deletion, all tools should pass through")
 
-	output = handleGuardMode("Edit", guardPath)
+	output = legacyCheckGuard("Edit", guardPath)
 	assert.Equal(t, "{}", output, "after deletion, all tools should pass through")
 }

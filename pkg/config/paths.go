@@ -409,3 +409,23 @@ func GetSharpEdgeHitsPathWithProjectDir() string {
 	}
 	return filepath.Join(GetGOgentDataDir(), "sharp-edge-hits.jsonl")
 }
+
+// GetGuardsDir returns the path to the session-scoped guard directory.
+// Creates the directory via os.MkdirAll if it doesn't exist.
+func GetGuardsDir() string {
+	dir := filepath.Join(GetGOgentDir(), "guards")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create guards dir at %s: %v\n", dir, err)
+	}
+	return dir
+}
+
+// GetGuardFilePath returns the path to the guard JSON file for a given session ID.
+func GetGuardFilePath(sessionID string) string {
+	return filepath.Join(GetGuardsDir(), sessionID+".json")
+}
+
+// GetGuardLockPath returns the path to the guard lock file for a given session ID.
+func GetGuardLockPath(sessionID string) string {
+	return filepath.Join(GetGuardsDir(), sessionID+".lock")
+}

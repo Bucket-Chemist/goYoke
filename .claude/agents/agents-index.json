@@ -2855,31 +2855,54 @@
     "braintrust": {
       "router_allowed_tools": [
         "Task",
+        "Agent",
         "Bash",
         "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
         "AskUserQuestion",
-        "Skill"
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "braintrust"
     },
     "review": {
       "router_allowed_tools": [
         "Task",
+        "Agent",
         "Bash",
         "Read",
         "Glob",
+        "Grep",
+        "ToolSearch",
         "AskUserQuestion",
-        "Skill"
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "code-review"
     },
     "implement": {
       "router_allowed_tools": [
         "Task",
+        "Agent",
         "Bash",
         "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
         "AskUserQuestion",
-        "Skill"
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "implementation"
     }

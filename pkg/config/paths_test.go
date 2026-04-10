@@ -1423,3 +1423,74 @@ func TestRuntimeDir_Idempotent(t *testing.T) {
 		t.Error("Expected directory to exist after second call")
 	}
 }
+
+func TestGetGuardsDir_ReturnsPathUnderGOgentDir(t *testing.T) {
+	testDir := t.TempDir()
+	orig := os.Getenv("XDG_RUNTIME_DIR")
+	defer os.Setenv("XDG_RUNTIME_DIR", orig)
+	os.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	guardsDir := GetGuardsDir()
+	gogentDir := GetGOgentDir()
+
+	if !strings.HasPrefix(guardsDir, gogentDir) {
+		t.Errorf("GetGuardsDir() %q not under GetGOgentDir() %q", guardsDir, gogentDir)
+	}
+	if filepath.Base(guardsDir) != "guards" {
+		t.Errorf("Expected path ending in /guards, got %q", guardsDir)
+	}
+}
+
+func TestGetGuardsDir_CreatesDirectory(t *testing.T) {
+	testDir := t.TempDir()
+	orig := os.Getenv("XDG_RUNTIME_DIR")
+	defer os.Setenv("XDG_RUNTIME_DIR", orig)
+	os.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	guardsDir := GetGuardsDir()
+	if _, err := os.Stat(guardsDir); os.IsNotExist(err) {
+		t.Errorf("Expected GetGuardsDir() to create directory %q", guardsDir)
+	}
+}
+
+func TestGetGuardFilePath_IncludesSessionID(t *testing.T) {
+	testDir := t.TempDir()
+	orig := os.Getenv("XDG_RUNTIME_DIR")
+	defer os.Setenv("XDG_RUNTIME_DIR", orig)
+	os.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	sessionID := "test-session-abc123"
+	path := GetGuardFilePath(sessionID)
+
+	if !strings.Contains(path, sessionID) {
+		t.Errorf("GetGuardFilePath() %q does not contain session ID %q", path, sessionID)
+	}
+	if filepath.Ext(path) != ".json" {
+		t.Errorf("GetGuardFilePath() %q does not end in .json", path)
+	}
+	expected := filepath.Join(GetGuardsDir(), sessionID+".json")
+	if path != expected {
+		t.Errorf("Expected %q, got %q", expected, path)
+	}
+}
+
+func TestGetGuardLockPath_IncludesSessionID(t *testing.T) {
+	testDir := t.TempDir()
+	orig := os.Getenv("XDG_RUNTIME_DIR")
+	defer os.Setenv("XDG_RUNTIME_DIR", orig)
+	os.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	sessionID := "test-session-abc123"
+	path := GetGuardLockPath(sessionID)
+
+	if !strings.Contains(path, sessionID) {
+		t.Errorf("GetGuardLockPath() %q does not contain session ID %q", path, sessionID)
+	}
+	if filepath.Ext(path) != ".lock" {
+		t.Errorf("GetGuardLockPath() %q does not end in .lock", path)
+	}
+	expected := filepath.Join(GetGuardsDir(), sessionID+".lock")
+	if path != expected {
+		t.Errorf("Expected %q, got %q", expected, path)
+	}
+}

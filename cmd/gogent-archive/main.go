@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
@@ -123,6 +124,7 @@ func run() error {
 
 	// Clean up permission gate session cache (PERM-007).
 	cleanupPermCache(event.SessionID)
+	cleanupSkillGuard(event.SessionID)
 
 	// GOgent-041c: Analyze intent outcomes (non-blocking)
 	if err := analyzeAndUpdateIntentOutcomes(projectDir, event.SessionID); err != nil {
@@ -284,6 +286,37 @@ func cleanupPermCache(sessionID string) {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove permission cache %s: %v\n", path, err)
 	}
+}
+
+// cleanupSkillGuard removes the skill guard files for the given session ID.
+// If the guard file records an active holder PID, SIGTERM is sent before removal
+// so any blocked tool call can unblock cleanly.
+// Errors are logged but non-fatal — a missing guard is normal for sessions that
+// never executed a skill.
+func cleanupSkillGuard(sessionID string) {
+	guardPath := config.GetGuardFilePath(sessionID)
+
+	data, err := os.ReadFile(guardPath)
+	if err == nil && len(data) > 0 {
+		var active config.ActiveSkill
+		if jsonErr := json.Unmarshal(data, &active); jsonErr == nil && active.HolderPID > 0 {
+			if killErr := syscall.Kill(active.HolderPID, syscall.SIGTERM); killErr != nil && killErr != syscall.ESRCH {
+				fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to SIGTERM skill guard holder PID %d: %v\n", active.HolderPID, killErr)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	if err := os.Remove(guardPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove skill guard file %s: %v\n", guardPath, err)
+	}
+
+	lockPath := config.GetGuardLockPath(sessionID)
+	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove skill guard lock %s: %v\n", lockPath, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "[gogent-archive] Cleaned up skill guard for session %s\n", sessionID)
 }
 
 // getProjectDir determines project directory from env or cwd
