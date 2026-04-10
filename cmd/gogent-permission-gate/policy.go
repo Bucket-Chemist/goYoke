@@ -31,8 +31,8 @@ var defaultPolicy = Policy{
 		"ExitPlanMode", "WebSearch", "WebFetch", "ToolSearch",
 		"AskUserQuestion", "Skill", "Write", "Edit", "NotebookEdit",
 	},
-	NeedsApproval: []string{"Bash"},
-	Skip:          []string{"Task", "Agent"},
+	NeedsApproval: []string{},
+	Skip:          []string{"Task", "Agent", "Bash"},
 	Default:       classAutoAllow,
 }
 

@@ -80,8 +80,10 @@ func TestParseStdin_MissingToolInput(t *testing.T) {
 // Policy classification tests
 // =============================================================================
 
-func TestPolicy_BashNeedsApproval(t *testing.T) {
-	assert.Equal(t, classNeedsApproval, defaultPolicy.Classify("Bash"))
+func TestPolicy_BashSkipped(t *testing.T) {
+	// Bash is delegated to Claude Code's native permission system (settings.json
+	// Bash patterns), not gated by the TUI modal.
+	assert.Equal(t, classSkip, defaultPolicy.Classify("Bash"))
 }
 
 func TestPolicy_WriteAutoAllow(t *testing.T) {

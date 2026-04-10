@@ -34,10 +34,6 @@
           "Read",
           "Write",
           "Glob"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -88,10 +84,6 @@
           "Glob",
           "Grep",
           "Read"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -136,10 +128,6 @@
           "Bash",
           "Read",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -185,10 +173,6 @@
           "Read",
           "Write",
           "Glob"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -240,10 +224,6 @@
           "Glob",
           "Grep",
           "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -284,10 +264,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -332,11 +308,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -424,11 +398,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -499,11 +471,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -568,11 +538,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -647,11 +615,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -725,11 +691,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -804,11 +768,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -879,11 +841,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -955,11 +915,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -1026,11 +984,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -1103,11 +1059,10 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -1179,10 +1134,6 @@
           "Write",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1246,11 +1197,9 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1333,10 +1282,6 @@
           "Grep",
           "Write",
           "mcp__gofortress-interactive__ask_user"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1395,10 +1340,6 @@
           "Glob",
           "Grep",
           "Write"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1457,10 +1398,6 @@
           "mcp__gofortress-interactive__ask_user",
           "mcp__gofortress-interactive__spawn_agent",
           "mcp__gofortress-interactive__get_agent_result"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1514,10 +1451,6 @@
           "Glob",
           "Grep",
           "Write"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1593,7 +1526,12 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Gemini Slave"
+      "subagent_type": "Gemini Slave",
+      "cli_flags": {
+        "allowed_tools": [
+          "Bash"
+        ]
+      }
     },
     {
       "id": "staff-architect-critical-review",
@@ -1624,10 +1562,6 @@
           "Glob",
           "Grep",
           "Write"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1690,10 +1624,6 @@
           "Write",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1750,10 +1680,6 @@
           "Glob",
           "Grep",
           "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1810,7 +1736,12 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "GOgent Smart Scout"
+      "subagent_type": "GOgent Smart Scout",
+      "cli_flags": {
+        "allowed_tools": [
+          "Bash"
+        ]
+      }
     },
     {
       "id": "typescript-pro",
@@ -1847,11 +1778,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -1922,11 +1851,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -1987,10 +1914,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2040,10 +1963,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2091,10 +2010,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2138,10 +2053,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2192,11 +2103,10 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -2261,11 +2171,10 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -2358,10 +2267,6 @@
           "Bash",
           "WebFetch",
           "AskUserQuestion"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2427,10 +2332,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2484,10 +2385,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2541,10 +2438,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2598,10 +2491,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2657,10 +2546,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2715,10 +2600,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -2766,10 +2647,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
