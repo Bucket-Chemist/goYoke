@@ -73,6 +73,14 @@ test/audit/**
 /.test-spawn-logs/
 /test_files/
 
+# POC/test cmd binaries (source in git history if needed)
+cmd/debug-injection/
+cmd/gofortress-ipc-poc/
+cmd/gofortress-mcp-poc/
+cmd/gogent-e2e-*/
+cmd/gogent-timeout-test/
+cmd/mousetest/
+
 # Archived TS TUI (deprecated — Go TUI is canonical)
 .archive/
 
