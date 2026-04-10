@@ -493,6 +493,8 @@ func TestEnsureTeamVisible_CreatesSymlink(t *testing.T) {
 	// Set up a fake ~/.gogent/current-session pointing to a temp TUI session.
 	fakeHome := t.TempDir()
 	t.Setenv("HOME", fakeHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	t.Setenv("GOGENT_CONFIG_DIR", "")
 
 	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
 	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
@@ -526,9 +528,119 @@ func TestEnsureTeamVisible_CreatesSymlink(t *testing.T) {
 	assert.Equal(t, ccTeamDir, target)
 }
 
+func TestEnsureTeamVisible_RespectsClaudeConfigDir(t *testing.T) {
+	// When CLAUDE_CONFIG_DIR is set, ensureTeamVisible should read the marker
+	// from $CLAUDE_CONFIG_DIR/current-session instead of ~/.gogent/current-session.
+	fakeHome := t.TempDir()
+	customConfig := filepath.Join(fakeHome, ".claude-em")
+	t.Setenv("HOME", fakeHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", customConfig)
+	t.Setenv("GOGENT_CONFIG_DIR", "")
+
+	tuiSessionDir := filepath.Join(customConfig, "sessions", "20260410.custom-session")
+	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
+
+	// Write marker under custom config dir (where the TUI session store writes it).
+	require.NoError(t, os.WriteFile(
+		filepath.Join(customConfig, "current-session"),
+		[]byte(tuiSessionDir),
+		0o644,
+	))
+
+	// Do NOT create ~/.gogent/current-session — ensureTeamVisible must not fall back to it.
+
+	ccTeamDir := filepath.Join(t.TempDir(), "teams", "test-team")
+	require.NoError(t, os.MkdirAll(ccTeamDir, 0o755))
+
+	ensureTeamVisible(ccTeamDir)
+
+	symlinkPath := filepath.Join(tuiSessionDir, "teams", "test-team")
+	info, err := os.Lstat(symlinkPath)
+	require.NoError(t, err, "symlink should exist under CLAUDE_CONFIG_DIR session")
+	assert.NotZero(t, info.Mode()&os.ModeSymlink, "should be a symlink")
+
+	target, err := os.Readlink(symlinkPath)
+	require.NoError(t, err)
+	assert.Equal(t, ccTeamDir, target)
+}
+
+func TestEnsureTeamVisible_RespectsGogentConfigDir(t *testing.T) {
+	// GOGENT_CONFIG_DIR takes second priority after CLAUDE_CONFIG_DIR.
+	fakeHome := t.TempDir()
+	customConfig := filepath.Join(fakeHome, ".custom-gogent")
+	t.Setenv("HOME", fakeHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	t.Setenv("GOGENT_CONFIG_DIR", customConfig)
+
+	tuiSessionDir := filepath.Join(customConfig, "sessions", "20260410.gogent-session")
+	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(customConfig, "current-session"),
+		[]byte(tuiSessionDir),
+		0o644,
+	))
+
+	ccTeamDir := filepath.Join(t.TempDir(), "teams", "test-team")
+	require.NoError(t, os.MkdirAll(ccTeamDir, 0o755))
+
+	ensureTeamVisible(ccTeamDir)
+
+	symlinkPath := filepath.Join(tuiSessionDir, "teams", "test-team")
+	info, err := os.Lstat(symlinkPath)
+	require.NoError(t, err, "symlink should exist under GOGENT_CONFIG_DIR session")
+	assert.NotZero(t, info.Mode()&os.ModeSymlink)
+}
+
+func TestEnsureTeamVisible_ClaudeConfigDirTakesPriority(t *testing.T) {
+	// When both CLAUDE_CONFIG_DIR and GOGENT_CONFIG_DIR are set,
+	// CLAUDE_CONFIG_DIR wins.
+	fakeHome := t.TempDir()
+	claudeDir := filepath.Join(fakeHome, ".claude-em")
+	gogentDir := filepath.Join(fakeHome, ".custom-gogent")
+	t.Setenv("HOME", fakeHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", claudeDir)
+	t.Setenv("GOGENT_CONFIG_DIR", gogentDir)
+
+	// Set up marker under CLAUDE_CONFIG_DIR.
+	claudeSession := filepath.Join(claudeDir, "sessions", "20260410.claude-session")
+	require.NoError(t, os.MkdirAll(claudeSession, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(claudeDir, "current-session"),
+		[]byte(claudeSession),
+		0o644,
+	))
+
+	// Set up marker under GOGENT_CONFIG_DIR (should be ignored).
+	gogentSession := filepath.Join(gogentDir, "sessions", "20260410.gogent-session")
+	require.NoError(t, os.MkdirAll(gogentSession, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(gogentDir, "current-session"),
+		[]byte(gogentSession),
+		0o644,
+	))
+
+	ccTeamDir := filepath.Join(t.TempDir(), "teams", "priority-team")
+	require.NoError(t, os.MkdirAll(ccTeamDir, 0o755))
+
+	ensureTeamVisible(ccTeamDir)
+
+	// Symlink should be under CLAUDE_CONFIG_DIR session, not GOGENT_CONFIG_DIR.
+	claudeSymlink := filepath.Join(claudeSession, "teams", "priority-team")
+	gogentSymlink := filepath.Join(gogentSession, "teams", "priority-team")
+
+	_, err := os.Lstat(claudeSymlink)
+	assert.NoError(t, err, "symlink should exist under CLAUDE_CONFIG_DIR")
+
+	_, err = os.Lstat(gogentSymlink)
+	assert.True(t, os.IsNotExist(err), "symlink should NOT exist under GOGENT_CONFIG_DIR")
+}
+
 func TestEnsureTeamVisible_SkipsWhenAlreadyInTUITree(t *testing.T) {
 	fakeHome := t.TempDir()
 	t.Setenv("HOME", fakeHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	t.Setenv("GOGENT_CONFIG_DIR", "")
 
 	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
 	tuiTeamsDir := filepath.Join(tuiSessionDir, "teams")
@@ -555,6 +667,8 @@ func TestEnsureTeamVisible_SkipsWhenAlreadyInTUITree(t *testing.T) {
 func TestEnsureTeamVisible_IdempotentOnRerun(t *testing.T) {
 	fakeHome := t.TempDir()
 	t.Setenv("HOME", fakeHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	t.Setenv("GOGENT_CONFIG_DIR", "")
 
 	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
 	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))

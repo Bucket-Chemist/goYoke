@@ -10,6 +10,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -596,20 +597,31 @@ func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
 
 // handleTabFlash handles TabFlashMsg: forwards the flash request to the tab
 // bar widget so it can schedule its tick-based accent animation (TUI-061).
+
 // handleTeamUpdate handles a TeamUpdateMsg from the IPC bridge. It triggers
-// an immediate filesystem scan (so the registry is populated before we read
-// drawer content) and auto-expands the teams drawer. This avoids relying on
-// the 2-second poll tick chain which may not have fired yet.
-func (m AppModel) handleTeamUpdate(_ TeamUpdateMsg) (tea.Model, tea.Cmd) {
+// an immediate filesystem scan, then unconditionally expands the teams drawer.
+// If the scan didn't find the team yet (ensureTeamVisible race), a placeholder
+// is shown. The teamNotifiedAt grace period prevents the poll-tick handler
+// from immediately collapsing the drawer via ClearTeamsContent.
+func (m AppModel) handleTeamUpdate(msg TeamUpdateMsg) (tea.Model, tea.Cmd) {
 	if m.shared == nil || m.shared.teamList == nil {
 		return m, nil
 	}
+	// Record notification time — suppresses ClearTeamsContent in poll handler.
+	m.shared.teamNotifiedAt = time.Now()
 	// Scan immediately — populates the registry before HasData() check.
 	m.shared.teamList.ScanNow()
-	// Auto-expand the drawer if we have data.
-	if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
-		if m.shared.teamsHealth.HasData() {
+	// Always expand the drawer. TeamUpdateMsg is only sent when team_run
+	// launches a team, so expansion is always appropriate.
+	if m.shared.drawerStack != nil {
+		if m.shared.teamsHealth != nil && m.shared.teamsHealth.HasData() {
 			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		} else {
+			// ScanNow couldn't find the team yet (symlink race, config.json
+			// not flushed, or ensureTeamVisible failed). Show placeholder;
+			// the poll chain will replace it once the team is discoverable.
+			placeholder := fmt.Sprintf("  Team starting: %s", filepath.Base(msg.TeamDir))
+			m.shared.drawerStack.SetTeamsContent(placeholder)
 		}
 	}
 	if m.shared.teamDetail != nil {

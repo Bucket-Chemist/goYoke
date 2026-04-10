@@ -213,7 +213,7 @@ func (c *UDSClient) notify(msgType string, payload any) {
 		Payload: raw,
 	}
 	if err := c.send(req); err != nil {
-		slog.Info("IPC notification failed, retrying", "type", msgType, "err", err)
+		slog.Warn("IPC notification failed, retrying", "type", msgType, "err", err)
 		time.Sleep(200 * time.Millisecond)
 		// Reset the connection so send() re-dials on the retry attempt.
 		c.mu.Lock()
@@ -1216,23 +1216,36 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 // Errors are logged but never returned — team visibility in the drawer is
 // a nice-to-have, not a launch blocker.
 func ensureTeamVisible(teamDir string) {
-	// Read the TUI's current session from ~/.gogent/current-session.
+	// Resolve the TUI's current session from the correct config directory.
+	// Priority: CLAUDE_CONFIG_DIR → GOGENT_CONFIG_DIR → ~/.gogent
+	// This must match session.DefaultBaseDir() so we read the same marker
+	// file that the TUI's session store wrote.
 	home, err := os.UserHomeDir()
 	if err != nil {
 		slog.Warn("ensureTeamVisible: cannot resolve home dir", "err", err)
 		return
 	}
-	markerPath := filepath.Join(home, ".gogent", "current-session")
+	gogentDir := ""
+	if configDir := os.Getenv("CLAUDE_CONFIG_DIR"); configDir != "" {
+		gogentDir = configDir
+	} else if configDir := os.Getenv("GOGENT_CONFIG_DIR"); configDir != "" {
+		gogentDir = configDir
+	} else {
+		gogentDir = filepath.Join(home, ".gogent")
+	}
+	markerPath := filepath.Join(gogentDir, "current-session")
 	data, err := os.ReadFile(markerPath)
 	if err != nil {
-		slog.Info("ensureTeamVisible: no TUI session marker", "path", markerPath, "err", err)
+		slog.Warn("ensureTeamVisible: no TUI session marker — team will be invisible to TUI poller",
+			"path", markerPath, "team_dir", teamDir, "err", err)
 		return
 	}
 	tuiSessionDir := strings.TrimSpace(string(data))
 	if tuiSessionDir == "" {
+		slog.Warn("ensureTeamVisible: TUI session marker is empty — team will be invisible to TUI poller",
+			"path", markerPath, "team_dir", teamDir)
 		return
 	}
-
 	tuiTeamsDir := filepath.Join(tuiSessionDir, "teams")
 	teamBase := filepath.Base(teamDir)
 	symlinkPath := filepath.Join(tuiTeamsDir, teamBase)

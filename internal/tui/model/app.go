@@ -5,6 +5,7 @@ package model
 
 import (
 	"encoding/json"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -122,7 +123,12 @@ type sharedState struct {
 	// teamsHealth is the team health dashboard widget (TUI-003).
 	// Concrete implementation lives in the teams package (TUI-005).
 	teamsHealth teamsHealthWidget
-	taskBoard   taskBoardWidget
+	// teamNotifiedAt records when the last TeamUpdateMsg arrived.
+	// The poll-tick handler suppresses ClearTeamsContent within a 10s
+	// grace window to prevent a race where the poll clears the drawer
+	// before the team becomes visible to the filesystem scanner.
+	teamNotifiedAt time.Time
+	taskBoard      taskBoardWidget
 
 	// planViewModal is the full-screen plan viewer overlay (TUI-056).
 	// It is activated by alt+v when rightPanelMode == RPMPlanPreview.
@@ -648,7 +654,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
 					}
 				} else {
-					m.shared.drawerStack.ClearTeamsContent()
+					// Don't clear teams drawer within 10s of a TeamUpdateMsg —
+					// the team may not yet be visible to the filesystem scanner
+					// (ensureTeamVisible race or symlink propagation delay).
+					if m.shared.teamNotifiedAt.IsZero() || time.Since(m.shared.teamNotifiedAt) > 10*time.Second {
+						m.shared.drawerStack.ClearTeamsContent()
+					}
 				}
 			}
 			// Refresh the team detail panel so it shows up-to-date member state.
