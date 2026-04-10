@@ -356,6 +356,7 @@ func (s *stubDrawerStack) SetTeamsContent(_ string)                        {}
 func (s *stubDrawerStack) ClearTeamsContent()                              {}
 func (s *stubDrawerStack) TeamsHasContent() bool                           { return s.teamsHasContent }
 func (s *stubDrawerStack) RefreshTeamsContent(_ string)                    {}
+func (s *stubDrawerStack) TeamsIsMinimized() bool                          { return false }
 func (s *stubDrawerStack) SetOptionsFocused(_ bool)                        {}
 func (s *stubDrawerStack) SetPlanFocused(_ bool)                           {}
 func (s *stubDrawerStack) SetTeamsFocused(_ bool)                          {}

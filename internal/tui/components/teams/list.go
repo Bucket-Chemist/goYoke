@@ -29,18 +29,11 @@ type TeamSelectedMsg struct {
 }
 
 // pollTickMsg is a package-private message that drives the 2-second polling
-// cycle. It carries the tick time for diagnostic purposes.
-type pollTickMsg time.Time
-
-// ---------------------------------------------------------------------------
-// pollCmd
-// ---------------------------------------------------------------------------
-
-// pollCmd returns a tea.Cmd that fires after 2 seconds with a pollTickMsg.
-func pollCmd() tea.Cmd {
-	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-		return pollTickMsg(t)
-	})
+// cycle. seq is compared against TeamListModel.pollSeq to discard ticks from
+// superseded chains (created by a prior StartPolling or PollNow call).
+type pollTickMsg struct {
+	time time.Time
+	seq  int
 }
 
 // ---------------------------------------------------------------------------
@@ -54,12 +47,13 @@ func pollCmd() tea.Cmd {
 // The zero value is not usable; use NewTeamListModel instead.
 type TeamListModel struct {
 	registry *TeamRegistry
-	selected int        // cursor index into teams snapshot
+	selected int          // cursor index into teams snapshot
 	teams    []*TeamState // snapshot refreshed on every poll/update
 	width    int
 	height   int
 	teamsDir string // directory containing team subdirectories
 	polling  bool   // true once polling has been started
+	pollSeq  int    // incremented on each StartPolling/PollNow; stale ticks are dropped
 }
 
 // NewTeamListModel returns a TeamListModel backed by the given registry.
@@ -75,28 +69,42 @@ func (m TeamListModel) Init() tea.Cmd {
 	return nil
 }
 
+// pollCmd returns a Cmd that fires after 2 seconds with the current pollSeq.
+// Ticks carrying a seq that no longer matches m.pollSeq are discarded in
+// Update, which makes the chain idempotent across PollNow / StartPolling.
+func (m TeamListModel) pollCmd() tea.Cmd {
+	seq := m.pollSeq
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return pollTickMsg{time: t, seq: seq}
+	})
+}
+
 // StartPolling sets the directory to poll and returns a tea.Cmd that
 // immediately fires a pollTickMsg to kick off the 2-second polling cycle.
-// It uses a pointer receiver so that teamsDir is stored on the actual model
-// instance and is visible in subsequent Update calls.
+// It increments pollSeq so any tick from a previous chain is discarded.
 func (m *TeamListModel) StartPolling(teamsDir string) tea.Cmd {
 	m.teamsDir = teamsDir
 	m.polling = true
+	m.pollSeq++
+	seq := m.pollSeq
 	return func() tea.Msg {
-		return pollTickMsg(time.Now())
+		return pollTickMsg{time: time.Now(), seq: seq}
 	}
 }
 
-// PollNow returns a Cmd that immediately fires a pollTickMsg.  It is used
-// by AppModel.Init() to kick the first poll cycle after main.go has called
-// StartPolling to set the teams directory.  Returns nil when polling has not
-// been started.
+// PollNow returns a Cmd that immediately fires a pollTickMsg with the new
+// pollSeq, making any pending tick from the previous chain stale. It is
+// idempotent: calling it repeatedly only advances the seq and kills the old
+// chain; the new chain re-establishes the 2-second cadence on the next tick.
+// Returns nil when polling has not been started.
 func (m *TeamListModel) PollNow() tea.Cmd {
 	if !m.polling {
 		return nil
 	}
+	m.pollSeq++
+	seq := m.pollSeq
 	return func() tea.Msg {
-		return pollTickMsg(time.Now())
+		return pollTickMsg{time: time.Now(), seq: seq}
 	}
 }
 
@@ -145,6 +153,10 @@ func (m TeamListModel) Update(msg tea.Msg) (TeamListModel, tea.Cmd) {
 		return m, nil
 
 	case pollTickMsg:
+		// Discard ticks from superseded chains (stale seq).
+		if msg.seq != m.pollSeq {
+			return m, nil
+		}
 		// Scan the directory and update the registry for each team found.
 		if m.teamsDir != "" {
 			scanTeamsDir(m.teamsDir, m.registry)
@@ -152,8 +164,8 @@ func (m TeamListModel) Update(msg tea.Msg) (TeamListModel, tea.Cmd) {
 		// Refresh the local snapshot.
 		m.teams = m.registry.All()
 		m.clampSelected()
-		// Schedule the next poll.
-		return m, pollCmd()
+		// Schedule the next poll with the same seq.
+		return m, m.pollCmd()
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)

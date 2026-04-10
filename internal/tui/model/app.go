@@ -583,6 +583,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.waitForCLIEvent()
 	}
 
+	// ─── FORWARDING CASCADE ──────────────────────────────────────────────
+	// Contract: each forwarder returns non-nil ONLY for its own package's
+	// unexported tick type. The cascade exits on the first non-nil cmd, so
+	// a forwarder that claims a foreign type starves downstream forwarders.
+	// All tick types are distinct named structs — do NOT use interface
+	// matching here.
+	// Order: 1. StatusLine  2. Toast  3. TabBar  4. TeamList  5. TeamDetail
+	// ─────────────────────────────────────────────────────────────────────
+
 	// Forward unhandled messages to status line (handles its own tick types).
 	{
 		updated, cmd := m.statusLine.Update(msg)
@@ -628,6 +637,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.shared.teamsHealth.HasData() {
 					if !m.shared.drawerStack.TeamsHasContent() {
 						// First team discovered — force-expand the drawer.
+						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+					} else if m.shared.teamsHealth.HasRunningTeam() &&
+						m.shared.drawerStack.TeamsIsMinimized() {
+						// A team is actively running and the drawer was minimized —
+						// force-expand so the user sees live progress without manually
+						// reopening the drawer.
 						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
 					} else {
 						m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())

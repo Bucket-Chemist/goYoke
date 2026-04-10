@@ -199,19 +199,34 @@ func (c *UDSClient) sendModal(payload ModalRequestPayload) (string, error) {
 
 // notify sends a one-way IPC message to the TUI, logging any errors at WARN
 // level.  It is a best-effort call — tool handler responses are not delayed
-// waiting for notification delivery.
+// waiting for notification delivery.  On a transient send failure it retries
+// once after 200 ms with a fresh connection.
 func (c *UDSClient) notify(msgType string, payload any) {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		slog.Warn("failed to marshal IPC notification", "type", msgType, "err", err)
 		return
 	}
-	if err := c.send(IPCRequest{
+	req := IPCRequest{
 		Type:    msgType,
 		ID:      uuid.New().String(),
 		Payload: raw,
-	}); err != nil {
-		slog.Warn("failed to send IPC notification", "type", msgType, "err", err)
+	}
+	if err := c.send(req); err != nil {
+		slog.Info("IPC notification failed, retrying", "type", msgType, "err", err)
+		time.Sleep(200 * time.Millisecond)
+		// Reset the connection so send() re-dials on the retry attempt.
+		c.mu.Lock()
+		if c.conn != nil {
+			c.conn.Close()
+			c.conn = nil
+			c.enc = nil
+			c.dec = nil
+		}
+		c.mu.Unlock()
+		if retryErr := c.send(req); retryErr != nil {
+			slog.Warn("IPC notification retry failed", "type", msgType, "err", retryErr)
+		}
 	}
 }
 

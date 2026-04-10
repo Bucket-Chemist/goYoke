@@ -526,6 +526,107 @@ func (r *AgentRegistry) KillRunning() {
 	}
 }
 
+// KillByID sends SIGTERM to the process group of the agent identified by id
+// and all its running descendants (depth-first, bottom-up). Each killed agent
+// transitions to StatusKilled. Returns an error if the agent is not found, not
+// running, or has no PID.
+//
+// After SIGTERM, a background goroutine waits 5s and escalates to SIGKILL for
+// any process group that is still alive, checking under RLock that the agent
+// status is still StatusKilled and the process group exists.
+func (r *AgentRegistry) KillByID(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[id]
+	if !ok {
+		return fmt.Errorf("agent %q not found", id)
+	}
+	if a.Status != StatusRunning {
+		return fmt.Errorf("agent %q is %s, not running", id, a.Status)
+	}
+	if a.PID <= 0 {
+		return fmt.Errorf("agent %q has no PID", id)
+	}
+
+	// Collect all descendants depth-first (leaves before parents), then kill
+	// bottom-up so children are terminated before their parent.
+	var targets []*Agent
+	r.collectDescendants(id, &targets)
+	targets = append(targets, a) // parent last
+
+	for _, t := range targets {
+		if t.Status != StatusRunning || t.PID <= 0 {
+			continue
+		}
+		pid := t.PID
+		targetID := t.ID
+		if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+			slog.Warn("KillByID: SIGTERM failed",
+				"agent", t.ID, "pid", pid, "err", err)
+		}
+		t.Status = StatusKilled
+
+		// SIGKILL escalation goroutine — captures pid and targetID by value.
+		// Checks agent status under RLock and confirms process group still exists
+		// before escalating.
+		go func(pid int, targetID string) {
+			time.Sleep(5 * time.Second)
+			r.mu.RLock()
+			agent, exists := r.agents[targetID]
+			stillKilled := exists && agent.Status == StatusKilled
+			r.mu.RUnlock()
+			if stillKilled {
+				if err := syscall.Kill(-pid, 0); err == nil {
+					// Process group still alive — escalate to SIGKILL.
+					syscall.Kill(-pid, syscall.SIGKILL) //nolint:errcheck
+				}
+			}
+		}(pid, targetID)
+	}
+
+	return nil
+}
+
+// collectDescendants walks the Children slice recursively and appends
+// all descendants to targets in depth-first post-order (leaves before
+// their parents). MUST be called with r.mu held.
+func (r *AgentRegistry) collectDescendants(id string, targets *[]*Agent) {
+	a, ok := r.agents[id]
+	if !ok {
+		return
+	}
+	for _, childID := range a.Children {
+		r.collectDescendants(childID, targets)
+		if child, ok := r.agents[childID]; ok {
+			*targets = append(*targets, child)
+		}
+	}
+}
+
+// CountRunningDescendants returns the number of running descendants of the
+// agent identified by id. Thread-safe.
+func (r *AgentRegistry) CountRunningDescendants(id string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.countRunningDescendantsLocked(id)
+}
+
+func (r *AgentRegistry) countRunningDescendantsLocked(id string) int {
+	a, ok := r.agents[id]
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, childID := range a.Children {
+		if child, ok := r.agents[childID]; ok && child.Status == StatusRunning {
+			count++
+		}
+		count += r.countRunningDescendantsLocked(childID)
+	}
+	return count
+}
+
 // SetSelected records the ID of the currently selected agent for UI
 // highlighting. Passing an empty string deselects.
 func (r *AgentRegistry) SetSelected(id string) {

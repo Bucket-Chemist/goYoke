@@ -148,3 +148,33 @@ func TestTeamsHealthModel_EmptyState(t *testing.T) {
 		t.Errorf("empty registry should render 'No active teams', got: %q", view)
 	}
 }
+
+func TestTeamsHealthModel_HasRunningTeam(t *testing.T) {
+	t.Run("empty registry returns false", func(t *testing.T) {
+		reg := NewTeamRegistry()
+		m := NewTeamsHealthModel(reg)
+		if m.HasRunningTeam() {
+			t.Error("HasRunningTeam should return false on empty registry")
+		}
+	})
+
+	t.Run("running team returns true", func(t *testing.T) {
+		reg := NewTeamRegistry()
+		cfg := TeamConfig{TeamName: "active", Status: "running", CreatedAt: "2026-01-01T00:00:00Z"}
+		reg.Update("/sessions/active", cfg, nil)
+		m := NewTeamsHealthModel(reg)
+		if !m.HasRunningTeam() {
+			t.Error("HasRunningTeam should return true when a running team exists")
+		}
+	})
+
+	t.Run("completed team returns false", func(t *testing.T) {
+		reg := NewTeamRegistry()
+		cfg := TeamConfig{TeamName: "done", Status: "completed", CreatedAt: "2026-01-01T00:00:00Z"}
+		reg.Update("/sessions/done", cfg, nil)
+		m := NewTeamsHealthModel(reg)
+		if m.HasRunningTeam() {
+			t.Error("HasRunningTeam should return false when only a completed team exists")
+		}
+	})
+}

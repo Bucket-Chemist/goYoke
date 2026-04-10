@@ -4,6 +4,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -13,12 +14,18 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // interruptConfirmRequestID is the modal request ID used for the ESC-while-streaming
 // interrupt confirmation dialog. It is matched in handleModalResponse to execute
 // the actual CLI interrupt only after the user selects "Yes".
 const interruptConfirmRequestID = "interrupt-confirm"
+
+// agentKillConfirmPrefix is the ModalRequest.ID prefix for the Ctrl+X surgical
+// agent kill confirmation. The agent ID is appended after the prefix so that
+// handleModalResponse can extract it without any additional state.
+const agentKillConfirmPrefix = "agent-kill-confirm:"
 
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -347,6 +354,12 @@ func (m AppModel) handleClaudeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // When the right panel is showing the dashboard it forwards events to the
 // dashboard component instead of the agent tree.
 func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Ctrl+X: surgical agent kill — intercept BEFORE detail panel
+	// forwarding so it works regardless of which child has focus.
+	if key.Matches(msg, m.keys.Agent.AgentKill) {
+		return m.handleAgentKillKey()
+	}
+
 	switch m.rightPanelMode {
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {
@@ -373,6 +386,53 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 	}
+}
+
+// handleAgentKillKey handles Ctrl+X when the agent tree has focus. It looks up
+// the selected agent and, if it is running with a known PID, pushes a
+// confirmation modal. The modal response is handled in handleModalResponse via
+// the agentKillConfirmPrefix on the request ID.
+func (m AppModel) handleAgentKillKey() (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.agentRegistry == nil || m.shared.modalQueue == nil {
+		return m, nil
+	}
+
+	id := m.agentTree.SelectedID()
+	if id == "" {
+		return m, nil
+	}
+
+	registry := m.shared.agentRegistry
+	agent := registry.Get(id)
+	if agent == nil || agent.Status != state.StatusRunning || agent.PID <= 0 {
+		return m, nil
+	}
+
+	desc := fmt.Sprintf(
+		"Type: %s\nID: %.12s…\nPID: %d\nStatus: %s",
+		agent.AgentType, agent.ID, agent.PID, agent.Status,
+	)
+	if agent.Description != "" {
+		desc += fmt.Sprintf("\nTask: %s", agent.Description)
+	}
+	childCount := registry.CountRunningDescendants(id)
+	if childCount > 0 {
+		desc += fmt.Sprintf("\n\n⚠ This will also kill %d running child agent(s)", childCount)
+	}
+
+	req := modals.ModalRequest{
+		ID:      agentKillConfirmPrefix + id,
+		Type:    modals.Confirm,
+		Header:  "Kill Agent?",
+		Message: desc,
+		Options: []string{"Yes, kill", "Cancel"},
+	}
+
+	m.shared.modalQueue.Push(req)
+	if !m.shared.modalQueue.IsActive() {
+		m.shared.modalQueue.Activate()
+	}
+	return m, nil
 }
 
 // handleDrawerKey routes keyboard events to the focused drawer via the drawer

@@ -993,3 +993,167 @@ func TestTree_NoExplicitRoot(t *testing.T) {
 	require.Len(t, nodes, 1)
 	assert.Equal(t, "solo", nodes[0].Agent.ID)
 }
+
+// ---------------------------------------------------------------------------
+// KillByID
+// ---------------------------------------------------------------------------
+
+// makeRunningAgent registers a running agent with the given PID. Returns the
+// agent ID for use in assertions.
+func mustRegisterRunning(t *testing.T, r *AgentRegistry, id, agentType, desc, parentID string, pid int) {
+	t.Helper()
+	a := makeAgent(id, agentType, desc, parentID)
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update(id, func(ag *Agent) { ag.Status = StatusRunning }))
+	r.SetPID(id, pid)
+}
+
+func TestKillByID_UnknownID(t *testing.T) {
+	r := NewAgentRegistry()
+	err := r.KillByID("no-such-id")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestKillByID_NotRunning(t *testing.T) {
+	r := NewAgentRegistry()
+	a := makeAgent("a1", "go-pro", "task", "")
+	require.NoError(t, r.Register(a))
+	// Status is StatusPending — not running.
+	err := r.KillByID("a1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestKillByID_AlreadyKilled(t *testing.T) {
+	r := NewAgentRegistry()
+	a := makeAgent("a1", "go-pro", "task", "")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("a1", func(ag *Agent) { ag.Status = StatusKilled }))
+	err := r.KillByID("a1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestKillByID_NoPID(t *testing.T) {
+	r := NewAgentRegistry()
+	a := makeAgent("a1", "go-pro", "task", "")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("a1", func(ag *Agent) { ag.Status = StatusRunning }))
+	// PID is 0 (default).
+	err := r.KillByID("a1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no PID")
+}
+
+func TestKillByID_RunningSuccess(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "a1", "go-pro", "task", "", 12345)
+
+	err := r.KillByID("a1")
+	require.NoError(t, err)
+
+	got := r.Get("a1")
+	require.NotNil(t, got)
+	assert.Equal(t, StatusKilled, got.Status)
+}
+
+func TestKillByID_RecursiveChildren(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 100)
+	mustRegisterRunning(t, r, "child1", "go-tui", "child1 task", "parent", 101)
+	mustRegisterRunning(t, r, "child2", "go-tui", "child2 task", "parent", 102)
+
+	err := r.KillByID("parent")
+	require.NoError(t, err)
+
+	for _, id := range []string{"parent", "child1", "child2"} {
+		got := r.Get(id)
+		require.NotNil(t, got, "agent %s should still exist", id)
+		assert.Equal(t, StatusKilled, got.Status, "agent %s should be StatusKilled", id)
+	}
+}
+
+func TestKillByID_RecursiveMixedStatus(t *testing.T) {
+	// Parent and one running child get killed; already-complete child is left alone.
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 200)
+	mustRegisterRunning(t, r, "running-child", "go-tui", "running child", "parent", 201)
+
+	// Register a completed child.
+	a := makeAgent("done-child", "go-cli", "done child", "parent")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("done-child", func(ag *Agent) { ag.Status = StatusRunning }))
+	require.NoError(t, r.Update("done-child", func(ag *Agent) { ag.Status = StatusComplete }))
+
+	err := r.KillByID("parent")
+	require.NoError(t, err)
+
+	assert.Equal(t, StatusKilled, r.Get("parent").Status)
+	assert.Equal(t, StatusKilled, r.Get("running-child").Status)
+	assert.Equal(t, StatusComplete, r.Get("done-child").Status, "completed child must not be affected")
+}
+
+func TestKillByID_DeepNesting(t *testing.T) {
+	// grandparent → parent → child, all running — all three must be killed.
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "grandparent", "go-pro", "gp task", "", 300)
+	mustRegisterRunning(t, r, "parent", "go-tui", "p task", "grandparent", 301)
+	mustRegisterRunning(t, r, "child", "go-cli", "c task", "parent", 302)
+
+	err := r.KillByID("grandparent")
+	require.NoError(t, err)
+
+	for _, id := range []string{"grandparent", "parent", "child"} {
+		assert.Equal(t, StatusKilled, r.Get(id).Status, "agent %s should be StatusKilled", id)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CountRunningDescendants
+// ---------------------------------------------------------------------------
+
+func TestCountRunningDescendants_NoChildren(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "solo", "go-pro", "solo task", "", 400)
+	assert.Equal(t, 0, r.CountRunningDescendants("solo"))
+}
+
+func TestCountRunningDescendants_TwoRunningChildren(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 500)
+	mustRegisterRunning(t, r, "c1", "go-tui", "child 1", "parent", 501)
+	mustRegisterRunning(t, r, "c2", "go-tui", "child 2", "parent", 502)
+	assert.Equal(t, 2, r.CountRunningDescendants("parent"))
+}
+
+func TestCountRunningDescendants_MixedStatus(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 600)
+	mustRegisterRunning(t, r, "running", "go-tui", "running child", "parent", 601)
+
+	// Complete child.
+	a := makeAgent("done", "go-cli", "done child", "parent")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("done", func(ag *Agent) { ag.Status = StatusRunning }))
+	require.NoError(t, r.Update("done", func(ag *Agent) { ag.Status = StatusComplete }))
+
+	assert.Equal(t, 1, r.CountRunningDescendants("parent"))
+}
+
+func TestCountRunningDescendants_DeepNesting(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "gp", "go-pro", "gp task", "", 700)
+	mustRegisterRunning(t, r, "p", "go-tui", "p task", "gp", 701)
+	mustRegisterRunning(t, r, "c", "go-cli", "c task", "p", 702)
+
+	// CountRunningDescendants("gp") should count p and c.
+	assert.Equal(t, 2, r.CountRunningDescendants("gp"))
+	// CountRunningDescendants("p") should count only c.
+	assert.Equal(t, 1, r.CountRunningDescendants("p"))
+}
+
+func TestCountRunningDescendants_UnknownID(t *testing.T) {
+	r := NewAgentRegistry()
+	assert.Equal(t, 0, r.CountRunningDescendants("no-such-id"))
+}

@@ -486,3 +486,82 @@ func TestTeamListModel_PollTick_TimestampAccepted(t *testing.T) {
 	assert.WithinDuration(t, time.Now(), ts.LastPolled, 5*time.Second)
 	_ = updated
 }
+
+// ---------------------------------------------------------------------------
+// Sequence guard (C-1)
+// ---------------------------------------------------------------------------
+
+// TestTeamListModel_PollTick_StaleSeqReturnsNilCmd verifies that a tick from a
+// superseded poll chain is silently discarded without scheduling a new tick.
+func TestTeamListModel_PollTick_StaleSeqReturnsNilCmd(t *testing.T) {
+	root := t.TempDir()
+	r := teams.NewTeamRegistry()
+	m := teams.NewTeamListModel(r)
+
+	// Chain 1: StartPolling sets seq=1, returns cmd carrying seq=1.
+	cmd1 := m.StartPolling(root)
+	require.NotNil(t, cmd1)
+
+	// PollNow advances seq to 2, making any pending seq=1 tick stale.
+	cmd2 := m.PollNow()
+	require.NotNil(t, cmd2, "PollNow after StartPolling must return non-nil cmd")
+
+	// Execute cmd1 to materialise the stale tick (seq=1).
+	staleMsg := cmd1()
+
+	// Model has pollSeq=2; stale tick carries seq=1 → must be dropped.
+	_, staleCmd := m.Update(staleMsg)
+	assert.Nil(t, staleCmd, "stale tick (seq=1 vs pollSeq=2) must return nil — chain must die")
+}
+
+// TestTeamListModel_PollTick_FreshSeqSchedulesNextPoll verifies that a tick
+// whose seq matches the current pollSeq is processed and schedules the next tick.
+func TestTeamListModel_PollTick_FreshSeqSchedulesNextPoll(t *testing.T) {
+	root := t.TempDir()
+	r := teams.NewTeamRegistry()
+	m := teams.NewTeamListModel(r)
+
+	// StartPolling: seq=1; returned cmd carries seq=1.
+	cmd := m.StartPolling(root)
+	require.NotNil(t, cmd)
+
+	// Execute cmd → pollTickMsg{seq:1}. Model has pollSeq=1 → match.
+	freshMsg := cmd()
+	_, nextCmd := m.Update(freshMsg)
+	assert.NotNil(t, nextCmd, "fresh tick (seq matches pollSeq) must schedule the next poll")
+}
+
+// TestTeamListModel_PollNow_KillsPreviousChain verifies the full seq-guard
+// flow: two concurrent chains compete, only the newer one survives.
+func TestTeamListModel_PollNow_KillsPreviousChain(t *testing.T) {
+	root := t.TempDir()
+	r := teams.NewTeamRegistry()
+	m := teams.NewTeamListModel(r)
+
+	// Chain 1 (seq=1).
+	cmd1 := m.StartPolling(root)
+	require.NotNil(t, cmd1)
+
+	// Chain 2 (seq=2) — supersedes chain 1.
+	cmd2 := m.PollNow()
+	require.NotNil(t, cmd2)
+
+	staleMsg := cmd1() // seq=1
+	freshMsg := cmd2() // seq=2
+
+	// Stale tick (seq=1, model pollSeq=2): must be dropped.
+	_, staleNextCmd := m.Update(staleMsg)
+	assert.Nil(t, staleNextCmd, "tick from killed chain (seq=1 vs pollSeq=2) should return nil")
+
+	// Fresh tick (seq=2, model pollSeq=2): must be processed and continue.
+	_, freshNextCmd := m.Update(freshMsg)
+	assert.NotNil(t, freshNextCmd, "tick from active chain (seq=2 vs pollSeq=2) should return non-nil")
+}
+
+// TestTeamListModel_PollNow_BeforeStartPolling_ReturnsNil verifies that
+// PollNow is a no-op when polling has not been started.
+func TestTeamListModel_PollNow_BeforeStartPolling_ReturnsNil(t *testing.T) {
+	r := teams.NewTeamRegistry()
+	m := teams.NewTeamListModel(r)
+	assert.Nil(t, m.PollNow(), "PollNow before StartPolling must return nil")
+}

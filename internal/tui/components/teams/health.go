@@ -45,6 +45,14 @@ func (m *TeamsHealthModel) HasData() bool {
 	return m.registry.MostRecentRunning() != nil
 }
 
+// HasRunningTeam returns true when MostRecentRunning returns a team whose
+// status is explicitly "running". Used by the poll-tick handler in app.go to
+// decide whether to re-expand a minimized teams drawer.
+func (m *TeamsHealthModel) HasRunningTeam() bool {
+	ts := m.registry.MostRecentRunning()
+	return ts != nil && ts.Config.Status == "running"
+}
+
 // View renders the health dashboard as a pure string. It is safe to call
 // from a Bubbletea View() method: data is obtained via MostRecentRunning()
 // which holds only an RLock internally.

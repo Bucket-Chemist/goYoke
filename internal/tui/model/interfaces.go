@@ -467,6 +467,10 @@ type teamsHealthWidget interface {
 	SetTier(tier LayoutTier)
 	// HasData returns true when there is at least one running team to display.
 	HasData() bool
+	// HasRunningTeam returns true when MostRecentRunning returns a team whose
+	// status is "running". Used by the poll-tick handler to decide whether to
+	// re-expand a minimized teams drawer.
+	HasRunningTeam() bool
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +500,10 @@ type drawerStackWidget interface {
 	ClearTeamsContent()
 	TeamsHasContent() bool
 	RefreshTeamsContent(content string)
+	// TeamsIsMinimized returns true when the teams drawer is in the minimized
+	// (tab-only) state. Used by the poll-tick handler to decide whether to
+	// force-expand the drawer when a running team is detected.
+	TeamsIsMinimized() bool
 	SetOptionsFocused(focused bool)
 	SetPlanFocused(focused bool)
 	SetTeamsFocused(focused bool)

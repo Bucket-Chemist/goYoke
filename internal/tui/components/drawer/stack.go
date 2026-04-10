@@ -87,6 +87,13 @@ func (s *DrawerStack) Plan() *DrawerModel { return &s.plan }
 // Teams returns a pointer to the teams DrawerModel.
 func (s *DrawerStack) Teams() *DrawerModel { return &s.teams }
 
+// TeamsIsMinimized returns true when the teams drawer is in the minimized state.
+// This is a proxy for model.drawerStackWidget that avoids exposing the concrete
+// DrawerModel type through the interface.
+func (s *DrawerStack) TeamsIsMinimized() bool {
+	return s.teams.State() == DrawerMinimized
+}
+
 // ExpandedDrawers returns the DrawerID strings for all currently expanded drawers.
 func (s DrawerStack) ExpandedDrawers() []string {
 	var ids []string

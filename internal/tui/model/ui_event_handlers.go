@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -307,6 +308,18 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 		return m, nil
 	}
 
+	// Agent kill confirmation — check between interrupt-confirm and permHandler
+	// fallthrough so the request ID prefix is matched before generic routing.
+	if strings.HasPrefix(msg.RequestID, agentKillConfirmPrefix) {
+		if !msg.Response.Cancelled && msg.Response.Value == "Yes" {
+			agentID := strings.TrimPrefix(msg.RequestID, agentKillConfirmPrefix)
+			m.killAgentByID(agentID)
+		}
+		// Whether confirmed or cancelled, restore focus to the agent tree.
+		m.focus = FocusAgents
+		return m, nil
+	}
+
 	result, cmd := m.shared.permHandler.HandleResponse(msg)
 	if result != nil {
 		// Check if this was a permission gate flow.
@@ -453,6 +466,21 @@ func parseAgentStatus(s string) state.AgentStatus {
 	}
 }
 
+// killAgentByID kills the agent identified by id and all its running
+// descendants via KillByID, then refreshes the agent tree and status line.
+func (m *AppModel) killAgentByID(id string) {
+	if m.shared == nil || m.shared.agentRegistry == nil {
+		return
+	}
+	registry := m.shared.agentRegistry
+	if err := registry.KillByID(id); err != nil {
+		slog.Warn("killAgentByID failed", "id", id, "err", err)
+	}
+	registry.InvalidateTreeCache()
+	m.agentTree.SetNodes(registry.Tree())
+	m.statusLine.AgentCount = registry.Count().Total
+}
+
 // killRunningAgents sends SIGTERM to all spawned agent process groups that
 // are still in StatusRunning and have a known PID. Called when the user
 // confirms the ESC interrupt to clean up subprocesses that use Setsid: true
@@ -578,8 +606,6 @@ func (m AppModel) handleTeamUpdate(_ TeamUpdateMsg) (tea.Model, tea.Cmd) {
 	}
 	// Scan immediately — populates the registry before HasData() check.
 	m.shared.teamList.ScanNow()
-	// Refresh the team list's local snapshot.
-	m.shared.teamList.HandleMsg(TeamUpdateMsg{})
 	// Auto-expand the drawer if we have data.
 	if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
 		if m.shared.teamsHealth.HasData() {
@@ -589,7 +615,9 @@ func (m AppModel) handleTeamUpdate(_ TeamUpdateMsg) (tea.Model, tea.Cmd) {
 	if m.shared.teamDetail != nil {
 		m.shared.teamDetail.Refresh()
 	}
-	return m, nil
+	// PollNow recovers the poll chain if it died and is idempotent due to the
+	// sequence guard introduced in C-1.
+	return m, m.shared.teamList.PollNow()
 }
 
 func (m AppModel) handleTabFlash(msg TabFlashMsg) (tea.Model, tea.Cmd) {

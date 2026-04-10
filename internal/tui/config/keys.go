@@ -130,6 +130,9 @@ type AgentKeys struct {
 
 	// AgentExpand expands the selected agent entry to show detail.
 	AgentExpand key.Binding
+
+	// AgentKill sends a kill signal to the selected agent and all its descendants.
+	AgentKill key.Binding
 }
 
 // ModalKeys groups the keybindings that are active while a modal overlay is
@@ -312,6 +315,10 @@ func DefaultKeyMap() KeyMap {
 			AgentExpand: key.NewBinding(
 				key.WithKeys("enter"),
 				key.WithHelp("enter", "expand agent"),
+			),
+			AgentKill: key.NewBinding(
+				key.WithKeys("ctrl+x"),
+				key.WithHelp("ctrl+x", "kill agent"),
 			),
 		},
 
