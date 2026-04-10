@@ -1,1 +1,0 @@
-{"timestamp":"2026-02-07T20:19:08+07:00","session_id":"f9a42bc9-576f-431f-a640-c7414430aa30","violation_type":"subagent_type_mismatch","agent":"go-pro","reason":"Allowed: [general-purpose], Requested: go-pro","project_dir":"/home/doktersmol/Documents/GOgent-Fortress"}

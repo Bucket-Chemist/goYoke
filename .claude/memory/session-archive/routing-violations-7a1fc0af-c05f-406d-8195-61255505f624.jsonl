@@ -1,1 +1,0 @@
-{"timestamp":"2026-03-28T08:05:46+01:00","session_id":"5ca07be6-5993-4264-bde0-091312c9a71d","violation_type":"opus_agent_wrong_model","agent":"architect","model":"sonnet","reason":"agent_requires_opus_got_sonnet","project_dir":"/home/doktersmol"}

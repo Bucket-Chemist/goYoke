@@ -1,2 +1,0 @@
-{"timestamp":"2026-02-16T14:52:31+07:00","session_id":"46d06b34-5f1c-4247-8517-6afc2a61e3d5","violation_type":"opus_agent_wrong_model","agent":"architect","model":"sonnet","reason":"agent_requires_opus_got_sonnet","project_dir":"/home/doktersmol"}
-{"timestamp":"2026-02-16T14:52:38+07:00","session_id":"46d06b34-5f1c-4247-8517-6afc2a61e3d5","violation_type":"subagent_type_mismatch","agent":"architect","reason":"Allowed: [general-purpose], Requested: Plan","project_dir":"/home/doktersmol"}
