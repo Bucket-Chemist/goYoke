@@ -162,7 +162,7 @@ var SessionEndInvariants = []Invariant{
 		ID:   "S2",
 		Name: "handoff_created",
 		Check: func(input interface{}, output string, exitCode int, tempDir string) (bool, string) {
-			handoffPath := filepath.Join(tempDir, ".claude", "memory", "handoffs.jsonl")
+			handoffPath := filepath.Join(tempDir, ".gogent", "memory", "handoffs.jsonl")
 			if _, err := os.Stat(handoffPath); os.IsNotExist(err) {
 				return false, "handoffs.jsonl was not created"
 			}
@@ -173,7 +173,7 @@ var SessionEndInvariants = []Invariant{
 		ID:   "S3",
 		Name: "schema_version_current",
 		Check: func(input interface{}, output string, exitCode int, tempDir string) (bool, string) {
-			handoffPath := filepath.Join(tempDir, ".claude", "memory", "handoffs.jsonl")
+			handoffPath := filepath.Join(tempDir, ".gogent", "memory", "handoffs.jsonl")
 			data, err := os.ReadFile(handoffPath)
 			if err != nil {
 				return false, "cannot read handoffs.jsonl: " + err.Error()
@@ -202,7 +202,7 @@ var SessionEndInvariants = []Invariant{
 		ID:   "S4",
 		Name: "markdown_created",
 		Check: func(input interface{}, output string, exitCode int, tempDir string) (bool, string) {
-			mdPath := filepath.Join(tempDir, ".claude", "memory", "last-handoff.md")
+			mdPath := filepath.Join(tempDir, ".gogent", "memory", "last-handoff.md")
 			if _, err := os.Stat(mdPath); os.IsNotExist(err) {
 				return false, "last-handoff.md was not created"
 			}

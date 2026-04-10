@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 // DelegationCeilingRuntime represents max allowed delegation tier
@@ -14,7 +16,7 @@ type DelegationCeilingRuntime struct {
 
 // LoadDelegationCeiling reads max_delegation file from project
 func LoadDelegationCeiling(projectDir string) (*DelegationCeilingRuntime, error) {
-	ceilingPath := filepath.Join(projectDir, ".claude", "tmp", "max_delegation")
+	ceilingPath := filepath.Join(config.RuntimeDir(projectDir), "tmp", "max_delegation")
 
 	data, err := os.ReadFile(ceilingPath)
 	if err != nil {

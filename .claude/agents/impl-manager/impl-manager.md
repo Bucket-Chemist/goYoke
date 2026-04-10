@@ -13,7 +13,7 @@ thinking:
   budget_complex: 18000
 tier: 2
 category: coordination
-subagent_type: Plan
+subagent_type: Implementation Manager
 
 triggers:
   - "implement from specs"

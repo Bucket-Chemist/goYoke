@@ -25,6 +25,25 @@ type ModalResponseMsg struct {
 // to request the full-screen plan view modal.
 type PlanViewRequestMsg struct{}
 
+// OptionsViewRequestMsg is emitted when the user presses Alt+O in the options
+// drawer to request the full-screen options view modal.
+// It carries all drawer state the modal needs so no additional accessors are
+// required at the call site.
+type OptionsViewRequestMsg struct {
+	// Content is the plain-text drawer content (view mode).
+	Content string
+	// Interactive indicates the drawer has an active modal selection.
+	Interactive bool
+	// RequestID is the bridge request ID (interactive mode only).
+	RequestID string
+	// Message is the modal prompt message (interactive mode only).
+	Message string
+	// Options is the list of selectable options (interactive mode only).
+	Options []string
+	// SelectedIdx is the currently highlighted option index (interactive mode only).
+	SelectedIdx int
+}
+
 // DrawerState describes whether a drawer is currently collapsed or open.
 type DrawerState int
 
@@ -43,6 +62,8 @@ const (
 	DrawerOptions DrawerID = "options"
 	// DrawerPlan is the id for the plan-preview drawer.
 	DrawerPlan DrawerID = "plan"
+	// DrawerTeams is the id for the teams health drawer.
+	DrawerTeams DrawerID = "teams"
 )
 
 // DrawerModel is the Bubbletea model for a single drawer pane.
@@ -87,12 +108,13 @@ func (m *DrawerModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 
-	// Inner dimensions: borders take 2 cols wide, header+divider+footer = 3 rows.
+	// Inner dimensions: borders take 2 cols wide and 2 rows tall,
+	// header+divider+footer = 3 rows.  Total overhead = 5 rows.
 	innerW := w - 2
 	if innerW < 1 {
 		innerW = 1
 	}
-	innerH := h - 3 // header row + divider row + footer row
+	innerH := h - 5 // 2 (border top+bottom) + 1 header + 1 divider + 1 footer
 	if innerH < 1 {
 		innerH = 1
 	}
@@ -110,6 +132,27 @@ func (m *DrawerModel) SetContent(content string) {
 	if m.hasContent {
 		m.state = DrawerExpanded
 	}
+}
+
+// RefreshContent updates the drawer content without changing expansion state
+// when the drawer already has content. On first content arrival it auto-expands;
+// when content becomes empty it auto-minimises. Used for live-updating drawers
+// (e.g. teams health) where the content changes every poll tick.
+func (m *DrawerModel) RefreshContent(content string) {
+	if content == "" {
+		if m.hasContent {
+			m.ClearContent()
+		}
+		return
+	}
+	if !m.hasContent {
+		// First content — auto-expand.
+		m.SetContent(content)
+		return
+	}
+	// Update existing content without changing expansion state.
+	m.content = content
+	m.viewport.SetContent(content)
 }
 
 // ClearContent empties the drawer content and auto-minimises it.
@@ -187,6 +230,18 @@ func (m *DrawerModel) SelectedOption() string {
 // ActiveRequestID returns the current modal request ID.
 func (m *DrawerModel) ActiveRequestID() string { return m.activeRequestID }
 
+// Content returns the current plain-text content of the drawer.
+func (m DrawerModel) Content() string { return m.content }
+
+// ActiveMessage returns the modal prompt message when a modal is active.
+func (m DrawerModel) ActiveMessage() string { return m.activeMessage }
+
+// ActiveOptions returns the list of selectable options when a modal is active.
+func (m DrawerModel) ActiveOptions() []string { return m.activeOptions }
+
+// SelectedIdx returns the currently highlighted option index when a modal is active.
+func (m DrawerModel) SelectedIdx() int { return m.selectedIdx }
+
 // formatModalContent renders the modal prompt and options list with a cursor
 // indicator on the currently selected option.
 func (m DrawerModel) formatModalContent(message string, options []string, selectedIdx int) string {
@@ -204,13 +259,18 @@ func (m DrawerModel) formatModalContent(message string, options []string, select
 	return sb.String()
 }
 
-// ViewMinimized renders the compact single-row tab: icon + label.
+// ViewMinimized renders a compact bordered row: icon + label.
 func (m DrawerModel) ViewMinimized() string {
 	tab := config.StyleSubtle.Render(m.icon + " " + m.label)
-	return lipgloss.NewStyle().
-		Width(m.width).
-		Padding(0, 1).
-		Render(tab)
+	borderStyle := config.StyleUnfocusedBorder
+	if m.focused {
+		borderStyle = config.StyleFocusedBorder
+	}
+	innerW := m.width - 2
+	if innerW < 1 {
+		innerW = 1
+	}
+	return borderStyle.Width(innerW).Render(tab)
 }
 
 // ViewExpanded renders the full bordered content pane with:
@@ -238,6 +298,8 @@ func (m DrawerModel) ViewExpanded() string {
 	hint := "↑/↓ scroll • esc minimize"
 	if m.id == DrawerPlan {
 		hint = "↑/↓ scroll • alt+v full view • esc minimize"
+	} else if m.id == DrawerOptions {
+		hint = "↑/↓ scroll • alt+o full view • esc minimize"
 	}
 	hint = config.StyleMuted.Render(hint)
 
@@ -306,6 +368,29 @@ func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 	// Plan drawer: Alt+V opens full-screen plan view (TDS-007).
 	if msg.String() == "alt+v" && m.id == DrawerPlan {
 		return func() tea.Msg { return PlanViewRequestMsg{} }
+	}
+
+	// Options drawer: Alt+O opens full-screen options view.
+	if msg.String() == "alt+o" && m.id == DrawerOptions {
+		if m.HasActiveModal() {
+			reqID := m.activeRequestID
+			message := m.activeMessage
+			opts := m.activeOptions
+			idx := m.selectedIdx
+			return func() tea.Msg {
+				return OptionsViewRequestMsg{
+					Interactive: true,
+					RequestID:   reqID,
+					Message:     message,
+					Options:     opts,
+					SelectedIdx: idx,
+				}
+			}
+		}
+		content := m.content
+		return func() tea.Msg {
+			return OptionsViewRequestMsg{Content: content}
+		}
 	}
 
 	// Normal (non-modal) key handling.

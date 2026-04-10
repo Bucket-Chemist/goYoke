@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdin/bioinformatics-reviewer.json",
+  "title": "Bioinformatics Reviewer Stdin Schema",
+  "description": "Validates stdin for bioinformatics domain reviewers (genomics, proteomics, proteogenomics, proteoform, mass-spectrometry, pipeline)",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "agent",
+    "workflow",
+    "context",
+    "review_scope",
+    "git_context",
+    "focus_areas",
+    "project_conventions",
+    "omics_context"
+  ],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "enum": [
+        "genomics-reviewer",
+        "proteomics-reviewer",
+        "proteogenomics-reviewer",
+        "proteoform-reviewer",
+        "mass-spec-reviewer",
+        "bioinformatician-reviewer"
+      ],
+      "description": "Bioinformatics domain reviewer identifier"
+    },
+    "workflow": {
+      "type": "string",
+      "const": "review-bioinformatics",
+      "description": "Workflow type"
+    },
+    "context": {
+      "type": "object",
+      "required": ["project_root", "team_dir"],
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to project root"
+        },
+        "team_dir": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to team directory"
+        }
+      }
+    },
+    "review_scope": {
+      "type": "object",
+      "required": ["files", "total_files", "languages_detected"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "language", "category", "changed_lines", "is_new_file"],
+            "properties": {
+              "path": {"type": "string"},
+              "language": {"type": "string"},
+              "category": {"type": "string"},
+              "changed_lines": {
+                "type": "object",
+                "required": ["added", "removed"],
+                "properties": {
+                  "added": {"type": "integer", "minimum": 0},
+                  "removed": {"type": "integer", "minimum": 0}
+                }
+              },
+              "is_new_file": {"type": "boolean"}
+            }
+          }
+        },
+        "total_files": {"type": "integer", "minimum": 0},
+        "languages_detected": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "changed_files": {
+          "type": "array",
+          "description": "For architect-reviewer: includes dependency context",
+          "items": {
+            "type": "object"
+          }
+        },
+        "direct_imports": {
+          "type": "array",
+          "description": "For architect-reviewer: direct dependencies",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "git_context": {
+      "type": "object",
+      "required": ["commit_message"],
+      "properties": {
+        "commit_message": {"type": "string"},
+        "pr_description": {"type": "string"},
+        "related_tickets": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "branch_name": {"type": "string"}
+      }
+    },
+    "focus_areas": {
+      "type": "object",
+      "description": "Domain-specific focus areas for bioinformatics review"
+    },
+    "project_conventions": {
+      "type": "object",
+      "description": "Project-specific coding conventions and patterns"
+    },
+    "omics_context": {
+      "type": "object",
+      "required": [
+        "primary_domain",
+        "data_formats_detected",
+        "pipeline_tools_detected",
+        "workflow_manager"
+      ],
+      "description": "Bioinformatics domain context for specialized review",
+      "properties": {
+        "primary_domain": {
+          "type": "string",
+          "enum": [
+            "genomics",
+            "proteomics",
+            "proteogenomics",
+            "proteoform",
+            "mass-spectrometry",
+            "pipeline",
+            "mixed"
+          ],
+          "description": "Primary omics domain being reviewed"
+        },
+        "data_formats_detected": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Data formats used in the codebase (e.g., FASTA, VCF, mzML, BAM, mgf)"
+        },
+        "pipeline_tools_detected": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Bioinformatics tools and packages detected (e.g., BWA, GATK, MaxQuant, Nextflow, DeepDive)"
+        },
+        "workflow_manager": {
+          "type": ["string", "null"],
+          "description": "Workflow orchestration tool in use (e.g., nextflow, snakemake, wdl, cwl, or null if none)"
+        }
+      }
+    },
+    "pipeline_context": {
+      "type": "object",
+      "description": "Optional pipeline execution context for containerized/distributed analysis",
+      "properties": {
+        "container_technology": {
+          "type": ["string", "null"],
+          "description": "Container system in use (e.g., docker, singularity, apptainer)"
+        },
+        "execution_environment": {
+          "type": ["string", "null"],
+          "description": "Execution environment (e.g., local, hpc, cloud-hpc, aws)"
+        },
+        "sample_count": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Number of samples in analysis"
+        },
+        "organisms": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Organisms studied (e.g., Homo sapiens, Arabidopsis thaliana)"
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable task summary for envelope builder compatibility"
+    }
+  },
+  "additionalProperties": false
+}

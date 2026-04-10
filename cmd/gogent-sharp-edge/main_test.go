@@ -162,7 +162,7 @@ func TestWritePendingLearning(t *testing.T) {
 	}
 
 	// Verify file exists
-	pendingPath := filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(pendingPath); os.IsNotExist(err) {
 		t.Fatalf("pending-learnings.jsonl not created")
 	}
@@ -259,7 +259,7 @@ func TestSingleFailureDoesNotCapture(t *testing.T) {
 	}
 
 	// Verify pending-learnings.jsonl does NOT exist (threshold not reached)
-	pendingPath := filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(pendingPath); err == nil {
 		t.Error("pending-learnings.jsonl should not exist after single failure")
 	}
@@ -318,7 +318,7 @@ func TestThresholdReachedCapturesSharpEdge(t *testing.T) {
 	}
 
 	// Verify pending-learnings.jsonl exists
-	pendingPath := filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(pendingPath); os.IsNotExist(err) {
 		t.Fatal("pending-learnings.jsonl should exist after threshold reached")
 	}
@@ -395,7 +395,7 @@ func TestSchemaCompliance(t *testing.T) {
 	}
 
 	// Read back and verify schema compliance
-	pendingPath := filepath.Join(tmpDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
 	data, err := os.ReadFile(pendingPath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -870,8 +870,8 @@ func TestMLLogging_DualWrite(t *testing.T) {
 		}
 	}()
 
-	// Create project .claude/memory directory
-	projectMemoryDir := filepath.Join(projectDir, ".claude", "memory")
+	// Create project .gogent/memory directory
+	projectMemoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	if err := os.MkdirAll(projectMemoryDir, 0755); err != nil {
 		t.Fatalf("Failed to create project memory dir: %v", err)
 	}
@@ -1091,7 +1091,7 @@ func TestMLLogging_ErrorHandlingNonBlocking(t *testing.T) {
 	}
 
 	// Verify project log doesn't exist (project dir doesn't exist)
-	projectLogPath := filepath.Join("/nonexistent/project/dir", ".claude", "memory", "ml-tool-events.jsonl")
+	projectLogPath := filepath.Join("/nonexistent/project/dir", ".gogent", "memory", "ml-tool-events.jsonl")
 	if _, err := os.Stat(projectLogPath); !os.IsNotExist(err) {
 		t.Error("Project log should not exist for nonexistent directory")
 	}

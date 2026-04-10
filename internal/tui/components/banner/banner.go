@@ -12,11 +12,13 @@ import (
 )
 
 // BannerModel is the Bubbletea model for the top banner strip.
-// It renders "GOgent-Fortress" centred inside a rounded border box.
+// It renders "GOgent-Fortress" centred inside a rounded border box, or a
+// single-line strip when compact mode is active.
 //
 // The zero value is not usable; use NewBannerModel instead.
 type BannerModel struct {
-	width int
+	width   int
+	compact bool
 }
 
 // NewBannerModel returns a BannerModel with the given terminal width.
@@ -38,15 +40,23 @@ func (m BannerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View implements tea.Model. It renders the banner as a 3-row rounded border
-// box that spans the full terminal width. The application name is styled
-// with config.StyleTitle and centred horizontally inside the box.
+// View implements tea.Model.
 //
-// The rendered output is always exactly 3 rows tall:
+// When compact is false (the default) it renders a 3-row rounded border box
+// that spans the full terminal width.  The rendered output is always exactly
+// 3 rows tall:
 //   - row 1: top border
 //   - row 2: title text
 //   - row 3: bottom border
+//
+// When compact is true it returns a single left-aligned line containing the
+// application name, suitable for narrow terminals where the bordered box would
+// consume too many vertical rows.
 func (m BannerModel) View() string {
+	if m.compact {
+		return m.viewCompact()
+	}
+
 	title := config.StyleTitle.Render("GOgent-Fortress")
 
 	// The border consumes 2 columns on each side (border + space handled by
@@ -72,9 +82,34 @@ func (m BannerModel) View() string {
 	return box
 }
 
+// viewCompact renders the single-line compact banner.
+// The text is truncated to m.width runes so it never overflows a narrow
+// terminal.
+func (m BannerModel) viewCompact() string {
+	text := "⚡ GOgent Fortress"
+	runes := []rune(text)
+	if m.width > 0 && len(runes) > m.width {
+		text = string(runes[:m.width])
+	}
+	return config.StyleTitle.Render(text)
+}
+
 // SetWidth updates the banner width for responsive resizing. It mirrors the
 // state change that Update applies on tea.WindowSizeMsg so callers can resize
 // the component directly when composing layouts.
 func (m *BannerModel) SetWidth(w int) {
 	m.width = w
+}
+
+// SetCompact enables or disables compact (single-line) rendering mode.
+// When true, View() returns a single left-aligned line instead of the 3-row
+// bordered box.  Call this from the parent's WindowSizeMsg handler alongside
+// SetWidth so the banner adapts to narrow terminals.
+func (m *BannerModel) SetCompact(c bool) {
+	m.compact = c
+}
+
+// IsCompact reports whether compact mode is currently active.
+func (m BannerModel) IsCompact() bool {
+	return m.compact
 }

@@ -600,7 +600,7 @@ The `/review` skill coordinates specialized reviewers and captures findings:
    - `category`: "security", "performance", "maintainability", etc.
    - `sharp_edge_id`: Optional correlation to known sharp edge
 5. Findings piped to `gogent-log-review` (written to telemetry files)
-6. Skill outputs to `.claude/tmp/review-telemetry.json`
+6. Skill outputs to `.gogent/tmp/review-telemetry.json`
 
 **Sharp Edge Correlation:**
 When findings correlate to previously captured sharp edges (from `pending-learnings.jsonl`), the system:
@@ -683,7 +683,7 @@ type SharpEdgeHit struct {
 
 The Sharp Edge Registry provides validation and enumeration of valid sharp edge IDs.
 
-**Location:** `~/.claude/memory/pending-learnings.jsonl`
+**Location:** `~/.gogent/memory/pending-learnings.jsonl`
 
 **Functions (pkg/telemetry/sharp_edge_registry.go):**
 
@@ -727,7 +727,7 @@ flowchart TB
         patterns[/error-patterns.jsonl/]
     end
 
-    subgraph "Project Scope (.claude/memory/)"
+    subgraph "Project Scope (.gogent/memory/)"
         handoffs[/handoffs.jsonl/]
         intents[/user-intents.jsonl/]
         decisions[/decisions.jsonl/]
@@ -1032,7 +1032,7 @@ The `gogent-scout` binary provides unified pre-routing reconnaissance with smart
 |--------|--------|
 | **Purpose** | Assess scope before committing expensive resources |
 | **Backends** | Native Go (score < 40), Gemini 3 Flash (score ≥ 40), Synthetic fallback |
-| **Output** | JSON to stdout + `.claude/tmp/scout_metrics.json` |
+| **Output** | JSON to stdout + `.gogent/tmp/scout_metrics.json` |
 | **Latency** | Native: < 100ms (p50), Gemini: 1-3s |
 
 **Usage:**
@@ -1554,12 +1554,12 @@ type sharedState struct {
 | Ticket index (70 tickets) | `tickets/tui-migration/tickets/tickets-index.json` |
 | Individual tickets (Phases 1-9) | `tickets/tui-migration/tickets/TUI-{001..042}.md` |
 | Individual tickets (Phase 10) | `tickets/tui-migration/tickets/TUI-{043..070}.md` |
-| Strategy plan (Phases 1-9) | `.claude/sessions/20260316-plan-tickets-tui/strategy.md` |
-| Implementation specs (Phases 1-9) | `.claude/sessions/20260316-plan-tickets-tui/specs.md` |
-| Staff architect review (Phases 1-9) | `.claude/sessions/20260316-plan-tickets-tui/review-critique.md` |
-| Strategy plan (Phase 10) | `.claude/sessions/20260323-plan-tickets-tui-phase10/strategy.md` |
-| Implementation specs (Phase 10) | `.claude/sessions/20260323-plan-tickets-tui-phase10/specs.md` |
-| Staff architect review (Phase 10) | `.claude/sessions/20260323-plan-tickets-tui-phase10/review-critique.md` |
+| Strategy plan (Phases 1-9) | `.gogent/sessions/20260316-plan-tickets-tui/strategy.md` |
+| Implementation specs (Phases 1-9) | `.gogent/sessions/20260316-plan-tickets-tui/specs.md` |
+| Staff architect review (Phases 1-9) | `.gogent/sessions/20260316-plan-tickets-tui/review-critique.md` |
+| Strategy plan (Phase 10) | `.gogent/sessions/20260323-plan-tickets-tui-phase10/strategy.md` |
+| Implementation specs (Phase 10) | `.gogent/sessions/20260323-plan-tickets-tui-phase10/specs.md` |
+| Staff architect review (Phase 10) | `.gogent/sessions/20260323-plan-tickets-tui-phase10/review-critique.md` |
 | Braintrust analysis | `tickets/tui-migration/braintrust-handoff-v2.md` |
 | Spike results | `tickets/tui-migration/spike-results/` |
 

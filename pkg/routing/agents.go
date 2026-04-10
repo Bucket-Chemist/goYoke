@@ -9,7 +9,7 @@ import (
 )
 
 // EXPECTED_AGENT_INDEX_VERSION is the version this code is built for.
-const EXPECTED_AGENT_INDEX_VERSION = "2.6.0"
+const EXPECTED_AGENT_INDEX_VERSION = "2.7.0"
 
 // AgentIndex represents the complete agents-index.json v2.2.0 structure.
 // This defines the agent catalog for Claude Code routing and auto-activation.
@@ -36,6 +36,7 @@ type Agent struct {
 	Thinking              bool            `json:"thinking"`
 	ThinkingBudget        int             `json:"thinking_budget,omitempty"`
 	ThinkingBudgetComplex int             `json:"thinking_budget_complex,omitempty"`
+	EffortLevel           string          `json:"effortLevel,omitempty"`
 	Tier                  any             `json:"tier"` // Can be float64 (1.5) or string ("external")
 	Category              string          `json:"category"`
 	Path                  string          `json:"path"`
@@ -60,13 +61,15 @@ type Agent struct {
 	CostPerInvocation     string          `json:"cost_per_invocation,omitempty"`
 	ParallelSafe          bool            `json:"parallel_safe,omitempty"`
 	SwarmCompatible       bool            `json:"swarm_compatible,omitempty"`
+	Interactive           bool            `json:"interactive,omitempty"`
 	OutputFormat          string          `json:"output_format,omitempty"`
 	OutputFile            string          `json:"output_file,omitempty"`
 	CostCeilingUSD        float64         `json:"cost_ceiling_usd,omitempty"`
 	FallbackFor           string          `json:"fallback_for,omitempty"`
-	SpawnedBy             []string             `json:"spawned_by,omitempty"`
-	CanSpawn              []string             `json:"can_spawn,omitempty"`
-	ContextRequirements   *ContextRequirements `json:"context_requirements,omitempty"`
+	SpawnedBy                  []string             `json:"spawned_by,omitempty"`
+	CanSpawn                   []string             `json:"can_spawn,omitempty"`
+	ContextRequirements        *ContextRequirements `json:"context_requirements,omitempty"`
+	DefaultAcceptanceCriteria  []string             `json:"default_acceptance_criteria,omitempty"`
 }
 
 // AutoActivate defines conditions for agent auto-activation.
@@ -507,4 +510,20 @@ func (ag *Agent) GetAllowedTools() []string {
 		return ag.CliFlags.AllowedTools
 	}
 	return []string{"Read", "Glob", "Grep"}
+}
+
+// TierNumber returns the numeric tier value for an agent tier field.
+// Handles float64 (JSON default), int, string ("external" → 0), and nil → 0.
+func TierNumber(tier any) float64 {
+	switch v := tier.(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case string:
+		// Only "external" is a valid string tier; treat as 0.
+		return 0
+	default:
+		return 0
+	}
 }

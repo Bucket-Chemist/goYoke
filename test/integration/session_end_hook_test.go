@@ -18,7 +18,7 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 
 	// Setup temp project directory
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create temp metrics files

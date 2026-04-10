@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 const (
@@ -82,7 +84,7 @@ func run(args []string, projectDirEnv string) int {
 		projectDir = cwd
 	}
 
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := config.ProjectMemoryDir(projectDir)
 	archiveDir := filepath.Join(memoryDir, "archive")
 
 	// Build full paths for all files
@@ -296,25 +298,25 @@ Week: %s
 ## Archive Location
 
 All artifacts for this week are archived in:
-- sharp edges: `+"`"+`.claude/memory/archive/%s-sharp-edges.jsonl`+"`"+`
-- user intents: `+"`"+`.claude/memory/archive/%s-user-intents.jsonl`+"`"+`
-- decisions: `+"`"+`.claude/memory/archive/%s-decisions.jsonl`+"`"+`
-- preferences: `+"`"+`.claude/memory/archive/%s-preferences.jsonl`+"`"+`
-- performance: `+"`"+`.claude/memory/archive/%s-performance.jsonl`+"`"+`
-- violations: `+"`"+`.claude/memory/archive/%s-violations.jsonl`+"`"+`
+- sharp edges: `+"`"+`.gogent/memory/archive/%s-sharp-edges.jsonl`+"`"+`
+- user intents: `+"`"+`.gogent/memory/archive/%s-user-intents.jsonl`+"`"+`
+- decisions: `+"`"+`.gogent/memory/archive/%s-decisions.jsonl`+"`"+`
+- preferences: `+"`"+`.gogent/memory/archive/%s-preferences.jsonl`+"`"+`
+- performance: `+"`"+`.gogent/memory/archive/%s-performance.jsonl`+"`"+`
+- violations: `+"`"+`.gogent/memory/archive/%s-violations.jsonl`+"`"+`
 
 ## Usage
 
 Query archived decisions:
 `+"```bash"+`
 # Example: Find architectural decisions from this week
-grep '"category":"architecture"' .claude/memory/archive/%s-decisions.jsonl
+grep '"category":"architecture"' .gogent/memory/archive/%s-decisions.jsonl
 `+"```"+`
 
 Review sharp edges:
 `+"```bash"+`
 # Example: Count error types
-jq '.error_type' .claude/memory/archive/%s-sharp-edges.jsonl | sort | uniq -c
+jq '.error_type' .gogent/memory/archive/%s-sharp-edges.jsonl | sort | uniq -c
 `+"```"+`
 
 ---
@@ -353,15 +355,15 @@ func printHelp(w *os.File) {
 	fmt.Fprintln(w, "  gogent-aggregate --help         Show this help")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Files checked:")
-	fmt.Fprintln(w, "  - .claude/memory/pending-learnings.jsonl   (SharpEdges)")
-	fmt.Fprintln(w, "  - .claude/memory/user-intents.jsonl        (UserIntents)")
-	fmt.Fprintln(w, "  - .claude/memory/decisions.jsonl           (Decisions)")
-	fmt.Fprintln(w, "  - .claude/memory/preferences.jsonl         (Preferences)")
-	fmt.Fprintln(w, "  - .claude/memory/performance.jsonl         (Performance)")
-	fmt.Fprintln(w, "  - .claude/memory/routing-violations.jsonl  (Violations)")
+	fmt.Fprintln(w, "  - .gogent/memory/pending-learnings.jsonl   (SharpEdges)")
+	fmt.Fprintln(w, "  - .gogent/memory/user-intents.jsonl        (UserIntents)")
+	fmt.Fprintln(w, "  - .gogent/memory/decisions.jsonl           (Decisions)")
+	fmt.Fprintln(w, "  - .gogent/memory/preferences.jsonl         (Preferences)")
+	fmt.Fprintln(w, "  - .gogent/memory/performance.jsonl         (Performance)")
+	fmt.Fprintln(w, "  - .gogent/memory/routing-violations.jsonl  (Violations)")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Archive location:")
-	fmt.Fprintln(w, "  .claude/memory/archive/YYYY-Www-{type}.jsonl")
+	fmt.Fprintln(w, "  .gogent/memory/archive/YYYY-Www-{type}.jsonl")
 	fmt.Fprintln(w, "")
 	fmt.Fprintln(w, "Examples:")
 	fmt.Fprintln(w, "  gogent-aggregate                    # Auto-aggregate if needed")

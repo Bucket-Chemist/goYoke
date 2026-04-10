@@ -237,6 +237,8 @@ func ExtractToolActivity(block ContentBlock) state.AgentActivity {
 
 	return state.AgentActivity{
 		Type:      "tool_use",
+		ToolName:  block.Name,
+		ToolID:    block.ID,
 		Target:    target,
 		Preview:   preview,
 		Timestamp: time.Now(),

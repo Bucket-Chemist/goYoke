@@ -80,6 +80,10 @@ func (b *mockBridge) ResolveModalSimple(requestID, value string) {
 	b.resolvedRequests = append(b.resolvedRequests, resolvedRequest{requestID, value})
 }
 
+func (b *mockBridge) ResolvePermGate(requestID, decision string) {
+	// no-op for tests that don't verify perm gate
+}
+
 // ---------------------------------------------------------------------------
 // Helper: wiredModel builds an AppModel with mock driver + bridge injected.
 // ---------------------------------------------------------------------------

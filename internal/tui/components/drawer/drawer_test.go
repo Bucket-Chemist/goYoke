@@ -263,6 +263,9 @@ func TestExpandedDrawers(t *testing.T) {
 }
 
 func TestSetSizeHeightDistribution(t *testing.T) {
+	// With 3 drawers stacked vertically, each minimized drawer = 3 rows
+	// (border top + label + border bottom). Expanded drawers split the
+	// remaining height; remainder goes to the first expanded.
 	tests := []struct {
 		name      string
 		setup     func(*DrawerStack)
@@ -271,45 +274,49 @@ func TestSetSizeHeightDistribution(t *testing.T) {
 		wantPlanH int
 	}{
 		{
-			name:      "both minimized each gets 1 row",
+			name:      "all minimized each gets 3 rows",
 			setup:     func(_ *DrawerStack) {},
 			h:         20,
-			wantOptH:  1,
-			wantPlanH: 1,
+			wantOptH:  3,
+			wantPlanH: 3,
 		},
 		{
-			name:      "options expanded gets h-1, plan gets 1",
+			// h=20, 2 minimized (plan+teams) = 6 rows, options = 20-6 = 14.
+			name:      "options expanded plan minimized",
 			setup:     func(s *DrawerStack) { s.Options().Expand() },
 			h:         20,
-			wantOptH:  19,
-			wantPlanH: 1,
+			wantOptH:  14,
+			wantPlanH: 3,
 		},
 		{
-			name:      "plan expanded gets h-1, options gets 1",
+			// h=20, 2 minimized (options+teams) = 6 rows, plan = 20-6 = 14.
+			name:      "plan expanded options minimized",
 			setup:     func(s *DrawerStack) { s.Plan().Expand() },
 			h:         20,
-			wantOptH:  1,
-			wantPlanH: 19,
+			wantOptH:  3,
+			wantPlanH: 14,
 		},
 		{
+			// h=20, 1 minimized (teams) = 3 rows, expanded = 17, 17/2=8 rem 1 → opt=9, plan=8.
+			name: "both expanded teams minimized",
+			setup: func(s *DrawerStack) {
+				s.Options().Expand()
+				s.Plan().Expand()
+			},
+			h:         20,
+			wantOptH:  9,
+			wantPlanH: 8,
+		},
+		{
+			// h=21, 1 minimized (teams) = 3 rows, expanded = 18, 18/2=9 each.
 			name: "both expanded even split",
 			setup: func(s *DrawerStack) {
 				s.Options().Expand()
 				s.Plan().Expand()
 			},
-			h:         20,
-			wantOptH:  10,
-			wantPlanH: 10,
-		},
-		{
-			name: "both expanded odd split remainder to plan",
-			setup: func(s *DrawerStack) {
-				s.Options().Expand()
-				s.Plan().Expand()
-			},
 			h:         21,
-			wantOptH:  10,
-			wantPlanH: 11,
+			wantOptH:  9,
+			wantPlanH: 9,
 		},
 	}
 

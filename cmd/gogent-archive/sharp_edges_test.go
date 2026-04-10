@@ -17,7 +17,7 @@ import (
 
 func TestListSharpEdges_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Create empty file
@@ -50,7 +50,7 @@ func TestListSharpEdges_Empty(t *testing.T) {
 
 func TestListSharpEdges_WithSeverityFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"a.go","error_type":"err1","consecutive_failures":3,"timestamp":1705000000,"severity":"high"}
@@ -90,7 +90,7 @@ func TestListSharpEdges_WithSeverityFilter(t *testing.T) {
 
 func TestListSharpEdges_WithUnresolvedFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Use distinct filenames that don't contain each other as substrings
@@ -134,7 +134,7 @@ func TestListSharpEdges_WithUnresolvedFilter(t *testing.T) {
 
 func TestListSharpEdges_WithFileFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"pkg/auth/handler.go","error_type":"err1","consecutive_failures":3,"timestamp":1705000000}
@@ -171,7 +171,7 @@ func TestListSharpEdges_WithFileFilter(t *testing.T) {
 
 func TestListSharpEdges_WithErrorTypeFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"a.go","error_type":"nil_pointer","consecutive_failures":3,"timestamp":1705000000}
@@ -208,7 +208,7 @@ func TestListSharpEdges_WithErrorTypeFilter(t *testing.T) {
 
 func TestListSharpEdges_WithSinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// One recent, one old
@@ -250,7 +250,7 @@ func TestListSharpEdges_WithSinceFilter(t *testing.T) {
 
 func TestListSharpEdges_TableFormat(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"test.go","error_type":"compile_error","consecutive_failures":5,"timestamp":1705000000,"severity":"high","resolved_at":1705001000}`
@@ -317,7 +317,7 @@ func TestListSharpEdges_TableFormat(t *testing.T) {
 
 func TestListUserIntents_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(""), 0644)
@@ -348,7 +348,7 @@ func TestListUserIntents_Empty(t *testing.T) {
 
 func TestListUserIntents_WithSourceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Q1","response":"A1","confidence":"explicit","source":"ask_user"}
@@ -388,7 +388,7 @@ func TestListUserIntents_WithSourceFilter(t *testing.T) {
 
 func TestListUserIntents_HasActionFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Q1","response":"A1","confidence":"explicit","source":"ask_user","action_taken":"Did X"}
@@ -425,7 +425,7 @@ func TestListUserIntents_HasActionFilter(t *testing.T) {
 
 func TestListUserIntents_WithConfidenceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Explicit Q","response":"A1","confidence":"explicit","source":"ask_user"}
@@ -462,7 +462,7 @@ func TestListUserIntents_WithConfidenceFilter(t *testing.T) {
 
 func TestListUserIntents_WithSinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// One recent, one old
@@ -504,7 +504,7 @@ func TestListUserIntents_WithSinceFilter(t *testing.T) {
 
 func TestListUserIntents_TableFormat(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Should I use React?","response":"Yes, use React","confidence":"explicit","source":"ask_user"}`
@@ -741,7 +741,7 @@ func TestListUserIntents_MissingFile(t *testing.T) {
 
 func TestListSharpEdges_DefaultSeverityDash(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Edge without severity field

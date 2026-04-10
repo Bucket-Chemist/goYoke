@@ -37,12 +37,13 @@ type messageSender interface {
 // IPCBridge is the TUI-side Unix domain socket server.
 // Its zero value is not usable; use NewIPCBridge instead.
 type IPCBridge struct {
-	socketPath    string
-	listener      net.Listener
-	sender        messageSender
-	pendingModals map[string]chan mcp.ModalResponsePayload
-	mu            sync.Mutex
-	done          chan struct{}
+	socketPath       string
+	listener         net.Listener
+	sender           messageSender
+	pendingModals    map[string]chan mcp.ModalResponsePayload
+	pendingPermGates map[string]chan mcp.PermGateResponsePayload
+	mu               sync.Mutex
+	done             chan struct{}
 }
 
 // NewIPCBridge creates and binds a new IPCBridge.
@@ -67,11 +68,12 @@ func NewIPCBridge(sender messageSender) (*IPCBridge, error) {
 	}
 
 	return &IPCBridge{
-		socketPath:    socketPath,
-		listener:      ln,
-		sender:        sender,
-		pendingModals: make(map[string]chan mcp.ModalResponsePayload),
-		done:          make(chan struct{}),
+		socketPath:       socketPath,
+		listener:         ln,
+		sender:           sender,
+		pendingModals:    make(map[string]chan mcp.ModalResponsePayload),
+		pendingPermGates: make(map[string]chan mcp.PermGateResponsePayload),
+		done:             make(chan struct{}),
 	}, nil
 }
 
@@ -154,6 +156,12 @@ func (b *IPCBridge) dispatch(req mcp.IPCRequest, enc *json.Encoder) {
 		b.handleAgentActivity(req)
 	case mcp.TypeToast:
 		b.handleToast(req)
+	case mcp.TypePermGateRequest:
+		b.handlePermGate(req, enc)
+	case mcp.TypeAgentTodoUpdate:
+		b.handleAgentTodoUpdate(req)
+	case mcp.TypeTeamUpdate:
+		b.handleTeamUpdate(req)
 	default:
 		slog.Warn("bridge: unknown request type", "type", req.Type, "id", req.ID)
 	}
@@ -229,14 +237,15 @@ func (b *IPCBridge) handleAgentRegister(req mcp.IPCRequest) {
 		return
 	}
 	b.sender.Send(model.AgentRegisteredMsg{
-		AgentID:     p.AgentID,
-		AgentType:   p.AgentType,
-		ParentID:    p.ParentID,
-		Model:       p.Model,
-		Tier:        p.Tier,
-		Description: p.Description,
-		Conventions: p.Conventions,
-		Prompt:      p.Prompt,
+		AgentID:            p.AgentID,
+		AgentType:          p.AgentType,
+		ParentID:           p.ParentID,
+		Model:              p.Model,
+		Tier:               p.Tier,
+		Description:        p.Description,
+		Conventions:        p.Conventions,
+		Prompt:             p.Prompt,
+		AcceptanceCriteria: p.AcceptanceCriteria,
 	})
 }
 
@@ -269,6 +278,23 @@ func (b *IPCBridge) handleAgentActivity(req mcp.IPCRequest) {
 	})
 }
 
+// handleAgentTodoUpdate processes an agent_todo_update request (fire-and-forget).
+func (b *IPCBridge) handleAgentTodoUpdate(req mcp.IPCRequest) {
+	var p mcp.AgentTodoUpdatePayload
+	if err := json.Unmarshal(req.Payload, &p); err != nil {
+		slog.Error("bridge: unmarshal agent_todo_update payload", "id", req.ID, "error", err)
+		return
+	}
+	todos := make([]model.AgentTodoItem, len(p.Todos))
+	for i, t := range p.Todos {
+		todos[i] = model.AgentTodoItem{Content: t.Content, Status: t.Status}
+	}
+	b.sender.Send(model.AgentTodoUpdateMsg{
+		AgentID: p.AgentID,
+		Todos:   todos,
+	})
+}
+
 // handleToast processes a toast request (fire-and-forget).
 func (b *IPCBridge) handleToast(req mcp.IPCRequest) {
 	var p mcp.ToastPayload
@@ -280,6 +306,120 @@ func (b *IPCBridge) handleToast(req mcp.IPCRequest) {
 		Text:  p.Message,
 		Level: model.ToastLevel(p.Level),
 	})
+}
+
+// handleTeamUpdate processes a team_update notification (fire-and-forget).
+// It sends a TeamUpdateMsg to the Bubbletea event loop so the teams drawer
+// can scan immediately and auto-expand.
+func (b *IPCBridge) handleTeamUpdate(req mcp.IPCRequest) {
+	var p mcp.TeamUpdatePayload
+	if err := json.Unmarshal(req.Payload, &p); err != nil {
+		slog.Error("bridge: unmarshal team_update payload", "id", req.ID, "error", err)
+		return
+	}
+	b.sender.Send(model.TeamUpdateMsg{
+		TeamDir: p.TeamDir,
+		Status:  p.Status,
+	})
+}
+
+// handlePermGate processes a permission_gate_request: it injects a
+// CLIPermissionRequestMsg into the Bubbletea event loop and blocks until
+// ResolvePermGate delivers the user's decision (or the request times out,
+// or Shutdown cancels the wait).
+func (b *IPCBridge) handlePermGate(req mcp.IPCRequest, enc *json.Encoder) {
+	var payload mcp.PermGateRequestPayload
+	if err := json.Unmarshal(req.Payload, &payload); err != nil {
+		slog.Error("bridge: unmarshal permission_gate_request payload", "id", req.ID, "error", err)
+		return
+	}
+
+	timeoutMS := payload.TimeoutMS
+	if timeoutMS <= 0 {
+		timeoutMS = 30_000 // default 30 s
+	}
+
+	ch := make(chan mcp.PermGateResponsePayload, 1)
+
+	b.mu.Lock()
+	b.pendingPermGates[req.ID] = ch
+	b.mu.Unlock()
+
+	// Inject the request into the Bubbletea event loop.
+	b.sender.Send(model.CLIPermissionRequestMsg{
+		RequestID: req.ID,
+		ToolName:  payload.ToolName,
+		ToolInput: payload.ToolInput,
+		TimeoutMS: timeoutMS,
+	})
+
+	// Default deny payload used on timeout.
+	denyPayload := mcp.PermGateResponsePayload{Decision: "deny"}
+
+	// Block until the user responds, the timeout fires, or the bridge shuts down.
+	var permResp mcp.PermGateResponsePayload
+	select {
+	case resp, ok := <-ch:
+		if !ok {
+			// Channel closed by Shutdown; return without sending a response.
+			slog.Info("bridge: permission gate cancelled by shutdown", "id", req.ID)
+			return
+		}
+		permResp = resp
+	case <-time.After(time.Duration(timeoutMS) * time.Millisecond):
+		slog.Info("bridge: permission gate timed out, denying", "id", req.ID)
+		permResp = denyPayload
+	case <-b.done:
+		// Bridge is shutting down; clean up and return without sending.
+		b.mu.Lock()
+		delete(b.pendingPermGates, req.ID)
+		b.mu.Unlock()
+		return
+	}
+
+	// C-1 fix: Remove the map entry BEFORE sending the response. This prevents
+	// a concurrent ResolvePermGate from writing "allow" to the channel after the
+	// timeout branch already consumed the deny value.
+	b.mu.Lock()
+	delete(b.pendingPermGates, req.ID)
+	b.mu.Unlock()
+
+	// Marshal the response payload.
+	rawPayload, err := json.Marshal(permResp)
+	if err != nil {
+		slog.Error("bridge: marshal permission gate response payload", "id", req.ID, "error", err)
+		return
+	}
+
+	resp := mcp.IPCResponse{
+		Type:    mcp.TypePermGateResponse,
+		ID:      req.ID,
+		Payload: json.RawMessage(rawPayload),
+	}
+	if err := enc.Encode(resp); err != nil {
+		slog.Warn("bridge: write permission gate response", "id", req.ID, "error", err)
+	}
+}
+
+// ResolvePermGate is called by AppModel.Update when the user makes a
+// permission decision. It delivers the response to the goroutine blocking
+// in handlePermGate.
+//
+// The send is non-blocking (select/default): if the buffered channel is already
+// full (e.g. a duplicate call for the same requestID), the response is dropped
+// and a warning is logged instead of deadlocking while holding b.mu.
+func (b *IPCBridge) ResolvePermGate(requestID string, decision string) {
+	b.mu.Lock()
+	ch, ok := b.pendingPermGates[requestID]
+	if ok {
+		select {
+		case ch <- mcp.PermGateResponsePayload{Decision: decision}:
+		default:
+			slog.Warn("bridge: ResolvePermGate channel full, response dropped", "id", requestID)
+		}
+		delete(b.pendingPermGates, requestID)
+	}
+	b.mu.Unlock()
 }
 
 // ResolveModal is called by AppModel.Update when the user makes a modal
@@ -338,6 +478,15 @@ func (b *IPCBridge) Shutdown() {
 		default:
 		}
 		delete(b.pendingModals, id)
+	}
+	// Drain any channels still registered in the pending permission gate map.
+	// Same reasoning as above — non-blocking send avoids double-close panics.
+	for id, ch := range b.pendingPermGates {
+		select {
+		case ch <- mcp.PermGateResponsePayload{}:
+		default:
+		}
+		delete(b.pendingPermGates, id)
 	}
 	b.mu.Unlock()
 }

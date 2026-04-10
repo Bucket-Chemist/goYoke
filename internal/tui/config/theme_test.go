@@ -770,3 +770,33 @@ func TestValidateContrast_DarkTheme_SkipsAnsiColors(t *testing.T) {
 			"every returned ratio must be at least 1.0")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// RainbowGradient
+// ---------------------------------------------------------------------------
+
+func TestRainbowGradient_EmptyInput(t *testing.T) {
+	result := RainbowGradient("")
+	assert.Equal(t, "", result, "empty input must return empty string")
+}
+
+func TestRainbowGradient_NonEmptyInput(t *testing.T) {
+	result := RainbowGradient("hello")
+	assert.NotEmpty(t, result, "non-empty input must produce non-empty output")
+}
+
+func TestRainbowGradient_WhitespacePassthrough(t *testing.T) {
+	// Whitespace characters must be preserved but not colorized.
+	// The output must contain the original space character unmodified.
+	result := RainbowGradient("a b")
+	assert.Contains(t, result, " ", "space must be preserved in output")
+}
+
+func TestRainbowGradient_CyclesThroughColors(t *testing.T) {
+	// A string longer than the palette length (7) must not panic and must
+	// produce non-empty output. (lipgloss may strip ANSI escapes when there
+	// is no TTY, so we only assert non-emptiness.)
+	long := strings.Repeat("x", 20)
+	result := RainbowGradient(long)
+	assert.NotEmpty(t, result, "long input must produce non-empty output")
+}

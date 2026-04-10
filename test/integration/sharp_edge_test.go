@@ -21,7 +21,7 @@ func setupTestProject(t *testing.T) string {
 	tmpDir := t.TempDir()
 
 	// Create required directories
-	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".claude", "memory"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".gogent", "memory"), 0755))
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".gogent"), 0755))
 
 	return tmpDir
@@ -282,7 +282,7 @@ func TestWorkflow_SameError_Trigger(t *testing.T) {
 // TestWorkflow_CaptureToPendingLearnings tests that sharp edges are captured
 func TestWorkflow_CaptureToPendingLearnings(t *testing.T) {
 	projectDir := setupTestProject(t)
-	pendingPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
 
 	// Create a sharp edge entry
 	sharpEdge := map[string]interface{}{
@@ -462,7 +462,7 @@ func TestSharpEdge_Integration(t *testing.T) {
 	}
 
 	// Verify sharp edge captured to pending learnings
-	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings file not created: %v", err)
 	} else {
@@ -714,7 +714,7 @@ func TestSharpEdge_MLTelemetryFields(t *testing.T) {
 	}
 
 	// Verify third failure (blocking) includes ML telemetry in sharp edge capture
-	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings file not created: %v", err)
 	} else {

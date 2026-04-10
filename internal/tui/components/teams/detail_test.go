@@ -72,7 +72,7 @@ func makeFullTeamState() *teams.TeamState {
 // ---------------------------------------------------------------------------
 
 func TestNewTeamDetailModel(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	assert.Nil(t, m.Init())
 }
 
@@ -81,13 +81,13 @@ func TestNewTeamDetailModel(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_View_EmptyTeam(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	view := m.View()
 	assert.Contains(t, view, "Select a team")
 }
 
 func TestTeamDetailModel_View_SetTeamNil_ShowsEmptyState(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetTeam(makeFullTeamState())
 	m.SetTeam(nil)
 	view := m.View()
@@ -99,7 +99,7 @@ func TestTeamDetailModel_View_SetTeamNil_ShowsEmptyState(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_View_ShowsTeamName(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -107,7 +107,7 @@ func TestTeamDetailModel_View_ShowsTeamName(t *testing.T) {
 }
 
 func TestTeamDetailModel_View_ShowsWorkflowType(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -119,7 +119,7 @@ func TestTeamDetailModel_View_ShowsWorkflowType(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_View_ShowsStatus(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -133,7 +133,7 @@ func TestTeamDetailModel_TotalCost_SumsMemberCosts(t *testing.T) {
 	expected := 0.95 + 0.45
 	assert.InDelta(t, expected, ts.TotalCostUSD(), 0.001)
 
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -146,7 +146,7 @@ func TestTeamDetailModel_TotalCost_SumsMemberCosts(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_View_WaveGrouped(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -160,7 +160,7 @@ func TestTeamDetailModel_View_WaveGrouped(t *testing.T) {
 }
 
 func TestTeamDetailModel_View_ShowsMemberNames(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -171,7 +171,7 @@ func TestTeamDetailModel_View_ShowsMemberNames(t *testing.T) {
 }
 
 func TestTeamDetailModel_View_ShowsMemberStatus(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -182,7 +182,7 @@ func TestTeamDetailModel_View_ShowsMemberStatus(t *testing.T) {
 }
 
 func TestTeamDetailModel_View_ShowsMemberCost(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -194,7 +194,7 @@ func TestTeamDetailModel_View_ShowsMemberCost(t *testing.T) {
 func TestTeamDetailModel_View_ShowsDashForZeroCost(t *testing.T) {
 	ts := makeFullTeamState()
 	// beethoven has CostUSD = 0, should show "—"
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -206,7 +206,7 @@ func TestTeamDetailModel_View_ShowsDashForZeroCost(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_View_ShowsStatusIconsForMembers(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -224,7 +224,7 @@ func TestTeamDetailModel_View_ShowsStatusIconsForMembers(t *testing.T) {
 func TestTeamDetailModel_View_ShowsElapsedForCompletedMember(t *testing.T) {
 	ts := makeFullTeamState()
 	// einstein: started 10:00:00, completed 10:03:42 → 3m42s
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -235,7 +235,7 @@ func TestTeamDetailModel_View_ShowsElapsedForCompletedMember(t *testing.T) {
 func TestTeamDetailModel_View_ShowsDashForNilStartedAt(t *testing.T) {
 	ts := makeFullTeamState()
 	// beethoven has no StartedAt.
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -250,7 +250,7 @@ func TestTeamDetailModel_View_NoWaves_ShowsPlaceholder(t *testing.T) {
 	ts := &teams.TeamState{
 		Config: makeConfig("empty-team", "pending", "2026-01-01T00:00:00Z"),
 	}
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -262,7 +262,7 @@ func TestTeamDetailModel_View_NoWaves_ShowsPlaceholder(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_Update_NoOp(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetTeam(makeFullTeamState())
 	updated, cmd := m.Update(nil)
 	assert.Nil(t, cmd)
@@ -274,7 +274,7 @@ func TestTeamDetailModel_Update_NoOp(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_SetSize_DoesNotPanic(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(0, 0)
 	m.SetTeam(makeFullTeamState())
 	_ = m.View() // should not panic
@@ -302,7 +302,7 @@ func TestTeamDetailModel_View_FailedStatus(t *testing.T) {
 			},
 		},
 	}
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -315,7 +315,7 @@ func TestTeamDetailModel_View_FailedStatus(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTeamDetailModel_View_ContainsDivider(t *testing.T) {
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(40, 20)
 	m.SetTeam(makeFullTeamState())
 	view := m.View()
@@ -339,7 +339,7 @@ func TestTeamDetailModel_View_AllWavesRendered(t *testing.T) {
 			},
 		},
 	}
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -372,7 +372,7 @@ func TestTeamDetailModel_ElapsedFormatting_SubMinute(t *testing.T) {
 			},
 		},
 	}
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()
@@ -400,7 +400,7 @@ func TestTeamDetailModel_View_EmptyNameFallsBackToAgent(t *testing.T) {
 			},
 		},
 	}
-	m := teams.NewTeamDetailModel()
+	m := teams.NewTeamDetailModel(nil, nil)
 	m.SetSize(120, 40)
 	m.SetTeam(ts)
 	view := m.View()

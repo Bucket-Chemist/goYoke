@@ -32,7 +32,7 @@ func LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error {
 	// Write to project-scoped path (if directory exists and not already covered by GOGENT_PROJECT_DIR)
 	// Skip project-scoped write if GOGENT_PROJECT_DIR is set to avoid duplicate writes
 	if os.Getenv("GOGENT_PROJECT_DIR") == "" {
-		projectPath := filepath.Join(projectDir, ".claude", "memory", "ml-tool-events.jsonl")
+		projectPath := filepath.Join(config.ProjectMemoryDir(projectDir), "ml-tool-events.jsonl")
 		if dirExists(filepath.Dir(projectPath)) {
 			appendMLToolEvent(projectPath, jsonlLine) // Ignore errors for project-scoped writes
 		}

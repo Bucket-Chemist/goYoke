@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 )
 
 // LoadHandoffSummary loads the last session handoff for context resumption.
@@ -13,7 +15,7 @@ import (
 // Returns empty string (not error) if file doesn't exist - this is normal for first sessions.
 // Returns error if file is too large (>50KB) to protect against memory issues.
 func LoadHandoffSummary(projectDir string) (string, error) {
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(config.ProjectMemoryDir(projectDir), "last-handoff.md")
 
 	// Check if file exists - missing handoff is normal
 	info, err := os.Stat(handoffPath)
@@ -68,7 +70,7 @@ func LoadHandoffSummary(projectDir string) (string, error) {
 // Returns a formatted warning message if pending learnings exist, empty string otherwise.
 // This is a non-blocking check - missing or empty file returns empty string (not error).
 func CheckPendingLearnings(projectDir string) (string, error) {
-	learningsPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(config.ProjectMemoryDir(projectDir), "pending-learnings.jsonl")
 
 	// Check if file exists - missing learnings is normal
 	file, err := os.Open(learningsPath)

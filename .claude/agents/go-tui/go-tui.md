@@ -1,4 +1,5 @@
 ---
+id: go-tui
 name: GO TUI (Bubbletea)
 description: >
   Bubbletea TUI specialist for terminal user interfaces.
@@ -6,6 +7,7 @@ description: >
   MVU architecture, Lipgloss styling, component composition, and responsive layouts.
 
 model: sonnet
+subagent_type: GO TUI (Bubbletea)
 thinking:
   enabled: true
   budget: 12000

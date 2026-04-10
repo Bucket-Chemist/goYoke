@@ -405,7 +405,7 @@ func TestLogViolation_DualWrite(t *testing.T) {
 	}
 
 	// Verify project log exists
-	projectPath := filepath.Join(tmpProject, ".claude", "memory", "routing-violations.jsonl")
+	projectPath := filepath.Join(tmpProject, ".gogent", "memory", "routing-violations.jsonl")
 	if _, err := os.Stat(projectPath); os.IsNotExist(err) {
 		t.Error("Project log not created")
 	}

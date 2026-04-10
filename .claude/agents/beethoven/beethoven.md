@@ -8,13 +8,14 @@ description: >
   contradictions, identifies convergences, and delivers standardized output.
 
 model: opus
+effort: high
 thinking:
   enabled: true
   budget: 32000
 
 tier: 3
 category: synthesis
-subagent_type: Plan
+subagent_type: Beethoven
 
 triggers:
   # Beethoven is spawned by Mozart only - no direct triggers

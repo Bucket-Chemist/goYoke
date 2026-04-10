@@ -178,7 +178,7 @@ func TestAppendIntent_CreatesFile(t *testing.T) {
 	}
 
 	// Verify file exists
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected file to be created")
 	}
@@ -245,7 +245,7 @@ func TestAppendIntent_MultipleWrites(t *testing.T) {
 	}
 
 	// Verify file contains all intents
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	data, err := os.ReadFile(intentsPath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -290,7 +290,7 @@ func TestAppendIntent_FilePermissions(t *testing.T) {
 	}
 
 	// Verify file permissions are 0644
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	info, err := os.Stat(intentsPath)
 	if err != nil {
 		t.Fatalf("Failed to stat file: %v", err)
@@ -339,7 +339,7 @@ func TestRun_Integration(t *testing.T) {
 	}
 
 	// Verify end-to-end result
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	data, err := os.ReadFile(intentsPath)
 	if err != nil {
 		t.Fatalf("Integration test: failed to read result: %v", err)
@@ -421,7 +421,7 @@ func TestRun_ValidAskUserQuestion(t *testing.T) {
 	}
 
 	// Verify file was created
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected intents file to be created")
 	}
@@ -485,7 +485,7 @@ func TestRun_NonAskUserTool(t *testing.T) {
 	}
 
 	// Verify NO file was created
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); !os.IsNotExist(err) {
 		t.Error("Expected no intents file for non-AskUserQuestion tool")
 	}
@@ -595,7 +595,7 @@ func TestAppendIntent_ConcurrentWrites(t *testing.T) {
 	wg.Wait()
 
 	// Verify all writes succeeded
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	data, err := os.ReadFile(intentsPath)
 	if err != nil {
 		t.Fatalf("Failed to read intents file: %v", err)
@@ -650,7 +650,7 @@ func TestAppendIntent_MissingParentDirectory(t *testing.T) {
 	}
 
 	// Verify file exists at correct path
-	intentsPath := filepath.Join(projectDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(projectDir, ".gogent", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected directory and file to be created")
 	}
@@ -699,7 +699,7 @@ func TestAppendIntent_AppendExistingFile(t *testing.T) {
 	}
 
 	// Verify both intents exist in file
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	data, _ := os.ReadFile(intentsPath)
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 
@@ -745,7 +745,7 @@ func TestAppendIntent_AtomicWrite(t *testing.T) {
 	wg.Wait()
 
 	// Verify file integrity
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	data, _ := os.ReadFile(intentsPath)
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 
@@ -775,7 +775,7 @@ func TestAppendIntent_ReadOnlyDirectory(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Make directory read-only
@@ -828,7 +828,7 @@ func TestAppendIntent_EmptyQuestion(t *testing.T) {
 	}
 
 	// Verify file created
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	data, _ := os.ReadFile(intentsPath)
 
 	var parsed session.UserIntent
@@ -872,7 +872,7 @@ func TestAppendIntent_FallbackToCwd(t *testing.T) {
 	}
 
 	// Verify file created in cwd
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected intents file in cwd")
 	}
@@ -918,7 +918,7 @@ func TestRun_AppendIntentError(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 	os.Chmod(memoryDir, 0555) // Make read-only to cause append error
 	defer os.Chmod(memoryDir, 0755)

@@ -55,7 +55,7 @@ func TestExpectedOutput_JSONRoundtrip(t *testing.T) {
 	expected := ExpectedOutput{
 		Decision:      &decision,
 		ReasonPattern: "opus.*blocked",
-		FilesCreated:  []string{".claude/memory/handoffs.jsonl"},
+		FilesCreated:  []string{".gogent/memory/handoffs.jsonl"},
 		ExitCode:      0,
 	}
 

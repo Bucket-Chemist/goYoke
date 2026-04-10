@@ -84,3 +84,59 @@ func TestBannerNarrowWidth(t *testing.T) {
 	m := banner.NewBannerModel(1)
 	_ = m.View()
 }
+
+// ---------------------------------------------------------------------------
+// Compact mode tests
+// ---------------------------------------------------------------------------
+
+func TestCompactBannerSingleLine(t *testing.T) {
+	m := banner.NewBannerModel(80)
+	m.SetCompact(true)
+	view := m.View()
+	view = strings.TrimRight(view, "\n")
+	lines := strings.Split(view, "\n")
+	if len(lines) != 1 {
+		t.Errorf("compact View() should produce 1 line; got %d:\n%s", len(lines), view)
+	}
+	if !strings.Contains(view, "GOgent Fortress") {
+		t.Errorf("compact View() does not contain 'GOgent Fortress'; got:\n%s", view)
+	}
+}
+
+func TestCompactBannerFalsePreservesThreeRows(t *testing.T) {
+	m := banner.NewBannerModel(80)
+	m.SetCompact(false)
+	view := m.View()
+	view = strings.TrimRight(view, "\n")
+	lines := strings.Split(view, "\n")
+	if len(lines) != 3 {
+		t.Errorf("non-compact View() should produce 3 rows; got %d:\n%s", len(lines), view)
+	}
+}
+
+func TestCompactBannerWidthTruncation(t *testing.T) {
+	// Very narrow compact banner must not panic and must not exceed width.
+	m := banner.NewBannerModel(5)
+	m.SetCompact(true)
+	view := m.View()
+	// Strip ANSI codes to measure visible width.
+	// We only verify there is no panic and that the view is non-empty.
+	if view == "" {
+		t.Error("compact View() on narrow width returned empty string")
+	}
+}
+
+func TestIsCompact(t *testing.T) {
+	m := banner.NewBannerModel(80)
+	if m.IsCompact() {
+		t.Error("IsCompact() should be false after NewBannerModel")
+	}
+	m.SetCompact(true)
+	if !m.IsCompact() {
+		t.Error("IsCompact() should be true after SetCompact(true)")
+	}
+	m.SetCompact(false)
+	if m.IsCompact() {
+		t.Error("IsCompact() should be false after SetCompact(false)")
+	}
+}

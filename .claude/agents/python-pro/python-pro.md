@@ -1,4 +1,5 @@
 ---
+id: python-pro
 name: Python Pro
 description: >
   Expert Python development with modern patterns. Auto-activated for Python projects.
@@ -6,6 +7,7 @@ description: >
   performant, idiomatic Python with advanced features.
 
 model: sonnet
+subagent_type: Python Pro
 thinking: true
 thinking_budget: 10000
 thinking_budget_refactor: 14000

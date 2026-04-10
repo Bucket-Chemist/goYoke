@@ -1,4 +1,5 @@
 ---
+id: python-ux
 name: Python UX (PySide6)
 description: >
   PySide6/Qt6 GUI development expert. Specializes in desktop application UI,
@@ -6,6 +7,7 @@ description: >
   Use for any Qt or PySide6 development work.
 
 model: sonnet
+subagent_type: Python UX (PySide6)
 thinking:
   enabled: true
   budget: 10000

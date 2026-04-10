@@ -1,4 +1,5 @@
 ---
+id: standards-reviewer
 name: Standards Reviewer
 description: >
   Universal code quality reviewer for language-agnostic standards.
@@ -12,7 +13,7 @@ thinking:
 
 tier: 2
 category: review
-subagent_type: Explore
+subagent_type: Standards Reviewer
 
 triggers:
   - "review standards"

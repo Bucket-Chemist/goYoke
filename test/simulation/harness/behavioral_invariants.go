@@ -206,8 +206,8 @@ var BehavioralInvariants = []BehavioralInvariant{
 		Check: func(ctx *BehavioralContext) (bool, string) {
 			// Check all JSONL files the system writes to
 			jsonlFiles := []string{
-				".claude/memory/pending-learnings.jsonl",
-				".claude/memory/handoffs.jsonl",
+				".gogent/memory/pending-learnings.jsonl",
+				".gogent/memory/handoffs.jsonl",
 				".gogent/failure-tracker.jsonl",
 			}
 
@@ -270,7 +270,7 @@ func LoadBehavioralContext(tempDir string, config BehavioralConfig) (*Behavioral
 	}
 
 	// Load sharp edges
-	pendingPath := filepath.Join(tempDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tempDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if edges, err := loadJSONLFile(pendingPath); err == nil {
 		ctx.SharpEdges = edges
 	}
@@ -282,7 +282,7 @@ func LoadBehavioralContext(tempDir string, config BehavioralConfig) (*Behavioral
 	}
 
 	// Load last handoff
-	handoffPath := filepath.Join(tempDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tempDir, ".gogent", "memory", "handoffs.jsonl")
 	if handoffs, err := loadJSONLFile(handoffPath); err == nil && len(handoffs) > 0 {
 		ctx.Handoff = handoffs[len(handoffs)-1] // Last entry is most recent
 	}

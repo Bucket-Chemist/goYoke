@@ -15,7 +15,7 @@ func TestGuardMode_NoGuardFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	guardPath := filepath.Join(tmpDir, guardFileName)
 
-	output := handleGuardMode("Glob", guardPath)
+	output := legacyCheckGuard("Glob", guardPath)
 	assert.Equal(t, "{}", output)
 }
 
@@ -31,7 +31,7 @@ func TestGuardMode_AllowedTool(t *testing.T) {
 	}
 	writeGuardFile(t, guardPath, guard)
 
-	output := handleGuardMode("Task", guardPath)
+	output := legacyCheckGuard("Task", guardPath)
 	assert.Equal(t, "{}", output)
 }
 
@@ -47,7 +47,7 @@ func TestGuardMode_BlockedTool(t *testing.T) {
 	}
 	writeGuardFile(t, guardPath, guard)
 
-	output := handleGuardMode("Glob", guardPath)
+	output := legacyCheckGuard("Glob", guardPath)
 	assert.Contains(t, output, "skill-guard")
 	assert.Contains(t, output, "blocked")
 	assert.Contains(t, output, "braintrust")
@@ -65,7 +65,7 @@ func TestGuardMode_StaleGuard(t *testing.T) {
 	}
 	writeGuardFile(t, guardPath, guard)
 
-	output := handleGuardMode("Glob", guardPath)
+	output := legacyCheckGuard("Glob", guardPath)
 	assert.Equal(t, "{}", output)
 
 	// File should be deleted
@@ -85,7 +85,7 @@ func TestGuardMode_EmptyAllowedTools(t *testing.T) {
 	}
 	writeGuardFile(t, guardPath, guard)
 
-	output := handleGuardMode("Task", guardPath)
+	output := legacyCheckGuard("Task", guardPath)
 	assert.Contains(t, output, "skill-guard")
 	assert.Contains(t, output, "blocked")
 }
@@ -95,7 +95,7 @@ func TestGuardMode_MalformedJSON(t *testing.T) {
 	guardPath := filepath.Join(tmpDir, guardFileName)
 	require.NoError(t, os.WriteFile(guardPath, []byte("not valid json"), 0644))
 
-	output := handleGuardMode("Glob", guardPath)
+	output := legacyCheckGuard("Glob", guardPath)
 	assert.Equal(t, "{}", output)
 
 	// File should be deleted
@@ -117,12 +117,12 @@ func TestGuardMode_MultipleAllowedTools(t *testing.T) {
 
 	// Test all allowed tools pass through
 	for _, tool := range guard.RouterAllowedTools {
-		output := handleGuardMode(tool, guardPath)
+		output := legacyCheckGuard(tool, guardPath)
 		assert.Equal(t, "{}", output, "tool %s should be allowed", tool)
 	}
 
 	// Test blocked tool
-	output := handleGuardMode("Write", guardPath)
+	output := legacyCheckGuard("Write", guardPath)
 	assert.Contains(t, output, "blocked")
 }
 
@@ -139,10 +139,10 @@ func TestGuardMode_InvalidCreatedAtTime(t *testing.T) {
 	writeGuardFile(t, guardPath, guard)
 
 	// Should still check allowed tools even if time parse fails
-	output := handleGuardMode("Task", guardPath)
+	output := legacyCheckGuard("Task", guardPath)
 	assert.Equal(t, "{}", output)
 
-	output = handleGuardMode("Glob", guardPath)
+	output = legacyCheckGuard("Glob", guardPath)
 	assert.Contains(t, output, "blocked")
 }
 

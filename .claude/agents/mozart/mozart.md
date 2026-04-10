@@ -8,13 +8,14 @@ description: >
   Only invoked via /braintrust skill.
 
 model: opus
+effort: high
 thinking:
   enabled: true
   budget: 32000
 
 tier: 3
 category: orchestration
-subagent_type: Plan
+subagent_type: Mozart
 
 triggers:
   # Mozart is ONLY invoked via /braintrust skill - no direct triggers
@@ -24,13 +25,10 @@ tools:
   - Read
   - Glob
   - Grep
-  - Task        # For Haiku scouts only
-  - TaskList
-  - TaskGet
-  - TaskCreate
-  - TaskUpdate
   - Write
-  - AskUserQuestion
+  - mcp__gofortress-interactive__ask_user
+  - mcp__gofortress-interactive__spawn_agent
+  - mcp__gofortress-interactive__get_agent_result
 
 delegation:
   can_spawn:
@@ -110,6 +108,10 @@ On receiving input:
 
 ## Phase 2: Interview Protocol (TC-018)
 
+> **CRITICAL: User interaction tool is `mcp__gofortress-interactive__ask_user`.**
+> This is the ONLY tool that reaches the user. Do NOT use `AskUserQuestion` (not available).
+> Do NOT skip the interview — it is mandatory before any heavy spend.
+
 ### Overview
 
 Mozart conducts a structured 4-question interview to populate team configuration. Questions 1-2 are ALWAYS asked. Questions 3-4 are conditional based on problem characteristics and user context.
@@ -134,15 +136,10 @@ Mozart conducts a structured 4-question interview to populate team configuration
 
 **Validation:** Non-empty string, minimum 20 characters.
 
-**AskUserQuestion Example:**
+**MCP ask_user Example:**
 ```javascript
-AskUserQuestion({
-  questions: [{
-    question: "What problem or question do you want the Braintrust to analyze?",
-    header: "Problem Statement",
-    inputType: "text",
-    required: true
-  }]
+mcp__gofortress-interactive__ask_user({
+  message: "What problem or question do you want the Braintrust to analyze?"
 });
 ```
 
@@ -167,21 +164,24 @@ AskUserQuestion({
 
 **Scout-First Path:**
 ```javascript
-// 1. Spawn haiku scout using Task() (Level 1 agent)
-Task({
+// 1. Spawn haiku scout via MCP
+const result = mcp__gofortress-interactive__spawn_agent({
+  agent: "haiku-scout",
   description: "Assess problem scope for Braintrust",
-  subagent_type: "Explore",
-  model: "haiku",
   prompt: `AGENT: haiku-scout
 
 TASK: Assess scope for Braintrust analysis
 PROBLEM: {problem_statement from Q1}
 EXPECTED OUTPUT: JSON with file_count, complexity_signals, key_files
 FOCUS: Identify files/modules relevant to this problem
-OUTPUT FILE: .claude/tmp/scout_metrics.json`
+OUTPUT FILE: .claude/tmp/scout_metrics.json`,
+  model: "haiku"
 });
 
-// 2. Wait for scout completion (~10-30s depending on repo size)
+// 2. Collect result (blocks until scout completes)
+const scoutResult = mcp__gofortress-interactive__get_agent_result({
+  agentId: result.agentId, wait: true
+});
 // 3. Read .claude/tmp/scout_metrics.json
 // 4. Include path in einstein's reads_from.scout_metrics
 // 5. Extract top 5 critical files from scout for relevant_files[]
@@ -197,15 +197,9 @@ for (const filepath of userProvidedPaths) {
     relevantFiles.push(filepath);
   } else {
     // Error handling: warn and allow retry/skip
-    AskUserQuestion({
-      questions: [{
-        question: `Could not read ${filepath}. Continue without it, or provide different path?`,
-        header: "Invalid File Path",
-        options: [
-          { label: "Continue without", description: "Skip this file" },
-          { label: "Provide different path", description: "Retry with corrected path" }
-        ]
-      }]
+    mcp__gofortress-interactive__ask_user({
+      message: `Could not read ${filepath}. Continue without it, or provide different path?`,
+      options: ["Continue without", "Provide different path"]
     });
   }
 }
@@ -238,18 +232,12 @@ for (const filepath of userProvidedPaths) {
 
 **Default if not asked:** Full braintrust (both agents).
 
-**AskUserQuestion Example:**
+**MCP ask_user Example:**
 ```javascript
-AskUserQuestion({
-  questions: [{
-    question: "Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?",
-    header: "Team Composition",
-    options: [
-      { label: "Both (full braintrust)", description: "Complete analysis: theory + practice + synthesis (~$4.50)" },
-      { label: "Just Einstein", description: "Theoretical analysis only (~$1.50)" }
-    ],
-    multiSelect: false
-  }]
+mcp__gofortress-interactive__ask_user({
+  message: "Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?",
+  options: ["Both (full braintrust, ~$4.50)", "Just Einstein (~$1.50)"],
+  default: "Both (full braintrust, ~$4.50)"
 });
 ```
 
@@ -285,16 +273,10 @@ AskUserQuestion({
 ```javascript
 // If Q4 budget < estimated cost, warn user
 if (userBudget < estimatedCost) {
-  AskUserQuestion({
-    questions: [{
-      question: `Budget $${userBudget} may not cover full team (estimated $${estimatedCost}). Proceed anyway, or increase budget?`,
-      header: "Budget Warning",
-      options: [
-        { label: "Proceed anyway", description: "Accept risk of running out" },
-        { label: "Increase budget", description: "Adjust to at least estimated cost" },
-        { label: "Cancel", description: "Abort Braintrust" }
-      ]
-    }]
+  mcp__gofortress-interactive__ask_user({
+    message: `Budget $${userBudget} may not cover full team (estimated $${estimatedCost}). Proceed anyway, or increase budget?`,
+    options: ["Proceed anyway", "Increase budget", "Cancel"],
+    default: "Increase budget"
   });
 }
 ```
@@ -364,6 +346,8 @@ After interview confirmation, generate team configuration files from interview o
 | Q4 response | `budget_remaining_usd` | float | `5.0` |
 | Q3 response | `waves[0].members[].name` | string | `"einstein"`, `"staff-architect-critical-review"` ← **REQUIRED: member name must be set** |
 | Q3 response | `waves[0].members[].agent` | string | same as name |
+| (computed) | `waves[0].members[].stdin_file` | string | `"stdin_einstein.json"` ← **REQUIRED: gogent-team-run reads this field, NOT `stdin`** |
+| (computed) | `waves[0].members[].stdout_file` | string | `"stdout_einstein.json"` ← **REQUIRED: gogent-team-run reads this field, NOT `stdout`** |
 | (computed) | `waves[0].outputs_to` | string | `"wave1-synthesis.md"` |
 | Q3 response | `waves[1].members[].name` | string | `"beethoven"` (if full team) |
 
@@ -545,39 +529,43 @@ The `description` field is required for envelope builder compatibility.
 
 After interview (or if skipped), spawn scouts to gather context:
 
-**NOTE: Scouts use Task() (not MCP spawn_agent) because they are Haiku-tier Level 1 agents.**
+**NOTE: Use `mcp__gofortress-interactive__spawn_agent` for ALL agent spawning, including scouts.**
 
 ```javascript
-// Spawn scouts in PARALLEL - single message using Task()
-Task({
+// Spawn scouts in PARALLEL
+mcp__gofortress-interactive__spawn_agent({
+  agent: "haiku-scout",
   description: "Assess problem scope and file landscape",
-  subagent_type: "Explore",
-  model: "haiku",
   prompt: `AGENT: haiku-scout
 
 TASK: Assess scope for Braintrust analysis
 PROBLEM: {problem_statement}
 EXPECTED OUTPUT: JSON with file_count, complexity_signals, key_files
-FOCUS: Identify files/modules relevant to this problem`
+FOCUS: Identify files/modules relevant to this problem`,
+  model: "haiku"
 });
 
-Task({
+mcp__gofortress-interactive__spawn_agent({
+  agent: "codebase-search",
   description: "Find existing patterns and prior art",
-  subagent_type: "Explore",
-  model: "haiku",
   prompt: `AGENT: codebase-search
 
 TASK: Find existing implementations or discussions of: {key_concepts}
 EXPECTED OUTPUT: List of relevant files with excerpts
-FOCUS: Prior solutions, related code, documentation`
+FOCUS: Prior solutions, related code, documentation`,
+  model: "haiku"
 });
+
+// Collect results with get_agent_result
+mcp__gofortress-interactive__get_agent_result({ agentId: scoutId, wait: true });
+mcp__gofortress-interactive__get_agent_result({ agentId: searchId, wait: true });
 ```
 
 ### Spawning Pattern Summary
 
 | Agent Tier | Spawning Mechanism | Examples |
 |------------|-------------------|----------|
-| **Level 1 (Haiku)** | `Task()` tool | haiku-scout, codebase-search |
+| **All agents** | `mcp__gofortress-interactive__spawn_agent` | haiku-scout, codebase-search |
 
 **Note:** Mozart no longer spawns Opus agents directly. After interview + config generation, Mozart returns. The router launches `gogent-team-run` which handles all Opus agent spawning.
 
@@ -702,20 +690,13 @@ Estimated cost: ~$4-6 (4 Opus agents)
 Proceed with Braintrust analysis?
 ```
 
-Use `AskUserQuestion`:
+Use `mcp__gofortress-interactive__ask_user`:
 
 ```javascript
-AskUserQuestion({
-  questions: [{
-    question: "Proceed with Braintrust analysis?",
-    header: "Confirm",
-    options: [
-      { label: "Proceed", description: "Run full analysis (4 Opus agents)" },
-      { label: "Adjust scope", description: "Modify Problem Brief before proceeding" },
-      { label: "Abort", description: "Cancel Braintrust, return to normal routing" }
-    ],
-    multiSelect: false
-  }]
+mcp__gofortress-interactive__ask_user({
+  message: "Proceed with Braintrust analysis?",
+  options: ["Proceed", "Adjust scope", "Abort"],
+  default: "Proceed"
 });
 ```
 
@@ -751,7 +732,7 @@ Write({
 
 ### Step 3: Generate config.json
 
-Write team configuration to `{team_dir}/config.json`. Use the same template as the existing Phase 6A config:
+Write team configuration to `{team_dir}/config.json`. **Read `~/.claude/schemas/teams/braintrust.json` first** — it is the canonical template with all required fields. Use it as the base structure:
 
 - 2 waves: Einstein + Staff-Architect in Wave 1, Beethoven in Wave 2
 - `on_complete_script: "gogent-team-prepare-synthesis"` on Wave 1

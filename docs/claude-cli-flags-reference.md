@@ -75,7 +75,6 @@ claude -p --output-format json --permission-mode bypassPermissions
 | Config key | Binary | Tool prefix | Used by |
 |------------|--------|-------------|---------|
 | `gofortress-interactive` | `bin/gofortress-mcp` | `mcp__gofortress-interactive__*` | Go TUI (via `--mcp-config`) |
-| `gofortress-standalone` | `bin/gofortress-mcp-standalone` | `mcp__gofortress-standalone__*` | settings.json |
 
 **Critical:** The config key in `writeMCPConfig()` determines the tool prefix. CLAUDE.md tells the LLM to call `mcp__gofortress-interactive__spawn_agent`. If the config key doesn't match, the LLM can't find the tool.
 

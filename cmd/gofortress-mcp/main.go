@@ -44,7 +44,7 @@ func main() {
 	// exists but will return ErrTUINotConnected on interactive tool calls.
 	uds := tuimcp.NewUDSClient()
 
-	// Register all 7 tools.
+	// Register all 8 tools.
 	tuimcp.RegisterAll(server, uds)
 
 	slog.Info("gofortress-mcp starting", "socket", os.Getenv("GOFORTRESS_SOCKET"))

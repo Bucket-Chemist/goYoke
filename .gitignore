@@ -1,9 +1,8 @@
-# Binaries (at root level only)
-/gogent-validate
-/gogent-archive
-/gogent-sharp-edge
-/gogent-daemon
-/gogent
+# Binaries — all build outputs (root level and bin/)
+/gofortress
+/gofortress-*
+/gogent-*
+/run-bin
 /bin/
 
 # Test output
@@ -67,8 +66,20 @@ test/audit/**
 # Debug logs
 /debug/
 
-# Completed tickets (archived)
-tickets/completed/
+# Internal / non-release directories
+/dev/
+/tickets/
+/_templates/
+/.test-spawn-logs/
+/test_files/
+
+# POC/test cmd binaries (source in git history if needed)
+cmd/debug-injection/
+cmd/gofortress-ipc-poc/
+cmd/gofortress-mcp-poc/
+cmd/gogent-e2e-*/
+cmd/gogent-timeout-test/
+cmd/mousetest/
 
 # Archived TS TUI (deprecated — Go TUI is canonical)
 .archive/
@@ -79,3 +90,25 @@ node_modules/
 # Claude memory
 .claude/memory/ml-tool-events.jsonl
 /.claude/memory/*.jsonl
+
+# GOgent runtime state (sessions, memory, teams)
+.gogent/
+/fix-bin-permissions.sh
+
+# Loose artifacts (one-off analysis, session outputs)
+/architect-permission-channel.md
+/interrupt-diagnostic-specs.md
+/review-critique.md
+/review-metadata.json
+/.ticket-config.json
+
+# Claude ephemeral
+.claude/.claude.json
+.claude/*.bak
+.claude/mcp-needs-auth-cache.json
+.claude/telemetry/
+.claude/input-history.json
+.claude/memory/session-archive/
+.claude/backups/
+.claude/sessions/*.json
+.claude/Pasted*.txt

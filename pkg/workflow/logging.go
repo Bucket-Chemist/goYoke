@@ -21,7 +21,7 @@ func GetEndstateLogPath() string {
 
 // GetProjectEndstateLogPath returns project-scoped path for endstate logs
 func GetProjectEndstateLogPath(projectDir string) string {
-	return filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	return filepath.Join(config.ProjectMemoryDir(projectDir), "agent-endstates.jsonl")
 }
 
 // LogEndstate writes endstate decision to JSONL file using XDG-compliant path

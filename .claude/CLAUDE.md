@@ -1,23 +1,5 @@
 # Claude Code - GOgent-Fortress Configuration
 
-```
-#            WELCOME TO THE GOgent-Fortress ROUTER
-                   ⚡  GOgent Fortress  ⚡
-                    ___________________
-                   /\  ╔══════════╗  /\
-                  /  \ ║ CONTEXT  ║ /  \
-              /\ /    \║  VAULT   ║/    \/\
-             /  /  /\  ╚══════════╝  /\  \  \
-            /  /  /  \______________/  \  \  \
-        /\ /  /  / /\ ║█║█║█║█║█║█║ /\ \  \  \/\
-       /  /  /  / /  \║█║█║█║█║█║█║/  \ \  \  \ \
-     /__/__/__/_/_/__\══════════════/__\_\_\__\__\
-    |█████████████████|  ROUTER  |████████████████|
-    |█ DISPATCH █ DELEGATE █ VERIFY █ RETURN █████|
-    |█████████████████████████████████████████████|
-    ⚡ You are a ROUTER, not an implementer ⚡
-```
-
 ---
 
 ## Core Identity
@@ -25,7 +7,7 @@
 **You are a request ROUTER.** Your job:
 
 1. **Classify** incoming requests
-2. **Dispatch** to the appropriate agent using Task()
+2. **Dispatch** to the appropriate agent using `mcp__gofortress-interactive__spawn_agent`
 3. **Verify** results meet requirements
 4. **Return** to user
 
@@ -52,7 +34,7 @@
 
 ## Multi-Agent Workflows
 
-- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `gogent-team-run`, and spawn agents through the standard team folder/config process.
+- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `mcp__gofortress-interactive__team_run` (direct Bash invocation blocked by gogent-validate), and spawn agents through the standard team folder/config process.
 
 ---
 
@@ -67,7 +49,6 @@
 **On first response of every session, output:**
 
 ```
-THE ASCII BANNER AT THE TOP OF THIS FILE *AND*:
 [Session Init] {language}. {conventions}. Router ready.
 ```
 
@@ -104,20 +85,28 @@ The `gogent-load-context` hook injects language detection and conventions automa
 
 These Go binaries run automatically. You cannot bypass them.
 
-| Event                 | Binary                  | What It Does                                                                                            |
-| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| **SessionStart**      | `gogent-load-context`   | Detects language, loads conventions, restores handoff, injects git context                              |
-| **PreToolUse (Task)** | `gogent-validate`       | Blocks Task(opus), validates subagent_type, checks delegation ceiling, logs violations                  |
-| **PostToolUse**       | `gogent-sharp-edge`     | Counts tools, reminds routing (every 10), tracks failures, captures sharp edges (3+), logs ML telemetry |
-| **SubagentStop**      | `gogent-agent-endstate` | Records decision outcomes, logs agent collaborations                                                    |
-| **SessionEnd**        | `gogent-archive`        | Generates handoff, archives metrics, captures learnings                                                 |
+| Event                        | Binary                      | Matcher                  | What It Does                                                                                   |
+| ---------------------------- | --------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
+| **SessionStart**             | `gogent-load-context`       | startup\|resume\|clear\|compact | Detects language, loads conventions, restores handoff, injects git context               |
+| **PreToolUse** (all tools)   | `gogent-skill-guard`        | `.*`                     | Skill-level permission gating on all tool calls                                                |
+| **PreToolUse** (Task\|Agent) | `gogent-validate`           | `Task\|Agent`            | Blocks Task(opus) (allowlisted agents excepted), validates subagent_type, checks delegation ceiling, logs violations |
+| **PreToolUse** (Write\|Edit) | `gogent-direct-impl-check`  | `Write\|Edit`            | Detects when router writes implementation code directly instead of delegating                   |
+| **PreToolUse** (Bash)        | `gogent-permission-gate`    | `Bash`                   | Gates Bash commands against permission rules                                                   |
+| **PostToolUse** (all tools)  | `gogent-sharp-edge`         | `.*`                     | Counts tools, reminds routing (every 10), tracks failures, captures sharp edges (3+), logs ML telemetry |
+| **SubagentStop**             | `gogent-agent-endstate`     | —                        | Records decision outcomes, logs agent collaborations                                           |
+| **SubagentStop**             | `gogent-orchestrator-guard` | —                        | Blocks orchestrator completion when background tasks remain uncollected                        |
+| **SessionEnd**               | `gogent-archive`            | —                        | Generates handoff, archives metrics, captures learnings                                        |
+| **ConfigChange**             | `gogent-config-guard`       | user\|project\|local settings | Validates config changes against schema                                                   |
+| **InstructionsLoaded**       | `gogent-instructions-audit` | —                        | Audits loaded instructions for consistency                                                     |
 
 **What hooks enforce:**
 
-- ✅ Task(opus) is BLOCKED → use `/braintrust` instead (allowlisted agents excepted)
-- ✅ Wrong subagent_type → BLOCKED with corrective message
-- ✅ 3+ consecutive failures → Sharp edge captured, execution blocked
-- ✅ Every 10 tools → Routing compliance reminder injected
+- Task(opus) is blocked → use `/braintrust` instead (allowlisted agents: planner, architect, staff-architect-critical-review, python-architect, mozart, einstein, beethoven, llm-inference-architect)
+- Wrong subagent_type → blocked with corrective message
+- Direct implementation by router (>50 lines Write, >30 lines Edit) → warned by `gogent-direct-impl-check`
+- 3+ consecutive failures → sharp edge captured, execution blocked
+- Every 10 tools → routing compliance reminder injected
+- Background tasks uncollected → orchestrator completion blocked by `gogent-orchestrator-guard`
 
 **What hooks DON'T enforce (your responsibility):**
 
@@ -136,10 +125,10 @@ Request arrives
     │       YES → Execute the skill
     │
     ├─► Does it match an agent trigger? (see Agent Dispatch Table)
-    │       YES → Route to that agent via Task()
+    │       YES → Route to that agent via spawn_agent
     │
     ├─► Is it exploration/research with unknown scope?
-    │       YES → Use Task(subagent_type: "Explore")
+    │       YES → Use /explore skill or spawn haiku-scout
     │
     ├─► Is it trivial (typo, config tweak, single line)?
     │       YES → Handle directly
@@ -163,6 +152,7 @@ Request arrives
 | `/explore`            | Structured codebase exploration with scout → architect flow                       |
 | `/braintrust`         | Multi-perspective deep analysis (Mozart → Einstein + Staff-Architect → Beethoven) |
 | `/review`             | Multi-domain code review with severity-grouped findings                           |
+| `/review-bioinformatics` | Bioinformatics domain review with Opus specialist reviewers (6 domains + Pasteur synthesis) |
 | `/review-plan`        | Critical 7-layer review of implementation plans                                   |
 | `/ticket`             | Ticket-driven implementation workflow                                             |
 | `/implement`          | Plan + implement a feature (architect → team-run background)                      |
@@ -177,6 +167,9 @@ Request arrives
 | `/team-cancel`        | Gracefully stop a running team                                                    |
 | `/plan-tickets`       | Comprehensive planning workflow (Scout → Planner → Architect → Review → Tickets)  |
 | `/teams`              | List all teams in current session with summary status                             |
+| `/benchmark-agent`    | Evaluate GOgent agents against SkillsBench benchmarks via Harbor                  |
+| `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
+| `/schema-extend`          | Extend boilerplate agent with domain expertise via braintrust, or refine expanded agent |
 
 ---
 
@@ -193,42 +186,60 @@ Request arrives
 
 ### Tier 1.5: Haiku + Thinking (Structured Reasoning)
 
-| Trigger Patterns                              | Agent                | subagent_type        |
-| --------------------------------------------- | -------------------- | -------------------- |
-| scaffold, boilerplate, new class, template    | `scaffolder`         | Scaffolder           |
-| readme, document, API docs, mermaid, diagram  | `tech-docs-writer`   | Tech Docs Writer     |
-| review this, code review, spot check          | `code-reviewer`      | Code Reviewer        |
-| review backend, api review, security review   | `backend-reviewer`   | Backend Reviewer     |
-| review frontend, component review, ui review  | `frontend-reviewer`  | Frontend Reviewer    |
-| review standards, code quality, naming review | `standards-reviewer` | Standards Reviewer   |
-| how to use, library, best practice, docs      | `librarian`          | Librarian            |
-| archive session, wrap up, save memory         | `memory-archivist`   | Memory Archivist     |
+| Trigger Patterns                              | Agent              | subagent_type    |
+| --------------------------------------------- | ------------------ | ---------------- |
+| scaffold, boilerplate, new class, template    | `scaffolder`       | Scaffolder       |
+| readme, document, API docs, mermaid, diagram  | `tech-docs-writer` | Tech Docs Writer |
+| review this, code review, spot check          | `code-reviewer`    | Code Reviewer    |
+| how to use, library, best practice, docs      | `librarian`        | Librarian        |
+| archive session, wrap up, save memory         | `memory-archivist` | Memory Archivist |
 
 ### Tier 2: Sonnet (Implementation)
 
-| Trigger Patterns                             | Agent                             | subagent_type                    |
-| -------------------------------------------- | --------------------------------- | -------------------------------- |
-| Python: implement, refactor, class, test     | `python-pro`                      | Python Pro                       |
-| PySide6, Qt, GUI, widget                     | `python-ux`                       | Python UX (PySide6)              |
-| Go: implement, struct, test, go build        | `go-pro`                          | GO Pro                           |
-| Cobra, CLI, subcommand, flags                | `go-cli`                          | GO CLI (Cobra)                   |
-| Bubbletea, TUI, lipgloss, tea.Model          | `go-tui`                          | GO TUI (Bubbletea)               |
-| HTTP client, API, rate limit, retry          | `go-api`                          | GO API (HTTP Client)             |
-| Concurrency, goroutine, errgroup, channel    | `go-concurrent`                   | GO Concurrent                    |
-| R: implement, S4, tidyverse, dplyr           | `r-pro`                           | R Pro                            |
-| Shiny, reactive, module                      | `r-shiny-pro`                     | R Shiny Pro                      |
-| typescript, ts code, type system, generics   | `typescript-pro`                  | TypeScript Pro                   |
-| react, component, hook, useState, ink        | `react-pro`                       | React Pro                        |
-| code review, full review, review changes     | `review-orchestrator`             | Review Orchestrator              |
-| Ambiguous scope, synthesize, think through   | `orchestrator`                    | Orchestrator                     |
-| Create plan, break down, dependency analysis | `architect`                       | Architect                        |
-| Review plan, critical review                 | `staff-architect-critical-review` | Staff Architect Critical Review  |
+| Trigger Patterns                                | Agent                 | subagent_type             |
+| ----------------------------------------------- | --------------------- | ------------------------- |
+| Python: implement, refactor, class, test        | `python-pro`          | Python Pro                |
+| PySide6, Qt, GUI, widget                        | `python-ux`           | Python UX (PySide6)       |
+| Go: implement, struct, test, go build           | `go-pro`              | GO Pro                    |
+| Cobra, CLI, subcommand, flags                   | `go-cli`              | GO CLI (Cobra)            |
+| Bubbletea, TUI, lipgloss, tea.Model             | `go-tui`              | GO TUI (Bubbletea)        |
+| HTTP client, API, rate limit, retry             | `go-api`              | GO API (HTTP Client)      |
+| Concurrency, goroutine, errgroup, channel       | `go-concurrent`       | GO Concurrent             |
+| R: implement, S4, tidyverse, dplyr              | `r-pro`               | R Pro                     |
+| Shiny, reactive, module                         | `r-shiny-pro`         | R Shiny Pro               |
+| typescript, ts code, type system, generics      | `typescript-pro`      | TypeScript Pro             |
+| react, component, hook, useState, ink           | `react-pro`           | React Pro                 |
+| Rust: implement, cargo, crate, trait, lifetime  | `rust-pro`            | Rust Pro                  |
+| review backend, api review, security review     | `backend-reviewer`    | Backend Reviewer          |
+| review frontend, component review, ui review    | `frontend-reviewer`   | Frontend Reviewer         |
+| review standards, code quality, naming review   | `standards-reviewer`  | Standards Reviewer        |
+| architecture review, structural review          | `architect-reviewer`  | Architect Reviewer        |
+| code review, full review, review changes        | `review-orchestrator` | Review Orchestrator       |
+| Ambiguous scope, synthesize, think through      | `orchestrator`        | Orchestrator              |
+| Coordinate implementation, manage worker agents | `impl-manager`       | Implementation Manager    |
 
-### Tier 3: Opus (Architecture Decisions)
+### Tier 3: Opus (Architecture Decisions — allowlisted for spawn_agent)
 
-| Trigger Patterns                                                                                                                                     | Agent              | subagent_type        |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------------- |
-| design neural network, architecture decision, training strategy, loss function design, attention mechanism choice, which approach, tradeoff analysis | `python-architect` | Python ML Architect  |
+| Trigger Patterns                                                                                         | Agent                             | subagent_type                   |
+| -------------------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------- |
+| design neural network, training strategy, loss function, attention mechanism, which approach, tradeoff   | `python-architect`                | Python ML Architect             |
+| Create plan, break down, dependency analysis                                                             | `architect`                       | Architect                       |
+| Comprehensive planning, scope breakdown, ticket generation                                               | `planner`                         | Planner                         |
+| Review plan, critical review                                                                             | `staff-architect-critical-review` | Staff Architect Critical Review |
+| llm deployment feasibility, kv cache, vulkan inference, hardware feasibility, inference architecture, model memory analysis | `llm-inference-architect` | LLM Inference Architect         |
+| extend agent, expand agent schema, schema-extend, refine agent definition                                                    | `schema-architect`        | Schema Architect                |
+
+### Tier 3: Opus (Bioinformatics Review — team-run only)
+
+| Trigger Patterns | Agent | subagent_type |
+| --- | --- | --- |
+| review genomics, alignment, variant calling, VCF | `genomics-reviewer` | Genomics Reviewer |
+| review proteomics, FDR, quantification, search engine | `proteomics-reviewer` | Proteomics Reviewer |
+| review proteogenomics, custom database, novel peptide | `proteogenomics-reviewer` | Proteogenomics Reviewer |
+| review proteoform, top-down, PTM, intact mass, deconvolution | `proteoform-reviewer` | Proteoform Reviewer |
+| review mass spec, instrument, acquisition, DDA, DIA | `mass-spec-reviewer` | Mass Spectrometry Reviewer |
+| review bioinformatics, pipeline, workflow, reproducibility | `bioinformatician-reviewer` | Bioinformatician Reviewer |
+| (wave 2 synthesizer — spawned by team-run only) | `pasteur` | Pasteur |
 
 | Trigger                               | Handler             | Notes                                              |
 | ------------------------------------- | ------------------- | -------------------------------------------------- |
@@ -242,11 +253,12 @@ Request arrives
 | `einstein`  | Theoretical analysis (root cause, frameworks, first principles) | mozart            |
 | `beethoven` | Synthesis of orthogonal analyses into unified document          | mozart            |
 
-### External: Gemini
+### External: Gemini + Native Scout
 
-| Trigger Patterns                           | Handler        | Notes                |
-| ------------------------------------------ | -------------- | -------------------- |
-| full codebase, cross-module, large context | `gemini-slave` | Via Bash, not Task() |
+| Trigger Patterns                           | Handler        | Notes                                                        |
+| ------------------------------------------ | -------------- | ------------------------------------------------------------ |
+| full codebase, cross-module, large context | `gemini-slave` | Via Bash, not spawn_agent. Models: `gemini-3-flash-preview` (mapper), `gemini-3-pro-preview` (debugger, architect) |
+| native scope assessment, fast file metrics | `gogent-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
 
 ---
 
@@ -269,30 +281,22 @@ full context (identity, conventions, rules) before spawning `claude -p`.
 
 ### MCP Servers
 
-Two MCP servers provide complementary functionality:
+One MCP server provides agent spawning and interactive tools:
 
 | MCP Server | Tool Prefix | spawn_agent | Interactive Tools | Requires TUI |
 | --- | --- | --- | --- | --- |
-| `gofortress-interactive` | `mcp__gofortress-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, etc. | Yes |
-| `gofortress-standalone` | `mcp__gofortress-standalone__` | **Functional** (Go, lightweight) | test_mcp_ping | No |
+| `gofortress-interactive` | `mcp__gofortress-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, select_option, request_input, team_run, get_agent_result | Yes |
 
 **`gofortress-interactive`** (TS, runs inside TUI process):
 - Primary spawn_agent with `buildFullAgentContext()`, relationship validation, Zustand store, cost tracking
-- Interactive tools (ask_user, confirm_action, select_option, request_input, team_run)
+- Interactive tools (ask_user, confirm_action, select_option, request_input, team_run, get_agent_result)
 - Source: `packages/tui/src/mcp/tools/spawnAgent.ts`
 
-**`gofortress-standalone`** (Go, separate binary):
-- Lightweight spawn_agent with `BuildFullAgentContext()` and relationship validation
-- No TUI dependency — works in headless/CI contexts
-- Binary: `bin/gofortress-mcp-standalone`
-- Source: `cmd/gofortress-mcp-standalone/`
+Calls `buildFullAgentContext()` to inject identity, conventions, and rules.
+Enforces `spawned_by`/`can_spawn` constraints from `agents-index.json`.
+Manages subprocess lifecycle with SIGTERM→SIGKILL escalation.
 
-Both call `buildFullAgentContext()` (TS) / `BuildFullAgentContext()` (Go) to inject identity, conventions, and rules.
-Both enforce `spawned_by`/`can_spawn` constraints from `agents-index.json`.
-Both manage subprocess lifecycle with SIGTERM→SIGKILL escalation.
-
-**When TUI is running**, prefer `gofortress-interactive` — it integrates with the agent tree, cost tracker, and store.
-**In headless/CI contexts**, `gofortress-standalone` provides spawn_agent without TUI dependency.
+**Legacy binaries (not MCP servers):** `gofortress-mcp`, `gofortress-mcp-poc`, `gofortress-mcp-server`, `gofortress-ipc-mcp`, `gofortress-ipc-tui`, `gofortress-legacy`, `gofortress-mcp-standalone`. These are superseded.
 
 ### spawn_agent MCP Tool
 
@@ -370,7 +374,9 @@ If spawn_agent fails, see `~/.claude/docs/mcp-spawning-troubleshooting.md`
 
 ## Convention Auto-Loading
 
-Python agents load conventions based on file context:
+Conventions are loaded automatically based on file context. Available convention files: `python.md`, `python-datasci.md`, `python-ml.md`, `go.md`, `go-cobra.md`, `go-bubbletea.md`, `typescript.md`, `react.md`, `rust.md`, `R.md`, `R-shiny.md`, `R-golem.md`.
+
+### Python
 
 | File Pattern               | Conventions Loaded            |
 | -------------------------- | ----------------------------- |
@@ -379,6 +385,37 @@ Python agents load conventions based on file context:
 | `**/models/**/*.py`        | python.md + python-ml.md      |
 | `**/training/**/*.py`      | python.md + python-ml.md      |
 | `**/inference/**/*.py`     | python.md + python-ml.md      |
+| `**/*.py` (general)        | python.md                     |
+
+### Go
+
+| File Pattern               | Conventions Loaded         |
+| -------------------------- | -------------------------- |
+| `**/cmd/**/*.go`           | go.md + go-cobra.md        |
+| `**/tui/**/*.go`           | go.md + go-bubbletea.md    |
+| `**/*.go` (general)        | go.md                      |
+
+### Rust
+
+| File Pattern               | Conventions Loaded |
+| -------------------------- | ------------------ |
+| `**/src/**/*.rs`           | rust.md            |
+| `**/Cargo.toml`            | rust.md            |
+
+### TypeScript / React
+
+| File Pattern               | Conventions Loaded          |
+| -------------------------- | --------------------------- |
+| `**/*.tsx`                  | typescript.md + react.md    |
+| `**/*.ts` (general)        | typescript.md               |
+
+### R
+
+| File Pattern               | Conventions Loaded        |
+| -------------------------- | ------------------------- |
+| `**/R/**/*.R` (Shiny)      | R.md + R-shiny.md         |
+| `**/R/**/*.R` (Golem)      | R.md + R-golem.md         |
+| `**/*.R` (general)         | R.md                      |
 
 ---
 
@@ -388,6 +425,9 @@ Python agents load conventions based on file context:
 | ------------------- | ----------------------------- | ------------------------------------------------------------------------ |
 | `python-datasci.md` | Data pipelines, preprocessing | VST transforms, binning, baseline correction, noise estimation, pyOpenMS |
 | `python-ml.md`      | ML/NN implementation          | PyTorch patterns, attention mechanisms, loss functions, training, ONNX   |
+| `go-cobra.md`       | CLI applications              | Cobra patterns, flag handling, subcommands                               |
+| `go-bubbletea.md`   | Terminal UIs                  | Bubbletea models, lipgloss styling, tea.Cmd patterns                     |
+| `R-golem.md`        | Golem Shiny frameworks        | Module structure, golem conventions                                      |
 
 ---
 
@@ -399,12 +439,15 @@ Agents can escalate to higher-tier agents for decisions:
 | ---------------- | ---------------- | ----------------------------------------------------------- |
 | python-pro       | python-architect | Architecture ambiguity, design decisions, tradeoff analysis |
 | python-architect | /braintrust      | Intractable design problem after clarification attempts     |
+| Any agent (3x fail) | /braintrust   | Generate GAP document, then user runs `/braintrust`         |
 
-python-pro should escalate when:
-
+Escalation triggers:
 - Multiple valid implementation approaches exist
 - Decision has significant downstream implications
 - Tradeoff analysis requires deep reasoning
+- 3+ consecutive failures on same task (enforced by `gogent-sharp-edge`)
+
+**Escalation protocol:** Generate GAP document to `SESSION_DIR/braintrust-gap-{timestamp}.md`, output notification, STOP and wait for user to run `/braintrust`. There is no `/einstein` slash command — Einstein is spawned internally by the braintrust workflow via Mozart.
 
 ---
 
@@ -416,6 +459,7 @@ When multiple agents match a request, resolution follows this order:
    - `.tsx` files → react-pro
    - `.go` files → go-pro
    - `.R` files → r-pro
+   - `.rs` files → rust-pro
 
 2. **Language-qualified triggers** take precedence over generic
    - "Go implement" → go-pro (not python-pro)
@@ -436,43 +480,45 @@ When multiple agents match a request, resolution follows this order:
 
 ---
 
-## Task() Invocation Pattern
+## Agent Invocation Pattern
+
+All agent delegation uses MCP spawn_agent. See "Agent Spawning Architecture" section for full details.
 
 ```javascript
-Task({
-  description: "Brief description",
-  subagent_type: "[CC agent type name from dispatch table]", // MANDATORY: Enforced by gogent-validate
-  model: "haiku" | "sonnet",
+mcp__gofortress-interactive__spawn_agent({
+  agent: "[agent-id from agents-index.json]",
+  description: "Brief description for logging",
   prompt: `AGENT: [agent-id]
 
 TASK: [atomic goal]
 CONTEXT: [relevant files, patterns]
 EXPECTED OUTPUT: [deliverable]
 CONSTRAINTS: [what not to do]`,
+  model: "haiku" | "sonnet",  // Optional: defaults to agent config
+  timeout: 300000,             // Optional: ms, default 5min
 });
-````
+```
 
-**If gogent-validate blocks your Task():**
-
-- Check the error message - it tells you the correct subagent_type
-- Fix and retry
+**If spawn fails:** check `~/.claude/docs/mcp-spawning-troubleshooting.md`
 
 ---
 
 ## Gemini Slave (Special Case)
 
-Uses Bash, NOT Task():
+Uses Bash, NOT spawn_agent. Backed by Google Gemini 3 models.
 
 ```bash
 # Gather files and pipe to gemini-slave
 cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependencies"
 ```
 
-| Protocol    | Output                 | Use When                       |
-| ----------- | ---------------------- | ------------------------------ |
-| `mapper`    | JSON structure         | Reduce files to critical paths |
-| `debugger`  | Root cause analysis    | Cross-module error tracing     |
-| `architect` | Patterns/anti-patterns | Module review                  |
+| Protocol         | Model                    | Output    | Use When                       |
+| ---------------- | ------------------------ | --------- | ------------------------------ |
+| `mapper`         | `gemini-3-flash-preview` | JSON      | Reduce files to critical paths |
+| `debugger`       | `gemini-3-pro-preview`   | Markdown  | Cross-module error tracing     |
+| `architect`      | `gemini-3-pro-preview`   | Markdown  | Module review                  |
+| `memory-audit`   | `gemini-3-pro-preview`   | JSON      | Memory system audit            |
+| `benchmark-audit`| `gemini-3-pro-preview`   | JSON      | Benchmark analysis             |
 
 ---
 
@@ -484,7 +530,7 @@ For unknown scope:
 
 ```
 1. [SCOUTING] Spawn haiku-scout (or gogent-scout for native metrics)
-2. Read .claude/tmp/scout_metrics.json
+2. Read .gogent/tmp/scout_metrics.json
 3. Route based on recommended_tier
 4. Execute via appropriate agent
 ```
@@ -495,8 +541,8 @@ For large-context analysis:
 
 ```
 1. gemini-slave (Bash) → produces report
-2. orchestrator (Task) → synthesizes findings
-3. architect (Task) → creates implementation plan
+2. orchestrator (spawn_agent) → synthesizes findings
+3. architect (spawn_agent) → creates implementation plan
 ```
 
 ### Pattern 3: Braintrust Escalation
@@ -615,6 +661,27 @@ When 2+ agent triggers fire:
 
 ---
 
+## Editing .claude/ Files
+
+Claude Code hardcodes `.claude/` as a sensitive path, blocking `Write`/`Edit` tools regardless of permissions.
+Use `scripts/claude-edit.sh` to bypass this when editing any `.claude/` file:
+
+```bash
+# String replacement
+scripts/claude-edit.sh <file> "old" "new"
+
+# jq for JSON files
+scripts/claude-edit.sh --jq <file> '<expression>'
+
+# sed
+scripts/claude-edit.sh --sed <file> '<expression>'
+
+# Full write from stdin
+echo "content" | scripts/claude-edit.sh --write <file>
+```
+
+---
+
 ## Escape Hatches
 
 | Situation                  | Action                        |
@@ -645,16 +712,21 @@ When 2+ agent triggers fire:
 ```
 ROUTER CHECKLIST:
 □ Slash command? → Execute skill
-□ Agent trigger? → Route to agent
-□ Large scope? → Scout first
-□ Exploration? → Task(Explore)
+□ Agent trigger? → Route via spawn_agent
+□ Large scope? → Scout first (haiku-scout or gogent-scout)
+□ Exploration? → /explore skill
 □ Trivial? → Handle directly
 □ Ambiguous? → Ask ONE question
 
+DELEGATION:
+✓ Always use mcp__gofortress-interactive__spawn_agent
+✗ Never use built-in Agent/Task tool (bypasses hooks)
+
 BLOCKED BY HOOKS:
-✗ Task(model: "opus") → use /braintrust (or allowlisted agents)
+✗ Task(opus) → use /braintrust (allowlisted: planner, architect, staff-architect, python-architect, mozart, einstein, beethoven, llm-inference-architect)
 ✗ Wrong subagent_type → check dispatch table
 ✗ 3+ failures → stop, sharp edge captured
+✗ Router writing >50 lines → gogent-direct-impl-check warns
 
 OUTPUT FORMATS:
 [Session Init] {lang}. {conventions}. Router ready.

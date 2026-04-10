@@ -129,6 +129,10 @@ type StatusLineModel struct {
 	// Only displayed when VimEnabled is true.
 	VimMode string
 
+	// MouseEnabled is true when mouse capture is active (scroll wheel works).
+	// When false, native terminal text selection is available. Always rendered.
+	MouseEnabled bool
+
 	// theme holds the active theme for semantic coloring.
 	theme config.Theme
 
@@ -306,6 +310,14 @@ func (m StatusLineModel) View() string {
 		vimBadge = vimStyle.Render("["+mode+"]") + " "
 	}
 
+	// Mouse mode badge: muted [M] when enabled (default), warning [T] when disabled (text select).
+	var mouseBadge string
+	if m.MouseEnabled {
+		mouseBadge = config.StyleMuted.Render("[M]") + " "
+	} else {
+		mouseBadge = m.theme.WarningStyle().Render("[T]") + " "
+	}
+
 	// Plan mode badge (optional)
 	planBadge := ""
 	if m.PlanActive {
@@ -352,7 +364,7 @@ func (m StatusLineModel) View() string {
 		}
 	}
 
-	row1Left := vimBadge + planBadge + modelBadge + " " + permBadge +
+	row1Left := vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
 		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + cwdField + branchField
 
 	// Auth: right-aligned

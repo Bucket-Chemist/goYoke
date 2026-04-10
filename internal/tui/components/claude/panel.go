@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/scrollbar"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/slashcmd"
@@ -22,6 +23,7 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
 // CLIDriverSender is a package-level type alias retained for backward
@@ -103,7 +105,25 @@ type ClaudePanelModel struct {
 	draftInput string
 
 	// streaming is true while an assistant response is being streamed.
+	// Used for the "..." display indicator and as a fallback replace/append
+	// decision when MessageID is not available.
 	streaming bool
+
+	// thinkingActive is true while the assistant is in its reasoning
+	// (extended thinking) phase. Set by ThinkingActiveMsg{Active: true} and
+	// cleared by ThinkingActiveMsg{Active: false} or ResultMsg.
+	thinkingActive bool
+
+	// ultrathinkActive is true when the submitted message contained the word
+	// "ultrathink" (case-insensitive). It enables the rainbow gradient thinking
+	// indicator during extended thinking. Cleared on ResultMsg.
+	ultrathinkActive bool
+
+	// currentMsgID is the Message.ID of the assistant message currently being
+	// streamed.  It is set when the first fragment of a new turn arrives and
+	// cleared on ResultMsg.  When non-empty, replace-vs-append decisions use
+	// this ID rather than the streaming boolean to avoid cross-turn overwrites.
+	currentMsgID string
 
 	// autoScroll is true when the viewport should follow new content.
 	autoScroll bool
@@ -127,6 +147,18 @@ type ClaudePanelModel struct {
 
 	// slashCmd is the slash-command autocomplete dropdown (TUI-054).
 	slashCmd slashcmd.SlashCmdModel
+
+	// skillCmds holds dynamically loaded skill commands from ~/.claude/skills/.
+	// Stored so executeSlashCommand can include them in HelpText output.
+	skillCmds []slashcmd.SlashCommand
+
+	// tier tracks the current layout tier so renderMessage can suppress
+	// inline tool blocks when the Activity panel is visible (TUI-L05).
+	tier model.LayoutTier
+
+	// effortLevel holds the current --effort level for display in the input
+	// line. Empty string or "auto" means default (no indicator shown).
+	effortLevel string
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -139,6 +171,11 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 
 	vp := viewport.New(0, 0)
 
+	var skillCmds []slashcmd.SlashCommand
+	if configDir, err := routing.GetClaudeConfigDir(); err == nil {
+		skillCmds = slashcmd.LoadSkillCommands(configDir)
+	}
+
 	return ClaudePanelModel{
 		vp:         vp,
 		input:      ti,
@@ -146,7 +183,8 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 		autoScroll: true,
 		keys:       keys.Claude,
 		search:     NewSearchModel(),
-		slashCmd:   slashcmd.NewSlashCmdModel(),
+		slashCmd:   slashcmd.NewSlashCmdModel(skillCmds...),
+		skillCmds:  skillCmds,
 	}
 }
 
@@ -186,8 +224,20 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		}
 		return m, nil
 
+	case model.ThinkingActiveMsg:
+		m.thinkingActive = msg.Active
+		m.syncViewport()
+		return m, nil
+
+	case model.EffortChangedMsg:
+		m.effortLevel = msg.Level
+		return m, nil
+
 	case model.ResultMsg:
 		m.streaming = false
+		m.thinkingActive = false
+		m.ultrathinkActive = false
+		m.currentMsgID = ""
 		m.syncViewport()
 		if m.autoScroll {
 			m.vp.GotoBottom()
@@ -244,23 +294,50 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 // accumulated text so far (a snapshot), not an incremental delta. The final
 // event has stop_reason set and Streaming=false.
 //
-// Streaming path: replace (not append) the last assistant message so that
-// each snapshot overwrites the previous partial view rather than concatenating
-// all snapshots into garbled output.
+// Replace-vs-append decision (in priority order):
 //
-// Non-streaming path: if we were previously streaming, replace the last
-// assistant message with the clean complete text. If no streaming was
-// in progress, append a new message (fresh turn with no prior partial).
+//  1. MessageID-based (preferred): when msg.MessageID is non-empty, replace
+//     the last assistant message only when its ID matches m.currentMsgID.
+//     A new or different ID always appends, preventing cross-turn overwrites.
+//
+//  2. Streaming-bool fallback: when MessageID is empty (legacy / test paths),
+//     the original Streaming-boolean logic is used so existing callers and
+//     tests that do not set MessageID continue to work unchanged.
 func (m ClaudePanelModel) handleAssistantMsg(
 	msg model.AssistantMsg,
 	cmds []tea.Cmd,
 ) (ClaudePanelModel, []tea.Cmd) {
-	if msg.Streaming {
+	if msg.MessageID != "" {
+		// --- MessageID-based path (preferred) ---
+		m.streaming = msg.Streaming
+		sameMsg := msg.MessageID == m.currentMsgID &&
+			len(m.messages) > 0 &&
+			m.messages[len(m.messages)-1].Role == "assistant"
+		if sameMsg {
+			// Same turn: replace snapshot.
+			m.messages[len(m.messages)-1].Content = msg.Text
+			if !msg.Streaming {
+				m.messages[len(m.messages)-1].Timestamp = time.Now()
+			}
+		} else {
+			// New turn (different or first ID): append.
+			m.currentMsgID = msg.MessageID
+			m.messages = append(m.messages, DisplayMessage{
+				Role:      "assistant",
+				Content:   msg.Text,
+				Timestamp: time.Now(),
+			})
+		}
+		if !msg.Streaming {
+			m.currentMsgID = ""
+		}
+	} else if msg.Streaming {
+		// --- Legacy streaming-bool path ---
+		alreadyStreaming := m.streaming
 		m.streaming = true
-		// Replace (not append) the last assistant message with the latest
-		// snapshot. The CLI sends cumulative snapshots, so each event
-		// supersedes the previous one rather than extending it.
-		if len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" {
+		// Replace only if we were already streaming (same turn, cumulative
+		// snapshot). If we weren't streaming, this is a new turn — append.
+		if alreadyStreaming && len(m.messages) > 0 && m.messages[len(m.messages)-1].Role == "assistant" {
 			m.messages[len(m.messages)-1].Content = msg.Text
 		} else {
 			m.messages = append(m.messages, DisplayMessage{
@@ -270,6 +347,7 @@ func (m ClaudePanelModel) handleAssistantMsg(
 			})
 		}
 	} else {
+		// --- Legacy non-streaming path ---
 		// Complete (non-streaming) assistant message. Track whether we were
 		// previously streaming so we know whether to replace or append.
 		wasStreaming := m.streaming
@@ -391,8 +469,10 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 	// ---------------------------------------------------------------------------
 	if m.slashCmd.IsVisible() {
 		switch msg.String() {
-		case "up", "k", "down", "j", "enter":
+		case "up", "down", "enter":
 			// Forward navigation/selection to the dropdown.
+			// Note: "k"/"j" are NOT intercepted — they must reach the text
+			// input so the user can type commands like "/ticket".
 			var scCmd tea.Cmd
 			m.slashCmd, scCmd = m.slashCmd.Update(msg)
 			return m, scCmd
@@ -479,6 +559,8 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		m.syncViewport()
 		m.autoScroll = true
 		m.vp.GotoBottom()
+
+		m.ultrathinkActive = strings.Contains(strings.ToLower(text), "ultrathink")
 
 		if m.sender != nil {
 			cmds = append(cmds, m.sender.SendMessage(text))
@@ -632,8 +714,22 @@ func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea
 			return model.OpenCWDSelectorMsg{}
 		}
 
+	case "/model":
+		// Emit a message for AppModel to handle — it owns ProviderState and
+		// the CLI driver restart flow. The panel stays decoupled.
+		return m, func() tea.Msg {
+			return model.ModelSwitchRequestMsg{ModelID: args}
+		}
+
+	case "/effort":
+		// Emit a message for AppModel to handle — it owns the activeEffort
+		// field and the CLI driver restart flow. The panel stays decoupled.
+		return m, func() tea.Msg {
+			return model.EffortChangeRequestMsg{Level: args}
+		}
+
 	case "/help":
-		helpText := slashcmd.HelpText()
+		helpText := slashcmd.HelpText(m.skillCmds...)
 		m.messages = append(m.messages, DisplayMessage{
 			Role:      "system",
 			Content:   helpText,
@@ -675,55 +771,73 @@ func (m ClaudePanelModel) View() string {
 		return ""
 	}
 
-	inputLine := m.renderInputLine()
-	inputH := lipgloss.Height(inputLine)
+	conv := m.ViewConversation()
+	input := m.ViewInput()
+	composed := lipgloss.JoinVertical(lipgloss.Left, conv, input)
+	return m.ApplyOverlay(composed)
+}
 
-	// Reserve a line for the search bar when it is active.
-	var searchBar string
-	searchBarH := 0
+// ViewConversation returns the scrollable viewport with optional search bar.
+// It includes the streaming indicator ("...") appended to viewport content
+// when a response is being streamed. This is everything above the input line.
+func (m ClaudePanelModel) ViewConversation() string {
 	if m.search.IsActive() {
-		searchBar = m.search.View()
-		searchBarH = lipgloss.Height(searchBar)
+		searchView := m.search.View()
+		searchH := lipgloss.Height(searchView)
+		vpCopy := m.vp
+		if vpCopy.Height > searchH {
+			vpCopy.Height -= searchH
+		}
+		vpView := vpCopy.View()
+		sb := scrollbar.Render(vpCopy.Height, vpCopy.TotalLineCount(), vpCopy.YOffset)
+		if sb != "" {
+			vpView = lipgloss.JoinHorizontal(lipgloss.Top, vpView, sb)
+		}
+		return lipgloss.JoinVertical(lipgloss.Left, searchView, vpView)
+	}
+	return m.viewportWithScrollbar()
+}
+
+// ViewInput returns the input prompt and text input only.
+// It does not include the streaming indicator or the slash command dropdown.
+func (m ClaudePanelModel) ViewInput() string {
+	prompt := inputPromptStyle.Render("› ")
+	return prompt + m.input.View()
+}
+
+// ApplyOverlay takes a fully composed panel string (conversation joined with
+// input) and applies the slash command dropdown overlay when it is visible.
+// The dropdown floats over the viewport content just above the input line.
+// When no dropdown is active the composed string is returned unchanged.
+func (m ClaudePanelModel) ApplyOverlay(composed string) string {
+	if !m.slashCmd.IsVisible() {
+		return composed
 	}
 
-	// Render the slash-command dropdown above the input line when visible.
-	var dropdownView string
-	dropdownH := 0
-	if m.slashCmd.IsVisible() {
-		dropdownView = m.slashCmd.View()
-		dropdownH = lipgloss.Height(dropdownView)
+	dropdownView := m.slashCmd.View()
+	dropdownH := lipgloss.Height(dropdownView)
+	inputH := lipgloss.Height(m.ViewInput())
+
+	// Split the composed string into lines and overlay the dropdown on the
+	// lines just above the input line.
+	lines := strings.Split(composed, "\n")
+	totalLines := len(lines)
+	// The dropdown replaces lines ending at (totalLines - inputH - 1),
+	// i.e. the bottom of the viewport region.
+	overlayEnd := totalLines - inputH
+	overlayStart := overlayEnd - dropdownH
+	if overlayStart < 0 {
+		overlayStart = 0
 	}
 
-	// The viewport takes all remaining vertical space.
-	vpH := m.height - inputH - searchBarH - dropdownH
-	if vpH < 1 {
-		vpH = 1
+	dropdownLines := strings.Split(dropdownView, "\n")
+	for i, dl := range dropdownLines {
+		idx := overlayStart + i
+		if idx >= 0 && idx < overlayEnd {
+			lines[idx] = dl
+		}
 	}
-	if m.vp.Height != vpH {
-		// Non-mutating: we only update in SetSize / explicit calls.  A
-		// transient height mismatch here is acceptable.
-	}
-
-	if m.search.IsActive() {
-		return lipgloss.JoinVertical(lipgloss.Left,
-			searchBar,
-			m.viewportWithScrollbar(),
-			inputLine,
-		)
-	}
-
-	if m.slashCmd.IsVisible() {
-		return lipgloss.JoinVertical(lipgloss.Left,
-			m.viewportWithScrollbar(),
-			dropdownView,
-			inputLine,
-		)
-	}
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		m.viewportWithScrollbar(),
-		inputLine,
-	)
+	return strings.Join(lines, "\n")
 }
 
 // viewportWithScrollbar renders the viewport and, when content overflows,
@@ -747,6 +861,10 @@ func (m ClaudePanelModel) renderInputLine() string {
 	if m.streaming {
 		indicator := streamingStyle.Render("  ...")
 		line += indicator
+	}
+
+	if m.effortLevel != "" && m.effortLevel != "auto" {
+		line += config.StyleMuted.Render("  effort:" + m.effortLevel)
 	}
 
 	return line
@@ -777,7 +895,12 @@ func (m ClaudePanelModel) renderMessages() string {
 		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1))
 	}
 
-	if m.streaming {
+	switch {
+	case m.thinkingActive && m.ultrathinkActive:
+		sb.WriteString("\n" + config.RainbowGradient("Thinking..."))
+	case m.thinkingActive:
+		sb.WriteString("\n" + config.StyleMuted.Render("thinking..."))
+	case m.streaming:
 		sb.WriteString("\n" + streamingStyle.Render("..."))
 	}
 
@@ -818,17 +941,24 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 			// Completed assistant message — render markdown.
 			// RenderMarkdown logs warnings internally when Glamour fails and
 			// gracefully falls back to the original plain text.
-			rendered, _ := util.RenderMarkdown(msg.Content, m.width)
+			rendered, _ := util.RenderMarkdown(msg.Content, m.vp.Width)
+			rendered = strings.TrimRight(rendered, "\n") + "\n"
 			sb.WriteString(rendered)
 		} else {
-			sb.WriteString(msg.Content)
+			// Wrap to viewport width so long lines (markdown tables, URLs)
+			// don't overflow the viewport height when the terminal wraps them.
+			sb.WriteString(wordwrap.String(msg.Content, m.vp.Width))
 			sb.WriteByte('\n')
 		}
 	}
 
-	// Collapsed tool blocks.
-	for _, tb := range msg.ToolBlocks {
-		sb.WriteString(renderToolBlock(tb, m.width))
+	// Render tool blocks inline only in compact mode (width < 80).
+	// In standard/wide/ultra tiers the Activity panel is visible and
+	// tool blocks are shown there instead (TUI-L05).
+	if m.tier == model.LayoutCompact {
+		for _, tb := range msg.ToolBlocks {
+			sb.WriteString(renderToolBlock(tb, m.vp.Width))
+		}
 	}
 
 	return sb.String()
@@ -978,13 +1108,22 @@ func (m *ClaudePanelModel) SetHistory(h *InputHistory) {
 	m.history = h
 }
 
-// SetTier satisfies the claudePanelWidget interface.  Tier-specific rendering
-// adaptations are reserved for a future ticket; this is a no-op placeholder.
-func (m *ClaudePanelModel) SetTier(_ model.LayoutTier) {}
+// SetTier stores the current layout tier so renderMessage can conditionally
+// render inline tool blocks only in compact mode (TUI-L05).
+func (m *ClaudePanelModel) SetTier(tier model.LayoutTier) {
+	m.tier = tier
+}
 
 // IsStreaming returns true while an assistant response is being streamed.
 func (m ClaudePanelModel) IsStreaming() bool {
 	return m.streaming
+}
+
+// IsUltrathinkActive reports whether the last submitted message contained
+// "ultrathink" (case-insensitive). Used by the thinking indicator renderer
+// to select the rainbow gradient variant.
+func (m ClaudePanelModel) IsUltrathinkActive() bool {
+	return m.ultrathinkActive
 }
 
 // refreshViewport rebuilds the viewport content string from the current
@@ -1047,6 +1186,21 @@ func (m *ClaudePanelModel) RestoreMessages(msgs []state.DisplayMessage) {
 	m.streaming = false
 	m.autoScroll = true
 	m.refreshViewport()
+}
+
+// AppendSystemMessage adds a system-role message to the conversation history
+// and scrolls to bottom. Used by AppModel for informational output such as
+// the /model listing.
+func (m *ClaudePanelModel) AppendSystemMessage(text string) {
+	m.messages = append(m.messages, DisplayMessage{
+		Role:      "system",
+		Content:   text,
+		Timestamp: time.Now(),
+	})
+	m.syncViewport()
+	if m.autoScroll {
+		m.vp.GotoBottom()
+	}
 }
 
 // Messages returns a copy of the conversation history. It is intended for

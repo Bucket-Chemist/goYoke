@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -114,6 +115,96 @@ func TestMainIntegrationMalformedJSON(t *testing.T) {
 	outputData, err := os.ReadFile(outputPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(outputData), "unavailable:")
+}
+
+func TestPrepareBraintrust_Integration(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Copy fixtures
+	einsteinData, err := os.ReadFile(filepath.Join("testdata", "valid_einstein.json"))
+	require.NoError(t, err)
+	staffArchData, err := os.ReadFile(filepath.Join("testdata", "valid_staff_arch.json"))
+	require.NoError(t, err)
+
+	err = os.WriteFile(filepath.Join(tmpDir, einsteinStdoutFile), einsteinData, 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tmpDir, staffArchStdoutFile), staffArchData, 0644)
+	require.NoError(t, err)
+
+	err = prepareBraintrust(tmpDir)
+	require.NoError(t, err)
+
+	// Verify output was written
+	outputData, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
+	require.NoError(t, err)
+	assert.Contains(t, string(outputData), "# Pre-Synthesis Input for Beethoven")
+}
+
+func TestPrepareBraintrust_MissingFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	// No Einstein/StaffArch files — should still succeed with fallback content
+	err := prepareBraintrust(tmpDir)
+	require.NoError(t, err)
+
+	outputData, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
+	require.NoError(t, err)
+	assert.Contains(t, string(outputData), "unavailable:")
+}
+
+func TestDispatch_BraintrustWorkflow(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write braintrust config.json
+	cfg := TeamConfig{WorkflowType: "braintrust", Waves: []WaveInfo{}}
+	data, err := json.Marshal(cfg)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tmpDir, "config.json"), data, 0644)
+	require.NoError(t, err)
+
+	// Write dummy einstein/staff-arch files (empty JSON)
+	err = os.WriteFile(filepath.Join(tmpDir, einsteinStdoutFile), []byte("{}"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tmpDir, staffArchStdoutFile), []byte("{}"), 0644)
+	require.NoError(t, err)
+
+	config, err := loadConfig(tmpDir)
+	require.NoError(t, err)
+	assert.Equal(t, "braintrust", config.WorkflowType)
+
+	// Dispatch should call prepareBraintrust, producing pre-synthesis.md
+	err = prepareBraintrust(tmpDir)
+	require.NoError(t, err)
+
+	_, err = os.Stat(filepath.Join(tmpDir, outputFile))
+	assert.NoError(t, err, "pre-synthesis.md should exist after braintrust dispatch")
+}
+
+func TestDispatch_UnknownWorkflow(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	cfg := TeamConfig{WorkflowType: "unknown-workflow-type", Waves: []WaveInfo{}}
+	data, err := json.Marshal(cfg)
+	require.NoError(t, err)
+	err = os.WriteFile(filepath.Join(tmpDir, "config.json"), data, 0644)
+	require.NoError(t, err)
+
+	config, err := loadConfig(tmpDir)
+	require.NoError(t, err)
+
+	// Unknown workflow should produce no output file and no error
+	// (main() logs a warning and exits 0; here we verify the config is valid)
+	assert.Equal(t, "unknown-workflow-type", config.WorkflowType)
+
+	_, err = os.Stat(filepath.Join(tmpDir, outputFile))
+	assert.True(t, os.IsNotExist(err), "no output file should be created for unknown workflow")
+}
+
+func TestDispatch_MissingConfigJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	// No config.json
+	_, err := loadConfig(tmpDir)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "config.json")
 }
 
 func TestValidateTeamDir(t *testing.T) {

@@ -9,6 +9,9 @@
 package slashcmd
 
 import (
+	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -117,19 +120,136 @@ func DefaultCommands() []SlashCommand {
 		{"team-cancel", "Stop running team"},
 		{"plan-tickets", "Comprehensive planning workflow"},
 		{"teams", "List all teams"},
+		{"model", "Switch model (e.g. /model haiku)"},
 	}
 }
 
 // HelpText returns a formatted string listing all available slash commands,
-// suitable for display as a system message in the Claude panel.
-func HelpText() string {
+// suitable for display as a system message in the Claude panel. Extra commands
+// (e.g. dynamically loaded skill commands) are appended after the defaults.
+func HelpText(extra ...SlashCommand) string {
 	var sb strings.Builder
 	sb.WriteString("Available slash commands:\n")
-	for _, cmd := range DefaultCommands() {
+	all := append(DefaultCommands(), extra...)
+	for _, cmd := range all {
 		sb.WriteString("  /" + cmd.Name + " — " + cmd.Description + "\n")
 	}
-	sb.WriteString("\nLocal commands: /clear (clear conversation), /help (this message)")
+	sb.WriteString("\nLocal commands: /clear (clear conversation), /model [name] (switch model), /help (this message)")
 	return sb.String()
+}
+
+// ---------------------------------------------------------------------------
+// Skill command loader
+// ---------------------------------------------------------------------------
+
+// localCommandNames is the set of built-in TUI command names that must never
+// be overridden by skill discovery.
+var localCommandNames = map[string]struct{}{
+	"clear":  {},
+	"exit":   {},
+	"quit":   {},
+	"help":   {},
+	"cwd":    {},
+	"model":  {},
+	"effort": {},
+}
+
+// LoadSkillCommands scans configDir/skills/ for subdirectories and returns a
+// SlashCommand for each discovered skill. If the subdirectory contains a
+// SKILL.md file with YAML frontmatter that includes a description: field, that
+// value is used; otherwise a default description "Skill: <name>" is used.
+//
+// Commands whose names collide with localCommandNames are silently filtered.
+//
+// The function is fault-tolerant: unreadable directories or files produce
+// slog warnings but do not stop discovery of other skills.
+func LoadSkillCommands(configDir string) []SlashCommand {
+	skillsDir := filepath.Join(configDir, "skills")
+
+	entries, err := os.ReadDir(skillsDir)
+	if err != nil {
+		slog.Warn("slashcmd: cannot read skills directory", "dir", skillsDir, "err", err)
+		return nil
+	}
+
+	var cmds []SlashCommand
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+
+		if _, reserved := localCommandNames[name]; reserved {
+			continue
+		}
+
+		desc := extractSkillDescription(filepath.Join(skillsDir, name, "SKILL.md"), name)
+		cmds = append(cmds, SlashCommand{Name: name, Description: desc})
+	}
+
+	return cmds
+}
+
+// extractSkillDescription reads skillFile and tries to extract a description:
+// field from YAML frontmatter. Returns "Skill: <name>" when the file is
+// missing, unreadable, lacks frontmatter, or has no description field.
+func extractSkillDescription(skillFile, name string) string {
+	defaultDesc := "Skill: " + name
+
+	data, err := os.ReadFile(skillFile)
+	if err != nil {
+		return defaultDesc
+	}
+
+	desc := parseFrontmatterDescription(string(data))
+	if desc == "" {
+		return defaultDesc
+	}
+	return desc
+}
+
+// parseFrontmatterDescription extracts the value of the "description:" key
+// from YAML frontmatter at the top of content. Frontmatter must be delimited
+// by "---" lines at the start of the file. Returns an empty string if not
+// found.
+func parseFrontmatterDescription(content string) string {
+	if !strings.HasPrefix(content, "---") {
+		return ""
+	}
+
+	// Advance past the opening "---" and its trailing newline.
+	rest := content[3:]
+	if strings.HasPrefix(rest, "\r\n") {
+		rest = rest[2:]
+	} else if strings.HasPrefix(rest, "\n") {
+		rest = rest[1:]
+	}
+
+	// Locate the closing "---".
+	end := strings.Index(rest, "\n---")
+	if end < 0 {
+		return ""
+	}
+
+	frontmatter := rest[:end]
+
+	for _, line := range strings.Split(frontmatter, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "description:") {
+			continue
+		}
+		val := strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		// Strip optional surrounding quotes.
+		if len(val) >= 2 {
+			if (val[0] == '"' && val[len(val)-1] == '"') ||
+				(val[0] == '\'' && val[len(val)-1] == '\'') {
+				val = val[1 : len(val)-1]
+			}
+		}
+		return val
+	}
+
+	return ""
 }
 
 // ---------------------------------------------------------------------------
@@ -160,9 +280,10 @@ type SlashCmdModel struct {
 }
 
 // NewSlashCmdModel returns a SlashCmdModel initialised with DefaultCommands
-// and a maxVisible of 8. The dropdown starts hidden.
-func NewSlashCmdModel() SlashCmdModel {
-	cmds := DefaultCommands()
+// and a maxVisible of 8. The dropdown starts hidden. Any extra commands
+// (e.g. dynamically loaded skill commands) are appended after the defaults.
+func NewSlashCmdModel(extra ...SlashCommand) SlashCmdModel {
+	cmds := append(DefaultCommands(), extra...)
 	return SlashCmdModel{
 		commands:   cmds,
 		filtered:   append([]SlashCommand(nil), cmds...),

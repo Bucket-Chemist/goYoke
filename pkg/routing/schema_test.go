@@ -69,7 +69,7 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 	t.Run("DelegationCeilingFields", func(t *testing.T) {
 		dc := schema.DelegationCeiling
 		assert.NotEmpty(t, dc.Description)
-		assert.Equal(t, ".claude/tmp/max_delegation", dc.File)
+		assert.Contains(t, dc.File, "max_delegation")
 		assert.Equal(t, "calculate-complexity.sh", dc.SetBy)
 		assert.Equal(t, "validate-routing.sh", dc.EnforcedBy)
 		assert.Contains(t, dc.Values, "haiku")

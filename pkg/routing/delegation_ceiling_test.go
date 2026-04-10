@@ -8,7 +8,7 @@ import (
 
 func TestLoadDelegationCeiling_FileExists(t *testing.T) {
 	tmpDir := t.TempDir()
-	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	ceilingDir := filepath.Join(tmpDir, ".gogent", "tmp")
 	os.MkdirAll(ceilingDir, 0755)
 
 	ceilingPath := filepath.Join(ceilingDir, "max_delegation")

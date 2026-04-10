@@ -7,18 +7,32 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"syscall"
 	"time"
 )
 
 func main() {
+	// Crash diagnostics: log any panic or unexpected exit before output is redirected.
+	// SIGKILL cannot be caught, but panics and os.Exit(1) paths will appear here.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[FATAL] runner panic: %v\n%s", r, debug.Stack())
+		}
+		log.Printf("[INFO] runner exiting normally")
+	}()
+
+	// Ignore SIGPIPE: prevents runner death if a pipe write fails after
+	// stdout/stderr are redirected (e.g., if any inherited FD is still a pipe).
+	signal.Ignore(syscall.SIGPIPE)
+
 	// Validate arguments
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: gogent-team-run <team-directory>")
 		os.Exit(1)
 	}
 
-	teamDir := os.Args[1]
+	teamDir, _ := filepath.Abs(os.Args[1])
 
 	// Validate team directory exists
 	if stat, err := os.Stat(teamDir); err != nil || !stat.IsDir() {
@@ -32,10 +46,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Become session leader if not already
-	// This enables immunity to Ctrl+C in parent terminal
-	// Errors are expected in re-exec scenarios or systemd launches
-	_, _ = syscall.Setsid()
+	// Become session leader if not already.
+	// This enables immunity to Ctrl+C in parent terminal.
+	// EPERM is expected when already a session leader (e.g. launched with Setsid:true by the MCP tool).
+	if _, err := syscall.Setsid(); err != nil && err != syscall.EPERM {
+		fmt.Fprintf(os.Stderr, "Warning: setsid failed unexpectedly: %v (runner may be vulnerable to parent cleanup)\n", err)
+	}
 
 	// Acquire PID file (prevents double-start)
 	pidFile, err := acquirePIDFile(teamDir)
@@ -79,6 +95,11 @@ func main() {
 		log.Fatalf("Failed to initialize TeamRunner: %v", err)
 	}
 
+	// Initialize UDS client for TUI notifications (noop when GOFORTRESS_SOCKET is unset)
+	udsClient := NewTeamRunUDSClient(os.Getenv("GOFORTRESS_SOCKET"))
+	defer udsClient.Close()
+	runner.uds = udsClient
+
 	// Write startup state to config.json for external monitoring
 	pid := os.Getpid()
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -93,6 +114,26 @@ func main() {
 		log.Fatalf("Failed to write startup state to config.json: %v", err)
 	}
 	log.Printf("[INFO] main: wrote startup state (PID=%d, status=running) to config.json", pid)
+
+	// Register synthetic team parent agent with TUI
+	if !udsClient.isNoop() {
+		teamName := filepath.Base(teamDir)
+		workflowType := ""
+		runner.configMu.RLock()
+		if runner.config != nil {
+			workflowType = runner.config.WorkflowType
+		}
+		runner.configMu.RUnlock()
+		udsClient.notify(typeAgentRegister, agentRegisterPayload{
+			AgentID:     "team:" + teamName,
+			AgentType:   "team-run",
+			Description: workflowType + " team",
+		})
+		udsClient.notify(typeAgentUpdate, agentUpdatePayload{
+			AgentID: "team:" + teamName,
+			Status:  "running",
+		})
+	}
 
 	// Create context for cancellation
 	ctx, cancel := context.WithCancel(context.Background())
@@ -114,6 +155,18 @@ func main() {
 	// Wait for completion or signal
 	select {
 	case err := <-doneCh:
+		// Send team completion status to TUI before updating config
+		if !udsClient.isNoop() {
+			teamName := filepath.Base(teamDir)
+			status := "complete"
+			if err != nil {
+				status = "error"
+			}
+			udsClient.notify(typeAgentUpdate, agentUpdatePayload{
+				AgentID: "team:" + teamName,
+				Status:  status,
+			})
+		}
 		// Waves completed normally
 		if err != nil {
 			log.Printf("Wave execution failed: %v", err)

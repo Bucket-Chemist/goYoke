@@ -29,13 +29,13 @@ const targetTeam = args.length > 0 ? args.join(' ') : null;
 ### 2. Discover Session Directory
 
 ```javascript
-// Resolve session directory: env var → current-session marker → fallback
+// Resolve gogent session directory from .gogent/current-session: env var → current-session marker → fallback
 Bash({
-    command: `session_dir="\${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"; session_dir="\${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"; echo "$session_dir"`,
-    description: "Resolve session directory"
+    command: `project_root="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"; gogent_session_dir="$(cat "$project_root/.gogent/current-session" 2>/dev/null)"; gogent_session_dir="${gogent_session_dir:-$project_root/.gogent/sessions/unknown}"; echo "$gogent_session_dir"`,
+    description: "Resolve gogent session directory from .gogent/current-session"
 })
 // Verify it exists
-Bash({command: `test -d "${sessionDir}" && echo "exists" || echo "missing"`})
+Bash({command: `test -d "${gogentSessionDir}" && echo "exists" || echo "missing"`})
 // If missing, error and exit
 ```
 
@@ -43,7 +43,7 @@ Bash({command: `test -d "${sessionDir}" && echo "exists" || echo "missing"`})
 
 ```javascript
 Bash({
-    command: `find ${sessionDir}/teams -maxdepth 1 -type d -name "*.*" | sort`,
+    command: `find ${gogentSessionDir}/teams -maxdepth 1 -type d -name "*.*" | sort`,
     description: "List all team directories"
 })
 // Each directory format: {timestamp}.{name}

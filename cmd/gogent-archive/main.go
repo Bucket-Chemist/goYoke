@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
@@ -106,7 +108,7 @@ func run() error {
 	_ = hMetrics // Metrics available for future use (e.g., performance monitoring)
 
 	// Render markdown for human consumption
-	mdPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff.md")
+	mdPath := filepath.Join(config.ProjectMemoryDir(projectDir), "last-handoff.md")
 	if err := os.MkdirAll(filepath.Dir(mdPath), 0755); err != nil {
 		return fmt.Errorf("[gogent-archive] Failed to create directory for %s: %w", mdPath, err)
 	}
@@ -119,6 +121,10 @@ func run() error {
 	if err := session.ArchiveArtifacts(*handoffCfg, event.SessionID); err != nil {
 		return fmt.Errorf("[gogent-archive] Failed to archive artifacts: %w", err)
 	}
+
+	// Clean up permission gate session cache (PERM-007).
+	cleanupPermCache(event.SessionID)
+	cleanupSkillGuard(event.SessionID)
 
 	// GOgent-041c: Analyze intent outcomes (non-blocking)
 	if err := analyzeAndUpdateIntentOutcomes(projectDir, event.SessionID); err != nil {
@@ -187,7 +193,7 @@ func buildSessionActions(projectDir, sessionID string) session.SessionActions {
 	}
 
 	// Try to read handoff for this session to get some context
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(config.ProjectMemoryDir(projectDir), "handoffs.jsonl")
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
 		return actions // Return empty on error
@@ -220,7 +226,7 @@ func buildSessionActions(projectDir, sessionID string) session.SessionActions {
 // updateIntentsWithOutcomes updates user-intents.jsonl with outcome analysis
 // Reads all intents, updates matching ones, rewrites entire file
 func updateIntentsWithOutcomes(projectDir string, analyzedIntents []session.UserIntent, outcomes []session.IntentOutcome) error {
-	intentsPath := filepath.Join(projectDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(config.ProjectMemoryDir(projectDir), "user-intents.jsonl")
 
 	// Load ALL intents from file
 	allIntents, err := session.LoadAllUserIntents(intentsPath)
@@ -262,6 +268,57 @@ func updateIntentsWithOutcomes(projectDir string, analyzedIntents []session.User
 	return nil
 }
 
+// cleanupPermCache removes the permission gate session cache for the given
+// session ID. The cache file is at:
+//
+//	$XDG_RUNTIME_DIR/gofortress-perm-cache-{session_id}.json
+//
+// This is called during session end cleanup to prevent stale caches from
+// accumulating. Errors are logged but non-fatal — a missing cache is normal
+// for sessions that never triggered the permission gate.
+func cleanupPermCache(sessionID string) {
+	dir := os.Getenv("XDG_RUNTIME_DIR")
+	if dir == "" {
+		dir = os.TempDir()
+	}
+
+	path := filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", sessionID))
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove permission cache %s: %v\n", path, err)
+	}
+}
+
+// cleanupSkillGuard removes the skill guard files for the given session ID.
+// If the guard file records an active holder PID, SIGTERM is sent before removal
+// so any blocked tool call can unblock cleanly.
+// Errors are logged but non-fatal — a missing guard is normal for sessions that
+// never executed a skill.
+func cleanupSkillGuard(sessionID string) {
+	guardPath := config.GetGuardFilePath(sessionID)
+
+	data, err := os.ReadFile(guardPath)
+	if err == nil && len(data) > 0 {
+		var active config.ActiveSkill
+		if jsonErr := json.Unmarshal(data, &active); jsonErr == nil && active.HolderPID > 0 {
+			if killErr := syscall.Kill(active.HolderPID, syscall.SIGTERM); killErr != nil && killErr != syscall.ESRCH {
+				fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to SIGTERM skill guard holder PID %d: %v\n", active.HolderPID, killErr)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	if err := os.Remove(guardPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove skill guard file %s: %v\n", guardPath, err)
+	}
+
+	lockPath := config.GetGuardLockPath(sessionID)
+	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove skill guard lock %s: %v\n", lockPath, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "[gogent-archive] Cleaned up skill guard for session %s\n", sessionID)
+}
+
 // getProjectDir determines project directory from env or cwd
 // Exits with error if detection fails (matching run() behavior)
 func getProjectDir() string {
@@ -290,12 +347,12 @@ func listSessions() {
 	listFlags.Parse(os.Args[2:])
 
 	projectDir := getProjectDir()
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(config.ProjectMemoryDir(projectDir), "handoffs.jsonl")
 
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load handoffs: %v\n", err)
-		fmt.Fprintln(os.Stderr, "  Verify .claude/memory/handoffs.jsonl exists and is readable.")
+		fmt.Fprintln(os.Stderr, "  Verify .gogent/memory/handoffs.jsonl exists and is readable.")
 		os.Exit(1)
 	}
 
@@ -339,12 +396,12 @@ func listSessions() {
 // showSession renders a specific session handoff as markdown to stdout
 func showSession(sessionID string) {
 	projectDir := getProjectDir()
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(config.ProjectMemoryDir(projectDir), "handoffs.jsonl")
 
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load handoffs: %v\n", err)
-		fmt.Fprintln(os.Stderr, "  Verify .claude/memory/handoffs.jsonl exists and is readable.")
+		fmt.Fprintln(os.Stderr, "  Verify .gogent/memory/handoffs.jsonl exists and is readable.")
 		os.Exit(1)
 	}
 
@@ -367,12 +424,12 @@ func showSession(sessionID string) {
 // showStats displays aggregate session statistics with breakdowns
 func showStats() {
 	projectDir := getProjectDir()
-	handoffPath := filepath.Join(projectDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(config.ProjectMemoryDir(projectDir), "handoffs.jsonl")
 
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load handoffs: %v\n", err)
-		fmt.Fprintln(os.Stderr, "  Verify .claude/memory/handoffs.jsonl exists and is readable.")
+		fmt.Fprintln(os.Stderr, "  Verify .gogent/memory/handoffs.jsonl exists and is readable.")
 		os.Exit(1)
 	}
 
@@ -1001,7 +1058,7 @@ func generateWeeklySummary() {
 	}
 
 	// Load all user intents
-	intentsPath := filepath.Join(projectDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(config.ProjectMemoryDir(projectDir), "user-intents.jsonl")
 	intents, err := session.LoadAllUserIntents(intentsPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load user intents: %v\n", err)

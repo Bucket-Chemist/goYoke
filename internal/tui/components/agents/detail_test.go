@@ -398,3 +398,88 @@ func TestView_ErrorSectionVisibleForError(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Acceptance Criteria
+// ---------------------------------------------------------------------------
+
+func TestView_ACSection_EmptyNotShown(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	// AcceptanceCriteria is nil/empty by default.
+	m.SetAgent(a)
+	view := m.View()
+	if strings.Contains(view, "Acceptance Criteria") {
+		t.Errorf("empty AC list should NOT render section; got:\n%s", view)
+	}
+}
+
+func TestView_ACSection_MixedCriteria(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	a.AcceptanceCriteria = []state.AcceptanceCriterion{
+		{Text: "AC checklist renders with indicators", Completed: true},
+		{Text: "Pending items show unchecked box", Completed: false},
+	}
+	m.SetAgent(a)
+	view := m.View()
+
+	if !strings.Contains(view, "Acceptance Criteria") {
+		t.Errorf("View() should show 'Acceptance Criteria' section; got:\n%s", view)
+	}
+	if !strings.Contains(view, "[x]") {
+		t.Errorf("View() should show '[x]' for completed item; got:\n%s", view)
+	}
+	if !strings.Contains(view, "[ ]") {
+		t.Errorf("View() should show '[ ]' for pending item; got:\n%s", view)
+	}
+	if !strings.Contains(view, "AC checklist renders with indicators") {
+		t.Errorf("View() should show completed item text; got:\n%s", view)
+	}
+	if !strings.Contains(view, "Pending items show unchecked box") {
+		t.Errorf("View() should show pending item text; got:\n%s", view)
+	}
+}
+
+func TestView_ACSection_AllCompleted(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	a.AcceptanceCriteria = []state.AcceptanceCriterion{
+		{Text: "First criterion done", Completed: true},
+		{Text: "Second criterion done", Completed: true},
+	}
+	m.SetAgent(a)
+	view := m.View()
+
+	if strings.Contains(view, "[ ]") {
+		t.Errorf("all-completed AC should not show '[ ]'; got:\n%s", view)
+	}
+	// Both should show as completed.
+	checkCount := strings.Count(view, "[x]")
+	if checkCount < 2 {
+		t.Errorf("all-completed AC should show 2 '[x]' markers, got %d; view:\n%s", checkCount, view)
+	}
+}
+
+func TestView_ACSection_AllPending(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent()
+	a.AcceptanceCriteria = []state.AcceptanceCriterion{
+		{Text: "Not done yet", Completed: false},
+		{Text: "Also pending", Completed: false},
+	}
+	m.SetAgent(a)
+	view := m.View()
+
+	if strings.Contains(view, "[x]") {
+		t.Errorf("all-pending AC should not show '[x]'; got:\n%s", view)
+	}
+	uncheckedCount := strings.Count(view, "[ ]")
+	if uncheckedCount < 2 {
+		t.Errorf("all-pending AC should show 2 '[ ]' markers, got %d; view:\n%s", uncheckedCount, view)
+	}
+}
+

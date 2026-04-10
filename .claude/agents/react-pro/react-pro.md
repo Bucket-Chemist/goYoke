@@ -1,4 +1,5 @@
 ---
+id: react-pro
 name: React Pro
 description: >
   Expert React development (React 18+ and Ink). Auto-activated for React projects.
@@ -6,6 +7,7 @@ description: >
   Specializes in hooks-based components, state management, and terminal UIs with Ink.
 
 model: sonnet
+subagent_type: React Pro
 thinking:
   enabled: true
   budget: 10000

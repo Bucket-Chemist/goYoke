@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
 )
 
@@ -75,12 +77,12 @@ func TestRun_ValidSessionEnd(t *testing.T) {
 	}
 
 	// Verify handoff files created
-	handoffJSONL := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	handoffJSONL := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
 	if _, err := os.Stat(handoffJSONL); os.IsNotExist(err) {
 		t.Error("handoffs.jsonl was not created")
 	}
 
-	handoffMD := filepath.Join(tmpDir, ".claude", "memory", "last-handoff.md")
+	handoffMD := filepath.Join(tmpDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffMD); os.IsNotExist(err) {
 		t.Error("last-handoff.md was not created")
 	}
@@ -145,15 +147,15 @@ func TestRun_MissingProjectDir(t *testing.T) {
 	// Should succeed using cwd as project directory
 	err = run()
 	if err != nil {
-		t.Logf("Run failed (may be expected if .claude/memory not writable in cwd): %v", err)
+		t.Logf("Run failed (may be expected if .gogent/memory not writable in cwd): %v", err)
 		// Check that it at least attempted to use the right directory
-		if !strings.Contains(err.Error(), expectedDir) && !strings.Contains(err.Error(), ".claude/memory") {
+		if !strings.Contains(err.Error(), expectedDir) && !strings.Contains(err.Error(), ".gogent/memory") {
 			t.Errorf("Error should reference cwd path, got: %v", err)
 		}
 	}
 
 	// Verify handoff was attempted in cwd (may not succeed if cwd is read-only)
-	handoffPath := filepath.Join(expectedDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(expectedDir, ".gogent", "memory", "handoffs.jsonl")
 	if _, statErr := os.Stat(handoffPath); statErr == nil {
 		t.Logf("Successfully created handoff in cwd: %s", handoffPath)
 		defer os.RemoveAll(filepath.Join(expectedDir, ".claude"))
@@ -320,12 +322,12 @@ func TestRun_WithMultipleMetrics(t *testing.T) {
 	}
 
 	// Verify handoff files were created
-	handoffJSONL := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	handoffJSONL := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
 	if _, err := os.Stat(handoffJSONL); os.IsNotExist(err) {
 		t.Errorf("Expected handoff JSONL at %s, but it doesn't exist", handoffJSONL)
 	}
 
-	handoffMD := filepath.Join(tmpDir, ".claude", "memory", "last-handoff.md")
+	handoffMD := filepath.Join(tmpDir, ".gogent", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffMD); os.IsNotExist(err) {
 		t.Errorf("Expected handoff MD at %s, but it doesn't exist", handoffMD)
 	}
@@ -350,7 +352,7 @@ func TestBuildSessionActions(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a handoff with session data
-	handoffPath := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoffData := `{"session_id":"test-session","timestamp":1000,"version":"1.0","context":{"git_info":{"is_dirty":true,"uncommitted":["file1.go","file2.go"],"branch":"main"},"metrics":{"tool_calls":5,"errors":0,"violations":0}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[],"user_intents":[],"decisions":[],"preference_overrides":[],"performance_metrics":[]}}`
@@ -397,7 +399,7 @@ func TestBuildSessionActions_SessionNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a handoff for a different session
-	handoffPath := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoffData := `{"session_id":"other-session","timestamp":1000,"version":"1.0","context":{"git_info":{},"metrics":{}},"artifacts":{}}`
@@ -415,7 +417,7 @@ func TestBuildSessionActions_SessionNotFound(t *testing.T) {
 // TestUpdateIntentsWithOutcomes tests the updateIntentsWithOutcomes helper function
 func TestUpdateIntentsWithOutcomes(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	// Create initial intents file
@@ -465,12 +467,13 @@ func TestUpdateIntentsWithOutcomes(t *testing.T) {
 func TestUpdateIntentsWithOutcomes_MissingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// No intents file exists
+	// No intents file exists — ProjectMemoryDir creates the directory,
+	// and LoadAllUserIntents handles missing file gracefully
 	err := updateIntentsWithOutcomes(tmpDir, []session.UserIntent{}, []session.IntentOutcome{})
 
-	// Should return an error when file doesn't exist
-	if err == nil {
-		t.Error("Expected error when intents file doesn't exist, got nil")
+	// Should succeed (graceful handling of missing file)
+	if err != nil {
+		t.Errorf("Expected no error for missing intents file, got: %v", err)
 	}
 }
 
@@ -487,7 +490,7 @@ func TestGenerateWeeklySummary_DefaultRange(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create user-intents.jsonl with test data
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	// Create intents from last 7 days
@@ -536,7 +539,7 @@ func TestGenerateWeeklySummary_CustomDateRange(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create user-intents.jsonl
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	// Create intent for specific date
@@ -583,7 +586,7 @@ func TestGenerateWeeklySummary_IntentsOnlyFlag(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create user-intents.jsonl
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	now := time.Now()
@@ -628,7 +631,7 @@ func TestGenerateWeeklySummary_NoIntents(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create empty user-intents.jsonl
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 	os.WriteFile(intentsPath, []byte(""), 0644)
 
@@ -662,7 +665,7 @@ func TestGenerateWeeklySummary_DriftDetection(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create intents spanning 2 weeks (to enable drift comparison)
-	intentsPath := filepath.Join(tmpDir, ".claude", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	now := time.Now()
@@ -831,7 +834,7 @@ func TestShowSession_ValidSession(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create handoff for session
-	handoffPath := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoff := session.Handoff{
@@ -878,7 +881,7 @@ func TestShowSession_RendersFullMarkdown(t *testing.T) {
 	defer os.Unsetenv("GOGENT_PROJECT_DIR")
 
 	// Create handoff with rich content
-	handoffPath := filepath.Join(tmpDir, ".claude", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoff := session.Handoff{
@@ -946,3 +949,122 @@ func TestFilterBetween_EmptyHandoffs(t *testing.T) {
 }
 
 // Note: TestFilterByArtifacts_* and TestTruncateForTable are in subcommands_test.go and sharp_edges_test.go
+
+// --- cleanupPermCache() Tests (PERM-007) ---
+
+func TestCleanupPermCache(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	sessionID := "test-session-cleanup"
+	cachePath := filepath.Join(tmpDir, fmt.Sprintf("gofortress-perm-cache-%s.json", sessionID))
+
+	// Create a fake cache file.
+	if err := os.WriteFile(cachePath, []byte(`{"Bash":"allow_session"}`), 0600); err != nil {
+		t.Fatalf("Failed to create fake cache file: %v", err)
+	}
+
+	// Verify it exists before cleanup.
+	if _, err := os.Stat(cachePath); err != nil {
+		t.Fatalf("Expected cache file to exist before cleanup, got: %v", err)
+	}
+
+	cleanupPermCache(sessionID)
+
+	// Verify it is gone after cleanup.
+	if _, err := os.Stat(cachePath); !os.IsNotExist(err) {
+		t.Errorf("Expected cache file to be removed, but os.Stat returned: %v", err)
+	}
+}
+
+func TestCleanupPermCache_NoFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	// Should not panic or write an error when no cache exists.
+	oldStderr := os.Stderr
+	_, wErr, _ := os.Pipe()
+	os.Stderr = wErr
+
+	cleanupPermCache("nonexistent-session")
+
+	wErr.Close()
+	os.Stderr = oldStderr
+	// Reaching here without panic is sufficient.
+}
+
+// --- cleanupSkillGuard() Tests ---
+
+func TestCleanupSkillGuard_RemovesBothFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	sessionID := "test-skill-guard-cleanup"
+	guardPath := config.GetGuardFilePath(sessionID)
+	lockPath := config.GetGuardLockPath(sessionID)
+
+	// Create guard JSON without a holder PID.
+	guardData := config.ActiveSkill{
+		FormatVersion: 2,
+		Skill:         "test-skill",
+		SessionID:     sessionID,
+	}
+	data, err := json.Marshal(guardData)
+	if err != nil {
+		t.Fatalf("Failed to marshal guard data: %v", err)
+	}
+	if err := os.WriteFile(guardPath, data, 0600); err != nil {
+		t.Fatalf("Failed to write guard file: %v", err)
+	}
+	if err := os.WriteFile(lockPath, []byte{}, 0600); err != nil {
+		t.Fatalf("Failed to write lock file: %v", err)
+	}
+
+	cleanupSkillGuard(sessionID)
+
+	if _, err := os.Stat(guardPath); !os.IsNotExist(err) {
+		t.Errorf("Expected guard file to be removed, but os.Stat returned: %v", err)
+	}
+	if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
+		t.Errorf("Expected lock file to be removed, but os.Stat returned: %v", err)
+	}
+}
+
+func TestCleanupSkillGuard_NoFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	// Should not panic or error when no guard files exist.
+	cleanupSkillGuard("nonexistent-skill-guard-session")
+	// Reaching here without panic is sufficient.
+}
+
+func TestCleanupSkillGuard_DeadPID(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	sessionID := "test-skill-guard-dead-pid"
+	guardPath := config.GetGuardFilePath(sessionID)
+
+	// Write guard file with a PID that is certainly not running.
+	guardData := config.ActiveSkill{
+		FormatVersion: 2,
+		Skill:         "test-skill",
+		SessionID:     sessionID,
+		HolderPID:     2147483647, // max int32, certainly not a real PID
+	}
+	data, err := json.Marshal(guardData)
+	if err != nil {
+		t.Fatalf("Failed to marshal guard data: %v", err)
+	}
+	if err := os.WriteFile(guardPath, data, 0600); err != nil {
+		t.Fatalf("Failed to write guard file: %v", err)
+	}
+
+	// Should handle ESRCH gracefully and still remove the file.
+	cleanupSkillGuard(sessionID)
+
+	if _, err := os.Stat(guardPath); !os.IsNotExist(err) {
+		t.Errorf("Expected guard file to be removed after dead-PID cleanup, but os.Stat returned: %v", err)
+	}
+}

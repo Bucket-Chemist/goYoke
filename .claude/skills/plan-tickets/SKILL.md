@@ -42,7 +42,7 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 **Required state:**
 
 - Project directory with identifiable language (go.mod, pyproject.toml, etc.)
-- Writeable `.claude/sessions/` directory (auto-created by session hook)
+- Writeable `.gogent/sessions/` directory (auto-created by session hook)
 - Session directory for artifacts (SESSION_DIR from session context)
 
 **Optional inputs:**
@@ -284,10 +284,10 @@ Be adversarial to the plan, but constructive to the outcome.
 
 ```bash
 # Read review verdict
-session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
-verdict=$(jq -r '.verdict' "$session_dir/review-metadata.json")
-critical_count=$(jq -r '.issue_counts.critical' "$session_dir/review-metadata.json")
+gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
+gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
+verdict=$(jq -r '.verdict' "$gogent_session_dir/review-metadata.json")
+critical_count=$(jq -r '.issue_counts.critical' "$gogent_session_dir/review-metadata.json")
 ```
 
 **Branch based on verdict:**

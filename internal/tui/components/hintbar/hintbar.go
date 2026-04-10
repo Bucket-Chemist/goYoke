@@ -55,6 +55,37 @@ var hintSets = map[string][]HintItem{
 		{Key: "alt+v", Desc: "view plan"},
 		{Key: "Esc", Desc: "exit plan"},
 	},
+	"agents": {
+		{Key: "↑/↓", Desc: "navigate"},
+		{Key: "Enter", Desc: "detail"},
+		{Key: "Esc", Desc: "back"},
+		{Key: "Tab", Desc: "next panel"},
+	},
+	"agents_detail": {
+		{Key: "↑/↓", Desc: "scroll"},
+		{Key: "Esc", Desc: "back to tree"},
+		{Key: "Tab", Desc: "next panel"},
+	},
+	"taskboard": {
+		{Key: "↑/↓", Desc: "navigate"},
+		{Key: "Tab", Desc: "next panel"},
+	},
+	"teams": {
+		{Key: "↑/↓", Desc: "navigate"},
+		{Key: "Enter", Desc: "status"},
+		{Key: "x", Desc: "cancel"},
+	},
+	"drawer": {
+		{Key: "↑/↓", Desc: "scroll"},
+		{Key: "alt+o", Desc: "full options"},
+		{Key: "alt+v", Desc: "full plan"},
+		{Key: "Esc", Desc: "minimize"},
+	},
+	"options": {
+		{Key: "↑/↓", Desc: "navigate"},
+		{Key: "Enter", Desc: "select"},
+		{Key: "Esc", Desc: "close"},
+	},
 }
 
 // separator is the string used between hint items in the rendered row.

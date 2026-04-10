@@ -33,8 +33,8 @@ Usage: /team-cancel <team-name>
 
 Check in order:
 1. Environment variable `GOGENT_SESSION_DIR`
-2. Read `.claude/current-session` marker file
-3. Fallback: `.claude/sessions/$(date +%Y%m%d-%H%M%S)`
+2. Read `{project_root}/.gogent/current-session` marker file
+3. Fallback: `{project_root}/.gogent/sessions/unknown`
 
 If no session found:
 ```
@@ -43,12 +43,12 @@ Error: No active session directory found
 
 ### 3. Locate Team Directory
 
-Team directory pattern: `{session_dir}/teams/{team_name}/`
+Team directory pattern: `{gogent_session_dir}/teams/{team_name}/`
 
 If directory doesn't exist:
 ```bash
 # List available teams
-ls -1 {session_dir}/teams/ 2>/dev/null || echo "none"
+ls -1 {gogent_session_dir}/teams/ 2>/dev/null || echo "none"
 ```
 
 Output:

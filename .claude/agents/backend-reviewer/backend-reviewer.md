@@ -1,4 +1,5 @@
 ---
+id: backend-reviewer
 name: Backend Reviewer
 description: >
   Backend code quality and security reviewer. Specializes in API design,
@@ -12,7 +13,7 @@ thinking:
 
 tier: 2
 category: review
-subagent_type: Explore
+subagent_type: Backend Reviewer
 
 triggers:
   - "review backend"

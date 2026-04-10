@@ -62,6 +62,12 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 	m.cliReady = true
 	m.sessionID = msg.SessionID
 	m.activeModel = msg.Model
+	// Latch the 1M context flag on the first session init so it survives
+	// model switches. Once set, it is never cleared — the user's account
+	// capability does not change mid-session.
+	if strings.Contains(msg.Model, "[1m]") {
+		m.context1M = true
+	}
 	// Persist session ID to active provider for resume support (TUI-031).
 	if m.shared != nil && m.shared.providerState != nil && msg.SessionID != "" {
 		m.shared.providerState.SetSessionID(msg.SessionID)
@@ -113,6 +119,35 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 // the Claude panel and syncs the agent registry from Task tool_use blocks.
 func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	var rootActivityAppended bool
+
+	// Pre-scan: detect thinking blocks and emit ThinkingActiveMsg before
+	// forwarding text content. Emitting first means text content (AssistantMsg)
+	// is delivered after, preserving the lastMsg order expected by the panel.
+	// If any block is "thinking", the assistant is in its reasoning phase.
+	// If only text blocks are present, it has transitioned to responding.
+	if m.shared.claudePanel != nil && len(msg.Message.Content) > 0 {
+		hasThinking := false
+		hasText := false
+		for _, block := range msg.Message.Content {
+			if block.Type == "thinking" {
+				hasThinking = true
+			} else if block.Type == "text" && block.Text != "" {
+				hasText = true
+			}
+		}
+		if hasThinking {
+			cmd := m.shared.claudePanel.HandleMsg(ThinkingActiveMsg{Active: true})
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		} else if hasText {
+			cmd := m.shared.claudePanel.HandleMsg(ThinkingActiveMsg{Active: false})
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
 
 	// Forward text and tool_use content to Claude panel.
 	if m.shared.claudePanel != nil {
@@ -123,23 +158,29 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 				cmd := m.shared.claudePanel.HandleMsg(AssistantMsg{
 					Text:      block.Text,
 					Streaming: streaming,
+					MessageID: msg.Message.ID,
 				})
 				if cmd != nil {
 					cmds = append(cmds, cmd)
 				}
 			case block.Type == "tool_use" && block.Name != "":
-				// Show tool calls in the chat so the user has visibility
-				// into what the router is doing (spawn_agent, Read, etc.).
-				// Extract a human-readable target (file path, command, pattern)
-				// instead of showing raw JSON.
 				activity := cli.ExtractToolActivity(block)
-				cmd := m.shared.claudePanel.HandleMsg(ToolUseMsg{
-					ToolName: block.Name,
-					ToolID:   block.ID,
-					Input:    activity.Target,
-				})
-				if cmd != nil {
-					cmds = append(cmds, cmd)
+				if msg.ParentToolUseID == nil {
+					// Root-level tool_use: route to agent registry activity panel.
+					if m.shared.agentRegistry != nil {
+						m.shared.agentRegistry.AppendActivity("router-root", activity)
+						rootActivityAppended = true
+					}
+				} else {
+					// Subagent tool_use: show inline in conversation panel.
+					cmd := m.shared.claudePanel.HandleMsg(ToolUseMsg{
+						ToolName: block.Name,
+						ToolID:   block.ID,
+						Input:    activity.Target,
+					})
+					if cmd != nil {
+						cmds = append(cmds, cmd)
+					}
 				}
 			}
 		}
@@ -178,7 +219,7 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 	// Sync agent registry from Task tool_use blocks.
 	if m.shared.agentRegistry != nil {
 		result := cli.SyncAssistantEvent(msg, m.shared.agentRegistry)
-		if len(result.Registered) > 0 || len(result.Activity) > 0 {
+		if len(result.Registered) > 0 || len(result.Activity) > 0 || rootActivityAppended {
 			// C-3: invalidate before reading Tree() so the view reflects
 			// the mutations that SyncAssistantEvent just applied.
 			m.shared.agentRegistry.InvalidateTreeCache()
@@ -248,11 +289,21 @@ func (m AppModel) handleUserEvent(msg cli.UserEvent) (tea.Model, tea.Cmd) {
 	// Extract post-hoc diffs.
 	m = m.extractDiffs(msg)
 
-	// Dispatch tool_result blocks to the Claude panel so it can show ✓/✗
-	// on the matching tool_use block in the conversation view.
-	if m.shared != nil && m.shared.claudePanel != nil {
+	// Dispatch tool_result blocks: root-level → agent registry; subagent → Claude panel.
+	var rootResultUpdated bool
+	if m.shared != nil {
 		for _, block := range msg.Message.Content {
-			if block.Type == "tool_result" && block.ToolUseID != "" {
+			if block.Type != "tool_result" || block.ToolUseID == "" {
+				continue
+			}
+			if msg.ParentToolUseID == nil {
+				// Root-level tool_result: update activity entry in agent registry.
+				if m.shared.agentRegistry != nil {
+					m.shared.agentRegistry.UpdateActivityResult("router-root", block.ToolUseID, !block.IsError)
+					rootResultUpdated = true
+				}
+			} else if m.shared.claudePanel != nil {
+				// Subagent tool_result: update conversation panel block.
 				m.shared.claudePanel.HandleMsg(ToolResultMsg{
 					ToolID:  block.ToolUseID,
 					Success: !block.IsError,
@@ -264,7 +315,7 @@ func (m AppModel) handleUserEvent(msg cli.UserEvent) (tea.Model, tea.Cmd) {
 	// Sync agent registry from tool_result blocks.
 	if m.shared.agentRegistry != nil {
 		result := cli.SyncUserEvent(msg, m.shared.agentRegistry)
-		if len(result.Updated) > 0 || len(result.Activity) > 0 {
+		if len(result.Updated) > 0 || len(result.Activity) > 0 || rootResultUpdated {
 			// C-3: invalidate before reading Tree() so the view reflects
 			// the mutations that SyncUserEvent just applied.
 			m.shared.agentRegistry.InvalidateTreeCache()

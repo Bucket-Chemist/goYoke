@@ -77,10 +77,31 @@ func GetViolationsLogPath() string {
 	return filepath.Join(GetGOgentDir(), "routing-violations.jsonl")
 }
 
+// RuntimeDir returns the project-scoped runtime directory.
+// Priority: GOGENT_RUNTIME_DIR env var > {projectDir}/.gogent
+// Creates the directory if it does not exist (idempotent via os.MkdirAll).
+func RuntimeDir(projectDir string) string {
+	if override := os.Getenv("GOGENT_RUNTIME_DIR"); override != "" {
+		os.MkdirAll(override, 0755)
+		return override
+	}
+	dir := filepath.Join(projectDir, ".gogent")
+	os.MkdirAll(dir, 0755)
+	return dir
+}
+
+// ProjectMemoryDir returns the memory subdirectory within the project runtime dir.
+// Creates the directory if it does not exist.
+func ProjectMemoryDir(projectDir string) string {
+	dir := filepath.Join(RuntimeDir(projectDir), "memory")
+	os.MkdirAll(dir, 0755)
+	return dir
+}
+
 // GetProjectViolationsLogPath returns project-scoped violation log path.
 // Used for dual-write pattern - integrates with session archive.
 func GetProjectViolationsLogPath(projectDir string) string {
-	return filepath.Join(projectDir, ".claude", "memory", "routing-violations.jsonl")
+	return filepath.Join(ProjectMemoryDir(projectDir), "routing-violations.jsonl")
 }
 
 // GetToolCounterPath returns path to tool counter file.
@@ -387,4 +408,24 @@ func GetSharpEdgeHitsPathWithProjectDir() string {
 		return filepath.Join(projectDir, ".gogent", "sharp-edge-hits.jsonl")
 	}
 	return filepath.Join(GetGOgentDataDir(), "sharp-edge-hits.jsonl")
+}
+
+// GetGuardsDir returns the path to the session-scoped guard directory.
+// Creates the directory via os.MkdirAll if it doesn't exist.
+func GetGuardsDir() string {
+	dir := filepath.Join(GetGOgentDir(), "guards")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create guards dir at %s: %v\n", dir, err)
+	}
+	return dir
+}
+
+// GetGuardFilePath returns the path to the guard JSON file for a given session ID.
+func GetGuardFilePath(sessionID string) string {
+	return filepath.Join(GetGuardsDir(), sessionID+".json")
+}
+
+// GetGuardLockPath returns the path to the guard lock file for a given session ID.
+func GetGuardLockPath(sessionID string) string {
+	return filepath.Join(GetGuardsDir(), sessionID+".lock")
 }

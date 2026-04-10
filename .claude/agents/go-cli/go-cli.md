@@ -1,4 +1,5 @@
 ---
+id: go-cli
 name: GO CLI (Cobra)
 description: >
   Cobra CLI specialist for professional command-line applications.
@@ -6,6 +7,7 @@ description: >
   CLI UX, configuration management, shell completion, and argument validation.
 
 model: sonnet
+subagent_type: GO CLI (Cobra)
 thinking:
   enabled: true
   budget: 10000

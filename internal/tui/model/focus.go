@@ -20,11 +20,14 @@ const (
 
 	// FocusOptionsDrawer indicates that the options drawer holds focus (TDS-008).
 	FocusOptionsDrawer
+
+	// FocusTeamsDrawer indicates that the teams health drawer holds focus.
+	FocusTeamsDrawer
 )
 
 // focusTargetCount is the total number of FocusTarget values.
 // Update this constant whenever a new FocusTarget is added.
-const focusTargetCount = int(FocusOptionsDrawer) + 1
+const focusTargetCount = int(FocusTeamsDrawer) + 1
 
 // String returns a human-readable name for the FocusTarget.
 func (f FocusTarget) String() string {
@@ -37,6 +40,8 @@ func (f FocusTarget) String() string {
 		return "Plan Drawer"
 	case FocusOptionsDrawer:
 		return "Options Drawer"
+	case FocusTeamsDrawer:
+		return "Teams Drawer"
 	default:
 		return "Unknown"
 	}
@@ -65,6 +70,8 @@ func FocusRing(expandedDrawers []string) []FocusTarget {
 			ring = append(ring, FocusPlanDrawer)
 		case "options":
 			ring = append(ring, FocusOptionsDrawer)
+		case "teams":
+			ring = append(ring, FocusTeamsDrawer)
 		}
 	}
 	return ring
@@ -120,11 +127,14 @@ const (
 
 	// RPMPlanPreview shows the implementation plan preview.
 	RPMPlanPreview
+
+	// RPMTeams shows the team detail panel for the selected team.
+	RPMTeams
 )
 
 // rightPanelModeCount is the total number of RightPanelMode values.
 // Update this constant whenever a new RightPanelMode is added.
-const rightPanelModeCount = int(RPMPlanPreview) + 1
+const rightPanelModeCount = int(RPMTeams) + 1
 
 // String returns a human-readable name for the RightPanelMode.
 func (r RightPanelMode) String() string {
@@ -139,6 +149,8 @@ func (r RightPanelMode) String() string {
 		return "Telemetry"
 	case RPMPlanPreview:
 		return "Plan Preview"
+	case RPMTeams:
+		return "Teams"
 	default:
 		return "Unknown"
 	}

@@ -1,10 +1,12 @@
 ---
+id: orchestrator
 name: Orchestrator
 description: >
   Handles ambiguous scope, cross-module planning, user interviews,
   design tradeoffs, and debugging loops. Invoked when terminal
   cannot route confidently.
 model: sonnet
+subagent_type: Orchestrator
 thinking:
   enabled: true
   budget: 16000

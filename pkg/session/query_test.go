@@ -17,7 +17,7 @@ func TestNewQuery(t *testing.T) {
 
 func TestQuerySharpEdges_NoFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestQuerySharpEdges_NoFilters(t *testing.T) {
 
 func TestQuerySharpEdges_FileFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -98,7 +98,7 @@ func TestQuerySharpEdges_FileFilter(t *testing.T) {
 
 func TestQuerySharpEdges_ErrorTypeFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -122,7 +122,7 @@ func TestQuerySharpEdges_ErrorTypeFilter(t *testing.T) {
 
 func TestQuerySharpEdges_SeverityFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -146,7 +146,7 @@ func TestQuerySharpEdges_SeverityFilter(t *testing.T) {
 
 func TestQuerySharpEdges_UnresolvedFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -170,7 +170,7 @@ func TestQuerySharpEdges_UnresolvedFilter(t *testing.T) {
 
 func TestQuerySharpEdges_SinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
@@ -200,7 +200,7 @@ func TestQuerySharpEdges_SinceFilter(t *testing.T) {
 
 func TestQuerySharpEdges_Limit(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -223,7 +223,7 @@ func TestQuerySharpEdges_Limit(t *testing.T) {
 
 func TestQuerySharpEdges_CombinedFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -272,7 +272,7 @@ func TestQuerySharpEdges_MissingFile(t *testing.T) {
 
 func TestQuerySharpEdges_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -291,7 +291,7 @@ func TestQuerySharpEdges_EmptyFile(t *testing.T) {
 
 func TestQuerySharpEdges_MalformedLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -317,7 +317,7 @@ func TestQuerySharpEdges_MalformedLines(t *testing.T) {
 func TestQuerySharpEdges_BackwardCompatibility(t *testing.T) {
 	// Test that old JSONL format (without new fields) still parses
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Old format without ErrorMessage, Severity, Resolution, ResolvedAt
@@ -356,7 +356,7 @@ func TestQuerySharpEdges_BackwardCompatibility(t *testing.T) {
 
 func TestQuerySharpEdges_NewFieldsParsed(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -625,7 +625,7 @@ func itoa(n int64) string {
 
 func TestQueryDecisions_NoFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -647,7 +647,7 @@ func TestQueryDecisions_NoFilters(t *testing.T) {
 
 func TestQueryDecisions_CategoryFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -671,7 +671,7 @@ func TestQueryDecisions_CategoryFilter(t *testing.T) {
 
 func TestQueryDecisions_ImpactFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -695,7 +695,7 @@ func TestQueryDecisions_ImpactFilter(t *testing.T) {
 
 func TestQueryDecisions_SinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
@@ -725,7 +725,7 @@ func TestQueryDecisions_SinceFilter(t *testing.T) {
 
 func TestQueryDecisions_LimitFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -761,7 +761,7 @@ func TestQueryDecisions_MissingFile(t *testing.T) {
 
 func TestQueryDecisions_MalformedLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -786,7 +786,7 @@ func TestQueryDecisions_MalformedLines(t *testing.T) {
 
 func TestQueryPreferences_NoFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -808,7 +808,7 @@ func TestQueryPreferences_NoFilters(t *testing.T) {
 
 func TestQueryPreferences_CategoryFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -832,7 +832,7 @@ func TestQueryPreferences_CategoryFilter(t *testing.T) {
 
 func TestQueryPreferences_ScopeFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -859,7 +859,7 @@ func TestQueryPreferences_ScopeFilter(t *testing.T) {
 
 func TestQueryPreferences_SinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
@@ -889,7 +889,7 @@ func TestQueryPreferences_SinceFilter(t *testing.T) {
 
 func TestQueryPreferences_LimitFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -927,7 +927,7 @@ func TestQueryPreferences_MissingFile(t *testing.T) {
 
 func TestQueryPerformance_NoFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -949,7 +949,7 @@ func TestQueryPerformance_NoFilters(t *testing.T) {
 
 func TestQueryPerformance_OperationFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -973,7 +973,7 @@ func TestQueryPerformance_OperationFilter(t *testing.T) {
 
 func TestQueryPerformance_SlowOnlyFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -997,7 +997,7 @@ func TestQueryPerformance_SlowOnlyFilter(t *testing.T) {
 
 func TestQueryPerformance_SuccessOnlyFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1020,7 +1020,7 @@ func TestQueryPerformance_SuccessOnlyFilter(t *testing.T) {
 
 func TestQueryPerformance_FailedOnlyFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1043,7 +1043,7 @@ func TestQueryPerformance_FailedOnlyFilter(t *testing.T) {
 
 func TestQueryPerformance_SinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
@@ -1073,7 +1073,7 @@ func TestQueryPerformance_SinceFilter(t *testing.T) {
 
 func TestQueryPerformance_LimitFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1111,7 +1111,7 @@ func TestQueryPerformance_MissingFile(t *testing.T) {
 
 func TestQueryPerformanceSummary_Basic(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1169,7 +1169,7 @@ func TestQueryPerformanceSummary_Basic(t *testing.T) {
 
 func TestQueryPerformanceSummary_WithSlowFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1196,7 +1196,7 @@ func TestQueryPerformanceSummary_WithSlowFilter(t *testing.T) {
 
 func TestQueryPerformanceSummary_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1223,7 +1223,7 @@ func TestSlowThresholdMs_Value(t *testing.T) {
 
 func TestQueryPreferences_MalformedLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -1246,7 +1246,7 @@ func TestQueryPreferences_MalformedLines(t *testing.T) {
 
 func TestQueryPerformance_MalformedLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1269,7 +1269,7 @@ func TestQueryPerformance_MalformedLines(t *testing.T) {
 
 func TestQueryDecisions_CombinedFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -1303,7 +1303,7 @@ func TestQueryDecisions_CombinedFilters(t *testing.T) {
 
 func TestQueryPreferences_CombinedFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -1341,7 +1341,7 @@ func TestQueryPreferences_CombinedFilters(t *testing.T) {
 
 func TestQueryPerformance_CombinedFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1380,7 +1380,7 @@ func TestQueryPerformance_CombinedFilters(t *testing.T) {
 
 func TestQueryPerformance_EmptyLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")
@@ -1406,7 +1406,7 @@ func TestQueryPerformance_EmptyLines(t *testing.T) {
 
 func TestQueryPreferences_EmptyLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -1430,7 +1430,7 @@ func TestQueryPreferences_EmptyLines(t *testing.T) {
 
 func TestQueryDecisions_EmptyLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")

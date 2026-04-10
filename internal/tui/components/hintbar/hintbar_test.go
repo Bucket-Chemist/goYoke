@@ -59,6 +59,34 @@ func TestSetContext_Plan(t *testing.T) {
 	assert.Equal(t, hintSets["plan"], h.hints)
 }
 
+func TestSetContext_Agents(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("agents")
+	assert.Equal(t, "agents", h.context)
+	assert.Equal(t, hintSets["agents"], h.hints)
+}
+
+func TestSetContext_AgentsDetail(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("agents_detail")
+	assert.Equal(t, "agents_detail", h.context)
+	assert.Equal(t, hintSets["agents_detail"], h.hints)
+}
+
+func TestSetContext_Taskboard(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("taskboard")
+	assert.Equal(t, "taskboard", h.context)
+	assert.Equal(t, hintSets["taskboard"], h.hints)
+}
+
+func TestSetContext_Teams(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("teams")
+	assert.Equal(t, "teams", h.context)
+	assert.Equal(t, hintSets["teams"], h.hints)
+}
+
 func TestSetContext_UnknownFallsBackToMain(t *testing.T) {
 	h := NewHintBarModel()
 	h.SetContext("this-context-does-not-exist")
@@ -124,6 +152,54 @@ func TestPlanHintSet_ContainsExpectedKeys(t *testing.T) {
 
 	assert.Contains(t, view, "alt+v", "plan hints should contain alt+v")
 	assert.Contains(t, view, "Esc", "plan hints should contain Esc")
+}
+
+func TestAgentsHintSet_ContainsExpectedKeys(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("agents")
+	h.SetWidth(200)
+
+	view := stripANSI(h.View())
+
+	assert.Contains(t, view, "↑/↓", "agents hints should contain ↑/↓")
+	assert.Contains(t, view, "Enter", "agents hints should contain Enter")
+	assert.Contains(t, view, "Esc", "agents hints should contain Esc")
+	assert.Contains(t, view, "Tab", "agents hints should contain Tab")
+}
+
+func TestAgentsDetailHintSet_ContainsExpectedKeys(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("agents_detail")
+	h.SetWidth(200)
+
+	view := stripANSI(h.View())
+
+	assert.Contains(t, view, "↑/↓", "agents_detail hints should contain ↑/↓")
+	assert.Contains(t, view, "Esc", "agents_detail hints should contain Esc")
+	assert.Contains(t, view, "Tab", "agents_detail hints should contain Tab")
+}
+
+func TestTaskboardHintSet_ContainsExpectedKeys(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("taskboard")
+	h.SetWidth(200)
+
+	view := stripANSI(h.View())
+
+	assert.Contains(t, view, "↑/↓", "taskboard hints should contain ↑/↓")
+	assert.Contains(t, view, "Tab", "taskboard hints should contain Tab")
+}
+
+func TestTeamsHintSet_ContainsExpectedKeys(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("teams")
+	h.SetWidth(200)
+
+	view := stripANSI(h.View())
+
+	assert.Contains(t, view, "↑/↓", "teams hints should contain ↑/↓")
+	assert.Contains(t, view, "Enter", "teams hints should contain Enter")
+	assert.Contains(t, view, "x", "teams hints should contain x")
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +336,26 @@ func TestContextHints_TableDriven(t *testing.T) {
 			context:  "nonexistent",
 			wantKeys: []string{"Tab", "ctrl+f"},
 		},
+		{
+			name:     "agents context",
+			context:  "agents",
+			wantKeys: []string{"Enter", "Esc", "Tab"},
+		},
+		{
+			name:     "agents_detail context",
+			context:  "agents_detail",
+			wantKeys: []string{"Esc", "Tab"},
+		},
+		{
+			name:     "taskboard context",
+			context:  "taskboard",
+			wantKeys: []string{"Tab"},
+		},
+		{
+			name:     "teams context",
+			context:  "teams",
+			wantKeys: []string{"Enter", "x"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -282,7 +378,7 @@ func TestContextHints_TableDriven(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHintSets_AllContextsHaveNonEmptyHints(t *testing.T) {
-	expected := []string{"main", "settings", "search", "modal", "plan"}
+	expected := []string{"main", "settings", "search", "modal", "plan", "agents", "agents_detail", "taskboard", "teams"}
 	for _, ctx := range expected {
 		hints, ok := hintSets[ctx]
 		assert.True(t, ok, "hint set for %q should exist", ctx)

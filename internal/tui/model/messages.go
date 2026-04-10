@@ -5,6 +5,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
@@ -39,9 +40,16 @@ type CompactMsg struct {
 // AssistantMsg carries a fragment of assistant output text.  When Streaming
 // is true the fragment is an in-progress delta; when false it is a complete
 // turn.
+//
+// MessageID is stable within a single assistant turn and changes between
+// turns.  When non-empty it is used (instead of the Streaming boolean) to
+// decide whether to replace the last assistant message or append a new one.
+// Empty MessageID falls back to the legacy Streaming-bool logic so that
+// existing tests that do not set the field continue to work.
 type AssistantMsg struct {
 	Text      string
 	Streaming bool
+	MessageID string // stable within a turn, changes between turns
 }
 
 // ToolUseMsg signals that the assistant invoked a tool.  The Claude panel
@@ -133,14 +141,15 @@ type TickMsg struct {
 // AgentRegisteredMsg is emitted when a new agent process is first detected.
 // ParentID is empty for root-level agents.
 type AgentRegisteredMsg struct {
-	AgentID     string
-	AgentType   string
-	ParentID    string
-	Model       string
-	Tier        string
-	Description string
-	Conventions []string
-	Prompt      string
+	AgentID            string
+	AgentType          string
+	ParentID           string
+	Model              string
+	Tier               string
+	Description        string
+	Conventions        []string
+	Prompt             string
+	AcceptanceCriteria []string
 }
 
 // AgentUpdatedMsg is emitted when an existing agent's status changes.
@@ -161,6 +170,21 @@ type AgentActivityMsg struct {
 	Target    string // key param: file path, command, pattern
 	Preview   string // human-readable summary
 	Streaming bool
+}
+
+// AgentTodoItem is a single todo item from an agent's TodoWrite call.
+// Used to update acceptance criteria match state in the registry.
+type AgentTodoItem struct {
+	Content string
+	Status  string
+}
+
+// AgentTodoUpdateMsg is emitted when a subagent reports a TodoWrite update.
+// The handler matches todo items against the agent's acceptance criteria.
+// This is the sole writer path for AgentRegistry.AcceptanceCriteria (M-1).
+type AgentTodoUpdateMsg struct {
+	AgentID string
+	Todos   []AgentTodoItem
 }
 
 // ---------------------------------------------------------------------------
@@ -237,6 +261,19 @@ type BridgeModalRequestMsg struct {
 	Options []string
 }
 
+// CLIPermissionRequestMsg is sent by the IPC bridge when a hook binary
+// requests user permission to execute a tool (e.g. Bash).
+type CLIPermissionRequestMsg struct {
+	// RequestID is the IPC request identifier used to route the response.
+	RequestID string
+	// ToolName is the name of the tool awaiting permission (e.g. "Bash").
+	ToolName string
+	// ToolInput is the raw JSON arguments for display to the user.
+	ToolInput json.RawMessage
+	// TimeoutMS is the permission request timeout in milliseconds.
+	TimeoutMS int
+}
+
 // ---------------------------------------------------------------------------
 // Provider messages (TUI-029)
 //
@@ -261,6 +298,45 @@ type ProviderSwitchExecuteMsg struct {
 	// Seq is the sequence counter at the time the debounce timer was created.
 	// Stale timers (from earlier keypresses) have a lower Seq and are discarded.
 	Seq int
+}
+
+// ---------------------------------------------------------------------------
+// Model switching messages
+// ---------------------------------------------------------------------------
+
+// ModelSwitchRequestMsg is emitted by the Claude panel when the user types
+// /model [name]. AppModel validates the model, guards against streaming, and
+// restarts the CLI driver with the new model.
+//
+// When ModelID is empty the handler lists available models as a system message.
+type ModelSwitchRequestMsg struct {
+	// ModelID is the requested model identifier (e.g. "haiku", "sonnet").
+	// Empty means "show available models".
+	ModelID string
+}
+
+// ---------------------------------------------------------------------------
+// Effort switching messages
+// ---------------------------------------------------------------------------
+
+// EffortChangeRequestMsg is emitted by the Claude panel when the user types
+// /effort [level]. AppModel persists the level and restarts the CLI driver
+// with the new --effort flag.
+//
+// Valid Level values: "low", "medium", "high", "max".
+// "auto" is treated as empty (omits the flag, reverting to CLI default).
+// When Level is empty the handler shows the current effort level as a system message.
+type EffortChangeRequestMsg struct {
+	// Level is the requested effort level (e.g. "low", "medium", "high", "max").
+	// Empty means "show current effort level".
+	Level string
+}
+
+// EffortChangedMsg is emitted by AppModel after a successful effort level
+// change, so the Claude panel can update its status indicator.
+// Level is the new effort level; empty string means "default (not set)".
+type EffortChangedMsg struct {
+	Level string
 }
 
 // ---------------------------------------------------------------------------
@@ -311,6 +387,15 @@ type SlashExecutedMsg struct {
 // ---------------------------------------------------------------------------
 // Plan mode messages (TUI-057)
 // ---------------------------------------------------------------------------
+
+// ThinkingActiveMsg is emitted when thinking blocks start or stop within
+// an assistant turn. Active is true when at least one thinking block is
+// present in the current content; false when only text blocks remain.
+// This allows the Claude panel to distinguish the "thinking" phase from
+// the "responding" phase of a single assistant turn.
+type ThinkingActiveMsg struct {
+	Active bool
+}
 
 // PlanStepMsg signals plan mode state changes including step tracking.
 // It is emitted when plan mode becomes active or inactive, and whenever

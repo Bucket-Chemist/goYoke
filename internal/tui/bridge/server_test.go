@@ -657,6 +657,130 @@ func TestHandleToast_MalformedPayload_NoPanic(t *testing.T) {
 	t.Fatal("handler crashed after malformed toast payload")
 }
 
+// ---------------------------------------------------------------------------
+// PERM-002: permission_gate_request tests
+// ---------------------------------------------------------------------------
+
+// TestPermGateRequestResponseRoundtrip verifies the full permission gate flow:
+//  1. Client sends permission_gate_request
+//  2. Bridge delivers CLIPermissionRequestMsg to the sender
+//  3. Test calls ResolvePermGate("allow") simulating a user decision
+//  4. Bridge sends TypePermGateResponse back to the client
+func TestPermGateRequestResponseRoundtrip(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, dec := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	toolInput := json.RawMessage(`{"command":"ls -la"}`)
+	req := buildRequest(t, mcp.TypePermGateRequest, "req-perm-1", mcp.PermGateRequestPayload{
+		ToolName:  "Bash",
+		ToolInput: toolInput,
+		SessionID: "session-42",
+		TimeoutMS: 5000,
+	})
+	sendRequest(t, enc, req)
+
+	// Wait for CLIPermissionRequestMsg to arrive via program.Send().
+	permMsg, ok := waitFor[model.CLIPermissionRequestMsg](ms, testTimeout)
+	require.True(t, ok, "timed out waiting for CLIPermissionRequestMsg")
+	assert.Equal(t, "req-perm-1", permMsg.RequestID)
+	assert.Equal(t, "Bash", permMsg.ToolName)
+	assert.Equal(t, 5000, permMsg.TimeoutMS)
+
+	// Simulate the user selecting "allow".
+	go b.ResolvePermGate("req-perm-1", "allow")
+
+	// Expect a TypePermGateResponse on the connection.
+	conn.SetReadDeadline(time.Now().Add(testTimeout))
+	var resp mcp.IPCResponse
+	require.NoError(t, dec.Decode(&resp))
+
+	assert.Equal(t, mcp.TypePermGateResponse, resp.Type)
+	assert.Equal(t, "req-perm-1", resp.ID)
+
+	var respPayload mcp.PermGateResponsePayload
+	require.NoError(t, json.Unmarshal(resp.Payload, &respPayload))
+	assert.Equal(t, "allow", respPayload.Decision)
+}
+
+// TestPermGateTimeout verifies that a permission gate request with a short
+// TimeoutMS is automatically denied when no ResolvePermGate call is made.
+func TestPermGateTimeout(t *testing.T) {
+	b, ms := startBridge(t)
+	defer b.Shutdown()
+
+	conn, enc, dec := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	req := buildRequest(t, mcp.TypePermGateRequest, "req-perm-timeout", mcp.PermGateRequestPayload{
+		ToolName:  "Bash",
+		ToolInput: json.RawMessage(`{}`),
+		TimeoutMS: 100, // 100 ms — will fire before test timeout
+	})
+	sendRequest(t, enc, req)
+
+	// Wait for CLIPermissionRequestMsg to confirm the request was received.
+	_, ok := waitFor[model.CLIPermissionRequestMsg](ms, testTimeout)
+	require.True(t, ok, "timed out waiting for CLIPermissionRequestMsg")
+
+	// Do NOT call ResolvePermGate — wait for the auto-deny.
+	conn.SetReadDeadline(time.Now().Add(testTimeout))
+	var resp mcp.IPCResponse
+	require.NoError(t, dec.Decode(&resp))
+
+	assert.Equal(t, mcp.TypePermGateResponse, resp.Type)
+	assert.Equal(t, "req-perm-timeout", resp.ID)
+
+	var respPayload mcp.PermGateResponsePayload
+	require.NoError(t, json.Unmarshal(resp.Payload, &respPayload))
+	assert.Equal(t, "deny", respPayload.Decision)
+}
+
+// TestPermGateShutdown verifies that calling Shutdown() while a permission
+// gate request is pending unblocks the handler cleanly without writing a
+// response to the connection.
+func TestPermGateShutdown(t *testing.T) {
+	b, ms := startBridge(t)
+
+	conn, enc, dec := dialBridge(t, b.SocketPath())
+	defer conn.Close()
+
+	req := buildRequest(t, mcp.TypePermGateRequest, "req-perm-shutdown", mcp.PermGateRequestPayload{
+		ToolName:  "Bash",
+		ToolInput: json.RawMessage(`{}`),
+		TimeoutMS: 30000,
+	})
+	sendRequest(t, enc, req)
+
+	// Wait until the bridge has injected CLIPermissionRequestMsg (i.e. the
+	// handlePermGate goroutine is now blocking on the response channel).
+	_, ok := waitFor[model.CLIPermissionRequestMsg](ms, testTimeout)
+	require.True(t, ok, "timed out waiting for CLIPermissionRequestMsg before shutdown")
+
+	// Shutdown the bridge. The perm gate handler goroutine should unblock via
+	// the b.done channel and NOT write a response.
+	shutdownDone := make(chan struct{})
+	go func() {
+		b.Shutdown()
+		close(shutdownDone)
+	}()
+
+	select {
+	case <-shutdownDone:
+		// Good — Shutdown returned.
+	case <-time.After(testTimeout):
+		t.Fatal("Shutdown timed out")
+	}
+
+	// Set a short read deadline. We expect EOF or timeout — not a valid response.
+	conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	var resp mcp.IPCResponse
+	err := dec.Decode(&resp)
+	assert.Error(t, err, "expected no response after shutdown-cancelled permission gate")
+}
+
 // TestNewIPCBridge_RemovesStaleSocket verifies that NewIPCBridge succeeds
 // even when a socket file already exists at the target path (stale socket
 // removal code path).

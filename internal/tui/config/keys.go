@@ -55,11 +55,22 @@ type GlobalKeys struct {
 	// panel is in RPMPlanPreview mode.
 	ViewPlan key.Binding
 
+	// ViewOptions opens the full-screen options viewer when the options drawer
+	// has content or an active modal selection.
+	ViewOptions key.Binding
+
 	// Search opens the unified cross-panel fuzzy search overlay (TUI-059).
 	Search key.Binding
 
 	// ChangeCWD opens the CWD selector modal to change the working directory.
 	ChangeCWD key.Binding
+
+	// ShowHelp opens the full-screen keyboard shortcut reference overlay.
+	ShowHelp key.Binding
+
+	// ToggleMouse enables or disables mouse capture. When disabled, native
+	// terminal text selection works; when enabled, scroll wheel forwarding works.
+	ToggleMouse key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -119,6 +130,9 @@ type AgentKeys struct {
 
 	// AgentExpand expands the selected agent entry to show detail.
 	AgentExpand key.Binding
+
+	// AgentKill sends a kill signal to the selected agent and all its descendants.
+	AgentKill key.Binding
 }
 
 // ModalKeys groups the keybindings that are active while a modal overlay is
@@ -209,6 +223,10 @@ func DefaultKeyMap() KeyMap {
 				key.WithKeys("alt+v"),
 				key.WithHelp("alt+v", "view plan"),
 			),
+			ViewOptions: key.NewBinding(
+				key.WithKeys("alt+o"),
+				key.WithHelp("alt+o", "view options"),
+			),
 			Search: key.NewBinding(
 				key.WithKeys("ctrl+f"),
 				key.WithHelp("ctrl+f", "search"),
@@ -216,6 +234,14 @@ func DefaultKeyMap() KeyMap {
 			ChangeCWD: key.NewBinding(
 				key.WithKeys("ctrl+d"),
 				key.WithHelp("ctrl+d", "change cwd"),
+			),
+			ShowHelp: key.NewBinding(
+				key.WithKeys("alt+h"),
+				key.WithHelp("alt+h", "help"),
+			),
+			ToggleMouse: key.NewBinding(
+				key.WithKeys("alt+m"),
+				key.WithHelp("alt+m", "toggle mouse"),
 			),
 		},
 
@@ -289,6 +315,10 @@ func DefaultKeyMap() KeyMap {
 			AgentExpand: key.NewBinding(
 				key.WithKeys("enter"),
 				key.WithHelp("enter", "expand agent"),
+			),
+			AgentKill: key.NewBinding(
+				key.WithKeys("ctrl+x"),
+				key.WithHelp("ctrl+x", "kill agent"),
 			),
 		},
 

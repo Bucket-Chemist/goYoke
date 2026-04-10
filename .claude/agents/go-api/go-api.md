@@ -1,4 +1,5 @@
 ---
+id: go-api
 name: GO API (HTTP Client)
 description: >
   HTTP client and API integration specialist. Auto-activated for API client code.
@@ -6,6 +7,7 @@ description: >
   SSE streaming for LLM API integrations.
 
 model: sonnet
+subagent_type: GO API (HTTP Client)
 thinking:
   enabled: true
   budget: 10000

@@ -46,7 +46,7 @@ func TestTeamRegistry_Update_NewTeam(t *testing.T) {
 	r := teams.NewTeamRegistry()
 	cfg := makeConfig("alpha", "running", "2026-01-01T10:00:00Z")
 
-	r.Update("/sessions/alpha", cfg)
+	r.Update("/sessions/alpha", cfg, nil)
 
 	assert.Equal(t, 1, r.Count())
 	ts := r.Get("/sessions/alpha")
@@ -61,11 +61,11 @@ func TestTeamRegistry_Update_NewTeam(t *testing.T) {
 
 func TestTeamRegistry_Update_Existing(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T10:00:00Z"))
+	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T10:00:00Z"), nil)
 
 	// Update same dir with new status.
 	updated := makeConfig("alpha", "completed", "2026-01-01T10:00:00Z")
-	r.Update("/sessions/alpha", updated)
+	r.Update("/sessions/alpha", updated, nil)
 
 	assert.Equal(t, 1, r.Count(), "count should still be 1 after update")
 	ts := r.Get("/sessions/alpha")
@@ -79,9 +79,9 @@ func TestTeamRegistry_Update_Existing(t *testing.T) {
 
 func TestTeamRegistry_All_SortedByCreatedAt(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/old", makeConfig("old", "completed", "2025-12-01T00:00:00Z"))
-	r.Update("/sessions/mid", makeConfig("mid", "running", "2026-01-01T00:00:00Z"))
-	r.Update("/sessions/new", makeConfig("new", "pending", "2026-06-01T00:00:00Z"))
+	r.Update("/sessions/old", makeConfig("old", "completed", "2025-12-01T00:00:00Z"), nil)
+	r.Update("/sessions/mid", makeConfig("mid", "running", "2026-01-01T00:00:00Z"), nil)
+	r.Update("/sessions/new", makeConfig("new", "pending", "2026-06-01T00:00:00Z"), nil)
 
 	all := r.All()
 	require.Len(t, all, 3)
@@ -104,7 +104,7 @@ func TestTeamRegistry_All_ReturnsEmptyWhenNoTeams(t *testing.T) {
 
 func TestTeamRegistry_Get_ReturnsCopy(t *testing.T) {
 	r := teams.NewTeamRegistry()
-	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"), nil)
 
 	ts := r.Get("/sessions/alpha")
 	require.NotNil(t, ts)
@@ -132,7 +132,7 @@ func TestTeamRegistry_Count_MultipleTeams(t *testing.T) {
 	r := teams.NewTeamRegistry()
 	for i := range 5 {
 		dir := "/sessions/team-" + string(rune('a'+i))
-		r.Update(dir, makeConfig("t", "pending", "2026-01-01T00:00:00Z"))
+		r.Update(dir, makeConfig("t", "pending", "2026-01-01T00:00:00Z"), nil)
 	}
 	assert.Equal(t, 5, r.Count())
 }
@@ -212,7 +212,7 @@ func TestTeamRegistry_All_WavesCopied(t *testing.T) {
 	cfg := makeConfigWithWaves("alpha", "running", []teams.Wave{
 		{WaveNumber: 1, Members: []teams.Member{{Name: "member-a", CostUSD: 1.0}}},
 	})
-	r.Update("/sessions/alpha", cfg)
+	r.Update("/sessions/alpha", cfg, nil)
 
 	all := r.All()
 	require.Len(t, all, 1)
@@ -233,11 +233,42 @@ func TestTeamRegistry_All_WavesCopied(t *testing.T) {
 func TestTeamRegistry_Update_SetsLastPolled(t *testing.T) {
 	r := teams.NewTeamRegistry()
 	before := time.Now()
-	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"))
+	r.Update("/sessions/alpha", makeConfig("alpha", "running", "2026-01-01T00:00:00Z"), nil)
 	after := time.Now()
 
 	ts := r.Get("/sessions/alpha")
 	require.NotNil(t, ts)
 	assert.True(t, !ts.LastPolled.Before(before), "LastPolled should be >= before")
 	assert.True(t, !ts.LastPolled.After(after), "LastPolled should be <= after")
+}
+
+// ---------------------------------------------------------------------------
+// TeamRegistry.MostRecentRunning
+// ---------------------------------------------------------------------------
+
+func TestTeamRegistry_MostRecentRunning_ReturnsRunningTeam(t *testing.T) {
+	r := teams.NewTeamRegistry()
+	r.Update("/sessions/done", makeConfig("done", "completed", "2026-06-01T00:00:00Z"), nil)
+	r.Update("/sessions/run", makeConfig("run", "running", "2026-01-01T00:00:00Z"), nil)
+
+	ts := r.MostRecentRunning()
+	require.NotNil(t, ts)
+	assert.Equal(t, "running", ts.Config.Status)
+	assert.Equal(t, "run", ts.Config.TeamName)
+}
+
+func TestTeamRegistry_MostRecentRunning_FallsBackToMostRecent(t *testing.T) {
+	r := teams.NewTeamRegistry()
+	r.Update("/sessions/old", makeConfig("old", "completed", "2026-01-01T00:00:00Z"), nil)
+	r.Update("/sessions/new", makeConfig("new", "completed", "2026-06-01T00:00:00Z"), nil)
+
+	ts := r.MostRecentRunning()
+	require.NotNil(t, ts)
+	assert.Equal(t, "new", ts.Config.TeamName, "should return most recent when none running")
+}
+
+func TestTeamRegistry_MostRecentRunning_ReturnsNilWhenEmpty(t *testing.T) {
+	r := teams.NewTeamRegistry()
+	ts := r.MostRecentRunning()
+	assert.Nil(t, ts)
 }

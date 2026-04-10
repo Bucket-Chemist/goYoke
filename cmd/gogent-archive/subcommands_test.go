@@ -16,7 +16,7 @@ import (
 func TestListSessions_EmptyFile(t *testing.T) {
 	// Setup: Create empty handoffs.jsonl
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestListSessions_EmptyFile(t *testing.T) {
 func TestListSessions_MultipleHandoffs(t *testing.T) {
 	// Setup: Create handoffs.jsonl with 3 sessions
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestListSessions_MultipleHandoffs(t *testing.T) {
 
 func TestShowSession_Found(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestShowSession_Found(t *testing.T) {
 
 func TestStats_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +196,7 @@ func TestStats_EmptyFile(t *testing.T) {
 
 func TestStats_MultipleHandoffs(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -598,7 +598,7 @@ func TestGetProjectDir_Fallback(t *testing.T) {
 
 func TestListSessions_WithSinceFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -647,7 +647,7 @@ func TestListSessions_WithSinceFlag(t *testing.T) {
 
 func TestListSessions_WithCleanFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -691,7 +691,7 @@ func TestListSessions_WithCleanFlag(t *testing.T) {
 
 func TestListSessions_NoMatchesAfterFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -731,7 +731,7 @@ func TestListSessions_NoMatchesAfterFilter(t *testing.T) {
 
 func TestStats_NoBreakdownsForCleanSessions(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -770,7 +770,7 @@ func TestStats_NoBreakdownsForCleanSessions(t *testing.T) {
 
 func TestListSessions_WithBetweenFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -819,7 +819,7 @@ func TestListSessions_WithBetweenFlag(t *testing.T) {
 
 func TestListSessions_WithHasSharpEdgesFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -862,7 +862,7 @@ func TestListSessions_WithHasSharpEdgesFlag(t *testing.T) {
 
 func TestListSessions_WithHasViolationsFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -974,7 +974,7 @@ func TestShowSession_RendersArtifacts(t *testing.T) {
 	// This test uses session.LoadAllHandoffs and session.RenderHandoffMarkdown directly
 	// to avoid os.Exit calls in showSession
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1022,7 +1022,7 @@ func TestShowSession_RendersArtifacts(t *testing.T) {
 
 func TestStats_WithMultipleErrorTypes(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1073,7 +1073,7 @@ func TestStats_WithMultipleErrorTypes(t *testing.T) {
 
 func TestListSessions_MetricsDisplayed(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1130,7 +1130,7 @@ func TestListSessions_MetricsDisplayed(t *testing.T) {
 
 func TestListDecisions_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1165,7 +1165,7 @@ func TestListDecisions_EmptyFile(t *testing.T) {
 
 func TestListDecisions_MultipleDecisions(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1232,7 +1232,7 @@ func TestListDecisions_MultipleDecisions(t *testing.T) {
 
 func TestListDecisions_FilterByCategory(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1278,7 +1278,7 @@ func TestListDecisions_FilterByCategory(t *testing.T) {
 
 func TestListDecisions_FilterByImpact(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1321,7 +1321,7 @@ func TestListDecisions_FilterByImpact(t *testing.T) {
 
 func TestListDecisions_FilterBySince(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1370,7 +1370,7 @@ func TestListDecisions_FilterBySince(t *testing.T) {
 
 func TestListPreferences_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1405,7 +1405,7 @@ func TestListPreferences_EmptyFile(t *testing.T) {
 
 func TestListPreferences_MultiplePreferences(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1472,7 +1472,7 @@ func TestListPreferences_MultiplePreferences(t *testing.T) {
 
 func TestListPreferences_FilterByCategory(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1518,7 +1518,7 @@ func TestListPreferences_FilterByCategory(t *testing.T) {
 
 func TestListPreferences_FilterByScope(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1570,7 +1570,7 @@ func TestListPreferences_FilterByScope(t *testing.T) {
 
 func TestShowPerformance_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1605,7 +1605,7 @@ func TestShowPerformance_EmptyFile(t *testing.T) {
 
 func TestShowPerformance_MultipleMetrics(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1675,7 +1675,7 @@ func TestShowPerformance_MultipleMetrics(t *testing.T) {
 
 func TestShowPerformance_ByOperation(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1743,7 +1743,7 @@ func TestShowPerformance_ByOperation(t *testing.T) {
 
 func TestShowPerformance_SlowOnly(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1799,7 +1799,7 @@ func TestShowPerformance_SlowOnly(t *testing.T) {
 
 func TestShowPerformance_FilterBySince(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1951,7 +1951,7 @@ func TestQueryDecisions_MissingFile(t *testing.T) {
 
 func TestQueryDecisions_WithLimit(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1991,7 +1991,7 @@ func TestQueryPreferences_MissingFile(t *testing.T) {
 
 func TestQueryPreferences_WithLimit(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -2031,7 +2031,7 @@ func TestQueryPerformance_MissingFile(t *testing.T) {
 
 func TestQueryPerformance_WithFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -2091,7 +2091,7 @@ func TestQueryPerformance_WithFilters(t *testing.T) {
 
 func TestQueryPerformanceSummary(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".claude", "memory")
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}

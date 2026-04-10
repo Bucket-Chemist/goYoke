@@ -544,6 +544,47 @@ func (t Theme) ValidateContrast() (map[string]float64, error) {
 	return ratios, nil
 }
 
+// ---------------------------------------------------------------------------
+// Rainbow gradient
+// ---------------------------------------------------------------------------
+
+// rainbowColors is a fixed palette of 7 hex colors representing the visible
+// spectrum. Each character in the input is assigned a color by cycling through
+// this slice.
+var rainbowColors = []lipgloss.Color{
+	"#FF0000", // red
+	"#FF8800", // orange
+	"#FFFF00", // yellow
+	"#00FF00", // green
+	"#0088FF", // blue
+	"#8800FF", // indigo/violet
+	"#FF00FF", // magenta
+}
+
+// RainbowGradient applies a per-character rainbow color cycle to text.
+// Each non-whitespace rune is rendered with the next color in the palette;
+// whitespace runes are appended unstyled to preserve spacing.
+// An empty input returns an empty string without allocating.
+func RainbowGradient(text string) string {
+	if text == "" {
+		return ""
+	}
+	var b strings.Builder
+	colorIdx := 0
+	for _, r := range text {
+		if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+			b.WriteRune(r)
+			continue
+		}
+		styled := lipgloss.NewStyle().
+			Foreground(rainbowColors[colorIdx%len(rainbowColors)]).
+			Render(string(r))
+		b.WriteString(styled)
+		colorIdx++
+	}
+	return b.String()
+}
+
 // DefaultTheme returns the standard GOgent-Fortress theme.
 // All existing fields are unchanged; InfoColor is set to ColorPrimary (cyan).
 func DefaultTheme() Theme {

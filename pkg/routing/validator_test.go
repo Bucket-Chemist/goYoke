@@ -76,7 +76,7 @@ func TestValidationOrchestrator_CeilingViolation(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create delegation ceiling file
-	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	ceilingDir := filepath.Join(tmpDir, ".gogent", "tmp")
 	os.MkdirAll(ceilingDir, 0755)
 	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("haiku"), 0644)
 
@@ -146,7 +146,7 @@ func TestValidationOrchestrator_OpusAllowlistBypassesCeiling(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create delegation ceiling file set to haiku (very restrictive)
-	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	ceilingDir := filepath.Join(tmpDir, ".gogent", "tmp")
 	os.MkdirAll(ceilingDir, 0755)
 	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("haiku"), 0644)
 
@@ -188,7 +188,7 @@ func TestValidationOrchestrator_NonAllowlistedOpusStillBlockedByCeiling(t *testi
 	tmpDir := t.TempDir()
 
 	// Create delegation ceiling file set to sonnet
-	ceilingDir := filepath.Join(tmpDir, ".claude", "tmp")
+	ceilingDir := filepath.Join(tmpDir, ".gogent", "tmp")
 	os.MkdirAll(ceilingDir, 0755)
 	os.WriteFile(filepath.Join(ceilingDir, "max_delegation"), []byte("sonnet"), 0644)
 

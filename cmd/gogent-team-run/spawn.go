@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -41,13 +40,15 @@ type spawnConfig struct {
 	stdoutPath   string
 	waveIdx      int
 	memIdx       int
+	teamAgentID  string
 }
 
 // spawnResult holds the outputs from a completed CLI process.
 type spawnResult struct {
-	stdout   []byte
-	exitCode int
-	pid      int
+	stdout      []byte
+	exitCode    int
+	pid         int
+	teamAgentID string
 }
 
 // agentCLIConfig holds CLI flags and context requirements from agents-index.json.
@@ -111,6 +112,32 @@ func (pt *progressTracker) BytesReceived() int64 {
 
 func (pt *progressTracker) Bytes() []byte {
 	return pt.buf.Bytes()
+}
+
+// WatchFile polls a file and updates lastActivity/bytesReceived when it grows.
+// Used when the child process writes directly to a file instead of through tracker.Write.
+// Stops when ctx is cancelled.
+func (pt *progressTracker) WatchFile(ctx context.Context, path string, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			stat, err := os.Stat(path)
+			if err != nil {
+				continue
+			}
+			size := stat.Size()
+			pt.mu.Lock()
+			if size > pt.bytesReceived {
+				pt.lastActivity = time.Now()
+				pt.bytesReceived = size
+			}
+			pt.mu.Unlock()
+		}
+	}
 }
 
 // workflowTimeout returns the default timeout for a workflow type.
@@ -243,6 +270,7 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 	// 6. Build stdout path
 	stdoutPath := filepath.Join(tr.teamDir, member.StdoutFile)
 
+	teamName := filepath.Base(tr.teamDir)
 	return &spawnConfig{
 		envelope:    envelope,
 		args:        args,
@@ -253,6 +281,7 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 		stdoutPath:  stdoutPath,
 		waveIdx:     waveIdx,
 		memIdx:      memIdx,
+		teamAgentID: fmt.Sprintf("team:%s:%s", teamName, member.Name),
 	}, nil
 }
 
@@ -286,20 +315,22 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		log.Printf("INFO: Could not read current-session marker: %v (child will inherit parent session)", err)
 	}
 
-	// 6. Capture output with live stream tee
+	// 6. Capture output by writing child stdout directly to the stream file.
+	// Direct-to-file avoids routing bytes through the runner process: if the runner
+	// dies (e.g. SIGKILL from an MCP timeout), the child continues writing and the
+	// data survives on disk. O_SYNC ensures kernel flushes to disk on every write.
 	tracker := newProgressTracker()
-
-	// Tee stream-json output to a file for live monitoring (tail -f, jq, /team-status)
 	streamPath := filepath.Join(tr.teamDir, fmt.Sprintf("stream_%s.ndjson", cfg.agentID))
-	streamFile, err := os.Create(streamPath)
+	streamFile, err := os.OpenFile(streamPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC|os.O_SYNC, 0644)
 	if err != nil {
-		log.Printf("WARNING: Could not create stream file %s: %v (monitoring disabled)", streamPath, err)
+		log.Printf("WARNING: Could not create stream file %s: %v (falling back to in-memory capture)", streamPath, err)
+		// Fallback: route through tracker so parseCLIOutput still has bytes
 		cmd.Stdout = tracker
 		cmd.Stderr = tracker
 	} else {
-		multi := io.MultiWriter(tracker, streamFile)
-		cmd.Stdout = multi
-		cmd.Stderr = multi
+		// Child writes directly to file; tracker monitors file growth for health checks
+		cmd.Stdout = streamFile
+		cmd.Stderr = streamFile
 	}
 	defer func() {
 		if streamFile != nil {
@@ -307,22 +338,53 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		}
 	}()
 
-	// 7. Start command
+	// 7. Send agent_register before starting so the TUI knows about this agent
+	// before it produces any output.
+	if tr.uds != nil && !tr.uds.isNoop() {
+		teamName := filepath.Base(tr.teamDir)
+		tr.uds.notify(typeAgentRegister, agentRegisterPayload{
+			AgentID:     cfg.teamAgentID,
+			AgentType:   cfg.agentID,
+			ParentID:    "team:" + teamName,
+			Description: cfg.memberName,
+		})
+	}
+
+	// 8. Start command
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start claude CLI: %w", err)
 	}
 
 	pid := cmd.Process.Pid
 
-	// 8. W6: registerChild(pid) IMMEDIATELY after Start
+	// 9. Send agent_update(running, PID) now that we have the PID.
+	if tr.uds != nil && !tr.uds.isNoop() {
+		tr.uds.notify(typeAgentUpdate, agentUpdatePayload{
+			AgentID: cfg.teamAgentID,
+			Status:  "running",
+			PID:     pid,
+		})
+	}
+
+	// 11. W6: registerChild(pid) IMMEDIATELY after Start
 	tr.registerChild(pid)
 
-	// 9. defer unregisterChild
+	// 12. defer unregisterChild
 	defer tr.unregisterChild(pid)
 
-	// Start health monitor (shadow mode — observe only, no kills)
+	// Start health monitor (shadow mode — observe only, no kills).
+	// When child writes directly to streamFile, watch the file's size for activity.
+	// Fallback (streamFile == nil): tracker.Write receives bytes directly.
 	monitorCtx, monitorCancel := context.WithCancel(ctx)
 	defer monitorCancel()
+	if streamFile != nil {
+		go tracker.WatchFile(monitorCtx, streamPath, 500*time.Millisecond)
+	}
+	// Tail-follow the stream file for UDS notifications (tool_use events → TUI).
+	// Runs alongside WatchFile with its own independent FD — no conflict.
+	if streamFile != nil && tr.uds != nil && !tr.uds.isNoop() {
+		go tailStreamForUDS(monitorCtx, streamPath, tr.uds, cfg.teamAgentID)
+	}
 	go startHealthMonitor(monitorCtx, tr, cfg.waveIdx, cfg.memIdx, tracker, healthCheckInterval)
 
 	// 10. Wait for command with timeout
@@ -361,10 +423,20 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 			}
 		}
 
+		// Read stdout from the stream file (child wrote directly to it).
+		// Fallback to tracker bytes if streamFile was never opened.
+		var stdoutBytes []byte
+		if streamFile != nil {
+			stdoutBytes, _ = os.ReadFile(streamPath)
+		} else {
+			stdoutBytes = tracker.Bytes()
+		}
+
 		return &spawnResult{
-			stdout:   tracker.Bytes(),
-			exitCode: exitCode,
-			pid:      pid,
+			stdout:      stdoutBytes,
+			exitCode:    exitCode,
+			pid:         pid,
+			teamAgentID: cfg.teamAgentID,
 		}, nil
 	case <-time.After(cfg.timeout):
 		// Timeout - attempt graceful shutdown with SIGTERM first
@@ -445,6 +517,18 @@ func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, resul
 		return fmt.Errorf("update member: %w", err)
 	}
 
+	// 5. Send completion notification via UDS.
+	if tr.uds != nil && !tr.uds.isNoop() && result.teamAgentID != "" {
+		status := "complete"
+		if result.exitCode != 0 {
+			status = "error"
+		}
+		tr.uds.notify(typeAgentUpdate, agentUpdatePayload{
+			AgentID: result.teamAgentID,
+			Status:  status,
+		})
+	}
+
 	return nil
 }
 
@@ -496,7 +580,7 @@ func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
 // for interactive contexts (TUI/MCP), but pipe mode (-p) has no interactive approval.
 // We replace "delegate" with "auto-edit" so workers can write files within the project.
 func buildCLIArgs(agentConfig *agentCLIConfig) []string {
-	args := []string{"-p", "--output-format", "stream-json"}
+	args := []string{"-p", "--verbose", "--output-format", "stream-json"}
 
 	if agentConfig.Model != "" {
 		model := agentConfig.Model
@@ -518,6 +602,13 @@ func buildCLIArgs(agentConfig *agentCLIConfig) []string {
 	if len(agentConfig.AllowedTools) > 0 {
 		args = append(args, "--allowedTools", strings.Join(agentConfig.AllowedTools, ","))
 	}
+
+	// Block built-in tools that cannot work in team-run's pipe mode.
+	// Task: spawns unconstrained subprocesses bypassing the fortress architecture.
+	// AskUserQuestion: requires an interactive terminal — hangs or fails in -p mode.
+	// A future "convoy listener" daemon could bridge team-run to the TUI's UDS
+	// socket and provide MCP equivalents (ask_user, spawn_agent) instead.
+	args = append(args, "--disallowedTools", "Task,AskUserQuestion")
 
 	// Filter additional flags, replacing permission-mode for pipe-mode compatibility
 	for i := 0; i < len(agentConfig.AdditionalFlags); i++ {
@@ -856,5 +947,71 @@ func spawnAndWait(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int, wg *
 		log.Printf("ERROR: Failed to update member %s: %v", member.Name, err)
 	}
 	log.Printf("Member %s failed after %d retries", member.Name, member.MaxRetries+1)
+}
+
+// tailStreamForUDS opens an independent read-only FD on the stream file and
+// follows it as the child appends NDJSON lines. It parses tool_use events
+// and forwards them as UDS agent_activity notifications.
+//
+// The stream file is written by the child with O_SYNC, guaranteeing each
+// write() is flushed to disk before returning. POSIX guarantees atomic writes
+// for sizes <= PIPE_BUF (4096 on Linux); NDJSON tool_use events are typically
+// <1KB, so partial lines are not possible at the OS level.
+//
+// This goroutine runs alongside WatchFile (health monitoring) without conflict:
+// each holds its own *os.File with independent file offset.
+func tailStreamForUDS(ctx context.Context, path string, uds *TeamRunUDSClient, agentID string) {
+	f, err := os.Open(path)
+	if err != nil {
+		log.Printf("WARNING: tailStreamForUDS: open %s: %v", path, err)
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024) // 64KB initial, 10MB max
+
+	for {
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			ev := parseStreamEvent(line)
+			if ev == nil || ev.Type != "assistant" {
+				continue
+			}
+			ae := parseAssistantEvent(line)
+			if ae == nil {
+				continue
+			}
+			for _, block := range ae.Message.Content {
+				if block.Type != "tool_use" {
+					continue
+				}
+				act := extractToolActivity(block)
+				uds.notify(typeAgentActivity, agentActivityPayload{
+					AgentID: agentID,
+					Tool:    act.Tool,
+					Target:  act.Target,
+					Preview: act.Preview,
+				})
+				// Forward TodoWrite events for acceptance criteria matching.
+				if block.Name == "TodoWrite" {
+					todos := parseTodoItems(block.Input)
+					if len(todos) > 0 {
+						uds.notify(typeAgentTodoUpdate, agentTodoUpdatePayload{
+							AgentID: agentID,
+							Todos:   todos,
+						})
+					}
+				}
+			}
+		}
+		// EOF reached — child may still be writing. Poll every 200ms.
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(200 * time.Millisecond):
+			// Continue scanning — new data may have been appended.
+		}
+	}
 }
 

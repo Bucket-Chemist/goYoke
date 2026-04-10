@@ -53,7 +53,11 @@ func (m *mockClaudePanel) SetSender(s MessageSender) {
 	m.setSenderCalled++
 	m.lastSender = s
 }
-func (m *mockClaudePanel) SetTier(_ LayoutTier) {}
+func (m *mockClaudePanel) AppendSystemMessage(_ string)        {}
+func (m *mockClaudePanel) SetTier(_ LayoutTier)                {}
+func (m *mockClaudePanel) ViewConversation() string            { return m.viewOutput }
+func (m *mockClaudePanel) ViewInput() string                   { return "" }
+func (m *mockClaudePanel) ApplyOverlay(composed string) string { return composed }
 
 // mockToast satisfies toastWidget for testing.
 type mockToast struct {
@@ -67,9 +71,10 @@ func (m *mockToast) HandleMsg(msg tea.Msg) tea.Cmd {
 	m.handleMsgCalled = true
 	return nil
 }
-func (m *mockToast) View() string      { return m.viewOutput }
-func (m *mockToast) SetSize(w, h int)  { m.width = w; m.height = h }
-func (m *mockToast) IsEmpty() bool     { return m.empty }
+func (m *mockToast) View() string         { return m.viewOutput }
+func (m *mockToast) SetSize(w, h int)     { m.width = w; m.height = h }
+func (m *mockToast) IsEmpty() bool        { return m.empty }
+func (m *mockToast) Height() int          { return 0 }
 func (m *mockToast) SetTier(_ LayoutTier) {}
 
 // ---------------------------------------------------------------------------

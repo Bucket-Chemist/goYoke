@@ -42,9 +42,14 @@ func (m *AppModel) SetToasts(t toastWidget) {
 	m.shared.toasts = t
 }
 
-// SetTeamList injects the team list model.
+// SetTeamList injects the team list model and creates the companion team
+// detail widget. The detail widget is backed by the same registry as the list
+// and by the shared agent registry so it can display live activity.
 func (m *AppModel) SetTeamList(tl teamListWidget) {
 	m.shared.teamList = tl
+	if m.shared != nil {
+		m.shared.teamDetail = tl.CreateDetailModel(m.shared.agentRegistry)
+	}
 }
 
 // SetProviderState injects a pre-configured ProviderState into the shared
@@ -98,6 +103,13 @@ func (m *AppModel) SetPlanPreview(pp planPreviewWidget) {
 func (m *AppModel) SetDrawerStack(ds drawerStackWidget) {
 	if m.shared != nil {
 		m.shared.drawerStack = ds
+	}
+}
+
+// SetTeamsHealth injects the team health dashboard widget (TUI-003).
+func (m *AppModel) SetTeamsHealth(th teamsHealthWidget) {
+	if m.shared != nil {
+		m.shared.teamsHealth = th
 	}
 }
 

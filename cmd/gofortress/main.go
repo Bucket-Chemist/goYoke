@@ -117,13 +117,15 @@ func main() {
 	cp := claudepkg.NewClaudePanelModel(keys)
 	app.SetClaudePanel(&cp)
 
-	// Load cross-session prompt history (shared with TS TUI via
-	// ~/.claude/input-history.json). The config dir respects --config-dir
-	// and CLAUDE_CONFIG_DIR for multi-config setups.
-	histDir := os.Getenv("CLAUDE_CONFIG_DIR")
+	// Load cross-session prompt history. The config dir respects --config-dir,
+	// GOGENT_CONFIG_DIR, and CLAUDE_CONFIG_DIR for multi-config setups.
+	histDir := os.Getenv("GOGENT_CONFIG_DIR")
+	if histDir == "" {
+		histDir = os.Getenv("CLAUDE_CONFIG_DIR")
+	}
 	if histDir == "" {
 		if home, err := os.UserHomeDir(); err == nil {
-			histDir = filepath.Join(home, ".claude")
+			histDir = filepath.Join(home, ".gogent")
 		}
 	}
 	if histDir != "" {
@@ -137,6 +139,8 @@ func main() {
 	teamReg := teams.NewTeamRegistry()
 	teamList := teams.NewTeamListModel(teamReg)
 	app.SetTeamList(&teamList)
+	teamsHealth := teams.NewTeamsHealthModel(teamReg)
+	app.SetTeamsHealth(teamsHealth)
 
 	// Phase 7: Provider tab bar.
 	// ProviderState is created inside NewAppModel() and stored in shared state.
@@ -152,7 +156,7 @@ func main() {
 	// If --session-id is provided, load the existing session and restore
 	// provider state (session IDs, model selections, active provider).
 	// Otherwise, generate a fresh session ID, set up the session directory
-	// (including .claude/current-session and .claude/tmp symlink), and
+	// (including .gogent/current-session and .gogent/tmp symlink), and
 	// create initial SessionData.
 	// -----------------------------------------------------------------------
 
@@ -216,6 +220,15 @@ func main() {
 
 	app.SetSessionStore(sessionStore)
 	app.SetSessionData(sessionData)
+
+	// Set up team list polling so the teams health dashboard receives data.
+	// The teams directory lives at {sessionDir}/teams/, created by
+	// gogent-skill-guard when a team is dispatched via gogent-team-run.
+	// StartPolling sets the dir and marks the model ready; the returned Cmd
+	// is discarded here because Init() calls PollNow() to kick the first
+	// tick inside the Bubbletea event loop.
+	teamsDir := filepath.Join(sessionStore.SessionDir(sessionData.ID), "teams")
+	_ = teamList.StartPolling(teamsDir)
 
 	// Phase 7: Right-panel components.
 	dashModel := dashboard.NewDashboardModel()
@@ -337,6 +350,15 @@ func main() {
 	if err := os.Setenv("GOFORTRESS_SOCKET", ipcBridge.SocketPath()); err != nil {
 		if *verbose {
 			log.Printf("[gofortress] warning: could not set GOFORTRESS_SOCKET: %v", err)
+		}
+	}
+
+	// Expose the MCP config path so spawned Claude subprocesses can load MCP tools.
+	if mcpConfigPath != "" {
+		if err := os.Setenv("GOFORTRESS_MCP_CONFIG", mcpConfigPath); err != nil {
+			if *verbose {
+				log.Printf("[gofortress] warning: could not set GOFORTRESS_MCP_CONFIG: %v", err)
+			}
 		}
 	}
 

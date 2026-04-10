@@ -5,14 +5,20 @@
 package model
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
@@ -28,6 +34,7 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	// Propagate width to all chrome components.
 	m.banner.SetWidth(msg.Width)
+	m.banner.SetCompact(msg.Width < 80)
 	if m.tabBar != nil {
 		m.tabBar.SetWidth(msg.Width)
 	}
@@ -83,33 +90,52 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 // banner and tab bar to be pushed off the top of the screen.
 func (m *AppModel) propagateContentSizes() {
 	dims := m.computeLayout()
-	if m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight)
+	drawerH, _ := m.computeDrawerLayout(dims)
+	mainH := dims.contentHeight - drawerH
+	if mainH < 1 {
+		mainH = 1
 	}
-	m.agentTree.SetSize(dims.rightWidth, dims.contentHeight/2)
-	m.agentDetail.SetSize(dims.rightWidth, dims.contentHeight/2)
+
+	if m.shared.claudePanel != nil {
+		// Subtract separatorHeight so the panel's internal viewport is sized to
+		// contentHeight-2 (one row for the separator, one for the input line),
+		// leaving the layout composition in renderLeftPanel to fill all rows.
+		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight-separatorHeight)
+	}
+	m.agentTree.SetSize(dims.rightWidth, mainH/2)
+	m.agentDetail.SetSize(dims.rightWidth, mainH/2)
 	if m.shared.toasts != nil {
 		m.shared.toasts.SetSize(m.width, m.height)
 	}
 	if m.shared.teamList != nil {
-		m.shared.teamList.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.teamList.SetSize(dims.rightWidth, mainH)
 	}
 
 	// Right-panel components (TUI-032).
 	if m.shared.dashboard != nil {
-		m.shared.dashboard.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.dashboard.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.settings != nil {
-		m.shared.settings.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.settings.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.telemetry != nil {
-		m.shared.telemetry.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.telemetry.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.planPreview != nil {
-		m.shared.planPreview.SetSize(dims.rightWidth, dims.contentHeight)
+		m.shared.planPreview.SetSize(dims.rightWidth, mainH)
 	}
 	if m.shared.drawerStack != nil {
-		m.shared.drawerStack.SetSize(dims.rightWidth, dims.contentHeight)
+		// Size the teams health widget and refresh the teams drawer content.
+		if m.shared.teamsHealth != nil {
+			m.shared.teamsHealth.SetSize(dims.rightWidth-4, drawerH-5) // inner: -4 width (drawer+panel borders), -5 height (borders+header+divider+footer)
+			m.shared.teamsHealth.SetTier(dims.tier)
+			if m.shared.teamsHealth.HasData() {
+				m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+			} else {
+				m.shared.drawerStack.ClearTeamsContent()
+			}
+		}
+		m.shared.drawerStack.SetSize(dims.rightWidth, drawerH)
 	}
 	if m.shared.taskBoard != nil {
 		m.shared.taskBoard.SetSize(m.width, m.height)
@@ -179,6 +205,34 @@ func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model
 		return m, cmd
 	}
 	return m, nil
+}
+
+// handleCLIPermissionRequest handles CLIPermissionRequestMsg: presents a
+// permission modal with Allow/Deny/Allow for Session options.
+func (m AppModel) handleCLIPermissionRequest(msg CLIPermissionRequestMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.permHandler == nil {
+		return m, nil
+	}
+
+	// Build a human-readable message showing the tool name and input.
+	message := fmt.Sprintf("Tool Permission Required\n\nTool: %s", msg.ToolName)
+	if len(msg.ToolInput) > 0 {
+		// Try to extract "command" field for Bash, fall back to raw JSON.
+		var input map[string]interface{}
+		if err := json.Unmarshal(msg.ToolInput, &input); err == nil {
+			if cmd, ok := input["command"].(string); ok {
+				message += fmt.Sprintf("\nCommand: %s", cmd)
+			}
+		}
+	}
+
+	options := []string{"Allow", "Deny", "Allow for Session"}
+
+	// Route through PermissionHandler using the FlowToolPermission type.
+	cmd := m.shared.permHandler.HandlePermGateRequest(
+		msg.RequestID, message, options, msg.TimeoutMS,
+	)
+	return m, cmd
 }
 
 // handleModalResponse handles modals.ModalResponseMsg: advances the permission
@@ -255,18 +309,53 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 		return m, nil
 	}
 
+	// Agent kill confirmation — check between interrupt-confirm and permHandler
+	// fallthrough so the request ID prefix is matched before generic routing.
+	if strings.HasPrefix(msg.RequestID, agentKillConfirmPrefix) {
+		if !msg.Response.Cancelled && msg.Response.Value == "Yes" {
+			agentID := strings.TrimPrefix(msg.RequestID, agentKillConfirmPrefix)
+			m.killAgentByID(agentID)
+		}
+		// Whether confirmed or cancelled, restore focus to the agent tree.
+		m.focus = FocusAgents
+		return m, nil
+	}
+
 	result, cmd := m.shared.permHandler.HandleResponse(msg)
 	if result != nil {
-		// Flow complete — deliver response to the bridge goroutine.
-		if m.shared.bridge != nil {
-			value := result.Value
-			if result.Cancelled {
-				value = ""
+		// Check if this was a permission gate flow.
+		if m.shared.permHandler.WasPermGateFlow(result.RequestID) {
+			if m.shared.bridge != nil {
+				decision := mapPermGateDecision(result.Value, result.Cancelled)
+				m.shared.bridge.ResolvePermGate(result.RequestID, decision)
 			}
-			m.shared.bridge.ResolveModalSimple(result.RequestID, value)
+		} else {
+			// Existing modal flow — deliver via ResolveModalSimple.
+			if m.shared.bridge != nil {
+				value := result.Value
+				if result.Cancelled {
+					value = ""
+				}
+				m.shared.bridge.ResolveModalSimple(result.RequestID, value)
+			}
 		}
 	}
 	return m, cmd
+}
+
+// mapPermGateDecision converts modal option labels to permission decisions.
+func mapPermGateDecision(value string, cancelled bool) string {
+	if cancelled {
+		return "deny"
+	}
+	switch value {
+	case "Allow":
+		return "allow"
+	case "Allow for Session":
+		return "allow_session"
+	default:
+		return "deny"
+	}
 }
 
 // handleAgentRegistryMsg handles AgentRegisteredMsg, AgentUpdatedMsg, and
@@ -292,17 +381,22 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if parentID == "" && rootID != "" && rootID != msg.AgentID {
 			parentID = rootID
 		}
+		var ac []state.AcceptanceCriterion
+		for _, text := range msg.AcceptanceCriteria {
+			ac = append(ac, state.AcceptanceCriterion{Text: text})
+		}
 		_ = m.shared.agentRegistry.Register(state.Agent{
-			ID:          msg.AgentID,
-			AgentType:   msg.AgentType,
-			ParentID:    parentID,
-			Model:       msg.Model,
-			Tier:        msg.Tier,
-			Description: msg.Description,
-			Conventions: msg.Conventions,
-			Prompt:      msg.Prompt,
-			Status:      state.StatusRunning,
-			StartedAt:   time.Now(),
+			ID:                 msg.AgentID,
+			AgentType:          msg.AgentType,
+			ParentID:           parentID,
+			Model:              msg.Model,
+			Tier:               msg.Tier,
+			Description:        msg.Description,
+			Conventions:        msg.Conventions,
+			Prompt:             msg.Prompt,
+			AcceptanceCriteria: ac,
+			Status:             state.StatusRunning,
+			StartedAt:          time.Now(),
 		})
 	case AgentUpdatedMsg:
 		_ = m.shared.agentRegistry.Update(msg.AgentID, func(a *state.Agent) {
@@ -317,7 +411,8 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AgentActivityMsg:
 		m.shared.agentRegistry.AppendActivity(msg.AgentID, state.AgentActivity{
 			Type:      "tool_use",
-			Target:    msg.ToolName,
+			ToolName:  msg.ToolName,
+			Target:    msg.Target,
 			Preview:   msg.Preview,
 			Timestamp: time.Now(),
 		})
@@ -326,6 +421,32 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.shared.agentRegistry.InvalidateTreeCache()
 	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 	m.statusLine.AgentCount = m.shared.agentRegistry.Count().Total
+	return m, nil
+}
+
+// handleAgentTodoUpdate handles AgentTodoUpdateMsg: matches the todo items from
+// a subagent's TodoWrite call against its acceptance criteria and refreshes the
+// agent tree and detail panel.
+//
+// This is the sole writer to AgentRegistry.AcceptanceCriteria (M-1 enforcement).
+// The NDJSON goroutine (spawner.go) only sends UDS notifications; it never
+// writes to the registry directly.
+func (m AppModel) handleAgentTodoUpdate(msg AgentTodoUpdateMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.agentRegistry == nil {
+		return m, nil
+	}
+	todos := make([]state.TodoUpdate, len(msg.Todos))
+	for i, t := range msg.Todos {
+		todos[i] = state.TodoUpdate{Content: t.Content, Status: t.Status}
+	}
+	m.shared.agentRegistry.UpdateAcceptanceCriteria(msg.AgentID, todos)
+	m.shared.agentRegistry.InvalidateTreeCache()
+	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
+	if id := m.agentTree.SelectedID(); id != "" {
+		if agent := m.shared.agentRegistry.Get(id); agent != nil {
+			m.agentDetail.SetAgent(agent)
+		}
+	}
 	return m, nil
 }
 
@@ -344,6 +465,21 @@ func parseAgentStatus(s string) state.AgentStatus {
 	default:
 		return state.StatusPending
 	}
+}
+
+// killAgentByID kills the agent identified by id and all its running
+// descendants via KillByID, then refreshes the agent tree and status line.
+func (m *AppModel) killAgentByID(id string) {
+	if m.shared == nil || m.shared.agentRegistry == nil {
+		return
+	}
+	registry := m.shared.agentRegistry
+	if err := registry.KillByID(id); err != nil {
+		slog.Warn("killAgentByID failed", "id", id, "err", err)
+	}
+	registry.InvalidateTreeCache()
+	m.agentTree.SetNodes(registry.Tree())
+	m.statusLine.AgentCount = registry.Count().Total
 }
 
 // killRunningAgents sends SIGTERM to all spawned agent process groups that
@@ -378,6 +514,9 @@ func (m AppModel) handleAgentSelected(msg agents.AgentSelectedMsg) (tea.Model, t
 func (m AppModel) handleToastMsg(msg ToastMsg) (tea.Model, tea.Cmd) {
 	if m.shared != nil && m.shared.toasts != nil {
 		cmd := m.shared.toasts.HandleMsg(msg)
+		// Toast height changed (empty → visible); re-propagate so the Claude
+		// panel viewport shrinks to accommodate the new toast rows.
+		m.propagateContentSizes()
 		return m, cmd
 	}
 	return m, nil
@@ -458,6 +597,41 @@ func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
 
 // handleTabFlash handles TabFlashMsg: forwards the flash request to the tab
 // bar widget so it can schedule its tick-based accent animation (TUI-061).
+
+// handleTeamUpdate handles a TeamUpdateMsg from the IPC bridge. It triggers
+// an immediate filesystem scan, then unconditionally expands the teams drawer.
+// If the scan didn't find the team yet (ensureTeamVisible race), a placeholder
+// is shown. The teamNotifiedAt grace period prevents the poll-tick handler
+// from immediately collapsing the drawer via ClearTeamsContent.
+func (m AppModel) handleTeamUpdate(msg TeamUpdateMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.teamList == nil {
+		return m, nil
+	}
+	// Record notification time — suppresses ClearTeamsContent in poll handler.
+	m.shared.teamNotifiedAt = time.Now()
+	// Scan immediately — populates the registry before HasData() check.
+	m.shared.teamList.ScanNow()
+	// Always expand the drawer. TeamUpdateMsg is only sent when team_run
+	// launches a team, so expansion is always appropriate.
+	if m.shared.drawerStack != nil {
+		if m.shared.teamsHealth != nil && m.shared.teamsHealth.HasData() {
+			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		} else {
+			// ScanNow couldn't find the team yet (symlink race, config.json
+			// not flushed, or ensureTeamVisible failed). Show placeholder;
+			// the poll chain will replace it once the team is discoverable.
+			placeholder := fmt.Sprintf("  Team starting: %s", filepath.Base(msg.TeamDir))
+			m.shared.drawerStack.SetTeamsContent(placeholder)
+		}
+	}
+	if m.shared.teamDetail != nil {
+		m.shared.teamDetail.Refresh()
+	}
+	// PollNow recovers the poll chain if it died and is idempotent due to the
+	// sequence guard introduced in C-1.
+	return m, m.shared.teamList.PollNow()
+}
+
 func (m AppModel) handleTabFlash(msg TabFlashMsg) (tea.Model, tea.Cmd) {
 	if m.tabBar == nil {
 		return m, nil
@@ -535,6 +709,205 @@ func (m AppModel) handleSettingChanged(msg settingstree.SettingChangedMsg) (tea.
 	return m, nil
 }
 
+// handleModelSwitchRequest processes a /model command from the Claude panel.
+//
+// When ModelID is empty it lists available models as a system message.
+// When ModelID is set it validates the model against the active provider,
+// guards against switching while streaming, updates ProviderState, and
+// restarts the CLI driver.
+func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.providerState == nil {
+		return m, nil
+	}
+
+	ps := m.shared.providerState
+	cfg := ps.GetActiveConfig()
+
+	// No arg: list available models for the active provider.
+	if msg.ModelID == "" {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("Available models for %s:\n", cfg.Name))
+		currentModel := ps.GetActiveModel()
+		for _, mc := range cfg.Models {
+			marker := "  "
+			if mc.ID == currentModel {
+				marker = "▸ "
+			}
+			sb.WriteString(fmt.Sprintf("%s%s — %s\n", marker, mc.ID, mc.Description))
+		}
+		sb.WriteString("\nUsage: /model <name>")
+
+		if m.shared.claudePanel != nil {
+			m.shared.claudePanel.AppendSystemMessage(sb.String())
+		}
+		return m, nil
+	}
+
+	// Guard: refuse while streaming — the CLI restart would kill the active response.
+	if m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  "Cannot switch model while streaming. Wait for the response to finish.",
+				Level: ToastLevelWarn,
+			}
+		}
+	}
+
+	// Validate that the requested model belongs to the active provider.
+	var found bool
+	var displayName string
+	for _, mc := range cfg.Models {
+		if mc.ID == msg.ModelID {
+			found = true
+			displayName = mc.DisplayName
+			break
+		}
+	}
+	if !found {
+		ids := make([]string, 0, len(cfg.Models))
+		for _, mc := range cfg.Models {
+			ids = append(ids, mc.ID)
+		}
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Unknown model %q for %s. Valid: %s", msg.ModelID, cfg.Name, strings.Join(ids, ", ")),
+				Level: ToastLevelError,
+			}
+		}
+	}
+
+	// Already on this model — no-op.
+	if ps.GetActiveModel() == msg.ModelID {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Already using %s.", displayName),
+				Level: ToastLevelInfo,
+			}
+		}
+	}
+
+	// Persist current session ID so the new driver can resume.
+	if m.sessionID != "" {
+		ps.SetSessionID(m.sessionID)
+	}
+
+	// Set the new model in provider state.
+	if err := ps.SetActiveModel(msg.ModelID); err != nil {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Model switch failed: %v", err),
+				Level: ToastLevelError,
+			}
+		}
+	}
+
+	// Restart the CLI driver with the new model.
+	model, cmd := m.restartCLIDriver()
+	appModel := model.(AppModel)
+
+	// Emit a toast confirming the switch.
+	toastCmd := func() tea.Msg {
+		return ToastMsg{
+			Text:  fmt.Sprintf("Switched to %s for %s.", displayName, cfg.Name),
+			Level: ToastLevelSuccess,
+		}
+	}
+
+	return appModel, tea.Batch(cmd, toastCmd)
+}
+
+// handleEffortChangeRequest processes a /effort command from the Claude panel.
+//
+// When Level is empty it shows the current effort level as a system message.
+// When Level is set it stores the level in AppModel.activeEffort and restarts
+// the CLI driver with the new --effort flag.
+// "auto" is mapped to empty string (omits the flag, reverting to CLI default).
+func (m AppModel) handleEffortChangeRequest(msg EffortChangeRequestMsg) (tea.Model, tea.Cmd) {
+	level := strings.TrimSpace(msg.Level)
+
+	// Normalize "auto" → "" so the --effort flag is omitted.
+	if strings.EqualFold(level, "auto") {
+		level = ""
+	}
+
+	// No arg: show current effort level.
+	if msg.Level == "" {
+		current := m.activeEffort
+		if current == "" {
+			current = "default (not set)"
+		}
+		if m.shared != nil && m.shared.claudePanel != nil {
+			m.shared.claudePanel.AppendSystemMessage(fmt.Sprintf("Current effort level: %s\nUsage: /effort <low|medium|high|max>", current))
+		}
+		return m, nil
+	}
+
+	// Guard: refuse while streaming — the CLI restart would kill the active response.
+	if m.shared != nil && m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  "Cannot change effort while streaming. Wait for the response to finish.",
+				Level: ToastLevelWarn,
+			}
+		}
+	}
+
+	// Validate the effort level (empty is allowed — it resets to default).
+	validLevels := map[string]bool{"low": true, "medium": true, "high": true, "max": true, "": true}
+	if !validLevels[strings.ToLower(level)] {
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Unknown effort level %q. Valid values: low, medium, high, max", level),
+				Level: ToastLevelError,
+			}
+		}
+	}
+
+	// Already at this level — no-op.
+	if m.activeEffort == level {
+		display := level
+		if display == "" {
+			display = "default"
+		}
+		return m, func() tea.Msg {
+			return ToastMsg{
+				Text:  fmt.Sprintf("Already using effort level: %s.", display),
+				Level: ToastLevelInfo,
+			}
+		}
+	}
+
+	// Persist the new effort level.
+	m.activeEffort = level
+
+	// Confirm to the user via system message and update the panel's indicator.
+	if m.shared != nil && m.shared.claudePanel != nil {
+		display := level
+		if display == "" {
+			display = "default"
+		}
+		m.shared.claudePanel.AppendSystemMessage(fmt.Sprintf("Effort level set to: %s", display))
+		m.shared.claudePanel.HandleMsg(EffortChangedMsg{Level: level})
+	}
+
+	// Restart the CLI driver with the updated effort flag.
+	newModel, cmd := m.restartCLIDriver()
+	appModel := newModel.(AppModel)
+
+	display := level
+	if display == "" {
+		display = "default"
+	}
+	toastCmd := func() tea.Msg {
+		return ToastMsg{
+			Text:  fmt.Sprintf("Effort level set to: %s.", display),
+			Level: ToastLevelSuccess,
+		}
+	}
+
+	return appModel, tea.Batch(cmd, toastCmd)
+}
+
 // saveSession snapshots the current application state into the session store.
 // It persists both the session metadata (cost, provider IDs, model selections)
 // and conversation histories for all providers that have messages.
@@ -578,4 +951,21 @@ func (m AppModel) saveSession() {
 			}
 		}
 	}
+}
+
+// handleOptionsViewRequest opens the full-screen options view modal.
+// Called from Update when drawer.OptionsViewRequestMsg is received.
+func (m AppModel) handleOptionsViewRequest(msg drawer.OptionsViewRequestMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil {
+		return m, nil
+	}
+	if msg.Interactive {
+		m.shared.optionsViewModal.ShowInteractive(
+			msg.RequestID, msg.Message, msg.Options, msg.SelectedIdx,
+			m.width, m.height,
+		)
+	} else if msg.Content != "" {
+		m.shared.optionsViewModal.ShowContent(msg.Content, m.width, m.height)
+	}
+	return m, nil
 }

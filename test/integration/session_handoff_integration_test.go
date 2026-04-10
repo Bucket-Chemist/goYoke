@@ -36,11 +36,11 @@ func skipIfBinaryNotBuilt(t *testing.T) string {
 	return binaryPath
 }
 
-// setupTempProject creates a temp project with .claude/memory/ structure
+// setupTempProject creates a temp project with .gogent/memory/ structure
 func setupTempProject(t *testing.T) (projectDir string, memoryDir string, runtimeDir string, gogentDir string) {
 	t.Helper()
 	projectDir = t.TempDir()
-	memoryDir = filepath.Join(projectDir, ".claude", "memory")
+	memoryDir = filepath.Join(projectDir, ".gogent", "memory")
 	if err := os.MkdirAll(memoryDir, 0755); err != nil {
 		t.Fatalf("Failed to create memory dir: %v", err)
 	}
@@ -353,13 +353,13 @@ func TestCLI_WorkingDirectoryBehavior(t *testing.T) {
 	projectDir2 := t.TempDir()
 
 	// Setup project 1 with handoffs
-	memoryDir1 := filepath.Join(projectDir1, ".claude", "memory")
+	memoryDir1 := filepath.Join(projectDir1, ".gogent", "memory")
 	os.MkdirAll(memoryDir1, 0755)
 	handoff1 := `{"schema_version":"1.0","timestamp":1705000000,"session_id":"project1-session","context":{"project_dir":"/test1","metrics":{"tool_calls":10,"errors_logged":0,"routing_violations":0,"session_id":"project1-session"},"git_info":{"branch":"","is_dirty":false}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[]},"actions":[]}`
 	os.WriteFile(filepath.Join(memoryDir1, "handoffs.jsonl"), []byte(handoff1+"\n"), 0644)
 
 	// Setup project 2 with different handoffs
-	memoryDir2 := filepath.Join(projectDir2, ".claude", "memory")
+	memoryDir2 := filepath.Join(projectDir2, ".gogent", "memory")
 	os.MkdirAll(memoryDir2, 0755)
 	handoff2 := `{"schema_version":"1.0","timestamp":1705100000,"session_id":"project2-session","context":{"project_dir":"/test2","metrics":{"tool_calls":20,"errors_logged":0,"routing_violations":0,"session_id":"project2-session"},"git_info":{"branch":"","is_dirty":false}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[]},"actions":[]}`
 	os.WriteFile(filepath.Join(memoryDir2, "handoffs.jsonl"), []byte(handoff2+"\n"), 0644)
@@ -415,7 +415,7 @@ func TestCLI_EnvironmentVariables(t *testing.T) {
 
 	t.Run("GOGENT_PROJECT_DIR_set", func(t *testing.T) {
 		projectDir := t.TempDir()
-		memoryDir := filepath.Join(projectDir, ".claude", "memory")
+		memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 		os.MkdirAll(memoryDir, 0755)
 		os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(""), 0644)
 
@@ -436,7 +436,7 @@ func TestCLI_EnvironmentVariables(t *testing.T) {
 
 	t.Run("GOGENT_PROJECT_DIR_unset_invalid_cwd", func(t *testing.T) {
 		// This test verifies behavior when neither env nor valid handoff exists
-		// Most systems will have a cwd, but .claude/memory might not exist
+		// Most systems will have a cwd, but .gogent/memory might not exist
 		cmd := exec.Command(binaryPath, "list")
 		// Strip GOGENT_PROJECT_DIR
 		env := []string{}
@@ -446,7 +446,7 @@ func TestCLI_EnvironmentVariables(t *testing.T) {
 			}
 		}
 		cmd.Env = env
-		cmd.Dir = t.TempDir() // Empty temp dir - no .claude/memory
+		cmd.Dir = t.TempDir() // Empty temp dir - no .gogent/memory
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -488,7 +488,7 @@ func TestCLI_InvalidJSONInput(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			projectDir := t.TempDir()
-			memoryDir := filepath.Join(projectDir, ".claude", "memory")
+			memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 			os.MkdirAll(memoryDir, 0755)
 
 			// Setup minimal runtime dir
@@ -538,7 +538,7 @@ func TestCLI_StdinTimeout(t *testing.T) {
 	defer cancel()
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	cmd := exec.CommandContext(ctx, binaryPath)
@@ -659,7 +659,7 @@ func TestCLI_ExitCodes(t *testing.T) {
 
 	t.Run("success_exit_0", func(t *testing.T) {
 		projectDir := t.TempDir()
-		memoryDir := filepath.Join(projectDir, ".claude", "memory")
+		memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 		os.MkdirAll(memoryDir, 0755)
 		os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(""), 0644)
 
@@ -689,7 +689,7 @@ func TestCLI_ExitCodes(t *testing.T) {
 
 	t.Run("failure_exit_1_missing_session", func(t *testing.T) {
 		projectDir := t.TempDir()
-		memoryDir := filepath.Join(projectDir, ".claude", "memory")
+		memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 		os.MkdirAll(memoryDir, 0755)
 		os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(""), 0644)
 
@@ -757,7 +757,7 @@ func TestCLI_ShowSubcommand(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create handoff with known session ID
@@ -792,7 +792,7 @@ func TestCLI_StatsSubcommand(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create multiple handoffs for stats
@@ -833,7 +833,7 @@ func TestCLI_ListWithFilters(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".claude", "memory")
+	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create handoffs with different characteristics

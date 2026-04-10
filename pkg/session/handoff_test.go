@@ -18,12 +18,12 @@ func TestDefaultHandoffConfig(t *testing.T) {
 		t.Errorf("Expected ProjectDir %s, got: %s", projectDir, config.ProjectDir)
 	}
 
-	expectedHandoffPath := filepath.Join(projectDir, ".claude", "memory", "handoffs.jsonl")
+	expectedHandoffPath := filepath.Join(projectDir, ".gogent", "memory", "handoffs.jsonl")
 	if config.HandoffPath != expectedHandoffPath {
 		t.Errorf("Expected HandoffPath %s, got: %s", expectedHandoffPath, config.HandoffPath)
 	}
 
-	expectedPendingPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	expectedPendingPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
 	if config.PendingPath != expectedPendingPath {
 		t.Errorf("Expected PendingPath %s, got: %s", expectedPendingPath, config.PendingPath)
 	}
@@ -91,7 +91,7 @@ func TestGenerateHandoff_MinimalSession(t *testing.T) {
 	tmpDir := t.TempDir()
 	config := DefaultHandoffConfig(tmpDir)
 	// Override ViolationsPath to use temp dir (avoid picking up system-wide violations)
-	config.ViolationsPath = filepath.Join(tmpDir, ".claude", "memory", "routing-violations.jsonl")
+	config.ViolationsPath = filepath.Join(tmpDir, ".gogent", "memory", "routing-violations.jsonl")
 
 	metrics := &SessionMetrics{
 		ToolCalls:         5,
@@ -1179,7 +1179,7 @@ func TestHandoffMetrics_TimingAccuracy(t *testing.T) {
 	tmpDir := t.TempDir()
 	config := DefaultHandoffConfig(tmpDir)
 	// Override ViolationsPath to use temp dir (avoid picking up system-wide violations)
-	config.ViolationsPath = filepath.Join(tmpDir, ".claude", "memory", "routing-violations.jsonl")
+	config.ViolationsPath = filepath.Join(tmpDir, ".gogent", "memory", "routing-violations.jsonl")
 
 	metrics := &SessionMetrics{
 		ToolCalls:         1,

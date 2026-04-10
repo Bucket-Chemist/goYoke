@@ -86,12 +86,36 @@ func isValidTransition(from, to AgentStatus) bool {
 type AgentActivity struct {
 	// Type classifies the activity, e.g. "tool_use" or "thinking".
 	Type string
-	// Target is the subject of the activity, e.g. the tool name.
+	// ToolName is the tool that was invoked (e.g. "Read", "Grep", "Bash").
+	ToolName string
+	// Target is the subject of the activity, e.g. a file path or pattern.
 	Target string
 	// Preview is a short human-readable summary suitable for one-line display.
 	Preview string
 	// Timestamp records when this activity started.
 	Timestamp time.Time
+	// ToolID is the block ID from tool_use events, used to match tool_result
+	// responses back to this activity entry.
+	ToolID string
+	// Success is nil while the tool call is pending, true when the tool
+	// returned successfully, and false when it returned an error.
+	Success *bool
+}
+
+// ---------------------------------------------------------------------------
+// AcceptanceCriterion / TodoUpdate
+// ---------------------------------------------------------------------------
+
+// AcceptanceCriterion tracks a single acceptance criterion and its completion status.
+type AcceptanceCriterion struct {
+	Text      string
+	Completed bool
+}
+
+// TodoUpdate represents a todo item from an agent's TodoWrite call.
+type TodoUpdate struct {
+	Content string
+	Status  string
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +144,9 @@ type Agent struct {
 	// RecentActivity holds the rolling buffer of last N tool calls for this
 	// agent, providing visibility into what spawned subprocesses are doing.
 	RecentActivity []AgentActivity
+	// FullActivityLog is an unbounded (capped at maxFullActivityLog) log of
+	// ALL tool calls for this agent, preserving the complete history.
+	FullActivityLog []AgentActivity
 	// StartedAt is the wall-clock time when the agent began executing.
 	StartedAt time.Time
 	// Duration is the elapsed time for a completed agent; zero for in-progress.
@@ -139,6 +166,9 @@ type Agent struct {
 	Conventions []string
 	// Prompt is the augmented prompt sent to the agent (may be truncated).
 	Prompt string
+	// AcceptanceCriteria holds the list of acceptance criteria for this agent
+	// invocation and tracks their completion state.
+	AcceptanceCriteria []AcceptanceCriterion
 }
 
 // dedupKey returns the deduplication key for this agent: agentType + ":" + description.
@@ -165,6 +195,14 @@ func (a *Agent) copyOf() Agent {
 	if a.RecentActivity != nil {
 		cp.RecentActivity = make([]AgentActivity, len(a.RecentActivity))
 		copy(cp.RecentActivity, a.RecentActivity)
+	}
+	if a.FullActivityLog != nil {
+		cp.FullActivityLog = make([]AgentActivity, len(a.FullActivityLog))
+		copy(cp.FullActivityLog, a.FullActivityLog)
+	}
+	if a.AcceptanceCriteria != nil {
+		cp.AcceptanceCriteria = make([]AcceptanceCriterion, len(a.AcceptanceCriteria))
+		copy(cp.AcceptanceCriteria, a.AcceptanceCriteria)
 	}
 	return cp
 }
@@ -352,8 +390,12 @@ func (r *AgentRegistry) SetActivity(id string, activity AgentActivity) {
 // maxRecentActivities is the rolling buffer cap for per-agent tool history.
 const maxRecentActivities = 5
 
-// AppendActivity sets the current activity AND appends it to the rolling
-// buffer of recent tool calls (capped at maxRecentActivities).
+// maxFullActivityLog is the cap for the unbounded full activity log.
+const maxFullActivityLog = 500
+
+// AppendActivity sets the current activity AND appends it to both the rolling
+// buffer of recent tool calls (capped at maxRecentActivities) and the full
+// activity log (capped at maxFullActivityLog, oldest evicted when full).
 func (r *AgentRegistry) AppendActivity(id string, activity AgentActivity) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -368,6 +410,55 @@ func (r *AgentRegistry) AppendActivity(id string, activity AgentActivity) {
 	if len(a.RecentActivity) > maxRecentActivities {
 		a.RecentActivity = a.RecentActivity[len(a.RecentActivity)-maxRecentActivities:]
 	}
+	a.FullActivityLog = append(a.FullActivityLog, activity)
+	if len(a.FullActivityLog) > maxFullActivityLog {
+		a.FullActivityLog = a.FullActivityLog[len(a.FullActivityLog)-maxFullActivityLog:]
+	}
+}
+
+// UpdateActivityResult finds the activity entry with the given toolID in both
+// RecentActivity and FullActivityLog for the agent identified by id, and sets
+// its Success field to the provided value. No-op if the agent or toolID is not
+// found.
+func (r *AgentRegistry) UpdateActivityResult(agentID, toolID string, success bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[agentID]
+	if !ok {
+		return
+	}
+
+	for i := range a.RecentActivity {
+		if a.RecentActivity[i].ToolID == toolID {
+			v := success
+			a.RecentActivity[i].Success = &v
+			break
+		}
+	}
+
+	for i := range a.FullActivityLog {
+		if a.FullActivityLog[i].ToolID == toolID {
+			v := success
+			a.FullActivityLog[i].Success = &v
+			break
+		}
+	}
+}
+
+// UpdateAcceptanceCriteria matches todos to the acceptance criteria of the
+// agent identified by agentID and updates their completion state. It is a
+// no-op when the agent does not exist or has no acceptance criteria.
+func (r *AgentRegistry) UpdateAcceptanceCriteria(agentID string, todos []TodoUpdate) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[agentID]
+	if !ok {
+		return
+	}
+
+	a.AcceptanceCriteria = MatchTodosToAC(a.AcceptanceCriteria, todos)
 }
 
 // Remove deletes the agent identified by id from the registry and removes its
@@ -433,6 +524,107 @@ func (r *AgentRegistry) KillRunning() {
 			a.Status = StatusKilled
 		}
 	}
+}
+
+// KillByID sends SIGTERM to the process group of the agent identified by id
+// and all its running descendants (depth-first, bottom-up). Each killed agent
+// transitions to StatusKilled. Returns an error if the agent is not found, not
+// running, or has no PID.
+//
+// After SIGTERM, a background goroutine waits 5s and escalates to SIGKILL for
+// any process group that is still alive, checking under RLock that the agent
+// status is still StatusKilled and the process group exists.
+func (r *AgentRegistry) KillByID(id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	a, ok := r.agents[id]
+	if !ok {
+		return fmt.Errorf("agent %q not found", id)
+	}
+	if a.Status != StatusRunning {
+		return fmt.Errorf("agent %q is %s, not running", id, a.Status)
+	}
+	if a.PID <= 0 {
+		return fmt.Errorf("agent %q has no PID", id)
+	}
+
+	// Collect all descendants depth-first (leaves before parents), then kill
+	// bottom-up so children are terminated before their parent.
+	var targets []*Agent
+	r.collectDescendants(id, &targets)
+	targets = append(targets, a) // parent last
+
+	for _, t := range targets {
+		if t.Status != StatusRunning || t.PID <= 0 {
+			continue
+		}
+		pid := t.PID
+		targetID := t.ID
+		if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+			slog.Warn("KillByID: SIGTERM failed",
+				"agent", t.ID, "pid", pid, "err", err)
+		}
+		t.Status = StatusKilled
+
+		// SIGKILL escalation goroutine — captures pid and targetID by value.
+		// Checks agent status under RLock and confirms process group still exists
+		// before escalating.
+		go func(pid int, targetID string) {
+			time.Sleep(5 * time.Second)
+			r.mu.RLock()
+			agent, exists := r.agents[targetID]
+			stillKilled := exists && agent.Status == StatusKilled
+			r.mu.RUnlock()
+			if stillKilled {
+				if err := syscall.Kill(-pid, 0); err == nil {
+					// Process group still alive — escalate to SIGKILL.
+					syscall.Kill(-pid, syscall.SIGKILL) //nolint:errcheck
+				}
+			}
+		}(pid, targetID)
+	}
+
+	return nil
+}
+
+// collectDescendants walks the Children slice recursively and appends
+// all descendants to targets in depth-first post-order (leaves before
+// their parents). MUST be called with r.mu held.
+func (r *AgentRegistry) collectDescendants(id string, targets *[]*Agent) {
+	a, ok := r.agents[id]
+	if !ok {
+		return
+	}
+	for _, childID := range a.Children {
+		r.collectDescendants(childID, targets)
+		if child, ok := r.agents[childID]; ok {
+			*targets = append(*targets, child)
+		}
+	}
+}
+
+// CountRunningDescendants returns the number of running descendants of the
+// agent identified by id. Thread-safe.
+func (r *AgentRegistry) CountRunningDescendants(id string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.countRunningDescendantsLocked(id)
+}
+
+func (r *AgentRegistry) countRunningDescendantsLocked(id string) int {
+	a, ok := r.agents[id]
+	if !ok {
+		return 0
+	}
+	count := 0
+	for _, childID := range a.Children {
+		if child, ok := r.agents[childID]; ok && child.Status == StatusRunning {
+			count++
+		}
+		count += r.countRunningDescendantsLocked(childID)
+	}
+	return count
 }
 
 // SetSelected records the ID of the currently selected agent for UI

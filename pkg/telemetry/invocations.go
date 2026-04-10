@@ -54,12 +54,12 @@ func GetInvocationsLogPath() string {
 
 // GetProjectInvocationsLogPath returns the project-scoped invocations log path.
 func GetProjectInvocationsLogPath(projectDir string) string {
-	return filepath.Join(projectDir, ".claude", "memory", "agent-invocations.jsonl")
+	return filepath.Join(config.ProjectMemoryDir(projectDir), "agent-invocations.jsonl")
 }
 
 // LogInvocation appends invocation to BOTH:
 // 1. Global XDG cache: ~/.cache/gogent/agent-invocations.jsonl (survives project deletion)
-// 2. Project memory: <project>/.claude/memory/agent-invocations.jsonl (session integration)
+// 2. Project memory: <project>/.gogent/memory/agent-invocations.jsonl (session integration)
 //
 // Timestamp is auto-populated in RFC3339 format.
 // Project log failure does NOT fail the entire operation (graceful degradation).

@@ -572,7 +572,7 @@ func setupMLTelemetryProject(t *testing.T, projectDir string) {
 	dirs := []string{
 		filepath.Join(projectDir, ".gogent"),
 		filepath.Join(projectDir, ".claude"),
-		filepath.Join(projectDir, ".claude", "memory"),
+		filepath.Join(projectDir, ".gogent", "memory"),
 	}
 
 	for _, dir := range dirs {

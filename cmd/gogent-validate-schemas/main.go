@@ -173,8 +173,8 @@ func validateAgent(agent *routing.Agent, agentsDir string) []ValidationResult {
 		})
 	}
 
-	// Validate model
-	if frontmatter.Model != "" && frontmatter.Model != agent.Model {
+	// Validate model (normalize API strings to tier names before comparing)
+	if frontmatter.Model != "" && normalizeModel(frontmatter.Model) != agent.Model {
 		results = append(results, ValidationResult{
 			AgentID:    agent.ID,
 			Field:      "model",
@@ -316,19 +316,36 @@ func extractFrontmatter(path string) (*FrontmatterData, map[string]int, error) {
 	return &data, lineMap, nil
 }
 
-// extractThinkingValue handles both bool and struct thinking formats.
+// extractThinkingValue handles bool and struct thinking formats.
+// Supported formats:
+//   - bool: true/false directly
+//   - {enabled: bool}: legacy struct format
+//   - {type: "adaptive"}: Opus 4.6 adaptive thinking → true
+//   - {type: "enabled", budget_tokens: N}: explicit enabled → true
+//   - {type: "disabled"}: explicitly disabled → false
 func extractThinkingValue(thinking interface{}) *bool {
 	if thinking == nil {
 		return nil
 	}
 
+	boolPtr := func(v bool) *bool { return &v }
+
 	switch v := thinking.(type) {
 	case bool:
 		return &v
 	case map[string]interface{}:
-		// Nested struct with "enabled" field
+		// Legacy: {enabled: bool}
 		if enabled, ok := v["enabled"].(bool); ok {
-			return &enabled
+			return boolPtr(enabled)
+		}
+		// Opus 4.6: {type: "adaptive"|"enabled"|"disabled"}
+		if typVal, ok := v["type"].(string); ok {
+			switch typVal {
+			case "adaptive", "enabled":
+				return boolPtr(true)
+			case "disabled":
+				return boolPtr(false)
+			}
 		}
 	}
 
@@ -360,6 +377,20 @@ func stringSlicesEqual(a, b []string) bool {
 	}
 
 	return true
+}
+
+// normalizeModel maps Claude API model strings to tier names used in agents-index.json.
+// Tier names (haiku, sonnet, opus) pass through unchanged.
+func normalizeModel(model string) string {
+	aliases := map[string]string{
+		"claude-opus-4-6":          "opus",
+		"claude-sonnet-4-6":        "sonnet",
+		"claude-haiku-4-5-20251001": "haiku",
+	}
+	if tier, ok := aliases[model]; ok {
+		return tier
+	}
+	return model
 }
 
 // getAgentsDir returns the agents directory path.

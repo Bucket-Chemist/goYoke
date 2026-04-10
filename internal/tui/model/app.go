@@ -5,6 +5,7 @@ package model
 
 import (
 	"encoding/json"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -115,14 +116,27 @@ type sharedState struct {
 	settings    settingsWidget
 	telemetry   telemetryWidget
 	planPreview planPreviewWidget
+	teamDetail  TeamDetailWidget
 	// drawerStack is the collapsible drawer stack (TDS-004).
 	// It manages the options and plan drawers in the right panel.
 	drawerStack drawerStackWidget
-	taskBoard   taskBoardWidget
+	// teamsHealth is the team health dashboard widget (TUI-003).
+	// Concrete implementation lives in the teams package (TUI-005).
+	teamsHealth teamsHealthWidget
+	// teamNotifiedAt records when the last TeamUpdateMsg arrived.
+	// The poll-tick handler suppresses ClearTeamsContent within a 10s
+	// grace window to prevent a race where the poll clears the drawer
+	// before the team becomes visible to the filesystem scanner.
+	teamNotifiedAt time.Time
+	taskBoard      taskBoardWidget
 
 	// planViewModal is the full-screen plan viewer overlay (TUI-056).
 	// It is activated by alt+v when rightPanelMode == RPMPlanPreview.
 	planViewModal modals.PlanViewModal
+	helpModal     modals.HelpModal // full-screen keyboard shortcut reference (alt+h)
+
+	// optionsViewModal is the full-screen options viewer overlay (alt+o).
+	optionsViewModal modals.OptionsViewModal
 
 	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
 	// It is activated by ctrl+f and queries all registered SearchSources.
@@ -211,6 +225,8 @@ type AppModel struct {
 	cliReady       bool   // true after SystemInitEvent processed
 	sessionID      string // from SystemInitEvent
 	activeModel    string // from SystemInitEvent
+	activeEffort   string // current --effort value; empty omits the flag
+	context1M      bool   // true if initial session resolved to a [1m] model
 	reconnectCount int    // number of reconnection attempts made
 
 	// Provider switch debounce (R-2).
@@ -232,6 +248,9 @@ type AppModel struct {
 	// within the shutdown window forces an immediate tea.Quit without waiting
 	// for the graceful sequence to complete (TUI-034).
 	shutdownInProgress bool
+
+	// mouseEnabled tracks whether tea mouse capture is active; true at startup.
+	mouseEnabled bool
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:
@@ -256,9 +275,11 @@ func NewAppModel() AppModel {
 		providerState: state.NewProviderState(),
 		activeTheme:   &defaultTheme,
 		themeVariant:  config.ThemeDark,
-		planViewModal: modals.NewPlanViewModal(),
+		planViewModal:    modals.NewPlanViewModal(),
+		helpModal:        modals.NewHelpModal(),
+		optionsViewModal: modals.NewOptionsViewModal(),
 	}
-	return AppModel{
+	m := AppModel{
 		focus:          FocusClaude,
 		rightPanelMode: RPMAgents,
 		activeTab:      TabChat,
@@ -268,7 +289,10 @@ func NewAppModel() AppModel {
 		agentTree:      agents.NewAgentTreeModel(),
 		agentDetail:    agents.NewAgentDetailModel(),
 		shared:         shared,
+		mouseEnabled:   true,
 	}
+	m.statusLine.MouseEnabled = true
+	return m
 }
 
 // ---------------------------------------------------------------------------
@@ -284,6 +308,7 @@ func (m AppModel) Init() tea.Cmd {
 		tea.EnterAltScreen,
 		m.startCLI(),
 		m.statusLine.StartTicks(),
+		m.startTeamPolling(),
 	)
 }
 
@@ -294,6 +319,17 @@ func (m AppModel) startCLI() tea.Cmd {
 		return nil
 	}
 	return m.shared.cliDriver.Start()
+}
+
+// startTeamPolling returns the initial team-list poll command, or nil when
+// no team list is wired or StartPolling has not been called yet.  The poll
+// fires a package-private pollTickMsg that must be forwarded to the team
+// list via the unhandled-message fallthrough in Update().
+func (m AppModel) startTeamPolling() tea.Cmd {
+	if m.shared == nil || m.shared.teamList == nil {
+		return nil
+	}
+	return m.shared.teamList.PollNow()
 }
 
 // Update is the sole mutation point for AppModel state.  It dispatches all
@@ -343,11 +379,28 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleProviderSwitchExecuteMsg(msg)
 
 	// -----------------------------------------------------------------
+	// Model switching
+	// -----------------------------------------------------------------
+
+	case ModelSwitchRequestMsg:
+		return m.handleModelSwitchRequest(msg)
+
+	// -----------------------------------------------------------------
+	// Effort switching
+	// -----------------------------------------------------------------
+
+	case EffortChangeRequestMsg:
+		return m.handleEffortChangeRequest(msg)
+
+	// -----------------------------------------------------------------
 	// Bridge events (from MCP server via UDS)
 	// -----------------------------------------------------------------
 
 	case BridgeModalRequestMsg:
 		return m.handleBridgeModalRequest(msg)
+
+	case CLIPermissionRequestMsg:
+		return m.handleCLIPermissionRequest(msg)
 
 	case drawer.ModalResponseMsg:
 		// TDS-006: Drawer resolved a modal — deliver response to the bridge.
@@ -370,6 +423,12 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.shared.planViewModal.Show()
 			}
 		}
+		return m, nil
+
+	case drawer.OptionsViewRequestMsg:
+		return m.handleOptionsViewRequest(msg)
+
+	case modals.OptionsViewClosedMsg:
 		return m, nil
 
 	case modals.ModalResponseMsg:
@@ -395,6 +454,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
 		return m.handleAgentRegistryMsg(msg)
+
+	case AgentTodoUpdateMsg:
+		return m.handleAgentTodoUpdate(msg)
 
 	case agents.AgentSelectedMsg:
 		return m.handleAgentSelected(msg)
@@ -498,6 +560,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	// -----------------------------------------------------------------
+	// Team update (immediate scan + drawer expand)
+	// -----------------------------------------------------------------
+
+	case TeamUpdateMsg:
+		return m.handleTeamUpdate(msg)
+
+	// -----------------------------------------------------------------
 	// Tab flash animation (TUI-061)
 	// -----------------------------------------------------------------
 
@@ -505,12 +574,10 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleTabFlash(msg)
 
 	// -----------------------------------------------------------------
-	// Plan view modal (TUI-056)
+	// Plan view / help modals — deactivate themselves on Esc/q.
 	// -----------------------------------------------------------------
 
-	case modals.PlanViewClosedMsg:
-		// Nothing extra to do; the modal deactivated itself on Esc/q.
-		// The renderLayout guard already checks IsActive before rendering.
+	case modals.PlanViewClosedMsg, modals.HelpClosedMsg:
 		return m, nil
 
 	// -----------------------------------------------------------------
@@ -521,6 +588,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cli.StreamEvent, cli.CLIUnknownEvent:
 		return m, m.waitForCLIEvent()
 	}
+
+	// ─── FORWARDING CASCADE ──────────────────────────────────────────────
+	// Contract: each forwarder returns non-nil ONLY for its own package's
+	// unexported tick type. The cascade exits on the first non-nil cmd, so
+	// a forwarder that claims a foreign type starves downstream forwarders.
+	// All tick types are distinct named structs — do NOT use interface
+	// matching here.
+	// Order: 1. StatusLine  2. Toast  3. TabBar  4. TeamList  5. TeamDetail
+	// ─────────────────────────────────────────────────────────────────────
 
 	// Forward unhandled messages to status line (handles its own tick types).
 	{
@@ -534,7 +610,11 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Forward unhandled messages to toast for tick-based expiry.
 	if m.shared != nil && m.shared.toasts != nil {
+		prevToastH := m.shared.toasts.Height()
 		cmd := m.shared.toasts.HandleMsg(msg)
+		if m.shared.toasts.Height() != prevToastH {
+			m.propagateContentSizes()
+		}
 		if cmd != nil {
 			return m, cmd
 		}
@@ -549,6 +629,53 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if cmd != nil {
 			return m, cmd
 		}
+	}
+
+	// Forward unhandled messages to the team list for autonomous 2-second
+	// poll ticks.  pollTickMsg is unexported from the teams package, so
+	// AppModel cannot type-switch on it; forwarding here ensures the poll
+	// cycle is self-sustaining once started by Init → startTeamPolling.
+	if m.shared != nil && m.shared.teamList != nil {
+		cmd := m.shared.teamList.HandleMsg(msg)
+		if cmd != nil {
+			// Poll tick processed — refresh teams drawer with latest health data.
+			if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
+				if m.shared.teamsHealth.HasData() {
+					if !m.shared.drawerStack.TeamsHasContent() {
+						// First team discovered — force-expand the drawer.
+						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+					} else if m.shared.teamsHealth.HasRunningTeam() &&
+						m.shared.drawerStack.TeamsIsMinimized() {
+						// A team is actively running and the drawer was minimized —
+						// force-expand so the user sees live progress without manually
+						// reopening the drawer.
+						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+					} else {
+						m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+					}
+				} else {
+					// Don't clear teams drawer within 10s of a TeamUpdateMsg —
+					// the team may not yet be visible to the filesystem scanner
+					// (ensureTeamVisible race or symlink propagation delay).
+					if m.shared.teamNotifiedAt.IsZero() || time.Since(m.shared.teamNotifiedAt) > 10*time.Second {
+						m.shared.drawerStack.ClearTeamsContent()
+					}
+				}
+			}
+			// Refresh the team detail panel so it shows up-to-date member state.
+			if m.shared.teamDetail != nil {
+				m.shared.teamDetail.Refresh()
+			}
+			return m, cmd
+		}
+	}
+
+	// Forward unhandled messages to the team detail for TeamSelectedMsg
+	// (emitted as a tea.Cmd result by the team list when the cursor moves).
+	// TeamSelectedMsg is unexported from the teams package so AppModel cannot
+	// type-switch on it directly; the detail model handles it internally.
+	if m.shared != nil && m.shared.teamDetail != nil {
+		m.shared.teamDetail.HandleMsg(msg)
 	}
 
 	return m, nil

@@ -13,6 +13,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -28,18 +29,11 @@ type TeamSelectedMsg struct {
 }
 
 // pollTickMsg is a package-private message that drives the 2-second polling
-// cycle. It carries the tick time for diagnostic purposes.
-type pollTickMsg time.Time
-
-// ---------------------------------------------------------------------------
-// pollCmd
-// ---------------------------------------------------------------------------
-
-// pollCmd returns a tea.Cmd that fires after 2 seconds with a pollTickMsg.
-func pollCmd() tea.Cmd {
-	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-		return pollTickMsg(t)
-	})
+// cycle. seq is compared against TeamListModel.pollSeq to discard ticks from
+// superseded chains (created by a prior StartPolling or PollNow call).
+type pollTickMsg struct {
+	time time.Time
+	seq  int
 }
 
 // ---------------------------------------------------------------------------
@@ -53,12 +47,13 @@ func pollCmd() tea.Cmd {
 // The zero value is not usable; use NewTeamListModel instead.
 type TeamListModel struct {
 	registry *TeamRegistry
-	selected int        // cursor index into teams snapshot
+	selected int          // cursor index into teams snapshot
 	teams    []*TeamState // snapshot refreshed on every poll/update
 	width    int
 	height   int
 	teamsDir string // directory containing team subdirectories
 	polling  bool   // true once polling has been started
+	pollSeq  int    // incremented on each StartPolling/PollNow; stale ticks are dropped
 }
 
 // NewTeamListModel returns a TeamListModel backed by the given registry.
@@ -74,16 +69,55 @@ func (m TeamListModel) Init() tea.Cmd {
 	return nil
 }
 
+// pollCmd returns a Cmd that fires after 2 seconds with the current pollSeq.
+// Ticks carrying a seq that no longer matches m.pollSeq are discarded in
+// Update, which makes the chain idempotent across PollNow / StartPolling.
+func (m TeamListModel) pollCmd() tea.Cmd {
+	seq := m.pollSeq
+	return tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+		return pollTickMsg{time: t, seq: seq}
+	})
+}
+
 // StartPolling sets the directory to poll and returns a tea.Cmd that
 // immediately fires a pollTickMsg to kick off the 2-second polling cycle.
-// It uses a pointer receiver so that teamsDir is stored on the actual model
-// instance and is visible in subsequent Update calls.
+// It increments pollSeq so any tick from a previous chain is discarded.
 func (m *TeamListModel) StartPolling(teamsDir string) tea.Cmd {
 	m.teamsDir = teamsDir
 	m.polling = true
+	m.pollSeq++
+	seq := m.pollSeq
 	return func() tea.Msg {
-		return pollTickMsg(time.Now())
+		return pollTickMsg{time: time.Now(), seq: seq}
 	}
+}
+
+// PollNow returns a Cmd that immediately fires a pollTickMsg with the new
+// pollSeq, making any pending tick from the previous chain stale. It is
+// idempotent: calling it repeatedly only advances the seq and kills the old
+// chain; the new chain re-establishes the 2-second cadence on the next tick.
+// Returns nil when polling has not been started.
+func (m *TeamListModel) PollNow() tea.Cmd {
+	if !m.polling {
+		return nil
+	}
+	m.pollSeq++
+	seq := m.pollSeq
+	return func() tea.Msg {
+		return pollTickMsg{time: time.Now(), seq: seq}
+	}
+}
+
+// ScanNow performs an immediate filesystem scan of the teams directory and
+// refreshes the local snapshot. Unlike PollNow it does NOT schedule a follow-up
+// tick, so it cannot create duplicate poll chains. Use this when a TeamUpdateMsg
+// arrives and you need the registry populated before reading drawer content.
+func (m *TeamListModel) ScanNow() {
+	if m.teamsDir != "" {
+		scanTeamsDir(m.teamsDir, m.registry)
+	}
+	m.teams = m.registry.All()
+	m.clampSelected()
 }
 
 // SetSize updates the width and height used for rendering.
@@ -119,6 +153,10 @@ func (m TeamListModel) Update(msg tea.Msg) (TeamListModel, tea.Cmd) {
 		return m, nil
 
 	case pollTickMsg:
+		// Discard ticks from superseded chains (stale seq).
+		if msg.seq != m.pollSeq {
+			return m, nil
+		}
 		// Scan the directory and update the registry for each team found.
 		if m.teamsDir != "" {
 			scanTeamsDir(m.teamsDir, m.registry)
@@ -126,8 +164,8 @@ func (m TeamListModel) Update(msg tea.Msg) (TeamListModel, tea.Cmd) {
 		// Refresh the local snapshot.
 		m.teams = m.registry.All()
 		m.clampSelected()
-		// Schedule the next poll.
-		return m, pollCmd()
+		// Schedule the next poll with the same seq.
+		return m, m.pollCmd()
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -284,6 +322,14 @@ func (m *TeamListModel) HandleMsg(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
+// CreateDetailModel returns a preconfigured TeamDetailModel backed by the
+// same registry as this list. agentReg may be nil. The concrete type
+// satisfies model.TeamDetailWidget without importing the model package.
+func (m *TeamListModel) CreateDetailModel(agentReg *state.AgentRegistry) model.TeamDetailWidget {
+	td := NewTeamDetailModel(m.registry, agentReg)
+	return &td
+}
+
 // scanTeamsDir reads every subdirectory of dir, attempts to parse
 // config.json, and calls registry.Update for any successfully parsed team.
 // Errors are silently ignored so a single corrupt config.json does not block
@@ -295,8 +341,17 @@ func scanTeamsDir(dir string, reg *TeamRegistry) {
 	}
 
 	for _, entry := range entries {
+		// Accept both real directories and symlinks that resolve to directories
+		// (ensureTeamVisible creates symlinks for cross-session team visibility).
 		if !entry.IsDir() {
-			continue
+			if entry.Type()&os.ModeSymlink == 0 {
+				continue
+			}
+			target := filepath.Join(dir, entry.Name())
+			info, err := os.Stat(target) // Stat follows symlinks
+			if err != nil || !info.IsDir() {
+				continue
+			}
 		}
 		teamDir := filepath.Join(dir, entry.Name())
 		cfgPath := filepath.Join(teamDir, "config.json")
@@ -311,6 +366,21 @@ func scanTeamsDir(dir string, reg *TeamRegistry) {
 			continue
 		}
 
-		reg.Update(teamDir, cfg)
+		// Stat stream files for activity tracking.
+		var streamSizes map[string]int64
+		streamEntries, _ := filepath.Glob(filepath.Join(teamDir, "stream_*.ndjson"))
+		if len(streamEntries) > 0 {
+			streamSizes = make(map[string]int64, len(streamEntries))
+			for _, path := range streamEntries {
+				base := filepath.Base(path)
+				name := strings.TrimPrefix(base, "stream_")
+				name = strings.TrimSuffix(name, ".ndjson")
+				if info, err := os.Stat(path); err == nil {
+					streamSizes[name] = info.Size()
+				}
+			}
+		}
+
+		reg.Update(teamDir, cfg, streamSizes)
 	}
 }

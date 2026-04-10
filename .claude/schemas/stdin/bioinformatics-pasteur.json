@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gogent-fortress/schemas/stdin/bioinformatics-pasteur.json",
+  "title": "Bioinformatics Pasteur Synthesizer Stdin Schema",
+  "description": "Validates stdin for the pasteur bioinformatics review synthesizer (wave 1)",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "agent",
+    "workflow",
+    "context",
+    "wave_0_outputs",
+    "review_scope_summary",
+    "omics_context"
+  ],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "const": "pasteur",
+      "description": "Agent identifier"
+    },
+    "workflow": {
+      "type": "string",
+      "const": "review-bioinformatics",
+      "description": "Workflow type"
+    },
+    "context": {
+      "type": "object",
+      "required": [
+        "project_root",
+        "team_dir"
+      ],
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to project root"
+        },
+        "team_dir": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to team directory"
+        }
+      }
+    },
+    "wave_0_outputs": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "reviewer_id",
+          "stdout_file_path",
+          "status"
+        ],
+        "properties": {
+          "reviewer_id": {
+            "type": "string",
+            "description": "Reviewer agent identifier"
+          },
+          "stdout_file_path": {
+            "type": "string",
+            "pattern": "^/",
+            "description": "Absolute path to reviewer's stdout file"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed",
+              "timeout"
+            ],
+            "description": "Execution status of the reviewer"
+          },
+          "cost_usd": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Optional: Cost of this reviewer's execution"
+          }
+        }
+      },
+      "description": "Array of wave 0 reviewer results. Pasteur reads stdout files of completed reviewers."
+    },
+    "review_scope_summary": {
+      "type": "object",
+      "required": [
+        "total_files",
+        "languages_detected"
+      ],
+      "properties": {
+        "total_files": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of files in review scope"
+        },
+        "languages_detected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of programming languages detected"
+        },
+        "file_categories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional: Categories of files (pipeline, config, data-processing, etc.)"
+        }
+      },
+      "description": "Summary of original review scope (not full file list — pasteur reads that from reviewer outputs)"
+    },
+    "omics_context": {
+      "type": "object",
+      "required": [
+        "primary_domain",
+        "data_formats_detected",
+        "pipeline_tools_detected",
+        "workflow_manager"
+      ],
+      "properties": {
+        "primary_domain": {
+          "type": "string",
+          "enum": [
+            "genomics",
+            "proteomics",
+            "proteogenomics",
+            "proteoform",
+            "mass-spectrometry",
+            "pipeline",
+            "mixed"
+          ],
+          "description": "Primary bioinformatics domain"
+        },
+        "data_formats_detected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Data formats detected in scope (e.g., FASTQ, BAM, mzML, mzXML)"
+        },
+        "pipeline_tools_detected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pipeline tools detected (e.g., nextflow, snakemake, wdl, cwl)"
+        },
+        "workflow_manager": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Detected workflow manager (nextflow, snakemake, wdl, cwl, or null)"
+        }
+      },
+      "description": "Bioinformatics and omics-specific context for synthesis"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable task summary for envelope builder compatibility"
+    }
+  },
+  "additionalProperties": false
+}

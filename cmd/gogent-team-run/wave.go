@@ -64,11 +64,19 @@ func runWaves(ctx context.Context, tr *TeamRunner) error {
 			}
 		}
 
-		// Check for wave failures and skip subsequent waves if any failed
+		// Check for wave failures. Total failure aborts remaining waves;
+		// partial failure allows continuation so synthesizers (e.g. Pasteur)
+		// can work with whatever results are available.
 		if failed := checkWaveFailures(tr, waveIdx); len(failed) > 0 {
-			log.Printf("[WARN] wave: Wave %d had failed members: %v", wave.WaveNumber, failed)
-			skipRemainingWaves(tr, waveIdx)
-			return fmt.Errorf("wave %d had %d failed member(s), skipping subsequent waves", wave.WaveNumber, len(failed))
+			if len(failed) == len(wave.Members) {
+				// Total wipe — no results at all, skip remaining waves.
+				log.Printf("[ERROR] wave: Wave %d ALL members failed: %v", wave.WaveNumber, failed)
+				skipRemainingWaves(tr, waveIdx)
+				return fmt.Errorf("wave %d: all %d members failed, skipping subsequent waves", wave.WaveNumber, len(failed))
+			}
+			// Partial failure — continue to next wave so synthesizer can handle partial results.
+			log.Printf("[WARN] wave: Wave %d had %d/%d failed members: %v — continuing to next wave",
+				wave.WaveNumber, len(failed), len(wave.Members), failed)
 		}
 
 		log.Printf("[INFO] wave: Wave %d completed", wave.WaveNumber)

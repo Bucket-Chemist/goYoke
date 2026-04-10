@@ -84,7 +84,7 @@ func TestGenerateRoutingReminder(t *testing.T) {
 
 func TestCountPendingLearnings(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings file
@@ -121,7 +121,7 @@ func TestCountPendingLearnings_NoFile(t *testing.T) {
 
 func TestCountPendingLearnings_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	pendingPath := filepath.Join(memoryDir, "pending-learnings.jsonl")
@@ -140,7 +140,7 @@ func TestCountPendingLearnings_EmptyFile(t *testing.T) {
 
 func TestShouldFlushLearnings_BelowThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Set custom threshold
@@ -173,7 +173,7 @@ func TestShouldFlushLearnings_BelowThreshold(t *testing.T) {
 
 func TestShouldFlushLearnings_ConfigurableThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Set custom threshold
@@ -206,7 +206,7 @@ func TestShouldFlushLearnings_ConfigurableThreshold(t *testing.T) {
 
 func TestShouldFlushLearnings_ExactlyAtThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Use default threshold
@@ -238,7 +238,7 @@ func TestShouldFlushLearnings_ExactlyAtThreshold(t *testing.T) {
 
 func TestArchivePendingLearnings(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings
@@ -270,7 +270,7 @@ func TestArchivePendingLearnings(t *testing.T) {
 	}
 
 	// Verify archive directory was created
-	sharpEdgesDir := filepath.Join(tmpDir, ".claude", "memory", "sharp-edges")
+	sharpEdgesDir := filepath.Join(tmpDir, ".gogent", "memory", "sharp-edges")
 	if _, err := os.Stat(sharpEdgesDir); os.IsNotExist(err) {
 		t.Error("Archive directory should be created")
 	}
@@ -305,7 +305,7 @@ func TestArchivePendingLearnings_NoFile(t *testing.T) {
 
 func TestArchivePendingLearnings_CreatesDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".claude", "memory")
+	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings
@@ -313,7 +313,7 @@ func TestArchivePendingLearnings_CreatesDirectory(t *testing.T) {
 	os.WriteFile(pendingPath, []byte("{}\n"), 0644)
 
 	// sharp-edges directory should NOT exist yet
-	sharpEdgesDir := filepath.Join(tmpDir, ".claude", "memory", "sharp-edges")
+	sharpEdgesDir := filepath.Join(tmpDir, ".gogent", "memory", "sharp-edges")
 	if _, err := os.Stat(sharpEdgesDir); !os.IsNotExist(err) {
 		t.Fatal("sharp-edges directory should not exist before archival")
 	}

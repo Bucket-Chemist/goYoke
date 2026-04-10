@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
@@ -41,6 +42,7 @@ const (
 	hintBarHeight     = 1 // single-row keyboard hint bar (TUI-060)
 	breadcrumbHeight  = 1 // single-row breadcrumb trail (TUI-063)
 	borderFrame       = 2 // border chars on each axis (1 left + 1 right)
+	separatorHeight   = 1 // horizontal separator between conversation viewport and input (TUI-L02)
 )
 
 // ---------------------------------------------------------------------------
@@ -139,6 +141,10 @@ func (m AppModel) computeLayout() layoutDims {
 	if m.shared != nil && m.shared.taskBoard != nil {
 		taskBoardH = m.shared.taskBoard.Height()
 	}
+	toastH := 0
+	if m.shared != nil && m.shared.toasts != nil {
+		toastH = m.shared.toasts.Height()
+	}
 	hintH := 0
 	if m.shared != nil && m.shared.hintBar != nil && m.shared.hintBar.IsVisible() {
 		hintH = hintBarHeight
@@ -151,7 +157,7 @@ func (m AppModel) computeLayout() layoutDims {
 		// crumbs on startup ensure the row is always present.
 		bcH = breadcrumbHeight
 	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - hintH - bcH - borderFrame
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - toastH - hintH - bcH - borderFrame
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}
@@ -215,6 +221,50 @@ func (m AppModel) computeLayout() layoutDims {
 	return dims
 }
 
+// computeDrawerLayout returns the height and width for the drawer rendered
+// at the bottom of the right panel.
+//
+// Rules:
+//   - Compact tier: always (0, 0) — drawers suppressed
+//   - nil drawerStack: (0, 0)
+//   - Expanded (has content): 30% of contentHeight, capped at 12, minimum 5
+//   - Minimized (no content): 2-row tab strip at right panel width
+func (m AppModel) computeDrawerLayout(dims layoutDims) (height, width int) {
+	if dims.tier == LayoutCompact || m.shared == nil || m.shared.drawerStack == nil {
+		return 0, 0
+	}
+	drawerWidth := dims.rightWidth
+	// Each minimized drawer = 3 rows (border top + label + border bottom).
+	// 3 drawers all minimized = 9 rows minimum.
+	const numDrawers = 3
+	const minimizedH = 3
+	minH := numDrawers * minimizedH
+
+	hasContent := m.shared.drawerStack.OptionsHasContent() || m.shared.drawerStack.PlanHasContent() || m.shared.drawerStack.TeamsHasContent()
+	if hasContent {
+		h := dims.contentHeight * 40 / 100
+		if h < minH {
+			h = minH
+		}
+		if h > dims.contentHeight-5 {
+			h = dims.contentHeight - 5
+		}
+		if h < minH {
+			h = minH
+		}
+		return h, drawerWidth
+	}
+	// All minimized.
+	h := minH
+	if h > dims.contentHeight-1 {
+		h = dims.contentHeight - 1
+	}
+	if h < 1 {
+		h = 1
+	}
+	return h, drawerWidth
+}
+
 // ---------------------------------------------------------------------------
 // Layout rendering
 // ---------------------------------------------------------------------------
@@ -247,6 +297,16 @@ func (m AppModel) renderLayout() string {
 		)
 	}
 
+	// Options view modal renders as a full-screen overlay (same priority as
+	// plan view modal).
+	if m.shared != nil && m.shared.optionsViewModal.IsActive() {
+		return lipgloss.Place(
+			m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			m.shared.optionsViewModal.View(),
+		)
+	}
+
 	// CWD selector renders as a full-screen overlay (lower priority than
 	// plan view, higher than search overlay and normal content).
 	if m.shared != nil && m.shared.cwdSelector != nil && m.shared.cwdSelector.IsActive() {
@@ -276,7 +336,10 @@ func (m AppModel) renderLayout() string {
 
 	mainArea := m.renderMain(dims)
 
-	parts := []string{bannerView, tabBarView}
+	parts := []string{bannerView}
+	if tabBarView != "" {
+		parts = append(parts, tabBarView)
+	}
 
 	// Insert provider tab bar between the tab bar and main content area.
 	if m.shared != nil && m.shared.providerTabBar != nil && m.shared.providerTabBar.IsVisible() {
@@ -320,35 +383,126 @@ func (m AppModel) renderLayout() string {
 	// This catches any overflow from toasts (whose height is not subtracted
 	// from contentHeight), phantom blank lines from JoinVertical with "",
 	// or stale component dimensions after a missed propagateContentSizes call.
-	return truncateHeight(output, m.height)
+	result := truncateHeight(output, m.height)
+
+	// Help modal: composite the help box on top of the rendered layout.
+	if m.shared != nil && m.shared.helpModal.IsActive() {
+		result = overlayCenter(result, m.shared.helpModal.View(), m.width, m.height)
+	}
+
+	return result
+}
+
+// overlayCenter composites fg centered on top of bg. Background content
+// outside the fg region is preserved. Uses charmbracelet/x/ansi for
+// ANSI-aware string slicing.
+func overlayCenter(bg, fg string, termW, termH int) string {
+	bgLines := strings.Split(bg, "\n")
+	fgLines := strings.Split(fg, "\n")
+
+	fgH := len(fgLines)
+	fgW := lipgloss.Width(fg)
+
+	startY := (termH - fgH) / 2
+	if startY < 0 {
+		startY = 0
+	}
+	startX := (termW - fgW) / 2
+	if startX < 0 {
+		startX = 0
+	}
+
+	for len(bgLines) < termH {
+		bgLines = append(bgLines, strings.Repeat(" ", termW))
+	}
+
+	for i, fgLine := range fgLines {
+		row := startY + i
+		if row >= len(bgLines) {
+			break
+		}
+
+		bgLine := bgLines[row]
+		// Pad bg line so ansi.TruncateLeft has enough columns to work with.
+		if lipgloss.Width(bgLine) < termW {
+			bgLine += strings.Repeat(" ", termW-lipgloss.Width(bgLine))
+		}
+
+		left := ansi.Truncate(bgLine, startX, "")
+		right := ansi.TruncateLeft(bgLine, startX+fgW, "")
+
+		bgLines[row] = left + fgLine + right
+	}
+
+	if len(bgLines) > termH {
+		bgLines = bgLines[:termH]
+	}
+	return strings.Join(bgLines, "\n")
 }
 
 // renderMain renders the split content area (left panel + optional right panel).
+// The left panel uses the full content height.  The right panel handles its
+// drawer allocation internally in renderRightPanel (TUI-002).
 func (m AppModel) renderMain(dims layoutDims) string {
-	leftPanel := m.renderLeftPanel(dims)
+	panelH := dims.contentHeight
+
+	leftPanel := m.renderLeftPanel(dims, panelH)
 
 	if !dims.showRightPanel {
 		return leftPanel
 	}
-
-	rightPanel := m.renderRightPanel(dims)
+	rightPanel := m.renderRightPanel(dims, panelH)
 	return lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, rightPanel)
 }
 
-// renderLeftPanel renders the Claude conversation panel with the appropriate
-// focus border.
-func (m AppModel) renderLeftPanel(dims layoutDims) string {
+// renderHorizontalSeparator renders a single-row horizontal rule at the given
+// width using the muted style.  It visually separates the conversation viewport
+// from the input box in the left (Claude) panel.
+func renderHorizontalSeparator(width int) string {
+	if width <= 0 {
+		return ""
+	}
+	return config.StyleMuted.Render(strings.Repeat("─", width))
+}
+
+// renderLeftPanel renders the left panel content with the appropriate focus
+// border.  The content depends on the active tab:
+//   - TabChat       → Claude conversation panel
+//   - TabTeamConfig → Team list
+//   - TabAgentConfig, TabTelemetry → placeholder
+//
+// panelH is the content height after subtracting the drawer allocation.
+func (m AppModel) renderLeftPanel(dims layoutDims, panelH int) string {
 	focused := m.focus == FocusClaude
 
 	var content string
-	if m.shared != nil && m.shared.claudePanel != nil {
-		content = m.shared.claudePanel.View()
-	} else {
-		content = config.StyleSubtle.Render("Claude panel  [focus=" + m.focus.String() + "]")
+	switch m.activeTab {
+	case TabChat:
+		if m.shared != nil && m.shared.claudePanel != nil {
+			conversation := m.shared.claudePanel.ViewConversation()
+			separator := renderHorizontalSeparator(dims.leftWidth)
+			input := m.shared.claudePanel.ViewInput()
+			composed := lipgloss.JoinVertical(lipgloss.Left, conversation, separator, input)
+			content = m.shared.claudePanel.ApplyOverlay(composed)
+		} else {
+			content = config.StyleSubtle.Render("Claude panel  [focus=" + m.focus.String() + "]")
+		}
+	case TabTeamConfig:
+		if m.shared != nil && m.shared.teamList != nil {
+			content = m.shared.teamList.View()
+		} else {
+			content = config.StyleSubtle.Render("Team Config — no teams loaded")
+		}
+	case TabAgentConfig:
+		content = config.StyleSubtle.Render("Agent Config (not yet implemented)")
+	case TabTelemetry:
+		content = config.StyleSubtle.Render("Telemetry → right panel (use Tab to focus)")
+	default:
+		content = config.StyleSubtle.Render(m.activeTab.String())
 	}
 
 	// Clip inner content — lipgloss.Height() pads but does NOT truncate.
-	content = truncateHeight(content, dims.contentHeight)
+	content = truncateHeight(content, panelH)
 
 	var style lipgloss.Style
 	if focused {
@@ -359,14 +513,22 @@ func (m AppModel) renderLeftPanel(dims layoutDims) string {
 
 	return style.
 		Width(dims.leftWidth).
-		Height(dims.contentHeight).
+		Height(panelH).
 		Render(content)
 }
 
 // renderRightPanel renders the right-side panel whose content depends on the
-// active RightPanelMode.
-func (m AppModel) renderRightPanel(dims layoutDims) string {
+// active RightPanelMode.  panelH is the total column height; the drawer
+// allocation is computed internally and the remaining space goes to content.
+func (m AppModel) renderRightPanel(dims layoutDims, panelH int) string {
 	focused := m.focus == FocusAgents
+
+	// Compute drawer allocation within the right panel; content gets the rest.
+	drawerH, drawerW := m.computeDrawerLayout(dims)
+	contentH := panelH - drawerH
+	if contentH < 1 {
+		contentH = 1
+	}
 
 	var content string
 	switch m.rightPanelMode {
@@ -398,64 +560,31 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 		} else {
 			content = config.StyleSubtle.Render("Plan Preview")
 		}
+	case RPMTeams:
+		if m.shared != nil && m.shared.teamDetail != nil {
+			m.shared.teamDetail.SetSize(dims.rightWidth, contentH)
+			content = m.shared.teamDetail.View()
+		} else {
+			content = config.StyleSubtle.Render("Teams")
+		}
 	default:
 		content = config.StyleSubtle.Render(m.rightPanelMode.String())
 	}
 
-	// Drawer stack compositing (TDS-005).
-	// Always render drawer tabs at bottom of right panel for discoverability.
-	// When drawers have content, they expand and consume up to 40% of height.
-	// Compact tier suppresses drawers entirely.
-	if dims.tier != LayoutCompact && m.shared != nil && m.shared.drawerStack != nil {
-		hasContent := m.shared.drawerStack.OptionsHasContent() || m.shared.drawerStack.PlanHasContent()
+	// Clip inner content, then pad to exactly contentH rows so the drawer
+	// is flush with the bottom of the panel (not top-justified).
+	content = truncateHeight(content, contentH)
+	content = lipgloss.NewStyle().Width(dims.rightWidth).Height(contentH).Render(content)
 
-		if hasContent {
-			// Expanded: drawer gets up to 40% of content height, capped at 15 rows, min 5.
-			drawerH := dims.contentHeight * 40 / 100
-			if drawerH > 15 {
-				drawerH = 15
-			}
-			if drawerH < 5 {
-				drawerH = 5
-			}
-			if drawerH > dims.contentHeight-5 {
-				drawerH = dims.contentHeight - 5
-			}
-			if drawerH < 1 {
-				drawerH = 1
-			}
-
-			mainH := dims.contentHeight - drawerH
-			m.shared.drawerStack.SetSize(dims.rightWidth, drawerH)
-
-			mainStyle := lipgloss.NewStyle().Width(dims.rightWidth).Height(mainH)
-			drawerView := m.shared.drawerStack.View()
-
-			content = lipgloss.JoinVertical(lipgloss.Left,
-				mainStyle.Render(content),
-				drawerView,
-			)
-		} else {
-			// Minimized: show compact tabs (1 row each) at the bottom.
-			tabH := 2 // 1 row per minimized drawer tab
-			mainH := dims.contentHeight - tabH
-			if mainH < 1 {
-				mainH = 1
-			}
-			m.shared.drawerStack.SetSize(dims.rightWidth, tabH)
-
-			mainStyle := lipgloss.NewStyle().Width(dims.rightWidth).Height(mainH)
-			drawerView := m.shared.drawerStack.View()
-
-			content = lipgloss.JoinVertical(lipgloss.Left,
-				mainStyle.Render(content),
-				drawerView,
-			)
-		}
+	// Drawer renders INSIDE the panel border at the bottom of the right column.
+	if drawerH > 0 && m.shared != nil && m.shared.drawerStack != nil {
+		m.shared.drawerStack.SetSize(drawerW, drawerH)
+		drawerView := m.shared.drawerStack.View()
+		content = lipgloss.JoinVertical(lipgloss.Left, content, drawerView)
 	}
 
-	// Clip inner content — lipgloss.Height() pads but does NOT truncate.
-	content = truncateHeight(content, dims.contentHeight)
+	// Final clip to panelH to prevent any overflow from drawer chrome.
+	content = truncateHeight(content, panelH)
 
 	var style lipgloss.Style
 	if focused {
@@ -466,6 +595,6 @@ func (m AppModel) renderRightPanel(dims layoutDims) string {
 
 	return style.
 		Width(dims.rightWidth).
-		Height(dims.contentHeight).
+		Height(panelH).
 		Render(content)
 }

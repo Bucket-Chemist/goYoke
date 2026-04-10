@@ -653,10 +653,14 @@ func TestProviderState_NilShared_ReturnsNil(t *testing.T) {
 // mockTeamListWidget satisfies teamListWidget.
 type mockTeamListWidget struct{}
 
-func (m *mockTeamListWidget) HandleMsg(_ tea.Msg) tea.Cmd      { return nil }
-func (m *mockTeamListWidget) View() string                     { return "" }
-func (m *mockTeamListWidget) SetSize(_, _ int)                  {}
-func (m *mockTeamListWidget) StartPolling(_ string) tea.Cmd    { return nil }
+func (m *mockTeamListWidget) HandleMsg(_ tea.Msg) tea.Cmd                                    { return nil }
+func (m *mockTeamListWidget) View() string                                                    { return "" }
+func (m *mockTeamListWidget) SetSize(_, _ int)                                                {}
+func (m *mockTeamListWidget) StartPolling(_ string) tea.Cmd                                  { return nil }
+func (m *mockTeamListWidget) PollNow() tea.Cmd                                               { return nil }
+func (m *mockTeamListWidget) ScanNow()                                                       {}
+func (m *mockTeamListWidget) SelectedTeam() string                                           { return "" }
+func (m *mockTeamListWidget) CreateDetailModel(_ *state.AgentRegistry) TeamDetailWidget      { return nil }
 
 // mockProviderTabBarWidget satisfies providerTabBarWidget.
 type mockProviderTabBarWidget struct{}

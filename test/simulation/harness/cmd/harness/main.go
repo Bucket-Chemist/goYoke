@@ -492,17 +492,17 @@ func runBehavioral(cfg harness.SimulationConfig, validatePath, archivePath, shar
 	defer os.RemoveAll(testTempDir)
 
 	// Setup directories
-	os.MkdirAll(filepath.Join(testTempDir, ".claude", "memory"), 0755)
+	os.MkdirAll(filepath.Join(testTempDir, ".gogent", "memory"), 0755)
 	os.MkdirAll(filepath.Join(testTempDir, ".gogent"), 0755)
 
 	// Create test sharp edge with valid schema
 	sharpEdgeContent := `{"file":"test.py","error_type":"TypeError","consecutive_failures":3,"timestamp":1705000020}`
-	os.WriteFile(filepath.Join(testTempDir, ".claude", "memory", "pending-learnings.jsonl"),
+	os.WriteFile(filepath.Join(testTempDir, ".gogent", "memory", "pending-learnings.jsonl"),
 		[]byte(sharpEdgeContent+"\n"), 0644)
 
 	// Create test handoff with correct schema version
 	handoffContent := `{"schema_version":"1.3","session_id":"test","timestamp":"2026-01-23T10:00:00Z"}`
-	os.WriteFile(filepath.Join(testTempDir, ".claude", "memory", "handoffs.jsonl"),
+	os.WriteFile(filepath.Join(testTempDir, ".gogent", "memory", "handoffs.jsonl"),
 		[]byte(handoffContent+"\n"), 0644)
 
 	// Create failure tracker

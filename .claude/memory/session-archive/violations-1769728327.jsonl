@@ -1,4 +1,0 @@
-{"agent":"test-agent","violation_type":"wrong_tier","timestamp":1200}
-{"agent":"other-agent","violation_type":"wrong_tier","timestamp":1300}
-{"agent":"third-agent","violation_type":"missing_delegation","timestamp":1400}{"timestamp":"2026-01-30T06:09:00+07:00","session_id":"e2e-test","violation_type":"blocked_task_opus","agent":"einstein","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/.claude/tmp/TestEndToEnd_ValidationToSharpEdge1084904609/001"}
-{"timestamp":"2026-01-30T06:10:37+07:00","session_id":"e2e-test","violation_type":"blocked_task_opus","agent":"einstein","model":"opus","reason":"model_is_opus","project_dir":"/home/doktersmol/.claude/tmp/TestEndToEnd_ValidationToSharpEdge1670357363/001"}

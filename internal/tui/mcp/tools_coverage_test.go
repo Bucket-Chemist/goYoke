@@ -274,7 +274,7 @@ func TestHandleSpawnAgent_ValidAgent_NotifiesUDS(t *testing.T) {
 			Agent:       "dummy-agent",
 			Description: "test spawn",
 			Prompt:      "do something",
-		}, uds)
+		}, uds, NewAgentStore())
 	// Subprocess errors are soft — returned in output, not as Go errors.
 	require.NoError(t, err)
 	assert.Equal(t, "dummy-agent", out.Agent)

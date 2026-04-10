@@ -2,12 +2,13 @@
 id: python-architect
 name: Python ML Architect
 model: opus
+effort: high
 thinking: true
 thinking_budget: 32000
 thinking_budget_complex: 48000
 tier: 3
 category: architecture
-subagent_type: ["Plan", "Explore"]  # Plan for decisions, Explore for read-only analysis
+subagent_type: Python ML Architect
 
 triggers:
   - design neural network

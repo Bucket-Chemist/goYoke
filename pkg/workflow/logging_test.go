@@ -26,7 +26,7 @@ func TestGetEndstateLogPath(t *testing.T) {
 func TestGetProjectEndstateLogPath(t *testing.T) {
 	projectDir := "/home/user/project"
 	path := GetProjectEndstateLogPath(projectDir)
-	expected := filepath.Join(projectDir, ".claude", "memory", "agent-endstates.jsonl")
+	expected := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
 
 	if path != expected {
 		t.Errorf("GetProjectEndstateLogPath() = %s, want %s", path, expected)

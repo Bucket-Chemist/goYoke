@@ -46,12 +46,27 @@ const (
 
 	// TypeToast requests a transient notification toast in the TUI.
 	TypeToast = "toast"
+
+	// TypePermGateRequest asks the TUI to display a permission gate modal
+	// for a tool invocation and return the user's decision.
+	TypePermGateRequest = "permission_gate_request"
+
+	// TypeAgentTodoUpdate reports a TodoWrite update from a subagent, used to
+	// match todo items against the agent's acceptance criteria.
+	TypeAgentTodoUpdate = "agent_todo_update"
+
+	// TypeTeamUpdate notifies the TUI that a team has been launched or updated.
+	// Triggers an immediate filesystem scan and drawer expansion.
+	TypeTeamUpdate = "team_update"
 )
 
 // Response type constants — sent from TUI back to MCP server.
 const (
 	// TypeModalResponse carries the user's selection from a modal dialog.
 	TypeModalResponse = "modal_response"
+
+	// TypePermGateResponse carries the user's permission decision.
+	TypePermGateResponse = "permission_gate_response"
 )
 
 // ModalRequestPayload is the payload for a TypeModalRequest message.
@@ -89,6 +104,25 @@ type AgentRegisterPayload struct {
 	Conventions []string `json:"conventions,omitempty"`
 	// Prompt is the augmented prompt sent to the agent (truncated to 2000 chars).
 	Prompt string `json:"prompt,omitempty"`
+	// AcceptanceCriteria lists the criteria the agent must satisfy, injected
+	// into the prompt for Sonnet+ tier agents.
+	AcceptanceCriteria []string `json:"acceptanceCriteria,omitempty"`
+}
+
+// TodoItem is a single item from an agent's TodoWrite call.
+type TodoItem struct {
+	// Content is the text of the todo item.
+	Content string `json:"content"`
+	// Status is the completion state (e.g. "pending", "in_progress", "completed").
+	Status string `json:"status"`
+}
+
+// AgentTodoUpdatePayload is the payload for a TypeAgentTodoUpdate message.
+type AgentTodoUpdatePayload struct {
+	// AgentID identifies the agent whose todos changed.
+	AgentID string `json:"agentId"`
+	// Todos is the updated list of todo items from a TodoWrite call.
+	Todos []TodoItem `json:"todos"`
 }
 
 // AgentUpdatePayload is the payload for a TypeAgentUpdate message.
@@ -121,4 +155,12 @@ type ToastPayload struct {
 	Message string `json:"message"`
 	// Level is the severity: "info", "warn", or "error".
 	Level string `json:"level"`
+}
+
+// TeamUpdatePayload is the payload for a TypeTeamUpdate message.
+type TeamUpdatePayload struct {
+	// TeamDir is the absolute path to the team directory.
+	TeamDir string `json:"team_dir"`
+	// Status is the team's current status (e.g. "running", "completed").
+	Status string `json:"status"`
 }

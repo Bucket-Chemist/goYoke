@@ -484,7 +484,7 @@ func TestBuildSchemaCandidates(t *testing.T) {
 			name:         "reviewer_agent",
 			workflowType: "review",
 			agentID:      "backend-reviewer",
-			expected:     []string{"review-backend-reviewer.json", "review-backend.json", "review-worker.json"},
+			expected:     []string{"review-backend-reviewer.json", "review-backend.json", "review-reviewer.json", "review-worker.json"},
 		},
 		{
 			name:         "exact_match_agent",
@@ -496,13 +496,19 @@ func TestBuildSchemaCandidates(t *testing.T) {
 			name:         "critical_review_suffix",
 			workflowType: "braintrust",
 			agentID:      "staff-architect-critical-review",
-			expected:     []string{"braintrust-staff-architect-critical-review.json", "braintrust-staff-architect.json", "braintrust-worker.json"},
+			expected:     []string{"braintrust-staff-architect-critical-review.json", "braintrust-staff-architect.json", "braintrust-critical-review.json", "braintrust-worker.json"},
 		},
 		{
 			name:         "pro_suffix",
 			workflowType: "implementation",
 			agentID:      "go-pro",
-			expected:     []string{"implementation-go-pro.json", "implementation-go.json", "implementation-worker.json"},
+			expected:     []string{"implementation-go-pro.json", "implementation-go.json", "implementation-pro.json", "implementation-worker.json"},
+		},
+		{
+			name:         "bioinformatics_reviewer_role_fallback",
+			workflowType: "review-bioinformatics",
+			agentID:      "genomics-reviewer",
+			expected:     []string{"review-bioinformatics-genomics-reviewer.json", "review-bioinformatics-genomics.json", "review-bioinformatics-reviewer.json", "review-bioinformatics-worker.json"},
 		},
 	}
 

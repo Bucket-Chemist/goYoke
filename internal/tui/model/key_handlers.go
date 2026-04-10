@@ -4,14 +4,17 @@
 package model
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 )
 
 // interruptConfirmRequestID is the modal request ID used for the ESC-while-streaming
@@ -19,8 +22,26 @@ import (
 // the actual CLI interrupt only after the user selects "Yes".
 const interruptConfirmRequestID = "interrupt-confirm"
 
+// agentKillConfirmPrefix is the ModalRequest.ID prefix for the Ctrl+X surgical
+// agent kill confirmation. The agent ID is appended after the prefix so that
+// handleModalResponse can extract it without any additional state.
+const agentKillConfirmPrefix = "agent-kill-confirm:"
+
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// While the help modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.helpModal.IsActive() {
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("help")
+		}
+		updated, cmd := m.shared.helpModal.Update(msg)
+		m.shared.helpModal = updated
+		if !m.shared.helpModal.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
 	// While the plan view modal is open, forward all keys to it.
 	if m.shared != nil && m.shared.planViewModal.IsActive() {
 		// Set hint context to "plan" while plan modal is active (TUI-060).
@@ -31,6 +52,20 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.shared.planViewModal = updated
 		// Restore main context when plan modal closes.
 		if !m.shared.planViewModal.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
+	// While the options view modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.optionsViewModal.IsActive() {
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("options")
+		}
+		updated, cmd := m.shared.optionsViewModal.Update(msg)
+		m.shared.optionsViewModal = updated
+		// Restore main context when options modal closes.
+		if !m.shared.optionsViewModal.IsActive() {
 			m.updateHintContext()
 		}
 		return m, cmd
@@ -178,6 +213,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keys.Global.ViewOptions):
+		// Route alt+o to the options drawer's HandleKey so it emits
+		// OptionsViewRequestMsg with the full drawer state (content or
+		// interactive modal data). The message is then handled in Update.
+		if m.shared != nil && m.shared.drawerStack != nil {
+			cmd := m.shared.drawerStack.HandleKey(string(drawer.DrawerOptions), msg)
+			return m, cmd
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keys.Global.Interrupt):
 		// Escape while a turn is active: show a confirmation modal before
 		// sending SIGINT to the CLI subprocess.  We check statusLine.Streaming
@@ -221,6 +266,24 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keys.Global.ToggleMouse):
+		m.mouseEnabled = !m.mouseEnabled
+		m.statusLine.MouseEnabled = m.mouseEnabled
+		if m.mouseEnabled {
+			return m, tea.EnableMouseCellMotion
+		}
+		return m, tea.DisableMouse
+
+	case key.Matches(msg, m.keys.Global.ShowHelp):
+		if m.shared != nil {
+			m.shared.helpModal.SetSize(m.width, m.height)
+			m.shared.helpModal.Show()
+			if m.shared.hintBar != nil {
+				m.shared.hintBar.SetContext("help")
+			}
+		}
+		return m, nil
+
 	// Tab switching keys (Alt+C, Alt+A, Alt+T, Alt+Y).
 	// These must be in the global section so they work regardless of focus.
 	case key.Matches(msg, m.keys.Tab.TabChat),
@@ -230,6 +293,13 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.tabBar != nil {
 			cmd := m.tabBar.HandleMsg(msg)
 			m.activeTab = m.tabBar.ActiveTab()
+			// Auto-switch right panel: Teams tab shows team detail, all others
+			// revert to agents view (unless another mode was previously chosen).
+			if m.activeTab == TabTeamConfig {
+				m.rightPanelMode = RPMTeams
+			} else if m.rightPanelMode == RPMTeams {
+				m.rightPanelMode = RPMAgents
+			}
 			m.updateHintContext()
 			m.updateBreadcrumbs()
 			return m, cmd
@@ -243,7 +313,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleClaudeKey(msg)
 	case FocusAgents:
 		return m.handleAgentsKey(msg)
-	case FocusPlanDrawer, FocusOptionsDrawer:
+	case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
 		return m.handleDrawerKey(msg)
 	}
 
@@ -262,11 +332,20 @@ func (m AppModel) handleModalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// handleClaudeKey processes key events when the Claude panel holds focus.
+// handleClaudeKey processes key events when the left panel holds focus.
+// The target widget depends on the active tab.
 func (m AppModel) handleClaudeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if m.shared != nil && m.shared.claudePanel != nil {
-		cmd := m.shared.claudePanel.HandleMsg(msg)
-		return m, cmd
+	switch m.activeTab {
+	case TabChat:
+		if m.shared != nil && m.shared.claudePanel != nil {
+			cmd := m.shared.claudePanel.HandleMsg(msg)
+			return m, cmd
+		}
+	case TabTeamConfig:
+		if m.shared != nil && m.shared.teamList != nil {
+			cmd := m.shared.teamList.HandleMsg(msg)
+			return m, cmd
+		}
 	}
 	return m, nil
 }
@@ -275,6 +354,12 @@ func (m AppModel) handleClaudeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // When the right panel is showing the dashboard it forwards events to the
 // dashboard component instead of the agent tree.
 func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Ctrl+X: surgical agent kill — intercept BEFORE detail panel
+	// forwarding so it works regardless of which child has focus.
+	if key.Matches(msg, m.keys.Agent.AgentKill) {
+		return m.handleAgentKillKey()
+	}
+
 	switch m.rightPanelMode {
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {
@@ -303,6 +388,53 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// handleAgentKillKey handles Ctrl+X when the agent tree has focus. It looks up
+// the selected agent and, if it is running with a known PID, pushes a
+// confirmation modal. The modal response is handled in handleModalResponse via
+// the agentKillConfirmPrefix on the request ID.
+func (m AppModel) handleAgentKillKey() (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.agentRegistry == nil || m.shared.modalQueue == nil {
+		return m, nil
+	}
+
+	id := m.agentTree.SelectedID()
+	if id == "" {
+		return m, nil
+	}
+
+	registry := m.shared.agentRegistry
+	agent := registry.Get(id)
+	if agent == nil || agent.Status != state.StatusRunning || agent.PID <= 0 {
+		return m, nil
+	}
+
+	desc := fmt.Sprintf(
+		"Type: %s\nID: %.12s…\nPID: %d\nStatus: %s",
+		agent.AgentType, agent.ID, agent.PID, agent.Status,
+	)
+	if agent.Description != "" {
+		desc += fmt.Sprintf("\nTask: %s", agent.Description)
+	}
+	childCount := registry.CountRunningDescendants(id)
+	if childCount > 0 {
+		desc += fmt.Sprintf("\n\n⚠ This will also kill %d running child agent(s)", childCount)
+	}
+
+	req := modals.ModalRequest{
+		ID:      agentKillConfirmPrefix + id,
+		Type:    modals.Confirm,
+		Header:  "Kill Agent?",
+		Message: desc,
+		Options: []string{"Yes, kill", "Cancel"},
+	}
+
+	m.shared.modalQueue.Push(req)
+	if !m.shared.modalQueue.IsActive() {
+		m.shared.modalQueue.Activate()
+	}
+	return m, nil
+}
+
 // handleDrawerKey routes keyboard events to the focused drawer via the drawer
 // stack. The focusedDrawer ID is derived from the current FocusTarget.
 // If the focused drawer is minimized (no longer in the expanded ring) after
@@ -317,6 +449,8 @@ func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		drawerID = "plan"
 	case FocusOptionsDrawer:
 		drawerID = "options"
+	case FocusTeamsDrawer:
+		drawerID = "teams"
 	default:
 		return m, nil
 	}
@@ -346,7 +480,7 @@ func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // syncFocusState propagates the current focus state to child components.
 func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
-		m.shared.claudePanel.SetFocused(m.focus == FocusClaude)
+		m.shared.claudePanel.SetFocused(m.focus == FocusClaude && m.activeTab == TabChat)
 	}
 	m.agentTree.SetFocused(m.focus == FocusAgents && m.rightPanelMode == RPMAgents)
 	if m.shared != nil && m.shared.dashboard != nil {
@@ -356,6 +490,7 @@ func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.drawerStack != nil {
 		m.shared.drawerStack.SetPlanFocused(m.focus == FocusPlanDrawer)
 		m.shared.drawerStack.SetOptionsFocused(m.focus == FocusOptionsDrawer)
+		m.shared.drawerStack.SetTeamsFocused(m.focus == FocusTeamsDrawer)
 	}
 }
 
@@ -531,6 +666,8 @@ func (m *AppModel) updateBreadcrumbs() {
 			crumbs = []string{"Plan", "Preview"}
 		case RPMTelemetry:
 			crumbs = []string{"Telemetry", "Overview"}
+		case RPMTeams:
+			crumbs = []string{"Teams", "Detail"}
 		default:
 			crumbs = []string{"Agents", m.rightPanelMode.String()}
 		}
@@ -540,6 +677,9 @@ func (m *AppModel) updateBreadcrumbs() {
 
 	case FocusOptionsDrawer:
 		crumbs = []string{"Drawer", "Options"}
+
+	case FocusTeamsDrawer:
+		crumbs = []string{"Drawer", "Teams"}
 
 	default:
 		crumbs = []string{m.focus.String()}
@@ -563,15 +703,19 @@ func (m *AppModel) updateHintContext() {
 		return
 	}
 	switch {
+	case m.shared.helpModal.IsActive():
+		m.shared.hintBar.SetContext("help")
 	case m.shared.planViewModal.IsActive():
 		m.shared.hintBar.SetContext("plan")
+	case m.shared.optionsViewModal.IsActive():
+		m.shared.hintBar.SetContext("options")
 	case m.shared.modalQueue != nil && m.shared.modalQueue.IsActive():
 		m.shared.hintBar.SetContext("modal")
 	case m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive():
 		m.shared.hintBar.SetContext("search")
 	case m.rightPanelMode == RPMSettings:
 		m.shared.hintBar.SetContext("settings")
-	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer:
+	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer || m.focus == FocusTeamsDrawer:
 		m.shared.hintBar.SetContext("drawer")
 	default:
 		m.shared.hintBar.SetContext("main")

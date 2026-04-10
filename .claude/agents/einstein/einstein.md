@@ -8,13 +8,14 @@ description: >
   to Beethoven for synthesis with Staff-Architect's practical review.
 
 model: opus
+effort: high
 thinking:
   enabled: true
   budget: 32000
 
 tier: 3
 category: analysis
-subagent_type: Plan
+subagent_type: Einstein
 
 triggers:
   # Einstein is spawned by Mozart within Braintrust - these are legacy/escalation
@@ -33,6 +34,7 @@ delegation:
     - haiku-scout
     - codebase-search
     - librarian
+    - llm-inference-architect
   cannot_spawn:
     - einstein
     - mozart

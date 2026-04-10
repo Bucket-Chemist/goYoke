@@ -1,10 +1,12 @@
 ---
+id: code-reviewer
 name: Code Reviewer
 description: >
   Routine code review for style, simple bugs, and obvious improvements.
   Fast, cheap reviews using thinking to systematically check code quality.
   NOT for architectural review or complex logic analysis.
 model: haiku
+subagent_type: Code Reviewer
 thinking:
   enabled: true
   budget: 6000

@@ -1,5 +1,5 @@
 {
-  "version": "2.6.0",
+  "version": "2.7.0",
   "generated_at": "2026-02-01T00:00:00Z",
   "description": "Agent index for Intent Gate routing and auto-activation.",
   "agents": [
@@ -34,10 +34,6 @@
           "Read",
           "Write",
           "Glob"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -56,7 +52,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Memory Archivist"
     },
     {
       "id": "codebase-search",
@@ -87,10 +84,6 @@
           "Glob",
           "Grep",
           "Read"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -98,7 +91,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Codebase Search"
     },
     {
       "id": "librarian",
@@ -134,10 +128,6 @@
           "Bash",
           "Read",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -150,7 +140,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Librarian"
     },
     {
       "id": "scaffolder",
@@ -182,10 +173,6 @@
           "Read",
           "Write",
           "Glob"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -195,7 +182,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Scaffolder"
     },
     {
       "id": "tech-docs-writer",
@@ -236,10 +224,6 @@
           "Glob",
           "Grep",
           "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -249,7 +233,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Tech Docs Writer"
     },
     {
       "id": "code-reviewer",
@@ -279,10 +264,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -290,7 +271,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Code Reviewer"
     },
     {
       "id": "python-pro",
@@ -326,11 +308,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -374,7 +354,13 @@
             }
           ]
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Python Pro"
     },
     {
       "id": "python-ux",
@@ -412,11 +398,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -443,7 +427,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Python UX (PySide6)"
     },
     {
       "id": "r-pro",
@@ -481,11 +471,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -508,7 +496,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "R Pro"
     },
     {
       "id": "r-shiny-pro",
@@ -544,11 +538,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -580,7 +572,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "R Shiny Pro"
     },
     {
       "id": "go-pro",
@@ -617,11 +615,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -648,7 +644,95 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "GO Pro"
+    },
+    {
+      "id": "rust-pro",
+      "parallelization_template": "D",
+      "name": "Rust Pro",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 14000,
+      "thinking_budget_refactor": 18000,
+      "thinking_budget_debug": 24000,
+      "tier": 2,
+      "category": "language",
+      "path": "rust-pro",
+      "triggers": [
+        "implement",
+        "refactor",
+        "optimize",
+        "create struct",
+        "add function",
+        "write test",
+        "rust code",
+        "cargo",
+        "crate",
+        "trait",
+        "lifetime",
+        "borrow"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Bash",
+          "Write",
+          "Edit"
+        ]
+      },
+      "auto_activate": {
+        "languages": [
+          "Rust"
+        ],
+        "file_patterns": [
+          "Cargo.toml",
+          "*.rs"
+        ]
+      },
+      "spawned_by": [
+        "router",
+        "orchestrator",
+        "impl-manager",
+        "architect"
+      ],
+      "conventions_required": [
+        "rust.md"
+      ],
+      "sharp_edges_count": 17,
+      "description": "Expert Rust development with modern patterns. Auto-activated for Rust projects. Single-binary desktop distribution focus with edition 2024.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {
+          "base": [
+            "rust.md"
+          ],
+          "conditional": []
+        }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Rust Pro"
     },
     {
       "id": "go-cli",
@@ -684,11 +768,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -718,7 +800,13 @@
             }
           ]
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "GO CLI (Cobra)"
     },
     {
       "id": "go-tui",
@@ -753,11 +841,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -787,7 +873,13 @@
             }
           ]
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "GO TUI (Bubbletea)"
     },
     {
       "id": "go-api",
@@ -823,11 +915,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -851,7 +941,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "GO API (HTTP Client)"
     },
     {
       "id": "go-concurrent",
@@ -888,11 +984,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -916,7 +1010,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "GO Concurrent"
     },
     {
       "id": "orchestrator",
@@ -959,11 +1059,10 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -976,7 +1075,9 @@
         "go-pro",
         "python-pro",
         "typescript-pro",
-        "react-pro"
+        "react-pro",
+        "rust-pro",
+        "llm-inference-architect"
       ],
       "must_delegate": false,
       "scout_first": true,
@@ -987,7 +1088,13 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Orchestrator"
     },
     {
       "id": "architect",
@@ -1027,10 +1134,6 @@
           "Write",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1053,7 +1156,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Architect"
     },
     {
       "id": "python-architect",
@@ -1093,11 +1197,9 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1144,7 +1246,8 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "subagent_type": "Python ML Architect"
     },
     {
       "id": "planner",
@@ -1170,18 +1273,15 @@
         "Read",
         "Glob",
         "Grep",
-        "Write",
-        "AskUserQuestion"
+        "Write"
       ],
       "cli_flags": {
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1202,7 +1302,15 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "can_spawn": [
+        "llm-inference-architect"
+      ],
+      "subagent_type": "Planner",
+      "interactive": true,
+      "spawned_by": [
+        "router"
+      ]
     },
     {
       "id": "einstein",
@@ -1215,7 +1323,7 @@
       "tier": 3,
       "category": "analysis",
       "path": "einstein",
-      "subagent_type": "Analyst",
+      "subagent_type": "Einstein",
       "triggers": [
         "escalate to einstein",
         "deep theoretical analysis"
@@ -1224,18 +1332,14 @@
         "Read",
         "Write",
         "Glob",
-        "Grep",
-        "TaskGet"
+        "Grep"
       ],
       "cli_flags": {
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write"
         ]
       },
       "auto_activate": null,
@@ -1257,7 +1361,14 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "can_spawn": [
+        "haiku-scout",
+        "codebase-search",
+        "librarian",
+        "llm-inference-architect"
+      ],
+      "interactive": true
     },
     {
       "id": "mozart",
@@ -1270,29 +1381,23 @@
       "tier": 3,
       "category": "orchestration",
       "path": "mozart",
-      "subagent_type": "Plan",
+      "subagent_type": "Mozart",
       "triggers": [],
       "tools": [
         "Read",
         "Glob",
         "Grep",
-        "Write",
-        "AskUserQuestion",
-        "Task",
-        "TaskList",
-        "TaskCreate",
-        "TaskUpdate",
-        "TaskGet"
+        "Write"
       ],
       "cli_flags": {
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__ask_user",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -1318,7 +1423,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "interactive": true
     },
     {
       "id": "beethoven",
@@ -1331,7 +1437,7 @@
       "tier": 3,
       "category": "synthesis",
       "path": "beethoven",
-      "subagent_type": "Analyst",
+      "subagent_type": "Beethoven",
       "triggers": [],
       "tools": [
         "Read",
@@ -1343,11 +1449,8 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write"
         ]
       },
       "auto_activate": null,
@@ -1422,6 +1525,12 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
+      },
+      "subagent_type": "Gemini Slave",
+      "cli_flags": {
+        "allowed_tools": [
+          "Bash"
+        ]
       }
     },
     {
@@ -1451,11 +1560,8 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write"
         ]
       },
       "auto_activate": null,
@@ -1478,7 +1584,70 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "can_spawn": [
+        "llm-inference-architect"
+      ],
+      "subagent_type": "Staff Architect Critical Review",
+      "interactive": true
+    },
+    {
+      "id": "schema-architect",
+      "parallelization_template": "E",
+      "name": "Schema Architect",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "thinking_budget_complex": 48000,
+      "tier": 3,
+      "category": "analysis",
+      "path": "schema-architect",
+      "triggers": [
+        "extend agent",
+        "expand agent schema",
+        "schema-extend",
+        "refine agent definition",
+        "upgrade agent content",
+        "from domain research",
+        "agent expansion"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Write",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "output_artifacts": {
+        "required": [
+          "expanded-body.md",
+          "expansion-report.md"
+        ],
+        "specs_location": "SESSION_DIR/expanded-body.md"
+      },
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "sharp_edges_count": 12,
+      "cost_per_invocation": "0.20-0.40",
+      "description": "Opus-tier schema extension specialist. Transforms boilerplate agent .md files into production-quality agents with deep domain expertise. Produces expanded body content and expansion reports. Leaf agent with no spawning capability.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Schema Architect"
     },
     {
       "id": "haiku-scout",
@@ -1511,10 +1680,6 @@
           "Glob",
           "Grep",
           "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1529,7 +1694,8 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "subagent_type": "Haiku Scout"
     },
     {
       "id": "gogent-scout",
@@ -1569,6 +1735,12 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
+      },
+      "subagent_type": "GOgent Smart Scout",
+      "cli_flags": {
+        "allowed_tools": [
+          "Bash"
+        ]
       }
     },
     {
@@ -1606,11 +1778,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -1637,7 +1807,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "TypeScript Pro"
     },
     {
       "id": "react-pro",
@@ -1675,11 +1851,9 @@
           "Read",
           "Glob",
           "Grep",
-          "Bash"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Bash",
+          "Write",
+          "Edit"
         ]
       },
       "auto_activate": {
@@ -1705,7 +1879,13 @@
           ],
           "conditional": []
         }
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "React Pro"
     },
     {
       "id": "backend-reviewer",
@@ -1734,10 +1914,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1752,7 +1928,13 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Backend Reviewer"
     },
     {
       "id": "frontend-reviewer",
@@ -1781,10 +1963,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1797,7 +1975,13 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Frontend Reviewer"
     },
     {
       "id": "standards-reviewer",
@@ -1826,10 +2010,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1838,7 +2018,13 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Standards Reviewer"
     },
     {
       "id": "architect-reviewer",
@@ -1867,10 +2053,6 @@
           "Read",
           "Glob",
           "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
         ]
       },
       "auto_activate": null,
@@ -1885,7 +2067,13 @@
       "context_requirements": {
         "rules": [],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Architect Reviewer"
     },
     {
       "id": "review-orchestrator",
@@ -1915,11 +2103,10 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -1942,7 +2129,13 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Review Orchestrator"
     },
     {
       "id": "impl-manager",
@@ -1978,11 +2171,10 @@
         "allowed_tools": [
           "Read",
           "Glob",
-          "Grep"
-        ],
-        "additional_flags": [
-          "--permission-mode",
-          "delegate"
+          "Grep",
+          "Write",
+          "mcp__gofortress-interactive__spawn_agent",
+          "mcp__gofortress-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -1999,7 +2191,8 @@
         "typescript-pro",
         "react-pro",
         "codebase-search",
-        "code-reviewer"
+        "code-reviewer",
+        "rust-pro"
       ],
       "must_delegate": true,
       "min_delegations": 1,
@@ -2019,7 +2212,462 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "Code compiles without errors",
+        "All existing tests pass",
+        "Conventions followed"
+      ],
+      "subagent_type": "Implementation Manager"
+    },
+    {
+      "id": "llm-inference-architect",
+      "parallelization_template": "E",
+      "name": "LLM Inference Architect",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "architecture",
+      "path": "llm-inference-architect",
+      "subagent_type": "LLM Inference Architect",
+      "triggers": [
+        "llm deployment feasibility",
+        "kv cache optimization",
+        "vulkan inference",
+        "cpu inference optimization",
+        "model memory analysis",
+        "inference architecture",
+        "amd gpu inference",
+        "igpu llm",
+        "uma memory",
+        "gguf deployment",
+        "llama.cpp integration",
+        "kv compression strategy",
+        "hardware feasibility",
+        "rope implementation",
+        "attention backend"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Glob",
+        "Grep",
+        "Bash",
+        "WebFetch",
+        "AskUserQuestion"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Write",
+          "Glob",
+          "Grep",
+          "Bash",
+          "WebFetch",
+          "AskUserQuestion"
+        ]
+      },
+      "auto_activate": null,
+      "spawned_by": [
+        "orchestrator",
+        "planner",
+        "einstein",
+        "staff-architect-critical-review"
+      ],
+      "can_spawn": [
+        "codebase-search",
+        "haiku-scout",
+        "librarian"
+      ],
+      "inputs": [
+        "Hardware specification (CPU, GPU, RAM, VRAM)",
+        "Model config.json or GGUF metadata",
+        "Deployment plan (.md)",
+        "llama.cpp source tree (optional, for verification)",
+        "Benchmark results (optional)"
+      ],
+      "outputs": [
+        "SESSION_DIR/inference-feasibility.md",
+        "SESSION_DIR/inference-metadata.json",
+        "SESSION_DIR/preflight-checks.sh"
+      ],
+      "sharp_edges_count": 18,
+      "cost_per_invocation": "0.40-1.13",
+      "description": "Opus-tier LLM inference systems architect specializing in llama.cpp ecosystem, Vulkan/CPU backends on AMD hardware, KV cache optimization, memory arithmetic, and hardware feasibility analysis. Performs adversarial review of deployment plans, generates preflight verification scripts, and produces hardware-grounded architectural decisions. Expert in RoPE mechanics, KV compression techniques (TriAttention, TurboQuant, KVTC), UMA/iGPU zero-copy optimization, and the full GGML tensor pipeline.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
       }
+    },
+    {
+      "id": "genomics-reviewer",
+      "parallelization_template": "C",
+      "name": "Genomics Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "genomics-reviewer",
+      "triggers": [
+        "review genomics",
+        "alignment review",
+        "variant calling review",
+        "genome assembly review",
+        "VCF review",
+        "sequencing review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Genome assembly, variant calling, alignment, and sequence data format review. BWA/Bowtie2/STAR, GATK/bcftools, VCF/BAM/FASTA/FASTQ/GFF/GTF/BED.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Genomics Reviewer",
+      "spawned_by": [
+        "router"
+      ]
+    },
+    {
+      "id": "proteomics-reviewer",
+      "parallelization_template": "C",
+      "name": "Proteomics Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "proteomics-reviewer",
+      "triggers": [
+        "review proteomics",
+        "protein identification review",
+        "quantification review",
+        "FDR review",
+        "search engine review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Mass spectrometry proteomics data processing review. Search engine config, FDR control, quantification (TMT/iTRAQ/LFQ/SILAC), mzML/mzXML, PSM scoring.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Proteomics Reviewer",
+      "spawned_by": [
+        "router"
+      ]
+    },
+    {
+      "id": "proteogenomics-reviewer",
+      "parallelization_template": "C",
+      "name": "Proteogenomics Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "proteogenomics-reviewer",
+      "triggers": [
+        "review proteogenomics",
+        "custom database review",
+        "novel peptide review",
+        "variant peptide review",
+        "splice junction review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Proteogenomics pipeline review. Custom protein DB construction, novel peptide ID, variant peptides, splice junction peptides, ORF prediction.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Proteogenomics Reviewer",
+      "spawned_by": [
+        "router"
+      ]
+    },
+    {
+      "id": "proteoform-reviewer",
+      "parallelization_template": "C",
+      "name": "Proteoform Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "proteoform-reviewer",
+      "triggers": [
+        "review proteoform",
+        "top-down review",
+        "PTM analysis review",
+        "intact mass review",
+        "deconvolution review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Top-down proteomics and proteoform analysis review. Intact mass, PTM combinatorics, proteoform families, deconvolution, sequence coverage.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Proteoform Reviewer",
+      "spawned_by": [
+        "router"
+      ]
+    },
+    {
+      "id": "mass-spec-reviewer",
+      "parallelization_template": "C",
+      "name": "Mass Spectrometry Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "mass-spec-reviewer",
+      "triggers": [
+        "review mass spec",
+        "instrument review",
+        "acquisition review",
+        "raw data quality review",
+        "spectral processing review",
+        "DIA review",
+        "DDA review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "MS instrumentation and data acquisition review. DDA/DIA/PRM methods, calibration, raw data quality, vendor formats (Thermo/Bruker/SCIEX/Waters), spectral processing.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Mass Spectrometry Reviewer",
+      "spawned_by": [
+        "router"
+      ]
+    },
+    {
+      "id": "bioinformatician-reviewer",
+      "parallelization_template": "C",
+      "name": "Bioinformatician Reviewer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "bioinformatician-reviewer",
+      "triggers": [
+        "review bioinformatics",
+        "pipeline review",
+        "workflow review",
+        "reproducibility review",
+        "statistical methods review",
+        "Nextflow review",
+        "Snakemake review"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "python.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Pipeline architecture and methodology review. Nextflow/Snakemake/WDL workflows, Docker/Singularity/Conda reproducibility, statistics, data provenance.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Severity classification follows bioinformatics review standards"
+      ],
+      "subagent_type": "Bioinformatician Reviewer",
+      "spawned_by": [
+        "router"
+      ]
+    },
+    {
+      "id": "pasteur",
+      "parallelization_template": "E",
+      "name": "Pasteur",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "pasteur",
+      "triggers": [],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "sharp_edges_count": 0,
+      "description": "Bioinformatics review synthesizer. Deduplicates findings across domain reviewers, identifies cross-domain contradictions, produces unified BLOCK/WARNING/APPROVE verdict.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All reviewer stdout files read",
+        "Findings deduplicated across reviewers",
+        "Cross-domain issues identified",
+        "Unified verdict with justification"
+      ],
+      "subagent_type": "Pasteur",
+      "spawned_by": [
+        "router"
+      ]
     }
   ],
   "routing_rules": {
@@ -2097,7 +2745,8 @@
       "implementation_go_cli": "go-cli",
       "implementation_go_tui": "go-tui",
       "pyside6_detected": "python-ux",
-      "high_context_detected": "gemini-slave"
+      "high_context_detected": "gemini-slave",
+      "implementation_rust": "rust-pro"
     },
     "model_tiers": {
       "haiku": [
@@ -2128,7 +2777,8 @@
         "typescript-pro",
         "react-pro",
         "review-orchestrator",
-        "architect-reviewer"
+        "architect-reviewer",
+        "rust-pro"
       ],
       "opus": [
         "einstein",
@@ -2137,7 +2787,15 @@
         "staff-architect-critical-review",
         "python-architect",
         "mozart",
-        "beethoven"
+        "beethoven",
+        "llm-inference-architect",
+        "genomics-reviewer",
+        "proteomics-reviewer",
+        "proteogenomics-reviewer",
+        "proteoform-reviewer",
+        "mass-spec-reviewer",
+        "bioinformatician-reviewer",
+        "pasteur"
       ],
       "external": [
         "gemini-slave"
@@ -2197,31 +2855,54 @@
     "braintrust": {
       "router_allowed_tools": [
         "Task",
+        "Agent",
         "Bash",
         "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
         "AskUserQuestion",
-        "Skill"
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "braintrust"
     },
     "review": {
       "router_allowed_tools": [
         "Task",
+        "Agent",
         "Bash",
         "Read",
         "Glob",
+        "Grep",
+        "ToolSearch",
         "AskUserQuestion",
-        "Skill"
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "code-review"
     },
     "implement": {
       "router_allowed_tools": [
         "Task",
+        "Agent",
         "Bash",
         "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
         "AskUserQuestion",
-        "Skill"
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "implementation"
     }

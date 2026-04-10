@@ -321,7 +321,7 @@ func main() {
 
 // writePendingLearning appends a SharpEdge to pending-learnings.jsonl
 func writePendingLearning(projectDir string, edge session.SharpEdge) error {
-	pendingPath := filepath.Join(projectDir, ".claude", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(config.ProjectMemoryDir(projectDir), "pending-learnings.jsonl")
 
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(pendingPath), 0755); err != nil {
@@ -459,8 +459,9 @@ func detectSandboxBlock(event *routing.PostToolEvent) string {
 		return ""
 	}
 
-	// Only fire for paths under .claude/.
-	if !strings.Contains(filePath, ".claude/") && !strings.Contains(filePath, "/.claude/") {
+	// Only fire for paths under .claude/ or .gogent/.
+	if !strings.Contains(filePath, ".claude/") && !strings.Contains(filePath, "/.claude/") &&
+		!strings.Contains(filePath, ".gogent/") && !strings.Contains(filePath, "/.gogent/") {
 		return ""
 	}
 
@@ -484,8 +485,8 @@ func detectSandboxBlock(event *routing.PostToolEvent) string {
 	}
 
 	return fmt.Sprintf(
-		"[sandbox] Write blocked on sensitive path %q. Use mcp__gofortress-standalone__sandbox_write instead:\n\nmcp__gofortress-standalone__sandbox_write({\n  content: <file content>,\n  dest_path: %q,\n  make_executable: false\n})",
-		filePath, filePath,
+		"[sandbox] Write blocked on sensitive path %q. Use the /sandbox skill or write the file manually.",
+		filePath,
 	)
 }
 

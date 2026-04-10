@@ -269,8 +269,8 @@ if [[ "$use_team" == "true" ]] && [[ -f "$plan_file" ]]; then
     echo "[ticket] Team-run dispatch: implementation-plan.json found"
 
     # Determine team directory
-    session_dir="${GOGENT_SESSION_DIR:-$(cat .claude/current-session 2>/dev/null)}"
-    session_dir="${session_dir:-.claude/sessions/$(date +%Y%m%d-%H%M%S)}"
+    gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
+    gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
     team_dir="$session_dir/teams/$(date +%s).implementation"
 
     # Generate config + stdin files
@@ -284,20 +284,20 @@ if [[ "$use_team" == "true" ]] && [[ -f "$plan_file" ]]; then
         # Fall through to Phase 6 (foreground)
     else
         # Launch background execution
-        gogent-team-run "$team_dir" &
-        sleep 2
-
-        # Verify launch
-        background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
-        if kill -0 "$background_pid" 2>/dev/null; then
+        result = mcp__gofortress-interactive__team_run({
+            team_dir: "$team_dir",
+            wait_for_start: true,
+            timeout_ms: 10000
+        })
+        if result.success:
+            background_pid = result.background_pid
             echo "[ticket] Team launched (PID $background_pid)"
             echo "[ticket] Monitor with: /team-status"
             echo "[ticket] Results with: /team-result"
             # EXIT — TUI returns to user, background handles execution
             exit 0
-        else
-            echo "[ticket] ERROR: Team failed to start. Falling back to foreground."
-        fi
+        else:
+            echo "[ticket] ERROR: ${result.result}. Falling back to foreground."
     fi
 fi
 

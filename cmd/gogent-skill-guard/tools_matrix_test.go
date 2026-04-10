@@ -49,7 +49,7 @@ func TestToolsMatrix(t *testing.T) {
 					}
 					writeGuardFile(t, guardPath, guard)
 
-					output := handleGuardMode(tool, guardPath)
+					output := legacyCheckGuard(tool, guardPath)
 
 					if contains(skillCfg.allowed, tool) {
 						assert.Equal(t, "{}", output,

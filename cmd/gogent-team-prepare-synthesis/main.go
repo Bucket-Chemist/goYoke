@@ -1,14 +1,15 @@
-// Command gogent-team-prepare-synthesis bridges Wave 1 (Einstein + Staff-Architect)
-// and Wave 2 (Beethoven) in the braintrust workflow. It extracts key analysis sections
-// from parallel analyst JSON outputs and generates a pre-synthesis markdown document.
+// Command gogent-team-prepare-synthesis bridges analyst waves and synthesis waves.
+// It reads the team config to determine workflow type, finds the completed wave,
+// and dispatches to the appropriate preparation handler.
 //
 // Usage:
 //
 //	gogent-team-prepare-synthesis <team-directory>
 //
-// The binary reads stdout_einstein.json and stdout_staff-arch.json from the team
-// directory, extracts sections with graceful degradation for missing or malformed
-// data, and writes pre-synthesis.md for Beethoven to consume.
+// Supported workflow types:
+//   - braintrust: reads Einstein + Staff-Arch stdout, writes pre-synthesis.md
+//   - review-bioinformatics: updates stdin_pasteur.json with wave_0_outputs
+//   - unknown: logs warning and exits 0 (graceful no-op)
 //
 // Exit codes:
 //   - 0: Success (including graceful degradation for missing/malformed input)
@@ -53,6 +54,27 @@ func validateTeamDir(path string) (string, error) {
 	return abs, nil
 }
 
+// prepareBraintrust runs the braintrust preparation logic.
+// Reads Einstein + Staff-Arch stdout and writes pre-synthesis.md.
+func prepareBraintrust(teamDir string) error {
+	einsteinPath := filepath.Join(teamDir, einsteinStdoutFile)
+	staffArchPath := filepath.Join(teamDir, staffArchStdoutFile)
+	outputPath := filepath.Join(teamDir, outputFile)
+
+	log.Printf("Preparing braintrust synthesis from team directory: %s", teamDir)
+
+	einstein := extractEinstein(einsteinPath)
+	staffArch := extractStaffArch(staffArchPath)
+	markdown := generateMarkdown(einstein, staffArch)
+
+	if err := os.WriteFile(outputPath, []byte(markdown), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", outputPath, err)
+	}
+
+	log.Printf("Successfully wrote pre-synthesis document to: %s", outputPath)
+	return nil
+}
+
 func main() {
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <team-directory>\n", os.Args[0])
@@ -73,25 +95,30 @@ func main() {
 	}
 	os.Remove(testFile)
 
-	// Build file paths
-	einsteinPath := filepath.Join(teamDir, einsteinStdoutFile)
-	staffArchPath := filepath.Join(teamDir, staffArchStdoutFile)
-	outputPath := filepath.Join(teamDir, outputFile)
-
-	log.Printf("Preparing synthesis from team directory: %s", teamDir)
-
-	// Extract sections from both analysts
-	einstein := extractEinstein(einsteinPath)
-	staffArch := extractStaffArch(staffArchPath)
-
-	// Generate markdown
-	markdown := generateMarkdown(einstein, staffArch)
-
-	// Write output file
-	if err := os.WriteFile(outputPath, []byte(markdown), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Failed to write %s: %v\n", outputPath, err)
+	// Load config to determine workflow type
+	config, err := loadConfig(teamDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERROR: Failed to load config: %v\n", err)
 		os.Exit(1)
 	}
 
-	log.Printf("Successfully wrote pre-synthesis document to: %s", outputPath)
+	switch config.WorkflowType {
+	case "braintrust":
+		if err := prepareBraintrust(teamDir); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: braintrust preparation failed: %v\n", err)
+			os.Exit(1)
+		}
+	case "review-bioinformatics":
+		completedWaveIdx := findCompletedWaveIdx(config)
+		if completedWaveIdx == -1 {
+			log.Printf("[WARN] review-bioinformatics: no completed wave with pending next wave found, skipping")
+			return
+		}
+		if err := prepareBioinformaticsReview(teamDir, config, completedWaveIdx); err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: bioinformatics review preparation failed: %v\n", err)
+			os.Exit(1)
+		}
+	default:
+		log.Printf("WARNING: unknown workflow_type %q, skipping synthesis", config.WorkflowType)
+	}
 }

@@ -1,4 +1,5 @@
 ---
+id: memory-archivist
 name: Memory Archivist
 description: >
   The Historian. Invoked at the end of sessions or after architect planning to synthesize
@@ -11,6 +12,7 @@ thinking:
   budget: 4000
 tier: 1.5
 category: memory
+subagent_type: Memory Archivist
 triggers:
   - "task complete"
   - "end session"

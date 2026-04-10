@@ -2,11 +2,12 @@
 id: planner
 name: Planner
 model: opus
+effort: high
 thinking: true
 thinking_budget: 32000
 tier: 3
 category: architecture
-subagent_type: Plan
+subagent_type: Planner
 
 triggers:
   - strategic planning

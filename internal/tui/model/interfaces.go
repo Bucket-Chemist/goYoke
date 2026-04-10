@@ -77,6 +77,10 @@ type bridgeWidget interface {
 	// empty string (the bridge always receives a value; cancellation is
 	// communicated by convention with the empty string or a dedicated sentinel).
 	ResolveModalSimple(requestID string, value string)
+	// ResolvePermGate delivers the user's permission decision to the bridge
+	// goroutine blocking on the given requestID. decision is one of "allow",
+	// "deny", or "allow_session".
+	ResolvePermGate(requestID string, decision string)
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +105,16 @@ type MessageSender interface {
 type claudePanelWidget interface {
 	HandleMsg(msg tea.Msg) tea.Cmd
 	View() string
+	// ViewConversation returns the scrollable viewport with optional search
+	// bar and streaming indicator — everything above the input line.
+	ViewConversation() string
+	// ViewInput returns the input prompt and text input only, without the
+	// streaming indicator or slash command dropdown.
+	ViewInput() string
+	// ApplyOverlay takes a fully composed panel string and applies the slash
+	// command dropdown overlay when it is active. Returns the string unchanged
+	// when no dropdown is visible.
+	ApplyOverlay(composed string) string
 	SetSize(width, height int)
 	SetFocused(focused bool)
 	IsStreaming() bool
@@ -113,6 +127,9 @@ type claudePanelWidget interface {
 	// SetSender updates the CLI driver used to submit user messages.
 	// Called after a provider switch to wire the new driver into the panel.
 	SetSender(s MessageSender)
+	// AppendSystemMessage adds a system-role message to the conversation
+	// and scrolls to bottom. Used by AppModel for /model listing output.
+	AppendSystemMessage(text string)
 	// SetTier notifies the component of the current responsive layout tier.
 	// Components may use this to adapt their rendering in future tickets.
 	SetTier(tier LayoutTier)
@@ -130,6 +147,9 @@ type toastWidget interface {
 	View() string
 	SetSize(width, height int)
 	IsEmpty() bool
+	// Height returns the number of terminal rows the toast block occupies.
+	// Returns 0 when there are no active toasts.
+	Height() int
 	// SetTier notifies the component of the current responsive layout tier.
 	SetTier(tier LayoutTier)
 }
@@ -140,12 +160,40 @@ type toastWidget interface {
 // teamListWidget is the interface satisfied by *teams.TeamListModel.
 // ---------------------------------------------------------------------------
 
+// TeamDetailWidget is the interface satisfied by *teams.TeamDetailModel.
+// It is exported so that the teams package can reference it as a return type
+// in CreateDetailModel without creating a circular import.
+type TeamDetailWidget interface {
+	View() string
+	SetSize(w, h int)
+	// HandleMsg forwards a tea.Msg to the detail model. The concrete
+	// implementation handles teams.TeamSelectedMsg to update the displayed team.
+	// All other messages are ignored. Never emits commands.
+	HandleMsg(msg tea.Msg) tea.Cmd
+	// Refresh re-reads the currently displayed team from the registry.
+	// Called after every poll tick to keep the detail view up-to-date.
+	Refresh()
+}
+
 // teamListWidget is the interface satisfied by *teams.TeamListModel.
 type teamListWidget interface {
 	HandleMsg(msg tea.Msg) tea.Cmd
 	View() string
 	SetSize(width, height int)
 	StartPolling(teamsDir string) tea.Cmd
+	// PollNow returns a Cmd that immediately fires a poll tick.  It is used
+	// by Init() to kick the first poll after StartPolling has set the dir.
+	PollNow() tea.Cmd
+	// ScanNow performs an immediate filesystem scan without scheduling a
+	// follow-up tick. Use when a TeamUpdateMsg arrives so the registry is
+	// populated before reading drawer content.
+	ScanNow()
+	// SelectedTeam returns the directory path of the currently selected team,
+	// or "" when the list is empty.
+	SelectedTeam() string
+	// CreateDetailModel returns a preconfigured TeamDetailWidget backed by
+	// the same registry as this list. agentReg may be nil.
+	CreateDetailModel(agentReg *state.AgentRegistry) TeamDetailWidget
 }
 
 // ---------------------------------------------------------------------------
@@ -405,6 +453,27 @@ type searchOverlayWidget interface {
 }
 
 // ---------------------------------------------------------------------------
+// teamsHealthWidget  (TUI-003)
+//
+// teamsHealthWidget is the interface satisfied by the concrete health
+// dashboard component (implemented in TUI-005). Defining it here decouples
+// AppModel from the concrete type and avoids a circular import.
+// ---------------------------------------------------------------------------
+
+// teamsHealthWidget is the interface for the team health dashboard component.
+type teamsHealthWidget interface {
+	View() string
+	SetSize(w, h int)
+	SetTier(tier LayoutTier)
+	// HasData returns true when there is at least one running team to display.
+	HasData() bool
+	// HasRunningTeam returns true when MostRecentRunning returns a team whose
+	// status is "running". Used by the poll-tick handler to decide whether to
+	// re-expand a minimized teams drawer.
+	HasRunningTeam() bool
+}
+
+// ---------------------------------------------------------------------------
 // drawerStackWidget  (TDS-004)
 //
 // drawerStackWidget is the interface satisfied by drawer.DrawerStack.
@@ -427,8 +496,17 @@ type drawerStackWidget interface {
 	SetPlanContent(content string)
 	ClearPlanContent()
 	PlanHasContent() bool
+	SetTeamsContent(content string)
+	ClearTeamsContent()
+	TeamsHasContent() bool
+	RefreshTeamsContent(content string)
+	// TeamsIsMinimized returns true when the teams drawer is in the minimized
+	// (tab-only) state. Used by the poll-tick handler to decide whether to
+	// force-expand the drawer when a running team is detected.
+	TeamsIsMinimized() bool
 	SetOptionsFocused(focused bool)
 	SetPlanFocused(focused bool)
+	SetTeamsFocused(focused bool)
 	// Modal routing (TDS-006).
 	SetActiveModal(requestID string, message string, options []string)
 	HasActiveModal() bool

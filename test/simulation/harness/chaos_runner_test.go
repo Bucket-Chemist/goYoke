@@ -148,7 +148,7 @@ func TestChaosRunner_SetupTempDir(t *testing.T) {
 
 	// Check directories exist
 	expectedDirs := []string{
-		filepath.Join(tmpDir, ".claude", "memory"),
+		filepath.Join(tmpDir, ".gogent", "memory"),
 		filepath.Join(tmpDir, ".gogent"),
 	}
 

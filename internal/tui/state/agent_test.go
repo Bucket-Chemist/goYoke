@@ -322,6 +322,146 @@ func TestSetActivity_GetReturnsCopy(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// AppendActivity / FullActivityLog / UpdateActivityResult
+// ---------------------------------------------------------------------------
+
+func TestAppendActivity_WritesToBothBuffers(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	act := AgentActivity{Type: "tool_use", Target: "Read", ToolID: "tool-1"}
+	r.AppendActivity("a1", act)
+
+	a := r.Get("a1")
+	require.Len(t, a.RecentActivity, 1)
+	assert.Equal(t, "tool-1", a.RecentActivity[0].ToolID)
+	require.Len(t, a.FullActivityLog, 1)
+	assert.Equal(t, "tool-1", a.FullActivityLog[0].ToolID)
+}
+
+func TestAppendActivity_RecentActivityCappedAt5(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	for i := range 7 {
+		r.AppendActivity("a1", AgentActivity{
+			Type:   "tool_use",
+			Target: fmt.Sprintf("tool-%d", i),
+			ToolID: fmt.Sprintf("id-%d", i),
+		})
+	}
+
+	a := r.Get("a1")
+	assert.Len(t, a.RecentActivity, 5, "RecentActivity must cap at 5")
+	// Oldest two evicted; last 5 remain.
+	assert.Equal(t, "id-2", a.RecentActivity[0].ToolID)
+	assert.Equal(t, "id-6", a.RecentActivity[4].ToolID)
+}
+
+func TestAppendActivity_FullActivityLogCappedAt500(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	for i := range 502 {
+		r.AppendActivity("a1", AgentActivity{
+			Type:   "tool_use",
+			ToolID: fmt.Sprintf("id-%d", i),
+		})
+	}
+
+	a := r.Get("a1")
+	assert.Len(t, a.FullActivityLog, 500, "FullActivityLog must cap at 500")
+	// First two evicted; entry at index 0 should be id-2.
+	assert.Equal(t, "id-2", a.FullActivityLog[0].ToolID)
+	assert.Equal(t, "id-501", a.FullActivityLog[499].ToolID)
+}
+
+func TestAppendActivity_FullActivityLogDeepCopied(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+
+	a := r.Get("a1")
+	require.Len(t, a.FullActivityLog, 1)
+	a.FullActivityLog[0].Target = "mutated"
+
+	// Registry must not be affected.
+	a2 := r.Get("a1")
+	assert.Equal(t, "", a2.FullActivityLog[0].Target)
+}
+
+func TestUpdateActivityResult_SetsSuccessOnBothBuffers(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.UpdateActivityResult("a1", "t1", true)
+
+	a := r.Get("a1")
+	require.NotNil(t, a.RecentActivity[0].Success)
+	assert.True(t, *a.RecentActivity[0].Success)
+	require.NotNil(t, a.FullActivityLog[0].Success)
+	assert.True(t, *a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_SuccessFalse(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.UpdateActivityResult("a1", "t1", false)
+
+	a := r.Get("a1")
+	require.NotNil(t, a.FullActivityLog[0].Success)
+	assert.False(t, *a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_PendingBeforeUpdate(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+
+	a := r.Get("a1")
+	// Before UpdateActivityResult, Success must be nil (pending).
+	assert.Nil(t, a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_UnknownAgentNoOp(t *testing.T) {
+	r := NewAgentRegistry()
+	// Should not panic.
+	r.UpdateActivityResult("nope", "t1", true)
+}
+
+func TestUpdateActivityResult_UnknownToolIDNoOp(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.UpdateActivityResult("a1", "no-such-tool", true)
+
+	// Original entry unchanged.
+	a := r.Get("a1")
+	assert.Nil(t, a.FullActivityLog[0].Success)
+}
+
+func TestUpdateActivityResult_MatchesCorrectEntry(t *testing.T) {
+	r := NewAgentRegistry()
+	require.NoError(t, r.Register(makeAgent("a1", "go-pro", "task", "")))
+
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t1"})
+	r.AppendActivity("a1", AgentActivity{Type: "tool_use", ToolID: "t2"})
+	r.UpdateActivityResult("a1", "t2", false)
+
+	a := r.Get("a1")
+	// t1 untouched, t2 updated.
+	assert.Nil(t, a.FullActivityLog[0].Success)
+	require.NotNil(t, a.FullActivityLog[1].Success)
+	assert.False(t, *a.FullActivityLog[1].Success)
+}
+
+// ---------------------------------------------------------------------------
 // Remove
 // ---------------------------------------------------------------------------
 
@@ -852,4 +992,168 @@ func TestTree_NoExplicitRoot(t *testing.T) {
 	nodes := r.Tree()
 	require.Len(t, nodes, 1)
 	assert.Equal(t, "solo", nodes[0].Agent.ID)
+}
+
+// ---------------------------------------------------------------------------
+// KillByID
+// ---------------------------------------------------------------------------
+
+// makeRunningAgent registers a running agent with the given PID. Returns the
+// agent ID for use in assertions.
+func mustRegisterRunning(t *testing.T, r *AgentRegistry, id, agentType, desc, parentID string, pid int) {
+	t.Helper()
+	a := makeAgent(id, agentType, desc, parentID)
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update(id, func(ag *Agent) { ag.Status = StatusRunning }))
+	r.SetPID(id, pid)
+}
+
+func TestKillByID_UnknownID(t *testing.T) {
+	r := NewAgentRegistry()
+	err := r.KillByID("no-such-id")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestKillByID_NotRunning(t *testing.T) {
+	r := NewAgentRegistry()
+	a := makeAgent("a1", "go-pro", "task", "")
+	require.NoError(t, r.Register(a))
+	// Status is StatusPending — not running.
+	err := r.KillByID("a1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestKillByID_AlreadyKilled(t *testing.T) {
+	r := NewAgentRegistry()
+	a := makeAgent("a1", "go-pro", "task", "")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("a1", func(ag *Agent) { ag.Status = StatusKilled }))
+	err := r.KillByID("a1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestKillByID_NoPID(t *testing.T) {
+	r := NewAgentRegistry()
+	a := makeAgent("a1", "go-pro", "task", "")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("a1", func(ag *Agent) { ag.Status = StatusRunning }))
+	// PID is 0 (default).
+	err := r.KillByID("a1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no PID")
+}
+
+func TestKillByID_RunningSuccess(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "a1", "go-pro", "task", "", 12345)
+
+	err := r.KillByID("a1")
+	require.NoError(t, err)
+
+	got := r.Get("a1")
+	require.NotNil(t, got)
+	assert.Equal(t, StatusKilled, got.Status)
+}
+
+func TestKillByID_RecursiveChildren(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 100)
+	mustRegisterRunning(t, r, "child1", "go-tui", "child1 task", "parent", 101)
+	mustRegisterRunning(t, r, "child2", "go-tui", "child2 task", "parent", 102)
+
+	err := r.KillByID("parent")
+	require.NoError(t, err)
+
+	for _, id := range []string{"parent", "child1", "child2"} {
+		got := r.Get(id)
+		require.NotNil(t, got, "agent %s should still exist", id)
+		assert.Equal(t, StatusKilled, got.Status, "agent %s should be StatusKilled", id)
+	}
+}
+
+func TestKillByID_RecursiveMixedStatus(t *testing.T) {
+	// Parent and one running child get killed; already-complete child is left alone.
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 200)
+	mustRegisterRunning(t, r, "running-child", "go-tui", "running child", "parent", 201)
+
+	// Register a completed child.
+	a := makeAgent("done-child", "go-cli", "done child", "parent")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("done-child", func(ag *Agent) { ag.Status = StatusRunning }))
+	require.NoError(t, r.Update("done-child", func(ag *Agent) { ag.Status = StatusComplete }))
+
+	err := r.KillByID("parent")
+	require.NoError(t, err)
+
+	assert.Equal(t, StatusKilled, r.Get("parent").Status)
+	assert.Equal(t, StatusKilled, r.Get("running-child").Status)
+	assert.Equal(t, StatusComplete, r.Get("done-child").Status, "completed child must not be affected")
+}
+
+func TestKillByID_DeepNesting(t *testing.T) {
+	// grandparent → parent → child, all running — all three must be killed.
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "grandparent", "go-pro", "gp task", "", 300)
+	mustRegisterRunning(t, r, "parent", "go-tui", "p task", "grandparent", 301)
+	mustRegisterRunning(t, r, "child", "go-cli", "c task", "parent", 302)
+
+	err := r.KillByID("grandparent")
+	require.NoError(t, err)
+
+	for _, id := range []string{"grandparent", "parent", "child"} {
+		assert.Equal(t, StatusKilled, r.Get(id).Status, "agent %s should be StatusKilled", id)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CountRunningDescendants
+// ---------------------------------------------------------------------------
+
+func TestCountRunningDescendants_NoChildren(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "solo", "go-pro", "solo task", "", 400)
+	assert.Equal(t, 0, r.CountRunningDescendants("solo"))
+}
+
+func TestCountRunningDescendants_TwoRunningChildren(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 500)
+	mustRegisterRunning(t, r, "c1", "go-tui", "child 1", "parent", 501)
+	mustRegisterRunning(t, r, "c2", "go-tui", "child 2", "parent", 502)
+	assert.Equal(t, 2, r.CountRunningDescendants("parent"))
+}
+
+func TestCountRunningDescendants_MixedStatus(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "parent", "go-pro", "parent task", "", 600)
+	mustRegisterRunning(t, r, "running", "go-tui", "running child", "parent", 601)
+
+	// Complete child.
+	a := makeAgent("done", "go-cli", "done child", "parent")
+	require.NoError(t, r.Register(a))
+	require.NoError(t, r.Update("done", func(ag *Agent) { ag.Status = StatusRunning }))
+	require.NoError(t, r.Update("done", func(ag *Agent) { ag.Status = StatusComplete }))
+
+	assert.Equal(t, 1, r.CountRunningDescendants("parent"))
+}
+
+func TestCountRunningDescendants_DeepNesting(t *testing.T) {
+	r := NewAgentRegistry()
+	mustRegisterRunning(t, r, "gp", "go-pro", "gp task", "", 700)
+	mustRegisterRunning(t, r, "p", "go-tui", "p task", "gp", 701)
+	mustRegisterRunning(t, r, "c", "go-cli", "c task", "p", 702)
+
+	// CountRunningDescendants("gp") should count p and c.
+	assert.Equal(t, 2, r.CountRunningDescendants("gp"))
+	// CountRunningDescendants("p") should count only c.
+	assert.Equal(t, 1, r.CountRunningDescendants("p"))
+}
+
+func TestCountRunningDescendants_UnknownID(t *testing.T) {
+	r := NewAgentRegistry()
+	assert.Equal(t, 0, r.CountRunningDescendants("no-such-id"))
 }

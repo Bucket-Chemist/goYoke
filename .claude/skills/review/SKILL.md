@@ -50,8 +50,10 @@ None required. Works in any git repository.
 ## Workflow
 
 When `/review` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{session_dir}/teams/{timestamp}.code-review/`)
+- Created the team directory (`{gogent_session_dir}/teams/{timestamp}.code-review/`)
 - Written `active-skill.json` with guard restrictions + `team_dir` path
+
+The `gogent_session_dir` lives under `{project_root}/.gogent/sessions/`, NOT `.claude/sessions/`. It is resolved by reading `{project_root}/.gogent/current-session`.
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
 The Router executes the following steps:
@@ -61,11 +63,11 @@ The Router executes the following steps:
 #### Step 1: Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${session_dir}/active-skill.json` })
+Read({ file_path: `${gogent_session_dir}/active-skill.json` })
 // Extract team_dir from JSON response
 ```
 
-The `session_dir` is available from the `.claude/current-session` marker file or `GOGENT_SESSION_DIR` env var.
+The `gogent_session_dir` is resolved by reading `{project_root}/.gogent/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOGENT_PROJECT_ROOT` env var.
 
 #### Step 2: Detect Changed Files
 
@@ -104,7 +106,7 @@ esac
 
 if [[ -z "$files" ]]; then
     echo "[review] No files to review."
-    rm -f "$session_dir/active-skill.json"
+    rm -f "$gogent_session_dir/active-skill.json"
     exit 0
 fi
 
@@ -259,36 +261,26 @@ Write each stdin file to `$team_dir/stdin_{reviewer-name}.json`.
 
 #### Step 3: Launch
 
-```bash
-gogent-team-run "$team_dir"
 ```
-
-No output redirection. No config.json path argument. The binary handles:
-- PID file creation
-- Log redirection to `runner.log`
-- Session leadership (setsid)
-- Writing `background_pid` to config.json
-
-#### Step 4: Verify Launch
-
-```bash
-sleep 2
-background_pid=$(jq -r '.background_pid' "$team_dir/config.json")
-if [[ -z "$background_pid" || "$background_pid" == "null" ]]; then
-    echo "[review] ERROR: Team launch failed. Check $team_dir/runner.log"
-    rm -f "$session_dir/active-skill.json"
+result = mcp__gofortress-interactive__team_run({
+    team_dir: "$team_dir",
+    wait_for_start: true,
+    timeout_ms: 10000
+})
+if !result.success:
+    echo "[review] ERROR: ${result.result}"
+    rm -f "$gogent_session_dir/active-skill.json"
     exit 1
-else
-    echo "[review] Team launched (PID $background_pid)"
-    echo "[review] Use /team-status to track progress"
-    echo "[review] Use /team-result when complete to see findings"
-fi
+background_pid = result.background_pid
+echo "[review] Team launched (PID $background_pid)"
+echo "[review] Use /team-status to track progress"
+echo "[review] Use /team-result when complete to see findings"
 ```
 
 #### Step 5: Remove Skill Guard
 
 ```bash
-rm -f "$session_dir/active-skill.json"
+rm -f "$gogent_session_dir/active-skill.json"
 ```
 
 #### Step 6: Return to User
@@ -493,7 +485,7 @@ fi
 | `{team_dir}/stdout_*.json`      | Per-reviewer output        | JSON with findings                  |
 | `{team_dir}/runner.log`         | Execution log              | Plain text                          |
 
-`{team_dir}` = `{session_dir}/teams/{timestamp}.code-review/` (created by `gogent-skill-guard` hook)
+`{team_dir}` = `{gogent_session_dir}/teams/{timestamp}.code-review/` (created by `gogent-skill-guard` hook)
 
 ---
 
@@ -549,7 +541,7 @@ $ /review
 [review] Review team launched in background
   Reviewers: backend-reviewer standards-reviewer
   Files: 3 files across 1 languages
-  Team: /home/user/.claude/sessions/20260208.a1b2c3d4/teams/1738901234.code-review
+  Team: /home/user/project/.gogent/sessions/20260208.a1b2c3d4/teams/1738901234.code-review
   PID: 12345
 
 Use /team-status to check progress

@@ -236,7 +236,7 @@ func TestLogInvocation_ProjectWriteFailure_GracefulDegradation(t *testing.T) {
 
 	// Create a non-writable project directory
 	projectDir := filepath.Join(tmpDir, "readonly-project")
-	claudeMemDir := filepath.Join(projectDir, ".claude", "memory")
+	claudeMemDir := filepath.Join(projectDir, ".gogent", "memory")
 	os.MkdirAll(claudeMemDir, 0755)
 
 	// Create the invocations file as a directory (will cause write failure)
@@ -397,7 +397,7 @@ func TestGetProjectInvocationsLogPath(t *testing.T) {
 	projectDir := "/home/user/my-project"
 	path := GetProjectInvocationsLogPath(projectDir)
 
-	expectedPath := filepath.Join(projectDir, ".claude", "memory", "agent-invocations.jsonl")
+	expectedPath := filepath.Join(projectDir, ".gogent", "memory", "agent-invocations.jsonl")
 	if path != expectedPath {
 		t.Errorf("Expected path '%s', got: '%s'", expectedPath, path)
 	}

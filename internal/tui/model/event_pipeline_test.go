@@ -386,32 +386,75 @@ func TestEventPipeline_AssistantEvent_SetsStreamingIndicator(t *testing.T) {
 	}
 }
 
-// TestEventPipeline_AssistantEvent_ToolUseBlocksForwarded verifies that
-// tool_use content blocks are forwarded to the Claude panel as ToolUseMsg
-// so the user can see what tools the router is calling.
+// TestEventPipeline_AssistantEvent_ToolUseBlocksForwarded verifies the
+// routing split for tool_use blocks:
+//   - Root-level (ParentToolUseID == nil): routed to agentRegistry, NOT claudePanel.
+//   - Subagent-level (ParentToolUseID != nil): routed to claudePanel as ToolUseMsg.
 func TestEventPipeline_AssistantEvent_ToolUseBlocksForwarded(t *testing.T) {
+	// --- root-level: should go to agentRegistry, NOT claudePanel ---
 	m := newReadyAppModel(120, 40)
 	mock := &mockClaudePanel{}
 	m.shared.claudePanel = mock
+	// Register router-root so AppendActivity has a target (normally done by SystemInitEvent).
+	_ = m.shared.agentRegistry.Register(state.Agent{
+		ID:        "router-root",
+		AgentType: "router",
+		Status:    state.StatusRunning,
+	})
 
-	ev := cli.AssistantEvent{
+	rootEv := cli.AssistantEvent{
 		Type: "assistant",
 		Message: cli.AssistantMessage{
-			ID:   "msg-tools",
+			ID:   "msg-tools-root",
 			Role: "assistant",
 			Content: []cli.ContentBlock{
 				{Type: "tool_use", ID: "tu1", Name: "Read"},
 			},
 		},
+		// ParentToolUseID == nil → root-level
 	}
 
-	// Must not panic.
-	updated, _ := m.Update(ev)
-	_ = updated.(AppModel)
+	updated, _ := m.Update(rootEv)
+	m = updated.(AppModel)
 
-	// Panel SHOULD have received a HandleMsg call for the tool_use block.
-	if !mock.handleMsgCalled {
-		t.Error("claudePanel.HandleMsg not called for tool_use event; want ToolUseMsg forwarded")
+	// Panel must NOT receive the root-level tool_use block.
+	if mock.handleMsgCalled {
+		t.Error("root-level tool_use: claudePanel.HandleMsg was called; want routed to agentRegistry instead")
+	}
+
+	// agentRegistry "router-root" must have recorded the activity.
+	agent := m.shared.agentRegistry.Get("router-root")
+	if agent == nil {
+		t.Fatal("root-level tool_use: router-root agent not found in registry")
+	}
+	if len(agent.RecentActivity) == 0 {
+		t.Error("root-level tool_use: router-root RecentActivity is empty; want activity appended")
+	}
+
+	// --- subagent-level: should go to claudePanel as ToolUseMsg ---
+	m2 := newReadyAppModel(120, 40)
+	mock2 := &mockClaudePanel{}
+	m2.shared.claudePanel = mock2
+
+	parentID := "task-toolu-001"
+	subEv := cli.AssistantEvent{
+		Type: "assistant",
+		Message: cli.AssistantMessage{
+			ID:   "msg-tools-sub",
+			Role: "assistant",
+			Content: []cli.ContentBlock{
+				{Type: "tool_use", ID: "tu2", Name: "Read"},
+			},
+		},
+		ParentToolUseID: &parentID,
+	}
+
+	updated2, _ := m2.Update(subEv)
+	_ = updated2.(AppModel)
+
+	// Panel SHOULD receive the subagent tool_use block.
+	if !mock2.handleMsgCalled {
+		t.Error("subagent tool_use: claudePanel.HandleMsg not called; want ToolUseMsg forwarded")
 	}
 }
 
@@ -744,7 +787,7 @@ func TestEventPipeline_AgentActivityMsg_SetsActivity(t *testing.T) {
 	m = updated.(AppModel)
 
 	// Set activity.
-	updated, _ = m.Update(AgentActivityMsg{AgentID: "mcp-agent-3", ToolName: "Read"})
+	updated, _ = m.Update(AgentActivityMsg{AgentID: "mcp-agent-3", ToolName: "Read", Target: "/src/main.go"})
 	result := updated.(AppModel)
 
 	agent := result.shared.agentRegistry.Get("mcp-agent-3")
@@ -754,8 +797,11 @@ func TestEventPipeline_AgentActivityMsg_SetsActivity(t *testing.T) {
 	if agent.Activity == nil {
 		t.Fatal("agent.Activity is nil after AgentActivityMsg")
 	}
-	if agent.Activity.Target != "Read" {
-		t.Errorf("agent.Activity.Target = %q; want %q", agent.Activity.Target, "Read")
+	if agent.Activity.ToolName != "Read" {
+		t.Errorf("agent.Activity.ToolName = %q; want %q", agent.Activity.ToolName, "Read")
+	}
+	if agent.Activity.Target != "/src/main.go" {
+		t.Errorf("agent.Activity.Target = %q; want %q", agent.Activity.Target, "/src/main.go")
 	}
 }
 

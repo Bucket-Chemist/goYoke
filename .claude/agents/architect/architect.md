@@ -1,15 +1,18 @@
 ---
+id: architect
 name: Architect
 description: >
   Implementation planner for multi-file changes. Creates phased execution plans
   with dependency mapping and risk assessment. Mandatory outputs: specs.md + write_todos.
 model: opus
+effort: high
 thinking:
   enabled: true
   budget: 32000
   budget_complex: 48000
 tier: 3
 category: planning
+subagent_type: Architect
 triggers:
   - "create a plan"
   - "implementation plan"
@@ -88,6 +91,8 @@ integration:
       - mapper
       - architect
 ---
+id: architect
+id: architect
 
 # Architect Agent
 
@@ -238,7 +243,12 @@ Your output MUST be valid JSON matching this structure:
 
 ## Workflow
 
-1. **Read Strategy Document**: Load `SESSION_DIR/strategy.md` from planner phase - this is your primary input
+**Step 0 — Determine input mode:**
+- If your prompt contains explicit CONTEXT/TASK sections with file listings and code snippets: **the prompt IS your strategy document.** Skip step 1. Do NOT explore the codebase beyond files named in the prompt. Do NOT read git history or uncommitted changes.
+- If your prompt references a strategy.md or scout report: proceed to step 1.
+- If SESSION_DIR contains specs.md or implementation-plan.json from a previous run: check whether their content matches your current TASK. If not, treat them as stale — overwrite unconditionally.
+
+1. **Read Strategy Document**: Load `SESSION_DIR/strategy.md` from planner phase - this is your primary input (SKIP if prompt contains full context — see step 0)
 2. **Parse Scout Report**: Extract key metrics and recommendations
 3. **Check Confidence**:
    - If `routing_recommendation.confidence == "low"`: Ask 1-2 clarifying questions FIRST
@@ -297,6 +307,7 @@ If you cannot produce a viable plan:
 - ❌ Missing risk assessment for complex changes
 
 ---
+id: architect
 
 ## PARALLELIZATION: CONSTRAINED
 
@@ -333,6 +344,7 @@ After gathering context, planning MUST be sequential:
 - [ ] specs.md written before write_todos called
 
 ---
+id: architect
 
 ## Integration with Gemini
 

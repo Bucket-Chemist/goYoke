@@ -1,8 +1,7 @@
 package mcp
 
-// spawner.go implements the subprocess management for spawn_agent.
-// Ported from cmd/gofortress-mcp-standalone/spawner.go to work within the
-// TUI's MCP server context (adds UDS notifications for agent tracking).
+// spawner.go implements the subprocess management for spawn_agent
+// within the TUI's MCP server context (adds UDS notifications for agent tracking).
 
 import (
 	"bufio"
@@ -15,6 +14,8 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,11 +23,19 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
+// acWrittenToRe matches "<filename> written to <path>" in criterion text.
+var acWrittenToRe = regexp.MustCompile(`(?i)(\S+)\s+written\s+to\s+(\S+)`)
+
+// acWrittenToDirRe matches "written to <dir/>" (trailing slash) without a
+// leading filename token — used as a fallback for directory-listing checks.
+var acWrittenToDirRe = regexp.MustCompile(`(?i)written\s+to\s+(\S+/)`)
+
 const (
-	defaultTimeoutMS = 300_000          // 5 minutes
+	defaultTimeoutMS = 600_000          // 10 minutes
 	sigkillGraceMS   = 5_000            // 5s between SIGTERM and SIGKILL
 	maxBufferBytes   = 10 * 1024 * 1024 // 10MB stdout buffer limit
 	maxNestingDepth  = 10
@@ -208,6 +217,13 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
+		// acState tracks the goroutine-local AC state updated on each TodoWrite.
+		// Initialised from input.AcceptanceCriteria so that MatchTodosToAC can
+		// compare against the injected criteria text from the first TodoWrite call.
+		acState := make([]state.AcceptanceCriterion, len(input.AcceptanceCriteria))
+		for idx, text := range input.AcceptanceCriteria {
+			acState[idx] = state.AcceptanceCriterion{Text: text}
+		}
 		scanner := bufio.NewScanner(stdoutPipe)
 		scanner.Buffer(make([]byte, 0, 512*1024), maxBufferBytes)
 		for scanner.Scan() {
@@ -238,10 +254,39 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 								Target:  act.Target,
 								Preview: act.Preview,
 							})
+							// Detect TodoWrite and forward full todo state to TUI.
+							// Also write the AC sidecar file from this goroutine to
+							// avoid a race with the endstate hook (M-3).
+							if block.Name == "TodoWrite" {
+								todos := parseTodoWriteInput(block.Input)
+								if len(todos) > 0 {
+									uds.notify(TypeAgentTodoUpdate, AgentTodoUpdatePayload{
+										AgentID: agentID,
+										Todos:   todos,
+									})
+									acState = writeACSidecar(agentID, todos, acState)
+								}
+							}
 						}
 					}
 				}
 			}
+		}
+		// Post-completion AC verification: programmatic filesystem checks for
+		// any criteria that the agent's TodoWrite output did not mark completed.
+		// Runs after the subprocess has exited (scanner returns EOF), before
+		// wg.Done() fires, so no extra synchronisation is needed.
+		if len(acState) > 0 {
+			acState = verifyACDeliverables(agentID, acState, uds)
+			finalTodos := make([]TodoItem, len(acState))
+			for i, ac := range acState {
+				status := "pending"
+				if ac.Completed {
+					status = "completed"
+				}
+				finalTodos[i] = TodoItem{Content: ac.Text, Status: status}
+			}
+			writeACSidecar(agentID, finalTodos, acState)
 		}
 	}()
 	go func() {
@@ -305,4 +350,167 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	}
 
 	return result, nil
+}
+
+// parseTodoWriteInput parses the JSON input of a TodoWrite tool_use block and
+// returns the list of todo items. Returns nil for empty or malformed input
+// without panicking (M-2).
+func parseTodoWriteInput(input json.RawMessage) []TodoItem {
+	if len(input) == 0 {
+		return nil
+	}
+	var payload struct {
+		Todos []struct {
+			Content string `json:"content"`
+			Status  string `json:"status"`
+		} `json:"todos"`
+	}
+	if err := json.Unmarshal(input, &payload); err != nil {
+		slog.Warn("parseTodoWriteInput: malformed input", "err", err)
+		return nil
+	}
+	if len(payload.Todos) == 0 {
+		return nil
+	}
+	items := make([]TodoItem, len(payload.Todos))
+	for i, t := range payload.Todos {
+		items[i] = TodoItem{Content: t.Content, Status: t.Status}
+	}
+	return items
+}
+
+// writeACSidecar matches todos against the current AC state using
+// state.MatchTodosToAC, writes the updated state to
+// SESSION_DIR/ac/{agentID}.json, and returns the updated AC slice.
+//
+// Called from the NDJSON scanner goroutine — before wg.Wait() and before
+// the endstate hook fires — which eliminates the race condition (M-3).
+func writeACSidecar(agentID string, todos []TodoItem, acState []state.AcceptanceCriterion) []state.AcceptanceCriterion {
+	updates := make([]state.TodoUpdate, len(todos))
+	for i, t := range todos {
+		updates[i] = state.TodoUpdate{Content: t.Content, Status: t.Status}
+	}
+	updated := state.MatchTodosToAC(acState, updates)
+
+	sessionDir := os.Getenv("GOGENT_SESSION_DIR")
+	if sessionDir == "" {
+		slog.Warn("writeACSidecar: GOGENT_SESSION_DIR not set, skipping sidecar write",
+			"agentID", agentID)
+		return updated
+	}
+
+	acDir := filepath.Join(sessionDir, "ac")
+	if err := os.MkdirAll(acDir, 0o755); err != nil {
+		slog.Warn("writeACSidecar: failed to create ac dir", "err", err, "dir", acDir)
+		return updated
+	}
+
+	data, err := json.Marshal(updated)
+	if err != nil {
+		slog.Warn("writeACSidecar: failed to marshal AC state", "err", err, "agentID", agentID)
+		return updated
+	}
+
+	sidecarPath := filepath.Join(acDir, agentID+".json")
+	if err := os.WriteFile(sidecarPath, data, 0o644); err != nil {
+		slog.Warn("writeACSidecar: failed to write sidecar", "err", err, "path", sidecarPath)
+	}
+
+	return updated
+}
+
+// verifyACDeliverables performs post-completion programmatic verification of
+// unmet acceptance criteria by checking for deliverable files on disk. It does
+// NOT spawn any LLM calls — purely filesystem checks.
+//
+// For each criterion that is not yet completed, it looks for "X written to Y"
+// patterns and calls os.Stat to confirm the deliverable exists. When at least
+// one unmet criterion is newly satisfied, a final AgentTodoUpdate UDS
+// notification is sent so the TUI reflects the updated state.
+//
+// This is called at the end of the stdout scanner goroutine (after the
+// subprocess exits) so that acState is in-scope without extra synchronisation.
+func verifyACDeliverables(agentID string, acState []state.AcceptanceCriterion, uds *UDSClient) []state.AcceptanceCriterion {
+	if len(acState) == 0 {
+		return acState
+	}
+
+	updated := make([]state.AcceptanceCriterion, len(acState))
+	copy(updated, acState)
+	changed := false
+
+	for i, ac := range updated {
+		if ac.Completed {
+			continue
+		}
+		if acFileExists(ac.Text) {
+			updated[i].Completed = true
+			changed = true
+			slog.Info("verifyACDeliverables: criterion satisfied by file check",
+				"agentID", agentID, "criterion", ac.Text)
+		}
+	}
+
+	if !changed || uds == nil {
+		return updated
+	}
+
+	// Send final UDS notification so the TUI reflects the verified state.
+	todos := make([]TodoItem, len(updated))
+	for i, ac := range updated {
+		status := "pending"
+		if ac.Completed {
+			status = "completed"
+		}
+		todos[i] = TodoItem{Content: ac.Text, Status: status}
+	}
+	uds.notify(TypeAgentTodoUpdate, AgentTodoUpdatePayload{
+		AgentID: agentID,
+		Todos:   todos,
+	})
+
+	return updated
+}
+
+// acFileExists checks whether a criterion's mentioned deliverable exists on
+// disk. It parses patterns such as:
+//   - "foo.json written to dir/"        → checks dir/foo.json
+//   - "foo.json written to dir/foo.json"→ checks dir/foo.json as a file
+//   - "written to dir/"                 → checks that dir/ has at least one file
+func acFileExists(criterionText string) bool {
+	if m := acWrittenToRe.FindStringSubmatch(criterionText); len(m) == 3 {
+		filename := strings.TrimRight(m[1], "/,.")
+		target := strings.TrimRight(m[2], "/,.")
+
+		// Attempt <target>/<filename>.
+		if _, err := os.Stat(filepath.Join(target, filename)); err == nil {
+			return true
+		}
+		// Attempt target as the full file path itself (no trailing dir component).
+		if info, err := os.Stat(target); err == nil && !info.IsDir() {
+			return true
+		}
+		// If target is a directory, any non-directory entry satisfies the check.
+		if entries, err := os.ReadDir(target); err == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					return true
+				}
+			}
+		}
+	}
+
+	// Fallback: "written to <dir/>" without a leading filename token.
+	if m := acWrittenToDirRe.FindStringSubmatch(criterionText); len(m) == 2 {
+		dirPath := strings.TrimRight(m[1], "/,.")
+		if entries, err := os.ReadDir(dirPath); err == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }

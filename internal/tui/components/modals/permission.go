@@ -34,6 +34,11 @@ const (
 
 	// FlowSelect presents a single Select modal with the supplied options.
 	FlowSelect
+
+	// FlowToolPermission presents a three-option Select modal: Allow / Deny /
+	// Allow for Session. Used by the permission gate hook to request user
+	// approval for tool invocations.
+	FlowToolPermission
 )
 
 // ---------------------------------------------------------------------------
@@ -106,16 +111,18 @@ type exitPlanResult struct {
 //
 // The zero value is not usable; use NewPermissionHandler instead.
 type PermissionHandler struct {
-	queue   *ModalQueue
-	pending map[string]*PermissionFlow
+	queue              *ModalQueue
+	pending            map[string]*PermissionFlow
+	completedPermGates map[string]struct{}
 }
 
 // NewPermissionHandler creates a PermissionHandler backed by the given queue.
 // queue must be non-nil; its lifetime must exceed that of the handler.
 func NewPermissionHandler(queue *ModalQueue) *PermissionHandler {
 	return &PermissionHandler{
-		queue:   queue,
-		pending: make(map[string]*PermissionFlow),
+		queue:              queue,
+		pending:            make(map[string]*PermissionFlow),
+		completedPermGates: make(map[string]struct{}),
 	}
 }
 
@@ -142,6 +149,32 @@ func (h *PermissionHandler) HandleBridgeRequest(requestID, message string, optio
 	flow := h.buildFlow(requestID, message, options)
 	h.pending[requestID] = flow
 	return h.enqueueStep(flow)
+}
+
+// HandlePermGateRequest starts a tool-permission flow. The modal presents
+// three choices: Allow, Deny, Allow for Session. The flow resolves in a
+// single step.
+func (h *PermissionHandler) HandlePermGateRequest(requestID, message string, options []string, timeoutMS int) tea.Cmd {
+	flow := &PermissionFlow{
+		RequestID: requestID,
+		FlowType:  FlowToolPermission,
+		Steps:     1,
+		message:   message,
+		options:   options,
+	}
+	h.pending[requestID] = flow
+	return h.enqueueStep(flow)
+}
+
+// WasPermGateFlow reports whether the given requestID was completed as a
+// FlowToolPermission flow. The check is one-time: the record is deleted after
+// the first successful lookup.
+func (h *PermissionHandler) WasPermGateFlow(requestID string) bool {
+	_, ok := h.completedPermGates[requestID]
+	if ok {
+		delete(h.completedPermGates, requestID)
+	}
+	return ok
 }
 
 // buildFlow selects the correct FlowType from the bridge message content.
@@ -269,6 +302,15 @@ func (h *PermissionHandler) buildRequest(flow *PermissionFlow) ModalRequest {
 			Options: flow.options,
 		}
 
+	case FlowToolPermission:
+		return ModalRequest{
+			ID:      flow.RequestID,
+			Type:    Select,
+			Header:  "Tool Permission Required",
+			Message: flow.message,
+			Options: flow.options,
+		}
+
 	default:
 		return ModalRequest{
 			ID:      flow.RequestID,
@@ -324,8 +366,16 @@ func (h *PermissionHandler) HandleResponse(msg ModalResponseMsg) (*PermissionRes
 	switch flow.FlowType {
 	case FlowExitPlan:
 		return h.handleExitPlanResponse(flow, requestID)
+	case FlowToolPermission:
+		// Single-step flow — record as a completed perm gate and return.
+		delete(h.pending, requestID)
+		h.completedPermGates[requestID] = struct{}{}
+		return &PermissionResult{
+			RequestID: requestID,
+			Value:     msg.Response.Value,
+		}, nil
 	default:
-		// All single-step flows are complete.
+		// All other single-step flows are complete.
 		delete(h.pending, requestID)
 		return &PermissionResult{
 			RequestID: requestID,

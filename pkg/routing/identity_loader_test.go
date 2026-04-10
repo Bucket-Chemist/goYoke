@@ -324,7 +324,7 @@ func TestGetSessionDir(t *testing.T) {
 			setupEnv: func(t *testing.T) string {
 				// Set up both: direct env var AND file-based marker
 				tmpDir := t.TempDir()
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte("/file-based-path"), 0644)
 				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
@@ -348,8 +348,8 @@ func TestGetSessionDir(t *testing.T) {
 			name: "GOGENT_PROJECT_ROOT set with current-session file",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "test-session")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "test-session")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
 				t.Setenv("GOGENT_SESSION_DIR", "")
@@ -363,8 +363,8 @@ func TestGetSessionDir(t *testing.T) {
 			name: "GOGENT_PROJECT_DIR set (no ROOT)",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "another-session")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "another-session")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
 				t.Setenv("GOGENT_SESSION_DIR", "")
@@ -378,8 +378,8 @@ func TestGetSessionDir(t *testing.T) {
 			name: "CLAUDE_PROJECT_DIR set (no ROOT, no DIR)",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "legacy-session")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "legacy-session")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
 				t.Setenv("GOGENT_SESSION_DIR", "")
@@ -393,7 +393,7 @@ func TestGetSessionDir(t *testing.T) {
 			name: "env var set but current-session file missing",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				os.MkdirAll(filepath.Join(tmpDir, ".claude"), 0755)
+				os.MkdirAll(filepath.Join(tmpDir, ".gogent"), 0755)
 				// Don't write current-session file
 				t.Setenv("GOGENT_SESSION_DIR", "")
 				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
@@ -407,8 +407,8 @@ func TestGetSessionDir(t *testing.T) {
 			name: "current-session file has trailing whitespace",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "whitespace-test")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "whitespace-test")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				// Write with trailing whitespace and newlines
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir+"  \n\n"), 0644)
@@ -454,8 +454,8 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 			name: "session dir present, session markers injected",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "test-123")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "test-123")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
 				t.Setenv("GOGENT_SESSION_DIR", "")
@@ -488,8 +488,8 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 			name: "session context appears before identity marker",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "ordering-test")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "ordering-test")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
 				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
@@ -518,8 +518,8 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 			name: "prompt already contains session marker, no double injection",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".claude", "sessions", "double-test")
-				claudeDir := filepath.Join(tmpDir, ".claude")
+				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "double-test")
+				claudeDir := filepath.Join(tmpDir, ".gogent")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
 				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
