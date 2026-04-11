@@ -21,23 +21,27 @@ func main() {
 
 	target := os.Args[1]
 	instruction := os.Args[2]
+	var inputFiles []string
 
 	// Handle piped input (stdin file list)
 	if target == "-" {
 		scanner := bufio.NewScanner(os.Stdin)
-		var files []string
+		scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024)
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			if line != "" {
-				files = append(files, line)
+				inputFiles = append(inputFiles, line)
 			}
 		}
-		if len(files) == 0 {
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to read stdin file list: %v\n", err)
+			os.Exit(2)
+		}
+		if len(inputFiles) == 0 {
 			fmt.Fprintf(os.Stderr, "Error: no files provided via stdin\n")
 			os.Exit(2)
 		}
-		// Use directory of first file as target
-		target = filepath.Dir(files[0])
+		target = commonRoot(inputFiles)
 	}
 
 	// Validate target exists
@@ -47,7 +51,7 @@ func main() {
 	}
 
 	// Run native scout
-	report, err := runScout(target, instruction)
+	report, err := runScout(target, instruction, inputFiles)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -86,9 +90,9 @@ func main() {
 }
 
 // runScout executes the native scout with synthetic fallback.
-func runScout(target, instruction string) (*ScoutReport, error) {
+func runScout(target, instruction string, files []string) (*ScoutReport, error) {
 	// Run native scout
-	scout := &NativeScout{Target: target, Instruction: instruction}
+	scout := &NativeScout{Target: target, Instruction: instruction, Files: files}
 	report, err := scout.Run()
 
 	if err == nil {
@@ -98,6 +102,61 @@ func runScout(target, instruction string) (*ScoutReport, error) {
 	// Native failed - synthetic fallback (always succeeds)
 	log.Printf("Native scout failed: %v, generating synthetic report", err)
 	return generateSyntheticReport(target, err, nil), nil
+}
+
+func commonRoot(paths []string) string {
+	if len(paths) == 0 {
+		return "."
+	}
+
+	common := normalizePathRoot(paths[0])
+	for _, path := range paths[1:] {
+		common = sharedPathPrefix(common, normalizePathRoot(path))
+		if common == "." || common == string(filepath.Separator) {
+			break
+		}
+	}
+	return common
+}
+
+func normalizePathRoot(path string) string {
+	clean := filepath.Clean(path)
+	if info, err := os.Stat(clean); err == nil && !info.IsDir() {
+		return filepath.Dir(clean)
+	}
+	return clean
+}
+
+func sharedPathPrefix(a, b string) string {
+	if a == b {
+		return a
+	}
+
+	aParts := strings.Split(filepath.Clean(a), string(filepath.Separator))
+	bParts := strings.Split(filepath.Clean(b), string(filepath.Separator))
+	maxParts := len(aParts)
+	if len(bParts) < maxParts {
+		maxParts = len(bParts)
+	}
+
+	var shared []string
+	for i := 0; i < maxParts; i++ {
+		if aParts[i] != bParts[i] {
+			break
+		}
+		shared = append(shared, aParts[i])
+	}
+
+	switch len(shared) {
+	case 0:
+		return "."
+	case 1:
+		if shared[0] == "" {
+			return string(filepath.Separator)
+		}
+	}
+
+	return filepath.Join(shared...)
 }
 
 // atomicWrite writes data to a file atomically using temp + rename.

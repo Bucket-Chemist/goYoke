@@ -42,42 +42,14 @@ var TestPatterns = []string{
 type NativeScout struct {
 	Target      string
 	Instruction string
+	Files       []string
 }
 
 // Run executes the native scout and returns a basic scout report.
 func (ns *NativeScout) Run() (*ScoutReport, error) {
-	// 1. Walk directory and collect file stats
-	var files []FileInfo
-	err := filepath.WalkDir(ns.Target, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			// Skip unreadable paths
-			return nil
-		}
-
-		if d.IsDir() {
-			// Skip hidden directories and common vendor directories
-			name := d.Name()
-			if strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		ext := filepath.Ext(path)
-		if lang, ok := SupportedExtensions[ext]; ok {
-			lines, _ := countLines(path)
-			files = append(files, FileInfo{
-				Path:     path,
-				Lines:    lines,
-				Language: lang,
-				IsTest:   isTestFile(path),
-			})
-		}
-		return nil
-	})
-
+	files, err := ns.collectFiles()
 	if err != nil {
-		return nil, fmt.Errorf("failed to walk directory: %w", err)
+		return nil, err
 	}
 
 	if len(files) == 0 {
@@ -110,6 +82,89 @@ func (ns *NativeScout) Run() (*ScoutReport, error) {
 	}, nil
 }
 
+func (ns *NativeScout) collectFiles() ([]FileInfo, error) {
+	if len(ns.Files) > 0 {
+		files := make([]FileInfo, 0, len(ns.Files))
+		for _, path := range ns.Files {
+			info, err := os.Stat(path)
+			if err != nil {
+				return nil, fmt.Errorf("stat %s: %w", path, err)
+			}
+			if info.IsDir() {
+				dirFiles, err := collectFilesFromDir(path)
+				if err != nil {
+					return nil, err
+				}
+				files = append(files, dirFiles...)
+				continue
+			}
+
+			fileInfo, ok, err := collectFileInfo(path)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				files = append(files, fileInfo)
+			}
+		}
+		return files, nil
+	}
+
+	return collectFilesFromDir(ns.Target)
+}
+
+func collectFilesFromDir(target string) ([]FileInfo, error) {
+	var files []FileInfo
+	err := filepath.WalkDir(target, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			// Skip unreadable paths
+			return nil
+		}
+
+		if d.IsDir() {
+			// Skip hidden directories and common vendor directories
+			name := d.Name()
+			if strings.HasPrefix(name, ".") || name == "vendor" || name == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		fileInfo, ok, err := collectFileInfo(path)
+		if err != nil {
+			return err
+		}
+		if ok {
+			files = append(files, fileInfo)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk directory: %w", err)
+	}
+	return files, nil
+}
+
+func collectFileInfo(path string) (FileInfo, bool, error) {
+	ext := filepath.Ext(path)
+	lang, ok := SupportedExtensions[ext]
+	if !ok {
+		return FileInfo{}, false, nil
+	}
+
+	lines, err := countLines(path)
+	if err != nil {
+		return FileInfo{}, false, err
+	}
+
+	return FileInfo{
+		Path:     path,
+		Lines:    lines,
+		Language: lang,
+		IsTest:   isTestFile(path),
+	}, true, nil
+}
+
 // countLines counts the number of lines in a file.
 func countLines(path string) (int, error) {
 	f, err := os.Open(path)
@@ -120,6 +175,7 @@ func countLines(path string) (int, error) {
 
 	count := 0
 	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024)
 	for scanner.Scan() {
 		count++
 	}

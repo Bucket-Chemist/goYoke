@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,16 @@ func TestCountLines(t *testing.T) {
 			assert.Equal(t, tt.expected, count)
 		})
 	}
+}
+
+func TestCountLines_LargeLine(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "large.txt")
+	content := strings.Repeat("x", 70*1024) + "\n" + "tail"
+	require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0644))
+
+	count, err := countLines(tmpFile)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
 }
 
 // TestIsTestFile verifies test file pattern matching.
@@ -151,8 +162,8 @@ func TestIdentifyKeyFiles(t *testing.T) {
 // TestNativeScout_SmallProject verifies native scout on a small project.
 func TestNativeScout_SmallProject(t *testing.T) {
 	tmpDir := createTestFiles(t, map[string]string{
-		"main.go":       "package main\n\nfunc main() {\n}\n",
-		"handler.go":    "package main\n\nfunc handle() {}\n",
+		"main.go":         "package main\n\nfunc main() {\n}\n",
+		"handler.go":      "package main\n\nfunc handle() {}\n",
 		"handler_test.go": "package main\n\nimport \"testing\"\n\nfunc TestHandle(t *testing.T) {}\n",
 	})
 
@@ -173,10 +184,10 @@ func TestNativeScout_SmallProject(t *testing.T) {
 // TestNativeScout_MixedLanguages verifies multi-language project handling.
 func TestNativeScout_MixedLanguages(t *testing.T) {
 	tmpDir := createTestFiles(t, map[string]string{
-		"main.go":    "package main\n",
-		"script.py":  "def main():\n    pass\n",
-		"app.ts":     "function main() {}\n",
-		"README.md":  "# Project\n",
+		"main.go":   "package main\n",
+		"script.py": "def main():\n    pass\n",
+		"app.ts":    "function main() {}\n",
+		"README.md": "# Project\n",
 	})
 
 	scout := &NativeScout{Target: tmpDir}
@@ -234,6 +245,23 @@ func TestGenerateSyntheticReport(t *testing.T) {
 	assert.Len(t, report.Warnings, 3)
 	assert.Contains(t, report.Warnings[0], "Primary backend failed")
 	assert.Contains(t, report.Warnings[1], "Fallback backend failed")
+}
+
+func TestRunScout_UsesExplicitStdinFileList(t *testing.T) {
+	tmpDir := createTestFiles(t, map[string]string{
+		"picked/main.go":    "package main\n",
+		"ignored/other.go":  "package main\n\nfunc ignored() {}\n",
+		"ignored/readme.md": "# ignored\n",
+	})
+
+	selected := filepath.Join(tmpDir, "picked", "main.go")
+	report, err := runScout(filepath.Join(tmpDir, "picked"), "Assess selection", []string{selected})
+
+	require.NoError(t, err)
+	require.NotNil(t, report.ScopeMetrics)
+	assert.Equal(t, 1, report.ScopeMetrics.TotalFiles)
+	require.Len(t, report.KeyFiles, 1)
+	assert.Equal(t, selected, report.KeyFiles[0].Path)
 }
 
 // TestAtomicWrite verifies atomic file writing.
