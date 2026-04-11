@@ -125,6 +125,20 @@
         }
       }
     },
+    "go_implementation_guardrails": {
+      "type": "object",
+      "description": "Optional Go-specific guardrails for workers touching streams, temp fallbacks, IPC, or orchestration paths",
+      "properties": {
+        "scanner_limits_required": {"type": "boolean"},
+        "jsonl_ndjson_paths_in_scope": {"type": "boolean"},
+        "stdin_scope_must_be_preserved": {"type": "boolean"},
+        "partial_failure_must_fail_command": {"type": "boolean"},
+        "temp_fallback_must_be_private": {"type": "boolean"},
+        "path_components_must_be_sanitized": {"type": "boolean"},
+        "socket_path_limit_must_be_checked": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
     "description": {
       "type": "string",
       "description": "Human-readable task summary for envelope builder compatibility"

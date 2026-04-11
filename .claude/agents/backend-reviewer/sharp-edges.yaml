@@ -1,8 +1,8 @@
 # Sharp Edges for Backend Reviewer Agent
 # Security and performance pitfalls in backend code
 
-version: "1.0"
-updated: "2026-02-01"
+version: "1.1"
+updated: "2026-04-11"
 
 sharp_edges:
   - id: sql-injection
@@ -113,4 +113,46 @@ sharp_edges:
       NEVER return stack traces to clients
       Use error handling middleware to catch and sanitize
       Log full traces server-side only
+    auto_inject: true
+
+  - id: jsonl-ndjson-scanner-limits
+    severity: high
+    category: reliability
+    description: "Default scanner limits break valid JSONL or NDJSON payloads"
+    symptom: "Large telemetry, transcript, session, or CLI stream records vanish or abort the reader"
+    solution: |
+      Review all bufio.Scanner-based readers that process structured line-based
+      payloads. Require an explicit raised buffer limit or a safer reader when
+      payloads can exceed the default token cap.
+    auto_inject: true
+
+  - id: shared-temp-fallback
+    severity: high
+    category: security
+    description: "Shared temp-directory fallbacks expose runtime or telemetry state"
+    symptom: "Caches, guard files, or telemetry land in predictable /tmp paths with weak permissions"
+    solution: |
+      Flag deterministic shared temp fallbacks for any persistent or
+      security-relevant data. Require per-user scoping and 0700 permissions.
+    auto_inject: true
+
+  - id: path-derived-filename
+    severity: high
+    category: security
+    description: "Raw session or user identifiers are joined into filenames without sanitization"
+    symptom: "Path separators or traversal characters alter the resolved target path"
+    solution: |
+      Treat session IDs, tool names, and external identifiers as untrusted path
+      components. Hash or sanitize them before writing cache or state files.
+    auto_inject: true
+
+  - id: partial-failure-reported-success
+    severity: high
+    category: reliability
+    description: "Multi-unit backend operations return success despite unresolved failures"
+    symptom: "Wave, batch, or fan-out operations log warnings but still exit cleanly"
+    solution: |
+      Inspect aggregate success semantics. If any unit failed and the external
+      contract implies full completion, the command should fail or report partial
+      status explicitly.
     auto_inject: true

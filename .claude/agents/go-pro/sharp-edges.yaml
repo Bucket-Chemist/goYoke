@@ -1,8 +1,8 @@
 # Sharp Edges for GO Pro Agent
 # These are common pitfalls and learned gotchas
 
-version: "1.0"
-updated: "2026-01-15"
+version: "1.1"
+updated: "2026-04-11"
 
 sharp_edges:
   - id: loop-variable-capture
@@ -124,3 +124,40 @@ sharp_edges:
           "duration_ms", elapsed.Milliseconds(),
       )
     auto_inject: false
+
+  - id: jsonl-scanner-limit
+    severity: high
+    category: io
+    description: "Default bufio.Scanner token limit truncates valid JSONL or NDJSON records"
+    symptom: "Large transcript, telemetry, session, or log entries fail with ErrTooLong or silently disappear"
+    solution: |
+      NEVER use the default scanner buffer for JSONL or NDJSON streams that may
+      carry tool output, telemetry, or serialized payloads.
+
+      scanner := bufio.NewScanner(r)
+      scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024)
+
+      Prefer a shared helper so all JSONL readers enforce the same ceiling.
+    auto_inject: true
+
+  - id: shared-temp-fallback
+    severity: high
+    category: filesystem
+    description: "Shared /tmp fallback directories expose runtime state to other local users"
+    symptom: "Fallback caches, telemetry, or guards land in predictable world-readable temp paths"
+    solution: |
+      Avoid shared temp roots like /tmp/app-data or /tmp/app-fallback.
+      Use a per-user directory name and force 0700 permissions.
+
+      Validate writability without broadening existing permissions.
+    auto_inject: true
+
+  - id: path-component-sanitization
+    severity: high
+    category: filesystem
+    description: "Raw identifiers embedded in filenames can escape or reshape target paths"
+    symptom: "session_id, tool names, or user-derived strings alter the resolved cache/log path"
+    solution: |
+      NEVER write raw user- or session-derived strings into filenames.
+      Hash, sanitize, or map them to a safe slug before joining into paths.
+    auto_inject: true

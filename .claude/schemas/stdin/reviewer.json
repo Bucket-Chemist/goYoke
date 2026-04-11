@@ -100,6 +100,20 @@
       "type": "object",
       "description": "Project-specific coding conventions and patterns"
     },
+    "go_review_checklist": {
+      "type": "object",
+      "description": "Optional Go-specific review checklist for runtime, IPC, and structured-stream pitfalls",
+      "properties": {
+        "scanner_limits_checked": {"type": "boolean"},
+        "jsonl_ndjson_paths_checked": {"type": "boolean"},
+        "stdin_scope_preserved_checked": {"type": "boolean"},
+        "partial_failure_semantics_checked": {"type": "boolean"},
+        "temp_fallback_permissions_checked": {"type": "boolean"},
+        "path_component_sanitization_checked": {"type": "boolean"},
+        "socket_path_limit_checked": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
     "component_tree": {
       "type": "object",
       "description": "For frontend-reviewer: component hierarchy context",

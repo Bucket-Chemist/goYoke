@@ -130,6 +130,24 @@
         }
       }
     },
+    "go_guardrail_status": {
+      "type": "object",
+      "description": "Optional Go-specific implementation status for stream sizing, filesystem safety, and orchestration semantics",
+      "properties": {
+        "scanner_limits_updated": {"type": "boolean"},
+        "jsonl_ndjson_paths_verified": {"type": "boolean"},
+        "stdin_scope_preserved": {"type": "boolean"},
+        "partial_failure_semantics_verified": {"type": "boolean"},
+        "temp_fallback_hardened": {"type": "boolean"},
+        "path_components_sanitized": {"type": "boolean"},
+        "socket_path_limit_checked": {"type": "boolean"},
+        "notes": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
     "blockers": {
       "type": "array",
       "items": {

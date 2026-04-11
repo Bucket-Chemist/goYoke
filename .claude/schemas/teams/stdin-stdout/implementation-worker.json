@@ -39,6 +39,15 @@
       "architecture_notes": "Brief description of relevant architecture",
       "patterns_to_follow": ["Existing pattern descriptions to be consistent with"],
       "anti_patterns": ["What NOT to do"]
+    },
+    "go_implementation_guardrails": {
+      "scanner_limits_required": true,
+      "jsonl_ndjson_paths_in_scope": true,
+      "stdin_scope_must_be_preserved": true,
+      "partial_failure_must_fail_command": true,
+      "temp_fallback_must_be_private": true,
+      "path_components_must_be_sanitized": true,
+      "socket_path_limit_must_be_checked": false
     }
   },
   "stdout": {
@@ -72,6 +81,18 @@
       "compiled": true,
       "tests_passed": true,
       "race_detector_clean": true
+    },
+    "go_guardrail_status": {
+      "scanner_limits_updated": true,
+      "jsonl_ndjson_paths_verified": true,
+      "stdin_scope_preserved": true,
+      "partial_failure_semantics_verified": true,
+      "temp_fallback_hardened": true,
+      "path_components_sanitized": true,
+      "socket_path_limit_checked": false,
+      "notes": [
+        "Socket path limit checks are only expected when the task touches Unix socket or IPC startup code."
+      ]
     },
     "blockers": [
       {
