@@ -47,7 +47,7 @@
     {
       "id": "UX-004",
       "title": "Activity: relative paths (strip project root)",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "0.25s",
