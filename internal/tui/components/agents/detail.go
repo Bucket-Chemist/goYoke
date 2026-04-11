@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // activityToolStyle renders the tool name badge in activity entries with a
@@ -175,6 +176,69 @@ func (m AgentDetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.vp, cmd = m.vp.Update(msg)
 	return m, cmd
+}
+
+// Render renders the detail panel using the specified mode and available width.
+// RenderFull delegates to View() so existing behaviour is unchanged.
+// RenderIconRail renders a compact 2-line overview for narrow right panels.
+func (m AgentDetailModel) Render(mode RenderMode, width int) string {
+	if mode == RenderIconRail {
+		return m.renderCompactDetail(width)
+	}
+	return m.View()
+}
+
+// renderCompactDetail renders a compact 2+ line overview for icon rail mode.
+//
+// Format:
+//
+//	Line 1: "{Status} · {model} · {duration}"
+//	Line 2: "${cost} · {tokens} tokens"
+//	Lines 3+: recent activity entries (icon + tool + filename only)
+func (m AgentDetailModel) renderCompactDetail(width int) string {
+	if m.agent == nil {
+		return config.StyleMuted.Render("—")
+	}
+
+	var sb strings.Builder
+
+	// Line 1: status, model, duration.
+	line1 := fmt.Sprintf("%s · %s · %s",
+		capitalise(m.agent.Status.String()),
+		m.agent.Model,
+		formatAgentDuration(m.agent),
+	)
+	sb.WriteString(config.StyleMuted.Render(util.Truncate(line1, width)))
+	sb.WriteByte('\n')
+
+	// Line 2: cost and tokens.
+	line2 := fmt.Sprintf("$%.3f · %s tokens", m.agent.Cost, formatTokens(m.agent.Tokens))
+	sb.WriteString(config.StyleMuted.Render(util.Truncate(line2, width)))
+	sb.WriteByte('\n')
+
+	// Activity entries: most recent first, verb + filename only.
+	for i := len(m.agent.RecentActivity) - 1; i >= 0; i-- {
+		act := m.agent.RecentActivity[i]
+		icon := activityIcon(act.Success)
+		tool := act.ToolName
+		if tool == "" {
+			tool = act.Type
+		}
+		target := act.Target
+		if idx := strings.LastIndexByte(target, '/'); idx >= 0 {
+			target = target[idx+1:]
+		}
+		var entry string
+		if target != "" {
+			entry = fmt.Sprintf("%s %s %s", icon, tool, target)
+		} else {
+			entry = fmt.Sprintf("%s %s", icon, tool)
+		}
+		sb.WriteString(config.StyleMuted.Render(util.Truncate(entry, width)))
+		sb.WriteByte('\n')
+	}
+
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 // View implements tea.Model.

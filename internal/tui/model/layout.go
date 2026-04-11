@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
@@ -533,8 +534,12 @@ func (m AppModel) renderRightPanel(dims layoutDims, panelH int) string {
 	var content string
 	switch m.rightPanelMode {
 	case RPMAgents:
-		treeView := m.agentTree.View()
-		detailView := m.agentDetail.View()
+		renderMode := agents.RenderFull
+		if m.iconRailMode {
+			renderMode = agents.RenderIconRail
+		}
+		treeView := m.agentTree.Render(renderMode, dims.rightWidth)
+		detailView := m.agentDetail.Render(renderMode, dims.rightWidth)
 		content = lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {

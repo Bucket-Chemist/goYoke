@@ -753,9 +753,9 @@ func TestTruncate(t *testing.T) {
 	}{
 		{"short string unchanged", "hello", 10, "hello"},
 		{"exact length unchanged", "hello", 5, "hello"},
-		{"truncates with ellipsis", "hello world", 5, "hello…"},
+		{"truncates with ellipsis", "hello world", 5, "hell…"},
 		{"empty string", "", 10, ""},
-		{"unicode aware", "日本語テスト", 4, "日本語テ…"},
+		{"unicode aware", "日本語テスト", 4, "日本語…"},
 	}
 
 	for _, tc := range tests {

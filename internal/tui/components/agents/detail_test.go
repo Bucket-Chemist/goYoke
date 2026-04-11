@@ -1,9 +1,12 @@
 package agents_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
@@ -480,6 +483,102 @@ func TestView_ACSection_AllPending(t *testing.T) {
 	uncheckedCount := strings.Count(view, "[ ]")
 	if uncheckedCount < 2 {
 		t.Errorf("all-pending AC should show 2 '[ ]' markers, got %d; view:\n%s", uncheckedCount, view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Render — RenderFull
+// ---------------------------------------------------------------------------
+
+func TestDetailRender_FullMatchesView(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	m.SetAgent(fullyPopulatedAgent())
+
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("Render(RenderFull, 80) != View()\nRender: %q\nView:   %q", got, want)
+	}
+}
+
+func TestDetailRender_FullNilAgent(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("Render(RenderFull) on nil agent != View()")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Render — RenderIconRail (compact detail)
+// ---------------------------------------------------------------------------
+
+func TestDetailRender_CompactNilAgent(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	view := m.Render(agents.RenderIconRail, 22)
+	// Should not panic and should return non-empty placeholder.
+	if view == "" {
+		t.Error("Render(RenderIconRail) on nil agent should not return empty string")
+	}
+}
+
+func TestDetailRender_CompactShowsStatus(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(40, 10)
+	a := fullyPopulatedAgent() // StatusRunning
+	m.SetAgent(a)
+
+	view := m.Render(agents.RenderIconRail, 40)
+	if !strings.Contains(view, "Running") {
+		t.Errorf("compact detail should contain 'Running'; got:\n%s", view)
+	}
+}
+
+func TestDetailRender_CompactShowsModel(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(40, 10)
+	a := fullyPopulatedAgent() // model="sonnet"
+	m.SetAgent(a)
+
+	view := m.Render(agents.RenderIconRail, 40)
+	if !strings.Contains(view, "sonnet") {
+		t.Errorf("compact detail should contain model name; got:\n%s", view)
+	}
+}
+
+func TestDetailRender_CompactShowsCost(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(40, 10)
+	a := fullyPopulatedAgent()
+	a.Cost = 0.045
+	m.SetAgent(a)
+
+	view := m.Render(agents.RenderIconRail, 40)
+	if !strings.Contains(view, "0.045") {
+		t.Errorf("compact detail should contain cost value; got:\n%s", view)
+	}
+}
+
+func TestDetailRender_CompactWidthBoundaries(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 20)
+	a := fullyPopulatedAgent()
+	a.Cost = 1.98
+	m.SetAgent(a)
+
+	for _, width := range []int{15, 22, 28, 29, 30, 31, 32, 45} {
+		t.Run(fmt.Sprintf("width=%d", width), func(t *testing.T) {
+			view := m.Render(agents.RenderIconRail, width)
+			if view == "" {
+				t.Fatalf("Render(RenderIconRail, %d) returned empty string", width)
+			}
+			for i, line := range strings.Split(view, "\n") {
+				w := lipgloss.Width(line)
+				if w > width {
+					t.Errorf("line %d: lipgloss.Width=%d exceeds width=%d: %q",
+						i, w, width, line)
+				}
+			}
+		})
 	}
 }
 

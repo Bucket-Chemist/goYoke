@@ -211,6 +211,131 @@ func emitSelected(id string) tea.Cmd {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// RenderMode
+// ---------------------------------------------------------------------------
+
+// RenderMode controls how AgentTreeModel renders its content.
+type RenderMode int
+
+const (
+	// RenderFull renders the complete tree with labels and activity preview.
+	RenderFull RenderMode = iota
+	// RenderIconRail renders a compact icon + 2-char abbreviation + cost/status
+	// view for narrow right panels (< 28 columns).
+	RenderIconRail
+)
+
+// Render renders the tree using the specified mode and available width.
+// RenderFull delegates to View() so existing behaviour is unchanged.
+// RenderIconRail renders the compact icon rail for narrow panels.
+func (m AgentTreeModel) Render(mode RenderMode, width int) string {
+	if mode == RenderIconRail {
+		return m.renderIconRail(width)
+	}
+	return m.View()
+}
+
+// renderIconRail renders the agent tree as a compact icon rail.
+// Each visible line: {treePrefix}{statusIcon} {abbrev} {costOrStatus}
+func (m AgentTreeModel) renderIconRail(width int) string {
+	if len(m.treeNodes) == 0 {
+		return config.StyleMuted.Render("No agents")
+	}
+
+	start := m.scrollOffset
+	end := start + m.height
+	if end > len(m.treeNodes) || m.height <= 0 {
+		end = len(m.treeNodes)
+	}
+
+	var sb strings.Builder
+	for i := start; i < end; i++ {
+		node := m.treeNodes[i]
+		line := m.renderIconNode(node, i == m.selectedIdx, width)
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
+
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderIconNode renders a single tree node in icon rail mode.
+// Format: {prefix}{icon} {abbrev} {value}
+func (m AgentTreeModel) renderIconNode(node *state.AgentTreeNode, selected bool, width int) string {
+	// Build tree connector prefix (same structure as full mode).
+	var prefixBuf strings.Builder
+	if node.Depth > 0 {
+		for range node.Depth - 1 {
+			prefixBuf.WriteString("│ ")
+		}
+		if node.IsLast {
+			prefixBuf.WriteString("└─")
+		} else {
+			prefixBuf.WriteString("├─")
+		}
+	}
+	prefixStr := prefixBuf.String()
+	prefixW := lipgloss.Width(prefixStr)
+
+	// Status icon.
+	icon := string(statusIcon(node.Agent.Status))
+	iconStr := statusStyle(node.Agent.Status).Render(icon)
+
+	// 2-char uppercase abbreviation.
+	abbrev := agentAbbrev(node.Agent.AgentType)
+
+	// Cost or status value — truncated to remaining available width.
+	// Fixed overhead: prefix + icon(1) + space(1) + abbrev(2) + space(1) = prefixW + 5
+	value := iconRailValue(node.Agent)
+	available := width - prefixW - 5
+	if available < 0 {
+		available = 0
+	}
+	value = util.Truncate(value, available)
+
+	if selected {
+		plain := prefixStr + icon + " " + abbrev + " " + value
+		return config.StyleHighlight.Render(plain)
+	}
+	return prefixStr + iconStr + " " + abbrev + " " + value
+}
+
+// agentAbbrev returns a 2-char uppercase abbreviation for the given agent type.
+// Uses the first 2 runes of agentType, uppercased. Single-char types are padded
+// with a trailing space; empty types return two spaces.
+func agentAbbrev(agentType string) string {
+	runes := []rune(strings.ToUpper(agentType))
+	switch len(runes) {
+	case 0:
+		return "  "
+	case 1:
+		return string(runes[0]) + " "
+	default:
+		return string(runes[:2])
+	}
+}
+
+// iconRailValue returns the compact value string shown in icon rail mode.
+// Displays cost if non-zero; otherwise a short status word.
+func iconRailValue(a *state.Agent) string {
+	if a.Cost > 0 {
+		return fmt.Sprintf("$%.2f", a.Cost)
+	}
+	switch a.Status {
+	case state.StatusRunning:
+		return "run"
+	case state.StatusComplete:
+		return "done"
+	case state.StatusError:
+		return "fail"
+	case state.StatusKilled:
+		return "kill"
+	default:
+		return "wait"
+	}
+}
+
 // View implements tea.Model. It renders the agent hierarchy as a scrollable
 // tree using Unicode box-drawing connectors. The view is a pure function of
 // the model state — no I/O is performed here.

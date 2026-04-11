@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
@@ -500,5 +501,145 @@ func TestAlternativeKeys(t *testing.T) {
 	tm2 := newM2.(agents.AgentTreeModel)
 	if tm2.SelectedID() != "root" {
 		t.Errorf("after 'k' SelectedID() = %q; want %q", tm2.SelectedID(), "root")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Render — RenderFull
+// ---------------------------------------------------------------------------
+
+func TestRender_FullMatchesView(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("Render(RenderFull, 80) != View()\nRender: %q\nView:   %q", got, want)
+	}
+}
+
+func TestRender_Full_EmptyMatchesView(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("Render(RenderFull) on empty tree != View()")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Render — RenderIconRail
+// ---------------------------------------------------------------------------
+
+func TestRender_IconRail_EmptyTree(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetSize(22, 20)
+
+	view := m.Render(agents.RenderIconRail, 22)
+	if !strings.Contains(view, "No agents") {
+		t.Errorf("Render(RenderIconRail) on empty tree should contain 'No agents'; got:\n%s", view)
+	}
+}
+
+func TestRender_IconRail_ContainsAbbreviations(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	// threeNodeTree: root=orchestrator, c1=go-pro, c2=code-reviewer
+	m.SetNodes(threeNodeTree())
+	m.SetSize(22, 20)
+
+	view := m.Render(agents.RenderIconRail, 22)
+
+	// First 2 chars uppercase: "OR", "GO", "CO"
+	for _, abbrev := range []string{"OR", "GO", "CO"} {
+		if !strings.Contains(view, abbrev) {
+			t.Errorf("Render(RenderIconRail, 22) missing abbrev %q; got:\n%s", abbrev, view)
+		}
+	}
+}
+
+func TestRender_IconRail_ShowsCostWhenNonZero(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "task", state.StatusRunning), 0, true)
+	node.Agent.Cost = 1.98
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(22, 20)
+
+	view := m.Render(agents.RenderIconRail, 22)
+	if !strings.Contains(view, "$1.98") {
+		t.Errorf("icon rail should show '$1.98' for agent with cost; got:\n%s", view)
+	}
+}
+
+func TestRender_IconRail_ShowsStatusWhenNoCost(t *testing.T) {
+	tests := []struct {
+		status state.AgentStatus
+		want   string
+	}{
+		{state.StatusRunning, "run"},
+		{state.StatusComplete, "done"},
+		{state.StatusError, "fail"},
+		{state.StatusPending, "wait"},
+		{state.StatusKilled, "kill"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.want, func(t *testing.T) {
+			node := makeNode(makeAgent("root", "", "go-pro", "task", tc.status), 0, true)
+			// Cost is 0 (default) — should show status string.
+			m := agents.NewAgentTreeModel()
+			m.SetNodes([]*state.AgentTreeNode{node})
+			m.SetSize(22, 20)
+
+			view := m.Render(agents.RenderIconRail, 22)
+			if !strings.Contains(view, tc.want) {
+				t.Errorf("status %s: want %q in icon rail; got:\n%s", tc.status, tc.want, view)
+			}
+		})
+	}
+}
+
+func TestRender_IconRail_CorrectLineCount(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20) // height 20, tree has 3 nodes
+
+	view := m.Render(agents.RenderIconRail, 22)
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Errorf("3-node tree icon rail should produce 3 lines; got %d:\n%s", len(lines), view)
+	}
+}
+
+// TestRender_IconRail_WidthBoundaries verifies that every rendered line fits within
+// the specified width at the boundary widths required by UX-003.
+func TestRender_IconRail_WidthBoundaries(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+
+	for _, width := range []int{15, 22, 28, 29, 30, 31, 32, 45} {
+		t.Run(fmt.Sprintf("width=%d", width), func(t *testing.T) {
+			view := m.Render(agents.RenderIconRail, width)
+			if view == "" {
+				t.Fatalf("Render(RenderIconRail, %d) returned empty string", width)
+			}
+			lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+			for i, line := range lines {
+				w := lipgloss.Width(line)
+				if w > width {
+					t.Errorf("line %d: lipgloss.Width=%d exceeds available width=%d: %q",
+						i, w, width, line)
+				}
+			}
+		})
+	}
+}
+
+func TestRender_IconRail_TreeConnectors(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+
+	view := m.Render(agents.RenderIconRail, 45)
+	// Children at depth 1 should still have tree connectors.
+	if !strings.Contains(view, "├─") && !strings.Contains(view, "└─") {
+		t.Errorf("icon rail should preserve tree connectors; got:\n%s", view)
 	}
 }

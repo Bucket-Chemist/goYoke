@@ -25,7 +25,7 @@ func TestTruncate(t *testing.T) {
 			name:     "ASCII string over limit truncated with ellipsis",
 			input:    "hello world",
 			maxRunes: 5,
-			want:     "hello…",
+			want:     "hell…",
 		},
 		{
 			name:     "empty string unchanged",
@@ -49,25 +49,25 @@ func TestTruncate(t *testing.T) {
 			name:     "CJK characters truncated at rune boundary",
 			input:    "日本語テスト",
 			maxRunes: 4,
-			want:     "日本語テ…",
+			want:     "日本語…",
 		},
 		{
 			name:     "emoji multi-byte truncated at rune boundary",
 			input:    "😀😁😂😃😄",
 			maxRunes: 3,
-			want:     "😀😁😂…",
+			want:     "😀😁…",
 		},
 		{
 			name:     "mixed ASCII and CJK over limit",
 			input:    "abc日本語",
 			maxRunes: 4,
-			want:     "abc日…",
+			want:     "abc…",
 		},
 		{
 			name:     "single character over limit returns ellipsis only",
 			input:    "hello",
 			maxRunes: 1,
-			want:     "h…",
+			want:     "…",
 		},
 	}
 
