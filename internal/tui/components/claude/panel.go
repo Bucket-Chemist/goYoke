@@ -54,13 +54,25 @@ var (
 			Bold(true).
 			Foreground(config.ColorPrimary)
 
+	// userContentStyle colors user message body text cyan, matching userRoleStyle.
+	userContentStyle = lipgloss.NewStyle().
+				Foreground(config.ColorPrimary)
+
 	// assistantRoleStyle renders the "Claude:" prefix for assistant messages.
 	assistantRoleStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(config.ColorAccent)
 
+	// assistantContentStyle colors streaming assistant body text green.
+	// Completed assistant messages are styled by Glamour and are not affected.
+	assistantContentStyle = lipgloss.NewStyle().
+				Foreground(config.ColorSuccess)
+
 	// systemRoleStyle renders the "System:" prefix for system messages.
 	systemRoleStyle = config.StyleMuted.Copy().Bold(true)
+
+	// systemContentStyle colors system message body text muted/grey.
+	systemContentStyle = config.StyleMuted.Copy()
 
 	// toolNameStyle renders the collapsed tool-block name.
 	toolNameStyle = config.StyleSubtle.Copy()
@@ -957,7 +969,15 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 		} else {
 			// Wrap to viewport width so long lines (markdown tables, URLs)
 			// don't overflow the viewport height when the terminal wraps them.
-			sb.WriteString(wordwrap.String(msg.Content, m.vp.Width))
+			wrapped := wordwrap.String(msg.Content, m.vp.Width)
+			switch msg.Role {
+			case "user":
+				sb.WriteString(userContentStyle.Render(wrapped))
+			case "assistant":
+				sb.WriteString(assistantContentStyle.Render(wrapped))
+			default:
+				sb.WriteString(systemContentStyle.Render(wrapped))
+			}
 			sb.WriteByte('\n')
 		}
 	}
