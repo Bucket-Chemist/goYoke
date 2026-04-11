@@ -11,7 +11,7 @@
     {
       "id": "UX-001",
       "title": "Conversation: horizontal rule between turns",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "0.25s",
