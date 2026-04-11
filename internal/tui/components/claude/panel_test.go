@@ -1386,3 +1386,81 @@ func TestSlashEffort_ViaDropdown_EmitsEffortChangeRequestMsg(t *testing.T) {
 	_, ok := msg.(model.EffortChangeRequestMsg)
 	require.True(t, ok, "expected EffortChangeRequestMsg from dropdown selection; got %T", msg)
 }
+
+// ---------------------------------------------------------------------------
+// UX-001: Horizontal rule between role transitions
+// ---------------------------------------------------------------------------
+
+func TestRenderMessages_SeparatorBetweenRoleTransitions(t *testing.T) {
+	// Build a conversation with alternating roles: user → assistant.
+	m := newPanel()
+	m, _ = sendAndCapture(m, "Hello")
+	m, _ = m.Update(assistantMsg("Hi there"))
+
+	view := stripANSI(m.View())
+	if !strings.Contains(view, "─") {
+		t.Error("expected horizontal rule (─) between user→assistant messages; got none")
+	}
+}
+
+func TestRenderMessages_NoSeparatorSameRole(t *testing.T) {
+	// Two consecutive assistant messages should NOT have a separator between them.
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("First assistant turn"))
+	m, _ = m.Update(assistantMsg("Second assistant turn"))
+
+	// Both messages must be visible.
+	view := stripANSI(m.View())
+	require.True(t, strings.Contains(view, "First assistant turn"), "first message not visible")
+	require.True(t, strings.Contains(view, "Second assistant turn"), "second message not visible")
+
+	if strings.Contains(view, "─") {
+		t.Error("expected no horizontal rule between consecutive assistant messages; got one")
+	}
+}
+
+func TestRenderMessages_SeparatorOnlyAtTransition(t *testing.T) {
+	// Conversation: user → assistant → user → assistant.
+	// The separator must appear at each role boundary.
+	m := newPanel()
+	m, _ = sendAndCapture(m, "First user message")
+	m, _ = m.Update(assistantMsg("First reply"))
+	m, _ = sendAndCapture(m, "Second user message")
+	m, _ = m.Update(assistantMsg("Second reply"))
+
+	view := stripANSI(m.View())
+
+	// Verify separator is present (at least one transition).
+	if !strings.Contains(view, "─") {
+		t.Error("expected at least one horizontal rule in multi-turn conversation; got none")
+	}
+
+	// Verify all message content is still present.
+	for _, content := range []string{
+		"First user message", "First reply",
+		"Second user message", "Second reply",
+	} {
+		if !strings.Contains(view, content) {
+			t.Errorf("message content %q missing from view after separator insertion", content)
+		}
+	}
+}
+
+func TestRenderMessages_SeparatorUsesViewportWidth(t *testing.T) {
+	// The rule length must match the viewport width (panelWidth - 1 for scrollbar).
+	const panelWidth = 60
+	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+	m.SetSize(panelWidth, 24)
+	m.SetFocused(true)
+
+	m, _ = sendAndCapture(m, "ping")
+	m, _ = m.Update(model.AssistantMsg{Text: "pong", Streaming: false})
+
+	view := stripANSI(m.View())
+
+	// The viewport is panelWidth-1 wide (one column reserved for scrollbar).
+	expectedRule := strings.Repeat("─", panelWidth-1)
+	if !strings.Contains(view, expectedRule) {
+		t.Errorf("expected rule of width %d matching viewport width; not found in view", panelWidth-1)
+	}
+}

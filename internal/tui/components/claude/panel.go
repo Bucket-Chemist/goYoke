@@ -890,7 +890,17 @@ func (m ClaudePanelModel) renderMessages() string {
 	var sb strings.Builder
 	for i, msg := range m.messages {
 		if i > 0 {
-			sb.WriteByte('\n')
+			if m.messages[i].Role != m.messages[i-1].Role {
+				ruleWidth := m.vp.Width
+				if ruleWidth <= 0 {
+					ruleWidth = 80
+				}
+				sb.WriteByte('\n')
+				sb.WriteString(config.StyleMuted.Render(strings.Repeat("─", ruleWidth)))
+				sb.WriteByte('\n')
+			} else {
+				sb.WriteByte('\n')
+			}
 		}
 		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1))
 	}
