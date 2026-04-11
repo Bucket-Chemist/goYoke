@@ -23,7 +23,7 @@
     {
       "id": "UX-002",
       "title": "Conversation: user/assistant color differentiation",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "0.25s",
