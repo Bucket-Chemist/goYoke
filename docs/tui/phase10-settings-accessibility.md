@@ -164,12 +164,121 @@ ok := config.ValidateContrast(theme)
 
 ---
 
+---
+
+## UX-016: Agent Count Sparkline Dots
+
+> **Added in:** UX Redesign P2 sprint (commit `9b899a23`)
+
+### Purpose
+
+Replace the plain `agents:N` text in the status line with a per-status sparkline that conveys agent health at a glance. Each dot represents one agent, colored by its current status.
+
+### Design Decision
+
+**Per-status dot coloring** matching the agent tree's `StatusRowStyle()` from [[phase10-overview|UX-009]]. The dot order is: running → pending → complete → error → killed, reading left to right from "needs attention" to "done".
+
+| Status | Symbol | Style |
+|--------|--------|-------|
+| Running | ● | `SuccessStyle` (green) |
+| Pending | ○ | `StyleMuted` (grey) |
+| Complete | ● | `SuccessStyle` + Bold (bright green) |
+| Error | ● | `ErrorStyle` (red) |
+| Killed | ● | `WarningStyle` (yellow) |
+
+### Implementation
+
+- `renderAgentSparkline()` in `statusline.go`
+- `AgentStats` struct replaces `AgentCount int` — carries per-status counts
+- Prefix: `agents: {running}/{total}` followed by colored dots
+- Empty string when `Total == 0` (no wasted space)
+- `ui_event_handlers.go` wires `.AgentStats` from registry on every agent event
+
+### Testing
+
+- Sparkline rendering tests with various status combinations
+- Zero-agent hiding test
+- Integration with `AgentStats` struct propagation
+
+---
+
+## UX-017: Adaptive Status Line (1-Row at Narrow Widths)
+
+> **Added in:** UX Redesign P2 sprint (commit `9b899a23`)
+
+### Purpose
+
+The two-row status line wastes vertical space at narrow terminal widths where every row counts. Provide a single-row compact variant that shows only critical fields.
+
+### Design Decision
+
+**Width-based dispatch** at 120 columns. Wide terminals get the full two-row layout; standard/compact terminals get a single row with only cost, model, sparkline, context bar, elapsed time, and streaming indicator. Permission mode, auth, git branch, CWD, and vim/mouse badges are omitted in compact mode.
+
+| Width | Rows | Fields Shown |
+|-------|------|-------------|
+| ≥120 | 2 | All fields (unchanged from TUI-048/049) |
+| <120 | 1 | Cost, plan badge, model, agent sparkline, context bar, elapsed, streaming |
+
+### Implementation
+
+- `View()` dispatches to `viewFull()` or `viewCompact()` based on `m.width`
+- `Height() int` method returns 2 or 1 — used by `layout.go` instead of hardcoded `statusLineHeight` constant
+- `viewCompact()` uses `joinLeftRight()` for single-row alignment
+- Both views share `renderAgentSparkline()` and `renderContextBar()`
+
+### Testing
+
+- Height assertion tests at various widths
+- Compact layout field presence/absence tests
+- Layout integration: `computeLayout()` uses dynamic `m.statusLine.Height()`
+
+---
+
+## UX-020: Reduce Motion Config Flag
+
+> **Added in:** UX Redesign P2 sprint (commit `9b899a23`)
+
+### Purpose
+
+Provide a global reduce-motion toggle for users with vestibular disorders or motion sensitivity. Meets WCAG 2.3.1 ("Three Flashes or Below Threshold") by disabling all animations.
+
+### Design Decision
+
+**Single boolean flag** propagated through `sharedState` to all animation sites. Each component checks `reduceMotion` and substitutes static equivalents.
+
+| Animation | Normal | Reduce-Motion |
+|-----------|--------|---------------|
+| Streaming spinner | Braille animation cycle (`⠋⠙⠹...`) | Static `⠿ streaming` |
+| Ultrathink indicator | `RainbowGradient("Thinking...")` | Plain `thinking...` (muted) |
+| Tab flash | Animated flash highlight | Suppressed (no-op) |
+| Spinner tick scheduling | Continuous `tea.Tick` | No tick scheduled (saves CPU) |
+
+### Implementation
+
+- `settingstree.go`: New "Reduce Motion" toggle in Display section (default: off)
+- `app.go`: `sharedState.reduceMotion` flag
+- `ui_event_handlers.go`: `handleSettingChanged` wires `"reduce_motion"` → `sharedState` + `statusLine.ReduceMotion` + `claudePanel.SetReduceMotion()`
+- `statusline.go`: `spinnerTickMsg` handler returns `nil` cmd (no rescheduling); `viewFull()`/`viewCompact()` render static indicator
+- `panel.go`: `renderMessages()` replaces `RainbowGradient()` with `StyleMuted.Render("thinking...")`
+- `ui_event_handlers.go`: `handleTabFlash()` returns early when `reduceMotion` is true
+- `interfaces.go`: `SetReduceMotion(v bool)` on `claudePanelWidget`
+
+### Testing
+
+- `reduce_motion_test.go` — **new file**: setting propagation, tab flash suppression, interface compliance
+- `panel_test.go` — reduce-motion ultrathink indicator test
+- `statusline_test.go` — reduce-motion spinner suppression test
+
+---
+
 ## Cross-References
 
 - **Depends on:** [[phase10-visual-foundation]] — TUI-044 (semantic colors), TUI-045 (icons), TUI-046 (theme switching)
 - **Consumed by:** [[phase10-parity-features]] — TUI-057 (plan mode UX uses status line extensions)
 - **Consumed by:** [[phase10-navigation-interaction]] — TUI-062 (vim mode indicator in status line)
+- **Extended by:** UX-016 (sparkline dots), UX-017 (adaptive layout), UX-020 (reduce-motion) — P2 sprint of [[SESSION-20260411-UX-OVERHAUL|UX Redesign]]
+- **P3 depends on UX-020:** UX-023 (pulse animation respects reduce-motion), UX-025 (cost flash respects reduce-motion)
 
 ---
 
-_Part of [[phase10-overview|Phase 10 UX Overhaul]]. Generated by TUI-069._
+_Part of [[phase10-overview|Phase 10 UX Overhaul]]. Updated with UX Redesign P2 (2026-04-11)._

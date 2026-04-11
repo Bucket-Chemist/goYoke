@@ -1,12 +1,12 @@
-# Session Report: UX Overhaul — Braintrust Review + P0/P1 Implementation
+# Session Report: UX Overhaul — Braintrust Review + P0/P1/P2 Implementation
 
 ## Summary
 
-Comprehensive multi-session effort covering UX redesign evaluation, ticket generation, and full P0+P1 implementation. The UX-REDESIGN-SPEC.md (1233 lines, 24 recommendations) was evaluated via Braintrust (Einstein + Staff-Architect + Beethoven), producing a multi-perspective analysis that identified a fundamental PMF gap. 28 tickets were generated, preflight-reviewed against the codebase, and passed through Staff-Architect final review. All 12 P0+P1 tickets have been implemented and shipped.
+Comprehensive multi-session effort covering UX redesign evaluation, ticket generation, and full P0+P1+P2 implementation. The UX-REDESIGN-SPEC.md (1233 lines, 24 recommendations) was evaluated via Braintrust (Einstein + Staff-Architect + Beethoven), producing a multi-perspective analysis that identified a fundamental PMF gap. 28 tickets were generated, preflight-reviewed against the codebase, and passed through Staff-Architect final review. All 20 P0+P1+P2 tickets have been implemented and shipped.
 
 **Branch:** `ux-overhaul`
-**Session Cost:** ~$20 total (Braintrust $6.14 + P0 agents ~$4 + P1 agents ~$4.90 + router overhead)
-**Commits:** 18 (6 bug fixes + 1 schema/config + 11 UX implementation + ticket management)
+**Session Cost:** ~$25 total (Braintrust $6.14 + P0 agents ~$4 + P1 agents ~$4.90 + P2 ~$5 + router overhead)
+**Commits:** 19 (6 bug fixes + 1 schema/config + 12 UX implementation + ticket management)
 
 ---
 
@@ -60,7 +60,7 @@ Evaluate UX-REDESIGN-SPEC.md for:
 |-------|---------|--------|--------|
 | P0 | UX-001 through UX-007 (7 tickets) | ~3-3.5 sessions | **COMPLETE** (7/7) |
 | P1 | UX-008 through UX-012 (5 tickets) | ~2-3 sessions | **COMPLETE** (5/5) |
-| P2 | UX-013 through UX-020 (8 tickets) | ~3-4 sessions | Pending |
+| P2 | UX-013 through UX-020 (8 tickets) | ~3-4 sessions | **COMPLETE** (8/8) |
 | P3 | UX-021 through UX-028 (8 tickets) | ~3-4 sessions | Pending |
 
 ### Staff-Architect Final Review
@@ -172,6 +172,78 @@ Six commits for bugs discovered during recent sessions:
 
 ---
 
+## Phase 6: P2 Ticket Implementation (completed session 3)
+
+| Ticket | Title | Changes |
+|--------|-------|---------|
+| UX-013 | Detail: collapsible overview to one-liner | Overview section defaults collapsed; added `renderCollapsed` callback to `DetailSection`; compact one-line format: `Status · AgentType · Model · $Cost · Duration` |
+| UX-014 | Conversation: inline streaming tool indicator | Tool blocks now render inline in ALL layout tiers (not just Compact); `⏳` pending indicator for in-flight tools; `StartedAt`/`Duration` tracking on `ToolBlock`; elapsed time on completed tools (ms/s/m format) |
+| UX-015 | Conversation: collapsible tool-use blocks | `toggleLastToolExpansion` (single block) and `cycleAllToolExpansion` (all blocks) keybindings; collapsed shows name + input summary + duration; expanded adds full I/O |
+| UX-016 | Status line: agent count sparkline dots | Replaced `agents:N` with per-status sparkline: running=green●, complete=bright-green●, pending=grey○, error=red●, killed=yellow●; `AgentStats` struct replaces plain `int` |
+| UX-017 | Status line: adaptive 1-row at narrow widths | Width ≥120: two-row layout (unchanged); width <120: single-row compact (cost, model, sparkline, context bar, elapsed, streaming); `Height()` method; `viewFull()`/`viewCompact()` split |
+| UX-018 | Teams: action-hinted toasts | Toast messages include actionable hints (`/team-status`, `/team-result`); budget warning toast (fire-once via `atomic.Bool`); member failure toasts with retry count; new UDS types: `toast`, `team_update` |
+| UX-019 | Teams: auto-switch on completion | On team complete/error: flash Teams tab + auto-switch to Teams panel; guarded when streaming or user has input text; `HasInput()` on `ClaudePanelModel` and `claudePanelWidget` interface |
+| UX-020 | Reduce-motion config flag | "Reduce Motion" toggle in Settings → Display; disables spinner animation (static `⠿` instead); disables rainbow ultrathink gradient; suppresses tab flash animation; wired through `sharedState` → `statusLine` + `claudePanel`; WCAG 2.3.1 compliance |
+
+**P2 commit:** `9b899a23` — 29 files, +1315/-94 lines
+
+### What Changed in the TUI (P2)
+
+**Agent detail (`detail.go`):**
+- Overview section starts collapsed with one-line summary
+- New `renderCollapsed` callback on `DetailSection` for per-section compact rendering
+- `renderOverviewCompact()`: `Status · AgentType · Model · $Cost · Duration`
+
+**Conversation panel (`panel.go`):**
+- Inline tool blocks in all layout tiers (previously Compact-only)
+- Pending tool indicator (`⏳`) while tool is in-flight
+- Duration display on completed tools (`fmtToolDuration()`)
+- Collapsible tool blocks: per-block toggle + cycle-all keybindings
+- Reduce-motion: rainbow ultrathink → plain "thinking..." when enabled
+
+**Status line (`statusline.go`):**
+- `renderAgentSparkline()`: per-status colored dots replacing plain count
+- Adaptive layout: `viewFull()` (2 rows, ≥120 cols) / `viewCompact()` (1 row, <120 cols)
+- `Height()` method replaces hardcoded `statusLineHeight` constant in `layout.go`
+- Reduce-motion: static `⠿ streaming` replaces animated spinner
+
+**Team daemon (`cmd/gogent-team-run/`):**
+- Action-hinted toast notifications via UDS (`toastPayload`, `teamUpdatePayload`)
+- Budget warning toast (fires once when remaining drops below `WarningThresholdUSD`)
+- Member failure toasts with retry count
+- Team completion toast with total cost summary
+- Team update notification for tab flash / auto-switch (UX-019)
+
+**MCP tools (`mcp/tools.go`):**
+- Toast messages rewritten with actionable hints (`/team-status to inspect`, `/team-result to view findings`)
+
+**Settings (`settingstree.go`):**
+- New "Reduce Motion" toggle in Display section
+
+**App model (`app.go`, `ui_event_handlers.go`):**
+- `sharedState.reduceMotion` flag wired to statusline + claude panel
+- Team completion handler: tab flash + auto-switch (guarded by streaming/input state)
+- Tab flash suppressed when reduce-motion enabled
+
+**Interfaces (`interfaces.go`):**
+- `HasInput() bool` added to `claudePanelWidget`
+- `SetReduceMotion(v bool)` added to `claudePanelWidget`
+
+**State (`state/provider.go`):**
+- `ToolBlock.StartedAt` and `ToolBlock.Duration` fields for tool timing
+
+### Test Coverage (P2)
+
+- 615 new lines of test code across 4 modified + 2 new test files
+- `cmd/gogent-team-run/toast_test.go` — **new**: toast payload, action hints, budget warning
+- `internal/tui/model/reduce_motion_test.go` — **new**: setting propagation, tab flash suppression
+- `statusline_test.go` — sparkline rendering, compact/full layout, height assertions
+- `panel_test.go` — tool duration formatting, tool expansion toggle/cycle, reduce-motion indicator
+- `detail_test.go` — collapsed overview rendering, section visibility
+- `team_drawer_test.go` — auto-switch on completion, streaming/input guards
+
+---
+
 ## Configuration Changes
 
 ### Timeout Default Alignment
@@ -243,6 +315,37 @@ All agent timeout references aligned to 600000ms (10 min) across:
 - `cmd/gogent-scout/native_scout.go` — refactored file collection
 - + 20 more (tests, session, telemetry, routing packages)
 
+### Go Source — P2 (committed `9b899a23`)
+- `internal/tui/components/agents/detail.go` — `renderCollapsed` callback, `renderOverviewCompact()`
+- `internal/tui/components/agents/detail_test.go` — collapsed overview tests
+- `internal/tui/components/agents/pipeline_test.go` — updated for AgentStats
+- `internal/tui/components/claude/panel.go` — inline tools all tiers, duration, expansion, reduce-motion
+- `internal/tui/components/claude/panel_test.go` — duration format, expansion toggle, reduce-motion
+- `internal/tui/components/settingstree/settingstree.go` — reduce_motion toggle
+- `internal/tui/components/statusline/statusline.go` — sparkline, adaptive layout, reduce-motion
+- `internal/tui/components/statusline/statusline_test.go` — sparkline + compact layout tests
+- `internal/tui/components/statusline/export_test.go` — AgentStats test helpers
+- `internal/tui/mcp/tools.go` — action-hinted toast messages
+- `internal/tui/model/app.go` — `sharedState.reduceMotion`
+- `internal/tui/model/app_test.go` — updated for new interface methods
+- `internal/tui/model/bench_test.go` — updated for AgentStats
+- `internal/tui/model/event_pipeline_test.go` — updated for AgentStats
+- `internal/tui/model/interfaces.go` — `HasInput()`, `SetReduceMotion()`
+- `internal/tui/model/layout.go` — dynamic `statusLine.Height()` replaces constant
+- `internal/tui/model/layout_test.go` — updated for dynamic height
+- `internal/tui/model/reduce_motion_test.go` — **new**: reduce-motion propagation tests
+- `internal/tui/model/team_drawer_test.go` — auto-switch + flash guard tests
+- `internal/tui/model/ui_event_handlers.go` — team completion handler, reduce-motion wiring
+- `internal/tui/phase10_integration_test.go` — updated for interface changes
+- `internal/tui/state/provider.go` — `ToolBlock.StartedAt`, `ToolBlock.Duration`
+- `cmd/gogent-team-run/daemon.go` — `budgetWarnSent atomic.Bool`
+- `cmd/gogent-team-run/main.go` — completion/failure toasts, team update notifications
+- `cmd/gogent-team-run/spawn.go` — member failure toasts
+- `cmd/gogent-team-run/uds.go` — `toastPayload`, `teamUpdatePayload` types
+- `cmd/gogent-team-run/wave.go` — budget warning toast logic
+- `cmd/gogent-team-run/toast_test.go` — **new**: toast payload + action hint tests
+- `tickets/UX-redesign/tickets-index.json` — UX-013..020 marked completed
+
 ### Tickets/Docs (committed)
 - `tickets/UX-redesign/` — 33 new files (28 tickets + analysis + overview + preflight + final review + index)
 - `tickets/UX-redesign/UX-REDESIGN-SPEC.md` — Sections 8-12 added/revised
@@ -259,6 +362,8 @@ All agent timeout references aligned to 600000ms (10 min) across:
 ## Git Log (all sessions)
 
 ```
+9b899a23 feat(tui): implement P2 UX redesign — detail collapse, inline tools, sparklines, adaptive status, toasts, auto-switch, reduce-motion (UX-013..020)
+fe40f72b docs: update session report with P1 completion — P0+P1 COMPLETE (12/12)
 44f5696b feat(tui): implement P1 UX redesign — tree overhaul, status hints, onboarding (UX-008..012)
 d361ab87 chore(tickets): mark UX-004 completed — P0 COMPLETE (7/7)
 93980b4d feat(tui): strip project root from activity paths, split compound commands (UX-004)
@@ -288,13 +393,12 @@ ff5e40dc fix(jsonl): replace default bufio.Scanner with 10MB-buffered scanners a
 
 ---
 
-## Remaining Work (P2+P3)
+## Remaining Work (P3)
 
-16 tickets remain across phases 3-4:
+8 tickets remain in Phase 4:
 
 | Phase | Tickets | Key Items |
 |-------|---------|-----------|
-| P2 (8) | UX-013..020 | Collapsible detail, inline streaming indicator, collapsible tool blocks, sparkline dots, adaptive status line, team toasts, team auto-switch, reduce-motion config |
 | P3 (8) | UX-021..028 | Focus-driven layout, tree density toggle, pulse animation, timestamp gutter, cost flash, timeline progress bars, team tabs, diff summary |
 
-No blocking dependencies remain — all P2 tickets are independent. P3 has three dependencies: UX-022→UX-008 (done), UX-023→UX-020, UX-025→UX-020.
+All P2 dependencies are now satisfied. P3 has two dependencies on P2 work (now done): UX-023→UX-020 (reduce-motion), UX-025→UX-020 (reduce-motion). UX-022→UX-008 was already done in P1.
