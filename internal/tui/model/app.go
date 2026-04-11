@@ -251,6 +251,11 @@ type AppModel struct {
 
 	// mouseEnabled tracks whether tea mouse capture is active; true at startup.
 	mouseEnabled bool
+
+	// simpleMode hides the right panel when true, giving the conversation panel
+	// 100% of the terminal width (UX-007). Toggled by alt+\. Persisted to
+	// SessionData.SimpleMode across restarts.
+	simpleMode bool
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:

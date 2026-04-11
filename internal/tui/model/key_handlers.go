@@ -274,6 +274,11 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.DisableMouse
 
+	case key.Matches(msg, m.keys.Global.ToggleSimpleMode):
+		m.simpleMode = !m.simpleMode
+		m.propagateContentSizes()
+		return m, nil
+
 	case key.Matches(msg, m.keys.Global.ShowHelp):
 		if m.shared != nil {
 			m.shared.helpModal.SetSize(m.width, m.height)

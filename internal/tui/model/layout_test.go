@@ -731,3 +731,74 @@ func TestSyncFocusState_ClaudePanelUnfocusedOnNonChatTab(t *testing.T) {
 		t.Error("claude panel should NOT be focused on TabTeamConfig")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// UX-007: SimpleMode toggle tests
+//
+// Verify that simpleMode=true hides the right panel and gives the conversation
+// 100% width, regardless of terminal width, and that simpleMode=false restores
+// the normal two-column layout.
+// ---------------------------------------------------------------------------
+
+// TestComputeLayout_SimpleMode verifies simpleMode behaviour across widths.
+// When true: right panel hidden, leftWidth == terminal width - borderFrame.
+// When false: normal responsive split (right panel visible at >= 80 cols).
+func TestComputeLayout_SimpleMode(t *testing.T) {
+	t.Parallel()
+
+	const height = 40
+
+	tests := []struct {
+		name          string
+		width         int
+		simpleMode    bool
+		wantShowRight bool
+	}{
+		// simpleMode=true hides right panel on all tier widths.
+		{"simple_standard_80", 80, true, false},
+		{"simple_standard_100", 100, true, false},
+		{"simple_wide_120", 120, true, false},
+		{"simple_wide_150", 150, true, false},
+		{"simple_ultra_180", 180, true, false},
+		{"simple_ultra_240", 240, true, false},
+
+		// simpleMode=false restores normal layout (compact stays hidden).
+		{"normal_compact_79", 79, false, false},
+		{"normal_standard_80", 80, false, true},
+		{"normal_standard_100", 100, false, true},
+		{"normal_wide_120", 120, false, true},
+		{"normal_ultra_200", 200, false, true},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := NewAppModel()
+			m.width = tc.width
+			m.height = height
+			m.simpleMode = tc.simpleMode
+
+			dims := m.computeLayout()
+
+			if dims.showRightPanel != tc.wantShowRight {
+				t.Errorf("width=%d simpleMode=%v: showRightPanel=%v; want %v",
+					tc.width, tc.simpleMode, dims.showRightPanel, tc.wantShowRight)
+			}
+
+			// When the right panel is hidden (either by simpleMode or compact tier),
+			// leftWidth must equal the full terminal width minus border frame.
+			if !dims.showRightPanel {
+				wantLeft := tc.width - borderFrame
+				if wantLeft < 1 {
+					wantLeft = 1
+				}
+				if dims.leftWidth != wantLeft {
+					t.Errorf("width=%d simpleMode=%v: leftWidth=%d; want %d (full width)",
+						tc.width, tc.simpleMode, dims.leftWidth, wantLeft)
+				}
+			}
+		})
+	}
+}

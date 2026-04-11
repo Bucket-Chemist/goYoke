@@ -176,8 +176,8 @@ func (m AppModel) computeLayout() layoutDims {
 	}
 	dims.tier = tier
 
-	if tier == LayoutCompact {
-		// Narrow: single column, right panel hidden.
+	if tier == LayoutCompact || m.simpleMode {
+		// Narrow terminal OR user-toggled simple mode: single column, right panel hidden.
 		dims.showRightPanel = false
 		dims.leftWidth = m.width - borderFrame
 		if dims.leftWidth < 1 {

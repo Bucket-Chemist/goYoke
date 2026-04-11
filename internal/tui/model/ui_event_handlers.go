@@ -937,6 +937,9 @@ func (m AppModel) saveSession() {
 	// from the JSON output by the omitempty tag on SessionData.ThemeVariant.
 	sd.ThemeVariant = int(m.shared.themeVariant)
 
+	// Snapshot simple mode preference (UX-007).
+	sd.SimpleMode = m.simpleMode
+
 	// Save session metadata.
 	if err := m.shared.sessionStore.SaveSession(sd); err != nil {
 		log.Printf("[session] save session: %v", err)

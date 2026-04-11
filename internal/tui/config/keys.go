@@ -71,6 +71,11 @@ type GlobalKeys struct {
 	// ToggleMouse enables or disables mouse capture. When disabled, native
 	// terminal text selection works; when enabled, scroll wheel forwarding works.
 	ToggleMouse key.Binding
+
+	// ToggleSimpleMode hides or shows the right panel (UX-007).
+	// When active the conversation panel expands to full terminal width.
+	// Keybinding: alt+\ (backslash evokes a vertical split).
+	ToggleSimpleMode key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -242,6 +247,10 @@ func DefaultKeyMap() KeyMap {
 			ToggleMouse: key.NewBinding(
 				key.WithKeys("alt+m"),
 				key.WithHelp("alt+m", "toggle mouse"),
+			),
+			ToggleSimpleMode: key.NewBinding(
+				key.WithKeys("alt+\\"),
+				key.WithHelp("alt+\\", "toggle panels"),
 			),
 		},
 
