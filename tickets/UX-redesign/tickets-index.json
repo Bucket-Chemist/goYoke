@@ -35,7 +35,7 @@
     {
       "id": "UX-003",
       "title": "Right panel: icon rail mode (< 30 cols)",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "1.5-2s",
