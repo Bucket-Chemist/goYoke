@@ -1,9 +1,10 @@
 # GOgent-Fortress TUI: UX Redesign Specification
 
 **Author:** UX Audit — April 2026
-**Status:** Approved for implementation
-**Branch:** Create from `routing-restructure` after PR merge
+**Status:** Approved with conditions (Braintrust review 2026-04-11)
+**Branch:** `ux-overhaul` (created from `routing-restructure`)
 **Reference TUIs:** lazygit, gh-dash, spotify-tui, Bubbletea examples catalogue
+**Braintrust Review:** [BRAINTRUST-ANALYSIS-20260411.md](BRAINTRUST-ANALYSIS-20260411.md) — $4.39, APPROVE_WITH_CONDITIONS
 
 ---
 
@@ -16,8 +17,11 @@
 5. [Area 3: Conversation Panel & Chat UX](#5-area-3-conversation-panel--chat-ux)
 6. [Area 4: Status Line & Progress Feedback](#6-area-4-status-line--progress-feedback)
 7. [Area 5: Team & Workflow Monitoring](#7-area-5-team--workflow-monitoring)
-8. [Priority Matrix](#8-priority-matrix)
+8. [Priority Matrix (REVISED)](#8-priority-matrix-revised)
 9. [Implementation Notes](#9-implementation-notes)
+10. [Braintrust Review Findings](#10-braintrust-review-findings)
+11. [New Recommendations (from Braintrust)](#11-new-recommendations-from-braintrust)
+12. [Ticket-Ready Recommendation Index](#12-ticket-ready-recommendation-index)
 
 ---
 
@@ -1108,58 +1112,72 @@ review team done — 3 files modified, +45 -12 lines — $2.30
 
 ---
 
-## 8. Priority Matrix
+## 8. Priority Matrix (REVISED)
 
-### P0 — Do First (transforms daily experience)
+> **Revised per Braintrust review 2026-04-11.** Key changes: 3a+3b promoted to P0 (universal PMF), 4a/4b downscoped to enhancement-only (already partially implemented), simple/expert toggle added as NEW, tree.go recs consolidated, effort estimates corrected. See [BRAINTRUST-ANALYSIS-20260411.md](BRAINTRUST-ANALYSIS-20260411.md) for full rationale.
 
-| ID | Recommendation | Impact | Effort | Files |
-|----|---------------|--------|--------|-------|
-| 1a | Adaptive right-panel (icon rail < 30 cols) | Critical | Medium | tree.go, detail.go, layout.go, interfaces.go |
-| 1b | Relative paths in activity entries | High | Low | activity.go, detail.go |
-| 4a | Context window progress bar | High | Low | statusline.go |
-| 4b | Prominent cost display (first in row, colored) | High | Low | statusline.go |
+### P0 — Do First (universal foundations + core differentiator)
+
+| ID | Recommendation | Impact | Effort | Files | Notes |
+|----|---------------|--------|--------|-------|-------|
+| 3a | Horizontal rule between turns | High | Low | panel.go | **PROMOTED from P1.** Universal PMF — benefits all user profiles. |
+| 3b | User/assistant color differentiation | High | Low | panel.go | **PROMOTED from P1.** Universal PMF — benefits all user profiles. |
+| 1a | Adaptive right-panel (icon rail < 30 cols) | Critical | **High** | tree.go, detail.go, layout.go | **Effort corrected** from Medium to High (1.5-2 sessions). **interfaces.go NOT needed** — tree/detail are concrete types. Use unified `Render(mode)` method. |
+| 1b | Relative paths in activity entries | High | Low | activity.go, detail.go | Unchanged. |
+| 4a | Context window progress bar | High | **Low (enhance)** | statusline.go | **DOWNSCOPED:** `renderContextBar()` already exists at statusline.go:228. Enhancement-only: reposition + add color thresholds if missing. |
+| 4b | Prominent cost display (first in row, colored) | High | **Low (enhance)** | statusline.go | **DOWNSCOPED:** `costStyle()` already exists at statusline.go:476. Enhancement-only: reorder Row 1, add threshold colors if missing. |
+| N1 | **NEW: Simple/expert toggle** | High | Low | layout.go, config/keys.go | **NEW from Braintrust.** One keybinding to hide/show right panel. Captures 80% of multi-profile PMF at minimal cost. |
+
+**Estimated combined effort:** 3-3.5 sessions
+
+**Decision points before starting:**
+- [ ] Choose `Render(mode RenderMode)` unified method vs `View()`/`ViewCompact()` dual path — affects 1a architecture
+- [ ] Simple toggle scope: right panel only (recommended) or also simplify status line?
+- [ ] Should tree-overhaul branch include P1 items 2a+2b+2c to avoid merge conflicts?
+
+### P1 — Do Next (tree overhaul + status integration)
+
+| ID | Recommendation | Impact | Effort | Files | Notes |
+|----|---------------|--------|--------|-------|-------|
+| 2a | Two-column tree layout (dots, right-aligned) | High | Medium | tree.go | **CONSOLIDATE** into single `tree-overhaul` branch with 2b, 2c to avoid merge conflicts (6 recs touch tree.go). |
+| 2b | Full-row color by agent status | High | Low | tree.go | Part of tree-overhaul branch. |
+| 2c | Inline cost per agent in tree | Medium | Low | tree.go | **PROMOTED from P2.** Part of tree-overhaul branch. |
+| 5a | Status line team indicator | High | Medium | statusline.go, app.go | Unchanged. |
+| N2 | **NEW: First-run orientation hints** | Medium | Low | hint bar widget, config | **NEW from Braintrust.** Use existing `hintBarWidget` to show "Press Tab to see agents" etc. for sessions 1-3. Zero new infrastructure. |
 
 **Estimated combined effort:** 2-3 sessions
 
-### P1 — Do Next (major readability gains)
+**Branch strategy:** Single `tree-overhaul` branch for 2a+2b+2c. Separate branch for 5a+N2.
 
-| ID | Recommendation | Impact | Effort | Files |
-|----|---------------|--------|--------|-------|
-| 2a | Two-column tree layout (dots, right-aligned) | High | Medium | tree.go |
-| 2b | Full-row color by agent status | High | Low | tree.go |
-| 3a | Horizontal rule between turns | High | Low | panel.go |
-| 3b | User/assistant color differentiation | Medium | Low | panel.go |
-| 5a | Status line team indicator | High | Medium | statusline.go, app.go |
+### P2 — Polish (conversation + monitoring enhancements)
 
-**Estimated combined effort:** 2-3 sessions
-
-### P2 — Polish (meaningful improvements)
-
-| ID | Recommendation | Impact | Effort | Files |
-|----|---------------|--------|--------|-------|
-| 1c | Collapsible Overview to one-liner | Medium | Medium | detail.go |
-| 2c | Inline cost per agent in tree | Medium | Low | tree.go |
-| 3d | Collapsible tool-use blocks | Medium | Medium | panel.go |
-| 4c | Agent count sparkline dots | Medium | Low | statusline.go |
-| 5b | Action-hinted team toasts | Medium | Low | tools.go, spawn.go |
-| 5d | Team timeline progress bars | Medium | High | health.go |
-| 5e | Team tabs in drawer (←/→ cycle) | Medium | Medium | health.go, detail.go, key_handlers.go |
+| ID | Recommendation | Impact | Effort | Files | Notes |
+|----|---------------|--------|--------|-------|-------|
+| 1c | Collapsible Overview to one-liner | Medium | Medium | detail.go | Unchanged. |
+| 3c | Inline streaming tool indicator | Medium | Medium | panel.go | **MOVED from P3** — pairs well with 3d. |
+| 3d | Collapsible tool-use blocks | Medium | Medium | panel.go | Use `tool_use_id` as collapse state key (per Staff-Architect failure mode analysis). |
+| 4c | Agent count sparkline dots | Medium | Low | statusline.go | Unchanged. |
+| 4d | Adaptive 1-row status line at narrow widths | Medium | Medium | statusline.go, layout.go | **MOVED from P3.** Implement `statusLineHeight` as method on AppModel (not from computeLayout). |
+| 5b | Action-hinted team toasts | Medium | Low | tools.go, spawn.go | Unchanged. |
+| 5c | Auto-switch on team completion | Low | Low | app.go | **MOVED from P3.** |
+| N3 | **NEW: reduce-motion config flag** | Medium | Low | config, all animation recs | **NEW from Braintrust.** WCAG 2.3.1 compliance. Must ship before any P3 animations. |
 
 **Estimated combined effort:** 3-4 sessions
 
-### P3 — Nice-to-have (refinements)
+### P3 — Nice-to-have (animations + advanced features)
 
-| ID | Recommendation | Impact | Effort | Files |
-|----|---------------|--------|--------|-------|
-| 1d | Focus-driven drawer/content split | Medium | High | layout.go |
-| 2d | Tree density toggle (compact/standard/verbose) | Low | Low | tree.go, key_handlers.go |
-| 2e | Pulse animation on active agent | Low | Low | tree.go |
-| 3c | Inline streaming tool indicator | Medium | Medium | panel.go |
-| 3e | Timestamp gutter | Low | Medium | panel.go |
-| 4d | Adaptive 1-row status line at narrow widths | Medium | Medium | statusline.go, layout.go |
-| 4e | Cost flash-on-change | Low | Low | statusline.go |
-| 5c | Auto-switch on team completion | Low | Low | app.go |
-| 5f | Team diff summary on completion | Low | Medium | detail.go |
+> **All animation recs in P3 MUST respect `reduce-motion` config (N3).** Ship N3 in P2 first.
+
+| ID | Recommendation | Impact | Effort | Files | Notes |
+|----|---------------|--------|--------|-------|-------|
+| 1d | Focus-driven drawer/content split | Medium | High | layout.go | Unchanged. |
+| 2d | Tree density toggle (compact/standard/verbose) | Low | Low | tree.go, key_handlers.go | Unchanged. |
+| 2e | Pulse animation on active agent | Low | Low | tree.go | **Requires reduce-motion (N3).** |
+| 3e | Timestamp gutter | Low | Medium | panel.go | Unchanged. |
+| 4e | Cost flash-on-change | Low | Low | statusline.go | **Changed to opt-in** (not default-on). Requires reduce-motion (N3). |
+| 5d | Team timeline progress bars | Medium | High | health.go | Unchanged. |
+| 5e | Team tabs in drawer | Medium | Medium | health.go, detail.go, key_handlers.go | **Needs spec additions:** empty state, overflow behavior, vim mode, dismiss semantics. |
+| 5f | Team diff summary on completion | Low | Medium | detail.go | Unchanged. |
 
 ---
 
@@ -1167,23 +1185,30 @@ review team done — 3 files modified, +45 -12 lines — $2.30
 
 ### 9.1 Branching Strategy
 
-Create from `routing-restructure` after PR merge:
-```
-git checkout -b ux-redesign-p0
-```
+> **REVISED per Braintrust review.** Tree.go recs consolidated to avoid merge conflicts.
 
-Each priority tier should be its own branch/PR:
-- `ux-redesign-p0` — 4 items, 2-3 sessions
-- `ux-redesign-p1` — 5 items, 2-3 sessions
-- `ux-redesign-p2` — 6 items, 3-4 sessions
-- `ux-redesign-p3` — 9 items, as time permits
+Branch: `ux-overhaul` (already created from `routing-restructure`)
+
+Sub-branches per priority tier:
+- `ux-overhaul-p0-conversation` — 3a+3b (~0.5 sessions)
+- `ux-overhaul-p0-icon-rail` — 1a+1b (~2 sessions)
+- `ux-overhaul-p0-statusline` — 4a+4b enhancement (~0.5 sessions)
+- `ux-overhaul-p0-toggle` — N1 simple/expert toggle (~0.25 sessions)
+- `ux-overhaul-p1-tree-overhaul` — 2a+2b+2c consolidated (~2 sessions)
+- `ux-overhaul-p1-status-hints` — 5a+N2 (~1 session)
+- `ux-overhaul-p2` — 1c, 3c, 3d, 4c, 4d, 5b, 5c, N3 (~3-4 sessions)
+- `ux-overhaul-p3` — remaining items, as time permits
 
 ### 9.2 Testing Strategy
 
+> **REVISED per Braintrust review.** Boundary test matrix expanded. Staff-Architect found 48+ render paths vs 4 proposed boundary tests.
+
 Each visual change should include:
 1. Unit test for the rendering function (string assertions)
-2. Width boundary tests (verify behavior at 22, 30, 45, 80 cols)
+2. Width boundary tests at **{15, 22, 28, 29, 30, 31, 32, 45, 60, 80, 120, 180}** column widths
 3. Screenshot comparison if possible
+4. **NEW:** For width-conditional rendering (icon rail, adaptive status), add hysteresis boundary tests at switch points
+5. **NEW:** If implementing `Render(mode)` pattern, add compile-time test verifying all modes render the same agent IDs
 
 ### 9.3 Backward Compatibility
 
@@ -1230,3 +1255,192 @@ if panelWidth < 30 {
 }
 return m.View()
 ```
+
+---
+
+## 10. Braintrust Review Findings
+
+> Full analysis: [BRAINTRUST-ANALYSIS-20260411.md](BRAINTRUST-ANALYSIS-20260411.md)
+
+### 10.1 Spec Corrections (must fix before implementation)
+
+| ID | Finding | Source | Action |
+|----|---------|--------|--------|
+| C-1 | Recs 4a/4b already partially implemented: `renderContextBar()` at statusline.go:228, `costStyle()` at statusline.go:476 | Staff-Architect | Rewrite as enhancement-only tickets referencing existing code. Do NOT implement from scratch. |
+| M-1 | interfaces.go modification unnecessary — tree.go and detail.go are concrete types, not interface-backed | Staff-Architect | Remove interfaces.go from Rec 1a file list. No `ViewCompact()` interface method needed. |
+| M-3 | 48+ render paths identified vs 4 proposed boundary tests — test coverage gap | Staff-Architect | Expand boundary test matrix. See revised Section 9.2. |
+| M-4 | Dynamic `statusLineHeight` (Rec 4d) risks layout overflow if computed height != rendered height | Staff-Architect | Implement as method on AppModel computing from m.width directly. Add height invariant test. |
+| m-5 | 6 recs across 4 branches all touch tree.go — guaranteed merge conflicts | Staff-Architect | Consolidate 1a+2a+2b+2c into single tree-overhaul branch. See revised Section 9.1. |
+
+### 10.2 PMF Gap Analysis
+
+| Finding | Impact | Resolution |
+|---------|--------|------------|
+| Spec conflates terminal width with user expertise. Narrow terminal != beginner. | All 24 recs increase info density, serving only power users. | Add simple/expert toggle (N1) — one keybinding to hide/show right panel. |
+| No onboarding or first-run experience for new users. | Users must discover features by exploration. | Add first-run hints (N2) via existing hintBarWidget. |
+| Reference TUIs (lazygit, gh-dash, spotify-tui) are all power-user tools. | Design language optimizes for expert audience only. | Acknowledged. TUI is primarily a power-user tool. Toggle provides escape hatch. |
+| Spec's "progressive disclosure" is actually responsive sizing. True PD = simple default, complexity opt-in. | Width-conditional rendering != expertise-conditional rendering. | Toggle implements real PD: default = panels visible (power user), opt-out = conversation only (simple mode). |
+| Animations (pulse 2e, flash 4e, sparkline 4c) missing WCAG 2.3.1 motion consideration. | Accessibility risk for users with vestibular sensitivities. | Add reduce-motion config (N3). Ship before P3. |
+
+### 10.3 Key Architectural Decisions Required
+
+| Decision | Options | Recommendation | Decide Before |
+|----------|---------|----------------|---------------|
+| Rendering approach for width-conditional components | A) `Render(mode RenderMode)` unified method B) Separate `View()`/`ViewCompact()` methods | **A** — single method prevents path drift (Risk #3) | Starting Rec 1a |
+| Icon rail boundary handling | A) Hard threshold at 30 cols B) Hysteresis: 28 icon→text, 32 text→icon | **B** — prevents flicker at boundary (Risk #1) | Starting Rec 1a |
+| Tree-overhaul branch scope | A) P0-only: just 1a B) P0+P1: include 2a+2b+2c | **B** — avoids merge conflicts (Risk #4), slightly more P0 effort | Starting Rec 1a |
+| Simple toggle scope | A) Hide right panel only B) Hide right panel + simplify status line | **A** to start — revisit after user research | Starting N1 |
+
+---
+
+## 11. New Recommendations (from Braintrust)
+
+### 11.1 Recommendation N1: Simple/Expert Toggle
+
+**Priority:** P0
+**Impact:** High
+**Effort:** Low (~0.25 sessions)
+**Source:** Braintrust — Einstein PMF analysis
+
+**Problem:** The TUI has no way for users to opt out of the agent monitoring panels. A user running a single agent (common for vibe coders) sees the same complex interface as someone orchestrating 6 agents.
+
+**Solution:** One keybinding to toggle the right panel (agent tree + detail) on/off. When off, conversation panel gets 100% width. Persisted to config so the preference survives restarts.
+
+**Implementation:**
+```go
+// In layout.go — renderRightPanel conditional
+if m.simpleMode {
+    // Give conversation 100% width, skip right panel entirely
+    return m.renderConversationPanel(dims.totalWidth, dims.contentHeight)
+}
+// ... existing split rendering
+```
+
+**Keybinding:** `alt+p` (toggle panels) — check config/keys.go for conflicts.
+
+**Config persistence:**
+```go
+// In config or settings
+type UserPreferences struct {
+    SimpleMode bool `json:"simple_mode"`
+}
+```
+
+**Files to modify:**
+- `internal/tui/model/layout.go` — conditional right panel rendering
+- `internal/tui/config/keys.go` — add keybinding
+- `internal/tui/model/key_handlers.go` — wire toggle handler
+- Config/settings persistence
+
+**Success criteria:**
+- [ ] Toggle keybinding hides/shows right panel
+- [ ] Conversation panel fills 100% width in simple mode
+- [ ] Preference persists across session restarts
+- [ ] Status line still visible in simple mode
+
+**Dependencies:** None — can be implemented independently.
+
+### 11.2 Recommendation N2: First-Run Orientation Hints
+
+**Priority:** P1
+**Impact:** Medium
+**Effort:** Low (~0.25 sessions)
+**Source:** Braintrust — Einstein PMF analysis
+
+**Problem:** New users have no guidance about what the agent tree, drawers, or tabs do. The TUI assumes familiarity with the layout from the start.
+
+**Solution:** Use the existing `hintBarWidget` to show contextual orientation hints during the first 3 sessions. Hints appear at the bottom of relevant panels and auto-dismiss after the user performs the hinted action.
+
+**Hints:**
+```
+Session 1-3: "Press Tab to see running agents →"  (conversation panel)
+Session 1-3: "Press ← → to switch tabs"            (tab bar area)
+Session 1-3: "Press Enter to expand agent details"  (agent tree, when agents exist)
+```
+
+**Files to modify:**
+- Hint bar widget — add session-count-aware hint content
+- Config — track session count for hint suppression
+
+**Success criteria:**
+- [ ] Hints display on sessions 1-3 only
+- [ ] Hints suppress after user performs the hinted action
+- [ ] No hints after session 3 (or after all hints dismissed)
+- [ ] Zero new UI components — uses existing hint bar infrastructure
+
+**Dependencies:** None.
+
+### 11.3 Recommendation N3: Reduce-Motion Config Flag
+
+**Priority:** P2 (but MUST ship before any P3 animation recs)
+**Impact:** Medium
+**Effort:** Low (~0.25 sessions)
+**Source:** Braintrust — Einstein accessibility analysis + WCAG 2.3.1
+
+**Problem:** Recs 2e (pulse animation), 4e (cost flash), and 4c (sparkline) introduce motion that may be harmful for users with vestibular sensitivities, attention disorders, or seizure conditions. WCAG 2.3.1 requires an option to disable triggering animation.
+
+**Solution:** Add `reduce_motion: bool` to TUI config. When true, all animations render as static alternatives:
+- Pulse (2e): static bright icon instead of bright/dim cycle
+- Cost flash (4e): static color change instead of 500ms flash
+- Spinner: static indicator instead of cycling frames
+
+**Implementation:**
+```go
+// Check before any animation rendering
+if m.config.ReduceMotion {
+    return staticAlternative
+}
+return animatedVersion
+```
+
+**Files to modify:**
+- TUI config — add `reduce_motion` field
+- All animation rendering sites (2e, 4c, 4e, existing spinners)
+
+**Success criteria:**
+- [ ] `reduce_motion: true` disables all animation rendering
+- [ ] Static alternatives are visually clear (not just "nothing")
+- [ ] Config persists across restarts
+- [ ] All P3 animation recs check this flag
+
+**Dependencies:** Must be implemented before Recs 2e, 4c, 4e.
+
+---
+
+## 12. Ticket-Ready Recommendation Index
+
+> This index is formatted for `/plan-tickets` consumption. Each recommendation is a discrete ticket candidate with dependencies, effort, and success criteria.
+
+| ID | Title | Priority | Effort | Branch | Dependencies | Files |
+|----|-------|----------|--------|--------|-------------|-------|
+| 3a | Conversation: horizontal rule between turns | P0 | 0.25s | p0-conversation | None | panel.go |
+| 3b | Conversation: user/assistant color differentiation | P0 | 0.25s | p0-conversation | None | panel.go |
+| 1a | Right panel: icon rail mode (< 30 cols) | P0 | 1.5-2s | p0-icon-rail | Decision: Render(mode) vs dual-path | tree.go, detail.go, layout.go |
+| 1b | Activity: relative paths (strip project root) | P0 | 0.25s | p0-icon-rail | None | activity.go, detail.go |
+| 4a | Status line: enhance existing context bar | P0 | 0.25s | p0-statusline | None | statusline.go |
+| 4b | Status line: enhance existing cost display | P0 | 0.25s | p0-statusline | None | statusline.go |
+| N1 | Simple/expert toggle (hide/show right panel) | P0 | 0.25s | p0-toggle | None | layout.go, keys.go, key_handlers.go |
+| 2a | Tree: two-column dot-leader layout | P1 | 1s | p1-tree-overhaul | 1a complete | tree.go |
+| 2b | Tree: full-row color by agent status | P1 | 0.25s | p1-tree-overhaul | 2a | tree.go |
+| 2c | Tree: inline cost per agent | P1 | 0.25s | p1-tree-overhaul | 2a | tree.go |
+| 5a | Status line: team indicator | P1 | 0.75s | p1-status-hints | None | statusline.go, app.go |
+| N2 | First-run orientation hints | P1 | 0.25s | p1-status-hints | None | hint bar, config |
+| 1c | Detail: collapsible overview to one-liner | P2 | 0.5s | p2 | None | detail.go |
+| 3c | Conversation: inline streaming tool indicator | P2 | 0.75s | p2 | None | panel.go, cli_event_handlers.go |
+| 3d | Conversation: collapsible tool-use blocks | P2 | 0.75s | p2 | None | panel.go, key_handlers.go |
+| 4c | Status line: agent count sparkline dots | P2 | 0.25s | p2 | N3 (reduce-motion) | statusline.go |
+| 4d | Status line: adaptive 1-row at narrow widths | P2 | 0.5s | p2 | None | statusline.go, layout.go |
+| 5b | Teams: action-hinted toasts | P2 | 0.25s | p2 | None | tools.go, spawn.go |
+| 5c | Teams: auto-switch on completion | P2 | 0.25s | p2 | None | app.go |
+| N3 | Reduce-motion config flag | P2 | 0.25s | p2 | None (but blocks 2e, 4e) | config, animation sites |
+| 1d | Layout: focus-driven drawer/content split | P3 | 1s | p3 | None | layout.go |
+| 2d | Tree: density toggle (compact/standard/verbose) | P3 | 0.25s | p3 | 2a | tree.go, key_handlers.go |
+| 2e | Tree: pulse animation on active agent | P3 | 0.25s | p3 | N3 | tree.go |
+| 3e | Conversation: timestamp gutter | P3 | 0.5s | p3 | None | panel.go |
+| 4e | Status line: cost flash-on-change (opt-in) | P3 | 0.25s | p3 | N3 | statusline.go |
+| 5d | Teams: timeline progress bars | P3 | 1s | p3 | None | health.go |
+| 5e | Teams: tabs in drawer | P3 | 0.75s | p3 | None | health.go, detail.go, key_handlers.go |
+| 5f | Teams: diff summary on completion | P3 | 0.5s | p3 | None | detail.go |
+
+**Total: 27 tickets (24 original + 3 new)**
+**Total estimated effort: ~12-14.5 sessions across all priorities**
