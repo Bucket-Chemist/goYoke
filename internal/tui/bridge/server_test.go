@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -328,6 +329,17 @@ func TestSocketPathIsSetCorrectly(t *testing.T) {
 	assert.NotEmpty(t, path)
 	assert.Contains(t, path, "gofortress-")
 	assert.Contains(t, path, ".sock")
+}
+
+func TestBuildSocketPath_FallsBackToTmpWhenCandidatesAreTooLong(t *testing.T) {
+	longBase := filepath.Join("/tmp", strings.Repeat("x", 120))
+	t.Setenv("XDG_RUNTIME_DIR", longBase)
+	t.Setenv("TMPDIR", longBase)
+
+	path := buildSocketPath()
+
+	assert.Equal(t, filepath.Join("/tmp", fmt.Sprintf("gofortress-%d.sock", os.Getpid())), path)
+	assert.LessOrEqual(t, len(path), maxUnixSocketPathBytes)
 }
 
 // TestUnknownRequestTypeIsIgnored verifies that an unrecognised request type

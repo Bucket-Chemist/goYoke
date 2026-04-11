@@ -26,7 +26,7 @@ func GetGOgentDir() string {
 	// Try XDG_RUNTIME_DIR (systemd standard, session-scoped)
 	if xdg := os.Getenv("XDG_RUNTIME_DIR"); xdg != "" {
 		dir := filepath.Join(xdg, "gogent")
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := ensureWritableDir(dir); err != nil {
 			fmt.Fprintf(os.Stderr, "[config] Failed to create gogent dir at %s: %v. Trying fallback.\n", dir, err)
 		} else {
 			return dir
@@ -36,7 +36,7 @@ func GetGOgentDir() string {
 	// Try XDG_CACHE_HOME (user-configurable cache directory)
 	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
 		dir := filepath.Join(xdg, "gogent")
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := ensureWritableDir(dir); err != nil {
 			fmt.Fprintf(os.Stderr, "[config] Failed to create gogent dir at %s: %v. Trying fallback.\n", dir, err)
 		} else {
 			return dir
@@ -47,19 +47,70 @@ func GetGOgentDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[config] Failed to get home directory: %v. Using /tmp fallback.\n", err)
-		dir := filepath.Join(os.TempDir(), "gogent-fallback")
-		os.MkdirAll(dir, 0755)
+		dir := tempFallbackDir("gogent-fallback")
+		if fallbackErr := ensureWritableDirWithPerm(dir, 0700, true); fallbackErr != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create fallback gogent dir at %s: %v\n", dir, fallbackErr)
+		}
 		return dir
 	}
 
 	dir := filepath.Join(home, ".cache", "gogent")
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := ensureWritableDir(dir); err != nil {
 		fmt.Fprintf(os.Stderr, "[config] Failed to create gogent dir at %s: %v. Using /tmp fallback.\n", dir, err)
-		dir = filepath.Join(os.TempDir(), "gogent-fallback")
-		os.MkdirAll(dir, 0755)
+		dir = tempFallbackDir("gogent-fallback")
+		if fallbackErr := ensureWritableDirWithPerm(dir, 0700, true); fallbackErr != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create fallback gogent dir at %s: %v\n", dir, fallbackErr)
+		}
 		return dir
 	}
 	return dir
+}
+
+// ensureWritableDir makes sure dir exists and accepts file creation.
+func ensureWritableDir(dir string) error {
+	return ensureWritableDirWithPerm(dir, 0755, false)
+}
+
+func ensureWritableDirWithPerm(dir string, perm os.FileMode, forcePerm bool) error {
+	existed := false
+	if info, err := os.Stat(dir); err == nil && info.IsDir() {
+		existed = true
+	}
+
+	if err := os.MkdirAll(dir, perm); err != nil {
+		return err
+	}
+	if forcePerm || !existed {
+		if err := os.Chmod(dir, perm); err != nil && !os.IsPermission(err) && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	if info, err := os.Stat(dir); err == nil && !info.IsDir() {
+		return fmt.Errorf("%s is not a directory", dir)
+	} else if err != nil {
+		return err
+	}
+
+	probe, err := os.CreateTemp(dir, ".gogent-write-check-*")
+	if err != nil {
+		return err
+	}
+
+	name := probe.Name()
+	if err := probe.Close(); err != nil {
+		_ = os.Remove(name)
+		return err
+	}
+	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
+}
+
+func tempFallbackDir(prefix string) string {
+	return filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d", prefix, os.Getuid()))
 }
 
 // GetTierFilePath returns path to current-tier state file.
@@ -262,7 +313,7 @@ func GetGOgentDataDir() string {
 	// Try XDG_DATA_HOME (user-configurable data directory)
 	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
 		dir := filepath.Join(xdg, "gogent")
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := ensureWritableDir(dir); err != nil {
 			fmt.Fprintf(os.Stderr, "[config] Failed to create gogent data dir at %s: %v. Trying fallback.\n", dir, err)
 		} else {
 			return dir
@@ -273,16 +324,20 @@ func GetGOgentDataDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[config] Failed to get home directory: %v. Using /tmp fallback.\n", err)
-		dir := filepath.Join(os.TempDir(), "gogent-data")
-		os.MkdirAll(dir, 0755)
+		dir := tempFallbackDir("gogent-data")
+		if fallbackErr := ensureWritableDirWithPerm(dir, 0700, true); fallbackErr != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create fallback gogent data dir at %s: %v\n", dir, fallbackErr)
+		}
 		return dir
 	}
 
 	dir := filepath.Join(home, ".local", "share", "gogent")
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := ensureWritableDir(dir); err != nil {
 		fmt.Fprintf(os.Stderr, "[config] Failed to create gogent data dir at %s: %v. Using /tmp fallback.\n", dir, err)
-		dir = filepath.Join(os.TempDir(), "gogent-data")
-		os.MkdirAll(dir, 0755)
+		dir = tempFallbackDir("gogent-data")
+		if fallbackErr := ensureWritableDirWithPerm(dir, 0700, true); fallbackErr != nil {
+			fmt.Fprintf(os.Stderr, "[config] Failed to create fallback gogent data dir at %s: %v\n", dir, fallbackErr)
+		}
 		return dir
 	}
 	return dir

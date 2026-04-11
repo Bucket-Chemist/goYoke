@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,7 +16,8 @@ func cachePath(sessionID string) string {
 	if dir == "" {
 		dir = os.TempDir()
 	}
-	return filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", sessionID))
+	sum := sha256.Sum256([]byte(sessionID))
+	return filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", hex.EncodeToString(sum[:])))
 }
 
 // loadCache reads the cache file for sessionID.
