@@ -59,8 +59,8 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 // StatusLineModel is the Bubbletea model for the bottom status bar.
 // It holds data fields rendered into two rows:
 //
-//	Row 1: SessionCost  TokenCount  ContextPercent  PermissionMode  Elapsed  [thinking...]
-//	Row 2: ActiveModel  Provider    GitBranch       AuthStatus  AgentCount  [UncommittedCount]
+//	Row 1: [model] [perm] 📁 project | 🌿 branch     ████░░ 45% 234K/1M | agents:N · auth
+//	Row 2: $0.45                                       ⏱ 5m 12s | ↻ streaming
 //
 // The zero value is not usable; use NewStatusLineModel instead.
 type StatusLineModel struct {
@@ -219,8 +219,8 @@ const contextBarWidth = 10
 
 // renderContextBar renders a visual progress bar for context window utilization.
 //
-// Wide terminal (>= 100): ▓▓▓▓▓░░░░░ 45% 234K/1M
-// Medium terminal (80-99): ▓▓▓▓▓░░░░░ 45% 234K/1M  (shorter bar)
+// Wide terminal (>= 100): █████░░░░░ 45% 234K/1M
+// Medium terminal (80-99): █████░░░░░ 45% 234K/1M  (shorter bar)
 // Narrow terminal (< 80):  45% 234K/1M
 //
 // The filled portion is colored using semantic thresholds (green/yellow/red).
@@ -262,7 +262,7 @@ func (m StatusLineModel) renderContextBar() string {
 		fillCount = contextBarWidth
 	}
 
-	filled := strings.Repeat("▓", fillCount)
+	filled := strings.Repeat("█", fillCount)
 	empty := strings.Repeat("░", contextBarWidth-fillCount)
 
 	coloredFill := style.Render(filled)
@@ -275,8 +275,8 @@ func (m StatusLineModel) renderContextBar() string {
 // View implements tea.Model. It renders the status bar as two rows matching
 // the TS TUI layout:
 //
-//	Row 1: [model] [perm] 📁 project | 🌿 branch              auth · email
-//	Row 2: ▓▓▓░░ 41% | $0.45                       ⏱ 5m 12s | ↻ streaming
+//	Row 1: [model] [perm] 📁 project | 🌿 branch     ████░░ 41% 234K/1M | auth · email
+//	Row 2: $0.45                                       ⏱ 5m 12s | ↻ streaming
 //
 // Cost, context, permission and auth fields use semantic colors.
 func (m StatusLineModel) View() string {
@@ -374,7 +374,9 @@ func (m StatusLineModel) View() string {
 	} else {
 		authValue = m.theme.SuccessStyle().Render(m.AuthStatus)
 	}
-	row1Right := authValue
+	// Context bar: positioned prominently on the right side of Row 1.
+	ctxBar := m.renderContextBar()
+	row1Right := ctxBar + muted(" | ") + authValue
 
 	// Agents count (only if > 0)
 	if m.AgentCount > 0 {
@@ -385,10 +387,9 @@ func (m StatusLineModel) View() string {
 
 	// ===== ROW 2: metrics line =====
 
-	// Context bar + cost
-	ctxBar := m.renderContextBar()
+	// Cost
 	costValue := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
-	row2Left := ctxBar + muted(" | ") + costValue
+	row2Left := costValue
 
 	// Elapsed + streaming status: right-aligned
 	var row2RightParts []string

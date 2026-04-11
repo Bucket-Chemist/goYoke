@@ -632,7 +632,7 @@ func TestRenderContextBar_25Percent(t *testing.T) {
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "25%")
 	assert.Contains(t, result, "250K/1M")
-	assert.Contains(t, result, "▓")
+	assert.Contains(t, result, "█")
 }
 
 func TestRenderContextBar_50Percent(t *testing.T) {
@@ -662,7 +662,7 @@ func TestRenderContextBar_100Percent(t *testing.T) {
 	m.ContextUsedTokens = 1_000_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "100%")
-	assert.Contains(t, result, "▓▓▓▓▓▓▓▓▓▓")
+	assert.Contains(t, result, "██████████")
 	assert.Contains(t, result, "1M/1M")
 }
 
@@ -674,7 +674,7 @@ func TestRenderContextBar_NarrowFallback(t *testing.T) {
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "52%")
 	assert.Contains(t, result, "520K/1M")
-	assert.NotContains(t, result, "▓")
+	assert.NotContains(t, result, "█")
 }
 
 func TestRenderContextBar_NegativePercent(t *testing.T) {
@@ -692,7 +692,7 @@ func TestRenderContextBar_OverPercent(t *testing.T) {
 	m.ContextUsedTokens = 300_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "100%")
-	assert.Contains(t, result, "▓▓▓▓▓▓▓▓▓▓")
+	assert.Contains(t, result, "██████████")
 }
 
 func TestRenderContextBar_ContainsBarChars(t *testing.T) {
@@ -701,7 +701,7 @@ func TestRenderContextBar_ContainsBarChars(t *testing.T) {
 	m.ContextCapacity = 1_000_000
 	m.ContextUsedTokens = 600_000
 	result := m.RenderContextBarForTest()
-	assert.Contains(t, result, "▓")
+	assert.Contains(t, result, "█")
 	assert.Contains(t, result, "░")
 	assert.Contains(t, result, "600K/1M")
 }
