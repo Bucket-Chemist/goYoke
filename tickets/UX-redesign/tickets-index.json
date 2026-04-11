@@ -83,7 +83,7 @@
     {
       "id": "UX-007",
       "title": "Simple/expert toggle (hide/show right panel)",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "0.25s",
