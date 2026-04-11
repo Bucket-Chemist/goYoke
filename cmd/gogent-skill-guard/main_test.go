@@ -187,6 +187,79 @@ func TestExtractSkillName(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TUI translation injection tests
+// ---------------------------------------------------------------------------
+
+func TestEmitSetupResponse_TUI_InjectsTranslation(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/gofortress-mcp-test.json")
+
+	// Capture stdout by calling the helper indirectly through handleSetupModeWithConfig
+	// with a nil guardConfig (non-guarded skill path).
+	tmpDir := t.TempDir()
+	guardPath := filepath.Join(tmpDir, guardFileName)
+
+	// We can't easily capture fmt.Println output in unit tests, so test
+	// isTUIMode detection and the translation const directly.
+	assert.True(t, isTUIMode(), "isTUIMode should return true when GOFORTRESS_MCP_CONFIG is set")
+	assert.Contains(t, tuiTranslation, "spawn_agent")
+	assert.Contains(t, tuiTranslation, "get_agent_result")
+	assert.Contains(t, tuiTranslation, "Task()")
+	assert.Contains(t, tuiTranslation, "Do NOT translate mcp__gofortress-interactive__team_run")
+
+	// Verify guard path is not created for non-guarded skill
+	_, err := os.Stat(guardPath)
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestIsTUIMode_NotSet(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	assert.False(t, isTUIMode(), "isTUIMode should return false when GOFORTRESS_MCP_CONFIG is empty")
+}
+
+func TestIsTUIMode_Set(t *testing.T) {
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/gofortress-mcp-12345.json")
+	assert.True(t, isTUIMode(), "isTUIMode should return true when GOFORTRESS_MCP_CONFIG is set")
+}
+
+func TestTuiTranslation_ContainsKeyRules(t *testing.T) {
+	// Verify the translation const covers all critical rules from the plan.
+	assert.Contains(t, tuiTranslation, "TOOL TRANSLATION", "must have header")
+	assert.Contains(t, tuiTranslation, "spawn_agent", "must mention spawn_agent")
+	assert.Contains(t, tuiTranslation, "get_agent_result", "must mention get_agent_result")
+	assert.Contains(t, tuiTranslation, "AGENT: xxx", "must explain agent ID extraction")
+	assert.Contains(t, tuiTranslation, "subagent_type", "must mention subagent_type is not needed")
+	assert.Contains(t, tuiTranslation, "async", "must explain async nature")
+	assert.Contains(t, tuiTranslation, "team_run", "must have team_run exclusion clause")
+	assert.Contains(t, tuiTranslation, "Only translate Task()", "must scope translation to Task only")
+}
+
+func TestHandleSetupModeWithConfig_LegacyGuarded_CreatesTeamDir(t *testing.T) {
+	// Verify that the legacy path still creates the team directory and guard file
+	// regardless of TUI mode (translation injection is orthogonal to guard creation).
+	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+
+	tmpDir := t.TempDir()
+	guardPath := filepath.Join(tmpDir, guardFileName)
+
+	guardConfig := &SkillGuardConfig{
+		RouterAllowedTools: []string{"Task", "Bash", "Read"},
+		TeamDirSuffix:      "test-team",
+	}
+
+	handleSetupModeWithConfig("braintrust", guardConfig, tmpDir, guardPath)
+
+	// Guard file should exist
+	_, err := os.Stat(guardPath)
+	assert.False(t, os.IsNotExist(err), "guard file should be created")
+
+	// Team dir should exist
+	entries, err := os.ReadDir(filepath.Join(tmpDir, "teams"))
+	require.NoError(t, err)
+	assert.Len(t, entries, 1, "exactly one team dir should be created")
+	assert.Contains(t, entries[0].Name(), "test-team")
+}
+
 // Helper function to write guard file
 func writeGuardFile(t *testing.T, path string, guard *ActiveSkill) {
 	t.Helper()

@@ -21,6 +21,33 @@ const (
 	guardFileName  = "active-skill.json"
 )
 
+// tuiTranslation is injected as additionalContext when a Skill tool is invoked
+// in TUI mode (GOFORTRESS_MCP_CONFIG set). It tells the model to translate
+// Task() calls in SKILL.md instructions to the async spawn_agent + get_agent_result
+// pattern. This keeps SKILL.md files dual-purpose: they work with native Claude Code
+// (which has Task) and with the GOgent TUI (which replaces Task with MCP spawn_agent).
+const tuiTranslation = `TOOL TRANSLATION (TUI mode active):
+
+The Task() tool is NOT available in this session. Wherever the skill instructions say Task(), use this two-step pattern instead:
+
+1. SPAWN: Call mcp__gofortress-interactive__spawn_agent with:
+   - agent: the agent ID from the prompt's "AGENT: xxx" line
+   - description: same as Task description
+   - prompt: same as Task prompt
+   - model: same as Task model (e.g. "opus", "sonnet", "haiku")
+
+2. WAIT: Call mcp__gofortress-interactive__get_agent_result with:
+   - agent_id: the agentId returned by spawn_agent
+   - wait: true
+   - timeout_ms: 600000
+
+Key rules:
+- subagent_type from Task() is NOT needed for spawn_agent.
+- Task() was synchronous. spawn_agent is async — you MUST call get_agent_result to get the output.
+- For parallel spawns: call spawn_agent multiple times, then call get_agent_result for each.
+- Do NOT translate mcp__gofortress-interactive__team_run or any other mcp__gofortress-interactive__* calls. These already work natively. Only translate Task() calls.
+- If no "AGENT: xxx" line exists in the Task prompt, infer the agent ID from context: the Task description, the agent name mentioned in surrounding text, or the model tier (haiku tasks → "haiku-scout").`
+
 // ActiveSkill is a type alias for config.ActiveSkill.
 // Kept for backward compatibility with test code; use config.ActiveSkill directly in new code.
 type ActiveSkill = config.ActiveSkill
@@ -29,6 +56,31 @@ type ActiveSkill = config.ActiveSkill
 type SkillGuardConfig struct {
 	RouterAllowedTools []string `json:"router_allowed_tools"`
 	TeamDirSuffix      string   `json:"team_dir_suffix"`
+}
+
+// isTUIMode returns true when the skill-guard is running inside the GOgent TUI.
+// Detection: the TUI sets GOFORTRESS_MCP_CONFIG to the path of the temporary
+// MCP config file it generates for the claude subprocess.
+func isTUIMode() bool {
+	return os.Getenv("GOFORTRESS_MCP_CONFIG") != ""
+}
+
+// emitSetupResponse prints the PreToolUse response for a Skill tool invocation.
+// In TUI mode it injects the Task→spawn_agent translation as additionalContext.
+// In native Claude Code mode it returns bare {} (no translation needed).
+func emitSetupResponse() {
+	if isTUIMode() {
+		resp := map[string]string{"additionalContext": tuiTranslation}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "[gogent-skill-guard] Warning: failed to marshal translation response:", err)
+			fmt.Println("{}")
+			return
+		}
+		fmt.Println(string(data))
+	} else {
+		fmt.Println("{}")
+	}
 }
 
 func main() {
@@ -75,9 +127,9 @@ func handleSetupMode(event *routing.ToolEvent) {
 		return
 	}
 
-	// Non-team skill: no guard needed.
+	// Non-team skill: no guard needed (but still inject translation in TUI mode).
 	if guardConfig == nil {
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 
@@ -100,7 +152,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 		fmt.Sprintf("%d.%s", timestamp, guardConfig.TeamDirSuffix))
 	if err := os.MkdirAll(teamDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to create team dir: %v\n", err)
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 
@@ -115,7 +167,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to create pipe: %v, continuing unguarded\n", err)
 		writeSessionGuard(skillName, guardConfig, teamDir, sessionID, guardPath, 0, ccPID)
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 
@@ -132,7 +184,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 		writePipe.Close()
 		readPipe.Close()
 		writeSessionGuard(skillName, guardConfig, teamDir, sessionID, guardPath, 0, ccPID)
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 	writePipe.Close() // Parent closes the write end; lock-holder has its own copy.
@@ -157,7 +209,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 
 	writeSessionGuard(skillName, guardConfig, teamDir, sessionID, guardPath, holderPID, ccPID)
 	cmd.Process.Release() //nolint:errcheck
-	fmt.Println("{}")
+	emitSetupResponse()
 }
 
 // writeSessionGuard writes a v2 session-scoped guard file.
@@ -186,7 +238,7 @@ func writeSessionGuard(skillName string, guardConfig *SkillGuardConfig, teamDir,
 func handleSetupModeWithConfig(skillName string, guardConfig *SkillGuardConfig, sessionDir, guardPath string) {
 	if guardConfig == nil {
 		// Non-team skill (e.g., /dummies-guide), no guard needed.
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 
@@ -196,7 +248,7 @@ func handleSetupModeWithConfig(skillName string, guardConfig *SkillGuardConfig, 
 		fmt.Sprintf("%d.%s", timestamp, guardConfig.TeamDirSuffix))
 	if err := os.MkdirAll(teamDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to create team dir: %v\n", err)
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 
@@ -210,14 +262,14 @@ func handleSetupModeWithConfig(skillName string, guardConfig *SkillGuardConfig, 
 	data, err := json.MarshalIndent(guard, "", "  ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to marshal guard file: %v\n", err)
-		fmt.Println("{}")
+		emitSetupResponse()
 		return
 	}
 	if err := os.WriteFile(guardPath, data, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to write guard file: %v\n", err)
 	}
 
-	fmt.Println("{}")
+	emitSetupResponse()
 }
 
 // handleGuardMode checks the session-scoped guard and returns JSON output string.
