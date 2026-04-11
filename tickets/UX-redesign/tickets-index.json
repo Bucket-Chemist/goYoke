@@ -71,7 +71,7 @@
     {
       "id": "UX-006",
       "title": "Status line: enhance existing cost display",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "0.25s",
