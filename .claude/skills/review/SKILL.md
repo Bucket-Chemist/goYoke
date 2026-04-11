@@ -175,7 +175,7 @@ Read the review template from `.claude/schemas/teams/review.json` and populate w
 
 **Per-member fields** (from review.json template, filtered to selected reviewers):
 - `model`: `"haiku"` for backend/frontend/standards, `"sonnet"` for architect
-- `timeout_ms`: `300000` for all reviewers (5 min)
+- `timeout_ms`: `600000` for all reviewers (10 min)
 - `max_retries`: `2`
 - `stdin_file`: `"stdin_{reviewer-name}.json"`
 - `stdout_file`: `"stdout_{reviewer-name}.json"`

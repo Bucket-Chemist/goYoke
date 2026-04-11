@@ -134,7 +134,7 @@ All agents your workflow will use must be registered in `~/.claude/agents/agents
 
 - `cli_flags.allowed_tools`: Determines what file operations the agent can perform. For implementation workers that create files, `augmentToolsForImplementation()` in `spawn.go` automatically adds `Write` and `Edit` when `workflowType == "implementation"`. For other workflows, explicitly include needed tools.
 
-- `model`: Drives cost estimation and timeout defaults (haiku: 120s, sonnet: 300s, opus: 600s)
+- `model`: Drives cost estimation and timeout defaults (haiku: 120s, sonnet: 600s, opus: 600s)
 
 ### 2.2 Stdin/Stdout Contract Schemas
 
@@ -356,7 +356,7 @@ This is the master template for your workflow. It defines waves, members, budget
           "error_message": "",
           "retry_count": 0,
           "max_retries": 2,
-          "timeout_ms": 300000,
+          "timeout_ms": 600000,
           "started_at": null,
           "completed_at": null,
           "blocked_by": [],
@@ -385,7 +385,7 @@ This is the master template for your workflow. It defines waves, members, budget
 | `error_message` | string | "" | Failure details if status=failed |
 | `retry_count` | int | 0 | Current retry attempt |
 | `max_retries` | int | 2 | Maximum retry attempts |
-| `timeout_ms` | int | 120000 (haiku)<br>300000 (sonnet)<br>600000 (opus) | Execution timeout |
+| `timeout_ms` | int | 120000 (haiku)<br>600000 (sonnet)<br>600000 (opus) | Execution timeout |
 | `started_at` | string / null | null | ISO 8601 timestamp |
 | `completed_at` | string / null | null | ISO 8601 timestamp |
 | `blocked_by` | string[] | [] | Member IDs that must complete first |
@@ -893,7 +893,7 @@ Create `~/.claude/schemas/teams/security-audit.json`:
           "error_message": "",
           "retry_count": 0,
           "max_retries": 2,
-          "timeout_ms": 300000,
+          "timeout_ms": 600000,
           "started_at": null,
           "completed_at": null,
           "blocked_by": [],
@@ -1303,7 +1303,7 @@ Compare actual vs. estimated. If actual consistently exceeds estimated by >50%, 
 
 **Symptom:** Agents killed with "timeout exceeded" before completing
 
-**Cause:** Default timeout (120s haiku, 300s sonnet) insufficient for large codebases
+**Cause:** Default timeout (120s haiku, 600s sonnet) insufficient for large codebases
 
 **Fix:** Increase `timeout_ms` in template for members that scan large file sets.
 ```
@@ -2976,7 +2976,7 @@ Use this checklist when creating a new team composition skill.
 - [ ] All waves defined with correct member structures
 - [ ] Member defaults correct (status: pending, pids: null, costs: 0.0)
 - [ ] Budget fields calculated (max, remaining, warning_threshold)
-- [ ] Timeouts appropriate for models (haiku: 120s, sonnet: 300s, opus: 600s)
+- [ ] Timeouts appropriate for models (haiku: 120s, sonnet: 600s, opus: 600s)
 - [ ] `blocked_by` and `blocks` set correctly (if DAG-ordered)
 
 ### Skill Implementation
@@ -3216,7 +3216,7 @@ If agents consistently hit timeout:
 
 ```json
 {
-  "timeout_ms": 300000  // Increase from 120000 for large codebases
+  "timeout_ms": 600000  // Increase from 120000 for large codebases
 }
 ```
 

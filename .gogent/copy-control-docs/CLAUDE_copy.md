@@ -101,7 +101,7 @@ These Go binaries run automatically. You cannot bypass them.
 
 **What hooks enforce:**
 
-- Task(opus) is blocked → use `/braintrust` instead (allowlisted agents: planner, architect, staff-architect-critical-review, python-architect, mozart, einstein, beethoven, llm-inference-architect)
+- Task(opus) is blocked → use `/braintrust` instead (allowlisted agents: planner, architect, staff-architect-critical-review, python-architect, mozart, einstein, beethoven)
 - Wrong subagent_type → blocked with corrective message
 - Direct implementation by router (>50 lines Write, >30 lines Edit) → warned by `gogent-direct-impl-check`
 - 3+ consecutive failures → sharp edge captured, execution blocked
@@ -152,7 +152,6 @@ Request arrives
 | `/explore`            | Structured codebase exploration with scout → architect flow                       |
 | `/braintrust`         | Multi-perspective deep analysis (Mozart → Einstein + Staff-Architect → Beethoven) |
 | `/review`             | Multi-domain code review with severity-grouped findings                           |
-| `/review-bioinformatics` | Bioinformatics domain review with Opus specialist reviewers (6 domains + Pasteur synthesis) |
 | `/review-plan`        | Critical 7-layer review of implementation plans                                   |
 | `/ticket`             | Ticket-driven implementation workflow                                             |
 | `/implement`          | Plan + implement a feature (architect → team-run background)                      |
@@ -169,7 +168,6 @@ Request arrives
 | `/teams`              | List all teams in current session with summary status                             |
 | `/benchmark-agent`    | Evaluate GOgent agents against SkillsBench benchmarks via Harbor                  |
 | `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
-| `/schema-extend`          | Extend boilerplate agent with domain expertise via braintrust, or refine expanded agent |
 
 ---
 
@@ -226,20 +224,6 @@ Request arrives
 | Create plan, break down, dependency analysis                                                             | `architect`                       | Architect                       |
 | Comprehensive planning, scope breakdown, ticket generation                                               | `planner`                         | Planner                         |
 | Review plan, critical review                                                                             | `staff-architect-critical-review` | Staff Architect Critical Review |
-| llm deployment feasibility, kv cache, vulkan inference, hardware feasibility, inference architecture, model memory analysis | `llm-inference-architect` | LLM Inference Architect         |
-| extend agent, expand agent schema, schema-extend, refine agent definition                                                    | `schema-architect`        | Schema Architect                |
-
-### Tier 3: Opus (Bioinformatics Review — team-run only)
-
-| Trigger Patterns | Agent | subagent_type |
-| --- | --- | --- |
-| review genomics, alignment, variant calling, VCF | `genomics-reviewer` | Genomics Reviewer |
-| review proteomics, FDR, quantification, search engine | `proteomics-reviewer` | Proteomics Reviewer |
-| review proteogenomics, custom database, novel peptide | `proteogenomics-reviewer` | Proteogenomics Reviewer |
-| review proteoform, top-down, PTM, intact mass, deconvolution | `proteoform-reviewer` | Proteoform Reviewer |
-| review mass spec, instrument, acquisition, DDA, DIA | `mass-spec-reviewer` | Mass Spectrometry Reviewer |
-| review bioinformatics, pipeline, workflow, reproducibility | `bioinformatician-reviewer` | Bioinformatician Reviewer |
-| (wave 2 synthesizer — spawned by team-run only) | `pasteur` | Pasteur |
 
 | Trigger                               | Handler             | Notes                                              |
 | ------------------------------------- | ------------------- | -------------------------------------------------- |
@@ -253,8 +237,11 @@ Request arrives
 | `einstein`  | Theoretical analysis (root cause, frameworks, first principles) | mozart            |
 | `beethoven` | Synthesis of orthogonal analyses into unified document          | mozart            |
 
+### External: Gemini + Native Scout
+
 | Trigger Patterns                           | Handler        | Notes                                                        |
 | ------------------------------------------ | -------------- | ------------------------------------------------------------ |
+| full codebase, cross-module, large context | `gemini-slave` | Via Bash, not spawn_agent. Models: `gemini-3-flash-preview` (mapper), `gemini-3-pro-preview` (debugger, architect) |
 | native scope assessment, fast file metrics | `gogent-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
 
 ---
@@ -278,22 +265,34 @@ full context (identity, conventions, rules) before spawning `claude -p`.
 
 ### MCP Servers
 
-One MCP server provides agent spawning and interactive tools:
+Two active MCP servers provide complementary functionality:
 
 | MCP Server | Tool Prefix | spawn_agent | Interactive Tools | Requires TUI |
 | --- | --- | --- | --- | --- |
 | `gofortress-interactive` | `mcp__gofortress-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, select_option, request_input, team_run, get_agent_result | Yes |
+| `gofortress-standalone` | `mcp__gofortress-standalone__` | **Functional** (Go, lightweight) | test_mcp_ping, sandbox_write, sandbox_status | No |
 
 **`gofortress-interactive`** (TS, runs inside TUI process):
 - Primary spawn_agent with `buildFullAgentContext()`, relationship validation, Zustand store, cost tracking
 - Interactive tools (ask_user, confirm_action, select_option, request_input, team_run, get_agent_result)
 - Source: `packages/tui/src/mcp/tools/spawnAgent.ts`
 
-Calls `buildFullAgentContext()` to inject identity, conventions, and rules.
-Enforces `spawned_by`/`can_spawn` constraints from `agents-index.json`.
-Manages subprocess lifecycle with SIGTERM→SIGKILL escalation.
+**`gofortress-standalone`** (Go, separate binary):
+- Lightweight spawn_agent with `BuildFullAgentContext()` and relationship validation
+- Sandbox write tool for protected `.claude/` paths
+- No TUI dependency — works in headless/CI contexts
+- Binary: `bin/gofortress-mcp-standalone`
+- Source: `cmd/gofortress-mcp-standalone/`
+- Configured in `settings.json` → `mcpServers.gofortress-standalone`
 
-**Legacy binaries (not MCP servers):** `gofortress-mcp`, `gofortress-mcp-poc`, `gofortress-mcp-server`, `gofortress-ipc-mcp`, `gofortress-ipc-tui`, `gofortress-legacy`, `gofortress-mcp-standalone`. These are superseded.
+Both call `buildFullAgentContext()` (TS) / `BuildFullAgentContext()` (Go) to inject identity, conventions, and rules.
+Both enforce `spawned_by`/`can_spawn` constraints from `agents-index.json`.
+Both manage subprocess lifecycle with SIGTERM→SIGKILL escalation.
+
+**When TUI is running**, prefer `gofortress-interactive` — it integrates with the agent tree, cost tracker, and store.
+**In headless/CI contexts**, `gofortress-standalone` provides spawn_agent without TUI dependency.
+
+**Legacy binaries (not configured as MCP servers):** `gofortress-mcp`, `gofortress-mcp-poc`, `gofortress-mcp-server`, `gofortress-ipc-mcp`, `gofortress-ipc-tui`, `gofortress-legacy`. These are superseded by the two servers above.
 
 ### spawn_agent MCP Tool
 
@@ -500,6 +499,24 @@ CONSTRAINTS: [what not to do]`,
 
 ---
 
+## Gemini Slave (Special Case)
+
+Uses Bash, NOT spawn_agent. Backed by Google Gemini 3 models.
+
+```bash
+# Gather files and pipe to gemini-slave
+cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependencies"
+```
+
+| Protocol         | Model                    | Output    | Use When                       |
+| ---------------- | ------------------------ | --------- | ------------------------------ |
+| `mapper`         | `gemini-3-flash-preview` | JSON      | Reduce files to critical paths |
+| `debugger`       | `gemini-3-pro-preview`   | Markdown  | Cross-module error tracing     |
+| `architect`      | `gemini-3-pro-preview`   | Markdown  | Module review                  |
+| `memory-audit`   | `gemini-3-pro-preview`   | JSON      | Memory system audit            |
+| `benchmark-audit`| `gemini-3-pro-preview`   | JSON      | Benchmark analysis             |
+
+---
 
 ## Workflow Patterns
 
@@ -514,6 +531,12 @@ For unknown scope:
 4. Execute via appropriate agent
 ```
 
+### Pattern 2: Gemini → Orchestrator → Architect
+
+For large-context analysis:
+
+```
+1. gemini-slave (Bash) → produces report
 2. orchestrator (spawn_agent) → synthesizes findings
 3. architect (spawn_agent) → creates implementation plan
 ```
@@ -634,27 +657,6 @@ When 2+ agent triggers fire:
 
 ---
 
-## Editing .claude/ Files
-
-Claude Code hardcodes `.claude/` as a sensitive path, blocking `Write`/`Edit` tools regardless of permissions.
-Use `scripts/claude-edit.sh` to bypass this when editing any `.claude/` file:
-
-```bash
-# String replacement
-scripts/claude-edit.sh <file> "old" "new"
-
-# jq for JSON files
-scripts/claude-edit.sh --jq <file> '<expression>'
-
-# sed
-scripts/claude-edit.sh --sed <file> '<expression>'
-
-# Full write from stdin
-echo "content" | scripts/claude-edit.sh --write <file>
-```
-
----
-
 ## Escape Hatches
 
 | Situation                  | Action                        |
@@ -692,11 +694,11 @@ ROUTER CHECKLIST:
 □ Ambiguous? → Ask ONE question
 
 DELEGATION:
-✓ Always use mcp__gofortress-interactive__spawn_agent
+✓ Always use mcp__gofortress-interactive__spawn_agent (or standalone)
 ✗ Never use built-in Agent/Task tool (bypasses hooks)
 
 BLOCKED BY HOOKS:
-✗ Task(opus) → use /braintrust (allowlisted: planner, architect, staff-architect, python-architect, mozart, einstein, beethoven, llm-inference-architect)
+✗ Task(opus) → use /braintrust (allowlisted: planner, architect, staff-architect, python-architect, mozart, einstein, beethoven)
 ✗ Wrong subagent_type → check dispatch table
 ✗ 3+ failures → stop, sharp edge captured
 ✗ Router writing >50 lines → gogent-direct-impl-check warns
