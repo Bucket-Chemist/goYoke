@@ -303,13 +303,15 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 				if ae, ok := event.(cli.AssistantEvent); ok {
 					for _, block := range ae.Message.Content {
 						if block.Type == "tool_use" && block.Name != "" {
-							act := cli.ExtractToolActivity(block)
-							uds.notify(TypeAgentActivity, AgentActivityPayload{
-								AgentID: agentID,
-								Tool:    block.Name,
-								Target:  act.Target,
-								Preview: act.Preview,
-							})
+							activities := cli.ExtractToolActivities(block, "")
+							for _, act := range activities {
+								uds.notify(TypeAgentActivity, AgentActivityPayload{
+									AgentID: agentID,
+									Tool:    block.Name,
+									Target:  act.Target,
+									Preview: act.Preview,
+								})
+							}
 							// Detect TodoWrite and forward full todo state to TUI.
 							// Also write the AC sidecar file from this goroutine to
 							// avoid a race with the endstate hook (M-3).

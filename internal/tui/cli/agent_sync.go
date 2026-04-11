@@ -2,6 +2,8 @@ package cli
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -91,9 +93,14 @@ func SyncAssistantEvent(ev AssistantEvent, registry *state.AgentRegistry) AgentS
 			continue
 		}
 
-		activity := ExtractToolActivity(block)
-		registry.AppendActivity(*ev.ParentToolUseID, activity)
-		result.Activity = append(result.Activity, *ev.ParentToolUseID)
+		root, _ := os.Getwd()
+		activities := ExtractToolActivities(block, root)
+		for _, activity := range activities {
+			registry.AppendActivity(*ev.ParentToolUseID, activity)
+		}
+		if len(activities) > 0 {
+			result.Activity = append(result.Activity, *ev.ParentToolUseID)
+		}
 	}
 
 	return result
@@ -222,27 +229,104 @@ func modelToTier(model string) string {
 }
 
 // ---------------------------------------------------------------------------
-// ExtractToolActivity
+// stripProjectRoot / splitCompoundCommand
 // ---------------------------------------------------------------------------
 
-// ExtractToolActivity creates an AgentActivity from a non-Task tool_use block.
-// The activity Type is always "tool_use". The Target is a human-readable
-// summary of what the tool operates on (file path, command, pattern, etc.).
-func ExtractToolActivity(block ContentBlock) state.AgentActivity {
-	target := extractToolTarget(block.Name, block.Input)
+// stripProjectRoot returns path relative to root. If path is outside root, if
+// root is empty, or if filepath.Rel fails, the original path is returned unchanged.
+func stripProjectRoot(path, root string) string {
+	if root == "" || path == "" {
+		return path
+	}
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return path
+	}
+	// A ".." prefix means the path escapes the root — return unchanged.
+	if strings.HasPrefix(rel, "..") {
+		return path
+	}
+	return rel
+}
+
+// splitCompoundCommand splits a shell command on "&&" and returns each trimmed
+// non-empty part.
+func splitCompoundCommand(cmd string) []string {
+	parts := strings.Split(cmd, "&&")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// ---------------------------------------------------------------------------
+// ExtractToolActivities
+// ---------------------------------------------------------------------------
+
+// ExtractToolActivities creates AgentActivity items from a non-Task tool_use
+// block. The activity Type is always "tool_use".
+//
+// For Bash commands containing "&&" each sub-command becomes its own entry,
+// allowing the rolling activity buffer to show individual steps.
+//
+// root is the project root directory used to strip absolute path prefixes from
+// file-path targets (Read, Write, Edit). Pass an empty string to disable
+// stripping.
+func ExtractToolActivities(block ContentBlock, root string) []state.AgentActivity {
+	now := time.Now()
+
+	// Bash compound commands: split on && and return one activity per part.
+	if block.Name == "Bash" && len(block.Input) > 0 {
+		var fields struct {
+			Command string `json:"command"`
+		}
+		if err := json.Unmarshal(block.Input, &fields); err == nil && strings.Contains(fields.Command, "&&") {
+			parts := splitCompoundCommand(fields.Command)
+			if len(parts) > 1 {
+				activities := make([]state.AgentActivity, 0, len(parts))
+				for _, part := range parts {
+					truncated := util.Truncate(part, 80)
+					activities = append(activities, state.AgentActivity{
+						Type:      "tool_use",
+						ToolName:  "Bash",
+						ToolID:    block.ID,
+						Target:    truncated,
+						Preview:   "Bash: " + truncated,
+						Timestamp: now,
+					})
+				}
+				return activities
+			}
+		}
+	}
+
+	// Default: single activity.
+	rawTarget := extractToolTarget(block.Name, block.Input)
+
+	// Strip project root for tools whose target is a file path.
+	target := rawTarget
+	switch block.Name {
+	case "Read", "Write", "Edit":
+		target = stripProjectRoot(rawTarget, root)
+	}
+
 	preview := block.Name
 	if target != "" {
 		preview = block.Name + ": " + target
 	}
 
-	return state.AgentActivity{
+	return []state.AgentActivity{{
 		Type:      "tool_use",
 		ToolName:  block.Name,
 		ToolID:    block.ID,
 		Target:    target,
 		Preview:   preview,
-		Timestamp: time.Now(),
-	}
+		Timestamp: now,
+	}}
 }
 
 // ---------------------------------------------------------------------------

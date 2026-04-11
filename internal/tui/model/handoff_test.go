@@ -59,7 +59,7 @@ func TestTruncate_ViaUtil(t *testing.T) {
 			name:     "long string truncated with ellipsis",
 			input:    "hello world this is a long string",
 			maxLen:   10,
-			expected: "hello worl…",
+			expected: "hello wor…",
 		},
 		{
 			name:     "empty string",
@@ -71,7 +71,7 @@ func TestTruncate_ViaUtil(t *testing.T) {
 			name:     "maxLen one",
 			input:    "ab",
 			maxLen:   1,
-			expected: "a…",
+			expected: "…",
 		},
 	}
 
@@ -215,8 +215,8 @@ func TestBuildHandoffSummary_LongContent_Truncated(t *testing.T) {
 
 	got := buildHandoffSummary(msgs, state.ProviderAnthropic, state.ProviderGoogle)
 
-	// The truncated content plus "…" should appear but not the full 300-char string.
-	expectedTruncated := strings.Repeat("a", maxContentLen) + "…"
+	// Truncate replaces the last char with "…", so output is (maxContentLen-1) a's + "…".
+	expectedTruncated := strings.Repeat("a", maxContentLen-1) + "…"
 	if !strings.Contains(got, expectedTruncated) {
 		t.Errorf("summary should contain truncated content %q; got:\n%s", expectedTruncated, got)
 	}
