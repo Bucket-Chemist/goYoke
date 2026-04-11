@@ -364,7 +364,8 @@ func (m StatusLineModel) View() string {
 		}
 	}
 
-	row1Left := vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
+	costBadge := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
+	row1Left := costBadge + " " + vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
 		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + cwdField + branchField
 
 	// Auth: right-aligned
@@ -387,9 +388,7 @@ func (m StatusLineModel) View() string {
 
 	// ===== ROW 2: metrics line =====
 
-	// Cost
-	costValue := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
-	row2Left := costValue
+	row2Left := ""
 
 	// Elapsed + streaming status: right-aligned
 	var row2RightParts []string
@@ -470,18 +469,18 @@ func (m StatusLineModel) StartTicks() tea.Cmd {
 // Semantic color helpers
 // ---------------------------------------------------------------------------
 
-// costStyle returns a lipgloss.Style based on session cost thresholds:
-//   - >= $1.00  → ErrorStyle  (red)
-//   - >= $0.10  → WarningStyle (yellow)
-//   - < $0.10   → SuccessStyle (green)
+// costStyle returns a bold lipgloss.Style based on session cost thresholds:
+//   - >= $5.00  → ErrorStyle   (red, bold)
+//   - >= $1.00  → WarningStyle (yellow, bold)
+//   - < $1.00   → SuccessStyle (green, bold)
 func (m StatusLineModel) costStyle(cost float64) lipgloss.Style {
 	switch {
+	case cost >= 5.00:
+		return m.theme.ErrorStyle().Bold(true)
 	case cost >= 1.00:
-		return m.theme.ErrorStyle()
-	case cost >= 0.10:
-		return m.theme.WarningStyle()
+		return m.theme.WarningStyle().Bold(true)
 	default:
-		return m.theme.SuccessStyle()
+		return m.theme.SuccessStyle().Bold(true)
 	}
 }
 

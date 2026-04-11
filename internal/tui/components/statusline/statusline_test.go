@@ -432,21 +432,25 @@ func TestCostStyle_Thresholds(t *testing.T) {
 	theme := config.DefaultTheme()
 	m.SetTheme(theme)
 
+	// costStyle thresholds: green <$1, yellow $1–$5, red >$5 (all bold).
 	tests := []struct {
 		name      string
 		cost      float64
 		wantStyle string
 	}{
-		{"below warning threshold", 0.05, "success"},
-		{"at warning threshold", 0.10, "warning"},
-		{"below error threshold", 0.99, "warning"},
-		{"at error threshold", 1.00, "error"},
-		{"above error threshold", 5.00, "error"},
+		{"zero cost", 0.00, "success"},
+		{"below $1 threshold", 0.99, "success"},
+		{"at $1 threshold", 1.00, "warning"},
+		{"between $1 and $5", 2.50, "warning"},
+		{"just below $5", 4.99, "warning"},
+		{"at $5 threshold", 5.00, "error"},
+		{"above $5 threshold", 10.00, "error"},
 	}
 
-	successStyle := theme.SuccessStyle()
-	warningStyle := theme.WarningStyle()
-	errorStyle := theme.ErrorStyle()
+	// costStyle always adds Bold(true); compare against bolded base styles.
+	successStyle := theme.SuccessStyle().Bold(true)
+	warningStyle := theme.WarningStyle().Bold(true)
+	errorStyle := theme.ErrorStyle().Bold(true)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -544,7 +548,7 @@ func TestSetTheme_UpdatesTheme(t *testing.T) {
 	lightTheme := config.NewTheme(config.ThemeLight)
 	m.SetTheme(lightTheme)
 	got := m.CostStyleForTest(0.01)
-	assert.Equal(t, lightTheme.SuccessStyle(), got)
+	assert.Equal(t, lightTheme.SuccessStyle().Bold(true), got)
 }
 
 // ---------------------------------------------------------------------------
