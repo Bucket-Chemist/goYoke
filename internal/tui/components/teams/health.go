@@ -53,6 +53,31 @@ func (m *TeamsHealthModel) HasRunningTeam() bool {
 	return ts != nil && ts.Config.Status == "running"
 }
 
+// TeamIndicator returns data for the status line team indicator.
+// Returns a zero TeamIndicatorData (Active=false) when no team is running.
+func (m *TeamsHealthModel) TeamIndicator() model.TeamIndicatorData {
+	ts := m.registry.MostRecentRunning()
+	if ts == nil || ts.Config.Status != "running" {
+		return model.TeamIndicatorData{}
+	}
+
+	var statuses []string
+	for _, w := range ts.Config.Waves {
+		for _, mem := range w.Members {
+			statuses = append(statuses, mem.Status)
+		}
+	}
+
+	return model.TeamIndicatorData{
+		Active:         true,
+		Name:           ts.Config.TeamName,
+		MemberStatuses: statuses,
+		CurrentWave:    ts.CurrentWaveNumber(),
+		TotalWaves:     len(ts.Config.Waves),
+		Cost:           ts.TotalCostUSD(),
+	}
+}
+
 // View renders the health dashboard as a pure string. It is safe to call
 // from a Bubbletea View() method: data is obtained via MostRecentRunning()
 // which holds only an RLock internally.

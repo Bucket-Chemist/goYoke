@@ -95,7 +95,7 @@
     {
       "id": "UX-008",
       "title": "Tree: two-column dot-leader layout",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "P1",
       "effort": "1s",
@@ -109,7 +109,7 @@
     {
       "id": "UX-009",
       "title": "Tree: full-row color by agent status",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "P1",
       "effort": "0.25s",
@@ -123,7 +123,7 @@
     {
       "id": "UX-010",
       "title": "Tree: inline cost per agent",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "P1",
       "effort": "0.25s",
@@ -137,7 +137,7 @@
     {
       "id": "UX-011",
       "title": "Status line: team indicator",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "P1",
       "effort": "0.75s",
@@ -149,7 +149,7 @@
     {
       "id": "UX-012",
       "title": "First-run orientation hints",
-      "status": "pending",
+      "status": "completed",
       "phase": 2,
       "priority": "P1",
       "effort": "0.5s",

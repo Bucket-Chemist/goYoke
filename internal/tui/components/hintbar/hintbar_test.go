@@ -387,6 +387,180 @@ func TestHintSets_AllContextsHaveNonEmptyHints(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Onboarding / orientation hints — SetOnboarding
+// ---------------------------------------------------------------------------
+
+func TestSetOnboarding_Session1_ShowsHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(1, nil)
+	assert.True(t, h.IsOnboarding(), "session 1 with no dismissed hints should be active")
+}
+
+func TestSetOnboarding_Session3_ShowsHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(3, nil)
+	assert.True(t, h.IsOnboarding(), "session 3 with no dismissed hints should be active")
+}
+
+func TestSetOnboarding_Session4_NoHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(4, nil)
+	assert.False(t, h.IsOnboarding(), "session 4 should not trigger onboarding")
+}
+
+func TestSetOnboarding_Session0_NoHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(0, nil)
+	assert.False(t, h.IsOnboarding(), "session 0 should not trigger onboarding")
+}
+
+func TestSetOnboarding_AllDismissed_NoHints(t *testing.T) {
+	h := NewHintBarModel()
+	dismissed := []string{"tab-agents", "arrows-tabs", "enter-details"}
+	h.SetOnboarding(1, dismissed)
+	assert.False(t, h.IsOnboarding(), "all hints dismissed should deactivate onboarding")
+}
+
+func TestSetOnboarding_PartialDismissed_StillActive(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(2, []string{"tab-agents"})
+	assert.True(t, h.IsOnboarding(), "partially dismissed hints should keep onboarding active")
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding — DismissHint
+// ---------------------------------------------------------------------------
+
+func TestDismissHint_RemovesFromView(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("main")
+	h.SetOnboarding(1, nil)
+	h.SetWidth(500)
+
+	viewBefore := stripANSI(h.View())
+	assert.Contains(t, viewBefore, "see agents", "orientation hint 'see agents' should appear before dismissal")
+
+	ok := h.DismissHint("tab-agents")
+	assert.True(t, ok, "DismissHint should return true for newly dismissed hint")
+
+	viewAfter := stripANSI(h.View())
+	assert.NotContains(t, viewAfter, "see agents", "dismissed hint description should not appear after dismissal")
+}
+
+func TestDismissHint_AlreadyDismissed_ReturnsFalse(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(1, []string{"tab-agents"})
+
+	ok := h.DismissHint("tab-agents")
+	assert.False(t, ok, "dismissing an already-dismissed hint should return false")
+}
+
+func TestDismissHint_NilDismissedMap_ReturnsFalse(t *testing.T) {
+	h := NewHintBarModel()
+	// SetOnboarding never called — dismissed map is nil.
+	ok := h.DismissHint("tab-agents")
+	assert.False(t, ok, "DismissHint without SetOnboarding should return false")
+}
+
+func TestDismissHint_AllDismissed_DeactivatesOnboarding(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(1, nil)
+
+	h.DismissHint("tab-agents")
+	h.DismissHint("arrows-tabs")
+	h.DismissHint("enter-details")
+
+	assert.False(t, h.IsOnboarding(), "dismissing all hints should deactivate onboarding")
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding — DismissedHints
+// ---------------------------------------------------------------------------
+
+func TestDismissedHints_ReturnsIDs(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(1, []string{"tab-agents", "arrows-tabs"})
+
+	dismissed := h.DismissedHints()
+	assert.ElementsMatch(t, []string{"tab-agents", "arrows-tabs"}, dismissed)
+}
+
+func TestDismissedHints_NoneReturnsNil(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(1, nil)
+
+	assert.Nil(t, h.DismissedHints(), "no dismissed hints should return nil")
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding — View integration
+// ---------------------------------------------------------------------------
+
+func TestView_OnboardingHints_PrependedToContext(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("main")
+	h.SetOnboarding(1, nil)
+	h.SetWidth(500)
+
+	view := stripANSI(h.View())
+
+	// All orientation hints should appear.
+	assert.Contains(t, view, "see agents", "orientation hint 'see agents' should appear")
+	assert.Contains(t, view, "switch tabs", "orientation hint 'switch tabs' should appear")
+	assert.Contains(t, view, "expand details", "orientation hint 'expand details' should appear")
+
+	// Context hint should also appear.
+	assert.Contains(t, view, "next panel", "context hint 'next panel' should appear")
+
+	// Orientation hints must precede context hints.
+	assert.Less(t, strings.Index(view, "see agents"), strings.Index(view, "next panel"),
+		"orientation hints should precede context hints")
+}
+
+func TestView_NoOnboarding_NormalHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("main")
+	h.SetWidth(200)
+	// SetOnboarding never called — onboardingActive is false.
+
+	view := stripANSI(h.View())
+	assert.NotContains(t, view, "see agents", "onboarding hint should not appear without SetOnboarding")
+	assert.NotContains(t, view, "switch tabs", "onboarding hint should not appear without SetOnboarding")
+	assert.Contains(t, view, "next panel", "normal context hint should appear")
+}
+
+func TestView_Session4_OnlyNormalHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("main")
+	h.SetOnboarding(4, nil)
+	h.SetWidth(200)
+
+	view := stripANSI(h.View())
+	assert.NotContains(t, view, "see agents", "onboarding hints should not appear in session 4")
+	assert.Contains(t, view, "next panel", "normal context hints should still appear in session 4")
+}
+
+func TestView_AllOrientationHintsDismissed_OnlyContextHints(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetContext("main")
+	h.SetOnboarding(1, []string{"tab-agents", "arrows-tabs", "enter-details"})
+	h.SetWidth(200)
+
+	view := stripANSI(h.View())
+	assert.NotContains(t, view, "see agents")
+	assert.Contains(t, view, "next panel", "context hints should appear when all orientation hints dismissed")
+}
+
+func TestView_OnboardingVisible_HiddenBarReturnsEmpty(t *testing.T) {
+	h := NewHintBarModel()
+	h.SetOnboarding(1, nil)
+	h.SetWidth(200)
+	h.Hide()
+
+	assert.Equal(t, "", h.View(), "hidden bar with active onboarding should still return empty")
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

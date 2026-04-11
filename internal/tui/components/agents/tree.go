@@ -73,6 +73,32 @@ func statusStyle(s state.AgentStatus) lipgloss.Style {
 	}
 }
 
+// StatusRowStyle returns the lipgloss.Style used to render the ENTIRE row for
+// the given agent status. Unlike statusStyle (which colors only the status
+// icon), this style is applied to the complete row text — indent, icon, label,
+// dot leaders, and value — in full-mode tree rendering.
+//
+// Color scheme:
+//   - Running:  dim green (success color, no bold — less emphasis than Complete)
+//   - Complete: bright green bold (success color + bold)
+//   - Error:    red
+//   - Killed:   yellow strikethrough
+//   - Pending:  muted (grey)
+func StatusRowStyle(s state.AgentStatus) lipgloss.Style {
+	switch s {
+	case state.StatusRunning:
+		return lipgloss.NewStyle().Foreground(config.ColorSuccess)
+	case state.StatusComplete:
+		return lipgloss.NewStyle().Foreground(config.ColorSuccess).Bold(true)
+	case state.StatusError:
+		return lipgloss.NewStyle().Foreground(config.ColorError)
+	case state.StatusKilled:
+		return lipgloss.NewStyle().Foreground(config.ColorWarning).Strikethrough(true)
+	default: // StatusPending and any unknown
+		return lipgloss.NewStyle().Foreground(config.ColorMuted)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // AgentTreeModel
 // ---------------------------------------------------------------------------
@@ -337,7 +363,8 @@ func iconRailValue(a *state.Agent) string {
 }
 
 // View implements tea.Model. It renders the agent hierarchy as a scrollable
-// tree using Unicode box-drawing connectors. The view is a pure function of
+// tree with dot-leader rows. Each row uses indentation (2 spaces per depth
+// level) rather than box-drawing connectors. The view is a pure function of
 // the model state — no I/O is performed here.
 func (m AgentTreeModel) View() string {
 	if len(m.treeNodes) == 0 {
@@ -398,89 +425,92 @@ func (m *AgentTreeModel) Search(query string) []state.SearchResult {
 	return results
 }
 
-// renderNode renders a single tree row. selected indicates whether this row is
-// the currently highlighted one.
-func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) string {
-	// ------------------------------------------------------------------
-	// Build indent + connector prefix
-	// ------------------------------------------------------------------
-	// For each ancestor level (depth-1 levels of parent indentation) we
-	// draw "│ " (two cells). At the node's own depth we draw "└─" or "├─".
-	var prefix strings.Builder
-	if node.Depth > 0 {
-		for range node.Depth - 1 {
-			prefix.WriteString("│ ")
-		}
-		if node.IsLast {
-			prefix.WriteString("└─")
-		} else {
-			prefix.WriteString("├─")
-		}
-	}
+// buildTreeValue returns the plain-text right-column value for a full-mode
+// tree row. It shows AC progress (if any) followed by a cost amount or short
+// status word.
+func buildTreeValue(a *state.Agent) string {
+	var parts []string
 
-	// ------------------------------------------------------------------
-	// Status icon
-	// ------------------------------------------------------------------
-	icon := string(statusIcon(node.Agent.Status))
-	iconStr := statusStyle(node.Agent.Status).Render(icon)
-
-	// ------------------------------------------------------------------
-	// Main label: "{type}: {description}"
-	// ------------------------------------------------------------------
-	label := fmt.Sprintf("%s: %s", node.Agent.AgentType, node.Agent.Description)
-
-	// ------------------------------------------------------------------
-	// AC progress (rendered before activity preview)
-	// ------------------------------------------------------------------
-	var acStr string
-	if len(node.Agent.AcceptanceCriteria) > 0 {
+	if len(a.AcceptanceCriteria) > 0 {
 		done := 0
-		for _, ac := range node.Agent.AcceptanceCriteria {
+		for _, ac := range a.AcceptanceCriteria {
 			if ac.Completed {
 				done++
 			}
 		}
-		total := len(node.Agent.AcceptanceCriteria)
-		progress := fmt.Sprintf(" %d/%d AC", done, total)
-		if done == total {
-			acStr = config.StyleSuccess.Render(progress)
-		} else {
-			acStr = config.StyleWarning.Render(progress)
+		parts = append(parts, fmt.Sprintf("%d/%d AC", done, len(a.AcceptanceCriteria)))
+	}
+
+	if a.Cost > 0 {
+		parts = append(parts, fmt.Sprintf("$%.2f", a.Cost))
+	} else {
+		switch a.Status {
+		case state.StatusRunning:
+			parts = append(parts, "run")
+		case state.StatusComplete:
+			parts = append(parts, "done")
+		case state.StatusError:
+			parts = append(parts, "fail")
+		case state.StatusKilled:
+			parts = append(parts, "kill")
+		default:
+			parts = append(parts, "wait")
 		}
 	}
 
-	// ------------------------------------------------------------------
-	// Activity preview (dimmed, appended in brackets)
-	// ------------------------------------------------------------------
-	var activityStr string
-	if node.Agent.Activity != nil && node.Agent.Activity.Preview != "" {
-		preview := util.Truncate(node.Agent.Activity.Preview, 39)
-		activityStr = " " + config.StyleMuted.Render("["+preview+"]")
-	}
+	return strings.Join(parts, " ")
+}
 
-	// ------------------------------------------------------------------
-	// Assemble full row, truncating to fit width
-	// ------------------------------------------------------------------
-	prefixStr := prefix.String()
-	// Calculate available width for label (rough: subtract prefix, icon, spaces, AC text)
-	overhead := len(prefixStr) + 2 // icon + one space
-	available := m.width - overhead
-	if available < 1 {
-		available = 1
-	}
-	acWidth := lipgloss.Width(acStr)
-	labelAvailable := available - 1 - acWidth
-	if labelAvailable < 1 {
-		labelAvailable = 1
-	}
-	label = util.Truncate(label, labelAvailable)
+// renderNode renders a single tree row using the dot-leader layout.
+//
+// Format: {indent}{icon} {label} {dots} {value}
+//
+//   - indent: 2 spaces × depth (no box-drawing characters)
+//   - icon: status icon character
+//   - label: agent type, truncated to fit available width
+//   - dots: "." repeated to fill the gap between label and value
+//   - value: right-aligned cost ($X.XX) or short status word, optionally
+//     preceded by AC progress ("N/M AC")
+//
+// All width arithmetic uses lipgloss.Width for ANSI safety.
+func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) string {
+	a := node.Agent
 
-	row := prefixStr + iconStr + " " + label + acStr + activityStr
+	// Indent: 2 spaces per depth level.
+	indent := strings.Repeat("  ", node.Depth)
+	indentW := node.Depth * 2
+
+	// Status icon (always 1 visual column wide).
+	icon := string(statusIcon(a.Status))
+
+	// Right column: plain-text value (no ANSI).
+	rightPlain := buildTreeValue(a)
+	rightW := lipgloss.Width(rightPlain)
+
+	// Row layout (visual widths):
+	//   indent(indentW) + icon(1) + " "(1) + label(labelW) + " "(1) + dots(dotsW) + " "(1) + right(rightW)
+	//   = indentW + 4 + labelW + dotsW + rightW  =  m.width
+	//
+	// Reserve at least 1 dot column so the leader is always visible.
+	maxLabelW := m.width - indentW - 4 - rightW - 1
+	if maxLabelW < 1 {
+		maxLabelW = 1
+	}
+	label := util.Truncate(a.AgentType, maxLabelW)
+	labelW := lipgloss.Width(label)
+
+	dotsW := m.width - indentW - 4 - labelW - rightW
+	if dotsW < 1 {
+		dotsW = 1
+	}
+	dots := strings.Repeat(".", dotsW)
 
 	if selected {
-		// Highlight the entire row.
-		return config.StyleHighlight.Render(prefixStr+icon+" "+label) + acStr + activityStr
+		plain := indent + icon + " " + label + " " + dots + " " + rightPlain
+		return config.StyleHighlight.Render(plain)
 	}
-	return row
+	rowStyle := StatusRowStyle(a.Status)
+	plain := indent + icon + " " + label + " " + dots + " " + rightPlain
+	return rowStyle.Render(plain)
 }
 

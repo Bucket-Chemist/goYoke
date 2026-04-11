@@ -68,6 +68,7 @@ func (h *trackingTeamsHealth) SetSize(_, _ int)          {}
 func (h *trackingTeamsHealth) SetTier(_ LayoutTier)      {}
 func (h *trackingTeamsHealth) HasData() bool             { return h.hasData }
 func (h *trackingTeamsHealth) HasRunningTeam() bool      { return h.hasRunning }
+func (h *trackingTeamsHealth) TeamIndicator() TeamIndicatorData { return TeamIndicatorData{} }
 
 // trackingTeamList records ScanNow and PollNow calls.
 type trackingTeamList struct {

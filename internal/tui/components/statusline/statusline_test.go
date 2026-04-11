@@ -787,3 +787,76 @@ func TestView_PlanMode_TwoRowsPreserved(t *testing.T) {
 	lines := strings.Split(view, "\n")
 	assert.Equal(t, 2, len(lines), "View() must still produce exactly 2 rows in plan mode")
 }
+
+// ---------------------------------------------------------------------------
+// Team indicator
+// ---------------------------------------------------------------------------
+
+func TestView_TeamIndicator_Hidden_WhenInactive(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	m.TeamActive = false
+	view := m.View()
+	assert.NotContains(t, view, "⚡", "View() must not show team indicator when TeamActive is false")
+}
+
+func TestView_TeamIndicator_Visible_WhenActive(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	statusline.SetTeamFieldsForTest(&m, true, "impl", []string{"running", "complete", "pending", "pending"}, 2, 4, 0.38)
+	view := m.View()
+	assert.Contains(t, view, "⚡", "View() must show ⚡ prefix when team is active")
+	assert.Contains(t, view, "impl", "View() must show team name")
+	assert.Contains(t, view, "2/4", "View() must show wave progress")
+	assert.Contains(t, view, "$0.38", "View() must show team cost")
+}
+
+func TestView_TeamIndicator_MemberDots_Colors(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	// One member per distinct status to verify dot characters are rendered.
+	statuses := []string{"running", "complete", "pending", "failed", "error", "skipped", "killed"}
+	statusline.SetTeamFieldsForTest(&m, true, "test", statuses, 1, 1, 0.10)
+	view := m.View()
+	// Filled dot for active/terminal statuses.
+	assert.Contains(t, view, "●", "View() must render filled dots for running/complete/failed/error/skipped/killed")
+	// Empty dot for pending.
+	assert.Contains(t, view, "○", "View() must render empty dot for pending")
+}
+
+func TestView_TeamIndicator_Disappears_WhenDeactivated(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	statusline.SetTeamFieldsForTest(&m, true, "myteam", []string{"running"}, 1, 3, 0.05)
+	activeView := m.View()
+	assert.Contains(t, activeView, "⚡", "View() must show team indicator when active")
+
+	statusline.SetTeamFieldsForTest(&m, false, "", nil, 0, 0, 0)
+	inactiveView := m.View()
+	assert.NotContains(t, inactiveView, "⚡", "View() must hide team indicator after deactivation")
+}
+
+func TestRenderTeamIndicator_Empty_WhenInactive(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	m.TeamActive = false
+	result := m.RenderTeamIndicatorForTest()
+	assert.Equal(t, "", result, "renderTeamIndicator() must return empty string when TeamActive is false")
+}
+
+func TestRenderTeamIndicator_ContainsAllParts(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	statusline.SetTeamFieldsForTest(&m, true, "longteamname", []string{"running", "pending"}, 3, 5, 1.25)
+	result := m.RenderTeamIndicatorForTest()
+	// Name is truncated to 8 runes: "longtea…"
+	assert.Contains(t, result, "⚡", "renderTeamIndicator() must contain ⚡ prefix")
+	assert.Contains(t, result, "longtea", "renderTeamIndicator() must contain truncated team name")
+	assert.Contains(t, result, "3/5", "renderTeamIndicator() must contain wave progress")
+	assert.Contains(t, result, "$1.25", "renderTeamIndicator() must contain team cost")
+	assert.Contains(t, result, "●", "renderTeamIndicator() must contain filled dot for running member")
+	assert.Contains(t, result, "○", "renderTeamIndicator() must contain empty dot for pending member")
+}
+
+func TestView_TeamIndicator_TwoRowsPreserved(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	statusline.SetTeamFieldsForTest(&m, true, "team", []string{"running", "complete"}, 1, 2, 0.15)
+	view := m.View()
+	view = strings.TrimRight(view, "\n")
+	lines := strings.Split(view, "\n")
+	assert.Equal(t, 2, len(lines), "View() must produce exactly 2 rows when team indicator is active")
+}

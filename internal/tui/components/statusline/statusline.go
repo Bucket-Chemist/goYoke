@@ -16,6 +16,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------
@@ -132,6 +133,25 @@ type StatusLineModel struct {
 	// MouseEnabled is true when mouse capture is active (scroll wheel works).
 	// When false, native terminal text selection is available. Always rendered.
 	MouseEnabled bool
+
+	// TeamActive is true when a team is currently running.
+	TeamActive bool
+
+	// TeamName is the name of the running team (truncated for display).
+	TeamName string
+
+	// TeamMemberStatuses is a slice of member status strings for dot rendering.
+	// Each entry is one of: "running", "complete", "pending", "failed", "error", "skipped", "killed".
+	TeamMemberStatuses []string
+
+	// TeamCurrentWave is the 1-based current wave number.
+	TeamCurrentWave int
+
+	// TeamTotalWaves is the total number of waves.
+	TeamTotalWaves int
+
+	// TeamCost is the cumulative cost of the team in USD.
+	TeamCost float64
 
 	// theme holds the active theme for semantic coloring.
 	theme config.Theme
@@ -272,6 +292,62 @@ func (m StatusLineModel) renderContextBar() string {
 	return coloredFill + mutedEmpty + " " + pctStr + config.StyleMuted.Render(" "+tokenLabel)
 }
 
+// renderTeamIndicator renders the compact team status indicator for Row 1.
+// Returns an empty string when no team is active (TeamActive == false).
+//
+// Format: "⚡{name} {dots} {wave}/{total} {cost}"
+//   - name: team name truncated to 8 runes
+//   - dots: one dot per member colored by status
+//   - wave/total: e.g. "2/4"
+//   - cost: formatted as "$X.XX"
+//
+// Dot coloring per status:
+//
+//	"running"         → SuccessStyle (green) ●
+//	"complete"        → SuccessStyle + Bold (bright green) ●
+//	"pending"         → StyleMuted (grey) ○
+//	"failed"/"error"  → ErrorStyle (red) ●
+//	"skipped"/"killed"→ WarningStyle (yellow) ●
+func (m StatusLineModel) renderTeamIndicator() string {
+	if !m.TeamActive {
+		return ""
+	}
+
+	// Prefix with team name (truncated to 8 runes).
+	name := util.Truncate(m.TeamName, 8)
+	prefix := m.theme.InfoStyle().Render("⚡") + config.StyleStatusBar.Render(name)
+
+	// One dot per member, colored by status.
+	var dotsBuilder strings.Builder
+	for _, status := range m.TeamMemberStatuses {
+		var dot string
+		switch status {
+		case "running":
+			dot = m.theme.SuccessStyle().Render("●")
+		case "complete":
+			dot = m.theme.SuccessStyle().Bold(true).Render("●")
+		case "pending":
+			dot = config.StyleMuted.Render("○")
+		case "failed", "error":
+			dot = m.theme.ErrorStyle().Render("●")
+		case "skipped", "killed":
+			dot = m.theme.WarningStyle().Render("●")
+		default:
+			dot = config.StyleMuted.Render("○")
+		}
+		dotsBuilder.WriteString(dot)
+	}
+	dots := dotsBuilder.String()
+
+	// Wave progress: "2/4"
+	waveStr := config.StyleStatusBar.Render(fmt.Sprintf("%d/%d", m.TeamCurrentWave, m.TeamTotalWaves))
+
+	// Team cost using the same threshold coloring as session cost.
+	costStr := m.costStyle(m.TeamCost).Render(state.FormatCost(m.TeamCost))
+
+	return prefix + " " + dots + " " + waveStr + " " + costStr
+}
+
 // View implements tea.Model. It renders the status bar as two rows matching
 // the TS TUI layout:
 //
@@ -367,6 +443,12 @@ func (m StatusLineModel) View() string {
 	costBadge := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
 	row1Left := costBadge + " " + vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
 		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + cwdField + branchField
+
+	// Team indicator (optional — only when a team is running)
+	teamInd := m.renderTeamIndicator()
+	if teamInd != "" {
+		row1Left = row1Left + muted(" | ") + teamInd
+	}
 
 	// Auth: right-aligned
 	var authValue string

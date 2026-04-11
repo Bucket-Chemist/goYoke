@@ -318,9 +318,17 @@ func TestView_ContainsTreeConnectors(t *testing.T) {
 	m.SetSize(120, 20)
 	view := m.View()
 
-	// The two children should trigger at least one connector.
-	if !strings.Contains(view, "├─") && !strings.Contains(view, "└─") {
-		t.Errorf("View() missing tree connectors (├─ or └─); got:\n%s", view)
+	// Children at depth 1 use 2-space indentation instead of box-drawing connectors.
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	foundIndented := false
+	for _, line := range lines {
+		if strings.HasPrefix(line, "  ") {
+			foundIndented = true
+			break
+		}
+	}
+	if !foundIndented {
+		t.Errorf("View() should have at least one child line with 2-space indent; got:\n%s", view)
 	}
 }
 
@@ -336,13 +344,21 @@ func TestView_DeepTree(t *testing.T) {
 			t.Errorf("deep tree View() missing %q; got:\n%s", typ, view)
 		}
 	}
-	// depth ≥ 2 produces "│ " indentation.
-	if !strings.Contains(view, "│") {
-		t.Errorf("deep tree View() missing '│' indentation; got:\n%s", view)
+	// depth ≥ 2 produces at least 4-space indentation (2 spaces per level).
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	found4space := false
+	for _, line := range lines {
+		if strings.HasPrefix(line, "    ") {
+			found4space = true
+			break
+		}
+	}
+	if !found4space {
+		t.Errorf("deep tree View() missing depth-2 indentation (4 spaces); got:\n%s", view)
 	}
 }
 
-func TestView_ActivityPreview(t *testing.T) {
+func TestView_NoActivityInTree(t *testing.T) {
 	node := makeNode(makeAgent("root", "", "go-pro", "root task", state.StatusRunning), 0, true)
 	node.Agent.Activity = &state.AgentActivity{
 		Type:    "tool_use",
@@ -354,8 +370,9 @@ func TestView_ActivityPreview(t *testing.T) {
 	m.SetSize(120, 20)
 	view := m.View()
 
-	if !strings.Contains(view, "Reading file.go") {
-		t.Errorf("View() missing activity preview; got:\n%s", view)
+	// Activity preview is shown in the detail panel only, not the tree view.
+	if strings.Contains(view, "Reading file.go") {
+		t.Errorf("View() should NOT show activity preview in tree; got:\n%s", view)
 	}
 }
 
@@ -448,32 +465,65 @@ func TestView_NoAC(t *testing.T) {
 	}
 }
 
-func TestView_ACBeforeActivity(t *testing.T) {
-	node := makeNode(makeAgent("root", "", "go-pro", "root task", state.StatusRunning), 0, true)
-	node.Agent.AcceptanceCriteria = []state.AcceptanceCriterion{
-		{Text: "ac1", Completed: true},
-		{Text: "ac2", Completed: false},
-	}
-	node.Agent.Activity = &state.AgentActivity{
-		Type:    "tool_use",
-		Target:  "Read",
-		Preview: "Reading file.go",
-	}
+
+// ---------------------------------------------------------------------------
+// Inline cost display (UX-010)
+// ---------------------------------------------------------------------------
+
+func TestView_InlineCost_ShowsDollarWhenPositive(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "task", state.StatusRunning), 0, true)
+	node.Agent.Cost = 2.47
 	m := agents.NewAgentTreeModel()
 	m.SetNodes([]*state.AgentTreeNode{node})
-	m.SetSize(120, 20)
+	m.SetSize(80, 20)
 	view := m.View()
 
-	acPos := strings.Index(view, "AC")
-	actPos := strings.Index(view, "Reading file.go")
-	if acPos == -1 {
-		t.Fatalf("View() missing AC progress; got:\n%s", view)
+	if !strings.Contains(view, "$2.47") {
+		t.Errorf("View() should show '$2.47' for agent with cost; got:\n%s", view)
 	}
-	if actPos == -1 {
-		t.Fatalf("View() missing activity preview; got:\n%s", view)
+	// Should NOT show status text when cost is present.
+	if strings.Contains(view, "run") {
+		t.Errorf("View() should not show status text when cost > 0; got:\n%s", view)
 	}
-	if acPos > actPos {
-		t.Errorf("AC progress (pos %d) should appear before activity preview (pos %d); got:\n%s", acPos, actPos, view)
+}
+
+func TestView_InlineCost_ShowsStatusWhenZero(t *testing.T) {
+	tests := []struct {
+		status state.AgentStatus
+		want   string
+	}{
+		{state.StatusRunning, "run"},
+		{state.StatusComplete, "done"},
+		{state.StatusError, "fail"},
+		{state.StatusPending, "wait"},
+		{state.StatusKilled, "kill"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.want, func(t *testing.T) {
+			node := makeNode(makeAgent("root", "", "go-pro", "task", tc.status), 0, true)
+			// Cost is 0 (default) — should show status string.
+			m := agents.NewAgentTreeModel()
+			m.SetNodes([]*state.AgentTreeNode{node})
+			m.SetSize(80, 20)
+			view := m.View()
+
+			if !strings.Contains(view, tc.want) {
+				t.Errorf("status %s: want %q in view; got:\n%s", tc.status, tc.want, view)
+			}
+		})
+	}
+}
+
+func TestView_InlineCost_TwoDecimalPlaces(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "task", state.StatusComplete), 0, true)
+	node.Agent.Cost = 0.1
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(80, 20)
+	view := m.View()
+
+	if !strings.Contains(view, "$0.10") {
+		t.Errorf("View() should format cost to 2 decimal places; got:\n%s", view)
 	}
 }
 
@@ -641,5 +691,186 @@ func TestRender_IconRail_TreeConnectors(t *testing.T) {
 	// Children at depth 1 should still have tree connectors.
 	if !strings.Contains(view, "├─") && !strings.Contains(view, "└─") {
 		t.Errorf("icon rail should preserve tree connectors; got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Dot-leader layout (UX-008)
+// ---------------------------------------------------------------------------
+
+func TestView_DotLeaderLayout(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(45, 20)
+	view := m.View()
+
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	for i, line := range lines {
+		// Each line must contain at least two consecutive dots (the dot leader).
+		if !strings.Contains(line, "..") {
+			t.Errorf("line %d: missing dot leaders; got:\n%q", i, line)
+		}
+	}
+}
+
+func TestView_NoBoxDrawing(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(deepTree())
+	m.SetSize(80, 20)
+	view := m.View()
+
+	for _, ch := range []string{"├─", "└─", "│"} {
+		if strings.Contains(view, ch) {
+			t.Errorf("View() (full mode) must not contain box-drawing %q; got:\n%s", ch, view)
+		}
+	}
+}
+
+func TestView_WidthBoundaries(t *testing.T) {
+	for _, w := range []int{22, 30, 45, 80} {
+		t.Run(fmt.Sprintf("width=%d", w), func(t *testing.T) {
+			m := agents.NewAgentTreeModel()
+			m.SetNodes(threeNodeTree())
+			m.SetSize(w, 20)
+			view := m.View()
+			lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+			for i, line := range lines {
+				got := lipgloss.Width(line)
+				if got > w {
+					t.Errorf("line %d at width=%d: lipgloss.Width=%d exceeds width: %q",
+						i, w, got, line)
+				}
+			}
+		})
+	}
+}
+
+// TestView_ANSISafeWidth verifies that every rendered line has exactly m.width
+// visual columns even after lipgloss ANSI styling is applied.
+func TestView_ANSISafeWidth(t *testing.T) {
+	for _, w := range []int{22, 30, 45, 80} {
+		t.Run(fmt.Sprintf("width=%d", w), func(t *testing.T) {
+			m := agents.NewAgentTreeModel()
+			m.SetNodes(threeNodeTree())
+			m.SetSize(w, 20)
+			view := m.View()
+			lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+			for i, line := range lines {
+				got := lipgloss.Width(line)
+				if got != w {
+					t.Errorf("ANSI width: line %d at width=%d: lipgloss.Width=%d (want %d): %q",
+						i, w, got, w, line)
+				}
+			}
+		})
+	}
+}
+
+func TestView_RightAlignedValues(t *testing.T) {
+	// Status words are the last text on every unstyled line.
+	node := makeNode(makeAgent("root", "", "go-pro", "task", state.StatusComplete), 0, true)
+	node.Agent.Cost = 1.50
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(45, 20)
+	view := m.View()
+
+	// The cost string must be the rightmost content (exact width == 45).
+	got := lipgloss.Width(view)
+	if got != 45 {
+		t.Errorf("right-aligned row: lipgloss.Width=%d, want 45: %q", got, view)
+	}
+	if !strings.Contains(view, "$1.50") {
+		t.Errorf("cost not present in row: %q", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Status row style (UX-009)
+// ---------------------------------------------------------------------------
+
+func TestStatusRowStyle(t *testing.T) {
+	// Complete must be bold (distinguishes it from Running at same color).
+	complete := agents.StatusRowStyle(state.StatusComplete)
+	if !complete.GetBold() {
+		t.Error("StatusRowStyle(Complete) must be bold")
+	}
+
+	// Running must NOT be bold (dimmer treatment than Complete).
+	running := agents.StatusRowStyle(state.StatusRunning)
+	if running.GetBold() {
+		t.Error("StatusRowStyle(Running) must not be bold")
+	}
+
+	// Killed must have strikethrough.
+	killed := agents.StatusRowStyle(state.StatusKilled)
+	if !killed.GetStrikethrough() {
+		t.Error("StatusRowStyle(Killed) must have strikethrough")
+	}
+
+	// Pending and Error must not have strikethrough.
+	for _, s := range []state.AgentStatus{state.StatusPending, state.StatusError} {
+		style := agents.StatusRowStyle(s)
+		if style.GetStrikethrough() {
+			t.Errorf("StatusRowStyle(%s) must not have strikethrough", s)
+		}
+	}
+
+	// All statuses must set a foreground color (not NoColor).
+	statuses := []state.AgentStatus{
+		state.StatusRunning,
+		state.StatusComplete,
+		state.StatusError,
+		state.StatusKilled,
+		state.StatusPending,
+	}
+	for _, s := range statuses {
+		style := agents.StatusRowStyle(s)
+		fg := style.GetForeground()
+		if _, isNone := fg.(lipgloss.NoColor); isNone {
+			t.Errorf("StatusRowStyle(%s) must set a foreground color", s)
+		}
+	}
+}
+
+func TestView_FullRowColorByStatus(t *testing.T) {
+	// Build a tree with one agent per status so every code path in
+	// StatusRowStyle is exercised through renderNode.
+	statusCases := []struct {
+		status  state.AgentStatus
+		agentType string
+	}{
+		{state.StatusRunning, "running-agent"},
+		{state.StatusComplete, "complete-agent"},
+		{state.StatusError, "error-agent"},
+		{state.StatusKilled, "killed-agent"},
+		{state.StatusPending, "pending-agent"},
+	}
+
+	var nodes []*state.AgentTreeNode
+	for i, tc := range statusCases {
+		a := makeAgent(fmt.Sprintf("id-%d", i), "", tc.agentType, "desc", tc.status)
+		nodes = append(nodes, makeNode(a, 0, i == len(statusCases)-1))
+	}
+
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(nodes)
+	m.SetSize(80, 20)
+	view := m.View()
+
+	// Every agent type must appear in the rendered output.
+	for _, tc := range statusCases {
+		if !strings.Contains(view, tc.agentType) {
+			t.Errorf("View() should contain agent type %q; got:\n%s", tc.agentType, view)
+		}
+	}
+
+	// Every line must have the correct visual width (row styling must not alter width).
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	for i, line := range lines {
+		got := lipgloss.Width(line)
+		if got != 80 {
+			t.Errorf("line %d: lipgloss.Width=%d, want 80: %q", i, got, line)
+		}
 	}
 }

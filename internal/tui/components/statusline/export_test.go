@@ -124,3 +124,18 @@ func SetPlanFieldsForTest(m *StatusLineModel, active bool, step, total int) {
 	m.PlanStep = step
 	m.PlanTotalSteps = total
 }
+
+// RenderTeamIndicatorForTest exposes renderTeamIndicator for direct unit testing.
+func (m StatusLineModel) RenderTeamIndicatorForTest() string {
+	return m.renderTeamIndicator()
+}
+
+// SetTeamFieldsForTest sets all team-related fields on a StatusLineModel for testing.
+func SetTeamFieldsForTest(m *StatusLineModel, active bool, name string, statuses []string, wave, total int, cost float64) {
+	m.TeamActive = active
+	m.TeamName = name
+	m.TeamMemberStatuses = statuses
+	m.TeamCurrentWave = wave
+	m.TeamTotalWaves = total
+	m.TeamCost = cost
+}

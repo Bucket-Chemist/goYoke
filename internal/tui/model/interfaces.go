@@ -460,6 +460,19 @@ type searchOverlayWidget interface {
 // AppModel from the concrete type and avoids a circular import.
 // ---------------------------------------------------------------------------
 
+// TeamIndicatorData holds the fields needed to populate the status line's
+// compact team indicator. Defined in the model package so both the teams
+// component (implementer) and app.go (consumer) can reference it without
+// circular imports.
+type TeamIndicatorData struct {
+	Active         bool
+	Name           string
+	MemberStatuses []string
+	CurrentWave    int
+	TotalWaves     int
+	Cost           float64
+}
+
 // teamsHealthWidget is the interface for the team health dashboard component.
 type teamsHealthWidget interface {
 	View() string
@@ -471,6 +484,9 @@ type teamsHealthWidget interface {
 	// status is "running". Used by the poll-tick handler to decide whether to
 	// re-expand a minimized teams drawer.
 	HasRunningTeam() bool
+	// TeamIndicator returns data for the status line team indicator.
+	// Returns a zero TeamIndicatorData (Active=false) when no team is running.
+	TeamIndicator() TeamIndicatorData
 }
 
 // ---------------------------------------------------------------------------

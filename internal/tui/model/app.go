@@ -256,6 +256,13 @@ type AppModel struct {
 	// 100% of the terminal width (UX-007). Toggled by alt+\. Persisted to
 	// SessionData.SimpleMode across restarts.
 	simpleMode bool
+
+	// iconRailMode is true when the right panel is narrow enough to activate the
+	// compact icon rail rendering (UX-003). Updated with hysteresis in
+	// propagateContentSizes: switches to icon rail when rightWidth < 28, reverts
+	// to full rendering when rightWidth >= 32. The [28, 32) band is a dead zone
+	// that preserves the current mode to prevent flicker during resize.
+	iconRailMode bool
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:
@@ -667,6 +674,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
+			// Populate status line team indicator from teamsHealth.
+			tid := m.shared.teamsHealth.TeamIndicator()
+			m.statusLine.TeamActive = tid.Active
+			m.statusLine.TeamName = tid.Name
+			m.statusLine.TeamMemberStatuses = tid.MemberStatuses
+			m.statusLine.TeamCurrentWave = tid.CurrentWave
+			m.statusLine.TeamTotalWaves = tid.TotalWaves
+			m.statusLine.TeamCost = tid.Cost
+
 			// Refresh the team detail panel so it shows up-to-date member state.
 			if m.shared.teamDetail != nil {
 				m.shared.teamDetail.Refresh()

@@ -96,6 +96,20 @@ func (m *AppModel) propagateContentSizes() {
 		mainH = 1
 	}
 
+	// UX-003: Icon rail hysteresis.
+	// Activates when rightWidth < 28; deactivates when rightWidth >= 32.
+	// The [28, 32) band is a dead zone — current mode is preserved to prevent
+	// flicker during terminal resize. When the right panel is hidden (simpleMode
+	// or compact layout), iconRailMode is left unchanged.
+	if dims.showRightPanel {
+		if dims.rightWidth < 28 {
+			m.iconRailMode = true
+		} else if dims.rightWidth >= 32 {
+			m.iconRailMode = false
+		}
+		// [28, 32): hysteresis — keep m.iconRailMode unchanged.
+	}
+
 	if m.shared.claudePanel != nil {
 		// Subtract separatorHeight so the panel's internal viewport is sized to
 		// contentHeight-2 (one row for the separator, one for the input line),
