@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -271,7 +273,7 @@ func updateIntentsWithOutcomes(projectDir string, analyzedIntents []session.User
 // cleanupPermCache removes the permission gate session cache for the given
 // session ID. The cache file is at:
 //
-//	$XDG_RUNTIME_DIR/gofortress-perm-cache-{session_id}.json
+//	$XDG_RUNTIME_DIR/gofortress-perm-cache-{sha256(session_id)}.json
 //
 // This is called during session end cleanup to prevent stale caches from
 // accumulating. Errors are logged but non-fatal — a missing cache is normal
@@ -282,7 +284,8 @@ func cleanupPermCache(sessionID string) {
 		dir = os.TempDir()
 	}
 
-	path := filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", sessionID))
+	sum := sha256.Sum256([]byte(sessionID))
+	path := filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", hex.EncodeToString(sum[:])))
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove permission cache %s: %v\n", path, err)
 	}

@@ -72,11 +72,14 @@ func runWaves(ctx context.Context, tr *TeamRunner) error {
 				// Total wipe — no results at all, skip remaining waves.
 				log.Printf("[ERROR] wave: Wave %d ALL members failed: %v", wave.WaveNumber, failed)
 				skipRemainingWaves(tr, waveIdx)
-				return fmt.Errorf("wave %d: all %d members failed, skipping subsequent waves", wave.WaveNumber, len(failed))
+				return fmt.Errorf("wave %d: failed members %v (all %d failed), skipping subsequent waves", wave.WaveNumber, failed, len(failed))
 			}
 			// Partial failure — continue to next wave so synthesizer can handle partial results.
 			log.Printf("[WARN] wave: Wave %d had %d/%d failed members: %v — continuing to next wave",
 				wave.WaveNumber, len(failed), len(wave.Members), failed)
+			if waveIdx == len(waves)-1 {
+				return fmt.Errorf("failed members remained after wave execution: %v", failed)
+			}
 		}
 
 		log.Printf("[INFO] wave: Wave %d completed", wave.WaveNumber)

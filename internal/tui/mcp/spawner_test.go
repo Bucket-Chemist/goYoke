@@ -1,8 +1,10 @@
 package mcp
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
@@ -99,4 +101,48 @@ func TestVerifyACDeliverables_OriginalNotMutated(t *testing.T) {
 	}
 	_ = verifyACDeliverables("agent-1", original, nil)
 	assert.False(t, original[0].Completed, "original slice must not be mutated")
+}
+
+func TestCLIOutputCollector_PreservesResultAfterTruncation(t *testing.T) {
+	collector := newCLIOutputCollector(1024)
+
+	filler := map[string]any{
+		"type": "assistant",
+		"message": map[string]any{
+			"id":    "m1",
+			"type":  "message",
+			"role":  "assistant",
+			"model": "m",
+			"content": []map[string]any{
+				{"type": "text", "text": strings.Repeat("x", 700)},
+			},
+			"stop_reason": nil,
+			"usage": map[string]any{
+				"input_tokens":  1,
+				"output_tokens": 1,
+			},
+		},
+		"session_id": "sess-fill",
+		"uuid":       "u1",
+	}
+	fillerLine, err := json.Marshal(filler)
+	require.NoError(t, err)
+
+	for i := 0; i < 3; i++ {
+		collector.appendLine(fillerLine)
+	}
+	require.True(t, collector.truncated, "collector should truncate once the raw buffer cap is hit")
+
+	resultLine := []byte(`{"type":"result","subtype":"success","is_error":false,"duration_ms":1,"duration_api_ms":1,"num_turns":4,"result":"done","stop_reason":"end_turn","session_id":"sess-123","total_cost_usd":1.25,"usage":{"input_tokens":0,"output_tokens":0},"uuid":"u2"}`)
+	collector.appendLine(resultLine)
+
+	_, parseErr := parseCLIOutput(collector.bytes())
+	require.Error(t, parseErr, "truncated raw output should no longer be parseable")
+
+	result := collector.fallbackResult()
+	require.NotNil(t, result)
+	assert.Equal(t, "done", result.Result)
+	assert.Equal(t, "sess-123", result.SessionID)
+	assert.Equal(t, 4, result.NumTurns)
+	assert.Equal(t, 1.25, result.TotalCostUSD)
 }

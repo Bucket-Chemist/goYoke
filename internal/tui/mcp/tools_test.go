@@ -104,6 +104,16 @@ func TestPermGateRequestRoundtrip(t *testing.T) {
 	assert.JSONEq(t, string(toolInput), string(gotPayload.ToolInput))
 }
 
+func makeTestSocketPath(t *testing.T, name string) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("/tmp", "gofortress-uds-")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
+	return filepath.Join(dir, name)
+}
+
 func TestPermGateResponseRoundtrip(t *testing.T) {
 	decisions := []string{"allow", "deny", "allow_session"}
 
@@ -191,8 +201,7 @@ func TestHandleTestMcpPing_WithEcho(t *testing.T) {
 // read exactly one IPCRequest and write exactly one IPCResponse.
 func mockUDS(t *testing.T, responder func(req IPCRequest) IPCResponse) (*UDSClient, func()) {
 	t.Helper()
-	dir := t.TempDir()
-	sockPath := filepath.Join(dir, "test.sock")
+	sockPath := makeTestSocketPath(t, "test.sock")
 
 	ln, err := net.Listen("unix", sockPath)
 	require.NoError(t, err, "mock UDS listener")

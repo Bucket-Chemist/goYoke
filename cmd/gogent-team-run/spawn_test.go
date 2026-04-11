@@ -21,11 +21,11 @@ import (
 // testConfig creates a TeamConfig for testing with given members
 func testConfig(members ...Member) *TeamConfig {
 	return &TeamConfig{
-		TeamName:    "test-team",
+		TeamName:     "test-team",
 		WorkflowType: "test",
-		ProjectRoot: "/tmp/test",
-		SessionID:   "test-session",
-		Status:      "running",
+		ProjectRoot:  "/tmp/test",
+		SessionID:    "test-session",
+		Status:       "running",
 		Waves: []Wave{{
 			WaveNumber:  1,
 			Description: "Test wave",
@@ -338,9 +338,9 @@ func TestSpawnAndWait_InvalidIndices(t *testing.T) {
 	})
 
 	tests := []struct {
-		name     string
-		waveIdx  int
-		memIdx   int
+		name    string
+		waveIdx int
+		memIdx  int
 	}{
 		{"invalid_wave", 99, 0},
 		{"invalid_member", 0, 99},
@@ -693,9 +693,9 @@ func TestBuildCLIArgs1MContextPropagation(t *testing.T) {
 // TestIsRetryableError tests error classification for retry decisions
 func TestIsRetryableError(t *testing.T) {
 	tests := []struct {
-		name       string
-		err        error
-		retryable  bool
+		name      string
+		err       error
+		retryable bool
 	}{
 		{
 			name:      "nil_error",
@@ -977,10 +977,10 @@ func TestUpdateMember_NegativeIndices(t *testing.T) {
 	runner, _ := setupTestRunner(t, config)
 
 	tests := []struct {
-		name     string
-		waveIdx  int
-		memIdx   int
-		wantErr  string
+		name    string
+		waveIdx int
+		memIdx  int
+		wantErr string
 	}{
 		{
 			name:    "negative_wave_index",
@@ -1160,7 +1160,9 @@ func TestClaudeSpawner_Spawn_InvalidIndices(t *testing.T) {
 // TestClaudeSpawner_Spawn_NoBudgetCheck tests that Spawn no longer checks budget
 // Budget checking happens at wave level in spawnAndWaitWithBudget
 func TestClaudeSpawner_Spawn_NoBudgetCheck(t *testing.T) {
-	t.Parallel()
+	origPath := os.Getenv("PATH")
+	defer os.Setenv("PATH", origPath)
+	os.Setenv("PATH", "")
 	member := Member{
 		Name:       "agent-1",
 		Agent:      "test-agent",
@@ -1195,13 +1197,13 @@ func TestClaudeSpawner_Spawn_NoBudgetCheck(t *testing.T) {
 // and legacy JSON array formats.
 func TestParseCLIOutput(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		wantResult   string
-		wantCost     float64
-		wantError    bool
-		wantIsError  bool
-		wantSession  string
+		name        string
+		input       string
+		wantResult  string
+		wantCost    float64
+		wantError   bool
+		wantIsError bool
+		wantSession string
 	}{
 		// Legacy JSON array format (backward compatibility)
 		{
@@ -1277,8 +1279,8 @@ func TestParseCLIOutput(t *testing.T) {
 			wantSession: "sess-ndjson-1",
 		},
 		{
-			name: "ndjson_single_result_line",
-			input: `{"type":"result","result":"quick test","total_cost_usd":0.01,"session_id":"sess-ndjson-2"}`,
+			name:        "ndjson_single_result_line",
+			input:       `{"type":"result","result":"quick test","total_cost_usd":0.01,"session_id":"sess-ndjson-2"}`,
 			wantResult:  "quick test",
 			wantCost:    0.01,
 			wantError:   false,
@@ -1367,12 +1369,12 @@ func TestParseCLIOutput(t *testing.T) {
 // TestWriteStdoutFile tests writing agent stdout to file
 func TestWriteStdoutFile(t *testing.T) {
 	tests := []struct {
-		name            string
-		agentResult     string
-		agentID         string
-		wantStatus      string
-		wantRawOutput   bool
-		wantValidJSON   bool
+		name              string
+		agentResult       string
+		agentID           string
+		wantStatus        string
+		wantRawOutput     bool
+		wantValidJSON     bool
 		wantPathTraversal bool
 	}{
 		{
