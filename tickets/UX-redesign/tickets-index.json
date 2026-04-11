@@ -152,7 +152,7 @@
       "status": "pending",
       "phase": 2,
       "priority": "P1",
-      "effort": "0.25s",
+      "effort": "0.5s",
       "branch": "p1-status-hints",
       "dependencies": [],
       "rec_id": "N2",
@@ -188,7 +188,7 @@
       "status": "pending",
       "phase": 3,
       "priority": "P2",
-      "effort": "0.75s",
+      "effort": "0.25-0.5s",
       "branch": "p2",
       "dependencies": [],
       "rec_id": "3d",
@@ -202,9 +202,7 @@
       "priority": "P2",
       "effort": "0.25s",
       "branch": "p2",
-      "dependencies": [
-        "UX-024"
-      ],
+      "dependencies": [],
       "rec_id": "4c",
       "file": "tickets/UX-redesign/UX-016.md"
     },
