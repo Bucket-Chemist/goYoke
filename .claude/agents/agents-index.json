@@ -1480,60 +1480,6 @@
       }
     },
     {
-      "id": "gemini-slave",
-      "parallelization_template": null,
-      "name": "Gemini Slave",
-      "model": "external",
-      "tier": "external",
-      "category": "context",
-      "path": "gemini-slave",
-      "triggers": [
-        "analyze entire",
-        "trace through",
-        "full codebase",
-        "all files in",
-        "deep dive",
-        "root cause across",
-        "architectural review",
-        "map the codebase",
-        "multiple files",
-        "entire module",
-        "large context",
-        "cross-module",
-        "assess scope",
-        "scout"
-      ],
-      "tools": [
-        "Bash"
-      ],
-      "auto_activate": null,
-      "invocation": "Bash (gemini-slave wrapper), NOT Task tool",
-      "protocols": [
-        "mapper",
-        "debugger",
-        "architect",
-        "benchmark-audit",
-        "memory-audit",
-        "scout"
-      ],
-      "state_files": {
-        "scout_output": ".claude/tmp/scout_metrics.json",
-        "complexity_score": ".claude/tmp/complexity_score"
-      },
-      "sharp_edges_count": 4,
-      "description": "Large-context analysis subagent with 1M+ token window. Includes scout protocol for pre-routing reconnaissance.",
-      "context_requirements": {
-        "rules": [],
-        "conventions": {}
-      },
-      "subagent_type": "Gemini Slave",
-      "cli_flags": {
-        "allowed_tools": [
-          "Bash"
-        ]
-      }
-    },
-    {
       "id": "staff-architect-critical-review",
       "parallelization_template": "C",
       "name": "Staff Architect Critical Review",
@@ -1701,8 +1647,8 @@
       "id": "gogent-scout",
       "parallelization_template": "A",
       "name": "GOgent Smart Scout",
-      "model": "gemini-3-flash-preview",
-      "tier": "external",
+      "model": "native",
+      "tier": 1,
       "category": "reconnaissance",
       "path": "cmd/gogent-scout",
       "triggers": [
@@ -2714,7 +2660,7 @@
         "single file operation",
         "trivial task (typo, config)"
       ],
-      "primary": "gemini-slave scout",
+      "primary": "gogent-scout",
       "fallback": "haiku-scout",
       "output": ".claude/tmp/scout_metrics.json"
     },
@@ -2729,11 +2675,11 @@
           "min_score": 2,
           "max_score": 10
         },
-        "external": {
+        "opus": {
           "min_score": 10
         }
       },
-      "force_external_if": "tokens > 50000"
+      "force_opus_if": "tokens > 50000"
     },
     "auto_fire": {
       "external_library_mentioned": "librarian",
@@ -2745,7 +2691,7 @@
       "implementation_go_cli": "go-cli",
       "implementation_go_tui": "go-tui",
       "pyside6_detected": "python-ux",
-      "high_context_detected": "gemini-slave",
+      "high_context_detected": "orchestrator",
       "implementation_rust": "rust-pro"
     },
     "model_tiers": {
@@ -2796,11 +2742,9 @@
         "mass-spec-reviewer",
         "bioinformatician-reviewer",
         "pasteur"
-      ],
-      "external": [
-        "gemini-slave"
       ]
-    }
+    },
+    "trigger_keywords": null
   },
   "state_management": {
     "description": "File-based state passing between agents",
@@ -2808,7 +2752,7 @@
     "files": {
       "scout_metrics.json": {
         "written_by": [
-          "gemini-slave scout",
+          "gogent-scout",
           "haiku-scout"
         ],
         "read_by": [

@@ -70,7 +70,7 @@ func CheckToolPermission(schema *Schema, currentTier string, toolName string) *T
 // Returns the tier name if found, or "unknown" if no tier allows the tool.
 func findTierForTool(schema *Schema, toolName string) string {
 	// Check tiers in ascending order (lowest to highest capability)
-	tierOrder := []string{"haiku", "haiku_thinking", "sonnet", "opus", "external"}
+	tierOrder := []string{"haiku", "haiku_thinking", "sonnet", "opus"}
 
 	for _, tier := range tierOrder {
 		tierConfig, exists := schema.Tiers[tier]

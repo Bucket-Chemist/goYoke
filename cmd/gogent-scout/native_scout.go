@@ -201,7 +201,7 @@ func (ns *NativeScout) generateRecommendation(m *ScopeMetrics) *RoutingRecommend
 		reasoning = fmt.Sprintf("Medium scope: %d files, %d lines", m.TotalFiles, m.TotalLines)
 
 	case m.TotalFiles > 15 || m.TotalLines >= 2000 || isMultiLang || m.EstimatedTokens > 50000:
-		tier = "external"
+		tier = "opus"
 		confidence = "high"
 		reasoning = fmt.Sprintf("Large or complex scope: %d files, %d lines, %d languages",
 			m.TotalFiles, m.TotalLines, len(m.Languages))

@@ -119,7 +119,7 @@ func TestCalculateInvocationCost_HaikuThinking(t *testing.T) {
 
 func TestCalculateInvocationCost_External(t *testing.T) {
 	inv := AgentInvocation{
-		Agent:        "gemini-slave",
+		Agent:        "external-agent",
 		Tier:         "external",
 		InputTokens:  10000,
 		OutputTokens: 5000,

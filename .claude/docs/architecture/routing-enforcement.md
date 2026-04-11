@@ -43,7 +43,6 @@ The source of truth for all routing decisions.
     "codebase-search": "Explore",
     "tech-docs-writer": "general-purpose",
     "orchestrator": "Plan",
-    "gemini-slave": "Bash",
     ...
   }
 }
@@ -134,7 +133,6 @@ Task() Call
 **Example**: Creating implementation roadmaps, interviewing users
 
 ### Bash (External Processes)
-**For**: gemini-slave
 **Tools**: Bash, Read
 **Rationale**: External context engines use shell piping, not file modification
 **Example**: Analyzing large codebases via piped commands

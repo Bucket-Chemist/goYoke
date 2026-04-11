@@ -70,7 +70,6 @@ type TierLevels struct {
 	HaikuThinking int    `json:"haiku_thinking"`
 	Sonnet        int    `json:"sonnet"`
 	Opus          int    `json:"opus"`
-	External      int    `json:"external"`
 }
 
 // Protocol defines external model protocol configuration.
@@ -107,7 +106,6 @@ type ScoutProtocol struct {
 // ScoutSelectionLogic defines logic for choosing between scout types.
 type ScoutSelectionLogic struct {
 	HaikuScout  ScoutCriteria `json:"haiku_scout"`
-	GeminiScout ScoutCriteria `json:"gemini_scout"`
 }
 
 // ScoutCriteria defines selection criteria for scout type.
@@ -131,7 +129,6 @@ type EscalationRules struct {
 	HaikuToHaikuThinking []string         `json:"haiku_to_haiku_thinking"`
 	HaikuToSonnet        []string         `json:"haiku_to_sonnet"`
 	SonnetToOpus         SonnetToOpusRule `json:"sonnet_to_opus"`
-	AnyToExternal        []string         `json:"any_to_external"`
 }
 
 // SonnetToOpusRule defines special handling for Opus escalation.
@@ -172,7 +169,6 @@ type SubagentTypesConfig struct {
 	Description    string       `json:"description"`
 	Exploration    SubagentType `json:"exploration"`
 	Implementation SubagentType `json:"implementation"`
-	External       SubagentType `json:"external"`
 	Planning       SubagentType `json:"planning"`
 	Analysis       SubagentType `json:"analysis"`
 }
@@ -302,7 +298,6 @@ type AgentSubagentMapping struct {
 	Einstein                     FlexibleSubagentType  `json:"einstein"`
 	Mozart                       FlexibleSubagentType  `json:"mozart"`
 	Beethoven                    FlexibleSubagentType  `json:"beethoven"`
-	GeminiSlave                  FlexibleSubagentType  `json:"gemini-slave"`
 	StaffArchitectCriticalReview FlexibleSubagentType  `json:"staff-architect-critical-review"`
 	SchemaArchitect             FlexibleSubagentType  `json:"schema-architect"`
 }
@@ -418,13 +413,12 @@ func (s *Schema) Validate() error {
 		"haiku_thinking": true,
 		"sonnet":         true,
 		"opus":           true,
-		"external":       true,
 	}
 
 	for tierName := range s.Tiers {
 		if !validTiers[tierName] {
 			return fmt.Errorf(
-				"[routing] Invalid tier name %q. Valid tiers: haiku, haiku_thinking, sonnet, opus, external",
+				"[routing] Invalid tier name %q. Valid tiers: haiku, haiku_thinking, sonnet, opus",
 				tierName,
 			)
 		}
@@ -463,7 +457,6 @@ func (s *Schema) Validate() error {
 		"Einstein":                      true,
 		"Mozart":                        true,
 		"Beethoven":                     true,
-		"Gemini Slave":                  true,
 		"Staff Architect Critical Review": true,
 		"Schema Architect":               true,
 	}
@@ -500,7 +493,6 @@ func (s *Schema) Validate() error {
 		s.AgentSubagentMapping.Einstein,
 		s.AgentSubagentMapping.Mozart,
 		s.AgentSubagentMapping.Beethoven,
-		s.AgentSubagentMapping.GeminiSlave,
 		s.AgentSubagentMapping.StaffArchitectCriticalReview,
 		s.AgentSubagentMapping.SchemaArchitect,
 	}
@@ -566,7 +558,6 @@ func (s *Schema) agentMapping() map[string]*FlexibleSubagentType {
 		"einstein":                        &s.AgentSubagentMapping.Einstein,
 		"mozart":                          &s.AgentSubagentMapping.Mozart,
 		"beethoven":                       &s.AgentSubagentMapping.Beethoven,
-		"gemini-slave":                    &s.AgentSubagentMapping.GeminiSlave,
 		"staff-architect-critical-review": &s.AgentSubagentMapping.StaffArchitectCriticalReview,
 		"schema-architect":               &s.AgentSubagentMapping.SchemaArchitect,
 	}
@@ -617,8 +608,6 @@ func (s *Schema) GetSubagentType(category string) (*SubagentType, error) {
 		return &s.SubagentTypesConfig.Exploration, nil
 	case "implementation":
 		return &s.SubagentTypesConfig.Implementation, nil
-	case "external":
-		return &s.SubagentTypesConfig.External, nil
 	case "planning":
 		return &s.SubagentTypesConfig.Planning, nil
 	case "analysis":
@@ -663,8 +652,6 @@ func (s *Schema) GetTierLevel(tierName string) (int, error) {
 		return s.TierLevels.Sonnet, nil
 	case "opus":
 		return s.TierLevels.Opus, nil
-	case "external":
-		return s.TierLevels.External, nil
 	default:
 		return 0, fmt.Errorf("[routing] No tier level defined for: %s", tierName)
 	}
@@ -684,7 +671,7 @@ func (s *Schema) FormatTierSummary() string {
 	sb.WriteString("ROUTING TIERS ACTIVE:\n")
 
 	// Process tiers in order
-	tierOrder := []string{"haiku", "haiku_thinking", "sonnet", "opus", "external"}
+	tierOrder := []string{"haiku", "haiku_thinking", "sonnet", "opus"}
 
 	for _, tierName := range tierOrder {
 		tier, exists := s.Tiers[tierName]

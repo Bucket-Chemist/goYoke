@@ -1385,7 +1385,6 @@ func TestGetAgentClass_All(t *testing.T) {
 		// Analysis class
 		{"beethoven", ClassAnalysis},
 		{"staff-architect-critical-review", ClassAnalysis},
-		{"gemini-slave", ClassAnalysis},
 		// Unknown
 		{"unknown-agent", ClassUnknown},
 		{"", ClassUnknown},

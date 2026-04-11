@@ -1,17 +1,15 @@
 ---
 name: memory-improvement
-description: Triggers a comprehensive audit of the system's memory. Compares "Live Memories" (decisions, sharp edges, facts) against "Static Configurations" (agents, conventions) to identify gaps, contradictions, and opportunities for improvement. Invokes the Gemini Slave 'memory-audit' protocol and routes findings to the Orchestrator for synthesis.
+description: Triggers a comprehensive audit of the system's memory. Compares "Live Memories" (decisions, sharp edges, facts) against "Static Configurations" (agents, conventions) to identify gaps, contradictions, and opportunities for improvement. Routes findings to the Orchestrator for synthesis.
 ---
 
 # Memory Improvement Protocol
 
 ## Overview
 
-This skill performs a "System Self-Audit". It uses `gemini-slave` (External Context) to read the entire memory store and configuration state, identifying where the system's "Learned Knowledge" (Memory) has diverged from or surpassed its "Hardcoded Knowledge" (Config).
 
 **Workflow:**
 1.  **Gather:** Collect all memory files, agent configs, and conventions.
-2.  **Audit:** Run `gemini-slave memory-audit` to find gaps.
 3.  **Synthesize:** Delegate to `orchestrator` to review findings.
 4.  **Plan:** (Optional) Orchestrator creates update tasks.
 
@@ -44,10 +42,8 @@ FILES=$(find ~/.claude/memory ~/.claude/agents ~/.claude/conventions -type f \( 
 ## Phase 2: The Memory Audit (Gemini Pipeline)
 
 **Step 1: Execute Gemini Protocol**
-Pipe the collected files to `gemini-slave` with the `memory-audit` protocol.
 
 ```bash
-cat $FILES | gemini-slave memory-audit "Perform a comprehensive gap analysis between Live Memory and Static Config."
 ```
 
 ---

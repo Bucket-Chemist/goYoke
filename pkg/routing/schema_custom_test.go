@@ -13,16 +13,14 @@ func TestStaffArchitectCriticalReviewIntegration(t *testing.T) {
 	schema := Schema{
 		Version: "2.5.0",
 		Tiers: map[string]TierConfig{
-			"haiku":    {},
-			"sonnet":   {},
-			"opus":     {},
-			"external": {},
+			"haiku":  {},
+			"sonnet": {},
+			"opus":   {},
 		},
 		TierLevels: TierLevels{
-			Haiku:    1,
-			Sonnet:   3,
-			Opus:     4,
-			External: 0,
+			Haiku:  1,
+			Sonnet: 3,
+			Opus:   4,
 		},
 		SubagentTypesConfig: SubagentTypesConfig{
 			Analysis: SubagentType{}, // Informational category

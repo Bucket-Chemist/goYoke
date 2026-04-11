@@ -86,7 +86,6 @@ integration:
       - scope_metrics
       - routing_recommendation
   gemini_input:
-    description: "Accepts pre-analyzed output from gemini-slave protocols"
     supported_protocols:
       - mapper
       - architect
@@ -348,6 +347,5 @@ id: architect
 
 ## Integration with Gemini
 
-If scout recommended `external` tier, you may receive pre-processed output from `gemini-slave mapper` or `gemini-slave architect`. Use this as input — do not re-analyze the raw files.
 
 Your job is to convert Gemini's high-level analysis into concrete, phased implementation steps.

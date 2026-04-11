@@ -27,7 +27,6 @@ without_flags=$(jq -r '.agents[] | select(.cli_flags == null) | .id' "$AGENTS_IN
 echo "OK: $with_flags/$total agents have cli_flags"
 
 # 3. Verify excluded agents are expected (bash-invoked only)
-expected_excluded="gemini-slave gogent-scout"
 for agent in $without_flags; do
   if ! echo "$expected_excluded" | grep -qw "$agent"; then
     echo "FAIL: Agent '$agent' missing cli_flags (not in expected exclusion list)"

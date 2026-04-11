@@ -368,7 +368,6 @@ Use:
 | Spawning background tasks without collecting | Orphaned work, blocked by gogent-orchestrator-guard | Always call TaskOutput before final synthesis |
 | Ignoring hook injections | Misses guidance/enforcement | Read and follow additionalContext from hooks |
 | Skipping scout on unknown scope | Potential mis-routing to expensive tier | Scout first with haiku-scout or gogent-scout |
-| Large context without Gemini | Context overflow, high cost | Pipe to gemini-slave for >50K tokens |
 
 ---
 

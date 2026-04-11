@@ -80,8 +80,8 @@ func TestUnmarshalProductionAgentIndex(t *testing.T) {
 		if len(agent.Triggers) == 0 && agent.AutoActivate == nil && len(agent.SpawnedBy) == 0 {
 			t.Errorf("Agent %d (%s) missing triggers, auto_activate, and spawned_by", i, agent.ID)
 		}
-		if len(agent.Tools) == 0 && agent.Model != "external" {
-			t.Errorf("Agent %d (%s) missing tools (non-external)", i, agent.ID)
+		if len(agent.Tools) == 0 {
+			t.Errorf("Agent %d (%s) missing tools", i, agent.ID)
 		}
 		if agent.Description == "" {
 			t.Errorf("Agent %d (%s) missing description", i, agent.ID)
@@ -110,19 +110,6 @@ func TestUnmarshalProductionAgentIndex(t *testing.T) {
 			if architect.OutputArtifacts.SpecsLocation == "" {
 				t.Error("architect.output_artifacts.specs_location missing")
 			}
-		}
-	}
-
-	geminiSlave, err := index.GetAgentByID("gemini-slave")
-	if err == nil {
-		if geminiSlave.Invocation == "" {
-			t.Error("gemini-slave missing invocation field")
-		}
-		if len(geminiSlave.Protocols) == 0 {
-			t.Error("gemini-slave missing protocols field")
-		}
-		if geminiSlave.StateFiles == nil {
-			t.Error("gemini-slave missing state_files field")
 		}
 	}
 
@@ -312,18 +299,18 @@ func TestValidateAgent(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid external agent",
+			name: "invalid string tier rejected",
 			agent: Agent{
-				ID:          "gemini",
-				Name:        "Gemini",
-				Model:       "external",
+				ID:          "test",
+				Name:        "Test",
+				Model:       "haiku",
 				Tier:        "external",
-				Category:    "context",
-				Path:        "gemini",
-				Tools:       []string{},
-				Description: "External",
+				Category:    "task",
+				Path:        "test",
+				Tools:       []string{"Read"},
+				Description: "Test",
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "missing id",
@@ -666,18 +653,14 @@ func TestGetScoutAgents(t *testing.T) {
 				ScoutFirst: true,
 			},
 			{
-				ID:        "gemini-slave",
-				Protocols: []string{"mapper", "scout"},
-			},
-			{
 				ID: "python-pro",
 			},
 		},
 	}
 
 	scouts := index.GetScoutAgents()
-	if len(scouts) != 2 {
-		t.Errorf("Expected 2 scout agents, got %d", len(scouts))
+	if len(scouts) != 1 {
+		t.Errorf("Expected 1 scout agent, got %d", len(scouts))
 	}
 
 	// Verify scout agent IDs
@@ -688,9 +671,6 @@ func TestGetScoutAgents(t *testing.T) {
 
 	if !scoutIDs["orchestrator"] {
 		t.Error("Expected orchestrator to be a scout agent")
-	}
-	if !scoutIDs["gemini-slave"] {
-		t.Error("Expected gemini-slave to be a scout agent")
 	}
 }
 
@@ -776,7 +756,6 @@ func TestProductionAgentIndexCompleteness(t *testing.T) {
 		"orchestrator",
 		"architect",
 		"einstein",
-		"gemini-slave",
 		"staff-architect-critical-review",
 		"haiku-scout",
 	}

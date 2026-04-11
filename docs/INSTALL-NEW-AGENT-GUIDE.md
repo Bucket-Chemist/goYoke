@@ -75,8 +75,8 @@ A subagent is a specialized Claude instance with:
 ├─────────────────────────────────────────────────────────────────┤
 │                       EXTERNAL (Tier 0)                         │
 │  Large context (1M+ tokens)                                     │
-│  Cost: $0.0001/1K tokens | External: Gemini                    │
-│  Agents: gemini-slave                                           │
+│  Cost: — | External: deprecated                                │
+│  (deprecated — no agents)                                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -87,7 +87,7 @@ A subagent is a specialized Claude instance with:
 | `Explore` | NO | Read-only reconnaissance (search, review) |
 | `general-purpose` | YES | Implementation, documentation, edits |
 | `Plan` | YES | Architecture, orchestration, planning |
-| `Bash` | NO | External process execution (Gemini) |
+| `Bash` | NO | External process execution (deprecated) |
 
 ---
 
@@ -453,7 +453,7 @@ allows_write: true
 ```yaml
 tools: [Bash, Read]
 allows_write: false
-# Use for: gemini-slave
+# (deprecated — no agents in this category)
 ```
 
 ---
@@ -507,7 +507,6 @@ Add to the `agent_subagent_mapping` section:
     "codebase-search": "Explore",
     "python-pro": "general-purpose",
     "orchestrator": "Plan",
-    "gemini-slave": "Bash",
     "my-new-agent": "general-purpose"  // ADD THIS
   }
 }
@@ -831,7 +830,7 @@ auto_activate:
 │  • Explore       → Read-only (search, review)                  │
 │  • general-purpose → Full access (implement, docs)              │
 │  • Plan          → Coordination (orchestrator)                 │
-│  • Bash          → External processes (gemini)                 │
+│  • Bash          → External processes (deprecated)             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

@@ -67,7 +67,6 @@ What do you want to achieve? One sentence.
   cat /tmp/bash_metrics.txt
   echo "---FILES---"
   find <target> -type f \( -name "*.py" -o -name "*.R" -o -name "*.md" \)
-} | gemini-slave scout "Assess scope for: <goal>" > .claude/tmp/scout_metrics.json
 
 # Stage 3: Calculate complexity score from scout JSON
 .claude/scripts/calculate-complexity.sh
@@ -126,8 +125,6 @@ If a phase requires agents above the ceiling, explore will prompt:
 |--------------|--------|
 | confidence: high, tier: haiku/sonnet | Proceed to architect |
 | confidence: low | Ask the clarification question, then proceed |
-| tier: external | Run `gemini-slave mapper` first to filter files, then architect |
-| estimated_tokens > 50000 | Mandatory `gemini-slave mapper` before architect |
 
 **If clarification needed:**
 
@@ -204,7 +201,6 @@ Delegate implementation to appropriate agents based on plan phases.
 | R implementation | r-pro | sonnet |
 | Cross-module coordination | orchestrator | sonnet |
 | Deep analysis | einstein | opus |
-| Large context (50k+ tokens) | gemini-slave | external |
 
 **Example delegation:**
 
@@ -234,7 +230,6 @@ User Request
      │
      ▼
 ┌─────────────┐
-│   SCOUT     │ ← gemini-slave scout (fast, cheap)
 │  (optional) │
 └──────┬──────┘
        │

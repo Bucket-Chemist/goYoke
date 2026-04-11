@@ -643,7 +643,6 @@ flowchart TD
 | go-pro | general-purpose | Implementation work |
 | orchestrator | Plan | Planning mode coordination |
 | architect | Plan | Design and planning |
-| gemini-slave | Bash | External shell piping |
 
 ---
 

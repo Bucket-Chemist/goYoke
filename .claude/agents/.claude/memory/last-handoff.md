@@ -26,7 +26,6 @@
   - claude/agents/einstein/CLAUDE.md
   - claude/agents/frontend-reviewer/CLAUDE.md
   - claude/agents/frontend-reviewer/agent.md
-  - claude/agents/gemini-slave/CLAUDE.md
   - claude/agents/go-api/CLAUDE.md
   - claude/agents/go-cli/CLAUDE.md
   - claude/agents/go-concurrent/CLAUDE.md

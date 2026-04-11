@@ -225,56 +225,6 @@
         "pasteur",
         "schema-architect"
       ]
-    },
-    "external": {
-      "description": "External context engine - Gemini 3 for 1M+ token windows",
-      "model": "gemini-3-flash-preview",
-      "thinking": false,
-      "cost_per_1k_tokens": 0.0001,
-      "patterns": [
-        "large context",
-        "entire codebase",
-        "full module",
-        "10+ files",
-        "cross-module trace",
-        "architectural review",
-        "map the codebase",
-        "trace through"
-      ],
-      "tools": [
-        "Bash"
-      ],
-      "invocation": "cat [files] | gemini-slave [protocol] \"[instruction]\"",
-      "protocols": {
-        "mapper": {
-          "model": "gemini-3-flash-preview",
-          "output": "json"
-        },
-        "debugger": {
-          "model": "gemini-3-pro-preview",
-          "output": "markdown"
-        },
-        "architect": {
-          "model": "gemini-3-pro-preview",
-          "output": "markdown"
-        },
-        "memory-audit": {
-          "model": "gemini-3-pro-preview",
-          "output": "json"
-        },
-        "benchmark-audit": {
-          "model": "gemini-3-pro-preview",
-          "output": "json"
-        }
-      },
-      "thresholds": {
-        "min_files": 10,
-        "min_lines": 2000,
-        "min_tokens_estimate": 50000
-      },
-      "agents": [
-        "gemini-slave"
-      ]
     }
   },
   "tier_levels": {
@@ -282,8 +232,7 @@
     "haiku": 1,
     "haiku_thinking": 2,
     "sonnet": 3,
-    "opus": 4,
-    "external": 0
+    "opus": 4
   },
   "delegation_ceiling": {
     "description": "Controls which agents can be spawned via Task(), independent of analysis context",
@@ -348,8 +297,7 @@
       "User specified exact files",
       "Single file operation",
       "Trivial task (typo, config change)"
-    ],
-    "deprecated": "Direct gemini-slave scout calls (use gogent-scout instead). Gemini backends removed from scout_protocol."
+    ]
   },
   "escalation_paths": {
     "python-pro": {
@@ -387,13 +335,7 @@
       "protocol": "escalate_to_einstein",
       "output_path": ".claude/tmp/einstein-gap-{timestamp}.md",
       "notification": "🚨 Run /einstein to process this escalation"
-    },
-    "any_to_external": [
-      "context exceeds 50K tokens",
-      "10+ files need simultaneous analysis",
-      "cross-module debugging required",
-      "full codebase understanding needed"
-    ]
+    }
   },
   "compound_triggers": {
     "description": "When 2+ patterns from different tiers fire, escalate to orchestrator",
@@ -433,8 +375,7 @@
       "haiku",
       "haiku_thinking",
       "sonnet",
-      "opus",
-      "external"
+      "opus"
     ],
     "audit_log": "/tmp/claude-routing-violations.jsonl"
   },
@@ -484,18 +425,6 @@
         "rust-pro"
       ],
       "rationale": "Implementation and documentation agents need write permissions"
-    },
-    "external": {
-      "description": "Command execution specialist for external processes",
-      "tools": [
-        "Bash",
-        "Read"
-      ],
-      "allows_write": false,
-      "agents": [
-        "gemini-slave"
-      ],
-      "rationale": "External context engines use shell piping, not file modification"
     },
     "planning": {
       "description": "Architecture and planning mode with controlled write access",
@@ -613,7 +542,6 @@
     "einstein": "Einstein",
     "mozart": "Mozart",
     "beethoven": "Beethoven",
-    "gemini-slave": "Gemini Slave",
     "staff-architect-critical-review": "Staff Architect Critical Review",
     "rust-pro": "Rust Pro",
     "llm-inference-architect": "LLM Inference Architect",

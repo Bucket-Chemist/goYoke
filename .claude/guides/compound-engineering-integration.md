@@ -149,7 +149,6 @@ export GEMINI_API_KEY="your-api-key"
 | **Reviewer naming** | Plugin has `code-simplicity-reviewer`; GOgent has `code-reviewer` | Different tools - no collision |
 | **Task() validation** | Plugin spawns agents without subagent_type | `gogent-validate` may warn on unexpected patterns |
 | **Model selection** | Plugin doesn't use tiered model routing | Plugin agents run at default model, not cost-optimized |
-| **Scout protocol** | Plugin does local research; GOgent uses gemini-slave scout | Use GOgent scout BEFORE `/workflows:plan` for large tasks |
 
 ### Hook Interactions
 
@@ -201,7 +200,6 @@ User Request
 
 1. **Go development** - Route to go-pro, go-tui, go-cli, go-concurrent
 2. **Cost optimization** - Haiku scouts before expensive work
-3. **Large context** - gemini-slave for 50K+ token analysis
 4. **Enforced constraints** - Hook-based blocking (not bypassable)
 5. **ML pattern learning** - Telemetry feeds future routing improvements
 
@@ -351,7 +349,6 @@ These complement GOgent's `librarian`:
 | `go-cli` | Cobra CLI |
 | `go-concurrent` | Concurrency patterns |
 | `haiku-scout` | Cheap scope assessment |
-| `gemini-slave` | Large context (50K+) |
 | `einstein` | Deep analysis (via /einstein) |
 
 ---
@@ -509,7 +506,6 @@ For significant PRs:
 
 ```
 1. [GOgent Scout] Assess scope
-   - gemini-slave scout | calculate-complexity.sh
    - Produces: .claude/tmp/scout_metrics.json
 
 2. [Compound Review] Multi-agent analysis
@@ -559,7 +555,6 @@ Output: Implementation complete
 User: "Refactor the authentication module"
 
 1. [GOgent Scout] Assess scope
-   gemini-slave scout → "Large scope: 15 files, recommend sonnet tier"
 
 2. [GOgent Architect] Create plan
    Task(architect) → specs.md with todos
@@ -648,7 +643,6 @@ User: "How do I use Hotwire Turbo frames in Rails?"
 | Rails implementation | Compound (kieran/dhh reviewers) |
 | Quick code check | GOgent (code-reviewer) |
 | Thorough PR review | Compound (/workflows:review) |
-| Large context analysis | GOgent (gemini-slave) |
 | Framework docs lookup | Compound (Context7 MCP) |
 | Library source reading | GOgent (librarian) |
 | Document a solution | Compound (/workflows:compound) |

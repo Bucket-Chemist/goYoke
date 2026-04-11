@@ -92,8 +92,8 @@ func TestGenerateRecommendation(t *testing.T) {
 		{"tiny project", 3, 200, "haiku"},
 		{"small project", 10, 1000, "sonnet"},
 		{"medium project", 15, 1800, "sonnet"},
-		{"large project", 25, 10000, "external"},
-		{"high token count", 10, 6000, "external"},
+		{"large project", 25, 10000, "opus"},
+		{"high token count", 10, 6000, "opus"},
 	}
 
 	for _, tt := range tests {

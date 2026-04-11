@@ -136,7 +136,7 @@ $ SCOUT_BACKEND=native gogent-scout ./pkg/routing "Quick scan"
 |-------|-------|--------|------|-----------|
 | < 5 | < 500 | < 5K | `haiku` | Small scope, mechanical work |
 | ≤ 15 | < 2000 | < 20K | `sonnet` | Medium scope, reasoning required |
-| > 15 | > 2000 | > 50K | `external` | Large scope, use gemini-slave mapper |
+| > 15 | > 2000 | > 50K | `opus` | Large scope, consider /braintrust |
 
 ## Performance
 

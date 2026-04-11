@@ -24,8 +24,6 @@
       "Edit(**)",
       "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/debug-injection:*)",
       "Bash(bin/debug-injection:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gemini-slave:*)",
-      "Bash(bin/gemini-slave:*)",
       "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress:*)",
       "Bash(bin/gofortress:*)",
       "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-ipc-mcp:*)",

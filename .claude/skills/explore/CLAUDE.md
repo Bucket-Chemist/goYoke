@@ -3,7 +3,6 @@
 ## Quick Reference
 - **Purpose:** Reconnaissance + Planning wrapper
 - **Output:** User-approved plan via architect
-- **Scout:** gemini-slave scout (primary) or haiku-scout (fallback)
 - **Planner:** architect (Sonnet)
 
 ## Workflow Summary
@@ -16,7 +15,6 @@ User Goal → Scout → Architect → User Approval → Execute
 
 ```bash
 find <target> -type f \( -name "*.py" -o -name "*.R" -o -name "*.md" \) | \
-  gemini-slave scout "Assess scope for: <goal>"
 ```
 
 ## Architect Delegation

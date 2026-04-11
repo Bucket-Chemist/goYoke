@@ -20,7 +20,6 @@ GoGent is a **Tiered Multi-Agent System** that orchestrates two distinct intelli
 The system projects itself into the user's workspace via two hidden nodes:
 
 1.  **The Brain (`~/.claude/`):** A high-reasoning, low-context hypervisor. It handles planning, architecture, synthesis, and precise implementation.
-2.  **The Brawn (`~/.gemini-slave/`):** A high-context, low-reasoning engine. It handles scouting, mapping, bulk analysis, and large-scale pattern matching.
 
 ---
 
@@ -43,7 +42,6 @@ This directory acts as the **Orchestrator**. It contains the "conscious" agents 
   - **`sharp-edge-detector.sh`**: Monitors for debugging loops (3+ failures).
   - **`attention-gate.sh`**: Injects reminders to keep the model focused.
 
-### 2.2 The Brawn: Gemini Node (`~/.gemini-slave/`)
 
 This directory defines the **Context Engine**. Gemini is never "chatted" with; it is invoked via CLI protocols to perform heavy data processing.
 
@@ -89,7 +87,6 @@ A unique capability of this architecture is **Bidirectional Autonomy**.
 
 Claude (Brain) needs to understand a large codebase.
 
-- **Action:** Claude runs `find src | gemini-slave mapper "Map the auth system"`.
 - **Result:** Gemini reads the files and returns a JSON map.
 
 ### Reverse Dispatch (The Artifact)
@@ -229,7 +226,6 @@ Memory is a structured filesystem, not a vector DB. This allows for precise RAG 
     - Reads `pending-learnings.jsonl`.
     - Compresses them into permanent `sharp-edges/YYYY-MM-DD-error.md`.
     - Moves `specs.md` to `decisions/`.
-3.  **Audit:** Periodically, `gemini-slave memory-audit` runs to ensure these learnings are codified into agent configs (`agent.yaml`).
 
 ---
 
@@ -239,12 +235,10 @@ When a user asks: `/explore "Refactor Auth"`
 
 1.  **Ack:** System acknowledges goal.
 2.  **Scout (Gemini):**
-    - `find src | gemini-slave scout "Refactor Auth"`
     - Output: `scout_metrics.json` (Files: 15, Tokens: 45k).
 3.  **Math:** `calculate-complexity.sh` -> Score: 12.5.
 4.  **Route:** Score > 10 -> **Tier: External**.
 5.  **Map (Gemini):**
-    - `find src | gemini-slave mapper "Map Auth"`
     - Output: `map.json` (Entry points, dependencies).
 6.  **Plan (Claude - Architect):**
     - Reads `scout_metrics.json` and `map.json`.
@@ -263,7 +257,6 @@ When a user asks: `/explore "Refactor Auth"`
 The system self-validates using `suite.yaml`.
 
 - **Command:** `.claude/hooks/benchmark-logger.sh run suite.yaml`
-- **Auditor:** `gemini-slave benchmark-audit` scores the run.
 - **Metrics:** Cost Efficiency, Routing Accuracy, Attention Retention.
 
 ---

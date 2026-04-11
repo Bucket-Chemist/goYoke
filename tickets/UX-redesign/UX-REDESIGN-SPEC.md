@@ -1022,7 +1022,77 @@ func (m *TeamsHealthModel) renderMemberBar(member Member, width int) string {
 **Files to modify:**
 - `internal/tui/components/teams/health.go` — add timeline rendering mode
 
-### 7.6 Recommendation 5e: Team Diff Summary on Completion
+### 7.6 Recommendation 5e: Team Tabs in Drawer
+
+**Current behavior:** The teams drawer shows a flat list of all teams. To inspect a specific team, the user must scroll through the list. There's no way to quickly switch between the team you just launched and one that completed earlier.
+
+**Proposed behavior:** When the teams drawer is focused, each team gets a tab. Left/right arrow keys (or `h`/`l` in vim mode) cycle between team tabs. The drawer body shows the selected team's detail view.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📊 Teams  ◄ [review-0411] │ braintrust-0410 │ impl-0409 ►
+├─────────────────────────────────────────────────────────┤
+│ review-0411  ● Running  1m 23s  $1.12/$5.00            │
+│                                                         │
+│ Wave 1: RUNNING (1/3)                                   │
+│   ✓ backend-reviewer    completed  45s   $0.55          │
+│   ⏳ standards-reviewer  running    32s   $0.28          │
+│   ⏸ architect-reviewer  pending    —     —              │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Tab bar behavior:**
+- Active team tab is highlighted (accent color), others are dim
+- New teams appear on the left (most recent first)
+- Completed teams stay accessible — don't disappear
+- Tab count badge shows total: `Teams (3)` in the drawer header
+- Arrow indicators `◄` `►` appear when tabs overflow visible width
+- Tab label format: `{team-name}` with status dot (colored: green=complete, yellow=running, red=failed, grey=pending)
+
+**Keybindings (when teams drawer is focused):**
+
+| Key | Action |
+|-----|--------|
+| `←` / `h` | Previous team tab |
+| `→` / `l` | Next team tab |
+| `Enter` | Expand selected team to full detail view |
+| `d` | Delete/dismiss completed team from tab bar |
+
+**Why:** Teams are launched and completed throughout a session. The user needs to compare results between teams (e.g., "what did the review find vs what the braintrust said?"). Tabs give O(1) access to any team instead of scrolling through a chronological list. The left/right cycle pattern matches tab navigation elsewhere in the TUI.
+
+**Implementation:**
+
+Add `SelectedTeamIndex` and tab rendering to `TeamsHealthModel`:
+
+```go
+type TeamsHealthModel struct {
+    // ... existing fields
+    SelectedTeamIndex int      // Index into sorted teams slice
+    TeamTabs          []string // Pre-rendered tab labels with status dots
+    TabScrollOffset   int      // For overflow: first visible tab index
+}
+```
+
+Key handler in `handleTeamsDrawerKey`:
+```go
+case key.Matches(msg, key.NewBinding(key.WithKeys("left", "h"))):
+    if m.SelectedTeamIndex > 0 {
+        m.SelectedTeamIndex--
+    }
+case key.Matches(msg, key.NewBinding(key.WithKeys("right", "l"))):
+    if m.SelectedTeamIndex < len(m.TeamTabs)-1 {
+        m.SelectedTeamIndex++
+    }
+```
+
+Tab bar rendered above team detail content using lipgloss inline layout with truncation.
+
+**Files to modify:**
+- `internal/tui/components/teams/health.go` — add tab state, key handling, tab bar rendering
+- `internal/tui/components/teams/detail.go` — accept selected team index
+- `internal/tui/model/key_handlers.go` — wire left/right in teams drawer focus
+
+### 7.7 Recommendation 5f: Team Diff Summary on Completion
 
 When a team completes, add a summary line to the toast and team detail:
 
@@ -1073,6 +1143,7 @@ review team done — 3 files modified, +45 -12 lines — $2.30
 | 4c | Agent count sparkline dots | Medium | Low | statusline.go |
 | 5b | Action-hinted team toasts | Medium | Low | tools.go, spawn.go |
 | 5d | Team timeline progress bars | Medium | High | health.go |
+| 5e | Team tabs in drawer (←/→ cycle) | Medium | Medium | health.go, detail.go, key_handlers.go |
 
 **Estimated combined effort:** 3-4 sessions
 
@@ -1088,7 +1159,7 @@ review team done — 3 files modified, +45 -12 lines — $2.30
 | 4d | Adaptive 1-row status line at narrow widths | Medium | Medium | statusline.go, layout.go |
 | 4e | Cost flash-on-change | Low | Low | statusline.go |
 | 5c | Auto-switch on team completion | Low | Low | app.go |
-| 5e | Team diff summary on completion | Low | Medium | detail.go |
+| 5f | Team diff summary on completion | Low | Medium | detail.go |
 
 ---
 

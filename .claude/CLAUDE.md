@@ -253,11 +253,8 @@ Request arrives
 | `einstein`  | Theoretical analysis (root cause, frameworks, first principles) | mozart            |
 | `beethoven` | Synthesis of orthogonal analyses into unified document          | mozart            |
 
-### External: Gemini + Native Scout
-
 | Trigger Patterns                           | Handler        | Notes                                                        |
 | ------------------------------------------ | -------------- | ------------------------------------------------------------ |
-| full codebase, cross-module, large context | `gemini-slave` | Via Bash, not spawn_agent. Models: `gemini-3-flash-preview` (mapper), `gemini-3-pro-preview` (debugger, architect) |
 | native scope assessment, fast file metrics | `gogent-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
 
 ---
@@ -503,24 +500,6 @@ CONSTRAINTS: [what not to do]`,
 
 ---
 
-## Gemini Slave (Special Case)
-
-Uses Bash, NOT spawn_agent. Backed by Google Gemini 3 models.
-
-```bash
-# Gather files and pipe to gemini-slave
-cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependencies"
-```
-
-| Protocol         | Model                    | Output    | Use When                       |
-| ---------------- | ------------------------ | --------- | ------------------------------ |
-| `mapper`         | `gemini-3-flash-preview` | JSON      | Reduce files to critical paths |
-| `debugger`       | `gemini-3-pro-preview`   | Markdown  | Cross-module error tracing     |
-| `architect`      | `gemini-3-pro-preview`   | Markdown  | Module review                  |
-| `memory-audit`   | `gemini-3-pro-preview`   | JSON      | Memory system audit            |
-| `benchmark-audit`| `gemini-3-pro-preview`   | JSON      | Benchmark analysis             |
-
----
 
 ## Workflow Patterns
 
@@ -535,12 +514,6 @@ For unknown scope:
 4. Execute via appropriate agent
 ```
 
-### Pattern 2: Gemini → Orchestrator → Architect
-
-For large-context analysis:
-
-```
-1. gemini-slave (Bash) → produces report
 2. orchestrator (spawn_agent) → synthesizes findings
 3. architect (spawn_agent) → creates implementation plan
 ```

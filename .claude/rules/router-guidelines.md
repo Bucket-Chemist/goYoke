@@ -31,7 +31,6 @@ Before using ANY tool, verify:
 
 **Opus tier (einstein)**: Novel, complex, or security-critical tasks → **generate GAP document** per Section 3.
 
-**External (Gemini)**: Over 10 files or 50K tokens → pipe to gemini-slave first.
 
 #### 1.2.1 Go Implementation Agents (Sonnet Tier)
 
@@ -415,7 +414,6 @@ These anti-patterns apply to Claude's internal behavior when executing tasks wit
 | Spawning background tasks without collecting | Orphaned work, blocked by gogent-orchestrator-guard | Always call TaskOutput before final synthesis |
 | Ignoring hook injections | Misses guidance/enforcement | Read and follow additionalContext from hooks |
 | Skipping scout on unknown scope | Potential mis-routing to expensive tier | Scout first with haiku-scout or gogent-scout |
-| Large context without Gemini | Context overflow, high cost | Pipe to gemini-slave for >50K tokens |
 
 ### 8.2 WARNING Behaviors
 

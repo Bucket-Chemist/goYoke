@@ -12,11 +12,10 @@ var ValidTiers = []string{
 	"haiku_thinking",
 	"sonnet",
 	"opus",
-	"external",
 }
 
 // GetCurrentTier reads the current tier from ~/.gogent/current-tier.
-// Returns "external" as fallback if file doesn't exist or is empty.
+// Returns "sonnet" as fallback if file doesn't exist or is empty.
 // Validates tier value against routing schema.
 //
 // Error format: "[tier] What. Why. How to fix."
@@ -25,7 +24,7 @@ func GetCurrentTier() (string, error) {
 }
 
 // GetCurrentTierFromPath reads tier from specified path (extracted for testing).
-// Returns "external" as fallback if file doesn't exist or is empty.
+// Returns "sonnet" as fallback if file doesn't exist or is empty.
 // Validates tier value against routing schema.
 //
 // This function is exported to allow tests to inject custom file paths
@@ -34,9 +33,9 @@ func GetCurrentTierFromPath(path string) (string, error) {
 	// Read file contents
 	content, err := os.ReadFile(path)
 	if err != nil {
-		// File doesn't exist → return external fallback
+		// File doesn't exist → return sonnet fallback
 		if os.IsNotExist(err) {
-			return "external", nil
+			return "sonnet", nil
 		}
 		return "", fmt.Errorf("[tier] Failed to read current-tier file. Filesystem error. Check permissions on %s: %w", path, err)
 	}
@@ -44,9 +43,9 @@ func GetCurrentTierFromPath(path string) (string, error) {
 	// Trim whitespace
 	tier := strings.TrimSpace(string(content))
 
-	// Empty file → return external fallback
+	// Empty file → return sonnet fallback
 	if tier == "" {
-		return "external", nil
+		return "sonnet", nil
 	}
 
 	// Validate tier value
