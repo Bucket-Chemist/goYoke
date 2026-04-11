@@ -59,7 +59,7 @@
     {
       "id": "UX-005",
       "title": "Status line: enhance existing context bar",
-      "status": "pending",
+      "status": "completed",
       "phase": 1,
       "priority": "P0",
       "effort": "0.25s",
