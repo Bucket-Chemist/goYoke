@@ -1464,3 +1464,188 @@ func TestRenderMessages_SeparatorUsesViewportWidth(t *testing.T) {
 		t.Errorf("expected rule of width %d matching viewport width; not found in view", panelWidth-1)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// UX-014: Inline tool spinner + duration (renderToolBlock)
+// ---------------------------------------------------------------------------
+
+// toolUseMsg constructs a ToolUseMsg with the given name/id/input.
+func toolUseMsg(name, id, input string) model.ToolUseMsg {
+	return model.ToolUseMsg{ToolName: name, ToolID: id, Input: input}
+}
+
+// toolResultMsg constructs a ToolResultMsg signalling success or failure.
+func toolResultMsg(id string, success bool) model.ToolResultMsg {
+	return model.ToolResultMsg{ToolID: id, Success: success}
+}
+
+// TestRenderToolBlock_PendingShowsSpinner verifies that a ToolBlock whose
+// Success field is nil (pending) renders with the ⏳ spinner prefix.
+func TestRenderToolBlock_PendingShowsSpinner(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Read", "tool-1", `{"file_path":"/tmp/foo.txt"}`))
+
+	view := stripANSI(m.View())
+	if !strings.Contains(view, "⏳") {
+		t.Errorf("pending tool block should show ⏳ spinner; view:\n%s", view)
+	}
+}
+
+// TestRenderToolBlock_SuccessShowsCheckAndDuration verifies that a completed
+// successful ToolBlock renders with ✓ and a duration string.
+func TestRenderToolBlock_SuccessShowsCheckAndDuration(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Read", "tool-2", `{"file_path":"/tmp/bar.txt"}`))
+	// Simulate a small sleep so Duration > 0.
+	time.Sleep(2 * time.Millisecond)
+	m, _ = m.Update(toolResultMsg("tool-2", true))
+
+	view := stripANSI(m.View())
+	if !strings.Contains(view, "✓") {
+		t.Errorf("completed successful tool block should show ✓; view:\n%s", view)
+	}
+	// A duration suffix (e.g. "2ms" or "0ms") should appear.
+	if !strings.Contains(view, "ms") && !strings.Contains(view, "s") {
+		t.Errorf("completed tool block should show a duration suffix; view:\n%s", view)
+	}
+}
+
+// TestRenderToolBlock_FailureShowsX verifies that a failed ToolBlock renders
+// with the ✗ prefix.
+func TestRenderToolBlock_FailureShowsX(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Bash", "tool-3", `{"command":"ls /nonexistent"}`))
+	m, _ = m.Update(toolResultMsg("tool-3", false))
+
+	view := stripANSI(m.View())
+	if !strings.Contains(view, "✗") {
+		t.Errorf("failed tool block should show ✗; view:\n%s", view)
+	}
+}
+
+// TestToolBlocksShownInAllTiers verifies that tool blocks are rendered
+// regardless of the active layout tier (UX-014 removed the compact-only gate).
+func TestToolBlocksShownInAllTiers(t *testing.T) {
+	tiers := []struct {
+		name  string
+		width int // width drives tier selection in SetSize
+	}{
+		{"compact", 60},
+		{"standard", 100},
+		{"wide", 140},
+	}
+	for _, tc := range tiers {
+		t.Run(tc.name, func(t *testing.T) {
+			m := claude.NewClaudePanelModel(config.DefaultKeyMap())
+			m.SetSize(tc.width, 24)
+			m.SetFocused(true)
+
+			m, _ = m.Update(assistantMsg("hi"))
+			m, _ = m.Update(toolUseMsg("Read", "tool-t", `{"file_path":"/x"}`))
+
+			view := stripANSI(m.View())
+			if !strings.Contains(view, "[Read]") {
+				t.Errorf("tier=%s: expected [Read] in view; got:\n%s", tc.name, view)
+			}
+		})
+	}
+}
+
+// TestRenderToolBlock_PendingNoSpinnerAfterCompletion verifies that once a
+// result arrives the ⏳ spinner is replaced by ✓/✗ (not both).
+func TestRenderToolBlock_PendingNoSpinnerAfterCompletion(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Edit", "tool-5", `{"file_path":"/a/b.go"}`))
+	m, _ = m.Update(toolResultMsg("tool-5", true))
+
+	view := stripANSI(m.View())
+	if strings.Contains(view, "⏳") {
+		t.Errorf("completed tool block must not still show ⏳; view:\n%s", view)
+	}
+	if !strings.Contains(view, "✓") {
+		t.Errorf("completed tool block should show ✓; view:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// UX-015: ToggleToolExpansion / CycleExpansion keybindings
+// ---------------------------------------------------------------------------
+
+// TestToggleToolExpansion_TogglesLastBlock verifies that alt+e flips the
+// Expanded flag on the most-recent tool block.
+func TestToggleToolExpansion_TogglesLastBlock(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Read", "t1", `{"file_path":"/a.go"}`))
+
+	msgs := m.Messages()
+	require.Len(t, msgs[0].ToolBlocks, 1)
+	assert.False(t, msgs[0].ToolBlocks[0].Expanded, "new tool block should default to collapsed")
+
+	// First alt+e: expand.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e"), Alt: true})
+	msgs = m.Messages()
+	assert.True(t, msgs[0].ToolBlocks[0].Expanded, "after first alt+e block should be expanded")
+
+	// Second alt+e: collapse.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e"), Alt: true})
+	msgs = m.Messages()
+	assert.False(t, msgs[0].ToolBlocks[0].Expanded, "after second alt+e block should be collapsed again")
+}
+
+// TestCycleExpansion_ExpandsAllWhenAnyCollapsed verifies that alt+shift+e
+// expands all blocks when at least one is collapsed.
+func TestCycleExpansion_ExpandsAllWhenAnyCollapsed(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Read", "t1", `{"file_path":"/a.go"}`))
+	m, _ = m.Update(toolUseMsg("Write", "t2", `{"file_path":"/b.go"}`))
+
+	// Manually expand the first block so we have a mixed state.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e"), Alt: true})
+
+	// alt+E (shift) should expand all.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("E"), Alt: true})
+	msgs := m.Messages()
+	require.Len(t, msgs[0].ToolBlocks, 2)
+	assert.True(t, msgs[0].ToolBlocks[0].Expanded, "block 0 should be expanded")
+	assert.True(t, msgs[0].ToolBlocks[1].Expanded, "block 1 should be expanded")
+}
+
+// TestCycleExpansion_CollapsesAllWhenAllExpanded verifies that alt+shift+e
+// collapses all blocks when all are already expanded.
+func TestCycleExpansion_CollapsesAllWhenAllExpanded(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("working"))
+	m, _ = m.Update(toolUseMsg("Read", "t1", `{"file_path":"/a.go"}`))
+	m, _ = m.Update(toolUseMsg("Write", "t2", `{"file_path":"/b.go"}`))
+
+	// Expand all first.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("E"), Alt: true})
+	msgs := m.Messages()
+	require.True(t, msgs[0].ToolBlocks[0].Expanded && msgs[0].ToolBlocks[1].Expanded,
+		"precondition: both blocks expanded")
+
+	// alt+E again: collapse all.
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("E"), Alt: true})
+	msgs = m.Messages()
+	assert.False(t, msgs[0].ToolBlocks[0].Expanded, "block 0 should be collapsed")
+	assert.False(t, msgs[0].ToolBlocks[1].Expanded, "block 1 should be collapsed")
+}
+
+// TestToggleToolExpansion_NoOpWithoutToolBlocks verifies that alt+e on a panel
+// with no tool blocks does not panic and is a silent no-op.
+func TestToggleToolExpansion_NoOpWithoutToolBlocks(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(assistantMsg("no tools here"))
+
+	require.NotPanics(t, func() {
+		m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e"), Alt: true})
+	})
+	msgs := m.Messages()
+	assert.Len(t, msgs[0].ToolBlocks, 0, "no tool blocks should be added")
+}

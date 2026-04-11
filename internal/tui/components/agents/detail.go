@@ -26,12 +26,13 @@ var activityToolStyle = lipgloss.NewStyle().
 
 // DetailSection represents one collapsible section in the agent detail panel.
 type DetailSection struct {
-	Title         string
-	Expanded      bool
-	render        func(a *state.Agent, w int) string // renders section content (compact)
-	renderFocused func(a *state.Agent, w int) string // renders section content when focused+expanded (optional)
-	titleFunc     func(a *state.Agent) string        // dynamic title override (optional)
-	visible       func(a *state.Agent) bool          // returns false to hide section entirely
+	Title           string
+	Expanded        bool
+	render          func(a *state.Agent, w int) string // renders section content (compact)
+	renderFocused   func(a *state.Agent, w int) string // renders section content when focused+expanded (optional)
+	renderCollapsed func(a *state.Agent, w int) string // renders one-line content when collapsed (optional)
+	titleFunc       func(a *state.Agent) string        // dynamic title override (optional)
+	visible         func(a *state.Agent) bool          // returns false to hide section entirely
 }
 
 // ---------------------------------------------------------------------------
@@ -64,10 +65,11 @@ func NewAgentDetailModel() AgentDetailModel {
 func (m AgentDetailModel) defaultSections() []DetailSection {
 	return []DetailSection{
 		{
-			Title:    "Overview",
-			Expanded: true,
-			render:   renderOverview,
-			visible:  alwaysVisible,
+			Title:           "Overview",
+			Expanded:        false,
+			render:          renderOverview,
+			renderCollapsed: renderOverviewCompact,
+			visible:         alwaysVisible,
 		},
 		{
 			Title:    "Context",
@@ -289,13 +291,19 @@ func (m *AgentDetailModel) syncViewport() {
 		}
 		sb.WriteByte('\n')
 
-		// Section content (only if expanded).
+		// Section content.
 		if sec.Expanded {
 			renderFn := m.sections[i].render
 			if isFocusedSection && m.sections[i].renderFocused != nil {
 				renderFn = m.sections[i].renderFocused
 			}
 			content := renderFn(m.agent, m.contentWidth())
+			if content != "" {
+				sb.WriteString(content)
+				sb.WriteByte('\n')
+			}
+		} else if m.sections[i].renderCollapsed != nil {
+			content := m.sections[i].renderCollapsed(m.agent, m.contentWidth())
 			if content != "" {
 				sb.WriteString(content)
 				sb.WriteByte('\n')
@@ -394,6 +402,20 @@ func renderOverview(a *state.Agent, _ int) string {
 	row("Tokens", formatTokens(a.Tokens), valueStyle)
 
 	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderOverviewCompact renders a single-line summary for the collapsed Overview.
+//
+// Format: "  {Status} · {AgentType} · {Model} · ${Cost} · {Duration}"
+func renderOverviewCompact(a *state.Agent, w int) string {
+	line := fmt.Sprintf("  %s · %s · %s · $%.3f · %s",
+		statusStyleFor(a.Status).Render(capitalise(a.Status.String())),
+		a.AgentType,
+		a.Model,
+		a.Cost,
+		formatAgentDuration(a),
+	)
+	return util.Truncate(line, w)
 }
 
 func renderContext(a *state.Agent, w int) string {

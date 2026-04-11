@@ -161,7 +161,7 @@
     {
       "id": "UX-013",
       "title": "Detail: collapsible overview to one-liner",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.5s",
@@ -173,7 +173,7 @@
     {
       "id": "UX-014",
       "title": "Conversation: inline streaming tool indicator",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.75s",
@@ -185,7 +185,7 @@
     {
       "id": "UX-015",
       "title": "Conversation: collapsible tool-use blocks",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.25-0.5s",
@@ -197,7 +197,7 @@
     {
       "id": "UX-016",
       "title": "Status line: agent count sparkline dots",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.25s",
@@ -209,7 +209,7 @@
     {
       "id": "UX-017",
       "title": "Status line: adaptive 1-row at narrow widths",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.5s",
@@ -221,7 +221,7 @@
     {
       "id": "UX-018",
       "title": "Teams: action-hinted toasts",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.25s",
@@ -233,7 +233,7 @@
     {
       "id": "UX-019",
       "title": "Teams: auto-switch on completion",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.25s",
@@ -245,7 +245,7 @@
     {
       "id": "UX-020",
       "title": "Reduce-motion config flag",
-      "status": "pending",
+      "status": "completed",
       "phase": 3,
       "priority": "P2",
       "effort": "0.25s",

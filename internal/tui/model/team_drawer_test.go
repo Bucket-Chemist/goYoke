@@ -192,3 +192,140 @@ func TestPollTick_NoNotificationAllowsClear(t *testing.T) {
 
 	assert.False(t, graceActive, "grace should not be active when teamNotifiedAt is zero")
 }
+
+// ---------------------------------------------------------------------------
+// Minimal claudePanelWidget stub for completion behavior tests (UX-019).
+// ---------------------------------------------------------------------------
+
+type completionClaudePanel struct {
+	streaming bool
+	hasInput  bool
+}
+
+func (p *completionClaudePanel) HandleMsg(_ tea.Msg) tea.Cmd                    { return nil }
+func (p *completionClaudePanel) View() string                                    { return "" }
+func (p *completionClaudePanel) ViewConversation() string                        { return "" }
+func (p *completionClaudePanel) ViewInput() string                               { return "" }
+func (p *completionClaudePanel) ApplyOverlay(s string) string                    { return s }
+func (p *completionClaudePanel) SetSize(_, _ int)                                {}
+func (p *completionClaudePanel) SetFocused(_ bool)                               {}
+func (p *completionClaudePanel) IsStreaming() bool                               { return p.streaming }
+func (p *completionClaudePanel) HasInput() bool                                  { return p.hasInput }
+func (p *completionClaudePanel) SaveMessages() []state.DisplayMessage            { return nil }
+func (p *completionClaudePanel) RestoreMessages(_ []state.DisplayMessage)        {}
+func (p *completionClaudePanel) SetSender(_ MessageSender)                       {}
+func (p *completionClaudePanel) AppendSystemMessage(_ string)                    {}
+func (p *completionClaudePanel) SetTier(_ LayoutTier)                            {}
+func (p *completionClaudePanel) SetReduceMotion(_ bool)                          {}
+
+// newCompletionTestModel returns a minimal AppModel wired for completion tests.
+func newCompletionTestModel(panel *completionClaudePanel) AppModel {
+	drawer := &trackingDrawerStack{}
+	health := &trackingTeamsHealth{hasData: true, viewContent: "Teams view"}
+	teamList := &trackingTeamList{}
+	shared := &sharedState{
+		drawerStack: drawer,
+		teamsHealth: health,
+		teamList:    teamList,
+	}
+	if panel != nil {
+		shared.claudePanel = panel
+	}
+	return AppModel{shared: shared}
+}
+
+// extractTabFlash inspects a tea.Cmd batch for a TabFlashMsg command.
+func extractTabFlash(cmd tea.Cmd) (TabFlashMsg, bool) {
+	if cmd == nil {
+		return TabFlashMsg{}, false
+	}
+	msg := cmd()
+	switch m := msg.(type) {
+	case TabFlashMsg:
+		return m, true
+	case tea.BatchMsg:
+		for _, c := range m {
+			if flash, ok := extractTabFlash(c); ok {
+				return flash, true
+			}
+		}
+	}
+	return TabFlashMsg{}, false
+}
+
+// ---------------------------------------------------------------------------
+// UX-019: completion behavior tests
+// ---------------------------------------------------------------------------
+
+func TestHandleTeamUpdate_CompletionFlashesTab(t *testing.T) {
+	m := newCompletionTestModel(nil)
+
+	_, cmd := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "complete"})
+
+	flash, ok := extractTabFlash(cmd)
+	assert.True(t, ok, "expected a TabFlashMsg in the returned cmd batch")
+	assert.Equal(t, int(RPMTeams), flash.TabIndex, "tab index should match RPMTeams")
+}
+
+func TestHandleTeamUpdate_ErrorAlsoFlashesTab(t *testing.T) {
+	m := newCompletionTestModel(nil)
+
+	_, cmd := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "error"})
+
+	_, ok := extractTabFlash(cmd)
+	assert.True(t, ok, "failed team should also flash Teams tab")
+}
+
+func TestHandleTeamUpdate_RunningStatusDoesNotFlash(t *testing.T) {
+	m := newCompletionTestModel(nil)
+
+	_, cmd := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "running"})
+
+	_, ok := extractTabFlash(cmd)
+	assert.False(t, ok, "running status should not flash the Teams tab")
+}
+
+func TestHandleTeamUpdate_AutoSwitchWhenIdle(t *testing.T) {
+	panel := &completionClaudePanel{streaming: false, hasInput: false}
+	m := newCompletionTestModel(panel)
+	// Ensure we're not already on Teams.
+	m.rightPanelMode = RPMAgents
+
+	updated, _ := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "complete"})
+	app := updated.(AppModel)
+
+	assert.Equal(t, RPMTeams, app.rightPanelMode, "should auto-switch to Teams when idle")
+}
+
+func TestHandleTeamUpdate_NoAutoSwitchWhenStreaming(t *testing.T) {
+	panel := &completionClaudePanel{streaming: true, hasInput: false}
+	m := newCompletionTestModel(panel)
+	m.rightPanelMode = RPMAgents
+
+	updated, _ := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "complete"})
+	app := updated.(AppModel)
+
+	assert.Equal(t, RPMAgents, app.rightPanelMode, "should not auto-switch while streaming")
+}
+
+func TestHandleTeamUpdate_NoAutoSwitchWhenTyping(t *testing.T) {
+	panel := &completionClaudePanel{streaming: false, hasInput: true}
+	m := newCompletionTestModel(panel)
+	m.rightPanelMode = RPMAgents
+
+	updated, _ := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "complete"})
+	app := updated.(AppModel)
+
+	assert.Equal(t, RPMAgents, app.rightPanelMode, "should not auto-switch while user is typing")
+}
+
+func TestHandleTeamUpdate_NoAutoSwitchWhenStreamingAndTyping(t *testing.T) {
+	panel := &completionClaudePanel{streaming: true, hasInput: true}
+	m := newCompletionTestModel(panel)
+	m.rightPanelMode = RPMDashboard
+
+	updated, _ := m.Update(TeamUpdateMsg{TeamDir: "/tmp/my-team", Status: "complete"})
+	app := updated.(AppModel)
+
+	assert.Equal(t, RPMDashboard, app.rightPanelMode, "should not auto-switch when both streaming and typing")
+}

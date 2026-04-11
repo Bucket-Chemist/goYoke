@@ -280,8 +280,14 @@ func TestDetail_SetAgent_ShowsCostAndTokens(t *testing.T) {
 	agent.Tokens = 4500
 	m.SetAgent(agent)
 
+	// Cost appears in the collapsed compact line ($0.123).
 	view := m.View()
 	assert.Contains(t, view, "0.123", "View() must display cost")
+
+	// Tokens only appear in the expanded Overview — expand it directly.
+	m.sections[0].Expanded = true
+	m.syncViewport()
+	view = m.View()
 	assert.Contains(t, view, "4,500", "View() must display token count with thousands separator")
 }
 

@@ -139,3 +139,13 @@ func SetTeamFieldsForTest(m *StatusLineModel, active bool, name string, statuses
 	m.TeamTotalWaves = total
 	m.TeamCost = cost
 }
+
+// RenderAgentSparklineForTest exposes renderAgentSparkline for direct unit testing.
+func (m StatusLineModel) RenderAgentSparklineForTest() string {
+	return m.renderAgentSparkline()
+}
+
+// SpinnerIdxForTest returns the internal spinner frame index for testing.
+func (m StatusLineModel) SpinnerIdxForTest() int {
+	return m.spinnerIdx
+}

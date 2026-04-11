@@ -177,6 +177,10 @@ type sharedState struct {
 	// persisted to SessionData without re-deriving the variant from the Theme
 	// value (which would require a reverse lookup).
 	themeVariant config.ThemeVariant
+
+	// reduceMotion disables animations when true (WCAG 2.3.1).
+	// Set via Settings → Display → Reduce Motion toggle.
+	reduceMotion bool
 }
 
 // ---------------------------------------------------------------------------

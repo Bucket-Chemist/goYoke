@@ -118,6 +118,9 @@ type claudePanelWidget interface {
 	SetSize(width, height int)
 	SetFocused(focused bool)
 	IsStreaming() bool
+	// HasInput returns true when the text input contains non-empty text.
+	// Used by the auto-switch guard to avoid interrupting the user mid-compose.
+	HasInput() bool
 	// SaveMessages returns a snapshot of the current conversation history.
 	// ToolBlocks are omitted; only the role, content, and timestamp are kept.
 	SaveMessages() []state.DisplayMessage
@@ -133,6 +136,9 @@ type claudePanelWidget interface {
 	// SetTier notifies the component of the current responsive layout tier.
 	// Components may use this to adapt their rendering in future tickets.
 	SetTier(tier LayoutTier)
+	// SetReduceMotion controls whether animations (e.g. rainbow ultrathink
+	// indicator) are suppressed for accessibility (WCAG 2.3.1).
+	SetReduceMotion(v bool)
 }
 
 // ---------------------------------------------------------------------------

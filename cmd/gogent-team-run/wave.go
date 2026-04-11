@@ -113,11 +113,34 @@ func spawnAndWaitWithBudget(ctx context.Context, tr *TeamRunner, waveIdx, memIdx
 	tr.configMu.RUnlock()
 
 	// Reconcile budget: return reservation, deduct actual
+	remainingBefore := tr.BudgetRemaining()
 	if err := tr.reconcileCost(estimated, actual); err != nil {
 		log.Printf("[ERROR] wave: budget reconciliation failed for %s: %v", memberName, err)
 	} else {
+		remainingAfter := tr.BudgetRemaining()
 		log.Printf("[INFO] wave: reconciled budget for %s (estimated=$%.2f, actual=$%.2f, remaining=$%.2f)",
-			memberName, estimated, actual, tr.BudgetRemaining())
+			memberName, estimated, actual, remainingAfter)
+
+		// Budget warning toast: fire once when budget crosses below WarningThresholdUSD.
+		tr.configMu.RLock()
+		var warningThreshold, maxBudget float64
+		if tr.config != nil {
+			warningThreshold = tr.config.WarningThresholdUSD
+			maxBudget = tr.config.BudgetMaxUSD
+		}
+		tr.configMu.RUnlock()
+
+		if warningThreshold > 0 && maxBudget > 0 &&
+			remainingBefore > warningThreshold && remainingAfter <= warningThreshold {
+			if tr.budgetWarnSent.CompareAndSwap(false, true) && tr.uds != nil && !tr.uds.isNoop() {
+				pct := (remainingAfter / maxBudget) * 100
+				tr.uds.notify(typeToast, toastPayload{
+					Message: fmt.Sprintf("budget warning: $%.2f of $%.2f remaining (%.0f%%) — /team-status for cost breakdown",
+						remainingAfter, maxBudget, pct),
+					Level: "warn",
+				})
+			}
+		}
 	}
 }
 

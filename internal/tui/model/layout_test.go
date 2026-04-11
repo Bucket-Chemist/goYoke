@@ -646,11 +646,13 @@ func (s *stubClaudePanel) View() string                           { return s.vie
 func (s *stubClaudePanel) SetSize(_, _ int)                       {}
 func (s *stubClaudePanel) SetFocused(f bool)                      { s.focused = f }
 func (s *stubClaudePanel) IsStreaming() bool                      { return false }
+func (s *stubClaudePanel) HasInput() bool                         { return false }
 func (s *stubClaudePanel) SaveMessages() []state.DisplayMessage   { return nil }
 func (s *stubClaudePanel) RestoreMessages(_ []state.DisplayMessage) {}
 func (s *stubClaudePanel) SetSender(_ MessageSender)              {}
 func (s *stubClaudePanel) AppendSystemMessage(_ string)           {}
 func (s *stubClaudePanel) SetTier(_ LayoutTier)                   {}
+func (s *stubClaudePanel) SetReduceMotion(_ bool)                 {}
 func (s *stubClaudePanel) ViewConversation() string               { return s.viewContent }
 func (s *stubClaudePanel) ViewInput() string                      { return "" }
 func (s *stubClaudePanel) ApplyOverlay(composed string) string    { return composed }

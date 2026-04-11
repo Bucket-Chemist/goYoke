@@ -171,6 +171,10 @@ type ClaudePanelModel struct {
 	// effortLevel holds the current --effort level for display in the input
 	// line. Empty string or "auto" means default (no indicator shown).
 	effortLevel string
+
+	// reduceMotion disables the rainbow gradient ultrathink indicator when true
+	// (WCAG 2.3.1). Set via Settings → Display → Reduce Motion toggle.
+	reduceMotion bool
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -406,9 +410,10 @@ func (m ClaudePanelModel) handleToolUseMsg(msg model.ToolUseMsg) ClaudePanelMode
 	}
 	last := &m.messages[len(m.messages)-1]
 	last.ToolBlocks = append(last.ToolBlocks, ToolBlock{
-		Name:   msg.ToolName,
-		ToolID: msg.ToolID,
-		Input:  msg.Input,
+		Name:      msg.ToolName,
+		ToolID:    msg.ToolID,
+		Input:     msg.Input,
+		StartedAt: time.Now(),
 	})
 
 	m.syncViewport()
@@ -427,12 +432,52 @@ func (m ClaudePanelModel) handleToolResultMsg(msg model.ToolResultMsg) ClaudePan
 			if m.messages[i].ToolBlocks[j].ToolID == msg.ToolID {
 				s := msg.Success
 				m.messages[i].ToolBlocks[j].Success = &s
+				if !m.messages[i].ToolBlocks[j].StartedAt.IsZero() {
+					m.messages[i].ToolBlocks[j].Duration = time.Since(m.messages[i].ToolBlocks[j].StartedAt)
+				}
 				m.syncViewport()
 				return m
 			}
 		}
 	}
 	return m
+}
+
+// toggleLastToolExpansion toggles the Expanded state of the most recent tool
+// block in the conversation. Walks messages backwards to find the last
+// assistant message with tool blocks.
+func (m *ClaudePanelModel) toggleLastToolExpansion() {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		if len(m.messages[i].ToolBlocks) > 0 {
+			last := len(m.messages[i].ToolBlocks) - 1
+			m.messages[i].ToolBlocks[last].Expanded = !m.messages[i].ToolBlocks[last].Expanded
+			m.syncViewport()
+			return
+		}
+	}
+}
+
+// cycleAllToolExpansion cycles all tool blocks in the last assistant message
+// between all-collapsed and all-expanded states.
+// If any block is collapsed → expand all. If all expanded → collapse all.
+func (m *ClaudePanelModel) cycleAllToolExpansion() {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		if len(m.messages[i].ToolBlocks) == 0 {
+			continue
+		}
+		anyCollapsed := false
+		for _, tb := range m.messages[i].ToolBlocks {
+			if !tb.Expanded {
+				anyCollapsed = true
+				break
+			}
+		}
+		for j := range m.messages[i].ToolBlocks {
+			m.messages[i].ToolBlocks[j].Expanded = anyCollapsed
+		}
+		m.syncViewport()
+		return
+	}
 }
 
 // handleKey processes keyboard input while the panel is focused.
@@ -585,6 +630,14 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 
 	case key.Matches(msg, m.keys.HistoryNext):
 		m = m.navigateHistoryNext()
+		return m, nil
+
+	case key.Matches(msg, m.keys.ToggleToolExpansion):
+		m.toggleLastToolExpansion()
+		return m, nil
+
+	case key.Matches(msg, m.keys.CycleExpansion):
+		m.cycleAllToolExpansion()
 		return m, nil
 	}
 
@@ -919,7 +972,11 @@ func (m ClaudePanelModel) renderMessages() string {
 
 	switch {
 	case m.thinkingActive && m.ultrathinkActive:
-		sb.WriteString("\n" + config.RainbowGradient("Thinking..."))
+		if m.reduceMotion {
+			sb.WriteString("\n" + config.StyleMuted.Render("thinking..."))
+		} else {
+			sb.WriteString("\n" + config.RainbowGradient("Thinking..."))
+		}
 	case m.thinkingActive:
 		sb.WriteString("\n" + config.StyleMuted.Render("thinking..."))
 	case m.streaming:
@@ -982,13 +1039,9 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 		}
 	}
 
-	// Render tool blocks inline only in compact mode (width < 80).
-	// In standard/wide/ultra tiers the Activity panel is visible and
-	// tool blocks are shown there instead (TUI-L05).
-	if m.tier == model.LayoutCompact {
-		for _, tb := range msg.ToolBlocks {
-			sb.WriteString(renderToolBlock(tb, m.vp.Width))
-		}
+	// Show inline tool blocks in all layout tiers (UX-014).
+	for _, tb := range msg.ToolBlocks {
+		sb.WriteString(renderToolBlock(tb, m.vp.Width))
 	}
 
 	return sb.String()
@@ -1036,26 +1089,32 @@ func extractToolDisplayInput(rawInput string) string {
 // renderToolBlock renders a ToolBlock either collapsed (just the name) or
 // expanded (name + input + output).
 func renderToolBlock(tb ToolBlock, _ int) string {
-	// Status prefix: ✓ for success, ✗ for failure, empty while pending.
-	prefix := "  "
+	var prefix, suffix string
+
 	if tb.Success != nil {
 		if *tb.Success {
 			prefix = "  ✓ "
 		} else {
 			prefix = "  ✗ "
 		}
+		if tb.Duration > 0 {
+			suffix = " " + config.StyleMuted.Render(fmtToolDuration(tb.Duration))
+		}
+	} else {
+		prefix = "  ⏳ "
 	}
 
 	if !tb.Expanded {
+		display := ""
 		if tb.Input != "" {
-			display := extractToolDisplayInput(tb.Input)
-			return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) +
-				" " + config.StyleSubtle.Render(display) + "\n"
+			display = " " + config.StyleSubtle.Render(extractToolDisplayInput(tb.Input))
 		}
-		return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) + "\n"
+		return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) +
+			display + suffix + "\n"
 	}
 	var sb strings.Builder
 	sb.WriteString(prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)))
+	sb.WriteString(suffix)
 	sb.WriteByte('\n')
 	if tb.Input != "" {
 		sb.WriteString(config.StyleSubtle.Render("    in:  "+tb.Input) + "\n")
@@ -1064,6 +1123,22 @@ func renderToolBlock(tb ToolBlock, _ int) string {
 		sb.WriteString(config.StyleSubtle.Render("    out: "+tb.Output) + "\n")
 	}
 	return sb.String()
+}
+
+// fmtToolDuration formats a tool invocation duration for the inline indicator.
+// Shows milliseconds for durations under 1 second, otherwise "Xs" or "Xm Ys".
+func fmtToolDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	d = d.Round(time.Second)
+	s := int(d.Seconds())
+	if s < 60 {
+		return fmt.Sprintf("%ds", s)
+	}
+	m := s / 60
+	s = s % 60
+	return fmt.Sprintf("%dm %ds", m, s)
 }
 
 // ---------------------------------------------------------------------------
@@ -1149,11 +1224,24 @@ func (m ClaudePanelModel) IsStreaming() bool {
 	return m.streaming
 }
 
+// HasInput returns true when the text input contains non-empty text.
+// Used by the auto-switch guard (UX-019) to avoid interrupting the user.
+func (m ClaudePanelModel) HasInput() bool {
+	return strings.TrimSpace(m.input.Value()) != ""
+}
+
 // IsUltrathinkActive reports whether the last submitted message contained
 // "ultrathink" (case-insensitive). Used by the thinking indicator renderer
 // to select the rainbow gradient variant.
 func (m ClaudePanelModel) IsUltrathinkActive() bool {
 	return m.ultrathinkActive
+}
+
+// SetReduceMotion controls whether animations (rainbow ultrathink indicator)
+// are suppressed for accessibility (WCAG 2.3.1). When true, the rainbow
+// gradient is replaced with a plain muted "thinking..." string.
+func (m *ClaudePanelModel) SetReduceMotion(v bool) {
+	m.reduceMotion = v
 }
 
 // refreshViewport rebuilds the viewport content string from the current

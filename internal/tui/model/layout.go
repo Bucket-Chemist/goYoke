@@ -158,7 +158,7 @@ func (m AppModel) computeLayout() layoutDims {
 		// crumbs on startup ensure the row is always present.
 		bcH = breadcrumbHeight
 	}
-	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - statusLineHeight - taskBoardH - toastH - hintH - bcH - borderFrame
+	dims.contentHeight = m.height - bannerHeight - tabBarHeight - providerTabH - m.statusLine.Height() - taskBoardH - toastH - hintH - bcH - borderFrame
 	if dims.contentHeight < 1 {
 		dims.contentHeight = 1
 	}

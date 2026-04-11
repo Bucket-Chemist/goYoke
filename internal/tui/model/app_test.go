@@ -41,6 +41,7 @@ func (m *mockClaudePanel) View() string      { return m.viewOutput }
 func (m *mockClaudePanel) SetSize(w, h int)  { m.width = w; m.height = h }
 func (m *mockClaudePanel) SetFocused(f bool) { m.focused = f }
 func (m *mockClaudePanel) IsStreaming() bool { return m.streaming }
+func (m *mockClaudePanel) HasInput() bool    { return false }
 func (m *mockClaudePanel) SaveMessages() []state.DisplayMessage {
 	return m.savedMessages
 }
@@ -55,6 +56,7 @@ func (m *mockClaudePanel) SetSender(s MessageSender) {
 }
 func (m *mockClaudePanel) AppendSystemMessage(_ string)        {}
 func (m *mockClaudePanel) SetTier(_ LayoutTier)                {}
+func (m *mockClaudePanel) SetReduceMotion(_ bool)              {}
 func (m *mockClaudePanel) ViewConversation() string            { return m.viewOutput }
 func (m *mockClaudePanel) ViewInput() string                   { return "" }
 func (m *mockClaudePanel) ApplyOverlay(composed string) string { return composed }
@@ -489,13 +491,17 @@ func TestComputeLayout_ExactBreakpointAt100_Uses70_30(t *testing.T) {
 }
 
 func TestComputeLayout_ContentHeight(t *testing.T) {
+	// Use Update(WindowSizeMsg) so that statusLine.SetWidth is called, keeping
+	// statusLine.width in sync with m.width. Without this, statusLine.Height()
+	// returns 1 (width=0 < 120) instead of 2 (Wide tier), giving contentHeight=33.
 	m := NewAppModel()
-	m.width = 120
-	m.height = 40
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(AppModel)
 
 	dims := m.computeLayout()
 
 	// contentHeight = height - bannerHeight(3) - tabBarHeight(1) - statusLineHeight(2) - borderFrame(2)
+	// At width=120 (Wide tier), statusLine.Height() == 2 == statusLineHeight.
 	wantHeight := 40 - bannerHeight - tabBarHeight - statusLineHeight - borderFrame // 32
 	if dims.contentHeight != wantHeight {
 		t.Errorf("contentHeight = %d; want %d", dims.contentHeight, wantHeight)

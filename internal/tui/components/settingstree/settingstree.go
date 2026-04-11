@@ -150,6 +150,13 @@ func defaultSections() []SettingsSection {
 					Value:       "off",
 					Description: "Enable j/k navigation in all panels.",
 				},
+				{
+					Key:         "reduce_motion",
+					Label:       "Reduce Motion",
+					Type:        SettingToggle,
+					Value:       "off",
+					Description: "Disable animations for accessibility (WCAG 2.3.1).",
+				},
 			},
 		},
 		{

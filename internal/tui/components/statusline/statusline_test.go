@@ -1,14 +1,17 @@
 package statusline_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
@@ -575,9 +578,9 @@ func TestUncommittedCountCmd_Execution(t *testing.T) {
 
 func TestView_IncludesAgentCount(t *testing.T) {
 	m := statusline.NewStatusLineModel(160)
-	m.AgentCount = 3
+	m.AgentStats = state.AgentStats{Total: 3, Running: 3}
 	view := m.View()
-	assert.Contains(t, view, "agents:3", "View() should include 'agents:3'")
+	assert.Contains(t, view, "agents: 3/3", "View() should include 'agents: 3/3'")
 }
 
 func TestView_IncludesUncommittedCount_WhenPositive(t *testing.T) {
@@ -602,7 +605,7 @@ func TestView_ExcludesUncommittedCount_WhenZero(t *testing.T) {
 
 func TestView_TwoRowsWithNewFields(t *testing.T) {
 	m := statusline.NewStatusLineModel(200)
-	m.AgentCount = 2
+	m.AgentStats = state.AgentStats{Total: 2, Running: 2}
 	m.UncommittedCount = 4
 	m.SessionCost = 1.50
 	m.ContextPercent = 85
@@ -859,4 +862,188 @@ func TestView_TeamIndicator_TwoRowsPreserved(t *testing.T) {
 	view = strings.TrimRight(view, "\n")
 	lines := strings.Split(view, "\n")
 	assert.Equal(t, 2, len(lines), "View() must produce exactly 2 rows when team indicator is active")
+}
+
+// ---------------------------------------------------------------------------
+// Agent sparkline
+// ---------------------------------------------------------------------------
+
+func TestRenderAgentSparkline_Empty(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	// Zero AgentStats → empty string
+	result := m.RenderAgentSparklineForTest()
+	assert.Equal(t, "", result, "renderAgentSparkline() must return empty string when Total==0")
+}
+
+func TestRenderAgentSparkline_AllRunning(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentStats = state.AgentStats{Total: 3, Running: 3}
+	result := m.RenderAgentSparklineForTest()
+	assert.Contains(t, result, "3/3", "renderAgentSparkline() must contain running/total ratio")
+	// Three filled dots for three running agents.
+	count := strings.Count(result, "●")
+	assert.Equal(t, 3, count, "renderAgentSparkline() must render 3 filled dots for 3 running agents")
+}
+
+func TestRenderAgentSparkline_MixedStates(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentStats = state.AgentStats{Total: 4, Running: 1, Complete: 1, Pending: 1, Error: 1}
+	result := m.RenderAgentSparklineForTest()
+	assert.Contains(t, result, "1/4", "renderAgentSparkline() must contain running/total ratio")
+	// 3 filled dots (running, complete, error) + 1 empty dot (pending) = 4 characters total.
+	filledCount := strings.Count(result, "●")
+	emptyCount := strings.Count(result, "○")
+	assert.Equal(t, 3, filledCount, "renderAgentSparkline() must render 3 filled dots for running+complete+error")
+	assert.Equal(t, 1, emptyCount, "renderAgentSparkline() must render 1 empty dot for pending")
+}
+
+func TestRenderAgentSparkline_AllComplete(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentStats = state.AgentStats{Total: 3, Running: 0, Complete: 3}
+	result := m.RenderAgentSparklineForTest()
+	assert.Contains(t, result, "0/3", "renderAgentSparkline() must contain 0/3 when all complete")
+	count := strings.Count(result, "●")
+	assert.Equal(t, 3, count, "renderAgentSparkline() must render 3 filled dots for 3 complete agents")
+}
+
+// ---------------------------------------------------------------------------
+// UX-017: Adaptive height — Height() and boundary tests
+// ---------------------------------------------------------------------------
+
+func TestHeight_Compact(t *testing.T) {
+	m := statusline.NewStatusLineModel(60)
+	assert.Equal(t, 1, m.Height(), "compact tier (<80) must be 1 row")
+}
+
+func TestHeight_Standard(t *testing.T) {
+	m80 := statusline.NewStatusLineModel(80)
+	assert.Equal(t, 1, m80.Height(), "standard tier lower bound (80) must be 1 row")
+
+	m119 := statusline.NewStatusLineModel(119)
+	assert.Equal(t, 1, m119.Height(), "standard tier upper bound (119) must be 1 row")
+}
+
+func TestHeight_Wide(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	assert.Equal(t, 2, m.Height(), "wide tier lower bound (120) must be 2 rows")
+}
+
+func TestHeight_Ultra(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	assert.Equal(t, 2, m.Height(), "ultra tier (200) must be 2 rows")
+}
+
+func TestViewCompact_SingleRow(t *testing.T) {
+	m := statusline.NewStatusLineModel(100)
+	m.SessionCost = 0.50
+	m.ActiveModel = "sonnet"
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	assert.Equal(t, 1, len(lines), "compact view (width=100) must be exactly 1 line")
+}
+
+func TestViewFull_TwoRows(t *testing.T) {
+	m := statusline.NewStatusLineModel(150)
+	m.SessionCost = 0.50
+	m.ActiveModel = "sonnet"
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	assert.Equal(t, 2, len(lines), "full view (width=150) must be exactly 2 lines")
+}
+
+// TestView_HeightMatchesRendered is the invariant test: Height() must equal
+// lipgloss.Height(View()) at every tier boundary width.
+func TestView_HeightMatchesRendered(t *testing.T) {
+	for _, w := range []int{79, 80, 119, 120} {
+		t.Run(fmt.Sprintf("width=%d", w), func(t *testing.T) {
+			m := statusline.NewStatusLineModel(w)
+			m.SessionCost = 1.23
+			m.ActiveModel = "sonnet"
+			rendered := m.View()
+			assert.Equal(t, m.Height(), lipgloss.Height(rendered),
+				"Height() must match actual rendered height at width=%d", w)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Reduce Motion (UX-020)
+// ---------------------------------------------------------------------------
+
+// TestSpinner_ReduceMotion_NoAdvance verifies that spinnerTickMsg does not
+// advance the frame index when ReduceMotion is true.
+func TestSpinner_ReduceMotion_NoAdvance(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ReduceMotion = true
+	m.Streaming = true
+
+	// Confirm starting index is 0.
+	if m.SpinnerIdxForTest() != 0 {
+		t.Fatalf("precondition: spinnerIdx should be 0, got %d", m.SpinnerIdxForTest())
+	}
+
+	tick := statusline.SpinnerTickMsgForTest(time.Now())
+	result, _ := m.Update(tick)
+
+	if result.SpinnerIdxForTest() != 0 {
+		t.Errorf("spinnerIdx advanced despite ReduceMotion=true: got %d, want 0",
+			result.SpinnerIdxForTest())
+	}
+}
+
+// TestSpinner_ReduceMotion_Off_Advances verifies the normal path still works:
+// spinnerTickMsg advances the frame index when ReduceMotion is false.
+func TestSpinner_ReduceMotion_Off_Advances(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ReduceMotion = false
+	m.Streaming = true
+
+	tick := statusline.SpinnerTickMsgForTest(time.Now())
+	result, _ := m.Update(tick)
+
+	if result.SpinnerIdxForTest() != 1 {
+		t.Errorf("spinnerIdx did not advance: got %d, want 1", result.SpinnerIdxForTest())
+	}
+}
+
+// TestView_ReduceMotion_StaticSpinner verifies that when ReduceMotion is true
+// and Streaming is true, View renders a static "⠿ streaming" indicator instead
+// of an animated Braille frame.
+func TestView_ReduceMotion_StaticSpinner(t *testing.T) {
+	for _, width := range []int{80, 120, 160} {
+		t.Run(fmt.Sprintf("width=%d", width), func(t *testing.T) {
+			m := statusline.NewStatusLineModel(width)
+			m.ReduceMotion = true
+			m.Streaming = true
+
+			view := m.View()
+
+			if !strings.Contains(view, "⠿ streaming") {
+				t.Errorf("expected static '⠿ streaming' indicator in View(), got:\n%s", view)
+			}
+			// The animated frames cycle through ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ — confirm none appear
+			// immediately after "streaming" (which would indicate animation ran).
+			animatedFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+			for _, frame := range animatedFrames {
+				if strings.Contains(view, frame+" streaming") {
+					t.Errorf("animated frame %q should not appear in View() when ReduceMotion=true", frame)
+				}
+			}
+		})
+	}
+}
+
+// TestView_ReduceMotion_Off_AnimatedSpinner verifies that when ReduceMotion is
+// false the normal animated frame is rendered.
+func TestView_ReduceMotion_Off_AnimatedSpinner(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ReduceMotion = false
+	m.Streaming = true
+	// Frame index 0 → first Braille char "⠋".
+
+	view := m.View()
+
+	if !strings.Contains(view, "⠋ streaming") {
+		t.Errorf("expected animated '⠋ streaming' in View() when ReduceMotion=false, got:\n%s", view)
+	}
 }
