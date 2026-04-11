@@ -1,12 +1,12 @@
-# Session Report: UX Overhaul — Braintrust Review + P0 Implementation
+# Session Report: UX Overhaul — Braintrust Review + P0/P1 Implementation
 
 ## Summary
 
-Comprehensive session covering UX redesign evaluation, ticket generation, and initial P0 implementation. The UX-REDESIGN-SPEC.md (1233 lines, 24 recommendations) was evaluated via Braintrust (Einstein + Staff-Architect + Beethoven), producing a multi-perspective analysis that identified a fundamental PMF gap. 28 tickets were generated, preflight-reviewed against the codebase, and passed through Staff-Architect final review. Four P0 tickets were implemented and shipped.
+Comprehensive multi-session effort covering UX redesign evaluation, ticket generation, and full P0+P1 implementation. The UX-REDESIGN-SPEC.md (1233 lines, 24 recommendations) was evaluated via Braintrust (Einstein + Staff-Architect + Beethoven), producing a multi-perspective analysis that identified a fundamental PMF gap. 28 tickets were generated, preflight-reviewed against the codebase, and passed through Staff-Architect final review. All 12 P0+P1 tickets have been implemented and shipped.
 
 **Branch:** `ux-overhaul`
-**Session Cost:** ~$15 total (Braintrust $4.39 + Mozart $1.75 + Staff-Architect $1.93 + 4 go-tui agents ~$4 + router overhead)
-**Commits:** 14 (6 bug fixes + 1 schema/config + 4 UX implementation + 3 ticket management)
+**Session Cost:** ~$20 total (Braintrust $6.14 + P0 agents ~$4 + P1 agents ~$4.90 + router overhead)
+**Commits:** 18 (6 bug fixes + 1 schema/config + 11 UX implementation + ticket management)
 
 ---
 
@@ -58,8 +58,8 @@ Evaluate UX-REDESIGN-SPEC.md for:
 
 | Phase | Tickets | Effort | Status |
 |-------|---------|--------|--------|
-| P0 | UX-001 through UX-007 (7 tickets) | ~3-3.5 sessions | 4/7 completed |
-| P1 | UX-008 through UX-012 (5 tickets) | ~2-3 sessions | Pending |
+| P0 | UX-001 through UX-007 (7 tickets) | ~3-3.5 sessions | **COMPLETE** (7/7) |
+| P1 | UX-008 through UX-012 (5 tickets) | ~2-3 sessions | **COMPLETE** (5/5) |
 | P2 | UX-013 through UX-020 (8 tickets) | ~3-4 sessions | Pending |
 | P3 | UX-021 through UX-028 (8 tickets) | ~3-4 sessions | Pending |
 
@@ -118,13 +118,57 @@ Six commits for bugs discovered during recent sessions:
 
 ---
 
-## Remaining P0 Work (next session)
+## Phase 4b: Remaining P0 Tickets (completed session 2)
 
-| Ticket | Title | Effort | Notes |
-|--------|-------|--------|-------|
-| UX-003 | Icon rail mode (< 30 cols) | 1.5-2s | Biggest P0 item. Arch decisions documented. |
-| UX-004 | Relative paths in activity | 0.25s | Same branch as UX-003 |
-| UX-007 | Simple/expert toggle | 0.25s | Keybinding: `alt+\` |
+| Ticket | Title | Agent | Cost | Duration | Changes |
+|--------|-------|-------|------|----------|---------|
+| UX-003 | Icon rail mode (< 30 cols) | go-tui (Sonnet) | — | — | tree.go `Render(mode)` + `renderIconRail()` |
+| UX-004 | Relative paths in activity | go-tui (Sonnet) | — | — | Strip project root from activity paths |
+| UX-007 | Simple/expert toggle | go-tui (Sonnet) | — | — | `alt+\` toggle, hide/show right panel |
+
+---
+
+## Phase 5: P1 Ticket Implementation (completed session 2)
+
+| Ticket | Title | Agent | Cost | Duration | Changes |
+|--------|-------|-------|------|----------|---------|
+| UX-008 | Tree: two-column dot-leader layout | go-tui (Sonnet) | $1.42 | 6m53s | Rewrote `renderNode()` — indent + dot leaders + right-aligned values. Removed box-drawing chars. ANSI-safe via `lipgloss.Width()`. 5 new tests at widths {22,30,45,80}. |
+| UX-009 | Tree: full-row color by agent status | go-tui (Sonnet) | $1.47 | 8m15s | Added `StatusRowStyle()` — running=dim green, complete=bold green, error=red, killed=yellow+strikethrough, pending=grey. Entire row colored, not just icon. |
+| UX-010 | Tree: inline cost per agent | direct (trivial) | $0.00 | <1m | Already implemented by UX-008's `buildTreeValue()`. Added 3 dedicated cost-display tests. |
+| UX-011 | Status line: team indicator | go-tui (Sonnet) | $1.04 | 2m42s | `renderTeamIndicator()` renders `⚡name ●●○○ 2/4 $0.38` in Row 1. Colored member dots. `TeamIndicatorData` struct + `TeamIndicator()` interface method. Wired to poll tick in app.go. 7 new tests. |
+| UX-012 | First-run orientation hints | go-tui (Sonnet) | $0.97 | 4m52s | Onboarding layer on `HintBarModel` — hints during sessions 1-3, per-hint dismissal, persistence to `$XDG_DATA_HOME/gogent/onboarding.json`. New `onboarding.go`. 25 new tests. |
+
+**P1 total agent cost:** $4.90
+**P1 commit:** `44f5696b` — 16 files, +1097/-116 lines
+
+### What Changed in the TUI (P1)
+
+**Agent tree (`tree.go`):**
+- Two-column dot-leader layout: `agent-name ......... status $0.12`
+- Indentation-based hierarchy (2 spaces/depth) replaces box-drawing characters
+- Full-row coloring by agent status (dim green running, bold green complete, red error, yellow+strikethrough killed)
+- Right-aligned value column: cost (`$X.XX`) or status word + optional AC progress
+
+**Status line (`statusline.go`):**
+- Compact team indicator in Row 1: `⚡name ●●○○ 2/4 $0.38`
+- Member dots colored by status (green/grey/red/bold-green/yellow)
+- Auto-hides when no team is active
+
+**Hint bar (`hintbar.go` + `onboarding.go`):**
+- Orientation hints for sessions 1-3: Tab/arrows/Enter
+- Cyan-styled keys to distinguish from normal muted hints
+- Per-hint dismissal when user performs the action
+- Persisted to `$XDG_DATA_HOME/gogent/onboarding.json`
+
+**Interfaces (`interfaces.go`):**
+- `TeamIndicatorData` struct for status line team data
+- `TeamIndicator()` method added to `teamsHealthWidget` interface
+
+**Teams health (`health.go`):**
+- `TeamIndicator()` implementation pulling from `MostRecentRunning()`
+
+**App wiring (`app.go`):**
+- Poll tick handler populates status line team fields from `teamsHealth.TeamIndicator()`
 
 ---
 
@@ -163,9 +207,26 @@ All agent timeout references aligned to 600000ms (10 min) across:
 
 ---
 
-## Files Modified This Session
+## Files Modified (all sessions)
 
-### Go Source (committed)
+### Go Source — P1 (committed `44f5696b`)
+- `internal/tui/components/agents/tree.go` — dot-leader layout, `StatusRowStyle()`, `buildTreeValue()`
+- `internal/tui/components/agents/tree_test.go` — 15+ new tests (dot-leader, ANSI width, status color, cost)
+- `internal/tui/components/agents/pipeline_test.go` — updated assertions for dot-leader output
+- `internal/tui/components/statusline/statusline.go` — team indicator fields + `renderTeamIndicator()`
+- `internal/tui/components/statusline/statusline_test.go` — 7 new team indicator tests
+- `internal/tui/components/statusline/export_test.go` — team indicator test helpers
+- `internal/tui/components/hintbar/hintbar.go` — onboarding layer, `SetOnboarding()`, `DismissHint()`
+- `internal/tui/components/hintbar/hintbar_test.go` — 19 new onboarding tests
+- `internal/tui/components/hintbar/onboarding.go` — **new**: persistence for onboarding state
+- `internal/tui/components/hintbar/onboarding_test.go` — **new**: 6 persistence tests
+- `internal/tui/components/teams/health.go` — `TeamIndicator()` implementation
+- `internal/tui/model/interfaces.go` — `TeamIndicatorData` struct, `TeamIndicator()` interface method
+- `internal/tui/model/app.go` — poll tick wiring for team indicator
+- `internal/tui/model/ui_event_handlers.go` — (carried from P0)
+- `internal/tui/model/team_drawer_test.go` — mock updated for new interface method
+
+### Go Source — P0 (committed earlier)
 - `internal/tui/components/claude/panel.go` — turn separators + role colors
 - `internal/tui/components/claude/panel_test.go` — 4 separator tests
 - `internal/tui/components/claude/panel_rendering_test.go` — import fix
@@ -195,9 +256,17 @@ All agent timeout references aligned to 600000ms (10 min) across:
 
 ---
 
-## Git Log (this session)
+## Git Log (all sessions)
 
 ```
+44f5696b feat(tui): implement P1 UX redesign — tree overhaul, status hints, onboarding (UX-008..012)
+d361ab87 chore(tickets): mark UX-004 completed — P0 COMPLETE (7/7)
+93980b4d feat(tui): strip project root from activity paths, split compound commands (UX-004)
+43f6ee39 chore(tickets): mark UX-003 completed
+9f65e87c feat(tui): add icon rail mode for agent panel at narrow widths (UX-003)
+3241b84d chore(tickets): mark UX-007 completed
+fe6d8ecb feat(tui): add simple/expert toggle to hide right panel (UX-007)
+3d743891 docs: add session report for 2026-04-11 UX overhaul
 a44a6aa8 chore(tickets): mark UX-006 completed
 ee2ca55f feat(tui): make cost first element in Row 1 with bold threshold colors (UX-006)
 e2fe2729 chore(tickets): mark UX-005 completed
@@ -216,3 +285,16 @@ ef8bbde5 fix(paths): harden directory creation, socket paths, and permission cac
 71237fa7 fix(scout): handle piped stdin file lists and compute common root correctly
 ff5e40dc fix(jsonl): replace default bufio.Scanner with 10MB-buffered scanners across all JSONL readers
 ```
+
+---
+
+## Remaining Work (P2+P3)
+
+16 tickets remain across phases 3-4:
+
+| Phase | Tickets | Key Items |
+|-------|---------|-----------|
+| P2 (8) | UX-013..020 | Collapsible detail, inline streaming indicator, collapsible tool blocks, sparkline dots, adaptive status line, team toasts, team auto-switch, reduce-motion config |
+| P3 (8) | UX-021..028 | Focus-driven layout, tree density toggle, pulse animation, timestamp gutter, cost flash, timeline progress bars, team tabs, diff summary |
+
+No blocking dependencies remain — all P2 tickets are independent. P3 has three dependencies: UX-022→UX-008 (done), UX-023→UX-020, UX-025→UX-020.
