@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,7 +63,7 @@ func countLogLines(path string) (int, error) {
 	defer file.Close()
 
 	count := 0
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 	for scanner.Scan() {
 		count++
 	}

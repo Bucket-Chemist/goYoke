@@ -274,6 +274,26 @@ func TestGetFailureCount_MalformedJSON(t *testing.T) {
 	}
 }
 
+func TestGetFailureCount_LargeLine(t *testing.T) {
+	testPath, cleanup := setupTestFile(t)
+	defer cleanup()
+
+	now := time.Now().Unix()
+	largeMatch := strings.Repeat("m", 70*1024)
+	content := `{"file":"test.go","error_type":"large_error","timestamp":` + itoa(now) + `,"error_match":"` + largeMatch + `"}`
+	if err := os.WriteFile(testPath, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	count, err := GetFailureCount("test.go", "large_error")
+	if err != nil {
+		t.Fatalf("GetFailureCount failed: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("Expected count=1, got %d", count)
+	}
+}
+
 // TestClearFailures_RemovesMatchingEntries tests that ClearFailures removes only matching entries
 func TestClearFailures_RemovesMatchingEntries(t *testing.T) {
 	_, cleanup := setupTestFile(t)

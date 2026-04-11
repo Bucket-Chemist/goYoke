@@ -1,8 +1,10 @@
 package workflow
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -231,6 +233,46 @@ func TestReadEndstateLogs_MultipleEntries(t *testing.T) {
 
 	if len(logs) != 5 {
 		t.Errorf("Expected 5 log entries, got %d", len(logs))
+	}
+}
+
+func TestReadEndstateLogs_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	logPath := GetEndstateLogPath()
+	if err := os.MkdirAll(filepath.Dir(logPath), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	logEntry := session.EndstateLog{
+		Timestamp:       time.Now(),
+		AgentID:         "large-agent",
+		AgentClass:      "implementation",
+		Tier:            "sonnet",
+		ExitCode:        0,
+		Duration:        1000,
+		OutputTokens:    500,
+		Decision:        "prompt",
+		Recommendations: []string{strings.Repeat("w", 70*1024)},
+	}
+	data, err := json.Marshal(logEntry)
+	if err != nil {
+		t.Fatalf("Failed to marshal log: %v", err)
+	}
+	if err := os.WriteFile(logPath, append(data, '\n'), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	logs, err := ReadEndstateLogs()
+	if err != nil {
+		t.Fatalf("ReadEndstateLogs failed: %v", err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("Expected 1 log entry, got %d", len(logs))
+	}
+	if logs[0].AgentID != "large-agent" {
+		t.Fatalf("Expected large log to round-trip")
 	}
 }
 

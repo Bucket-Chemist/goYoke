@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,21 +17,21 @@ const HandoffSchemaVersion = "1.3"
 
 // Handoff represents a complete session handoff document in JSONL format
 type Handoff struct {
-	SchemaVersion string            `json:"schema_version"`
-	Timestamp     int64             `json:"timestamp"`
-	SessionID     string            `json:"session_id"`
-	Context       SessionContext    `json:"context"`
-	Artifacts     HandoffArtifacts  `json:"artifacts"`
-	Actions       []Action          `json:"actions"`
+	SchemaVersion string           `json:"schema_version"`
+	Timestamp     int64            `json:"timestamp"`
+	SessionID     string           `json:"session_id"`
+	Context       SessionContext   `json:"context"`
+	Artifacts     HandoffArtifacts `json:"artifacts"`
+	Actions       []Action         `json:"actions"`
 }
 
 // SessionContext captures the session's execution context
 type SessionContext struct {
-	ProjectDir    string            `json:"project_dir"`
-	Metrics       SessionMetrics    `json:"metrics"`
-	ActiveTicket  string            `json:"active_ticket,omitempty"`
-	Phase         string            `json:"phase,omitempty"`
-	GitInfo       GitInfo           `json:"git_info,omitempty"`
+	ProjectDir   string         `json:"project_dir"`
+	Metrics      SessionMetrics `json:"metrics"`
+	ActiveTicket string         `json:"active_ticket,omitempty"`
+	Phase        string         `json:"phase,omitempty"`
+	GitInfo      GitInfo        `json:"git_info,omitempty"`
 }
 
 // HandoffArtifacts contains references to session artifacts
@@ -122,10 +121,10 @@ func (rv *RoutingViolation) UnmarshalJSON(data []byte) error {
 
 // ErrorPattern represents a recurring error pattern
 type ErrorPattern struct {
-	ErrorType  string `json:"error_type"`
-	Count      int    `json:"count"`
-	LastSeen   int64  `json:"last_seen"`
-	Context    string `json:"context,omitempty"`
+	ErrorType string `json:"error_type"`
+	Count     int    `json:"count"`
+	LastSeen  int64  `json:"last_seen"`
+	Context   string `json:"context,omitempty"`
 }
 
 // Action represents an actionable next step
@@ -387,7 +386,7 @@ func LoadAllHandoffs(handoffPath string) ([]Handoff, error) {
 	defer file.Close()
 
 	var handoffs []Handoff
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

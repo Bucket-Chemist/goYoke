@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -376,7 +375,7 @@ func ParseTranscriptForMetadata(transcriptPath string) (*ParsedAgentMetadata, er
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := newTranscriptScanner(file)
 	var firstTimestamp, lastTimestamp int64
 
 	for scanner.Scan() {

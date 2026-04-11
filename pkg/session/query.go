@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -56,7 +55,7 @@ func (q *Query) QuerySharpEdges(filters SharpEdgeFilters) ([]SharpEdge, error) {
 	defer file.Close()
 
 	var edges []SharpEdge
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -138,7 +137,7 @@ func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error
 	defer file.Close()
 
 	var intents []UserIntent
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -247,7 +246,7 @@ func (q *Query) QueryDecisions(filters DecisionFilters) ([]Decision, error) {
 	defer file.Close()
 
 	var decisions []Decision
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -317,7 +316,7 @@ func (q *Query) QueryPreferences(filters PreferenceFilters) ([]PreferenceOverrid
 	defer file.Close()
 
 	var preferences []PreferenceOverride
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -391,7 +390,7 @@ func (q *Query) QueryPerformance(filters PerformanceFilters) ([]PerformanceMetri
 	defer file.Close()
 
 	var metrics []PerformanceMetric
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

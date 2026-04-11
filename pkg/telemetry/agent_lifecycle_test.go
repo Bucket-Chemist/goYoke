@@ -312,6 +312,35 @@ func TestReadAgentLifecycleLogs_EmptyLines(t *testing.T) {
 	os.RemoveAll(filepath.Dir(lifecyclePath))
 }
 
+func TestReadAgentLifecycleLogs_LargeLine(t *testing.T) {
+	lifecyclePath := getAgentLifecyclePath()
+	os.RemoveAll(filepath.Dir(lifecyclePath))
+
+	dir := filepath.Dir(lifecyclePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
+	largeTask := strings.Repeat("l", 70*1024)
+	content := `{"event_id":"large1","timestamp":123,"session_id":"test","event_type":"spawn","agent_id":"agent1","parent_agent":"terminal","tier":"haiku","task_description":"` + largeTask + `","decision_id":"dec1"}`
+	if err := os.WriteFile(lifecyclePath, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write log: %v", err)
+	}
+
+	logs, err := ReadAgentLifecycleLogs("")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("Expected 1 log, got: %d", len(logs))
+	}
+	if logs[0].TaskDescription != largeTask {
+		t.Fatalf("Expected large task description to round-trip")
+	}
+
+	os.RemoveAll(filepath.Dir(lifecyclePath))
+}
+
 func TestAgentLifecycle_ThreadSafety(t *testing.T) {
 	lifecyclePath := getAgentLifecyclePath()
 	os.RemoveAll(filepath.Dir(lifecyclePath))

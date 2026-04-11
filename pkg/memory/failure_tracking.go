@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -150,7 +149,7 @@ func scanFailures(path string, visitor func(*routing.FailureInfo) bool) error {
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := newFailureScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {

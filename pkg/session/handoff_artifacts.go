@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -257,7 +256,7 @@ func loadPendingLearnings(path string) ([]SharpEdge, error) {
 	defer file.Close()
 
 	var edges []SharpEdge
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -292,7 +291,7 @@ func loadViolations(path string) ([]RoutingViolation, error) {
 	defer file.Close()
 
 	var violations []RoutingViolation
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -327,7 +326,7 @@ func loadErrorPatterns(path string) ([]ErrorPattern, error) {
 	defer file.Close()
 
 	var patterns []ErrorPattern
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -362,7 +361,7 @@ func loadUserIntents(path string) ([]UserIntent, error) {
 	defer file.Close()
 
 	var intents []UserIntent
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -402,7 +401,7 @@ func loadDecisions(path string) ([]Decision, error) {
 	defer file.Close()
 
 	var decisions []Decision
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -437,7 +436,7 @@ func loadPreferences(path string) ([]PreferenceOverride, error) {
 	defer file.Close()
 
 	var preferences []PreferenceOverride
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -472,7 +471,7 @@ func loadPerformance(path string) ([]PerformanceMetric, error) {
 	defer file.Close()
 
 	var metrics []PerformanceMetric
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -509,7 +508,7 @@ func loadEndstates(projectDir string) ([]EndstateLog, error) {
 	defer file.Close()
 
 	var endstates []EndstateLog
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

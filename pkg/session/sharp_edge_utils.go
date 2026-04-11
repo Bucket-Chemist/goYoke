@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -39,7 +38,7 @@ func ExtractCodeSnippet(filePath string, lineNumber int, window int) (string, er
 
 	// Read all lines
 	var lines []string
-	scanner := bufio.NewScanner(f)
+	scanner := newSessionScanner(f)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
@@ -156,4 +155,3 @@ func extractBashChange(toolInput map[string]interface{}) string {
 
 	return fmt.Sprintf("Command: %s", command)
 }
-

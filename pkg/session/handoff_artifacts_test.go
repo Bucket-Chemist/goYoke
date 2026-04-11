@@ -1,8 +1,10 @@
 package session
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -164,6 +166,25 @@ also not json`
 
 	if edges[0].File != "valid.go" {
 		t.Errorf("Expected valid edge to be parsed, got: %s", edges[0].File)
+	}
+}
+
+func TestLoadPendingLearnings_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "large.jsonl")
+	largeContext := strings.Repeat("x", 70*1024)
+	data := fmt.Sprintf(`{"file":"large.go","error_type":"test","consecutive_failures":3,"timestamp":1000,"context":"%s"}`+"\n", largeContext)
+	os.WriteFile(path, []byte(data), 0644)
+
+	edges, err := loadPendingLearnings(path)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(edges) != 1 {
+		t.Fatalf("Expected 1 edge, got: %d", len(edges))
+	}
+	if edges[0].Context != largeContext {
+		t.Fatalf("Expected large context to round-trip without truncation")
 	}
 }
 

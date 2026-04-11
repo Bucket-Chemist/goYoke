@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,7 +41,7 @@ func LoadHandoffSummary(projectDir string) (string, error) {
 	// Read first 30 lines
 	const maxLines = 30
 	var lines []string
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 	totalLines := 0
 
 	for scanner.Scan() {
@@ -83,7 +82,7 @@ func CheckPendingLearnings(projectDir string) (string, error) {
 	defer file.Close()
 
 	// Count lines (each line = one sharp edge)
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 	count := 0
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

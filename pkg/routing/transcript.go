@@ -4,10 +4,19 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"strings"
 )
+
+const maxTranscriptLineBytes = 10 * 1024 * 1024
+
+func newTranscriptScanner(r io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxTranscriptLineBytes)
+	return scanner
+}
 
 // ParseTranscript reads a JSONL session transcript file and returns a slice of ToolEvent structs.
 // Each line in the file should be a valid JSON object representing a ToolEvent.
@@ -36,7 +45,7 @@ func ParseTranscript(transcriptPath string) ([]ToolEvent, error) {
 	defer f.Close()
 
 	var events []ToolEvent
-	scanner := bufio.NewScanner(f)
+	scanner := newTranscriptScanner(f)
 	lineNum := 0
 
 	for scanner.Scan() {
@@ -244,7 +253,7 @@ func (a *TranscriptAnalyzer) Analyze() error {
 	taskIDPattern := regexp.MustCompile(`task_id[:\s=]+"([^"]+)"`)
 	collectPattern := regexp.MustCompile(`(?i)TaskOutput.*task_id[:\s=]+"([^"]+)"`)
 
-	scanner := bufio.NewScanner(f)
+	scanner := newTranscriptScanner(f)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {

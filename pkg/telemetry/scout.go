@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -23,7 +22,7 @@ type ScopeMetrics struct {
 // Tracks whether the recommendation was followed and the outcome.
 type ScoutRecommendation struct {
 	// Core identification
-	Timestamp        string `json:"timestamp"`         // RFC3339 format
+	Timestamp        string `json:"timestamp"` // RFC3339 format
 	SessionID        string `json:"session_id"`
 	RecommendationID string `json:"recommendation_id"` // UUID
 
@@ -137,7 +136,7 @@ func LoadScoutRecommendations(path string) ([]ScoutRecommendation, error) {
 	defer file.Close()
 
 	var recommendations []ScoutRecommendation
-	scanner := bufio.NewScanner(file)
+	scanner := newTelemetryScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -426,8 +425,8 @@ func AnalyzeConfidenceCorrelation(recommendations []ScoutRecommendation) []Confi
 type ComplianceImpact struct {
 	FollowedSuccessRate     float64 `json:"followed_success_rate"`
 	IgnoredSuccessRate      float64 `json:"ignored_success_rate"`
-	ImpactDelta             float64 `json:"impact_delta"`              // Followed - Ignored
-	Recommendation          string  `json:"recommendation"`            // "follow", "ignore", "neutral"
+	ImpactDelta             float64 `json:"impact_delta"`             // Followed - Ignored
+	Recommendation          string  `json:"recommendation"`           // "follow", "ignore", "neutral"
 	StatisticalSignificance string  `json:"statistical_significance"` // "high", "medium", "low", "insufficient_data"
 }
 
@@ -494,11 +493,11 @@ func GetComplianceImpact(recommendations []ScoutRecommendation) ComplianceImpact
 
 // TierRecommendationStats shows how often each tier is recommended.
 type TierRecommendationStats struct {
-	Tier           string  `json:"tier"`
+	Tier             string  `json:"tier"`
 	RecommendedCount int     `json:"recommended_count"`
-	ActualCount    int     `json:"actual_count"`
-	ComplianceRate float64 `json:"compliance_rate"` // When recommended, how often used
-	AvgConfidence  float64 `json:"avg_confidence"`
+	ActualCount      int     `json:"actual_count"`
+	ComplianceRate   float64 `json:"compliance_rate"` // When recommended, how often used
+	AvgConfidence    float64 `json:"avg_confidence"`
 }
 
 // ClusterRecommendationsByTier groups recommendations by the tier that was recommended.
@@ -542,11 +541,11 @@ func ClusterRecommendationsByTier(recommendations []ScoutRecommendation) map[str
 
 // ScoutPerformanceSummary provides a complete overview of scout effectiveness.
 type ScoutPerformanceSummary struct {
-	AccuracyStats    ScoutAccuracyStats                  `json:"accuracy_stats"`
-	ConfidenceBuckets []ConfidenceBucket                 `json:"confidence_buckets"`
-	ComplianceImpact ComplianceImpact                    `json:"compliance_impact"`
-	TierDistribution map[string]*TierRecommendationStats `json:"tier_distribution"`
-	OverallVerdict   string                              `json:"overall_verdict"`
+	AccuracyStats     ScoutAccuracyStats                  `json:"accuracy_stats"`
+	ConfidenceBuckets []ConfidenceBucket                  `json:"confidence_buckets"`
+	ComplianceImpact  ComplianceImpact                    `json:"compliance_impact"`
+	TierDistribution  map[string]*TierRecommendationStats `json:"tier_distribution"`
+	OverallVerdict    string                              `json:"overall_verdict"`
 }
 
 // GetScoutPerformanceSummary generates a complete scout effectiveness report.

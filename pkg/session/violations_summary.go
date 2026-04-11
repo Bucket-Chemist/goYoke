@@ -1,7 +1,6 @@
 package session
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -32,7 +31,7 @@ func FormatViolationsSummary(violationsPath string, maxLines int) ([]string, err
 
 	// Load all violations from JSONL
 	var violations []*routing.Violation
-	scanner := bufio.NewScanner(file)
+	scanner := newSessionScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
@@ -296,4 +295,3 @@ func formatViolation(v *routing.Violation) string {
 		return fmt.Sprintf("- %s: %s", v.ViolationType, v.Reason)
 	}
 }
-

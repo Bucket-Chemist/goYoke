@@ -346,6 +346,28 @@ func TestLoadScoutRecommendations_BlankLines(t *testing.T) {
 	}
 }
 
+func TestLoadScoutRecommendations_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "scout.jsonl")
+	largeTask := strings.Repeat("z", 70*1024)
+	content := `{"timestamp":"2026-01-22T10:00:00Z","recommendation_id":"r1","scout_type":"haiku-scout","task_description":"` + largeTask + `","recommended_tier":"sonnet","followed":true,"confidence":0.85}`
+
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	recs, err := LoadScoutRecommendations(path)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(recs) != 1 {
+		t.Fatalf("Expected 1 recommendation, got: %d", len(recs))
+	}
+	if recs[0].TaskDescription != largeTask {
+		t.Fatalf("Expected large task description to round-trip")
+	}
+}
+
 func TestUpdateScoutOutcome_Success(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "scout.jsonl")

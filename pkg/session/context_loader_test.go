@@ -165,6 +165,20 @@ func TestCheckPendingLearnings_EmptyFile(t *testing.T) {
 	assert.Equal(t, "", result)
 }
 
+func TestCheckPendingLearnings_LargeLine(t *testing.T) {
+	projectDir := t.TempDir()
+	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	require.NoError(t, os.MkdirAll(claudeDir, 0755))
+
+	learningsPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
+	largeLine := strings.Repeat("x", 70*1024)
+	require.NoError(t, os.WriteFile(learningsPath, []byte(largeLine+"\n"), 0644))
+
+	result, err := CheckPendingLearnings(projectDir)
+	require.NoError(t, err)
+	assert.Contains(t, result, "1 sharp edge(s)")
+}
+
 func TestFormatGitInfo_NotGitRepo(t *testing.T) {
 	// Note: t.TempDir() may be inside a git repo if tests run inside repo root
 	// Git's --is-inside-work-tree traverses upward, so temp dirs inherit git context
@@ -231,6 +245,6 @@ func TestFormatGitInfo_DirtyRepo(t *testing.T) {
 	secondPart := strings.TrimSpace(parts[1])
 	assert.True(t,
 		strings.Contains(secondPart, "Clean working tree") ||
-		strings.Contains(secondPart, "Uncommitted:"),
+			strings.Contains(secondPart, "Uncommitted:"),
 		"Status should indicate clean or dirty state")
 }

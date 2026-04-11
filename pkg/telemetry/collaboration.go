@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,7 +33,7 @@ type AgentCollaboration struct {
 	HandoffFriction string `json:"handoff_friction,omitempty"` // "context_loss", "misunderstanding", "none"
 
 	// Chain position
-	ChainDepth int    `json:"chain_depth"` // 0 = root, 1 = first delegation, etc.
+	ChainDepth int    `json:"chain_depth"`  // 0 = root, 1 = first delegation, etc.
 	RootTaskID string `json:"root_task_id"` // Original task that spawned chain
 
 	// Swarm coordination (Addendum A.3)
@@ -107,7 +106,7 @@ func ReadCollaborationLogs() ([]AgentCollaboration, error) {
 	defer file.Close()
 
 	var logs []AgentCollaboration
-	scanner := bufio.NewScanner(file)
+	scanner := newTelemetryScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

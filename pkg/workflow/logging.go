@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -81,7 +80,7 @@ func ReadEndstateLogs() ([]session.EndstateLog, error) {
 	defer file.Close()
 
 	var logs []session.EndstateLog
-	scanner := bufio.NewScanner(file)
+	scanner := newWorkflowScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

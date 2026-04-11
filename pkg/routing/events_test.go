@@ -1343,6 +1343,33 @@ func TestParseTranscriptForMetadata_EmptyFile(t *testing.T) {
 	}
 }
 
+func TestParseTranscriptForMetadata_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	transcriptPath := filepath.Join(tmpDir, "large.jsonl")
+	largeContent := strings.Repeat("q", 70*1024)
+
+	transcriptData := `{"timestamp": 1700000000, "content": "AGENT: metadata-large", "role": "system"}
+{"timestamp": 1700005000, "model": "claude-sonnet-4", "content": "` + largeContent + `", "role": "assistant"}`
+
+	if err := os.WriteFile(transcriptPath, []byte(transcriptData), 0644); err != nil {
+		t.Fatalf("Failed to write mock transcript: %v", err)
+	}
+
+	metadata, err := ParseTranscriptForMetadata(transcriptPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if metadata.AgentID != "metadata-large" {
+		t.Fatalf("Expected agent_id metadata-large, got: %s", metadata.AgentID)
+	}
+	if metadata.Tier != "sonnet" {
+		t.Fatalf("Expected tier sonnet, got: %s", metadata.Tier)
+	}
+	if metadata.DurationMs != 5000 {
+		t.Fatalf("Expected duration 5000ms, got: %d", metadata.DurationMs)
+	}
+}
+
 // Test GetAgentClass with all agent types
 func TestGetAgentClass_All(t *testing.T) {
 	tests := []struct {
@@ -1754,9 +1781,9 @@ func TestEnrichMetadataFromEvent_PrefersAgentTranscriptPath(t *testing.T) {
 `), 0644)
 
 	event := &SubagentStopEvent{
-		HookEventName:      "SubagentStop",
-		SessionID:          "test-atp",
-		TranscriptPath:     sessionPath,
+		HookEventName:       "SubagentStop",
+		SessionID:           "test-atp",
+		TranscriptPath:      sessionPath,
 		AgentTranscriptPath: agentPath, // Should use this one
 	}
 
@@ -1804,16 +1831,16 @@ func TestNormalizeAgentType(t *testing.T) {
 		{"Python Pro", "python-pro"},
 		{"Explore", "explore"},
 		{"Codebase Search", "codebase-search"},
-		{"GO TUI (Bubbletea)", "go-tui"},       // parenthetical stripped
-		{"GO CLI (Cobra)", "go-cli"},             // parenthetical stripped
-		{"GO API (HTTP Client)", "go-api"},       // parenthetical stripped
-		{"Python UX (PySide6)", "python-ux"},     // parenthetical stripped
+		{"GO TUI (Bubbletea)", "go-tui"},     // parenthetical stripped
+		{"GO CLI (Cobra)", "go-cli"},         // parenthetical stripped
+		{"GO API (HTTP Client)", "go-api"},   // parenthetical stripped
+		{"Python UX (PySide6)", "python-ux"}, // parenthetical stripped
 		{"  Haiku Scout  ", "haiku-scout"},
 		{"R Pro", "r-pro"},
 		{"TypeScript Pro", "typescript-pro"},
 		{"Staff Architect Critical Review", "staff-architect-critical-review"},
-		{"haiku-scout", "haiku-scout"},           // already normalized
-		{"", ""},                                  // empty string
+		{"haiku-scout", "haiku-scout"}, // already normalized
+		{"", ""},                       // empty string
 	}
 
 	for _, tc := range tests {
