@@ -140,6 +140,10 @@ type AgentTreeModel struct {
 	height       int
 	scrollOffset int
 	density      TreeDensity
+	// inlineDetail is a pre-rendered compact summary for the selected node,
+	// set by SetInlineDetail from the layout before each Render call.
+	// Empty string means no inline detail is shown.
+	inlineDetail string
 	// reduceMotion suppresses the pulse animation (WCAG 2.3.1).
 	// When true, running agents always show a static bright icon.
 	reduceMotion bool
@@ -206,6 +210,29 @@ func (m *AgentTreeModel) SetReduceMotion(v bool) {
 	m.reduceMotion = v
 }
 
+// SetInlineDetail sets the pre-rendered compact detail string for the currently
+// selected node. Called by the layout immediately before Render. Pass "" to
+// show no inline detail (e.g. when no agent is selected or detail is absent).
+func (m *AgentTreeModel) SetInlineDetail(s string) {
+	m.inlineDetail = s
+}
+
+// nodeHeight returns the visual line count for node at idx.
+//
+//   - DensityVerbose: 2 lines (standard row + metadata line)
+//   - All other densities: 1 line
+//   - Selected node when inlineDetail is non-empty: adds inline detail lines
+func (m AgentTreeModel) nodeHeight(idx int) int {
+	h := 1
+	if m.density == DensityVerbose {
+		h = 2
+	}
+	if idx == m.selectedIdx && m.inlineDetail != "" {
+		h += strings.Count(m.inlineDetail, "\n") + 1
+	}
+	return h
+}
+
 // hasRunningAgents reports whether any node in the current tree has
 // StatusRunning. Used to drive the lazy pulse tick scheduler.
 func (m AgentTreeModel) hasRunningAgents() bool {
@@ -263,16 +290,26 @@ func (m AgentTreeModel) TreeNodes() []*state.AgentTreeNode {
 }
 
 // clampScroll adjusts scrollOffset so that selectedIdx is always visible
-// within the viewport.
+// within the viewport. It accounts for variable-height nodes (verbose density
+// and inline detail on the selected node) by summing visual rows rather than
+// using simple index arithmetic.
 func (m *AgentTreeModel) clampScroll() {
 	if m.height <= 0 {
 		return
 	}
+	// Ensure the selected node is not above the viewport top.
 	if m.selectedIdx < m.scrollOffset {
 		m.scrollOffset = m.selectedIdx
 	}
-	if m.selectedIdx >= m.scrollOffset+m.height {
-		m.scrollOffset = m.selectedIdx - m.height + 1
+	// Count visual rows from scrollOffset through selectedIdx (inclusive).
+	// If they exceed the viewport height, advance scrollOffset until they fit.
+	used := 0
+	for i := m.scrollOffset; i <= m.selectedIdx; i++ {
+		used += m.nodeHeight(i)
+	}
+	for used > m.height && m.scrollOffset < m.selectedIdx {
+		used -= m.nodeHeight(m.scrollOffset)
+		m.scrollOffset++
 	}
 	if m.scrollOffset < 0 {
 		m.scrollOffset = 0
@@ -411,6 +448,9 @@ func (m AgentTreeModel) renderIconRail(width int) string {
 		line := m.renderIconNode(node, i == m.selectedIdx, width)
 		sb.WriteString(line)
 		sb.WriteByte('\n')
+		if i == m.selectedIdx && m.inlineDetail != "" && width >= 28 {
+			m.appendInlineDetail(&sb, node.Depth)
+		}
 	}
 
 	return strings.TrimRight(sb.String(), "\n")
@@ -506,7 +546,7 @@ func (m AgentTreeModel) View() string {
 		return config.StyleMuted.Render("No agents")
 	}
 
-	// Determine the visible window.
+	// Determine the visible window (visual rows, not node count).
 	start := m.scrollOffset
 	end := start + m.height
 	if end > len(m.treeNodes) || m.height <= 0 {
@@ -519,11 +559,27 @@ func (m AgentTreeModel) View() string {
 		line := m.renderNode(node, i == m.selectedIdx)
 		sb.WriteString(line)
 		sb.WriteByte('\n')
+		if i == m.selectedIdx && m.inlineDetail != "" {
+			m.appendInlineDetail(&sb, node.Depth)
+		}
 	}
 
 	// Trim the trailing newline added by the last iteration.
 	out := strings.TrimRight(sb.String(), "\n")
 	return out
+}
+
+// appendInlineDetail writes the inline detail lines indented to depth*2 spaces
+// into sb. Each line from inlineDetail already has 2 spaces of internal indent
+// (from renderOverviewCompact / renderActivityEntry), so the tree prepends
+// depth*2 additional spaces giving depth*2+2 total for leaf agents at depth 1.
+func (m AgentTreeModel) appendInlineDetail(sb *strings.Builder, depth int) {
+	prefix := strings.Repeat("  ", depth)
+	for _, line := range strings.Split(m.inlineDetail, "\n") {
+		sb.WriteString(prefix)
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
 }
 
 // Search implements state.SearchSource for the agent tree.
@@ -620,6 +676,9 @@ func (m AgentTreeModel) renderCompactDensity() string {
 		line := m.renderCompactNode(node, i == m.selectedIdx)
 		sb.WriteString(line)
 		sb.WriteByte('\n')
+		if i == m.selectedIdx && m.inlineDetail != "" {
+			m.appendInlineDetail(&sb, node.Depth)
+		}
 	}
 	return strings.TrimRight(sb.String(), "\n")
 }
@@ -667,6 +726,9 @@ func (m AgentTreeModel) renderCompactNode(node *state.AgentTreeNode, selected bo
 // Each agent occupies two lines:
 //   - Line 1: standard dot-leader row (identical to DensityStandard)
 //   - Line 2: indented metadata — status | tier | duration | cost
+//
+// For the selected node an additional inline detail block is appended after
+// the metadata line.
 func (m AgentTreeModel) renderVerboseDensity() string {
 	if len(m.treeNodes) == 0 {
 		return config.StyleMuted.Render("No agents")
@@ -687,6 +749,9 @@ func (m AgentTreeModel) renderVerboseDensity() string {
 		// Line 2: metadata.
 		sb.WriteString(m.renderVerboseMeta(node))
 		sb.WriteByte('\n')
+		if i == m.selectedIdx && m.inlineDetail != "" {
+			m.appendInlineDetail(&sb, node.Depth)
+		}
 	}
 	return strings.TrimRight(sb.String(), "\n")
 }

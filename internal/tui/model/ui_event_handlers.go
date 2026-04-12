@@ -116,8 +116,12 @@ func (m *AppModel) propagateContentSizes() {
 		// leaving the layout composition in renderLeftPanel to fill all rows.
 		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight-separatorHeight)
 	}
-	m.agentTree.SetSize(dims.rightWidth, mainH/2)
-	m.agentDetail.SetSize(dims.rightWidth, mainH/2)
+	// Tree receives the full content height — the detail panel is no longer
+	// rendered as a separate block below the tree (it is inlined under the
+	// selected node). Detail still gets its size for the viewport used in
+	// focus/detail mode (Enter navigates into the detail panel).
+	m.agentTree.SetSize(dims.rightWidth, mainH)
+	m.agentDetail.SetSize(dims.rightWidth, mainH)
 	if m.shared.toasts != nil {
 		m.shared.toasts.SetSize(m.width, m.height)
 	}

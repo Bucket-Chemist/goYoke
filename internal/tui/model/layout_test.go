@@ -48,7 +48,7 @@ func TestLayoutTierString(t *testing.T) {
 // The table covers every critical boundary value: the last width in a tier,
 // the first width in the next tier, and a representative mid-tier value.
 // All cases use the default FocusClaude focus (zero value of FocusTarget).
-// UX-021 focus-driven ratios: Standard 55/45, Wide 55/45, Ultra 50/50.
+// UX-021 focus-driven ratios: Standard 70/30, Wide 65/35, Ultra 60/40.
 // ---------------------------------------------------------------------------
 
 func TestComputeLayout_TierBoundaries(t *testing.T) {
@@ -68,22 +68,22 @@ func TestComputeLayout_TierBoundaries(t *testing.T) {
 		{"compact_mid_60", 60, LayoutCompact, false, 0},
 		{"compact_min_1", 1, LayoutCompact, false, 0},
 
-		// Standard tier: 80–119 — FocusClaude: 55/45 (UX-021)
-		{"standard_lower_80", 80, LayoutStandard, true, 0.55},
-		{"standard_mid_90", 90, LayoutStandard, true, 0.55},
-		{"standard_upper_99", 99, LayoutStandard, true, 0.55},
-		{"standard_lower_100", 100, LayoutStandard, true, 0.55},
-		{"standard_mid_110", 110, LayoutStandard, true, 0.55},
-		{"standard_upper_119", 119, LayoutStandard, true, 0.55},
+		// Standard tier: 80–119 — FocusClaude: 70/30 (UX-021)
+		{"standard_lower_80", 80, LayoutStandard, true, 0.70},
+		{"standard_mid_90", 90, LayoutStandard, true, 0.70},
+		{"standard_upper_99", 99, LayoutStandard, true, 0.70},
+		{"standard_lower_100", 100, LayoutStandard, true, 0.70},
+		{"standard_mid_110", 110, LayoutStandard, true, 0.70},
+		{"standard_upper_119", 119, LayoutStandard, true, 0.70},
 
-		// Wide tier: 120–179 — FocusClaude: 55/45 (UX-021)
-		{"wide_lower_120", 120, LayoutWide, true, 0.55},
-		{"wide_mid_149", 149, LayoutWide, true, 0.55},
-		{"wide_upper_179", 179, LayoutWide, true, 0.55},
+		// Wide tier: 120–179 — FocusClaude: 65/35 (UX-021)
+		{"wide_lower_120", 120, LayoutWide, true, 0.65},
+		{"wide_mid_149", 149, LayoutWide, true, 0.65},
+		{"wide_upper_179", 179, LayoutWide, true, 0.65},
 
-		// Ultra tier: >= 180 — FocusClaude: 50/50
-		{"ultra_lower_180", 180, LayoutUltra, true, 0.50},
-		{"ultra_mid_240", 240, LayoutUltra, true, 0.50},
+		// Ultra tier: >= 180 — FocusClaude: 60/40
+		{"ultra_lower_180", 180, LayoutUltra, true, 0.60},
+		{"ultra_mid_240", 240, LayoutUltra, true, 0.60},
 	}
 
 	for _, tc := range tests {
@@ -142,9 +142,9 @@ func TestComputeLayout_TierBoundaries(t *testing.T) {
 // Tier-specific ratio verification (exact values, FocusClaude)
 // ---------------------------------------------------------------------------
 
-// TestComputeLayout_WideTerminal_FocusClaude_Uses55_45 verifies that the Wide
-// tier with FocusClaude yields a 55/45 split (UX-021).
-func TestComputeLayout_WideTerminal_FocusClaude_Uses55_45(t *testing.T) {
+// TestComputeLayout_WideTerminal_FocusClaude_Uses65_35 verifies that the Wide
+// tier with FocusClaude yields a 65/35 split (UX-021).
+func TestComputeLayout_WideTerminal_FocusClaude_Uses65_35(t *testing.T) {
 	t.Parallel()
 
 	m := NewAppModel()
@@ -161,10 +161,10 @@ func TestComputeLayout_WideTerminal_FocusClaude_Uses55_45(t *testing.T) {
 		t.Error("showRightPanel = false at width 120; want true")
 	}
 
-	// At width=120, FocusClaude leftRatio=0.55: leftOuter=66, rightOuter=54.
+	// At width=120, FocusClaude leftRatio=0.65: leftOuter=78, rightOuter=42.
 	// Inner widths subtract borderFrame (2).
-	wantLeftInner := int(float64(120)*0.55) - borderFrame  // 66 - 2 = 64
-	wantRightInner := (120 - int(float64(120)*0.55)) - borderFrame // 54 - 2 = 52
+	wantLeftInner := int(float64(120)*0.65) - borderFrame  // 78 - 2 = 76
+	wantRightInner := (120 - int(float64(120)*0.65)) - borderFrame // 42 - 2 = 40
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -174,7 +174,7 @@ func TestComputeLayout_WideTerminal_FocusClaude_Uses55_45(t *testing.T) {
 	}
 }
 
-func TestComputeLayout_UltraTerminal_Uses50_50(t *testing.T) {
+func TestComputeLayout_UltraTerminal_Uses60_40(t *testing.T) {
 	t.Parallel()
 
 	m := NewAppModel()
@@ -191,9 +191,9 @@ func TestComputeLayout_UltraTerminal_Uses50_50(t *testing.T) {
 		t.Error("showRightPanel = false at width 200; want true")
 	}
 
-	// At width=200, FocusClaude leftRatio=0.50: leftOuter=100, rightOuter=100.
-	wantLeftInner := int(float64(200)*0.50) - borderFrame  // 100 - 2 = 98
-	wantRightInner := (200 - int(float64(200)*0.50)) - borderFrame // 100 - 2 = 98
+	// At width=200, FocusClaude leftRatio=0.60: leftOuter=120, rightOuter=80.
+	wantLeftInner := int(float64(200)*0.60) - borderFrame  // 120 - 2 = 118
+	wantRightInner := (200 - int(float64(200)*0.60)) - borderFrame // 80 - 2 = 78
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -208,7 +208,7 @@ func TestComputeLayout_UltraTerminal_Uses50_50(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // TestComputeLayout_Standard_FocusClaude_At80 verifies that Standard tier at
-// width 80 uses the UX-021 FocusClaude ratio (55/45).
+// width 80 uses the UX-021 FocusClaude ratio (70/30).
 func TestComputeLayout_Standard_FocusClaude_At80(t *testing.T) {
 	t.Parallel()
 
@@ -226,9 +226,9 @@ func TestComputeLayout_Standard_FocusClaude_At80(t *testing.T) {
 		t.Error("showRightPanel = false at width 80; want true (80 is inclusive lower bound)")
 	}
 
-	// FocusClaude Standard: leftRatio=0.55
-	wantLeftInner := int(float64(80)*0.55) - borderFrame  // 44 - 2 = 42
-	wantRightInner := (80 - int(float64(80)*0.55)) - borderFrame // 36 - 2 = 34
+	// FocusClaude Standard: leftRatio=0.70
+	wantLeftInner := int(float64(80)*0.70) - borderFrame  // 56 - 2 = 54
+	wantRightInner := (80 - int(float64(80)*0.70)) - borderFrame // 24 - 2 = 22
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth at 80 = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -239,7 +239,7 @@ func TestComputeLayout_Standard_FocusClaude_At80(t *testing.T) {
 }
 
 // TestComputeLayout_Standard_FocusClaude_At100 verifies that Standard tier at
-// width 100 uses the UX-021 FocusClaude ratio (55/45).
+// width 100 uses the UX-021 FocusClaude ratio (70/30).
 func TestComputeLayout_Standard_FocusClaude_At100(t *testing.T) {
 	t.Parallel()
 
@@ -254,12 +254,12 @@ func TestComputeLayout_Standard_FocusClaude_At100(t *testing.T) {
 		t.Errorf("tier = %s; want LayoutStandard", dims.tier)
 	}
 
-	// FocusClaude Standard: leftRatio=0.55
+	// FocusClaude Standard: leftRatio=0.70
 	// Use a variable so the float multiply is runtime, avoiding const-eval truncation.
 	w100 := float64(100)
-	leftOuter100 := int(w100 * 0.55) // 55
-	wantLeftInner := leftOuter100 - borderFrame     // 53
-	wantRightInner := (100 - leftOuter100) - borderFrame // 43
+	leftOuter100 := int(w100 * 0.70) // 70
+	wantLeftInner := leftOuter100 - borderFrame     // 68
+	wantRightInner := (100 - leftOuter100) - borderFrame // 28
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth at 100 = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -273,8 +273,8 @@ func TestComputeLayout_Standard_FocusClaude_At100(t *testing.T) {
 // UX-021: Focus-driven ratio table test
 //
 // Verifies every focus × tier combination against the specified ratios:
-//   FocusClaude:                      Standard 55/45, Wide 55/45, Ultra 50/50
-//   FocusAgents:                      Standard 70/30, Wide 65/35, Ultra 60/40
+//   FocusClaude:                      Standard 70/30, Wide 65/35, Ultra 60/40
+//   FocusAgents:                      Standard 30/70, Wide 35/65, Ultra 40/60
 //   Drawer focus (Plan/Options/Teams): Standard 30/70, Wide 35/65, Ultra 40/60
 // ---------------------------------------------------------------------------
 
@@ -291,29 +291,29 @@ func TestComputeLayout_FocusAwareRatios(t *testing.T) {
 		wantLeftRatio float64
 	}{
 		// Standard tier (80–119) — all three focus categories
-		{"standard_claude_80", 80, FocusClaude, LayoutStandard, 0.55},
-		{"standard_claude_100", 100, FocusClaude, LayoutStandard, 0.55},
-		{"standard_agents_80", 80, FocusAgents, LayoutStandard, 0.70},
-		{"standard_agents_100", 100, FocusAgents, LayoutStandard, 0.70},
+		{"standard_claude_80", 80, FocusClaude, LayoutStandard, 0.70},
+		{"standard_claude_100", 100, FocusClaude, LayoutStandard, 0.70},
+		{"standard_agents_80", 80, FocusAgents, LayoutStandard, 0.30},
+		{"standard_agents_100", 100, FocusAgents, LayoutStandard, 0.30},
 		{"standard_plan_drawer_80", 80, FocusPlanDrawer, LayoutStandard, 0.30},
 		{"standard_plan_drawer_100", 100, FocusPlanDrawer, LayoutStandard, 0.30},
 		{"standard_options_drawer_80", 80, FocusOptionsDrawer, LayoutStandard, 0.30},
 		{"standard_teams_drawer_100", 100, FocusTeamsDrawer, LayoutStandard, 0.30},
 
 		// Wide tier (120–179) — all three focus categories
-		{"wide_claude_120", 120, FocusClaude, LayoutWide, 0.55},
-		{"wide_claude_150", 150, FocusClaude, LayoutWide, 0.55},
-		{"wide_agents_120", 120, FocusAgents, LayoutWide, 0.65},
-		{"wide_agents_150", 150, FocusAgents, LayoutWide, 0.65},
+		{"wide_claude_120", 120, FocusClaude, LayoutWide, 0.65},
+		{"wide_claude_150", 150, FocusClaude, LayoutWide, 0.65},
+		{"wide_agents_120", 120, FocusAgents, LayoutWide, 0.35},
+		{"wide_agents_150", 150, FocusAgents, LayoutWide, 0.35},
 		{"wide_plan_drawer_120", 120, FocusPlanDrawer, LayoutWide, 0.35},
 		{"wide_options_drawer_150", 150, FocusOptionsDrawer, LayoutWide, 0.35},
 		{"wide_teams_drawer_120", 120, FocusTeamsDrawer, LayoutWide, 0.35},
 
 		// Ultra tier (>=180) — all three focus categories
-		{"ultra_claude_180", 180, FocusClaude, LayoutUltra, 0.50},
-		{"ultra_claude_240", 240, FocusClaude, LayoutUltra, 0.50},
-		{"ultra_agents_180", 180, FocusAgents, LayoutUltra, 0.60},
-		{"ultra_agents_240", 240, FocusAgents, LayoutUltra, 0.60},
+		{"ultra_claude_180", 180, FocusClaude, LayoutUltra, 0.60},
+		{"ultra_claude_240", 240, FocusClaude, LayoutUltra, 0.60},
+		{"ultra_agents_180", 180, FocusAgents, LayoutUltra, 0.40},
+		{"ultra_agents_240", 240, FocusAgents, LayoutUltra, 0.40},
 		{"ultra_plan_drawer_180", 180, FocusPlanDrawer, LayoutUltra, 0.40},
 		{"ultra_options_drawer_240", 240, FocusOptionsDrawer, LayoutUltra, 0.40},
 		{"ultra_teams_drawer_180", 180, FocusTeamsDrawer, LayoutUltra, 0.40},

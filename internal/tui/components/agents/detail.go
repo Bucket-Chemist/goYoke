@@ -243,6 +243,17 @@ func (m AgentDetailModel) renderCompactDetail(width int) string {
 	return strings.TrimRight(sb.String(), "\n")
 }
 
+// RenderInlineContent renders the full collapsible section content for inline
+// display under the selected tree node. This is the same content that
+// syncViewport builds — section headers with collapse indicators, expanded
+// section bodies, collapsed one-liners — but returned as a string instead of
+// being set on the internal viewport.
+//
+// Returns "" when no agent is set.
+func (m AgentDetailModel) RenderInlineContent() string {
+	return m.buildSectionContent()
+}
+
 // View implements tea.Model.
 func (m AgentDetailModel) View() string {
 	if m.agent == nil {
@@ -255,16 +266,13 @@ func (m AgentDetailModel) View() string {
 // Internal rendering
 // ---------------------------------------------------------------------------
 
-// syncViewport rebuilds the full content and sets it on the viewport.
-// If the viewport was already at the bottom before the update, it stays
-// scrolled to the bottom after new content is set (auto-follow).
-func (m *AgentDetailModel) syncViewport() {
+// buildSectionContent renders all visible sections (headers + bodies) into a
+// single string. Used by both syncViewport (for the detail-focus viewport) and
+// RenderInlineContent (for inline display in the tree).
+func (m AgentDetailModel) buildSectionContent() string {
 	if m.agent == nil {
-		m.vp.SetContent("")
-		return
+		return ""
 	}
-
-	atBottom := m.vp.AtBottom()
 
 	var sb strings.Builder
 	visIdx := 0
@@ -273,7 +281,6 @@ func (m *AgentDetailModel) syncViewport() {
 			continue
 		}
 
-		// Section header with collapse indicator.
 		indicator := "▸"
 		if sec.Expanded {
 			indicator = "▼"
@@ -291,7 +298,6 @@ func (m *AgentDetailModel) syncViewport() {
 		}
 		sb.WriteByte('\n')
 
-		// Section content.
 		if sec.Expanded {
 			renderFn := m.sections[i].render
 			if isFocusedSection && m.sections[i].renderFocused != nil {
@@ -313,8 +319,16 @@ func (m *AgentDetailModel) syncViewport() {
 		visIdx++
 	}
 
-	m.vp.SetContent(strings.TrimRight(sb.String(), "\n"))
-	if atBottom {
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// syncViewport rebuilds the full content and sets it on the viewport.
+// If the viewport was already at the bottom before the update, it stays
+// scrolled to the bottom after new content is set (auto-follow).
+func (m *AgentDetailModel) syncViewport() {
+	atBottom := m.vp.AtBottom()
+	m.vp.SetContent(m.buildSectionContent())
+	if m.agent != nil && atBottom {
 		m.vp.GotoBottom()
 	}
 }
