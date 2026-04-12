@@ -1,12 +1,12 @@
-# Session Report: UX Overhaul — Braintrust Review + P0/P1/P2 Implementation
+# Session Report: UX Overhaul — Braintrust Review + P0/P1/P2/P3 Implementation
 
 ## Summary
 
-Comprehensive multi-session effort covering UX redesign evaluation, ticket generation, and full P0+P1+P2 implementation. The UX-REDESIGN-SPEC.md (1233 lines, 24 recommendations) was evaluated via Braintrust (Einstein + Staff-Architect + Beethoven), producing a multi-perspective analysis that identified a fundamental PMF gap. 28 tickets were generated, preflight-reviewed against the codebase, and passed through Staff-Architect final review. All 20 P0+P1+P2 tickets have been implemented and shipped.
+Comprehensive multi-session effort covering UX redesign evaluation, ticket generation, and full P0+P1+P2+P3 implementation. The UX-REDESIGN-SPEC.md (1233 lines, 24 recommendations) was evaluated via Braintrust (Einstein + Staff-Architect + Beethoven), producing a multi-perspective analysis that identified a fundamental PMF gap. 28 tickets were generated, preflight-reviewed against the codebase, and passed through Staff-Architect final review. **All 28 tickets have been implemented and shipped — UX Redesign COMPLETE.**
 
 **Branch:** `ux-overhaul`
-**Session Cost:** ~$25 total (Braintrust $6.14 + P0 agents ~$4 + P1 agents ~$4.90 + P2 ~$5 + router overhead)
-**Commits:** 19 (6 bug fixes + 1 schema/config + 12 UX implementation + ticket management)
+**Session Cost:** ~$38 total (Braintrust $6.14 + P0 agents ~$4 + P1 agents ~$4.90 + P2 ~$5 + P3 ~$13 + router overhead)
+**Commits:** 21 (6 bug fixes + 1 schema/config + 14 UX implementation + ticket management)
 
 ---
 
@@ -61,7 +61,7 @@ Evaluate UX-REDESIGN-SPEC.md for:
 | P0 | UX-001 through UX-007 (7 tickets) | ~3-3.5 sessions | **COMPLETE** (7/7) |
 | P1 | UX-008 through UX-012 (5 tickets) | ~2-3 sessions | **COMPLETE** (5/5) |
 | P2 | UX-013 through UX-020 (8 tickets) | ~3-4 sessions | **COMPLETE** (8/8) |
-| P3 | UX-021 through UX-028 (8 tickets) | ~3-4 sessions | Pending |
+| P3 | UX-021 through UX-028 (8 tickets) | ~3-4 sessions | **COMPLETE** (8/8) |
 
 ### Staff-Architect Final Review
 
@@ -244,6 +244,92 @@ Six commits for bugs discovered during recent sessions:
 
 ---
 
+## Phase 7: P3 Ticket Implementation (completed session 4)
+
+| Ticket | Title | Agent | Cost | Changes |
+|--------|-------|-------|------|---------|
+| UX-021 | Layout: focus-driven drawer/content split | go-tui (Sonnet) | $1.62 | Focus-aware ratios in `computeLayout()`: Standard 55/45→70/30→30/70, Wide 55/45→65/35→35/65, Ultra 50/50→60/40→40/60 by FocusClaude/Agents/Drawer. 23-case table test. |
+| UX-022 | Tree: density toggle (compact/standard/verbose) | go-tui (Sonnet) | $1.80 | `TreeDensity` type with 3 modes. `DensityCompact`: icon + 2-char abbreviation. `DensityVerbose`: metadata line below each node. `alt+d` keybinding, added to help modal. 14 new tests. |
+| UX-023 | Tree: pulse animation on active agent | go-tui (Sonnet) | ~$1.62 | Running agent icons pulse bright/dim on 500ms tick. Lazy tick scheduling (`MaybeStartPulseTick`) — no CPU when idle. Respects reduce-motion (UX-020). `SetReduceMotion()` on tree. 6 pulse tests. |
+| UX-024 | Conversation: timestamp gutter | go-tui (Sonnet) | ~$1.62 | Optional 5-char relative timestamp gutter at turn boundaries (`now`, `5m`, `2h`, `3d`). `fmtRelativeTime()` helper. Toggle in Settings → Display (default off). 60s refresh tick. `SetShowTimestamps()` interface method. |
+| UX-025 | Status line: cost flash-on-change (opt-in) | go-tui (Sonnet) | $2.11 | Cost badge flashes bright white 500ms on SessionCost increase. Opt-in via Settings → Display → Cost Flash. Respects reduce-motion. `CheckCostFlash()` + `activeCostStyle()` + `CostFlashExpiredMsg`. 5-case table test. |
+| UX-026 | Teams: timeline progress bars | go-tui (Sonnet) | $1.14 | Per-member horizontal progress bar (elapsed/timeout ratio). Wave-level aggregate bar. `calcProgress()` pure function. Color-coded matching tree status. Handles 0 timeout (indeterminate), negative elapsed. 20 test cases. |
+| UX-027 | Teams: tabs in drawer | go-tui (Sonnet) | ~$1.62 | Tab bar above team detail with left/right (h/l) cycling. Active tab highlighted. Overflow scroll indicators. Dismiss (d key). Tab count badge. `All()` method on TeamRegistry. Empty state handling. |
+| UX-028 | Teams: diff summary on completion | go-tui (Sonnet) | ~$1.62 | Completion summary: `"done — N files, +X/-Y lines — $Z.ZZ"`. NDJSON parser (`ndjson.go`) scans stdout for Write/Edit events. Summary in detail view + toast. Graceful fallback on parse failure. |
+
+**P3 total agent cost:** ~$13
+**P3 commit:** `9d2e4b36` — 36 files, +2355/-116 lines
+
+### What Changed in the TUI (P3)
+
+**Layout (`layout.go`):**
+- Panel ratios now shift dynamically based on `m.focus` (FocusClaude / FocusAgents / FocusPlanDrawer / FocusOptionsDrawer / FocusTeamsDrawer)
+- Existing Tab / Shift+Tab focus cycling now causes visible width changes (previously only changed border highlight)
+- Each tier has distinct ratios: Standard most dramatic (55→70→30), Ultra most subtle (50→60→40)
+
+**Agent tree (`tree.go`):**
+- 3 density modes: Standard (dot-leader), Compact (icon + abbreviation), Verbose (metadata line)
+- `alt+d` cycles density when agent panel is focused
+- Running agents pulse bright/dim on 500ms tick (lazy — no tick when all idle)
+- Reduce-motion: static bright icon, no pulse tick scheduled
+
+**Conversation panel (`panel.go`):**
+- Optional 5-char timestamp gutter at turn boundaries
+- Relative time format: `now`, `Xm`, `Xh`, `Xd`
+- Toggle via Settings → Display → Timestamps (default off)
+- 60-second `syncViewport()` refresh when timestamps enabled
+
+**Status line (`statusline.go`):**
+- Cost flash: bright white for 500ms on SessionCost increase (opt-in)
+- `CheckCostFlash()` called from cli_event_handlers after every cost update
+- `activeCostStyle()` dispatches between flash and normal threshold styles
+- Respects both opt-in toggle and reduce-motion flag
+
+**Teams health (`health.go`):**
+- Per-member horizontal progress bars based on elapsed/timeout ratio
+- Wave-level aggregate bars (completed+failed / total members)
+- Color-coded: running=green, complete=bright green, failed=red, pending=grey
+- `calcProgress()` handles 0 timeout (indeterminate), negative elapsed (clamped)
+
+**Teams detail (`detail.go`):**
+- Tab bar above detail for cycling between teams (left/right, h/l)
+- Active tab highlighted with accent color, overflow scroll indicators
+- Dismiss key (d), empty state, tab count badge
+- Completion diff summary: parses member stdout NDJSON for Write/Edit file counts
+- Summary line: `"done — N files, +X/-Y lines — $Z.ZZ"`
+
+**Team daemon (`cmd/gogent-team-run/`):**
+- Enhanced completion toast includes diff summary when available
+- New `ndjson.go` parser for scanning stdout files
+
+**Settings (`settingstree.go`):**
+- New toggles: "Timestamps" (default off), "Cost Flash" (default off)
+
+**Config (`keys.go`):**
+- `CycleDensity` keybinding (`alt+d`) in Agent key group
+
+**Help modal (`help_modal.go`):**
+- Added `CycleDensity` and `AgentKill` to Agent Panel section
+
+**Interfaces (`interfaces.go`):**
+- `SetShowTimestamps(bool) tea.Cmd` on `claudePanelWidget`
+
+### Test Coverage (P3)
+
+- ~1200 new lines of test code across 10 test files
+- `internal/tui/components/claude/export_test.go` — **new**: timestamp helpers
+- `internal/tui/components/claude/timestamps_test.go` — **new**: `fmtRelativeTime` table tests
+- `internal/tui/components/teams/diff_test.go` — **new**: NDJSON diff parsing tests
+- `internal/tui/components/agents/tree_test.go` — 14 density + 6 pulse tests
+- `internal/tui/components/statusline/statusline_test.go` — 5 flash + expiry tests
+- `internal/tui/components/statusline/export_test.go` — flash test helpers
+- `internal/tui/components/teams/health_test.go` — 20 progress/color/aggregate cases
+- `internal/tui/components/teams/detail_test.go` — tab cycling, dismiss, summary
+- `internal/tui/model/layout_test.go` — 23-case focus × tier table
+- `internal/tui/model/app_test.go` + `bench_test.go` + `event_pipeline_test.go` + `team_drawer_test.go` — mock updates
+
+---
+
 ## Configuration Changes
 
 ### Timeout Default Alignment
@@ -315,6 +401,41 @@ All agent timeout references aligned to 600000ms (10 min) across:
 - `cmd/gogent-scout/native_scout.go` — refactored file collection
 - + 20 more (tests, session, telemetry, routing packages)
 
+### Go Source — P3 (committed `9d2e4b36`)
+- `internal/tui/model/layout.go` — focus-driven panel ratios in `computeLayout()` (UX-021)
+- `internal/tui/model/layout_test.go` — 23-case table: every focus × tier combination
+- `internal/tui/components/agents/tree.go` — `TreeDensity` type, `CycleDensity()`, compact/verbose rendering, pulse animation, `MaybeStartPulseTick()`, `SetReduceMotion()`
+- `internal/tui/components/agents/tree_test.go` — 14 density tests + 6 pulse tests
+- `internal/tui/components/claude/panel.go` — timestamp gutter, `fmtRelativeTime()`, `SetShowTimestamps()`, 60s refresh tick
+- `internal/tui/components/claude/export_test.go` — **new**: timestamp test helpers
+- `internal/tui/components/claude/timestamps_test.go` — **new**: `fmtRelativeTime` table-driven tests
+- `internal/tui/components/statusline/statusline.go` — cost flash (`CheckCostFlash()`, `activeCostStyle()`, `CostFlashExpiredMsg`)
+- `internal/tui/components/statusline/statusline_test.go` — 5-case flash tests + expiry test
+- `internal/tui/components/statusline/export_test.go` — cost flash test helpers
+- `internal/tui/components/teams/health.go` — `calcProgress()`, `memberStatusStyle()`, `renderMemberProgressBar()`, `renderWaveProgressBar()` (UX-026)
+- `internal/tui/components/teams/health_test.go` — 20-case progress/color/aggregate tests
+- `internal/tui/components/teams/detail.go` — tab bar navigation, `renderTabBar()`, `DiffSummary`, `renderCompletionSummary()`, left/right/d key handling (UX-027, UX-028)
+- `internal/tui/components/teams/detail_test.go` — tab cycling, dismiss, summary rendering
+- `internal/tui/components/teams/diff_test.go` — **new**: NDJSON diff parsing tests
+- `internal/tui/components/settingstree/settingstree.go` — `timestamps` + `cost_flash` toggles
+- `internal/tui/components/settingstree/settingstree_test.go` — updated node count
+- `internal/tui/components/modals/help_modal.go` — `CycleDensity` + `AgentKill` in help
+- `internal/tui/config/keys.go` — `CycleDensity` keybinding (`alt+d`)
+- `internal/tui/model/app.go` — `sharedState` fields for timestamps + pulse
+- `internal/tui/model/interfaces.go` — `SetShowTimestamps()` on `claudePanelWidget`
+- `internal/tui/model/key_handlers.go` — `alt+d` → `CycleDensity` dispatch
+- `internal/tui/model/ui_event_handlers.go` — `timestamps`, `cost_flash` setting wiring, reduce-motion → tree
+- `internal/tui/model/cli_event_handlers.go` — `CheckCostFlash()` after cost update
+- `internal/tui/model/app_test.go` — updated mocks for `SetShowTimestamps`
+- `internal/tui/model/bench_test.go` — updated mock
+- `internal/tui/model/layout_test.go` — updated mock + focus-aware ratio tests
+- `internal/tui/model/event_pipeline_test.go` — updated for pulse tick cmd
+- `internal/tui/model/team_drawer_test.go` — updated mock
+- `cmd/gogent-team-run/main.go` — enhanced completion toast with diff summary
+- `cmd/gogent-team-run/ndjson.go` — **new**: NDJSON stdout parser for Write/Edit file counts
+- `tickets/UX-redesign/UX-021..028.md` — frontmatter fixes (description, time_estimate)
+- `tickets/UX-redesign/tickets-index.json` — UX-021..028 marked completed
+
 ### Go Source — P2 (committed `9b899a23`)
 - `internal/tui/components/agents/detail.go` — `renderCollapsed` callback, `renderOverviewCompact()`
 - `internal/tui/components/agents/detail_test.go` — collapsed overview tests
@@ -362,6 +483,8 @@ All agent timeout references aligned to 600000ms (10 min) across:
 ## Git Log (all sessions)
 
 ```
+9d2e4b36 feat(tui): implement P3 UX redesign — layout, density, pulse, timestamps, cost flash, progress bars, team tabs, diff summary (UX-021..028)
+6e58e89a docs: update session report with P2 completion, add prior-session artifacts
 9b899a23 feat(tui): implement P2 UX redesign — detail collapse, inline tools, sparklines, adaptive status, toasts, auto-switch, reduce-motion (UX-013..020)
 fe40f72b docs: update session report with P1 completion — P0+P1 COMPLETE (12/12)
 44f5696b feat(tui): implement P1 UX redesign — tree overhaul, status hints, onboarding (UX-008..012)
@@ -393,12 +516,15 @@ ff5e40dc fix(jsonl): replace default bufio.Scanner with 10MB-buffered scanners a
 
 ---
 
-## Remaining Work (P3)
+## Completion Status
 
-8 tickets remain in Phase 4:
+**ALL 28 TICKETS COMPLETE.** The UX redesign is fully implemented across 4 phases.
 
-| Phase | Tickets | Key Items |
-|-------|---------|-----------|
-| P3 (8) | UX-021..028 | Focus-driven layout, tree density toggle, pulse animation, timestamp gutter, cost flash, timeline progress bars, team tabs, diff summary |
+| Phase | Tickets | Commit | Lines Changed |
+|-------|---------|--------|---------------|
+| P0 | UX-001..007 (7) | Multiple (see log) | ~+400/-50 |
+| P1 | UX-008..012 (5) | `44f5696b` | +1097/-116 |
+| P2 | UX-013..020 (8) | `9b899a23` | +1315/-94 |
+| P3 | UX-021..028 (8) | `9d2e4b36` | +2355/-116 |
 
-All P2 dependencies are now satisfied. P3 has two dependencies on P2 work (now done): UX-023→UX-020 (reduce-motion), UX-025→UX-020 (reduce-motion). UX-022→UX-008 was already done in P1.
+**Total implementation:** ~+5200/-400 lines across 60+ files, ~$38 total cost.

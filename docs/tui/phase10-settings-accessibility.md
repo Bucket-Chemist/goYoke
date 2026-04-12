@@ -271,14 +271,55 @@ Provide a global reduce-motion toggle for users with vestibular disorders or mot
 
 ---
 
+---
+
+## UX-025: Cost Flash-on-Change (Opt-In)
+
+> **Added in:** UX Redesign P3 sprint (commit `9d2e4b36`)
+
+### Purpose
+
+Provide a visual cue when session cost increases, helping cost-conscious users notice spend in real time. Made opt-in per Braintrust recommendation (Einstein flagged anxiety risk for non-billing users).
+
+### Design Decision
+
+**Time-limited bright flash** using `costFlashUntil time.Time`. When SessionCost increases and the feature is enabled, the cost badge renders in bright white bold for 500ms, then reverts to normal threshold coloring. Double-gated: requires both opt-in AND reduce-motion off.
+
+| Condition | Flash Behavior |
+|-----------|---------------|
+| Disabled (default) | No flash, normal threshold colors |
+| Enabled + reduce-motion off | 500ms bright white bold on cost increase |
+| Enabled + reduce-motion on | No flash (WCAG 2.3.1 compliance) |
+| Cost decreases or unchanged | No flash |
+
+### Implementation
+
+- `CostFlashEnabled bool`, `costFlashUntil time.Time`, `prevCost float64` on `StatusLineModel`
+- `CheckCostFlash() tea.Cmd` — called by `cli_event_handlers.go` after every `SessionCost` update
+- `activeCostStyle()` — returns bright white bold during active flash, otherwise `costStyle()`
+- `CostFlashExpiredMsg` + `scheduleFlashExpiry()` — 500ms tick clears flash
+- Both `viewFull()` and `viewCompact()` use `activeCostStyle()`
+- Settings toggle: "Cost Flash" in Display section (default off)
+- Wired via `handleSettingChanged` → `m.statusLine.CostFlashEnabled`
+
+### Testing
+
+- 5-case table test: enabled+increase, disabled, reduce-motion, decrease, same cost
+- Flash expiry test: `CostFlashExpiredMsg` zeros `costFlashUntil`
+- Default-off assertion
+- `activeCostStyle` bright-white sub-test
+
+---
+
 ## Cross-References
 
 - **Depends on:** [[phase10-visual-foundation]] — TUI-044 (semantic colors), TUI-045 (icons), TUI-046 (theme switching)
 - **Consumed by:** [[phase10-parity-features]] — TUI-057 (plan mode UX uses status line extensions)
 - **Consumed by:** [[phase10-navigation-interaction]] — TUI-062 (vim mode indicator in status line)
-- **Extended by:** UX-016 (sparkline dots), UX-017 (adaptive layout), UX-020 (reduce-motion) — P2 sprint of [[SESSION-20260411-UX-OVERHAUL|UX Redesign]]
-- **P3 depends on UX-020:** UX-023 (pulse animation respects reduce-motion), UX-025 (cost flash respects reduce-motion)
+- **Extended by (P2):** UX-016 (sparkline dots), UX-017 (adaptive layout), UX-020 (reduce-motion)
+- **Extended by (P3):** UX-025 (cost flash)
+- **UX-020 consumed by (P3):** UX-023 (pulse animation), UX-025 (cost flash) — both respect reduce-motion flag
 
 ---
 
-_Part of [[phase10-overview|Phase 10 UX Overhaul]]. Updated with UX Redesign P2 (2026-04-11)._
+_Part of [[phase10-overview|Phase 10 UX Overhaul]]. Updated with UX Redesign P3 (2026-04-12)._

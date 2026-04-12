@@ -17,12 +17,14 @@ Adapt the TUI layout to the actual terminal width. A narrow SSH terminal gets a 
 
 **4-tier LayoutTier enum** covering real-world terminal widths from 80-char SSH to ultra-wide monitors. Components branch on tier for adaptive rendering.
 
-| Tier | Width | Panel Split | Rationale |
-|------|-------|-------------|-----------|
+| Tier | Width | Panel Split (original) | Rationale |
+|------|-------|------------------------|-----------|
 | Compact | <80 | Single panel | Narrow SSH/mobile terminal |
 | Standard | 80-119 | 75/25 (80-99) or 70/30 (100-119) | Common terminal widths |
 | Wide | 120-179 | 60/40 | Wide terminal / split screen |
 | Ultra | >=180 | 50/50 | Ultra-wide monitor |
+
+> **Note:** These fixed ratios were superseded by [[#UX-021 Focus-Driven DrawerContent Split|UX-021]] which makes ratios focus-dependent. The tiers remain; the ratios within each tier now vary by focus target.
 
 ### Implementation
 
@@ -195,12 +197,123 @@ Enable in Settings → Display → Vim Keys → Toggle On. Status line shows cur
 
 ---
 
+---
+
+## UX-021: Focus-Driven Drawer/Content Split
+
+> **Added in:** UX Redesign P3 sprint (commit `9d2e4b36`)
+
+### Purpose
+
+The fixed panel ratios from TUI-058 treat all focus states equally — when the user focuses the right panel, it has the same width as when focused on chat. This wastes space: the focused panel should get more room.
+
+### Design Decision
+
+**Focus-aware ratio override** in `computeLayout()`. Replaces the fixed per-tier ratios with a `switch m.focus` inside each tier case. The existing Tab/Shift+Tab focus cycling (TUI-052) now causes visible layout shifts.
+
+| Focus | Standard | Wide | Ultra |
+|-------|----------|------|-------|
+| `FocusClaude` | 55/45 | 55/45 | 50/50 |
+| `FocusAgents` | 70/30 | 65/35 | 60/40 |
+| Drawer focuses (Plan/Options/Teams) | 30/70 | 35/65 | 40/60 |
+
+Effect is most dramatic at Standard tier (55→70→30), most subtle at Ultra (50→60→40). Compact tier unchanged (single column).
+
+### Implementation
+
+- `computeLayout()` in `layout.go`: replaced fixed `leftRatio` assignments with `switch m.focus` blocks per tier
+- Previous sub-breakpoints (75/25 at 80-99, 70/30 at 100-119) removed — focus-driven ratios subsume them
+- All drawer focus types handled: `FocusPlanDrawer`, `FocusOptionsDrawer`, `FocusTeamsDrawer`
+- No new keybindings needed — existing Tab/Shift+Tab focus ring drives the layout
+
+### Testing
+
+- `TestComputeLayout_FocusAwareRatios` — 23-case table covering every focus × tier combination
+- Updated pre-existing ratio tests to expect UX-021 values
+- Updated `app_test.go` assertions for new defaults
+
+---
+
+## UX-022: Tree Density Toggle
+
+> **Added in:** UX Redesign P3 sprint (commit `9d2e4b36`)
+
+### Purpose
+
+Different tasks need different levels of agent detail. Scanning 20 agents needs compact; debugging one agent needs verbose. Let users cycle between views.
+
+### Design Decision
+
+**3-mode TreeDensity enum** cycled by `alt+d`. Context-sensitive: only fires when agent panel is focused. Added to help modal for discoverability.
+
+| Mode | Rendering | Use Case |
+|------|-----------|----------|
+| Standard (default) | Two-column dot-leader from UX-008 | Normal operation |
+| Compact | Icon + 2-char uppercase abbreviation | Scanning many agents |
+| Verbose | Standard + indented metadata line (status, tier, duration, cost) | Debugging |
+
+### Implementation
+
+- `TreeDensity` type with `DensityStandard`, `DensityCompact`, `DensityVerbose`
+- `CycleDensity()` advances through Standard → Compact → Verbose → wrap
+- `renderCompactDensity()` + `renderCompactNode()`: tree prefix + icon + abbreviation
+- `renderVerboseDensity()` + `renderVerboseMeta()`: standard row + indented metadata
+- `alt+d` in `config/keys.go` AgentKeys group
+- Dispatched in `key_handlers.go` `handleAgentsKey()` when FocusAgents + RPMAgents
+- Added to help modal Agent Panel section
+
+### Testing
+
+- 14 table-driven tests: density cycling, compact rendering, verbose metadata, empty tree, wrapping
+
+---
+
+## UX-023: Pulse Animation on Active Agent
+
+> **Added in:** UX Redesign P3 sprint (commit `9d2e4b36`)
+
+### Purpose
+
+Running agents should be visually distinct from pending ones. A subtle pulse draws the eye without being distracting. Respects reduce-motion for accessibility.
+
+### Design Decision
+
+**Lazy 500ms tick** that only runs when running agents exist. Toggles `pulseBright` boolean, which the icon renderer uses to alternate between bright and dim styles. Zero CPU cost when all agents are idle.
+
+| State | Rendering |
+|-------|-----------|
+| Running + pulse bright | Bright green icon |
+| Running + pulse dim | Dim green icon |
+| Running + reduce-motion | Always bright (static) |
+| Non-running | Normal status color (unchanged) |
+
+### Implementation
+
+- `pulseBright bool`, `tickRunning bool`, `reduceMotion bool` on `AgentTreeModel`
+- `TreePulseTickMsg` + `SchedulePulseTick()` — 500ms tick
+- `MaybeStartPulseTick()` — starts tick only when running agents exist and no tick in flight
+- `hasRunningAgents()` scan; lazy reschedule in Update handler
+- `SetReduceMotion(v bool)` wired from `handleSettingChanged`
+- Icon rendering branches on `pulseBright` for StatusRunning agents
+
+### Testing
+
+- Pulse toggle on tick message
+- Reduce-motion suppression (no tick rescheduled)
+- No tick when no running agents
+- `MaybeStartPulseTick` idempotency
+
+---
+
 ## Cross-References
 
 - **Depends on:** TUI-043 (app.go decomposition for key handler routing), [[phase10-settings-accessibility]] (TUI-050 settings panel for vim toggle, TUI-058 SetTier interfaces)
 - **Consumed by:** [[phase10-polish-animation]] (TUI-063 breadcrumbs use focus context from hint bar)
 - **Interacts with:** [[phase10-parity-features]] (TUI-052 Shift+Tab, TUI-057 plan mode) — hint bar shows context-appropriate shortcuts for these features
+- **Extended by (P3):** UX-021 (focus-driven layout overrides TUI-058 fixed ratios), UX-022 (tree density), UX-023 (pulse animation)
+- **UX-021 depends on:** TUI-058 (4-tier layout), TUI-052 (focus ring cycling)
+- **UX-023 depends on:** UX-020 (reduce-motion flag from [[phase10-settings-accessibility]])
 
 ---
 
-_Part of [[phase10-overview|Phase 10 UX Overhaul]]. Generated by TUI-069._
+_Part of [[phase10-overview|Phase 10 UX Overhaul]]. Updated with UX Redesign P3 (2026-04-12)._
