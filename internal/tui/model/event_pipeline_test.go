@@ -543,15 +543,15 @@ func TestEventPipeline_AssistantEvent_ContextWindow_IgnoresSubagent(t *testing.T
 }
 
 // ---------------------------------------------------------------------------
-// Test 4: AgentRegisteredMsg updates tree AND statusLine.AgentCount.
+// Test 4: AgentRegisteredMsg updates tree AND statusLine.AgentStats.
 // ---------------------------------------------------------------------------
 
 // TestEventPipeline_AgentRegistered_UpdatesTreeAndCount verifies that an
 // AgentRegisteredMsg refreshes both the agent tree nodes AND the
-// statusLine.AgentCount field.
+// statusLine.AgentStats field.
 //
 // Bug class guarded: handleAgentRegistryMsg calls agentTree.SetNodes() but
-// forgets to assign statusLine.AgentCount, so the count shown in the status
+// forgets to assign statusLine.AgentStats, so the count shown in the status
 // bar stays at 0 while the tree shows agents.
 func TestEventPipeline_AgentRegistered_UpdatesTreeAndCount(t *testing.T) {
 	m := newReadyAppModel(120, 40)
@@ -579,21 +579,20 @@ func TestEventPipeline_AgentRegistered_UpdatesTreeAndCount(t *testing.T) {
 	})
 	result := updated.(AppModel)
 
-	// No command expected from this handler.
-	if cmd != nil {
-		t.Errorf("cmd = %v; want nil for AgentRegisteredMsg", cmd)
-	}
+	// A pulse tick cmd is expected when running agents exist (UX-023).
+	// The registered agent has StatusRunning, so MaybeStartPulseTick returns non-nil.
+	_ = cmd
 
 	// Agent count on the status line must reflect the registry total.
 	wantCount := result.shared.agentRegistry.Count().Total
-	if result.statusLine.AgentCount != wantCount {
+	if result.statusLine.AgentStats.Total != wantCount {
 		t.Errorf("statusLine.AgentCount = %d; want %d (registry total)",
-			result.statusLine.AgentCount, wantCount)
+			result.statusLine.AgentStats.Total, wantCount)
 	}
 
 	// Agent count must be at least 1 (we registered one above).
-	if result.statusLine.AgentCount < 1 {
-		t.Errorf("statusLine.AgentCount = %d; want >= 1", result.statusLine.AgentCount)
+	if result.statusLine.AgentStats.Total < 1 {
+		t.Errorf("statusLine.AgentCount = %d; want >= 1", result.statusLine.AgentStats.Total)
 	}
 
 	// The agent tree must have at least one node.
@@ -604,7 +603,7 @@ func TestEventPipeline_AgentRegistered_UpdatesTreeAndCount(t *testing.T) {
 }
 
 // TestEventPipeline_AgentUpdated_CountReflectsRegistry verifies that
-// AgentUpdatedMsg also keeps statusLine.AgentCount in sync.
+// AgentUpdatedMsg also keeps statusLine.AgentStats in sync.
 func TestEventPipeline_AgentUpdated_CountReflectsRegistry(t *testing.T) {
 	m := newReadyAppModel(120, 40)
 
@@ -632,9 +631,9 @@ func TestEventPipeline_AgentUpdated_CountReflectsRegistry(t *testing.T) {
 	result := updated.(AppModel)
 
 	wantCount := result.shared.agentRegistry.Count().Total
-	if result.statusLine.AgentCount != wantCount {
+	if result.statusLine.AgentStats.Total != wantCount {
 		t.Errorf("statusLine.AgentCount = %d; want %d after AgentUpdatedMsg",
-			result.statusLine.AgentCount, wantCount)
+			result.statusLine.AgentStats.Total, wantCount)
 	}
 }
 
@@ -670,9 +669,9 @@ func TestEventPipeline_MultipleAgents_CountMatchesRegistry(t *testing.T) {
 	result := updated.(AppModel)
 
 	wantCount := result.shared.agentRegistry.Count().Total
-	if result.statusLine.AgentCount != wantCount {
+	if result.statusLine.AgentStats.Total != wantCount {
 		t.Errorf("statusLine.AgentCount = %d; want %d after mixed lifecycle messages",
-			result.statusLine.AgentCount, wantCount)
+			result.statusLine.AgentStats.Total, wantCount)
 	}
 }
 
@@ -725,8 +724,8 @@ func TestEventPipeline_AgentRegisteredMsg_RegistersInRegistry(t *testing.T) {
 	if agent.ParentID != rootID {
 		t.Errorf("agent.ParentID = %q; want %q (should default to root)", agent.ParentID, rootID)
 	}
-	if result.statusLine.AgentCount < 2 {
-		t.Errorf("statusLine.AgentCount = %d; want >= 2 (root + spawned)", result.statusLine.AgentCount)
+	if result.statusLine.AgentStats.Total < 2 {
+		t.Errorf("statusLine.AgentCount = %d; want >= 2 (root + spawned)", result.statusLine.AgentStats.Total)
 	}
 
 	// CRITICAL: verify agent is visible in Tree() DFS — not just Count().

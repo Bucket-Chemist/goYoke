@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -325,7 +324,7 @@ func GetAgentClass(agentID string) AgentClass {
 		return ClassSpecialist
 	case "codebase-search", "haiku-scout":
 		return ClassCoordination
-	case "beethoven", "staff-architect-critical-review", "gemini-slave":
+	case "beethoven", "staff-architect-critical-review":
 		return ClassAnalysis
 	default:
 		return ClassUnknown
@@ -376,7 +375,7 @@ func ParseTranscriptForMetadata(transcriptPath string) (*ParsedAgentMetadata, er
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	scanner := newTranscriptScanner(file)
 	var firstTimestamp, lastTimestamp int64
 
 	for scanner.Scan() {

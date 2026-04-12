@@ -283,8 +283,8 @@ func (ag *Agent) ValidateAgent() error {
 	if ag.Path == "" {
 		return fmt.Errorf("agent missing required field: path")
 	}
-	if len(ag.Tools) == 0 && ag.Model != "external" {
-		return fmt.Errorf("agent missing required field: tools (unless external)")
+	if len(ag.Tools) == 0 {
+		return fmt.Errorf("agent missing required field: tools")
 	}
 
 	// Tier validation
@@ -293,11 +293,6 @@ func (ag *Agent) ValidateAgent() error {
 		// Valid numeric tier
 		if tier < 1 || tier > 3 {
 			return fmt.Errorf("invalid numeric tier: %v (must be 1-3)", tier)
-		}
-	case string:
-		// Valid string tier (only "external" allowed)
-		if tier != "external" {
-			return fmt.Errorf("invalid string tier: %q (only 'external' allowed)", tier)
 		}
 	default:
 		return fmt.Errorf("tier must be float64 or string, got %T", ag.Tier)
@@ -513,16 +508,13 @@ func (ag *Agent) GetAllowedTools() []string {
 }
 
 // TierNumber returns the numeric tier value for an agent tier field.
-// Handles float64 (JSON default), int, string ("external" → 0), and nil → 0.
+// Handles float64 (JSON default), int, and nil → 0.
 func TierNumber(tier any) float64 {
 	switch v := tier.(type) {
 	case float64:
 		return v
 	case int:
 		return float64(v)
-	case string:
-		// Only "external" is a valid string tier; treat as 0.
-		return 0
 	default:
 		return 0
 	}

@@ -27,6 +27,8 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
 )
 
+const maxUnixSocketPathBytes = 107
+
 // messageSender is the subset of *tea.Program used by the bridge.
 // Defining it as an interface lets tests inject a mock without a real
 // Bubbletea program.
@@ -52,6 +54,7 @@ type IPCBridge struct {
 //
 //	$XDG_RUNTIME_DIR/gofortress-{pid}.sock   (preferred)
 //	$TMPDIR/gofortress-{pid}.sock            (fallback)
+//	/tmp/gofortress-{pid}.sock               (short-path fallback)
 //
 // Any stale socket at that path is removed before binding.
 func NewIPCBridge(sender messageSender) (*IPCBridge, error) {
@@ -79,11 +82,37 @@ func NewIPCBridge(sender messageSender) (*IPCBridge, error) {
 
 // buildSocketPath returns the socket path for the current PID.
 func buildSocketPath() string {
-	base := os.Getenv("XDG_RUNTIME_DIR")
-	if base == "" {
-		base = os.TempDir()
+	filename := fmt.Sprintf("gofortress-%d.sock", os.Getpid())
+	for _, base := range socketBaseCandidates() {
+		path := filepath.Join(base, filename)
+		if len(path) <= maxUnixSocketPathBytes {
+			return path
+		}
 	}
-	return filepath.Join(base, fmt.Sprintf("gofortress-%d.sock", os.Getpid()))
+	return filepath.Join("/tmp", filename)
+}
+
+func socketBaseCandidates() []string {
+	candidates := []string{
+		os.Getenv("XDG_RUNTIME_DIR"),
+		os.TempDir(),
+		"/tmp",
+	}
+
+	seen := make(map[string]struct{}, len(candidates))
+	bases := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		cleaned := filepath.Clean(candidate)
+		if _, ok := seen[cleaned]; ok {
+			continue
+		}
+		seen[cleaned] = struct{}{}
+		bases = append(bases, cleaned)
+	}
+	return bases
 }
 
 // SocketPath returns the absolute path of the UDS so callers can set

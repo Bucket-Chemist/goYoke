@@ -17,5 +17,8 @@ func Truncate(s string, maxRunes int) string {
 	if len(runes) <= maxRunes {
 		return s
 	}
-	return string(runes[:maxRunes]) + "…"
+	if maxRunes <= 1 {
+		return "…"
+	}
+	return string(runes[:maxRunes-1]) + "…"
 }

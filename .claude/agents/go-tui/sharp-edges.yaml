@@ -1,8 +1,8 @@
 # Sharp Edges for GO TUI Agent (Bubbletea)
 # Common Bubbletea/Lipgloss pitfalls
 
-version: "1.1"
-updated: "2026-01-26"
+version: "1.2"
+updated: "2026-04-11"
 
 sharp_edges:
   - id: goroutine-state-modification
@@ -223,4 +223,36 @@ sharp_edges:
 
       Native commands: /model, /context, /clear, /quit
       Pass-through: /explore, /einstein (handled by Claude)
+    auto_inject: true
+
+  - id: ndjson-large-event-tolerance
+    severity: critical
+    category: integration
+    description: "Valid large NDJSON or stream-json events are treated as fatal scanner errors"
+    symptom: "TUI disconnects or drops active sessions when tool output exceeds the default scanner cap"
+    solution: |
+      For CLI streams, transcripts, and tool-event pipes, increase scanner
+      limits to match realistic payload sizes. Large valid events must not be
+      treated as malformed input purely because they exceed 64 KiB or 1 MiB.
+    auto_inject: true
+
+  - id: truncated-result-loss
+    severity: high
+    category: integration
+    description: "Raw stdout truncation drops the final result event and metadata"
+    symptom: "Verbose subprocesses succeed but the TUI loses the final answer, session id, turn count, or cost"
+    solution: |
+      Capture terminal result events while scanning the stream, not only from a
+      post-hoc parse of the retained raw buffer. Truncation of debug output must
+      not erase the authoritative completion record.
+    auto_inject: true
+
+  - id: unix-socket-path-limit
+    severity: high
+    category: ipc
+    description: "Unix socket paths built from long XDG or temp directories fail before startup"
+    symptom: "Bridge or MCP server bind fails on valid environments with long runtime paths"
+    solution: |
+      Validate socket path length before bind and choose a shorter fallback path
+      when the derived path approaches sockaddr_un limits.
     auto_inject: true

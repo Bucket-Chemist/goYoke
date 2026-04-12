@@ -199,7 +199,6 @@ ERROR [validate-routing] INVALID subagent_type for 'python-pro'
 ERROR [validate-routing] INVALID subagent_type for 'orchestrator'
   Provided:  Bash
   Required:  Plan
-  Reason:    Only gemini-slave uses Bash subagent_type (shell piping)
   Fix:       Use subagent_type: 'Plan'
 ```
 

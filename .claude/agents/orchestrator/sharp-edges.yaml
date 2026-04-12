@@ -10,7 +10,6 @@ sharp_edges:
     solution: |
       ALWAYS run scout first when scope is unknown:
       1. Check if task mentions "module", "system", "refactor"
-      2. If yes, spawn haiku-scout or gemini-slave scout
       3. Read scout_metrics.json before routing
     auto_inject: true
 
@@ -102,20 +101,15 @@ sharp_edges:
       codebase-wide patterns directly will fail or produce shallow results.
     mitigation: >
       Before analyzing directly, check thresholds:
-      - Git diffs >2000 lines → MUST use gemini-slave
-      - Multi-file patterns >5 files → MUST use gemini-slave
-      - Codebase-wide (>10 files) → MUST use gemini-slave
       - Single file >1000 lines → Delegate to architect
       When in doubt, delegate up.
 
   - name: unspecified_gemini_protocol
     severity: medium
     description: >
-      Invoking gemini-slave without specifying protocol (mapper, debugger, architect).
       Each protocol produces different output structure and analytical focus. Without
       protocol, gemini produces generic output that wastes its large context capability.
     mitigation: >
-      Always specify: gemini-slave [protocol] "[question]"
       - mapper: For reducing many files to critical few (JSON output)
       - debugger: For cross-module error tracing (Root Cause analysis)
       - architect: For pattern/architecture identification (Design analysis)

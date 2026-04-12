@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -158,10 +159,11 @@ type TeamRunner struct {
 	configMu   sync.RWMutex  // Protects config reads/writes (acquire AFTER writeMu when both needed)
 	writeMu    sync.Mutex    // Serializes config writes (acquire FIRST when both locks needed)
 
-	spawner    Spawner              // Injected spawn implementation
-	uds        *TeamRunUDSClient    // UDS client for TUI notifications (noop when nil)
-	childPIDs  map[int]struct{}     // Track spawned child PIDs
-	childrenMu sync.Mutex           // Protect childPIDs map
+	spawner        Spawner              // Injected spawn implementation
+	uds            *TeamRunUDSClient    // UDS client for TUI notifications (noop when nil)
+	budgetWarnSent atomic.Bool          // True after budget warning toast has been sent (fire-once)
+	childPIDs      map[int]struct{}     // Track spawned child PIDs
+	childrenMu     sync.Mutex           // Protect childPIDs map
 }
 
 // NewTeamRunner creates a TeamRunner for the given team directory.

@@ -195,7 +195,7 @@ func TestCheckToolPermission_UnknownTier(t *testing.T) {
 	}
 }
 
-// TestFindTierForTool verifies the search order: haiku → haiku_thinking → sonnet → opus → external.
+// TestFindTierForTool verifies the search order: haiku → haiku_thinking → sonnet → opus.
 // Tests with explicit tools only (no wildcard) to verify search order works correctly.
 func TestFindTierForTool(t *testing.T) {
 	schema := &Schema{
@@ -211,9 +211,6 @@ func TestFindTierForTool(t *testing.T) {
 			},
 			"opus": {
 				Tools: []string{"Read", "Write", "Edit", "Task"},
-			},
-			"external": {
-				Tools: []string{"CustomExternal"},
 			},
 		},
 	}
@@ -242,11 +239,6 @@ func TestFindTierForTool(t *testing.T) {
 			name:     "Task found in opus",
 			tool:     "Task",
 			wantTier: "opus",
-		},
-		{
-			name:     "CustomExternal found in external",
-			tool:     "CustomExternal",
-			wantTier: "external",
 		},
 		{
 			name:     "Unknown tool returns unknown",

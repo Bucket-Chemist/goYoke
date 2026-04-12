@@ -447,7 +447,7 @@ Wave 2 (sequential): security-synthesiser (reads all Wave 1 outputs)
           "error_message": "",
           "retry_count": 0,
           "max_retries": 1,
-          "timeout_ms": 300000,
+          "timeout_ms": 600000,
           "started_at": null,
           "completed_at": null
         }

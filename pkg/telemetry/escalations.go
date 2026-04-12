@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,9 +16,9 @@ import (
 // Tracks Einstein/Gemini invocations and their outcomes.
 type EscalationEvent struct {
 	// Core identification
-	Timestamp    string `json:"timestamp"`      // RFC3339 format
+	Timestamp    string `json:"timestamp"` // RFC3339 format
 	SessionID    string `json:"session_id"`
-	EscalationID string `json:"escalation_id"`  // UUID for tracking
+	EscalationID string `json:"escalation_id"` // UUID for tracking
 
 	// Escalation context
 	FromTier  string `json:"from_tier"`  // e.g., "sonnet"
@@ -35,7 +34,7 @@ type EscalationEvent struct {
 	GAPDocPath string `json:"gap_doc_path,omitempty"` // Path to GAP document if generated
 
 	// Outcome tracking (updated after resolution)
-	Outcome           string `json:"outcome"`                        // "pending", "resolved", "still_blocked"
+	Outcome           string `json:"outcome"` // "pending", "resolved", "still_blocked"
 	ResolutionTimeMs  int64  `json:"resolution_time_ms,omitempty"`
 	ResolutionSummary string `json:"resolution_summary,omitempty"`
 	TokensUsed        int    `json:"tokens_used,omitempty"`
@@ -130,7 +129,7 @@ func LoadEscalations(path string) ([]EscalationEvent, error) {
 	defer file.Close()
 
 	var escalations []EscalationEvent
-	scanner := bufio.NewScanner(file)
+	scanner := newTelemetryScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -251,7 +250,7 @@ type EscalationStats struct {
 	StillBlockedCount int     `json:"still_blocked_count"`
 	PendingCount      int     `json:"pending_count"`
 	CancelledCount    int     `json:"cancelled_count"`
-	ResolutionRate    float64 `json:"resolution_rate"`    // ResolvedCount / (ResolvedCount + StillBlockedCount)
+	ResolutionRate    float64 `json:"resolution_rate"` // ResolvedCount / (ResolvedCount + StillBlockedCount)
 	AvgResolutionMs   int64   `json:"avg_resolution_ms"`
 	TotalTokensUsed   int     `json:"total_tokens_used"`
 }
@@ -280,7 +279,7 @@ type EscalationROI struct {
 	CompletedCount         int     `json:"completed_count"`
 	ResolvedCount          int     `json:"resolved_count"`
 	StillBlockedCount      int     `json:"still_blocked_count"`
-	ResolutionRate         float64 `json:"resolution_rate"`           // Resolved / Completed
+	ResolutionRate         float64 `json:"resolution_rate"` // Resolved / Completed
 	TotalTokensUsed        int     `json:"total_tokens_used"`
 	AvgTokensPerEscalation int     `json:"avg_tokens_per_escalation"`
 	EstimatedCostSaved     float64 `json:"estimated_cost_saved"` // If hadn't escalated (rough estimate)
@@ -300,8 +299,8 @@ type LatencyStats struct {
 type EscalationTrend struct {
 	EarlyCount    int     `json:"early_count"`
 	LateCount     int     `json:"late_count"`
-	Trend         string  `json:"trend"`           // "improving", "stable", "worsening"
-	ChangePercent float64 `json:"change_percent"`  // Percentage change
+	Trend         string  `json:"trend"`          // "improving", "stable", "worsening"
+	ChangePercent float64 `json:"change_percent"` // Percentage change
 	Message       string  `json:"message"`
 }
 

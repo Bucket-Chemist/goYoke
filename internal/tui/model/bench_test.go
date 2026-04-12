@@ -172,11 +172,14 @@ func (p *benchClaudePanel) View() string                              { return p
 func (p *benchClaudePanel) SetSize(_, _ int)                         {}
 func (p *benchClaudePanel) SetFocused(_ bool)                        {}
 func (p *benchClaudePanel) IsStreaming() bool                        { return false }
+func (p *benchClaudePanel) HasInput() bool                           { return false }
 func (p *benchClaudePanel) SaveMessages() []state.DisplayMessage     { return nil }
 func (p *benchClaudePanel) RestoreMessages(_ []state.DisplayMessage) {}
 func (p *benchClaudePanel) SetSender(_ MessageSender)                {}
 func (p *benchClaudePanel) AppendSystemMessage(_ string)             {}
 func (p *benchClaudePanel) SetTier(_ LayoutTier)                     {}
+func (p *benchClaudePanel) SetReduceMotion(_ bool)                   {}
+func (p *benchClaudePanel) SetShowTimestamps(_ bool) tea.Cmd         { return nil }
 func (p *benchClaudePanel) ViewConversation() string                 { return p.content }
 func (p *benchClaudePanel) ViewInput() string                        { return "" }
 func (p *benchClaudePanel) ApplyOverlay(composed string) string      { return composed }

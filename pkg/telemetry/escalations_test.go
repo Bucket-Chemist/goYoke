@@ -362,6 +362,28 @@ func TestLoadEscalations_EmptyFile(t *testing.T) {
 	}
 }
 
+func TestLoadEscalations_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "escalations.jsonl")
+	largeReason := strings.Repeat("y", 70*1024)
+	content := `{"timestamp":"2026-01-22T10:00:00Z","escalation_id":"e1","from_tier":"sonnet","to_tier":"opus","reason":"` + largeReason + `","outcome":"pending"}`
+
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	escalations, err := LoadEscalations(path)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(escalations) != 1 {
+		t.Fatalf("Expected 1 escalation, got: %d", len(escalations))
+	}
+	if escalations[0].Reason != largeReason {
+		t.Fatalf("Expected large reason to round-trip")
+	}
+}
+
 // ===== UpdateEscalationOutcome Tests =====
 
 func TestUpdateEscalationOutcome_Success(t *testing.T) {
@@ -809,10 +831,10 @@ func TestLogEscalation_AllFields(t *testing.T) {
 
 func TestClusterEscalationsByFromAgent(t *testing.T) {
 	tests := []struct {
-		name       string
+		name        string
 		escalations []EscalationEvent
-		wantCount  int
-		verify     func(t *testing.T, clusters map[string]*AgentEscalationStats)
+		wantCount   int
+		verify      func(t *testing.T, clusters map[string]*AgentEscalationStats)
 	}{
 		{
 			name: "multiple agents with different outcomes",
@@ -894,10 +916,10 @@ func TestClusterEscalationsByFromAgent(t *testing.T) {
 
 func TestClusterEscalationsByTrigger(t *testing.T) {
 	tests := []struct {
-		name       string
+		name        string
 		escalations []EscalationEvent
-		wantCount  int
-		verify     func(t *testing.T, clusters map[string]*TriggerEscalationStats)
+		wantCount   int
+		verify      func(t *testing.T, clusters map[string]*TriggerEscalationStats)
 	}{
 		{
 			name: "multiple triggers with mixed outcomes",
@@ -1140,9 +1162,9 @@ func TestAnalyzeEscalationLatency(t *testing.T) {
 		{
 			name: "ignores zero latencies",
 			escalations: []EscalationEvent{
-				{ResolutionTimeMs: 0},     // Ignored
+				{ResolutionTimeMs: 0}, // Ignored
 				{ResolutionTimeMs: 1000},
-				{ResolutionTimeMs: 0},     // Ignored
+				{ResolutionTimeMs: 0}, // Ignored
 				{ResolutionTimeMs: 2000},
 			},
 			verify: func(t *testing.T, stats LatencyStats) {

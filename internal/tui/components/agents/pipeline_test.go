@@ -71,9 +71,9 @@ func TestTree_SetNodes_ViewShowsAgents(t *testing.T) {
 	view := m.View()
 	assert.NotContains(t, view, "No agents",
 		"View() must not show empty-state when nodes are present")
-	// The agent type and description should appear in the rendered row.
+	// The agent type should appear in the rendered row (description is no
+	// longer shown in tree view after UX-008 dot-leader layout).
 	assert.Contains(t, view, "go-pro")
-	assert.Contains(t, view, "implement auth")
 }
 
 // TestTree_SetNodes_MultipleAgents_AllRendered verifies that all agents in the
@@ -177,9 +177,10 @@ func TestTree_SelectedHighlight_ViewDiffers(t *testing.T) {
 	lines := strings.Split(view, "\n")
 	require.GreaterOrEqual(t, len(lines), 2, "view must have at least 2 lines")
 
-	// Both lines contain their respective agent labels.
-	assert.Contains(t, lines[0], "selected task")
-	assert.Contains(t, lines[1], "unselected task")
+	// Both lines contain their respective agent types (description is no
+	// longer shown in tree view after UX-008 dot-leader layout).
+	assert.Contains(t, lines[0], "go-pro")
+	assert.Contains(t, lines[1], "go-tui")
 
 	// The selected row (index 0) and unselected row must not be byte-identical,
 	// because the selected row is wrapped with StyleHighlight.
@@ -279,8 +280,14 @@ func TestDetail_SetAgent_ShowsCostAndTokens(t *testing.T) {
 	agent.Tokens = 4500
 	m.SetAgent(agent)
 
+	// Cost appears in the collapsed compact line ($0.123).
 	view := m.View()
 	assert.Contains(t, view, "0.123", "View() must display cost")
+
+	// Tokens only appear in the expanded Overview — expand it directly.
+	m.sections[0].Expanded = true
+	m.syncViewport()
+	view = m.View()
 	assert.Contains(t, view, "4,500", "View() must display token count with thousands separator")
 }
 

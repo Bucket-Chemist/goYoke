@@ -99,18 +99,13 @@ What do you want to achieve? (One sentence describing the end state)
   cat /tmp/bash_metrics.txt
   echo "---FILES---"
   find . -type f \( -name "*.go" -o -name "*.py" -o -name "*.ts" \) | head -100
-} | gemini-slave scout "Assess scope for: <goal>"
 ```
 
 **Scout with fallback:**
 
 ```bash
-if command -v gemini-slave >/dev/null 2>&1; then
-    # Primary: gemini-slave
-    { cat /tmp/bash_metrics.txt; echo "---FILES---"; find . -type f \( -name "*.go" -o -name "*.py" -o -name "*.ts" \) | head -100; } | gemini-slave scout "Assess scope for: <goal>"
 else
     # Fallback: haiku-scout
-    echo "[scout] gemini-slave not available, using haiku-scout fallback"
     Task({subagent_type: "Explore", model: "haiku", prompt: "AGENT: haiku-scout\n\nAssess scope for: <goal>"})
 fi
 ```

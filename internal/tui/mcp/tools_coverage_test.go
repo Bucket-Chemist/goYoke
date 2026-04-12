@@ -35,8 +35,7 @@ import (
 // ---------------------------------------------------------------------------
 func mockUDSMulti(t *testing.T, responder func(req IPCRequest) (IPCResponse, bool)) (*UDSClient, func()) {
 	t.Helper()
-	dir := t.TempDir()
-	sockPath := filepath.Join(dir, "multi.sock")
+	sockPath := makeTestSocketPath(t, "multi.sock")
 
 	ln, err := net.Listen("unix", sockPath)
 	require.NoError(t, err)
@@ -78,8 +77,7 @@ func mockUDSMulti(t *testing.T, responder func(req IPCRequest) (IPCResponse, boo
 func TestUDSClient_Send_OneWayNotification(t *testing.T) {
 	received := make(chan IPCRequest, 1)
 
-	dir := t.TempDir()
-	sockPath := filepath.Join(dir, "send.sock")
+	sockPath := makeTestSocketPath(t, "send.sock")
 	ln, err := net.Listen("unix", sockPath)
 	require.NoError(t, err)
 	defer ln.Close()
@@ -123,8 +121,7 @@ func TestUDSClient_Send_OneWayNotification(t *testing.T) {
 func TestUDSClient_Notify_SendsPayload(t *testing.T) {
 	received := make(chan IPCRequest, 1)
 
-	dir := t.TempDir()
-	sockPath := filepath.Join(dir, "notify.sock")
+	sockPath := makeTestSocketPath(t, "notify.sock")
 	ln, err := net.Listen("unix", sockPath)
 	require.NoError(t, err)
 	defer ln.Close()
@@ -244,8 +241,7 @@ func TestHandleSpawnAgent_ValidAgent_NotifiesUDS(t *testing.T) {
 
 	// Capture all IPC notifications.
 	notifications := make(chan IPCRequest, 10)
-	sockDir := t.TempDir()
-	sockPath := filepath.Join(sockDir, "notify.sock")
+	sockPath := makeTestSocketPath(t, "notify.sock")
 	ln, err := net.Listen("unix", sockPath)
 	require.NoError(t, err)
 	defer ln.Close()

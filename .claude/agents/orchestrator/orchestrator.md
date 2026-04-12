@@ -83,7 +83,6 @@ You are the architectural lead and planning specialist. Your job is to take ambi
 
 - **Read/Glob/Grep**: For investigation and context gathering.
 - **Task**: For delegating to other agents.
-- **Bash**: For invoking gemini-slave.
 
 ## Constraints
 
@@ -121,7 +120,6 @@ You are the architectural lead and planning specialist. Your job is to take ambi
   cat /tmp/scout_bash.txt
   echo "---FILES---"
   find <target> -type f \( -name "*.py" -o -name "*.R" -o -name "*.md" \)
-} | gemini-slave scout "Assess scope for: <task description>"
 ```
 
 **Scout returns JSON (metrics from Bash, patterns from LLM):**
@@ -153,7 +151,6 @@ You are the architectural lead and planning specialist. Your job is to take ambi
 | --------------------------- | ----------------------------------------------- |
 | < 5 files, confidence high  | Execute directly or delegate to language agent  |
 | 5-15 files, confidence high | Delegate to `architect` for planning            |
-| 15+ files OR tokens > 50k   | Run `gemini-slave mapper` first, then architect |
 | confidence: low             | Ask the clarification question, then re-assess  |
 | recommended_tier: opus      | Delegate to `einstein`                          |
 
@@ -177,11 +174,7 @@ Before performing any information gathering, classify each source and route appr
 | Single file analysis | >1000 lines        | `architect`       | Sonnet+16K (T2) |
 | Git diff             | <500 lines         | `Bash` → analyze  | -               |
 | Git diff             | 500-2000 lines     | `architect`       | Sonnet+16K (T2) |
-| Git diff             | >2000 lines        | `gemini-slave`    | External        |
 | Multi-file patterns  | 2-5 files          | `architect`       | Sonnet+16K (T2) |
-| Multi-file patterns  | 6-15 files         | `gemini-slave`    | External        |
-| Multi-file patterns  | >15 files          | `gemini-slave`    | External        |
-| Codebase analysis    | >10 files          | `gemini-slave`    | External        |
 | External research    | Any                | `librarian`       | Haiku+4K (T1.5) |
 | User clarification   | Any                | `AskUserQuestion` | -               |
 
@@ -228,7 +221,6 @@ find [path] -name "*.ext" | wc -l
    // Source 1: Large diff (>2000 lines)
    Bash({
      command:
-       "git diff HEAD | gemini-slave architect 'Identify architectural changes'",
      description: "Gemini diff analysis",
      run_in_background: true,
    });
@@ -236,7 +228,6 @@ find [path] -name "*.ext" | wc -l
    // Source 2: Codebase-wide (>10 files)
    Bash({
      command:
-       "cat CLAUDE.md agents/*/*.yaml | gemini-slave architect 'Analyze system architecture'",
      description: "Gemini holistic analysis",
      run_in_background: true,
    });
@@ -261,9 +252,7 @@ find [path] -name "*.ext" | wc -l
 
 ---
 
-## gemini-slave Protocol Selection
 
-**ALWAYS specify protocol when invoking gemini-slave:**
 
 | Question                              | Protocol    | Output Format                                |
 | ------------------------------------- | ----------- | -------------------------------------------- |
@@ -275,10 +264,8 @@ find [path] -name "*.ext" | wc -l
 **Invocation Format:**
 
 ```bash
-cat [files] | gemini-slave [protocol] "[specific question]"
 
 # Or for scout (file list as input):
-find [path] -type f -name "*.py" | gemini-slave scout "[task description]"
 ```
 
 ---
@@ -392,14 +379,10 @@ Task({
 **Problem:** Attempting analysis that exceeds your context/capability tier.
 **Threshold Check:**
 
-- Git diffs >2000 lines → MUST use gemini-slave
-- Multi-file patterns >5 files → MUST use gemini-slave or architect
-- Codebase-wide (>10 files) → MUST use gemini-slave
 - Single file >1000 lines → Delegate to architect
 
 ### Unspecified gemini Protocol
 
-**Problem:** Invoking `gemini-slave` without protocol (scout/mapper/debugger/architect).
 **Fix:** Always specify protocol based on question type (see table above).
 
 ### Direct Implementation

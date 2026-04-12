@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -25,6 +25,17 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
+
+// timestampTickMsg is fired every 60 seconds when timestamp display is
+// enabled to refresh relative-time labels in the conversation gutter (UX-024).
+type timestampTickMsg time.Time
+
+// scheduleTimestampTick returns a Cmd that fires after 60 seconds.
+func scheduleTimestampTick() tea.Cmd {
+	return tea.Tick(60*time.Second, func(t time.Time) tea.Msg {
+		return timestampTickMsg(t)
+	})
+}
 
 // CLIDriverSender is a package-level type alias retained for backward
 // compatibility.  New code should use model.MessageSender directly.
@@ -54,13 +65,25 @@ var (
 			Bold(true).
 			Foreground(config.ColorPrimary)
 
+	// userContentStyle colors user message body text cyan, matching userRoleStyle.
+	userContentStyle = lipgloss.NewStyle().
+				Foreground(config.ColorPrimary)
+
 	// assistantRoleStyle renders the "Claude:" prefix for assistant messages.
 	assistantRoleStyle = lipgloss.NewStyle().
 				Bold(true).
 				Foreground(config.ColorAccent)
 
+	// assistantContentStyle colors streaming assistant body text green.
+	// Completed assistant messages are styled by Glamour and are not affected.
+	assistantContentStyle = lipgloss.NewStyle().
+				Foreground(config.ColorSuccess)
+
 	// systemRoleStyle renders the "System:" prefix for system messages.
 	systemRoleStyle = config.StyleMuted.Copy().Bold(true)
+
+	// systemContentStyle colors system message body text muted/grey.
+	systemContentStyle = config.StyleMuted.Copy()
 
 	// toolNameStyle renders the collapsed tool-block name.
 	toolNameStyle = config.StyleSubtle.Copy()
@@ -90,8 +113,8 @@ type ClaudePanelModel struct {
 	// viewport renders the scrollable conversation history.
 	vp viewport.Model
 
-	// input is the text-input widget for composing messages.
-	input textinput.Model
+	// input is the textarea widget for composing messages.
+	input textarea.Model
 
 	// history holds previously submitted messages with cross-session
 	// persistence to ~/.claude/input-history.json (shared with TS TUI).
@@ -159,15 +182,41 @@ type ClaudePanelModel struct {
 	// effortLevel holds the current --effort level for display in the input
 	// line. Empty string or "auto" means default (no indicator shown).
 	effortLevel string
+
+	// reduceMotion disables the rainbow gradient ultrathink indicator when true
+	// (WCAG 2.3.1). Set via Settings → Display → Reduce Motion toggle.
+	reduceMotion bool
+
+	// showTimestamps enables the 5-char relative-time gutter at turn boundaries
+	// in the conversation panel (UX-024). Default false.
+	showTimestamps bool
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
-// The viewport and textinput are initialised with zero dimensions; call
+// The viewport and textarea are initialised with zero dimensions; call
 // SetSize before the first render.
 func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
-	ti := textinput.New()
-	ti.Placeholder = "Message Claude…"
-	ti.CharLimit = 4096
+	ta := textarea.New()
+	ta.Placeholder = "Message Claude…"
+	ta.CharLimit = 4096
+	ta.ShowLineNumbers = false
+	ta.MaxHeight = 10
+
+	// Match the minimal textinput look: no cursor-line highlight, no muted
+	// blurred-text colour, and the styled "› " prompt rendered on the first
+	// display line with "  " indentation on continuation lines.
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.BlurredStyle.CursorLine = lipgloss.NewStyle()
+	ta.BlurredStyle.Text = lipgloss.NewStyle()
+	ta.FocusedStyle.Prompt = inputPromptStyle
+	ta.BlurredStyle.Prompt = inputPromptStyle
+	ta.SetPromptFunc(2, func(lineIdx int) string {
+		if lineIdx == 0 {
+			return "› "
+		}
+		return "  "
+	})
+	ta.SetHeight(1)
 
 	vp := viewport.New(0, 0)
 
@@ -178,7 +227,7 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 
 	return ClaudePanelModel{
 		vp:         vp,
-		input:      ti,
+		input:      ta,
 		historyIdx: -1,
 		autoScroll: true,
 		keys:       keys.Claude,
@@ -192,10 +241,10 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 // tea.Model interface
 // ---------------------------------------------------------------------------
 
-// Init implements tea.Model. It returns textinput.Blink so the cursor
+// Init implements tea.Model. It returns textarea.Blink so the cursor
 // animates when the panel is first shown.
 func (m ClaudePanelModel) Init() tea.Cmd {
-	return textinput.Blink
+	return textarea.Blink
 }
 
 // Update implements tea.Model. It handles all incoming messages and keyboard
@@ -244,6 +293,14 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		}
 		return m, nil
 
+	case timestampTickMsg:
+		// Refresh gutter timestamps and reschedule if still enabled (UX-024).
+		m.syncViewport()
+		if m.showTimestamps {
+			return m, scheduleTimestampTick()
+		}
+		return m, nil
+
 	case slashcmd.SlashCmdSelectedMsg:
 		// User selected a command from the dropdown via Enter.
 		// Execute the command immediately (no args appended).
@@ -281,7 +338,10 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		}
 	}
 
+	m.input.SetHeight(10)
 	m.input, tiCmd = m.input.Update(msg)
+	m.updateInputHeight()
+	m.recalculateLayout()
 	cmds = append(cmds, tiCmd)
 
 	return m, tea.Batch(cmds...)
@@ -394,9 +454,10 @@ func (m ClaudePanelModel) handleToolUseMsg(msg model.ToolUseMsg) ClaudePanelMode
 	}
 	last := &m.messages[len(m.messages)-1]
 	last.ToolBlocks = append(last.ToolBlocks, ToolBlock{
-		Name:   msg.ToolName,
-		ToolID: msg.ToolID,
-		Input:  msg.Input,
+		Name:      msg.ToolName,
+		ToolID:    msg.ToolID,
+		Input:     msg.Input,
+		StartedAt: time.Now(),
 	})
 
 	m.syncViewport()
@@ -415,12 +476,52 @@ func (m ClaudePanelModel) handleToolResultMsg(msg model.ToolResultMsg) ClaudePan
 			if m.messages[i].ToolBlocks[j].ToolID == msg.ToolID {
 				s := msg.Success
 				m.messages[i].ToolBlocks[j].Success = &s
+				if !m.messages[i].ToolBlocks[j].StartedAt.IsZero() {
+					m.messages[i].ToolBlocks[j].Duration = time.Since(m.messages[i].ToolBlocks[j].StartedAt)
+				}
 				m.syncViewport()
 				return m
 			}
 		}
 	}
 	return m
+}
+
+// toggleLastToolExpansion toggles the Expanded state of the most recent tool
+// block in the conversation. Walks messages backwards to find the last
+// assistant message with tool blocks.
+func (m *ClaudePanelModel) toggleLastToolExpansion() {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		if len(m.messages[i].ToolBlocks) > 0 {
+			last := len(m.messages[i].ToolBlocks) - 1
+			m.messages[i].ToolBlocks[last].Expanded = !m.messages[i].ToolBlocks[last].Expanded
+			m.syncViewport()
+			return
+		}
+	}
+}
+
+// cycleAllToolExpansion cycles all tool blocks in the last assistant message
+// between all-collapsed and all-expanded states.
+// If any block is collapsed → expand all. If all expanded → collapse all.
+func (m *ClaudePanelModel) cycleAllToolExpansion() {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		if len(m.messages[i].ToolBlocks) == 0 {
+			continue
+		}
+		anyCollapsed := false
+		for _, tb := range m.messages[i].ToolBlocks {
+			if !tb.Expanded {
+				anyCollapsed = true
+				break
+			}
+		}
+		for j := range m.messages[i].ToolBlocks {
+			m.messages[i].ToolBlocks[j].Expanded = anyCollapsed
+		}
+		m.syncViewport()
+		return
+	}
 }
 
 // handleKey processes keyboard input while the panel is focused.
@@ -491,6 +592,8 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 				newVal := "/" + sel.Name + " "
 				m.input.SetValue(newVal)
 				m.input.CursorEnd()
+				m.updateInputHeight()
+				m.recalculateLayout()
 			}
 			return m, nil
 		}
@@ -568,11 +671,44 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		return m, tea.Batch(cmds...)
 
 	case key.Matches(msg, m.keys.HistoryPrev):
-		m = m.navigateHistoryPrev()
-		return m, nil
+		// Navigate history when the cursor is on the first line.
+		// When the input has multiple lines and the cursor is below line 0,
+		// let the textarea handle Up to move the cursor within the text.
+		if m.input.Line() == 0 {
+			m = m.navigateHistoryPrev()
+			m.updateInputHeight()
+			m.recalculateLayout()
+			return m, nil
+		}
+		var tiCmd tea.Cmd
+		m.input.SetHeight(10)
+		m.input, tiCmd = m.input.Update(msg)
+		m.updateInputHeight()
+		m.recalculateLayout()
+		return m, tiCmd
 
 	case key.Matches(msg, m.keys.HistoryNext):
-		m = m.navigateHistoryNext()
+		// Navigate history when already in history mode or cursor is on the
+		// last logical line. Otherwise let the textarea move the cursor down.
+		if m.historyIdx != -1 || m.input.Line() == m.input.LineCount()-1 {
+			m = m.navigateHistoryNext()
+			m.updateInputHeight()
+			m.recalculateLayout()
+			return m, nil
+		}
+		var tiCmd tea.Cmd
+		m.input.SetHeight(10)
+		m.input, tiCmd = m.input.Update(msg)
+		m.updateInputHeight()
+		m.recalculateLayout()
+		return m, tiCmd
+
+	case key.Matches(msg, m.keys.ToggleToolExpansion):
+		m.toggleLastToolExpansion()
+		return m, nil
+
+	case key.Matches(msg, m.keys.CycleExpansion):
+		m.cycleAllToolExpansion()
 		return m, nil
 	}
 
@@ -591,14 +727,19 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		return m, nil
 	}
 
-	// Forward all other key events to the textinput.
+	// Forward all other key events to the textarea.
 	var tiCmd tea.Cmd
+	m.input.SetHeight(10)
 	m.input, tiCmd = m.input.Update(msg)
+
+	// Resize the textarea and viewport to fit the current content.
+	m.updateInputHeight()
+	m.recalculateLayout()
 
 	// After any text change, update the slash-command dropdown state.
 	m.updateSlashDropdown()
 
-	// Check if the viewport was scrolled by user (not textinput key).
+	// Check if the viewport was scrolled by user (not textarea key).
 	if !m.vp.AtBottom() {
 		m.autoScroll = false
 	}
@@ -798,11 +939,11 @@ func (m ClaudePanelModel) ViewConversation() string {
 	return m.viewportWithScrollbar()
 }
 
-// ViewInput returns the input prompt and text input only.
-// It does not include the streaming indicator or the slash command dropdown.
+// ViewInput returns the textarea (which includes the "› " prompt via its
+// SetPromptFunc) ready for composition. It does not include the streaming
+// indicator or the slash command dropdown.
 func (m ClaudePanelModel) ViewInput() string {
-	prompt := inputPromptStyle.Render("› ")
-	return prompt + m.input.View()
+	return m.input.View()
 }
 
 // ApplyOverlay takes a fully composed panel string (conversation joined with
@@ -851,12 +992,11 @@ func (m ClaudePanelModel) viewportWithScrollbar() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, vpView, sb)
 }
 
-// renderInputLine builds the single-line input area including the "› " prompt.
+// renderInputLine builds the input area including the embedded "› " prompt.
+// NOTE: this function is retained for completeness but is not called by the
+// main rendering path (View → ViewInput is used instead).
 func (m ClaudePanelModel) renderInputLine() string {
-	prompt := inputPromptStyle.Render("› ")
-	inputView := m.input.View()
-
-	line := prompt + inputView
+	line := m.input.View()
 
 	if m.streaming {
 		indicator := streamingStyle.Render("  ...")
@@ -889,15 +1029,30 @@ func (m ClaudePanelModel) renderMessages() string {
 
 	var sb strings.Builder
 	for i, msg := range m.messages {
+		isTurnBoundary := i == 0 || m.messages[i].Role != m.messages[i-1].Role
 		if i > 0 {
-			sb.WriteByte('\n')
+			if isTurnBoundary {
+				ruleWidth := m.vp.Width
+				if ruleWidth <= 0 {
+					ruleWidth = 80
+				}
+				sb.WriteByte('\n')
+				sb.WriteString(config.StyleMuted.Render(strings.Repeat("─", ruleWidth)))
+				sb.WriteByte('\n')
+			} else {
+				sb.WriteByte('\n')
+			}
 		}
-		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1))
+		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1, isTurnBoundary))
 	}
 
 	switch {
 	case m.thinkingActive && m.ultrathinkActive:
-		sb.WriteString("\n" + config.RainbowGradient("Thinking..."))
+		if m.reduceMotion {
+			sb.WriteString("\n" + config.StyleMuted.Render("thinking..."))
+		} else {
+			sb.WriteString("\n" + config.RainbowGradient("Thinking..."))
+		}
 	case m.thinkingActive:
 		sb.WriteString("\n" + config.StyleMuted.Render("thinking..."))
 	case m.streaming:
@@ -916,17 +1071,27 @@ func (m ClaudePanelModel) renderMessages() string {
 //
 // isLast must be true when this is the last message in the conversation, so
 // the streaming guard can correctly suppress Glamour for the live fragment.
-func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string {
+//
+// isTurnBoundary must be true when this message is the first of a role block
+// (i.e. where a horizontal rule is rendered), so the optional timestamp gutter
+// (UX-024) is only displayed at role transitions.
+func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool, isTurnBoundary bool) string {
 	var sb strings.Builder
+
+	// Timestamp gutter — 5-char column shown only at turn boundaries (UX-024).
+	var gutter string
+	if m.showTimestamps && isTurnBoundary && !msg.Timestamp.IsZero() {
+		gutter = config.StyleMuted.Render(fmtRelativeTime(msg.Timestamp))
+	}
 
 	// Role label.
 	switch msg.Role {
 	case "user":
-		sb.WriteString(userRoleStyle.Render("You:"))
+		sb.WriteString(gutter + userRoleStyle.Render("You:"))
 	case "assistant":
-		sb.WriteString(assistantRoleStyle.Render("Claude:"))
+		sb.WriteString(gutter + assistantRoleStyle.Render("Claude:"))
 	default:
-		sb.WriteString(systemRoleStyle.Render("System:"))
+		sb.WriteString(gutter + systemRoleStyle.Render("System:"))
 	}
 	sb.WriteByte('\n')
 
@@ -947,18 +1112,22 @@ func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string 
 		} else {
 			// Wrap to viewport width so long lines (markdown tables, URLs)
 			// don't overflow the viewport height when the terminal wraps them.
-			sb.WriteString(wordwrap.String(msg.Content, m.vp.Width))
+			wrapped := wordwrap.String(msg.Content, m.vp.Width)
+			switch msg.Role {
+			case "user":
+				sb.WriteString(userContentStyle.Render(wrapped))
+			case "assistant":
+				sb.WriteString(assistantContentStyle.Render(wrapped))
+			default:
+				sb.WriteString(systemContentStyle.Render(wrapped))
+			}
 			sb.WriteByte('\n')
 		}
 	}
 
-	// Render tool blocks inline only in compact mode (width < 80).
-	// In standard/wide/ultra tiers the Activity panel is visible and
-	// tool blocks are shown there instead (TUI-L05).
-	if m.tier == model.LayoutCompact {
-		for _, tb := range msg.ToolBlocks {
-			sb.WriteString(renderToolBlock(tb, m.vp.Width))
-		}
+	// Show inline tool blocks in all layout tiers (UX-014).
+	for _, tb := range msg.ToolBlocks {
+		sb.WriteString(renderToolBlock(tb, m.vp.Width))
 	}
 
 	return sb.String()
@@ -1006,26 +1175,32 @@ func extractToolDisplayInput(rawInput string) string {
 // renderToolBlock renders a ToolBlock either collapsed (just the name) or
 // expanded (name + input + output).
 func renderToolBlock(tb ToolBlock, _ int) string {
-	// Status prefix: ✓ for success, ✗ for failure, empty while pending.
-	prefix := "  "
+	var prefix, suffix string
+
 	if tb.Success != nil {
 		if *tb.Success {
 			prefix = "  ✓ "
 		} else {
 			prefix = "  ✗ "
 		}
+		if tb.Duration > 0 {
+			suffix = " " + config.StyleMuted.Render(fmtToolDuration(tb.Duration))
+		}
+	} else {
+		prefix = "  ⏳ "
 	}
 
 	if !tb.Expanded {
+		display := ""
 		if tb.Input != "" {
-			display := extractToolDisplayInput(tb.Input)
-			return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) +
-				" " + config.StyleSubtle.Render(display) + "\n"
+			display = " " + config.StyleSubtle.Render(extractToolDisplayInput(tb.Input))
 		}
-		return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) + "\n"
+		return prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)) +
+			display + suffix + "\n"
 	}
 	var sb strings.Builder
 	sb.WriteString(prefix + toolNameStyle.Render(fmt.Sprintf("[%s]", tb.Name)))
+	sb.WriteString(suffix)
 	sb.WriteByte('\n')
 	if tb.Input != "" {
 		sb.WriteString(config.StyleSubtle.Render("    in:  "+tb.Input) + "\n")
@@ -1036,30 +1211,78 @@ func renderToolBlock(tb ToolBlock, _ int) string {
 	return sb.String()
 }
 
+// fmtToolDuration formats a tool invocation duration for the inline indicator.
+// Shows milliseconds for durations under 1 second, otherwise "Xs" or "Xm Ys".
+func fmtToolDuration(d time.Duration) string {
+	if d < time.Second {
+		return fmt.Sprintf("%dms", d.Milliseconds())
+	}
+	d = d.Round(time.Second)
+	s := int(d.Seconds())
+	if s < 60 {
+		return fmt.Sprintf("%ds", s)
+	}
+	m := s / 60
+	s = s % 60
+	return fmt.Sprintf("%dm %ds", m, s)
+}
+
+// ---------------------------------------------------------------------------
+// Layout helpers
+// ---------------------------------------------------------------------------
+
+// updateInputHeight resizes the textarea to fit its current content.
+// It uses the textarea's own LineInfo().Height which reflects its internal
+// word-wrapping, avoiding any mismatch from manual width calculations.
+func (m *ClaudePanelModel) updateInputHeight() {
+	if m.input.Width() <= 0 {
+		return
+	}
+	h := m.input.LineInfo().Height
+	if h < 1 {
+		h = 1
+	}
+	if h > 10 {
+		h = 10
+	}
+	m.input.SetHeight(h)
+}
+
+// recalculateLayout adjusts the conversation viewport dimensions to consume
+// all panel height not occupied by the textarea. Called after any change that
+// may alter the textarea height (content edits, window resize).
+func (m *ClaudePanelModel) recalculateLayout() {
+	inputH := lipgloss.Height(m.input.View())
+	vpH := m.height - inputH
+	if vpH < 1 {
+		vpH = 1
+	}
+	vpW := m.width
+	if m.width > 20 {
+		vpW = m.width - 1 // reserve one column for the scrollbar
+	}
+	m.vp.Width = vpW
+	m.vp.Height = vpH
+}
+
 // ---------------------------------------------------------------------------
 // Public mutators
 // ---------------------------------------------------------------------------
 
 // SetSize updates the width and height of the panel and resizes the viewport
-// and textinput accordingly.  This must be called from the parent model's
+// and textarea accordingly.  This must be called from the parent model's
 // Update on every tea.WindowSizeMsg.
 func (m *ClaudePanelModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 
-	// Reserve one line for the input row.
-	vpH := height - 1
-	if vpH < 1 {
-		vpH = 1
-	}
+	// SetWidth accounts for the 2-char prompt internally; reserve 1 column
+	// for the vertical scrollbar so the textarea aligns with the viewport.
+	m.input.SetWidth(width - 1)
 
-	vpW := width
-	if width > 20 {
-		vpW = width - 1 // reserve one column for the scrollbar
-	}
-	m.vp.Width = vpW
-	m.vp.Height = vpH
-	m.input.Width = width - 3 // subtract prompt width ("› ")
+	// Resize textarea height to fit current content, then calculate viewport.
+	m.updateInputHeight()
+	m.recalculateLayout()
 
 	// Re-sync so content is re-wrapped to the new width.
 	m.syncViewport()
@@ -1070,13 +1293,15 @@ func (m *ClaudePanelModel) SetSize(width, height int) {
 }
 
 // SetFocused sets whether the panel accepts keyboard input.  When focused,
-// the textinput cursor is shown.  If the search overlay is active, focusing
+// the textarea cursor is shown.  If the search overlay is active, focusing
 // the panel does not steal focus from the search input.
 func (m *ClaudePanelModel) SetFocused(focused bool) {
 	m.focused = focused
 	if focused {
 		if !m.search.IsActive() {
-			m.input.Focus()
+			// textarea.Focus() returns a tea.Cmd to restart cursor blinking;
+			// discard it here since the blink chain was started in Init().
+			_ = m.input.Focus()
 		}
 	} else {
 		m.input.Blur()
@@ -1119,11 +1344,64 @@ func (m ClaudePanelModel) IsStreaming() bool {
 	return m.streaming
 }
 
+// HasInput returns true when the text input contains non-empty text.
+// Used by the auto-switch guard (UX-019) to avoid interrupting the user.
+func (m ClaudePanelModel) HasInput() bool {
+	return strings.TrimSpace(m.input.Value()) != ""
+}
+
 // IsUltrathinkActive reports whether the last submitted message contained
 // "ultrathink" (case-insensitive). Used by the thinking indicator renderer
 // to select the rainbow gradient variant.
 func (m ClaudePanelModel) IsUltrathinkActive() bool {
 	return m.ultrathinkActive
+}
+
+// SetReduceMotion controls whether animations (rainbow ultrathink indicator)
+// are suppressed for accessibility (WCAG 2.3.1). When true, the rainbow
+// gradient is replaced with a plain muted "thinking..." string.
+func (m *ClaudePanelModel) SetReduceMotion(v bool) {
+	m.reduceMotion = v
+}
+
+// SetShowTimestamps enables or disables the 5-char relative-time gutter shown
+// at turn boundaries in the conversation panel (UX-024).
+//
+// When enabling (v == true) it returns the initial 60-second tick command that
+// keeps relative timestamps fresh; the tick is self-rescheduling as long as
+// showTimestamps remains true. When disabling (v == false) it returns nil so
+// the tick chain stops naturally on the next firing.
+func (m *ClaudePanelModel) SetShowTimestamps(v bool) tea.Cmd {
+	m.showTimestamps = v
+	m.syncViewport()
+	if v {
+		return scheduleTimestampTick()
+	}
+	return nil
+}
+
+// fmtRelativeTime formats a message timestamp for the conversation gutter.
+// It returns a left-aligned 5-character string: the relative age followed by
+// spaces so the gutter always consumes exactly 5 columns.
+//
+//	< 1 min  → "now  "
+//	1–59 min → "Xm   "  (e.g. "5m   ")
+//	1–23 h   → "Xh   "  (e.g. "2h   ")
+//	1+ days  → "Xd   "  (e.g. "3d   ")
+func fmtRelativeTime(t time.Time) string {
+	d := time.Since(t)
+	var s string
+	switch {
+	case d < time.Minute:
+		s = "now"
+	case d < time.Hour:
+		s = fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		s = fmt.Sprintf("%dh", int(d.Hours()))
+	default:
+		s = fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
+	return fmt.Sprintf("%-5s", s)
 }
 
 // refreshViewport rebuilds the viewport content string from the current

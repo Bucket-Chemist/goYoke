@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
@@ -146,6 +148,196 @@ func TestTeamsHealthModel_EmptyState(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "No active teams") {
 		t.Errorf("empty registry should render 'No active teams', got: %q", view)
+	}
+}
+
+func TestCalcProgress(t *testing.T) {
+	tests := []struct {
+		name    string
+		elapsed time.Duration
+		timeout time.Duration
+		want    float64
+	}{
+		{"zero timeout is indeterminate", 30 * time.Second, 0, -1.0},
+		{"negative timeout is indeterminate", 30 * time.Second, -time.Second, -1.0},
+		{"negative elapsed clamps to 0", -5 * time.Second, 60 * time.Second, 0.0},
+		{"0% progress", 0, 60 * time.Second, 0.0},
+		{"50% progress", 30 * time.Second, 60 * time.Second, 0.5},
+		{"100% progress exact", 60 * time.Second, 60 * time.Second, 1.0},
+		{"overtime capped at 100%", 90 * time.Second, 60 * time.Second, 1.0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := calcProgress(tc.elapsed, tc.timeout)
+			if got != tc.want {
+				t.Errorf("calcProgress(%v, %v) = %v, want %v", tc.elapsed, tc.timeout, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMemberStatusStyle(t *testing.T) {
+	tests := []struct {
+		status string
+		want   lipgloss.Style
+	}{
+		{"running", config.StyleSuccess},
+		{"completed", config.StyleSuccess.Bold(true)},
+		{"failed", config.StyleError},
+		{"killed", config.StyleWarning},
+		{"pending", config.StyleMuted},
+		{"skipped", config.StyleMuted},
+		{"unknown", config.StyleMuted},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.status, func(t *testing.T) {
+			got := memberStatusStyle(tc.status)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("memberStatusStyle(%q): style mismatch", tc.status)
+			}
+		})
+	}
+}
+
+func TestRenderMemberProgressBar(t *testing.T) {
+	m := NewTeamsHealthModel(NewTeamRegistry())
+	m.SetSize(80, 24)
+
+	started := time.Now().Add(-2 * time.Minute).Format(time.RFC3339)
+	completed := time.Now().Add(-time.Minute).Format(time.RFC3339)
+
+	tests := []struct {
+		name        string
+		member      Member
+		wantEmpty   bool
+		wantContain []string
+	}{
+		{
+			name:      "pending returns empty string",
+			member:    Member{Name: "agent1", Status: "pending"},
+			wantEmpty: true,
+		},
+		{
+			name:      "skipped returns empty string",
+			member:    Member{Name: "agent1", Status: "skipped"},
+			wantEmpty: true,
+		},
+		{
+			name:        "running shows indeterminate bar",
+			member:      Member{Name: "agent1", Status: "running", StartedAt: &started},
+			wantContain: []string{"agent1", "[", "]", "—"},
+		},
+		{
+			name:        "completed shows 100% bar",
+			member:      Member{Name: "agent2", Status: "completed", StartedAt: &started, CompletedAt: &completed},
+			wantContain: []string{"agent2", "[", "]", "100%"},
+		},
+		{
+			name:        "failed shows 100% bar",
+			member:      Member{Name: "agent3", Status: "failed", StartedAt: &started, CompletedAt: &completed},
+			wantContain: []string{"agent3", "[", "]", "100%"},
+		},
+		{
+			name:        "killed shows 100% bar",
+			member:      Member{Name: "agent4", Status: "killed", StartedAt: &started, CompletedAt: &completed},
+			wantContain: []string{"agent4", "[", "]", "100%"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := m.renderMemberProgressBar(tc.member)
+			if tc.wantEmpty {
+				if got != "" {
+					t.Errorf("renderMemberProgressBar: got %q, want empty string", got)
+				}
+				return
+			}
+			for _, sub := range tc.wantContain {
+				if !strings.Contains(got, sub) {
+					t.Errorf("renderMemberProgressBar: result %q missing %q", got, sub)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderWaveProgressBar(t *testing.T) {
+	m := NewTeamsHealthModel(NewTeamRegistry())
+	m.SetSize(80, 24)
+
+	tests := []struct {
+		name        string
+		wave        Wave
+		wantEmpty   bool
+		wantContain []string
+	}{
+		{
+			name:      "empty wave returns empty string",
+			wave:      Wave{WaveNumber: 1},
+			wantEmpty: true,
+		},
+		{
+			name: "all pending shows 0/N",
+			wave: Wave{WaveNumber: 1, Members: []Member{
+				{Name: "a1", Status: "pending"},
+				{Name: "a2", Status: "pending"},
+			}},
+			wantContain: []string{"[", "]", "0/2"},
+		},
+		{
+			name: "partial completion shows count",
+			wave: Wave{WaveNumber: 1, Members: []Member{
+				{Name: "a1", Status: "completed"},
+				{Name: "a2", Status: "running"},
+				{Name: "a3", Status: "pending"},
+			}},
+			wantContain: []string{"[", "]", "1/3"},
+		},
+		{
+			name: "all completed shows full count",
+			wave: Wave{WaveNumber: 1, Members: []Member{
+				{Name: "a1", Status: "completed"},
+				{Name: "a2", Status: "completed"},
+			}},
+			wantContain: []string{"[", "]", "2/2"},
+		},
+		{
+			name: "failed member counts toward done",
+			wave: Wave{WaveNumber: 1, Members: []Member{
+				{Name: "a1", Status: "failed"},
+				{Name: "a2", Status: "pending"},
+			}},
+			wantContain: []string{"[", "]", "1/2"},
+		},
+		{
+			name: "killed member counts toward done",
+			wave: Wave{WaveNumber: 1, Members: []Member{
+				{Name: "a1", Status: "killed"},
+				{Name: "a2", Status: "completed"},
+				{Name: "a3", Status: "running"},
+			}},
+			wantContain: []string{"[", "]", "2/3"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := m.renderWaveProgressBar(tc.wave)
+			if tc.wantEmpty {
+				if got != "" {
+					t.Errorf("renderWaveProgressBar: got %q, want empty string", got)
+				}
+				return
+			}
+			for _, sub := range tc.wantContain {
+				if !strings.Contains(got, sub) {
+					t.Errorf("renderWaveProgressBar: result %q missing %q", got, sub)
+				}
+			}
+		})
 	}
 }
 

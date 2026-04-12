@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -189,4 +193,98 @@ func parseTodoItems(input json.RawMessage) []todoItem {
 		items[i] = todoItem{Content: t.Content, Status: t.Status}
 	}
 	return items
+}
+
+// ---------------------------------------------------------------------------
+// Stream file scanning for diff summary (UX-028)
+// ---------------------------------------------------------------------------
+
+// countNL returns the number of newline-terminated lines in s.
+// Returns 0 for empty strings, otherwise counts newlines and adds 1 if the
+// string does not end with a newline.
+func countNL(s string) int {
+	if s == "" {
+		return 0
+	}
+	n := strings.Count(s, "\n")
+	if !strings.HasSuffix(s, "\n") {
+		n++
+	}
+	return n
+}
+
+// scanStreamNDJSON reads a stream_*.ndjson file and extracts the set of file
+// paths touched by Write/Edit tool_use events, plus line deltas.
+// Best-effort: returns empty set and zeros on any read or parse error.
+func scanStreamNDJSON(path string) (files map[string]struct{}, linesAdded, linesRemoved int) {
+	files = make(map[string]struct{})
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	for _, rawLine := range bytes.Split(data, []byte("\n")) {
+		rawLine = bytes.TrimSpace(rawLine)
+		if len(rawLine) == 0 {
+			continue
+		}
+
+		ev := parseStreamEvent(rawLine)
+		if ev == nil || ev.Type != "assistant" {
+			continue
+		}
+
+		ae := parseAssistantEvent(rawLine)
+		if ae == nil {
+			continue
+		}
+
+		for _, block := range ae.Message.Content {
+			if block.Type != "tool_use" {
+				continue
+			}
+			switch block.Name {
+			case "Write":
+				var input struct {
+					FilePath string `json:"file_path"`
+					Content  string `json:"content"`
+				}
+				if err := json.Unmarshal(block.Input, &input); err != nil || input.FilePath == "" {
+					continue
+				}
+				files[input.FilePath] = struct{}{}
+				linesAdded += countNL(input.Content)
+
+			case "Edit":
+				var input struct {
+					FilePath  string `json:"file_path"`
+					OldString string `json:"old_string"`
+					NewString string `json:"new_string"`
+				}
+				if err := json.Unmarshal(block.Input, &input); err != nil || input.FilePath == "" {
+					continue
+				}
+				files[input.FilePath] = struct{}{}
+				linesRemoved += countNL(input.OldString)
+				linesAdded += countNL(input.NewString)
+			}
+		}
+	}
+	return
+}
+
+// countChangedFilesInDir scans the stream_*.ndjson files for each agentID in
+// the team directory and returns the count of unique file paths modified.
+// Best-effort: returns 0 on any error.
+func countChangedFilesInDir(teamDir string, agentIDs []string) int {
+	fileSet := make(map[string]struct{})
+	for _, agentID := range agentIDs {
+		path := filepath.Join(teamDir, fmt.Sprintf("stream_%s.ndjson", agentID))
+		files, _, _ := scanStreamNDJSON(path)
+		for f := range files {
+			fileSet[f] = struct{}{}
+		}
+	}
+	return len(fileSet)
 }

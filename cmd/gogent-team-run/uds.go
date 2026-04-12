@@ -15,6 +15,8 @@ const (
 	typeAgentUpdate     = "agent_update"
 	typeAgentActivity   = "agent_activity"
 	typeAgentTodoUpdate = "agent_todo_update"
+	typeToast           = "toast"
+	typeTeamUpdate      = "team_update"
 )
 
 // ipcRequest is a fire-and-forget notification sent to the TUI over UDS.
@@ -52,6 +54,20 @@ type agentActivityPayload struct {
 	Tool    string `json:"tool"`
 	Target  string `json:"target,omitempty"`
 	Preview string `json:"preview,omitempty"`
+}
+
+// toastPayload mirrors protocol.go ToastPayload. Sent to TUI to display
+// actionable notifications.
+type toastPayload struct {
+	Message string `json:"message"`
+	Level   string `json:"level"` // "info", "warn", "error"
+}
+
+// teamUpdatePayload mirrors protocol.go TeamUpdatePayload. Sent to TUI when a
+// team completes or fails so the Teams tab can flash and auto-switch (UX-019).
+type teamUpdatePayload struct {
+	TeamDir string `json:"teamDir"`
+	Status  string `json:"status"`
 }
 
 // agentTodoUpdatePayload mirrors protocol.go AgentTodoUpdatePayload.

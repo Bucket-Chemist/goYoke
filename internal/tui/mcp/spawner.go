@@ -51,6 +51,48 @@ type cliResult struct {
 	Truncated    bool
 }
 
+type cliOutputCollector struct {
+	stdoutBuf   bytes.Buffer
+	maxBytes    int
+	truncated   bool
+	resultEntry *cliResult
+}
+
+func newCLIOutputCollector(maxBytes int) *cliOutputCollector {
+	return &cliOutputCollector{maxBytes: maxBytes}
+}
+
+func (c *cliOutputCollector) appendLine(line []byte) {
+	if c.resultEntry == nil {
+		if result, ok := parseCLIResultEntry(line); ok {
+			c.resultEntry = result
+		}
+	}
+
+	if c.truncated || c.stdoutBuf.Len() >= c.maxBytes {
+		return
+	}
+
+	c.stdoutBuf.Write(line)
+	c.stdoutBuf.WriteByte('\n')
+	if c.stdoutBuf.Len() >= c.maxBytes {
+		c.truncated = true
+		c.stdoutBuf.WriteString("[OUTPUT TRUNCATED]")
+	}
+}
+
+func (c *cliOutputCollector) bytes() []byte {
+	return c.stdoutBuf.Bytes()
+}
+
+func (c *cliOutputCollector) fallbackResult() *cliResult {
+	if c.resultEntry != nil {
+		cloned := *c.resultEntry
+		return &cloned
+	}
+	return nil
+}
+
 // validateNestingDepth checks GOGENT_NESTING_LEVEL and returns an error if the
 // maximum nesting depth has been reached.
 func validateNestingDepth() error {
@@ -163,6 +205,29 @@ func parseCLIOutput(output []byte) (*cliResult, error) {
 	return nil, fmt.Errorf("no result entry found in CLI output")
 }
 
+func parseCLIResultEntry(entry []byte) (*cliResult, bool) {
+	var partial struct {
+		Type     string  `json:"type"`
+		Result   string  `json:"result"`
+		Cost     float64 `json:"total_cost_usd"`
+		IsError  bool    `json:"is_error"`
+		Session  string  `json:"session_id"`
+		NumTurns int     `json:"num_turns"`
+	}
+
+	if err := json.Unmarshal(entry, &partial); err != nil || partial.Type != "result" {
+		return nil, false
+	}
+
+	return &cliResult{
+		Result:       partial.Result,
+		TotalCostUSD: partial.Cost,
+		NumTurns:     partial.NumTurns,
+		IsError:      partial.IsError,
+		SessionID:    partial.Session,
+	}, true
+}
+
 // runSubprocess starts a claude CLI subprocess, applies a SIGTERM/SIGKILL
 // timeout lifecycle, and returns the parsed result. When uds is non-nil,
 // live tool_use events are parsed from the NDJSON stream and forwarded as
@@ -208,10 +273,9 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	}
 
 	var (
-		stdoutBuf bytes.Buffer
-		stderrBuf bytes.Buffer
-		truncated bool
-		wg        sync.WaitGroup
+		outputCollector = newCLIOutputCollector(maxBufferBytes)
+		stderrBuf       bytes.Buffer
+		wg              sync.WaitGroup
 	)
 
 	wg.Add(2)
@@ -228,15 +292,7 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 		scanner.Buffer(make([]byte, 0, 512*1024), maxBufferBytes)
 		for scanner.Scan() {
 			line := scanner.Bytes()
-			// Buffer raw lines for final result parsing by parseCLIOutput.
-			if !truncated && stdoutBuf.Len() < maxBufferBytes {
-				stdoutBuf.Write(line)
-				stdoutBuf.WriteByte('\n')
-				if stdoutBuf.Len() >= maxBufferBytes {
-					truncated = true
-					stdoutBuf.WriteString("[OUTPUT TRUNCATED]")
-				}
-			}
+			outputCollector.appendLine(line)
 			// Live NDJSON parsing: extract tool_use events and forward
 			// as AgentActivity IPC notifications for the TUI detail panel.
 			if uds != nil {
@@ -247,13 +303,15 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 				if ae, ok := event.(cli.AssistantEvent); ok {
 					for _, block := range ae.Message.Content {
 						if block.Type == "tool_use" && block.Name != "" {
-							act := cli.ExtractToolActivity(block)
-							uds.notify(TypeAgentActivity, AgentActivityPayload{
-								AgentID: agentID,
-								Tool:    block.Name,
-								Target:  act.Target,
-								Preview: act.Preview,
-							})
+							activities := cli.ExtractToolActivities(block, "")
+							for _, act := range activities {
+								uds.notify(TypeAgentActivity, AgentActivityPayload{
+									AgentID: agentID,
+									Tool:    block.Name,
+									Target:  act.Target,
+									Preview: act.Preview,
+								})
+							}
 							// Detect TodoWrite and forward full todo state to TUI.
 							// Also write the AC sidecar file from this goroutine to
 							// avoid a race with the endstate hook (M-3).
@@ -327,12 +385,16 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 
 	waitErr := cmd.Wait()
 
-	result, parseErr := parseCLIOutput(stdoutBuf.Bytes())
+	result, parseErr := parseCLIOutput(outputCollector.bytes())
 	if parseErr != nil {
-		slog.Warn("spawn_agent CLI output parse failed", "agent", input.Agent, "err", parseErr)
-		result = &cliResult{Result: stdoutBuf.String()}
+		if fallback := outputCollector.fallbackResult(); fallback != nil {
+			result = fallback
+		} else {
+			slog.Warn("spawn_agent CLI output parse failed", "agent", input.Agent, "err", parseErr)
+			result = &cliResult{Result: string(outputCollector.bytes())}
+		}
 	}
-	result.Truncated = truncated
+	result.Truncated = outputCollector.truncated
 
 	if waitErr != nil {
 		var exitErr *exec.ExitError

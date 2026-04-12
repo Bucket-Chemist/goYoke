@@ -135,8 +135,12 @@ func (m *AppModel) SetSessionStore(store *session.Store) {
 // SetSessionData injects the initial session data into the shared state.
 // On session resume, this is populated from LoadSession; for new sessions,
 // the caller creates a fresh SessionData with NewSessionID().
+// It also restores persisted preferences (e.g. SimpleMode) into AppModel.
 func (m *AppModel) SetSessionData(data *session.SessionData) {
 	m.shared.sessionData = data
+	if data != nil {
+		m.simpleMode = data.SimpleMode
+	}
 }
 
 // SessionData returns the current session data held in shared state.

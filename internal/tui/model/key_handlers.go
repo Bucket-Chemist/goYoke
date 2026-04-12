@@ -274,6 +274,11 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.DisableMouse
 
+	case key.Matches(msg, m.keys.Global.ToggleSimpleMode):
+		m.simpleMode = !m.simpleMode
+		m.propagateContentSizes()
+		return m, nil
+
 	case key.Matches(msg, m.keys.Global.ShowHelp):
 		if m.shared != nil {
 			m.shared.helpModal.SetSize(m.width, m.height)
@@ -358,6 +363,13 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// forwarding so it works regardless of which child has focus.
 	if key.Matches(msg, m.keys.Agent.AgentKill) {
 		return m.handleAgentKillKey()
+	}
+
+	// alt+d: cycle tree density (UX-022). Works in RPMAgents regardless of
+	// whether the tree or detail sub-panel has focus.
+	if key.Matches(msg, m.keys.Agent.CycleDensity) {
+		m.agentTree.CycleDensity()
+		return m, nil
 	}
 
 	switch m.rightPanelMode {

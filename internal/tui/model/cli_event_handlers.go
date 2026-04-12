@@ -164,11 +164,17 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 					cmds = append(cmds, cmd)
 				}
 			case block.Type == "tool_use" && block.Name != "":
-				activity := cli.ExtractToolActivity(block)
+				activities := cli.ExtractToolActivities(block, "")
+				if len(activities) == 0 {
+					continue
+				}
+				activity := activities[0]
 				if msg.ParentToolUseID == nil {
 					// Root-level tool_use: route to agent registry activity panel.
 					if m.shared.agentRegistry != nil {
-						m.shared.agentRegistry.AppendActivity("router-root", activity)
+						for _, act := range activities {
+							m.shared.agentRegistry.AppendActivity("router-root", act)
+						}
 						rootActivityAppended = true
 					}
 				} else {
@@ -353,6 +359,9 @@ func (m AppModel) handleResultEvent(msg cli.ResultEvent) (tea.Model, tea.Cmd) {
 		m.shared.costTracker.UpdateSessionCost(msg.TotalCostUSD)
 	}
 	m.statusLine.SessionCost = msg.TotalCostUSD
+	if cmd := m.statusLine.CheckCostFlash(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 
 	// Accumulate session token counts from aggregate usage.
 	m.statusLine.TokenCount += msg.Usage.InputTokens + msg.Usage.OutputTokens

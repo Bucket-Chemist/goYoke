@@ -177,6 +177,10 @@ type sharedState struct {
 	// persisted to SessionData without re-deriving the variant from the Theme
 	// value (which would require a reverse lookup).
 	themeVariant config.ThemeVariant
+
+	// reduceMotion disables animations when true (WCAG 2.3.1).
+	// Set via Settings → Display → Reduce Motion toggle.
+	reduceMotion bool
 }
 
 // ---------------------------------------------------------------------------
@@ -251,6 +255,18 @@ type AppModel struct {
 
 	// mouseEnabled tracks whether tea mouse capture is active; true at startup.
 	mouseEnabled bool
+
+	// simpleMode hides the right panel when true, giving the conversation panel
+	// 100% of the terminal width (UX-007). Toggled by alt+\. Persisted to
+	// SessionData.SimpleMode across restarts.
+	simpleMode bool
+
+	// iconRailMode is true when the right panel is narrow enough to activate the
+	// compact icon rail rendering (UX-003). Updated with hysteresis in
+	// propagateContentSizes: switches to icon rail when rightWidth < 28, reverts
+	// to full rendering when rightWidth >= 32. The [28, 32) band is a dead zone
+	// that preserves the current mode to prevent flicker during resize.
+	iconRailMode bool
 }
 
 // NewAppModel returns an AppModel initialised with sensible defaults:
@@ -479,6 +495,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.agentTree.SetFocused(true)
 		return m, nil
 
+	case agents.TreePulseTickMsg:
+		// Forward pulse tick to the tree; the tree self-reschedules lazily.
+		result, cmd := m.agentTree.Update(msg)
+		if updated, ok := result.(agents.AgentTreeModel); ok {
+			m.agentTree = updated
+		}
+		return m, cmd
+
 	case ToastMsg:
 		return m.handleToastMsg(msg)
 
@@ -662,6 +686,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
+			// Populate status line team indicator from teamsHealth.
+			tid := m.shared.teamsHealth.TeamIndicator()
+			m.statusLine.TeamActive = tid.Active
+			m.statusLine.TeamName = tid.Name
+			m.statusLine.TeamMemberStatuses = tid.MemberStatuses
+			m.statusLine.TeamCurrentWave = tid.CurrentWave
+			m.statusLine.TeamTotalWaves = tid.TotalWaves
+			m.statusLine.TeamCost = tid.Cost
+
 			// Refresh the team detail panel so it shows up-to-date member state.
 			if m.shared.teamDetail != nil {
 				m.shared.teamDetail.Refresh()
@@ -676,6 +709,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// type-switch on it directly; the detail model handles it internally.
 	if m.shared != nil && m.shared.teamDetail != nil {
 		m.shared.teamDetail.HandleMsg(msg)
+	}
+
+	// Forward unhandled messages to the claude panel for timestamp tick
+	// processing (UX-024). timestampTickMsg is unexported from the claude
+	// package, so AppModel cannot type-switch on it; forwarding here keeps the
+	// self-scheduling 60-second tick alive as long as timestamps are enabled.
+	if m.shared != nil && m.shared.claudePanel != nil {
+		if cmd := m.shared.claudePanel.HandleMsg(msg); cmd != nil {
+			return m, cmd
+		}
 	}
 
 	return m, nil

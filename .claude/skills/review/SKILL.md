@@ -165,9 +165,9 @@ Read the review template from `.claude/schemas/teams/review.json` and populate w
 - `project_root`: `$(git rev-parse --show-toplevel)`
 - `session_id`: basename of `$GOGENT_SESSION_DIR`
 - `created_at`: `$(date -u +%Y-%m-%dT%H:%M:%SZ)`
-- `budget_max_usd`: `2.0`
-- `budget_remaining_usd`: `2.0`
-- `warning_threshold_usd`: `1.6`
+- `budget_max_usd`: `5.0`
+- `budget_remaining_usd`: `5.0`
+- `warning_threshold_usd`: `4.0`
 - `status`: `"pending"`
 - `background_pid`: `null`
 - `started_at`: `null`
@@ -175,7 +175,7 @@ Read the review template from `.claude/schemas/teams/review.json` and populate w
 
 **Per-member fields** (from review.json template, filtered to selected reviewers):
 - `model`: `"haiku"` for backend/frontend/standards, `"sonnet"` for architect
-- `timeout_ms`: `120000` for haiku reviewers, `300000` for architect
+- `timeout_ms`: `600000` for all reviewers (10 min)
 - `max_retries`: `2`
 - `stdin_file`: `"stdin_{reviewer-name}.json"`
 - `stdout_file`: `"stdout_{reviewer-name}.json"`

@@ -185,6 +185,29 @@ not valid json
 	}
 }
 
+func TestLoadEntriesCmd_LargeLine(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "large.jsonl")
+	largeDecision := strings.Repeat("d", 70*1024)
+	content := `{"timestamp":"2026-01-01T00:00:00Z","agent":"go-pro","tier":"sonnet","decision":"` + largeDecision + `"}`
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	cmd := LoadEntriesCmd(path)
+	msg := cmd()
+	loaded := msg.(TelemetryLoadedMsg)
+	if loaded.Err != nil {
+		t.Fatalf("unexpected error: %v", loaded.Err)
+	}
+	if len(loaded.Entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(loaded.Entries))
+	}
+	if loaded.Entries[0].Decision != largeDecision {
+		t.Fatalf("expected large decision to round-trip")
+	}
+}
+
 func TestShortTimestamp(t *testing.T) {
 	tests := []struct {
 		ts   string

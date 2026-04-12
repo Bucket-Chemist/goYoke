@@ -326,8 +326,8 @@ func (d *CLIDriver) buildArgs() []string {
 // ---------------------------------------------------------------------------
 
 // scannerBufSize is the maximum line length accepted by the NDJSON scanner.
-// 1 MB accommodates large tool outputs such as file reads.
-const scannerBufSize = 1024 * 1024
+// Claude tool results can exceed 1 MB when Read/Grep return large payloads.
+const scannerBufSize = 10 * 1024 * 1024
 
 // consumeEvents reads NDJSON lines from d.stdout, parses each line with
 // ParseCLIEvent, and sends parsed events to d.eventCh. It runs in its own

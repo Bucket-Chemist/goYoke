@@ -1,14 +1,17 @@
 package statusline_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/stretchr/testify/assert"
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 )
 
@@ -432,21 +435,25 @@ func TestCostStyle_Thresholds(t *testing.T) {
 	theme := config.DefaultTheme()
 	m.SetTheme(theme)
 
+	// costStyle thresholds: green <$1, yellow $1–$5, red >$5 (all bold).
 	tests := []struct {
 		name      string
 		cost      float64
 		wantStyle string
 	}{
-		{"below warning threshold", 0.05, "success"},
-		{"at warning threshold", 0.10, "warning"},
-		{"below error threshold", 0.99, "warning"},
-		{"at error threshold", 1.00, "error"},
-		{"above error threshold", 5.00, "error"},
+		{"zero cost", 0.00, "success"},
+		{"below $1 threshold", 0.99, "success"},
+		{"at $1 threshold", 1.00, "warning"},
+		{"between $1 and $5", 2.50, "warning"},
+		{"just below $5", 4.99, "warning"},
+		{"at $5 threshold", 5.00, "error"},
+		{"above $5 threshold", 10.00, "error"},
 	}
 
-	successStyle := theme.SuccessStyle()
-	warningStyle := theme.WarningStyle()
-	errorStyle := theme.ErrorStyle()
+	// costStyle always adds Bold(true); compare against bolded base styles.
+	successStyle := theme.SuccessStyle().Bold(true)
+	warningStyle := theme.WarningStyle().Bold(true)
+	errorStyle := theme.ErrorStyle().Bold(true)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -544,7 +551,7 @@ func TestSetTheme_UpdatesTheme(t *testing.T) {
 	lightTheme := config.NewTheme(config.ThemeLight)
 	m.SetTheme(lightTheme)
 	got := m.CostStyleForTest(0.01)
-	assert.Equal(t, lightTheme.SuccessStyle(), got)
+	assert.Equal(t, lightTheme.SuccessStyle().Bold(true), got)
 }
 
 // ---------------------------------------------------------------------------
@@ -571,9 +578,9 @@ func TestUncommittedCountCmd_Execution(t *testing.T) {
 
 func TestView_IncludesAgentCount(t *testing.T) {
 	m := statusline.NewStatusLineModel(160)
-	m.AgentCount = 3
+	m.AgentStats = state.AgentStats{Total: 3, Running: 3}
 	view := m.View()
-	assert.Contains(t, view, "agents:3", "View() should include 'agents:3'")
+	assert.Contains(t, view, "agents: 3/3", "View() should include 'agents: 3/3'")
 }
 
 func TestView_IncludesUncommittedCount_WhenPositive(t *testing.T) {
@@ -598,7 +605,7 @@ func TestView_ExcludesUncommittedCount_WhenZero(t *testing.T) {
 
 func TestView_TwoRowsWithNewFields(t *testing.T) {
 	m := statusline.NewStatusLineModel(200)
-	m.AgentCount = 2
+	m.AgentStats = state.AgentStats{Total: 2, Running: 2}
 	m.UncommittedCount = 4
 	m.SessionCost = 1.50
 	m.ContextPercent = 85
@@ -632,7 +639,7 @@ func TestRenderContextBar_25Percent(t *testing.T) {
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "25%")
 	assert.Contains(t, result, "250K/1M")
-	assert.Contains(t, result, "▓")
+	assert.Contains(t, result, "█")
 }
 
 func TestRenderContextBar_50Percent(t *testing.T) {
@@ -662,7 +669,7 @@ func TestRenderContextBar_100Percent(t *testing.T) {
 	m.ContextUsedTokens = 1_000_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "100%")
-	assert.Contains(t, result, "▓▓▓▓▓▓▓▓▓▓")
+	assert.Contains(t, result, "██████████")
 	assert.Contains(t, result, "1M/1M")
 }
 
@@ -674,7 +681,7 @@ func TestRenderContextBar_NarrowFallback(t *testing.T) {
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "52%")
 	assert.Contains(t, result, "520K/1M")
-	assert.NotContains(t, result, "▓")
+	assert.NotContains(t, result, "█")
 }
 
 func TestRenderContextBar_NegativePercent(t *testing.T) {
@@ -692,7 +699,7 @@ func TestRenderContextBar_OverPercent(t *testing.T) {
 	m.ContextUsedTokens = 300_000
 	result := m.RenderContextBarForTest()
 	assert.Contains(t, result, "100%")
-	assert.Contains(t, result, "▓▓▓▓▓▓▓▓▓▓")
+	assert.Contains(t, result, "██████████")
 }
 
 func TestRenderContextBar_ContainsBarChars(t *testing.T) {
@@ -701,7 +708,7 @@ func TestRenderContextBar_ContainsBarChars(t *testing.T) {
 	m.ContextCapacity = 1_000_000
 	m.ContextUsedTokens = 600_000
 	result := m.RenderContextBarForTest()
-	assert.Contains(t, result, "▓")
+	assert.Contains(t, result, "█")
 	assert.Contains(t, result, "░")
 	assert.Contains(t, result, "600K/1M")
 }
@@ -782,4 +789,395 @@ func TestView_PlanMode_TwoRowsPreserved(t *testing.T) {
 	view = strings.TrimRight(view, "\n")
 	lines := strings.Split(view, "\n")
 	assert.Equal(t, 2, len(lines), "View() must still produce exactly 2 rows in plan mode")
+}
+
+// ---------------------------------------------------------------------------
+// Team indicator
+// ---------------------------------------------------------------------------
+
+func TestView_TeamIndicator_Hidden_WhenInactive(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	m.TeamActive = false
+	view := m.View()
+	assert.NotContains(t, view, "⚡", "View() must not show team indicator when TeamActive is false")
+}
+
+func TestView_TeamIndicator_Visible_WhenActive(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	statusline.SetTeamFieldsForTest(&m, true, "impl", []string{"running", "complete", "pending", "pending"}, 2, 4, 0.38)
+	view := m.View()
+	assert.Contains(t, view, "⚡", "View() must show ⚡ prefix when team is active")
+	assert.Contains(t, view, "impl", "View() must show team name")
+	assert.Contains(t, view, "2/4", "View() must show wave progress")
+	assert.Contains(t, view, "$0.38", "View() must show team cost")
+}
+
+func TestView_TeamIndicator_MemberDots_Colors(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	// One member per distinct status to verify dot characters are rendered.
+	statuses := []string{"running", "complete", "pending", "failed", "error", "skipped", "killed"}
+	statusline.SetTeamFieldsForTest(&m, true, "test", statuses, 1, 1, 0.10)
+	view := m.View()
+	// Filled dot for active/terminal statuses.
+	assert.Contains(t, view, "●", "View() must render filled dots for running/complete/failed/error/skipped/killed")
+	// Empty dot for pending.
+	assert.Contains(t, view, "○", "View() must render empty dot for pending")
+}
+
+func TestView_TeamIndicator_Disappears_WhenDeactivated(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	statusline.SetTeamFieldsForTest(&m, true, "myteam", []string{"running"}, 1, 3, 0.05)
+	activeView := m.View()
+	assert.Contains(t, activeView, "⚡", "View() must show team indicator when active")
+
+	statusline.SetTeamFieldsForTest(&m, false, "", nil, 0, 0, 0)
+	inactiveView := m.View()
+	assert.NotContains(t, inactiveView, "⚡", "View() must hide team indicator after deactivation")
+}
+
+func TestRenderTeamIndicator_Empty_WhenInactive(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	m.TeamActive = false
+	result := m.RenderTeamIndicatorForTest()
+	assert.Equal(t, "", result, "renderTeamIndicator() must return empty string when TeamActive is false")
+}
+
+func TestRenderTeamIndicator_ContainsAllParts(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	statusline.SetTeamFieldsForTest(&m, true, "longteamname", []string{"running", "pending"}, 3, 5, 1.25)
+	result := m.RenderTeamIndicatorForTest()
+	// Name is truncated to 8 runes: "longtea…"
+	assert.Contains(t, result, "⚡", "renderTeamIndicator() must contain ⚡ prefix")
+	assert.Contains(t, result, "longtea", "renderTeamIndicator() must contain truncated team name")
+	assert.Contains(t, result, "3/5", "renderTeamIndicator() must contain wave progress")
+	assert.Contains(t, result, "$1.25", "renderTeamIndicator() must contain team cost")
+	assert.Contains(t, result, "●", "renderTeamIndicator() must contain filled dot for running member")
+	assert.Contains(t, result, "○", "renderTeamIndicator() must contain empty dot for pending member")
+}
+
+func TestView_TeamIndicator_TwoRowsPreserved(t *testing.T) {
+	m := statusline.NewStatusLineModel(300)
+	statusline.SetTeamFieldsForTest(&m, true, "team", []string{"running", "complete"}, 1, 2, 0.15)
+	view := m.View()
+	view = strings.TrimRight(view, "\n")
+	lines := strings.Split(view, "\n")
+	assert.Equal(t, 2, len(lines), "View() must produce exactly 2 rows when team indicator is active")
+}
+
+// ---------------------------------------------------------------------------
+// Agent sparkline
+// ---------------------------------------------------------------------------
+
+func TestRenderAgentSparkline_Empty(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	// Zero AgentStats → empty string
+	result := m.RenderAgentSparklineForTest()
+	assert.Equal(t, "", result, "renderAgentSparkline() must return empty string when Total==0")
+}
+
+func TestRenderAgentSparkline_AllRunning(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentStats = state.AgentStats{Total: 3, Running: 3}
+	result := m.RenderAgentSparklineForTest()
+	assert.Contains(t, result, "3/3", "renderAgentSparkline() must contain running/total ratio")
+	// Three filled dots for three running agents.
+	count := strings.Count(result, "●")
+	assert.Equal(t, 3, count, "renderAgentSparkline() must render 3 filled dots for 3 running agents")
+}
+
+func TestRenderAgentSparkline_MixedStates(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentStats = state.AgentStats{Total: 4, Running: 1, Complete: 1, Pending: 1, Error: 1}
+	result := m.RenderAgentSparklineForTest()
+	assert.Contains(t, result, "1/4", "renderAgentSparkline() must contain running/total ratio")
+	// 3 filled dots (running, complete, error) + 1 empty dot (pending) = 4 characters total.
+	filledCount := strings.Count(result, "●")
+	emptyCount := strings.Count(result, "○")
+	assert.Equal(t, 3, filledCount, "renderAgentSparkline() must render 3 filled dots for running+complete+error")
+	assert.Equal(t, 1, emptyCount, "renderAgentSparkline() must render 1 empty dot for pending")
+}
+
+func TestRenderAgentSparkline_AllComplete(t *testing.T) {
+	m := statusline.NewStatusLineModel(160)
+	m.AgentStats = state.AgentStats{Total: 3, Running: 0, Complete: 3}
+	result := m.RenderAgentSparklineForTest()
+	assert.Contains(t, result, "0/3", "renderAgentSparkline() must contain 0/3 when all complete")
+	count := strings.Count(result, "●")
+	assert.Equal(t, 3, count, "renderAgentSparkline() must render 3 filled dots for 3 complete agents")
+}
+
+// ---------------------------------------------------------------------------
+// UX-017: Adaptive height — Height() and boundary tests
+// ---------------------------------------------------------------------------
+
+func TestHeight_Compact(t *testing.T) {
+	m := statusline.NewStatusLineModel(60)
+	assert.Equal(t, 1, m.Height(), "compact tier (<80) must be 1 row")
+}
+
+func TestHeight_Standard(t *testing.T) {
+	m80 := statusline.NewStatusLineModel(80)
+	assert.Equal(t, 1, m80.Height(), "standard tier lower bound (80) must be 1 row")
+
+	m119 := statusline.NewStatusLineModel(119)
+	assert.Equal(t, 1, m119.Height(), "standard tier upper bound (119) must be 1 row")
+}
+
+func TestHeight_Wide(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	assert.Equal(t, 2, m.Height(), "wide tier lower bound (120) must be 2 rows")
+}
+
+func TestHeight_Ultra(t *testing.T) {
+	m := statusline.NewStatusLineModel(200)
+	assert.Equal(t, 2, m.Height(), "ultra tier (200) must be 2 rows")
+}
+
+func TestViewCompact_SingleRow(t *testing.T) {
+	m := statusline.NewStatusLineModel(100)
+	m.SessionCost = 0.50
+	m.ActiveModel = "sonnet"
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	assert.Equal(t, 1, len(lines), "compact view (width=100) must be exactly 1 line")
+}
+
+func TestViewFull_TwoRows(t *testing.T) {
+	m := statusline.NewStatusLineModel(150)
+	m.SessionCost = 0.50
+	m.ActiveModel = "sonnet"
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	assert.Equal(t, 2, len(lines), "full view (width=150) must be exactly 2 lines")
+}
+
+// TestView_HeightMatchesRendered is the invariant test: Height() must equal
+// lipgloss.Height(View()) at every tier boundary width.
+func TestView_HeightMatchesRendered(t *testing.T) {
+	for _, w := range []int{79, 80, 119, 120} {
+		t.Run(fmt.Sprintf("width=%d", w), func(t *testing.T) {
+			m := statusline.NewStatusLineModel(w)
+			m.SessionCost = 1.23
+			m.ActiveModel = "sonnet"
+			rendered := m.View()
+			assert.Equal(t, m.Height(), lipgloss.Height(rendered),
+				"Height() must match actual rendered height at width=%d", w)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Reduce Motion (UX-020)
+// ---------------------------------------------------------------------------
+
+// TestSpinner_ReduceMotion_NoAdvance verifies that spinnerTickMsg does not
+// advance the frame index when ReduceMotion is true.
+func TestSpinner_ReduceMotion_NoAdvance(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ReduceMotion = true
+	m.Streaming = true
+
+	// Confirm starting index is 0.
+	if m.SpinnerIdxForTest() != 0 {
+		t.Fatalf("precondition: spinnerIdx should be 0, got %d", m.SpinnerIdxForTest())
+	}
+
+	tick := statusline.SpinnerTickMsgForTest(time.Now())
+	result, _ := m.Update(tick)
+
+	if result.SpinnerIdxForTest() != 0 {
+		t.Errorf("spinnerIdx advanced despite ReduceMotion=true: got %d, want 0",
+			result.SpinnerIdxForTest())
+	}
+}
+
+// TestSpinner_ReduceMotion_Off_Advances verifies the normal path still works:
+// spinnerTickMsg advances the frame index when ReduceMotion is false.
+func TestSpinner_ReduceMotion_Off_Advances(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ReduceMotion = false
+	m.Streaming = true
+
+	tick := statusline.SpinnerTickMsgForTest(time.Now())
+	result, _ := m.Update(tick)
+
+	if result.SpinnerIdxForTest() != 1 {
+		t.Errorf("spinnerIdx did not advance: got %d, want 1", result.SpinnerIdxForTest())
+	}
+}
+
+// TestView_ReduceMotion_StaticSpinner verifies that when ReduceMotion is true
+// and Streaming is true, View renders a static "⠿ streaming" indicator instead
+// of an animated Braille frame.
+func TestView_ReduceMotion_StaticSpinner(t *testing.T) {
+	for _, width := range []int{80, 120, 160} {
+		t.Run(fmt.Sprintf("width=%d", width), func(t *testing.T) {
+			m := statusline.NewStatusLineModel(width)
+			m.ReduceMotion = true
+			m.Streaming = true
+
+			view := m.View()
+
+			if !strings.Contains(view, "⠿ streaming") {
+				t.Errorf("expected static '⠿ streaming' indicator in View(), got:\n%s", view)
+			}
+			// The animated frames cycle through ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏ — confirm none appear
+			// immediately after "streaming" (which would indicate animation ran).
+			animatedFrames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+			for _, frame := range animatedFrames {
+				if strings.Contains(view, frame+" streaming") {
+					t.Errorf("animated frame %q should not appear in View() when ReduceMotion=true", frame)
+				}
+			}
+		})
+	}
+}
+
+// TestView_ReduceMotion_Off_AnimatedSpinner verifies that when ReduceMotion is
+// false the normal animated frame is rendered.
+func TestView_ReduceMotion_Off_AnimatedSpinner(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.ReduceMotion = false
+	m.Streaming = true
+	// Frame index 0 → first Braille char "⠋".
+
+	view := m.View()
+
+	if !strings.Contains(view, "⠋ streaming") {
+		t.Errorf("expected animated '⠋ streaming' in View() when ReduceMotion=false, got:\n%s", view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Cost flash — CheckCostFlash / CostFlashExpiredMsg
+// ---------------------------------------------------------------------------
+
+// TestCheckCostFlash exercises all branch conditions as a table-driven test.
+func TestCheckCostFlash(t *testing.T) {
+	flashStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+
+	tests := []struct {
+		name             string
+		prevCost         float64
+		newCost          float64
+		flashEnabled     bool
+		reduceMotion     bool
+		wantCmd          bool   // whether a tea.Cmd is returned
+		wantFlashActive  bool   // whether costFlashUntil is non-zero
+		wantPrevCost     float64
+	}{
+		{
+			name:            "flash triggers when cost increases and enabled",
+			prevCost:        0.10,
+			newCost:         0.20,
+			flashEnabled:    true,
+			reduceMotion:    false,
+			wantCmd:         true,
+			wantFlashActive: true,
+			wantPrevCost:    0.20,
+		},
+		{
+			name:            "no flash when disabled (default)",
+			prevCost:        0.10,
+			newCost:         0.20,
+			flashEnabled:    false,
+			reduceMotion:    false,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.20,
+		},
+		{
+			name:            "no flash when reduce-motion enabled",
+			prevCost:        0.10,
+			newCost:         0.20,
+			flashEnabled:    true,
+			reduceMotion:    true,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.20,
+		},
+		{
+			name:            "no flash when cost stays same",
+			prevCost:        0.10,
+			newCost:         0.10,
+			flashEnabled:    true,
+			reduceMotion:    false,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.10,
+		},
+		{
+			name:            "no flash when cost decreases",
+			prevCost:        0.50,
+			newCost:         0.30,
+			flashEnabled:    true,
+			reduceMotion:    false,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.30,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := statusline.NewStatusLineModel(120)
+			m.CostFlashEnabled = tc.flashEnabled
+			m.ReduceMotion = tc.reduceMotion
+			// Seed prevCost directly to avoid triggering flash side-effects.
+			m.SetPrevCostForTest(tc.prevCost)
+
+			// Simulate the cost update.
+			m.SessionCost = tc.newCost
+			cmd := m.CheckCostFlash()
+
+			if tc.wantCmd {
+				assert.NotNil(t, cmd, "CheckCostFlash() should return a Cmd when flash triggers")
+			} else {
+				assert.Nil(t, cmd, "CheckCostFlash() should return nil when flash does not trigger")
+			}
+
+			if tc.wantFlashActive {
+				assert.False(t, m.CostFlashUntilForTest().IsZero(), "costFlashUntil should be set")
+			} else {
+				assert.True(t, m.CostFlashUntilForTest().IsZero(), "costFlashUntil should be zero")
+			}
+
+			assert.InDelta(t, tc.wantPrevCost, m.PrevCostForTest(), 1e-9, "prevCost mismatch")
+		})
+	}
+
+	// Verify that while flash is active, activeCostStyle returns bright white bold.
+	t.Run("active flash style is bright white bold", func(t *testing.T) {
+		m := statusline.NewStatusLineModel(120)
+		m.CostFlashEnabled = true
+		m.ReduceMotion = false
+		m.SetPrevCostForTest(0.10)
+		m.SessionCost = 0.20
+		_ = m.CheckCostFlash()
+
+		got := m.ActiveCostStyleForTest()
+		assert.Equal(t, flashStyle, got, "activeCostStyle() should return bright-white bold during flash")
+	})
+}
+
+// TestCostFlashExpiredMsg_ClearsCostFlashUntil verifies the expiry message
+// resets the flash state in Update().
+func TestCostFlashExpiredMsg_ClearsCostFlashUntil(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.CostFlashEnabled = true
+	m.SetPrevCostForTest(0.20)
+	m.SessionCost = 0.50
+	_ = m.CheckCostFlash() // flash is now active
+
+	assert.False(t, m.CostFlashUntilForTest().IsZero(), "flash should be active before expiry")
+
+	newM, cmd := m.Update(statusline.CostFlashExpiredMsgForTest())
+	assert.Nil(t, cmd, "CostFlashExpiredMsg should return nil command")
+	assert.True(t, newM.CostFlashUntilForTest().IsZero(), "costFlashUntil should be zero after expiry")
+}
+
+// TestCostFlashDefault_IsOff verifies the default is off for new models.
+func TestCostFlashDefault_IsOff(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	assert.False(t, m.CostFlashEnabled, "CostFlashEnabled should default to false")
 }

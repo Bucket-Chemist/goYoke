@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -63,8 +64,7 @@ func TestGetGOgentDir_XDG_CACHE_HOME(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDir_Fallback(t *testing.T) {
-	// Save original env
+func TestGetGOgentDir_FallsBackWhenRuntimeDirIsNotWritable(t *testing.T) {
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
 	defer func() {
@@ -72,12 +72,51 @@ func TestGetGOgentDir_Fallback(t *testing.T) {
 		os.Setenv("XDG_CACHE_HOME", origCache)
 	}()
 
+	runtimeRoot := t.TempDir()
+	cacheRoot := t.TempDir()
+	runtimeGogent := filepath.Join(runtimeRoot, "gogent")
+	if err := os.MkdirAll(runtimeGogent, 0755); err != nil {
+		t.Fatalf("Failed to create runtime dir: %v", err)
+	}
+	if err := os.Chmod(runtimeGogent, 0555); err != nil {
+		t.Fatalf("Failed to chmod runtime dir: %v", err)
+	}
+	defer os.Chmod(runtimeGogent, 0755) //nolint:errcheck
+
+	probePath := filepath.Join(runtimeGogent, "probe")
+	if err := os.WriteFile(probePath, []byte("x"), 0644); err == nil {
+		_ = os.Remove(probePath)
+		t.Skip("filesystem permissions do not block writes in this environment")
+	}
+
+	os.Setenv("XDG_RUNTIME_DIR", runtimeRoot)
+	os.Setenv("XDG_CACHE_HOME", cacheRoot)
+
+	result := GetGOgentDir()
+	expected := filepath.Join(cacheRoot, "gogent")
+	if result != expected {
+		t.Fatalf("Expected fallback to %s, got %s", expected, result)
+	}
+}
+
+func TestGetGOgentDir_Fallback(t *testing.T) {
+	// Save original env
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+		os.Setenv("HOME", origHome)
+	}()
+
 	// Unset both XDG vars (fallback to ~/.cache/gogent)
 	os.Unsetenv("XDG_RUNTIME_DIR")
 	os.Unsetenv("XDG_CACHE_HOME")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
 
 	result := GetGOgentDir()
-	home, _ := os.UserHomeDir()
 	expected := filepath.Join(home, ".cache", "gogent")
 
 	if result != expected {
@@ -89,17 +128,20 @@ func TestGetGOgentDir_EmptyXDGVars(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
+	origHome := os.Getenv("HOME")
 	defer func() {
 		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
 		os.Setenv("XDG_CACHE_HOME", origCache)
+		os.Setenv("HOME", origHome)
 	}()
 
 	// Set to empty strings (should fallback)
 	os.Setenv("XDG_RUNTIME_DIR", "")
 	os.Setenv("XDG_CACHE_HOME", "")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
 
 	result := GetGOgentDir()
-	home, _ := os.UserHomeDir()
 	expected := filepath.Join(home, ".cache", "gogent")
 
 	if result != expected {
@@ -755,6 +797,16 @@ func TestGetGOgentDir_AllPathsFail(t *testing.T) {
 	if !strings.HasPrefix(result, os.TempDir()) {
 		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
 	}
+	if !strings.HasSuffix(result, fmt.Sprintf("-%d", os.Getuid())) {
+		t.Errorf("Expected per-user fallback suffix, got: %s", result)
+	}
+	info, err := os.Stat(result)
+	if err != nil {
+		t.Fatalf("Expected fallback dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected fallback permissions 0700, got %o", info.Mode().Perm())
+	}
 }
 
 func TestGetGOgentDir_HomeDirFails(t *testing.T) {
@@ -781,9 +833,12 @@ func TestGetGOgentDir_HomeDirFails(t *testing.T) {
 	if !strings.Contains(result, "gogent-fallback") {
 		t.Errorf("Expected /tmp fallback, got: %s", result)
 	}
+	if !strings.HasSuffix(result, fmt.Sprintf("-%d", os.Getuid())) {
+		t.Errorf("Expected per-user fallback suffix, got: %s", result)
+	}
 }
 
-func TestInitializeToolCounter_ErrorPath(t *testing.T) {
+func TestInitializeToolCounter_FallsBackFromReadOnlyRuntimeDir(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -792,30 +847,31 @@ func TestInitializeToolCounter_ErrorPath(t *testing.T) {
 		os.Setenv("XDG_CACHE_HOME", origCache)
 	}()
 
-	// Set to invalid path to trigger WriteFile error
-	os.Setenv("XDG_RUNTIME_DIR", "/dev/null/invalid-write")
-	os.Unsetenv("XDG_CACHE_HOME")
-
-	// This will use the fallback path which should succeed
-	// To actually test the error path, we'd need to create the directory
-	// but make it read-only. Let's do that:
 	testDir := t.TempDir()
 	gogentDir := filepath.Join(testDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	if err := os.MkdirAll(gogentDir, 0755); err != nil {
+		t.Fatalf("Failed to create runtime dir: %v", err)
+	}
 
-	// Make directory read-only
-	os.Chmod(gogentDir, 0444)
-	defer os.Chmod(gogentDir, 0755) // Restore for cleanup
+	if err := os.Chmod(gogentDir, 0444); err != nil {
+		t.Fatalf("Failed to chmod runtime dir: %v", err)
+	}
+	defer os.Chmod(gogentDir, 0755) //nolint:errcheck
 
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
+	cacheDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", cacheDir)
 
-	// Initialize should fail due to read-only directory
-	err := InitializeToolCounter()
-	if err == nil {
-		t.Error("Expected error when writing to read-only directory, got nil")
+	counterPath := filepath.Join(cacheDir, "gogent", "tool-counter")
+	if err := InitializeToolCounter(); err != nil {
+		t.Fatalf("Expected fallback initialization to succeed, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "failed to initialize tool counter") {
-		t.Errorf("Expected 'failed to initialize tool counter' error, got: %v", err)
+	data, err := os.ReadFile(counterPath)
+	if err != nil {
+		t.Fatalf("Expected counter file at fallback path %s: %v", counterPath, err)
+	}
+	if string(data) != "0" {
+		t.Fatalf("Expected initialized counter to be 0, got %q", string(data))
 	}
 }
 
@@ -990,12 +1046,17 @@ func TestGetGOgentDataDir_XDGSet(t *testing.T) {
 func TestGetGOgentDataDir_Fallback(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
-	defer os.Setenv("XDG_DATA_HOME", origXDG)
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
 
 	os.Unsetenv("XDG_DATA_HOME")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
 
 	dir := GetGOgentDataDir()
-	home, _ := os.UserHomeDir()
 	expected := filepath.Join(home, ".local", "share", "gogent")
 
 	if dir != expected {
@@ -1043,13 +1104,18 @@ func TestGetGOgentDataDir_CreatesDirectory(t *testing.T) {
 func TestGetGOgentDataDir_EmptyXDGVar(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
-	defer os.Setenv("XDG_DATA_HOME", origXDG)
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
 
 	// Set to empty string (should fallback)
 	os.Setenv("XDG_DATA_HOME", "")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
 
 	dir := GetGOgentDataDir()
-	home, _ := os.UserHomeDir()
 	expected := filepath.Join(home, ".local", "share", "gogent")
 
 	if dir != expected {
@@ -1060,13 +1126,18 @@ func TestGetGOgentDataDir_EmptyXDGVar(t *testing.T) {
 func TestGetGOgentDataDir_XDGInvalidPath(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
-	defer os.Setenv("XDG_DATA_HOME", origXDG)
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
 
 	// Set XDG_DATA_HOME to a path that cannot be created
 	os.Setenv("XDG_DATA_HOME", "/dev/null/cannot-create-here")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
 
 	dir := GetGOgentDataDir()
-	home, _ := os.UserHomeDir()
 	expected := filepath.Join(home, ".local", "share", "gogent")
 
 	if dir != expected {
@@ -1098,6 +1169,16 @@ func TestGetGOgentDataDir_HomeDirFails(t *testing.T) {
 	if !strings.HasPrefix(result, os.TempDir()) {
 		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
 	}
+	if !strings.HasSuffix(result, fmt.Sprintf("-%d", os.Getuid())) {
+		t.Errorf("Expected per-user fallback suffix, got: %s", result)
+	}
+	info, err := os.Stat(result)
+	if err != nil {
+		t.Fatalf("Expected fallback dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected fallback permissions 0700, got %o", info.Mode().Perm())
+	}
 }
 
 func TestGetGOgentDataDir_AllPathsFail(t *testing.T) {
@@ -1122,6 +1203,9 @@ func TestGetGOgentDataDir_AllPathsFail(t *testing.T) {
 	}
 	if !strings.HasPrefix(result, os.TempDir()) {
 		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
+	}
+	if !strings.HasSuffix(result, fmt.Sprintf("-%d", os.Getuid())) {
+		t.Errorf("Expected per-user fallback suffix, got: %s", result)
 	}
 }
 
@@ -1284,12 +1368,17 @@ func TestMLPathHelpers_AllUseDataDir(t *testing.T) {
 func TestMLPathHelpers_Fallback(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
-	defer os.Setenv("XDG_DATA_HOME", origXDG)
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
 
 	// Unset XDG_DATA_HOME to test fallback behavior
 	os.Unsetenv("XDG_DATA_HOME")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
 
-	home, _ := os.UserHomeDir()
 	expectedDataDir := filepath.Join(home, ".local", "share", "gogent")
 
 	paths := []struct {
@@ -1307,6 +1396,42 @@ func TestMLPathHelpers_Fallback(t *testing.T) {
 		if tc.path != expected {
 			t.Errorf("%s with fallback: expected %s, got %s", tc.name, expected, tc.path)
 		}
+	}
+}
+
+func TestGetGOgentDataDir_FallsBackWhenDataDirIsNotWritable(t *testing.T) {
+	origXDG := os.Getenv("XDG_DATA_HOME")
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origXDG)
+		os.Setenv("HOME", origHome)
+	}()
+
+	xdgDataHome := t.TempDir()
+	readOnlyParent := filepath.Join(xdgDataHome, "gogent")
+	if err := os.MkdirAll(readOnlyParent, 0755); err != nil {
+		t.Fatalf("Failed to create read-only parent: %v", err)
+	}
+	if err := os.Chmod(readOnlyParent, 0555); err != nil {
+		t.Fatalf("Failed to chmod read-only parent: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(readOnlyParent, 0755)
+	})
+
+	home := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", xdgDataHome)
+	os.Setenv("HOME", home)
+
+	dir := GetGOgentDataDir()
+	expected := filepath.Join(home, ".local", "share", "gogent")
+	if dir != expected {
+		t.Fatalf("Expected fallback to %s, got %s", expected, dir)
+	}
+
+	testFile := filepath.Join(dir, "telemetry.jsonl")
+	if err := os.WriteFile(testFile, []byte("{}\n"), 0644); err != nil {
+		t.Fatalf("Expected fallback data dir to be writable: %v", err)
 	}
 }
 

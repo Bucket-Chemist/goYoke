@@ -42,7 +42,6 @@ Command execution specialist for external processes. Shell piping only.
 
 | Agent | Model | Domain | When to Use | If Wrong |
 |-------|-------|--------|-------------|----------|
-| `gemini-slave` | Gemini 2.0 Flash | Large-context analysis | Multiple files, cross-module, 1M+ token context | Will error: "requires Bash, not Explore" |
 
 ## Complete Mapping Reference
 
@@ -53,7 +52,6 @@ Use this table to quickly find the correct subagent_type for any agent.
   "Explore": ["codebase-search", "haiku-scout", "code-reviewer", "librarian"],
   "general-purpose": ["scaffolder", "tech-docs-writer", "python-pro", "python-ux", "r-pro", "r-shiny-pro", "memory-archivist", "staff-architect-critical-review", "einstein"],
   "Plan": ["orchestrator", "architect"],
-  "Bash": ["gemini-slave"]
 }
 ```
 
@@ -293,7 +291,6 @@ Use this table to quickly find the correct subagent_type for any agent.
   ```
 - **If you use wrong subagent_type**: Will fail with "einstein requires general-purpose"
 
-### gemini-slave
 
 - **Tier**: External (bash execution only)
 - **Subagent Type**: `Bash`
@@ -303,9 +300,7 @@ Use this table to quickly find the correct subagent_type for any agent.
 - **Note**: Uses Bash, NOT Task tool. Invoke via piping:
   ```bash
   FILES=$(find src/ -name "*.py")
-  cat $FILES | gemini-slave mapper "Find core logic"
   ```
-- **If you use wrong subagent_type**: Will fail with "gemini-slave requires Bash"
 
 ### staff-architect-critical-review
 

@@ -235,7 +235,7 @@ export const spawnAgentTool = tool(
     epicId: z.string().optional().describe("Epic ID for grouping related agents"),
     parentId: z.string().optional().describe("Parent agent ID (auto-detected if possible)"),
     maxTurns: z.number().default(30).describe("Maximum conversation turns"),
-    timeout: z.number().default(300000).describe("Timeout in milliseconds"),
+    timeout: z.number().default(600000).describe("Timeout in milliseconds"),
     allowedTools: z.array(z.string()).optional().describe("Restrict available tools"),
     stream: z.boolean().default(true).describe("Stream output in real-time"),
   },

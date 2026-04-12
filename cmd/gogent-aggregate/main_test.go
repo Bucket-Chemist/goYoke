@@ -145,12 +145,12 @@ func TestRun_ForceAggregation(t *testing.T) {
 
 	// Create test files with content
 	testFiles := map[string]string{
-		"pending-learnings.jsonl":   `{"error_type":"test","file":"test.go"}`,
-		"user-intents.jsonl":        `{"question":"test?","response":"yes"}`,
-		"decisions.jsonl":           `{"category":"arch","decision":"test"}`,
-		"preferences.jsonl":         `{"key":"theme","value":"dark"}`,
-		"performance.jsonl":         `{"operation":"test","duration_ms":100}`,
-		"routing-violations.jsonl":  `{"violation_type":"tier_mismatch"}`,
+		"pending-learnings.jsonl":  `{"error_type":"test","file":"test.go"}`,
+		"user-intents.jsonl":       `{"question":"test?","response":"yes"}`,
+		"decisions.jsonl":          `{"category":"arch","decision":"test"}`,
+		"preferences.jsonl":        `{"key":"theme","value":"dark"}`,
+		"performance.jsonl":        `{"operation":"test","duration_ms":100}`,
+		"routing-violations.jsonl": `{"violation_type":"tier_mismatch"}`,
 	}
 
 	for filename, content := range testFiles {
@@ -367,6 +367,23 @@ func TestCountLines_MissingFile(t *testing.T) {
 	_, err := countLines("/nonexistent/path/file.jsonl")
 	if err == nil {
 		t.Error("Expected error for missing file")
+	}
+}
+
+func TestCountLines_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "large.jsonl")
+	content := strings.Repeat("x", 70*1024) + "\n" + `{"b":2}` + "\n"
+	if err := os.WriteFile(testFile, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := countLines(testFile)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if count != 2 {
+		t.Fatalf("Expected 2 lines, got %d", count)
 	}
 }
 
@@ -752,12 +769,12 @@ func TestRun_AllFileTypes(t *testing.T) {
 
 	// Create all 6 file types
 	allFiles := map[string]string{
-		"pending-learnings.jsonl":   `{"error_type":"compile","file":"main.go","consecutive_failures":3}`,
-		"user-intents.jsonl":        `{"question":"use tabs?","response":"yes","source":"ask_user"}`,
-		"decisions.jsonl":           `{"category":"architecture","decision":"use hexagonal","rationale":"clean boundaries"}`,
-		"preferences.jsonl":         `{"key":"model","value":"sonnet","scope":"project"}`,
-		"performance.jsonl":         `{"operation":"query","duration_ms":250,"success":true}`,
-		"routing-violations.jsonl":  `{"violation_type":"tier_mismatch","agent":"haiku","expected_tier":"sonnet"}`,
+		"pending-learnings.jsonl":  `{"error_type":"compile","file":"main.go","consecutive_failures":3}`,
+		"user-intents.jsonl":       `{"question":"use tabs?","response":"yes","source":"ask_user"}`,
+		"decisions.jsonl":          `{"category":"architecture","decision":"use hexagonal","rationale":"clean boundaries"}`,
+		"preferences.jsonl":        `{"key":"model","value":"sonnet","scope":"project"}`,
+		"performance.jsonl":        `{"operation":"query","duration_ms":250,"success":true}`,
+		"routing-violations.jsonl": `{"violation_type":"tier_mismatch","agent":"haiku","expected_tier":"sonnet"}`,
 	}
 
 	for filename, content := range allFiles {

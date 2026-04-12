@@ -3,6 +3,7 @@ package telemetry
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -350,6 +351,35 @@ func TestReadCollaborationLogs_EmptyLines(t *testing.T) {
 	}
 
 	// Cleanup
+	os.RemoveAll(filepath.Dir(globalPath))
+}
+
+func TestReadCollaborationLogs_LargeLine(t *testing.T) {
+	globalPath := getGlobalCollaborationPath()
+	os.RemoveAll(filepath.Dir(globalPath))
+
+	dir := filepath.Dir(globalPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("Failed to create directory: %v", err)
+	}
+
+	largeTask := strings.Repeat("c", 70*1024)
+	content := `{"collaboration_id":"large","timestamp":123,"session_id":"test","parent_agent":"orchestrator","child_agent":"python-pro","delegation_type":"spawn","task_description":"` + largeTask + `"}`
+	if err := os.WriteFile(globalPath, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write log: %v", err)
+	}
+
+	logs, err := ReadCollaborationLogs()
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(logs) != 1 {
+		t.Fatalf("Expected 1 log, got: %d", len(logs))
+	}
+	if logs[0].TaskDescription != largeTask {
+		t.Fatalf("Expected large task description to round-trip")
+	}
+
 	os.RemoveAll(filepath.Dir(globalPath))
 }
 

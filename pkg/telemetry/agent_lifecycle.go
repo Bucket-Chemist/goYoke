@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,15 +15,15 @@ import (
 // AgentLifecycleEvent captures agent spawn and completion events for TUI real-time tracking
 type AgentLifecycleEvent struct {
 	// Identity
-	EventID   string `json:"event_id"`   // UUID
+	EventID   string `json:"event_id"` // UUID
 	SessionID string `json:"session_id"`
 	Timestamp int64  `json:"timestamp"`
 	EventType string `json:"event_type"` // "spawn" | "complete" | "error"
 
 	// Agent identity
-	AgentID     string `json:"agent_id"`      // "python-pro", etc.
-	ParentAgent string `json:"parent_agent"`  // "terminal" or parent agent
-	Tier        string `json:"tier"`          // "haiku", "sonnet", etc.
+	AgentID     string `json:"agent_id"`     // "python-pro", etc.
+	ParentAgent string `json:"parent_agent"` // "terminal" or parent agent
+	Tier        string `json:"tier"`         // "haiku", "sonnet", etc.
 
 	// Task context
 	TaskDescription string `json:"task_description"`
@@ -95,7 +94,7 @@ func ReadAgentLifecycleLogs(sessionID string) ([]AgentLifecycleEvent, error) {
 	defer file.Close()
 
 	var logs []AgentLifecycleEvent
-	scanner := bufio.NewScanner(file)
+	scanner := newTelemetryScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

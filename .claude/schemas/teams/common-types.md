@@ -48,7 +48,7 @@ This document defines the field contracts for team configuration JSON files used
 | `cost_status` | string | yes | Cost extraction status. Values: `""`, `"ok"`, `"unknown"`, `"error"`. |
 | `retry_count` | int | yes | Initially `0`. Incremented on retry. |
 | `max_retries` | int | yes | Maximum retry attempts. Typically `1` for Opus (expensive), `2` for Haiku/Sonnet. |
-| `timeout_ms` | int | yes | Agent timeout in milliseconds. Typical values: 120000 (Haiku), 300000 (Sonnet), 600000 (Opus). |
+| `timeout_ms` | int | yes | Agent timeout in milliseconds. Typical values: 120000 (Haiku), 600000 (Sonnet), 600000 (Opus). |
 
 ## Budget Field Contract (Critical Decision)
 

@@ -32,3 +32,39 @@ edges:
     mitigation: >
       Run a dedicated "security pass" in your thinking process. 
       Scan for `exec`, `eval`, SQL strings, and "password"/"key" variables.
+
+  - name: large_payload_blindness
+    severity: high
+    description: >
+      Missing bugs caused by default scanner or line-buffer limits in JSONL/NDJSON readers,
+      especially around telemetry, transcripts, session artifacts, and stream-json pipes.
+    mitigation: >
+      Whenever code uses `bufio.Scanner` on structured line-based data, explicitly check
+      buffer sizing and ask whether valid payloads can exceed the default token limit.
+
+  - name: scope_widening_false_negative
+    severity: high
+    description: >
+      Missing cases where an explicit file list, stdin scope, or narrow target is silently
+      widened into a directory-wide scan or operation.
+    mitigation: >
+      Trace the exact scope through every layer. If stdin or caller input names specific
+      files, verify the implementation preserves that set rather than falling back to a parent directory.
+
+  - name: temp_fallback_security_gap
+    severity: high
+    description: >
+      Treating shared /tmp fallbacks as harmless operational details instead of local
+      tampering or disclosure risks.
+    mitigation: >
+      Review temp-directory fallbacks for per-user scoping, 0700 permissions, and whether
+      the data being stored is security-relevant, persistent, or coordination-critical.
+
+  - name: partial_success_misreport
+    severity: high
+    description: >
+      Missing bugs where fan-out, wave, or batch execution logs a warning but still reports
+      success even though failed members remain.
+    mitigation: >
+      Evaluate externally visible success semantics, not just internal logging. If any
+      required sub-operation failed, confirm the command cannot still return clean success.

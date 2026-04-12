@@ -1,9 +1,13 @@
 package agents_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
@@ -111,10 +115,14 @@ func TestSetAgent_ShowsTier(t *testing.T) {
 	m.SetSize(80, 40)
 	a := fullyPopulatedAgent()
 	m.SetAgent(a)
+
+	// Overview starts collapsed — expand to see the Tier label.
+	m.SetFocused(true)
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = newM.(agents.AgentDetailModel)
 	view := m.View()
-	// Tier label
 	if !strings.Contains(view, "Tier") {
-		t.Errorf("View() should contain 'Tier' label; got:\n%s", view)
+		t.Errorf("expanded Overview should contain 'Tier' label; got:\n%s", view)
 	}
 }
 
@@ -136,10 +144,15 @@ func TestSetAgent_ShowsTokens(t *testing.T) {
 	a := fullyPopulatedAgent()
 	a.Tokens = 12450
 	m.SetAgent(a)
+
+	// Overview starts collapsed — expand to see token count.
+	m.SetFocused(true)
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = newM.(agents.AgentDetailModel)
 	view := m.View()
 	// Formatted as 12,450
 	if !strings.Contains(view, "12,450") {
-		t.Errorf("View() should contain tokens '12,450'; got:\n%s", view)
+		t.Errorf("expanded Overview should contain tokens '12,450'; got:\n%s", view)
 	}
 }
 
@@ -287,9 +300,14 @@ func TestFormatTokens_SmallNumber(t *testing.T) {
 	a := fullyPopulatedAgent()
 	a.Tokens = 999
 	m.SetAgent(a)
+
+	// Overview starts collapsed — expand to see token count.
+	m.SetFocused(true)
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = newM.(agents.AgentDetailModel)
 	view := m.View()
 	if !strings.Contains(view, "999") {
-		t.Errorf("View() should contain '999' tokens; got:\n%s", view)
+		t.Errorf("expanded Overview should contain '999' tokens; got:\n%s", view)
 	}
 }
 
@@ -299,9 +317,14 @@ func TestFormatTokens_MillionPlus(t *testing.T) {
 	a := fullyPopulatedAgent()
 	a.Tokens = 1234567
 	m.SetAgent(a)
+
+	// Overview starts collapsed — expand to see token count.
+	m.SetFocused(true)
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = newM.(agents.AgentDetailModel)
 	view := m.View()
 	if !strings.Contains(view, "1,234,567") {
-		t.Errorf("View() should contain '1,234,567' tokens; got:\n%s", view)
+		t.Errorf("expanded Overview should contain '1,234,567' tokens; got:\n%s", view)
 	}
 }
 
@@ -325,12 +348,17 @@ func TestView_AllFieldLabelsPresent(t *testing.T) {
 	m := agents.NewAgentDetailModel()
 	m.SetSize(120, 40)
 	m.SetAgent(fullyPopulatedAgent())
+
+	// Overview starts collapsed — expand it via Enter to see all field labels.
+	m.SetFocused(true)
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = newM.(agents.AgentDetailModel)
 	view := m.View()
 
 	labels := []string{"Status", "Type", "Model", "Tier", "Duration", "Cost", "Tokens"}
 	for _, label := range labels {
 		if !strings.Contains(view, label) {
-			t.Errorf("View() missing field label %q; got:\n%s", label, view)
+			t.Errorf("expanded Overview missing field label %q; got:\n%s", label, view)
 		}
 	}
 }
@@ -345,9 +373,9 @@ func TestView_SectionHeaders(t *testing.T) {
 	m.SetAgent(fullyPopulatedAgent())
 	view := m.View()
 
-	// Overview and Activity start expanded (▼), Context starts collapsed (▸).
-	if !strings.Contains(view, "▼ Overview") {
-		t.Errorf("View() should show '▼ Overview' (expanded); got:\n%s", view)
+	// Overview starts collapsed (▸), Activity starts expanded (▼), Context starts collapsed (▸).
+	if !strings.Contains(view, "▸ Overview") {
+		t.Errorf("View() should show '▸ Overview' (collapsed); got:\n%s", view)
 	}
 	if !strings.Contains(view, "▸ Context") {
 		t.Errorf("View() should show '▸ Context' (collapsed); got:\n%s", view)
@@ -480,6 +508,171 @@ func TestView_ACSection_AllPending(t *testing.T) {
 	uncheckedCount := strings.Count(view, "[ ]")
 	if uncheckedCount < 2 {
 		t.Errorf("all-pending AC should show 2 '[ ]' markers, got %d; view:\n%s", uncheckedCount, view)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Overview: collapsed by default, expands on Enter (UX-013)
+// ---------------------------------------------------------------------------
+
+func TestView_OverviewStartsCollapsed(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent())
+	view := m.View()
+
+	if !strings.Contains(view, "▸ Overview") {
+		t.Errorf("Overview should start collapsed (▸); got:\n%s", view)
+	}
+	// Compact summary contains "·" separator.
+	if !strings.Contains(view, "·") {
+		t.Errorf("collapsed Overview should contain '·' separator; got:\n%s", view)
+	}
+	// Expanded field labels must NOT appear in the default view.
+	for _, label := range []string{"Type:", "Tier:", "Tokens:"} {
+		if strings.Contains(view, label) {
+			t.Errorf("collapsed Overview should NOT contain label %q; got:\n%s", label, view)
+		}
+	}
+}
+
+func TestView_OverviewExpandsOnEnter(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	m.SetAgent(fullyPopulatedAgent())
+
+	m.SetFocused(true)
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m = newM.(agents.AgentDetailModel)
+	view := m.View()
+
+	if !strings.Contains(view, "▼ Overview") {
+		t.Errorf("after Enter Overview should be expanded (▼); got:\n%s", view)
+	}
+	labels := []string{"Status", "Type", "Model", "Tier", "Duration", "Cost", "Tokens"}
+	for _, label := range labels {
+		if !strings.Contains(view, label) {
+			t.Errorf("expanded Overview should contain label %q; got:\n%s", label, view)
+		}
+	}
+}
+
+func TestView_OverviewCompactContainsFields(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(120, 40)
+	a := fullyPopulatedAgent() // StatusRunning, AgentType="go-pro", Model="sonnet", Cost=0.045
+	m.SetAgent(a)
+	view := m.View()
+
+	checks := []struct {
+		field string
+		want  string
+	}{
+		{"status", "Running"},
+		{"agent type", "go-pro"},
+		{"model", "sonnet"},
+		{"cost", "0.045"},
+	}
+	for _, c := range checks {
+		if !strings.Contains(view, c.want) {
+			t.Errorf("compact Overview should contain %s %q; got:\n%s", c.field, c.want, view)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Render — RenderFull
+// ---------------------------------------------------------------------------
+
+func TestDetailRender_FullMatchesView(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	m.SetAgent(fullyPopulatedAgent())
+
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("Render(RenderFull, 80) != View()\nRender: %q\nView:   %q", got, want)
+	}
+}
+
+func TestDetailRender_FullNilAgent(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("Render(RenderFull) on nil agent != View()")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Render — RenderIconRail (compact detail)
+// ---------------------------------------------------------------------------
+
+func TestDetailRender_CompactNilAgent(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	view := m.Render(agents.RenderIconRail, 22)
+	// Should not panic and should return non-empty placeholder.
+	if view == "" {
+		t.Error("Render(RenderIconRail) on nil agent should not return empty string")
+	}
+}
+
+func TestDetailRender_CompactShowsStatus(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(40, 10)
+	a := fullyPopulatedAgent() // StatusRunning
+	m.SetAgent(a)
+
+	view := m.Render(agents.RenderIconRail, 40)
+	if !strings.Contains(view, "Running") {
+		t.Errorf("compact detail should contain 'Running'; got:\n%s", view)
+	}
+}
+
+func TestDetailRender_CompactShowsModel(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(40, 10)
+	a := fullyPopulatedAgent() // model="sonnet"
+	m.SetAgent(a)
+
+	view := m.Render(agents.RenderIconRail, 40)
+	if !strings.Contains(view, "sonnet") {
+		t.Errorf("compact detail should contain model name; got:\n%s", view)
+	}
+}
+
+func TestDetailRender_CompactShowsCost(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(40, 10)
+	a := fullyPopulatedAgent()
+	a.Cost = 0.045
+	m.SetAgent(a)
+
+	view := m.Render(agents.RenderIconRail, 40)
+	if !strings.Contains(view, "0.045") {
+		t.Errorf("compact detail should contain cost value; got:\n%s", view)
+	}
+}
+
+func TestDetailRender_CompactWidthBoundaries(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 20)
+	a := fullyPopulatedAgent()
+	a.Cost = 1.98
+	m.SetAgent(a)
+
+	for _, width := range []int{15, 22, 28, 29, 30, 31, 32, 45} {
+		t.Run(fmt.Sprintf("width=%d", width), func(t *testing.T) {
+			view := m.Render(agents.RenderIconRail, width)
+			if view == "" {
+				t.Fatalf("Render(RenderIconRail, %d) returned empty string", width)
+			}
+			for i, line := range strings.Split(view, "\n") {
+				w := lipgloss.Width(line)
+				if w > width {
+					t.Errorf("line %d: lipgloss.Width=%d exceeds width=%d: %q",
+						i, w, width, line)
+				}
+			}
+		})
 	}
 }
 

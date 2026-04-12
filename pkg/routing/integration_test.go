@@ -46,7 +46,6 @@ func TestEcosystem_GOgent003(t *testing.T) {
 		{"python-pro", "python-pro"},
 		{"go-pro", "go-pro"},
 		{"orchestrator", "orchestrator"},
-		{"gemini-slave", "gemini-slave"},
 	}
 
 	for _, agent := range agentIDs {
@@ -103,7 +102,6 @@ func TestEcosystem_AllAgentsMappedCorrectly(t *testing.T) {
 		"orchestrator",
 		"architect",
 		"einstein",
-		"gemini-slave",
 		"staff-architect-critical-review",
 		"haiku-scout",
 	}
@@ -140,13 +138,13 @@ func TestEcosystem_BackwardCompatibility(t *testing.T) {
 	// Test cases that should remain stable across versions
 	t.Run("SchemaAPIStability", func(t *testing.T) {
 		// GetTier should work for all standard tiers
-		for _, tier := range []string{"haiku", "haiku_thinking", "sonnet", "opus", "external"} {
+		for _, tier := range []string{"haiku", "haiku_thinking", "sonnet", "opus"} {
 			_, err := schema.GetTier(tier)
 			assert.NoError(t, err, "GetTier(%s) failed", tier)
 		}
 
 		// GetTierLevel should work for all standard tiers
-		for _, tier := range []string{"haiku", "haiku_thinking", "sonnet", "opus", "external"} {
+		for _, tier := range []string{"haiku", "haiku_thinking", "sonnet", "opus"} {
 			_, err := schema.GetTierLevel(tier)
 			assert.NoError(t, err, "GetTierLevel(%s) failed", tier)
 		}
@@ -160,12 +158,6 @@ func TestEcosystem_BackwardCompatibility(t *testing.T) {
 			agents, err := index.GetAgentsByTier(tier)
 			assert.NoError(t, err, "GetAgentsByTier(%s) failed", tier)
 			assert.NotEmpty(t, agents, "Tier %s should have agents", tier)
-		}
-
-		// External tier might be present but is expected to have no agents in model_tiers
-		_, err := index.GetAgentsByTier("external")
-		if err != nil {
-			t.Logf("External tier has no agents (expected): %v", err)
 		}
 
 		// haiku_thinking is a valid schema tier but may not have agents mapped yet

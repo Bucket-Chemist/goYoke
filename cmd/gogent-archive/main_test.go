@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -719,7 +721,7 @@ func TestGenerateWeeklySummary_DriftDetection(t *testing.T) {
 
 func TestParseSinceFilter_DurationFormat(t *testing.T) {
 	tests := []struct {
-		input       string
+		input        string
 		expectedDiff int
 	}{
 		{"7d", 7},
@@ -957,7 +959,8 @@ func TestCleanupPermCache(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
 
 	sessionID := "test-session-cleanup"
-	cachePath := filepath.Join(tmpDir, fmt.Sprintf("gofortress-perm-cache-%s.json", sessionID))
+	sum := sha256.Sum256([]byte(sessionID))
+	cachePath := filepath.Join(tmpDir, fmt.Sprintf("gofortress-perm-cache-%s.json", hex.EncodeToString(sum[:])))
 
 	// Create a fake cache file.
 	if err := os.WriteFile(cachePath, []byte(`{"Bash":"allow_session"}`), 0600); err != nil {

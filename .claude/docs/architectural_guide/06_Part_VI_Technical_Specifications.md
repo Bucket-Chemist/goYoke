@@ -441,7 +441,6 @@ implementation
 
 - ├── routing-schema.json # Routing rules and thresholds ├── agents-index.json # Agent registry with lifecycle └── autonomy-levels.yaml # Autonomy state per category
 
-- ~/.gemini-slave/ # Gemini integration ├── protocols/
 
 │ ├── handover-protocol.md
 

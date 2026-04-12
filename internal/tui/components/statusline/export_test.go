@@ -124,3 +124,54 @@ func SetPlanFieldsForTest(m *StatusLineModel, active bool, step, total int) {
 	m.PlanStep = step
 	m.PlanTotalSteps = total
 }
+
+// RenderTeamIndicatorForTest exposes renderTeamIndicator for direct unit testing.
+func (m StatusLineModel) RenderTeamIndicatorForTest() string {
+	return m.renderTeamIndicator()
+}
+
+// SetTeamFieldsForTest sets all team-related fields on a StatusLineModel for testing.
+func SetTeamFieldsForTest(m *StatusLineModel, active bool, name string, statuses []string, wave, total int, cost float64) {
+	m.TeamActive = active
+	m.TeamName = name
+	m.TeamMemberStatuses = statuses
+	m.TeamCurrentWave = wave
+	m.TeamTotalWaves = total
+	m.TeamCost = cost
+}
+
+// RenderAgentSparklineForTest exposes renderAgentSparkline for direct unit testing.
+func (m StatusLineModel) RenderAgentSparklineForTest() string {
+	return m.renderAgentSparkline()
+}
+
+// SpinnerIdxForTest returns the internal spinner frame index for testing.
+func (m StatusLineModel) SpinnerIdxForTest() int {
+	return m.spinnerIdx
+}
+
+// CostFlashExpiredMsgForTest constructs a CostFlashExpiredMsg for use in tests.
+func CostFlashExpiredMsgForTest() CostFlashExpiredMsg {
+	return CostFlashExpiredMsg{}
+}
+
+// CostFlashUntilForTest returns the costFlashUntil field for testing.
+func (m StatusLineModel) CostFlashUntilForTest() time.Time {
+	return m.costFlashUntil
+}
+
+// PrevCostForTest returns the prevCost field for testing.
+func (m StatusLineModel) PrevCostForTest() float64 {
+	return m.prevCost
+}
+
+// SetPrevCostForTest directly sets the prevCost field, bypassing CheckCostFlash,
+// so tests can seed the prior-cost value without triggering flash side-effects.
+func (m *StatusLineModel) SetPrevCostForTest(cost float64) {
+	m.prevCost = cost
+}
+
+// ActiveCostStyleForTest exposes activeCostStyle for unit testing.
+func (m StatusLineModel) ActiveCostStyleForTest() lipgloss.Style {
+	return m.activeCostStyle()
+}

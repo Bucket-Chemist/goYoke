@@ -54,6 +54,15 @@
       "conventions_file": "go.md",
       "error_handling_pattern": "fmt.Errorf with %w wrapping",
       "logging_pattern": "structured logging with slog or zerolog"
+    },
+    "go_review_checklist": {
+      "scanner_limits_checked": true,
+      "jsonl_ndjson_paths_checked": true,
+      "stdin_scope_preserved_checked": true,
+      "partial_failure_semantics_checked": true,
+      "temp_fallback_permissions_checked": true,
+      "path_component_sanitization_checked": true,
+      "socket_path_limit_checked": true
     }
   },
   "stdout": {
@@ -83,6 +92,18 @@
       "auth_issues": 0,
       "secrets_exposure": 0,
       "input_validation_gaps": 0
+    },
+    "go_review_coverage": {
+      "scanner_limits_checked": true,
+      "jsonl_ndjson_paths_checked": true,
+      "stdin_scope_preserved_checked": true,
+      "partial_failure_semantics_checked": true,
+      "temp_fallback_permissions_checked": true,
+      "path_component_sanitization_checked": true,
+      "socket_path_limit_checked": false,
+      "notes": [
+        "Socket path limit check is only relevant when the review scope includes Unix socket or IPC startup code."
+      ]
     },
     "files_reviewed": 0,
     "files_skipped": 0,

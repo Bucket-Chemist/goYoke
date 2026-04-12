@@ -47,6 +47,7 @@ type RoutingEntry struct {
 
 // maxEntries is the maximum number of entries rendered to avoid viewport overflow.
 const maxEntries = 50
+const maxTelemetryLineBytes = 10 * 1024 * 1024
 
 // ---------------------------------------------------------------------------
 // TelemetryModel
@@ -142,6 +143,7 @@ func loadJSONL(path string) ([]RoutingEntry, error) {
 
 	var all []RoutingEntry
 	scanner := bufio.NewScanner(f)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxTelemetryLineBytes)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {

@@ -90,6 +90,12 @@ type ToolBlock struct {
 	// Expanded controls whether the full Input/Output is shown in the UI.
 	// Always starts false on restore; transient UI state only.
 	Expanded bool
+	// StartedAt records when the tool invocation began. Used to compute
+	// duration displayed in the inline tool indicator.
+	StartedAt time.Time
+	// Duration is the tool invocation duration, set when the result arrives.
+	// Zero means the tool has not yet completed.
+	Duration time.Duration
 }
 
 // DisplayMessage is a single rendered message in a provider's conversation

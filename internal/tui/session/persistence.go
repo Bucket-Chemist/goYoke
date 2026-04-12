@@ -58,6 +58,12 @@ type SessionData struct {
 	// config.ThemeVariant and int at the save/restore boundary.
 	// ThemeDark (0) is the default and is omitted from JSON by omitempty.
 	ThemeVariant int `json:"theme_variant,omitempty"`
+
+	// SimpleMode indicates whether the right panel was hidden when the session
+	// was saved (UX-007). false (the default) shows both panels; true collapses
+	// the right panel so the conversation fills the full terminal width.
+	// Omitted from JSON when false so existing sessions default to full layout.
+	SimpleMode bool `json:"simple_mode,omitempty"`
 }
 
 // ---------------------------------------------------------------------------

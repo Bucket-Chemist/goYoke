@@ -162,10 +162,10 @@ func TestExtractToolTarget(t *testing.T) {
 			name:     "Bash truncates long command",
 			toolName: "Bash",
 			input: mustJSON(map[string]any{
-				// 93 rune command — truncated at 80 runes
+				// 93 rune command — Truncate(s, 80) returns first 79 runes + "…" = 80 runes
 				"command": "GOOS=linux GOARCH=amd64 go build -ldflags '-X main.version=1.0.0' -o dist/binary ./cmd/binary",
 			}),
-			want: "GOOS=linux GOARCH=amd64 go build -ldflags '-X main.version=1.0.0' -o dist/binary…",
+			want: "GOOS=linux GOARCH=amd64 go build -ldflags '-X main.version=1.0.0' -o dist/binar…",
 		},
 		{
 			name:     "Grep uses pattern",
@@ -220,10 +220,10 @@ func TestExtractToolTarget(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// ExtractToolActivity
+// ExtractToolActivities
 // ---------------------------------------------------------------------------
 
-func TestExtractToolActivity(t *testing.T) {
+func TestExtractToolActivities_SingleActivity(t *testing.T) {
 	block := ContentBlock{
 		Type:  "tool_use",
 		ID:    "toolu_abc",
@@ -232,9 +232,11 @@ func TestExtractToolActivity(t *testing.T) {
 	}
 
 	before := time.Now()
-	activity := ExtractToolActivity(block)
+	activities := ExtractToolActivities(block, "")
 	after := time.Now()
 
+	require.Len(t, activities, 1)
+	activity := activities[0]
 	assert.Equal(t, "tool_use", activity.Type)
 	assert.Equal(t, "/src/config.go", activity.Target)
 	assert.Equal(t, "Read: /src/config.go", activity.Preview)
@@ -242,7 +244,7 @@ func TestExtractToolActivity(t *testing.T) {
 	assert.True(t, !activity.Timestamp.After(after))
 }
 
-func TestExtractToolActivityEmptyTarget(t *testing.T) {
+func TestExtractToolActivities_EmptyTarget(t *testing.T) {
 	// A tool with no recognised input fields should still produce a valid activity.
 	block := ContentBlock{
 		Type:  "tool_use",
@@ -251,11 +253,201 @@ func TestExtractToolActivityEmptyTarget(t *testing.T) {
 		Input: mustJSON(map[string]any{"someField": "value"}),
 	}
 
-	activity := ExtractToolActivity(block)
+	activities := ExtractToolActivities(block, "")
+	require.Len(t, activities, 1)
+	activity := activities[0]
 	assert.Equal(t, "tool_use", activity.Type)
 	// extractToolTarget falls back to tool name
 	assert.Equal(t, "UnknownTool", activity.Target)
 	assert.Equal(t, "UnknownTool: UnknownTool", activity.Preview)
+}
+
+// ---------------------------------------------------------------------------
+// stripProjectRoot
+// ---------------------------------------------------------------------------
+
+func TestStripProjectRoot(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		root string
+		want string
+	}{
+		{
+			name: "absolute path under root strips to relative",
+			path: "/home/user/project/internal/pkg/file.go",
+			root: "/home/user/project",
+			want: "internal/pkg/file.go",
+		},
+		{
+			name: "path at root level",
+			path: "/home/user/project/main.go",
+			root: "/home/user/project",
+			want: "main.go",
+		},
+		{
+			name: "path outside root returned unchanged",
+			path: "/other/place/file.go",
+			root: "/home/user/project",
+			want: "/other/place/file.go",
+		},
+		{
+			name: "empty root disables stripping",
+			path: "/home/user/project/file.go",
+			root: "",
+			want: "/home/user/project/file.go",
+		},
+		{
+			name: "empty path returned unchanged",
+			path: "",
+			root: "/home/user/project",
+			want: "",
+		},
+		{
+			name: "already relative path (no leading slash) returned unchanged",
+			path: "internal/pkg/file.go",
+			root: "/home/user/project",
+			want: "internal/pkg/file.go",
+		},
+		{
+			name: "sibling directory returns unchanged (starts with ..)",
+			path: "/home/user/other/file.go",
+			root: "/home/user/project",
+			want: "/home/user/other/file.go",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := stripProjectRoot(tc.path, tc.root)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// splitCompoundCommand
+// ---------------------------------------------------------------------------
+
+func TestSplitCompoundCommand(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{
+			name:  "simple compound command",
+			input: "go build ./... && go test ./...",
+			want:  []string{"go build ./...", "go test ./..."},
+		},
+		{
+			name:  "three parts",
+			input: "make clean && make build && make test",
+			want:  []string{"make clean", "make build", "make test"},
+		},
+		{
+			name:  "single command (no &&) returned as one element",
+			input: "go test ./...",
+			want:  []string{"go test ./..."},
+		},
+		{
+			name:  "extra whitespace trimmed",
+			input: "cmd1  &&   cmd2",
+			want:  []string{"cmd1", "cmd2"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := splitCompoundCommand(tc.input)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ExtractToolActivities — path stripping and compound split
+// ---------------------------------------------------------------------------
+
+func TestExtractToolActivities_StripsProjectRoot(t *testing.T) {
+	root := "/home/user/project"
+	block := ContentBlock{
+		Type:  "tool_use",
+		ID:    "toolu_read",
+		Name:  "Read",
+		Input: mustJSON(map[string]any{"file_path": "/home/user/project/internal/tui/app.go"}),
+	}
+
+	activities := ExtractToolActivities(block, root)
+
+	require.Len(t, activities, 1)
+	assert.Equal(t, "internal/tui/app.go", activities[0].Target)
+	assert.Equal(t, "Read: internal/tui/app.go", activities[0].Preview)
+}
+
+func TestExtractToolActivities_PathOutsideRootUnchanged(t *testing.T) {
+	root := "/home/user/project"
+	block := ContentBlock{
+		Type:  "tool_use",
+		ID:    "toolu_read",
+		Name:  "Read",
+		Input: mustJSON(map[string]any{"file_path": "/etc/hosts"}),
+	}
+
+	activities := ExtractToolActivities(block, root)
+
+	require.Len(t, activities, 1)
+	assert.Equal(t, "/etc/hosts", activities[0].Target)
+}
+
+func TestExtractToolActivities_CompoundBashSplit(t *testing.T) {
+	block := ContentBlock{
+		Type:  "tool_use",
+		ID:    "toolu_bash",
+		Name:  "Bash",
+		Input: mustJSON(map[string]any{"command": "go build ./... && go test ./..."}),
+	}
+
+	activities := ExtractToolActivities(block, "")
+
+	require.Len(t, activities, 2)
+	assert.Equal(t, "go build ./...", activities[0].Target)
+	assert.Equal(t, "Bash: go build ./...", activities[0].Preview)
+	assert.Equal(t, "go test ./...", activities[1].Target)
+	assert.Equal(t, "Bash: go test ./...", activities[1].Preview)
+	// Both share the same ToolID
+	assert.Equal(t, "toolu_bash", activities[0].ToolID)
+	assert.Equal(t, "toolu_bash", activities[1].ToolID)
+}
+
+func TestExtractToolActivities_SimpleBashNoSplit(t *testing.T) {
+	block := ContentBlock{
+		Type:  "tool_use",
+		ID:    "toolu_bash",
+		Name:  "Bash",
+		Input: mustJSON(map[string]any{"command": "go test ./..."}),
+	}
+
+	activities := ExtractToolActivities(block, "")
+
+	require.Len(t, activities, 1)
+	assert.Equal(t, "go test ./...", activities[0].Target)
+}
+
+func TestExtractToolActivities_NonFileToolNotStripped(t *testing.T) {
+	root := "/home/user/project"
+	block := ContentBlock{
+		Type:  "tool_use",
+		ID:    "toolu_grep",
+		Name:  "Grep",
+		Input: mustJSON(map[string]any{"pattern": "func.*Error"}),
+	}
+
+	activities := ExtractToolActivities(block, root)
+
+	require.Len(t, activities, 1)
+	// Pattern should not be modified by path stripping
+	assert.Equal(t, "func.*Error", activities[0].Target)
 }
 
 // ---------------------------------------------------------------------------
@@ -753,9 +945,9 @@ func TestTruncate(t *testing.T) {
 	}{
 		{"short string unchanged", "hello", 10, "hello"},
 		{"exact length unchanged", "hello", 5, "hello"},
-		{"truncates with ellipsis", "hello world", 5, "hello…"},
+		{"truncates with ellipsis", "hello world", 5, "hell…"},
 		{"empty string", "", 10, ""},
-		{"unicode aware", "日本語テスト", 4, "日本語テ…"},
+		{"unicode aware", "日本語テスト", 4, "日本語…"},
 	}
 
 	for _, tc := range tests {

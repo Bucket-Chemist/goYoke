@@ -161,28 +161,28 @@ func TestBuildArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "mcp-config omits allowedTools when path empty",
-			opts: CLIDriverOpts{MCPConfigPath: ""},
+			name:   "mcp-config omits allowedTools when path empty",
+			opts:   CLIDriverOpts{MCPConfigPath: ""},
 			absent: []string{"--allowedTools"},
 		},
 		{
-			name: "config-dir is never passed as CLI flag (not supported by claude CLI)",
-			opts: CLIDriverOpts{ConfigDir: "/home/user/.claude-em"},
+			name:   "config-dir is never passed as CLI flag (not supported by claude CLI)",
+			opts:   CLIDriverOpts{ConfigDir: "/home/user/.claude-em"},
 			absent: []string{"--config-dir"},
 		},
 		{
-			name: "effort flag included when set",
-			opts: CLIDriverOpts{Effort: "high"},
+			name:     "effort flag included when set",
+			opts:     CLIDriverOpts{Effort: "high"},
 			contains: []string{"--effort", "high"},
 		},
 		{
-			name: "effort flag omitted when empty",
-			opts: CLIDriverOpts{},
+			name:   "effort flag omitted when empty",
+			opts:   CLIDriverOpts{},
 			absent: []string{"--effort"},
 		},
 		{
-			name: "effort flag omitted when auto",
-			opts: CLIDriverOpts{Effort: "auto"},
+			name:   "effort flag omitted when auto",
+			opts:   CLIDriverOpts{Effort: "auto"},
 			absent: []string{"--effort"},
 		},
 	}
@@ -789,6 +789,48 @@ func TestConsumeEvents_LargeLineHandled(t *testing.T) {
 
 	ev, ok := items[0].(AssistantEvent)
 	require.True(t, ok, "expected AssistantEvent for large line, got %T", items[0])
+	require.Len(t, ev.Message.Content, 1)
+	assert.Len(t, ev.Message.Content[0].Text, len(largeText))
+}
+
+func TestConsumeEvents_VeryLargeLineHandled(t *testing.T) {
+	d, writer, _ := newTestDriver(t, CLIDriverOpts{})
+
+	// Valid assistant events can exceed 1 MB when a tool result embeds a large
+	// file payload. The driver must keep streaming instead of disconnecting.
+	largeText := strings.Repeat("x", 2*1024*1024)
+	largeEvent := map[string]any{
+		"type": "assistant",
+		"message": map[string]any{
+			"id":    "msg_very_large",
+			"type":  "message",
+			"role":  "assistant",
+			"model": "m",
+			"content": []map[string]any{
+				{"type": "text", "text": largeText},
+			},
+			"stop_reason": nil,
+			"usage": map[string]any{
+				"input_tokens":  1,
+				"output_tokens": 1,
+			},
+		},
+		"parent_tool_use_id": nil,
+		"session_id":         "s",
+		"uuid":               "u_very_large",
+	}
+
+	data, err := json.Marshal(largeEvent)
+	require.NoError(t, err)
+
+	fmt.Fprintln(writer, string(data))
+	writer.Close()
+
+	items := drainChannel(d.eventCh, 5, 3*time.Second)
+	require.GreaterOrEqual(t, len(items), 1)
+
+	ev, ok := items[0].(AssistantEvent)
+	require.True(t, ok, "expected AssistantEvent for very large line, got %T", items[0])
 	require.Len(t, ev.Message.Content, 1)
 	assert.Len(t, ev.Message.Content[0].Text, len(largeText))
 }

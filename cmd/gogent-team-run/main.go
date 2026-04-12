@@ -166,10 +166,21 @@ func main() {
 				AgentID: "team:" + teamName,
 				Status:  status,
 			})
+			// UX-019: notify TUI so Teams tab flashes and auto-switch can trigger.
+			udsClient.notify(typeTeamUpdate, teamUpdatePayload{
+				TeamDir: teamDir,
+				Status:  status,
+			})
 		}
 		// Waves completed normally
 		if err != nil {
 			log.Printf("Wave execution failed: %v", err)
+			if !udsClient.isNoop() {
+				udsClient.notify(typeToast, toastPayload{
+					Message: fmt.Sprintf("team failed — /team-status to inspect: %v", err),
+					Level:   "error",
+				})
+			}
 			// Update config with failure status
 			now := time.Now().UTC().Format(time.RFC3339)
 			runner.configMu.Lock()
@@ -182,6 +193,40 @@ func main() {
 			os.Exit(1)
 		}
 		log.Printf("Wave execution completed successfully")
+		if !udsClient.isNoop() {
+			totalCost := 0.0
+			var agentIDs []string
+			runner.configMu.RLock()
+			if runner.config != nil {
+				for _, wave := range runner.config.Waves {
+					for _, member := range wave.Members {
+						totalCost += member.CostUSD
+						id := member.Agent
+						if id == "" {
+							id = member.Name
+						}
+						if id != "" {
+							agentIDs = append(agentIDs, id)
+						}
+					}
+				}
+			}
+			runner.configMu.RUnlock()
+
+			// Scan stream files for changed-file count (best-effort, post-completion).
+			filesChanged := countChangedFilesInDir(teamDir, agentIDs)
+
+			var toastMsg string
+			if filesChanged > 0 {
+				toastMsg = fmt.Sprintf("team complete — %d file(s), $%.2f — /team-result to view", filesChanged, totalCost)
+			} else {
+				toastMsg = fmt.Sprintf("team complete ($%.2f) — /team-result to view findings", totalCost)
+			}
+			udsClient.notify(typeToast, toastPayload{
+				Message: toastMsg,
+				Level:   "info",
+			})
+		}
 		// Update config with completion status
 		now := time.Now().UTC().Format(time.RFC3339)
 		runner.configMu.Lock()

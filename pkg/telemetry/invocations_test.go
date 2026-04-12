@@ -362,6 +362,28 @@ func TestLoadInvocations_EmptyFile(t *testing.T) {
 	}
 }
 
+func TestLoadInvocations_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	logPath := filepath.Join(tmpDir, "invocations.jsonl")
+	largeTask := strings.Repeat("x", 70*1024)
+	content := `{"timestamp":"2026-01-22T10:00:00Z","session_id":"s1","invocation_id":"i1","agent":"python-pro","model":"sonnet","tier":"sonnet","duration_ms":1000,"input_tokens":500,"output_tokens":250,"success":true,"task_description":"` + largeTask + `","tools_used":[]}`
+
+	if err := os.WriteFile(logPath, []byte(content), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	invocations, err := LoadInvocations(logPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+	if len(invocations) != 1 {
+		t.Fatalf("Expected 1 invocation, got: %d", len(invocations))
+	}
+	if invocations[0].TaskDescription != largeTask {
+		t.Fatalf("Expected large task description to round-trip")
+	}
+}
+
 func TestGetInvocationsLogPath_XDGCompliance(t *testing.T) {
 	// Test with XDG_RUNTIME_DIR set (highest priority)
 	tmpDir := t.TempDir()
@@ -1072,7 +1094,7 @@ func TestGetTopAgentsByUsage_EmptyInput(t *testing.T) {
 
 func TestGetTopAgentsByErrorRate_Basic(t *testing.T) {
 	stats := []AgentInvocationStats{
-		{Agent: "agent-a", TotalCount: 10, SuccessCount: 9, SuccessRate: 0.9},  // 10% error
+		{Agent: "agent-a", TotalCount: 10, SuccessCount: 9, SuccessRate: 0.9},   // 10% error
 		{Agent: "agent-b", TotalCount: 20, SuccessCount: 15, SuccessRate: 0.75}, // 25% error
 		{Agent: "agent-c", TotalCount: 30, SuccessCount: 27, SuccessRate: 0.9},  // 10% error
 	}
@@ -1095,7 +1117,7 @@ func TestGetTopAgentsByErrorRate_Basic(t *testing.T) {
 
 func TestGetTopAgentsByErrorRate_MinInvocations(t *testing.T) {
 	stats := []AgentInvocationStats{
-		{Agent: "agent-a", TotalCount: 5, SuccessCount: 2, SuccessRate: 0.4},   // 60% error but < 10 invocations
+		{Agent: "agent-a", TotalCount: 5, SuccessCount: 2, SuccessRate: 0.4},    // 60% error but < 10 invocations
 		{Agent: "agent-b", TotalCount: 20, SuccessCount: 15, SuccessRate: 0.75}, // 25% error
 		{Agent: "agent-c", TotalCount: 30, SuccessCount: 27, SuccessRate: 0.9},  // 10% error
 	}

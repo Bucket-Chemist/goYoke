@@ -357,9 +357,14 @@ func TestDecisionFileSeparation(t *testing.T) {
 func TestXDGDataHomeFallback(t *testing.T) {
 	// Test that when XDG_DATA_HOME is not set, it falls back to ~/.local/share
 	originalXDG := os.Getenv("XDG_DATA_HOME")
-	defer os.Setenv("XDG_DATA_HOME", originalXDG)
+	originalHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", originalXDG)
+		os.Setenv("HOME", originalHome)
+	}()
 
 	os.Unsetenv("XDG_DATA_HOME")
+	t.Setenv("HOME", t.TempDir())
 
 	path := getRoutingDecisionPath()
 	if !strings.Contains(path, ".local/share/gogent") {

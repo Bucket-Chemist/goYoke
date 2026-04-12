@@ -406,3 +406,67 @@ func TestTeamDetailModel_View_EmptyNameFallsBackToAgent(t *testing.T) {
 	view := m.View()
 	require.Contains(t, view, "go-pro", "view should fall back to Agent field when Name is empty")
 }
+
+// ---------------------------------------------------------------------------
+// Completion summary (UX-028)
+// ---------------------------------------------------------------------------
+
+func TestTeamDetailModel_View_CompletedTeam_ShowsSummary(t *testing.T) {
+	// A completed team with no stream files on disk still shows the summary
+	// line (with "no file changes" since stream files are absent).
+	ts := &teams.TeamState{
+		Dir: t.TempDir(), // empty dir — no stream files
+		Config: teams.TeamConfig{
+			TeamName:  "done-team",
+			Status:    "completed",
+			CreatedAt: "2026-01-01T00:00:00Z",
+			Waves: []teams.Wave{
+				{WaveNumber: 1, Members: []teams.Member{
+					{Name: "worker", Agent: "go-pro", Status: "completed", CostUSD: 1.0},
+				}},
+			},
+		},
+	}
+	reg := teams.NewTeamRegistry()
+	reg.Update(ts.Dir, ts.Config, nil)
+	m := teams.NewTeamDetailModel(reg, nil)
+	m.SetSize(120, 40)
+	m.Refresh()
+	view := m.View()
+	assert.Contains(t, view, "✓ done", "completed team should show checkmark summary")
+	assert.Contains(t, view, "no file changes", "no stream files → no file changes")
+}
+
+func TestTeamDetailModel_View_RunningTeam_NoSummary(t *testing.T) {
+	// A running team must NOT show the completion summary.
+	ts := makeFullTeamState() // status = "running"
+	m := teams.NewTeamDetailModel(nil, nil)
+	m.SetSize(120, 40)
+	m.SetTeam(ts)
+	view := m.View()
+	assert.NotContains(t, view, "✓ done", "running team must not show completion summary")
+}
+
+func TestTeamDetailModel_View_CompleteStatus_ShowsSummary(t *testing.T) {
+	// "complete" (without 'd') is also a valid terminal status.
+	ts := &teams.TeamState{
+		Dir: t.TempDir(),
+		Config: teams.TeamConfig{
+			TeamName:  "alt-complete",
+			Status:    "complete",
+			CreatedAt: "2026-01-01T00:00:00Z",
+			Waves: []teams.Wave{
+				{WaveNumber: 1, Members: []teams.Member{
+					{Name: "a", Agent: "go-pro", Status: "completed", CostUSD: 0.5},
+				}},
+			},
+		},
+	}
+	reg := teams.NewTeamRegistry()
+	reg.Update(ts.Dir, ts.Config, nil)
+	m := teams.NewTeamDetailModel(reg, nil)
+	m.SetSize(120, 40)
+	m.Refresh()
+	view := m.View()
+	assert.Contains(t, view, "✓ done", "status='complete' should also show summary")
+}

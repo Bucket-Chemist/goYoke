@@ -1,8 +1,8 @@
 # Sharp Edges for GO CLI Agent (Cobra)
 # Common Cobra/Viper pitfalls
 
-version: "1.0"
-updated: "2026-01-15"
+version: "1.1"
+updated: "2026-04-11"
 
 sharp_edges:
   - id: flag-binding-timing
@@ -75,4 +75,36 @@ sharp_edges:
       
       Local: Only available to THIS command
       serveCmd.Flags().Int("port", 8080, "port")
+    auto_inject: true
+
+  - id: stdin-scope-widening
+    severity: high
+    category: input
+    description: "Explicit stdin file lists widened into a parent directory scan"
+    symptom: "CLI reports or edits files that were never passed on stdin"
+    solution: |
+      If stdin provides an explicit file list, preserve that exact set through
+      the full call chain. Do not convert it into a common-root directory scan
+      unless the command explicitly documents broader scope.
+    auto_inject: true
+
+  - id: partial-failure-success-reporting
+    severity: high
+    category: error-handling
+    description: "Commands with multiple sub-operations return success despite unresolved failures"
+    symptom: "Final exit code is zero even though one worker, wave, or cleanup step failed"
+    solution: |
+      Aggregate per-unit failures and fail the command if any unresolved failure
+      remains at the end. Warnings are not enough when the externally visible
+      outcome is partial or inconsistent.
+    auto_inject: true
+
+  - id: path-component-sanitization
+    severity: high
+    category: filesystem
+    description: "Raw session or user identifiers embedded in filenames can escape the intended directory"
+    symptom: "Cache or state files land outside the expected runtime directory"
+    solution: |
+      Hash or sanitize session_id and similar identifiers before joining them
+      into filenames. Never rely on raw values being path-safe.
     auto_inject: true

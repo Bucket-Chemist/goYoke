@@ -72,11 +72,14 @@ func runWaves(ctx context.Context, tr *TeamRunner) error {
 				// Total wipe — no results at all, skip remaining waves.
 				log.Printf("[ERROR] wave: Wave %d ALL members failed: %v", wave.WaveNumber, failed)
 				skipRemainingWaves(tr, waveIdx)
-				return fmt.Errorf("wave %d: all %d members failed, skipping subsequent waves", wave.WaveNumber, len(failed))
+				return fmt.Errorf("wave %d: failed members %v (all %d failed), skipping subsequent waves", wave.WaveNumber, failed, len(failed))
 			}
 			// Partial failure — continue to next wave so synthesizer can handle partial results.
 			log.Printf("[WARN] wave: Wave %d had %d/%d failed members: %v — continuing to next wave",
 				wave.WaveNumber, len(failed), len(wave.Members), failed)
+			if waveIdx == len(waves)-1 {
+				return fmt.Errorf("failed members remained after wave execution: %v", failed)
+			}
 		}
 
 		log.Printf("[INFO] wave: Wave %d completed", wave.WaveNumber)
@@ -110,11 +113,34 @@ func spawnAndWaitWithBudget(ctx context.Context, tr *TeamRunner, waveIdx, memIdx
 	tr.configMu.RUnlock()
 
 	// Reconcile budget: return reservation, deduct actual
+	remainingBefore := tr.BudgetRemaining()
 	if err := tr.reconcileCost(estimated, actual); err != nil {
 		log.Printf("[ERROR] wave: budget reconciliation failed for %s: %v", memberName, err)
 	} else {
+		remainingAfter := tr.BudgetRemaining()
 		log.Printf("[INFO] wave: reconciled budget for %s (estimated=$%.2f, actual=$%.2f, remaining=$%.2f)",
-			memberName, estimated, actual, tr.BudgetRemaining())
+			memberName, estimated, actual, remainingAfter)
+
+		// Budget warning toast: fire once when budget crosses below WarningThresholdUSD.
+		tr.configMu.RLock()
+		var warningThreshold, maxBudget float64
+		if tr.config != nil {
+			warningThreshold = tr.config.WarningThresholdUSD
+			maxBudget = tr.config.BudgetMaxUSD
+		}
+		tr.configMu.RUnlock()
+
+		if warningThreshold > 0 && maxBudget > 0 &&
+			remainingBefore > warningThreshold && remainingAfter <= warningThreshold {
+			if tr.budgetWarnSent.CompareAndSwap(false, true) && tr.uds != nil && !tr.uds.isNoop() {
+				pct := (remainingAfter / maxBudget) * 100
+				tr.uds.notify(typeToast, toastPayload{
+					Message: fmt.Sprintf("budget warning: $%.2f of $%.2f remaining (%.0f%%) — /team-status for cost breakdown",
+						remainingAfter, maxBudget, pct),
+					Level: "warn",
+				})
+			}
+		}
 	}
 }
 

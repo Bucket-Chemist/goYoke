@@ -928,6 +928,12 @@ func spawnAndWait(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int, wg *
 				log.Printf("ERROR: Failed to update member %s: %v", member.Name, err)
 			}
 			log.Printf("Member %s failed with non-retryable error: %v", member.Name, err)
+			if tr.uds != nil && !tr.uds.isNoop() {
+				tr.uds.notify(typeToast, toastPayload{
+					Message: fmt.Sprintf("%s failed — /team-status for details", member.Name),
+					Level:   "warn",
+				})
+			}
 			return
 		}
 
@@ -947,6 +953,13 @@ func spawnAndWait(ctx context.Context, tr *TeamRunner, waveIdx, memIdx int, wg *
 		log.Printf("ERROR: Failed to update member %s: %v", member.Name, err)
 	}
 	log.Printf("Member %s failed after %d retries", member.Name, member.MaxRetries+1)
+	if tr.uds != nil && !tr.uds.isNoop() {
+		tr.uds.notify(typeToast, toastPayload{
+			Message: fmt.Sprintf("%s failed after %d retries — /team-status for details",
+				member.Name, member.MaxRetries+1),
+			Level: "warn",
+		})
+	}
 }
 
 // tailStreamForUDS opens an independent read-only FD on the stream file and

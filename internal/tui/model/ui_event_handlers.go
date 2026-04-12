@@ -96,6 +96,20 @@ func (m *AppModel) propagateContentSizes() {
 		mainH = 1
 	}
 
+	// UX-003: Icon rail hysteresis.
+	// Activates when rightWidth < 28; deactivates when rightWidth >= 32.
+	// The [28, 32) band is a dead zone — current mode is preserved to prevent
+	// flicker during terminal resize. When the right panel is hidden (simpleMode
+	// or compact layout), iconRailMode is left unchanged.
+	if dims.showRightPanel {
+		if dims.rightWidth < 28 {
+			m.iconRailMode = true
+		} else if dims.rightWidth >= 32 {
+			m.iconRailMode = false
+		}
+		// [28, 32): hysteresis — keep m.iconRailMode unchanged.
+	}
+
 	if m.shared.claudePanel != nil {
 		// Subtract separatorHeight so the panel's internal viewport is sized to
 		// contentHeight-2 (one row for the separator, one for the input line),
@@ -420,8 +434,8 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.shared.agentRegistry.InvalidateTreeCache()
 	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
-	m.statusLine.AgentCount = m.shared.agentRegistry.Count().Total
-	return m, nil
+	m.statusLine.AgentStats = m.shared.agentRegistry.Count()
+	return m, m.agentTree.MaybeStartPulseTick()
 }
 
 // handleAgentTodoUpdate handles AgentTodoUpdateMsg: matches the todo items from
@@ -479,7 +493,7 @@ func (m *AppModel) killAgentByID(id string) {
 	}
 	registry.InvalidateTreeCache()
 	m.agentTree.SetNodes(registry.Tree())
-	m.statusLine.AgentCount = registry.Count().Total
+	m.statusLine.AgentStats = registry.Count()
 }
 
 // killRunningAgents sends SIGTERM to all spawned agent process groups that
@@ -494,7 +508,7 @@ func (m *AppModel) killRunningAgents() {
 	// Refresh the tree view so killed agents show their new status.
 	m.shared.agentRegistry.InvalidateTreeCache()
 	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
-	m.statusLine.AgentCount = m.shared.agentRegistry.Count().Total
+	m.statusLine.AgentStats = m.shared.agentRegistry.Count()
 }
 
 // handleAgentSelected handles agents.AgentSelectedMsg: loads the selected
@@ -603,6 +617,11 @@ func (m AppModel) handlePlanStep(msg PlanStepMsg) (tea.Model, tea.Cmd) {
 // If the scan didn't find the team yet (ensureTeamVisible race), a placeholder
 // is shown. The teamNotifiedAt grace period prevents the poll-tick handler
 // from immediately collapsing the drawer via ClearTeamsContent.
+//
+// On team completion (status "complete" or "error"), it also:
+//   - flashes the Teams tab so the user notices without being at that tab
+//   - auto-switches to the Teams panel when the conversation is idle (not
+//     streaming and no text in the input box)
 func (m AppModel) handleTeamUpdate(msg TeamUpdateMsg) (tea.Model, tea.Cmd) {
 	if m.shared == nil || m.shared.teamList == nil {
 		return m, nil
@@ -627,13 +646,41 @@ func (m AppModel) handleTeamUpdate(msg TeamUpdateMsg) (tea.Model, tea.Cmd) {
 	if m.shared.teamDetail != nil {
 		m.shared.teamDetail.Refresh()
 	}
+
+	var cmds []tea.Cmd
 	// PollNow recovers the poll chain if it died and is idempotent due to the
 	// sequence guard introduced in C-1.
-	return m, m.shared.teamList.PollNow()
+	cmds = append(cmds, m.shared.teamList.PollNow())
+
+	// UX-019: on team completion, flash the Teams tab and optionally auto-switch.
+	isComplete := msg.Status == "complete" || msg.Status == "completed" ||
+		msg.Status == "error" || msg.Status == "failed"
+	if isComplete {
+		// Flash the Teams tab regardless of current focus.
+		cmds = append(cmds, tabFlashCmd(int(RPMTeams)))
+
+		// Auto-switch to Teams only when the conversation is fully idle:
+		// the assistant is not streaming and the user has not started typing.
+		streaming := m.statusLine.Streaming
+		if m.shared.claudePanel != nil {
+			streaming = streaming || m.shared.claudePanel.IsStreaming()
+		}
+		userTyping := m.shared.claudePanel != nil && m.shared.claudePanel.HasInput()
+
+		if !streaming && !userTyping {
+			m.rightPanelMode = RPMTeams
+		}
+	}
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m AppModel) handleTabFlash(msg TabFlashMsg) (tea.Model, tea.Cmd) {
 	if m.tabBar == nil {
+		return m, nil
+	}
+	if m.shared != nil && m.shared.reduceMotion {
+		// Skip the flash animation — the tab is already visible.
 		return m, nil
 	}
 	cmd := m.tabBar.HandleMsg(msg)
@@ -704,6 +751,26 @@ func (m AppModel) handleSettingChanged(msg settingstree.SettingChangedMsg) (tea.
 			m.statusLine.VimMode = m.keys.VimMode.String()
 		}
 		m.statusLine.VimEnabled = enabled
+
+	case "reduce_motion":
+		enabled := msg.Value == "on"
+		m.shared.reduceMotion = enabled
+		m.statusLine.ReduceMotion = enabled
+		if m.shared.claudePanel != nil {
+			m.shared.claudePanel.SetReduceMotion(enabled)
+		}
+		m.agentTree.SetReduceMotion(enabled)
+
+	case "timestamps":
+		enabled := msg.Value == "on"
+		if m.shared.claudePanel != nil {
+			if cmd := m.shared.claudePanel.SetShowTimestamps(enabled); cmd != nil {
+				return m, cmd
+			}
+		}
+
+	case "cost_flash":
+		m.statusLine.CostFlashEnabled = msg.Value == "on"
 	}
 
 	return m, nil
@@ -936,6 +1003,9 @@ func (m AppModel) saveSession() {
 	// Snapshot theme variant.  ThemeDark (0) is the default and is omitted
 	// from the JSON output by the omitempty tag on SessionData.ThemeVariant.
 	sd.ThemeVariant = int(m.shared.themeVariant)
+
+	// Snapshot simple mode preference (UX-007).
+	sd.SimpleMode = m.simpleMode
 
 	// Save session metadata.
 	if err := m.shared.sessionStore.SaveSession(sd); err != nil {

@@ -253,11 +253,8 @@ Request arrives
 | `einstein`  | Theoretical analysis (root cause, frameworks, first principles) | mozart            |
 | `beethoven` | Synthesis of orthogonal analyses into unified document          | mozart            |
 
-### External: Gemini + Native Scout
-
 | Trigger Patterns                           | Handler        | Notes                                                        |
 | ------------------------------------------ | -------------- | ------------------------------------------------------------ |
-| full codebase, cross-module, large context | `gemini-slave` | Via Bash, not spawn_agent. Models: `gemini-3-flash-preview` (mapper), `gemini-3-pro-preview` (debugger, architect) |
 | native scope assessment, fast file metrics | `gogent-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
 
 ---
@@ -308,7 +305,7 @@ mcp__gofortress-interactive__spawn_agent({
   description: string,  // Brief description for logging
   prompt: string,       // Task prompt for the agent
   model?: string,       // Optional model override (default: from agent config)
-  timeout?: number,     // Optional timeout in ms (default: 300000)
+  timeout?: number,     // Optional timeout in ms (default: 600000)
   caller_type?: string, // Self-identification for CLI-spawned agents
 })
 ```
@@ -495,7 +492,7 @@ CONTEXT: [relevant files, patterns]
 EXPECTED OUTPUT: [deliverable]
 CONSTRAINTS: [what not to do]`,
   model: "haiku" | "sonnet",  // Optional: defaults to agent config
-  timeout: 300000,             // Optional: ms, default 5min
+  timeout: 600000,             // Optional: ms, default 10min
 });
 ```
 
@@ -503,24 +500,6 @@ CONSTRAINTS: [what not to do]`,
 
 ---
 
-## Gemini Slave (Special Case)
-
-Uses Bash, NOT spawn_agent. Backed by Google Gemini 3 models.
-
-```bash
-# Gather files and pipe to gemini-slave
-cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependencies"
-```
-
-| Protocol         | Model                    | Output    | Use When                       |
-| ---------------- | ------------------------ | --------- | ------------------------------ |
-| `mapper`         | `gemini-3-flash-preview` | JSON      | Reduce files to critical paths |
-| `debugger`       | `gemini-3-pro-preview`   | Markdown  | Cross-module error tracing     |
-| `architect`      | `gemini-3-pro-preview`   | Markdown  | Module review                  |
-| `memory-audit`   | `gemini-3-pro-preview`   | JSON      | Memory system audit            |
-| `benchmark-audit`| `gemini-3-pro-preview`   | JSON      | Benchmark analysis             |
-
----
 
 ## Workflow Patterns
 
@@ -535,12 +514,6 @@ For unknown scope:
 4. Execute via appropriate agent
 ```
 
-### Pattern 2: Gemini → Orchestrator → Architect
-
-For large-context analysis:
-
-```
-1. gemini-slave (Bash) → produces report
 2. orchestrator (spawn_agent) → synthesizes findings
 3. architect (spawn_agent) → creates implementation plan
 ```

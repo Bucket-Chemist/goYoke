@@ -120,7 +120,7 @@ FILES: [relevant backend files]
 EXPECTED OUTPUT: Structured findings by severity (Critical/Warning/Info)
 FOCUS: Security, API design, error handling, concurrency safety`,
   model: "haiku",
-  timeout: 300000,  // 5 minutes for review
+  timeout: 600000,  // 5 minutes for review
 });
 
 mcp__gofortress__spawn_agent({
@@ -134,7 +134,7 @@ FILES: [relevant frontend files]
 EXPECTED OUTPUT: Structured findings by severity (Critical/Warning/Info)
 FOCUS: Accessibility, hooks patterns, error states, performance`,
   model: "haiku",
-  timeout: 300000,
+  timeout: 600000,
 });
 
 mcp__gofortress__spawn_agent({
@@ -148,7 +148,7 @@ FILES: [all files]
 EXPECTED OUTPUT: Structured findings by severity (Warning/Info only)
 FOCUS: Naming, complexity, DRY, documentation`,
   model: "haiku",
-  timeout: 300000,
+  timeout: 600000,
 });
 
 mcp__gofortress__spawn_agent({
@@ -162,7 +162,7 @@ FILES: [all files]
 EXPECTED OUTPUT: Structured findings by severity (Critical/Warning/Info)
 FOCUS: Module boundaries, dependency health, design patterns, change impact`,
   model: "sonnet",
-  timeout: 300000,
+  timeout: 600000,
 });
 ```
 

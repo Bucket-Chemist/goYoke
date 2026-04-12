@@ -49,31 +49,24 @@ func TestGetCurrentTier(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:        "valid tier: external",
-			fileContent: "external",
-			createFile:  true,
-			wantTier:    "external",
-			wantErr:     false,
-		},
-		{
-			name:        "missing file returns external",
+			name:        "missing file returns sonnet",
 			fileContent: "",
 			createFile:  false,
-			wantTier:    "external",
+			wantTier:    "sonnet",
 			wantErr:     false,
 		},
 		{
-			name:        "empty file returns external",
+			name:        "empty file returns sonnet",
 			fileContent: "",
 			createFile:  true,
-			wantTier:    "external",
+			wantTier:    "sonnet",
 			wantErr:     false,
 		},
 		{
-			name:        "whitespace only returns external",
+			name:        "whitespace only returns sonnet",
 			fileContent: "   \n\t  ",
 			createFile:  true,
-			wantTier:    "external",
+			wantTier:    "sonnet",
 			wantErr:     false,
 		},
 		{
@@ -175,7 +168,7 @@ func TestIsValidTier(t *testing.T) {
 		{name: "haiku_thinking is valid", tier: "haiku_thinking", want: true},
 		{name: "sonnet is valid", tier: "sonnet", want: true},
 		{name: "opus is valid", tier: "opus", want: true},
-		{name: "external is valid", tier: "external", want: true},
+		{name: "external is no longer valid", tier: "external", want: false},
 		{name: "invalid tier", tier: "invalid", want: false},
 		{name: "empty tier", tier: "", want: false},
 		{name: "uppercase tier", tier: "SONNET", want: false},
@@ -200,7 +193,7 @@ func TestGetCurrentTier_UsesGetTierFilePath(t *testing.T) {
 	// If not accessible, just verify function doesn't panic
 	tier, err := GetCurrentTier()
 
-	// Should return either a valid tier or "external" fallback
+	// Should return either a valid tier or "sonnet" fallback
 	if err != nil {
 		t.Errorf("GetCurrentTier() unexpected error: %v", err)
 	}

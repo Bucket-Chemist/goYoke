@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -174,7 +175,7 @@ func TestQuerySharpEdges_SinceFilter(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
-	oldTimestamp := now - (30 * 24 * 60 * 60) // 30 days ago
+	oldTimestamp := now - (30 * 24 * 60 * 60)   // 30 days ago
 	recentTimestamp := now - (5 * 24 * 60 * 60) // 5 days ago
 
 	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -386,6 +387,34 @@ func TestQuerySharpEdges_NewFieldsParsed(t *testing.T) {
 	}
 	if edge.ResolvedAt != 1705000100 {
 		t.Errorf("Expected ResolvedAt 1705000100, got: %d", edge.ResolvedAt)
+	}
+}
+
+func TestQuerySharpEdges_LargeLine(t *testing.T) {
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	edgesPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
+	largeContext := strings.Repeat("x", 70*1024)
+	content := fmt.Sprintf(`{"file":"large.go","error_type":"test_error","consecutive_failures":4,"timestamp":1705000000,"context":"%s"}`+"\n", largeContext)
+	if err := os.WriteFile(edgesPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	q := NewQuery(tmpDir)
+	edges, err := q.QuerySharpEdges(SharpEdgeFilters{})
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(edges) != 1 {
+		t.Fatalf("Expected 1 edge, got: %d", len(edges))
+	}
+	if edges[0].Context != largeContext {
+		t.Fatalf("Expected large context to round-trip without truncation")
 	}
 }
 
@@ -699,7 +728,7 @@ func TestQueryDecisions_SinceFilter(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
-	oldTs := now - (30 * 24 * 60 * 60) // 30 days ago
+	oldTs := now - (30 * 24 * 60 * 60)   // 30 days ago
 	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
 
 	decisionsPath := filepath.Join(claudeDir, "decisions.jsonl")
@@ -863,7 +892,7 @@ func TestQueryPreferences_SinceFilter(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
-	oldTs := now - (30 * 24 * 60 * 60) // 30 days ago
+	oldTs := now - (30 * 24 * 60 * 60)   // 30 days ago
 	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
 
 	prefsPath := filepath.Join(claudeDir, "preferences.jsonl")
@@ -1047,7 +1076,7 @@ func TestQueryPerformance_SinceFilter(t *testing.T) {
 	os.MkdirAll(claudeDir, 0755)
 
 	now := time.Now().Unix()
-	oldTs := now - (30 * 24 * 60 * 60) // 30 days ago
+	oldTs := now - (30 * 24 * 60 * 60)   // 30 days ago
 	recentTs := now - (5 * 24 * 60 * 60) // 5 days ago
 
 	perfPath := filepath.Join(claudeDir, "performance.jsonl")

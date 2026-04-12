@@ -37,15 +37,11 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 	assert.Contains(t, schema.Tiers, "haiku_thinking")
 	assert.Contains(t, schema.Tiers, "sonnet")
 	assert.Contains(t, schema.Tiers, "opus")
-	assert.Contains(t, schema.Tiers, "external")
-
 	// Verify tier_levels
 	assert.Equal(t, 1, schema.TierLevels.Haiku)
 	assert.Equal(t, 2, schema.TierLevels.HaikuThinking)
 	assert.Equal(t, 3, schema.TierLevels.Sonnet)
 	assert.Equal(t, 4, schema.TierLevels.Opus)
-	assert.Equal(t, 0, schema.TierLevels.External)
-
 	// Verify informational SubagentType categories
 	t.Run("SubagentTypeFields", func(t *testing.T) {
 		exploration := schema.SubagentTypesConfig.Exploration
@@ -55,10 +51,6 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		implementation := schema.SubagentTypesConfig.Implementation
 		assert.True(t, implementation.AllowsWrite, "implementation should allow write")
 		assert.Contains(t, implementation.Agents, "python-pro")
-
-		external := schema.SubagentTypesConfig.External
-		assert.False(t, external.AllowsWrite, "external should not allow write")
-		assert.Contains(t, external.Agents, "gemini-slave")
 
 		planning := schema.SubagentTypesConfig.Planning
 		assert.True(t, planning.AllowsWrite, "planning should allow write")
@@ -97,15 +89,12 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		assert.True(t, schema.AgentSubagentMapping.PythonPro.Contains("Python Pro"))
 		assert.True(t, schema.AgentSubagentMapping.GoPro.Contains("GO Pro"))
 		assert.True(t, schema.AgentSubagentMapping.Orchestrator.Contains("Orchestrator"))
-		assert.True(t, schema.AgentSubagentMapping.GeminiSlave.Contains("Gemini Slave"))
 	})
 
 	// Verify escalation_rules structure
 	t.Run("EscalationRules", func(t *testing.T) {
 		assert.NotEmpty(t, schema.EscalationRules.HaikuToHaikuThinking)
 		assert.NotEmpty(t, schema.EscalationRules.HaikuToSonnet)
-		assert.NotEmpty(t, schema.EscalationRules.AnyToExternal)
-
 		opusRule := schema.EscalationRules.SonnetToOpus
 		assert.NotEmpty(t, opusRule.Triggers)
 		assert.Equal(t, "DO NOT use Task(opus). Generate GAP document instead.", opusRule.Action)
@@ -120,22 +109,6 @@ func TestUnmarshalProductionSchema(t *testing.T) {
 		assert.True(t, opus.TaskInvocationBlocked, "Opus should have task_invocation_blocked=true")
 		assert.Equal(t, "escalate_to_einstein", opus.EscalationProtocol)
 		assert.Contains(t, opus.Invocation, "/braintrust")
-	})
-
-	// Verify external tier protocols
-	t.Run("ExternalTierProtocols", func(t *testing.T) {
-		external := schema.Tiers["external"]
-		require.NotNil(t, external.Protocols, "External tier missing protocols")
-
-		// Verify mapper protocol (Flash tier)
-		mapper := external.Protocols["mapper"]
-		assert.Equal(t, "gemini-3-flash-preview", mapper.Model)
-		assert.Equal(t, "json", mapper.Output)
-
-		// Verify architect protocol (Pro tier)
-		architect := external.Protocols["architect"]
-		assert.Equal(t, "gemini-3-pro-preview", architect.Model)
-		assert.Equal(t, "markdown", architect.Output)
 	})
 
 	// Verify meta_rules
@@ -192,6 +165,18 @@ func TestSchemaValidate(t *testing.T) {
 				Version: "2.5.0",
 				Tiers: map[string]TierConfig{
 					"invalid-tier": {},
+				},
+			},
+			wantErr:   true,
+			errSubstr: "Invalid tier name",
+		},
+		{
+			name: "external tier rejected",
+			schema: Schema{
+				Version: "2.5.0",
+				Tiers: map[string]TierConfig{
+					"haiku":    {},
+					"external": {},
 				},
 			},
 			wantErr:   true,

@@ -1018,7 +1018,7 @@ func handleTeamRun(
 			"err", err,
 		)
 		uds.notify(TypeToast, ToastPayload{
-			Message: fmt.Sprintf("team_run failed to start: %v", err),
+			Message: fmt.Sprintf("team_run failed to start: %v — check logs", err),
 			Level:   "error",
 		})
 		return nil, TeamRunOutput{
@@ -1042,13 +1042,13 @@ func handleTeamRun(
 		if waitErr != nil {
 			slog.Info("team_run: subprocess exited", "pid", pid, "err", waitErr)
 			uds.notify(TypeToast, ToastPayload{
-				Message: fmt.Sprintf("team_run (pid %d) exited: %v", pid, waitErr),
+				Message: "team_run exited with error — /team-status to inspect",
 				Level:   "warn",
 			})
 		} else {
 			slog.Info("team_run: subprocess exited cleanly", "pid", pid)
 			uds.notify(TypeToast, ToastPayload{
-				Message: fmt.Sprintf("team_run (pid %d) completed", pid),
+				Message: "team complete — /team-result to view findings",
 				Level:   "info",
 			})
 		}
@@ -1063,7 +1063,7 @@ func handleTeamRun(
 
 	// 6. Notify the TUI immediately that the team has started.
 	uds.notify(TypeToast, ToastPayload{
-		Message: fmt.Sprintf("team_run started (pid %d): %s", pid, input.TeamDir),
+		Message: "team launched — /team-status to monitor",
 		Level:   "info",
 	})
 	// 6b. Send a team update so the TUI scans immediately and auto-expands

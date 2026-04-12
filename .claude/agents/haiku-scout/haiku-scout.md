@@ -39,7 +39,6 @@ output:
 max_files: 50
 max_tokens_per_file: 500
 cost_ceiling_usd: 0.02
-fallback_for: gemini-slave scout
 failure_tracking:
   max_attempts: 2
   on_max_reached: report_and_exit
@@ -71,7 +70,6 @@ You are a **lightweight reconnaissance agent**. Your ONLY purpose is gathering m
 - An analyst
 - A code reviewer
 
-**Primary use:** Pre-routing reconnaissance when scope is unknown. Fallback for gemini-slave scout.
 
 ---
 
@@ -187,7 +185,6 @@ Based on unique import count from grep:
 | ------------------------------------------ | ---------------------------------- |
 | <5 files, <500 total lines                 | `haiku` or `haiku_thinking`        |
 | 5-15 files, <2000 lines, single language   | `sonnet`                           |
-| 15+ files OR >2000 lines OR multi-language | `external` (gemini-slave first)    |
 | Complex dependencies, 3+ modules coupled   | `orchestrator` for coordination    |
 | Security-sensitive, auth/crypto code       | `opus` (einstein)                  |
 | Unknown/novel patterns                     | `orchestrator` with low confidence |

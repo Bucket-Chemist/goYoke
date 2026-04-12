@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,9 +16,9 @@ import (
 // Logged to both global XDG cache and project memory for comprehensive telemetry.
 type AgentInvocation struct {
 	// Core identification
-	Timestamp    string `json:"timestamp"`      // RFC3339 format, auto-populated
-	SessionID    string `json:"session_id"`     // Session identifier
-	InvocationID string `json:"invocation_id"`  // UUID for this specific invocation
+	Timestamp    string `json:"timestamp"`     // RFC3339 format, auto-populated
+	SessionID    string `json:"session_id"`    // Session identifier
+	InvocationID string `json:"invocation_id"` // UUID for this specific invocation
 
 	// Agent context
 	Agent string `json:"agent"` // e.g., "python-pro", "orchestrator"
@@ -37,8 +36,8 @@ type AgentInvocation struct {
 	ErrorType string `json:"error_type,omitempty"` // If !Success
 
 	// Task context
-	TaskDescription string   `json:"task_description"`           // First 200 chars
-	ParentTaskID    string   `json:"parent_task_id,omitempty"`   // For delegation chains
+	TaskDescription string   `json:"task_description"`         // First 200 chars
+	ParentTaskID    string   `json:"parent_task_id,omitempty"` // For delegation chains
 	ToolsUsed       []string `json:"tools_used"`
 
 	// Project context
@@ -110,7 +109,7 @@ func LoadInvocations(path string) ([]AgentInvocation, error) {
 	defer file.Close()
 
 	var invocations []AgentInvocation
-	scanner := bufio.NewScanner(file)
+	scanner := newTelemetryScanner(file)
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())

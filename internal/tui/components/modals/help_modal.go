@@ -300,6 +300,8 @@ func buildHelpContent(km config.KeyMap) string {
 		{a.AgentUp.Help().Key, a.AgentUp.Help().Desc},
 		{a.AgentDown.Help().Key, a.AgentDown.Help().Desc},
 		{a.AgentExpand.Help().Key, a.AgentExpand.Help().Desc},
+		{a.AgentKill.Help().Key, a.AgentKill.Help().Desc},
+		{a.CycleDensity.Help().Key, a.CycleDensity.Help().Desc},
 	})
 
 	// Modal section

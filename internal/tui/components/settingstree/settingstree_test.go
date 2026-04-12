@@ -294,9 +294,9 @@ func TestEnter_SelectNode_WrapsOptions(t *testing.T) {
 func TestEnter_DisplayNode_NoOp(t *testing.T) {
 	m := focused()
 	// Navigate to Session section → first node (Model) which is Display type.
-	// Display header(0) → down*3 nodes + down to Session header + down to Model
-	// That is: down×4 lands on Session header, down×5 lands on Model
-	for range 4 {
+	// Display section has 6 nodes (theme, ascii_icons, vim_keys, reduce_motion,
+	// timestamps, cost_flash), so down×6 lands on Session header, down×7 on Model.
+	for range 6 {
 		m, _ = press(m, "down")
 	}
 	// Should be on Session header now; press down one more to reach Model node.

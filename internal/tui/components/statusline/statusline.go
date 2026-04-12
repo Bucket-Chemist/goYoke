@@ -1,7 +1,8 @@
-// Package statusline implements the two-row status-bar component for the
+// Package statusline implements the adaptive status-bar component for the
 // GOgent-Fortress TUI. It surfaces session cost, token usage, context
 // percentage, permission mode, active model, provider, git branch, and
-// authentication status across two compact rows at the bottom of the screen.
+// authentication status. At Standard width (80-119 cols) it renders one row;
+// at Wide+ (120+) it renders two rows.
 package statusline
 
 import (
@@ -16,6 +17,7 @@ import (
 
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
 	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------
@@ -49,6 +51,10 @@ type sessionTimerTickMsg time.Time
 // spinnerTickMsg is fired during streaming to animate the thinking indicator.
 type spinnerTickMsg time.Time
 
+// CostFlashExpiredMsg is fired 500ms after a cost flash starts, signalling the
+// bright-white highlight should be cleared.
+type CostFlashExpiredMsg struct{}
+
 // spinnerFrames are the Braille spinner animation frames.
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -57,10 +63,14 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 // ---------------------------------------------------------------------------
 
 // StatusLineModel is the Bubbletea model for the bottom status bar.
-// It holds data fields rendered into two rows:
+// At Wide+ (width >= 120) it renders two rows:
 //
-//	Row 1: SessionCost  TokenCount  ContextPercent  PermissionMode  Elapsed  [thinking...]
-//	Row 2: ActiveModel  Provider    GitBranch       AuthStatus  AgentCount  [UncommittedCount]
+//	Row 1: [model] [perm] 📁 project | 🌿 branch     ████░░ 45% 234K/1M | agents:N · auth
+//	Row 2: $0.45                                       ⏱ 5m 12s | ↻ streaming
+//
+// At Standard/Compact (width < 120) it renders one row with critical fields only:
+//
+//	Row 1: $0.45 [model]        agents:N/T ██░░ 45% | ⏱ 5m12s
 //
 // The zero value is not usable; use NewStatusLineModel instead.
 type StatusLineModel struct {
@@ -104,8 +114,8 @@ type StatusLineModel struct {
 	// UncommittedCount is the number of git uncommitted files in the working tree.
 	UncommittedCount int
 
-	// AgentCount is the number of currently active agents.
-	AgentCount int
+	// AgentStats holds per-status agent counts for the sparkline display.
+	AgentStats state.AgentStats
 
 	// PlanActive is true while the assistant is operating in plan mode.
 	PlanActive bool
@@ -132,6 +142,42 @@ type StatusLineModel struct {
 	// MouseEnabled is true when mouse capture is active (scroll wheel works).
 	// When false, native terminal text selection is available. Always rendered.
 	MouseEnabled bool
+
+	// TeamActive is true when a team is currently running.
+	TeamActive bool
+
+	// TeamName is the name of the running team (truncated for display).
+	TeamName string
+
+	// TeamMemberStatuses is a slice of member status strings for dot rendering.
+	// Each entry is one of: "running", "complete", "pending", "failed", "error", "skipped", "killed".
+	TeamMemberStatuses []string
+
+	// TeamCurrentWave is the 1-based current wave number.
+	TeamCurrentWave int
+
+	// TeamTotalWaves is the total number of waves.
+	TeamTotalWaves int
+
+	// TeamCost is the cumulative cost of the team in USD.
+	TeamCost float64
+
+	// ReduceMotion disables the spinner animation when true (WCAG 2.3.1).
+	// When true, streaming is shown as a static "⠿ streaming" indicator instead
+	// of the animated Braille spinner. Set via the Settings → Display panel.
+	ReduceMotion bool
+
+	// CostFlashEnabled enables the cost flash-on-increase animation (opt-in).
+	// When false (default), the cost badge never flashes regardless of other settings.
+	CostFlashEnabled bool
+
+	// costFlashUntil is the expiry time for the current cost flash. Zero means no
+	// flash is active. Set by CheckCostFlash, cleared by CostFlashExpiredMsg.
+	costFlashUntil time.Time
+
+	// prevCost is the SessionCost value from the previous CheckCostFlash call,
+	// used to detect increases.
+	prevCost float64
 
 	// theme holds the active theme for semantic coloring.
 	theme config.Theme
@@ -203,12 +249,20 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 		return m, scheduleSessionTimerTick()
 
 	case spinnerTickMsg:
+		if m.ReduceMotion {
+			// Reduce motion: do not advance the frame index and do not
+			// reschedule — the static indicator in View() needs no ticking.
+			return m, nil
+		}
 		m.spinnerIdx = (m.spinnerIdx + 1) % len(spinnerFrames)
 		if m.Streaming {
 			// Continue animating as long as we are still streaming.
 			return m, scheduleSpinnerTick()
 		}
 		// Streaming stopped between ticks — let the animation trail off.
+
+	case CostFlashExpiredMsg:
+		m.costFlashUntil = time.Time{}
 	}
 
 	return m, nil
@@ -219,8 +273,8 @@ const contextBarWidth = 10
 
 // renderContextBar renders a visual progress bar for context window utilization.
 //
-// Wide terminal (>= 100): ▓▓▓▓▓░░░░░ 45% 234K/1M
-// Medium terminal (80-99): ▓▓▓▓▓░░░░░ 45% 234K/1M  (shorter bar)
+// Wide terminal (>= 100): █████░░░░░ 45% 234K/1M
+// Medium terminal (80-99): █████░░░░░ 45% 234K/1M  (shorter bar)
 // Narrow terminal (< 80):  45% 234K/1M
 //
 // The filled portion is colored using semantic thresholds (green/yellow/red).
@@ -262,7 +316,7 @@ func (m StatusLineModel) renderContextBar() string {
 		fillCount = contextBarWidth
 	}
 
-	filled := strings.Repeat("▓", fillCount)
+	filled := strings.Repeat("█", fillCount)
 	empty := strings.Repeat("░", contextBarWidth-fillCount)
 
 	coloredFill := style.Render(filled)
@@ -272,14 +326,127 @@ func (m StatusLineModel) renderContextBar() string {
 	return coloredFill + mutedEmpty + " " + pctStr + config.StyleMuted.Render(" "+tokenLabel)
 }
 
-// View implements tea.Model. It renders the status bar as two rows matching
-// the TS TUI layout:
+// renderTeamIndicator renders the compact team status indicator for Row 1.
+// Returns an empty string when no team is active (TeamActive == false).
 //
-//	Row 1: [model] [perm] 📁 project | 🌿 branch              auth · email
-//	Row 2: ▓▓▓░░ 41% | $0.45                       ⏱ 5m 12s | ↻ streaming
+// Format: "⚡{name} {dots} {wave}/{total} {cost}"
+//   - name: team name truncated to 8 runes
+//   - dots: one dot per member colored by status
+//   - wave/total: e.g. "2/4"
+//   - cost: formatted as "$X.XX"
+//
+// Dot coloring per status:
+//
+//	"running"         → SuccessStyle (green) ●
+//	"complete"        → SuccessStyle + Bold (bright green) ●
+//	"pending"         → StyleMuted (grey) ○
+//	"failed"/"error"  → ErrorStyle (red) ●
+//	"skipped"/"killed"→ WarningStyle (yellow) ●
+func (m StatusLineModel) renderTeamIndicator() string {
+	if !m.TeamActive {
+		return ""
+	}
+
+	// Prefix with team name (truncated to 8 runes).
+	name := util.Truncate(m.TeamName, 8)
+	prefix := m.theme.InfoStyle().Render("⚡") + config.StyleStatusBar.Render(name)
+
+	// One dot per member, colored by status.
+	var dotsBuilder strings.Builder
+	for _, status := range m.TeamMemberStatuses {
+		var dot string
+		switch status {
+		case "running":
+			dot = m.theme.SuccessStyle().Render("●")
+		case "complete":
+			dot = m.theme.SuccessStyle().Bold(true).Render("●")
+		case "pending":
+			dot = config.StyleMuted.Render("○")
+		case "failed", "error":
+			dot = m.theme.ErrorStyle().Render("●")
+		case "skipped", "killed":
+			dot = m.theme.WarningStyle().Render("●")
+		default:
+			dot = config.StyleMuted.Render("○")
+		}
+		dotsBuilder.WriteString(dot)
+	}
+	dots := dotsBuilder.String()
+
+	// Wave progress: "2/4"
+	waveStr := config.StyleStatusBar.Render(fmt.Sprintf("%d/%d", m.TeamCurrentWave, m.TeamTotalWaves))
+
+	// Team cost using the same threshold coloring as session cost.
+	costStr := m.costStyle(m.TeamCost).Render(state.FormatCost(m.TeamCost))
+
+	return prefix + " " + dots + " " + waveStr + " " + costStr
+}
+
+// renderAgentSparkline renders the agent count with per-status sparkline dots.
+// Format: "agents: {running}/{total} {dots}"
+// Dot colors match the agent tree status colors:
+//
+//	running  → SuccessStyle (green) ●
+//	complete → SuccessStyle + Bold (bright green) ●
+//	pending  → StyleMuted (grey) ○
+//	error    → ErrorStyle (red) ●
+//	killed   → WarningStyle (yellow) ●
+//
+// Returns an empty string when no agents exist (Total == 0).
+func (m StatusLineModel) renderAgentSparkline() string {
+	stats := m.AgentStats
+	if stats.Total == 0 {
+		return ""
+	}
+
+	prefix := config.StyleMuted.Render(fmt.Sprintf("agents: %d/%d ", stats.Running, stats.Total))
+
+	var dots strings.Builder
+	for range stats.Running {
+		dots.WriteString(m.theme.SuccessStyle().Render("●"))
+	}
+	for range stats.Pending {
+		dots.WriteString(config.StyleMuted.Render("○"))
+	}
+	for range stats.Complete {
+		dots.WriteString(m.theme.SuccessStyle().Bold(true).Render("●"))
+	}
+	for range stats.Error {
+		dots.WriteString(m.theme.ErrorStyle().Render("●"))
+	}
+	for range stats.Killed {
+		dots.WriteString(m.theme.WarningStyle().Render("●"))
+	}
+
+	return prefix + dots.String()
+}
+
+// Height returns the number of rows the status line occupies at the current
+// width. Wide+ (>= 120 cols) uses 2 rows; Standard/Compact (< 120) uses 1 row.
+// This must agree with lipgloss.Height(View()) at all widths.
+func (m StatusLineModel) Height() int {
+	if m.width >= 120 {
+		return 2
+	}
+	return 1
+}
+
+// View implements tea.Model. It dispatches to viewFull (2 rows, width >= 120)
+// or viewCompact (1 row, width < 120) based on the current terminal width.
+func (m StatusLineModel) View() string {
+	if m.width >= 120 {
+		return m.viewFull()
+	}
+	return m.viewCompact()
+}
+
+// viewFull renders the two-row status bar used at Wide+ (width >= 120):
+//
+//	Row 1: [model] [perm] 📁 project | 🌿 branch     ████░░ 41% 234K/1M | auth · email
+//	Row 2: $0.45                                       ⏱ 5m 12s | ↻ streaming
 //
 // Cost, context, permission and auth fields use semantic colors.
-func (m StatusLineModel) View() string {
+func (m StatusLineModel) viewFull() string {
 	muted := config.StyleMuted.Render
 
 	// ===== ROW 1: identity line =====
@@ -364,8 +531,15 @@ func (m StatusLineModel) View() string {
 		}
 	}
 
-	row1Left := vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
+	costBadge := m.activeCostStyle().Render(state.FormatCost(m.SessionCost))
+	row1Left := costBadge + " " + vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
 		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + cwdField + branchField
+
+	// Team indicator (optional — only when a team is running)
+	teamInd := m.renderTeamIndicator()
+	if teamInd != "" {
+		row1Left = row1Left + muted(" | ") + teamInd
+	}
 
 	// Auth: right-aligned
 	var authValue string
@@ -374,21 +548,20 @@ func (m StatusLineModel) View() string {
 	} else {
 		authValue = m.theme.SuccessStyle().Render(m.AuthStatus)
 	}
-	row1Right := authValue
+	// Context bar: positioned prominently on the right side of Row 1.
+	ctxBar := m.renderContextBar()
+	row1Right := ctxBar + muted(" | ") + authValue
 
-	// Agents count (only if > 0)
-	if m.AgentCount > 0 {
-		row1Right = muted(fmt.Sprintf("agents:%d · ", m.AgentCount)) + row1Right
+	// Agent sparkline (only if agents exist)
+	if agentSpark := m.renderAgentSparkline(); agentSpark != "" {
+		row1Right = agentSpark + muted(" · ") + row1Right
 	}
 
 	row1 := m.joinLeftRight(row1Left, row1Right)
 
 	// ===== ROW 2: metrics line =====
 
-	// Context bar + cost
-	ctxBar := m.renderContextBar()
-	costValue := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
-	row2Left := ctxBar + muted(" | ") + costValue
+	row2Left := ""
 
 	// Elapsed + streaming status: right-aligned
 	var row2RightParts []string
@@ -402,15 +575,76 @@ func (m StatusLineModel) View() string {
 	}
 
 	if m.Streaming {
-		frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
-		row2RightParts = append(row2RightParts,
-			m.theme.InfoStyle().Render(frame+" streaming"))
+		if m.ReduceMotion {
+			row2RightParts = append(row2RightParts,
+				m.theme.InfoStyle().Render("⠿ streaming"))
+		} else {
+			frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
+			row2RightParts = append(row2RightParts,
+				m.theme.InfoStyle().Render(frame+" streaming"))
+		}
 	}
 
 	row2Right := strings.Join(row2RightParts, muted(" | "))
 	row2 := m.joinLeftRight(row2Left, row2Right)
 
 	return lipgloss.JoinVertical(lipgloss.Left, row1, row2)
+}
+
+// viewCompact renders the single-row status bar used at Standard/Compact
+// (width < 120). Only critical fields are shown to fit in limited space:
+// cost, plan badge, model, agent sparkline, context bar, elapsed time,
+// and streaming indicator. Permission mode, auth, git branch, CWD, vim/mouse
+// badges are omitted.
+func (m StatusLineModel) viewCompact() string {
+	muted := config.StyleMuted.Render
+
+	// Cost badge.
+	costBadge := m.activeCostStyle().Render(state.FormatCost(m.SessionCost))
+
+	// Plan badge (only when active).
+	planBadge := ""
+	if m.PlanActive {
+		if m.PlanTotalSteps > 0 {
+			planBadge = m.theme.WarningStyle().Render(fmt.Sprintf("[P%d/%d]", m.PlanStep, m.PlanTotalSteps)) + " "
+		} else {
+			planBadge = m.theme.WarningStyle().Render("[PLAN]") + " "
+		}
+	}
+
+	// Model badge (short).
+	modelBadge := m.theme.InfoStyle().Render("[" + m.ActiveModel + "]")
+
+	left := costBadge + " " + planBadge + modelBadge
+
+	// Right: agent sparkline · context bar · elapsed · streaming frame.
+	var rightParts []string
+
+	if agentSpark := m.renderAgentSparkline(); agentSpark != "" {
+		rightParts = append(rightParts, agentSpark)
+	}
+
+	rightParts = append(rightParts, m.renderContextBar())
+
+	if !m.SessionStart.IsZero() {
+		elapsed := time.Since(m.SessionStart)
+		mins := int(elapsed.Minutes())
+		secs := int(elapsed.Seconds()) % 60
+		rightParts = append(rightParts,
+			muted("⏱ ")+config.StyleStatusBar.Render(fmt.Sprintf("%dm%ds", mins, secs)))
+	}
+
+	if m.Streaming {
+		if m.ReduceMotion {
+			rightParts = append(rightParts, m.theme.InfoStyle().Render("⠿ streaming"))
+		} else {
+			frame := spinnerFrames[m.spinnerIdx%len(spinnerFrames)]
+			rightParts = append(rightParts, m.theme.InfoStyle().Render(frame+" streaming"))
+		}
+	}
+
+	right := strings.Join(rightParts, muted(" · "))
+	return m.joinLeftRight(left, right)
 }
 
 // joinLeftRight renders a left-aligned and right-aligned string on one line,
@@ -451,6 +685,24 @@ func (m *StatusLineModel) SetStreaming(v bool) tea.Cmd {
 	return nil
 }
 
+// CheckCostFlash compares SessionCost against the previously observed value and
+// starts a 500ms bright-white flash when all of the following hold:
+//   - SessionCost has increased since the last call
+//   - CostFlashEnabled is true
+//   - ReduceMotion is false
+//
+// It must be called by the parent model immediately after updating SessionCost.
+// Returns a tea.Cmd that fires CostFlashExpiredMsg after 500ms, or nil.
+func (m *StatusLineModel) CheckCostFlash() tea.Cmd {
+	increased := m.SessionCost > m.prevCost
+	m.prevCost = m.SessionCost
+	if increased && m.CostFlashEnabled && !m.ReduceMotion {
+		m.costFlashUntil = time.Now().Add(500 * time.Millisecond)
+		return scheduleFlashExpiry()
+	}
+	return nil
+}
+
 // StartTicks returns the initial commands to fetch git branch and auth status
 // immediately, plus the periodic tick schedulers. Call from AppModel.Init()
 // or after the CLI driver is ready.
@@ -469,18 +721,28 @@ func (m StatusLineModel) StartTicks() tea.Cmd {
 // Semantic color helpers
 // ---------------------------------------------------------------------------
 
-// costStyle returns a lipgloss.Style based on session cost thresholds:
-//   - >= $1.00  → ErrorStyle  (red)
-//   - >= $0.10  → WarningStyle (yellow)
-//   - < $0.10   → SuccessStyle (green)
+// activeCostStyle returns the lipgloss.Style to use for the cost badge. During
+// an active flash it returns bright-white bold; otherwise it delegates to
+// costStyle using the current SessionCost.
+func (m StatusLineModel) activeCostStyle() lipgloss.Style {
+	if m.CostFlashEnabled && !m.ReduceMotion && !m.costFlashUntil.IsZero() && time.Now().Before(m.costFlashUntil) {
+		return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+	}
+	return m.costStyle(m.SessionCost)
+}
+
+// costStyle returns a bold lipgloss.Style based on session cost thresholds:
+//   - >= $5.00  → ErrorStyle   (red, bold)
+//   - >= $1.00  → WarningStyle (yellow, bold)
+//   - < $1.00   → SuccessStyle (green, bold)
 func (m StatusLineModel) costStyle(cost float64) lipgloss.Style {
 	switch {
+	case cost >= 5.00:
+		return m.theme.ErrorStyle().Bold(true)
 	case cost >= 1.00:
-		return m.theme.ErrorStyle()
-	case cost >= 0.10:
-		return m.theme.WarningStyle()
+		return m.theme.WarningStyle().Bold(true)
 	default:
-		return m.theme.SuccessStyle()
+		return m.theme.SuccessStyle().Bold(true)
 	}
 }
 
@@ -715,6 +977,14 @@ func scheduleSessionTimerTick() tea.Cmd {
 func scheduleSpinnerTick() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return spinnerTickMsg(t)
+	})
+}
+
+// scheduleFlashExpiry returns a command that fires CostFlashExpiredMsg after
+// 500ms, ending the cost badge flash highlight.
+func scheduleFlashExpiry() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+		return CostFlashExpiredMsg{}
 	})
 }
 

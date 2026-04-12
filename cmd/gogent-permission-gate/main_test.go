@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -182,6 +183,23 @@ func TestCache_FilePermissions(t *testing.T) {
 	info, err := os.Stat(cachePath(sessionID))
 	require.NoError(t, err)
 	assert.Equal(t, os.FileMode(0600), info.Mode().Perm())
+}
+
+func TestCache_SessionIDPathTraversalIsContained(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", dir)
+
+	sessionID := "../../escape/me"
+	WriteCache(sessionID, "Bash", "allow_session")
+
+	path := cachePath(sessionID)
+	rel, err := filepath.Rel(dir, path)
+	require.NoError(t, err)
+	assert.NotContains(t, rel, "..")
+
+	decision, ok := CheckCache(sessionID, "Bash")
+	assert.True(t, ok)
+	assert.Equal(t, "allow_session", decision)
 }
 
 // =============================================================================

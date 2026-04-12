@@ -173,6 +173,36 @@ func TestParseTranscript_LargeFile(t *testing.T) {
 	}
 }
 
+func TestParseTranscript_LargeSingleEvent(t *testing.T) {
+	largeCommand := strings.Repeat("x", 70*1024)
+	events := []ToolEvent{
+		{
+			ToolName: "Bash",
+			ToolInput: map[string]interface{}{
+				"command": largeCommand,
+			},
+			SessionID:     "session-large-line",
+			HookEventName: "PreToolUse",
+			CapturedAt:    1705000000,
+		},
+	}
+
+	tmpFile := createTempTranscript(t, events)
+	defer os.Remove(tmpFile)
+
+	parsed, err := ParseTranscript(tmpFile)
+	if err != nil {
+		t.Fatalf("ParseTranscript failed on large single event: %v", err)
+	}
+
+	if len(parsed) != 1 {
+		t.Fatalf("Expected 1 event, got %d", len(parsed))
+	}
+	if parsed[0].ToolInput["command"] != largeCommand {
+		t.Fatalf("Large command payload was truncated during parsing")
+	}
+}
+
 // TestParseTranscript_EmptyLines tests that empty lines are skipped gracefully.
 func TestParseTranscript_EmptyLines(t *testing.T) {
 	content := `{"tool_name":"Read","tool_input":{},"session_id":"session-123","hook_event_name":"PreToolUse","captured_at":1705000000}
@@ -368,6 +398,34 @@ func TestAnalyzeToolDistribution_AccuracyWithRealPattern(t *testing.T) {
 		if result[tool] != expectedCount {
 			t.Errorf("Tool %s: expected count %d, got: %d", tool, expectedCount, result[tool])
 		}
+	}
+}
+
+func TestTranscriptAnalyzer_AnalyzeLargeSingleEvent(t *testing.T) {
+	largeCommand := strings.Repeat("x", 70*1024)
+	events := []ToolEvent{
+		{
+			ToolName: "Bash",
+			ToolInput: map[string]interface{}{
+				"command":           largeCommand,
+				"run_in_background": true,
+				"task_id":           "task-large-line",
+			},
+			SessionID:     "session-large-line",
+			HookEventName: "PreToolUse",
+			CapturedAt:    1705000000,
+		},
+	}
+
+	tmpFile := createTempTranscript(t, events)
+	defer os.Remove(tmpFile)
+
+	analyzer := NewTranscriptAnalyzer(tmpFile)
+	if err := analyzer.Analyze(); err != nil {
+		t.Fatalf("Analyze failed on large single event: %v", err)
+	}
+	if !analyzer.HasUncollectedTasks() {
+		t.Fatalf("Expected large background task event to be tracked as uncollected")
 	}
 }
 

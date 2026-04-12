@@ -131,7 +131,6 @@ jq -s '{
 
 ## Phase 4: Audit with Gemini (Single Large-Context Call)
 
-**Pipeline enforcement:** Use gemini-slave for audit to leverage 1M token context.
 
 ```bash
 # Concatenate all context for Gemini
@@ -154,13 +153,11 @@ jq -s '{
         head -50 "$f"  # Sample first 50 events per prompt
     done
     
-} | gemini-slave benchmark-audit "Score this benchmark run against expected metrics. Identify violations and provide recommendations."
 ```
 
 Save Gemini output:
 ```bash
 # Gemini output goes to stdout, capture it
-GEMINI_OUTPUT=$(... | gemini-slave benchmark-audit "...")
 echo "$GEMINI_OUTPUT" > "$RUN_DIR/audit_report.md"
 ```
 
