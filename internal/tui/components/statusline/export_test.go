@@ -149,3 +149,29 @@ func (m StatusLineModel) RenderAgentSparklineForTest() string {
 func (m StatusLineModel) SpinnerIdxForTest() int {
 	return m.spinnerIdx
 }
+
+// CostFlashExpiredMsgForTest constructs a CostFlashExpiredMsg for use in tests.
+func CostFlashExpiredMsgForTest() CostFlashExpiredMsg {
+	return CostFlashExpiredMsg{}
+}
+
+// CostFlashUntilForTest returns the costFlashUntil field for testing.
+func (m StatusLineModel) CostFlashUntilForTest() time.Time {
+	return m.costFlashUntil
+}
+
+// PrevCostForTest returns the prevCost field for testing.
+func (m StatusLineModel) PrevCostForTest() float64 {
+	return m.prevCost
+}
+
+// SetPrevCostForTest directly sets the prevCost field, bypassing CheckCostFlash,
+// so tests can seed the prior-cost value without triggering flash side-effects.
+func (m *StatusLineModel) SetPrevCostForTest(cost float64) {
+	m.prevCost = cost
+}
+
+// ActiveCostStyleForTest exposes activeCostStyle for unit testing.
+func (m StatusLineModel) ActiveCostStyleForTest() lipgloss.Style {
+	return m.activeCostStyle()
+}

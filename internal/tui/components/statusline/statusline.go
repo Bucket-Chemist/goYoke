@@ -51,6 +51,10 @@ type sessionTimerTickMsg time.Time
 // spinnerTickMsg is fired during streaming to animate the thinking indicator.
 type spinnerTickMsg time.Time
 
+// CostFlashExpiredMsg is fired 500ms after a cost flash starts, signalling the
+// bright-white highlight should be cleared.
+type CostFlashExpiredMsg struct{}
+
 // spinnerFrames are the Braille spinner animation frames.
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -163,6 +167,18 @@ type StatusLineModel struct {
 	// of the animated Braille spinner. Set via the Settings → Display panel.
 	ReduceMotion bool
 
+	// CostFlashEnabled enables the cost flash-on-increase animation (opt-in).
+	// When false (default), the cost badge never flashes regardless of other settings.
+	CostFlashEnabled bool
+
+	// costFlashUntil is the expiry time for the current cost flash. Zero means no
+	// flash is active. Set by CheckCostFlash, cleared by CostFlashExpiredMsg.
+	costFlashUntil time.Time
+
+	// prevCost is the SessionCost value from the previous CheckCostFlash call,
+	// used to detect increases.
+	prevCost float64
+
 	// theme holds the active theme for semantic coloring.
 	theme config.Theme
 
@@ -244,6 +260,9 @@ func (m StatusLineModel) Update(msg tea.Msg) (StatusLineModel, tea.Cmd) {
 			return m, scheduleSpinnerTick()
 		}
 		// Streaming stopped between ticks — let the animation trail off.
+
+	case CostFlashExpiredMsg:
+		m.costFlashUntil = time.Time{}
 	}
 
 	return m, nil
@@ -512,7 +531,7 @@ func (m StatusLineModel) viewFull() string {
 		}
 	}
 
-	costBadge := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
+	costBadge := m.activeCostStyle().Render(state.FormatCost(m.SessionCost))
 	row1Left := costBadge + " " + vimBadge + planBadge + mouseBadge + modelBadge + " " + permBadge +
 		muted(" 📁 ") + config.StyleStatusBar.Render(projectName) + cwdField + branchField
 
@@ -581,7 +600,7 @@ func (m StatusLineModel) viewCompact() string {
 	muted := config.StyleMuted.Render
 
 	// Cost badge.
-	costBadge := m.costStyle(m.SessionCost).Render(state.FormatCost(m.SessionCost))
+	costBadge := m.activeCostStyle().Render(state.FormatCost(m.SessionCost))
 
 	// Plan badge (only when active).
 	planBadge := ""
@@ -666,6 +685,24 @@ func (m *StatusLineModel) SetStreaming(v bool) tea.Cmd {
 	return nil
 }
 
+// CheckCostFlash compares SessionCost against the previously observed value and
+// starts a 500ms bright-white flash when all of the following hold:
+//   - SessionCost has increased since the last call
+//   - CostFlashEnabled is true
+//   - ReduceMotion is false
+//
+// It must be called by the parent model immediately after updating SessionCost.
+// Returns a tea.Cmd that fires CostFlashExpiredMsg after 500ms, or nil.
+func (m *StatusLineModel) CheckCostFlash() tea.Cmd {
+	increased := m.SessionCost > m.prevCost
+	m.prevCost = m.SessionCost
+	if increased && m.CostFlashEnabled && !m.ReduceMotion {
+		m.costFlashUntil = time.Now().Add(500 * time.Millisecond)
+		return scheduleFlashExpiry()
+	}
+	return nil
+}
+
 // StartTicks returns the initial commands to fetch git branch and auth status
 // immediately, plus the periodic tick schedulers. Call from AppModel.Init()
 // or after the CLI driver is ready.
@@ -683,6 +720,16 @@ func (m StatusLineModel) StartTicks() tea.Cmd {
 // ---------------------------------------------------------------------------
 // Semantic color helpers
 // ---------------------------------------------------------------------------
+
+// activeCostStyle returns the lipgloss.Style to use for the cost badge. During
+// an active flash it returns bright-white bold; otherwise it delegates to
+// costStyle using the current SessionCost.
+func (m StatusLineModel) activeCostStyle() lipgloss.Style {
+	if m.CostFlashEnabled && !m.ReduceMotion && !m.costFlashUntil.IsZero() && time.Now().Before(m.costFlashUntil) {
+		return lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+	}
+	return m.costStyle(m.SessionCost)
+}
 
 // costStyle returns a bold lipgloss.Style based on session cost thresholds:
 //   - >= $5.00  → ErrorStyle   (red, bold)
@@ -930,6 +977,14 @@ func scheduleSessionTimerTick() tea.Cmd {
 func scheduleSpinnerTick() tea.Cmd {
 	return tea.Tick(100*time.Millisecond, func(t time.Time) tea.Msg {
 		return spinnerTickMsg(t)
+	})
+}
+
+// scheduleFlashExpiry returns a command that fires CostFlashExpiredMsg after
+// 500ms, ending the cost badge flash highlight.
+func scheduleFlashExpiry() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(t time.Time) tea.Msg {
+		return CostFlashExpiredMsg{}
 	})
 }
 

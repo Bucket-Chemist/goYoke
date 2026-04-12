@@ -217,6 +217,7 @@ func (p *completionClaudePanel) SetSender(_ MessageSender)                      
 func (p *completionClaudePanel) AppendSystemMessage(_ string)                    {}
 func (p *completionClaudePanel) SetTier(_ LayoutTier)                            {}
 func (p *completionClaudePanel) SetReduceMotion(_ bool)                          {}
+func (p *completionClaudePanel) SetShowTimestamps(_ bool) tea.Cmd               { return nil }
 
 // newCompletionTestModel returns a minimal AppModel wired for completion tests.
 func newCompletionTestModel(panel *completionClaudePanel) AppModel {

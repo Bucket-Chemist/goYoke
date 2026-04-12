@@ -157,6 +157,20 @@ func defaultSections() []SettingsSection {
 					Value:       "off",
 					Description: "Disable animations for accessibility (WCAG 2.3.1).",
 				},
+				{
+					Key:         "timestamps",
+					Label:       "Timestamps",
+					Type:        SettingToggle,
+					Value:       "off",
+					Description: "Show relative timestamps at turn boundaries.",
+				},
+				{
+					Key:         "cost_flash",
+					Label:       "Cost Flash",
+					Type:        SettingToggle,
+					Value:       "off",
+					Description: "Flash cost badge on increase (disabled by Reduce Motion).",
+				},
 			},
 		},
 		{

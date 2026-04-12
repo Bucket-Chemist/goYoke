@@ -26,6 +26,17 @@ import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
 )
 
+// timestampTickMsg is fired every 60 seconds when timestamp display is
+// enabled to refresh relative-time labels in the conversation gutter (UX-024).
+type timestampTickMsg time.Time
+
+// scheduleTimestampTick returns a Cmd that fires after 60 seconds.
+func scheduleTimestampTick() tea.Cmd {
+	return tea.Tick(60*time.Second, func(t time.Time) tea.Msg {
+		return timestampTickMsg(t)
+	})
+}
+
 // CLIDriverSender is a package-level type alias retained for backward
 // compatibility.  New code should use model.MessageSender directly.
 // The two interfaces are structurally identical; this alias exists so that
@@ -175,6 +186,10 @@ type ClaudePanelModel struct {
 	// reduceMotion disables the rainbow gradient ultrathink indicator when true
 	// (WCAG 2.3.1). Set via Settings → Display → Reduce Motion toggle.
 	reduceMotion bool
+
+	// showTimestamps enables the 5-char relative-time gutter at turn boundaries
+	// in the conversation panel (UX-024). Default false.
+	showTimestamps bool
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
@@ -257,6 +272,14 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		m.syncViewport()
 		if m.autoScroll {
 			m.vp.GotoBottom()
+		}
+		return m, nil
+
+	case timestampTickMsg:
+		// Refresh gutter timestamps and reschedule if still enabled (UX-024).
+		m.syncViewport()
+		if m.showTimestamps {
+			return m, scheduleTimestampTick()
 		}
 		return m, nil
 
@@ -954,8 +977,9 @@ func (m ClaudePanelModel) renderMessages() string {
 
 	var sb strings.Builder
 	for i, msg := range m.messages {
+		isTurnBoundary := i == 0 || m.messages[i].Role != m.messages[i-1].Role
 		if i > 0 {
-			if m.messages[i].Role != m.messages[i-1].Role {
+			if isTurnBoundary {
 				ruleWidth := m.vp.Width
 				if ruleWidth <= 0 {
 					ruleWidth = 80
@@ -967,7 +991,7 @@ func (m ClaudePanelModel) renderMessages() string {
 				sb.WriteByte('\n')
 			}
 		}
-		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1))
+		sb.WriteString(m.renderMessage(msg, i == len(m.messages)-1, isTurnBoundary))
 	}
 
 	switch {
@@ -995,17 +1019,27 @@ func (m ClaudePanelModel) renderMessages() string {
 //
 // isLast must be true when this is the last message in the conversation, so
 // the streaming guard can correctly suppress Glamour for the live fragment.
-func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool) string {
+//
+// isTurnBoundary must be true when this message is the first of a role block
+// (i.e. where a horizontal rule is rendered), so the optional timestamp gutter
+// (UX-024) is only displayed at role transitions.
+func (m ClaudePanelModel) renderMessage(msg DisplayMessage, isLast bool, isTurnBoundary bool) string {
 	var sb strings.Builder
+
+	// Timestamp gutter — 5-char column shown only at turn boundaries (UX-024).
+	var gutter string
+	if m.showTimestamps && isTurnBoundary && !msg.Timestamp.IsZero() {
+		gutter = config.StyleMuted.Render(fmtRelativeTime(msg.Timestamp))
+	}
 
 	// Role label.
 	switch msg.Role {
 	case "user":
-		sb.WriteString(userRoleStyle.Render("You:"))
+		sb.WriteString(gutter + userRoleStyle.Render("You:"))
 	case "assistant":
-		sb.WriteString(assistantRoleStyle.Render("Claude:"))
+		sb.WriteString(gutter + assistantRoleStyle.Render("Claude:"))
 	default:
-		sb.WriteString(systemRoleStyle.Render("System:"))
+		sb.WriteString(gutter + systemRoleStyle.Render("System:"))
 	}
 	sb.WriteByte('\n')
 
@@ -1242,6 +1276,46 @@ func (m ClaudePanelModel) IsUltrathinkActive() bool {
 // gradient is replaced with a plain muted "thinking..." string.
 func (m *ClaudePanelModel) SetReduceMotion(v bool) {
 	m.reduceMotion = v
+}
+
+// SetShowTimestamps enables or disables the 5-char relative-time gutter shown
+// at turn boundaries in the conversation panel (UX-024).
+//
+// When enabling (v == true) it returns the initial 60-second tick command that
+// keeps relative timestamps fresh; the tick is self-rescheduling as long as
+// showTimestamps remains true. When disabling (v == false) it returns nil so
+// the tick chain stops naturally on the next firing.
+func (m *ClaudePanelModel) SetShowTimestamps(v bool) tea.Cmd {
+	m.showTimestamps = v
+	m.syncViewport()
+	if v {
+		return scheduleTimestampTick()
+	}
+	return nil
+}
+
+// fmtRelativeTime formats a message timestamp for the conversation gutter.
+// It returns a left-aligned 5-character string: the relative age followed by
+// spaces so the gutter always consumes exactly 5 columns.
+//
+//	< 1 min  → "now  "
+//	1–59 min → "Xm   "  (e.g. "5m   ")
+//	1–23 h   → "Xh   "  (e.g. "2h   ")
+//	1+ days  → "Xd   "  (e.g. "3d   ")
+func fmtRelativeTime(t time.Time) string {
+	d := time.Since(t)
+	var s string
+	switch {
+	case d < time.Minute:
+		s = "now"
+	case d < time.Hour:
+		s = fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		s = fmt.Sprintf("%dh", int(d.Hours()))
+	default:
+		s = fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
+	return fmt.Sprintf("%-5s", s)
 }
 
 // refreshViewport rebuilds the viewport content string from the current

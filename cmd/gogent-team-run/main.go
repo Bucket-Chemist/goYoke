@@ -195,17 +195,35 @@ func main() {
 		log.Printf("Wave execution completed successfully")
 		if !udsClient.isNoop() {
 			totalCost := 0.0
+			var agentIDs []string
 			runner.configMu.RLock()
 			if runner.config != nil {
 				for _, wave := range runner.config.Waves {
 					for _, member := range wave.Members {
 						totalCost += member.CostUSD
+						id := member.Agent
+						if id == "" {
+							id = member.Name
+						}
+						if id != "" {
+							agentIDs = append(agentIDs, id)
+						}
 					}
 				}
 			}
 			runner.configMu.RUnlock()
+
+			// Scan stream files for changed-file count (best-effort, post-completion).
+			filesChanged := countChangedFilesInDir(teamDir, agentIDs)
+
+			var toastMsg string
+			if filesChanged > 0 {
+				toastMsg = fmt.Sprintf("team complete — %d file(s), $%.2f — /team-result to view", filesChanged, totalCost)
+			} else {
+				toastMsg = fmt.Sprintf("team complete ($%.2f) — /team-result to view findings", totalCost)
+			}
 			udsClient.notify(typeToast, toastPayload{
-				Message: fmt.Sprintf("team complete ($%.2f) — /team-result to view findings", totalCost),
+				Message: toastMsg,
 				Level:   "info",
 			})
 		}

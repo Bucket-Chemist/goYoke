@@ -1047,3 +1047,137 @@ func TestView_ReduceMotion_Off_AnimatedSpinner(t *testing.T) {
 		t.Errorf("expected animated '⠋ streaming' in View() when ReduceMotion=false, got:\n%s", view)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Cost flash — CheckCostFlash / CostFlashExpiredMsg
+// ---------------------------------------------------------------------------
+
+// TestCheckCostFlash exercises all branch conditions as a table-driven test.
+func TestCheckCostFlash(t *testing.T) {
+	flashStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+
+	tests := []struct {
+		name             string
+		prevCost         float64
+		newCost          float64
+		flashEnabled     bool
+		reduceMotion     bool
+		wantCmd          bool   // whether a tea.Cmd is returned
+		wantFlashActive  bool   // whether costFlashUntil is non-zero
+		wantPrevCost     float64
+	}{
+		{
+			name:            "flash triggers when cost increases and enabled",
+			prevCost:        0.10,
+			newCost:         0.20,
+			flashEnabled:    true,
+			reduceMotion:    false,
+			wantCmd:         true,
+			wantFlashActive: true,
+			wantPrevCost:    0.20,
+		},
+		{
+			name:            "no flash when disabled (default)",
+			prevCost:        0.10,
+			newCost:         0.20,
+			flashEnabled:    false,
+			reduceMotion:    false,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.20,
+		},
+		{
+			name:            "no flash when reduce-motion enabled",
+			prevCost:        0.10,
+			newCost:         0.20,
+			flashEnabled:    true,
+			reduceMotion:    true,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.20,
+		},
+		{
+			name:            "no flash when cost stays same",
+			prevCost:        0.10,
+			newCost:         0.10,
+			flashEnabled:    true,
+			reduceMotion:    false,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.10,
+		},
+		{
+			name:            "no flash when cost decreases",
+			prevCost:        0.50,
+			newCost:         0.30,
+			flashEnabled:    true,
+			reduceMotion:    false,
+			wantCmd:         false,
+			wantFlashActive: false,
+			wantPrevCost:    0.30,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := statusline.NewStatusLineModel(120)
+			m.CostFlashEnabled = tc.flashEnabled
+			m.ReduceMotion = tc.reduceMotion
+			// Seed prevCost directly to avoid triggering flash side-effects.
+			m.SetPrevCostForTest(tc.prevCost)
+
+			// Simulate the cost update.
+			m.SessionCost = tc.newCost
+			cmd := m.CheckCostFlash()
+
+			if tc.wantCmd {
+				assert.NotNil(t, cmd, "CheckCostFlash() should return a Cmd when flash triggers")
+			} else {
+				assert.Nil(t, cmd, "CheckCostFlash() should return nil when flash does not trigger")
+			}
+
+			if tc.wantFlashActive {
+				assert.False(t, m.CostFlashUntilForTest().IsZero(), "costFlashUntil should be set")
+			} else {
+				assert.True(t, m.CostFlashUntilForTest().IsZero(), "costFlashUntil should be zero")
+			}
+
+			assert.InDelta(t, tc.wantPrevCost, m.PrevCostForTest(), 1e-9, "prevCost mismatch")
+		})
+	}
+
+	// Verify that while flash is active, activeCostStyle returns bright white bold.
+	t.Run("active flash style is bright white bold", func(t *testing.T) {
+		m := statusline.NewStatusLineModel(120)
+		m.CostFlashEnabled = true
+		m.ReduceMotion = false
+		m.SetPrevCostForTest(0.10)
+		m.SessionCost = 0.20
+		_ = m.CheckCostFlash()
+
+		got := m.ActiveCostStyleForTest()
+		assert.Equal(t, flashStyle, got, "activeCostStyle() should return bright-white bold during flash")
+	})
+}
+
+// TestCostFlashExpiredMsg_ClearsCostFlashUntil verifies the expiry message
+// resets the flash state in Update().
+func TestCostFlashExpiredMsg_ClearsCostFlashUntil(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	m.CostFlashEnabled = true
+	m.SetPrevCostForTest(0.20)
+	m.SessionCost = 0.50
+	_ = m.CheckCostFlash() // flash is now active
+
+	assert.False(t, m.CostFlashUntilForTest().IsZero(), "flash should be active before expiry")
+
+	newM, cmd := m.Update(statusline.CostFlashExpiredMsgForTest())
+	assert.Nil(t, cmd, "CostFlashExpiredMsg should return nil command")
+	assert.True(t, newM.CostFlashUntilForTest().IsZero(), "costFlashUntil should be zero after expiry")
+}
+
+// TestCostFlashDefault_IsOff verifies the default is off for new models.
+func TestCostFlashDefault_IsOff(t *testing.T) {
+	m := statusline.NewStatusLineModel(120)
+	assert.False(t, m.CostFlashEnabled, "CostFlashEnabled should default to false")
+}

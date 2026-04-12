@@ -257,7 +257,7 @@
     {
       "id": "UX-021",
       "title": "Layout: focus-driven drawer/content split",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "1s",
@@ -269,7 +269,7 @@
     {
       "id": "UX-022",
       "title": "Tree: density toggle (compact/standard/verbose)",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "0.25s",
@@ -283,7 +283,7 @@
     {
       "id": "UX-023",
       "title": "Tree: pulse animation on active agent",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "0.25s",
@@ -297,7 +297,7 @@
     {
       "id": "UX-024",
       "title": "Conversation: timestamp gutter",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "0.5s",
@@ -309,7 +309,7 @@
     {
       "id": "UX-025",
       "title": "Status line: cost flash-on-change (opt-in)",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "0.25s",
@@ -323,7 +323,7 @@
     {
       "id": "UX-026",
       "title": "Teams: timeline progress bars",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "1s",
@@ -335,7 +335,7 @@
     {
       "id": "UX-027",
       "title": "Teams: tabs in drawer",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "0.75s",
@@ -347,7 +347,7 @@
     {
       "id": "UX-028",
       "title": "Teams: diff summary on completion",
-      "status": "pending",
+      "status": "completed",
       "phase": 4,
       "priority": "P3",
       "effort": "0.5s",

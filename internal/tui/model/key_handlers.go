@@ -365,6 +365,13 @@ func (m AppModel) handleAgentsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleAgentKillKey()
 	}
 
+	// alt+d: cycle tree density (UX-022). Works in RPMAgents regardless of
+	// whether the tree or detail sub-panel has focus.
+	if key.Matches(msg, m.keys.Agent.CycleDensity) {
+		m.agentTree.CycleDensity()
+		return m, nil
+	}
+
 	switch m.rightPanelMode {
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {

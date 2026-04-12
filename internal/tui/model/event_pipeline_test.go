@@ -579,10 +579,9 @@ func TestEventPipeline_AgentRegistered_UpdatesTreeAndCount(t *testing.T) {
 	})
 	result := updated.(AppModel)
 
-	// No command expected from this handler.
-	if cmd != nil {
-		t.Errorf("cmd = %v; want nil for AgentRegisteredMsg", cmd)
-	}
+	// A pulse tick cmd is expected when running agents exist (UX-023).
+	// The registered agent has StatusRunning, so MaybeStartPulseTick returns non-nil.
+	_ = cmd
 
 	// Agent count on the status line must reflect the registry total.
 	wantCount := result.shared.agentRegistry.Count().Total

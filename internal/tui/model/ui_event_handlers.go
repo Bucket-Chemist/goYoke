@@ -435,7 +435,7 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.shared.agentRegistry.InvalidateTreeCache()
 	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 	m.statusLine.AgentStats = m.shared.agentRegistry.Count()
-	return m, nil
+	return m, m.agentTree.MaybeStartPulseTick()
 }
 
 // handleAgentTodoUpdate handles AgentTodoUpdateMsg: matches the todo items from
@@ -759,6 +759,18 @@ func (m AppModel) handleSettingChanged(msg settingstree.SettingChangedMsg) (tea.
 		if m.shared.claudePanel != nil {
 			m.shared.claudePanel.SetReduceMotion(enabled)
 		}
+		m.agentTree.SetReduceMotion(enabled)
+
+	case "timestamps":
+		enabled := msg.Value == "on"
+		if m.shared.claudePanel != nil {
+			if cmd := m.shared.claudePanel.SetShowTimestamps(enabled); cmd != nil {
+				return m, cmd
+			}
+		}
+
+	case "cost_flash":
+		m.statusLine.CostFlashEnabled = msg.Value == "on"
 	}
 
 	return m, nil

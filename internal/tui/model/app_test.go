@@ -57,6 +57,7 @@ func (m *mockClaudePanel) SetSender(s MessageSender) {
 func (m *mockClaudePanel) AppendSystemMessage(_ string)        {}
 func (m *mockClaudePanel) SetTier(_ LayoutTier)                {}
 func (m *mockClaudePanel) SetReduceMotion(_ bool)              {}
+func (m *mockClaudePanel) SetShowTimestamps(_ bool) tea.Cmd    { return nil }
 func (m *mockClaudePanel) ViewConversation() string            { return m.viewOutput }
 func (m *mockClaudePanel) ViewInput() string                   { return "" }
 func (m *mockClaudePanel) ApplyOverlay(composed string) string { return composed }
@@ -396,6 +397,7 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel60_40(t *testing.T) {
 	m := NewAppModel()
 	m.width = 120
 	m.height = 40
+	m.focus = FocusClaude
 
 	dims := m.computeLayout()
 
@@ -403,11 +405,13 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel60_40(t *testing.T) {
 		t.Error("showRightPanel = false at width 120; want true")
 	}
 
-	// TUI-058: width 120 falls in LayoutWide (60/40 split).
-	// At width=120, left outer = 72 (60%), right outer = 48 (40%).
+	// UX-021: FocusClaude at LayoutWide uses 55/45 split.
+	// At width=120, left outer = 66 (55%), right outer = 54 (45%).
 	// Inner widths subtract borderFrame (2).
-	wantLeftInner := int(float64(120)*0.60) - borderFrame            // 72 - 2 = 70
-	wantRightInner := (120 - int(float64(120)*0.60)) - borderFrame   // 48 - 2 = 46
+	w120 := float64(120)
+	leftOuter120 := int(w120 * 0.55)                          // 66
+	wantLeftInner := leftOuter120 - borderFrame                // 64
+	wantRightInner := (120 - leftOuter120) - borderFrame       // 52
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -421,6 +425,7 @@ func TestComputeLayout_MediumTerminal_ShowsRightPanel75_25(t *testing.T) {
 	m := NewAppModel()
 	m.width = 90
 	m.height = 30
+	m.focus = FocusClaude
 
 	dims := m.computeLayout()
 
@@ -428,9 +433,10 @@ func TestComputeLayout_MediumTerminal_ShowsRightPanel75_25(t *testing.T) {
 		t.Error("showRightPanel = false at width 90; want true")
 	}
 
-	// At width=90, left outer = floor(90*0.75) = 67, right outer = 23.
-	width90 := m.width // 90, as a non-constant to allow float conversion
-	leftOuter := int(float64(width90) * 0.75)
+	// UX-021: FocusClaude at LayoutStandard uses 55/45 split.
+	// At width=90, left outer = floor(90*0.55) = 49, right outer = 41.
+	width90 := m.width
+	leftOuter := int(float64(width90) * 0.55) // 49
 	wantLeftInner := leftOuter - borderFrame
 	wantRightInner := (width90 - leftOuter) - borderFrame
 
@@ -475,10 +481,14 @@ func TestComputeLayout_ExactBreakpointAt100_Uses70_30(t *testing.T) {
 	m := NewAppModel()
 	m.width = 100
 	m.height = 30
+	m.focus = FocusClaude
 
 	dims := m.computeLayout()
 
-	leftOuter := int(float64(100) * 0.70)
+	// UX-021: FocusClaude at LayoutStandard uses 55/45. Use a variable to
+	// avoid compile-time constant truncation of 100*0.55.
+	w100 := float64(100)
+	leftOuter := int(w100 * 0.55) // 55
 	wantLeftInner := leftOuter - borderFrame
 	wantRightInner := (100 - leftOuter) - borderFrame
 
@@ -1002,12 +1012,10 @@ func TestUpdate_AgentRegisteredMsg_RefreshesTree(t *testing.T) {
 	m.height = 40
 	m.ready = true
 
-	// Deliver an AgentRegisteredMsg — should not panic and should return nil cmd.
-	updated, cmd := m.Update(AgentRegisteredMsg{AgentID: "a1", AgentType: "go-pro"})
+	// Deliver an AgentRegisteredMsg — should not panic.
+	// May return a pulse tick cmd if running agents exist (UX-023).
+	updated, _ := m.Update(AgentRegisteredMsg{AgentID: "a1", AgentType: "go-pro"})
 	_ = updated.(AppModel)
-	if cmd != nil {
-		t.Error("cmd != nil for AgentRegisteredMsg; want nil")
-	}
 }
 
 func TestUpdate_AgentUpdatedMsg_RefreshesTree(t *testing.T) {

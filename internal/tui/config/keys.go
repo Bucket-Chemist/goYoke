@@ -138,6 +138,9 @@ type AgentKeys struct {
 
 	// AgentKill sends a kill signal to the selected agent and all its descendants.
 	AgentKill key.Binding
+
+	// CycleDensity cycles the tree view through Standard → Compact → Verbose density modes (UX-022).
+	CycleDensity key.Binding
 }
 
 // ModalKeys groups the keybindings that are active while a modal overlay is
@@ -328,6 +331,10 @@ func DefaultKeyMap() KeyMap {
 			AgentKill: key.NewBinding(
 				key.WithKeys("ctrl+x"),
 				key.WithHelp("ctrl+x", "kill agent"),
+			),
+			CycleDensity: key.NewBinding(
+				key.WithKeys("alt+d"),
+				key.WithHelp("alt+d", "cycle tree density"),
 			),
 		},
 

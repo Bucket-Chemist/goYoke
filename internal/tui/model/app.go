@@ -495,6 +495,14 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.agentTree.SetFocused(true)
 		return m, nil
 
+	case agents.TreePulseTickMsg:
+		// Forward pulse tick to the tree; the tree self-reschedules lazily.
+		result, cmd := m.agentTree.Update(msg)
+		if updated, ok := result.(agents.AgentTreeModel); ok {
+			m.agentTree = updated
+		}
+		return m, cmd
+
 	case ToastMsg:
 		return m.handleToastMsg(msg)
 
@@ -701,6 +709,16 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// type-switch on it directly; the detail model handles it internally.
 	if m.shared != nil && m.shared.teamDetail != nil {
 		m.shared.teamDetail.HandleMsg(msg)
+	}
+
+	// Forward unhandled messages to the claude panel for timestamp tick
+	// processing (UX-024). timestampTickMsg is unexported from the claude
+	// package, so AppModel cannot type-switch on it; forwarding here keeps the
+	// self-scheduling 60-second tick alive as long as timestamps are enabled.
+	if m.shared != nil && m.shared.claudePanel != nil {
+		if cmd := m.shared.claudePanel.HandleMsg(msg); cmd != nil {
+			return m, cmd
+		}
 	}
 
 	return m, nil

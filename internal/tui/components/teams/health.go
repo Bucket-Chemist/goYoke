@@ -101,9 +101,17 @@ func (m *TeamsHealthModel) View() string {
 		sb.WriteString("\n\n")
 		sb.WriteString(m.renderWaveHeader(wave, ts))
 		sb.WriteByte('\n')
+		if wavePBar := m.renderWaveProgressBar(wave); wavePBar != "" {
+			sb.WriteString(wavePBar)
+			sb.WriteByte('\n')
+		}
 		for _, member := range wave.Members {
 			sb.WriteString(m.renderMember(member, wave.WaveNumber, ts.StreamSizes))
 			sb.WriteByte('\n')
+			if pbar := m.renderMemberProgressBar(member); pbar != "" {
+				sb.WriteString(pbar)
+				sb.WriteByte('\n')
+			}
 		}
 	}
 
@@ -426,6 +434,215 @@ func healthIcon(member Member) string {
 	default: // "healthy", "" or any unrecognised value
 		return config.StyleSuccess.Render("●")
 	}
+}
+
+// memberStatusStyle returns the lipgloss style matching the agent-tree status
+// colours for use in member progress bars.
+//
+//   - "running"   → StyleSuccess (green)
+//   - "completed" → StyleSuccess + Bold (bright green)
+//   - "failed"    → StyleError (red)
+//   - "killed"    → StyleWarning (yellow)
+//   - default     → StyleMuted (grey)
+func memberStatusStyle(status string) lipgloss.Style {
+	switch status {
+	case "running":
+		return config.StyleSuccess
+	case "completed":
+		return config.StyleSuccess.Bold(true)
+	case "failed":
+		return config.StyleError
+	case "killed":
+		return config.StyleWarning
+	default:
+		return config.StyleMuted
+	}
+}
+
+// calcProgress returns the progress ratio in [0.0, 1.0] from elapsed and
+// timeout durations, or -1.0 when the progress is indeterminate.
+//
+//   - timeout ≤ 0           → -1.0  (indeterminate; no timeout set)
+//   - elapsed < 0           → 0.0   (clock-skew: clamp to zero)
+//   - elapsed/timeout > 1.0 → 1.0   (overtime: cap at 100%)
+func calcProgress(elapsed, timeout time.Duration) float64 {
+	if timeout <= 0 {
+		return -1.0
+	}
+	if elapsed < 0 {
+		return 0.0
+	}
+	r := float64(elapsed) / float64(timeout)
+	if r > 1.0 {
+		return 1.0
+	}
+	return r
+}
+
+// memberElapsed returns how long a member has been (or was) running:
+//
+//   - running:   time.Since(startedAt)
+//   - completed/failed/killed: completedAt − startedAt
+//   - otherwise: 0
+//
+// Negative results and parse errors are clamped to 0.
+func memberElapsed(member Member) time.Duration {
+	if member.StartedAt == nil {
+		return 0
+	}
+	startedAt, err := time.Parse(time.RFC3339, *member.StartedAt)
+	if err != nil {
+		return 0
+	}
+	if member.CompletedAt != nil {
+		completedAt, err := time.Parse(time.RFC3339, *member.CompletedAt)
+		if err == nil {
+			if d := completedAt.Sub(startedAt); d >= 0 {
+				return d
+			}
+			return 0
+		}
+	}
+	if d := time.Since(startedAt); d >= 0 {
+		return d
+	}
+	return 0
+}
+
+// renderMemberProgressBar renders a compact single-line progress bar for a
+// member. Returns an empty string for pending or skipped members.
+//
+// Format: "  name           [████████░░░░] 45% 2m30s"
+//
+// Running members show an indeterminate solid bar because the Member schema
+// carries no TimeoutMS field; calcProgress(elapsed, 0) returns -1.0.
+func (m *TeamsHealthModel) renderMemberProgressBar(member Member) string {
+	switch member.Status {
+	case "pending", "skipped":
+		return ""
+	}
+
+	// Determine progress ratio.
+	var ratio float64
+	switch member.Status {
+	case "completed", "failed", "killed":
+		ratio = 1.0
+	case "running":
+		// No TimeoutMS in Member schema → timeout=0 → indeterminate (-1.0).
+		ratio = calcProgress(memberElapsed(member), 0)
+	default:
+		ratio = 0.0
+	}
+
+	nameWidth := 14
+	if m.width > 0 && m.width < 60 {
+		nameWidth = 10
+	}
+
+	// Layout: 2 (indent) + nameWidth + 1 (space) + 1 ([) + barWidth + 1 (]) + 5 (pct) + 8 (elapsed)
+	barWidth := 20
+	if m.width > 50 {
+		if avail := m.width - (2 + nameWidth + 2 + 5 + 8); avail > 10 {
+			barWidth = avail
+		}
+		if barWidth > 30 {
+			barWidth = 30
+		}
+	}
+	if barWidth < 5 {
+		barWidth = 5
+	}
+
+	style := memberStatusStyle(member.Status)
+
+	var bar, pctStr string
+	if ratio < 0 {
+		// Indeterminate: solid bar in status colour with "—" marker.
+		bar = style.Render(strings.Repeat("█", barWidth))
+		pctStr = config.StyleMuted.Render("  —  ")
+	} else {
+		filled := int(float64(barWidth) * ratio)
+		empty := barWidth - filled
+		bar = style.Render(strings.Repeat("█", filled)) +
+			config.StyleMuted.Render(strings.Repeat("░", empty))
+		pctStr = config.StyleMuted.Render(fmt.Sprintf(" %3.0f%%", ratio*100))
+	}
+
+	elapsedStr := ""
+	if elapsed := memberElapsed(member); elapsed > 0 {
+		elapsedStr = " " + config.StyleMuted.Render(formatDuration(elapsed))
+	}
+
+	name := member.Name
+	if len(name) > nameWidth {
+		name = name[:nameWidth]
+	}
+
+	return fmt.Sprintf("  %-*s [%s]%s%s", nameWidth, name, bar, pctStr, elapsedStr)
+}
+
+// renderWaveProgressBar renders the aggregate count-based progress bar for a
+// wave. Returns an empty string when the wave has no members.
+//
+// Format: "  [████████████░░░░] 3/5"
+//
+// Colour precedence: any errors/kills = red, all done = bold green,
+// any running = green, all pending = grey.
+func (m *TeamsHealthModel) renderWaveProgressBar(wave Wave) string {
+	total := len(wave.Members)
+	if total == 0 {
+		return ""
+	}
+
+	var done, running, failed int
+	for _, mem := range wave.Members {
+		switch mem.Status {
+		case "completed", "skipped":
+			done++
+		case "running":
+			running++
+		case "failed", "killed":
+			failed++
+			done++ // terminal: counts toward progress
+		}
+	}
+
+	ratio := float64(done) / float64(total)
+
+	var style lipgloss.Style
+	switch {
+	case failed > 0:
+		style = config.StyleError
+	case done == total:
+		style = config.StyleSuccess.Bold(true)
+	case running > 0:
+		style = config.StyleSuccess
+	default:
+		style = config.StyleMuted
+	}
+
+	barWidth := 24
+	if m.width > 50 {
+		if avail := m.width - 20; avail > 12 {
+			barWidth = avail
+		}
+		if barWidth > 40 {
+			barWidth = 40
+		}
+	}
+	if barWidth < 5 {
+		barWidth = 5
+	}
+
+	filled := int(float64(barWidth) * ratio)
+	empty := barWidth - filled
+
+	bar := style.Render(strings.Repeat("█", filled)) +
+		config.StyleMuted.Render(strings.Repeat("░", empty))
+
+	label := config.StyleMuted.Render(fmt.Sprintf(" %d/%d", done, total))
+
+	return "  [" + bar + "]" + label
 }
 
 // budgetColor returns the lipgloss style appropriate for a given budget usage fraction:

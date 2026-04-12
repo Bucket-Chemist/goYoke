@@ -833,6 +833,216 @@ func TestStatusRowStyle(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Density modes (UX-022)
+// ---------------------------------------------------------------------------
+
+func TestDensity_DefaultIsStandard(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	if m.Density() != agents.DensityStandard {
+		t.Errorf("default density = %v; want DensityStandard", m.Density())
+	}
+}
+
+func TestCycleDensity_StandardToCompact(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.CycleDensity()
+	if m.Density() != agents.DensityCompact {
+		t.Errorf("after 1 cycle density = %v; want DensityCompact", m.Density())
+	}
+}
+
+func TestCycleDensity_CompactToVerbose(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.CycleDensity()
+	m.CycleDensity()
+	if m.Density() != agents.DensityVerbose {
+		t.Errorf("after 2 cycles density = %v; want DensityVerbose", m.Density())
+	}
+}
+
+func TestCycleDensity_VerboseWrapsToStandard(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.CycleDensity()
+	m.CycleDensity()
+	m.CycleDensity()
+	if m.Density() != agents.DensityStandard {
+		t.Errorf("after 3 cycles density = %v; want DensityStandard (wrapped)", m.Density())
+	}
+}
+
+// Standard density must produce identical output to View() (existing behaviour unchanged).
+func TestRender_Standard_MatchesView(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityStandard)
+
+	if got, want := m.Render(agents.RenderFull, 80), m.View(); got != want {
+		t.Errorf("standard density Render(RenderFull) != View()\nRender: %q\nView:   %q", got, want)
+	}
+}
+
+// Compact density: 3 nodes → 3 lines.
+func TestRender_Compact_ThreeLinesForThreeNodes(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityCompact)
+
+	view := m.Render(agents.RenderFull, 80)
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Errorf("compact density: 3 nodes should produce 3 lines; got %d:\n%s", len(lines), view)
+	}
+}
+
+// Compact density: each line must contain the 2-char abbreviation.
+func TestRender_Compact_ContainsAbbreviations(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	// threeNodeTree: root=orchestrator, c1=go-pro, c2=code-reviewer
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityCompact)
+
+	view := m.Render(agents.RenderFull, 80)
+	for _, abbrev := range []string{"OR", "GO", "CO"} {
+		if !strings.Contains(view, abbrev) {
+			t.Errorf("compact density missing abbreviation %q; got:\n%s", abbrev, view)
+		}
+	}
+}
+
+// Compact density: no dot-leaders.
+func TestRender_Compact_NoDotLeaders(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityCompact)
+
+	view := m.Render(agents.RenderFull, 80)
+	if strings.Contains(view, "..") {
+		t.Errorf("compact density must not contain dot leaders; got:\n%s", view)
+	}
+}
+
+// Compact density: empty tree shows "No agents".
+func TestRender_Compact_EmptyTree(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetDensity(agents.DensityCompact)
+
+	view := m.Render(agents.RenderFull, 80)
+	if !strings.Contains(view, "No agents") {
+		t.Errorf("compact density empty tree should contain 'No agents'; got:\n%s", view)
+	}
+}
+
+// Compact density: status icons must appear.
+func TestRender_Compact_ContainsStatusIcons(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityCompact)
+
+	view := m.Render(agents.RenderFull, 80)
+	// threeNodeTree: running ">", complete "*", pending "."
+	for _, icon := range []string{">", "*", "."} {
+		if !strings.Contains(view, icon) {
+			t.Errorf("compact density missing status icon %q; got:\n%s", icon, view)
+		}
+	}
+}
+
+// Verbose density: 3 nodes → 6 lines (2 per node).
+func TestRender_Verbose_SixLinesForThreeNodes(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityVerbose)
+
+	view := m.Render(agents.RenderFull, 80)
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	if len(lines) != 6 {
+		t.Errorf("verbose density: 3 nodes should produce 6 lines; got %d:\n%s", len(lines), view)
+	}
+}
+
+// Verbose density: status words must appear on the metadata lines.
+func TestRender_Verbose_ContainsStatusWords(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	// threeNodeTree: running root, complete child1, pending child2.
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityVerbose)
+
+	view := m.Render(agents.RenderFull, 80)
+	for _, word := range []string{"running", "complete", "pending"} {
+		if !strings.Contains(view, word) {
+			t.Errorf("verbose density missing status word %q; got:\n%s", word, view)
+		}
+	}
+}
+
+// Verbose density: tier and cost appear in metadata line.
+func TestRender_Verbose_ContainsTierAndCost(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "task", state.StatusComplete), 0, true)
+	node.Agent.Tier = "sonnet"
+	node.Agent.Cost = 1.23
+
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityVerbose)
+
+	view := m.Render(agents.RenderFull, 80)
+	if !strings.Contains(view, "sonnet") {
+		t.Errorf("verbose density should contain tier 'sonnet'; got:\n%s", view)
+	}
+	if !strings.Contains(view, "$1.23") {
+		t.Errorf("verbose density should contain cost '$1.23'; got:\n%s", view)
+	}
+}
+
+// Verbose density: duration appears for completed agents.
+func TestRender_Verbose_ContainsDuration(t *testing.T) {
+	node := makeNode(makeAgent("root", "", "go-pro", "task", state.StatusComplete), 0, true)
+	node.Agent.Duration = 2*time.Minute + 15*time.Second
+
+	m := agents.NewAgentTreeModel()
+	m.SetNodes([]*state.AgentTreeNode{node})
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityVerbose)
+
+	view := m.Render(agents.RenderFull, 80)
+	// formatAgentDuration delegates to fmtDuration which formats as "2m 15s".
+	if !strings.Contains(view, "2m") {
+		t.Errorf("verbose density should contain duration in minutes; got:\n%s", view)
+	}
+}
+
+// Verbose density: empty tree shows "No agents".
+func TestRender_Verbose_EmptyTree(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetDensity(agents.DensityVerbose)
+
+	view := m.Render(agents.RenderFull, 80)
+	if !strings.Contains(view, "No agents") {
+		t.Errorf("verbose density empty tree should contain 'No agents'; got:\n%s", view)
+	}
+}
+
+// Density persists across SetNodes and SetSize calls.
+func TestSetDensity_PersistsAcrossSetCalls(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetDensity(agents.DensityVerbose)
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+
+	if m.Density() != agents.DensityVerbose {
+		t.Errorf("density should persist after SetNodes/SetSize; got %v, want DensityVerbose", m.Density())
+	}
+}
+
 func TestView_FullRowColorByStatus(t *testing.T) {
 	// Build a tree with one agent per status so every code path in
 	// StatusRowStyle is exercised through renderNode.
@@ -872,5 +1082,203 @@ func TestView_FullRowColorByStatus(t *testing.T) {
 		if got != 80 {
 			t.Errorf("line %d: lipgloss.Width=%d, want 80: %q", i, got, line)
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Pulse animation (UX-023)
+// ---------------------------------------------------------------------------
+
+// TestPulseTick_TogglesPhase verifies that TreePulseTickMsg toggles pulseBright.
+func TestPulseTick_TogglesPhase(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree()) // root is StatusRunning
+	m.SetSize(80, 20)
+
+	initialPhase := m.PulseBright() // false by default
+
+	result, _ := m.Update(agents.TreePulseTickMsg{})
+	tm := result.(agents.AgentTreeModel)
+
+	if tm.PulseBright() == initialPhase {
+		t.Error("TreePulseTickMsg should toggle pulseBright")
+	}
+}
+
+// TestPulseTick_ReschedulesWhenRunningAgents verifies that a non-nil Cmd is
+// returned when at least one agent has StatusRunning (lazy tick continues).
+func TestPulseTick_ReschedulesWhenRunningAgents(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree()) // root is StatusRunning
+	m.SetSize(80, 20)
+
+	_, cmd := m.Update(agents.TreePulseTickMsg{})
+	if cmd == nil {
+		t.Error("TreePulseTickMsg with running agents should return a non-nil reschedule Cmd")
+	}
+}
+
+// TestPulseTick_StopsWhenNoRunningAgents verifies that the tick does NOT
+// reschedule when no agents are running (lazy-tick invariant).
+func TestPulseTick_StopsWhenNoRunningAgents(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	// Tree with only complete/pending agents — no running agent.
+	nodes := []*state.AgentTreeNode{
+		makeNode(makeAgent("a", "", "go-pro", "done", state.StatusComplete), 0, false),
+		makeNode(makeAgent("b", "", "go-pro", "wait", state.StatusPending), 0, true),
+	}
+	m.SetNodes(nodes)
+	m.SetSize(80, 20)
+
+	_, cmd := m.Update(agents.TreePulseTickMsg{})
+	if cmd != nil {
+		t.Error("TreePulseTickMsg with no running agents should return nil Cmd (tick stops)")
+	}
+}
+
+// TestPulseTick_AlternatesPhaseOnMultipleTicks verifies that consecutive ticks
+// alternate pulseBright between true and false.
+func TestPulseTick_AlternatesPhaseOnMultipleTicks(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree())
+	m.SetSize(80, 20)
+
+	phases := make([]bool, 4)
+	cur := tea.Model(m)
+	for i := range phases {
+		next, _ := cur.Update(agents.TreePulseTickMsg{})
+		cur = next
+		phases[i] = cur.(agents.AgentTreeModel).PulseBright()
+	}
+
+	// Should alternate: true, false, true, false (or false, true, false, true).
+	for i := 1; i < len(phases); i++ {
+		if phases[i] == phases[i-1] {
+			t.Errorf("phase[%d]=%v same as phase[%d]=%v; should alternate", i, phases[i], i-1, phases[i-1])
+		}
+	}
+}
+
+// TestReduceMotion_TickStillFires verifies that the tick continues firing
+// even when reduceMotion is true (the icon is static bright, but the tick
+// doesn't need to stop — it's harmless).
+func TestReduceMotion_TickStillFires(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree())
+	m.SetSize(80, 20)
+	m.SetReduceMotion(true)
+
+	_, cmd := m.Update(agents.TreePulseTickMsg{})
+	// With running agents the tick should still reschedule.
+	if cmd == nil {
+		t.Error("with reduceMotion=true and running agents, tick should still reschedule")
+	}
+}
+
+// TestReduceMotion_PhaseContinuesTogglewithReduceMotion verifies that the
+// internal pulseBright state still toggles even when reduceMotion is enabled.
+// The visual output is constant (always bright) but the model state still
+// advances — this keeps the tick logic simple (no special case for reduceMotion).
+func TestReduceMotion_PhaseStillTogglesWhenEnabled(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree())
+	m.SetSize(80, 20)
+	m.SetReduceMotion(true)
+
+	initialPhase := m.PulseBright() // false by default
+
+	result, _ := m.Update(agents.TreePulseTickMsg{})
+	tm := result.(agents.AgentTreeModel)
+
+	if tm.PulseBright() == initialPhase {
+		t.Error("pulseBright should still toggle even when reduceMotion is true")
+	}
+}
+
+// TestReduceMotion_SetReduceMotion_Roundtrip verifies that SetReduceMotion
+// correctly sets and clears the flag.
+func TestReduceMotion_SetReduceMotion_Roundtrip(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+
+	m.SetReduceMotion(true)
+	// Verify indirectly: with running agents the tick should still reschedule
+	// (reduce-motion doesn't stop the tick, only changes icon rendering).
+	m.SetNodes(singleNodeTree())
+	_, cmd := m.Update(agents.TreePulseTickMsg{})
+	if cmd == nil {
+		t.Error("with reduceMotion=true and running agents, tick should still reschedule")
+	}
+
+	m.SetReduceMotion(false)
+	// Same behaviour — tick reschedules when running agents present.
+	_, cmd2 := m.Update(agents.TreePulseTickMsg{})
+	if cmd2 == nil {
+		t.Error("with reduceMotion=false and running agents, tick should reschedule")
+	}
+}
+
+// TestMaybeStartPulseTick_StartsWhenRunning verifies that MaybeStartPulseTick
+// returns a non-nil Cmd when there are running agents and no tick is running.
+func TestMaybeStartPulseTick_StartsWhenRunning(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree()) // root is StatusRunning
+
+	cmd := m.MaybeStartPulseTick()
+	if cmd == nil {
+		t.Error("MaybeStartPulseTick should return Cmd when running agents exist and no tick is running")
+	}
+}
+
+// TestMaybeStartPulseTick_IdempotentWhenAlreadyTicking verifies that calling
+// MaybeStartPulseTick a second time (after the tick is already running) returns
+// nil — no duplicate goroutine is started.
+func TestMaybeStartPulseTick_IdempotentWhenAlreadyTicking(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree())
+
+	// First call starts the tick.
+	first := m.MaybeStartPulseTick()
+	if first == nil {
+		t.Fatal("first MaybeStartPulseTick should return a Cmd")
+	}
+
+	// Second call must be a no-op (tick already in flight).
+	second := m.MaybeStartPulseTick()
+	if second != nil {
+		t.Error("second MaybeStartPulseTick should return nil (tick already running)")
+	}
+}
+
+// TestMaybeStartPulseTick_NilWhenNoRunningAgents verifies that
+// MaybeStartPulseTick returns nil when all agents are idle.
+func TestMaybeStartPulseTick_NilWhenNoRunningAgents(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	nodes := []*state.AgentTreeNode{
+		makeNode(makeAgent("a", "", "go-pro", "done", state.StatusComplete), 0, true),
+	}
+	m.SetNodes(nodes)
+
+	cmd := m.MaybeStartPulseTick()
+	if cmd != nil {
+		t.Error("MaybeStartPulseTick should return nil when no agents are running")
+	}
+}
+
+// TestPulseTick_NotFocused verifies that TreePulseTickMsg is handled regardless
+// of whether the tree has keyboard focus (pulse must work even when unfocused).
+func TestPulseTick_NotFocused(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(singleNodeTree())
+	m.SetFocused(false) // explicitly unfocused
+
+	result, cmd := m.Update(agents.TreePulseTickMsg{})
+	tm := result.(agents.AgentTreeModel)
+
+	// Phase must have toggled even though tree is unfocused.
+	if !tm.PulseBright() {
+		t.Error("pulseBright should toggle even when tree is unfocused")
+	}
+	if cmd == nil {
+		t.Error("tick should reschedule even when tree is unfocused (running agents present)")
 	}
 }

@@ -179,6 +179,7 @@ func (p *benchClaudePanel) SetSender(_ MessageSender)                {}
 func (p *benchClaudePanel) AppendSystemMessage(_ string)             {}
 func (p *benchClaudePanel) SetTier(_ LayoutTier)                     {}
 func (p *benchClaudePanel) SetReduceMotion(_ bool)                   {}
+func (p *benchClaudePanel) SetShowTimestamps(_ bool) tea.Cmd         { return nil }
 func (p *benchClaudePanel) ViewConversation() string                 { return p.content }
 func (p *benchClaudePanel) ViewInput() string                        { return "" }
 func (p *benchClaudePanel) ApplyOverlay(composed string) string      { return composed }

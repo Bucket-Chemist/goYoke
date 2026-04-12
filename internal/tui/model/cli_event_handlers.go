@@ -359,6 +359,9 @@ func (m AppModel) handleResultEvent(msg cli.ResultEvent) (tea.Model, tea.Cmd) {
 		m.shared.costTracker.UpdateSessionCost(msg.TotalCostUSD)
 	}
 	m.statusLine.SessionCost = msg.TotalCostUSD
+	if cmd := m.statusLine.CheckCostFlash(); cmd != nil {
+		cmds = append(cmds, cmd)
+	}
 
 	// Accumulate session token counts from aggregate usage.
 	m.statusLine.TokenCount += msg.Usage.InputTokens + msg.Usage.OutputTokens

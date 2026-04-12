@@ -139,6 +139,10 @@ type claudePanelWidget interface {
 	// SetReduceMotion controls whether animations (e.g. rainbow ultrathink
 	// indicator) are suppressed for accessibility (WCAG 2.3.1).
 	SetReduceMotion(v bool)
+	// SetShowTimestamps enables or disables the 5-char relative-time gutter at
+	// turn boundaries (UX-024). Returns the initial 60-second tick Cmd when
+	// enabling, nil when disabling.
+	SetShowTimestamps(v bool) tea.Cmd
 }
 
 // ---------------------------------------------------------------------------

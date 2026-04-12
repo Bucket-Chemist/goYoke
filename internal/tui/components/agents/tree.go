@@ -6,6 +6,7 @@ package agents
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -25,6 +26,10 @@ import (
 type AgentSelectedMsg struct {
 	AgentID string
 }
+
+// TreePulseTickMsg is emitted by the lazy pulse ticker to toggle icon brightness
+// for running agents. The parent model must forward it to AgentTreeModel.Update.
+type TreePulseTickMsg struct{}
 
 // AgentDetailFocusMsg is emitted when the user presses Enter on a tree node.
 // The parent model should transfer keyboard focus from the tree to the detail panel.
@@ -100,6 +105,25 @@ func StatusRowStyle(s state.AgentStatus) lipgloss.Style {
 }
 
 // ---------------------------------------------------------------------------
+// TreeDensity
+// ---------------------------------------------------------------------------
+
+// TreeDensity controls the information density of AgentTreeModel rendering.
+type TreeDensity int
+
+const (
+	// DensityStandard is the default two-column dot-leader layout (existing behaviour).
+	DensityStandard TreeDensity = iota
+	// DensityCompact renders each agent as a single compact line: tree prefix + icon + 2-char abbreviation.
+	DensityCompact
+	// DensityVerbose extends each node with a second metadata line showing status, tier, duration, and cost.
+	DensityVerbose
+)
+
+// densityCount is the total number of TreeDensity values used for modular cycling.
+const densityCount = 3
+
+// ---------------------------------------------------------------------------
 // AgentTreeModel
 // ---------------------------------------------------------------------------
 
@@ -115,6 +139,16 @@ type AgentTreeModel struct {
 	width        int
 	height       int
 	scrollOffset int
+	density      TreeDensity
+	// reduceMotion suppresses the pulse animation (WCAG 2.3.1).
+	// When true, running agents always show a static bright icon.
+	reduceMotion bool
+	// pulseBright tracks the current pulse phase for running-agent icons.
+	// Toggled every 500 ms by TreePulseTickMsg when at least one agent is running.
+	pulseBright bool
+	// tickRunning is true while a SchedulePulseTick Cmd is in flight.
+	// Prevents duplicate tick goroutines when SetNodes is called repeatedly.
+	tickRunning bool
 }
 
 // NewAgentTreeModel returns an AgentTreeModel ready for use.
@@ -149,6 +183,67 @@ func (m *AgentTreeModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 	m.clampScroll()
+}
+
+// Density returns the current tree density setting.
+func (m AgentTreeModel) Density() TreeDensity {
+	return m.density
+}
+
+// SetDensity sets the tree density to the given value.
+func (m *AgentTreeModel) SetDensity(d TreeDensity) {
+	m.density = d
+}
+
+// CycleDensity advances through Standard → Compact → Verbose → Standard.
+func (m *AgentTreeModel) CycleDensity() {
+	m.density = TreeDensity((int(m.density) + 1) % densityCount)
+}
+
+// SetReduceMotion controls whether the pulse animation is suppressed.
+// When true, running agents show a static bright icon instead of pulsing.
+func (m *AgentTreeModel) SetReduceMotion(v bool) {
+	m.reduceMotion = v
+}
+
+// hasRunningAgents reports whether any node in the current tree has
+// StatusRunning. Used to drive the lazy pulse tick scheduler.
+func (m AgentTreeModel) hasRunningAgents() bool {
+	for _, node := range m.treeNodes {
+		if node.Agent.Status == state.StatusRunning {
+			return true
+		}
+	}
+	return false
+}
+
+// SchedulePulseTick returns a Cmd that fires TreePulseTickMsg after 500 ms.
+// The caller should schedule this at startup and whenever a running agent
+// first appears. AgentTreeModel re-schedules lazily from within Update.
+func SchedulePulseTick() tea.Cmd {
+	return tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg {
+		return TreePulseTickMsg{}
+	})
+}
+
+// MaybeStartPulseTick returns a SchedulePulseTick Cmd when there are running
+// agents and no tick is currently in flight. Returns nil otherwise.
+//
+// Call this after every SetNodes invocation so the tick starts automatically
+// when the first running agent appears and stops when all agents are idle.
+func (m *AgentTreeModel) MaybeStartPulseTick() tea.Cmd {
+	if !m.tickRunning && m.hasRunningAgents() {
+		m.tickRunning = true
+		return SchedulePulseTick()
+	}
+	return nil
+}
+
+// PulseBright returns the current pulse phase for running-agent icons.
+// True means the icon is in the bright phase; false means the dim phase.
+// This accessor exists primarily for testing.
+func (m AgentTreeModel) PulseBright() bool {
+	return m.pulseBright
 }
 
 // SelectedID returns the agent ID of the currently highlighted tree node, or
@@ -189,9 +284,21 @@ func (m AgentTreeModel) Init() tea.Cmd {
 	return nil
 }
 
-// Update implements tea.Model. When focused, Up/Down navigate the tree and
-// Enter emits AgentSelectedMsg.
+// Update implements tea.Model. Handles TreePulseTickMsg (regardless of focus)
+// and, when focused, Up/Down navigation and Enter to emit AgentSelectedMsg.
 func (m AgentTreeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Handle pulse tick regardless of focus state.
+	if _, ok := msg.(TreePulseTickMsg); ok {
+		m.pulseBright = !m.pulseBright
+		// Reschedule only while at least one agent is still running.
+		// This is the lazy-tick invariant: no CPU cost when all agents are idle.
+		if m.hasRunningAgents() {
+			return m, SchedulePulseTick()
+		}
+		m.tickRunning = false
+		return m, nil
+	}
+
 	if !m.focused {
 		return m, nil
 	}
@@ -237,6 +344,19 @@ func emitSelected(id string) tea.Cmd {
 	}
 }
 
+// pulseIconStyle returns the lipgloss.Style for a running agent's status icon,
+// applying the current pulse phase. Non-running statuses should use statusStyle.
+//
+// When reduceMotion is true, always returns the bright (static) style.
+// When pulseBright is true (or reduceMotion), returns a bold warning style.
+// When pulseBright is false, returns a muted style (dim phase).
+func (m AgentTreeModel) pulseIconStyle() lipgloss.Style {
+	if m.reduceMotion || m.pulseBright {
+		return lipgloss.NewStyle().Foreground(config.ColorWarning).Bold(true)
+	}
+	return lipgloss.NewStyle().Foreground(config.ColorMuted)
+}
+
 // ---------------------------------------------------------------------------
 // RenderMode
 // ---------------------------------------------------------------------------
@@ -253,13 +373,23 @@ const (
 )
 
 // Render renders the tree using the specified mode and available width.
-// RenderFull delegates to View() so existing behaviour is unchanged.
 // RenderIconRail renders the compact icon rail for narrow panels.
+// RenderFull dispatches based on the current density setting:
+//   - DensityStandard: existing dot-leader layout (delegates to View())
+//   - DensityCompact:  single line per agent — tree prefix + icon + 2-char abbreviation
+//   - DensityVerbose:  two lines per agent — standard row + metadata line
 func (m AgentTreeModel) Render(mode RenderMode, width int) string {
 	if mode == RenderIconRail {
 		return m.renderIconRail(width)
 	}
-	return m.View()
+	switch m.density {
+	case DensityCompact:
+		return m.renderCompactDensity()
+	case DensityVerbose:
+		return m.renderVerboseDensity()
+	default: // DensityStandard
+		return m.View()
+	}
 }
 
 // renderIconRail renders the agent tree as a compact icon rail.
@@ -306,7 +436,12 @@ func (m AgentTreeModel) renderIconNode(node *state.AgentTreeNode, selected bool,
 
 	// Status icon.
 	icon := string(statusIcon(node.Agent.Status))
-	iconStr := statusStyle(node.Agent.Status).Render(icon)
+	var iconStr string
+	if node.Agent.Status == state.StatusRunning {
+		iconStr = m.pulseIconStyle().Render(icon)
+	} else {
+		iconStr = statusStyle(node.Agent.Status).Render(icon)
+	}
 
 	// 2-char uppercase abbreviation.
 	abbrev := agentAbbrev(node.Agent.AgentType)
@@ -461,6 +596,135 @@ func buildTreeValue(a *state.Agent) string {
 	return strings.Join(parts, " ")
 }
 
+// ---------------------------------------------------------------------------
+// DensityCompact rendering
+// ---------------------------------------------------------------------------
+
+// renderCompactDensity renders the tree in compact density mode.
+// Each agent occupies a single line: {treePrefix}{icon} {abbrev}
+// No dot-leaders and no right-aligned value column.
+func (m AgentTreeModel) renderCompactDensity() string {
+	if len(m.treeNodes) == 0 {
+		return config.StyleMuted.Render("No agents")
+	}
+
+	start := m.scrollOffset
+	end := start + m.height
+	if end > len(m.treeNodes) || m.height <= 0 {
+		end = len(m.treeNodes)
+	}
+
+	var sb strings.Builder
+	for i := start; i < end; i++ {
+		node := m.treeNodes[i]
+		line := m.renderCompactNode(node, i == m.selectedIdx)
+		sb.WriteString(line)
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderCompactNode renders a single node in compact density mode.
+// Format: {treePrefix}{icon} {abbrev}
+func (m AgentTreeModel) renderCompactNode(node *state.AgentTreeNode, selected bool) string {
+	a := node.Agent
+
+	// Build tree connector prefix identical to icon rail mode.
+	var prefixBuf strings.Builder
+	if node.Depth > 0 {
+		for range node.Depth - 1 {
+			prefixBuf.WriteString("│ ")
+		}
+		if node.IsLast {
+			prefixBuf.WriteString("└─")
+		} else {
+			prefixBuf.WriteString("├─")
+		}
+	}
+	prefixStr := prefixBuf.String()
+
+	icon := string(statusIcon(a.Status))
+	abbrev := agentAbbrev(a.AgentType)
+
+	if selected {
+		plain := prefixStr + icon + " " + abbrev
+		return config.StyleHighlight.Render(plain)
+	}
+	var iconStr string
+	if a.Status == state.StatusRunning {
+		iconStr = m.pulseIconStyle().Render(icon)
+	} else {
+		iconStr = statusStyle(a.Status).Render(icon)
+	}
+	return prefixStr + iconStr + " " + abbrev
+}
+
+// ---------------------------------------------------------------------------
+// DensityVerbose rendering
+// ---------------------------------------------------------------------------
+
+// renderVerboseDensity renders the tree in verbose density mode.
+// Each agent occupies two lines:
+//   - Line 1: standard dot-leader row (identical to DensityStandard)
+//   - Line 2: indented metadata — status | tier | duration | cost
+func (m AgentTreeModel) renderVerboseDensity() string {
+	if len(m.treeNodes) == 0 {
+		return config.StyleMuted.Render("No agents")
+	}
+
+	start := m.scrollOffset
+	end := start + m.height
+	if end > len(m.treeNodes) || m.height <= 0 {
+		end = len(m.treeNodes)
+	}
+
+	var sb strings.Builder
+	for i := start; i < end; i++ {
+		node := m.treeNodes[i]
+		// Line 1: standard dot-leader row.
+		sb.WriteString(m.renderNode(node, i == m.selectedIdx))
+		sb.WriteByte('\n')
+		// Line 2: metadata.
+		sb.WriteString(m.renderVerboseMeta(node))
+		sb.WriteByte('\n')
+	}
+	return strings.TrimRight(sb.String(), "\n")
+}
+
+// renderVerboseMeta renders the second metadata line for verbose density mode.
+// Format: {indent}  {status} | {tier} | {duration} | {cost}
+func (m AgentTreeModel) renderVerboseMeta(node *state.AgentTreeNode) string {
+	a := node.Agent
+
+	// Indent matches the node depth (2 spaces per level) plus 2 for the icon column.
+	indent := strings.Repeat("  ", node.Depth) + "  "
+
+	tier := a.Tier
+	if tier == "" {
+		tier = "-"
+	}
+
+	dur := formatAgentDuration(a)
+
+	costStr := "-"
+	if a.Cost > 0 {
+		costStr = fmt.Sprintf("$%.2f", a.Cost)
+	}
+
+	meta := fmt.Sprintf("%s%s | %s | %s | %s", indent, a.Status.String(), tier, dur, costStr)
+
+	// Truncate to available width so long metadata doesn't wrap.
+	if lipgloss.Width(meta) > m.width {
+		meta = util.Truncate(meta, m.width)
+	}
+
+	return config.StyleMuted.Render(meta)
+}
+
+// ---------------------------------------------------------------------------
+// Standard (dot-leader) rendering
+// ---------------------------------------------------------------------------
+
 // renderNode renders a single tree row using the dot-leader layout.
 //
 // Format: {indent}{icon} {label} {dots} {value}
@@ -510,6 +774,12 @@ func (m AgentTreeModel) renderNode(node *state.AgentTreeNode, selected bool) str
 		return config.StyleHighlight.Render(plain)
 	}
 	rowStyle := StatusRowStyle(a.Status)
+	if a.Status == state.StatusRunning {
+		// Render the icon with pulse styling; the rest of the row uses rowStyle.
+		iconRendered := m.pulseIconStyle().Render(icon)
+		rest := " " + label + " " + dots + " " + rightPlain
+		return indent + iconRendered + rowStyle.Render(rest)
+	}
 	plain := indent + icon + " " + label + " " + dots + " " + rightPlain
 	return rowStyle.Render(plain)
 }

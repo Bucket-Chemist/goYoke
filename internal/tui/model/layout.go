@@ -60,9 +60,9 @@ const (
 	// Only a single column is shown; the right panel is hidden.
 	LayoutCompact LayoutTier = iota
 
-	// LayoutStandard covers 80–119 columns.  Both panels are visible with a
-	// 75/25 (80–99) or 70/30 (100–119) split — matching the pre-TUI-058
-	// behaviour exactly.
+	// LayoutStandard covers 80–119 columns.  Both panels are visible with
+	// focus-driven ratios: FocusClaude 55/45, FocusAgents 70/30, drawer
+	// focuses 30/70 (UX-021).
 	LayoutStandard
 
 	// LayoutWide covers 120–179 columns.  The right panel receives a larger
@@ -121,12 +121,17 @@ type layoutDims struct {
 
 // computeLayout calculates panel dimensions from the current terminal size.
 //
-// Responsive breakpoints:
-//   - width < 80   → LayoutCompact:  single-column (right panel hidden)
-//   - width 80–99  → LayoutStandard: left 75%, right 25%
-//   - width 100–119 → LayoutStandard: left 70%, right 30%
-//   - width 120–179 → LayoutWide:    left 60%, right 40%
-//   - width >= 180  → LayoutUltra:   left 50%, right 50%
+// Responsive breakpoints (tiers):
+//   - width < 80    → LayoutCompact:  single-column (right panel hidden)
+//   - width 80–119  → LayoutStandard: focus-driven split
+//   - width 120–179 → LayoutWide:     focus-driven split
+//   - width >= 180   → LayoutUltra:   focus-driven split
+//
+// Focus-driven left-panel ratios (UX-021):
+//
+//	FocusClaude:                      Standard 55/45, Wide 55/45, Ultra 50/50
+//	FocusAgents:                      Standard 70/30, Wide 65/35, Ultra 60/40
+//	Drawer focus (Plan/Options/Teams): Standard 30/70, Wide 35/65, Ultra 40/60
 //
 // Border frame (1 char per edge = 2 per axis) is subtracted from each panel
 // inner width so that the borders do not overflow the terminal width.
@@ -189,20 +194,40 @@ func (m AppModel) computeLayout() layoutDims {
 
 	dims.showRightPanel = true
 
-	// Per-tier left-panel ratio.
+	// Per-tier, focus-aware left-panel ratio (UX-021).
+	// Allocation shifts based on where keyboard focus lives:
+	//   FocusAgents       → left panel grows, giving right panel a compact slot
+	//   Drawer focuses    → right panel grows, left panel shrinks to make room
+	//   FocusClaude       → balanced split favouring left slightly (or equal at Ultra)
 	var leftRatio float64
 	switch tier {
 	case LayoutStandard:
-		// Preserve exact pre-TUI-058 sub-breakpoints within Standard.
-		if m.width < 100 {
-			leftRatio = 0.75
-		} else {
+		switch m.focus {
+		case FocusAgents:
 			leftRatio = 0.70
+		case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
+			leftRatio = 0.30
+		default: // FocusClaude (and any future targets)
+			leftRatio = 0.55
 		}
 	case LayoutWide:
-		leftRatio = 0.60
+		switch m.focus {
+		case FocusAgents:
+			leftRatio = 0.65
+		case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
+			leftRatio = 0.35
+		default: // FocusClaude
+			leftRatio = 0.55
+		}
 	case LayoutUltra:
-		leftRatio = 0.50
+		switch m.focus {
+		case FocusAgents:
+			leftRatio = 0.60
+		case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
+			leftRatio = 0.40
+		default: // FocusClaude
+			leftRatio = 0.50
+		}
 	}
 
 	// Compute outer column widths, then subtract border frame for inner.
