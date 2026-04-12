@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -113,8 +113,8 @@ type ClaudePanelModel struct {
 	// viewport renders the scrollable conversation history.
 	vp viewport.Model
 
-	// input is the text-input widget for composing messages.
-	input textinput.Model
+	// input is the textarea widget for composing messages.
+	input textarea.Model
 
 	// history holds previously submitted messages with cross-session
 	// persistence to ~/.claude/input-history.json (shared with TS TUI).
@@ -193,12 +193,30 @@ type ClaudePanelModel struct {
 }
 
 // NewClaudePanelModel creates a ClaudePanelModel ready for embedding.
-// The viewport and textinput are initialised with zero dimensions; call
+// The viewport and textarea are initialised with zero dimensions; call
 // SetSize before the first render.
 func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
-	ti := textinput.New()
-	ti.Placeholder = "Message Claude…"
-	ti.CharLimit = 4096
+	ta := textarea.New()
+	ta.Placeholder = "Message Claude…"
+	ta.CharLimit = 4096
+	ta.ShowLineNumbers = false
+	ta.MaxHeight = 10
+
+	// Match the minimal textinput look: no cursor-line highlight, no muted
+	// blurred-text colour, and the styled "› " prompt rendered on the first
+	// display line with "  " indentation on continuation lines.
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.BlurredStyle.CursorLine = lipgloss.NewStyle()
+	ta.BlurredStyle.Text = lipgloss.NewStyle()
+	ta.FocusedStyle.Prompt = inputPromptStyle
+	ta.BlurredStyle.Prompt = inputPromptStyle
+	ta.SetPromptFunc(2, func(lineIdx int) string {
+		if lineIdx == 0 {
+			return "› "
+		}
+		return "  "
+	})
+	ta.SetHeight(1)
 
 	vp := viewport.New(0, 0)
 
@@ -209,7 +227,7 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 
 	return ClaudePanelModel{
 		vp:         vp,
-		input:      ti,
+		input:      ta,
 		historyIdx: -1,
 		autoScroll: true,
 		keys:       keys.Claude,
@@ -223,10 +241,10 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 // tea.Model interface
 // ---------------------------------------------------------------------------
 
-// Init implements tea.Model. It returns textinput.Blink so the cursor
+// Init implements tea.Model. It returns textarea.Blink so the cursor
 // animates when the panel is first shown.
 func (m ClaudePanelModel) Init() tea.Cmd {
-	return textinput.Blink
+	return textarea.Blink
 }
 
 // Update implements tea.Model. It handles all incoming messages and keyboard
@@ -320,7 +338,10 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		}
 	}
 
+	m.input.SetHeight(10)
 	m.input, tiCmd = m.input.Update(msg)
+	m.updateInputHeight()
+	m.recalculateLayout()
 	cmds = append(cmds, tiCmd)
 
 	return m, tea.Batch(cmds...)
@@ -571,6 +592,8 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 				newVal := "/" + sel.Name + " "
 				m.input.SetValue(newVal)
 				m.input.CursorEnd()
+				m.updateInputHeight()
+				m.recalculateLayout()
 			}
 			return m, nil
 		}
@@ -648,12 +671,37 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		return m, tea.Batch(cmds...)
 
 	case key.Matches(msg, m.keys.HistoryPrev):
-		m = m.navigateHistoryPrev()
-		return m, nil
+		// Navigate history when the cursor is on the first line.
+		// When the input has multiple lines and the cursor is below line 0,
+		// let the textarea handle Up to move the cursor within the text.
+		if m.input.Line() == 0 {
+			m = m.navigateHistoryPrev()
+			m.updateInputHeight()
+			m.recalculateLayout()
+			return m, nil
+		}
+		var tiCmd tea.Cmd
+		m.input.SetHeight(10)
+		m.input, tiCmd = m.input.Update(msg)
+		m.updateInputHeight()
+		m.recalculateLayout()
+		return m, tiCmd
 
 	case key.Matches(msg, m.keys.HistoryNext):
-		m = m.navigateHistoryNext()
-		return m, nil
+		// Navigate history when already in history mode or cursor is on the
+		// last logical line. Otherwise let the textarea move the cursor down.
+		if m.historyIdx != -1 || m.input.Line() == m.input.LineCount()-1 {
+			m = m.navigateHistoryNext()
+			m.updateInputHeight()
+			m.recalculateLayout()
+			return m, nil
+		}
+		var tiCmd tea.Cmd
+		m.input.SetHeight(10)
+		m.input, tiCmd = m.input.Update(msg)
+		m.updateInputHeight()
+		m.recalculateLayout()
+		return m, tiCmd
 
 	case key.Matches(msg, m.keys.ToggleToolExpansion):
 		m.toggleLastToolExpansion()
@@ -679,14 +727,19 @@ func (m ClaudePanelModel) handleKey(msg tea.KeyMsg) (ClaudePanelModel, tea.Cmd) 
 		return m, nil
 	}
 
-	// Forward all other key events to the textinput.
+	// Forward all other key events to the textarea.
 	var tiCmd tea.Cmd
+	m.input.SetHeight(10)
 	m.input, tiCmd = m.input.Update(msg)
+
+	// Resize the textarea and viewport to fit the current content.
+	m.updateInputHeight()
+	m.recalculateLayout()
 
 	// After any text change, update the slash-command dropdown state.
 	m.updateSlashDropdown()
 
-	// Check if the viewport was scrolled by user (not textinput key).
+	// Check if the viewport was scrolled by user (not textarea key).
 	if !m.vp.AtBottom() {
 		m.autoScroll = false
 	}
@@ -886,11 +939,11 @@ func (m ClaudePanelModel) ViewConversation() string {
 	return m.viewportWithScrollbar()
 }
 
-// ViewInput returns the input prompt and text input only.
-// It does not include the streaming indicator or the slash command dropdown.
+// ViewInput returns the textarea (which includes the "› " prompt via its
+// SetPromptFunc) ready for composition. It does not include the streaming
+// indicator or the slash command dropdown.
 func (m ClaudePanelModel) ViewInput() string {
-	prompt := inputPromptStyle.Render("› ")
-	return prompt + m.input.View()
+	return m.input.View()
 }
 
 // ApplyOverlay takes a fully composed panel string (conversation joined with
@@ -939,12 +992,11 @@ func (m ClaudePanelModel) viewportWithScrollbar() string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, vpView, sb)
 }
 
-// renderInputLine builds the single-line input area including the "› " prompt.
+// renderInputLine builds the input area including the embedded "› " prompt.
+// NOTE: this function is retained for completeness but is not called by the
+// main rendering path (View → ViewInput is used instead).
 func (m ClaudePanelModel) renderInputLine() string {
-	prompt := inputPromptStyle.Render("› ")
-	inputView := m.input.View()
-
-	line := prompt + inputView
+	line := m.input.View()
 
 	if m.streaming {
 		indicator := streamingStyle.Render("  ...")
@@ -1176,29 +1228,61 @@ func fmtToolDuration(d time.Duration) string {
 }
 
 // ---------------------------------------------------------------------------
+// Layout helpers
+// ---------------------------------------------------------------------------
+
+// updateInputHeight resizes the textarea to fit its current content.
+// It uses the textarea's own LineInfo().Height which reflects its internal
+// word-wrapping, avoiding any mismatch from manual width calculations.
+func (m *ClaudePanelModel) updateInputHeight() {
+	if m.input.Width() <= 0 {
+		return
+	}
+	h := m.input.LineInfo().Height
+	if h < 1 {
+		h = 1
+	}
+	if h > 10 {
+		h = 10
+	}
+	m.input.SetHeight(h)
+}
+
+// recalculateLayout adjusts the conversation viewport dimensions to consume
+// all panel height not occupied by the textarea. Called after any change that
+// may alter the textarea height (content edits, window resize).
+func (m *ClaudePanelModel) recalculateLayout() {
+	inputH := lipgloss.Height(m.input.View())
+	vpH := m.height - inputH
+	if vpH < 1 {
+		vpH = 1
+	}
+	vpW := m.width
+	if m.width > 20 {
+		vpW = m.width - 1 // reserve one column for the scrollbar
+	}
+	m.vp.Width = vpW
+	m.vp.Height = vpH
+}
+
+// ---------------------------------------------------------------------------
 // Public mutators
 // ---------------------------------------------------------------------------
 
 // SetSize updates the width and height of the panel and resizes the viewport
-// and textinput accordingly.  This must be called from the parent model's
+// and textarea accordingly.  This must be called from the parent model's
 // Update on every tea.WindowSizeMsg.
 func (m *ClaudePanelModel) SetSize(width, height int) {
 	m.width = width
 	m.height = height
 
-	// Reserve one line for the input row.
-	vpH := height - 1
-	if vpH < 1 {
-		vpH = 1
-	}
+	// SetWidth accounts for the 2-char prompt internally; reserve 1 column
+	// for the vertical scrollbar so the textarea aligns with the viewport.
+	m.input.SetWidth(width - 1)
 
-	vpW := width
-	if width > 20 {
-		vpW = width - 1 // reserve one column for the scrollbar
-	}
-	m.vp.Width = vpW
-	m.vp.Height = vpH
-	m.input.Width = width - 3 // subtract prompt width ("› ")
+	// Resize textarea height to fit current content, then calculate viewport.
+	m.updateInputHeight()
+	m.recalculateLayout()
 
 	// Re-sync so content is re-wrapped to the new width.
 	m.syncViewport()
@@ -1209,13 +1293,15 @@ func (m *ClaudePanelModel) SetSize(width, height int) {
 }
 
 // SetFocused sets whether the panel accepts keyboard input.  When focused,
-// the textinput cursor is shown.  If the search overlay is active, focusing
+// the textarea cursor is shown.  If the search overlay is active, focusing
 // the panel does not steal focus from the search input.
 func (m *ClaudePanelModel) SetFocused(focused bool) {
 	m.focused = focused
 	if focused {
 		if !m.search.IsActive() {
-			m.input.Focus()
+			// textarea.Focus() returns a tea.Cmd to restart cursor blinking;
+			// discard it here since the blink chain was started in Init().
+			_ = m.input.Focus()
 		}
 	} else {
 		m.input.Blur()
