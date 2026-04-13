@@ -1,18 +1,11 @@
-// Package version is a placeholder stub for the gogent-version hook.
-// The real implementation will be wired in DIST-002 from internal/hooks/version.
+// Package version registers the gogent-version command in the multi-call dispatch table.
 package version
 
 import (
-	"fmt"
-
 	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	versionlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/version"
 )
 
-func init() {
-	multicall.Register("gogent-version", Main)
-}
+func init() { multicall.Register("gogent-version", Main) }
 
-// Main is a stub. Replaced in DIST-002.
-func Main() {
-	fmt.Println("not yet wired: gogent-version")
-}
+func Main() { versionlib.Main() }

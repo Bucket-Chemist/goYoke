@@ -2,14 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
-	"os"
+
+	versionlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/version"
 )
 
 const Version = "0.1.0"
 
+// BuildTime can be overridden at build time:
+//
+//	go build -ldflags "-X main.BuildTime=$(date -u +%FT%TZ)"
 var BuildTime = "development"
 
 type versionInfo struct {
@@ -36,11 +39,7 @@ func run(w io.Writer, jsonOutput bool) error {
 }
 
 func main() {
-	jsonFlag := flag.Bool("json", false, "Output version information as JSON")
-	flag.Parse()
-
-	if err := run(os.Stdout, *jsonFlag); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	// Propagate cmd-level BuildTime (set via ldflags) to the library.
+	versionlib.BuildTime = BuildTime
+	versionlib.Main()
 }

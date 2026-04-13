@@ -15,14 +15,15 @@ package main
 import (
 	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
 
-	// Hook stubs — each init() calls multicall.Register("<binary-name>", Main).
-	// Replace stub imports with real internal/hooks/* packages in DIST-002 through DIST-006.
+	// Hook packages — each init() calls multicall.Register("<binary-name>", Main).
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/agentendstate"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/archive"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/configguard"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/directimplcheck"
+	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/doctheater"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/instructionsaudit"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/loadcontext"
+	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/logreview"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/mlexport"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/orchestratorguard"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/permissiongate"
@@ -31,6 +32,7 @@ import (
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/sharpedge"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/skillguard"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/teamrun"
+	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/updatereviewoutcome"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/validate"
 	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/version"
 )
