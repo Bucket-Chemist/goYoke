@@ -1,18 +1,11 @@
-// Package loadcontext is a placeholder stub for the gogent-load-context hook.
-// The real implementation will be wired in DIST-002 from internal/hooks/loadcontext.
+// Package loadcontext registers the gogent-load-context command in the multi-call dispatch table.
 package loadcontext
 
 import (
-	"fmt"
-
 	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	loadcontextlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/loadcontext"
 )
 
-func init() {
-	multicall.Register("gogent-load-context", Main)
-}
+func init() { multicall.Register("gogent-load-context", Main) }
 
-// Main is a stub. Replaced in DIST-002.
-func Main() {
-	fmt.Println("not yet wired: gogent-load-context")
-}
+func Main() { loadcontextlib.Main() }

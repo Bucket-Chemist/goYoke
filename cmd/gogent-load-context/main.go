@@ -1,114 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"path/filepath"
-	"os"
-	"time"
-
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	loadcontextlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/loadcontext"
 )
 
-const (
-	DEFAULT_TIMEOUT = 5 * time.Second
-)
+// DEFAULT_TIMEOUT aliases the library constant so package-internal tests can
+// reference it by its original name.
+const DEFAULT_TIMEOUT = loadcontextlib.DefaultTimeout
 
-func main() {
-	// Get project directory (priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > cwd)
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
-	if projectDir == "" {
-		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
-	}
-	if projectDir == "" {
-		var err error
-		projectDir, err = os.Getwd()
-		if err != nil {
-			outputError(fmt.Sprintf("Failed to get working directory: %v", err))
-			os.Exit(1)
-		}
-	}
+// outputError is an unexported shim for package-internal tests.
+func outputError(message string) { loadcontextlib.OutputError(message) }
 
-	// Parse SessionStart event from STDIN
-	event, err := session.ParseSessionStartEvent(os.Stdin, DEFAULT_TIMEOUT)
-	if err != nil {
-		outputError(fmt.Sprintf("Failed to parse SessionStart event: %v", err))
-		os.Exit(1)
-	}
-
-	// Create session directory and write marker
-	sessionDir, err := session.CreateSessionDir(projectDir, event.SessionID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: session dir: %v\n", err)
-	} else {
-		if err := session.WriteCurrentSession(projectDir, sessionDir); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: write current-session: %v\n", err)
-		}
-	}
-
-	// Clean up stale skill guard files (C-1 crash recovery)
-	if sessionDir != "" {
-		guardPath := filepath.Join(sessionDir, "active-skill.json")
-		if _, err := os.Stat(guardPath); err == nil {
-			os.Remove(guardPath)
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Cleaned up stale active-skill.json\n")
-		}
-	}
-
-	// Initialize tool counter for attention-gate hook
-	if err := config.InitializeToolCounter(); err != nil {
-		// Non-fatal - log warning and continue
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: Failed to initialize tool counter: %v\n", err)
-	}
-
-	// Build context components
-	ctx := &session.ContextComponents{
-		SessionType: event.Type,
-		SessionDir:  sessionDir,
-	}
-
-	// Load routing schema summary (non-fatal if missing)
-	if summary, err := routing.LoadAndFormatSchemaSummary(); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: %v\n", err)
-	} else {
-		ctx.RoutingSummary = summary
-	}
-
-	// Load handoff for resume sessions only
-	if event.IsResume() {
-		if handoff, err := session.LoadHandoffSummary(projectDir); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: Failed to load handoff: %v\n", err)
-		} else {
-			ctx.HandoffSummary = handoff
-		}
-	}
-
-	// Check pending learnings
-	if pending, err := session.CheckPendingLearnings(projectDir); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: Failed to check pending learnings: %v\n", err)
-	} else {
-		ctx.PendingLearnings = pending
-	}
-
-	// Get git info
-	ctx.GitInfo = session.FormatGitInfo(projectDir)
-
-	// Detect project type
-	ctx.ProjectInfo = session.DetectProjectType(projectDir)
-
-	// Generate response
-	response, err := session.GenerateSessionStartResponse(ctx)
-	if err != nil {
-		outputError(fmt.Sprintf("Failed to generate response: %v", err))
-		os.Exit(1)
-	}
-
-	// Output response to STDOUT
-	fmt.Println(response)
-}
-
-// outputError writes error message in hook format to STDOUT
-func outputError(message string) {
-	fmt.Println(session.GenerateErrorResponse(message))
-}
+func main() { loadcontextlib.Main() }

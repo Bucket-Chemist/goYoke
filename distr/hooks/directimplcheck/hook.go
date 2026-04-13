@@ -1,18 +1,11 @@
-// Package directimplcheck is a placeholder stub for the gogent-direct-impl-check hook.
-// The real implementation will be wired in DIST-002 from internal/hooks/directimplcheck.
+// Package directimplcheck registers the gogent-direct-impl-check command in the multi-call dispatch table.
 package directimplcheck
 
 import (
-	"fmt"
-
 	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	directimplchecklib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/directimplcheck"
 )
 
-func init() {
-	multicall.Register("gogent-direct-impl-check", Main)
-}
+func init() { multicall.Register("gogent-direct-impl-check", Main) }
 
-// Main is a stub. Replaced in DIST-002.
-func Main() {
-	fmt.Println("not yet wired: gogent-direct-impl-check")
-}
+func Main() { directimplchecklib.Main() }
