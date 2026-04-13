@@ -205,7 +205,8 @@ Execute Braintrust workflow:
 4. Assemble Problem Brief
 5. Confirm with user before proceeding
 6. Write config.json + stdin files + problem-brief.md to TEAM_DIR
-7. RETURN — do NOT launch team-run or spawn agents. Router handles dispatch.`,
+7. Launch team-run via mcp__gofortress-interactive__team_run({ team_dir: TEAM_DIR, wait_for_start: true })
+8. RETURN with team-run PID and team directory.`,
 });
 ```
 
@@ -224,19 +225,21 @@ if [[ $? -ne 0 ]]; then
 fi
 ```
 
-### Step 4: Launch Team-Run
+### Step 4: Verify Team-Run Launch
+
+Mozart now launches team-run internally. Check Mozart's output for the PID:
 
 ```
-result = mcp__gofortress-interactive__team_run({
-    team_dir: "$team_dir",
-    wait_for_start: true,
-    timeout_ms: 10000
-})
-if !result.success:
-    echo "[braintrust] ERROR: ${result.result}"
-    rm -f "$session_dir/active-skill.json"
-    exit 1
-background_pid = result.background_pid
+# Mozart output includes: "[Mozart] Team-run launched (PID: {pid})."
+# Extract background_pid from Mozart result.
+# If Mozart reports team-run launch failure, retry from router:
+if mozart_output contains "ERROR: team-run launch failed":
+    result = mcp__gofortress-interactive__team_run({
+        team_dir: "$team_dir",
+        wait_for_start: true,
+        timeout_ms: 10000
+    })
+    background_pid = result.background_pid
 ```
 
 ### Step 5: Remove Skill Guard

@@ -207,10 +207,11 @@ func (m AppModel) handleProviderSwitchExecuteMsg(msg ProviderSwitchExecuteMsg) (
 // drawer on Standard+ tiers, or falls back to the ModalQueue overlay on Compact.
 func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model, tea.Cmd) {
 	// TDS-006: Route to options drawer when available and not Compact tier.
+	// All request types (with or without options) go to the drawer so that
+	// ask_user / request_input requests don't fall through to the modal overlay.
 	dims := m.computeLayout()
 	if dims.tier != LayoutCompact &&
-		m.shared != nil && m.shared.drawerStack != nil &&
-		len(msg.Options) > 0 {
+		m.shared != nil && m.shared.drawerStack != nil {
 		m.shared.drawerStack.SetActiveModal(msg.RequestID, msg.Message, msg.Options)
 		return m, nil
 	}

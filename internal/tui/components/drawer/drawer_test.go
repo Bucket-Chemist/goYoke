@@ -411,6 +411,124 @@ func TestDrawerStackViewNonEmpty(t *testing.T) {
 	}
 }
 
+// ---- Text-input modal mode tests ----
+
+func TestSetActiveModalTextInputMode(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetActiveModal("req-1", "What is your name?", nil)
+
+	if !m.HasActiveModal() {
+		t.Error("HasActiveModal should be true after SetActiveModal with no options")
+	}
+	if !m.IsTextInputMode() {
+		t.Error("IsTextInputMode should be true when options is nil")
+	}
+	if m.State() != DrawerExpanded {
+		t.Error("SetActiveModal should expand the drawer")
+	}
+	if !m.HasContent() {
+		t.Error("SetActiveModal should set hasContent")
+	}
+	if !strings.Contains(m.Content(), "What is your name?") {
+		t.Error("drawer content should contain the modal message")
+	}
+	if !strings.Contains(m.Content(), "[Enter] Submit") {
+		t.Error("drawer content should contain the submit hint")
+	}
+}
+
+func TestSetActiveModalEmptySliceIsTextInputMode(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetActiveModal("req-2", "Confirm?", []string{})
+
+	if !m.IsTextInputMode() {
+		t.Error("IsTextInputMode should be true when options is empty slice")
+	}
+}
+
+func TestIsTextInputModeFalseWhenOptionsPresent(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetActiveModal("req-3", "Choose:", []string{"A", "B"})
+
+	if m.IsTextInputMode() {
+		t.Error("IsTextInputMode should be false when options are present")
+	}
+}
+
+func TestTextInputModeKeyTypingUpdatesContent(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetSize(80, 20)
+	m.SetActiveModal("req-4", "Enter value:", nil)
+
+	// Type 'h', 'i'
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+
+	if !strings.Contains(m.Content(), "hi") {
+		t.Errorf("drawer content should contain typed text 'hi', got: %q", m.Content())
+	}
+}
+
+func TestTextInputModeEnterSubmitsValue(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetSize(80, 20)
+	m.SetActiveModal("req-5", "What?", nil)
+
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+
+	cmd := m.HandleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("Enter in text-input mode should return a non-nil cmd")
+	}
+
+	msg := cmd()
+	resp, ok := msg.(ModalResponseMsg)
+	if !ok {
+		t.Fatalf("cmd() should return ModalResponseMsg, got %T", msg)
+	}
+	if resp.RequestID != "req-5" {
+		t.Errorf("RequestID=%q, want %q", resp.RequestID, "req-5")
+	}
+	if resp.Value != "ok" {
+		t.Errorf("Value=%q, want %q", resp.Value, "ok")
+	}
+	if resp.Cancelled {
+		t.Error("Cancelled should be false on Enter submit")
+	}
+
+	// Modal should be cleared after submit
+	if m.HasActiveModal() {
+		t.Error("HasActiveModal should be false after Enter submit")
+	}
+}
+
+func TestTextInputModeEscCancels(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetSize(80, 20)
+	m.SetActiveModal("req-6", "Prompt?", nil)
+
+	cmd := m.HandleKey(tea.KeyMsg{Type: tea.KeyEsc})
+	if cmd == nil {
+		t.Fatal("Esc in text-input mode should return a non-nil cmd")
+	}
+
+	msg := cmd()
+	resp, ok := msg.(ModalResponseMsg)
+	if !ok {
+		t.Fatalf("cmd() should return ModalResponseMsg, got %T", msg)
+	}
+	if resp.RequestID != "req-6" {
+		t.Errorf("RequestID=%q, want %q", resp.RequestID, "req-6")
+	}
+	if !resp.Cancelled {
+		t.Error("Cancelled should be true on Esc")
+	}
+	if resp.Value != "" {
+		t.Errorf("Value should be empty on cancel, got %q", resp.Value)
+	}
+}
+
 func TestDrawerStackHandleKey(t *testing.T) {
 	s := NewDrawerStack()
 	s.SetSize(80, 20)

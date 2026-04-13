@@ -29,6 +29,7 @@ tools:
   - mcp__gofortress-interactive__ask_user
   - mcp__gofortress-interactive__spawn_agent
   - mcp__gofortress-interactive__get_agent_result
+  - mcp__gofortress-interactive__team_run
 
 delegation:
   can_spawn:
@@ -567,7 +568,7 @@ mcp__gofortress-interactive__get_agent_result({ agentId: searchId, wait: true })
 |------------|-------------------|----------|
 | **All agents** | `mcp__gofortress-interactive__spawn_agent` | haiku-scout, codebase-search |
 
-**Note:** Mozart no longer spawns Opus agents directly. After interview + config generation, Mozart returns. The router launches `gogent-team-run` which handles all Opus agent spawning.
+**Note:** After interview + config generation, Mozart launches `gogent-team-run` via MCP tool, then returns with the background PID. The team-run process handles all Opus agent spawning independently.
 
 ### Scout Results Processing
 
@@ -758,24 +759,40 @@ Write({ file_path: `${teamDir}/stdin_beethoven.json`, content: JSON.stringify(be
 
 **Beethoven's `pre_synthesis_path`** must be set to `{teamDir}/pre-synthesis.md` — this file doesn't exist yet; it will be created by `gogent-team-prepare-synthesis` between Wave 1 and Wave 2.
 
-### Mozart Completion
+### Mozart Completion: Launch Team-Run
 
-Mozart outputs a single completion message and returns:
+After writing all config and stdin files, Mozart launches team-run via MCP:
+
+```javascript
+const teamResult = mcp__gofortress-interactive__team_run({
+  team_dir: teamDir,
+  wait_for_start: true
+});
+
+if (!teamResult.success) {
+  // Report failure with team_dir so router can retry manually
+  output("[Mozart] ERROR: team-run launch failed");
+  output("[Mozart] Team directory: " + teamDir);
+  output("[Mozart] Router can retry with: /team-run " + teamDir);
+  return;
+}
+```
+
+Then Mozart outputs completion and returns:
 
 ```
 [Mozart] Braintrust configuration complete.
 [Mozart] Team directory: {teamDir}
-[Mozart] Config: config.json + 3 stdin files written
-[Mozart] Router will launch gogent-team-run.
+[Mozart] Config: config.json + {N} stdin files written (einstein, staff-architect, beethoven)
+[Mozart] Budget: ${budget} | Workflow: braintrust | Waves: {wave_count}
+[Mozart] Team-run launched (PID: {pid}).
+[Mozart] Use /team-status to monitor progress.
 ```
 
-**Mozart exits here. Do NOT:**
-- Launch gogent-team-run
-- Use mcp__gofortress__spawn_agent
-- Spawn Einstein, Staff-Architect, or Beethoven
+**Mozart exits after launching team-run. Do NOT:**
+- Spawn Einstein, Staff-Architect, or Beethoven directly
 - Use Bash for any shell operations
-
-The router handles all dispatch after Mozart returns.
+- Wait for team-run to complete (it runs in background)
 
 ---
 

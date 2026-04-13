@@ -1,0 +1,61 @@
+{
+  "schema_id": "reviewer",
+  "reviewer": "proteogenomics-reviewer",
+  "status": "complete",
+  "overall_assessment": "BLOCK",
+  "summary": "Protein deduplication absent — duplicate protein sequences from unnormalized variants will accumulate in search database. Database 3.2x reference proteome size without class-specific FDR. NMD-susceptible proteins included.",
+  "findings": [
+    {
+      "id": "PG-1",
+      "severity": "WARNING",
+      "category": "fasta-generation",
+      "file": "pipeline/db_construction/build_fasta.py",
+      "line": 167,
+      "end_line": 182,
+      "title": "Identical protein sequences not deduplicated before database export",
+      "message": "build_fasta.py exports all generated protein sequences without checking for duplicates. When variants are not normalised upstream (see genomics-reviewer GEN-1), the same amino acid substitution may be generated multiple times from different VCF representations of the same variant. Each duplicate produces an independent FASTA entry with a distinct header. The search engine treats these as separate protein identifications.",
+      "impact": "Search database inflated by duplicate protein entries. Each duplicate consumes decoy competition budget, directly inflating actual FDR for the entire variant protein class. Combined with missing variant normalisation upstream, expected duplication rate is 8-15% of variant proteins for a typical indel-containing WGS callset.",
+      "recommendation": "Add deduplication step: group protein sequences by amino acid sequence (MD5 hash), merge headers for identical sequences, export one entry per unique sequence. Use the merged header to retain all variant traceability metadata.",
+      "code_snippet": "# Current: no deduplication\nfor protein in all_proteins:\n    fasta_handle.write(f'>{protein.header}\\n{protein.sequence}\\n')\n\n# Required:\nfrom collections import defaultdict\nseq_to_headers = defaultdict(list)\nfor protein in all_proteins:\n    seq_to_headers[protein.sequence].append(protein.header)\nfor seq, headers in seq_to_headers.items():\n    merged_header = '|'.join(headers)  # or first header + count\n    fasta_handle.write(f'>{merged_header}\\n{seq}\\n')",
+      "sharp_edge_id": "proteogenomics-fasta-dedup-missing",
+      "references": []
+    },
+    {
+      "id": "PG-2",
+      "severity": "WARNING",
+      "category": "database-construction",
+      "file": "pipeline/db_construction/build_fasta.py",
+      "line": 112,
+      "end_line": 128,
+      "title": "Search database 3.2x reference proteome — FDR impact unaddressed",
+      "message": "build_fasta.py generates 65,200 protein sequences. The canonical UniProt human reference proteome contains 20,371 reviewed entries. Ratio: 3.2x. This is below the Nesvizhskii 2014 threshold (>3x) for mandatory class-specific FDR, but given the additional duplication from unnormalized variants (see PG-1), effective inflation is higher. Standard 1% PSM FDR is applied globally.",
+      "impact": "Actual FDR for variant peptide class approximately 3.2x nominal (pre-deduplication). Post-deduplication, effective inflation may be 2.7-2.9x. At nominal 1% FDR: 27-32 false positive variant peptides per 1000 identifications.",
+      "recommendation": "Implement class-specific FDR or apply AF-based filtering to reduce variant protein count. As an immediate mitigation, set psm_fdr: 0.003 to achieve effective 1% FDR for the variant class.",
+      "code_snippet": "# No AF floor, no consequence filtering applied\nfor variant in vcf_reader:\n    proteins.append(generate_protein(variant))\n# Total: 65,200 sequences vs 20,371 reference",
+      "sharp_edge_id": "proteogenomics-db-search-inflation",
+      "references": ["Nesvizhskii AI (2014) Proteogenomics: concepts, applications and computational strategies. Nat Methods 11(11):1114-1125"]
+    },
+    {
+      "id": "PG-3",
+      "severity": "WARNING",
+      "category": "database-construction",
+      "file": "pipeline/db_construction/build_fasta.py",
+      "line": 78,
+      "end_line": 92,
+      "title": "NMD-susceptible truncated proteins included in search database",
+      "message": "Frameshift and stop-gain variants generate truncated protein sequences that are included in the database without NMD susceptibility filtering. Transcripts satisfying the 50-55 nt rule are predicted NMD substrates not expressed in vivo. 12-18% of frameshift variants in a typical WGS callset affect NMD-susceptible transcripts.",
+      "impact": "Phantom peptide candidates in database. MBR can transfer identifications from NMD-susceptible proteins across runs. These phantom proteins, if included in downstream differential expression, produce artefactual fold change signals.",
+      "recommendation": "Apply NMD prediction (NMDterminus or sequence-based rule) and exclude NMD-susceptible truncated proteins, or flag them in headers for post-search filtering.",
+      "code_snippet": "# Includes all frameshift/stop-gain without NMD check\nif variant.consequence in ['frameshift_variant', 'stop_gained']:\n    proteins.append(generate_truncated_protein(variant))",
+      "sharp_edge_id": "proteogenomics-protein-nmd-included",
+      "references": []
+    }
+  ],
+  "files_reviewed": 5,
+  "files_skipped": 0,
+  "metadata": {
+    "duration_ms": 58700,
+    "thinking_budget_used": 10400,
+    "attempt_number": 1
+  }
+}

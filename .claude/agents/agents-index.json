@@ -1397,7 +1397,8 @@
           "Write",
           "mcp__gofortress-interactive__ask_user",
           "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__gofortress-interactive__get_agent_result",
+          "mcp__gofortress-interactive__team_run"
         ]
       },
       "auto_activate": null,
@@ -2614,6 +2615,51 @@
       "spawned_by": [
         "router"
       ]
+    },
+    {
+      "id": "staff-bioinformatician",
+      "parallelization_template": "E",
+      "name": "Staff Bioinformatician",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "staff-bioinformatician",
+      "subagent_type": "Staff Bioinformatician",
+      "triggers": [],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "invoked_by": "team-run wave 1 only (replaces Pasteur)",
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "must_delegate": false,
+      "min_delegations": 0,
+      "outputs": [
+        "stdout JSON with 7-layer review + unified verdict"
+      ],
+      "description": "Cross-domain bioinformatics pipeline synthesis with 7-layer review framework. Replaces Pasteur as wave 1 synthesizer in /review-bioinformatics.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "interactive": false
     }
   ],
   "routing_rules": {

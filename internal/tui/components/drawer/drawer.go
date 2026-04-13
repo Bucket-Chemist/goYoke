@@ -6,6 +6,7 @@ package drawer
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -88,17 +89,26 @@ type DrawerModel struct {
 	activeMessage   string
 	activeOptions   []string
 	selectedIdx     int
+
+	// textInput is used when a modal has no options (ask_user / request_input).
+	// In that mode the drawer renders a free-text input field instead of an
+	// option list.
+	textInput textinput.Model
 }
 
 // NewDrawerModel returns a DrawerModel in the minimised state with no content.
 func NewDrawerModel(id DrawerID, label string, icon string) DrawerModel {
 	vp := viewport.New(0, 0)
+	ti := textinput.New()
+	ti.Placeholder = "Type your response..."
+	ti.CharLimit = 500
 	return DrawerModel{
-		id:       id,
-		state:    DrawerMinimized,
-		label:    label,
-		icon:     icon,
-		viewport: vp,
+		id:        id,
+		state:     DrawerMinimized,
+		label:     label,
+		icon:      icon,
+		viewport:  vp,
+		textInput: ti,
 	}
 }
 
@@ -194,18 +204,36 @@ func (m DrawerModel) ID() DrawerID { return m.id }
 // IsFocused reports whether the drawer currently holds focus.
 func (m DrawerModel) IsFocused() bool { return m.focused }
 
-// SetActiveModal stores the modal request state and renders options into the
-// drawer content area, expanding it automatically.
+// SetActiveModal stores the modal request state and renders the appropriate
+// interaction into the drawer content area, expanding it automatically.
+// When options is non-empty the drawer shows a selection list; when options
+// is empty it shows a free-text input field (ask_user / request_input mode).
 func (m *DrawerModel) SetActiveModal(requestID string, message string, options []string) {
 	m.activeRequestID = requestID
 	m.activeMessage = message
 	m.activeOptions = options
 	m.selectedIdx = 0
 	m.state = DrawerExpanded
-	formatted := m.formatModalContent(message, options, 0)
-	m.content = formatted
-	m.hasContent = true
-	m.viewport.SetContent(formatted)
+
+	if len(options) == 0 {
+		m.textInput.Reset()
+		m.textInput.Focus()
+		formatted := m.formatTextInputContent(message)
+		m.content = formatted
+		m.hasContent = true
+		m.viewport.SetContent(formatted)
+	} else {
+		formatted := m.formatModalContent(message, options, 0)
+		m.content = formatted
+		m.hasContent = true
+		m.viewport.SetContent(formatted)
+	}
+}
+
+// IsTextInputMode reports whether the drawer is currently showing a free-text
+// input prompt (i.e. an active modal with no options list).
+func (m DrawerModel) IsTextInputMode() bool {
+	return m.HasActiveModal() && len(m.activeOptions) == 0
 }
 
 // HasActiveModal returns true when the drawer is displaying a modal choice.
@@ -256,6 +284,17 @@ func (m DrawerModel) formatModalContent(message string, options []string, select
 		}
 	}
 	sb.WriteString("\n[Enter] Select  [Esc] Cancel")
+	return sb.String()
+}
+
+// formatTextInputContent renders the modal prompt together with the current
+// state of the free-text input field.
+func (m DrawerModel) formatTextInputContent(message string) string {
+	var sb strings.Builder
+	sb.WriteString(message)
+	sb.WriteString("\n\n")
+	sb.WriteString(m.textInput.View())
+	sb.WriteString("\n\n[Enter] Submit  [Esc] Cancel")
 	return sb.String()
 }
 
@@ -330,6 +369,39 @@ func (m DrawerModel) View() string {
 func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 	// Modal-active key handling (TDS-006).
 	if m.HasActiveModal() {
+		// Text-input mode: no options list — show a free-text field instead.
+		if m.IsTextInputMode() {
+			switch msg.String() {
+			case "enter":
+				value := m.textInput.Value()
+				reqID := m.activeRequestID
+				m.textInput.Reset()
+				m.textInput.Blur()
+				m.ClearActiveModal()
+				m.ClearContent()
+				return func() tea.Msg {
+					return ModalResponseMsg{RequestID: reqID, Value: value}
+				}
+			case "esc":
+				reqID := m.activeRequestID
+				m.textInput.Reset()
+				m.textInput.Blur()
+				m.ClearActiveModal()
+				m.ClearContent()
+				return func() tea.Msg {
+					return ModalResponseMsg{RequestID: reqID, Value: "", Cancelled: true}
+				}
+			default:
+				var cmd tea.Cmd
+				m.textInput, cmd = m.textInput.Update(msg)
+				formatted := m.formatTextInputContent(m.activeMessage)
+				m.content = formatted
+				m.viewport.SetContent(formatted)
+				return cmd
+			}
+		}
+
+		// Option-selection mode: navigate list and confirm with Enter.
 		switch msg.String() {
 		case "up", "k":
 			if m.selectedIdx > 0 {

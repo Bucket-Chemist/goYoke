@@ -131,14 +131,14 @@
     },
     {
       "wave_number": 2,
-      "description": "Synthesis of domain reviewer findings into unified report",
+      "description": "7-layer cross-domain pipeline synthesis and methodology evaluation (Staff Bioinformatician)",
       "members": [
         {
-          "name": "pasteur",
-          "agent": "pasteur",
+          "name": "staff-bioinformatician",
+          "agent": "staff-bioinformatician",
           "model": "opus",
-          "stdin_file": "stdin_pasteur.json",
-          "stdout_file": "stdout_pasteur.json",
+          "stdin_file": "stdin_staff-bioinformatician.json",
+          "stdout_file": "stdout_staff-bioinformatician.json",
           "status": "pending",
           "process_pid": null,
           "exit_code": null,

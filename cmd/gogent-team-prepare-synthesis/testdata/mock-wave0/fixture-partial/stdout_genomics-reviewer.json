@@ -1,0 +1,61 @@
+{
+  "schema_id": "reviewer",
+  "reviewer": "genomics-reviewer",
+  "status": "complete",
+  "overall_assessment": "WARNING",
+  "summary": "No transcript selection strategy configured. BQSR skipped without documented justification. Minor annotation database version concern. No critical pipeline failures detected.",
+  "findings": [
+    {
+      "id": "GEN-1",
+      "severity": "WARNING",
+      "category": "annotation",
+      "file": "pipeline/annotation/vep_annotation.py",
+      "line": 31,
+      "end_line": 38,
+      "title": "No transcript selection strategy configured for VEP annotation",
+      "message": "VEP runs without --mane_select, --canonical, or --pick. Default returns all transcripts for each variant, and downstream processing selects by longest transcript heuristic. Pathogenic splice variants may be annotated against non-MANE transcripts, reporting them as intronic when the MANE transcript annotation would be coding.",
+      "impact": "Potentially missed pathogenic variants at exon boundaries for non-dominant transcripts. Protein generation may use non-canonical isoforms.",
+      "recommendation": "Add --mane_select --pick_order mane_select,mane_plus_clinical,canonical to VEP command.",
+      "code_snippet": "vep_cmd = ['vep', '--input_file', vcf, '--assembly', 'GRCh38']\n# MISSING: --mane_select or --canonical",
+      "sharp_edge_id": "genomics-anno-no-transcript",
+      "references": []
+    },
+    {
+      "id": "GEN-2",
+      "severity": "WARNING",
+      "category": "alignment",
+      "file": "pipeline/alignment.nf",
+      "line": 62,
+      "end_line": 70,
+      "title": "BQSR skipped without documented justification",
+      "message": "Base quality score recalibration (BQSR) is absent from the alignment pipeline. No comment or config parameter explaining the omission. For WGS data from Illumina sequencers, systematic base quality errors introduce a 2-5% false positive rate increase at Q20 quality boundaries.",
+      "impact": "Systematic base quality errors propagate to variant quality scores. Modest but consistent false positive rate increase across the callset.",
+      "recommendation": "Add GATK BaseRecalibrator → ApplyBQSR with --known-sites matching reference build. If deliberately omitted (e.g., for DeepVariant which performs internal recalibration), document the reason in a config comment.",
+      "code_snippet": "// alignment.nf: BWA-MEM2 | samtools sort -> HaplotypeCaller\n// No BaseRecalibrator or ApplyBQSR step",
+      "sharp_edge_id": "genomics-align-no-bqsr",
+      "references": []
+    },
+    {
+      "id": "GEN-3",
+      "severity": "INFO",
+      "category": "annotation",
+      "file": "config/annotation.config",
+      "line": 12,
+      "end_line": 14,
+      "title": "gnomAD v3.1.2 used with GRCh38 pipeline — v4.0 now available",
+      "message": "Annotation config specifies gnomAD v3.1.2 for population frequency filtering. gnomAD v4.0 was released in late 2023 and includes ~30% more samples plus additional population strata. Variants reclassified between v3.1.2 and v4.0 may affect pathogenicity assessments.",
+      "impact": "Minor: some variants classified as rare in v3.1.2 may be reclassified as common in v4.0 (true positives filtered) or vice versa. No correctness impact for established variants.",
+      "recommendation": "Consider upgrading to gnomAD v4.0 for new analyses. For ongoing studies, document the gnomAD version in Methods to ensure reproducibility.",
+      "code_snippet": "params.gnomad_vcf = 'refs/gnomad/gnomad.genomes.v3.1.2.sites.vcf.bgz'",
+      "sharp_edge_id": null,
+      "references": []
+    }
+  ],
+  "files_reviewed": 4,
+  "files_skipped": 0,
+  "metadata": {
+    "duration_ms": 31800,
+    "thinking_budget_used": 5100,
+    "attempt_number": 1
+  }
+}

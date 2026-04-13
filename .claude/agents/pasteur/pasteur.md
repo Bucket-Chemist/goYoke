@@ -1,3 +1,6 @@
+# [ARCHIVED] Superseded by staff-bioinformatician (2026-04-13)
+# This agent is retained for reference. Use staff-bioinformatician for wave 1 synthesis.
+
 ---
 id: pasteur
 name: Pasteur

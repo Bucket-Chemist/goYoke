@@ -1,0 +1,179 @@
+# Sharp edges for Staff Bioinformatician
+# These are known failure patterns observed during synthesis reviews.
+
+edges:
+  - id: staff-bio-fabricated-connection
+    severity: critical
+    description: >
+      Fabricating cross-domain causal chains not supported by wave 0 reviewer outputs.
+      The synthesis agent invents a connection between findings from different reviewers
+      that sounds plausible but has no evidence in the actual outputs. This produces
+      false critical findings that waste investigation time.
+    detection: >
+      Check if the cited reviewer findings actually exist in the stdout files.
+      If the causal chain references a check number that the reviewer didn't flag,
+      the connection is fabricated.
+    mitigation: >
+      Only report connections with explicit evidence from 2+ reviewer outputs.
+      Cite the specific check numbers and finding text from each reviewer.
+
+  - id: staff-bio-layer-skip
+    severity: warning
+    description: >
+      Skipping foundation layers (1-3) and jumping directly to finding synthesis (Layer 4).
+      This misses the most dangerous cross-domain failures: data integrity breaks,
+      version mismatches, and FDR chain failures. These foundation issues may
+      invalidate all findings reported in later layers.
+    detection: >
+      Output contains Layer 4+ findings but Layer 1-3 assessments are empty,
+      "PASS" without evidence, or missing entirely.
+    mitigation: >
+      Always evaluate layers in order. Layers 1-3 findings explicitly gate
+      the validity of Layers 4-7.
+
+  - id: staff-bio-severity-inflation
+    severity: warning
+    description: >
+      Systematically upgrading findings from "warning" to "critical" during synthesis
+      without genuine cross-domain interaction justifying the upgrade. This creates
+      alarm fatigue and reduces trust in the synthesis output.
+    detection: >
+      Count severity reclassifications. If >50% of findings are upgraded,
+      check whether each upgrade has a documented cross-domain justification.
+    mitigation: >
+      Reclassify severity only when cross-domain interaction genuinely
+      increases the impact. Document the interaction for each reclassification.
+
+  - id: staff-bio-domain-overreach
+    severity: warning
+    description: >
+      Making domain-specific findings that belong to wave 0 reviewers rather than
+      synthesizing existing findings. The staff-bioinformatician should not generate
+      new "proteomics-reviewer check #42" style findings — it should connect
+      existing findings across domains.
+    detection: >
+      Finding references a specific tool parameter, code pattern, or domain-specific
+      methodology without citing a wave 0 reviewer's output as the source.
+    mitigation: >
+      All domain-specific content must trace back to a wave 0 reviewer output.
+      If a domain gap exists, flag it at Layer 7 (coverage gap), don't fill it.
+
+  - id: staff-bio-verdict-unjustified
+    severity: critical
+    description: >
+      Producing BLOCK or APPROVE verdict without tracing to specific layer findings.
+      A verdict without justification is unactionable — the user can't determine
+      what to fix (for BLOCK) or what was validated (for APPROVE).
+    detection: >
+      Verdict section lacks per-layer status summary or cites no specific findings.
+    mitigation: >
+      Every verdict must include per-layer status and cite the key finding that
+      determined the verdict. BLOCK must cite the blocking finding. APPROVE must
+      confirm all 7 layers passed or had only minor concerns.
+
+  - id: staff-bio-incomplete-wave0-read
+    severity: critical
+    description: >
+      Not reading all available wave 0 reviewer outputs before beginning synthesis.
+      Missing a reviewer's output means their findings are absent from ALL 7 layers,
+      creating systematic blind spots. This is especially dangerous if the missed
+      reviewer flagged critical findings.
+    detection: >
+      Count reviewer outputs in stdin wave_0_outputs vs reviewer outputs actually
+      referenced in the synthesis. If any completed reviewer is unreferenced, their
+      output was not read.
+    mitigation: >
+      Read ALL stdout files listed in wave_0_outputs before beginning any layer
+      analysis. Batch all reads in a single message.
+
+  - id: staff-bio-contradiction-ignored
+    severity: warning
+    description: >
+      Contradictory findings from different reviewers present in wave 0 outputs
+      but not addressed in Layer 5. Unresolved contradictions leave the user
+      with conflicting guidance and no resolution.
+    detection: >
+      Two reviewers flag the same pipeline component with different severities
+      or different assessments, but Layer 5 contains no contradiction entry.
+    mitigation: >
+      Scan all findings for overlapping scope (same file, same parameter,
+      same pipeline stage). Any overlap with different severity or conflicting
+      recommendations must be addressed in Layer 5.
+
+  - id: staff-bio-missing-fdr-chain
+    severity: critical
+    description: >
+      Layer 3 (Statistical Coherence) does not trace the FDR chain end-to-end.
+      The most common cross-domain statistical failure is database-inflated FDR:
+      proteogenomics-reviewer reports custom DB inflation, proteomics-reviewer
+      reports standard FDR, but the staff-bioinformatician doesn't connect them.
+    detection: >
+      Layer 3 assessment mentions FDR but doesn't cross-reference database size
+      findings from proteogenomics-reviewer with FDR methodology from proteomics-reviewer.
+    mitigation: >
+      Always check: (1) what is the search DB size? (2) what FDR methodology is used?
+      (3) does the FDR methodology account for the DB size? This is the single most
+      important cross-domain statistical check.
+  - id: staff-bio-citation-dressing
+    severity: critical
+    description: >
+      Fabricating cross-domain connections by filling in template-suggested check
+      pairs even when actual reviewer outputs don't support the connection. Unlike
+      bare fabrication (staff-bio-fabricated-connection), citation-dressing appears
+      verified because it cites real sharp_edge_ids and matches plausible interaction
+      patterns. This is more dangerous than bare fabrication because it resists
+      verification — the IDs resolve, the pattern is plausible, but the evidence
+      is insufficient.
+    detection: >
+      Cross-domain connection cites specific sharp_edge_ids from the Interaction Map
+      or Causal Chain Library, but the cited checks were PASS or not flagged in actual
+      reviewer outputs. The connection pattern matches a template suggestion rather
+      than evidence from the review. Key signal: the chain narrative uses interaction
+      map language rather than evidence-specific language from reviewer findings.
+    mitigation: >
+      Only report connections where BOTH reviewer outputs contain WARNING or CRITICAL
+      findings at the referenced sharp_edge_ids. A PASS at either end means no
+      connection exists — the template is a guide for WHERE to look, not a guarantee
+      that a problem exists. Chain narratives must quote specific findings from
+      reviewer outputs, not paraphrase library pattern descriptions.
+
+  - id: staff-bio-template-driven-connection
+    severity: warning
+    description: >
+      Causal chains that map 1:1 to Causal Chain Library patterns without independent
+      evidence from the specific pipeline under review. The agent treats pre-built
+      patterns as a checklist to fill in rather than diagnostic hypotheses to verify.
+      This produces false causal chains that appear well-supported because they match
+      template patterns and cite valid sharp_edge_ids.
+    detection: >
+      All reported causal chains correspond exactly to Causal Chain Library entries
+      with no novel connections. Chain narratives reuse library language verbatim
+      rather than describing pipeline-specific evidence. The number of reported
+      chains suspiciously matches the number of applicable library patterns.
+    mitigation: >
+      Frame library chains as diagnostic hypotheses: "Check whether Chain N applies
+      by verifying [specific evidence] in [specific reviewer output]." Require chain
+      narratives to cite specific finding text from reviewer outputs. If a chain
+      matches a library pattern, the narrative must describe what pipeline-specific
+      evidence confirms the pattern, not just assert the match.
+
+  - id: staff-bio-signal-dilution
+    severity: warning
+    description: >
+      A domain reviewer's CRITICAL finding is downgraded to WARNING or CONCERN
+      during synthesis without explicit cross-domain justification. This is the
+      mirror of staff-bio-severity-inflation and equally dangerous. Domain reviewers
+      are authoritative within their scope — their severity assessment reflects
+      domain expertise the synthesizer lacks.
+    detection: >
+      A finding classified as CRITICAL by a wave 0 reviewer appears at WARNING
+      or CONCERN severity in the synthesis output. The severity change lacks an
+      explicit cross-domain justification citing a specific finding from another
+      reviewer that provides mitigating evidence (a NEGATING interaction per the
+      Boundary Interaction Algebra).
+    mitigation: >
+      Domain reviewer CRITICAL findings can only be downgraded in synthesis if
+      another reviewer's finding provides specific mitigating evidence — a NEGATING
+      interaction where the downstream finding explicitly compensates for the
+      upstream concern. "The issue seems less important in context" is NOT sufficient
+      justification. If no NEGATING evidence exists, preserve the original severity.
