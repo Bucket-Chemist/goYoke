@@ -162,17 +162,26 @@ Cross-check these sharp_edge_id pairs at each boundary. When BOTH sides flag WAR
 | FASTA → Search | `proteogenomics-fasta-header-incomplete` | `proteomics-search-header-incompatible` | Protein grouping fails silently; quantification aggregates wrong proteins |
 | FASTA → Search | `proteogenomics-db-search-inflation` | `proteomics-fdr-global-only` | Variant peptide FDR 3-5x nominal (see Layer 3 FDR Detection Matrix) |
 | FASTA → Search | `proteogenomics-db-reference-gap` | `proteomics-fdr-global-only` | Target-decoy calibration biased; FDR underestimated for reference class |
-| Spectral → Search | mass-spec: centroiding/calibration quality | `proteomics-search-precursor-tolerance` | Noise peaks match as PSMs if mass accuracy doesn't match tolerance |
-| Spectral → Search | mass-spec: DIA acquisition | `proteomics-dia-library-provenance` | Mismatched library: false negatives + miscalibrated RT predictions |
+| Spectral → Search | `massspec-spectral-centroiding`, `massspec-cal-mass-accuracy` | `proteomics-search-precursor-tolerance` | Noise peaks match as PSMs if mass accuracy doesn't match tolerance |
+| Spectral → Search | `massspec-acq-dia-window`, `massspec-acq-dia-cycle-time` | `proteomics-dia-library-provenance` | Mismatched library: false negatives + miscalibrated RT predictions |
+| Spectral → Deconvolution | `massspec-spectral-centroiding` | `proteoform-deconv-charge-cascade` | GATING: poor centroiding invalidates deconvolution; phantom proteoforms |
+| Spectral → Deconvolution | `massspec-cal-mass-accuracy` | `proteoform-deconv-psf-mismatch` | GATING: mass accuracy issues cascade to deconvolved mass assignment |
+| Spectral → Deconvolution | `massspec-acq-collision-energy` | `proteoform-ptm-no-fragment-evidence` | Wrong fragmentation energy → poor fragment coverage → PTM localization fails |
+| Container → Annotation | `bioinfo-repro-mutable-tag` | `proteogenomics-version-vep-pyensembl` | Container drift → VEP cache version change → different protein sequences |
+| Container → Reference | `bioinfo-repro-mutable-reference` | `genomics-ref-wrong-build` | Mutable reference URL → wrong genome build silently loaded |
+| Error handling → FDR | `bioinfo-arch-silent-fail` | `proteomics-fdr-global-only` | Silent sample dropout × global FDR → FDR calibrated on incomplete sample set |
 
 **Non-Sequential Boundaries:**
 
 | Boundary | Reviewers | Key IDs | What Can Break |
 |---|---|---|---|
-| Reference in containers | genomics × bioinformatician | `genomics-ref-wrong-build` + bioinformatician: container reference consistency | Container bundles different reference build than pipeline config |
-| Acquisition → Search config | mass-spec × proteomics | mass-spec: acquisition parameters + `proteomics-search-precursor-tolerance` | Instrument mass accuracy doesn't match search tolerance |
-| Variant × PTM | proteogenomics × proteoform | `proteogenomics-digest-cleavage-site` + proteoform: PTM site assignment | Variant creates/destroys PTM site not modeled in proteoform analysis |
+| Reference in containers | genomics × bioinformatician | `genomics-ref-wrong-build` + `bioinfo-repro-mutable-tag` | Container bundles different reference build than pipeline config |
+| Acquisition → Search config | mass-spec × proteomics | `massspec-cal-mass-accuracy`, `massspec-acq-collision-energy` + `proteomics-search-precursor-tolerance` | Instrument mass accuracy doesn't match search tolerance |
+| Variant × PTM | proteogenomics × proteoform | `proteogenomics-digest-cleavage-site` + `proteoform-ptm-no-fragment-evidence`, `proteoform-mass-adduct-as-ptm` | Variant creates/destroys PTM site not modeled in proteoform analysis |
 | Phase × Haplotype | genomics × proteogenomics | `genomics-vc-wrong-ploidy` + `proteogenomics-protein-phase-ignored` | Phasing quality affects haplotype-specific protein generation |
+| Spectral quality × deconvolution | mass-spec × proteoform | `massspec-cal-mass-drift` + `proteoform-deconv-em-local-optima` | Mass drift during acquisition shifts charge state envelopes → EM converges to wrong local optimum |
+| Container × reference consistency | bioinformatician × genomics | `bioinfo-repro-mutable-tag` + `genomics-ref-wrong-build` | Container reference ≠ pipeline reference; container bundles different genome build |
+| Pipeline error × quantification | bioinformatician × proteomics | `bioinfo-arch-silent-fail` + `proteomics-quant-mnar-as-mcar` | Silent sample dropout creates MNAR pattern that MCAR imputation masks as random |
 
 **How to evaluate:**
 
@@ -247,7 +256,7 @@ A pipeline hardcodes VEP cache version 108 but uses `pyensembl.EnsemblRelease(11
 | FDR chain integrity | PSM FDR → peptide FDR → protein FDR → differential expression. Is FDR controlled at each level? Does protein-level FDR account for the DB used? | `proteomics-fdr-global-only`, `proteomics-fdr-no-parsimony` + `proteogenomics-db-search-inflation`, `proteogenomics-db-class-fdr` |
 | Database size × FDR coupling | If proteogenomics-reviewer reports custom DB size >3x reference AND proteomics-reviewer reports standard 1% FDR, the actual variant-class FDR may be 5-15% | `proteomics-fdr-global-only` + `proteogenomics-db-search-inflation` |
 | Multi-stage independence | If the pipeline has iterative/multi-stage search (forward then targeted), are FDR assessments independent or correlated? | `proteomics-fdr-multistage-dependent` |
-| Quantification assumptions | Does the quantification method match the data characteristics? TMT on DIA data? LFQ normalization on TMT data? | `proteomics-quant-normalization-mismatch`, `proteomics-quant-tmt-no-compression` + mass-spec: acquisition mode |
+| Quantification assumptions | Does the quantification method match the data characteristics? TMT on DIA data? LFQ normalization on TMT data? | `proteomics-quant-normalization-mismatch`, `proteomics-quant-tmt-no-compression` + `massspec-acq-mode-mismatch` |
 | Missing value mechanism | Is the imputation method appropriate for the missingness mechanism (MNAR vs MCAR)? | `proteomics-quant-mnar-as-mcar`, `proteomics-mbr-no-fdr` |
 
 **Critical interaction to watch:**
@@ -347,11 +356,11 @@ Four types of cross-domain finding interaction. For each pair of findings from d
 | 22 | `proteogenomics-vep-pick-coverage` | `proteogenomics-db-search-inflation` | negating | --pick reduces DB, mitigating inflation | May reduce severity; check goals |
 | 23 | `proteogenomics-vep-consequence-filter` | `proteogenomics-db-search-inflation` | negating | Consequence filtering reduces DB size | May reduce severity if appropriate |
 | 24 | `proteomics-rescore-training-mismatch` | `proteomics-fdr-global-only` | multiplicative | Miscalibrated rescoring × PSM-only FDR | Escalate to critical |
-| 25 | `proteomics-quant-tmt-no-compression` | mass-spec: MS3/FAIMS acquisition | negating | MS3 mitigates TMT compression at hardware | Reduce severity if MS3 confirmed |
-| 26 | mass-spec: DIA acquisition | `proteomics-dia-library-provenance` | multiplicative | DIA × mismatched library = false negatives | Escalate; check library source |
-| 27 | mass-spec: centroiding quality | `proteomics-search-precursor-tolerance` | multiplicative | Poor centroiding × wrong tolerance = noise matches | Check mass accuracy reports |
-| 28 | `genomics-ref-wrong-build` | bioinformatician: container reference | gating | Container reference ≠ pipeline reference | Layer 2 FAIL |
-| 29 | `proteogenomics-digest-cleavage-site` | proteoform: PTM site assignment | additive | Variant cleavage + PTM conflict | Flag for domain expert review |
+| 25 | `proteomics-quant-tmt-no-compression` | `massspec-acq-sps-ms3` | negating | MS3 mitigates TMT compression at hardware | Reduce severity if MS3 confirmed |
+| 26 | `massspec-acq-dia-window`, `massspec-acq-dia-cycle-time` | `proteomics-dia-library-provenance` | multiplicative | DIA × mismatched library = false negatives | Escalate; check library source |
+| 27 | `massspec-spectral-centroiding`, `massspec-cal-mass-accuracy` | `proteomics-search-precursor-tolerance` | multiplicative | Poor centroiding × wrong tolerance = noise matches | Check mass accuracy reports |
+| 28 | `genomics-ref-wrong-build` | `bioinfo-repro-mutable-tag` | gating | Container reference ≠ pipeline reference | Layer 2 FAIL |
+| 29 | `proteogenomics-digest-cleavage-site` | `proteoform-ptm-no-fragment-evidence`, `proteoform-mass-adduct-as-ptm` | additive | Variant cleavage + PTM conflict | Flag for domain expert review |
 
 **Unmatched findings:** Cross-boundary findings that don't match any entry in this map should be reported as "potential interaction — recommend domain expert review" rather than silently dropped.
 
@@ -388,6 +397,42 @@ Four types of cross-domain finding interaction. For each pair of findings from d
 - Algebra: MULTIPLICATIVE
 - Mechanism: Inflated custom DB used in multi-stage search where FDR is per-stage but stages share spectra. Stage 1 nominal FDR on inflated DB already underestimated. Stage 2 inherits contaminated spectra. Compound effect makes total FDR essentially uncalibrated.
 - Systemic severity: critical
+
+**Chain 6: Centroiding → Deconvolution Artifacts → False Proteoforms**
+- Path: `massspec-spectral-centroiding` → `proteoform-deconv-charge-cascade` → `proteoform-assign-fdr-wrong-level`
+- Algebra: GATING at first step → MULTIPLICATIVE at downstream
+- Mechanism: Poor centroiding splits or merges peaks at the spectral level. Deconvolution algorithms assign charge states based on inter-peak spacing — corrupted spacing produces phantom charge state envelopes. These generate fictitious proteoform masses that enter the PrSM database and inflate false discovery. Unlike database search (which tolerates some mass error), deconvolution is mathematically non-recoverable from centroiding errors.
+- Systemic severity: critical
+
+**Chain 7: Container Drift → VEP Change → Different Proteins → Search Invalidation**
+- Path: `bioinfo-repro-mutable-tag` → `proteogenomics-version-vep-pyensembl` → proteogenomics protein generation affected → `proteomics-fdr-global-only` compromised
+- Algebra: GATING at first step, MULTIPLICATIVE at downstream
+- Mechanism: Container image tag is mutable. Maintainer rebuilds with updated VEP cache. VEP annotations use different transcript models. PyEnsembl resolves transcript IDs to different exon structures. Proteins built from wrong gene models. Custom database contains different proteins. Search results and FDR calibrated against wrong target distribution. No individual reviewer sees the full chain — only the staff-bioinformatician can connect `bioinfo-repro-mutable-tag` (bioinformatician finding) to `proteogenomics-version-vep-pyensembl` (proteogenomics finding).
+- Systemic severity: critical
+
+**Chain 8: Resolution Mismatch → Charge State Confusion → Artifact Proteoforms**
+- Path: `massspec-inst-resolution-mismatch` → `proteoform-deconv-charge-cascade` → `proteoform-mass-adduct-as-ptm`
+- Algebra: MULTIPLICATIVE
+- Mechanism: Insufficient MS1 resolution prevents separation of adjacent charge state isotope envelopes. Overlapping envelopes are deconvolved as single species at intermediate mass. The mass error from merged envelopes falls in the range of common adduct/PTM masses (+22 Da Na+, +42 Da acetylation), leading to false PTM assignment on artifact masses.
+- Systemic severity: critical
+
+**Chain 9: Silent Sample Dropout → Biased Quantification → False Differential Expression**
+- Path: `bioinfo-arch-silent-fail` → incomplete sample set → `proteomics-quant-mnar-as-mcar`
+- Algebra: MULTIPLICATIVE at first step → ADDITIVE downstream
+- Mechanism: Nextflow `errorStrategy 'ignore'` causes failed samples to emit empty output channels. `.collect()` aggregates N-1 samples. If the dropped sample is from one treatment group, the missing data pattern is MNAR. MCAR imputation fills the gap with population mean, creating false abundance estimates. Differential expression detects "significant" differences that are artifacts of the dropout + imputation.
+- Systemic severity: critical
+
+**Chain 10: Unpinned Environment → Tool Version Change → Different Statistical Results**
+- Path: `bioinfo-repro-unlocked-env` → tool behavior change → statistical analysis affected
+- Algebra: GATING
+- Mechanism: Unpinned environment resolves to different tool version between runs. Statistical test implementation changes between versions (default hypothesis, tie handling, continuity correction). Results differ with no code change. If multiple testing correction was borderline, version change flips significance calls.
+- Systemic severity: warning
+
+**Chain 11: Mass Accuracy Drift → Search Mismatch → Identification Failure**
+- Path: `massspec-cal-mass-drift` → `massspec-cal-no-lockmass` → `proteomics-search-precursor-tolerance`
+- Algebra: ADDITIVE → MULTIPLICATIVE
+- Mechanism: Mass accuracy drifts over multi-hour acquisition without lock mass correction. Early samples within ±3 ppm, late samples at ±15 ppm. Search engine tolerance set to ±10 ppm. Late-run precursor masses fall outside tolerance window. Appears as "fewer identifications in later samples" but root cause is calibration drift, not biology.
+- Systemic severity: warning
 
 ---
 
@@ -456,7 +501,7 @@ For each pair of contradictory findings:
 | Decision Dimension | What to Check | Check Against (sharp_edge_ids) | Assessment |
 |---|---|---|---|
 | Search strategy (forward/inverted/chimeric) | Does DB construction match search engine expectations? | `proteogenomics-db-search-inflation`, `proteomics-fdr-multistage-dependent` | _from review_ |
-| Quantification method (LFQ/TMT/SILAC/DIA) | Does quant method match acquisition mode and study design? | `proteomics-quant-normalization-mismatch`, `proteomics-quant-tmt-no-compression`, mass-spec: acquisition mode | _from review_ |
+| Quantification method (LFQ/TMT/SILAC/DIA) | Does quant method match acquisition mode and study design? | `proteomics-quant-normalization-mismatch`, `proteomics-quant-tmt-no-compression`, `massspec-acq-mode-mismatch` | _from review_ |
 | VEP annotation strategy (--pick/--per_gene) | Does strategy balance search space vs isoform coverage? | `proteogenomics-vep-pick-coverage`, `proteogenomics-db-search-inflation` | _from review_ |
 | Analysis type (germline/somatic/population) | Is variant caller matched to analysis type? Is DB construction appropriate? | `genomics-vc-wrong-caller`, `proteogenomics-popgen-af-ploidy`, `proteogenomics-popgen-no-af-floor` | _from review_ |
 | Filtering stringency (AF/QUAL/expression) | Do thresholds balance sensitivity vs FDR? | `genomics-vc-no-filter`, `proteogenomics-vcf-filter-ignored`, `proteogenomics-popgen-no-af-floor` | _from review_ |
@@ -514,9 +559,9 @@ When the pipeline's approach can be compared against alternatives:
 | FDR/statistical control | — | class FDR context | PRIMARY | — | — | — | HIGH |
 | Quantification | — | — | PRIMARY | — | quant QC | — | MEDIUM |
 | RT alignment / MBR | — | — | MBR config | — | RT quality | — | LOW |
-| Spectral processing | — | — | — | deconvolution | PRIMARY | — | MEDIUM |
-| Proteoform assignment | — | variant context | — | PRIMARY | — | — | LOW (conditional) |
-| Pipeline reproducibility | — | — | — | — | — | PRIMARY | MEDIUM |
+| Spectral processing | — | — | — | deconvolution | PRIMARY | — | HIGH |
+| Proteoform assignment | — | variant context | — | PRIMARY | — | — | MEDIUM |
+| Pipeline reproducibility | — | — | — | — | — | PRIMARY | HIGH |
 
 **Density legend:** HIGH = 8+ checks across reviewers with cross-references. MEDIUM = 4-7 checks. LOW = <4 checks, minimal cross-referencing. LOW-density stages are structural blind spots regardless of pipeline-specific findings.
 
