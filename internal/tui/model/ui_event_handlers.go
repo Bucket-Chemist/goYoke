@@ -213,6 +213,11 @@ func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model
 	if dims.tier != LayoutCompact &&
 		m.shared != nil && m.shared.drawerStack != nil {
 		m.shared.drawerStack.SetActiveModal(msg.RequestID, msg.Message, msg.Options)
+		m.focus = FocusOptionsDrawer
+		m.syncFocusState()
+		m.updateHintContext()
+		m.updateBreadcrumbs()
+		m.propagateContentSizes()
 		return m, nil
 	}
 

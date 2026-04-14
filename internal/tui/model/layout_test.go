@@ -467,6 +467,7 @@ func (s *stubDrawerStack) SetActiveModal(_ string, _ string, _ []string)   {}
 func (s *stubDrawerStack) HasActiveModal() bool                            { return false }
 func (s *stubDrawerStack) OptionsActiveRequestID() string                  { return "" }
 func (s *stubDrawerStack) OptionsSelectedOption() string                   { return "" }
+func (s *stubDrawerStack) ClearOptionsModal()                              {}
 
 func TestComputeDrawerLayout(t *testing.T) {
 	t.Parallel()

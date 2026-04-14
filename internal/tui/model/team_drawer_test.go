@@ -55,6 +55,7 @@ func (s *trackingDrawerStack) SetActiveModal(_, _ string, _ []string) {}
 func (s *trackingDrawerStack) HasActiveModal() bool             { return false }
 func (s *trackingDrawerStack) OptionsActiveRequestID() string   { return "" }
 func (s *trackingDrawerStack) OptionsSelectedOption() string    { return "" }
+func (s *trackingDrawerStack) ClearOptionsModal()               {}
 
 // trackingTeamsHealth controls HasData/HasRunningTeam for tests.
 type trackingTeamsHealth struct {

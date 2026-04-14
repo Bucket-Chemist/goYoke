@@ -427,6 +427,22 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.shared.bridge.ResolveModalSimple(msg.RequestID, value)
 		}
+		// Clear stale drawer modal state when the response came from the
+		// full-screen OptionsViewModal (which doesn't call ClearActiveModal).
+		if m.shared != nil && m.shared.drawerStack != nil &&
+			m.shared.drawerStack.OptionsActiveRequestID() == msg.RequestID {
+			m.shared.drawerStack.ClearOptionsModal()
+		}
+		// Snap focus back to Claude if the options drawer just minimized.
+		if m.focus == FocusOptionsDrawer && m.shared != nil && m.shared.drawerStack != nil {
+			if !m.shared.drawerStack.OptionsHasContent() {
+				m.focus = FocusClaude
+				m.syncFocusState()
+				m.updateHintContext()
+				m.updateBreadcrumbs()
+				m.propagateContentSizes()
+			}
+		}
 		return m, nil
 
 	case drawer.PlanViewRequestMsg:

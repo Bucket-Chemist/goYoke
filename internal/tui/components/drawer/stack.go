@@ -171,6 +171,12 @@ func (s *DrawerStack) OptionsActiveRequestID() string { return s.options.ActiveR
 // OptionsSelectedOption returns the currently highlighted option label from the options drawer.
 func (s *DrawerStack) OptionsSelectedOption() string { return s.options.SelectedOption() }
 
+// ClearOptionsModal clears the active modal state and content from the options drawer.
+func (s *DrawerStack) ClearOptionsModal() {
+	s.options.ClearActiveModal()
+	s.options.ClearContent()
+}
+
 // SetTeamsContent sets content in the teams drawer (auto-expands it).
 func (s *DrawerStack) SetTeamsContent(content string) { s.teams.SetContent(content) }
 

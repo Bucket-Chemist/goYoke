@@ -538,6 +538,7 @@ type drawerStackWidget interface {
 	HasActiveModal() bool
 	OptionsActiveRequestID() string
 	OptionsSelectedOption() string
+	ClearOptionsModal()
 }
 
 // ---------------------------------------------------------------------------

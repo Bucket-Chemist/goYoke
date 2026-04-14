@@ -298,6 +298,21 @@ func (m DrawerModel) formatTextInputContent(message string) string {
 	return sb.String()
 }
 
+// scrollToSelected adjusts the viewport offset so the currently selected
+// option line is visible. Called after changing selectedIdx.
+func (m *DrawerModel) scrollToSelected() {
+	if len(m.activeOptions) == 0 {
+		return
+	}
+	msgLines := strings.Count(m.activeMessage, "\n") + 1
+	targetLine := msgLines + 1 + m.selectedIdx // +1 for blank line after message
+	if targetLine < m.viewport.YOffset {
+		m.viewport.YOffset = targetLine
+	} else if targetLine >= m.viewport.YOffset+m.viewport.Height {
+		m.viewport.YOffset = targetLine - m.viewport.Height + 1
+	}
+}
+
 // ViewMinimized renders a compact bordered row: icon + label.
 func (m DrawerModel) ViewMinimized() string {
 	tab := config.StyleSubtle.Render(m.icon + " " + m.label)
@@ -410,6 +425,7 @@ func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 			formatted := m.formatModalContent(m.activeMessage, m.activeOptions, m.selectedIdx)
 			m.content = formatted
 			m.viewport.SetContent(formatted)
+			m.scrollToSelected()
 		case "down", "j":
 			if m.selectedIdx < len(m.activeOptions)-1 {
 				m.selectedIdx++
@@ -417,6 +433,7 @@ func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 			formatted := m.formatModalContent(m.activeMessage, m.activeOptions, m.selectedIdx)
 			m.content = formatted
 			m.viewport.SetContent(formatted)
+			m.scrollToSelected()
 		case "enter":
 			selected := m.SelectedOption()
 			reqID := m.activeRequestID
@@ -431,6 +448,22 @@ func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 			m.ClearContent()
 			return func() tea.Msg {
 				return ModalResponseMsg{RequestID: reqID, Value: "", Cancelled: true}
+			}
+		case "alt+o":
+			if m.id == DrawerOptions {
+				reqID := m.activeRequestID
+				message := m.activeMessage
+				opts := m.activeOptions
+				idx := m.selectedIdx
+				return func() tea.Msg {
+					return OptionsViewRequestMsg{
+						Interactive: true,
+						RequestID:   reqID,
+						Message:     message,
+						Options:     opts,
+						SelectedIdx: idx,
+					}
+				}
 			}
 		}
 		// Swallow all other keys during modal interaction.

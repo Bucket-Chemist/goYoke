@@ -145,6 +145,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.syncFocusState()
 		m.updateHintContext()
 		m.updateBreadcrumbs()
+		m.propagateContentSizes()
 		// Flash the active tab to acknowledge the focus change (TUI-061).
 		return m, tabFlashCmd(int(m.activeTab))
 
@@ -159,6 +160,7 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.syncFocusState()
 		m.updateHintContext()
 		m.updateBreadcrumbs()
+		m.propagateContentSizes()
 		// Flash the active tab to acknowledge the focus change (TUI-061).
 		return m, tabFlashCmd(int(m.activeTab))
 
@@ -484,6 +486,7 @@ func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.syncFocusState()
 		m.updateHintContext()
 		m.updateBreadcrumbs()
+		m.propagateContentSizes()
 	}
 
 	return m, cmd
