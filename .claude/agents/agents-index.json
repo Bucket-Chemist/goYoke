@@ -2445,7 +2445,7 @@
         "python.md",
         "R.md"
       ],
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 15,
       "description": "Top-down proteomics and proteoform analysis review. Intact mass, PTM combinatorics, proteoform families, deconvolution, sequence coverage.",
       "context_requirements": {
         "rules": [
@@ -2499,7 +2499,7 @@
       "conventions_required": [
         "python.md"
       ],
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 17,
       "description": "MS instrumentation and data acquisition review. DDA/DIA/PRM methods, calibration, raw data quality, vendor formats (Thermo/Bruker/SCIEX/Waters), spectral processing.",
       "context_requirements": {
         "rules": [
@@ -2554,7 +2554,7 @@
         "python.md",
         "R.md"
       ],
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 20,
       "description": "Pipeline architecture and methodology review. Nextflow/Snakemake/WDL workflows, Docker/Singularity/Conda reproducibility, statistics, data provenance.",
       "context_requirements": {
         "rules": [

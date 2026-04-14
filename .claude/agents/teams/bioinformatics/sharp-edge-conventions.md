@@ -85,3 +85,82 @@ Categories: `ref` (reference genome), `align` (alignment), `vc` (variant calling
 | `genomics-align-no-contamination` | critical | No contamination estimation step (VerifyBamID2 / CalculateContamination) |
 | `genomics-vc-wrong-dv-model` | critical | DeepVariant model type does not match sequencing data type |
 | `genomics-vc-wrong-ploidy` | warning | Sex chromosome or mitochondrial ploidy not handled (default diploid) |
+
+---
+
+## proteoform (proteoform-reviewer)
+
+Categories: `deconv` (deconvolution), `ptm` (PTM localization), `assign` (proteoform assignment), `mass` (mass discrimination), `coverage` (sequence coverage).
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| `proteoform-deconv-charge-cascade` | critical | Charge state assignment error producing phantom proteoforms at harmonic masses |
+| `proteoform-deconv-harmonic-artifact` | critical | Harmonic artifacts from dominant species at mass/N ratios |
+| `proteoform-deconv-em-local-optima` | critical | EM deconvolution merges overlapping proteoforms into chimeric mass |
+| `proteoform-deconv-regularization` | critical | UniDec stiffness miscalibrated — FP/FN tradeoff |
+| `proteoform-deconv-psf-mismatch` | critical | UniDec mzsig doesn't match instrument peak width |
+| `proteoform-deconv-resolution-mismatch` | warning | Deconvolution resolution doesn't match instrument capability |
+| `proteoform-deconv-intensity-bias` | warning | EM intensity biased toward abundant species in overlapping envelopes |
+| `proteoform-ptm-no-fragment-evidence` | critical | PTM localization claimed without flanking fragment coverage |
+| `proteoform-ptm-combinatorial-explosion` | critical | Unbounded PTM combinatorial search — FDR unreliable |
+| `proteoform-mass-adduct-as-ptm` | critical | Metal adducts misclassified as PTMs |
+| `proteoform-mass-truncation-as-diversity` | warning | In vitro degradation reported as proteoform diversity |
+| `proteoform-assign-fdr-wrong-level` | critical | Bottom-up PSM FDR applied to proteoform-spectrum matches |
+| `proteoform-assign-small-db-fdr` | warning | Target-decoy FDR unreliable on small databases |
+| `proteoform-assign-mass-coincidence` | warning | PTM identity from mass alone when multiple mods same delta |
+| `proteoform-coverage-internal-fragments` | warning | Internal fragments misassigned as terminal ions |
+
+---
+
+## massspec (mass-spec-reviewer)
+
+Categories: `spectral` (spectral processing), `cal` (calibration), `acq` (acquisition), `inst` (instrument), `data` (data handling).
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| `massspec-spectral-centroiding` | critical | Double centroiding or wrong algorithm — split peaks corrupt downstream |
+| `massspec-cal-mass-accuracy` | critical | Mass accuracy outside instrument spec — GATES downstream |
+| `massspec-cal-mass-drift` | warning | Mass accuracy drift over acquisition sequence |
+| `massspec-cal-no-lockmass` | critical | Lock mass configured but not applied, or absent |
+| `massspec-acq-mode-mismatch` | warning | Acquisition mode doesn't match experimental goal |
+| `massspec-acq-collision-energy` | critical | Wrong collision energy or fragmentation mode |
+| `massspec-acq-dda-exclusion` | warning | DDA dynamic exclusion misconfigured |
+| `massspec-acq-dia-window` | warning | DIA window scheme inappropriate for precursor density |
+| `massspec-acq-dia-cycle-time` | critical | DIA cycle time too long — <6 data points per peak |
+| `massspec-acq-tmt-reporter-sn` | warning | TMT reporter S/N inadequate or co-isolation not assessed |
+| `massspec-acq-sps-ms3` | critical | SPS-MS3 misconfigured — wrong notches or collision energy |
+| `massspec-inst-resolution-mismatch` | warning | Resolution inappropriate for scan type |
+| `massspec-inst-agc-injection` | warning | AGC/injection time imbalance |
+| `massspec-cal-rt-stability` | warning | RT instability or no RT standards |
+| `massspec-cal-no-qc` | warning | No QC samples in acquisition sequence |
+| `massspec-data-conversion-fidelity` | critical | Lossy conversion or wrong bit encoding |
+| `massspec-data-centroid-profile` | critical | Centroid/profile mode mismatch |
+
+---
+
+## bioinfo (bioinformatician-reviewer)
+
+Categories: `repro` (reproducibility), `arch` (architecture), `stat` (statistics), `resource` (resource management), `audit` (data provenance).
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| `bioinfo-repro-mutable-tag` | critical | Container image by mutable tag, not SHA256 digest |
+| `bioinfo-repro-unlocked-env` | critical | Conda/pip/renv without version lockfile |
+| `bioinfo-repro-no-engine-version` | warning | Workflow engine version not pinned |
+| `bioinfo-repro-mutable-reference` | critical | Reference data fetched from mutable URL at runtime |
+| `bioinfo-repro-no-seed` | critical | Random seed not set for stochastic processes |
+| `bioinfo-repro-mutable-base` | warning | Dockerfile FROM without SHA256 digest |
+| `bioinfo-arch-silent-fail` | critical | Pipeline continues after step failure |
+| `bioinfo-arch-resume-stale` | critical | Resume reuses stale outputs from different params |
+| `bioinfo-arch-no-validation` | warning | No input validation before processing |
+| `bioinfo-arch-retry-unbounded` | warning | Retry without maxRetries bound |
+| `bioinfo-arch-race-condition` | critical | Parallel execution race on shared temp files |
+| `bioinfo-arch-non-atomic` | warning | Non-atomic output writes |
+| `bioinfo-arch-wdl-portability` | warning | WDL runtime uses backend-specific attributes |
+| `bioinfo-stat-no-mtc` | critical | Multiple testing correction absent |
+| `bioinfo-stat-wrong-test` | warning | Test assumptions not verified computationally |
+| `bioinfo-stat-no-effect-size` | warning | P-values without effect sizes |
+| `bioinfo-resource-no-memory` | warning | No memory declaration on processes |
+| `bioinfo-resource-no-cleanup` | warning | Intermediate files never cleaned |
+| `bioinfo-audit-no-versions` | warning | Software versions not recorded |
+| `bioinfo-audit-no-params` | warning | Run parameters not logged |

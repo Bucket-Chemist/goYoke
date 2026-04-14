@@ -1,2 +1,102 @@
-# Sharp edges for Mass Spectrometry Reviewer - none captured yet
-edges: []
+edges:
+  - id: massspec-spectral-centroiding
+    severity: critical
+    description: Double centroiding or wrong centroiding algorithm — split peaks corrupt downstream deconvolution and search
+    detection: "grep -r 'peakPicking|PeakPickerHiRes|centroid|MS:1000127|MS:1000128' --include='*.py' --include='*.xml'"
+    mitigation: "Verify centroiding applied exactly once; check mzML CV terms for spectrum type"
+
+  - id: massspec-cal-mass-accuracy
+    severity: critical
+    description: Mass accuracy outside instrument specification — GATES deconvolution and database search
+    detection: "grep -r 'mass_accuracy|ppm_error|calibration_check|mass_error' --include='*.py' --include='*.R'"
+    mitigation: "Verify calibration; apply lock mass; flag as gating dependency for downstream reviewers"
+
+  - id: massspec-cal-mass-drift
+    severity: warning
+    description: Mass accuracy drift over acquisition sequence — position-dependent bias
+    detection: "grep -r 'mass_drift|lock_mass_residual|calibration_drift' --include='*.py' --include='*.R'"
+    mitigation: "Apply recalibration per-scan or per-segment; verify lock mass correction active"
+
+  - id: massspec-cal-no-lockmass
+    severity: critical
+    description: Lock mass configured but not applied, or absent entirely
+    detection: "grep -r 'lock_mass|lockmass|internal_calibrant|UseInternalCalibration' --include='*.py' --include='*.xml'"
+    mitigation: "Verify lock mass is configured AND activated; check lock mass m/z appropriate for matrix"
+
+  - id: massspec-acq-mode-mismatch
+    severity: warning
+    description: Acquisition mode doesn't match experimental goal (DDA for quant, DIA for low-input discovery)
+    detection: "Check acquisition mode detection vs stated experimental goal in documentation/config"
+    mitigation: "Document rationale for acquisition mode choice; verify mode matches study objectives"
+
+  - id: massspec-acq-collision-energy
+    severity: critical
+    description: Wrong collision energy or fragmentation mode — poor or absent fragmentation
+    detection: "grep -r 'collision_energy|nce|normalized_collision_energy|activation_type|HCD|CID|ETD' --include='*.py' --include='*.xml'"
+    mitigation: "Verify CE/NCE appropriate for peptide mass range and fragmentation type"
+
+  - id: massspec-acq-dda-exclusion
+    severity: warning
+    description: DDA dynamic exclusion misconfigured — too short or too long duration
+    detection: "grep -r 'dynamic_exclusion|exclusion_duration|repeat_count|exclude_after' --include='*.py' --include='*.xml'"
+    mitigation: "Set exclusion 15-60s for typical LC gradients; verify repeat count and mass tolerance"
+
+  - id: massspec-acq-dia-window
+    severity: warning
+    description: DIA window scheme inappropriate for precursor density — fixed windows in crowded m/z range
+    detection: "grep -r 'swath_windows|dia_windows|isolation_scheme|window_file' --include='*.py' --include='*.txt'"
+    mitigation: "Use variable windows optimized for precursor density distribution"
+
+  - id: massspec-acq-dia-cycle-time
+    severity: critical
+    description: DIA cycle time too long relative to chromatographic peak width — fewer than 6 data points per peak
+    detection: "grep -r 'cycle_time|total_cycle|n_windows|peak_width' --include='*.py' --include='*.xml'"
+    mitigation: "Ensure cycle_time <= peak_width / 6; reduce number of windows or MS2 scan time"
+
+  - id: massspec-acq-tmt-reporter-sn
+    severity: warning
+    description: TMT reporter ion S/N inadequate or co-isolation interference not assessed
+    detection: "grep -r 'reporter_sn|reporter_intensity|isolation_purity|purity_correction' --include='*.py' --include='*.R'"
+    mitigation: "Assess reporter S/N threshold (>=10); evaluate co-isolation purity; consider SPS-MS3"
+
+  - id: massspec-acq-sps-ms3
+    severity: critical
+    description: SPS-MS3 misconfigured — wrong notch count, placement, or MS3 collision energy
+    detection: "grep -r 'sps_mass_range|sps_precursor|number_of_sps|ms3_nce|ms3_collision' --include='*.py' --include='*.xml'"
+    mitigation: "Verify 6-10 SPS notches targeting b/y ions; MS3 NCE 55-65% for TMT reporters"
+
+  - id: massspec-inst-resolution-mismatch
+    severity: warning
+    description: Resolution setting inappropriate for scan type — too high slows acquisition, too low degrades mass accuracy
+    detection: "grep -r 'resolution|orbitrap_resolution|ms1_resolution|ms2_resolution' --include='*.py' --include='*.xml'"
+    mitigation: "Match resolution to application: 60-120K MS1, 15-30K MS2 for standard bottom-up"
+
+  - id: massspec-inst-agc-injection
+    severity: warning
+    description: AGC target / injection time imbalance — affects scan speed or spectrum quality
+    detection: "grep -r 'agc_target|max_injection_time|inject_time|accumulation_time' --include='*.py' --include='*.xml'"
+    mitigation: "Balance AGC and injection time for target scan speed; verify fill time achievable"
+
+  - id: massspec-cal-rt-stability
+    severity: warning
+    description: Retention time instability or no RT standards — affects MBR and DIA RT alignment
+    detection: "grep -r 'irt|retention_time_standard|rt_calibration|rt_standard' --include='*.py' --include='*.R'"
+    mitigation: "Include iRT peptides; verify RT alignment quality metrics"
+
+  - id: massspec-cal-no-qc
+    severity: warning
+    description: No QC samples in acquisition sequence — instrument degradation undetected
+    detection: "grep -r 'qc_sample|system_suitability|blank|wash|injection_order' --include='*.py' --include='*.csv'"
+    mitigation: "Add system suitability at start; intersperse QC every 6-10 samples; include blanks"
+
+  - id: massspec-data-conversion-fidelity
+    severity: critical
+    description: Raw to mzML conversion applies lossy filters or wrong bit encoding — spectral information destroyed
+    detection: "grep -r 'msconvert|ThermoRawFileParser|peakPicking|threshold|--32|--64' --include='*.py' --include='*.sh' --include='*.nf'"
+    mitigation: "Use 64-bit m/z encoding; avoid global intensity thresholds during conversion"
+
+  - id: massspec-data-centroid-profile
+    severity: critical
+    description: Centroid/profile mode mismatch between file declaration and actual data content
+    detection: "grep -r 'MS:1000127|MS:1000128|centroid|profile|peakPicking' --include='*.py' --include='*.xml'"
+    mitigation: "Verify mzML CV terms match actual data point density; check conversion flags"

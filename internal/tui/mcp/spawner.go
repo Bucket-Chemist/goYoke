@@ -35,7 +35,7 @@ var acWrittenToRe = regexp.MustCompile(`(?i)(\S+)\s+written\s+to\s+(\S+)`)
 var acWrittenToDirRe = regexp.MustCompile(`(?i)written\s+to\s+(\S+/)`)
 
 const (
-	defaultTimeoutMS = 600_000          // 10 minutes
+	defaultTimeoutMS = 900_000          // 15 minutes
 	sigkillGraceMS   = 5_000            // 5s between SIGTERM and SIGKILL
 	maxBufferBytes   = 10 * 1024 * 1024 // 10MB stdout buffer limit
 	maxNestingDepth  = 10
