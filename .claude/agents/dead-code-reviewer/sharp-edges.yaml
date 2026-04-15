@@ -1,0 +1,58 @@
+version: "1.0"
+updated: "2026-04-15"
+
+sharp_edges:
+  - id: unused-export
+    severity: high
+    category: dead-code
+    description: "Exported function/type with zero importers"
+    symptom: "Codebase clutter, false positives in search results"
+    solution: |
+      Verify no dynamic/reflection usage. If confirmed unused, delete.
+      Check: grep for the symbol name across entire codebase including
+      config files, scripts, and documentation.
+    auto_inject: true
+
+  - id: orphaned-file
+    severity: high
+    category: dead-code
+    description: "Source file with no importers (not imported by any other file)"
+    symptom: "Entire file is dead weight in the repository"
+    solution: |
+      Verify it's not a standalone entry point (main, script, test helper).
+      If truly orphaned, delete the file.
+    auto_inject: true
+
+  - id: unused-dependency
+    severity: high
+    category: dead-code
+    description: "Package dependency in manifest with no import in source"
+    symptom: "Supply chain bloat, unnecessary security surface"
+    solution: |
+      Remove from go.mod / package.json / requirements.txt.
+      Run go mod tidy / npm prune / pip-autoremove.
+    auto_inject: true
+
+  - id: dynamic-usage-false-positive
+    severity: high
+    category: judgment
+    description: "Code appears unused but is accessed via reflection, plugins, or config"
+    symptom: "Deletion breaks runtime behavior without compiler warning"
+    solution: |
+      Before flagging as dead:
+      - Grep for string literals matching the function/type name
+      - Check reflect.*, getattr, importlib usage
+      - Check YAML/JSON config for code references
+      - Check build tags and conditional compilation
+      Set confidence < 0.7 if any dynamic access pattern found.
+    auto_inject: true
+
+  - id: dead-branch
+    severity: medium
+    category: dead-code
+    description: "Code after unconditional return, break, or always-false condition"
+    symptom: "Unreachable code, misleading to readers"
+    solution: |
+      Delete the unreachable code. If the condition was meant to be
+      conditional, fix the logic instead.
+    auto_inject: true

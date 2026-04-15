@@ -1,0 +1,63 @@
+version: "1.0"
+updated: "2026-04-15"
+
+sharp_edges:
+  - id: explicit-any
+    severity: high
+    category: type-safety
+    description: "Explicitly typed as 'any' where a specific type is determinable"
+    symptom: "Type checking disabled, bugs pass silently through compilation"
+    solution: |
+      Trace the value's source and consumers to determine the real type.
+      If from an API: use the API's type definition.
+      If from JSON: create a type from the schema.
+      If from a library: check the library's .d.ts or source types.
+    auto_inject: true
+
+  - id: type-infection
+    severity: high
+    category: type-safety
+    description: "'any' value passed through multiple functions, spreading type unsafety"
+    symptom: "One 'any' at the source disables type checking through entire call chain"
+    solution: |
+      Fix at the source — type the originating value correctly.
+      All downstream consumers inherit the correct type automatically.
+      This is why type-safety phase comes after type-consolidation.
+    auto_inject: true
+
+  - id: unsafe-assertion
+    severity: high
+    category: type-safety
+    description: "Type assertion (as X, .(X)) without runtime verification"
+    symptom: "Runtime panic or silent data corruption if value isn't actually type X"
+    solution: |
+      Add runtime check before assertion:
+      Go: v, ok := x.(Type); if !ok { handle }
+      TS: type guard function, instanceof, or discriminant check
+      Python: isinstance() check
+    auto_inject: true
+
+  - id: type-ignore-directive
+    severity: medium
+    category: type-safety
+    description: "@ts-ignore, @ts-expect-error, or # type: ignore suppressing type errors"
+    symptom: "Known type error being hidden instead of fixed"
+    solution: |
+      Read the suppressed error. Fix the underlying type issue.
+      If the error is from a broken library type, wrap the library
+      call with a properly typed adapter function.
+    auto_inject: true
+
+  - id: boundary-unknown-correct
+    severity: low
+    category: judgment
+    description: "'unknown' at a genuine system boundary is correct usage"
+    symptom: "False positive — this is proper defensive typing"
+    solution: |
+      DO NOT flag unknown at:
+      - HTTP request/response handlers
+      - JSON.parse() results
+      - User input processing
+      - External API responses
+      Instead, verify that narrowing happens before the value is used.
+    auto_inject: true

@@ -2660,6 +2660,490 @@
         "conventions": {}
       },
       "interactive": false
+    },
+    {
+      "id": "dedup-reviewer",
+      "parallelization_template": "C",
+      "name": "Dedup Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "dedup-reviewer",
+      "triggers": [
+        "find duplicates",
+        "dedup review",
+        "dry violations",
+        "code consolidation",
+        "copy paste"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "python.md",
+        "typescript.md"
+      ],
+      "sharp_edges_count": 15,
+      "description": "Structural and semantic code duplication detector. Finds copy-paste blocks, near-identical functions, and consolidation opportunities.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Dedup Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "type-consolidator",
+      "parallelization_template": "C",
+      "name": "Type Consolidator",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "type-consolidator",
+      "triggers": [
+        "consolidate types",
+        "type review",
+        "shared types",
+        "scattered types",
+        "type organization"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 5,
+      "description": "Finds scattered, redundant, and orphaned type definitions. Identifies types that should be shared or consolidated.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Type Consolidator",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "dead-code-reviewer",
+      "parallelization_template": "C",
+      "name": "Dead Code Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "dead-code-reviewer",
+      "triggers": [
+        "dead code",
+        "unused code",
+        "remove unused",
+        "knip",
+        "tree shaking"
+      ],
+      "tools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Bash",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 5,
+      "description": "Detects genuinely unused code via static analysis and manual verification. Finds unreferenced exports, orphaned files, unused dependencies.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include verification method",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Dead Code Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "dependency-reviewer",
+      "parallelization_template": "C",
+      "name": "Dependency Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "dependency-reviewer",
+      "triggers": [
+        "circular dependency",
+        "dependency graph",
+        "import cycle",
+        "coupling review",
+        "madge",
+        "module structure"
+      ],
+      "tools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Bash",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md"
+      ],
+      "sharp_edges_count": 14,
+      "description": "Maps dependency graphs, detects circular dependencies, identifies tightly coupled modules. Uses madge, go list, and import analysis.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Cycle paths fully documented",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Dependency Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "type-safety-reviewer",
+      "parallelization_template": "C",
+      "name": "Type Safety Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "type-safety-reviewer",
+      "triggers": [
+        "type safety",
+        "weak types",
+        "remove any",
+        "strong typing",
+        "type assertions"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 5,
+      "description": "Finds weak types (any, unknown, interface{}) and researches correct strong types by tracing data flow and checking library definitions.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Recommendations include specific types",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Type Safety Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "error-hygiene-reviewer",
+      "parallelization_template": "C",
+      "name": "Error Hygiene Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "error-hygiene-reviewer",
+      "triggers": [
+        "error handling review",
+        "try catch review",
+        "defensive programming",
+        "error hiding",
+        "silent failures"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 5,
+      "description": "Finds unnecessary try/catch, error hiding, silent fallbacks, and cargo-cult defensive programming.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Each finding explains why error handling is unnecessary",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Error Hygiene Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "legacy-code-reviewer",
+      "parallelization_template": "C",
+      "name": "Legacy Code Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "legacy-code-reviewer",
+      "triggers": [
+        "legacy code",
+        "deprecated code",
+        "fallback removal",
+        "migration cleanup",
+        "feature flag cleanup"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 5,
+      "description": "Finds deprecated patterns, backward-compat shims, migration artifacts, stale feature flags, and dual code paths.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Evidence of removability included",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Legacy Code Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "slop-reviewer",
+      "parallelization_template": "C",
+      "name": "Slop Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "slop-reviewer",
+      "triggers": [
+        "slop review",
+        "ai slop",
+        "comment cleanup",
+        "stub removal",
+        "code polish"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 5,
+      "description": "Detects AI-generated artifacts, placeholder stubs, LARPing code, unnecessary comments, and in-motion commentary.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Rewrite recommendations include replacement text",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Slop Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00
+    },
+    {
+      "id": "cleanup-synthesizer",
+      "parallelization_template": "E",
+      "name": "Cleanup Synthesizer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "cleanup",
+      "path": "cleanup-synthesizer",
+      "triggers": [],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "invoked_by": "team-run wave 1 only",
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "must_delegate": false,
+      "min_delegations": 0,
+      "outputs": [
+        "stdout JSON with phased remediation plan"
+      ],
+      "sharp_edges_count": 3,
+      "description": "Opus synthesizer for /cleanup skill. Deduplicates findings, identifies causal chains, resolves conflicts, produces phased remediation plan.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Cleanup Synthesizer",
+      "interactive": false
     }
   ],
   "routing_rules": {
@@ -2770,7 +3254,15 @@
         "react-pro",
         "review-orchestrator",
         "architect-reviewer",
-        "rust-pro"
+        "rust-pro",
+        "dedup-reviewer",
+        "type-consolidator",
+        "dead-code-reviewer",
+        "dependency-reviewer",
+        "type-safety-reviewer",
+        "error-hygiene-reviewer",
+        "legacy-code-reviewer",
+        "slop-reviewer"
       ],
       "opus": [
         "einstein",
@@ -2787,7 +3279,8 @@
         "proteoform-reviewer",
         "mass-spec-reviewer",
         "bioinformatician-reviewer",
-        "pasteur"
+        "pasteur",
+        "cleanup-synthesizer"
       ]
     },
     "trigger_keywords": null
@@ -2895,6 +3388,24 @@
         "mcp__gofortress-interactive__ask_user"
       ],
       "team_dir_suffix": "implementation"
+    },
+    "cleanup": {
+      "router_allowed_tools": [
+        "Task",
+        "Agent",
+        "Bash",
+        "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
+        "AskUserQuestion",
+        "Skill",
+        "mcp__gofortress-interactive__spawn_agent",
+        "mcp__gofortress-interactive__team_run",
+        "mcp__gofortress-interactive__get_agent_result",
+        "mcp__gofortress-interactive__ask_user"
+      ],
+      "team_dir_suffix": "cleanup"
     }
   }
 }
