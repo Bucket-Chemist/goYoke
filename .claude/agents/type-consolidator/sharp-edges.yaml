@@ -1,5 +1,5 @@
 version: "1.0"
-updated: "2026-04-15"
+updated: "2026-04-16"
 
 sharp_edges:
   - id: scattered-type
@@ -8,7 +8,8 @@ sharp_edges:
     description: "Same type defined in multiple packages with same or similar shape"
     symptom: "Type confusion, unsafe casts between 'different' types that are actually the same"
     solution: |
-      Move to a shared types package. Update all importers.
+      Apply Type Identity Test first: if one changes, should the other?
+      If yes, move to a shared types package. Update all importers.
       Go: internal/types/ or pkg/types/
       TS: src/types/ or domain barrel export
       Python: package-level types.py
@@ -17,11 +18,13 @@ sharp_edges:
   - id: redundant-alias
     severity: low
     category: type-organization
-    description: "Type alias that adds no information (just re-exports)"
+    description: "Type alias that adds no information (just re-exports within same module)"
     symptom: "Extra indirection, confusing for newcomers"
     solution: |
       Remove the alias, import the original directly.
       Exception: aliasing for package-boundary clarity is acceptable.
+      Check the Alias Value Spectrum before removing:
+      pure re-export = delete, API boundary marker = keep, domain adapter = keep.
     auto_inject: true
 
   - id: misplaced-type
@@ -31,7 +34,8 @@ sharp_edges:
     symptom: "Surprising imports, circular dependency risk"
     solution: |
       Move to the package that owns the concept, or to shared types
-      if used across 3+ packages.
+      if used across 3+ packages. Check for hub anti-pattern before
+      consolidating into a single types package.
     auto_inject: true
 
   - id: inline-type-literal
@@ -50,6 +54,77 @@ sharp_edges:
     description: "Moving a type to shared location would create an import cycle"
     symptom: "Blocked consolidation, type must stay scattered"
     solution: |
-      Fix the dependency cycle first (coordinate with dependency-reviewer).
-      Then move the type. Tag finding for cross-agent resolution.
+      Fix the dependency cycle first (tag for cleanup-synthesizer).
+      Then move the type. Do NOT recommend a move that creates a cycle.
+    auto_inject: true
+
+  - id: type-hub-antipattern
+    severity: high
+    category: type-organization
+    description: "Over-consolidated types package imported by >10 packages"
+    symptom: "Coupling hub — any change to types/ forces recompilation/retesting of all importers"
+    solution: |
+      Break types/ into domain-scoped packages (internal/auth/types/,
+      internal/billing/types/). Move each type to the package with most
+      semantic authority. >5 importers = investigate, >10 = escalate.
+    auto_inject: true
+
+  - id: type-structural-coincidence
+    severity: low
+    category: type-organization
+    description: "Same shape in TypeScript — structural typing makes types interchangeable"
+    symptom: "Cosmetic clutter but no compile-time or runtime bugs"
+    solution: |
+      Flag as Low severity. TypeScript's structural typing means the
+      compiler treats same-shape types as interchangeable regardless of
+      name. Consolidation is a readability improvement, not a bug fix.
+    auto_inject: true
+
+  - id: type-alias-boundary
+    severity: medium
+    category: judgment
+    description: "Alias that serves as domain/API boundary marker — do NOT remove"
+    symptom: "Looks like a valueless alias but insulates from external changes or adds semantic meaning"
+    solution: |
+      Classify using Alias Value Spectrum:
+      1. Pure re-export within same module → delete (zero value)
+      2. API boundary marker (type UserID = string) → keep (moderate value)
+      3. Domain boundary adapter (type Config = external.Config) → keep (high value)
+      Only remove category 1.
+    auto_inject: true
+
+  - id: type-bounded-context
+    severity: high
+    category: judgment
+    description: "False positive trap: types are intentionally separate per DDD bounded contexts"
+    symptom: "Types share shape but encode different domain knowledge across contexts"
+    solution: |
+      Apply Type Identity Test: if billing.Order changes, should
+      shipping.Order change identically? If no, these are correctly
+      separate. Do NOT flag as scattered. DDD bounded contexts
+      deliberately duplicate type shapes to maintain domain isolation.
+    auto_inject: true
+
+  - id: type-cross-language-drift
+    severity: high
+    category: type-organization
+    description: "Same concept defined differently across languages in polyglot repo"
+    symptom: "Serialization mismatches, API contract violations between services"
+    solution: |
+      Check if types represent the same domain concept (shared API,
+      database schema, message format). If yes, align field names and
+      types. Consider generating from a shared schema (protobuf, JSON
+      Schema, OpenAPI) to prevent drift.
+    auto_inject: true
+
+  - id: type-partial-overlap
+    severity: medium
+    category: type-organization
+    description: "Types with >=80% field overlap — candidate for base type extraction"
+    symptom: "Near-identical types diverge over time, creating subtle inconsistencies"
+    solution: |
+      Apply Type Identity Test to shared fields. If they should change
+      together, extract a shared base type with language-appropriate
+      composition: Go embedding, TS intersection/extends, Python
+      inheritance. Keep divergent fields in specialized types.
     auto_inject: true
