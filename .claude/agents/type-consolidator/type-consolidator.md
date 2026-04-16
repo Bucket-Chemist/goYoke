@@ -271,19 +271,19 @@ Severity is based on **impact** adjusted by **language type identity model**.
 
 ## Sharp Edge Correlation
 
-| ID | Severity | What It Addresses |
+| ID | Category | Severity | Description |
 |----|----------|-------------------|
-| `scattered-type` | high | Same type defined in multiple packages — apply Identity Test before flagging |
-| `redundant-alias` | low | Type alias that adds no information, pure re-export within same module |
-| `misplaced-type` | medium | Type defined where it's used least; also covers Go interfaces defined at producer instead of consumer |
-| `inline-type-literal` | medium | Complex inline type used in multiple places without a named definition |
-| `import-cycle-from-type-move` | high | Moving type to shared location would create an import cycle |
-| `type-hub-antipattern` | high | Over-consolidated types package imported by >10 packages, creating coupling hub |
-| `type-structural-coincidence` | low | Same shape in TS — structural typing makes types interchangeable, cosmetic only |
-| `type-alias-boundary` | medium | Alias that serves as domain/API boundary marker — do NOT remove |
-| `type-bounded-context` | high | False positive trap: types are intentionally separate per DDD bounded contexts |
-| `type-cross-language-drift` | high | Same concept defined differently across languages in polyglot repo |
-| `type-partial-overlap` | medium | Types with >=80% field overlap — candidate for base type extraction |
+| `scattered-type` | `scattered-type` | high | Same type defined in multiple packages — apply Identity Test before flagging |
+| `redundant-alias` | `redundant-alias` | low | Type alias that adds no information, pure re-export within same module |
+| `misplaced-type` | `misplaced-type` | medium | Type defined where it is used least; Go interfaces defined at producer instead of consumer |
+| `inline-type-literal` | `inline-type-literal` | medium | Complex inline type used in multiple places without a named definition |
+| `import-cycle-from-type-move` | `misplaced-type` | high | Moving type to shared location would create an import cycle |
+| `type-hub-antipattern` | `scattered-type` | high | Over-consolidated types package imported by >10 packages, creating coupling hub |
+| `type-structural-coincidence` | `scattered-type` | low | Same shape in TS — structural typing makes types interchangeable, cosmetic only |
+| `type-alias-boundary` | `redundant-alias` | medium | Alias that serves as domain/API boundary marker — do NOT remove |
+| `type-bounded-context` | `scattered-type` | high | False positive trap: types intentionally separate per DDD bounded contexts |
+| `type-cross-language-drift` | `scattered-type` | high | Same concept defined differently across languages in polyglot repo |
+| `type-partial-overlap` | `scattered-type` | medium | Types with >=80% field overlap — candidate for base type extraction |
 
 ---
 
@@ -325,7 +325,7 @@ Your output MUST be valid JSON matching the cleanup reviewer contract:
       "effort": "trivial|small|medium|large",
       "confidence": 0.0,
       "tags": ["<module>", "<type-name>"],
-      "language": "<go|typescript|python>",
+      "language": "<go|typescript|python|rust|r>",
       "sharp_edge_id": "<optional>"
     }
   ],
@@ -378,16 +378,17 @@ Escalate when:
 
 - **vs dead-code-reviewer**: Dead-code-reviewer owns "zero-reference type" (type has no usage anywhere). Type-consolidator owns "consolidation opportunity" (type is used but duplicated/misplaced). If a type has zero references, leave it for dead-code-reviewer. If it has references but duplicates another type, that's yours.
 
-- **vs dedup-reviewer**: Dedup-reviewer owns "code duplication" (same logic/functions). Type-consolidator owns "type duplication" (same struct/interface/class definitions). If duplicate code happens to include duplicate types, both agents may flag — tag with `["cross-agent:dedup"]` for synthesizer deduplication.
+- **vs dedup-reviewer**: Dedup-reviewer owns "code duplication" (same logic/functions). Type-consolidator owns "type duplication" (same struct/interface/class definitions). If duplicate code happens to include duplicate types, both agents may flag — tag with `["cross:dedup"]` for synthesizer deduplication.
 
-- **vs type-safety-reviewer**: Type-safety-reviewer owns "type safety issues" (`any`, `interface{}`, `unknown` at value positions). Type-consolidator owns "type organization" (where types live, whether they're shared). When you find `Any`/`interface{}`/`unknown`, tag for type-safety-reviewer with `["cross-agent:type-safety"]`.
+- **vs type-safety-reviewer**: Type-safety-reviewer owns "type safety issues" (`any`, `interface{}`, `unknown` at value positions). Type-consolidator owns "type organization" (where types live, whether they're shared). When you find `Any`/`interface{}`/`unknown`, tag for type-safety-reviewer with `["cross:type-safety"]`.
 
-- **vs dependency-reviewer**: Import cycle concerns from type moves should be tagged with `["cross-agent:dependency"]` for cleanup-synthesizer manual review. Note: no dedicated dependency-reviewer agent exists yet — tag for synthesizer resolution.
+- **vs dependency-reviewer**: Import cycle concerns from type moves should be tagged with `["cross:dependency"]` for cleanup-synthesizer manual review.
+
 
 **Tag overlap findings** for cleanup-synthesizer deduplication:
-- Overlap with dead-code-reviewer: add `["cross-agent:dead-code"]`
-- Overlap with dedup-reviewer: add `["cross-agent:dedup"]`
-- Overlap with type-safety-reviewer: add `["cross-agent:type-safety"]`
+- Overlap with dead-code-reviewer: add `["cross:dead-code"]`
+- Overlap with dedup-reviewer: add `["cross:dedup"]`
+- Overlap with type-safety-reviewer: add `["cross:type-safety"]`
 
 ---
 

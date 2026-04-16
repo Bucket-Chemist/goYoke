@@ -275,20 +275,20 @@ Severity is based on **impact**, not code size.
 
 ## Sharp Edge Correlation
 
-| ID | Severity | What It Addresses |
+| ID | Category | Severity | Description |
 |----|----------|-------------------|
-| `dead-unused-export` | high | Exported function/type with zero importers after full verification |
-| `dead-orphaned-file` | high | Source file with no importers (not a standalone entry point) |
-| `dead-unused-dependency` | high | Package dependency in manifest with no import in source |
-| `dead-dynamic-false-positive` | high | False positive trap: code appears unused but accessed via reflection, plugins, or config — verify before flagging |
-| `dead-branch` | medium | Code after unconditional return, break, or always-false condition |
-| `dead-interface-impl` | high | Go type appears unused but satisfies an interface implicitly |
-| `dead-barrel-reexport` | medium | TS barrel export appears unused but consumed downstream |
-| `dead-decorator-hidden` | high | Function appears uncalled but registered via framework decorator |
-| `dead-init-sideeffect` | high | init() or module-level code has side effects; removal breaks behavior |
-| `dead-codegen-consumed` | medium | Code appears unused but consumed by code generation pipeline |
-| `dead-unused-error-type` | medium | Custom error type with zero catch/handle sites |
-| `dead-config-driven` | medium | Code referenced only by config files |
+| `dead-unused-export` | `unused-export` | high | Exported function/type with zero importers after full verification |
+| `dead-orphaned-file` | `orphaned-file` | high | Source file with no importers (not a standalone entry point) |
+| `dead-unused-dependency` | `unused-dependency` | high | Package dependency in manifest with no import in source |
+| `dead-dynamic-false-positive` | `unused-export` | high | False positive trap: code accessed via reflection, plugins, or config |
+| `dead-branch` | `dead-branch` | medium | Code after unconditional return, break, or always-false condition |
+| `dead-interface-impl` | `unused-export` | high | Go type appears unused but satisfies an interface implicitly |
+| `dead-barrel-reexport` | `unused-export` | medium | TS barrel export appears unused but consumed downstream |
+| `dead-decorator-hidden` | `unused-export` | high | Function appears uncalled but registered via framework decorator |
+| `dead-init-sideeffect` | `unused-import` | high | init() or module-level code has side effects; removal breaks behavior |
+| `dead-codegen-consumed` | `unused-export` | medium | Code appears unused but consumed by code generation pipeline |
+| `dead-unused-error-type` | `unused-export` | medium | Custom error type with zero catch/handle sites |
+| `dead-config-driven` | `dead-branch` | medium | Code referenced only by config files |
 
 ---
 
@@ -360,6 +360,7 @@ Run analysis tools first (Bash), then batch file reads for verification.
 ## Constraints
 
 - **Scope**: Unused code detection and verification only
+- **Language coverage**: Go, TypeScript, Python only. Rust and R dead code detection is not covered — Rust has `cargo-udeps` and R has `NAMESPACE`-based tooling outside this agent's scope.
 - **Depth**: Flag with evidence, do NOT delete
 - **Confidence**: Must be >= 0.8 for dead code findings due to false positive risk
 
@@ -386,7 +387,10 @@ Escalate when:
 
 - **vs type-consolidator**: Dead-code-reviewer owns "zero-reference type" (type has no usage anywhere). Type-consolidator owns "consolidation opportunity" (multiple types that could be merged).
 
+- **vs error-hygiene-reviewer**: Dead-code-reviewer owns "unreachable code paths." Error-hygiene-reviewer owns "error handling that hides failures." When dead code paths have defensive error handling that error-hygiene would also flag, tag the overlap.
+
 **Tag overlap findings** for cleanup-synthesizer deduplication:
-- Overlap with legacy-code-reviewer: add `["cross-agent:legacy"]`
-- Overlap with slop-reviewer: add `["cross-agent:slop"]`
-- Overlap with type-consolidator: add `["cross-agent:type-consolidator"]`
+- Overlap with legacy-code-reviewer: add `["cross:legacy-code"]`
+- Overlap with slop-reviewer: add `["cross:slop"]`
+- Overlap with type-consolidator: add `["cross:type-consolidator"]`
+- Overlap with error-hygiene-reviewer: add `["cross:error-hygiene"]`

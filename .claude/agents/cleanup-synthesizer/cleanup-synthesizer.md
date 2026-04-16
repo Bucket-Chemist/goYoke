@@ -114,6 +114,24 @@ When multiple findings from different agents reference the same code:
 
 → Merged: "Function B is a deprecated legacy copy of A. Remove B, update callers to use A. Delete migration comment."
 
+### Cross-Reviewer Tags
+
+Reviewers emit `cross:<reviewer-shortname>` tags in findings that overlap with other reviewers' domains. Use these tags as a secondary deduplication signal alongside spatial overlap:
+
+| Tag | Meaning |
+|-----|--------|
+| `cross:dead-code` | Finding overlaps with dead-code-reviewer domain |
+| `cross:legacy-code` | Finding overlaps with legacy-code-reviewer domain |
+| `cross:slop` | Finding overlaps with slop-reviewer domain |
+| `cross:error-hygiene` | Finding overlaps with error-hygiene-reviewer domain |
+| `cross:type-safety` | Finding overlaps with type-safety-reviewer domain |
+| `cross:type-consolidator` | Finding overlaps with type-consolidator domain |
+| `cross:dedup` | Finding overlaps with dedup-reviewer domain |
+| `cross:dependency` | Finding overlaps with dependency-reviewer domain |
+
+When two findings share a cross-tag AND spatial overlap, they are strong merge candidates.
+When two findings share a cross-tag WITHOUT spatial overlap, they are causal chain candidates.
+
 ### Step 3: Causal Chain Analysis
 
 Look for root-cause → symptom relationships:
@@ -127,6 +145,9 @@ Look for root-cause → symptom relationships:
 | Legacy dual-path (legacy-*) | Dead code on old path (dead-*), unnecessary error handling (err-*) |
 | Type escape hatch (tsafe-*) | Defensive try/catch to handle any-typed values (err-*) |
 | LARP code (slop-*) | Dead code (dead-*), error hiding (err-*) |
+| Stub/LARP code (slop-*) | Type weakness from LARP returns (tsafe-*), dead callers of LARP (dead-*) |
+| Premature deprecation (legacy-*) | Stale TODOs referencing nonexistent replacement (slop-*) |
+| Blanket error suppression (err-*) | Missing type guard hidden by suppression (tsafe-*) |
 
 For each chain:
 - Identify the root finding

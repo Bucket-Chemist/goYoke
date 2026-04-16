@@ -2694,7 +2694,9 @@
       "conventions_required": [
         "go.md",
         "python.md",
-        "typescript.md"
+        "typescript.md",
+        "rust.md",
+        "R.md"
       ],
       "sharp_edges_count": 15,
       "description": "Structural and semantic code duplication detector. Finds copy-paste blocks, near-identical functions, and consolidation opportunities.",
@@ -2748,9 +2750,11 @@
       "conventions_required": [
         "go.md",
         "typescript.md",
-        "python.md"
+        "python.md",
+        "rust.md",
+        "R.md"
       ],
-      "sharp_edges_count": 5,
+      "sharp_edges_count": 11,
       "description": "Finds scattered, redundant, and orphaned type definitions. Identifies types that should be shared or consolidated.",
       "context_requirements": {
         "rules": [
@@ -2806,7 +2810,7 @@
         "typescript.md",
         "python.md"
       ],
-      "sharp_edges_count": 5,
+      "sharp_edges_count": 12,
       "description": "Detects genuinely unused code via static analysis and manual verification. Finds unreferenced exports, orphaned files, unused dependencies.",
       "context_requirements": {
         "rules": [
@@ -2860,7 +2864,9 @@
       "auto_activate": null,
       "conventions_required": [
         "go.md",
-        "typescript.md"
+        "typescript.md",
+        "python.md",
+        "rust.md"
       ],
       "sharp_edges_count": 14,
       "description": "Maps dependency graphs, detects circular dependencies, identifies tightly coupled modules. Uses madge, go list, and import analysis.",
@@ -2914,9 +2920,11 @@
       "conventions_required": [
         "go.md",
         "typescript.md",
-        "python.md"
+        "python.md",
+        "rust.md",
+        "R.md"
       ],
-      "sharp_edges_count": 5,
+      "sharp_edges_count": 11,
       "description": "Finds weak types (any, unknown, interface{}) and researches correct strong types by tracing data flow and checking library definitions.",
       "context_requirements": {
         "rules": [
@@ -2968,9 +2976,11 @@
       "conventions_required": [
         "go.md",
         "typescript.md",
-        "python.md"
+        "python.md",
+        "rust.md",
+        "R.md"
       ],
-      "sharp_edges_count": 5,
+      "sharp_edges_count": 16,
       "description": "Finds unnecessary try/catch, error hiding, silent fallbacks, and cargo-cult defensive programming.",
       "context_requirements": {
         "rules": [
@@ -3024,9 +3034,11 @@
       "conventions_required": [
         "go.md",
         "typescript.md",
-        "python.md"
+        "python.md",
+        "rust.md",
+        "R.md"
       ],
-      "sharp_edges_count": 5,
+      "sharp_edges_count": 14,
       "description": "Finds deprecated patterns, backward-compat shims, migration artifacts, stale feature flags, and dual code paths.",
       "context_requirements": {
         "rules": [
@@ -3078,9 +3090,11 @@
       "conventions_required": [
         "go.md",
         "typescript.md",
-        "python.md"
+        "python.md",
+        "rust.md",
+        "R.md"
       ],
-      "sharp_edges_count": 5,
+      "sharp_edges_count": 14,
       "description": "Detects AI-generated artifacts, placeholder stubs, LARPing code, unnecessary comments, and in-motion commentary.",
       "context_requirements": {
         "rules": [

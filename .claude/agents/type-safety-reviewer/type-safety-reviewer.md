@@ -290,19 +290,19 @@ Severity correlates with **propagation distance × consumer criticality**.
 
 ## Sharp Edge Correlation
 
-| ID | Severity | What It Addresses |
+| ID | Category | Severity | Description |
 |----|----------|-------------------|
-| `tsafe-explicit-any` | high | Explicitly typed as any/interface{}/Any where specific type is determinable |
-| `tsafe-type-infection` | high | Weak type propagated through multiple call sites, spreading unsafety |
-| `tsafe-unsafe-assertion` | high | Type assertion (as X, .(X)) without runtime verification — panic or corruption risk |
-| `tsafe-type-ignore-directive` | medium | @ts-ignore, @ts-expect-error, # type: ignore suppressing real type errors |
-| `tsafe-boundary-unknown-correct` | low | False positive trap: unknown at genuine system boundary is correct defensive typing |
-| `tsafe-implicit-any` | high | Missing type annotation causes implicit any, silently infecting consumers |
-| `tsafe-empty-interface-param` | medium | Function parameter typed as interface{}/any where concrete type exists |
-| `tsafe-rust-unsafe-cast` | high | Rust unsafe/transmute/as cast where result escapes scope without invariant re-establishment |
-| `tsafe-r-unchecked-coercion` | medium | R as.* coercion without preceding is.* guard — silent data corruption risk |
-| `tsafe-weak-generic-constraint` | medium | Generic type parameter (Go any, Rust unbounded T, TS unconstrained T) that should have a constraint |
-| `tsafe-boundary-not-narrowed` | high | Value enters at boundary as unknown/any but is consumed without narrowing — the guard is missing |
+| `tsafe-explicit-any` | `explicit-any` | high | Explicitly typed as any/interface{}/Any where specific type is determinable |
+| `tsafe-type-infection` | `explicit-any` | high | Weak type propagated through multiple call sites, spreading unsafety |
+| `tsafe-unsafe-assertion` | `unsafe-assertion` | high | Type assertion (as X, .(X)) without runtime verification |
+| `tsafe-type-ignore-directive` | `type-ignore-directive` | medium | @ts-ignore, @ts-expect-error, # type: ignore suppressing real type errors |
+| `tsafe-boundary-unknown-correct` | `explicit-any` | low | False positive trap: unknown at genuine system boundary is correct |
+| `tsafe-implicit-any` | `implicit-any` | high | Missing type annotation causes implicit any, silently infecting consumers |
+| `tsafe-empty-interface-param` | `empty-interface` | medium | Function parameter typed as interface{}/any where concrete type exists |
+| `tsafe-rust-unsafe-cast` | `unsafe-coercion` | high | Rust unsafe/transmute/as cast where result escapes scope |
+| `tsafe-r-unchecked-coercion` | `silent-coercion` | medium | R as.* coercion without preceding is.* guard — silent data corruption risk |
+| `tsafe-weak-generic-constraint` | `missing-type-guard` | medium | Generic type parameter that should have a constraint |
+| `tsafe-boundary-not-narrowed` | `missing-type-guard` | high | Value enters at boundary as unknown/any but consumed without narrowing |
 
 ---
 
@@ -399,20 +399,20 @@ Escalate when:
 
 **Boundary rules:**
 
-- **vs type-consolidator**: Type-safety-reviewer owns "what type SHOULD this value be" (correct typing). Type-consolidator owns "where should this type LIVE" (organization). When the correct type doesn't exist yet, tag finding with `["cross-agent:type-consolidator", "action:create-type"]`.
+- **vs type-consolidator**: Type-safety-reviewer owns "what type SHOULD this value be" (correct typing). Type-consolidator owns "where should this type LIVE" (organization). When the correct type doesn't exist yet, tag finding with `["cross:type-consolidator", "action:create-type"]`.
 
 - **vs dead-code-reviewer**: Dead-code-reviewer owns unused type wrappers and dead typed code. Type-safety-reviewer owns weak types that ARE used. If a weak-typed wrapper is unused, leave it for dead-code-reviewer.
 
-- **vs error-hygiene-reviewer**: Error-hygiene-reviewer owns error handling patterns (try/catch, tryCatch, Result handling). Type-safety-reviewer owns type correctness. Shared territory: R `tryCatch` masking type errors, Go error returns typed as `interface{}`. Tag shared findings with `["cross-agent:error-hygiene"]`.
+- **vs error-hygiene-reviewer**: Error-hygiene-reviewer owns error handling patterns (try/catch, tryCatch, Result handling). Type-safety-reviewer owns type correctness. Shared territory: R `tryCatch` masking type errors, Go error returns typed as `interface{}`. Tag shared findings with `["cross:error-hygiene"]`.
 
 - **vs slop-reviewer**: Slop-reviewer owns commented-out code and stale annotations. Type-safety-reviewer owns active type weaknesses. Commented-out type annotations are slop, not type safety issues.
 
-- **vs cleanup-synthesizer**: Import cycle concerns that force `any`/`interface{}` usage should be tagged with `["cross-agent:dependency"]` for synthesizer manual review.
+- **vs cleanup-synthesizer**: Import cycle concerns that force `any`/`interface{}` usage should be tagged with `["cross:dependency"]` for synthesizer manual review.
 
 **Tag overlap findings** for cleanup-synthesizer deduplication:
-- Type creation needed: add `["cross-agent:type-consolidator"]`
-- Error handling masks type issue: add `["cross-agent:error-hygiene"]`
-- Import cycle forces weak type: add `["cross-agent:dependency"]`
+- Type creation needed: add `["cross:type-consolidator"]`
+- Error handling masks type issue: add `["cross:error-hygiene"]`
+- Import cycle forces weak type: add `["cross:dependency"]`
 
 ---
 
