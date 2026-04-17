@@ -101,6 +101,7 @@ cargo nextest run               # Run tests (preferred)
 | Testing | `proptest` | Property-based testing |
 | TLS | `rustls` | No system OpenSSL dependency |
 | Allocator | `mimalloc` | Replace musl default for perf |
+| Async utils | `futures` | `FutureExt` combinators for zero-cost future composition |
 
 ---
 
@@ -380,6 +381,76 @@ let results: Vec<_> = items
 | Channel communication | `tokio::sync::mpsc` / `broadcast` / `watch` |
 | One-shot results | `tokio::sync::oneshot` |
 
+### Async Future Size Optimization
+
+Async functions generate state machines. Careless signatures inflate future size and binary weight.
+
+**Eliminate unnecessary async state machines:**
+```rust
+// WRONG: async fn with no .await — generates dead state machine
+async fn default_config() -> Config {
+    Config::new()
+}
+
+// CORRECT: zero-cost ready future (Future is in 2024 prelude)
+fn default_config() -> impl Future<Output = Config> {
+    std::future::ready(Config::new())
+}
+```
+
+**Eliminate async pass-through wrappers:**
+```rust
+// WRONG: wrapper state machine just to forward
+impl Store for CachedStore {
+    async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        self.inner.get(key).await
+    }
+}
+
+// CORRECT: return inner future directly — zero-cost
+impl Store for CachedStore {
+    fn get(&self, key: &str) -> impl Future<Output = Result<Option<Vec<u8>>>> {
+        self.inner.get(key)
+    }
+}
+
+// With postamble: use FutureExt::map() instead of .await + transform
+use futures::FutureExt;
+
+fn get(&self, key: &str) -> impl Future<Output = Result<Option<Vec<u8>>>> {
+    self.inner.get(key).map(|res| res.map(|opt| opt.map(|v| v.to_vec())))
+}
+```
+
+**Pass references, not owned values, to async functions:**
+```rust
+// WRONG: owned buffer duplicated in state machine (2080 bytes for 1024-byte array)
+async fn process(mut buffer: [u8; 1024]) { /* ... */ }
+
+// CORRECT: reference — future is 40 bytes (98% reduction)
+async fn process(buffer: &mut [u8; 1024]) { /* ... */ }
+```
+
+**Factor common await points out of match arms:**
+```rust
+// WRONG: duplicates send_response in state machine per arm
+async fn handle() {
+    match command().await {
+        Cmd::A => send(123).await,
+        Cmd::B => send(456).await,
+    }
+}
+
+// CORRECT: single await point, ~11% smaller assembly
+async fn handle() {
+    let payload = match command().await {
+        Cmd::A => 123,
+        Cmd::B => 456,
+    };
+    send(payload).await;
+}
+```
+
 ---
 
 ## Testing
@@ -438,10 +509,13 @@ proptest! {
 - Use `criterion` for microbenchmarks
 - Use `cargo flamegraph` for CPU profiling
 - Use `dhat` for heap profiling
+- Use `cargo-bloat` for binary size analysis and function-level weight
 ```bash
 cargo bench                              # Run benchmarks
 cargo flamegraph --bin myapp             # Generate flamegraph
 cargo bench -- --baseline main           # Compare against baseline
+cargo bloat --release --crates           # Binary size by crate
+cargo bloat --release -n 20             # Top 20 largest functions
 ```
 
 ### Optimization Techniques

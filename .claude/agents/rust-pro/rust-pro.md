@@ -48,6 +48,7 @@ focus_areas:
   - Ownership, borrowing, and lifetimes
   - Error handling (thiserror/anyhow, ? operator)
   - Async patterns (tokio, async fn in traits)
+  - Async future size optimization (state machine debloating)
   - Testing (table-driven, proptest, nextest)
   - Cross-compilation and static linking
   - Serde serialization patterns
@@ -240,6 +241,41 @@ loop {
         Some(event) = stream.next() => handle(event),
         _ = shutdown.recv() => break,
     }
+}
+```
+
+#### Async Future Size Optimization
+
+Minimize state machine overhead for single-binary distribution:
+
+```rust
+// 1. No .await? Do not use async fn — use std::future::ready
+fn default_config() -> impl Future<Output = Config> {
+    std::future::ready(Config::new())  // Zero-cost, no state machine
+}
+
+// 2. Pass-through trait impls: return inner future directly
+impl Store for Wrapper {
+    fn get(&self, key: &str) -> impl Future<Output = Result<Option<Vec<u8>>>> {
+        self.inner.get(key)  // No wrapper state machine
+    }
+}
+
+// 3. Large values: pass by reference into async fn
+// WRONG: async fn process(buf: [u8; 1024]) — future = 2080 bytes
+// CORRECT: async fn process(buf: &mut [u8; 1024]) — future = 40 bytes
+
+// 4. Factor common await points out of match arms
+let payload = match command().await {
+    Cmd::A => 123,
+    Cmd::B => 456,
+};
+send(payload).await;  // Single await point, ~11% less assembly
+
+// 5. Use FutureExt combinators for postamble without state machine
+use futures::FutureExt;
+fn call(&self, req: Request) -> impl Future<Output = Result<Response>> {
+    self.inner.call(req).map(|r| r.map(|resp| resp.with_header("via", "proxy")))
 }
 ```
 
@@ -441,6 +477,8 @@ cargo fmt -- --check
 - Cross-compilation verified for target platforms
 - No `.unwrap()` or `.expect()` in production code paths
 - No `unsafe` in public API unless justified and documented
+- Async functions with no `.await` use `std::future::ready()` instead of `async fn`
+- Large value types passed by reference into async functions, not by value
 
 ---
 
