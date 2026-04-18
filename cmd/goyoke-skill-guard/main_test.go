@@ -192,7 +192,7 @@ func TestExtractSkillName(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestEmitSetupResponse_TUI_InjectsTranslation(t *testing.T) {
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/gofortress-mcp-test.json")
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/goyoke-mcp-test.json")
 
 	// Capture stdout by calling the helper indirectly through handleSetupModeWithConfig
 	// with a nil guardConfig (non-guarded skill path).
@@ -201,11 +201,11 @@ func TestEmitSetupResponse_TUI_InjectsTranslation(t *testing.T) {
 
 	// We can't easily capture fmt.Println output in unit tests, so test
 	// isTUIMode detection and the translation const directly.
-	assert.True(t, isTUIMode(), "isTUIMode should return true when GOFORTRESS_MCP_CONFIG is set")
+	assert.True(t, isTUIMode(), "isTUIMode should return true when GOYOKE_MCP_CONFIG is set")
 	assert.Contains(t, tuiTranslation, "spawn_agent")
 	assert.Contains(t, tuiTranslation, "get_agent_result")
 	assert.Contains(t, tuiTranslation, "Task()")
-	assert.Contains(t, tuiTranslation, "Do NOT translate mcp__gofortress-interactive__team_run")
+	assert.Contains(t, tuiTranslation, "Do NOT translate mcp__goyoke-interactive__team_run")
 
 	// Verify guard path is not created for non-guarded skill
 	_, err := os.Stat(guardPath)
@@ -213,13 +213,13 @@ func TestEmitSetupResponse_TUI_InjectsTranslation(t *testing.T) {
 }
 
 func TestIsTUIMode_NotSet(t *testing.T) {
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
-	assert.False(t, isTUIMode(), "isTUIMode should return false when GOFORTRESS_MCP_CONFIG is empty")
+	t.Setenv("GOYOKE_MCP_CONFIG", "")
+	assert.False(t, isTUIMode(), "isTUIMode should return false when GOYOKE_MCP_CONFIG is empty")
 }
 
 func TestIsTUIMode_Set(t *testing.T) {
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/gofortress-mcp-12345.json")
-	assert.True(t, isTUIMode(), "isTUIMode should return true when GOFORTRESS_MCP_CONFIG is set")
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/goyoke-mcp-12345.json")
+	assert.True(t, isTUIMode(), "isTUIMode should return true when GOYOKE_MCP_CONFIG is set")
 }
 
 func TestTuiTranslation_ContainsKeyRules(t *testing.T) {
@@ -237,7 +237,7 @@ func TestTuiTranslation_ContainsKeyRules(t *testing.T) {
 func TestHandleSetupModeWithConfig_LegacyGuarded_CreatesTeamDir(t *testing.T) {
 	// Verify that the legacy path still creates the team directory and guard file
 	// regardless of TUI mode (translation injection is orthogonal to guard creation).
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	t.Setenv("GOYOKE_MCP_CONFIG", "")
 
 	tmpDir := t.TempDir()
 	guardPath := filepath.Join(tmpDir, guardFileName)

@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains the root AppModel: the single top-level tea.Model that
 // owns all application state and implements The Elm Architecture.
 package model
@@ -153,7 +153,7 @@ type sharedState struct {
 	breadcrumb breadcrumbWidget
 
 	// cwdSelector is the modal overlay for changing the working directory.
-	// It propagates CWD changes to os.Chdir and GOGENT_CWD env var so that
+	// It propagates CWD changes to os.Chdir and GOYOKE_CWD env var so that
 	// spawned Claude CLI subprocesses inherit the desired scope.
 	cwdSelector cwdSelectorWidget
 
@@ -187,7 +187,7 @@ type sharedState struct {
 // AppModel
 // ---------------------------------------------------------------------------
 
-// AppModel is the root tea.Model for the GOgent-Fortress TUI.  It owns all
+// AppModel is the root tea.Model for the goYoke TUI.  It owns all
 // application state and delegates rendering and key handling to child
 // components.
 //

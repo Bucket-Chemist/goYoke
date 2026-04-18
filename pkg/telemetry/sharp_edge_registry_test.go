@@ -16,7 +16,7 @@ func resetRegistry() {
 func TestIsValidSharpEdgeID(t *testing.T) {
 	// Setup test directory with mock sharp-edges.yaml
 	dir := t.TempDir()
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 	resetRegistry()
 
 	// Create test agent directory with sharp-edges.yaml
@@ -58,7 +58,7 @@ func TestIsValidSharpEdgeID(t *testing.T) {
 
 func TestGetAllSharpEdgeIDs(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 	resetRegistry()
 
 	// Create multiple agent directories
@@ -91,7 +91,7 @@ func TestGetAllSharpEdgeIDs(t *testing.T) {
 
 func TestLoadSharpEdgeIDs_NoAgentsDir(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 	resetRegistry()
 
 	// Don't create the agents directory
@@ -109,7 +109,7 @@ func TestLoadSharpEdgeIDs_NoAgentsDir(t *testing.T) {
 
 func TestLoadSharpEdgeIDs_EmptyYAML(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 	resetRegistry()
 
 	agentDir := filepath.Join(dir, ".claude", "agents", "empty-agent")

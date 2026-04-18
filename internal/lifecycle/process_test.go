@@ -15,13 +15,13 @@ func TestCleanupStaleSockets(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
 
 	// Create a stale socket (non-existent PID)
-	stalePath := filepath.Join(tmpDir, "gofortress-99999999.sock")
+	stalePath := filepath.Join(tmpDir, "goyoke-99999999.sock")
 	if err := os.WriteFile(stalePath, []byte("test"), 0600); err != nil {
 		t.Fatalf("Failed to create stale socket: %v", err)
 	}
 
 	// Create a valid socket (current process)
-	validPath := filepath.Join(tmpDir, fmt.Sprintf("gofortress-%d.sock", os.Getpid()))
+	validPath := filepath.Join(tmpDir, fmt.Sprintf("goyoke-%d.sock", os.Getpid()))
 	if err := os.WriteFile(validPath, []byte("test"), 0600); err != nil {
 		t.Fatalf("Failed to create valid socket: %v", err)
 	}
@@ -66,9 +66,9 @@ func TestExtractPIDFromPath(t *testing.T) {
 		path     string
 		expected int
 	}{
-		{"/run/user/1000/gofortress-12345.sock", 12345},
-		{"/tmp/gofortress-1.sock", 1},
-		{"/tmp/gofortress-notapid.sock", 0},
+		{"/run/user/1000/goyoke-12345.sock", 12345},
+		{"/tmp/goyoke-1.sock", 1},
+		{"/tmp/goyoke-notapid.sock", 0},
 		{"/tmp/other-file.sock", 0},
 	}
 
@@ -262,9 +262,9 @@ func TestCleanupStaleSockets_MultipleStale(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
 
 	// Create multiple stale sockets
-	stale1 := filepath.Join(tmpDir, "gofortress-99999998.sock")
-	stale2 := filepath.Join(tmpDir, "gofortress-99999997.sock")
-	stale3 := filepath.Join(tmpDir, "gofortress-99999996.sock")
+	stale1 := filepath.Join(tmpDir, "goyoke-99999998.sock")
+	stale2 := filepath.Join(tmpDir, "goyoke-99999997.sock")
+	stale3 := filepath.Join(tmpDir, "goyoke-99999996.sock")
 
 	for _, path := range []string{stale1, stale2, stale3} {
 		if err := os.WriteFile(path, []byte("test"), 0600); err != nil {
@@ -303,7 +303,7 @@ func TestCleanupStaleSockets_RemoveError(t *testing.T) {
 		t.Fatalf("Failed to create subdirectory: %v", err)
 	}
 
-	stalePath := filepath.Join(subDir, "gofortress-99999995.sock")
+	stalePath := filepath.Join(subDir, "goyoke-99999995.sock")
 	if err := os.WriteFile(stalePath, []byte("test"), 0600); err != nil {
 		t.Fatalf("Failed to create stale socket: %v", err)
 	}

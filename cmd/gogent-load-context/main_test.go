@@ -111,9 +111,9 @@ func TestIntegration_ValidStartupSession(t *testing.T) {
 
 	// Setup project directory
 	projectDir := t.TempDir()
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	// Prepare valid SessionStart input
 	input := `{"type":"startup","session_id":"test-startup-123","hook_event_name":"SessionStart"}`
@@ -189,15 +189,15 @@ func TestIntegration_ValidResumeSession(t *testing.T) {
 
 	// Setup project directory with handoff file
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	handoffContent := "# Previous Session\n\nImplemented feature X.\n\nNext: Test feature X."
 	os.WriteFile(filepath.Join(memoryDir, "last-handoff.md"), []byte(handoffContent), 0644)
 
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	// Prepare resume SessionStart input
 	input := `{"type":"resume","session_id":"test-resume-456","hook_event_name":"SessionStart"}`
@@ -277,9 +277,9 @@ func TestIntegration_FileReadError_MissingHandoff(t *testing.T) {
 
 	// Setup project without handoff
 	projectDir := t.TempDir()
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	// Resume session (expects handoff)
 	input := `{"type":"resume","session_id":"test-no-handoff","hook_event_name":"SessionStart"}`
@@ -369,16 +369,16 @@ func TestIntegration_PendingLearnings(t *testing.T) {
 
 	// Setup project with pending learnings
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	learnings := `{"timestamp":"2024-01-20","learning":"Fixed bug in parser"}
 {"timestamp":"2024-01-21","learning":"Added validation for input"}`
 	os.WriteFile(filepath.Join(memoryDir, "pending-learnings.jsonl"), []byte(learnings), 0644)
 
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	// Valid startup input
 	input := `{"type":"startup","session_id":"test-learnings","hook_event_name":"SessionStart"}`
@@ -443,9 +443,9 @@ func TestIntegration_GitInfoDetection(t *testing.T) {
 	headContent := "ref: refs/heads/feature-branch"
 	os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte(headContent), 0644)
 
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	input := `{"type":"startup","session_id":"test-git","hook_event_name":"SessionStart"}`
 
@@ -493,7 +493,7 @@ func TestIntegration_GitInfoDetection(t *testing.T) {
 // =============================================================================
 
 func TestIntegration_WithCLAUDE_PROJECT_DIR(t *testing.T) {
-	// Test fallback to CLAUDE_PROJECT_DIR when GOGENT_PROJECT_DIR not set
+	// Test fallback to CLAUDE_PROJECT_DIR when GOYOKE_PROJECT_DIR not set
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
@@ -508,13 +508,13 @@ func TestIntegration_WithCLAUDE_PROJECT_DIR(t *testing.T) {
 	// Setup project directory
 	projectDir := t.TempDir()
 
-	// Unset GOGENT_PROJECT_DIR, set CLAUDE_PROJECT_DIR
-	oldGogent := os.Getenv("GOGENT_PROJECT_DIR")
+	// Unset GOYOKE_PROJECT_DIR, set CLAUDE_PROJECT_DIR
+	oldGogent := os.Getenv("GOYOKE_PROJECT_DIR")
 	oldClaude := os.Getenv("CLAUDE_PROJECT_DIR")
-	os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Unsetenv("GOYOKE_PROJECT_DIR")
 	os.Setenv("CLAUDE_PROJECT_DIR", projectDir)
 	defer func() {
-		os.Setenv("GOGENT_PROJECT_DIR", oldGogent)
+		os.Setenv("GOYOKE_PROJECT_DIR", oldGogent)
 		os.Setenv("CLAUDE_PROJECT_DIR", oldClaude)
 	}()
 
@@ -566,13 +566,13 @@ func TestIntegration_NoPendingLearnings(t *testing.T) {
 	os.WriteFile(filepath.Join(claudeDir, "routing-schema.json"), []byte(minimalSchema), 0644)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 	// No pending-learnings.jsonl file created
 
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	input := `{"type":"startup","session_id":"test-no-learnings","hook_event_name":"SessionStart"}`
 
@@ -630,9 +630,9 @@ func TestIntegration_WithToolCounterInitialization(t *testing.T) {
 	os.Setenv("XDG_CACHE_HOME", cacheDir)
 	defer os.Setenv("XDG_CACHE_HOME", oldXDG)
 
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	input := `{"type":"startup","session_id":"test-counter","hook_event_name":"SessionStart"}`
 
@@ -685,7 +685,7 @@ func TestIntegration_WithToolCounterInitialization(t *testing.T) {
 	}
 
 	// Tool counter should be initialized
-	counterPath := filepath.Join(cacheDir, "gogent", "tool-counter")
+	counterPath := filepath.Join(cacheDir, "goyoke", "tool-counter")
 	if _, err := os.Stat(counterPath); os.IsNotExist(err) {
 		t.Logf("Tool counter not created at %s (non-fatal)", counterPath)
 	}

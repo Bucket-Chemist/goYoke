@@ -97,7 +97,7 @@ func holdLock(t *testing.T, sessionID string) func() {
 func TestHandleGuardMode_EmptySessionID(t *testing.T) {
 	event := makeEvent("", "Write")
 	// Empty session ID with no legacy guard → allow.
-	t.Setenv("GOGENT_SESSION_DIR", t.TempDir())
+	t.Setenv("GOYOKE_SESSION_DIR", t.TempDir())
 	output := handleGuardMode(event)
 	assert.Equal(t, "{}", output)
 }
@@ -106,7 +106,7 @@ func TestHandleGuardMode_NoGuardFile(t *testing.T) {
 	sessionID := "test-session-no-guard"
 	event := makeEvent(sessionID, "Write")
 	// No legacy guard either.
-	t.Setenv("GOGENT_SESSION_DIR", t.TempDir())
+	t.Setenv("GOYOKE_SESSION_DIR", t.TempDir())
 	output := handleGuardMode(event)
 	assert.Equal(t, "{}", output)
 }
@@ -167,7 +167,7 @@ func TestHandleGuardMode_StaleGuard_AutoCleanup(t *testing.T) {
 	require.NoError(t, os.WriteFile(lockPath, nil, 0644))
 
 	// No legacy guard either.
-	t.Setenv("GOGENT_SESSION_DIR", t.TempDir())
+	t.Setenv("GOYOKE_SESSION_DIR", t.TempDir())
 
 	output := handleGuardMode(makeEvent(sessionID, "Write"))
 	assert.Equal(t, "{}", output, "stale guard should allow all tools")
@@ -221,13 +221,13 @@ func TestCheckAllowList_MCP_Tools(t *testing.T) {
 	guard := &config.ActiveSkill{
 		Skill: "review",
 		RouterAllowedTools: []string{
-			"mcp__gofortress-interactive__spawn_agent",
-			"mcp__gofortress-interactive__team_run",
+			"mcp__goyoke-interactive__spawn_agent",
+			"mcp__goyoke-interactive__team_run",
 		},
 	}
-	assert.Equal(t, "{}", checkAllowList("mcp__gofortress-interactive__spawn_agent", guard))
-	assert.Equal(t, "{}", checkAllowList("mcp__gofortress-interactive__team_run", guard))
-	assert.Contains(t, checkAllowList("mcp__gofortress-interactive__ask_user", guard), "blocked")
+	assert.Equal(t, "{}", checkAllowList("mcp__goyoke-interactive__spawn_agent", guard))
+	assert.Equal(t, "{}", checkAllowList("mcp__goyoke-interactive__team_run", guard))
+	assert.Contains(t, checkAllowList("mcp__goyoke-interactive__ask_user", guard), "blocked")
 }
 
 // ---------------------------------------------------------------------------
@@ -304,7 +304,7 @@ func TestHandleGuardMode_SessionA_Stale_SessionB_Active(t *testing.T) {
 	defer os.Remove(config.GetGuardLockPath(sessionB))
 
 	// No legacy guard.
-	t.Setenv("GOGENT_SESSION_DIR", t.TempDir())
+	t.Setenv("GOYOKE_SESSION_DIR", t.TempDir())
 
 	// Session A: stale → allow everything.
 	assert.Equal(t, "{}", handleGuardMode(makeEvent(sessionA, "Write")))

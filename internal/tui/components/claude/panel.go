@@ -1,5 +1,5 @@
 // Package claude implements the Claude conversation panel for the
-// GOgent-Fortress TUI. It renders the assistant/user message history,
+// goYoke TUI. It renders the assistant/user message history,
 // handles streaming updates, and provides a text-input line for composing
 // new messages.
 package claude

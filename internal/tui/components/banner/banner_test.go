@@ -27,8 +27,8 @@ func TestBannerInit(t *testing.T) {
 func TestBannerViewContainsTitle(t *testing.T) {
 	m := banner.NewBannerModel(80)
 	view := m.View()
-	if !strings.Contains(view, "GOgent-Fortress") {
-		t.Errorf("View() does not contain 'GOgent-Fortress'; got:\n%s", view)
+	if !strings.Contains(view, "goYoke") {
+		t.Errorf("View() does not contain 'goYoke'; got:\n%s", view)
 	}
 }
 
@@ -53,7 +53,7 @@ func TestBannerUpdateWindowSizeMsg(t *testing.T) {
 	}
 	// After update the new model should render without panicking.
 	view := newModel.(banner.BannerModel).View()
-	if !strings.Contains(view, "GOgent-Fortress") {
+	if !strings.Contains(view, "goYoke") {
 		t.Errorf("View() after resize does not contain title; got:\n%s", view)
 	}
 }
@@ -62,7 +62,7 @@ func TestBannerSetWidth(t *testing.T) {
 	m := banner.NewBannerModel(80)
 	m.SetWidth(100)
 	view := m.View()
-	if !strings.Contains(view, "GOgent-Fortress") {
+	if !strings.Contains(view, "goYoke") {
 		t.Errorf("View() after SetWidth does not contain title; got:\n%s", view)
 	}
 }
@@ -98,8 +98,8 @@ func TestCompactBannerSingleLine(t *testing.T) {
 	if len(lines) != 1 {
 		t.Errorf("compact View() should produce 1 line; got %d:\n%s", len(lines), view)
 	}
-	if !strings.Contains(view, "GOgent Fortress") {
-		t.Errorf("compact View() does not contain 'GOgent Fortress'; got:\n%s", view)
+	if !strings.Contains(view, "goYoke") {
+		t.Errorf("compact View() does not contain 'goYoke'; got:\n%s", view)
 	}
 }
 

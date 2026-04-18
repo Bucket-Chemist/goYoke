@@ -187,17 +187,17 @@ func TestAllowResponseForDelegation(t *testing.T) {
 
 func TestLoadAgentsIndex_FileNotFound(t *testing.T) {
 	// Save original env vars
-	origAgentsIndex := os.Getenv("GOGENT_AGENTS_INDEX")
-	origProjectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	origAgentsIndex := os.Getenv("GOYOKE_AGENTS_INDEX")
+	origProjectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	defer func() {
-		os.Setenv("GOGENT_AGENTS_INDEX", origAgentsIndex)
-		os.Setenv("GOGENT_PROJECT_DIR", origProjectDir)
+		os.Setenv("GOYOKE_AGENTS_INDEX", origAgentsIndex)
+		os.Setenv("GOYOKE_PROJECT_DIR", origProjectDir)
 		ClearAgentsIndexCache()
 	}()
 
 	// Point to non-existent file
-	os.Setenv("GOGENT_AGENTS_INDEX", "/nonexistent/path/agents-index.json")
-	os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_AGENTS_INDEX", "/nonexistent/path/agents-index.json")
+	os.Setenv("GOYOKE_PROJECT_DIR", "")
 	ClearAgentsIndexCache()
 
 	_, err := LoadAgentsIndexCached()
@@ -208,17 +208,17 @@ func TestLoadAgentsIndex_FileNotFound(t *testing.T) {
 
 func TestValidateDelegationRequirement_ConfigLoadError(t *testing.T) {
 	// Save original env vars
-	origAgentsIndex := os.Getenv("GOGENT_AGENTS_INDEX")
-	origProjectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	origAgentsIndex := os.Getenv("GOYOKE_AGENTS_INDEX")
+	origProjectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	defer func() {
-		os.Setenv("GOGENT_AGENTS_INDEX", origAgentsIndex)
-		os.Setenv("GOGENT_PROJECT_DIR", origProjectDir)
+		os.Setenv("GOYOKE_AGENTS_INDEX", origAgentsIndex)
+		os.Setenv("GOYOKE_PROJECT_DIR", origProjectDir)
 		ClearAgentsIndexCache()
 	}()
 
 	// Point to non-existent file
-	os.Setenv("GOGENT_AGENTS_INDEX", "/nonexistent/path/agents-index.json")
-	os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_AGENTS_INDEX", "/nonexistent/path/agents-index.json")
+	os.Setenv("GOYOKE_PROJECT_DIR", "")
 	ClearAgentsIndexCache()
 
 	// Should fail-open (return no error)

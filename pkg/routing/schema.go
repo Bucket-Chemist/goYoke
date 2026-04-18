@@ -348,15 +348,15 @@ type DocumentationTheater struct {
 }
 
 // LoadSchema loads and validates routing-schema.json.
-// Priority: GOGENT_ROUTING_SCHEMA env var > XDG config directory default.
+// Priority: GOYOKE_ROUTING_SCHEMA env var > XDG config directory default.
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadSchema() (*Schema, error) {
-	schemaPath := os.Getenv("GOGENT_ROUTING_SCHEMA")
+	schemaPath := os.Getenv("GOYOKE_ROUTING_SCHEMA")
 
 	// If explicit path not set, try project-specific or XDG default
 	if schemaPath == "" {
-		// Priority 1: GOGENT_PROJECT_DIR (test isolation)
-		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		// Priority 1: GOYOKE_PROJECT_DIR (test isolation)
+		if projectDir := os.Getenv("GOYOKE_PROJECT_DIR"); projectDir != "" {
 			path := filepath.Join(projectDir, ".claude", "routing-schema.json")
 			if _, err := os.Stat(path); err == nil {
 				schemaPath = path

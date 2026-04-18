@@ -236,7 +236,7 @@ func (s *claudeSpawner) prepareSpawn(tr *TeamRunner, waveIdx, memIdx int) (*spaw
 	}
 
 	// 3b. Inject agent identity + rules + conventions into envelope.
-	// This gives team-run agents the same context Task()-spawned agents get via gogent-validate.
+	// This gives team-run agents the same context Task()-spawned agents get via goyoke-validate.
 	if agentConfig.ContextRequirements != nil || member.Agent != "" {
 		augmented, err := routing.BuildFullAgentContext(
 			member.Agent,
@@ -301,16 +301,16 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		Setsid: true,
 	}
 
-	// 5. Set Env: GOGENT_NESTING_LEVEL=2, GOGENT_PROJECT_ROOT, GOGENT_SESSION_DIR
+	// 5. Set Env: GOYOKE_NESTING_LEVEL=2, GOYOKE_PROJECT_ROOT, GOYOKE_SESSION_DIR
 	// Filter out Claude Code session env vars that block nested CLI invocations.
 	// team-run spawns independent CLI processes that must not be treated as nested sessions.
 	cmd.Env = append(filterEnv(os.Environ(), "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"),
-		"GOGENT_NESTING_LEVEL=2",
-		fmt.Sprintf("GOGENT_PROJECT_ROOT=%s", cfg.projectRoot),
+		"GOYOKE_NESTING_LEVEL=2",
+		fmt.Sprintf("GOYOKE_PROJECT_ROOT=%s", cfg.projectRoot),
 	)
 	// Add session dir if available (read from current-session marker file)
 	if sessionDir, err := session.ReadCurrentSession(cfg.projectRoot); err == nil && sessionDir != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("GOGENT_SESSION_DIR=%s", sessionDir))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GOYOKE_SESSION_DIR=%s", sessionDir))
 	} else if err != nil {
 		log.Printf("INFO: Could not read current-session marker: %v (child will inherit parent session)", err)
 	}

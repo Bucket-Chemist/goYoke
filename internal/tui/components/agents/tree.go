@@ -1,5 +1,5 @@
 // Package agents implements the agent tree view and detail components for the
-// GOgent-Fortress TUI. It has no dependency on the model package; it imports
+// goYoke TUI. It has no dependency on the model package; it imports
 // only state and config to keep the import graph acyclic.
 package agents
 

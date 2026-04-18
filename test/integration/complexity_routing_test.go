@@ -13,7 +13,7 @@ import (
 func TestComplexityRoutingWorkflow(t *testing.T) {
 	// Setup temp directories
 	tmpProject := t.TempDir()
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	metricsDir := filepath.Join(tmpProject, ".claude", "tmp")
 	os.MkdirAll(metricsDir, 0755)
@@ -21,7 +21,7 @@ func TestComplexityRoutingWorkflow(t *testing.T) {
 	// Save and restore XDG_RUNTIME_DIR to isolate test
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
 	// Step 1: Scout writes metrics (simulated)
 	scoutMetrics := routing.ScoutMetrics{
@@ -67,7 +67,7 @@ func TestComplexityRoutingWorkflow(t *testing.T) {
 
 func TestComplexityRoutingStaleMetrics(t *testing.T) {
 	tmpProject := t.TempDir()
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	metricsDir := filepath.Join(tmpProject, ".claude", "tmp")
 	os.MkdirAll(metricsDir, 0755)
@@ -75,7 +75,7 @@ func TestComplexityRoutingStaleMetrics(t *testing.T) {
 	// Save and restore XDG_RUNTIME_DIR to isolate test
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
 	// Write stale metrics (10 minutes old)
 	staleMetrics := routing.ScoutMetrics{

@@ -1,4 +1,4 @@
-// Package orchestratorguard implements the gogent-orchestrator-guard hook.
+// Package orchestratorguard implements the goyoke-orchestrator-guard hook.
 // It validates background task collection before orchestrator completion.
 package orchestratorguard
 
@@ -15,7 +15,7 @@ import (
 // DefaultTimeout is the read timeout for stdin events.
 const DefaultTimeout = 5 * time.Second
 
-// Main is the entrypoint for the gogent-orchestrator-guard hook.
+// Main is the entrypoint for the goyoke-orchestrator-guard hook.
 func Main() {
 	event, err := routing.ParseSubagentStopEvent(os.Stdin, DefaultTimeout)
 	if err != nil {

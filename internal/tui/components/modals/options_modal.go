@@ -1,4 +1,4 @@
-// Package modals implements the modal dialog system for the GOgent-Fortress TUI.
+// Package modals implements the modal dialog system for the goYoke TUI.
 // This file implements OptionsViewModal: a full-screen options viewer that
 // activates via alt+o when the options drawer has content or an active modal.
 //

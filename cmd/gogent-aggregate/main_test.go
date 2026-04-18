@@ -29,7 +29,7 @@ func TestRun_HelpFlag(t *testing.T) {
 
 	output := buf.String()
 	expectedStrings := []string{
-		"gogent-aggregate - Weekly learning aggregation",
+		"goyoke-aggregate - Weekly learning aggregation",
 		"--force",
 		"--dry-run",
 		"pending-learnings.jsonl",
@@ -51,7 +51,7 @@ func TestRun_HelpFlag(t *testing.T) {
 // TestRun_NoAggregationNeeded verifies behavior when all files are under threshold.
 func TestRun_NoAggregationNeeded(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(memoryDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestRun_NoAggregationNeeded(t *testing.T) {
 // TestRun_DryRun verifies --dry-run flag shows what would be aggregated without modifying files.
 func TestRun_DryRun(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(memoryDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestRun_DryRun(t *testing.T) {
 // TestRun_ForceAggregation verifies --force flag triggers aggregation regardless of size.
 func TestRun_ForceAggregation(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	archiveDir := filepath.Join(memoryDir, "archive")
 	if err := os.MkdirAll(memoryDir, 0755); err != nil {
 		t.Fatal(err)
@@ -252,7 +252,7 @@ func TestRun_MissingProjectDir(t *testing.T) {
 	os.Chdir(tmpDir)
 	defer os.Chdir(oldWd)
 
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Capture stdout
@@ -390,7 +390,7 @@ func TestCountLines_LargeLine(t *testing.T) {
 // TestAggregateFiles verifies the core aggregation logic.
 func TestAggregateFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	archiveDir := filepath.Join(memoryDir, "archive")
 
 	os.MkdirAll(memoryDir, 0755)
@@ -679,7 +679,7 @@ func TestUpdateStats(t *testing.T) {
 
 // TestBuildFilePaths verifies path building from specs.
 func TestBuildFilePaths(t *testing.T) {
-	memoryDir := "/test/.gogent/memory"
+	memoryDir := "/test/.goyoke/memory"
 	specs := []FileSpec{
 		{Filename: "test1.jsonl", ArchiveType: "type1"},
 		{Filename: "test2.jsonl", ArchiveType: "type2"},
@@ -722,7 +722,7 @@ func TestPrintHelp(t *testing.T) {
 
 	// Verify all key elements are present
 	required := []string{
-		"gogent-aggregate",
+		"goyoke-aggregate",
 		"--force",
 		"--dry-run",
 		"--help",
@@ -764,7 +764,7 @@ func TestRun_InvalidFlag(t *testing.T) {
 // TestRun_AllFileTypes verifies all 6 file types are handled correctly.
 func TestRun_AllFileTypes(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create all 6 file types
@@ -863,7 +863,7 @@ func TestRun_AllFileTypes(t *testing.T) {
 // TestRun_EmptyMemoryDir verifies behavior with empty memory directory.
 func TestRun_EmptyMemoryDir(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Don't create any files - directory is empty
@@ -893,7 +893,7 @@ func TestRun_EmptyMemoryDir(t *testing.T) {
 // TestAggregateFiles_AllFileTypes verifies archiving for all 6 file types.
 func TestAggregateFiles_AllFileTypes(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	archiveDir := filepath.Join(memoryDir, "archive")
 
 	os.MkdirAll(memoryDir, 0755)
@@ -982,7 +982,7 @@ func TestCheckAggregationNeeded_DryRunOutput(t *testing.T) {
 // TestAggregateFiles_EmptyFile verifies handling of empty files.
 func TestAggregateFiles_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	archiveDir := filepath.Join(memoryDir, "archive")
 
 	os.MkdirAll(memoryDir, 0755)
@@ -1012,7 +1012,7 @@ func TestAggregateFiles_EmptyFile(t *testing.T) {
 // TestRun_LargeFileTriggersAggregation verifies size-based aggregation trigger.
 func TestRun_LargeFileTriggersAggregation(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create a file larger than 1MB
@@ -1129,7 +1129,7 @@ func TestRun_CheckAggregationError(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create a file then make the directory unreadable
@@ -1170,7 +1170,7 @@ func TestAggregateFiles_RenameError(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	archiveDir := filepath.Join(memoryDir, "archive")
 
 	os.MkdirAll(memoryDir, 0755)

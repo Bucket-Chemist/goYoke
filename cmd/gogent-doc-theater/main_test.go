@@ -313,16 +313,16 @@ func TestTheaterPatternWarning(t *testing.T) {
 	}
 }
 
-// TestTheaterPatternBlocking verifies block decision when GOGENT_DOC_THEATER_BLOCK=true.
+// TestTheaterPatternBlocking verifies block decision when GOYOKE_DOC_THEATER_BLOCK=true.
 func TestTheaterPatternBlocking(t *testing.T) {
 	// Set environment variable for blocking mode
-	oldEnv := os.Getenv("GOGENT_DOC_THEATER_BLOCK")
-	os.Setenv("GOGENT_DOC_THEATER_BLOCK", "true")
+	oldEnv := os.Getenv("GOYOKE_DOC_THEATER_BLOCK")
+	os.Setenv("GOYOKE_DOC_THEATER_BLOCK", "true")
 	defer func() {
 		if oldEnv == "" {
-			os.Unsetenv("GOGENT_DOC_THEATER_BLOCK")
+			os.Unsetenv("GOYOKE_DOC_THEATER_BLOCK")
 		} else {
-			os.Setenv("GOGENT_DOC_THEATER_BLOCK", oldEnv)
+			os.Setenv("GOYOKE_DOC_THEATER_BLOCK", oldEnv)
 		}
 	}()
 

@@ -9,7 +9,7 @@ import (
 
 const (
 	// ConventionsMarker is used to detect if conventions were already injected
-	ConventionsMarker = "[CONVENTIONS - AUTO-INJECTED BY gogent-validate]"
+	ConventionsMarker = "[CONVENTIONS - AUTO-INJECTED BY goyoke-validate]"
 	ConventionsEndMarker = "[END CONVENTIONS]"
 )
 

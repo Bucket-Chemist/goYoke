@@ -22,7 +22,7 @@ var (
 
 // Daemon timing constants
 const (
-	PIDFileName    = "gogent-team-run.pid"
+	PIDFileName    = "goyoke-team-run.pid"
 	ConfigFileName = "config.json"
 	RunnerLogFile  = "runner.log"
 

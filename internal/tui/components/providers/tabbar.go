@@ -1,5 +1,5 @@
 // Package providers implements the provider tab-bar component for the
-// GOgent-Fortress TUI. It renders a single-row strip of provider names and
+// goYoke TUI. It renders a single-row strip of provider names and
 // highlights the currently active provider.
 //
 // This component is display-only: key handling (Alt+] cycling) is wired

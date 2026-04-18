@@ -1,4 +1,4 @@
-// Package modals implements the modal dialog system for the GOgent-Fortress TUI.
+// Package modals implements the modal dialog system for the goYoke TUI.
 // This file implements PlanViewModal: a full-screen, scrollable, Glamour-rendered
 // plan viewer that activates via alt+v when the right panel is in RPMPlanPreview mode.
 package modals

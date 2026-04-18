@@ -128,13 +128,13 @@ func TestExtractToolActivity_BashTool(t *testing.T) {
 		Type:  "tool_use",
 		ID:    "toolu_bash01",
 		Name:  "Bash",
-		Input: json.RawMessage(`{"command":"go test -race ./cmd/gogent-team-run/..."}`),
+		Input: json.RawMessage(`{"command":"go test -race ./cmd/goyoke-team-run/..."}`),
 	}
 
 	act := extractToolActivity(block)
 	assert.Equal(t, "Bash", act.Tool)
-	assert.Equal(t, "go test -race ./cmd/gogent-team-run/...", act.Target)
-	assert.Equal(t, "Bash: go test -race ./cmd/gogent-team-run/...", act.Preview)
+	assert.Equal(t, "go test -race ./cmd/goyoke-team-run/...", act.Target)
+	assert.Equal(t, "Bash: go test -race ./cmd/goyoke-team-run/...", act.Preview)
 }
 
 func TestExtractToolActivity_GrepTool(t *testing.T) {

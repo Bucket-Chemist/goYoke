@@ -1,5 +1,5 @@
 // Package toast implements a transient notification overlay for the
-// GOgent-Fortress TUI. Toasts are small bordered boxes that appear at the
+// goYoke TUI. Toasts are small bordered boxes that appear at the
 // top-right of the terminal and expire automatically after a configurable
 // duration.
 //

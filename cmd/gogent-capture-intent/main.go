@@ -42,7 +42,7 @@ type AskUserQuestionResult struct {
 func main() {
 	if err := run(); err != nil {
 		// Log error but don't fail the hook (graceful degradation)
-		fmt.Fprintf(os.Stderr, "[gogent-capture-intent] %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-capture-intent] %v\n", err)
 		// Output empty JSON to not break hook chain
 		fmt.Println("{}")
 		os.Exit(0) // Don't fail - graceful degradation
@@ -125,7 +125,7 @@ func extractIntent(hookInput HookInput) (*session.UserIntent, error) {
 		ToolContext: hookInput.Tool.Name,
 	}
 
-	// GOgent-041: Add classification and keyword extraction
+	// goYoke-041: Add classification and keyword extraction
 	intent.Category = string(session.ClassifyIntent(q.Question, response))
 	intent.Keywords = session.ExtractKeywords(response)
 
@@ -135,7 +135,7 @@ func extractIntent(hookInput HookInput) (*session.UserIntent, error) {
 // appendIntent appends a UserIntent to the JSONL file
 func appendIntent(intent *session.UserIntent) error {
 	// Determine project directory
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	if projectDir == "" {
 		cwd, err := os.Getwd()
 		if err != nil {

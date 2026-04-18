@@ -166,8 +166,8 @@ func TestTimeWindow_ExcludesOldEntries(t *testing.T) {
 	defer cleanup()
 
 	// Set a small time window for testing
-	os.Setenv("GOGENT_FAILURE_WINDOW", "60")
-	defer os.Unsetenv("GOGENT_FAILURE_WINDOW")
+	os.Setenv("GOYOKE_FAILURE_WINDOW", "60")
+	defer os.Unsetenv("GOYOKE_FAILURE_WINDOW")
 
 	now := time.Now().Unix()
 	old := now - 120 // 2 minutes ago (outside 60s window)
@@ -379,15 +379,15 @@ func TestEnvironmentVariables_Configuration(t *testing.T) {
 		getter   func() int
 	}{
 		{
-			name:     "GOGENT_MAX_FAILURES",
-			envVar:   "GOGENT_MAX_FAILURES",
+			name:     "GOYOKE_MAX_FAILURES",
+			envVar:   "GOYOKE_MAX_FAILURES",
 			envValue: "5",
 			expected: 5,
 			getter:   getMaxFailures,
 		},
 		{
-			name:     "GOGENT_FAILURE_WINDOW",
-			envVar:   "GOGENT_FAILURE_WINDOW",
+			name:     "GOYOKE_FAILURE_WINDOW",
+			envVar:   "GOYOKE_FAILURE_WINDOW",
 			envValue: "600",
 			expected: 600,
 			getter:   getFailureWindow,
@@ -416,10 +416,10 @@ func TestEnvironmentVariables_InvalidValues(t *testing.T) {
 		expected int
 		getter   func() int
 	}{
-		{"invalid_max_failures", "GOGENT_MAX_FAILURES", "invalid", DefaultMaxFailures, getMaxFailures},
-		{"invalid_window", "GOGENT_FAILURE_WINDOW", "invalid", DefaultFailureWindow, getFailureWindow},
-		{"negative_max", "GOGENT_MAX_FAILURES", "-1", DefaultMaxFailures, getMaxFailures},
-		{"zero_window", "GOGENT_FAILURE_WINDOW", "0", DefaultFailureWindow, getFailureWindow},
+		{"invalid_max_failures", "GOYOKE_MAX_FAILURES", "invalid", DefaultMaxFailures, getMaxFailures},
+		{"invalid_window", "GOYOKE_FAILURE_WINDOW", "invalid", DefaultFailureWindow, getFailureWindow},
+		{"negative_max", "GOYOKE_MAX_FAILURES", "-1", DefaultMaxFailures, getMaxFailures},
+		{"zero_window", "GOYOKE_FAILURE_WINDOW", "0", DefaultFailureWindow, getFailureWindow},
 	}
 
 	for _, tt := range tests {
@@ -484,7 +484,7 @@ func TestExpandPath(t *testing.T) {
 		wantHome bool
 	}{
 		{"tilde_only", "~", false, true},
-		{"tilde_path", "~/.gogent/file.jsonl", false, true},
+		{"tilde_path", "~/.goyoke/file.jsonl", false, true},
 		{"absolute", "/tmp/file.jsonl", false, false},
 		{"relative", "file.jsonl", false, false},
 		{"empty", "", false, false},
@@ -519,8 +519,8 @@ func TestIsDebuggingLoop_EdgeCases(t *testing.T) {
 	now := time.Now().Unix()
 
 	// Test exactly at threshold
-	os.Setenv("GOGENT_MAX_FAILURES", "2")
-	defer os.Unsetenv("GOGENT_MAX_FAILURES")
+	os.Setenv("GOYOKE_MAX_FAILURES", "2")
+	defer os.Unsetenv("GOYOKE_MAX_FAILURES")
 
 	// Log 2 failures (exactly at threshold)
 	for i := 0; i < 2; i++ {
@@ -919,8 +919,8 @@ func TestGetFailureCount_MultipleTimeWindows(t *testing.T) {
 	_, cleanup := setupTestFile(t)
 	defer cleanup()
 
-	os.Setenv("GOGENT_FAILURE_WINDOW", "120")
-	defer os.Unsetenv("GOGENT_FAILURE_WINDOW")
+	os.Setenv("GOYOKE_FAILURE_WINDOW", "120")
+	defer os.Unsetenv("GOYOKE_FAILURE_WINDOW")
 
 	now := time.Now().Unix()
 	old := now - 180   // 3 minutes ago (outside 120s window)
@@ -1107,11 +1107,11 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	_, cleanup := setupTestFile(t)
 	defer cleanup()
 
-	os.Setenv("GOGENT_MAX_FAILURES", "3")
-	os.Setenv("GOGENT_FAILURE_WINDOW", "300")
+	os.Setenv("GOYOKE_MAX_FAILURES", "3")
+	os.Setenv("GOYOKE_FAILURE_WINDOW", "300")
 	defer func() {
-		os.Unsetenv("GOGENT_MAX_FAILURES")
-		os.Unsetenv("GOGENT_FAILURE_WINDOW")
+		os.Unsetenv("GOYOKE_MAX_FAILURES")
+		os.Unsetenv("GOYOKE_FAILURE_WINDOW")
 	}()
 
 	file := "integration.go"
@@ -1249,8 +1249,8 @@ func TestIntegration_TimeWindowBoundary(t *testing.T) {
 	_, cleanup := setupTestFile(t)
 	defer cleanup()
 
-	os.Setenv("GOGENT_FAILURE_WINDOW", "10")
-	defer os.Unsetenv("GOGENT_FAILURE_WINDOW")
+	os.Setenv("GOYOKE_FAILURE_WINDOW", "10")
+	defer os.Unsetenv("GOYOKE_FAILURE_WINDOW")
 
 	now := time.Now().Unix()
 	old := now - 11 // Outside window

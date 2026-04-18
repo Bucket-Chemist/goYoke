@@ -28,9 +28,9 @@ func main() {
 			return
 		case "show":
 			if len(os.Args) < 3 {
-				fmt.Fprintln(os.Stderr, "[gogent-archive] Usage: gogent-archive show <session-id>")
+				fmt.Fprintln(os.Stderr, "[goyoke-archive] Usage: goyoke-archive show <session-id>")
 				fmt.Fprintln(os.Stderr, "  Missing required argument: session-id")
-				fmt.Fprintln(os.Stderr, "  Example: gogent-archive show abc123def456")
+				fmt.Fprintln(os.Stderr, "  Example: goyoke-archive show abc123def456")
 				os.Exit(1)
 			}
 			showSession(os.Args[2])
@@ -60,7 +60,7 @@ func main() {
 			printHelp()
 			return
 		case "--version", "-v":
-			fmt.Printf("gogent-archive version %s\n", getVersion())
+			fmt.Printf("goyoke-archive version %s\n", getVersion())
 			return
 		}
 	}
@@ -74,11 +74,11 @@ func main() {
 
 func run() error {
 	// Determine project directory from env or cwd
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	if projectDir == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("[gogent-archive] Failed to get working directory: %w. Set GOGENT_PROJECT_DIR environment variable or run from project root.", err)
+			return fmt.Errorf("[goyoke-archive] Failed to get working directory: %w. Set GOYOKE_PROJECT_DIR environment variable or run from project root.", err)
 		}
 		projectDir = cwd
 	}
@@ -86,24 +86,24 @@ func run() error {
 	// Parse SessionEnd event from STDIN with timeout
 	event, err := session.ParseSessionEvent(os.Stdin, DEFAULT_TIMEOUT)
 	if err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to parse SessionEnd event: %w. Ensure hook provides valid JSON on STDIN.", err)
+		return fmt.Errorf("[goyoke-archive] Failed to parse SessionEnd event: %w. Ensure hook provides valid JSON on STDIN.", err)
 	}
 
 	// Collect session metrics
 	metrics, err := session.CollectSessionMetrics(event.SessionID)
 	if err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to collect metrics for session %s: %w. Check temp files exist and are readable.", event.SessionID, err)
+		return fmt.Errorf("[goyoke-archive] Failed to collect metrics for session %s: %w. Check temp files exist and are readable.", event.SessionID, err)
 	}
 
 	// Generate JSONL handoff
 	handoffCfg := session.DefaultHandoffConfig(projectDir)
 	handoff, hMetrics, err := session.GenerateHandoff(handoffCfg, metrics)
 	if err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to generate handoff: %w", err)
+		return fmt.Errorf("[goyoke-archive] Failed to generate handoff: %w", err)
 	}
 
 	if handoff == nil {
-		return fmt.Errorf("[gogent-archive] No handoff data generated. This may be normal for first session. Cannot generate markdown for empty handoff.")
+		return fmt.Errorf("[goyoke-archive] No handoff data generated. This may be normal for first session. Cannot generate markdown for empty handoff.")
 	}
 
 	// Log generation metrics at debug level (internal use only)
@@ -112,31 +112,31 @@ func run() error {
 	// Render markdown for human consumption
 	mdPath := filepath.Join(config.ProjectMemoryDir(projectDir), "last-handoff.md")
 	if err := os.MkdirAll(filepath.Dir(mdPath), 0755); err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to create directory for %s: %w", mdPath, err)
+		return fmt.Errorf("[goyoke-archive] Failed to create directory for %s: %w", mdPath, err)
 	}
 	markdown := session.RenderHandoffMarkdown(handoff)
 	if err := os.WriteFile(mdPath, []byte(markdown), 0644); err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to write markdown to %s: %w", mdPath, err)
+		return fmt.Errorf("[goyoke-archive] Failed to write markdown to %s: %w", mdPath, err)
 	}
 
 	// Archive artifacts AFTER handoff generation
 	if err := session.ArchiveArtifacts(*handoffCfg, event.SessionID); err != nil {
-		return fmt.Errorf("[gogent-archive] Failed to archive artifacts: %w", err)
+		return fmt.Errorf("[goyoke-archive] Failed to archive artifacts: %w", err)
 	}
 
 	// Clean up permission gate session cache (PERM-007).
 	cleanupPermCache(event.SessionID)
 	cleanupSkillGuard(event.SessionID)
 
-	// GOgent-041c: Analyze intent outcomes (non-blocking)
+	// goYoke-041c: Analyze intent outcomes (non-blocking)
 	if err := analyzeAndUpdateIntentOutcomes(projectDir, event.SessionID); err != nil {
 		// Log but don't fail - non-critical
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: Failed to analyze intent outcomes: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Warning: Failed to analyze intent outcomes: %v\n", err)
 	}
 
 	// SessionEnd hooks don't support hookSpecificOutput per Claude Code schema.
 	// Output empty JSON for success, log details to stderr for debugging.
-	fmt.Fprintf(os.Stderr, "[gogent-archive] 📦 SESSION ARCHIVED: %s (tools=%d, errors=%d, violations=%d)\n",
+	fmt.Fprintf(os.Stderr, "[goyoke-archive] 📦 SESSION ARCHIVED: %s (tools=%d, errors=%d, violations=%d)\n",
 		event.SessionID, metrics.ToolCalls, metrics.ErrorsLogged, metrics.RoutingViolations)
 
 	// Empty JSON signals success without triggering schema validation errors
@@ -149,7 +149,7 @@ func run() error {
 // SessionEnd hooks don't support hookSpecificOutput, so we log to stderr
 // and exit with code 0 + empty JSON (errors are non-blocking for SessionEnd).
 func outputError(message string) {
-	fmt.Fprintf(os.Stderr, "[gogent-archive] 🔴 %s\n", message)
+	fmt.Fprintf(os.Stderr, "[goyoke-archive] 🔴 %s\n", message)
 	fmt.Println("{}")
 }
 
@@ -273,7 +273,7 @@ func updateIntentsWithOutcomes(projectDir string, analyzedIntents []session.User
 // cleanupPermCache removes the permission gate session cache for the given
 // session ID. The cache file is at:
 //
-//	$XDG_RUNTIME_DIR/gofortress-perm-cache-{sha256(session_id)}.json
+//	$XDG_RUNTIME_DIR/goyoke-perm-cache-{sha256(session_id)}.json
 //
 // This is called during session end cleanup to prevent stale caches from
 // accumulating. Errors are logged but non-fatal — a missing cache is normal
@@ -285,9 +285,9 @@ func cleanupPermCache(sessionID string) {
 	}
 
 	sum := sha256.Sum256([]byte(sessionID))
-	path := filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", hex.EncodeToString(sum[:])))
+	path := filepath.Join(dir, fmt.Sprintf("goyoke-perm-cache-%s.json", hex.EncodeToString(sum[:])))
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove permission cache %s: %v\n", path, err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Warning: failed to remove permission cache %s: %v\n", path, err)
 	}
 }
 
@@ -304,33 +304,33 @@ func cleanupSkillGuard(sessionID string) {
 		var active config.ActiveSkill
 		if jsonErr := json.Unmarshal(data, &active); jsonErr == nil && active.HolderPID > 0 {
 			if killErr := syscall.Kill(active.HolderPID, syscall.SIGTERM); killErr != nil && killErr != syscall.ESRCH {
-				fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to SIGTERM skill guard holder PID %d: %v\n", active.HolderPID, killErr)
+				fmt.Fprintf(os.Stderr, "[goyoke-archive] Warning: failed to SIGTERM skill guard holder PID %d: %v\n", active.HolderPID, killErr)
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
 
 	if err := os.Remove(guardPath); err != nil && !os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove skill guard file %s: %v\n", guardPath, err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Warning: failed to remove skill guard file %s: %v\n", guardPath, err)
 	}
 
 	lockPath := config.GetGuardLockPath(sessionID)
 	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Warning: failed to remove skill guard lock %s: %v\n", lockPath, err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Warning: failed to remove skill guard lock %s: %v\n", lockPath, err)
 	}
 
-	fmt.Fprintf(os.Stderr, "[gogent-archive] Cleaned up skill guard for session %s\n", sessionID)
+	fmt.Fprintf(os.Stderr, "[goyoke-archive] Cleaned up skill guard for session %s\n", sessionID)
 }
 
 // getProjectDir determines project directory from env or cwd
 // Exits with error if detection fails (matching run() behavior)
 func getProjectDir() string {
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	if projectDir == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to get working directory: %v\n", err)
-			fmt.Fprintln(os.Stderr, "  Set GOGENT_PROJECT_DIR environment variable or run from project root.")
+			fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to get working directory: %v\n", err)
+			fmt.Fprintln(os.Stderr, "  Set GOYOKE_PROJECT_DIR environment variable or run from project root.")
 			os.Exit(1)
 		}
 		projectDir = cwd
@@ -354,8 +354,8 @@ func listSessions() {
 
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load handoffs: %v\n", err)
-		fmt.Fprintln(os.Stderr, "  Verify .gogent/memory/handoffs.jsonl exists and is readable.")
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to load handoffs: %v\n", err)
+		fmt.Fprintln(os.Stderr, "  Verify .goyoke/memory/handoffs.jsonl exists and is readable.")
 		os.Exit(1)
 	}
 
@@ -403,8 +403,8 @@ func showSession(sessionID string) {
 
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load handoffs: %v\n", err)
-		fmt.Fprintln(os.Stderr, "  Verify .gogent/memory/handoffs.jsonl exists and is readable.")
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to load handoffs: %v\n", err)
+		fmt.Fprintln(os.Stderr, "  Verify .goyoke/memory/handoffs.jsonl exists and is readable.")
 		os.Exit(1)
 	}
 
@@ -419,8 +419,8 @@ func showSession(sessionID string) {
 	}
 
 	// Session not found
-	fmt.Fprintf(os.Stderr, "[gogent-archive] Session %s not found in handoff history.\n", sessionID)
-	fmt.Fprintln(os.Stderr, "  Run 'gogent-archive list' to see available sessions.")
+	fmt.Fprintf(os.Stderr, "[goyoke-archive] Session %s not found in handoff history.\n", sessionID)
+	fmt.Fprintln(os.Stderr, "  Run 'goyoke-archive list' to see available sessions.")
 	os.Exit(1)
 }
 
@@ -431,8 +431,8 @@ func showStats() {
 
 	handoffs, err := session.LoadAllHandoffs(handoffPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load handoffs: %v\n", err)
-		fmt.Fprintln(os.Stderr, "  Verify .gogent/memory/handoffs.jsonl exists and is readable.")
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to load handoffs: %v\n", err)
+		fmt.Fprintln(os.Stderr, "  Verify .goyoke/memory/handoffs.jsonl exists and is readable.")
 		os.Exit(1)
 	}
 
@@ -495,77 +495,77 @@ func showStats() {
 
 // printHelp displays usage information for all subcommands
 func printHelp() {
-	fmt.Println("gogent-archive - Session handoff archival and querying")
+	fmt.Println("goyoke-archive - Session handoff archival and querying")
 	fmt.Println("")
 	fmt.Println("Usage:")
-	fmt.Println("  gogent-archive                       Read SessionEnd JSON from STDIN (hook mode)")
+	fmt.Println("  goyoke-archive                       Read SessionEnd JSON from STDIN (hook mode)")
 	fmt.Println("")
 	fmt.Println("Session Commands:")
-	fmt.Println("  gogent-archive list                  List all sessions")
-	fmt.Println("  gogent-archive list --since 7d       List sessions from last 7 days")
-	fmt.Println("  gogent-archive list --between <dates> List sessions between dates (YYYY-MM-DD,YYYY-MM-DD)")
-	fmt.Println("  gogent-archive list --has-sharp-edges Show only sessions with sharp edges")
-	fmt.Println("  gogent-archive list --has-violations Show only sessions with routing violations")
-	fmt.Println("  gogent-archive list --clean          Show only clean sessions (no errors/violations)")
-	fmt.Println("  gogent-archive show <id>             Show specific session handoff")
-	fmt.Println("  gogent-archive stats                 Show aggregate statistics with breakdowns")
+	fmt.Println("  goyoke-archive list                  List all sessions")
+	fmt.Println("  goyoke-archive list --since 7d       List sessions from last 7 days")
+	fmt.Println("  goyoke-archive list --between <dates> List sessions between dates (YYYY-MM-DD,YYYY-MM-DD)")
+	fmt.Println("  goyoke-archive list --has-sharp-edges Show only sessions with sharp edges")
+	fmt.Println("  goyoke-archive list --has-violations Show only sessions with routing violations")
+	fmt.Println("  goyoke-archive list --clean          Show only clean sessions (no errors/violations)")
+	fmt.Println("  goyoke-archive show <id>             Show specific session handoff")
+	fmt.Println("  goyoke-archive stats                 Show aggregate statistics with breakdowns")
 	fmt.Println("")
 	fmt.Println("Weekly Analysis Commands:")
-	fmt.Println("  gogent-archive weekly                Generate weekly intent summary (last 7 days)")
-	fmt.Println("  gogent-archive weekly --since <date> Generate summary from specific start date (YYYY-MM-DD)")
-	fmt.Println("  gogent-archive weekly --intents-only Show only intent section")
-	fmt.Println("  gogent-archive weekly --drift        Show preference changes (drift alerts)")
+	fmt.Println("  goyoke-archive weekly                Generate weekly intent summary (last 7 days)")
+	fmt.Println("  goyoke-archive weekly --since <date> Generate summary from specific start date (YYYY-MM-DD)")
+	fmt.Println("  goyoke-archive weekly --intents-only Show only intent section")
+	fmt.Println("  goyoke-archive weekly --drift        Show preference changes (drift alerts)")
 	fmt.Println("")
 	fmt.Println("Sharp Edge Commands:")
-	fmt.Println("  gogent-archive sharp-edges           List all sharp edges")
-	fmt.Println("  gogent-archive sharp-edges --severity high  Filter by severity (high, medium, low)")
-	fmt.Println("  gogent-archive sharp-edges --file 'pkg/*'   Filter by file pattern (glob)")
-	fmt.Println("  gogent-archive sharp-edges --error-type <type> Filter by error type")
-	fmt.Println("  gogent-archive sharp-edges --unresolved     Show only unresolved edges")
-	fmt.Println("  gogent-archive sharp-edges --since 7d       Filter by time")
+	fmt.Println("  goyoke-archive sharp-edges           List all sharp edges")
+	fmt.Println("  goyoke-archive sharp-edges --severity high  Filter by severity (high, medium, low)")
+	fmt.Println("  goyoke-archive sharp-edges --file 'pkg/*'   Filter by file pattern (glob)")
+	fmt.Println("  goyoke-archive sharp-edges --error-type <type> Filter by error type")
+	fmt.Println("  goyoke-archive sharp-edges --unresolved     Show only unresolved edges")
+	fmt.Println("  goyoke-archive sharp-edges --since 7d       Filter by time")
 	fmt.Println("")
 	fmt.Println("User Intent Commands:")
-	fmt.Println("  gogent-archive user-intents          List all user intents")
-	fmt.Println("  gogent-archive user-intents --source ask_user  Filter by source (ask_user, hook_prompt, manual)")
-	fmt.Println("  gogent-archive user-intents --confidence explicit  Filter by confidence (explicit, inferred, default)")
-	fmt.Println("  gogent-archive user-intents --category routing  Filter by category (routing, tooling, style, etc.)")
-	fmt.Println("  gogent-archive user-intents --keyword pytest    Filter by keyword")
-	fmt.Println("  gogent-archive user-intents --has-action    Show only intents with actions taken")
-	fmt.Println("  gogent-archive user-intents --honored true  Filter by honored status (true/false)")
-	fmt.Println("  gogent-archive user-intents --since 7d      Filter by time")
+	fmt.Println("  goyoke-archive user-intents          List all user intents")
+	fmt.Println("  goyoke-archive user-intents --source ask_user  Filter by source (ask_user, hook_prompt, manual)")
+	fmt.Println("  goyoke-archive user-intents --confidence explicit  Filter by confidence (explicit, inferred, default)")
+	fmt.Println("  goyoke-archive user-intents --category routing  Filter by category (routing, tooling, style, etc.)")
+	fmt.Println("  goyoke-archive user-intents --keyword pytest    Filter by keyword")
+	fmt.Println("  goyoke-archive user-intents --has-action    Show only intents with actions taken")
+	fmt.Println("  goyoke-archive user-intents --honored true  Filter by honored status (true/false)")
+	fmt.Println("  goyoke-archive user-intents --since 7d      Filter by time")
 	fmt.Println("")
 	fmt.Println("Decision Commands:")
-	fmt.Println("  gogent-archive decisions              List all decisions")
-	fmt.Println("  gogent-archive decisions --category architecture  Filter by category (architecture, tooling, pattern)")
-	fmt.Println("  gogent-archive decisions --impact high      Filter by impact level (high, medium, low)")
-	fmt.Println("  gogent-archive decisions --since 7d         Filter by time")
+	fmt.Println("  goyoke-archive decisions              List all decisions")
+	fmt.Println("  goyoke-archive decisions --category architecture  Filter by category (architecture, tooling, pattern)")
+	fmt.Println("  goyoke-archive decisions --impact high      Filter by impact level (high, medium, low)")
+	fmt.Println("  goyoke-archive decisions --since 7d         Filter by time")
 	fmt.Println("")
 	fmt.Println("Preference Commands:")
-	fmt.Println("  gogent-archive preferences            List all preference overrides")
-	fmt.Println("  gogent-archive preferences --category routing  Filter by category (routing, tooling, formatting)")
-	fmt.Println("  gogent-archive preferences --scope project   Filter by scope (session, project, global)")
-	fmt.Println("  gogent-archive preferences --since 7d        Filter by time")
+	fmt.Println("  goyoke-archive preferences            List all preference overrides")
+	fmt.Println("  goyoke-archive preferences --category routing  Filter by category (routing, tooling, formatting)")
+	fmt.Println("  goyoke-archive preferences --scope project   Filter by scope (session, project, global)")
+	fmt.Println("  goyoke-archive preferences --since 7d        Filter by time")
 	fmt.Println("")
 	fmt.Println("Performance Commands:")
-	fmt.Println("  gogent-archive performance            List all performance metrics")
-	fmt.Println("  gogent-archive performance --by-operation    Group metrics by operation (summary view)")
-	fmt.Println("  gogent-archive performance --slow-only       Show only slow operations (>1000ms)")
-	fmt.Println("  gogent-archive performance --since 7d        Filter by time")
+	fmt.Println("  goyoke-archive performance            List all performance metrics")
+	fmt.Println("  goyoke-archive performance --by-operation    Group metrics by operation (summary view)")
+	fmt.Println("  goyoke-archive performance --slow-only       Show only slow operations (>1000ms)")
+	fmt.Println("  goyoke-archive performance --since 7d        Filter by time")
 	fmt.Println("")
 	fmt.Println("Other Commands:")
-	fmt.Println("  gogent-archive --help                Show this help")
-	fmt.Println("  gogent-archive --version             Show version information")
+	fmt.Println("  goyoke-archive --help                Show this help")
+	fmt.Println("  goyoke-archive --version             Show version information")
 	fmt.Println("")
 	fmt.Println("Examples:")
-	fmt.Println("  gogent-archive sharp-edges --severity high --unresolved")
-	fmt.Println("  gogent-archive user-intents --source ask_user --has-action")
-	fmt.Println("  gogent-archive decisions --category architecture --impact high")
-	fmt.Println("  gogent-archive preferences --scope project")
-	fmt.Println("  gogent-archive performance --by-operation --slow-only")
-	fmt.Println("  gogent-archive list --since 2026-01-15 --clean")
-	fmt.Println("  gogent-archive show abc123def456")
+	fmt.Println("  goyoke-archive sharp-edges --severity high --unresolved")
+	fmt.Println("  goyoke-archive user-intents --source ask_user --has-action")
+	fmt.Println("  goyoke-archive decisions --category architecture --impact high")
+	fmt.Println("  goyoke-archive preferences --scope project")
+	fmt.Println("  goyoke-archive performance --by-operation --slow-only")
+	fmt.Println("  goyoke-archive list --since 2026-01-15 --clean")
+	fmt.Println("  goyoke-archive show abc123def456")
 	fmt.Println("")
-	fmt.Println("For subcommand-specific help, use: gogent-archive <subcommand> --help")
+	fmt.Println("For subcommand-specific help, use: goyoke-archive <subcommand> --help")
 }
 
 // getVersion returns version from build ldflags or "dev"
@@ -585,7 +585,7 @@ func filterSince(handoffs []session.Handoff, since string) []session.Handoff {
 		daysStr := strings.TrimSuffix(since, "d")
 		days, err := strconv.Atoi(daysStr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since format '%s'\n", since)
+			fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid --since format '%s'\n", since)
 			fmt.Fprintln(os.Stderr, "  Use duration format (e.g., '7d', '30d') or date format (YYYY-MM-DD)")
 			fmt.Fprintln(os.Stderr, "  Example: --since 7d OR --since 2026-01-15")
 			os.Exit(1)
@@ -595,7 +595,7 @@ func filterSince(handoffs []session.Handoff, since string) []session.Handoff {
 		// Try parsing as date (YYYY-MM-DD)
 		parsedDate, err := time.Parse("2006-01-02", since)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since date format '%s'\n", since)
+			fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid --since date format '%s'\n", since)
 			fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format (e.g., '2026-01-15')")
 			os.Exit(1)
 		}
@@ -616,7 +616,7 @@ func filterSince(handoffs []session.Handoff, since string) []session.Handoff {
 func filterBetween(handoffs []session.Handoff, between string) []session.Handoff {
 	parts := strings.Split(between, ",")
 	if len(parts) != 2 {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --between format '%s'\n", between)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid --between format '%s'\n", between)
 		fmt.Fprintln(os.Stderr, "  Expected format: YYYY-MM-DD,YYYY-MM-DD")
 		fmt.Fprintln(os.Stderr, "  Example: --between 2026-01-01,2026-01-15")
 		os.Exit(1)
@@ -624,14 +624,14 @@ func filterBetween(handoffs []session.Handoff, between string) []session.Handoff
 
 	startDate, err := time.Parse("2006-01-02", parts[0])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid start date in --between: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid start date in --between: %v\n", err)
 		fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format for start date")
 		os.Exit(1)
 	}
 
 	endDate, err := time.Parse("2006-01-02", parts[1])
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid end date in --between: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid end date in --between: %v\n", err)
 		fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format for end date")
 		os.Exit(1)
 	}
@@ -709,7 +709,7 @@ func listSharpEdges() {
 
 	edges, err := q.QuerySharpEdges(filters)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query sharp edges: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to query sharp edges: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -771,14 +771,14 @@ func listUserIntents() {
 		timestamp := since.Unix()
 		filters.Since = &timestamp
 	}
-	// GOgent-041: Category and keyword filters
+	// goYoke-041: Category and keyword filters
 	if *categoryFlag != "" {
 		filters.Category = categoryFlag
 	}
 	if *keywordFlag != "" {
 		filters.Keywords = []string{*keywordFlag}
 	}
-	// GOgent-041c: Honored filter
+	// goYoke-041c: Honored filter
 	if *honoredFlag != "" {
 		honored := *honoredFlag == "true"
 		filters.Honored = &honored
@@ -786,7 +786,7 @@ func listUserIntents() {
 
 	intents, err := q.QueryUserIntents(filters)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query user intents: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to query user intents: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -795,7 +795,7 @@ func listUserIntents() {
 		return
 	}
 
-	// Print table header (GOgent-041: Added Category column, GOgent-041c: Added Honored column)
+	// Print table header (goYoke-041: Added Category column, goYoke-041c: Added Honored column)
 	fmt.Println("Timestamp  | Category   | Honored | Source      | Question                     | Response")
 	fmt.Println("-----------|------------|---------|-------------|------------------------------|---------------------------")
 
@@ -850,7 +850,7 @@ func listDecisions() {
 
 	decisions, err := q.QueryDecisions(filters)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query decisions: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to query decisions: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -903,7 +903,7 @@ func listPreferences() {
 
 	preferences, err := q.QueryPreferences(filters)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query preferences: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to query preferences: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -956,7 +956,7 @@ func showPerformance() {
 		// Show summary grouped by operation
 		summaries, err := q.QueryPerformanceSummary(filters)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query performance summary: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to query performance summary: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -989,7 +989,7 @@ func showPerformance() {
 	// Show raw metrics table
 	metrics, err := q.QueryPerformance(filters)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to query performance metrics: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to query performance metrics: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -1047,7 +1047,7 @@ func generateWeeklySummary() {
 	if *sinceFlag != "" {
 		parsedDate, err := time.Parse("2006-01-02", *sinceFlag)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since date format '%s'\n", *sinceFlag)
+			fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid --since date format '%s'\n", *sinceFlag)
 			fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format (e.g., '2026-01-15')")
 			os.Exit(1)
 		}
@@ -1064,7 +1064,7 @@ func generateWeeklySummary() {
 	intentsPath := filepath.Join(config.ProjectMemoryDir(projectDir), "user-intents.jsonl")
 	intents, err := session.LoadAllUserIntents(intentsPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Failed to load user intents: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Failed to load user intents: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -1134,7 +1134,7 @@ func parseSinceFilter(since string) time.Time {
 		daysStr := strings.TrimSuffix(since, "d")
 		days, err := strconv.Atoi(daysStr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since format '%s'\n", since)
+			fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid --since format '%s'\n", since)
 			fmt.Fprintln(os.Stderr, "  Use duration format (e.g., '7d', '30d') or date format (YYYY-MM-DD)")
 			os.Exit(1)
 		}
@@ -1144,7 +1144,7 @@ func parseSinceFilter(since string) time.Time {
 	// Try parsing as date (YYYY-MM-DD)
 	parsedDate, err := time.Parse("2006-01-02", since)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-archive] Invalid --since date format '%s'\n", since)
+		fmt.Fprintf(os.Stderr, "[goyoke-archive] Invalid --since date format '%s'\n", since)
 		fmt.Fprintln(os.Stderr, "  Expected YYYY-MM-DD format (e.g., '2026-01-15')")
 		os.Exit(1)
 	}

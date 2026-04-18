@@ -33,7 +33,7 @@ func TestMLTelemetry_RoutingDecisionCapture(t *testing.T) {
 	}
 
 	// Run events through telemetry system
-	results, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
+	results, err := harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestMLTelemetry_RoutingDecisionCapture(t *testing.T) {
 	}
 
 	// Verify routing-decisions.jsonl file created
-	decisionsPath := filepath.Join(projectDir, ".gogent", "routing-decisions.jsonl")
+	decisionsPath := filepath.Join(projectDir, ".goyoke", "routing-decisions.jsonl")
 	if _, err := os.Stat(decisionsPath); err != nil {
 		t.Errorf("routing-decisions.jsonl not created: %v", err)
 	}
@@ -115,13 +115,13 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 	}
 
 	// First batch
-	results1, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
+	results1, err := harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("First batch failed: %v", err)
 	}
 
 	// Read updates after first batch
-	updatesPath := filepath.Join(projectDir, ".gogent", "routing-decision-updates.jsonl")
+	updatesPath := filepath.Join(projectDir, ".goyoke", "routing-decision-updates.jsonl")
 	data1, _ := os.ReadFile(updatesPath)
 	initialLineCount := 0
 	if len(data1) > 0 {
@@ -129,7 +129,7 @@ func TestMLTelemetry_DecisionUpdates(t *testing.T) {
 	}
 
 	// Run second batch
-	results2, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
+	results2, err := harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Second batch failed: %v", err)
 	}
@@ -210,7 +210,7 @@ func TestMLTelemetry_ConcurrentWrites(t *testing.T) {
 				return
 			}
 
-			_, err = harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
+			_, err = harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse")
 			if err != nil {
 				errors <- fmt.Errorf("hook batch failed for agent %d: %v", agentID, err)
 				return
@@ -228,7 +228,7 @@ func TestMLTelemetry_ConcurrentWrites(t *testing.T) {
 	}
 
 	// Verify final file integrity
-	decisionsPath := filepath.Join(projectDir, ".gogent", "routing-decisions.jsonl")
+	decisionsPath := filepath.Join(projectDir, ".goyoke", "routing-decisions.jsonl")
 	data, err := os.ReadFile(decisionsPath)
 	if err != nil {
 		t.Fatalf("Failed to read final routing-decisions.jsonl: %v", err)
@@ -282,13 +282,13 @@ func TestMLTelemetry_CollaborationTracking(t *testing.T) {
 	}
 
 	// Run events
-	_, err = harness.RunHookBatch("../../bin/gogent-agent-endstate", "SubagentStop")
+	_, err = harness.RunHookBatch("../../bin/goyoke-agent-endstate", "SubagentStop")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
 
 	// Verify agent-collaborations.jsonl created
-	collaborationsPath := filepath.Join(projectDir, ".gogent", "agent-collaborations.jsonl")
+	collaborationsPath := filepath.Join(projectDir, ".goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(collaborationsPath); err != nil {
 		t.Errorf("agent-collaborations.jsonl not created: %v", err)
 	}
@@ -335,16 +335,16 @@ func TestMLTelemetry_CollaborationTracking(t *testing.T) {
 	}
 }
 
-// TestMLTelemetry_ExportReconciliation verifies gogent-ml-export produces valid datasets
+// TestMLTelemetry_ExportReconciliation verifies goyoke-ml-export produces valid datasets
 func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 	projectDir := t.TempDir()
 	setupMLTelemetryProject(t, projectDir)
 
-	// Build gogent-ml-export binary
-	binaryPath := filepath.Join(t.TempDir(), "gogent-ml-export")
-	buildCmd := exec.Command("go", "build", "-o", binaryPath, "../../cmd/gogent-ml-export/main.go")
+	// Build goyoke-ml-export binary
+	binaryPath := filepath.Join(t.TempDir(), "goyoke-ml-export")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, "../../cmd/goyoke-ml-export/main.go")
 	if output, err := buildCmd.CombinedOutput(); err != nil {
-		t.Skipf("Failed to build gogent-ml-export: %v. Output: %s", err, string(output))
+		t.Skipf("Failed to build goyoke-ml-export: %v. Output: %s", err, string(output))
 	}
 
 	// Create telemetry data
@@ -361,7 +361,7 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 	}
 
 	// Populate telemetry files (PreToolUse creates routing decisions)
-	if _, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse"); err != nil {
+	if _, err := harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse"); err != nil {
 		t.Fatalf("Failed to populate telemetry: %v", err)
 	}
 
@@ -390,7 +390,7 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 		data, _ := json.Marshal(event)
 		mlEventsData = append(mlEventsData, string(data))
 	}
-	mlEventsPath := filepath.Join(projectDir, ".gogent", "ml-tool-events.jsonl")
+	mlEventsPath := filepath.Join(projectDir, ".goyoke", "ml-tool-events.jsonl")
 	if err := os.WriteFile(mlEventsPath, []byte(strings.Join(mlEventsData, "\n")+"\n"), 0644); err != nil {
 		t.Fatalf("Failed to write ml-tool-events.jsonl: %v", err)
 	}
@@ -398,9 +398,9 @@ func TestMLTelemetry_ExportReconciliation(t *testing.T) {
 	// Run export command
 	outputDir := filepath.Join(t.TempDir(), "ml-export")
 	exportCmd := exec.Command(binaryPath, "training-dataset", "--output", outputDir)
-	exportCmd.Env = append(os.Environ(), fmt.Sprintf("GOGENT_PROJECT_DIR=%s", projectDir))
+	exportCmd.Env = append(os.Environ(), fmt.Sprintf("GOYOKE_PROJECT_DIR=%s", projectDir))
 	if output, err := exportCmd.CombinedOutput(); err != nil {
-		t.Fatalf("gogent-ml-export failed: %v. Output: %s", err, string(output))
+		t.Fatalf("goyoke-ml-export failed: %v. Output: %s", err, string(output))
 	}
 
 	// Verify export created expected files
@@ -504,7 +504,7 @@ func TestMLTelemetry_RaceConditionDetection(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _ = harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
+			_, _ = harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse")
 		}()
 	}
 
@@ -531,7 +531,7 @@ func TestMLTelemetry_SequenceIntegrity(t *testing.T) {
 		t.Fatalf("Failed to load corpus: %v", err)
 	}
 
-	results, err := harness.RunHookBatch("../../bin/gogent-validate", "PreToolUse")
+	results, err := harness.RunHookBatch("../../bin/goyoke-validate", "PreToolUse")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
 	}
@@ -570,9 +570,9 @@ func TestMLTelemetry_SequenceIntegrity(t *testing.T) {
 // Helper: Setup ML telemetry project directories
 func setupMLTelemetryProject(t *testing.T, projectDir string) {
 	dirs := []string{
-		filepath.Join(projectDir, ".gogent"),
+		filepath.Join(projectDir, ".goyoke"),
 		filepath.Join(projectDir, ".claude"),
-		filepath.Join(projectDir, ".gogent", "memory"),
+		filepath.Join(projectDir, ".goyoke", "memory"),
 	}
 
 	for _, dir := range dirs {

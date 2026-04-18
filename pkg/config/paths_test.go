@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestGetGOgentDir_XDG_RUNTIME_DIR(t *testing.T) {
+func TestGetgoYokeDir_XDG_RUNTIME_DIR(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -24,8 +24,8 @@ func TestGetGOgentDir_XDG_RUNTIME_DIR(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 	os.Setenv("XDG_CACHE_HOME", "/should/not/use/this")
 
-	result := GetGOgentDir()
-	expected := filepath.Join(testDir, "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(testDir, "goyoke")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -33,11 +33,11 @@ func TestGetGOgentDir_XDG_RUNTIME_DIR(t *testing.T) {
 
 	// Verify directory was created
 	if _, err := os.Stat(result); os.IsNotExist(err) {
-		t.Error("Expected GetGOgentDir to create directory")
+		t.Error("Expected GetgoYokeDir to create directory")
 	}
 }
 
-func TestGetGOgentDir_XDG_CACHE_HOME(t *testing.T) {
+func TestGetgoYokeDir_XDG_CACHE_HOME(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -51,8 +51,8 @@ func TestGetGOgentDir_XDG_CACHE_HOME(t *testing.T) {
 	testDir := t.TempDir()
 	os.Setenv("XDG_CACHE_HOME", testDir)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(testDir, "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(testDir, "goyoke")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -60,11 +60,11 @@ func TestGetGOgentDir_XDG_CACHE_HOME(t *testing.T) {
 
 	// Verify directory was created
 	if _, err := os.Stat(result); os.IsNotExist(err) {
-		t.Error("Expected GetGOgentDir to create directory")
+		t.Error("Expected GetgoYokeDir to create directory")
 	}
 }
 
-func TestGetGOgentDir_FallsBackWhenRuntimeDirIsNotWritable(t *testing.T) {
+func TestGetgoYokeDir_FallsBackWhenRuntimeDirIsNotWritable(t *testing.T) {
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
 	defer func() {
@@ -74,7 +74,7 @@ func TestGetGOgentDir_FallsBackWhenRuntimeDirIsNotWritable(t *testing.T) {
 
 	runtimeRoot := t.TempDir()
 	cacheRoot := t.TempDir()
-	runtimeGogent := filepath.Join(runtimeRoot, "gogent")
+	runtimeGogent := filepath.Join(runtimeRoot, "goyoke")
 	if err := os.MkdirAll(runtimeGogent, 0755); err != nil {
 		t.Fatalf("Failed to create runtime dir: %v", err)
 	}
@@ -92,14 +92,14 @@ func TestGetGOgentDir_FallsBackWhenRuntimeDirIsNotWritable(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeRoot)
 	os.Setenv("XDG_CACHE_HOME", cacheRoot)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(cacheRoot, "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(cacheRoot, "goyoke")
 	if result != expected {
 		t.Fatalf("Expected fallback to %s, got %s", expected, result)
 	}
 }
 
-func TestGetGOgentDir_Fallback(t *testing.T) {
+func TestGetgoYokeDir_Fallback(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -110,21 +110,21 @@ func TestGetGOgentDir_Fallback(t *testing.T) {
 		os.Setenv("HOME", origHome)
 	}()
 
-	// Unset both XDG vars (fallback to ~/.cache/gogent)
+	// Unset both XDG vars (fallback to ~/.cache/goyoke)
 	os.Unsetenv("XDG_RUNTIME_DIR")
 	os.Unsetenv("XDG_CACHE_HOME")
 	home := t.TempDir()
 	os.Setenv("HOME", home)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(home, ".cache", "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(home, ".cache", "goyoke")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
 	}
 }
 
-func TestGetGOgentDir_EmptyXDGVars(t *testing.T) {
+func TestGetgoYokeDir_EmptyXDGVars(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -141,8 +141,8 @@ func TestGetGOgentDir_EmptyXDGVars(t *testing.T) {
 	home := t.TempDir()
 	os.Setenv("HOME", home)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(home, ".cache", "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(home, ".cache", "goyoke")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -160,7 +160,7 @@ func TestGetTierFilePath(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 
 	result := GetTierFilePath()
-	expected := filepath.Join(testDir, "gogent", "current-tier")
+	expected := filepath.Join(testDir, "goyoke", "current-tier")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -178,7 +178,7 @@ func TestGetMaxDelegationPath(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 
 	result := GetMaxDelegationPath()
-	expected := filepath.Join(testDir, "gogent", "max_delegation")
+	expected := filepath.Join(testDir, "goyoke", "max_delegation")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -196,7 +196,7 @@ func TestGetViolationsLogPath(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 
 	result := GetViolationsLogPath()
-	expected := filepath.Join(testDir, "gogent", "routing-violations.jsonl")
+	expected := filepath.Join(testDir, "goyoke", "routing-violations.jsonl")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -208,7 +208,7 @@ func TestGetViolationsLogPath(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDir_PriorityOrder(t *testing.T) {
+func TestGetgoYokeDir_PriorityOrder(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -224,15 +224,15 @@ func TestGetGOgentDir_PriorityOrder(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	os.Setenv("XDG_CACHE_HOME", cacheDir)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(runtimeDir, "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(runtimeDir, "goyoke")
 
 	if result != expected {
 		t.Errorf("XDG_RUNTIME_DIR should have priority. Expected %s, got %s", expected, result)
 	}
 }
 
-func TestGetGOgentDir_CreatesDirectory(t *testing.T) {
+func TestGetgoYokeDir_CreatesDirectory(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer func() {
@@ -240,24 +240,24 @@ func TestGetGOgentDir_CreatesDirectory(t *testing.T) {
 	}()
 
 	testDir := t.TempDir()
-	gogentPath := filepath.Join(testDir, "gogent")
+	goyokePath := filepath.Join(testDir, "goyoke")
 
 	// Ensure directory doesn't exist yet
-	os.RemoveAll(gogentPath)
+	os.RemoveAll(goyokePath)
 
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 
-	result := GetGOgentDir()
+	result := GetgoYokeDir()
 
 	// Verify directory was created
 	info, err := os.Stat(result)
 	if os.IsNotExist(err) {
-		t.Error("GetGOgentDir should create directory if it doesn't exist")
+		t.Error("GetgoYokeDir should create directory if it doesn't exist")
 	}
 
 	// Verify it's a directory
 	if !info.IsDir() {
-		t.Error("GetGOgentDir should create a directory, not a file")
+		t.Error("GetgoYokeDir should create a directory, not a file")
 	}
 
 	// Verify permissions (0755)
@@ -275,17 +275,17 @@ func TestGetProjectViolationsLogPath(t *testing.T) {
 		{
 			name:       "absolute path",
 			projectDir: "/home/user/my-project",
-			expected:   "/home/user/my-project/.gogent/memory/routing-violations.jsonl",
+			expected:   "/home/user/my-project/.goyoke/memory/routing-violations.jsonl",
 		},
 		{
 			name:       "relative path",
 			projectDir: "my-project",
-			expected:   "my-project/.gogent/memory/routing-violations.jsonl",
+			expected:   "my-project/.goyoke/memory/routing-violations.jsonl",
 		},
 		{
 			name:       "nested project",
 			projectDir: "/home/user/workspace/nested/project",
-			expected:   "/home/user/workspace/nested/project/.gogent/memory/routing-violations.jsonl",
+			expected:   "/home/user/workspace/nested/project/.goyoke/memory/routing-violations.jsonl",
 		},
 	}
 
@@ -301,9 +301,9 @@ func TestGetProjectViolationsLogPath(t *testing.T) {
 				t.Error("Expected path to end with .jsonl")
 			}
 
-			// Verify path contains .gogent/memory
-			if !strings.Contains(result, ".gogent/memory") {
-				t.Error("Expected path to contain .gogent/memory")
+			// Verify path contains .goyoke/memory
+			if !strings.Contains(result, ".goyoke/memory") {
+				t.Error("Expected path to contain .goyoke/memory")
 			}
 		})
 	}
@@ -324,7 +324,7 @@ func TestGetToolCounterPath(t *testing.T) {
 	os.Setenv("XDG_CACHE_HOME", testDir)
 
 	result := GetToolCounterPath()
-	expected := filepath.Join(testDir, "gogent", "tool-counter")
+	expected := filepath.Join(testDir, "goyoke", "tool-counter")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -722,7 +722,7 @@ func TestIncrementToolCount_LargeValue(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDir_XDGRuntimeDirInvalidPath(t *testing.T) {
+func TestGetgoYokeDir_XDGRuntimeDirInvalidPath(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -737,15 +737,15 @@ func TestGetGOgentDir_XDGRuntimeDirInvalidPath(t *testing.T) {
 	testDir := t.TempDir()
 	os.Setenv("XDG_CACHE_HOME", testDir)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(testDir, "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(testDir, "goyoke")
 
 	if result != expected {
 		t.Errorf("Expected fallback to XDG_CACHE_HOME: %s, got %s", expected, result)
 	}
 }
 
-func TestGetGOgentDir_BothXDGFail(t *testing.T) {
+func TestGetgoYokeDir_BothXDGFail(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -760,19 +760,19 @@ func TestGetGOgentDir_BothXDGFail(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", "/dev/null/invalid1")
 	os.Setenv("XDG_CACHE_HOME", "/dev/null/invalid2")
 
-	// Set valid HOME so we can test the .cache/gogent fallback
+	// Set valid HOME so we can test the .cache/goyoke fallback
 	testDir := t.TempDir()
 	os.Setenv("HOME", testDir)
 
-	result := GetGOgentDir()
-	expected := filepath.Join(testDir, ".cache", "gogent")
+	result := GetgoYokeDir()
+	expected := filepath.Join(testDir, ".cache", "goyoke")
 
 	if result != expected {
-		t.Errorf("Expected fallback to HOME/.cache/gogent: %s, got %s", expected, result)
+		t.Errorf("Expected fallback to HOME/.cache/goyoke: %s, got %s", expected, result)
 	}
 }
 
-func TestGetGOgentDir_AllPathsFail(t *testing.T) {
+func TestGetgoYokeDir_AllPathsFail(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -788,11 +788,11 @@ func TestGetGOgentDir_AllPathsFail(t *testing.T) {
 	os.Setenv("XDG_CACHE_HOME", "/dev/null/invalid2")
 	os.Setenv("HOME", "/dev/null/invalid3")
 
-	result := GetGOgentDir()
+	result := GetgoYokeDir()
 
-	// Should fallback to /tmp/gogent-fallback
-	if !strings.Contains(result, "gogent-fallback") {
-		t.Errorf("Expected /tmp fallback containing 'gogent-fallback', got: %s", result)
+	// Should fallback to /tmp/goyoke-fallback
+	if !strings.Contains(result, "goyoke-fallback") {
+		t.Errorf("Expected /tmp fallback containing 'goyoke-fallback', got: %s", result)
 	}
 	if !strings.HasPrefix(result, os.TempDir()) {
 		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
@@ -809,7 +809,7 @@ func TestGetGOgentDir_AllPathsFail(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDir_HomeDirFails(t *testing.T) {
+func TestGetgoYokeDir_HomeDirFails(t *testing.T) {
 	// Save original env
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	origCache := os.Getenv("XDG_CACHE_HOME")
@@ -827,10 +827,10 @@ func TestGetGOgentDir_HomeDirFails(t *testing.T) {
 	// Set HOME to invalid path that will fail MkdirAll
 	os.Setenv("HOME", "/dev/null/nohome")
 
-	result := GetGOgentDir()
+	result := GetgoYokeDir()
 
-	// Should fallback to /tmp/gogent-fallback
-	if !strings.Contains(result, "gogent-fallback") {
+	// Should fallback to /tmp/goyoke-fallback
+	if !strings.Contains(result, "goyoke-fallback") {
 		t.Errorf("Expected /tmp fallback, got: %s", result)
 	}
 	if !strings.HasSuffix(result, fmt.Sprintf("-%d", os.Getuid())) {
@@ -848,21 +848,21 @@ func TestInitializeToolCounter_FallsBackFromReadOnlyRuntimeDir(t *testing.T) {
 	}()
 
 	testDir := t.TempDir()
-	gogentDir := filepath.Join(testDir, "gogent")
-	if err := os.MkdirAll(gogentDir, 0755); err != nil {
+	goyokeDir := filepath.Join(testDir, "goyoke")
+	if err := os.MkdirAll(goyokeDir, 0755); err != nil {
 		t.Fatalf("Failed to create runtime dir: %v", err)
 	}
 
-	if err := os.Chmod(gogentDir, 0444); err != nil {
+	if err := os.Chmod(goyokeDir, 0444); err != nil {
 		t.Fatalf("Failed to chmod runtime dir: %v", err)
 	}
-	defer os.Chmod(gogentDir, 0755) //nolint:errcheck
+	defer os.Chmod(goyokeDir, 0755) //nolint:errcheck
 
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 	cacheDir := t.TempDir()
 	os.Setenv("XDG_CACHE_HOME", cacheDir)
 
-	counterPath := filepath.Join(cacheDir, "gogent", "tool-counter")
+	counterPath := filepath.Join(cacheDir, "goyoke", "tool-counter")
 	if err := InitializeToolCounter(); err != nil {
 		t.Fatalf("Expected fallback initialization to succeed, got: %v", err)
 	}
@@ -1020,9 +1020,9 @@ func TestGetToolCountAndIncrement_EmptyInitialContent(t *testing.T) {
 	}
 }
 
-// Tests for GetGOgentDataDir() and related path helpers
+// Tests for GetgoYokeDataDir() and related path helpers
 
-func TestGetGOgentDataDir_XDGSet(t *testing.T) {
+func TestGetgoYokeDataDir_XDGSet(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	defer os.Setenv("XDG_DATA_HOME", origXDG)
@@ -1030,8 +1030,8 @@ func TestGetGOgentDataDir_XDGSet(t *testing.T) {
 	testPath := t.TempDir()
 	os.Setenv("XDG_DATA_HOME", testPath)
 
-	dir := GetGOgentDataDir()
-	expected := filepath.Join(testPath, "gogent")
+	dir := GetgoYokeDataDir()
+	expected := filepath.Join(testPath, "goyoke")
 
 	if dir != expected {
 		t.Errorf("Expected %s, got %s", expected, dir)
@@ -1039,11 +1039,11 @@ func TestGetGOgentDataDir_XDGSet(t *testing.T) {
 
 	// Verify directory was created
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Error("Expected GetGOgentDataDir to create directory")
+		t.Error("Expected GetgoYokeDataDir to create directory")
 	}
 }
 
-func TestGetGOgentDataDir_Fallback(t *testing.T) {
+func TestGetgoYokeDataDir_Fallback(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	origHome := os.Getenv("HOME")
@@ -1056,8 +1056,8 @@ func TestGetGOgentDataDir_Fallback(t *testing.T) {
 	home := t.TempDir()
 	os.Setenv("HOME", home)
 
-	dir := GetGOgentDataDir()
-	expected := filepath.Join(home, ".local", "share", "gogent")
+	dir := GetgoYokeDataDir()
+	expected := filepath.Join(home, ".local", "share", "goyoke")
 
 	if dir != expected {
 		t.Errorf("Expected %s, got %s", expected, dir)
@@ -1065,34 +1065,34 @@ func TestGetGOgentDataDir_Fallback(t *testing.T) {
 
 	// Verify directory was created
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		t.Error("Expected GetGOgentDataDir to create directory in fallback location")
+		t.Error("Expected GetgoYokeDataDir to create directory in fallback location")
 	}
 }
 
-func TestGetGOgentDataDir_CreatesDirectory(t *testing.T) {
+func TestGetgoYokeDataDir_CreatesDirectory(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	defer os.Setenv("XDG_DATA_HOME", origXDG)
 
 	testDir := t.TempDir()
-	gogentPath := filepath.Join(testDir, "gogent")
+	goyokePath := filepath.Join(testDir, "goyoke")
 
 	// Ensure directory doesn't exist yet
-	os.RemoveAll(gogentPath)
+	os.RemoveAll(goyokePath)
 
 	os.Setenv("XDG_DATA_HOME", testDir)
 
-	result := GetGOgentDataDir()
+	result := GetgoYokeDataDir()
 
 	// Verify directory was created
 	info, err := os.Stat(result)
 	if os.IsNotExist(err) {
-		t.Error("GetGOgentDataDir should create directory if it doesn't exist")
+		t.Error("GetgoYokeDataDir should create directory if it doesn't exist")
 	}
 
 	// Verify it's a directory
 	if !info.IsDir() {
-		t.Error("GetGOgentDataDir should create a directory, not a file")
+		t.Error("GetgoYokeDataDir should create a directory, not a file")
 	}
 
 	// Verify permissions (0755)
@@ -1101,7 +1101,7 @@ func TestGetGOgentDataDir_CreatesDirectory(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDataDir_EmptyXDGVar(t *testing.T) {
+func TestGetgoYokeDataDir_EmptyXDGVar(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	origHome := os.Getenv("HOME")
@@ -1115,15 +1115,15 @@ func TestGetGOgentDataDir_EmptyXDGVar(t *testing.T) {
 	home := t.TempDir()
 	os.Setenv("HOME", home)
 
-	dir := GetGOgentDataDir()
-	expected := filepath.Join(home, ".local", "share", "gogent")
+	dir := GetgoYokeDataDir()
+	expected := filepath.Join(home, ".local", "share", "goyoke")
 
 	if dir != expected {
 		t.Errorf("Expected %s, got %s", expected, dir)
 	}
 }
 
-func TestGetGOgentDataDir_XDGInvalidPath(t *testing.T) {
+func TestGetgoYokeDataDir_XDGInvalidPath(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	origHome := os.Getenv("HOME")
@@ -1137,15 +1137,15 @@ func TestGetGOgentDataDir_XDGInvalidPath(t *testing.T) {
 	home := t.TempDir()
 	os.Setenv("HOME", home)
 
-	dir := GetGOgentDataDir()
-	expected := filepath.Join(home, ".local", "share", "gogent")
+	dir := GetgoYokeDataDir()
+	expected := filepath.Join(home, ".local", "share", "goyoke")
 
 	if dir != expected {
-		t.Errorf("Expected fallback to ~/.local/share/gogent: %s, got %s", expected, dir)
+		t.Errorf("Expected fallback to ~/.local/share/goyoke: %s, got %s", expected, dir)
 	}
 }
 
-func TestGetGOgentDataDir_HomeDirFails(t *testing.T) {
+func TestGetgoYokeDataDir_HomeDirFails(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	origHome := os.Getenv("HOME")
@@ -1160,11 +1160,11 @@ func TestGetGOgentDataDir_HomeDirFails(t *testing.T) {
 	// Set HOME to invalid path that will fail MkdirAll
 	os.Setenv("HOME", "/dev/null/nohome")
 
-	result := GetGOgentDataDir()
+	result := GetgoYokeDataDir()
 
-	// Should fallback to /tmp/gogent-data
-	if !strings.Contains(result, "gogent-data") {
-		t.Errorf("Expected /tmp fallback containing 'gogent-data', got: %s", result)
+	// Should fallback to /tmp/goyoke-data
+	if !strings.Contains(result, "goyoke-data") {
+		t.Errorf("Expected /tmp fallback containing 'goyoke-data', got: %s", result)
 	}
 	if !strings.HasPrefix(result, os.TempDir()) {
 		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
@@ -1181,7 +1181,7 @@ func TestGetGOgentDataDir_HomeDirFails(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDataDir_AllPathsFail(t *testing.T) {
+func TestGetgoYokeDataDir_AllPathsFail(t *testing.T) {
 	// Save original env
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	origHome := os.Getenv("HOME")
@@ -1195,11 +1195,11 @@ func TestGetGOgentDataDir_AllPathsFail(t *testing.T) {
 	// Set HOME to invalid path
 	os.Setenv("HOME", "/dev/null/invalid2")
 
-	result := GetGOgentDataDir()
+	result := GetgoYokeDataDir()
 
-	// Should fallback to /tmp/gogent-data
-	if !strings.Contains(result, "gogent-data") {
-		t.Errorf("Expected /tmp fallback containing 'gogent-data', got: %s", result)
+	// Should fallback to /tmp/goyoke-data
+	if !strings.Contains(result, "goyoke-data") {
+		t.Errorf("Expected /tmp fallback containing 'goyoke-data', got: %s", result)
 	}
 	if !strings.HasPrefix(result, os.TempDir()) {
 		t.Errorf("Expected path to start with TempDir (%s), got: %s", os.TempDir(), result)
@@ -1209,7 +1209,7 @@ func TestGetGOgentDataDir_AllPathsFail(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDataDir_SeparateFromCache(t *testing.T) {
+func TestGetgoYokeDataDir_SeparateFromCache(t *testing.T) {
 	// Save original env
 	origXDGData := os.Getenv("XDG_DATA_HOME")
 	origXDGCache := os.Getenv("XDG_CACHE_HOME")
@@ -1229,26 +1229,26 @@ func TestGetGOgentDataDir_SeparateFromCache(t *testing.T) {
 	os.Setenv("XDG_CACHE_HOME", cacheTempDir)
 	os.Setenv("XDG_RUNTIME_DIR", runtimeTempDir)
 
-	dataDir := GetGOgentDataDir()
-	cacheDir := GetGOgentDir()
+	dataDir := GetgoYokeDataDir()
+	cacheDir := GetgoYokeDir()
 
 	// Verify they use different base directories
 	if strings.HasPrefix(dataDir, runtimeTempDir) || strings.HasPrefix(dataDir, cacheTempDir) {
-		t.Errorf("GetGOgentDataDir should not use cache/runtime dirs. Got: %s", dataDir)
+		t.Errorf("GetgoYokeDataDir should not use cache/runtime dirs. Got: %s", dataDir)
 	}
 
 	if strings.HasPrefix(cacheDir, dataTempDir) {
-		t.Errorf("GetGOgentDir should not use data dir. Got: %s", cacheDir)
+		t.Errorf("GetgoYokeDir should not use data dir. Got: %s", cacheDir)
 	}
 
 	// Verify data dir uses XDG_DATA_HOME
-	expectedDataDir := filepath.Join(dataTempDir, "gogent")
+	expectedDataDir := filepath.Join(dataTempDir, "goyoke")
 	if dataDir != expectedDataDir {
 		t.Errorf("Expected data dir %s, got %s", expectedDataDir, dataDir)
 	}
 
 	// Verify cache dir uses XDG_RUNTIME_DIR (highest priority for cache)
-	expectedCacheDir := filepath.Join(runtimeTempDir, "gogent")
+	expectedCacheDir := filepath.Join(runtimeTempDir, "goyoke")
 	if cacheDir != expectedCacheDir {
 		t.Errorf("Expected cache dir %s, got %s", expectedCacheDir, cacheDir)
 	}
@@ -1270,13 +1270,13 @@ func TestGetMLToolEventsPath(t *testing.T) {
 	}
 
 	// Verify path is within data directory
-	dataDir := GetGOgentDataDir()
+	dataDir := GetgoYokeDataDir()
 	if !strings.HasPrefix(path, dataDir) {
 		t.Errorf("Expected path to be within data directory %s, got %s", dataDir, path)
 	}
 
 	// Verify exact path
-	expected := filepath.Join(testPath, "gogent", "tool-events.jsonl")
+	expected := filepath.Join(testPath, "goyoke", "tool-events.jsonl")
 	if path != expected {
 		t.Errorf("Expected %s, got %s", expected, path)
 	}
@@ -1298,13 +1298,13 @@ func TestGetRoutingDecisionsPath(t *testing.T) {
 	}
 
 	// Verify path is within data directory
-	dataDir := GetGOgentDataDir()
+	dataDir := GetgoYokeDataDir()
 	if !strings.HasPrefix(path, dataDir) {
 		t.Errorf("Expected path to be within data directory %s, got %s", dataDir, path)
 	}
 
 	// Verify exact path
-	expected := filepath.Join(testPath, "gogent", "routing-decisions.jsonl")
+	expected := filepath.Join(testPath, "goyoke", "routing-decisions.jsonl")
 	if path != expected {
 		t.Errorf("Expected %s, got %s", expected, path)
 	}
@@ -1326,13 +1326,13 @@ func TestGetCollaborationsPath(t *testing.T) {
 	}
 
 	// Verify path is within data directory
-	dataDir := GetGOgentDataDir()
+	dataDir := GetgoYokeDataDir()
 	if !strings.HasPrefix(path, dataDir) {
 		t.Errorf("Expected path to be within data directory %s, got %s", dataDir, path)
 	}
 
 	// Verify exact path
-	expected := filepath.Join(testPath, "gogent", "agent-collaborations.jsonl")
+	expected := filepath.Join(testPath, "goyoke", "agent-collaborations.jsonl")
 	if path != expected {
 		t.Errorf("Expected %s, got %s", expected, path)
 	}
@@ -1346,9 +1346,9 @@ func TestMLPathHelpers_AllUseDataDir(t *testing.T) {
 	testPath := t.TempDir()
 	os.Setenv("XDG_DATA_HOME", testPath)
 
-	dataDir := GetGOgentDataDir()
+	dataDir := GetgoYokeDataDir()
 
-	// All ML path helpers should use GetGOgentDataDir(), not GetGOgentDir()
+	// All ML path helpers should use GetgoYokeDataDir(), not GetgoYokeDir()
 	paths := []struct {
 		name string
 		path string
@@ -1379,7 +1379,7 @@ func TestMLPathHelpers_Fallback(t *testing.T) {
 	home := t.TempDir()
 	os.Setenv("HOME", home)
 
-	expectedDataDir := filepath.Join(home, ".local", "share", "gogent")
+	expectedDataDir := filepath.Join(home, ".local", "share", "goyoke")
 
 	paths := []struct {
 		name     string
@@ -1399,7 +1399,7 @@ func TestMLPathHelpers_Fallback(t *testing.T) {
 	}
 }
 
-func TestGetGOgentDataDir_FallsBackWhenDataDirIsNotWritable(t *testing.T) {
+func TestGetgoYokeDataDir_FallsBackWhenDataDirIsNotWritable(t *testing.T) {
 	origXDG := os.Getenv("XDG_DATA_HOME")
 	origHome := os.Getenv("HOME")
 	defer func() {
@@ -1408,7 +1408,7 @@ func TestGetGOgentDataDir_FallsBackWhenDataDirIsNotWritable(t *testing.T) {
 	}()
 
 	xdgDataHome := t.TempDir()
-	readOnlyParent := filepath.Join(xdgDataHome, "gogent")
+	readOnlyParent := filepath.Join(xdgDataHome, "goyoke")
 	if err := os.MkdirAll(readOnlyParent, 0755); err != nil {
 		t.Fatalf("Failed to create read-only parent: %v", err)
 	}
@@ -1423,8 +1423,8 @@ func TestGetGOgentDataDir_FallsBackWhenDataDirIsNotWritable(t *testing.T) {
 	os.Setenv("XDG_DATA_HOME", xdgDataHome)
 	os.Setenv("HOME", home)
 
-	dir := GetGOgentDataDir()
-	expected := filepath.Join(home, ".local", "share", "gogent")
+	dir := GetgoYokeDataDir()
+	expected := filepath.Join(home, ".local", "share", "goyoke")
 	if dir != expected {
 		t.Fatalf("Expected fallback to %s, got %s", expected, dir)
 	}
@@ -1436,13 +1436,13 @@ func TestGetGOgentDataDir_FallsBackWhenDataDirIsNotWritable(t *testing.T) {
 }
 
 func TestRuntimeDir_Default(t *testing.T) {
-	orig := os.Getenv("GOGENT_RUNTIME_DIR")
-	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
-	os.Unsetenv("GOGENT_RUNTIME_DIR")
+	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
+	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOYOKE_RUNTIME_DIR")
 
 	projectDir := t.TempDir()
 	result := RuntimeDir(projectDir)
-	expected := filepath.Join(projectDir, ".gogent")
+	expected := filepath.Join(projectDir, ".goyoke")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -1453,28 +1453,28 @@ func TestRuntimeDir_Default(t *testing.T) {
 }
 
 func TestRuntimeDir_EnvOverride(t *testing.T) {
-	orig := os.Getenv("GOGENT_RUNTIME_DIR")
-	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
+	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
+	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
 
 	overrideDir := t.TempDir()
-	os.Setenv("GOGENT_RUNTIME_DIR", overrideDir)
+	os.Setenv("GOYOKE_RUNTIME_DIR", overrideDir)
 
 	projectDir := t.TempDir()
 	result := RuntimeDir(projectDir)
 
 	if result != overrideDir {
-		t.Errorf("Expected GOGENT_RUNTIME_DIR override %s, got %s", overrideDir, result)
+		t.Errorf("Expected GOYOKE_RUNTIME_DIR override %s, got %s", overrideDir, result)
 	}
 }
 
 func TestProjectMemoryDir(t *testing.T) {
-	orig := os.Getenv("GOGENT_RUNTIME_DIR")
-	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
-	os.Unsetenv("GOGENT_RUNTIME_DIR")
+	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
+	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOYOKE_RUNTIME_DIR")
 
 	projectDir := t.TempDir()
 	result := ProjectMemoryDir(projectDir)
-	expected := filepath.Join(projectDir, ".gogent", "memory")
+	expected := filepath.Join(projectDir, ".goyoke", "memory")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
@@ -1485,26 +1485,26 @@ func TestProjectMemoryDir(t *testing.T) {
 }
 
 func TestGetProjectViolationsLogPath_UsesGogentMemory(t *testing.T) {
-	orig := os.Getenv("GOGENT_RUNTIME_DIR")
-	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
-	os.Unsetenv("GOGENT_RUNTIME_DIR")
+	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
+	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOYOKE_RUNTIME_DIR")
 
 	projectDir := t.TempDir()
 	result := GetProjectViolationsLogPath(projectDir)
-	expected := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
+	expected := filepath.Join(projectDir, ".goyoke", "memory", "routing-violations.jsonl")
 
 	if result != expected {
 		t.Errorf("Expected %s, got %s", expected, result)
 	}
 }
 
-// TestRuntimeDir_WriteCanary validates that .gogent/ paths are writable.
-// This is the migration canary — if .gogent/ writes fail, the .claude/ → .gogent/
+// TestRuntimeDir_WriteCanary validates that .goyoke/ paths are writable.
+// This is the migration canary — if .goyoke/ writes fail, the .claude/ → .goyoke/
 // runtime I/O migration is broken.
 func TestRuntimeDir_WriteCanary(t *testing.T) {
-	orig := os.Getenv("GOGENT_RUNTIME_DIR")
-	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
-	os.Unsetenv("GOGENT_RUNTIME_DIR")
+	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
+	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOYOKE_RUNTIME_DIR")
 
 	projectDir := t.TempDir()
 
@@ -1533,9 +1533,9 @@ func TestRuntimeDir_WriteCanary(t *testing.T) {
 }
 
 func TestRuntimeDir_Idempotent(t *testing.T) {
-	orig := os.Getenv("GOGENT_RUNTIME_DIR")
-	defer func() { os.Setenv("GOGENT_RUNTIME_DIR", orig) }()
-	os.Unsetenv("GOGENT_RUNTIME_DIR")
+	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
+	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
+	os.Unsetenv("GOYOKE_RUNTIME_DIR")
 
 	projectDir := t.TempDir()
 	result1 := RuntimeDir(projectDir)
@@ -1549,17 +1549,17 @@ func TestRuntimeDir_Idempotent(t *testing.T) {
 	}
 }
 
-func TestGetGuardsDir_ReturnsPathUnderGOgentDir(t *testing.T) {
+func TestGetGuardsDir_ReturnsPathUndergoYokeDir(t *testing.T) {
 	testDir := t.TempDir()
 	orig := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", orig)
 	os.Setenv("XDG_RUNTIME_DIR", testDir)
 
 	guardsDir := GetGuardsDir()
-	gogentDir := GetGOgentDir()
+	goyokeDir := GetgoYokeDir()
 
-	if !strings.HasPrefix(guardsDir, gogentDir) {
-		t.Errorf("GetGuardsDir() %q not under GetGOgentDir() %q", guardsDir, gogentDir)
+	if !strings.HasPrefix(guardsDir, goyokeDir) {
+		t.Errorf("GetGuardsDir() %q not under GetgoYokeDir() %q", guardsDir, goyokeDir)
 	}
 	if filepath.Base(guardsDir) != "guards" {
 		t.Errorf("Expected path ending in /guards, got %q", guardsDir)

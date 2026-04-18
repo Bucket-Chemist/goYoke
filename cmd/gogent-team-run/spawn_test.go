@@ -866,7 +866,7 @@ func TestPrepareSpawn_InjectsAgentIdentity(t *testing.T) {
 		"Envelope should contain agent identity marker")
 
 	// Verify envelope contains the conventions marker
-	assert.Contains(t, cfg.envelope, "[CONVENTIONS - AUTO-INJECTED BY gogent-validate]",
+	assert.Contains(t, cfg.envelope, "[CONVENTIONS - AUTO-INJECTED BY goyoke-validate]",
 		"Envelope should contain conventions marker")
 
 	// Verify envelope contains the original prompt content
@@ -875,7 +875,7 @@ func TestPrepareSpawn_InjectsAgentIdentity(t *testing.T) {
 
 	// Verify identity appears BEFORE conventions in the envelope
 	identityPos := strings.Index(cfg.envelope, "[AGENT IDENTITY - AUTO-INJECTED]")
-	conventionsPos := strings.Index(cfg.envelope, "[CONVENTIONS - AUTO-INJECTED BY gogent-validate]")
+	conventionsPos := strings.Index(cfg.envelope, "[CONVENTIONS - AUTO-INJECTED BY goyoke-validate]")
 
 	if identityPos >= 0 && conventionsPos >= 0 {
 		assert.Less(t, identityPos, conventionsPos,
@@ -1513,17 +1513,17 @@ func TestExtractCostFromCLIOutput_ArrayFormat(t *testing.T) {
 	}
 }
 
-// TestSessionDirEnvInjection tests that GOGENT_SESSION_DIR is correctly set when current-session exists
+// TestSessionDirEnvInjection tests that GOYOKE_SESSION_DIR is correctly set when current-session exists
 func TestSessionDirEnvInjection(t *testing.T) {
 	t.Parallel()
 	// Create temporary project directory
 	projectRoot := t.TempDir()
-	sessionDir := filepath.Join(projectRoot, ".gogent", "sessions", "test-session-123")
+	sessionDir := filepath.Join(projectRoot, ".goyoke", "sessions", "test-session-123")
 
 	// Create .claude directory and write current-session marker
-	gogentDir := filepath.Join(projectRoot, ".gogent")
-	require.NoError(t, os.MkdirAll(gogentDir, 0755))
-	currentSessionPath := filepath.Join(gogentDir, "current-session")
+	goyokeDir := filepath.Join(projectRoot, ".goyoke")
+	require.NoError(t, os.MkdirAll(goyokeDir, 0755))
+	currentSessionPath := filepath.Join(goyokeDir, "current-session")
 	require.NoError(t, os.WriteFile(currentSessionPath, []byte(sessionDir+"\n"), 0644))
 
 	// Verify ReadCurrentSession returns the expected path
@@ -1616,11 +1616,11 @@ func TestSessionDirEnvInjection_NoMarker(t *testing.T) {
 	assert.Equal(t, projectRoot, cfg.projectRoot)
 
 	// Verify that ReadCurrentSession still returns empty string
-	// (this proves the fallback: no marker = no GOGENT_SESSION_DIR env var would be set)
+	// (this proves the fallback: no marker = no GOYOKE_SESSION_DIR env var would be set)
 	verifySessionDir, err := session.ReadCurrentSession(cfg.projectRoot)
 	require.NoError(t, err)
 	assert.Equal(t, "", verifySessionDir,
-		"When current-session doesn't exist, ReadCurrentSession should return empty string (no GOGENT_SESSION_DIR)")
+		"When current-session doesn't exist, ReadCurrentSession should return empty string (no GOYOKE_SESSION_DIR)")
 }
 
 // TestWorkflowTimeout tests workflow-based timeout defaults

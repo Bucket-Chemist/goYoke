@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 )
 
-// TeamConfig is a minimal config for gogent-team-prepare-synthesis.
+// TeamConfig is a minimal config for goyoke-team-prepare-synthesis.
 // Only the fields needed for workflow dispatch and wave detection are included.
-// Source of truth: cmd/gogent-team-run/config.go (TeamConfig struct).
+// Source of truth: cmd/goyoke-team-run/config.go (TeamConfig struct).
 type TeamConfig struct {
 	WorkflowType string     `json:"workflow_type"`
 	Waves        []WaveInfo `json:"waves"`

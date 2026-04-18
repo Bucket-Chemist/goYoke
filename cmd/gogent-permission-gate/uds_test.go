@@ -18,29 +18,29 @@ import (
 // =============================================================================
 
 func TestPermTimeout_Default(t *testing.T) {
-	t.Setenv("GOGENT_PERM_TIMEOUT", "")
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "")
 	assert.Equal(t, defaultPermTimeout, permTimeout())
 }
 
 func TestPermTimeout_Custom(t *testing.T) {
-	t.Setenv("GOGENT_PERM_TIMEOUT", "5000")
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "5000")
 	assert.Equal(t, 5*time.Second, permTimeout())
 }
 
 func TestPermTimeout_Invalid(t *testing.T) {
-	t.Setenv("GOGENT_PERM_TIMEOUT", "abc")
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "abc")
 	assert.Equal(t, defaultPermTimeout, permTimeout())
 }
 
 func TestPermTimeout_Zero(t *testing.T) {
 	// Zero is treated as invalid — falls back to default.
-	t.Setenv("GOGENT_PERM_TIMEOUT", "0")
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "0")
 	assert.Equal(t, defaultPermTimeout, permTimeout())
 }
 
 func TestPermTimeout_Negative(t *testing.T) {
 	// Negative values are treated as invalid — falls back to default.
-	t.Setenv("GOGENT_PERM_TIMEOUT", "-100")
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "-100")
 	assert.Equal(t, defaultPermTimeout, permTimeout())
 }
 
@@ -49,7 +49,7 @@ func TestPermTimeout_Negative(t *testing.T) {
 // =============================================================================
 
 func TestRequestPermission_NoSocket(t *testing.T) {
-	t.Setenv("GOFORTRESS_SOCKET", "")
+	t.Setenv("GOYOKE_SOCKET", "")
 
 	_, err := RequestPermission("Bash", []byte(`{}`), "session-1")
 
@@ -59,7 +59,7 @@ func TestRequestPermission_NoSocket(t *testing.T) {
 
 func TestRequestPermission_BadSocketPath(t *testing.T) {
 	// Point at a path that does not exist — dial will fail.
-	t.Setenv("GOFORTRESS_SOCKET", "/nonexistent/path/to/bridge.sock")
+	t.Setenv("GOYOKE_SOCKET", "/nonexistent/path/to/bridge.sock")
 
 	_, err := RequestPermission("Bash", []byte(`{}`), "session-2")
 
@@ -141,8 +141,8 @@ func trimNewline(b []byte) []byte {
 
 func TestRequestPermission_AllowResponse(t *testing.T) {
 	socketPath, acceptCh := startMockBridge(t)
-	t.Setenv("GOFORTRESS_SOCKET", socketPath)
-	t.Setenv("GOGENT_PERM_TIMEOUT", "2000")
+	t.Setenv("GOYOKE_SOCKET", socketPath)
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "2000")
 
 	// Serve the mock response in a goroutine.
 	go func() {
@@ -158,8 +158,8 @@ func TestRequestPermission_AllowResponse(t *testing.T) {
 
 func TestRequestPermission_DenyResponse(t *testing.T) {
 	socketPath, acceptCh := startMockBridge(t)
-	t.Setenv("GOFORTRESS_SOCKET", socketPath)
-	t.Setenv("GOGENT_PERM_TIMEOUT", "2000")
+	t.Setenv("GOYOKE_SOCKET", socketPath)
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "2000")
 
 	go func() {
 		conn := <-acceptCh
@@ -174,8 +174,8 @@ func TestRequestPermission_DenyResponse(t *testing.T) {
 
 func TestRequestPermission_AllowSessionResponse(t *testing.T) {
 	socketPath, acceptCh := startMockBridge(t)
-	t.Setenv("GOFORTRESS_SOCKET", socketPath)
-	t.Setenv("GOGENT_PERM_TIMEOUT", "2000")
+	t.Setenv("GOYOKE_SOCKET", socketPath)
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "2000")
 
 	go func() {
 		conn := <-acceptCh
@@ -194,9 +194,9 @@ func TestRequestPermission_AllowSessionResponse(t *testing.T) {
 
 func TestRequestPermission_Timeout(t *testing.T) {
 	socketPath, acceptCh := startMockBridge(t)
-	t.Setenv("GOFORTRESS_SOCKET", socketPath)
+	t.Setenv("GOYOKE_SOCKET", socketPath)
 	// Short timeout so the test runs fast.
-	t.Setenv("GOGENT_PERM_TIMEOUT", "200")
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "200")
 
 	// Accept the connection but never respond — triggers the read deadline.
 	go func() {
@@ -218,8 +218,8 @@ func TestRequestPermission_Timeout(t *testing.T) {
 
 func TestRequestPermission_MalformedResponseJSON(t *testing.T) {
 	socketPath, acceptCh := startMockBridge(t)
-	t.Setenv("GOFORTRESS_SOCKET", socketPath)
-	t.Setenv("GOGENT_PERM_TIMEOUT", "2000")
+	t.Setenv("GOYOKE_SOCKET", socketPath)
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "2000")
 
 	go func() {
 		conn := <-acceptCh
@@ -239,8 +239,8 @@ func TestRequestPermission_MalformedResponseJSON(t *testing.T) {
 
 func TestRequestPermission_ResponseIDMismatch(t *testing.T) {
 	socketPath, acceptCh := startMockBridge(t)
-	t.Setenv("GOFORTRESS_SOCKET", socketPath)
-	t.Setenv("GOGENT_PERM_TIMEOUT", "2000")
+	t.Setenv("GOYOKE_SOCKET", socketPath)
+	t.Setenv("GOYOKE_PERM_TIMEOUT", "2000")
 
 	go func() {
 		conn := <-acceptCh

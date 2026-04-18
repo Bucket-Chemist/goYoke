@@ -1,5 +1,5 @@
 // Package state provides shared, thread-safe state containers for the
-// GOgent-Fortress TUI. It has no dependency on the model, cli, bridge, or any
+// goYoke TUI. It has no dependency on the model, cli, bridge, or any
 // Bubbletea packages, keeping the import graph acyclic.
 package state
 

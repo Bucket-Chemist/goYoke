@@ -293,7 +293,7 @@ func TestGenerateStdinFile_BlocksComputation(t *testing.T) {
 	assert.Equal(t, []string{}, stdin3.Task.Blocks)
 }
 
-// TestEnrichedPlanJSON_IgnoresEnrichmentFields verifies that gogent-plan-impl
+// TestEnrichedPlanJSON_IgnoresEnrichmentFields verifies that goyoke-plan-impl
 // safely handles enriched plan JSON. Specifically:
 //   - json.Unmarshal silently drops unknown fields (enrichment_version,
 //     review_annotations, harmonization_log, readiness_score)

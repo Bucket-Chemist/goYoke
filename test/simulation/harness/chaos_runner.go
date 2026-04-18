@@ -42,7 +42,7 @@ type ChaosConfig struct {
 	// Seed enables reproducible chaos (same seed = same sequence of operations)
 	Seed int64
 
-	// SharpEdgePath is the path to gogent-sharp-edge binary
+	// SharpEdgePath is the path to goyoke-sharp-edge binary
 	SharpEdgePath string
 
 	// SchemaPath is the path to routing-schema.json for test isolation
@@ -267,7 +267,7 @@ func (c *ChaosRunner) runAgent(agentID int, assignment KeyAssignment, seed int64
 	return nil
 }
 
-// simulateFailure calls gogent-sharp-edge with a failure event.
+// simulateFailure calls goyoke-sharp-edge with a failure event.
 // Returns the failure count and whether blocking occurred.
 func (c *ChaosRunner) simulateFailure(file, errorType string, agentID int) (count int, blocked bool, err error) {
 	// Build PostToolUse event with failure
@@ -358,16 +358,16 @@ func (c *ChaosRunner) buildEnv() []string {
 	}
 
 	// Test isolation
-	env = append(env, "GOGENT_PROJECT_DIR="+c.tempDir)
-	env = append(env, "GOGENT_STORAGE_PATH="+filepath.Join(c.tempDir, ".gogent", "failure-tracker.jsonl"))
-	env = append(env, fmt.Sprintf("GOGENT_MAX_FAILURES=%d", c.config.MaxFailures))
-	env = append(env, "GOGENT_FAILURE_WINDOW=999999999") // Very long window
+	env = append(env, "GOYOKE_PROJECT_DIR="+c.tempDir)
+	env = append(env, "GOYOKE_STORAGE_PATH="+filepath.Join(c.tempDir, ".goyoke", "failure-tracker.jsonl"))
+	env = append(env, fmt.Sprintf("GOYOKE_MAX_FAILURES=%d", c.config.MaxFailures))
+	env = append(env, "GOYOKE_FAILURE_WINDOW=999999999") // Very long window
 
 	if c.config.SchemaPath != "" {
-		env = append(env, "GOGENT_ROUTING_SCHEMA="+c.config.SchemaPath)
+		env = append(env, "GOYOKE_ROUTING_SCHEMA="+c.config.SchemaPath)
 	}
 	if c.config.AgentsPath != "" {
-		env = append(env, "GOGENT_AGENTS_INDEX="+c.config.AgentsPath)
+		env = append(env, "GOYOKE_AGENTS_INDEX="+c.config.AgentsPath)
 	}
 
 	return env
@@ -376,8 +376,8 @@ func (c *ChaosRunner) buildEnv() []string {
 // setupTempDir creates required directories for the chaos test.
 func (c *ChaosRunner) setupTempDir() error {
 	dirs := []string{
-		filepath.Join(c.tempDir, ".gogent", "memory"),
-		filepath.Join(c.tempDir, ".gogent"),
+		filepath.Join(c.tempDir, ".goyoke", "memory"),
+		filepath.Join(c.tempDir, ".goyoke"),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -480,8 +480,8 @@ func (c *ChaosRunner) validateJSONL() (*JSONLCheckResult, error) {
 	result := &JSONLCheckResult{}
 
 	jsonlFiles := []string{
-		filepath.Join(c.tempDir, ".gogent", "memory", "pending-learnings.jsonl"),
-		filepath.Join(c.tempDir, ".gogent", "failure-tracker.jsonl"),
+		filepath.Join(c.tempDir, ".goyoke", "memory", "pending-learnings.jsonl"),
+		filepath.Join(c.tempDir, ".goyoke", "failure-tracker.jsonl"),
 	}
 
 	for _, path := range jsonlFiles {

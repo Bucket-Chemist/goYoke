@@ -11,9 +11,9 @@ import (
 // TestSessionStart_Integration runs SessionStart with all fixture scenarios
 func TestSessionStart_Integration(t *testing.T) {
 	// Setup: Build binary if not present
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-load-context binary not found. Run: go build -o cmd/gogent-load-context/gogent-load-context cmd/gogent-load-context/main.go")
+		t.Skip("goyoke-load-context binary not found. Run: go build -o cmd/goyoke-load-context/goyoke-load-context cmd/goyoke-load-context/main.go")
 	}
 
 	// Setup: Create test corpus
@@ -34,7 +34,7 @@ func TestSessionStart_Integration(t *testing.T) {
 		t.Fatalf("Failed to load corpus: %v", err)
 	}
 
-	// Run all SessionStart events through gogent-load-context hook
+	// Run all SessionStart events through goyoke-load-context hook
 	results, err := harness.RunHookBatch(binaryPath, "SessionStart")
 	if err != nil {
 		t.Fatalf("Failed to run batch: %v", err)
@@ -81,9 +81,9 @@ func TestSessionStart_Integration(t *testing.T) {
 
 // TestSessionStart_LanguageDetection verifies Python/Go/R language detection
 func TestSessionStart_LanguageDetection(t *testing.T) {
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-load-context binary not found")
+		t.Skip("goyoke-load-context binary not found")
 	}
 
 	testCases := []struct {
@@ -171,9 +171,9 @@ func TestSessionStart_LanguageDetection(t *testing.T) {
 
 // TestSessionStart_ConventionLoading verifies conventions are injected into context
 func TestSessionStart_ConventionLoading(t *testing.T) {
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-load-context binary not found")
+		t.Skip("goyoke-load-context binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -242,9 +242,9 @@ func TestSessionStart_ConventionLoading(t *testing.T) {
 
 // TestSessionStart_HandoffInjection verifies last-handoff.md is injected if present
 func TestSessionStart_HandoffInjection(t *testing.T) {
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-load-context binary not found")
+		t.Skip("goyoke-load-context binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -254,7 +254,7 @@ func TestSessionStart_HandoffInjection(t *testing.T) {
 	os.WriteFile(filepath.Join(projectDir, "go.mod"), []byte("module github.com/test/project\n"), 0644)
 
 	// Create previous session handoff
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	handoff := `# Last Handoff
@@ -318,9 +318,9 @@ func TestSessionStart_HandoffInjection(t *testing.T) {
 
 // TestSessionStart_RoutingSchemaLoad verifies routing schema is loaded and parsed
 func TestSessionStart_RoutingSchemaLoad(t *testing.T) {
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-load-context binary not found")
+		t.Skip("goyoke-load-context binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -408,9 +408,9 @@ func TestSessionStart_RoutingSchemaLoad(t *testing.T) {
 
 // TestSessionStart_ErrorRecovery tests graceful fallback on errors
 func TestSessionStart_ErrorRecovery(t *testing.T) {
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-load-context binary not found")
+		t.Skip("goyoke-load-context binary not found")
 	}
 
 	testCases := []struct {

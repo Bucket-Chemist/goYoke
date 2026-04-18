@@ -1,10 +1,10 @@
-// Command gogent-team-prepare-synthesis bridges analyst waves and synthesis waves.
+// Command goyoke-team-prepare-synthesis bridges analyst waves and synthesis waves.
 // It reads the team config to determine workflow type, finds the completed wave,
 // and dispatches to the appropriate preparation handler.
 //
 // Usage:
 //
-//	gogent-team-prepare-synthesis <team-directory>
+//	goyoke-team-prepare-synthesis <team-directory>
 //
 // Supported workflow types:
 //   - braintrust: reads Einstein + Staff-Arch stdout, writes pre-synthesis.md

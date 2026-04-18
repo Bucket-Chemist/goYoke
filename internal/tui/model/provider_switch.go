@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains the provider-switching flow (TUI-029).
 package model
 

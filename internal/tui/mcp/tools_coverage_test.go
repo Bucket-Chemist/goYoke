@@ -65,7 +65,7 @@ func mockUDSMulti(t *testing.T, responder func(req IPCRequest) (IPCResponse, boo
 		}
 	}()
 
-	t.Setenv("GOFORTRESS_SOCKET", sockPath)
+	t.Setenv("GOYOKE_SOCKET", sockPath)
 	client := NewUDSClient()
 	return client, func() { _ = ln.Close() }
 }
@@ -95,7 +95,7 @@ func TestUDSClient_Send_OneWayNotification(t *testing.T) {
 		}
 	}()
 
-	t.Setenv("GOFORTRESS_SOCKET", sockPath)
+	t.Setenv("GOYOKE_SOCKET", sockPath)
 	client := NewUDSClient()
 
 	req := IPCRequest{
@@ -139,7 +139,7 @@ func TestUDSClient_Notify_SendsPayload(t *testing.T) {
 		}
 	}()
 
-	t.Setenv("GOFORTRESS_SOCKET", sockPath)
+	t.Setenv("GOYOKE_SOCKET", sockPath)
 	client := NewUDSClient()
 
 	payload := ToastPayload{Message: "notify test", Level: "info"}
@@ -157,7 +157,7 @@ func TestUDSClient_Notify_SendsPayload(t *testing.T) {
 }
 
 func TestUDSClient_Notify_NoTUI_SilentlyIgnored(t *testing.T) {
-	t.Setenv("GOFORTRESS_SOCKET", "")
+	t.Setenv("GOYOKE_SOCKET", "")
 	client := NewUDSClient()
 
 	// notify is best-effort: when TUI is not connected it must not panic.
@@ -236,8 +236,8 @@ func TestHandleSpawnAgent_ValidAgent_NotifiesUDS(t *testing.T) {
 		minimalAgentsIndex("dummy-agent"),
 		0o644,
 	))
-	t.Setenv("GOGENT_AGENTS_INDEX", "") // clear any env-inherited override
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_AGENTS_INDEX", "") // clear any env-inherited override
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 
 	// Capture all IPC notifications.
 	notifications := make(chan IPCRequest, 10)
@@ -262,7 +262,7 @@ func TestHandleSpawnAgent_ValidAgent_NotifiesUDS(t *testing.T) {
 		}
 	}()
 
-	t.Setenv("GOFORTRESS_SOCKET", sockPath)
+	t.Setenv("GOYOKE_SOCKET", sockPath)
 	uds := NewUDSClient()
 
 	_, out, err := handleSpawnAgent(context.Background(), nil,

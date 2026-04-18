@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// genTeamConfig matches the TeamConfig structure expected by gogent-team-run
+// genTeamConfig matches the TeamConfig structure expected by goyoke-team-run
 type genTeamConfig struct {
 	TeamName            string    `json:"team_name"`
 	WorkflowType        string    `json:"workflow_type"`

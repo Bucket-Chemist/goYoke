@@ -700,7 +700,7 @@ func TestFilterScoutRecommendations_EmptyInput(t *testing.T) {
 
 func TestGetScoutLogPath(t *testing.T) {
 	tmpDir := t.TempDir()
-	// Unset XDG_RUNTIME_DIR first (it takes priority over XDG_CACHE_HOME in GetGOgentDir)
+	// Unset XDG_RUNTIME_DIR first (it takes priority over XDG_CACHE_HOME in GetgoYokeDir)
 	oldRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	os.Unsetenv("XDG_RUNTIME_DIR")
 	defer func() {
@@ -727,7 +727,7 @@ func TestGetProjectScoutLogPath(t *testing.T) {
 	projectDir := "/home/user/my-project"
 	path := GetProjectScoutLogPath(projectDir)
 
-	expected := filepath.Join(projectDir, ".gogent", "memory", "scout-recommendations.jsonl")
+	expected := filepath.Join(projectDir, ".goyoke", "memory", "scout-recommendations.jsonl")
 	if path != expected {
 		t.Errorf("Expected path %s, got: %s", expected, path)
 	}

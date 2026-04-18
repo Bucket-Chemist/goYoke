@@ -130,7 +130,7 @@ func setupTestEnvironment(t *testing.T) (string, func()) {
 			},
 			"complexity_routing": {
 				"description": "Complexity-based routing",
-				"calculator": "gogent-scout",
+				"calculator": "goyoke-scout",
 				"thresholds": {},
 				"force_external_if": "score > 1000"
 			},

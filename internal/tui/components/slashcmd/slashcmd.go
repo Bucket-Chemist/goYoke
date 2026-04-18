@@ -1,5 +1,5 @@
 // Package slashcmd implements a slash command dropdown autocomplete component
-// for the GOgent-Fortress TUI. It renders a filterable, scrollable list of
+// for the goYoke TUI. It renders a filterable, scrollable list of
 // available slash commands and emits a SlashCmdSelectedMsg when the user
 // confirms a selection.
 //
@@ -97,7 +97,7 @@ const (
 // ---------------------------------------------------------------------------
 
 // DefaultCommands returns the canonical list of slash commands available in
-// GOgent-Fortress. This list mirrors the Slash Commands table in CLAUDE.md.
+// goYoke. This list mirrors the Slash Commands table in CLAUDE.md.
 func DefaultCommands() []SlashCommand {
 	return []SlashCommand{
 		{"explore", "Structured codebase exploration"},

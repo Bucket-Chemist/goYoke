@@ -236,7 +236,7 @@ func TestLogInvocation_ProjectWriteFailure_GracefulDegradation(t *testing.T) {
 
 	// Create a non-writable project directory
 	projectDir := filepath.Join(tmpDir, "readonly-project")
-	claudeMemDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeMemDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(claudeMemDir, 0755)
 
 	// Create the invocations file as a directory (will cause write failure)
@@ -410,8 +410,8 @@ func TestGetInvocationsLogPath_XDGCacheHome(t *testing.T) {
 	if !strings.HasPrefix(path, tmpDir) {
 		t.Errorf("Expected path to start with XDG_CACHE_HOME, got: %s", path)
 	}
-	if !strings.Contains(path, "gogent") {
-		t.Errorf("Expected path to contain 'gogent', got: %s", path)
+	if !strings.Contains(path, "goyoke") {
+		t.Errorf("Expected path to contain 'goyoke', got: %s", path)
 	}
 }
 
@@ -419,7 +419,7 @@ func TestGetProjectInvocationsLogPath(t *testing.T) {
 	projectDir := "/home/user/my-project"
 	path := GetProjectInvocationsLogPath(projectDir)
 
-	expectedPath := filepath.Join(projectDir, ".gogent", "memory", "agent-invocations.jsonl")
+	expectedPath := filepath.Join(projectDir, ".goyoke", "memory", "agent-invocations.jsonl")
 	if path != expectedPath {
 		t.Errorf("Expected path '%s', got: '%s'", expectedPath, path)
 	}
@@ -660,13 +660,13 @@ func TestAgentInvocation_OmitEmptyFields(t *testing.T) {
 
 func TestLogInvocation_GlobalWriteFailure(t *testing.T) {
 	// Test graceful degradation when primary paths fail
-	// GetGOgentDir() has multiple fallbacks (XDG_RUNTIME_DIR → XDG_CACHE_HOME → ~/.cache → /tmp)
+	// GetgoYokeDir() has multiple fallbacks (XDG_RUNTIME_DIR → XDG_CACHE_HOME → ~/.cache → /tmp)
 	// This test verifies the system gracefully handles partial failures
 	tmpDir := t.TempDir()
 
-	// Make the gogent directory a file instead of directory (causes mkdir to fail)
-	gogentPath := filepath.Join(tmpDir, "gogent")
-	os.WriteFile(gogentPath, []byte("not a directory"), 0644)
+	// Make the goyoke directory a file instead of directory (causes mkdir to fail)
+	goyokePath := filepath.Join(tmpDir, "goyoke")
+	os.WriteFile(goyokePath, []byte("not a directory"), 0644)
 
 	// Block primary paths - fallbacks may still succeed (by design)
 	os.Setenv("XDG_RUNTIME_DIR", tmpDir)

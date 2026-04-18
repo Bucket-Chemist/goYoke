@@ -1,5 +1,5 @@
 // Package banner implements the fixed-height top banner component for the
-// GOgent-Fortress TUI. It renders the application name centred inside a
+// goYoke TUI. It renders the application name centred inside a
 // rounded lipgloss border and responds to window-resize messages so it
 // always fills the full terminal width.
 package banner
@@ -12,7 +12,7 @@ import (
 )
 
 // BannerModel is the Bubbletea model for the top banner strip.
-// It renders "GOgent-Fortress" centred inside a rounded border box, or a
+// It renders "goYoke" centred inside a rounded border box, or a
 // single-line strip when compact mode is active.
 //
 // The zero value is not usable; use NewBannerModel instead.
@@ -57,7 +57,7 @@ func (m BannerModel) View() string {
 		return m.viewCompact()
 	}
 
-	title := config.StyleTitle.Render("GOgent-Fortress")
+	title := config.StyleTitle.Render("goYoke")
 
 	// The border consumes 2 columns on each side (border + space handled by
 	// lipgloss padding). We use lipgloss.Place to centre the title inside the
@@ -86,7 +86,7 @@ func (m BannerModel) View() string {
 // The text is truncated to m.width runes so it never overflows a narrow
 // terminal.
 func (m BannerModel) viewCompact() string {
-	text := "⚡ GOgent Fortress"
+	text := "⚡ goYoke"
 	runes := []rune(text)
 	if m.width > 0 && len(runes) > m.width {
 		text = string(runes[:m.width])

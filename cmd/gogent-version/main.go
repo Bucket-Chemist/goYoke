@@ -34,7 +34,7 @@ func run(w io.Writer, jsonOutput bool) error {
 		return err
 	}
 
-	_, err := fmt.Fprintf(w, "GOgent-Fortress v%s (built: %s)\n", Version, BuildTime)
+	_, err := fmt.Fprintf(w, "goYoke v%s (built: %s)\n", Version, BuildTime)
 	return err
 }
 

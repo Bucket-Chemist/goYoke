@@ -20,7 +20,7 @@ type DefaultRunner struct {
 	validatePath    string
 	archivePath     string
 	sharpEdgePath   string
-	loadContextPath string // Path to gogent-load-context binary
+	loadContextPath string // Path to goyoke-load-context binary
 	generator       Generator
 	scenarioEnv     map[string]string // Per-scenario environment variables
 }
@@ -37,13 +37,13 @@ func NewRunner(cfg SimulationConfig, validatePath, archivePath string, gen Gener
 	}
 }
 
-// SetSharpEdgePath sets the path to gogent-sharp-edge binary.
+// SetSharpEdgePath sets the path to goyoke-sharp-edge binary.
 // Required for posttooluse scenario execution.
 func (r *DefaultRunner) SetSharpEdgePath(path string) {
 	r.sharpEdgePath = path
 }
 
-// SetLoadContextPath sets the path to gogent-load-context binary.
+// SetLoadContextPath sets the path to goyoke-load-context binary.
 // Required for sessionstart scenario execution.
 func (r *DefaultRunner) SetLoadContextPath(path string) {
 	r.loadContextPath = path
@@ -95,8 +95,8 @@ func (r *DefaultRunner) RunScenario(s Scenario) SimulationResult {
 	// Clean up temp directory for test isolation
 	// Each scenario starts with a clean slate
 	if r.config.TempDir != "" {
-		gogentDir := filepath.Join(r.config.TempDir, ".gogent")
-		os.RemoveAll(gogentDir)
+		goyokeDir := filepath.Join(r.config.TempDir, ".goyoke")
+		os.RemoveAll(goyokeDir)
 
 		// Clean project indicator files to prevent cross-test contamination
 		// These files affect project type detection and must be removed between tests
@@ -166,12 +166,12 @@ func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
 		cmdPath = r.archivePath
 	case "posttooluse":
 		if r.sharpEdgePath == "" {
-			return "", -1, fmt.Errorf("posttooluse scenario requires sharpEdgePath (gogent-sharp-edge binary)")
+			return "", -1, fmt.Errorf("posttooluse scenario requires sharpEdgePath (goyoke-sharp-edge binary)")
 		}
 		cmdPath = r.sharpEdgePath
 	case "sessionstart":
 		if r.loadContextPath == "" {
-			return "", -1, fmt.Errorf("sessionstart scenario requires loadContextPath (gogent-load-context binary)")
+			return "", -1, fmt.Errorf("sessionstart scenario requires loadContextPath (goyoke-load-context binary)")
 		}
 		cmdPath = r.loadContextPath
 	default:
@@ -369,7 +369,7 @@ func (r *DefaultRunner) validateSharpEdgeSchema(expectedFields map[string]interf
 	var issues []string
 
 	// Read the pending-learnings.jsonl file
-	pendingPath := filepath.Join(r.config.TempDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(r.config.TempDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	content, err := os.ReadFile(pendingPath)
 	if err != nil {
 		issues = append(issues, fmt.Sprintf("validate_sharp_edge: cannot read pending-learnings.jsonl: %v", err))
@@ -488,12 +488,12 @@ func (r *DefaultRunner) validateSessionStartExpectations(expected ExpectedOutput
 	// Check tool counter initialization
 	if expected.ToolCounterInitialized {
 		// Read tool counter from XDG path
-		counterPath := filepath.Join(r.config.TempDir, ".cache", "gogent", "tool-counter")
+		counterPath := filepath.Join(r.config.TempDir, ".cache", "goyoke", "tool-counter")
 		if _, err := os.Stat(counterPath); os.IsNotExist(err) {
 			// Also check XDG_CACHE_HOME location
 			xdgPath := os.Getenv("XDG_CACHE_HOME")
 			if xdgPath != "" {
-				counterPath = filepath.Join(xdgPath, "gogent", "tool-counter")
+				counterPath = filepath.Join(xdgPath, "goyoke", "tool-counter")
 			}
 			if _, err := os.Stat(counterPath); os.IsNotExist(err) {
 				issues = append(issues, "tool_counter_initialized: counter file not found")
@@ -524,18 +524,18 @@ func (r *DefaultRunner) buildEnv() []string {
 
 	// Add test isolation paths
 	if r.config.SchemaPath != "" {
-		env = append(env, "GOGENT_ROUTING_SCHEMA="+r.config.SchemaPath)
+		env = append(env, "GOYOKE_ROUTING_SCHEMA="+r.config.SchemaPath)
 	}
 	if r.config.AgentsPath != "" {
-		env = append(env, "GOGENT_AGENTS_INDEX="+r.config.AgentsPath)
+		env = append(env, "GOYOKE_AGENTS_INDEX="+r.config.AgentsPath)
 	}
 	if r.config.TempDir != "" {
-		env = append(env, "GOGENT_PROJECT_DIR="+r.config.TempDir)
+		env = append(env, "GOYOKE_PROJECT_DIR="+r.config.TempDir)
 		// Set XDG_CACHE_HOME to isolate tool counter and other cache files
-		// This ensures GetGOgentDir() resolves to TempDir/.cache/gogent
+		// This ensures GetgoYokeDir() resolves to TempDir/.cache/goyoke
 		env = append(env, "XDG_CACHE_HOME="+filepath.Join(r.config.TempDir, ".cache"))
 		// Unset XDG_RUNTIME_DIR to prevent fallback to system runtime dir
-		// Empty value causes GetGOgentDir() to skip this check
+		// Empty value causes GetgoYokeDir() to skip this check
 		env = append(env, "XDG_RUNTIME_DIR=")
 	}
 
@@ -695,9 +695,9 @@ func (r *DefaultRunner) createSetupFunc(setup *FixtureSetup) SetupFunc {
 			// Expand ${TEMP_DIR} in env values
 			expandedValue := strings.ReplaceAll(value, "${TEMP_DIR}", baseDir)
 
-			if key == "GOGENT_DELEGATION_CEILING" {
+			if key == "GOYOKE_DELEGATION_CEILING" {
 				// Write ceiling to the file the CLI reads
-				ceilingPath := filepath.Join(baseDir, ".gogent", "tmp", "max_delegation")
+				ceilingPath := filepath.Join(baseDir, ".goyoke", "tmp", "max_delegation")
 				ceilingDir := filepath.Dir(ceilingPath)
 				if err := os.MkdirAll(ceilingDir, 0755); err != nil {
 					return fmt.Errorf("create ceiling dir: %w", err)

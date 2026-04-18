@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all setter/injector methods on AppModel.
 // Extracted from app.go as part of TUI-043.
 package model

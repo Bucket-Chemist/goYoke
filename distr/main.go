@@ -1,10 +1,10 @@
-// Package main is the entry point for the gofortress multi-call binary.
+// Package main is the entry point for the goyoke multi-call binary.
 //
 // The binary dispatches based on the name it is invoked with (os.Args[0]).
 // When installed, each hook is a symlink to this binary:
 //
-//	ln -s gofortress gogent-validate
-//	ln -s gofortress gogent-archive
+//	ln -s goyoke goyoke-validate
+//	ln -s goyoke goyoke-archive
 //	# …etc.
 //
 // Each blank import below triggers the hook package's init() function, which

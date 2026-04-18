@@ -87,7 +87,7 @@ func main() {
 	index, err := memory.LoadSharpEdgesIndex(agentDirs)
 	if err != nil {
 		// Log warning but continue - we'll just not have pattern matching
-		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: Failed to load sharp edges index: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: Failed to load sharp edges index: %v\n", err)
 		index = &memory.SharpEdgeIndex{} // Empty index
 	}
 
@@ -96,7 +96,7 @@ func main() {
 	// This ensures handoff metrics are accurate even when event parsing fails
 	toolCount, counterErr := config.GetToolCountAndIncrement()
 	if counterErr != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: counter error: %v\n", counterErr)
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: counter error: %v\n", counterErr)
 		toolCount = 0 // Continue with count=0 on error
 	}
 
@@ -113,11 +113,11 @@ func main() {
 	// Clean up vitest processes that may persist after typescript-pro/react-pro agents complete
 	cleanupVitestProcesses(event)
 
-	// === ML TOOL EVENT LOGGING (GOgent-087d) ===
+	// === ML TOOL EVENT LOGGING (goYoke-087d) ===
 	// Log to global and project-scoped paths (non-blocking)
 	if mlErr := telemetry.LogMLToolEvent(event, projectDir); mlErr != nil {
 		// Log error but don't fail hook - ML logging is non-critical
-		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] ML logging warning: %v\n", mlErr)
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] ML logging warning: %v\n", mlErr)
 	}
 
 	// Check reminder threshold
@@ -132,11 +132,11 @@ func main() {
 	if config.ShouldFlush(toolCount) {
 		shouldFlush, _, flushErr := session.ShouldFlushLearnings(projectDir)
 		if flushErr != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: flush check error: %v\n", flushErr)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: flush check error: %v\n", flushErr)
 		} else if shouldFlush {
 			ctx, archiveErr := session.ArchivePendingLearnings(projectDir)
 			if archiveErr != nil {
-				fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: archive error: %v\n", archiveErr)
+				fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: archive error: %v\n", archiveErr)
 			} else {
 				flushMsg = session.GenerateFlushNotification(ctx)
 			}
@@ -165,7 +165,7 @@ func main() {
 			resp.AddField("additionalContext", strings.Join(parts, "\n\n"))
 		}
 		if err := resp.Marshal(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling sandbox response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Error marshaling sandbox response: %v\n", err)
 			fmt.Println("{}")
 		}
 		return
@@ -184,7 +184,7 @@ func main() {
 		// No failure but have attention-gate messages
 		resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
 		if err := resp.Marshal(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Error marshaling response: %v\n", err)
 			fmt.Println("{}")
 		}
 		return
@@ -192,17 +192,17 @@ func main() {
 
 	// Log failure to tracker
 	if err := memory.LogFailure(failure); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: Failed to log failure: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: Failed to log failure: %v\n", err)
 	}
 
 	// Check failure count
 	count, err := memory.GetFailureCount(failure.File, failure.ErrorType)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: Failed to get failure count: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: Failed to get failure count: %v\n", err)
 		// Still output attention-gate messages if present
 		resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
 		if err := resp.Marshal(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Error marshaling response: %v\n", err)
 			fmt.Println("{}")
 		}
 		return
@@ -238,7 +238,7 @@ func main() {
 
 		// Write to pending-learnings.jsonl
 		if err := writePendingLearning(projectDir, edge); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Warning: Failed to write learning: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: Failed to write learning: %v\n", err)
 		}
 
 		// Build SharpEdge struct for pattern matching
@@ -287,7 +287,7 @@ func main() {
 
 		// Marshal and output response
 		if err := resp.Marshal(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Error marshaling response: %v\n", err)
 			// Fallback to simple JSON
 			fmt.Println("{}")
 		}
@@ -299,7 +299,7 @@ func main() {
 		// Output warning with attention-gate messages
 		resp := buildWarningResponse(failure.File, count, reminderMsg, flushMsg)
 		if err := resp.Marshal(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Error marshaling response: %v\n", err)
 			fmt.Println("{}")
 		}
 		return
@@ -309,7 +309,7 @@ func main() {
 	if reminderMsg != "" || flushMsg != "" {
 		resp := buildCombinedResponse(nil, reminderMsg, flushMsg)
 		if err := resp.Marshal(os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Error marshaling response: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Error marshaling response: %v\n", err)
 			fmt.Println("{}")
 		}
 		return
@@ -434,7 +434,7 @@ func cleanupVitestProcesses(event *routing.PostToolEvent) {
 	_ = cmd.Run()
 
 	// Log cleanup for debugging
-	fmt.Fprintf(os.Stderr, "[gogent-sharp-edge] Cleaned up vitest processes\n")
+	fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Cleaned up vitest processes\n")
 }
 
 // detectSandboxBlock returns a suggestion message when a Write or Edit tool call
@@ -459,9 +459,9 @@ func detectSandboxBlock(event *routing.PostToolEvent) string {
 		return ""
 	}
 
-	// Only fire for paths under .claude/ or .gogent/.
+	// Only fire for paths under .claude/ or .goyoke/.
 	if !strings.Contains(filePath, ".claude/") && !strings.Contains(filePath, "/.claude/") &&
-		!strings.Contains(filePath, ".gogent/") && !strings.Contains(filePath, "/.gogent/") {
+		!strings.Contains(filePath, ".goyoke/") && !strings.Contains(filePath, "/.goyoke/") {
 		return ""
 	}
 
@@ -491,10 +491,10 @@ func detectSandboxBlock(event *routing.PostToolEvent) string {
 }
 
 // getProjectDir returns the project directory from environment or cwd.
-// Priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > CWD
+// Priority: GOYOKE_PROJECT_DIR > CLAUDE_PROJECT_DIR > CWD
 func getProjectDir() string {
-	// 1. GOgent-specific override (highest priority)
-	if dir := os.Getenv("GOGENT_PROJECT_DIR"); dir != "" {
+	// 1. goYoke-specific override (highest priority)
+	if dir := os.Getenv("GOYOKE_PROJECT_DIR"); dir != "" {
 		return dir
 	}
 	// 2. Claude Code standard

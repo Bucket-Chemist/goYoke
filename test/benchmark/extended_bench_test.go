@@ -14,9 +14,9 @@ import (
 
 // BenchmarkLoadContext_LanguageDetection measures language detection latency
 func BenchmarkLoadContext_LanguageDetection(b *testing.B) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../cmd/goyoke-load-context/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-load-context binary not found")
+		b.Skip("goyoke-load-context binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -44,7 +44,7 @@ func BenchmarkLoadContext_LanguageDetection(b *testing.B) {
 		cmd.Stdout = &stdout
 
 		if err := cmd.Run(); err != nil {
-			b.Logf("Warning: gogent-load-context failed: %v", err)
+			b.Logf("Warning: goyoke-load-context failed: %v", err)
 		}
 
 		latencies = append(latencies, time.Since(start))
@@ -60,9 +60,9 @@ func BenchmarkLoadContext_LanguageDetection(b *testing.B) {
 
 // BenchmarkLoadContext_HandoffInjection measures handoff injection latency for various payload sizes
 func BenchmarkLoadContext_HandoffInjection(b *testing.B) {
-	binaryPath := "../../cmd/gogent-load-context/gogent-load-context"
+	binaryPath := "../../cmd/goyoke-load-context/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-load-context binary not found")
+		b.Skip("goyoke-load-context binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -90,7 +90,7 @@ func BenchmarkLoadContext_HandoffInjection(b *testing.B) {
 		cmd.Stdout = &stdout
 
 		if err := cmd.Run(); err != nil {
-			b.Logf("Warning: gogent-load-context failed: %v", err)
+			b.Logf("Warning: goyoke-load-context failed: %v", err)
 		}
 
 		latencies = append(latencies, time.Since(start))
@@ -106,9 +106,9 @@ func BenchmarkLoadContext_HandoffInjection(b *testing.B) {
 
 // BenchmarkAgentEndstate_OutcomeLogging measures outcome logging latency
 func BenchmarkAgentEndstate_OutcomeLogging(b *testing.B) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../cmd/goyoke-agent-endstate/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-agent-endstate binary not found")
+		b.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -138,7 +138,7 @@ func BenchmarkAgentEndstate_OutcomeLogging(b *testing.B) {
 		cmd.Stdout = &stdout
 
 		if err := cmd.Run(); err != nil {
-			b.Logf("Warning: gogent-agent-endstate failed: %v", err)
+			b.Logf("Warning: goyoke-agent-endstate failed: %v", err)
 		}
 
 		latencies = append(latencies, time.Since(start))
@@ -154,9 +154,9 @@ func BenchmarkAgentEndstate_OutcomeLogging(b *testing.B) {
 
 // BenchmarkAgentEndstate_CollaborationUpdate measures collaboration logging latency
 func BenchmarkAgentEndstate_CollaborationUpdate(b *testing.B) {
-	binaryPath := "../../cmd/gogent-agent-endstate/gogent-agent-endstate"
+	binaryPath := "../../cmd/goyoke-agent-endstate/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-agent-endstate binary not found")
+		b.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -186,7 +186,7 @@ func BenchmarkAgentEndstate_CollaborationUpdate(b *testing.B) {
 		cmd.Stdout = &stdout
 
 		if err := cmd.Run(); err != nil {
-			b.Logf("Warning: gogent-agent-endstate failed: %v", err)
+			b.Logf("Warning: goyoke-agent-endstate failed: %v", err)
 		}
 
 		latencies = append(latencies, time.Since(start))
@@ -202,9 +202,9 @@ func BenchmarkAgentEndstate_CollaborationUpdate(b *testing.B) {
 
 // BenchmarkMLExport_SmallDataset benchmarks ML export on 1K event dataset
 func BenchmarkMLExport_SmallDataset(b *testing.B) {
-	binaryPath := "../../cmd/gogent-ml-export/gogent-ml-export"
+	binaryPath := "../../cmd/goyoke-ml-export/goyoke-ml-export"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-ml-export binary not found")
+		b.Skip("goyoke-ml-export binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -235,9 +235,9 @@ func BenchmarkMLExport_SmallDataset(b *testing.B) {
 
 // BenchmarkMLExport_MediumDataset benchmarks ML export on 10K event dataset
 func BenchmarkMLExport_MediumDataset(b *testing.B) {
-	binaryPath := "../../cmd/gogent-ml-export/gogent-ml-export"
+	binaryPath := "../../cmd/goyoke-ml-export/goyoke-ml-export"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-ml-export binary not found")
+		b.Skip("goyoke-ml-export binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -268,9 +268,9 @@ func BenchmarkMLExport_MediumDataset(b *testing.B) {
 
 // BenchmarkMLExport_LargeDataset benchmarks ML export on 100K event dataset with strict targets
 func BenchmarkMLExport_LargeDataset(b *testing.B) {
-	binaryPath := "../../cmd/gogent-ml-export/gogent-ml-export"
+	binaryPath := "../../cmd/goyoke-ml-export/goyoke-ml-export"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-ml-export binary not found")
+		b.Skip("goyoke-ml-export binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -344,32 +344,32 @@ func BenchmarkLatency_AllHooks_Percentiles(b *testing.B) {
 	}{
 		{
 			name: "validate-routing",
-			path: "../../cmd/gogent-validate/gogent-validate",
+			path: "../../cmd/goyoke-validate/goyoke-validate",
 			event: `{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/test.txt"},"session_id":"bench-validate"}`,
 		},
 		{
 			name: "load-context",
-			path: "../../cmd/gogent-load-context/gogent-load-context",
+			path: "../../cmd/goyoke-load-context/goyoke-load-context",
 			event: `{"hook_event_name":"SessionStart","session_id":"bench-load-ctx","project_dir":""}`,
 		},
 		{
 			name: "agent-endstate",
-			path: "../../cmd/gogent-agent-endstate/gogent-agent-endstate",
+			path: "../../cmd/goyoke-agent-endstate/goyoke-agent-endstate",
 			event: `{"hook_event_name":"SubagentStop","subagent_type":"Explore","agent_name":"codebase-search","execution_time_ms":1234,"project_dir":""}`,
 		},
 		{
 			name: "sharp-edge-detector",
-			path: "../../cmd/gogent-sharp-edge/gogent-sharp-edge",
+			path: "../../cmd/goyoke-sharp-edge/goyoke-sharp-edge",
 			event: `{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"/tmp/test.go"},"tool_response":{"success":false,"error":"Type error"},"session_id":"bench-sharp"}`,
 		},
 		{
 			name: "session-archive",
-			path: "../../cmd/gogent-archive/gogent-archive",
+			path: "../../cmd/goyoke-archive/goyoke-archive",
 			event: `{"hook_event_name":"SessionEnd","session_id":"bench-archive","transcript_path":""}`,
 		},
 		{
 			name: "ml-export",
-			path: "../../cmd/gogent-ml-export/gogent-ml-export",
+			path: "../../cmd/goyoke-ml-export/goyoke-ml-export",
 			event: `{"hook_event_name":"SessionEnd","session_id":"bench-ml","transcript_path":""}`,
 		},
 	}

@@ -176,10 +176,10 @@ const (
 )
 
 // GetNestingLevel returns the current nesting level from environment.
-// If GOGENT_NESTING_LEVEL is unset, checks CLAUDE_CODE_NESTING_LEVEL to
+// If GOYOKE_NESTING_LEVEL is unset, checks CLAUDE_CODE_NESTING_LEVEL to
 // distinguish root sessions (level 0) from unknown contexts (fail-closed to 1).
 func GetNestingLevel() int {
-	levelStr := os.Getenv("GOGENT_NESTING_LEVEL")
+	levelStr := os.Getenv("GOYOKE_NESTING_LEVEL")
 
 	if levelStr == "" {
 		// If Claude Code's own nesting level is also unset or "0", we're at root
@@ -206,10 +206,10 @@ func GetNestingLevel() int {
 	return level
 }
 
-// IsNestingLevelExplicit returns true if GOGENT_NESTING_LEVEL was set explicitly.
+// IsNestingLevelExplicit returns true if GOYOKE_NESTING_LEVEL was set explicitly.
 // Used for telemetry to distinguish real Level 0 from assumed nesting.
 func IsNestingLevelExplicit() bool {
-	return os.Getenv("GOGENT_NESTING_LEVEL") != ""
+	return os.Getenv("GOYOKE_NESTING_LEVEL") != ""
 }
 
 // ValidateTaskNestingLevel checks if Task() is allowed at current nesting level.
@@ -224,7 +224,7 @@ func ValidateTaskNestingLevel() error {
 				"Task() blocked at nesting level %d. "+
 					"Subagents cannot spawn sub-subagents via Task(). "+
 					"Use MCP spawn_agent tool instead: "+
-					"mcp__gofortress__spawn_agent({agent: '...', prompt: '...'})",
+					"mcp__goyoke__spawn_agent({agent: '...', prompt: '...'})",
 				level,
 			),
 		}
@@ -294,7 +294,7 @@ func BlockResponseForNesting(level int, model, reason string) map[string]interfa
 			"nestingLevel":             level,
 			"model":                    model,
 			"blockReason":              reason,
-			"suggestion":               "Use Task(haiku) or Task(sonnet) for delegation, or mcp__gofortress__spawn_agent for MCP spawning.",
+			"suggestion":               "Use Task(haiku) or Task(sonnet) for delegation, or mcp__goyoke__spawn_agent for MCP spawning.",
 		},
 	}
 }

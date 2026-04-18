@@ -1,4 +1,4 @@
-// Package updatereviewoutcome implements the gogent-update-review-outcome hook.
+// Package updatereviewoutcome implements the goyoke-update-review-outcome hook.
 // It updates the outcome of a review finding in the telemetry system.
 package updatereviewoutcome
 
@@ -11,7 +11,7 @@ import (
 	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
 
-// Main is the entrypoint for the gogent-update-review-outcome hook.
+// Main is the entrypoint for the goyoke-update-review-outcome hook.
 func Main() {
 	findingID := flag.String("finding-id", "", "Finding ID to update (required)")
 	resolution := flag.String("resolution", "", "Resolution: fixed, wontfix, false_positive, deferred (required)")
@@ -20,7 +20,7 @@ func Main() {
 	flag.Parse()
 
 	if *findingID == "" || *resolution == "" {
-		fmt.Fprintln(os.Stderr, "Usage: gogent-update-review-outcome --finding-id=ID --resolution=TYPE [--ticket-id=ID] [--commit=HASH]")
+		fmt.Fprintln(os.Stderr, "Usage: goyoke-update-review-outcome --finding-id=ID --resolution=TYPE [--ticket-id=ID] [--commit=HASH]")
 		os.Exit(1)
 	}
 

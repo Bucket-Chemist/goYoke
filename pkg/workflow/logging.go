@@ -15,7 +15,7 @@ import (
 
 // GetEndstateLogPath returns XDG-compliant path for endstate logs (global)
 func GetEndstateLogPath() string {
-	return filepath.Join(config.GetGOgentDir(), "agent-endstates.jsonl")
+	return filepath.Join(config.GetgoYokeDir(), "agent-endstates.jsonl")
 }
 
 // GetProjectEndstateLogPath returns project-scoped path for endstate logs

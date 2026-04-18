@@ -13,7 +13,7 @@ import (
 func main() {
 	// Parse arguments
 	if len(os.Args) < 3 {
-		fmt.Fprintf(os.Stderr, "Usage: gogent-scout <target> \"<instruction>\" [--output=<file>]\n")
+		fmt.Fprintf(os.Stderr, "Usage: goyoke-scout <target> \"<instruction>\" [--output=<file>]\n")
 		fmt.Fprintf(os.Stderr, "\nEnvironment variables:\n")
 		fmt.Fprintf(os.Stderr, "  SCOUT_OUTPUT=<file>          Output file path\n")
 		os.Exit(1)

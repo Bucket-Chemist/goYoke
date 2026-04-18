@@ -1,16 +1,16 @@
-// Package main is the entry point for the gofortress-mcp MCP server binary.
+// Package main is the entry point for the goyoke-mcp MCP server binary.
 //
-// The binary exposes GOgent-Fortress agent-spawning and user-interaction
+// The binary exposes goYoke agent-spawning and user-interaction
 // capabilities over the Model Context Protocol using stdio transport.
 //
-// When the TUI is running it sets GOFORTRESS_SOCKET to the path of a Unix
+// When the TUI is running it sets GOYOKE_SOCKET to the path of a Unix
 // domain socket.  Interactive tools (ask_user, confirm_action, etc.) connect
 // to this socket to relay user prompts through the TUI.  Non-interactive tools
 // (test_mcp_ping, spawn_agent, team_run) work without the TUI.
 //
 // Usage (managed by TUI — not intended for direct invocation):
 //
-//	GOFORTRESS_SOCKET=/run/user/1000/gofortress-12345.sock gofortress-mcp
+//	GOYOKE_SOCKET=/run/user/1000/goyoke-12345.sock goyoke-mcp
 package main
 
 import (
@@ -34,22 +34,22 @@ func main() {
 
 	server := mcpsdk.NewServer(
 		&mcpsdk.Implementation{
-			Name:    "gofortress-mcp",
+			Name:    "goyoke-mcp",
 			Version: "1.0.0",
 		},
 		nil,
 	)
 
-	// Create the UDS client.  If GOFORTRESS_SOCKET is not set the client
+	// Create the UDS client.  If GOYOKE_SOCKET is not set the client
 	// exists but will return ErrTUINotConnected on interactive tool calls.
 	uds := tuimcp.NewUDSClient()
 
 	// Register all 8 tools.
 	tuimcp.RegisterAll(server, uds)
 
-	slog.Info("gofortress-mcp starting", "socket", os.Getenv("GOFORTRESS_SOCKET"))
+	slog.Info("goyoke-mcp starting", "socket", os.Getenv("GOYOKE_SOCKET"))
 
 	if err := server.Run(context.Background(), &mcpsdk.StdioTransport{}); err != nil {
-		log.Fatalf("gofortress-mcp: server error: %v", err)
+		log.Fatalf("goyoke-mcp: server error: %v", err)
 	}
 }

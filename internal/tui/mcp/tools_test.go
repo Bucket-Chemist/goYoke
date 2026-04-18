@@ -106,7 +106,7 @@ func TestPermGateRequestRoundtrip(t *testing.T) {
 
 func makeTestSocketPath(t *testing.T, name string) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "gofortress-uds-")
+	dir, err := os.MkdirTemp("/tmp", "goyoke-uds-")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_ = os.RemoveAll(dir)
@@ -194,7 +194,7 @@ func TestHandleTestMcpPing_WithEcho(t *testing.T) {
 // -----------------------------------------------------------------------------
 
 // mockUDS sets up a real Unix domain socket listener in a temp directory,
-// sets GOFORTRESS_SOCKET, and returns a UDSClient wired to it.  The cleanup
+// sets GOYOKE_SOCKET, and returns a UDSClient wired to it.  The cleanup
 // function must be deferred by the caller.
 //
 // The responder is called in a goroutine for each accepted connection and must
@@ -224,7 +224,7 @@ func mockUDS(t *testing.T, responder func(req IPCRequest) IPCResponse) (*UDSClie
 		_ = enc.Encode(resp)
 	}()
 
-	t.Setenv("GOFORTRESS_SOCKET", sockPath)
+	t.Setenv("GOYOKE_SOCKET", sockPath)
 	client := NewUDSClient()
 
 	cleanup := func() {
@@ -267,7 +267,7 @@ func TestHandleAskUser_MissingMessage(t *testing.T) {
 }
 
 func TestHandleAskUser_NoTUI(t *testing.T) {
-	t.Setenv("GOFORTRESS_SOCKET", "")
+	t.Setenv("GOYOKE_SOCKET", "")
 	uds := NewUDSClient()
 	_, _, err := handleAskUser(context.Background(), nil, AskUserInput{Message: "hello"}, uds)
 	require.Error(t, err)
@@ -445,7 +445,7 @@ func TestHandleSpawnAgent_UnknownAgent(t *testing.T) {
 		minimalAgentsIndex("dummy-agent"),
 		0o644,
 	))
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 
 	uds := &UDSClient{} // no TUI needed — stub returns before UDS call
 	_, out, err := handleSpawnAgent(context.Background(), nil,
@@ -499,16 +499,16 @@ func TestHandleTeamRun_ExistingDir(t *testing.T) {
 // -----------------------------------------------------------------------------
 
 func TestEnsureTeamVisible_CreatesSymlink(t *testing.T) {
-	// Set up a fake ~/.gogent/current-session pointing to a temp TUI session.
+	// Set up a fake ~/.goyoke/current-session pointing to a temp TUI session.
 	fakeHome := t.TempDir()
 	t.Setenv("HOME", fakeHome)
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
-	t.Setenv("GOGENT_CONFIG_DIR", "")
+	t.Setenv("GOYOKE_CONFIG_DIR", "")
 
-	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
+	tuiSessionDir := filepath.Join(fakeHome, ".goyoke", "sessions", "20260331.test-session")
 	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
 
-	markerDir := filepath.Join(fakeHome, ".gogent")
+	markerDir := filepath.Join(fakeHome, ".goyoke")
 	require.NoError(t, os.WriteFile(
 		filepath.Join(markerDir, "current-session"),
 		[]byte(tuiSessionDir),
@@ -539,12 +539,12 @@ func TestEnsureTeamVisible_CreatesSymlink(t *testing.T) {
 
 func TestEnsureTeamVisible_RespectsClaudeConfigDir(t *testing.T) {
 	// When CLAUDE_CONFIG_DIR is set, ensureTeamVisible should read the marker
-	// from $CLAUDE_CONFIG_DIR/current-session instead of ~/.gogent/current-session.
+	// from $CLAUDE_CONFIG_DIR/current-session instead of ~/.goyoke/current-session.
 	fakeHome := t.TempDir()
 	customConfig := filepath.Join(fakeHome, ".claude-em")
 	t.Setenv("HOME", fakeHome)
 	t.Setenv("CLAUDE_CONFIG_DIR", customConfig)
-	t.Setenv("GOGENT_CONFIG_DIR", "")
+	t.Setenv("GOYOKE_CONFIG_DIR", "")
 
 	tuiSessionDir := filepath.Join(customConfig, "sessions", "20260410.custom-session")
 	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
@@ -556,7 +556,7 @@ func TestEnsureTeamVisible_RespectsClaudeConfigDir(t *testing.T) {
 		0o644,
 	))
 
-	// Do NOT create ~/.gogent/current-session — ensureTeamVisible must not fall back to it.
+	// Do NOT create ~/.goyoke/current-session — ensureTeamVisible must not fall back to it.
 
 	ccTeamDir := filepath.Join(t.TempDir(), "teams", "test-team")
 	require.NoError(t, os.MkdirAll(ccTeamDir, 0o755))
@@ -574,14 +574,14 @@ func TestEnsureTeamVisible_RespectsClaudeConfigDir(t *testing.T) {
 }
 
 func TestEnsureTeamVisible_RespectsGogentConfigDir(t *testing.T) {
-	// GOGENT_CONFIG_DIR takes second priority after CLAUDE_CONFIG_DIR.
+	// GOYOKE_CONFIG_DIR takes second priority after CLAUDE_CONFIG_DIR.
 	fakeHome := t.TempDir()
-	customConfig := filepath.Join(fakeHome, ".custom-gogent")
+	customConfig := filepath.Join(fakeHome, ".custom-goyoke")
 	t.Setenv("HOME", fakeHome)
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
-	t.Setenv("GOGENT_CONFIG_DIR", customConfig)
+	t.Setenv("GOYOKE_CONFIG_DIR", customConfig)
 
-	tuiSessionDir := filepath.Join(customConfig, "sessions", "20260410.gogent-session")
+	tuiSessionDir := filepath.Join(customConfig, "sessions", "20260410.goyoke-session")
 	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
 
 	require.NoError(t, os.WriteFile(
@@ -597,19 +597,19 @@ func TestEnsureTeamVisible_RespectsGogentConfigDir(t *testing.T) {
 
 	symlinkPath := filepath.Join(tuiSessionDir, "teams", "test-team")
 	info, err := os.Lstat(symlinkPath)
-	require.NoError(t, err, "symlink should exist under GOGENT_CONFIG_DIR session")
+	require.NoError(t, err, "symlink should exist under GOYOKE_CONFIG_DIR session")
 	assert.NotZero(t, info.Mode()&os.ModeSymlink)
 }
 
 func TestEnsureTeamVisible_ClaudeConfigDirTakesPriority(t *testing.T) {
-	// When both CLAUDE_CONFIG_DIR and GOGENT_CONFIG_DIR are set,
+	// When both CLAUDE_CONFIG_DIR and GOYOKE_CONFIG_DIR are set,
 	// CLAUDE_CONFIG_DIR wins.
 	fakeHome := t.TempDir()
 	claudeDir := filepath.Join(fakeHome, ".claude-em")
-	gogentDir := filepath.Join(fakeHome, ".custom-gogent")
+	goyokeDir := filepath.Join(fakeHome, ".custom-goyoke")
 	t.Setenv("HOME", fakeHome)
 	t.Setenv("CLAUDE_CONFIG_DIR", claudeDir)
-	t.Setenv("GOGENT_CONFIG_DIR", gogentDir)
+	t.Setenv("GOYOKE_CONFIG_DIR", goyokeDir)
 
 	// Set up marker under CLAUDE_CONFIG_DIR.
 	claudeSession := filepath.Join(claudeDir, "sessions", "20260410.claude-session")
@@ -620,12 +620,12 @@ func TestEnsureTeamVisible_ClaudeConfigDirTakesPriority(t *testing.T) {
 		0o644,
 	))
 
-	// Set up marker under GOGENT_CONFIG_DIR (should be ignored).
-	gogentSession := filepath.Join(gogentDir, "sessions", "20260410.gogent-session")
-	require.NoError(t, os.MkdirAll(gogentSession, 0o755))
+	// Set up marker under GOYOKE_CONFIG_DIR (should be ignored).
+	goyokeSession := filepath.Join(goyokeDir, "sessions", "20260410.goyoke-session")
+	require.NoError(t, os.MkdirAll(goyokeSession, 0o755))
 	require.NoError(t, os.WriteFile(
-		filepath.Join(gogentDir, "current-session"),
-		[]byte(gogentSession),
+		filepath.Join(goyokeDir, "current-session"),
+		[]byte(goyokeSession),
 		0o644,
 	))
 
@@ -634,29 +634,29 @@ func TestEnsureTeamVisible_ClaudeConfigDirTakesPriority(t *testing.T) {
 
 	ensureTeamVisible(ccTeamDir)
 
-	// Symlink should be under CLAUDE_CONFIG_DIR session, not GOGENT_CONFIG_DIR.
+	// Symlink should be under CLAUDE_CONFIG_DIR session, not GOYOKE_CONFIG_DIR.
 	claudeSymlink := filepath.Join(claudeSession, "teams", "priority-team")
-	gogentSymlink := filepath.Join(gogentSession, "teams", "priority-team")
+	goyokeSymlink := filepath.Join(goyokeSession, "teams", "priority-team")
 
 	_, err := os.Lstat(claudeSymlink)
 	assert.NoError(t, err, "symlink should exist under CLAUDE_CONFIG_DIR")
 
-	_, err = os.Lstat(gogentSymlink)
-	assert.True(t, os.IsNotExist(err), "symlink should NOT exist under GOGENT_CONFIG_DIR")
+	_, err = os.Lstat(goyokeSymlink)
+	assert.True(t, os.IsNotExist(err), "symlink should NOT exist under GOYOKE_CONFIG_DIR")
 }
 
 func TestEnsureTeamVisible_SkipsWhenAlreadyInTUITree(t *testing.T) {
 	fakeHome := t.TempDir()
 	t.Setenv("HOME", fakeHome)
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
-	t.Setenv("GOGENT_CONFIG_DIR", "")
+	t.Setenv("GOYOKE_CONFIG_DIR", "")
 
-	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
+	tuiSessionDir := filepath.Join(fakeHome, ".goyoke", "sessions", "20260331.test-session")
 	tuiTeamsDir := filepath.Join(tuiSessionDir, "teams")
 	require.NoError(t, os.MkdirAll(tuiTeamsDir, 0o755))
 
 	require.NoError(t, os.WriteFile(
-		filepath.Join(fakeHome, ".gogent", "current-session"),
+		filepath.Join(fakeHome, ".goyoke", "current-session"),
 		[]byte(tuiSessionDir),
 		0o644,
 	))
@@ -677,13 +677,13 @@ func TestEnsureTeamVisible_IdempotentOnRerun(t *testing.T) {
 	fakeHome := t.TempDir()
 	t.Setenv("HOME", fakeHome)
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
-	t.Setenv("GOGENT_CONFIG_DIR", "")
+	t.Setenv("GOYOKE_CONFIG_DIR", "")
 
-	tuiSessionDir := filepath.Join(fakeHome, ".gogent", "sessions", "20260331.test-session")
+	tuiSessionDir := filepath.Join(fakeHome, ".goyoke", "sessions", "20260331.test-session")
 	require.NoError(t, os.MkdirAll(tuiSessionDir, 0o755))
 
 	require.NoError(t, os.WriteFile(
-		filepath.Join(fakeHome, ".gogent", "current-session"),
+		filepath.Join(fakeHome, ".goyoke", "current-session"),
 		[]byte(tuiSessionDir),
 		0o644,
 	))
@@ -705,7 +705,7 @@ func TestEnsureTeamVisible_IdempotentOnRerun(t *testing.T) {
 // -----------------------------------------------------------------------------
 
 func TestUDSClient_NoSocket(t *testing.T) {
-	t.Setenv("GOFORTRESS_SOCKET", "")
+	t.Setenv("GOYOKE_SOCKET", "")
 	c := NewUDSClient()
 	assert.Empty(t, c.sockEnv)
 	err := c.Connect()
@@ -981,7 +981,7 @@ func TestBuildSpawnArgs_CustomTimeout(t *testing.T) {
 }
 
 func TestBuildSpawnArgs_MCPConfig_InteractiveWithEnv(t *testing.T) {
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/mcp-config.json")
 	agent := &routing.Agent{ID: "spawn-agent", Model: "sonnet", Interactive: true}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
@@ -1006,13 +1006,13 @@ func TestBuildSpawnArgs_MCPConfig_InteractiveWithEnv(t *testing.T) {
 	// MCP glob must be in the allowedTools value
 	for i, a := range args {
 		if a == "--allowedTools" && i+1 < len(args) {
-			assert.Contains(t, args[i+1], "mcp__gofortress-interactive__*")
+			assert.Contains(t, args[i+1], "mcp__goyoke-interactive__*")
 		}
 	}
 }
 
 func TestBuildSpawnArgs_MCPConfig_NonInteractiveAgent(t *testing.T) {
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/mcp-config.json")
 	agent := &routing.Agent{ID: "go-pro", Model: "sonnet", Interactive: false}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
@@ -1020,25 +1020,25 @@ func TestBuildSpawnArgs_MCPConfig_NonInteractiveAgent(t *testing.T) {
 	assert.NotContains(t, args, "--mcp-config")
 	// MCP glob must NOT appear for non-interactive agents
 	for _, a := range args {
-		assert.NotContains(t, a, "mcp__gofortress-interactive__*")
+		assert.NotContains(t, a, "mcp__goyoke-interactive__*")
 	}
 }
 
 func TestBuildSpawnArgs_MCPConfig_InteractiveNoEnv(t *testing.T) {
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	t.Setenv("GOYOKE_MCP_CONFIG", "")
 	agent := &routing.Agent{ID: "spawn-agent", Model: "sonnet", Interactive: true}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
 
 	assert.NotContains(t, args, "--mcp-config")
 	for _, a := range args {
-		assert.NotContains(t, a, "mcp__gofortress-interactive__*")
+		assert.NotContains(t, a, "mcp__goyoke-interactive__*")
 	}
 }
 
 func TestBuildSpawnArgs_MCPConfig_InteractiveWithExplicitAllowedTools(t *testing.T) {
 	// MCP glob must be appended even when caller provides an explicit AllowedTools override.
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/test-mcp.json")
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/test-mcp.json")
 	agent := &routing.Agent{ID: "spawn-agent", Model: "sonnet", Interactive: true}
 	input := SpawnAgentInput{
 		Prompt:       "p",
@@ -1058,7 +1058,7 @@ func TestBuildSpawnArgs_MCPConfig_InteractiveWithExplicitAllowedTools(t *testing
 	require.NotEqual(t, -1, toolsIdx, "--allowedTools must be present")
 	require.Less(t, toolsIdx+1, len(args))
 	toolsVal := args[toolsIdx+1]
-	assert.Contains(t, toolsVal, "mcp__gofortress-interactive__*", "MCP glob must be appended even with explicit AllowedTools")
+	assert.Contains(t, toolsVal, "mcp__goyoke-interactive__*", "MCP glob must be appended even with explicit AllowedTools")
 	assert.Contains(t, toolsVal, "Read", "explicit tools must be preserved")
 	assert.Contains(t, toolsVal, "Write", "explicit tools must be preserved")
 	assert.Contains(t, toolsVal, "Bash", "explicit tools must be preserved")
@@ -1066,21 +1066,21 @@ func TestBuildSpawnArgs_MCPConfig_InteractiveWithExplicitAllowedTools(t *testing
 
 func TestBuildSpawnArgs_MCPConfig_NonInteractiveNoEnv(t *testing.T) {
 	// Baseline: non-interactive agent with no env var — no --mcp-config, no MCP tools.
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	t.Setenv("GOYOKE_MCP_CONFIG", "")
 	agent := &routing.Agent{ID: "go-pro", Model: "sonnet", Interactive: false}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
 
 	assert.NotContains(t, args, "--mcp-config")
 	for _, a := range args {
-		assert.NotContains(t, a, "mcp__gofortress-interactive__*")
+		assert.NotContains(t, a, "mcp__goyoke-interactive__*")
 	}
 }
 
 func TestBuildSpawnArgs_DisallowedTools_InteractiveWithMCP(t *testing.T) {
-	// Interactive agent + GOFORTRESS_MCP_CONFIG → must have --disallowedTools blocking
+	// Interactive agent + GOYOKE_MCP_CONFIG → must have --disallowedTools blocking
 	// built-in equivalents that are replaced by MCP tools.
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/mcp-config.json")
 	agent := &routing.Agent{ID: "mozart", Model: "opus", Interactive: true}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
@@ -1098,9 +1098,9 @@ func TestBuildSpawnArgs_DisallowedTools_InteractiveWithMCP(t *testing.T) {
 }
 
 func TestBuildSpawnArgs_DisallowedTools_InteractiveNoMCP(t *testing.T) {
-	// Interactive agent WITHOUT GOFORTRESS_MCP_CONFIG → no --disallowedTools.
+	// Interactive agent WITHOUT GOYOKE_MCP_CONFIG → no --disallowedTools.
 	// Built-ins must remain available when MCP bridge is absent.
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "")
+	t.Setenv("GOYOKE_MCP_CONFIG", "")
 	agent := &routing.Agent{ID: "mozart", Model: "opus", Interactive: true}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
@@ -1109,8 +1109,8 @@ func TestBuildSpawnArgs_DisallowedTools_InteractiveNoMCP(t *testing.T) {
 }
 
 func TestBuildSpawnArgs_DisallowedTools_NonInteractiveWithMCP(t *testing.T) {
-	// Non-interactive agent even with GOFORTRESS_MCP_CONFIG → no --disallowedTools.
-	t.Setenv("GOFORTRESS_MCP_CONFIG", "/tmp/mcp-config.json")
+	// Non-interactive agent even with GOYOKE_MCP_CONFIG → no --disallowedTools.
+	t.Setenv("GOYOKE_MCP_CONFIG", "/tmp/mcp-config.json")
 	agent := &routing.Agent{ID: "go-pro", Model: "sonnet", Interactive: false}
 	input := SpawnAgentInput{Prompt: "p"}
 	args := buildSpawnArgs(agent, input)
@@ -1190,7 +1190,7 @@ func minimalAgentsIndex(agentID string) []byte {
     },
     "complexity_routing": {
       "description": "test",
-      "calculator": "gogent-score",
+      "calculator": "goyoke-score",
       "thresholds": {},
       "force_external_if": "tokens > 50000"
     },

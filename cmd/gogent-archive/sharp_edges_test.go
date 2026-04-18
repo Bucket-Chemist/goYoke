@@ -17,14 +17,14 @@ import (
 
 func TestListSharpEdges_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Create empty file
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(""), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Capture stdout
 	oldStdout := os.Stdout
@@ -32,7 +32,7 @@ func TestListSharpEdges_Empty(t *testing.T) {
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges"}
+	os.Args = []string{"goyoke-archive", "sharp-edges"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -50,7 +50,7 @@ func TestListSharpEdges_Empty(t *testing.T) {
 
 func TestListSharpEdges_WithSeverityFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"a.go","error_type":"err1","consecutive_failures":3,"timestamp":1705000000,"severity":"high"}
@@ -58,15 +58,15 @@ func TestListSharpEdges_WithSeverityFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges", "--severity", "high"}
+	os.Args = []string{"goyoke-archive", "sharp-edges", "--severity", "high"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -90,7 +90,7 @@ func TestListSharpEdges_WithSeverityFilter(t *testing.T) {
 
 func TestListSharpEdges_WithUnresolvedFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Use distinct filenames that don't contain each other as substrings
@@ -99,15 +99,15 @@ func TestListSharpEdges_WithUnresolvedFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges", "--unresolved"}
+	os.Args = []string{"goyoke-archive", "sharp-edges", "--unresolved"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -134,7 +134,7 @@ func TestListSharpEdges_WithUnresolvedFilter(t *testing.T) {
 
 func TestListSharpEdges_WithFileFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"pkg/auth/handler.go","error_type":"err1","consecutive_failures":3,"timestamp":1705000000}
@@ -142,15 +142,15 @@ func TestListSharpEdges_WithFileFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges", "--file", "pkg/*"}
+	os.Args = []string{"goyoke-archive", "sharp-edges", "--file", "pkg/*"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -171,7 +171,7 @@ func TestListSharpEdges_WithFileFilter(t *testing.T) {
 
 func TestListSharpEdges_WithErrorTypeFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"a.go","error_type":"nil_pointer","consecutive_failures":3,"timestamp":1705000000}
@@ -179,15 +179,15 @@ func TestListSharpEdges_WithErrorTypeFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges", "--error-type", "nil_pointer"}
+	os.Args = []string{"goyoke-archive", "sharp-edges", "--error-type", "nil_pointer"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -208,7 +208,7 @@ func TestListSharpEdges_WithErrorTypeFilter(t *testing.T) {
 
 func TestListSharpEdges_WithSinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// One recent, one old
@@ -221,15 +221,15 @@ func TestListSharpEdges_WithSinceFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges", "--since", "7d"}
+	os.Args = []string{"goyoke-archive", "sharp-edges", "--since", "7d"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -250,22 +250,22 @@ func TestListSharpEdges_WithSinceFilter(t *testing.T) {
 
 func TestListSharpEdges_TableFormat(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"file":"test.go","error_type":"compile_error","consecutive_failures":5,"timestamp":1705000000,"severity":"high","resolved_at":1705001000}`
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges"}
+	os.Args = []string{"goyoke-archive", "sharp-edges"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -317,20 +317,20 @@ func TestListSharpEdges_TableFormat(t *testing.T) {
 
 func TestListUserIntents_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(""), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents"}
+	os.Args = []string{"goyoke-archive", "user-intents"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -348,7 +348,7 @@ func TestListUserIntents_Empty(t *testing.T) {
 
 func TestListUserIntents_WithSourceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Q1","response":"A1","confidence":"explicit","source":"ask_user"}
@@ -356,15 +356,15 @@ func TestListUserIntents_WithSourceFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents", "--source", "ask_user"}
+	os.Args = []string{"goyoke-archive", "user-intents", "--source", "ask_user"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -388,7 +388,7 @@ func TestListUserIntents_WithSourceFilter(t *testing.T) {
 
 func TestListUserIntents_HasActionFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Q1","response":"A1","confidence":"explicit","source":"ask_user","action_taken":"Did X"}
@@ -396,15 +396,15 @@ func TestListUserIntents_HasActionFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents", "--has-action"}
+	os.Args = []string{"goyoke-archive", "user-intents", "--has-action"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -425,7 +425,7 @@ func TestListUserIntents_HasActionFilter(t *testing.T) {
 
 func TestListUserIntents_WithConfidenceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Explicit Q","response":"A1","confidence":"explicit","source":"ask_user"}
@@ -433,15 +433,15 @@ func TestListUserIntents_WithConfidenceFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents", "--confidence", "explicit"}
+	os.Args = []string{"goyoke-archive", "user-intents", "--confidence", "explicit"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -462,7 +462,7 @@ func TestListUserIntents_WithConfidenceFilter(t *testing.T) {
 
 func TestListUserIntents_WithSinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// One recent, one old
@@ -475,15 +475,15 @@ func TestListUserIntents_WithSinceFilter(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents", "--since", "7d"}
+	os.Args = []string{"goyoke-archive", "user-intents", "--since", "7d"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -504,22 +504,22 @@ func TestListUserIntents_WithSinceFilter(t *testing.T) {
 
 func TestListUserIntents_TableFormat(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	content := `{"timestamp":1705000000,"question":"Should I use React?","response":"Yes, use React","confidence":"explicit","source":"ask_user"}`
 
 	os.WriteFile(filepath.Join(claudeDir, "user-intents.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents"}
+	os.Args = []string{"goyoke-archive", "user-intents"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -681,15 +681,15 @@ func TestListSharpEdges_MissingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Do NOT create pending-learnings.jsonl
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges"}
+	os.Args = []string{"goyoke-archive", "sharp-edges"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()
@@ -710,15 +710,15 @@ func TestListUserIntents_MissingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Do NOT create user-intents.jsonl
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "user-intents"}
+	os.Args = []string{"goyoke-archive", "user-intents"}
 	defer func() { os.Args = oldArgs }()
 
 	listUserIntents()
@@ -741,7 +741,7 @@ func TestListUserIntents_MissingFile(t *testing.T) {
 
 func TestListSharpEdges_DefaultSeverityDash(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(claudeDir, 0755)
 
 	// Edge without severity field
@@ -749,15 +749,15 @@ func TestListSharpEdges_DefaultSeverityDash(t *testing.T) {
 
 	os.WriteFile(filepath.Join(claudeDir, "pending-learnings.jsonl"), []byte(content), 0644)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "sharp-edges"}
+	os.Args = []string{"goyoke-archive", "sharp-edges"}
 	defer func() { os.Args = oldArgs }()
 
 	listSharpEdges()

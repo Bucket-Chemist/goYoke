@@ -1,11 +1,11 @@
-// gogent-inject-context: Reads a prompt from stdin, prepends agent identity +
+// goyoke-inject-context: Reads a prompt from stdin, prepends agent identity +
 // conventions via BuildFullAgentContext, and writes the augmented prompt to stdout.
 //
-// Usage: echo "AGENT: go-tui\n\nTASK: ..." | gogent-inject-context go-tui
+// Usage: echo "AGENT: go-tui\n\nTASK: ..." | goyoke-inject-context go-tui
 //
 // This is the workaround for Claude Code's Agent tool not firing PreToolUse hooks.
 // The router calls this before every Agent dispatch to ensure subagents receive
-// the same context injection that gogent-validate provides for Task() calls.
+// the same context injection that goyoke-validate provides for Task() calls.
 package main
 
 import (
@@ -30,7 +30,7 @@ func main() {
 	// Read original prompt from stdin
 	promptBytes, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-inject-context] Error reading stdin: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-inject-context] Error reading stdin: %v\n", err)
 		os.Exit(1)
 	}
 	originalPrompt := string(promptBytes)
@@ -38,7 +38,7 @@ func main() {
 	// Load agent config from agents-index.json
 	configDir, err := routing.GetClaudeConfigDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-inject-context] Error getting config dir: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-inject-context] Error getting config dir: %v\n", err)
 		// Fall through with original prompt
 		fmt.Print(originalPrompt)
 		return
@@ -47,7 +47,7 @@ func main() {
 	indexPath := filepath.Join(configDir, "agents", "agents-index.json")
 	data, err := os.ReadFile(indexPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-inject-context] Warning: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-inject-context] Warning: %v\n", err)
 		fmt.Print(originalPrompt)
 		return
 	}
@@ -59,7 +59,7 @@ func main() {
 		} `json:"agents"`
 	}
 	if err := json.Unmarshal(data, &index); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-inject-context] Warning: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-inject-context] Warning: %v\n", err)
 		fmt.Print(originalPrompt)
 		return
 	}
@@ -75,7 +75,7 @@ func main() {
 	// Build augmented prompt
 	augmented, err := routing.BuildFullAgentContext(agentID, requirements, nil, originalPrompt)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-inject-context] Warning: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-inject-context] Warning: %v\n", err)
 		fmt.Print(originalPrompt)
 		return
 	}

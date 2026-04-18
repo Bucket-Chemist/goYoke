@@ -519,13 +519,13 @@ func TestReportExtensionExhaustive(t *testing.T) {
 	}
 }
 
-// TestFindBinary_LoadContext tests binary discovery for gogent-load-context.
-// This test verifies findBinary can locate gogent-load-context when it exists
+// TestFindBinary_LoadContext tests binary discovery for goyoke-load-context.
+// This test verifies findBinary can locate goyoke-load-context when it exists
 // in expected locations (bin/ or PATH).
 func TestFindBinary_LoadContext(t *testing.T) {
 	// Create temp bin directory
 	tmpDir := t.TempDir()
-	binPath := filepath.Join(tmpDir, "bin", "gogent-load-context")
+	binPath := filepath.Join(tmpDir, "bin", "goyoke-load-context")
 	os.MkdirAll(filepath.Dir(binPath), 0755)
 
 	// Create mock binary
@@ -536,12 +536,12 @@ func TestFindBinary_LoadContext(t *testing.T) {
 	defer os.Chdir(origDir)
 	os.Chdir(tmpDir)
 
-	path, err := findBinary("gogent-load-context")
+	path, err := findBinary("goyoke-load-context")
 	if err != nil {
 		t.Fatalf("findBinary failed: %v", err)
 	}
 
-	if !strings.Contains(path, "gogent-load-context") {
+	if !strings.Contains(path, "goyoke-load-context") {
 		t.Errorf("Expected path to contain binary name, got: %s", path)
 	}
 }

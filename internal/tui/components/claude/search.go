@@ -1,5 +1,5 @@
 // Package claude implements the Claude conversation panel for the
-// GOgent-Fortress TUI.
+// goYoke TUI.
 package claude
 
 import (

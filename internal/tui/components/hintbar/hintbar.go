@@ -1,5 +1,5 @@
 // Package hintbar implements a context-aware keyboard hint bar for the
-// GOgent-Fortress TUI. It renders a single row of muted key:description pairs
+// goYoke TUI. It renders a single row of muted key:description pairs
 // that update based on the current focus/state context.
 package hintbar
 

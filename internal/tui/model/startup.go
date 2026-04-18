@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains the startup sequence helpers for wiring the CLI driver
 // and IPC bridge into the Bubbletea event loop (TUI-016).
 package model

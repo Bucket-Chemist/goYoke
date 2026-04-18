@@ -28,7 +28,7 @@ func main() {
 
 	// Validate arguments
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: gogent-team-run <team-directory>")
+		fmt.Fprintln(os.Stderr, "Usage: goyoke-team-run <team-directory>")
 		os.Exit(1)
 	}
 
@@ -95,8 +95,8 @@ func main() {
 		log.Fatalf("Failed to initialize TeamRunner: %v", err)
 	}
 
-	// Initialize UDS client for TUI notifications (noop when GOFORTRESS_SOCKET is unset)
-	udsClient := NewTeamRunUDSClient(os.Getenv("GOFORTRESS_SOCKET"))
+	// Initialize UDS client for TUI notifications (noop when GOYOKE_SOCKET is unset)
+	udsClient := NewTeamRunUDSClient(os.Getenv("GOYOKE_SOCKET"))
 	defer udsClient.Close()
 	runner.uds = udsClient
 

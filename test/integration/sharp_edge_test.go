@@ -21,8 +21,8 @@ func setupTestProject(t *testing.T) string {
 	tmpDir := t.TempDir()
 
 	// Create required directories
-	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".gogent", "memory"), 0755))
-	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".gogent"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".goyoke", "memory"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir, ".goyoke"), 0755))
 
 	return tmpDir
 }
@@ -40,11 +40,11 @@ func createTrackerEntries(t *testing.T, entries []routing.FailureInfo) {
 // TestWorkflow_SingleFailure_PassThrough tests that a single failure is logged but doesn't trigger
 func TestWorkflow_SingleFailure_PassThrough(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
 	// Set environment
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
 
 	// Override default path
 	originalPath := memory.DefaultStoragePath
@@ -81,10 +81,10 @@ func TestWorkflow_SingleFailure_PassThrough(t *testing.T) {
 // TestWorkflow_TwoFailures_Warning tests that 2 failures trigger warning state
 func TestWorkflow_TwoFailures_Warning(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -126,10 +126,10 @@ func TestWorkflow_TwoFailures_Warning(t *testing.T) {
 // TestWorkflow_ThreeFailures_Block tests that 3 failures trigger blocking
 func TestWorkflow_ThreeFailures_Block(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -172,10 +172,10 @@ func TestWorkflow_ThreeFailures_Block(t *testing.T) {
 // TestWorkflow_MultipleFiles_Independent tests that different files are tracked separately
 func TestWorkflow_MultipleFiles_Independent(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -210,10 +210,10 @@ func TestWorkflow_MultipleFiles_Independent(t *testing.T) {
 // TestWorkflow_MixedErrors_NoFalsePositive tests composite key correctness
 func TestWorkflow_MixedErrors_NoFalsePositive(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -250,10 +250,10 @@ func TestWorkflow_MixedErrors_NoFalsePositive(t *testing.T) {
 // TestWorkflow_SameError_Trigger tests that 3 identical errors trigger
 func TestWorkflow_SameError_Trigger(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -282,7 +282,7 @@ func TestWorkflow_SameError_Trigger(t *testing.T) {
 // TestWorkflow_CaptureToPendingLearnings tests that sharp edges are captured
 func TestWorkflow_CaptureToPendingLearnings(t *testing.T) {
 	projectDir := setupTestProject(t)
-	pendingPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
 
 	// Create a sharp edge entry
 	sharpEdge := map[string]interface{}{
@@ -322,11 +322,11 @@ func TestWorkflow_CaptureToPendingLearnings(t *testing.T) {
 // TestWorkflow_TimeWindowFiltering tests that old failures are excluded
 func TestWorkflow_TimeWindowFiltering(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
-	t.Setenv("GOGENT_MAX_FAILURES", "3")
-	t.Setenv("GOGENT_FAILURE_WINDOW", "60") // 60 second window
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_MAX_FAILURES", "3")
+	t.Setenv("GOYOKE_FAILURE_WINDOW", "60") // 60 second window
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -356,9 +356,9 @@ func TestWorkflow_TimeWindowFiltering(t *testing.T) {
 // TestWorkflow_ClearAfterResolution tests that clearing works
 func TestWorkflow_ClearAfterResolution(t *testing.T) {
 	projectDir := setupTestProject(t)
-	trackerPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 
-	t.Setenv("GOGENT_STORAGE_PATH", trackerPath)
+	t.Setenv("GOYOKE_STORAGE_PATH", trackerPath)
 
 	originalPath := memory.DefaultStoragePath
 	memory.DefaultStoragePath = trackerPath
@@ -392,13 +392,13 @@ func TestWorkflow_ClearAfterResolution(t *testing.T) {
 }
 
 // ============================================================================
-// HARNESS-BASED INTEGRATION TESTS (GOgent-097)
+// HARNESS-BASED INTEGRATION TESTS (goYoke-097)
 // ============================================================================
 
 func TestSharpEdge_Integration(t *testing.T) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-sharp-edge binary not found. Run: go build -o cmd/gogent-sharp-edge/gogent-sharp-edge cmd/gogent-sharp-edge/main.go")
+		t.Skip("goyoke-sharp-edge binary not found. Run: go build -o cmd/goyoke-sharp-edge/goyoke-sharp-edge cmd/goyoke-sharp-edge/main.go")
 	}
 
 	projectDir := t.TempDir()
@@ -462,7 +462,7 @@ func TestSharpEdge_Integration(t *testing.T) {
 	}
 
 	// Verify sharp edge captured to pending learnings
-	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings file not created: %v", err)
 	} else {
@@ -487,9 +487,9 @@ func TestSharpEdge_Integration(t *testing.T) {
 }
 
 func TestSharpEdge_FailureDetection(t *testing.T) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -549,7 +549,7 @@ func TestSharpEdge_FailureDetection(t *testing.T) {
 
 			if tc.expectFailure {
 				// Should log failure
-				errorLogPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+				errorLogPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 				if _, err := os.Stat(errorLogPath); err != nil {
 					t.Errorf("Error log not created for failure case: %v", err)
 				}
@@ -576,13 +576,13 @@ func TestSharpEdge_FailureDetection(t *testing.T) {
 }
 
 func TestSharpEdge_SlidingWindow(t *testing.T) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := t.TempDir()
-	errorLogPath := filepath.Join(projectDir, ".gogent", "failure-tracker.jsonl")
+	errorLogPath := filepath.Join(projectDir, ".goyoke", "failure-tracker.jsonl")
 	os.MkdirAll(filepath.Dir(errorLogPath), 0755)
 
 	// Create failures outside 5-minute window (should not trigger blocking)
@@ -629,9 +629,9 @@ func TestSharpEdge_SlidingWindow(t *testing.T) {
 }
 
 func TestSharpEdge_PerFileTracking(t *testing.T) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -676,9 +676,9 @@ func TestSharpEdge_PerFileTracking(t *testing.T) {
 }
 
 func TestSharpEdge_MLTelemetryFields(t *testing.T) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -714,7 +714,7 @@ func TestSharpEdge_MLTelemetryFields(t *testing.T) {
 	}
 
 	// Verify third failure (blocking) includes ML telemetry in sharp edge capture
-	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings file not created: %v", err)
 	} else {
@@ -736,9 +736,9 @@ func TestSharpEdge_MLTelemetryFields(t *testing.T) {
 }
 
 func TestSharpEdge_DecisionCorrelation(t *testing.T) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -781,7 +781,7 @@ func TestSharpEdge_DecisionCorrelation(t *testing.T) {
 
 	// Verify routing decision correlation is logged
 	// Note: Actual log path may vary based on implementation
-	decisionLogPath := filepath.Join(projectDir, ".gogent", "routing-decision-updates.jsonl")
+	decisionLogPath := filepath.Join(projectDir, ".goyoke", "routing-decision-updates.jsonl")
 	if _, err := os.Stat(decisionLogPath); err != nil {
 		// Decision correlation may be logged elsewhere or not yet implemented
 		t.Logf("Routing decision log not found at %s (may be logged separately)", decisionLogPath)

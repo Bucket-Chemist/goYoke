@@ -1,4 +1,4 @@
-// gogent-validate-schemas validates consistency between agents-index.json and
+// goyoke-validate-schemas validates consistency between agents-index.json and
 // per-agent .md frontmatter files.
 //
 // The validator checks for mismatches in overlapping fields:
@@ -15,7 +15,7 @@
 //   1: Inconsistencies found
 //
 // Usage:
-//   gogent-validate-schemas
+//   goyoke-validate-schemas
 //
 // Example output:
 //   Validating 37 agents...
@@ -395,8 +395,8 @@ func normalizeModel(model string) string {
 
 // getAgentsDir returns the agents directory path.
 func getAgentsDir() string {
-	// Priority 1: GOGENT_PROJECT_DIR (test isolation)
-	if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+	// Priority 1: GOYOKE_PROJECT_DIR (test isolation)
+	if projectDir := os.Getenv("GOYOKE_PROJECT_DIR"); projectDir != "" {
 		return filepath.Join(projectDir, ".claude", "agents")
 	}
 

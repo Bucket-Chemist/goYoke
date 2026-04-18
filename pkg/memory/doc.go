@@ -1,4 +1,4 @@
-// Package memory provides session memory and failure tracking for GOgent-Fortress.
+// Package memory provides session memory and failure tracking for goYoke.
 //
 // The failure tracking subsystem tracks consecutive failures per file+error_type
 // composite key to detect debugging loops. When a threshold is reached (default: 3),
@@ -6,12 +6,12 @@
 //
 // # Environment Variables
 //
-//   - GOGENT_MAX_FAILURES: Threshold for sharp edge capture (default: 3)
-//   - GOGENT_FAILURE_WINDOW: Time window in seconds (default: 300)
+//   - GOYOKE_MAX_FAILURES: Threshold for sharp edge capture (default: 3)
+//   - GOYOKE_FAILURE_WINDOW: Time window in seconds (default: 300)
 //
 // # Storage
 //
-// Tracker state is stored at ~/.gogent/failure-tracker.jsonl
+// Tracker state is stored at ~/.goyoke/failure-tracker.jsonl
 //
 // # Usage
 //

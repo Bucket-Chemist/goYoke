@@ -327,7 +327,7 @@ func TestSocketPathIsSetCorrectly(t *testing.T) {
 
 	path := b.SocketPath()
 	assert.NotEmpty(t, path)
-	assert.Contains(t, path, "gofortress-")
+	assert.Contains(t, path, "goyoke-")
 	assert.Contains(t, path, ".sock")
 }
 
@@ -338,7 +338,7 @@ func TestBuildSocketPath_FallsBackToTmpWhenCandidatesAreTooLong(t *testing.T) {
 
 	path := buildSocketPath()
 
-	assert.Equal(t, filepath.Join("/tmp", fmt.Sprintf("gofortress-%d.sock", os.Getpid())), path)
+	assert.Equal(t, filepath.Join("/tmp", fmt.Sprintf("goyoke-%d.sock", os.Getpid())), path)
 	assert.LessOrEqual(t, len(path), maxUnixSocketPathBytes)
 }
 
@@ -802,7 +802,7 @@ func TestNewIPCBridge_RemovesStaleSocket(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", dir)
 
 	// Pre-create a file at the path the bridge would use.
-	stalePath := filepath.Join(dir, fmt.Sprintf("gofortress-%d.sock", os.Getpid()))
+	stalePath := filepath.Join(dir, fmt.Sprintf("goyoke-%d.sock", os.Getpid()))
 	require.NoError(t, os.WriteFile(stalePath, []byte("stale"), 0o600))
 
 	// NewIPCBridge should remove the stale file and succeed.

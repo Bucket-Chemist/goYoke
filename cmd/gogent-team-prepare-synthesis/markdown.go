@@ -8,9 +8,9 @@ import (
 // generateMarkdown creates the pre-synthesis.md content from extracted sections.
 //
 // Integration contract (FIX #16): This markdown is a SUPPLEMENTAL context document placed in the
-// team directory. gogent-team-run reads this file and incorporates its content into
+// team directory. goyoke-team-run reads this file and incorporates its content into
 // Beethoven's JSON stdin (via the "pre_synthesis" field). Beethoven does NOT read this
-// file directly — gogent-team-run is the intermediary.
+// file directly — goyoke-team-run is the intermediary.
 func generateMarkdown(einstein EinsteinSections, staffArch StaffArchSections) string {
 	var sb strings.Builder
 

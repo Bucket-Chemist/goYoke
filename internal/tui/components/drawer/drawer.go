@@ -1,5 +1,5 @@
 // Package drawer implements a collapsible side-drawer component for the
-// GOgent-Fortress TUI. Drawers can be minimised (compact tab) or expanded
+// goYoke TUI. Drawers can be minimised (compact tab) or expanded
 // (bordered content pane with a scrollable viewport).
 package drawer
 

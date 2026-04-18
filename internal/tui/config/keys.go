@@ -1,4 +1,4 @@
-// Package config provides the foundational theme system for the GOgent-Fortress TUI.
+// Package config provides the foundational theme system for the goYoke TUI.
 // This file defines the keybinding registry using charmbracelet/bubbles/key.
 package config
 
@@ -184,7 +184,7 @@ type KeyMap struct {
 // DefaultKeyMap
 // ---------------------------------------------------------------------------
 
-// DefaultKeyMap returns a KeyMap populated with the standard GOgent-Fortress
+// DefaultKeyMap returns a KeyMap populated with the standard goYoke
 // keybindings.  Each binding includes Help text so the bubbles/help component
 // can render a contextual cheat-sheet.
 func DefaultKeyMap() KeyMap {

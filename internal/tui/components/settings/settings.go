@@ -1,4 +1,4 @@
-// Package settings implements the settings panel for the GOgent-Fortress TUI.
+// Package settings implements the settings panel for the goYoke TUI.
 // It displays static configuration values in a compact key-value layout.
 //
 // The component is display-only: Update is a no-op and state is set

@@ -650,9 +650,9 @@ func TestMain_ValidTaskEvent_ValidationRun(t *testing.T) {
 	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
 
 	// Point to our test schema
-	oldSchema := os.Getenv("GOGENT_ROUTING_SCHEMA")
-	os.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
-	defer os.Setenv("GOGENT_ROUTING_SCHEMA", oldSchema)
+	oldSchema := os.Getenv("GOYOKE_ROUTING_SCHEMA")
+	os.Setenv("GOYOKE_ROUTING_SCHEMA", schemaPath)
+	defer os.Setenv("GOYOKE_ROUTING_SCHEMA", oldSchema)
 
 	// Step 1: Load schema (simulating main lines 30-34)
 	loadedSchema, err := routing.LoadSchema()
@@ -851,9 +851,9 @@ func TestMain_BlockedAgent_OutputsBlock(t *testing.T) {
 	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
 
 	// Point to our test schema
-	oldSchema := os.Getenv("GOGENT_ROUTING_SCHEMA")
-	os.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
-	defer os.Setenv("GOGENT_ROUTING_SCHEMA", oldSchema)
+	oldSchema := os.Getenv("GOYOKE_ROUTING_SCHEMA")
+	os.Setenv("GOYOKE_ROUTING_SCHEMA", schemaPath)
+	defer os.Setenv("GOYOKE_ROUTING_SCHEMA", oldSchema)
 
 	// Load schema
 	loadedSchema, err := routing.LoadSchema()
@@ -940,9 +940,9 @@ func TestMain_AllowedAgent_OutputsAllow(t *testing.T) {
 	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
 
 	// Point to our test schema
-	oldSchema := os.Getenv("GOGENT_ROUTING_SCHEMA")
-	os.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
-	defer os.Setenv("GOGENT_ROUTING_SCHEMA", oldSchema)
+	oldSchema := os.Getenv("GOYOKE_ROUTING_SCHEMA")
+	os.Setenv("GOYOKE_ROUTING_SCHEMA", schemaPath)
+	defer os.Setenv("GOYOKE_ROUTING_SCHEMA", oldSchema)
 
 	// Load schema
 	loadedSchema, err := routing.LoadSchema()
@@ -1064,7 +1064,7 @@ func TestMain_ConcurrentInvocation(t *testing.T) {
 }
 
 // =============================================================================
-// Routing Decision Logging Tests (GOgent-087e)
+// Routing Decision Logging Tests (goYoke-087e)
 // =============================================================================
 
 // TestExtractAgentFromPrompt tests the agent extraction helper function
@@ -1161,7 +1161,7 @@ func TestRoutingDecisionLogging(t *testing.T) {
 	}
 
 	// Verify file created
-	logPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Error("Expected routing-decisions.jsonl to be created")
 	}
@@ -1298,7 +1298,7 @@ func TestRoutingDecisionLogging_MultipleDecisions(t *testing.T) {
 	}
 
 	// Verify both are in file
-	logPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -1352,7 +1352,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 	}`
 	os.WriteFile(filepath.Join(claudeDir, "agents-index.json"), []byte(agentsIndex), 0644)
 
-	t.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
+	t.Setenv("GOYOKE_ROUTING_SCHEMA", schemaPath)
 
 	// Load schema
 	loadedSchema, err := routing.LoadSchema()
@@ -1402,7 +1402,7 @@ func TestRoutingDecisionLogging_Integration(t *testing.T) {
 	}
 
 	// Verify routing decision was logged
-	logPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Error("Expected routing-decisions.jsonl to be created during integration test")
 	}
@@ -1658,8 +1658,8 @@ func TestTaskModelEnforcement_Integration(t *testing.T) {
 	schemaPath := filepath.Join(claudeDir, "routing-schema.json")
 	os.WriteFile(schemaPath, []byte(schema), 0644)
 
-	t.Setenv("GOGENT_ROUTING_SCHEMA", schemaPath)
-	t.Setenv("GOGENT_NESTING_LEVEL", "1") // Set to Level 1
+	t.Setenv("GOYOKE_ROUTING_SCHEMA", schemaPath)
+	t.Setenv("GOYOKE_NESTING_LEVEL", "1") // Set to Level 1
 
 	// Load schema
 	loadedSchema, err := routing.LoadSchema()
@@ -1747,7 +1747,7 @@ func TestLogNestingBlock_IncludesModel(t *testing.T) {
 	logNestingBlock(event, 1, true, "opus")
 
 	// Verify log file created and contains model
-	logPath := filepath.Join(tmpDir, "gogent", "nesting-blocks.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "nesting-blocks.jsonl")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Error("Expected nesting-blocks.jsonl to be created")
 	}

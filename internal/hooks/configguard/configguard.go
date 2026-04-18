@@ -1,4 +1,4 @@
-// Package configguard implements the gogent-config-guard hook.
+// Package configguard implements the goyoke-config-guard hook.
 // It blocks mid-session changes to settings.json files.
 package configguard
 
@@ -69,12 +69,12 @@ func Decision(event *ConfigChangeEvent) (block bool, reason string) {
 	return false, ""
 }
 
-// Main is the entrypoint for the gogent-config-guard hook.
+// Main is the entrypoint for the goyoke-config-guard hook.
 func Main() {
 	event, err := ReadEvent(os.Stdin, DefaultTimeout)
 	if err != nil {
 		// Parse failure: pass through silently so we never block on bad input.
-		fmt.Fprintf(os.Stderr, "[gogent-config-guard] Warning: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-config-guard] Warning: %v\n", err)
 		os.Exit(0)
 	}
 

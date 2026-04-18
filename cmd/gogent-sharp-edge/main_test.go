@@ -23,11 +23,11 @@ func TestGetProjectDir(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "GOGENT_PROJECT_DIR set",
+			name: "GOYOKE_PROJECT_DIR set",
 			env: map[string]string{
-				"GOGENT_PROJECT_DIR": "/test/gogent",
+				"GOYOKE_PROJECT_DIR": "/test/goyoke",
 			},
-			expected: "/test/gogent",
+			expected: "/test/goyoke",
 		},
 		{
 			name: "CLAUDE_PROJECT_DIR set",
@@ -37,19 +37,19 @@ func TestGetProjectDir(t *testing.T) {
 			expected: "/test/claude",
 		},
 		{
-			name: "GOGENT_PROJECT_DIR takes precedence",
+			name: "GOYOKE_PROJECT_DIR takes precedence",
 			env: map[string]string{
-				"GOGENT_PROJECT_DIR": "/test/gogent",
+				"GOYOKE_PROJECT_DIR": "/test/goyoke",
 				"CLAUDE_PROJECT_DIR": "/test/claude",
 			},
-			expected: "/test/gogent",
+			expected: "/test/goyoke",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear environment
-			os.Unsetenv("GOGENT_PROJECT_DIR")
+			os.Unsetenv("GOYOKE_PROJECT_DIR")
 			os.Unsetenv("CLAUDE_PROJECT_DIR")
 
 			// Set test environment
@@ -75,13 +75,13 @@ func TestGetProjectDir(t *testing.T) {
 
 func TestGetProjectDir_Priority(t *testing.T) {
 	// Save original env
-	origGogent := os.Getenv("GOGENT_PROJECT_DIR")
+	origGogent := os.Getenv("GOYOKE_PROJECT_DIR")
 	origClaude := os.Getenv("CLAUDE_PROJECT_DIR")
 	defer func() {
 		if origGogent != "" {
-			os.Setenv("GOGENT_PROJECT_DIR", origGogent)
+			os.Setenv("GOYOKE_PROJECT_DIR", origGogent)
 		} else {
-			os.Unsetenv("GOGENT_PROJECT_DIR")
+			os.Unsetenv("GOYOKE_PROJECT_DIR")
 		}
 		if origClaude != "" {
 			os.Setenv("CLAUDE_PROJECT_DIR", origClaude)
@@ -92,25 +92,25 @@ func TestGetProjectDir_Priority(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		gogentDir      string
+		goyokeDir      string
 		claudeDir      string
 		expectedResult string
 	}{
 		{
-			name:           "GOGENT_PROJECT_DIR has highest priority",
-			gogentDir:      "/gogent/path",
+			name:           "GOYOKE_PROJECT_DIR has highest priority",
+			goyokeDir:      "/goyoke/path",
 			claudeDir:      "/claude/path",
-			expectedResult: "/gogent/path",
+			expectedResult: "/goyoke/path",
 		},
 		{
 			name:           "CLAUDE_PROJECT_DIR when GOGENT not set",
-			gogentDir:      "",
+			goyokeDir:      "",
 			claudeDir:      "/claude/path",
 			expectedResult: "/claude/path",
 		},
 		{
 			name:           "Falls back to CWD when both unset",
-			gogentDir:      "",
+			goyokeDir:      "",
 			claudeDir:      "",
 			expectedResult: "", // Will match CWD
 		},
@@ -119,12 +119,12 @@ func TestGetProjectDir_Priority(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear environment
-			os.Unsetenv("GOGENT_PROJECT_DIR")
+			os.Unsetenv("GOYOKE_PROJECT_DIR")
 			os.Unsetenv("CLAUDE_PROJECT_DIR")
 
 			// Set test values
-			if tt.gogentDir != "" {
-				os.Setenv("GOGENT_PROJECT_DIR", tt.gogentDir)
+			if tt.goyokeDir != "" {
+				os.Setenv("GOYOKE_PROJECT_DIR", tt.goyokeDir)
 			}
 			if tt.claudeDir != "" {
 				os.Setenv("CLAUDE_PROJECT_DIR", tt.claudeDir)
@@ -162,7 +162,7 @@ func TestWritePendingLearning(t *testing.T) {
 	}
 
 	// Verify file exists
-	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(pendingPath); os.IsNotExist(err) {
 		t.Fatalf("pending-learnings.jsonl not created")
 	}
@@ -198,7 +198,7 @@ func TestNoFailurePassthrough(t *testing.T) {
 	tmpDir := t.TempDir()
 	memory.DefaultStoragePath = filepath.Join(tmpDir, "failure-tracker.jsonl")
 	defer func() {
-		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+		memory.DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 	}()
 
 	// Create a PostToolUse event with successful execution
@@ -219,13 +219,13 @@ func TestNoFailurePassthrough(t *testing.T) {
 func TestSingleFailureDoesNotCapture(t *testing.T) {
 	// Create temp directory
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Override storage path for this test
-	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl")
 	defer func() {
-		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+		memory.DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 	}()
 
 	// Use current time to ensure it's within the failure window
@@ -259,7 +259,7 @@ func TestSingleFailureDoesNotCapture(t *testing.T) {
 	}
 
 	// Verify pending-learnings.jsonl does NOT exist (threshold not reached)
-	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(pendingPath); err == nil {
 		t.Error("pending-learnings.jsonl should not exist after single failure")
 	}
@@ -268,13 +268,13 @@ func TestSingleFailureDoesNotCapture(t *testing.T) {
 func TestThresholdReachedCapturesSharpEdge(t *testing.T) {
 	// Create temp directory
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Override storage path
-	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl")
 	defer func() {
-		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+		memory.DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 	}()
 
 	// Use current time
@@ -318,7 +318,7 @@ func TestThresholdReachedCapturesSharpEdge(t *testing.T) {
 	}
 
 	// Verify pending-learnings.jsonl exists
-	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(pendingPath); os.IsNotExist(err) {
 		t.Fatal("pending-learnings.jsonl should exist after threshold reached")
 	}
@@ -342,9 +342,9 @@ func TestThresholdReachedCapturesSharpEdge(t *testing.T) {
 func TestCompositeKeyPreventsFalsePositives(t *testing.T) {
 	// Create temp directory
 	tmpDir := t.TempDir()
-	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl")
 	defer func() {
-		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+		memory.DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 	}()
 
 	// Use current time
@@ -395,7 +395,7 @@ func TestSchemaCompliance(t *testing.T) {
 	}
 
 	// Read back and verify schema compliance
-	pendingPath := filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tmpDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	data, err := os.ReadFile(pendingPath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -565,11 +565,11 @@ func TestBuildWarningResponse_WithAttentionGate(t *testing.T) {
 
 func TestMain_MultipleFailures_CorrectCount(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
-	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl")
 	defer func() {
-		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+		memory.DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 	}()
 	now := time.Now().Unix()
 	failures := []*routing.FailureInfo{
@@ -601,9 +601,9 @@ func TestMain_MultipleFailures_CorrectCount(t *testing.T) {
 
 func TestMain_CompositeKeyHandling_Extended(t *testing.T) {
 	tmpDir := t.TempDir()
-	memory.DefaultStoragePath = filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl")
+	memory.DefaultStoragePath = filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl")
 	defer func() {
-		memory.DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+		memory.DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 	}()
 	now := time.Now().Unix()
 	file := "main.go"
@@ -762,7 +762,7 @@ func TestBuildCombinedResponse_JSONMarshaling(t *testing.T) {
 }
 
 // =============================================================================
-// ML Tool Event Logging Integration Tests (GOgent-087d)
+// ML Tool Event Logging Integration Tests (goYoke-087d)
 // =============================================================================
 
 func TestMLLogging_Integration(t *testing.T) {
@@ -800,7 +800,7 @@ func TestMLLogging_Integration(t *testing.T) {
 	}
 
 	// Verify global log file created (using config.GetMLToolEventsPath naming)
-	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	globalLogPath := filepath.Join(tmpDir, "goyoke", "tool-events.jsonl")
 	if _, err := os.Stat(globalLogPath); os.IsNotExist(err) {
 		t.Errorf("Global log file should exist at %s", globalLogPath)
 	}
@@ -870,8 +870,8 @@ func TestMLLogging_DualWrite(t *testing.T) {
 		}
 	}()
 
-	// Create project .gogent/memory directory
-	projectMemoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	// Create project .goyoke/memory directory
+	projectMemoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	if err := os.MkdirAll(projectMemoryDir, 0755); err != nil {
 		t.Fatalf("Failed to create project memory dir: %v", err)
 	}
@@ -890,7 +890,7 @@ func TestMLLogging_DualWrite(t *testing.T) {
 	}
 
 	// Verify global log (using config.GetMLToolEventsPath naming: tool-events.jsonl)
-	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	globalLogPath := filepath.Join(tmpDir, "goyoke", "tool-events.jsonl")
 	if _, err := os.Stat(globalLogPath); os.IsNotExist(err) {
 		t.Error("Global log file should exist")
 	}
@@ -976,7 +976,7 @@ func TestMLLogging_MultipleEvents(t *testing.T) {
 	}
 
 	// Read log file (using config.GetMLToolEventsPath naming: tool-events.jsonl)
-	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	globalLogPath := filepath.Join(tmpDir, "goyoke", "tool-events.jsonl")
 	data, err := os.ReadFile(globalLogPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -1033,7 +1033,7 @@ func TestMLLogging_ExtendedFields(t *testing.T) {
 	}
 
 	// Read and verify fields are preserved (even if zero/empty)
-	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	globalLogPath := filepath.Join(tmpDir, "goyoke", "tool-events.jsonl")
 	data, err := os.ReadFile(globalLogPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -1085,13 +1085,13 @@ func TestMLLogging_ErrorHandlingNonBlocking(t *testing.T) {
 	}
 
 	// Verify global log exists
-	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	globalLogPath := filepath.Join(tmpDir, "goyoke", "tool-events.jsonl")
 	if _, err := os.Stat(globalLogPath); os.IsNotExist(err) {
 		t.Error("Global log should exist even when project dir write fails")
 	}
 
 	// Verify project log doesn't exist (project dir doesn't exist)
-	projectLogPath := filepath.Join("/nonexistent/project/dir", ".gogent", "memory", "ml-tool-events.jsonl")
+	projectLogPath := filepath.Join("/nonexistent/project/dir", ".goyoke", "memory", "ml-tool-events.jsonl")
 	if _, err := os.Stat(projectLogPath); !os.IsNotExist(err) {
 		t.Error("Project log should not exist for nonexistent directory")
 	}
@@ -1131,7 +1131,7 @@ func TestMLLogging_ConcurrentWrites(t *testing.T) {
 	}
 
 	// Verify all 10 events were written
-	globalLogPath := filepath.Join(tmpDir, "gogent", "tool-events.jsonl")
+	globalLogPath := filepath.Join(tmpDir, "goyoke", "tool-events.jsonl")
 	data, err := os.ReadFile(globalLogPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)

@@ -22,8 +22,8 @@ const (
 
 var (
 	// DefaultStoragePath is the default location for the failure tracker JSONL file
-	// Can be overridden via GOGENT_STORAGE_PATH environment variable or for testing
-	DefaultStoragePath = "~/.gogent/failure-tracker.jsonl"
+	// Can be overridden via GOYOKE_STORAGE_PATH environment variable or for testing
+	DefaultStoragePath = "~/.goyoke/failure-tracker.jsonl"
 )
 
 // LogFailure appends a failure entry to the tracker JSONL file.
@@ -213,9 +213,9 @@ func rewriteFailures(path string, entries []routing.FailureInfo) error {
 	return nil
 }
 
-// getStoragePath returns the storage path, checking GOGENT_STORAGE_PATH env var first
+// getStoragePath returns the storage path, checking GOYOKE_STORAGE_PATH env var first
 func getStoragePath() string {
-	if path := os.Getenv("GOGENT_STORAGE_PATH"); path != "" {
+	if path := os.Getenv("GOYOKE_STORAGE_PATH"); path != "" {
 		return path
 	}
 	return DefaultStoragePath
@@ -239,10 +239,10 @@ func expandPath(path string) (string, error) {
 	return filepath.Join(home, path[2:]), nil
 }
 
-// getMaxFailures returns the configured maximum failure threshold from GOGENT_MAX_FAILURES.
+// getMaxFailures returns the configured maximum failure threshold from GOYOKE_MAX_FAILURES.
 // Returns DefaultMaxFailures if not set or invalid.
 func getMaxFailures() int {
-	if val := os.Getenv("GOGENT_MAX_FAILURES"); val != "" {
+	if val := os.Getenv("GOYOKE_MAX_FAILURES"); val != "" {
 		if n, err := strconv.Atoi(val); err == nil && n > 0 {
 			return n
 		}
@@ -250,10 +250,10 @@ func getMaxFailures() int {
 	return DefaultMaxFailures
 }
 
-// getFailureWindow returns the configured failure time window from GOGENT_FAILURE_WINDOW.
+// getFailureWindow returns the configured failure time window from GOYOKE_FAILURE_WINDOW.
 // Returns DefaultFailureWindow if not set or invalid.
 func getFailureWindow() int {
-	if val := os.Getenv("GOGENT_FAILURE_WINDOW"); val != "" {
+	if val := os.Getenv("GOYOKE_FAILURE_WINDOW"); val != "" {
 		if n, err := strconv.Atoi(val); err == nil && n > 0 {
 			return n
 		}

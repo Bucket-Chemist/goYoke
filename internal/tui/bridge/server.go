@@ -1,9 +1,9 @@
 // Package bridge implements the TUI-side Unix domain socket server that
-// receives IPC requests from the gofortress-mcp MCP server and injects
+// receives IPC requests from the goyoke-mcp MCP server and injects
 // them into the Bubbletea event loop via program.Send().
 //
 // The bridge owns:
-//   - One UDS listener at $XDG_RUNTIME_DIR/gofortress-{pid}.sock
+//   - One UDS listener at $XDG_RUNTIME_DIR/goyoke-{pid}.sock
 //   - One goroutine per accepted connection (MCP server connects once)
 //   - A pending modal map for correlating request IDs with response channels
 //
@@ -52,9 +52,9 @@ type IPCBridge struct {
 //
 // The socket path is:
 //
-//	$XDG_RUNTIME_DIR/gofortress-{pid}.sock   (preferred)
-//	$TMPDIR/gofortress-{pid}.sock            (fallback)
-//	/tmp/gofortress-{pid}.sock               (short-path fallback)
+//	$XDG_RUNTIME_DIR/goyoke-{pid}.sock   (preferred)
+//	$TMPDIR/goyoke-{pid}.sock            (fallback)
+//	/tmp/goyoke-{pid}.sock               (short-path fallback)
 //
 // Any stale socket at that path is removed before binding.
 func NewIPCBridge(sender messageSender) (*IPCBridge, error) {
@@ -82,7 +82,7 @@ func NewIPCBridge(sender messageSender) (*IPCBridge, error) {
 
 // buildSocketPath returns the socket path for the current PID.
 func buildSocketPath() string {
-	filename := fmt.Sprintf("gofortress-%d.sock", os.Getpid())
+	filename := fmt.Sprintf("goyoke-%d.sock", os.Getpid())
 	for _, base := range socketBaseCandidates() {
 		path := filepath.Join(base, filename)
 		if len(path) <= maxUnixSocketPathBytes {
@@ -116,7 +116,7 @@ func socketBaseCandidates() []string {
 }
 
 // SocketPath returns the absolute path of the UDS so callers can set
-// GOFORTRESS_SOCKET in child process environments.
+// GOYOKE_SOCKET in child process environments.
 func (b *IPCBridge) SocketPath() string {
 	return b.socketPath
 }

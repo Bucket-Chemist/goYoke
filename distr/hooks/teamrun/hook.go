@@ -1,4 +1,4 @@
-// Package teamrun is a placeholder stub for the gogent-team-run hook.
+// Package teamrun is a placeholder stub for the goyoke-team-run hook.
 // The real implementation will be wired in DIST-002 from internal/hooks/teamrun.
 package teamrun
 
@@ -9,10 +9,10 @@ import (
 )
 
 func init() {
-	multicall.Register("gogent-team-run", Main)
+	multicall.Register("goyoke-team-run", Main)
 }
 
 // Main is a stub. Replaced in DIST-002.
 func Main() {
-	fmt.Println("not yet wired: gogent-team-run")
+	fmt.Println("not yet wired: goyoke-team-run")
 }

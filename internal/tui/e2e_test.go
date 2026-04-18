@@ -1,6 +1,6 @@
 //go:build e2e
 
-// Package tui_test contains end-to-end smoke tests for the full GOgent-Fortress
+// Package tui_test contains end-to-end smoke tests for the full goYoke
 // TUI + CLI + MCP pipeline.
 //
 // # WARNING: These tests require a REAL Claude CLI installation and cost money.
@@ -10,7 +10,7 @@
 // # Prerequisites
 //
 //   - `claude` binary in PATH (authenticated via `claude auth login` or ANTHROPIC_API_KEY)
-//   - `gofortress` and `gofortress-mcp` binaries buildable from source
+//   - `goyoke` and `goyoke-mcp` binaries buildable from source
 //
 // # Running
 //
@@ -20,12 +20,12 @@
 //
 // # Architecture under test
 //
-//	Go TUI (gofortress binary)
+//	Go TUI (goyoke binary)
 //	  ├─ Bubbletea event loop
 //	  ├─ CLIDriver (subprocess management via pipes)
 //	  ├─ IPCBridge (UDS listener)
 //	  └─ spawns → Claude CLI (--output-format stream-json)
-//	               └─ spawns → gofortress-mcp (Go MCP server, stdio)
+//	               └─ spawns → goyoke-mcp (Go MCP server, stdio)
 //	                              └─ connects → TUI via UDS side channel
 //
 // # Test approach
@@ -182,7 +182,7 @@ func newE2EHarness(t *testing.T, opts cli.CLIDriverOpts) *e2eHarness {
 	b.Start()
 
 	// Expose the UDS path so the MCP server subprocess can connect.
-	t.Setenv("GOFORTRESS_SOCKET", b.SocketPath())
+	t.Setenv("GOYOKE_SOCKET", b.SocketPath())
 
 	// Set default project directory to the temp dir if not already specified.
 	if opts.ProjectDir == "" {
@@ -306,15 +306,15 @@ func (h *e2eHarness) sendMessage(t *testing.T, text string) {
 }
 
 // ---------------------------------------------------------------------------
-// buildBinaries — compile gofortress + gofortress-mcp to a temp dir
+// buildBinaries — compile goyoke + goyoke-mcp to a temp dir
 // ---------------------------------------------------------------------------
 
-// buildBinaries compiles the gofortress and gofortress-mcp binaries into
+// buildBinaries compiles the goyoke and goyoke-mcp binaries into
 // outDir using `go build`.  It returns the paths to the two binaries.
 //
 // Building ensures the E2E tests exercise the current source, not a
 // potentially stale system-installed binary.
-func buildBinaries(t *testing.T, outDir string) (gofortressPath, mcpPath string) {
+func buildBinaries(t *testing.T, outDir string) (goyokePath, mcpPath string) {
 	t.Helper()
 
 	// Locate the module root from this source file's directory.
@@ -324,11 +324,11 @@ func buildBinaries(t *testing.T, outDir string) (gofortressPath, mcpPath string)
 	// moduleRoot: ../../.. relative to this file's directory
 	moduleRoot := filepath.Join(filepath.Dir(thisFile), "..", "..")
 
-	gofortressPath = filepath.Join(outDir, "gofortress")
-	mcpPath = filepath.Join(outDir, "gofortress-mcp")
+	goyokePath = filepath.Join(outDir, "goyoke")
+	mcpPath = filepath.Join(outDir, "goyoke-mcp")
 
 	if runtime.GOOS == "windows" {
-		gofortressPath += ".exe"
+		goyokePath += ".exe"
 		mcpPath += ".exe"
 	}
 
@@ -343,22 +343,22 @@ func buildBinaries(t *testing.T, outDir string) (gofortressPath, mcpPath string)
 		}
 	}
 
-	build(gofortressPath, "./cmd/gofortress")
-	build(mcpPath, "./cmd/gofortress-mcp")
+	build(goyokePath, "./cmd/goyoke")
+	build(mcpPath, "./cmd/goyoke-mcp")
 
 	t.Logf("E2E: binaries built to %s", outDir)
-	return gofortressPath, mcpPath
+	return goyokePath, mcpPath
 }
 
 // buildMCPConfig writes a minimal MCP configuration JSON file that points at
-// the gofortress-mcp binary.  Returns the path to the created file.
+// the goyoke-mcp binary.  Returns the path to the created file.
 func buildMCPConfig(t *testing.T, dir, mcpBinaryPath string) string {
 	t.Helper()
 
 	cfgPath := filepath.Join(dir, "mcp-config.json")
 	content := fmt.Sprintf(`{
   "mcpServers": {
-    "gofortress-interactive": {
+    "goyoke-interactive": {
       "command": %q,
       "args": ["--mcp-server"],
       "env": {}
@@ -379,7 +379,7 @@ func buildMCPConfig(t *testing.T, dir, mcpBinaryPath string) string {
 // Cost: ~$0.03–$0.05
 //
 // Flow:
-//  1. Build gofortress + gofortress-mcp binaries to a temp dir
+//  1. Build goyoke + goyoke-mcp binaries to a temp dir
 //  2. Start CLIDriver pointing at the real `claude` binary with MCP wired
 //  3. Wait for SystemInitEvent — verify session ID, model, tools present
 //  4. Send 'say hello' message
@@ -462,9 +462,9 @@ func TestE2E_HelloWorld(t *testing.T) {
 // TestE2E_MCPPing — MCP tool discovery verification
 // ---------------------------------------------------------------------------
 
-// TestE2E_MCPPing verifies that the gofortress-mcp server is correctly wired
+// TestE2E_MCPPing verifies that the goyoke-mcp server is correctly wired
 // as an MCP server subprocess.  After the SystemInitEvent, the tools list must
-// contain the `test_mcp_ping` tool exposed by gofortress-mcp.
+// contain the `test_mcp_ping` tool exposed by goyoke-mcp.
 //
 // Cost: ~$0.01 (no LLM response needed — only checks the init event)
 func TestE2E_MCPPing(t *testing.T) {
@@ -489,12 +489,12 @@ func TestE2E_MCPPing(t *testing.T) {
 	tools := initEv.ToolNames()
 	t.Logf("E2E_MCPPing: registered tools: %v", tools)
 
-	// The gofortress-mcp server registers test_mcp_ping via RegisterAll().
+	// The goyoke-mcp server registers test_mcp_ping via RegisterAll().
 	// When it is correctly spawned by the Claude CLI, this tool appears in the
 	// system init event.
 	found := false
 	for _, name := range tools {
-		if name == "mcp__gofortress__test_mcp_ping" || name == "test_mcp_ping" {
+		if name == "mcp__goyoke__test_mcp_ping" || name == "test_mcp_ping" {
 			found = true
 			break
 		}
@@ -506,20 +506,20 @@ func TestE2E_MCPPing(t *testing.T) {
 		t.Logf("E2E_MCPPing: test_mcp_ping not found in tools list; known tools: %v", tools)
 	}
 	assert.True(t, found,
-		"test_mcp_ping must appear in tools list when gofortress-mcp is connected; got %v", tools)
+		"test_mcp_ping must appear in tools list when goyoke-mcp is connected; got %v", tools)
 
 	// Also verify the MCP server was listed under mcp_servers in the init event.
 	if len(initEv.MCPServers) > 0 {
 		t.Logf("E2E_MCPPing: MCP servers in init: %+v", initEv.MCPServers)
 		serverFound := false
 		for _, srv := range initEv.MCPServers {
-			if strings.Contains(srv.Name, "gofortress") {
+			if strings.Contains(srv.Name, "goyoke") {
 				serverFound = true
 				break
 			}
 		}
 		assert.True(t, serverFound,
-			"gofortress MCP server must appear in mcp_servers; got %v", initEv.MCPServers)
+			"goyoke MCP server must appear in mcp_servers; got %v", initEv.MCPServers)
 	}
 
 	t.Log("E2E_MCPPing: clean shutdown...")
@@ -742,7 +742,7 @@ func TestE2E_CostAndTokensVerified(t *testing.T) {
 // TestE2E_PermissionModal documents the current status of the Write-permission
 // flow in E2E testing.
 //
-// The gofortress permission modal is triggered when Claude attempts a Write
+// The goyoke permission modal is triggered when Claude attempts a Write
 // tool call under plan mode.  Because the modal is resolved by the TUI's
 // Bubbletea event loop (which is NOT running in this harness), the request
 // would block indefinitely.

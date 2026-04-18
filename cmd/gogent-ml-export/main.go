@@ -557,7 +557,7 @@ func parseDuration(since string) time.Duration {
 
 // printUsage prints CLI usage information
 func printUsage() {
-	fmt.Println(`Usage: gogent-ml-export <command> [options]
+	fmt.Println(`Usage: goyoke-ml-export <command> [options]
 
 Commands:
   routing          Export routing decisions as CSV/JSON
@@ -592,11 +592,11 @@ Sharp-edge-hits options:
   --output string      Output file (default "-" for stdout)
 
 Examples:
-  gogent-ml-export routing --format csv --since 7d --output routing.csv
-  gogent-ml-export sequences --successful-only --output sequences.json
-  gogent-ml-export collaborations --format json
-  gogent-ml-export training-dataset --output ./ml-data/
-  gogent-ml-export review-findings --output findings.json
-  gogent-ml-export review-stats
-  gogent-ml-export sharp-edge-hits --output hits.json`)
+  goyoke-ml-export routing --format csv --since 7d --output routing.csv
+  goyoke-ml-export sequences --successful-only --output sequences.json
+  goyoke-ml-export collaborations --format json
+  goyoke-ml-export training-dataset --output ./ml-data/
+  goyoke-ml-export review-findings --output findings.json
+  goyoke-ml-export review-stats
+  goyoke-ml-export sharp-edge-hits --output hits.json`)
 }

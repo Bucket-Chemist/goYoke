@@ -36,10 +36,10 @@ var benchNDJSONLines = [][]byte{
 	[]byte(`{"type":"system","subtype":"init","cwd":"/home/user/project","session_id":"sess-abc123","tools":["Read","Write","Edit","Bash","Glob","Grep","Task"],"model":"claude-sonnet-4-20250514","permissionMode":"acceptEdits","apiKeySource":"env","claude_code_version":"1.2.3","uuid":"uuid-init-001"}`),
 
 	// system/hook_started
-	[]byte(`{"type":"system","subtype":"hook_started","hook_id":"hook-001","hook_name":"gogent-validate","hook_event":"PreToolUse","uuid":"uuid-hook-001","session_id":"sess-abc123"}`),
+	[]byte(`{"type":"system","subtype":"hook_started","hook_id":"hook-001","hook_name":"goyoke-validate","hook_event":"PreToolUse","uuid":"uuid-hook-001","session_id":"sess-abc123"}`),
 
 	// system/hook_response
-	[]byte(`{"type":"system","subtype":"hook_response","hook_id":"hook-001","hook_name":"gogent-validate","hook_event":"PreToolUse","output":"","stdout":"","stderr":"","exit_code":0,"outcome":"allow","uuid":"uuid-hook-002","session_id":"sess-abc123"}`),
+	[]byte(`{"type":"system","subtype":"hook_response","hook_id":"hook-001","hook_name":"goyoke-validate","hook_event":"PreToolUse","output":"","stdout":"","stderr":"","exit_code":0,"outcome":"allow","uuid":"uuid-hook-002","session_id":"sess-abc123"}`),
 
 	// assistant — text block only
 	[]byte(`{"type":"assistant","message":{"id":"msg-001","type":"message","role":"assistant","model":"claude-sonnet-4-20250514","content":[{"type":"text","text":"I will read the file and analyze its contents."}],"stop_reason":null,"usage":{"input_tokens":1024,"output_tokens":128}},"parent_tool_use_id":null,"session_id":"sess-abc123","uuid":"uuid-asst-001"}`),

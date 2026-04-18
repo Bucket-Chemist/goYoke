@@ -21,11 +21,11 @@ type UserIntent struct {
 	Context     string   `json:"context,omitempty"`      // Why this was asked
 	Source      string   `json:"source"`                 // "ask_user", "hook_prompt", "manual"
 	ActionTaken string   `json:"action_taken,omitempty"` // What we did with the response
-	SessionID   string   `json:"session_id,omitempty"`   // Session that captured this intent (GOgent-037d)
-	ToolContext string   `json:"tool_context,omitempty"` // Tool invocation context (GOgent-037d)
-	Category    string   `json:"category,omitempty"`     // Intent category from ClassifyIntent (GOgent-041)
-	Keywords    []string `json:"keywords,omitempty"`     // Extracted keywords from ExtractKeywords (GOgent-041)
-	// GOgent-041c: Outcome Tracking
+	SessionID   string   `json:"session_id,omitempty"`   // Session that captured this intent (goYoke-037d)
+	ToolContext string   `json:"tool_context,omitempty"` // Tool invocation context (goYoke-037d)
+	Category    string   `json:"category,omitempty"`     // Intent category from ClassifyIntent (goYoke-041)
+	Keywords    []string `json:"keywords,omitempty"`     // Extracted keywords from ExtractKeywords (goYoke-041)
+	// goYoke-041c: Outcome Tracking
 	Honored     *bool  `json:"honored,omitempty"`      // Whether intent was followed (nil = not yet analyzed)
 	OutcomeNote string `json:"outcome_note,omitempty"` // Explanation of outcome
 }
@@ -74,7 +74,7 @@ type PerformanceMetric struct {
 	Context     string `json:"context"`      // Additional context
 }
 
-// EndstateLog represents a single logged endstate decision (v1.3 - GOgent-065)
+// EndstateLog represents a single logged endstate decision (v1.3 - goYoke-065)
 type EndstateLog struct {
 	Timestamp       time.Time `json:"timestamp"`
 	AgentID         string    `json:"agent_id"`

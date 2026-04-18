@@ -1,4 +1,4 @@
-// Package multicall provides the dispatch table for the gofortress multi-call binary.
+// Package multicall provides the dispatch table for the goyoke multi-call binary.
 // It is imported by distr/main.go, and by each hook stub in distr/hooks/*.
 package multicall
 
@@ -13,7 +13,7 @@ var (
 // It is intended to be called from init() functions in hook packages so that
 // each hook self-registers without requiring a central list:
 //
-//	func init() { multicall.Register("gogent-validate", Main) }
+//	func init() { multicall.Register("goyoke-validate", Main) }
 func Register(name string, fn func()) {
 	mu.Lock()
 	defer mu.Unlock()

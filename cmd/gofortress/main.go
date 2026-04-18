@@ -1,8 +1,8 @@
-// Package main is the entry point for the gofortress TUI binary.
+// Package main is the entry point for the goyoke TUI binary.
 //
 // Usage:
 //
-//	gofortress [flags]
+//	goyoke [flags]
 //
 // Flags:
 //
@@ -12,13 +12,13 @@
 //	--model           Initial model override (e.g. "claude-opus-4-6")
 //	--permission-mode Initial permission mode: default, acceptEdits, plan
 //	--version         Print version and exit
-//	--mcp-server      Run MCP server mode (redirects to gofortress-mcp)
+//	--mcp-server      Run MCP server mode (redirects to goyoke-mcp)
 //	--config-dir      Override Claude config directory (e.g. ~/.claude-em)
 //	--resume          Resume the most recent session
 //
 // Version is injected at build time:
 //
-//	go build -ldflags "-X main.version=v1.0.0" ./cmd/gofortress/...
+//	go build -ldflags "-X main.version=v1.0.0" ./cmd/goyoke/...
 package main
 
 import (
@@ -67,20 +67,20 @@ func main() {
 	modelOverride := flag.String("model", "", "initial model override (e.g. claude-opus-4-6)")
 	permMode := flag.String("permission-mode", "acceptEdits", "initial permission mode: default, acceptEdits, plan")
 	printVersion := flag.Bool("version", false, "print version and exit")
-	mcpServer := flag.Bool("mcp-server", false, "run MCP server mode instead of TUI (use gofortress-mcp binary)")
+	mcpServer := flag.Bool("mcp-server", false, "run MCP server mode instead of TUI (use goyoke-mcp binary)")
 	configDir := flag.String("config-dir", "", "override Claude config directory (e.g. ~/.claude-em)")
 	resume := flag.Bool("resume", false, "resume most recent session")
-	mcpBinaryFlag := flag.String("mcp-binary", "", "explicit path to gofortress-mcp binary (overrides auto-discovery)")
+	mcpBinaryFlag := flag.String("mcp-binary", "", "explicit path to goyoke-mcp binary (overrides auto-discovery)")
 
 	flag.Parse()
 
 	if *printVersion {
-		fmt.Printf("gofortress version %s\n", version)
+		fmt.Printf("goyoke version %s\n", version)
 		os.Exit(0)
 	}
 
 	if *mcpServer {
-		fmt.Fprintln(os.Stderr, "MCP server mode not yet implemented. Use gofortress-mcp binary.")
+		fmt.Fprintln(os.Stderr, "MCP server mode not yet implemented. Use goyoke-mcp binary.")
 		os.Exit(1)
 	}
 
@@ -88,14 +88,14 @@ func main() {
 	// and session store both use the correct config directory.
 	if *configDir != "" {
 		if err := os.Setenv("CLAUDE_CONFIG_DIR", *configDir); err != nil {
-			log.Printf("[gofortress] warning: could not set CLAUDE_CONFIG_DIR: %v", err)
+			log.Printf("[goyoke] warning: could not set CLAUDE_CONFIG_DIR: %v", err)
 		}
 	}
 
 	// Clean up any socket files left by crashed sessions.
 	if err := lifecycle.CleanupStaleSockets(); err != nil {
 		if *verbose {
-			log.Printf("[gofortress] cleanup stale sockets: %v", err)
+			log.Printf("[goyoke] cleanup stale sockets: %v", err)
 		}
 	}
 
@@ -118,14 +118,14 @@ func main() {
 	app.SetClaudePanel(&cp)
 
 	// Load cross-session prompt history. The config dir respects --config-dir,
-	// GOGENT_CONFIG_DIR, and CLAUDE_CONFIG_DIR for multi-config setups.
-	histDir := os.Getenv("GOGENT_CONFIG_DIR")
+	// GOYOKE_CONFIG_DIR, and CLAUDE_CONFIG_DIR for multi-config setups.
+	histDir := os.Getenv("GOYOKE_CONFIG_DIR")
 	if histDir == "" {
 		histDir = os.Getenv("CLAUDE_CONFIG_DIR")
 	}
 	if histDir == "" {
 		if home, err := os.UserHomeDir(); err == nil {
-			histDir = filepath.Join(home, ".gogent")
+			histDir = filepath.Join(home, ".goyoke")
 		}
 	}
 	if histDir != "" {
@@ -156,7 +156,7 @@ func main() {
 	// If --session-id is provided, load the existing session and restore
 	// provider state (session IDs, model selections, active provider).
 	// Otherwise, generate a fresh session ID, set up the session directory
-	// (including .gogent/current-session and .gogent/tmp symlink), and
+	// (including .goyoke/current-session and .goyoke/tmp symlink), and
 	// create initial SessionData.
 	// -----------------------------------------------------------------------
 
@@ -167,15 +167,15 @@ func main() {
 	if *resume && *sessionID == "" {
 		sessions, err := sessionStore.ListSessions()
 		if err != nil {
-			log.Printf("[gofortress] warning: could not list sessions for --resume: %v", err)
+			log.Printf("[goyoke] warning: could not list sessions for --resume: %v", err)
 		} else if len(sessions) > 0 {
 			*sessionID = sessions[0].ID
 			if *verbose {
-				log.Printf("[gofortress] --resume: selected session %s (last used %s)",
+				log.Printf("[goyoke] --resume: selected session %s (last used %s)",
 					sessions[0].ID, sessions[0].LastUsed.Format(time.RFC3339))
 			}
 		} else if *verbose {
-			log.Printf("[gofortress] --resume: no existing sessions found, starting new session")
+			log.Printf("[goyoke] --resume: no existing sessions found, starting new session")
 		}
 	}
 
@@ -183,7 +183,7 @@ func main() {
 	if *sessionID != "" {
 		sd, err := sessionStore.LoadSession(*sessionID)
 		if err != nil {
-			log.Printf("[gofortress] warning: could not load session %q: %v", *sessionID, err)
+			log.Printf("[goyoke] warning: could not load session %q: %v", *sessionID, err)
 		}
 		if sd != nil {
 			sessionData = sd
@@ -196,7 +196,7 @@ func main() {
 				}
 			}
 			if *verbose {
-				log.Printf("[gofortress] resumed session %s (cost=$%.4f, providers=%d)",
+				log.Printf("[goyoke] resumed session %s (cost=$%.4f, providers=%d)",
 					sd.ID, sd.Cost, len(sd.ProviderSessionIDs))
 			}
 		}
@@ -211,10 +211,10 @@ func main() {
 			ActiveProvider: "anthropic",
 		}
 		if _, err := sessionStore.SetupSessionDir(newID); err != nil {
-			log.Printf("[gofortress] warning: could not setup session dir: %v", err)
+			log.Printf("[goyoke] warning: could not setup session dir: %v", err)
 		}
 		if *verbose {
-			log.Printf("[gofortress] new session %s", newID)
+			log.Printf("[goyoke] new session %s", newID)
 		}
 	}
 
@@ -223,7 +223,7 @@ func main() {
 
 	// Set up team list polling so the teams health dashboard receives data.
 	// The teams directory lives at {sessionDir}/teams/, created by
-	// gogent-skill-guard when a team is dispatched via gogent-team-run.
+	// goyoke-skill-guard when a team is dispatched via goyoke-team-run.
 	// StartPolling sets the dir and marks the model ready; the returned Cmd
 	// is discarded here because Init() calls PollNow() to kick the first
 	// tick inside the Bubbletea event loop.
@@ -253,9 +253,9 @@ func main() {
 	app.SetCWDSelector(cwdSel)
 
 	// -----------------------------------------------------------------------
-	// Phase 1b: Locate gofortress-mcp binary and generate MCP config.
+	// Phase 1b: Locate goyoke-mcp binary and generate MCP config.
 	//
-	// The gofortress-mcp binary bridges Claude CLI's MCP tool calls to the
+	// The goyoke-mcp binary bridges Claude CLI's MCP tool calls to the
 	// TUI's IPC bridge via Unix domain socket.  We generate a temporary
 	// mcp-config.json and pass it via --mcp-config so the Claude subprocess
 	// spawns the MCP server automatically.
@@ -267,18 +267,18 @@ func main() {
 		path, err := writeMCPConfig(mcpBinary)
 		if err != nil {
 			// Always warn — a broken MCP config means spawn_agent silently fails.
-			fmt.Fprintf(os.Stderr, "[gofortress] warning: could not write MCP config: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke] warning: could not write MCP config: %v\n", err)
 		} else {
 			mcpConfigPath = path
 			if *verbose {
-				log.Printf("[gofortress] MCP config: %s (binary: %s)", path, mcpBinary)
+				log.Printf("[goyoke] MCP config: %s (binary: %s)", path, mcpBinary)
 			}
 		}
 	} else {
 		// Always emit this warning regardless of --verbose; silent degradation is
 		// the root cause of spawn_agent appearing broken.
-		fmt.Fprintf(os.Stderr, "[gofortress] warning: gofortress-mcp binary not found; MCP tools (spawn_agent, ask_user, etc.) will be unavailable\n")
-		fmt.Fprintf(os.Stderr, "[gofortress] hint: run 'make build-go-mcp' to build it, or pass --mcp-binary=/path/to/gofortress-mcp\n")
+		fmt.Fprintf(os.Stderr, "[goyoke] warning: goyoke-mcp binary not found; MCP tools (spawn_agent, ask_user, etc.) will be unavailable\n")
+		fmt.Fprintf(os.Stderr, "[goyoke] hint: run 'make build-go-mcp' to build it, or pass --mcp-binary=/path/to/goyoke-mcp\n")
 	}
 
 	// Build the CLI driver options from flags.
@@ -303,7 +303,7 @@ func main() {
 		"Anthropic",
 		cliOpts.PermissionMode,
 		cliOpts.ProjectDir,
-		[]string{"gofortress"},
+		[]string{"goyoke"},
 	)
 
 	// -----------------------------------------------------------------------
@@ -319,14 +319,14 @@ func main() {
 	if *debug {
 		f, err := openDebugLog()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[gofortress] warning: could not open debug log: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke] warning: could not open debug log: %v\n", err)
 		} else {
 			defer f.Close()
 			opts = append(opts, tea.WithInput(os.Stdin))
 			log.SetOutput(f)
 			log.SetFlags(log.Ltime | log.Lmicroseconds)
 			if *verbose {
-				log.Printf("[gofortress] debug log opened: %s", f.Name())
+				log.Printf("[goyoke] debug log opened: %s", f.Name())
 			}
 		}
 	}
@@ -340,24 +340,24 @@ func main() {
 
 	ipcBridge, err := bridge.NewIPCBridge(p)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gofortress] bridge error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke] bridge error: %v\n", err)
 		os.Exit(1)
 	}
 	app.SetBridge(ipcBridge)
 	ipcBridge.Start()
 
 	// Expose the UDS path so the MCP server subprocess can connect.
-	if err := os.Setenv("GOFORTRESS_SOCKET", ipcBridge.SocketPath()); err != nil {
+	if err := os.Setenv("GOYOKE_SOCKET", ipcBridge.SocketPath()); err != nil {
 		if *verbose {
-			log.Printf("[gofortress] warning: could not set GOFORTRESS_SOCKET: %v", err)
+			log.Printf("[goyoke] warning: could not set GOYOKE_SOCKET: %v", err)
 		}
 	}
 
 	// Expose the MCP config path so spawned Claude subprocesses can load MCP tools.
 	if mcpConfigPath != "" {
-		if err := os.Setenv("GOFORTRESS_MCP_CONFIG", mcpConfigPath); err != nil {
+		if err := os.Setenv("GOYOKE_MCP_CONFIG", mcpConfigPath); err != nil {
 			if *verbose {
-				log.Printf("[gofortress] warning: could not set GOFORTRESS_MCP_CONFIG: %v", err)
+				log.Printf("[goyoke] warning: could not set GOYOKE_MCP_CONFIG: %v", err)
 			}
 		}
 	}
@@ -378,7 +378,7 @@ func main() {
 		SessionSaver: func() { app.SaveSessionPublic() },
 		OnStatus: func(msg string) {
 			if *verbose {
-				log.Printf("[gofortress] %s", msg)
+				log.Printf("[goyoke] %s", msg)
 			}
 		},
 	})
@@ -393,7 +393,7 @@ func main() {
 	procMgr := lifecycle.NewProcessManager(ipcBridge.SocketPath())
 	procMgr.StartSignalHandler(context.Background(), func() {
 		if *verbose {
-			log.Printf("[gofortress] OS signal received, initiating shutdown")
+			log.Printf("[goyoke] OS signal received, initiating shutdown")
 		}
 		_ = sm.Shutdown()
 	})
@@ -403,7 +403,7 @@ func main() {
 	// -----------------------------------------------------------------------
 
 	if _, err := p.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "[gofortress] error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke] error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -412,7 +412,7 @@ func main() {
 	// ShutdownManager ensures this is a no-op if already shut down.
 	if err := sm.Shutdown(); err != nil {
 		if *verbose {
-			log.Printf("[gofortress] shutdown warning: %v", err)
+			log.Printf("[goyoke] shutdown warning: %v", err)
 		}
 	}
 }
@@ -421,12 +421,12 @@ func main() {
 // directory and returns the open file.  The caller is responsible for
 // closing it.
 func openDebugLog() (*os.File, error) {
-	name := fmt.Sprintf("gofortress-debug-%s.log", time.Now().Format("20060102-150405"))
+	name := fmt.Sprintf("goyoke-debug-%s.log", time.Now().Format("20060102-150405"))
 	path := filepath.Join(os.TempDir(), name)
 	return os.Create(path)
 }
 
-// findMCPBinary searches for the gofortress-mcp binary.
+// findMCPBinary searches for the goyoke-mcp binary.
 //
 // Resolution order:
 //  1. explicit override (non-empty explicitPath is used as-is)
@@ -445,7 +445,7 @@ func findMCPBinary(explicitPath string) (string, bool) {
 			return abs, true
 		}
 		// Explicit path provided but not found — report the problem clearly.
-		fmt.Fprintf(os.Stderr, "[gofortress] warning: --mcp-binary path not found: %s\n", abs)
+		fmt.Fprintf(os.Stderr, "[goyoke] warning: --mcp-binary path not found: %s\n", abs)
 		return "", false
 	}
 
@@ -454,9 +454,9 @@ func findMCPBinary(explicitPath string) (string, bool) {
 
 	// 2. Filesystem candidates (ordered by likelihood in dev and installed layouts).
 	candidates := []string{
-		filepath.Join(exeDir, "gofortress-mcp"),              // same dir as TUI binary
-		filepath.Join(exeDir, "bin", "gofortress-mcp"),       // bin/ subdir
-		filepath.Join(exeDir, "..", "bin", "gofortress-mcp"), // parent/bin (dev layout)
+		filepath.Join(exeDir, "goyoke-mcp"),              // same dir as TUI binary
+		filepath.Join(exeDir, "bin", "goyoke-mcp"),       // bin/ subdir
+		filepath.Join(exeDir, "..", "bin", "goyoke-mcp"), // parent/bin (dev layout)
 	}
 
 	for _, path := range candidates {
@@ -470,7 +470,7 @@ func findMCPBinary(explicitPath string) (string, bool) {
 	}
 
 	// 3. Fall back to $PATH search.
-	if path, err := exec.LookPath("gofortress-mcp"); err == nil {
+	if path, err := exec.LookPath("goyoke-mcp"); err == nil {
 		return path, true
 	}
 
@@ -489,12 +489,12 @@ type mcpServerEntry struct {
 }
 
 // writeMCPConfig writes a temporary MCP configuration JSON file pointing at
-// the given gofortress-mcp binary.  Returns the path to the created file.
+// the given goyoke-mcp binary.  Returns the path to the created file.
 // The file is created in os.TempDir and will be cleaned up by the OS.
 func writeMCPConfig(mcpBinaryPath string) (string, error) {
 	cfg := mcpConfig{
 		MCPServers: map[string]mcpServerEntry{
-			"gofortress-interactive": {
+			"goyoke-interactive": {
 				Command: mcpBinaryPath,
 				Env:     map[string]string{},
 			},
@@ -506,7 +506,7 @@ func writeMCPConfig(mcpBinaryPath string) (string, error) {
 		return "", fmt.Errorf("marshal MCP config: %w", err)
 	}
 
-	f, err := os.CreateTemp("", "gofortress-mcp-*.json")
+	f, err := os.CreateTemp("", "goyoke-mcp-*.json")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}

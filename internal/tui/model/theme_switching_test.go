@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains tests for the theme switching infrastructure added in
 // TUI-046: ThemeChangedMsg, SetTheme/Theme methods, and sharedState fields.
 package model

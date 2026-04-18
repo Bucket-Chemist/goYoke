@@ -274,9 +274,9 @@ func discoverPresets() []preset {
 		home = "/"
 	}
 
-	projectRoot := os.Getenv("GOGENT_PROJECT_ROOT")
+	projectRoot := os.Getenv("GOYOKE_PROJECT_ROOT")
 	if projectRoot == "" {
-		projectRoot = filepath.Join(home, "Documents", "GOgent-Fortress")
+		projectRoot = filepath.Join(home, "Documents", "goYoke")
 	}
 
 	presets := []preset{

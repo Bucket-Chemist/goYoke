@@ -2044,19 +2044,19 @@ func TestMain_SwitchLogic(t *testing.T) {
 	}{
 		{
 			name: "routing command",
-			args: []string{"gogent-ml-export", "routing", "--format", "csv", "--output", filepath.Join(tmpDir, "test.csv")},
+			args: []string{"goyoke-ml-export", "routing", "--format", "csv", "--output", filepath.Join(tmpDir, "test.csv")},
 		},
 		{
 			name: "sequences command",
-			args: []string{"gogent-ml-export", "sequences", "--format", "json", "--output", filepath.Join(tmpDir, "test.json")},
+			args: []string{"goyoke-ml-export", "sequences", "--format", "json", "--output", filepath.Join(tmpDir, "test.json")},
 		},
 		{
 			name: "collaborations command",
-			args: []string{"gogent-ml-export", "collaborations", "--format", "csv", "--output", filepath.Join(tmpDir, "test.csv")},
+			args: []string{"goyoke-ml-export", "collaborations", "--format", "csv", "--output", filepath.Join(tmpDir, "test.csv")},
 		},
 		{
 			name: "training-dataset command",
-			args: []string{"gogent-ml-export", "training-dataset", "--output", filepath.Join(tmpDir, "dataset")},
+			args: []string{"goyoke-ml-export", "training-dataset", "--output", filepath.Join(tmpDir, "dataset")},
 		},
 	}
 

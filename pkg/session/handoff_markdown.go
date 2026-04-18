@@ -270,7 +270,7 @@ func FormatWeeklyIntentSummary(summary WeeklyIntentSummary) string {
 	sb.WriteString(fmt.Sprintf("**Total Captured:** %d intents across %d sessions\n\n",
 		summary.TotalIntents, summary.SessionCount))
 
-	// GOgent-041c: Honor rate section
+	// goYoke-041c: Honor rate section
 	if summary.TotalAnalyzed > 0 {
 		sb.WriteString("**Honor Rate:**\n")
 		sb.WriteString(fmt.Sprintf("- Overall: %.0f%% (%d/%d)\n",

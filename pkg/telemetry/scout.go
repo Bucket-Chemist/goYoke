@@ -64,7 +64,7 @@ var ValidTaskOutcomes = map[string]bool{
 
 // GetScoutLogPath returns the global scout recommendations log path.
 func GetScoutLogPath() string {
-	baseDir := config.GetGOgentDir()
+	baseDir := config.GetgoYokeDir()
 	return filepath.Join(baseDir, "scout-recommendations.jsonl")
 }
 

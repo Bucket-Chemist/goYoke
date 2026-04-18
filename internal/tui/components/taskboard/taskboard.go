@@ -1,5 +1,5 @@
 // Package taskboard implements the task board overlay for the
-// GOgent-Fortress TUI. It renders a compact strip showing active or completed
+// goYoke TUI. It renders a compact strip showing active or completed
 // tasks and is toggled by the Alt+B keybinding.
 //
 // The component is interactive: cursor navigation (j/k or up/down) moves

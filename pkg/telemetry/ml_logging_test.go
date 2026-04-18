@@ -36,7 +36,7 @@ func TestLogMLToolEvent_GlobalPath(t *testing.T) {
 func TestLogMLToolEvent_ProjectPath(t *testing.T) {
 	// Test project path writing when directory exists
 	projectDir := t.TempDir()
-	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(projectDir, ".goyoke", "memory"), 0755)
 
 	event := &routing.PostToolEvent{
 		ToolName:   "Read",
@@ -49,7 +49,7 @@ func TestLogMLToolEvent_ProjectPath(t *testing.T) {
 		t.Fatalf("Failed to log: %v", err)
 	}
 
-	projectPath := filepath.Join(projectDir, ".gogent", "memory", "ml-tool-events.jsonl")
+	projectPath := filepath.Join(projectDir, ".goyoke", "memory", "ml-tool-events.jsonl")
 	if _, err := os.Stat(projectPath); os.IsNotExist(err) {
 		t.Fatalf("Project log file should exist at %s", projectPath)
 	}
@@ -59,7 +59,7 @@ func TestLogMLToolEvent_NoProjectPath(t *testing.T) {
 	// Test that logging succeeds even when project path doesn't exist
 	// (project write errors are silently ignored)
 	projectDir := t.TempDir()
-	// Do NOT create .gogent/memory directory
+	// Do NOT create .goyoke/memory directory
 
 	event := &routing.PostToolEvent{
 		ToolName:   "Read",
@@ -229,7 +229,7 @@ func TestCalculateMLSessionStats_Empty(t *testing.T) {
 func TestDualWrite(t *testing.T) {
 	// Test that events are written to both global and project paths when available
 	projectDir := t.TempDir()
-	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(projectDir, ".goyoke", "memory"), 0755)
 
 	// Clean up global path first
 	globalPath := config.GetMLToolEventsPath()
@@ -247,7 +247,7 @@ func TestDualWrite(t *testing.T) {
 	}
 
 	// Verify both files exist
-	projectPath := filepath.Join(projectDir, ".gogent", "memory", "ml-tool-events.jsonl")
+	projectPath := filepath.Join(projectDir, ".goyoke", "memory", "ml-tool-events.jsonl")
 
 	if _, err := os.Stat(globalPath); os.IsNotExist(err) {
 		t.Fatalf("Global log file should exist at %s", globalPath)
@@ -338,10 +338,10 @@ func TestAppendMLToolEvent(t *testing.T) {
 }
 
 func TestXDGCompliance(t *testing.T) {
-	// Test that config.GetMLToolEventsPath() uses config.GetGOgentDataDir()
+	// Test that config.GetMLToolEventsPath() uses config.GetgoYokeDataDir()
 	// This verifies XDG Base Directory specification compliance
 	mlPath := config.GetMLToolEventsPath()
-	dataDir := config.GetGOgentDataDir()
+	dataDir := config.GetgoYokeDataDir()
 
 	// Verify ML path is under data directory
 	if !filepath.HasPrefix(mlPath, dataDir) {

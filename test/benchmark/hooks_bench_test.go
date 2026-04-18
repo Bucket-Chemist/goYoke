@@ -15,9 +15,9 @@ import (
 
 // BenchmarkValidateRouting_Allow benchmarks validate-routing for allowed operations
 func BenchmarkValidateRouting_Allow(b *testing.B) {
-	binaryPath := "../../bin/gogent-validate"
+	binaryPath := "../../bin/goyoke-validate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-validate binary not found")
+		b.Skip("goyoke-validate binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -48,9 +48,9 @@ func BenchmarkValidateRouting_Allow(b *testing.B) {
 
 // BenchmarkValidateRouting_Block benchmarks validate-routing for blocked operations
 func BenchmarkValidateRouting_Block(b *testing.B) {
-	binaryPath := "../../bin/gogent-validate"
+	binaryPath := "../../bin/goyoke-validate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-validate binary not found")
+		b.Skip("goyoke-validate binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -85,9 +85,9 @@ func BenchmarkValidateRouting_Block(b *testing.B) {
 
 // BenchmarkSessionArchive benchmarks session-archive hook
 func BenchmarkSessionArchive(b *testing.B) {
-	binaryPath := "../../bin/gogent-archive"
+	binaryPath := "../../bin/goyoke-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-archive binary not found")
+		b.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -122,9 +122,9 @@ func BenchmarkSessionArchive(b *testing.B) {
 
 // BenchmarkSharpEdgeDetector benchmarks sharp-edge-detector hook
 func BenchmarkSharpEdgeDetector(b *testing.B) {
-	binaryPath := "../../bin/gogent-sharp-edge"
+	binaryPath := "../../bin/goyoke-sharp-edge"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-sharp-edge binary not found")
+		b.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -154,11 +154,11 @@ func BenchmarkSharpEdgeDetector(b *testing.B) {
 	}
 }
 
-// BenchmarkLoadContext benchmarks gogent-load-context hook
+// BenchmarkLoadContext benchmarks goyoke-load-context hook
 func BenchmarkLoadContext(b *testing.B) {
-	binaryPath := "../../bin/gogent-load-context"
+	binaryPath := "../../bin/goyoke-load-context"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-load-context binary not found")
+		b.Skip("goyoke-load-context binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -200,11 +200,11 @@ func BenchmarkLoadContext(b *testing.B) {
 	}
 }
 
-// BenchmarkAgentEndstate benchmarks gogent-agent-endstate hook
+// BenchmarkAgentEndstate benchmarks goyoke-agent-endstate hook
 func BenchmarkAgentEndstate(b *testing.B) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-agent-endstate binary not found")
+		b.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -254,11 +254,11 @@ func BenchmarkAgentEndstate(b *testing.B) {
 	}
 }
 
-// BenchmarkMLExport benchmarks gogent-ml-export with large dataset
+// BenchmarkMLExport benchmarks goyoke-ml-export with large dataset
 func BenchmarkMLExport(b *testing.B) {
-	binaryPath := "../../bin/gogent-ml-export"
+	binaryPath := "../../bin/goyoke-ml-export"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-ml-export binary not found")
+		b.Skip("goyoke-ml-export binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -310,32 +310,32 @@ func BenchmarkMemoryUsage(b *testing.B) {
 	}{
 		{
 			name:  "validate-routing",
-			path:  "../../bin/gogent-validate",
+			path:  "../../bin/goyoke-validate",
 			event: `{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"/tmp/test.txt"}}`,
 		},
 		{
 			name:  "session-archive",
-			path:  "../../bin/gogent-archive",
+			path:  "../../bin/goyoke-archive",
 			event: `{"hook_event_name":"SessionEnd","session_id":"mem-test"}`,
 		},
 		{
 			name:  "sharp-edge-detector",
-			path:  "../../bin/gogent-sharp-edge",
+			path:  "../../bin/goyoke-sharp-edge",
 			event: `{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_response":{"success":false}}`,
 		},
 		{
 			name:  "load-context",
-			path:  "../../bin/gogent-load-context",
+			path:  "../../bin/goyoke-load-context",
 			event: `{"hook_event_name":"SessionStart","session_id":"mem-load-context"}`,
 		},
 		{
 			name:  "agent-endstate",
-			path:  "../../bin/gogent-agent-endstate",
+			path:  "../../bin/goyoke-agent-endstate",
 			event: `{"hook_event_name":"SubagentStop","agent_name":"codebase-search","session_id":"mem-agent-endstate","transcript_path":"/tmp/transcript.jsonl"}`,
 		},
 		{
 			name:  "ml-export",
-			path:  "../../bin/gogent-ml-export",
+			path:  "../../bin/goyoke-ml-export",
 			event: `{"hook_event_name":"SessionEnd","session_id":"mem-ml-export"}`,
 		},
 	}
@@ -384,9 +384,9 @@ func BenchmarkMemoryUsage(b *testing.B) {
 
 // BenchmarkLatency_Percentiles measures p50, p95, p99 latencies
 func BenchmarkLatency_Percentiles(b *testing.B) {
-	binaryPath := "../../bin/gogent-validate"
+	binaryPath := "../../bin/goyoke-validate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		b.Skip("gogent-validate binary not found")
+		b.Skip("goyoke-validate binary not found")
 	}
 
 	projectDir := setupBenchmarkProject(b)
@@ -461,7 +461,7 @@ func setupBenchmarkProject(b *testing.B) string {
 	os.WriteFile(schemaPath, []byte(schema), 0644)
 
 	// Set tier to haiku
-	tierPath := filepath.Join(projectDir, ".gogent", "current-tier")
+	tierPath := filepath.Join(projectDir, ".goyoke", "current-tier")
 	os.MkdirAll(filepath.Dir(tierPath), 0755)
 	os.WriteFile(tierPath, []byte("haiku\n"), 0644)
 
@@ -471,7 +471,7 @@ func setupBenchmarkProject(b *testing.B) string {
 // Helper: Setup session metrics files
 func setupSessionMetricsFiles(b *testing.B, projectDir string) {
 	// Create tool counter logs
-	toolCounterPath := filepath.Join(projectDir, ".gogent", "tool-counter-read")
+	toolCounterPath := filepath.Join(projectDir, ".goyoke", "tool-counter-read")
 	os.MkdirAll(filepath.Dir(toolCounterPath), 0755)
 	os.WriteFile(toolCounterPath, []byte("x\nx\nx\n"), 0644)
 

@@ -12,15 +12,15 @@ import (
 	"github.com/Bucket-Chemist/goYoke/test/integration"
 )
 
-// TestExtendedRegression_LoadContext validates gogent-load-context vs load-routing-context.sh
+// TestExtendedRegression_LoadContext validates goyoke-load-context vs load-routing-context.sh
 // for SessionStart event handling and routing schema injection with deep context validation.
 func TestExtendedRegression_LoadContext(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests (from GOgent-000)")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests (from goYoke-000)")
 	}
 
-	goBinary := "../../bin/gogent-load-context"
+	goBinary := "../../bin/goyoke-load-context"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/load-routing-context.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -114,15 +114,15 @@ func TestExtendedRegression_LoadContext(t *testing.T) {
 	}
 }
 
-// TestExtendedRegression_AgentEndstate validates gogent-agent-endstate vs agent-endstate.sh
+// TestExtendedRegression_AgentEndstate validates goyoke-agent-endstate vs agent-endstate.sh
 // for SubagentStop event handling and agent result injection with endstate field validation.
 func TestExtendedRegression_AgentEndstate(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../bin/gogent-agent-endstate"
+	goBinary := "../../bin/goyoke-agent-endstate"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/agent-endstate.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -219,9 +219,9 @@ func TestExtendedRegression_AgentEndstate(t *testing.T) {
 // TestExtendedRegression_MLFieldPopulation validates ML field population consistency
 // across all event types for machine learning telemetry export.
 func TestExtendedRegression_MLFieldPopulation(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
 	projectDir := t.TempDir()
@@ -337,9 +337,9 @@ func TestExtendedRegression_MLFieldPopulation(t *testing.T) {
 // TestExtendedRegression_CollaborationFormat validates collaboration logging JSONL schema
 // consistency for multiagent workflow telemetry.
 func TestExtendedRegression_CollaborationFormat(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
 	projectDir := t.TempDir()
@@ -431,9 +431,9 @@ func TestExtendedRegression_CollaborationFormat(t *testing.T) {
 // TestExtendedRegression_ContextInjection validates SessionStart context injection pipeline
 // verifies load-routing-context flows through all dependent hooks consistently.
 func TestExtendedRegression_ContextInjection(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
 	projectDir := t.TempDir()
@@ -645,7 +645,7 @@ Continue with current approach.
 	os.WriteFile(handoffPath, []byte(handoffContent), 0644)
 
 	// Create tier file
-	tierPath := filepath.Join(projectDir, ".gogent", "current-tier")
+	tierPath := filepath.Join(projectDir, ".goyoke", "current-tier")
 	os.MkdirAll(filepath.Dir(tierPath), 0755)
 	os.WriteFile(tierPath, []byte("haiku\n"), 0644)
 }
@@ -653,7 +653,7 @@ Continue with current approach.
 // setupAgentEndstateFiles creates agent output files for SubagentStop tests
 func setupAgentEndstateFiles(t *testing.T, projectDir string, event *integration.EventEntry) {
 	// Create agent output directory
-	agentDir := filepath.Join(projectDir, ".gogent", "agent-output")
+	agentDir := filepath.Join(projectDir, ".goyoke", "agent-output")
 	os.MkdirAll(agentDir, 0755)
 
 	// Create agent result file
@@ -712,12 +712,12 @@ func setupExtendedRegressionProject(t *testing.T, projectDir string) {
 	memoryDir := filepath.Join(projectDir, ".claude", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
-	// Create gogent directory
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	// Create goyoke directory
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Set current tier
-	tierPath := filepath.Join(gogentDir, "current-tier")
+	tierPath := filepath.Join(goyokeDir, "current-tier")
 	os.WriteFile(tierPath, []byte("haiku\n"), 0644)
 
 	// Create convention files directory

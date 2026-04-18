@@ -124,7 +124,7 @@ func ReadAgentLifecycleLogs(sessionID string) ([]AgentLifecycleEvent, error) {
 }
 
 // getAgentLifecyclePath returns XDG-compliant agent lifecycle log path
-// Checks GOGENT_PROJECT_DIR first for test isolation, falls back to XDG paths
+// Checks GOYOKE_PROJECT_DIR first for test isolation, falls back to XDG paths
 func getAgentLifecyclePath() string {
 	return config.GetAgentLifecyclePathWithProjectDir()
 }

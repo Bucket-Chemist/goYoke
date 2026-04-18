@@ -11,14 +11,14 @@ import (
 )
 
 // runHoldLock is the --hold-lock daemon mode.
-// Invoked as: gogent-skill-guard --hold-lock <lock-path> <cc-pid> <ready-fd>
+// Invoked as: goyoke-skill-guard --hold-lock <lock-path> <cc-pid> <ready-fd>
 //
 // It acquires an exclusive flock on the lock file, signals readiness via the
 // ready pipe, then polls the CC process until it dies or a signal is received,
 // at which point it cleans up and exits.
 func runHoldLock() {
 	if len(os.Args) < 5 {
-		fmt.Fprintln(os.Stderr, "[skill-guard:lock-holder] ERROR: usage: gogent-skill-guard --hold-lock <lock-path> <cc-pid> <ready-fd>")
+		fmt.Fprintln(os.Stderr, "[skill-guard:lock-holder] ERROR: usage: goyoke-skill-guard --hold-lock <lock-path> <cc-pid> <ready-fd>")
 		os.Exit(1)
 	}
 

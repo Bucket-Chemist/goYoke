@@ -16,7 +16,7 @@ import (
 func TestListSessions_EmptyFile(t *testing.T) {
 	// Setup: Create empty handoffs.jsonl
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -26,9 +26,9 @@ func TestListSessions_EmptyFile(t *testing.T) {
 	}
 
 	// Set env to override getProjectDir()
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	// Capture stdout
 	oldStdout := os.Stdout
@@ -37,7 +37,7 @@ func TestListSessions_EmptyFile(t *testing.T) {
 
 	// Reset os.Args to prevent flag parsing errors
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list"}
+	os.Args = []string{"goyoke-archive", "list"}
 	defer func() { os.Args = oldArgs }()
 
 	// Execute listSessions
@@ -61,7 +61,7 @@ func TestListSessions_EmptyFile(t *testing.T) {
 func TestListSessions_MultipleHandoffs(t *testing.T) {
 	// Setup: Create handoffs.jsonl with 3 sessions
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -77,8 +77,8 @@ func TestListSessions_MultipleHandoffs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	// Capture stdout
 	oldStdout := os.Stdout
@@ -86,7 +86,7 @@ func TestListSessions_MultipleHandoffs(t *testing.T) {
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list"}
+	os.Args = []string{"goyoke-archive", "list"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -124,7 +124,7 @@ func TestListSessions_MultipleHandoffs(t *testing.T) {
 
 func TestShowSession_Found(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -135,8 +135,8 @@ func TestShowSession_Found(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	// Capture stdout
 	oldStdout := os.Stdout
@@ -165,7 +165,7 @@ func TestShowSession_Found(t *testing.T) {
 
 func TestStats_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -174,8 +174,8 @@ func TestStats_EmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -196,7 +196,7 @@ func TestStats_EmptyFile(t *testing.T) {
 
 func TestStats_MultipleHandoffs(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -212,8 +212,8 @@ func TestStats_MultipleHandoffs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -539,8 +539,8 @@ func TestPrintHelp(t *testing.T) {
 	output := buf.String()
 
 	// Verify key help content
-	if !strings.Contains(output, "gogent-archive") {
-		t.Error("Expected 'gogent-archive' in help output")
+	if !strings.Contains(output, "goyoke-archive") {
+		t.Error("Expected 'goyoke-archive' in help output")
 	}
 	if !strings.Contains(output, "list") {
 		t.Error("Expected 'list' subcommand in help")
@@ -566,10 +566,10 @@ func TestPrintHelp(t *testing.T) {
 }
 
 func TestGetProjectDir_FromEnv(t *testing.T) {
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
 	testDir := "/test/project/dir"
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	result := getProjectDir()
 
@@ -579,9 +579,9 @@ func TestGetProjectDir_FromEnv(t *testing.T) {
 }
 
 func TestGetProjectDir_Fallback(t *testing.T) {
-	oldEnv := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Unsetenv("GOGENT_PROJECT_DIR")
-	defer os.Setenv("GOGENT_PROJECT_DIR", oldEnv)
+	oldEnv := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Unsetenv("GOYOKE_PROJECT_DIR")
+	defer os.Setenv("GOYOKE_PROJECT_DIR", oldEnv)
 
 	// Should fall back to cwd
 	expectedDir, err := os.Getwd()
@@ -598,7 +598,7 @@ func TestGetProjectDir_Fallback(t *testing.T) {
 
 func TestListSessions_WithSinceFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -617,15 +617,15 @@ func TestListSessions_WithSinceFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list", "--since", "7d"}
+	os.Args = []string{"goyoke-archive", "list", "--since", "7d"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -647,7 +647,7 @@ func TestListSessions_WithSinceFlag(t *testing.T) {
 
 func TestListSessions_WithCleanFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -661,15 +661,15 @@ func TestListSessions_WithCleanFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list", "--clean"}
+	os.Args = []string{"goyoke-archive", "list", "--clean"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -691,7 +691,7 @@ func TestListSessions_WithCleanFlag(t *testing.T) {
 
 func TestListSessions_NoMatchesAfterFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -704,15 +704,15 @@ func TestListSessions_NoMatchesAfterFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list", "--clean"}
+	os.Args = []string{"goyoke-archive", "list", "--clean"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -731,7 +731,7 @@ func TestListSessions_NoMatchesAfterFilter(t *testing.T) {
 
 func TestStats_NoBreakdownsForCleanSessions(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -744,8 +744,8 @@ func TestStats_NoBreakdownsForCleanSessions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -770,7 +770,7 @@ func TestStats_NoBreakdownsForCleanSessions(t *testing.T) {
 
 func TestListSessions_WithBetweenFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -786,15 +786,15 @@ func TestListSessions_WithBetweenFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list", "--between", "2025-01-08,2025-01-12"}
+	os.Args = []string{"goyoke-archive", "list", "--between", "2025-01-08,2025-01-12"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -819,7 +819,7 @@ func TestListSessions_WithBetweenFlag(t *testing.T) {
 
 func TestListSessions_WithHasSharpEdgesFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -833,15 +833,15 @@ func TestListSessions_WithHasSharpEdgesFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list", "--has-sharp-edges"}
+	os.Args = []string{"goyoke-archive", "list", "--has-sharp-edges"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -862,7 +862,7 @@ func TestListSessions_WithHasSharpEdgesFlag(t *testing.T) {
 
 func TestListSessions_WithHasViolationsFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -876,15 +876,15 @@ func TestListSessions_WithHasViolationsFlag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list", "--has-violations"}
+	os.Args = []string{"goyoke-archive", "list", "--has-violations"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -974,7 +974,7 @@ func TestShowSession_RendersArtifacts(t *testing.T) {
 	// This test uses session.LoadAllHandoffs and session.RenderHandoffMarkdown directly
 	// to avoid os.Exit calls in showSession
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1022,7 +1022,7 @@ func TestShowSession_RendersArtifacts(t *testing.T) {
 
 func TestStats_WithMultipleErrorTypes(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1038,8 +1038,8 @@ func TestStats_WithMultipleErrorTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
@@ -1073,7 +1073,7 @@ func TestStats_WithMultipleErrorTypes(t *testing.T) {
 
 func TestListSessions_MetricsDisplayed(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1086,15 +1086,15 @@ func TestListSessions_MetricsDisplayed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "list"}
+	os.Args = []string{"goyoke-archive", "list"}
 	defer func() { os.Args = oldArgs }()
 
 	listSessions()
@@ -1130,7 +1130,7 @@ func TestListSessions_MetricsDisplayed(t *testing.T) {
 
 func TestListDecisions_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1139,15 +1139,15 @@ func TestListDecisions_EmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "decisions"}
+	os.Args = []string{"goyoke-archive", "decisions"}
 	defer func() { os.Args = oldArgs }()
 
 	listDecisions()
@@ -1165,7 +1165,7 @@ func TestListDecisions_EmptyFile(t *testing.T) {
 
 func TestListDecisions_MultipleDecisions(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1180,15 +1180,15 @@ func TestListDecisions_MultipleDecisions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "decisions"}
+	os.Args = []string{"goyoke-archive", "decisions"}
 	defer func() { os.Args = oldArgs }()
 
 	listDecisions()
@@ -1232,7 +1232,7 @@ func TestListDecisions_MultipleDecisions(t *testing.T) {
 
 func TestListDecisions_FilterByCategory(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1246,15 +1246,15 @@ func TestListDecisions_FilterByCategory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "decisions", "--category", "architecture"}
+	os.Args = []string{"goyoke-archive", "decisions", "--category", "architecture"}
 	defer func() { os.Args = oldArgs }()
 
 	listDecisions()
@@ -1278,7 +1278,7 @@ func TestListDecisions_FilterByCategory(t *testing.T) {
 
 func TestListDecisions_FilterByImpact(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1292,15 +1292,15 @@ func TestListDecisions_FilterByImpact(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "decisions", "--impact", "high"}
+	os.Args = []string{"goyoke-archive", "decisions", "--impact", "high"}
 	defer func() { os.Args = oldArgs }()
 
 	listDecisions()
@@ -1321,7 +1321,7 @@ func TestListDecisions_FilterByImpact(t *testing.T) {
 
 func TestListDecisions_FilterBySince(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1339,15 +1339,15 @@ func TestListDecisions_FilterBySince(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "decisions", "--since", "7d"}
+	os.Args = []string{"goyoke-archive", "decisions", "--since", "7d"}
 	defer func() { os.Args = oldArgs }()
 
 	listDecisions()
@@ -1370,7 +1370,7 @@ func TestListDecisions_FilterBySince(t *testing.T) {
 
 func TestListPreferences_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1379,15 +1379,15 @@ func TestListPreferences_EmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "preferences"}
+	os.Args = []string{"goyoke-archive", "preferences"}
 	defer func() { os.Args = oldArgs }()
 
 	listPreferences()
@@ -1405,7 +1405,7 @@ func TestListPreferences_EmptyFile(t *testing.T) {
 
 func TestListPreferences_MultiplePreferences(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1420,15 +1420,15 @@ func TestListPreferences_MultiplePreferences(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "preferences"}
+	os.Args = []string{"goyoke-archive", "preferences"}
 	defer func() { os.Args = oldArgs }()
 
 	listPreferences()
@@ -1472,7 +1472,7 @@ func TestListPreferences_MultiplePreferences(t *testing.T) {
 
 func TestListPreferences_FilterByCategory(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1486,15 +1486,15 @@ func TestListPreferences_FilterByCategory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "preferences", "--category", "routing"}
+	os.Args = []string{"goyoke-archive", "preferences", "--category", "routing"}
 	defer func() { os.Args = oldArgs }()
 
 	listPreferences()
@@ -1518,7 +1518,7 @@ func TestListPreferences_FilterByCategory(t *testing.T) {
 
 func TestListPreferences_FilterByScope(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1533,15 +1533,15 @@ func TestListPreferences_FilterByScope(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "preferences", "--scope", "global"}
+	os.Args = []string{"goyoke-archive", "preferences", "--scope", "global"}
 	defer func() { os.Args = oldArgs }()
 
 	listPreferences()
@@ -1570,7 +1570,7 @@ func TestListPreferences_FilterByScope(t *testing.T) {
 
 func TestShowPerformance_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1579,15 +1579,15 @@ func TestShowPerformance_EmptyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "performance"}
+	os.Args = []string{"goyoke-archive", "performance"}
 	defer func() { os.Args = oldArgs }()
 
 	showPerformance()
@@ -1605,7 +1605,7 @@ func TestShowPerformance_EmptyFile(t *testing.T) {
 
 func TestShowPerformance_MultipleMetrics(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1620,15 +1620,15 @@ func TestShowPerformance_MultipleMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "performance"}
+	os.Args = []string{"goyoke-archive", "performance"}
 	defer func() { os.Args = oldArgs }()
 
 	showPerformance()
@@ -1675,7 +1675,7 @@ func TestShowPerformance_MultipleMetrics(t *testing.T) {
 
 func TestShowPerformance_ByOperation(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1691,15 +1691,15 @@ func TestShowPerformance_ByOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "performance", "--by-operation"}
+	os.Args = []string{"goyoke-archive", "performance", "--by-operation"}
 	defer func() { os.Args = oldArgs }()
 
 	showPerformance()
@@ -1743,7 +1743,7 @@ func TestShowPerformance_ByOperation(t *testing.T) {
 
 func TestShowPerformance_SlowOnly(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1759,15 +1759,15 @@ func TestShowPerformance_SlowOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "performance", "--slow-only"}
+	os.Args = []string{"goyoke-archive", "performance", "--slow-only"}
 	defer func() { os.Args = oldArgs }()
 
 	showPerformance()
@@ -1799,7 +1799,7 @@ func TestShowPerformance_SlowOnly(t *testing.T) {
 
 func TestShowPerformance_FilterBySince(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1817,15 +1817,15 @@ func TestShowPerformance_FilterBySince(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Setenv("GOGENT_PROJECT_DIR", "")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Setenv("GOYOKE_PROJECT_DIR", "")
 
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "performance", "--since", "7d"}
+	os.Args = []string{"goyoke-archive", "performance", "--since", "7d"}
 	defer func() { os.Args = oldArgs }()
 
 	showPerformance()
@@ -1887,8 +1887,8 @@ func TestPrintHelp_IncludesNewSubcommands(t *testing.T) {
 	if !strings.Contains(output, "Decision Commands:") {
 		t.Error("Expected 'Decision Commands:' section in help")
 	}
-	if !strings.Contains(output, "gogent-archive decisions") {
-		t.Error("Expected 'gogent-archive decisions' in help")
+	if !strings.Contains(output, "goyoke-archive decisions") {
+		t.Error("Expected 'goyoke-archive decisions' in help")
 	}
 	if !strings.Contains(output, "--category architecture") {
 		t.Error("Expected decision category filter in help")
@@ -1901,8 +1901,8 @@ func TestPrintHelp_IncludesNewSubcommands(t *testing.T) {
 	if !strings.Contains(output, "Preference Commands:") {
 		t.Error("Expected 'Preference Commands:' section in help")
 	}
-	if !strings.Contains(output, "gogent-archive preferences") {
-		t.Error("Expected 'gogent-archive preferences' in help")
+	if !strings.Contains(output, "goyoke-archive preferences") {
+		t.Error("Expected 'goyoke-archive preferences' in help")
 	}
 	if !strings.Contains(output, "--scope project") {
 		t.Error("Expected preference scope filter in help")
@@ -1912,8 +1912,8 @@ func TestPrintHelp_IncludesNewSubcommands(t *testing.T) {
 	if !strings.Contains(output, "Performance Commands:") {
 		t.Error("Expected 'Performance Commands:' section in help")
 	}
-	if !strings.Contains(output, "gogent-archive performance") {
-		t.Error("Expected 'gogent-archive performance' in help")
+	if !strings.Contains(output, "goyoke-archive performance") {
+		t.Error("Expected 'goyoke-archive performance' in help")
 	}
 	if !strings.Contains(output, "--by-operation") {
 		t.Error("Expected performance by-operation flag in help")
@@ -1951,7 +1951,7 @@ func TestQueryDecisions_MissingFile(t *testing.T) {
 
 func TestQueryDecisions_WithLimit(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1991,7 +1991,7 @@ func TestQueryPreferences_MissingFile(t *testing.T) {
 
 func TestQueryPreferences_WithLimit(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -2031,7 +2031,7 @@ func TestQueryPerformance_MissingFile(t *testing.T) {
 
 func TestQueryPerformance_WithFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -2091,7 +2091,7 @@ func TestQueryPerformance_WithFilters(t *testing.T) {
 
 func TestQueryPerformanceSummary(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}

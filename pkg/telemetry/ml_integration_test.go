@@ -19,7 +19,7 @@ func TestToolEventWorkflow_LogAndAnalyze(t *testing.T) {
 	defer os.Unsetenv("XDG_DATA_HOME")
 
 	projectDir := filepath.Join(tmpDir, "project")
-	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(projectDir, ".goyoke", "memory"), 0755)
 
 	// Simulate multiple tool events with ML fields
 	events := []*routing.PostToolEvent{
@@ -266,7 +266,7 @@ func TestDualWrite_Integration(t *testing.T) {
 	defer os.Unsetenv("XDG_DATA_HOME")
 
 	projectDir := filepath.Join(tmpDir, "test-project")
-	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(projectDir, ".goyoke", "memory"), 0755)
 
 	// Test global path uses XDG_DATA_HOME
 	globalPath := config.GetMLToolEventsPath()
@@ -275,9 +275,9 @@ func TestDualWrite_Integration(t *testing.T) {
 	}
 
 	// Test project path structure
-	projectPath := filepath.Join(projectDir, ".gogent", "memory", "ml-tool-events.jsonl")
-	if !strings.Contains(projectPath, ".gogent/memory") {
-		t.Errorf("Project path should include .gogent/memory, got %s", projectPath)
+	projectPath := filepath.Join(projectDir, ".goyoke", "memory", "ml-tool-events.jsonl")
+	if !strings.Contains(projectPath, ".goyoke/memory") {
+		t.Errorf("Project path should include .goyoke/memory, got %s", projectPath)
 	}
 
 	// Create test event and log it
@@ -623,7 +623,7 @@ func TestProjectPathWrite(t *testing.T) {
 	defer os.Unsetenv("XDG_DATA_HOME")
 
 	projectDir := filepath.Join(tmpDir, "project")
-	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(projectDir, ".goyoke", "memory"), 0755)
 
 	event := &routing.PostToolEvent{
 		ToolName:      "Test",
@@ -637,7 +637,7 @@ func TestProjectPathWrite(t *testing.T) {
 	}
 
 	// Verify project file exists
-	projectPath := filepath.Join(projectDir, ".gogent", "memory", "ml-tool-events.jsonl")
+	projectPath := filepath.Join(projectDir, ".goyoke", "memory", "ml-tool-events.jsonl")
 	if _, err := os.Stat(projectPath); os.IsNotExist(err) {
 		t.Errorf("Project log file should exist at %s", projectPath)
 	}

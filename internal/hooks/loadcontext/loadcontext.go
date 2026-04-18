@@ -1,4 +1,4 @@
-// Package loadcontext implements the gogent-load-context hook.
+// Package loadcontext implements the goyoke-load-context hook.
 // It loads context at session start: routing schema, handoffs, git info.
 package loadcontext
 
@@ -21,9 +21,9 @@ func OutputError(message string) {
 	fmt.Println(session.GenerateErrorResponse(message))
 }
 
-// Main is the entrypoint for the gogent-load-context hook.
+// Main is the entrypoint for the goyoke-load-context hook.
 func Main() {
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	if projectDir == "" {
 		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
 	}
@@ -44,10 +44,10 @@ func Main() {
 
 	sessionDir, err := session.CreateSessionDir(projectDir, event.SessionID)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: session dir: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: session dir: %v\n", err)
 	} else {
 		if err := session.WriteCurrentSession(projectDir, sessionDir); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: write current-session: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: write current-session: %v\n", err)
 		}
 	}
 
@@ -55,12 +55,12 @@ func Main() {
 		guardPath := filepath.Join(sessionDir, "active-skill.json")
 		if _, err := os.Stat(guardPath); err == nil {
 			os.Remove(guardPath)
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Cleaned up stale active-skill.json\n")
+			fmt.Fprintf(os.Stderr, "[goyoke-load-context] Cleaned up stale active-skill.json\n")
 		}
 	}
 
 	if err := config.InitializeToolCounter(); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: Failed to initialize tool counter: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: Failed to initialize tool counter: %v\n", err)
 	}
 
 	ctx := &session.ContextComponents{
@@ -69,21 +69,21 @@ func Main() {
 	}
 
 	if summary, err := routing.LoadAndFormatSchemaSummary(); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: %v\n", err)
 	} else {
 		ctx.RoutingSummary = summary
 	}
 
 	if event.IsResume() {
 		if handoff, err := session.LoadHandoffSummary(projectDir); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: Failed to load handoff: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: Failed to load handoff: %v\n", err)
 		} else {
 			ctx.HandoffSummary = handoff
 		}
 	}
 
 	if pending, err := session.CheckPendingLearnings(projectDir); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-load-context] Warning: Failed to check pending learnings: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: Failed to check pending learnings: %v\n", err)
 	} else {
 		ctx.PendingLearnings = pending
 	}

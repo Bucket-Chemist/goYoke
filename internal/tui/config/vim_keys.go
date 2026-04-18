@@ -1,4 +1,4 @@
-// Package config provides the foundational theme system for the GOgent-Fortress TUI.
+// Package config provides the foundational theme system for the goYoke TUI.
 // This file defines vim-style keybindings as an optional overlay on the standard
 // keybinding set.  Vim mode is off by default and can be toggled via the settings
 // panel (TUI-062).

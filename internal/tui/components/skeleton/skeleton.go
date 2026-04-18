@@ -1,4 +1,4 @@
-// Package skeleton implements skeleton loading screens for the GOgent-Fortress
+// Package skeleton implements skeleton loading screens for the goYoke
 // TUI. Skeletons render a shimmering placeholder structure that visually
 // matches the target component's layout, reducing perceived loading time when
 // CLI initialisation takes longer than 500 ms.

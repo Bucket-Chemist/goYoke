@@ -22,21 +22,21 @@ const (
 )
 
 // tuiTranslation is injected as additionalContext when a Skill tool is invoked
-// in TUI mode (GOFORTRESS_MCP_CONFIG set). It tells the model to translate
+// in TUI mode (GOYOKE_MCP_CONFIG set). It tells the model to translate
 // Task() calls in SKILL.md instructions to the async spawn_agent + get_agent_result
 // pattern. This keeps SKILL.md files dual-purpose: they work with native Claude Code
-// (which has Task) and with the GOgent TUI (which replaces Task with MCP spawn_agent).
+// (which has Task) and with the goYoke TUI (which replaces Task with MCP spawn_agent).
 const tuiTranslation = `TOOL TRANSLATION (TUI mode active):
 
 The Task() tool is NOT available in this session. Wherever the skill instructions say Task(), use this two-step pattern instead:
 
-1. SPAWN: Call mcp__gofortress-interactive__spawn_agent with:
+1. SPAWN: Call mcp__goyoke-interactive__spawn_agent with:
    - agent: the agent ID from the prompt's "AGENT: xxx" line
    - description: same as Task description
    - prompt: same as Task prompt
    - model: same as Task model (e.g. "opus", "sonnet", "haiku")
 
-2. WAIT: Call mcp__gofortress-interactive__get_agent_result with:
+2. WAIT: Call mcp__goyoke-interactive__get_agent_result with:
    - agent_id: the agentId returned by spawn_agent
    - wait: true
    - timeout_ms: 600000
@@ -45,7 +45,7 @@ Key rules:
 - subagent_type from Task() is NOT needed for spawn_agent.
 - Task() was synchronous. spawn_agent is async — you MUST call get_agent_result to get the output.
 - For parallel spawns: call spawn_agent multiple times, then call get_agent_result for each.
-- Do NOT translate mcp__gofortress-interactive__team_run or any other mcp__gofortress-interactive__* calls. These already work natively. Only translate Task() calls.
+- Do NOT translate mcp__goyoke-interactive__team_run or any other mcp__goyoke-interactive__* calls. These already work natively. Only translate Task() calls.
 - If no "AGENT: xxx" line exists in the Task prompt, infer the agent ID from context: the Task description, the agent name mentioned in surrounding text, or the model tier (haiku tasks → "haiku-scout").`
 
 // ActiveSkill is a type alias for config.ActiveSkill.
@@ -58,11 +58,11 @@ type SkillGuardConfig struct {
 	TeamDirSuffix      string   `json:"team_dir_suffix"`
 }
 
-// isTUIMode returns true when the skill-guard is running inside the GOgent TUI.
-// Detection: the TUI sets GOFORTRESS_MCP_CONFIG to the path of the temporary
+// isTUIMode returns true when the skill-guard is running inside the goYoke TUI.
+// Detection: the TUI sets GOYOKE_MCP_CONFIG to the path of the temporary
 // MCP config file it generates for the claude subprocess.
 func isTUIMode() bool {
-	return os.Getenv("GOFORTRESS_MCP_CONFIG") != ""
+	return os.Getenv("GOYOKE_MCP_CONFIG") != ""
 }
 
 // emitSetupResponse prints the PreToolUse response for a Skill tool invocation.
@@ -73,7 +73,7 @@ func emitSetupResponse() {
 		resp := map[string]string{"additionalContext": tuiTranslation}
 		data, err := json.Marshal(resp)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "[gogent-skill-guard] Warning: failed to marshal translation response:", err)
+			fmt.Fprintln(os.Stderr, "[goyoke-skill-guard] Warning: failed to marshal translation response:", err)
 			fmt.Println("{}")
 			return
 		}
@@ -92,7 +92,7 @@ func main() {
 
 	event, err := routing.ParseToolEvent(os.Stdin, defaultTimeout)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "[gogent-skill-guard] Warning: parse error:", err)
+		fmt.Fprintln(os.Stderr, "[goyoke-skill-guard] Warning: parse error:", err)
 		fmt.Println("{}")
 		return
 	}
@@ -121,7 +121,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 	sessionDir := resolveSessionDir()
 
 	if sessionID == "" {
-		fmt.Fprintln(os.Stderr, "[gogent-skill-guard] Warning: empty session_id, falling back to legacy guard path")
+		fmt.Fprintln(os.Stderr, "[goyoke-skill-guard] Warning: empty session_id, falling back to legacy guard path")
 		guardPath := filepath.Join(sessionDir, guardFileName)
 		handleSetupModeWithConfig(skillName, guardConfig, sessionDir, guardPath)
 		return
@@ -151,7 +151,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 	teamDir := filepath.Join(sessionDir, "teams",
 		fmt.Sprintf("%d.%s", timestamp, guardConfig.TeamDirSuffix))
 	if err := os.MkdirAll(teamDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to create team dir: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to create team dir: %v\n", err)
 		emitSetupResponse()
 		return
 	}
@@ -159,13 +159,13 @@ func handleSetupMode(event *routing.ToolEvent) {
 	// Get CC PID (our parent — the Claude Code process).
 	ccPID := os.Getppid()
 	if ccPID == 1 {
-		fmt.Fprintln(os.Stderr, "[gogent-skill-guard] Warning: parent PID is 1 (init), may be running in container")
+		fmt.Fprintln(os.Stderr, "[goyoke-skill-guard] Warning: parent PID is 1 (init), may be running in container")
 	}
 
 	// Create pipe for lock-holder readiness signal.
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to create pipe: %v, continuing unguarded\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to create pipe: %v, continuing unguarded\n", err)
 		writeSessionGuard(skillName, guardConfig, teamDir, sessionID, guardPath, 0, ccPID)
 		emitSetupResponse()
 		return
@@ -180,7 +180,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	if err := cmd.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to start lock-holder: %v, continuing unguarded\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to start lock-holder: %v, continuing unguarded\n", err)
 		writePipe.Close()
 		readPipe.Close()
 		writeSessionGuard(skillName, guardConfig, teamDir, sessionID, guardPath, 0, ccPID)
@@ -202,7 +202,7 @@ func handleSetupMode(event *routing.ToolEvent) {
 	case <-ready:
 		// Lock holder signalled readiness.
 	case <-time.After(2 * time.Second):
-		fmt.Fprintln(os.Stderr, "[gogent-skill-guard] Warning: lock-holder readiness timeout, continuing unguarded")
+		fmt.Fprintln(os.Stderr, "[goyoke-skill-guard] Warning: lock-holder readiness timeout, continuing unguarded")
 		holderPID = 0
 	}
 	readPipe.Close()
@@ -226,11 +226,11 @@ func writeSessionGuard(skillName string, guardConfig *SkillGuardConfig, teamDir,
 	}
 	data, err := json.MarshalIndent(guard, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to marshal guard file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to marshal guard file: %v\n", err)
 		return
 	}
 	if err := os.WriteFile(guardPath, data, 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to write guard file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to write guard file: %v\n", err)
 	}
 }
 
@@ -247,7 +247,7 @@ func handleSetupModeWithConfig(skillName string, guardConfig *SkillGuardConfig, 
 	teamDir := filepath.Join(sessionDir, "teams",
 		fmt.Sprintf("%d.%s", timestamp, guardConfig.TeamDirSuffix))
 	if err := os.MkdirAll(teamDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to create team dir: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to create team dir: %v\n", err)
 		emitSetupResponse()
 		return
 	}
@@ -261,12 +261,12 @@ func handleSetupModeWithConfig(skillName string, guardConfig *SkillGuardConfig, 
 	}
 	data, err := json.MarshalIndent(guard, "", "  ")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to marshal guard file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to marshal guard file: %v\n", err)
 		emitSetupResponse()
 		return
 	}
 	if err := os.WriteFile(guardPath, data, 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Warning: failed to write guard file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: failed to write guard file: %v\n", err)
 	}
 
 	emitSetupResponse()
@@ -348,19 +348,19 @@ func checkAllowList(toolName string, guard *config.ActiveSkill) string {
 
 	var buf strings.Builder
 	if err := resp.Marshal(&buf); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-skill-guard] Error: marshal failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Error: marshal failed: %v\n", err)
 		return "{}"
 	}
 	return buf.String()
 }
 
 func resolveSessionDir() string {
-	if dir := os.Getenv("GOGENT_SESSION_DIR"); dir != "" {
+	if dir := os.Getenv("GOYOKE_SESSION_DIR"); dir != "" {
 		return dir
 	}
 
 	// Try project dir resolution chain.
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	if projectDir == "" {
 		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
 	}
@@ -373,7 +373,7 @@ func resolveSessionDir() string {
 			return strings.TrimSpace(string(data))
 		}
 	}
-	return filepath.Join(".gogent", "sessions", "unknown")
+	return filepath.Join(".goyoke", "sessions", "unknown")
 }
 
 func extractSkillName(toolInput map[string]interface{}) string {

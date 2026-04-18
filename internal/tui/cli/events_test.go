@@ -49,7 +49,7 @@ func TestParseCLIEvent(t *testing.T) {
 				"cwd":"/home/user/project",
 				"session_id":"sess-001",
 				"tools":["Task","Bash","Read","Write","Edit","Glob","Grep"],
-				"mcp_servers":[{"name":"gofortress-poc","status":"connected"}],
+				"mcp_servers":[{"name":"goyoke-poc","status":"connected"}],
 				"model":"claude-opus-4-6[1m]",
 				"permissionMode":"acceptEdits",
 				"apiKeySource":"none",
@@ -72,7 +72,7 @@ func TestParseCLIEvent(t *testing.T) {
 				assert.Equal(t, "2.1.76", ev.ClaudeCodeVersion)
 				assert.Equal(t, "off", ev.FastModeState)
 				require.Len(t, ev.MCPServers, 1)
-				assert.Equal(t, "gofortress-poc", ev.MCPServers[0].Name)
+				assert.Equal(t, "goyoke-poc", ev.MCPServers[0].Name)
 				assert.Equal(t, "connected", ev.MCPServers[0].Status)
 				tools := ev.ToolNames()
 				assert.Equal(t, []string{"Task", "Bash", "Read", "Write", "Edit", "Glob", "Grep"}, tools)

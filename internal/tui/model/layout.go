@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains layout constants, dimension computation, and rendering
 // helpers for the Lipgloss-based terminal layout.
 package model

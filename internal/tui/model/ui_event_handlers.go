@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all UI and bridge event handlers for AppModel's Update
 // method, plus the session persistence helper. Extracted from app.go as part
 // of TUI-043.
@@ -301,7 +301,7 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 			}
 
 			// Restart the CLI driver. SIGINT to the process group kills
-			// both the claude subprocess and gofortress-mcp (Go default
+			// both the claude subprocess and goyoke-mcp (Go default
 			// SIGINT = exit). The old driver is in DriverDead state and
 			// Start() requires DriverIdle, so we must create a fresh one.
 			// This mirrors the provider_switch.go and perm_mode.go patterns.
@@ -547,14 +547,14 @@ func (m AppModel) handleToastMsg(msg ToastMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleCWDChanged applies the new working directory: calls os.Chdir, sets
-// the GOGENT_CWD env var (read by spawner.go for cmd.Dir), and updates the
+// the GOYOKE_CWD env var (read by spawner.go for cmd.Dir), and updates the
 // status line display.
 func (m AppModel) handleCWDChanged(msg CWDChangedMsg) (tea.Model, tea.Cmd) {
 	if err := os.Chdir(msg.Path); err != nil {
 		log.Printf("[cwd] chdir failed: %v", err)
 		return m, nil
 	}
-	os.Setenv("GOGENT_CWD", msg.Path)
+	os.Setenv("GOYOKE_CWD", msg.Path)
 	m.statusLine.CWD = msg.Path
 	log.Printf("[cwd] changed to %s", msg.Path)
 	return m, func() tea.Msg {

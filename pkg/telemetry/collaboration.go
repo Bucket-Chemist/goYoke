@@ -86,7 +86,7 @@ func LogCollaboration(collab *AgentCollaboration) error {
 }
 
 // getGlobalCollaborationPath returns XDG-compliant global collaboration log path
-// Checks GOGENT_PROJECT_DIR first for test isolation, falls back to XDG paths
+// Checks GOYOKE_PROJECT_DIR first for test isolation, falls back to XDG paths
 func getGlobalCollaborationPath() string {
 	return config.GetCollaborationsPathWithProjectDir()
 }

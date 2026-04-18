@@ -14,7 +14,7 @@ var ValidTiers = []string{
 	"opus",
 }
 
-// GetCurrentTier reads the current tier from ~/.gogent/current-tier.
+// GetCurrentTier reads the current tier from ~/.goyoke/current-tier.
 // Returns "sonnet" as fallback if file doesn't exist or is empty.
 // Validates tier value against routing schema.
 //

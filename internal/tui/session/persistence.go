@@ -1,6 +1,6 @@
-// Package session provides session persistence for the GOgent-Fortress TUI.
+// Package session provides session persistence for the goYoke TUI.
 // It handles saving and loading session metadata, conversation history, and
-// managing the session directory layout under ~/.gogent/sessions/.
+// managing the session directory layout under ~/.goyoke/sessions/.
 //
 // All writes are atomic (temp file + rename) to prevent partial writes on
 // crash or power loss. Missing files are handled gracefully (nil, nil return).
@@ -86,10 +86,10 @@ func NewStore(baseDir string) *Store {
 }
 
 // DefaultBaseDir returns the canonical base directory for session persistence.
-// Priority: GOGENT_CONFIG_DIR → CLAUDE_CONFIG_DIR → $HOME/.gogent/sessions.
+// Priority: GOYOKE_CONFIG_DIR → CLAUDE_CONFIG_DIR → $HOME/.goyoke/sessions.
 // It panics if HOME is not set (should never happen on a fully initialised system).
 func DefaultBaseDir() string {
-	if configDir := os.Getenv("GOGENT_CONFIG_DIR"); configDir != "" {
+	if configDir := os.Getenv("GOYOKE_CONFIG_DIR"); configDir != "" {
 		return filepath.Join(configDir, "sessions")
 	}
 	if configDir := os.Getenv("CLAUDE_CONFIG_DIR"); configDir != "" {
@@ -99,7 +99,7 @@ func DefaultBaseDir() string {
 	if home == "" {
 		panic("session: HOME environment variable is not set")
 	}
-	return filepath.Join(home, ".gogent", "sessions")
+	return filepath.Join(home, ".goyoke", "sessions")
 }
 
 // NewSessionID generates a time-stamped unique session identifier with the
@@ -192,9 +192,9 @@ func (s *Store) SaveSession(data *SessionData) error {
 // SetupSessionDir creates the session directory for sessionID and configures
 // two filesystem conveniences:
 //
-//  1. {gogentDir}/current-session — a plain text file containing the absolute
+//  1. {goyokeDir}/current-session — a plain text file containing the absolute
 //     path to the session directory (overwrites any existing file).
-//  2. {gogentDir}/tmp — a symbolic link pointing to the session directory
+//  2. {goyokeDir}/tmp — a symbolic link pointing to the session directory
 //     (removes and recreates any existing symlink or directory at that path).
 //
 // Returns the absolute path to the created session directory, or an error if
@@ -209,24 +209,24 @@ func (s *Store) SetupSessionDir(sessionID string) (string, error) {
 		return "", fmt.Errorf("setup session dir %q: create session dir: %w", sessionID, err)
 	}
 
-	// gogentDir is the parent of baseDir, e.g. ~/.gogent when baseDir is
-	// ~/.gogent/sessions.
-	gogentDir := filepath.Dir(s.baseDir)
+	// goyokeDir is the parent of baseDir, e.g. ~/.goyoke when baseDir is
+	// ~/.goyoke/sessions.
+	goyokeDir := filepath.Dir(s.baseDir)
 
 	// Write current-session marker file.
-	markerPath := filepath.Join(gogentDir, "current-session")
+	markerPath := filepath.Join(goyokeDir, "current-session")
 	if err := os.WriteFile(markerPath, []byte(sessionDir), 0o644); err != nil {
 		return "", fmt.Errorf("setup session dir %q: write current-session marker: %w", sessionID, err)
 	}
 
-	// Create/update .gogent/tmp symlink pointing to the session directory.
-	tmpLink := filepath.Join(gogentDir, "tmp")
+	// Create/update .goyoke/tmp symlink pointing to the session directory.
+	tmpLink := filepath.Join(goyokeDir, "tmp")
 
 	// Remove any existing symlink or directory at the tmp path so we can
 	// re-create it unconditionally.  os.Remove handles symlinks and empty
 	// dirs.  Fall back to os.RemoveAll for non-empty directories left by
 	// previous sessions, Claude Code, or other tools that wrote into
-	// ~/.gogent/tmp/ when it was a real directory rather than a symlink.
+	// ~/.goyoke/tmp/ when it was a real directory rather than a symlink.
 	if err := os.Remove(tmpLink); err != nil && !os.IsNotExist(err) {
 		if err2 := os.RemoveAll(tmpLink); err2 != nil {
 			return "", fmt.Errorf("setup session dir %q: remove existing tmp: %w", sessionID, err2)

@@ -159,8 +159,8 @@ func TestExtractIntent_MultipleQuestions(t *testing.T) {
 
 func TestAppendIntent_CreatesFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -178,7 +178,7 @@ func TestAppendIntent_CreatesFile(t *testing.T) {
 	}
 
 	// Verify file exists
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected file to be created")
 	}
@@ -224,8 +224,8 @@ func TestAppendIntent_CreatesFile(t *testing.T) {
 
 func TestAppendIntent_MultipleWrites(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Write multiple intents
 	for i := 0; i < 3; i++ {
@@ -245,7 +245,7 @@ func TestAppendIntent_MultipleWrites(t *testing.T) {
 	}
 
 	// Verify file contains all intents
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	data, err := os.ReadFile(intentsPath)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -271,8 +271,8 @@ func TestAppendIntent_MultipleWrites(t *testing.T) {
 
 func TestAppendIntent_FilePermissions(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -290,7 +290,7 @@ func TestAppendIntent_FilePermissions(t *testing.T) {
 	}
 
 	// Verify file permissions are 0644
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	info, err := os.Stat(intentsPath)
 	if err != nil {
 		t.Fatalf("Failed to stat file: %v", err)
@@ -305,8 +305,8 @@ func TestAppendIntent_FilePermissions(t *testing.T) {
 
 func TestRun_Integration(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Simulate full hook input via environment manipulation
 	// Note: This test verifies the integration but uses direct function calls
@@ -339,7 +339,7 @@ func TestRun_Integration(t *testing.T) {
 	}
 
 	// Verify end-to-end result
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	data, err := os.ReadFile(intentsPath)
 	if err != nil {
 		t.Fatalf("Integration test: failed to read result: %v", err)
@@ -367,8 +367,8 @@ func TestRun_Integration(t *testing.T) {
 // TestRun_ValidAskUserQuestion verifies successful extraction and append via run().
 func TestRun_ValidAskUserQuestion(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Simulate stdin with valid AskUserQuestion hook input
 	hookInput := HookInput{
@@ -421,7 +421,7 @@ func TestRun_ValidAskUserQuestion(t *testing.T) {
 	}
 
 	// Verify file was created
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected intents file to be created")
 	}
@@ -439,8 +439,8 @@ func TestRun_ValidAskUserQuestion(t *testing.T) {
 // TestRun_NonAskUserTool verifies graceful skip for non-AskUserQuestion tools.
 func TestRun_NonAskUserTool(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Simulate stdin with different tool
 	hookInput := HookInput{
@@ -485,7 +485,7 @@ func TestRun_NonAskUserTool(t *testing.T) {
 	}
 
 	// Verify NO file was created
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); !os.IsNotExist(err) {
 		t.Error("Expected no intents file for non-AskUserQuestion tool")
 	}
@@ -565,8 +565,8 @@ func TestRun_EmptyStdin(t *testing.T) {
 // CRITICAL: Race detector MUST be clean.
 func TestAppendIntent_ConcurrentWrites(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	const goroutines = 20
 	var wg sync.WaitGroup
@@ -595,7 +595,7 @@ func TestAppendIntent_ConcurrentWrites(t *testing.T) {
 	wg.Wait()
 
 	// Verify all writes succeeded
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	data, err := os.ReadFile(intentsPath)
 	if err != nil {
 		t.Fatalf("Failed to read intents file: %v", err)
@@ -631,8 +631,8 @@ func TestAppendIntent_MissingParentDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Intentionally use a non-existent project dir
 	projectDir := filepath.Join(tmpDir, "nonexistent", "project")
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -650,7 +650,7 @@ func TestAppendIntent_MissingParentDirectory(t *testing.T) {
 	}
 
 	// Verify file exists at correct path
-	intentsPath := filepath.Join(projectDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(projectDir, ".goyoke", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected directory and file to be created")
 	}
@@ -665,8 +665,8 @@ func TestAppendIntent_MissingParentDirectory(t *testing.T) {
 // TestAppendIntent_AppendExistingFile verifies append (not overwrite) behavior.
 func TestAppendIntent_AppendExistingFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Write first intent
 	intent1 := &session.UserIntent{
@@ -699,7 +699,7 @@ func TestAppendIntent_AppendExistingFile(t *testing.T) {
 	}
 
 	// Verify both intents exist in file
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	data, _ := os.ReadFile(intentsPath)
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 
@@ -718,8 +718,8 @@ func TestAppendIntent_AppendExistingFile(t *testing.T) {
 // TestAppendIntent_AtomicWrite verifies write integrity under concurrent stress.
 func TestAppendIntent_AtomicWrite(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	const iterations = 50
 	var wg sync.WaitGroup
@@ -745,7 +745,7 @@ func TestAppendIntent_AtomicWrite(t *testing.T) {
 	wg.Wait()
 
 	// Verify file integrity
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	data, _ := os.ReadFile(intentsPath)
 	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
 
@@ -775,15 +775,15 @@ func TestAppendIntent_ReadOnlyDirectory(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Make directory read-only
 	os.Chmod(memoryDir, 0555)
 	defer os.Chmod(memoryDir, 0755) // Restore for cleanup
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -808,8 +808,8 @@ func TestAppendIntent_ReadOnlyDirectory(t *testing.T) {
 // TestAppendIntent_EmptyQuestion verifies handling of edge case: empty question.
 func TestAppendIntent_EmptyQuestion(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -828,7 +828,7 @@ func TestAppendIntent_EmptyQuestion(t *testing.T) {
 	}
 
 	// Verify file created
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	data, _ := os.ReadFile(intentsPath)
 
 	var parsed session.UserIntent
@@ -844,7 +844,7 @@ func TestAppendIntent_EmptyQuestion(t *testing.T) {
 	}
 }
 
-// TestAppendIntent_FallbackToCwd verifies fallback to cwd when GOGENT_PROJECT_DIR unset.
+// TestAppendIntent_FallbackToCwd verifies fallback to cwd when GOYOKE_PROJECT_DIR unset.
 func TestAppendIntent_FallbackToCwd(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -853,8 +853,8 @@ func TestAppendIntent_FallbackToCwd(t *testing.T) {
 	os.Chdir(tmpDir)
 	defer os.Chdir(oldWd)
 
-	// Ensure GOGENT_PROJECT_DIR is NOT set
-	os.Unsetenv("GOGENT_PROJECT_DIR")
+	// Ensure GOYOKE_PROJECT_DIR is NOT set
+	os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -872,7 +872,7 @@ func TestAppendIntent_FallbackToCwd(t *testing.T) {
 	}
 
 	// Verify file created in cwd
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	if _, err := os.Stat(intentsPath); os.IsNotExist(err) {
 		t.Fatal("Expected intents file in cwd")
 	}
@@ -887,13 +887,13 @@ func TestAppendIntent_FallbackToCwd(t *testing.T) {
 // TestAppendIntent_GetwdError verifies error handling when getwd fails.
 func TestAppendIntent_GetwdError(t *testing.T) {
 	// This test is hard to trigger reliably, but we can at least
-	// verify the code path exists by ensuring GOGENT_PROJECT_DIR works
+	// verify the code path exists by ensuring GOYOKE_PROJECT_DIR works
 	// (the error branch is for os.Getwd() failure which is rare)
 
 	// Use a valid project dir to verify normal operation
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	intent := &session.UserIntent{
 		Timestamp:   1705000000,
@@ -918,13 +918,13 @@ func TestRun_AppendIntentError(t *testing.T) {
 	}
 
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 	os.Chmod(memoryDir, 0555) // Make read-only to cause append error
 	defer os.Chmod(memoryDir, 0755)
 
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Simulate valid hook input
 	hookInput := HookInput{

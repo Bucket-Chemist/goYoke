@@ -172,8 +172,8 @@ func TestSaveSession_UpdatesLastUsed(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestSetupSessionDir_Creates(t *testing.T) {
-	// We need a writable parent to simulate ~/.gogent, so we create a temp dir
-	// structured as: tmpRoot/sessions (= baseDir) with tmpRoot as gogentDir.
+	// We need a writable parent to simulate ~/.goyoke, so we create a temp dir
+	// structured as: tmpRoot/sessions (= baseDir) with tmpRoot as goyokeDir.
 	tmpRoot := t.TempDir()
 	baseDir := filepath.Join(tmpRoot, "sessions")
 	store := NewStore(baseDir)
@@ -257,11 +257,11 @@ func TestSetupSessionDir_EmptyID(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNewStore_EmptyBaseDirUsesDefault(t *testing.T) {
-	t.Setenv("GOGENT_CONFIG_DIR", "")
+	t.Setenv("GOYOKE_CONFIG_DIR", "")
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
 	store := NewStore("")
 	assert.NotEmpty(t, store.baseDir)
-	assert.Contains(t, store.baseDir, ".gogent")
+	assert.Contains(t, store.baseDir, ".goyoke")
 	assert.Contains(t, store.baseDir, "sessions")
 }
 
@@ -282,11 +282,11 @@ func TestSessionDir_ReturnsExpectedPath(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDefaultBaseDir(t *testing.T) {
-	t.Setenv("GOGENT_CONFIG_DIR", "")
+	t.Setenv("GOYOKE_CONFIG_DIR", "")
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
 	dir := DefaultBaseDir()
 	assert.NotEmpty(t, dir)
-	assert.Contains(t, dir, ".gogent")
+	assert.Contains(t, dir, ".goyoke")
 	assert.Contains(t, dir, "sessions")
 }
 

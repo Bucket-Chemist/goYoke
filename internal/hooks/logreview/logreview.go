@@ -1,4 +1,4 @@
-// Package logreview implements the gogent-log-review hook.
+// Package logreview implements the goyoke-log-review hook.
 // It reads a review summary from stdin and logs findings to the telemetry system.
 package logreview
 
@@ -38,7 +38,7 @@ type LogOutput struct {
 	InvalidEdgeIDs []string `json:"invalid_edge_ids,omitempty"`
 }
 
-// Main is the entrypoint for the gogent-log-review hook.
+// Main is the entrypoint for the goyoke-log-review hook.
 func Main() {
 	// Read JSON from stdin
 	var input ReviewInput

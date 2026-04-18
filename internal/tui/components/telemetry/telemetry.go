@@ -1,10 +1,10 @@
 // Package telemetry implements the routing-decisions telemetry panel for the
-// GOgent-Fortress TUI. It reads the routing-decisions JSONL file and renders
+// goYoke TUI. It reads the routing-decisions JSONL file and renders
 // the last 50 entries in a scrollable viewport.
 //
 // Loading is performed via a tea.Cmd (LoadEntriesCmd) so no I/O occurs in
 // View. The component follows the Bubbletea widget pattern used by other
-// GOgent-Fortress panels.
+// goYoke panels.
 package telemetry
 
 import (

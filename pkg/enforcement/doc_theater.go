@@ -9,8 +9,8 @@ import (
 // or the content is clean.
 //
 // This function integrates:
-// - ToolEvent helper methods (GOgent-080) for event classification and content extraction
-// - PatternDetector (GOgent-081) for theater pattern detection
+// - ToolEvent helper methods (goYoke-080) for event classification and content extraction
+// - PatternDetector (goYoke-081) for theater pattern detection
 //
 // Filtering logic:
 //  1. Non-write operations (Read, Glob, etc.) → return nil

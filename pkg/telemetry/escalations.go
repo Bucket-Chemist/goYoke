@@ -62,7 +62,7 @@ var ValidOutcomes = map[string]bool{
 
 // GetEscalationsLogPath returns the global escalations log path.
 func GetEscalationsLogPath() string {
-	baseDir := config.GetGOgentDir()
+	baseDir := config.GetgoYokeDir()
 	return filepath.Join(baseDir, "escalations.jsonl")
 }
 

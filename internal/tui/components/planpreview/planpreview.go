@@ -1,5 +1,5 @@
 // Package planpreview implements the plan preview panel for the
-// GOgent-Fortress TUI. It renders a Markdown implementation plan in a
+// goYoke TUI. It renders a Markdown implementation plan in a
 // scrollable viewport using Glamour.
 //
 // The component is display-only: markdown rendering is performed in

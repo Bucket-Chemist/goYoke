@@ -1,5 +1,5 @@
 // Package state provides shared, thread-safe state containers for the
-// GOgent-Fortress TUI.
+// goYoke TUI.
 //
 // This file defines the SearchResult and SearchSource types used by the
 // unified cross-panel fuzzy search overlay (TUI-059).  Placing these types

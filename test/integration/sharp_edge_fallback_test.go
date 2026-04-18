@@ -19,14 +19,14 @@ func itoa(i int64) string {
 	return strconv.FormatInt(i, 10)
 }
 
-// TestFallback_MissingProjectDir tests behavior when GOGENT_PROJECT_DIR not set
+// TestFallback_MissingProjectDir tests behavior when GOYOKE_PROJECT_DIR not set
 func TestFallback_MissingProjectDir(t *testing.T) {
-	// Unset GOGENT_PROJECT_DIR if it exists
-	originalDir := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Unsetenv("GOGENT_PROJECT_DIR")
+	// Unset GOYOKE_PROJECT_DIR if it exists
+	originalDir := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Unsetenv("GOYOKE_PROJECT_DIR")
 	defer func() {
 		if originalDir != "" {
-			os.Setenv("GOGENT_PROJECT_DIR", originalDir)
+			os.Setenv("GOYOKE_PROJECT_DIR", originalDir)
 		}
 	}()
 
@@ -46,7 +46,7 @@ func TestFallback_MissingProjectDir(t *testing.T) {
 	}
 
 	err := memory.LogFailure(info)
-	assert.NoError(t, err, "Should work without GOGENT_PROJECT_DIR when path is explicit")
+	assert.NoError(t, err, "Should work without GOYOKE_PROJECT_DIR when path is explicit")
 }
 
 // TestFallback_NonExistentDir tests behavior when project dir doesn't exist
@@ -207,12 +207,12 @@ func TestFallback_InvalidEnvironmentVariables(t *testing.T) {
 		envVar   string
 		envValue string
 	}{
-		{"invalid_max_failures", "GOGENT_MAX_FAILURES", "invalid"},
-		{"negative_max_failures", "GOGENT_MAX_FAILURES", "-1"},
-		{"zero_max_failures", "GOGENT_MAX_FAILURES", "0"},
-		{"invalid_window", "GOGENT_FAILURE_WINDOW", "not_a_number"},
-		{"negative_window", "GOGENT_FAILURE_WINDOW", "-100"},
-		{"zero_window", "GOGENT_FAILURE_WINDOW", "0"},
+		{"invalid_max_failures", "GOYOKE_MAX_FAILURES", "invalid"},
+		{"negative_max_failures", "GOYOKE_MAX_FAILURES", "-1"},
+		{"zero_max_failures", "GOYOKE_MAX_FAILURES", "0"},
+		{"invalid_window", "GOYOKE_FAILURE_WINDOW", "not_a_number"},
+		{"negative_window", "GOYOKE_FAILURE_WINDOW", "-100"},
+		{"zero_window", "GOYOKE_FAILURE_WINDOW", "0"},
 	}
 
 	for _, tc := range testCases {

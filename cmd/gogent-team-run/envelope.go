@@ -318,12 +318,12 @@ func buildPromptEnvelope(teamDir string, member *Member, workflowType string, co
 	// Add capabilities notice per TC-007 nesting level policy
 	builder.WriteString(`## Your Capabilities
 
-You are spawned via gogent-team-run at nesting level 2.
+You are spawned via goyoke-team-run at nesting level 2.
 
 **Available delegation:**
 - Task(model: "haiku") — For mechanical tasks (file search, pattern extraction)
 - Task(model: "sonnet") — For focused analysis or implementation
-- Task(model: "opus") — BLOCKED by gogent-validate
+- Task(model: "opus") — BLOCKED by goyoke-validate
 
 Always specify model explicitly in Task() calls. If omitted, the CLI defaults to the
 session model, which may be Opus — causing an unintended block.

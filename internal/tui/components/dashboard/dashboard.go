@@ -1,5 +1,5 @@
 // Package dashboard implements the session dashboard panel for the
-// GOgent-Fortress TUI. It displays a summary of key session metrics grouped
+// goYoke TUI. It displays a summary of key session metrics grouped
 // into collapsible sections with keyboard navigation.
 //
 // The component supports expand/collapse per section via Up/Down/Enter when

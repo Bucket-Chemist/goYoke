@@ -20,14 +20,14 @@ const (
 )
 
 // getLogPath returns the path for validation logs.
-// Uses XDG_DATA_HOME/gogent-fortress/validate.log or falls back to ~/.local/share/
+// Uses XDG_DATA_HOME/goyoke-fortress/validate.log or falls back to ~/.local/share/
 func getLogPath() string {
 	dataHome := os.Getenv("XDG_DATA_HOME")
 	if dataHome == "" {
 		home, _ := os.UserHomeDir()
 		dataHome = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(dataHome, "gogent-fortress", "validate.log")
+	return filepath.Join(dataHome, "goyoke-fortress", "validate.log")
 }
 
 // logValidation writes a validation event to the log file for visibility.
@@ -64,8 +64,8 @@ func logValidation(sessionID, agent, model, decision, reason string) {
 
 func main() {
 	// Get project directory from environment or current directory
-	// Priority: GOGENT_PROJECT_DIR > CLAUDE_PROJECT_DIR > cwd
-	projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+	// Priority: GOYOKE_PROJECT_DIR > CLAUDE_PROJECT_DIR > cwd
+	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 	if projectDir == "" {
 		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
 	}
@@ -119,7 +119,7 @@ func main() {
 		}
 	}
 
-	// Log routing decision for Task() calls (GOgent-087e)
+	// Log routing decision for Task() calls (goYoke-087e)
 	var decisionID string
 	if taskInput, err := routing.ParseTaskInput(event.ToolInput); err == nil {
 		decision := telemetry.NewRoutingDecision(
@@ -131,10 +131,10 @@ func main() {
 		decisionID = decision.DecisionID // Capture for lifecycle correlation
 		if logErr := telemetry.LogRoutingDecision(decision); logErr != nil {
 			// Non-blocking: log warning but continue execution
-			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log routing decision: %v\n", logErr)
+			fmt.Fprintf(os.Stderr, "[goyoke-validate] Warning: Failed to log routing decision: %v\n", logErr)
 		}
 
-		// Emit lifecycle spawn event for TUI real-time tracking (GOgent-109)
+		// Emit lifecycle spawn event for TUI real-time tracking (goYoke-109)
 		lifecycle := telemetry.NewAgentLifecycleEvent(
 			event.SessionID,
 			"spawn",
@@ -145,11 +145,11 @@ func main() {
 			decisionID,
 		)
 		if logErr := telemetry.LogAgentLifecycle(lifecycle); logErr != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log lifecycle spawn: %v\n", logErr)
+			fmt.Fprintf(os.Stderr, "[goyoke-validate] Warning: Failed to log lifecycle spawn: %v\n", logErr)
 		}
 	} else {
 		// Failed to parse task input - log warning but continue
-		fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to parse Task input for routing decision: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-validate] Warning: Failed to parse Task input for routing decision: %v\n", err)
 	}
 
 	// Build agent task names lookup
@@ -183,7 +183,7 @@ func main() {
 			// Load agent config
 			agentConfig, err := loadAgentConfig(agent)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to load agent config: %v\n", err)
+				fmt.Fprintf(os.Stderr, "[goyoke-validate] Warning: Failed to load agent config: %v\n", err)
 			} else if agentConfig != nil {
 				// Inject agent identity + rules + conventions via unified loader
 				// Even without ContextRequirements, we still inject identity from agent .md file
@@ -197,7 +197,7 @@ func main() {
 				)
 
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to build augmented prompt: %v\n", err)
+					fmt.Fprintf(os.Stderr, "[goyoke-validate] Warning: Failed to build augmented prompt: %v\n", err)
 				} else if augmentedPrompt != taskInput.Prompt {
 					// Conventions were injected - return modify response
 					updatedInput := map[string]interface{}{
@@ -217,7 +217,7 @@ func main() {
 
 					resp := routing.NewModifyResponse("PreToolUse", updatedInput)
 					if err := resp.Marshal(os.Stdout); err != nil {
-						fmt.Fprintf(os.Stderr, "[gogent-validate] Error: Failed to marshal response: %v\n", err)
+						fmt.Fprintf(os.Stderr, "[goyoke-validate] Error: Failed to marshal response: %v\n", err)
 						os.Exit(1)
 					}
 					fmt.Println() // Add newline after JSON
@@ -238,7 +238,7 @@ func main() {
 	// Log violations if any
 	for _, violation := range result.Violations {
 		if err := routing.LogViolation(violation, projectDir); err != nil {
-			fmt.Fprintf(os.Stderr, "[gogent-validate] Warning: Failed to log violation: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[goyoke-validate] Warning: Failed to log violation: %v\n", err)
 		}
 	}
 }
@@ -436,7 +436,7 @@ func logNestingBlock(event *routing.ToolEvent, level int, explicit bool, model s
 		home, _ := os.UserHomeDir()
 		dataHome = filepath.Join(home, ".local", "share")
 	}
-	telemetryPath := filepath.Join(dataHome, "gogent", "nesting-blocks.jsonl")
+	telemetryPath := filepath.Join(dataHome, "goyoke", "nesting-blocks.jsonl")
 
 	appendJSONL(telemetryPath, telemetry)
 }

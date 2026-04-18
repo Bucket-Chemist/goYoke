@@ -70,14 +70,14 @@ func processEvent(event *routing.SubagentStopEvent) (*workflow.EndstateResponse,
 		// Don't exit - logging failure is non-fatal
 	}
 
-	// Log collaboration (GOgent-088c - non-blocking)
+	// Log collaboration (goYoke-088c - non-blocking)
 	// This captures agent delegation patterns for ML optimization
 	if err := logCollaboration(event, metadata); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to log collaboration: %v\n", err)
 		// Don't exit - logging failure is non-fatal
 	}
 
-	// Emit lifecycle complete event for TUI real-time tracking (GOgent-109)
+	// Emit lifecycle complete event for TUI real-time tracking (goYoke-109)
 	if err := logLifecycleComplete(event, metadata); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to log lifecycle complete: %v\n", err)
 		// Don't exit - logging failure is non-fatal
@@ -85,7 +85,7 @@ func processEvent(event *routing.SubagentStopEvent) (*workflow.EndstateResponse,
 
 	// AC check — entirely defensive, must never crash the hook.
 	// TODO: AC sidecar cleanup (removing SESSION_DIR/ac/{agentID}.json) should happen
-	// in gogent-archive (SessionEnd hook) after all endstate hooks have run.
+	// in goyoke-archive (SessionEnd hook) after all endstate hooks have run.
 	checkAcceptanceCriteria(metadata.AgentID)
 
 	return response, nil

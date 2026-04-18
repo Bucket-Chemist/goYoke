@@ -37,8 +37,8 @@ import (
 func TestRun_ValidSessionEnd(t *testing.T) {
 	// Setup temp project directory
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Mock SessionEnd JSON on STDIN
 	sessionJSON := `{"session_id":"test-session-123","timestamp":1234567890,"hook_event_name":"SessionEnd"}`
@@ -79,12 +79,12 @@ func TestRun_ValidSessionEnd(t *testing.T) {
 	}
 
 	// Verify handoff files created
-	handoffJSONL := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffJSONL := filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl")
 	if _, err := os.Stat(handoffJSONL); os.IsNotExist(err) {
 		t.Error("handoffs.jsonl was not created")
 	}
 
-	handoffMD := filepath.Join(tmpDir, ".gogent", "memory", "last-handoff.md")
+	handoffMD := filepath.Join(tmpDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffMD); os.IsNotExist(err) {
 		t.Error("last-handoff.md was not created")
 	}
@@ -92,8 +92,8 @@ func TestRun_ValidSessionEnd(t *testing.T) {
 
 func TestRun_InvalidJSON(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Mock invalid JSON on STDIN
 	oldStdin := os.Stdin
@@ -112,14 +112,14 @@ func TestRun_InvalidJSON(t *testing.T) {
 		t.Error("Expected error for invalid JSON, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "[gogent-archive]") {
-		t.Errorf("Expected error with [gogent-archive] component tag, got: %v", err)
+	if !strings.Contains(err.Error(), "[goyoke-archive]") {
+		t.Errorf("Expected error with [goyoke-archive] component tag, got: %v", err)
 	}
 }
 
 func TestRun_MissingProjectDir(t *testing.T) {
 	// Unset env var to test fallback to os.Getwd()
-	os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Get current working directory (what we expect to be used)
 	expectedDir, err := os.Getwd()
@@ -149,15 +149,15 @@ func TestRun_MissingProjectDir(t *testing.T) {
 	// Should succeed using cwd as project directory
 	err = run()
 	if err != nil {
-		t.Logf("Run failed (may be expected if .gogent/memory not writable in cwd): %v", err)
+		t.Logf("Run failed (may be expected if .goyoke/memory not writable in cwd): %v", err)
 		// Check that it at least attempted to use the right directory
-		if !strings.Contains(err.Error(), expectedDir) && !strings.Contains(err.Error(), ".gogent/memory") {
+		if !strings.Contains(err.Error(), expectedDir) && !strings.Contains(err.Error(), ".goyoke/memory") {
 			t.Errorf("Error should reference cwd path, got: %v", err)
 		}
 	}
 
 	// Verify handoff was attempted in cwd (may not succeed if cwd is read-only)
-	handoffPath := filepath.Join(expectedDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(expectedDir, ".goyoke", "memory", "handoffs.jsonl")
 	if _, statErr := os.Stat(handoffPath); statErr == nil {
 		t.Logf("Successfully created handoff in cwd: %s", handoffPath)
 		defer os.RemoveAll(filepath.Join(expectedDir, ".claude"))
@@ -166,8 +166,8 @@ func TestRun_MissingProjectDir(t *testing.T) {
 
 func TestRun_STDINTimeout(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Mock STDIN that closes immediately (simulates timeout scenario)
 	oldStdin := os.Stdin
@@ -191,8 +191,8 @@ func TestRun_STDINTimeout(t *testing.T) {
 func TestMain_ErrorPath(t *testing.T) {
 	// Setup STDIN to fail parsing
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	oldStdin := os.Stdin
 	r, w, _ := os.Pipe()
@@ -252,7 +252,7 @@ func TestOutputError(t *testing.T) {
 	rErr, wErr, _ := os.Pipe()
 	os.Stderr = wErr
 
-	testError := "[gogent-archive] Test error message"
+	testError := "[goyoke-archive] Test error message"
 	outputError(testError)
 
 	wOut.Close()
@@ -284,8 +284,8 @@ func TestOutputError(t *testing.T) {
 func TestRun_WithMultipleMetrics(t *testing.T) {
 	// Setup temp project directory
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Mock SessionEnd JSON
 	sessionJSON := `{"session_id":"test-multi-metrics","timestamp":1234567890,"hook_event_name":"SessionEnd"}`
@@ -324,12 +324,12 @@ func TestRun_WithMultipleMetrics(t *testing.T) {
 	}
 
 	// Verify handoff files were created
-	handoffJSONL := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffJSONL := filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl")
 	if _, err := os.Stat(handoffJSONL); os.IsNotExist(err) {
 		t.Errorf("Expected handoff JSONL at %s, but it doesn't exist", handoffJSONL)
 	}
 
-	handoffMD := filepath.Join(tmpDir, ".gogent", "memory", "last-handoff.md")
+	handoffMD := filepath.Join(tmpDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffMD); os.IsNotExist(err) {
 		t.Errorf("Expected handoff MD at %s, but it doesn't exist", handoffMD)
 	}
@@ -354,7 +354,7 @@ func TestBuildSessionActions(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a handoff with session data
-	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoffData := `{"session_id":"test-session","timestamp":1000,"version":"1.0","context":{"git_info":{"is_dirty":true,"uncommitted":["file1.go","file2.go"],"branch":"main"},"metrics":{"tool_calls":5,"errors":0,"violations":0}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[],"user_intents":[],"decisions":[],"preference_overrides":[],"performance_metrics":[]}}`
@@ -401,7 +401,7 @@ func TestBuildSessionActions_SessionNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a handoff for a different session
-	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoffData := `{"session_id":"other-session","timestamp":1000,"version":"1.0","context":{"git_info":{},"metrics":{}},"artifacts":{}}`
@@ -419,7 +419,7 @@ func TestBuildSessionActions_SessionNotFound(t *testing.T) {
 // TestUpdateIntentsWithOutcomes tests the updateIntentsWithOutcomes helper function
 func TestUpdateIntentsWithOutcomes(t *testing.T) {
 	tmpDir := t.TempDir()
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	// Create initial intents file
@@ -488,11 +488,11 @@ func TestUpdateIntentsWithOutcomes_MissingFile(t *testing.T) {
 
 func TestGenerateWeeklySummary_DefaultRange(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create user-intents.jsonl with test data
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	// Create intents from last 7 days
@@ -516,7 +516,7 @@ func TestGenerateWeeklySummary_DefaultRange(t *testing.T) {
 
 	// Mock os.Args to trigger weekly command
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "weekly"}
+	os.Args = []string{"goyoke-archive", "weekly"}
 	defer func() { os.Args = oldArgs }()
 
 	// Run generateWeeklySummary
@@ -537,11 +537,11 @@ func TestGenerateWeeklySummary_DefaultRange(t *testing.T) {
 
 func TestGenerateWeeklySummary_CustomDateRange(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create user-intents.jsonl
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	// Create intent for specific date
@@ -564,7 +564,7 @@ func TestGenerateWeeklySummary_CustomDateRange(t *testing.T) {
 
 	// Mock os.Args with --since flag
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "weekly", "--since", "2026-01-01"}
+	os.Args = []string{"goyoke-archive", "weekly", "--since", "2026-01-01"}
 	defer func() { os.Args = oldArgs }()
 
 	generateWeeklySummary()
@@ -584,11 +584,11 @@ func TestGenerateWeeklySummary_CustomDateRange(t *testing.T) {
 
 func TestGenerateWeeklySummary_IntentsOnlyFlag(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create user-intents.jsonl
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	now := time.Now()
@@ -609,7 +609,7 @@ func TestGenerateWeeklySummary_IntentsOnlyFlag(t *testing.T) {
 	os.Stdout = wOut
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "weekly", "--intents-only"}
+	os.Args = []string{"goyoke-archive", "weekly", "--intents-only"}
 	defer func() { os.Args = oldArgs }()
 
 	generateWeeklySummary()
@@ -629,11 +629,11 @@ func TestGenerateWeeklySummary_IntentsOnlyFlag(t *testing.T) {
 
 func TestGenerateWeeklySummary_NoIntents(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create empty user-intents.jsonl
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 	os.WriteFile(intentsPath, []byte(""), 0644)
 
@@ -643,7 +643,7 @@ func TestGenerateWeeklySummary_NoIntents(t *testing.T) {
 	os.Stdout = wOut
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "weekly"}
+	os.Args = []string{"goyoke-archive", "weekly"}
 	defer func() { os.Args = oldArgs }()
 
 	generateWeeklySummary()
@@ -663,11 +663,11 @@ func TestGenerateWeeklySummary_NoIntents(t *testing.T) {
 
 func TestGenerateWeeklySummary_DriftDetection(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create intents spanning 2 weeks (to enable drift comparison)
-	intentsPath := filepath.Join(tmpDir, ".gogent", "memory", "user-intents.jsonl")
+	intentsPath := filepath.Join(tmpDir, ".goyoke", "memory", "user-intents.jsonl")
 	os.MkdirAll(filepath.Dir(intentsPath), 0755)
 
 	now := time.Now()
@@ -699,7 +699,7 @@ func TestGenerateWeeklySummary_DriftDetection(t *testing.T) {
 	os.Stdout = wOut
 
 	oldArgs := os.Args
-	os.Args = []string{"gogent-archive", "weekly", "--drift"}
+	os.Args = []string{"goyoke-archive", "weekly", "--drift"}
 	defer func() { os.Args = oldArgs }()
 
 	generateWeeklySummary()
@@ -832,11 +832,11 @@ func TestFilterBetween_InclusiveBoundaries(t *testing.T) {
 
 func TestShowSession_ValidSession(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create handoff for session
-	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoff := session.Handoff{
@@ -879,11 +879,11 @@ func TestShowSession_ValidSession(t *testing.T) {
 
 func TestShowSession_RendersFullMarkdown(t *testing.T) {
 	tmpDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", tmpDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Create handoff with rich content
-	handoffPath := filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl")
 	os.MkdirAll(filepath.Dir(handoffPath), 0755)
 
 	handoff := session.Handoff{
@@ -960,7 +960,7 @@ func TestCleanupPermCache(t *testing.T) {
 
 	sessionID := "test-session-cleanup"
 	sum := sha256.Sum256([]byte(sessionID))
-	cachePath := filepath.Join(tmpDir, fmt.Sprintf("gofortress-perm-cache-%s.json", hex.EncodeToString(sum[:])))
+	cachePath := filepath.Join(tmpDir, fmt.Sprintf("goyoke-perm-cache-%s.json", hex.EncodeToString(sum[:])))
 
 	// Create a fake cache file.
 	if err := os.WriteFile(cachePath, []byte(`{"Bash":"allow_session"}`), 0600); err != nil {

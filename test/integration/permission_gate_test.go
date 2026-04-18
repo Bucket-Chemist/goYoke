@@ -1,7 +1,7 @@
 //go:build integration
 
 // Package integration contains end-to-end integration tests for the
-// GOgent-Fortress permission gate feature (PERM-001 through PERM-007).
+// goYoke permission gate feature (PERM-001 through PERM-007).
 //
 // These tests exercise the full flow:
 //
@@ -244,20 +244,20 @@ func TestIntegration_PermGate_TimeoutAutoDeny(t *testing.T) {
 }
 
 // TestIntegration_PermGate_InvalidSocket validates the hook binary's client
-// behaviour when GOFORTRESS_SOCKET points to a nonexistent path: the UDS
+// behaviour when GOYOKE_SOCKET points to a nonexistent path: the UDS
 // dial fails and RequestPermission returns an error, which main() maps to an
 // auto-deny block response.
 //
 // This test drives RequestPermission directly (the exported function from
-// cmd/gogent-permission-gate) rather than through the compiled binary, since
+// cmd/goyoke-permission-gate) rather than through the compiled binary, since
 // the binary lives in package main and is not importable. Instead we replicate
 // the client-side dial logic inline using the same UDS primitives.
 func TestIntegration_PermGate_InvalidSocket(t *testing.T) {
-	// Point GOFORTRESS_SOCKET at a path that does not exist.
+	// Point GOYOKE_SOCKET at a path that does not exist.
 	nonexistentSocket := filepath.Join(t.TempDir(), "no-such-socket.sock")
-	t.Setenv("GOFORTRESS_SOCKET", nonexistentSocket)
+	t.Setenv("GOYOKE_SOCKET", nonexistentSocket)
 
-	// Replicate the UDS client dial from cmd/gogent-permission-gate/uds.go.
+	// Replicate the UDS client dial from cmd/goyoke-permission-gate/uds.go.
 	// A dial to a nonexistent path must fail immediately.
 	conn, err := net.DialTimeout("unix", nonexistentSocket, 2*time.Second)
 	if conn != nil {
@@ -266,7 +266,7 @@ func TestIntegration_PermGate_InvalidSocket(t *testing.T) {
 	require.Error(t, err, "dialing a nonexistent socket must return an error")
 
 	// Verify the env var is set to the nonexistent path (confirms t.Setenv worked).
-	assert.Equal(t, nonexistentSocket, os.Getenv("GOFORTRESS_SOCKET"))
+	assert.Equal(t, nonexistentSocket, os.Getenv("GOYOKE_SOCKET"))
 }
 
 // TestIntegration_PermGate_ConcurrentRequests validates that the bridge

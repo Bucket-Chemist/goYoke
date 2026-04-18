@@ -302,7 +302,7 @@ func TestFormatInvariantFailures(t *testing.T) {
 func TestFuzzRunner_SetupRandomArtifacts(t *testing.T) {
 	tempDir := t.TempDir()
 	testDir := filepath.Join(tempDir, "test-artifacts")
-	os.MkdirAll(filepath.Join(testDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(testDir, ".goyoke", "memory"), 0755)
 
 	cfg := SimulationConfig{TempDir: tempDir}
 	runner := &FuzzRunner{config: cfg}
@@ -311,13 +311,13 @@ func TestFuzzRunner_SetupRandomArtifacts(t *testing.T) {
 	// Try multiple seeds to ensure we hit both paths
 	for seed := int64(0); seed < 100; seed++ {
 		iterDir := filepath.Join(tempDir, filepath.Base(t.TempDir()))
-		os.MkdirAll(filepath.Join(iterDir, ".gogent", "memory"), 0755)
+		os.MkdirAll(filepath.Join(iterDir, ".goyoke", "memory"), 0755)
 
 		runner.setupRandomArtifacts(iterDir, seed)
 
 		// Check if files were created (probabilistic)
-		violationsPath := filepath.Join(iterDir, ".gogent", "memory", "routing-violations.jsonl")
-		edgesPath := filepath.Join(iterDir, ".gogent", "memory", "pending-learnings.jsonl")
+		violationsPath := filepath.Join(iterDir, ".goyoke", "memory", "routing-violations.jsonl")
+		edgesPath := filepath.Join(iterDir, ".goyoke", "memory", "pending-learnings.jsonl")
 
 		// At least verify paths don't cause errors
 		_, violErr := os.Stat(violationsPath)

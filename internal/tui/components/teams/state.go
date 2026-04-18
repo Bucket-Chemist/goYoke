@@ -1,9 +1,9 @@
 // Package teams implements the team list and detail views for the
-// GOgent-Fortress TUI. It polls gogent-team-run config.json files to track
+// goYoke TUI. It polls goyoke-team-run config.json files to track
 // team execution state.
 //
 // The TeamConfig, Wave, and Member types are imported from the shared
-// internal/teamconfig package, which both the TUI and cmd/gogent-team-run
+// internal/teamconfig package, which both the TUI and cmd/goyoke-team-run
 // consume. Changes to the config.json schema produce compile-time errors
 // in both consumers.
 package teams

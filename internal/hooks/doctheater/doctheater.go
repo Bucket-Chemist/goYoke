@@ -1,4 +1,4 @@
-// Package doctheater implements the gogent-doc-theater hook.
+// Package doctheater implements the goyoke-doc-theater hook.
 // It detects documentation theater patterns in CLAUDE.md writes.
 package doctheater
 
@@ -78,7 +78,7 @@ func GenerateDocTheaterResponse(event *routing.ToolEvent, results []enforcement.
 	}
 
 	warning := enforcement.GenerateWarning(results, event.ExtractFilePath())
-	blockEnabled := os.Getenv("GOGENT_DOC_THEATER_BLOCK") == "true"
+	blockEnabled := os.Getenv("GOYOKE_DOC_THEATER_BLOCK") == "true"
 
 	hasCritical := false
 	for _, result := range results {
@@ -95,7 +95,7 @@ func GenerateDocTheaterResponse(event *routing.ToolEvent, results []enforcement.
 	return WarnResponse(warning)
 }
 
-// Main is the entrypoint for the gogent-doc-theater hook.
+// Main is the entrypoint for the goyoke-doc-theater hook.
 func Main() {
 	event, err := routing.ParseToolEvent(os.Stdin, DefaultTimeout)
 	if err != nil {

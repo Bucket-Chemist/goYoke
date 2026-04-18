@@ -14,11 +14,11 @@ import (
 	"time"
 )
 
-// getBinaryPath returns the absolute path to gogent-archive binary
+// getBinaryPath returns the absolute path to goyoke-archive binary
 func getBinaryPath() string {
 	// Get the absolute path relative to this test file location
-	// Tests run from test/integration/, binary is at bin/gogent-archive
-	relativePath := "../../bin/gogent-archive"
+	// Tests run from test/integration/, binary is at bin/goyoke-archive
+	relativePath := "../../bin/goyoke-archive"
 	absPath, err := filepath.Abs(relativePath)
 	if err != nil {
 		return relativePath
@@ -31,16 +31,16 @@ func skipIfBinaryNotBuilt(t *testing.T) string {
 	t.Helper()
 	binaryPath := getBinaryPath()
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Skip("gogent-archive binary not built. Run: make build-archive")
+		t.Skip("goyoke-archive binary not built. Run: make build-archive")
 	}
 	return binaryPath
 }
 
-// setupTempProject creates a temp project with .gogent/memory/ structure
-func setupTempProject(t *testing.T) (projectDir string, memoryDir string, runtimeDir string, gogentDir string) {
+// setupTempProject creates a temp project with .goyoke/memory/ structure
+func setupTempProject(t *testing.T) (projectDir string, memoryDir string, runtimeDir string, goyokeDir string) {
 	t.Helper()
 	projectDir = t.TempDir()
-	memoryDir = filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir = filepath.Join(projectDir, ".goyoke", "memory")
 	if err := os.MkdirAll(memoryDir, 0755); err != nil {
 		t.Fatalf("Failed to create memory dir: %v", err)
 	}
@@ -50,26 +50,26 @@ func setupTempProject(t *testing.T) (projectDir string, memoryDir string, runtim
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	t.Cleanup(func() { os.Unsetenv("XDG_RUNTIME_DIR") })
 
-	gogentDir = filepath.Join(runtimeDir, "gogent")
-	if err := os.MkdirAll(gogentDir, 0755); err != nil {
-		t.Fatalf("Failed to create gogent dir: %v", err)
+	goyokeDir = filepath.Join(runtimeDir, "goyoke")
+	if err := os.MkdirAll(goyokeDir, 0755); err != nil {
+		t.Fatalf("Failed to create goyoke dir: %v", err)
 	}
 
-	return projectDir, memoryDir, runtimeDir, gogentDir
+	return projectDir, memoryDir, runtimeDir, goyokeDir
 }
 
 // createMetricsFiles populates tool counter, error log, and violations log
-func createMetricsFiles(t *testing.T, gogentDir string) {
+func createMetricsFiles(t *testing.T, goyokeDir string) {
 	t.Helper()
 
 	// Tool counter (5 calls)
-	counterFile := filepath.Join(gogentDir, "claude-tool-counter-test.log")
+	counterFile := filepath.Join(goyokeDir, "claude-tool-counter-test.log")
 	if err := os.WriteFile(counterFile, []byte("call1\ncall2\ncall3\ncall4\ncall5\n"), 0644); err != nil {
 		t.Fatalf("Failed to create counter file: %v", err)
 	}
 
 	// Error log (2 errors)
-	errorLog := filepath.Join(gogentDir, "claude-error-patterns.jsonl")
+	errorLog := filepath.Join(goyokeDir, "claude-error-patterns.jsonl")
 	if err := os.WriteFile(errorLog, []byte(`{"error":"type_mismatch","file":"test.go"}
 {"error":"nil_pointer","file":"main.go"}
 `), 0644); err != nil {
@@ -77,7 +77,7 @@ func createMetricsFiles(t *testing.T, gogentDir string) {
 	}
 
 	// Violations log (1 violation)
-	violationsLog := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsLog := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	if err := os.WriteFile(violationsLog, []byte(`{"agent":"python-pro","violation_type":"tier_mismatch"}
 `), 0644); err != nil {
 		t.Fatalf("Failed to create violations log: %v", err)
@@ -138,10 +138,10 @@ func parseJSONLFile(t *testing.T, path string) []map[string]interface{} {
 
 func TestSessionHandoffIntegration_FullWorkflow(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
-	projectDir, memoryDir, _, gogentDir := setupTempProject(t)
+	projectDir, memoryDir, _, goyokeDir := setupTempProject(t)
 
 	// Pre-populate metrics files
-	createMetricsFiles(t, gogentDir)
+	createMetricsFiles(t, goyokeDir)
 
 	// Create pending learnings JSONL
 	createPendingLearnings(t, memoryDir)
@@ -150,9 +150,9 @@ func TestSessionHandoffIntegration_FullWorkflow(t *testing.T) {
 	sessionID := "full-workflow-test-session"
 	eventJSON := createSessionEventJSON(sessionID)
 
-	// Invoke gogent-archive
+	// Invoke goyoke-archive
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -161,7 +161,7 @@ func TestSessionHandoffIntegration_FullWorkflow(t *testing.T) {
 
 	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("gogent-archive execution failed: %v\nStderr: %s\nStdout: %s", err, stderr.String(), stdout.String())
+		t.Fatalf("goyoke-archive execution failed: %v\nStderr: %s\nStdout: %s", err, stderr.String(), stdout.String())
 	}
 
 	// Verify handoffs.jsonl created and valid JSONL
@@ -208,7 +208,7 @@ func TestSessionHandoffIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Verify violations log moved (not at original location)
-	violationsLog := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsLog := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	if _, err := os.Stat(violationsLog); !os.IsNotExist(err) {
 		t.Error("Violations log should have been moved to archive")
 	}
@@ -241,7 +241,7 @@ func TestSessionHandoffIntegration_MinimalSession(t *testing.T) {
 	eventJSON := createSessionEventJSON(sessionID)
 
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -250,7 +250,7 @@ func TestSessionHandoffIntegration_MinimalSession(t *testing.T) {
 
 	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("gogent-archive should handle empty session gracefully: %v\nStderr: %s", err, stderr.String())
+		t.Fatalf("goyoke-archive should handle empty session gracefully: %v\nStderr: %s", err, stderr.String())
 	}
 
 	// Should still create handoffs.jsonl
@@ -281,10 +281,10 @@ func TestSessionHandoffIntegration_MinimalSession(t *testing.T) {
 
 func TestSessionHandoffIntegration_ArtifactArchival(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
-	projectDir, memoryDir, _, gogentDir := setupTempProject(t)
+	projectDir, memoryDir, _, goyokeDir := setupTempProject(t)
 
 	// Create violations that should be archived
-	violationsLog := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsLog := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	os.WriteFile(violationsLog, []byte(`{"agent":"test-agent","violation_type":"test_violation"}
 `), 0644)
 
@@ -297,7 +297,7 @@ func TestSessionHandoffIntegration_ArtifactArchival(t *testing.T) {
 	eventJSON := createSessionEventJSON(sessionID)
 
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout bytes.Buffer
@@ -353,22 +353,22 @@ func TestCLI_WorkingDirectoryBehavior(t *testing.T) {
 	projectDir2 := t.TempDir()
 
 	// Setup project 1 with handoffs
-	memoryDir1 := filepath.Join(projectDir1, ".gogent", "memory")
+	memoryDir1 := filepath.Join(projectDir1, ".goyoke", "memory")
 	os.MkdirAll(memoryDir1, 0755)
 	handoff1 := `{"schema_version":"1.0","timestamp":1705000000,"session_id":"project1-session","context":{"project_dir":"/test1","metrics":{"tool_calls":10,"errors_logged":0,"routing_violations":0,"session_id":"project1-session"},"git_info":{"branch":"","is_dirty":false}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[]},"actions":[]}`
 	os.WriteFile(filepath.Join(memoryDir1, "handoffs.jsonl"), []byte(handoff1+"\n"), 0644)
 
 	// Setup project 2 with different handoffs
-	memoryDir2 := filepath.Join(projectDir2, ".gogent", "memory")
+	memoryDir2 := filepath.Join(projectDir2, ".goyoke", "memory")
 	os.MkdirAll(memoryDir2, 0755)
 	handoff2 := `{"schema_version":"1.0","timestamp":1705100000,"session_id":"project2-session","context":{"project_dir":"/test2","metrics":{"tool_calls":20,"errors_logged":0,"routing_violations":0,"session_id":"project2-session"},"git_info":{"branch":"","is_dirty":false}},"artifacts":{"sharp_edges":[],"routing_violations":[],"error_patterns":[]},"actions":[]}`
 	os.WriteFile(filepath.Join(memoryDir2, "handoffs.jsonl"), []byte(handoff2+"\n"), 0644)
 
-	// Test 1: GOGENT_PROJECT_DIR takes precedence over cwd
-	// Even if we cd to project2, setting GOGENT_PROJECT_DIR=project1 should use project1
+	// Test 1: GOYOKE_PROJECT_DIR takes precedence over cwd
+	// Even if we cd to project2, setting GOYOKE_PROJECT_DIR=project1 should use project1
 	cmd := exec.Command(binaryPath, "list")
 	cmd.Dir = projectDir2 // cwd is project2
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir1) // but env points to project1
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir1) // but env points to project1
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -379,19 +379,19 @@ func TestCLI_WorkingDirectoryBehavior(t *testing.T) {
 
 	output := stdout.String()
 	if !strings.Contains(output, "project1-session") {
-		t.Error("Expected project1-session (from GOGENT_PROJECT_DIR), not project2")
+		t.Error("Expected project1-session (from GOYOKE_PROJECT_DIR), not project2")
 	}
 	if strings.Contains(output, "project2-session") {
-		t.Error("Should NOT see project2-session when GOGENT_PROJECT_DIR points elsewhere")
+		t.Error("Should NOT see project2-session when GOYOKE_PROJECT_DIR points elsewhere")
 	}
 
-	// Test 2: Without GOGENT_PROJECT_DIR, use cwd
+	// Test 2: Without GOYOKE_PROJECT_DIR, use cwd
 	cmd2 := exec.Command(binaryPath, "list")
 	cmd2.Dir = projectDir2
-	// Remove GOGENT_PROJECT_DIR from environment
+	// Remove GOYOKE_PROJECT_DIR from environment
 	env2 := []string{}
 	for _, e := range os.Environ() {
-		if !strings.HasPrefix(e, "GOGENT_PROJECT_DIR=") {
+		if !strings.HasPrefix(e, "GOYOKE_PROJECT_DIR=") {
 			env2 = append(env2, e)
 		}
 	}
@@ -401,26 +401,26 @@ func TestCLI_WorkingDirectoryBehavior(t *testing.T) {
 	cmd2.Stdout = &stdout2
 
 	if err := cmd2.Run(); err != nil {
-		t.Fatalf("list command without GOGENT_PROJECT_DIR failed: %v", err)
+		t.Fatalf("list command without GOYOKE_PROJECT_DIR failed: %v", err)
 	}
 
 	output2 := stdout2.String()
 	if !strings.Contains(output2, "project2-session") {
-		t.Error("Expected project2-session (from cwd) when GOGENT_PROJECT_DIR not set")
+		t.Error("Expected project2-session (from cwd) when GOYOKE_PROJECT_DIR not set")
 	}
 }
 
 func TestCLI_EnvironmentVariables(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
-	t.Run("GOGENT_PROJECT_DIR_set", func(t *testing.T) {
+	t.Run("GOYOKE_PROJECT_DIR_set", func(t *testing.T) {
 		projectDir := t.TempDir()
-		memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+		memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 		os.MkdirAll(memoryDir, 0755)
 		os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(""), 0644)
 
 		cmd := exec.Command(binaryPath, "list")
-		cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+		cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout
@@ -434,19 +434,19 @@ func TestCLI_EnvironmentVariables(t *testing.T) {
 		}
 	})
 
-	t.Run("GOGENT_PROJECT_DIR_unset_invalid_cwd", func(t *testing.T) {
+	t.Run("GOYOKE_PROJECT_DIR_unset_invalid_cwd", func(t *testing.T) {
 		// This test verifies behavior when neither env nor valid handoff exists
-		// Most systems will have a cwd, but .gogent/memory might not exist
+		// Most systems will have a cwd, but .goyoke/memory might not exist
 		cmd := exec.Command(binaryPath, "list")
-		// Strip GOGENT_PROJECT_DIR
+		// Strip GOYOKE_PROJECT_DIR
 		env := []string{}
 		for _, e := range os.Environ() {
-			if !strings.HasPrefix(e, "GOGENT_PROJECT_DIR=") {
+			if !strings.HasPrefix(e, "GOYOKE_PROJECT_DIR=") {
 				env = append(env, e)
 			}
 		}
 		cmd.Env = env
-		cmd.Dir = t.TempDir() // Empty temp dir - no .gogent/memory
+		cmd.Dir = t.TempDir() // Empty temp dir - no .goyoke/memory
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -488,17 +488,17 @@ func TestCLI_InvalidJSONInput(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			projectDir := t.TempDir()
-			memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+			memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 			os.MkdirAll(memoryDir, 0755)
 
 			// Setup minimal runtime dir
 			runtimeDir := t.TempDir()
 			os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 			defer os.Unsetenv("XDG_RUNTIME_DIR")
-			os.MkdirAll(filepath.Join(runtimeDir, "gogent"), 0755)
+			os.MkdirAll(filepath.Join(runtimeDir, "goyoke"), 0755)
 
 			cmd := exec.Command(binaryPath)
-			cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+			cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 			cmd.Stdin = bytes.NewReader([]byte(tc.input))
 
 			var stdout, stderr bytes.Buffer
@@ -521,8 +521,8 @@ func TestCLI_InvalidJSONInput(t *testing.T) {
 					t.Errorf("Expected empty JSON '{}' on stdout for error, got: %s", output)
 				}
 				// Error message with component tag should be on stderr
-				if !strings.Contains(stderr.String(), "[gogent-archive]") {
-					t.Error("Error message should contain [gogent-archive] component tag on stderr")
+				if !strings.Contains(stderr.String(), "[goyoke-archive]") {
+					t.Error("Error message should contain [goyoke-archive] component tag on stderr")
 				}
 			}
 		})
@@ -538,11 +538,11 @@ func TestCLI_StdinTimeout(t *testing.T) {
 	defer cancel()
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	cmd := exec.CommandContext(ctx, binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 	// Provide a reader that blocks forever
 	r, w, err := os.Pipe()
@@ -603,8 +603,8 @@ func TestCLI_VersionFlag(t *testing.T) {
 			}
 
 			output := stdout.String()
-			if !strings.Contains(output, "gogent-archive version") {
-				t.Errorf("Expected 'gogent-archive version' in output, got: %s", output)
+			if !strings.Contains(output, "goyoke-archive version") {
+				t.Errorf("Expected 'goyoke-archive version' in output, got: %s", output)
 			}
 			// Should contain some version string (dev or semver)
 			if !strings.Contains(output, "dev") && !strings.Contains(output, ".") {
@@ -659,12 +659,12 @@ func TestCLI_ExitCodes(t *testing.T) {
 
 	t.Run("success_exit_0", func(t *testing.T) {
 		projectDir := t.TempDir()
-		memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+		memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 		os.MkdirAll(memoryDir, 0755)
 		os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(""), 0644)
 
 		cmd := exec.Command(binaryPath, "list")
-		cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+		cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 		err := cmd.Run()
 		if err != nil {
@@ -689,12 +689,12 @@ func TestCLI_ExitCodes(t *testing.T) {
 
 	t.Run("failure_exit_1_missing_session", func(t *testing.T) {
 		projectDir := t.TempDir()
-		memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+		memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 		os.MkdirAll(memoryDir, 0755)
 		os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(""), 0644)
 
 		cmd := exec.Command(binaryPath, "show", "nonexistent-session-id")
-		cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+		cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 		err := cmd.Run()
 		if err == nil {
@@ -710,16 +710,16 @@ func TestCLI_ExitCodes(t *testing.T) {
 
 func TestCLI_ConfirmationJSONSchema(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
-	projectDir, memoryDir, _, gogentDir := setupTempProject(t)
+	projectDir, memoryDir, _, goyokeDir := setupTempProject(t)
 
 	// Create minimal metrics (new format: single counter file)
-	os.WriteFile(filepath.Join(gogentDir, "tool-counter"), []byte("1"), 0644)
+	os.WriteFile(filepath.Join(goyokeDir, "tool-counter"), []byte("1"), 0644)
 
 	sessionID := "schema-test-session"
 	eventJSON := createSessionEventJSON(sessionID)
 
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -757,7 +757,7 @@ func TestCLI_ShowSubcommand(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create handoff with known session ID
@@ -765,7 +765,7 @@ func TestCLI_ShowSubcommand(t *testing.T) {
 	os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(handoff+"\n"), 0644)
 
 	cmd := exec.Command(binaryPath, "show", "show-test-session")
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -792,7 +792,7 @@ func TestCLI_StatsSubcommand(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create multiple handoffs for stats
@@ -803,7 +803,7 @@ func TestCLI_StatsSubcommand(t *testing.T) {
 	os.WriteFile(filepath.Join(memoryDir, "handoffs.jsonl"), []byte(strings.Join(handoffs, "\n")+"\n"), 0644)
 
 	cmd := exec.Command(binaryPath, "stats")
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -833,7 +833,7 @@ func TestCLI_ListWithFilters(t *testing.T) {
 	binaryPath := skipIfBinaryNotBuilt(t)
 
 	projectDir := t.TempDir()
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create handoffs with different characteristics
@@ -846,7 +846,7 @@ func TestCLI_ListWithFilters(t *testing.T) {
 
 	t.Run("filter_since_7d", func(t *testing.T) {
 		cmd := exec.Command(binaryPath, "list", "--since", "7d")
-		cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+		cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout
@@ -866,7 +866,7 @@ func TestCLI_ListWithFilters(t *testing.T) {
 
 	t.Run("filter_clean", func(t *testing.T) {
 		cmd := exec.Command(binaryPath, "list", "--clean")
-		cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+		cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout
@@ -886,7 +886,7 @@ func TestCLI_ListWithFilters(t *testing.T) {
 
 	t.Run("filter_has_sharp_edges", func(t *testing.T) {
 		cmd := exec.Command(binaryPath, "list", "--has-sharp-edges")
-		cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+		cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout

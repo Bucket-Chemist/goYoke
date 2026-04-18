@@ -278,7 +278,7 @@ func (d *CLIDriver) buildArgs() []string {
 
 	// NOTE: --config-dir is NOT a valid claude CLI flag. The config directory
 	// override is propagated via the CLAUDE_CONFIG_DIR environment variable,
-	// which is set in cmd/gofortress/main.go when --config-dir is passed to
+	// which is set in cmd/goyoke/main.go when --config-dir is passed to
 	// the TUI. The claude subprocess inherits this env var automatically.
 
 	permMode := d.opts.PermissionMode
@@ -304,11 +304,11 @@ func (d *CLIDriver) buildArgs() []string {
 		args = append(args, "--allowedTools",
 			"Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch,NotebookEdit,"+
 				"TodoWrite,EnterPlanMode,ExitPlanMode,Skill,ToolSearch,AskUserQuestion,"+
-				"mcp__gofortress-interactive__*")
+				"mcp__goyoke-interactive__*")
 	}
 
 	// Block the built-in Agent tool — all agent spawning must go through
-	// mcp__gofortress-interactive__spawn_agent which injects identity,
+	// mcp__goyoke-interactive__spawn_agent which injects identity,
 	// conventions, and rules via buildFullAgentContext().
 	// Agent() bypasses all PreToolUse hooks and fires no context injection.
 	// Enforcement: routing-schema.json → this CLI flag → CLAUDE.md reference.

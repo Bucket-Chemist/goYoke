@@ -13,13 +13,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// DefaultPermTimeout is the permission request timeout when GOGENT_PERM_TIMEOUT is not set.
+// DefaultPermTimeout is the permission request timeout when GOYOKE_PERM_TIMEOUT is not set.
 const DefaultPermTimeout = 30 * time.Second
 
-// PermTimeout reads the timeout from GOGENT_PERM_TIMEOUT (milliseconds).
+// PermTimeout reads the timeout from GOYOKE_PERM_TIMEOUT (milliseconds).
 // Falls back to DefaultPermTimeout on missing or invalid values.
 func PermTimeout() time.Duration {
-	raw := os.Getenv("GOGENT_PERM_TIMEOUT")
+	raw := os.Getenv("GOYOKE_PERM_TIMEOUT")
 	if raw == "" {
 		return DefaultPermTimeout
 	}
@@ -33,7 +33,7 @@ func PermTimeout() time.Duration {
 // RequestPermission contacts the TUI bridge over UDS and returns the user's
 // decision for the tool invocation described by toolName, toolInputJSON, and sessionID.
 func RequestPermission(toolName string, toolInputJSON []byte, sessionID string) (string, error) {
-	socketPath := os.Getenv("GOFORTRESS_SOCKET")
+	socketPath := os.Getenv("GOYOKE_SOCKET")
 	if socketPath == "" {
 		return "", fmt.Errorf("No TUI bridge available")
 	}

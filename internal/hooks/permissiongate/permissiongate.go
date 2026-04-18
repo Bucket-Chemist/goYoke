@@ -1,5 +1,5 @@
-// Package permissiongate implements the gogent-permission-gate hook.
-// It gates tool invocations through the GOgent-Fortress TUI permission modal.
+// Package permissiongate implements the goyoke-permission-gate hook.
+// It gates tool invocations through the goYoke TUI permission modal.
 package permissiongate
 
 import (
@@ -19,7 +19,7 @@ type ToolEvent struct {
 	SessionID string                 `json:"session_id"`
 }
 
-// Main is the entrypoint for the gogent-permission-gate hook.
+// Main is the entrypoint for the goyoke-permission-gate hook.
 func Main() {
 	event, rawInput, err := ParseStdin(os.Stdin)
 	if err != nil {

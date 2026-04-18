@@ -1,4 +1,4 @@
-// Package util provides shared utility functions for the GOgent-Fortress TUI.
+// Package util provides shared utility functions for the goYoke TUI.
 package util
 
 import (

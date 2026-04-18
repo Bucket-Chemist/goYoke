@@ -1,5 +1,5 @@
 // Package testdata provides shared test fixtures and helpers for the
-// GOgent-Fortress TUI test suite. Test fixture files are embedded as
+// goYoke TUI test suite. Test fixture files are embedded as
 // JSON files in this directory and loaded via LoadFixture.
 package testdata
 

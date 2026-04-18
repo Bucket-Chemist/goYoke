@@ -1,4 +1,4 @@
-// Package version implements the gogent-version hook.
+// Package version implements the goyoke-version hook.
 // It reports the binary version and build time.
 package version
 
@@ -37,11 +37,11 @@ func Run(w io.Writer, jsonOutput bool) error {
 		return err
 	}
 
-	_, err := fmt.Fprintf(w, "GOgent-Fortress v%s (built: %s)\n", Version, BuildTime)
+	_, err := fmt.Fprintf(w, "goYoke v%s (built: %s)\n", Version, BuildTime)
 	return err
 }
 
-// Main is the entrypoint for the gogent-version hook.
+// Main is the entrypoint for the goyoke-version hook.
 func Main() {
 	jsonFlag := flag.Bool("json", false, "Output version information as JSON")
 	flag.Parse()

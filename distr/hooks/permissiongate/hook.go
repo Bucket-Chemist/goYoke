@@ -1,4 +1,4 @@
-// Package permissiongate registers the gogent-permission-gate command in the multi-call dispatch table.
+// Package permissiongate registers the goyoke-permission-gate command in the multi-call dispatch table.
 package permissiongate
 
 import (
@@ -6,6 +6,6 @@ import (
 	permissiongatelib "github.com/Bucket-Chemist/goYoke/internal/hooks/permissiongate"
 )
 
-func init() { multicall.Register("gogent-permission-gate", Main) }
+func init() { multicall.Register("goyoke-permission-gate", Main) }
 
 func Main() { permissiongatelib.Main() }

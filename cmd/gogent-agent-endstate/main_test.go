@@ -14,7 +14,7 @@ import (
 )
 
 // =============================================================================
-// Collaboration Logging Tests (GOgent-088c)
+// Collaboration Logging Tests (goYoke-088c)
 // =============================================================================
 
 func TestCollaborationLogging(t *testing.T) {
@@ -48,7 +48,7 @@ func TestCollaborationLogging(t *testing.T) {
 	}
 
 	// Verify file created
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Error("Collaboration log file should exist")
 	}
@@ -173,7 +173,7 @@ func TestLogCollaboration_Integration(t *testing.T) {
 	}
 
 	// Verify file created
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		t.Fatal("Collaboration log file should exist after logCollaboration()")
 	}
@@ -244,7 +244,7 @@ func TestLogCollaboration_FailureCase(t *testing.T) {
 	}
 
 	// Read and verify ChildSuccess is false
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -293,7 +293,7 @@ func TestLogCollaboration_MultipleAgents(t *testing.T) {
 	}
 
 	// Read log file
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -366,7 +366,7 @@ func TestLogCollaboration_ConcurrentWrites(t *testing.T) {
 	}
 
 	// Verify all 10 collaborations were written
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -451,7 +451,7 @@ func TestLogCollaboration_TerminalAsParent(t *testing.T) {
 	}
 
 	// Read all logged collaborations
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -502,7 +502,7 @@ func TestLogCollaboration_ChainDepthAlwaysOne(t *testing.T) {
 	}
 
 	// Read and verify ChainDepth
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -548,7 +548,7 @@ func TestLogCollaboration_DelegationTypeAlwaysSpawn(t *testing.T) {
 	}
 
 	// Read and verify DelegationType
-	logPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -642,7 +642,7 @@ func TestMain_EndToEnd(t *testing.T) {
 	}
 
 	// Verify collaboration was logged
-	collabPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	collabPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(collabPath); os.IsNotExist(err) {
 		t.Fatal("Collaboration log should exist after end-to-end flow")
 	}
@@ -718,7 +718,7 @@ func TestProcessEvent_Success(t *testing.T) {
 	}
 
 	// Verify collaboration was logged
-	collabPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	collabPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(collabPath); os.IsNotExist(err) {
 		t.Error("Collaboration should be logged by processEvent()")
 	}
@@ -754,7 +754,7 @@ func TestProcessEvent_MissingTranscript(t *testing.T) {
 	}
 
 	// Verify collaboration was still logged (with empty metadata)
-	collabPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	collabPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(collabPath); os.IsNotExist(err) {
 		t.Error("Collaboration should be logged even with missing transcript")
 	}
@@ -795,7 +795,7 @@ func TestProcessEvent_CollaborationLogging(t *testing.T) {
 	}
 
 	// Verify collaboration content
-	collabPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	collabPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(collabPath)
 	if err != nil {
 		t.Fatalf("Failed to read collaboration: %v", err)
@@ -848,7 +848,7 @@ func TestProcessEvent_NilMetadata(t *testing.T) {
 	}
 
 	// Verify collaboration was still logged
-	collabPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	collabPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	if _, err := os.Stat(collabPath); os.IsNotExist(err) {
 		t.Error("Collaboration should be logged even with nil metadata")
 	}
@@ -894,7 +894,7 @@ func TestMain_EmptyMetadataHandling(t *testing.T) {
 	}
 
 	// Verify collaboration logged with empty agent string (as-is behavior)
-	collabPath := filepath.Join(tmpDir, "gogent", "agent-collaborations.jsonl")
+	collabPath := filepath.Join(tmpDir, "goyoke", "agent-collaborations.jsonl")
 	data, err := os.ReadFile(collabPath)
 	if err != nil {
 		t.Fatalf("Failed to read collaboration log: %v", err)

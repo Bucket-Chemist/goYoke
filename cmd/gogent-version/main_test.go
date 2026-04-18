@@ -20,7 +20,7 @@ func TestRun(t *testing.T) {
 			jsonOutput: false,
 			verify: func(t *testing.T, buf *bytes.Buffer, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, "GOgent-Fortress v0.1.0 (built: development)\n", buf.String())
+				assert.Equal(t, "goYoke v0.1.0 (built: development)\n", buf.String())
 			},
 		},
 		{

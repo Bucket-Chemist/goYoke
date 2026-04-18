@@ -39,10 +39,10 @@ func TestSetupMode_BraintrustCreatesTeamDir(t *testing.T) {
 	assert.ElementsMatch(t, []string{
 		"Task", "Agent", "Bash", "Read", "Glob", "Grep", "ToolSearch",
 		"AskUserQuestion", "Skill",
-		"mcp__gofortress-interactive__spawn_agent",
-		"mcp__gofortress-interactive__team_run",
-		"mcp__gofortress-interactive__get_agent_result",
-		"mcp__gofortress-interactive__ask_user",
+		"mcp__goyoke-interactive__spawn_agent",
+		"mcp__goyoke-interactive__team_run",
+		"mcp__goyoke-interactive__get_agent_result",
+		"mcp__goyoke-interactive__ask_user",
 	}, guard.RouterAllowedTools)
 
 	// Verify team dir exists

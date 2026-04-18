@@ -1,4 +1,4 @@
-// Package version registers the gogent-version command in the multi-call dispatch table.
+// Package version registers the goyoke-version command in the multi-call dispatch table.
 package version
 
 import (
@@ -6,6 +6,6 @@ import (
 	versionlib "github.com/Bucket-Chemist/goYoke/internal/hooks/version"
 )
 
-func init() { multicall.Register("gogent-version", Main) }
+func init() { multicall.Register("goyoke-version", Main) }
 
 func Main() { versionlib.Main() }
