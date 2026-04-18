@@ -6,7 +6,7 @@ BINARY_NAME=goyoke
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context install install-archive install-aggregate install-wrapper install-load-context uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes all
 
 help:
 	@echo "goYoke - Available targets:"
@@ -28,7 +28,6 @@ help:
 	@echo "  make build-load-context   - Build goyoke-load-context binary"
 	@echo "  make build-agent-endstate - Build goyoke-agent-endstate binary"
 	@echo "  make build-orchestrator-guard - Build goyoke-orchestrator-guard binary"
-	@echo "  make build-doc-theater    - Build goyoke-doc-theater binary"
 	@echo "  make build-update-review-outcome - Build goyoke-update-review-outcome binary"
 	@echo "  make build-log-review     - Build goyoke-log-review binary"
 	@echo "  make build-all             - Build all hook binaries"
@@ -37,7 +36,6 @@ help:
 	@echo "  make install-aggregate - Install goyoke-aggregate to ~/.local/bin"
 	@echo "  make install-load-context - Install goyoke-load-context to ~/.local/bin"
 	@echo "  make install-orchestrator-guard - Install goyoke-orchestrator-guard to ~/.local/bin"
-	@echo "  make install-doc-theater - Install goyoke-doc-theater to ~/.local/bin"
 	@echo "  make install-update-review-outcome - Install goyoke-update-review-outcome to ~/.local/bin"
 	@echo "  make install-log-review - Install goyoke-log-review to ~/.local/bin"
 	@echo "  make install-wrapper - Install session-archive wrapper hook"
@@ -131,7 +129,7 @@ build-legacy:
 	@echo "✓ Legacy Go TUI built at bin/goyoke-legacy"
 
 # Build all hook binaries
-build-hooks: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review
+build-hooks: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review
 	@echo "✓ All hook binaries built"
 
 build-validate:
@@ -172,9 +170,6 @@ build-agent-endstate:
 build-orchestrator-guard:
 	@scripts/build-orchestrator-guard.sh
 
-build-doc-theater:
-	@scripts/build-doc-theater.sh
-
 build-update-review-outcome:
 	@echo "Building goyoke-update-review-outcome..."
 	@go build -o bin/goyoke-update-review-outcome ./cmd/goyoke-update-review-outcome
@@ -188,13 +183,13 @@ build-log-review:
 telemetry-tools: build-log-review build-update-review-outcome
 	@echo "✓ Telemetry tools built: goyoke-log-review, goyoke-update-review-outcome"
 
-build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review
 	@echo "✓ All hook binaries built"
 
 # Alias for build-all (matches plan documentation)
 all: build-all
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review check-path
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review check-path
 	@echo "Installing goYoke CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/goyoke-validate ~/.local/bin/goyoke-validate
@@ -205,7 +200,6 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/goyoke-load-context ~/.local/bin/goyoke-load-context
 	cp bin/goyoke-agent-endstate ~/.local/bin/goyoke-agent-endstate
 	cp bin/goyoke-orchestrator-guard ~/.local/bin/goyoke-orchestrator-guard
-	cp bin/goyoke-doc-theater ~/.local/bin/goyoke-doc-theater
 	cp bin/goyoke-update-review-outcome ~/.local/bin/goyoke-update-review-outcome
 	cp bin/goyoke-log-review ~/.local/bin/goyoke-log-review
 	chmod +x ~/.local/bin/goyoke-validate
@@ -216,10 +210,9 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	chmod +x ~/.local/bin/goyoke-load-context
 	chmod +x ~/.local/bin/goyoke-agent-endstate
 	chmod +x ~/.local/bin/goyoke-orchestrator-guard
-	chmod +x ~/.local/bin/goyoke-doc-theater
 	chmod +x ~/.local/bin/goyoke-update-review-outcome
 	chmod +x ~/.local/bin/goyoke-log-review
-	@echo "✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-doc-theater, goyoke-update-review-outcome, goyoke-log-review"
+	@echo "✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-update-review-outcome, goyoke-log-review"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -252,13 +245,6 @@ install-orchestrator-guard: build-orchestrator-guard
 	@cp bin/goyoke-orchestrator-guard ~/.local/bin/
 	@chmod +x ~/.local/bin/goyoke-orchestrator-guard
 	@echo "✓ Installed: ~/.local/bin/goyoke-orchestrator-guard"
-
-install-doc-theater: build-doc-theater
-	@echo "Installing goyoke-doc-theater to ~/.local/bin..."
-	@mkdir -p ~/.local/bin
-	@cp bin/goyoke-doc-theater ~/.local/bin/
-	@chmod +x ~/.local/bin/goyoke-doc-theater
-	@echo "✓ Installed: ~/.local/bin/goyoke-doc-theater"
 
 install-update-review-outcome: build-update-review-outcome
 	@echo "Installing goyoke-update-review-outcome to ~/.local/bin..."
@@ -305,7 +291,6 @@ uninstall:
 	rm -f ~/.local/bin/goyoke-load-context
 	rm -f ~/.local/bin/goyoke-agent-endstate
 	rm -f ~/.local/bin/goyoke-orchestrator-guard
-	rm -f ~/.local/bin/goyoke-doc-theater
 	rm -f ~/.local/bin/goyoke-update-review-outcome
 	rm -f ~/.local/bin/goyoke-log-review
 	@echo "✅ Uninstalled all CLIs"
@@ -325,7 +310,6 @@ clean:
 	rm -f bin/goyoke-load-context
 	rm -f bin/goyoke-agent-endstate
 	rm -f bin/goyoke-orchestrator-guard
-	rm -f bin/goyoke-doc-theater
 	rm -f bin/goyoke-update-review-outcome
 	rm -f bin/goyoke-log-review
 	rm -f bin/goyoke-legacy

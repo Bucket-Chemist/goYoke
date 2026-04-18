@@ -22,14 +22,15 @@ const (
 )
 
 // getAgentDirectories returns a list of agent directories to scan for sharp-edges.yaml files.
-// It constructs paths based on the home directory structure:
-// ~/.claude/agents/{agent-name}/sharp-edges.yaml
+// It dynamically discovers all agent directories under ~/.claude/agents/ so that
+// newly added agents are automatically included without code changes.
 //
 // Returns:
 //   - []string: List of absolute paths to agent directories
 //
-// Note: This function returns all common agent directories. LoadSharpEdgesIndex
-// will skip any that don't exist or lack sharp-edges.yaml files.
+// Directories starting with "." or "_" are skipped (e.g., .git, _archive).
+// If the agents directory does not exist, returns nil gracefully.
+// LoadSharpEdgesIndex will skip any directories that lack sharp-edges.yaml files.
 func getAgentDirectories() []string {
 	home := os.Getenv("HOME")
 	if home == "" {
@@ -39,41 +40,25 @@ func getAgentDirectories() []string {
 
 	claudeAgentsDir := filepath.Join(home, ".claude", "agents")
 
-	// Common agent directories
-	// These match the agents defined in agents-index.json
-	agents := []string{
-		"python-pro",
-		"python-ux",
-		"go-pro",
-		"go-cli",
-		"go-tui",
-		"go-api",
-		"go-concurrent",
-		"r-pro",
-		"r-shiny-pro",
-		"codebase-search",
-		"scaffolder",
-		"tech-docs-writer",
-		"librarian",
-		"code-reviewer",
-		"orchestrator",
-		"architect",
-		// NEW AGENTS (added in schema v2.4.0):
-		"typescript-pro",
-		"react-pro",
-		"backend-reviewer",
-		"frontend-reviewer",
-		"standards-reviewer",
-		"review-orchestrator",
-		// NEW AGENT (added in schema v2.5.0):
-		"impl-manager",
+	entries, err := os.ReadDir(claudeAgentsDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: could not read agents dir %s: %v\n", claudeAgentsDir, err)
+		return nil
 	}
 
-	dirs := make([]string, 0, len(agents))
-	for _, agent := range agents {
-		dirs = append(dirs, filepath.Join(claudeAgentsDir, agent))
+	var dirs []string
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+			continue
+		}
+		dirs = append(dirs, filepath.Join(claudeAgentsDir, name))
 	}
 
+	fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Loaded %d agent directories\n", len(dirs))
 	return dirs
 }
 
