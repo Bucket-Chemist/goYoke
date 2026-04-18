@@ -416,6 +416,11 @@ func (m AppModel) renderLayout() string {
 		result = overlayCenter(result, m.shared.helpModal.View(), m.width, m.height)
 	}
 
+	// Model selector modal: composite on top of the rendered layout.
+	if m.shared != nil && m.shared.modelModal.IsActive() {
+		result = overlayCenter(result, m.shared.modelModal.View(), m.width, m.height)
+	}
+
 	return result
 }
 

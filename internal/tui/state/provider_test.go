@@ -63,7 +63,7 @@ func TestDefaultProviders_LocalAdapterAndEnvVar(t *testing.T) {
 func TestDefaultProviders_AnthropicModels(t *testing.T) {
 	cfgs := DefaultProviders()
 	models := cfgs[ProviderAnthropic].Models
-	require.Len(t, models, 3)
+	require.Len(t, models, 5)
 
 	ids := make([]string, len(models))
 	for i, m := range models {
@@ -72,7 +72,7 @@ func TestDefaultProviders_AnthropicModels(t *testing.T) {
 		assert.NotEmpty(t, m.Description)
 		assert.Greater(t, m.ContextWindow, 0)
 	}
-	assert.Equal(t, []string{"opus", "sonnet", "haiku"}, ids)
+	assert.Equal(t, []string{"opus-4-6", "opus-4-7", "opus", "sonnet", "haiku"}, ids)
 }
 
 func TestDefaultProviders_GoogleModels(t *testing.T) {
@@ -222,7 +222,7 @@ func TestGetConfig_ReturnsCopy(t *testing.T) {
 	// Re-fetch — internal state must be unchanged.
 	cfg2, ok2 := ps.GetConfig(ProviderAnthropic)
 	require.True(t, ok2)
-	assert.Equal(t, "opus", cfg2.Models[0].ID)
+	assert.Equal(t, "opus-4-6", cfg2.Models[0].ID)
 }
 
 func TestGetConfig_EnvVarsCopied(t *testing.T) {
@@ -345,22 +345,22 @@ func TestSetActiveModel_ValidModel(t *testing.T) {
 	}
 }
 
-func TestSetActiveModel_InvalidModel(t *testing.T) {
+func TestSetActiveModel_PassthroughUnknown(t *testing.T) {
 	ps := NewProviderState()
-	err := ps.SetActiveModel("gpt-99-turbo")
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, ErrModelNotFound))
-	// Model must remain unchanged (first Anthropic model).
-	assert.Equal(t, "opus", ps.GetActiveModel())
+	// Unknown model IDs are accepted as passthrough to Claude CLI.
+	err := ps.SetActiveModel("claude-opus-4-6")
+	require.NoError(t, err)
+	assert.Equal(t, "claude-opus-4-6", ps.GetActiveModel())
+	assert.False(t, ps.IsKnownModel("claude-opus-4-6"))
 }
 
-// A model that belongs to a different provider must not be accepted.
-func TestSetActiveModel_CrossProviderModelRejected(t *testing.T) {
+// Cross-provider model IDs are accepted as passthrough (user intent).
+func TestSetActiveModel_CrossProviderModelPassthrough(t *testing.T) {
 	ps := NewProviderState()
-	// Anthropic is active; GPT model belongs to OpenAI.
+	// Anthropic is active; GPT model ID passes through to CLI.
 	err := ps.SetActiveModel("gpt-4-turbo")
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, ErrModelNotFound))
+	require.NoError(t, err)
+	assert.Equal(t, "gpt-4-turbo", ps.GetActiveModel())
 }
 
 // ---------------------------------------------------------------------------
@@ -503,11 +503,15 @@ func TestSentinelErrors_ProviderNotFound(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrProviderNotFound))
 }
 
-func TestSentinelErrors_ModelNotFound(t *testing.T) {
+func TestIsKnownModel(t *testing.T) {
 	ps := NewProviderState()
-	err := ps.SetActiveModel("bad-model")
-	require.Error(t, err)
-	assert.True(t, errors.Is(err, ErrModelNotFound))
+	assert.True(t, ps.IsKnownModel("opus"))
+	assert.True(t, ps.IsKnownModel("sonnet"))
+	assert.True(t, ps.IsKnownModel("haiku"))
+	assert.True(t, ps.IsKnownModel("opus-4-6"))
+	assert.True(t, ps.IsKnownModel("opus-4-7"))
+	assert.False(t, ps.IsKnownModel("bad-model"))
+	assert.False(t, ps.IsKnownModel("claude-opus-4-6"))
 }
 
 // ---------------------------------------------------------------------------
@@ -1061,7 +1065,7 @@ func TestImportModels_SkipsInvalidModel(t *testing.T) {
 		ProviderAnthropic: "gpt-99-turbo",
 	})
 	// Model must remain at the default.
-	assert.Equal(t, "opus", ps.GetActiveModel())
+	assert.Equal(t, "opus-4-6", ps.GetActiveModel())
 }
 
 func TestImportModels_SkipsUnknownProvider(t *testing.T) {
@@ -1079,7 +1083,7 @@ func TestImportModels_CrossProviderModelRejected(t *testing.T) {
 		ProviderAnthropic: "gpt-4",
 	})
 	// Anthropic model must remain unchanged.
-	assert.Equal(t, "opus", ps.GetActiveModel())
+	assert.Equal(t, "opus-4-6", ps.GetActiveModel())
 }
 
 func TestImportModels_MultipleProviders(t *testing.T) {

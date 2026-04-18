@@ -109,16 +109,14 @@ func (m AppModel) restartCLIDriver() (tea.Model, tea.Cmd) {
 	// Start from the baseline options captured at startup so that flags
 	// such as --verbose, --debug, and --permission-mode are not silently lost.
 	cfg := ps.GetActiveConfig()
-	activeModel := ps.GetActiveModel()
+	activeModel := ps.GetActiveCLIModel()
 
-	// Preserve the [1m] context window suffix when the session has 1M access.
-	// The context1M flag is latched on the first SystemInitEvent and survives
-	// across model switches.  Only opus supports [1m] on Max subscriptions;
-	// sonnet[1m] requires extra usage that is not available to all plans.
+	// The CLI only adds [1m] for shorthands (e.g. "opus"), not explicit model
+	// IDs.  Propagate 1M access to the API model ID when the session has it.
 	if m.context1M &&
 		!strings.Contains(activeModel, "[1m]") &&
-		strings.Contains(strings.ToLower(activeModel), "opus") {
-		activeModel = activeModel + "[1m]"
+		!strings.Contains(strings.ToLower(activeModel), "haiku") {
+		activeModel += "[1m]"
 	}
 
 	opts := m.shared.baseCLIOpts // value copy preserves Verbose, Debug, PermissionMode, MCPConfigPath, etc.

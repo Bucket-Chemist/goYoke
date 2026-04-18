@@ -138,6 +138,9 @@ type sharedState struct {
 	// optionsViewModal is the full-screen options viewer overlay (alt+o).
 	optionsViewModal modals.OptionsViewModal
 
+	// modelModal is the interactive model selector overlay (/model).
+	modelModal modals.ModelModal
+
 	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
 	// It is activated by ctrl+f and queries all registered SearchSources.
 	searchOverlay searchOverlayWidget
@@ -294,6 +297,7 @@ func NewAppModel() AppModel {
 		planViewModal:    modals.NewPlanViewModal(),
 		helpModal:        modals.NewHelpModal(),
 		optionsViewModal: modals.NewOptionsViewModal(),
+		modelModal:       modals.NewModelModal(),
 	}
 	m := AppModel{
 		focus:          FocusClaude,
@@ -400,6 +404,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ModelSwitchRequestMsg:
 		return m.handleModelSwitchRequest(msg)
+
+	case modals.ModelSelectedMsg:
+		m.shared.modelModal.Hide()
+		return m.handleModelSwitchRequest(ModelSwitchRequestMsg{ModelID: msg.ModelID})
+
+	case modals.ModelModalClosedMsg:
+		m.shared.modelModal.Hide()
+		m.updateHintContext()
+		return m, nil
 
 	// -----------------------------------------------------------------
 	// Effort switching
