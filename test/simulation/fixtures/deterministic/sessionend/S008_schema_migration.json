@@ -5,7 +5,7 @@
       ".claude/memory/handoffs.jsonl": "{\"schema_version\":\"1.0\",\"session_id\":\"old-session\",\"timestamp\":\"2026-01-21T10:00:00Z\",\"violations\":[]}"
     },
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {

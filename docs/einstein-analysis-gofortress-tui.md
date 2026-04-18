@@ -651,9 +651,9 @@ func (m Model) queryAgent() tea.Cmd {
 - Users expect `[q] Query agent` to work
 - This enables the core TUI value proposition: managing multiple Claude agents visually
 
-**Integration with GOgent Agent System:**
+**Integration with goYoke Agent System:**
 
-Your existing GOgent routing system (`agents-index.json`) defines agents like `go-pro`, `go-tui`, `security-reviewer`, etc. The SubagentManager can load these definitions:
+Your existing goYoke routing system (`agents-index.json`) defines agents like `go-pro`, `go-tui`, `security-reviewer`, etc. The SubagentManager can load these definitions:
 
 ```go
 // Load from agents-index.json
@@ -745,16 +745,16 @@ After implementing Phase 1, test with:
 
 ```bash
 # Build
-go build ./cmd/gofortress/
+go build ./cmd/goyoke/
 
-# Test without hooks (isolates TUI from GOgent hooks)
+# Test without hooks (isolates TUI from goYoke hooks)
 echo '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"say hello"}]}}' | \
   claude --print --verbose --debug-to-stderr --no-hooks \
          --input-format stream-json --output-format stream-json \
          --session-id $(uuidgen)
 
 # Test with TUI
-./gofortress --no-hooks
+./goyoke --no-hooks
 ```
 
 ---

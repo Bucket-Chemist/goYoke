@@ -1,6 +1,6 @@
 # Event Corpus Capture Status
 
-**Ticket**: GOgent-008b
+**Ticket**: goYoke-008b
 **Priority**: P0 CRITICAL BLOCKER
 **Started**: 2026-01-16 17:19 UTC
 
@@ -11,8 +11,8 @@ The event corpus logger is installed and capturing events passively. This docume
 ## Configuration
 
 - **Logger Binary**: `~/.claude/hooks/zzz-corpus-logger` (Go binary, statically linked)
-- **Corpus Location**: `/run/user/1000/gogent/event-corpus-raw.jsonl` (XDG_RUNTIME_DIR)
-- **Fallback Location**: `~/.cache/gogent/event-corpus-raw.jsonl`
+- **Corpus Location**: `/run/user/1000/goyoke/event-corpus-raw.jsonl` (XDG_RUNTIME_DIR)
+- **Fallback Location**: `~/.cache/goyoke/event-corpus-raw.jsonl`
 - **Target Output**: `test/fixtures/event-corpus.json` (curated corpus)
 
 ## Capture Status
@@ -76,14 +76,14 @@ Just use Claude Code normally. The logger will capture events automatically.
 
 **Check progress periodically:**
 ```bash
-wc -l /run/user/1000/gogent/event-corpus-raw.jsonl
+wc -l /run/user/1000/goyoke/event-corpus-raw.jsonl
 ```
 
 ### After Capture (when count ≥95)
 
 1. **Curate the corpus**:
    ```bash
-   cat /run/user/1000/gogent/event-corpus-raw.jsonl \
+   cat /run/user/1000/goyoke/event-corpus-raw.jsonl \
      | jq -s '[.[] | select(.tool_name != null)]' \
      > test/fixtures/event-corpus.json
    ```
@@ -99,7 +99,7 @@ wc -l /run/user/1000/gogent/event-corpus-raw.jsonl
    jq '.[0:5]' test/fixtures/event-corpus.json
    ```
 
-4. **Validate fields** (expected based on GOgent-003/006):
+4. **Validate fields** (expected based on goYoke-003/006):
    - `tool_name` (string)
    - `tool_input` (object or null)
    - `tool_response` (object, for PostToolUse events)
@@ -118,29 +118,29 @@ wc -l /run/user/1000/gogent/event-corpus-raw.jsonl
 
 ## Critical Notes
 
-**Why This Matters**: This corpus is the foundation for validating GOgent-006, GOgent-007, GOgent-008, and GOgent-009. Without real event data, we're validating against imaginary specs. The corpus will reveal:
+**Why This Matters**: This corpus is the foundation for validating goYoke-006, goYoke-007, goYoke-008, and goYoke-009. Without real event data, we're validating against imaginary specs. The corpus will reveal:
 
 - Actual field names and types (not guesses)
 - Edge cases our structs/parsers need to handle
 - Real-world error conditions
 - Data quality issues to handle
 
-**Blocked Tickets**: GOgent-006, GOgent-007, GOgent-008, GOgent-009 are blocked until this corpus is ready.
+**Blocked Tickets**: goYoke-006, goYoke-007, goYoke-008, goYoke-009 are blocked until this corpus is ready.
 
 ## Monitoring Commands
 
 ```bash
 # Check current event count
-wc -l /run/user/1000/gogent/event-corpus-raw.jsonl
+wc -l /run/user/1000/goyoke/event-corpus-raw.jsonl
 
 # View latest 5 events
-tail -5 /run/user/1000/gogent/event-corpus-raw.jsonl | jq -c '.'
+tail -5 /run/user/1000/goyoke/event-corpus-raw.jsonl | jq -c '.'
 
 # Check corpus file size
-ls -lh /run/user/1000/gogent/event-corpus-raw.jsonl
+ls -lh /run/user/1000/goyoke/event-corpus-raw.jsonl
 
 # Verify JSON validity
-jq -s 'length' /run/user/1000/gogent/event-corpus-raw.jsonl
+jq -s 'length' /run/user/1000/goyoke/event-corpus-raw.jsonl
 ```
 
 ## Timeline

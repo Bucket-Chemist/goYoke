@@ -2,7 +2,7 @@
 
 ## Summary
 
-The `/ticket` skill has been configured to reflect your current progress at GOgent-004a.
+The `/ticket` skill has been configured to reflect your current progress at goYoke-004a.
 
 ## Changes Made
 
@@ -10,25 +10,25 @@ The `/ticket` skill has been configured to reflect your current progress at GOge
 **Location:** `migration_plan/finalised/tickets/tickets-index.json`
 
 **Tickets marked as completed:**
-- GOgent-000: Baseline Measurement & Corpus Capture
-- GOgent-001: Setup Go Module & Directory Structure  
-- GOgent-002: Implement STDIN Timeout Reading
-- GOgent-003: Parse ToolEvent JSON Schema
+- goYoke-000: Baseline Measurement & Corpus Capture
+- goYoke-001: Setup Go Module & Directory Structure  
+- goYoke-002: Implement STDIN Timeout Reading
+- goYoke-003: Parse ToolEvent JSON Schema
 
 **Current ticket (in_progress):**
-- GOgent-004a: Load Routing Schema JSON
+- goYoke-004a: Load Routing Schema JSON
 
 ### 2. Created .current-ticket state file
 **Location:** `migration_plan/finalised/tickets/.current-ticket`
-**Content:** `GOgent-004a`
+**Content:** `goYoke-004a`
 
 This file tracks which ticket you're currently working on.
 
 ## Verification
 
 Next ticket detection works correctly:
-- Running `find-next-ticket.sh` returns: GOgent-005
-- This is correct because GOgent-004a is in_progress (must be completed first)
+- Running `find-next-ticket.sh` returns: goYoke-005
+- This is correct because goYoke-004a is in_progress (must be completed first)
 
 ## Next Steps
 
@@ -38,13 +38,13 @@ You can now test the `/ticket` workflow:
 # Show current ticket status
 /ticket status
 
-# Verify acceptance criteria for GOgent-004a
+# Verify acceptance criteria for goYoke-004a
 /ticket verify
 
-# When ready to complete GOgent-004a
+# When ready to complete goYoke-004a
 /ticket complete
 
-# Move to next ticket (GOgent-005)
+# Move to next ticket (goYoke-005)
 /ticket next
 ```
 
@@ -53,9 +53,9 @@ You can now test the `/ticket` workflow:
 ```
 migration_plan/finalised/tickets/
 ├── tickets-index.json          # Updated with completed statuses
-├── .current-ticket             # Contains "GOgent-004a"
-├── 00-prework.md              # GOgent-000 (completed)
-├── 01-week1-foundation-events.md  # GOgent-001-009
+├── .current-ticket             # Contains "goYoke-004a"
+├── 00-prework.md              # goYoke-000 (completed)
+├── 01-week1-foundation-events.md  # goYoke-001-009
 ├── 02-week1-overrides-permissions.md
 └── ... (other ticket files)
 ```
@@ -64,12 +64,12 @@ migration_plan/finalised/tickets/
 
 | Ticket | Status | Title |
 |--------|--------|-------|
-| GOgent-000 | ✓ completed | Baseline Measurement |
-| GOgent-001 | ✓ completed | Setup Go Module |
-| GOgent-002 | ✓ completed | STDIN Timeout Reading |
-| GOgent-003 | ✓ completed | Parse ToolEvent JSON |
-| GOgent-004a | → in_progress | Load Routing Schema JSON |
-| GOgent-004b | pending | Read Current Tier |
-| GOgent-005 | pending | Parse Task Input |
+| goYoke-000 | ✓ completed | Baseline Measurement |
+| goYoke-001 | ✓ completed | Setup Go Module |
+| goYoke-002 | ✓ completed | STDIN Timeout Reading |
+| goYoke-003 | ✓ completed | Parse ToolEvent JSON |
+| goYoke-004a | → in_progress | Load Routing Schema JSON |
+| goYoke-004b | pending | Read Current Tier |
+| goYoke-005 | pending | Parse Task Input |
 | ... | pending | ... |
 

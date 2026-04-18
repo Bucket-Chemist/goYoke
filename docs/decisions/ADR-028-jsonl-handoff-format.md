@@ -4,9 +4,9 @@
 
 **Date**: 2026-01-19
 
-**Deciders**: GOgent-Fortress Development Team
+**Deciders**: goYoke Development Team
 
-**Technical Story**: GOgent-028 series - Session handoff generation migration from bash to Go
+**Technical Story**: goYoke-028 series - Session handoff generation migration from bash to Go
 
 ---
 
@@ -48,7 +48,7 @@ EOF
 
 ### Requirements
 
-The replacement Go implementation (`gogent-archive`) must:
+The replacement Go implementation (`goyoke-archive`) must:
 
 1. **Preserve human UX** — Immediate review via markdown must still work
 2. **Enable machine queries** — "Show all sessions with >3 violations"
@@ -69,7 +69,7 @@ The replacement Go implementation (`gogent-archive`) must:
 **Implement dual-format handoff generation:**
 
 ```
-SessionEnd event → gogent-archive
+SessionEnd event → goyoke-archive
                         │
                         ▼
               ┌─────────────────┐
@@ -123,7 +123,7 @@ SessionEnd event → gogent-archive
       "routing_violations": 3,
       "session_id": "abc123def456"
     },
-    "active_ticket": "GOgent-028",
+    "active_ticket": "goYoke-028",
     "phase": "implementation",
     "git_info": {
       "branch": "feature/session-handoff",
@@ -264,21 +264,21 @@ The `RenderHandoffMarkdown()` function produces:
 
 ### CLI Architecture
 
-**Decision**: Single binary `gogent-archive` with mode-based operation.
+**Decision**: Single binary `goyoke-archive` with mode-based operation.
 
 ```
-gogent-archive                  # Hook mode: read SessionEnd JSON from STDIN
-gogent-archive list             # Query mode: show session history
-gogent-archive list --since 7d  # Filtered query
-gogent-archive show <id>        # Single session detail
-gogent-archive stats            # Aggregate statistics
+goyoke-archive                  # Hook mode: read SessionEnd JSON from STDIN
+goyoke-archive list             # Query mode: show session history
+goyoke-archive list --since 7d  # Filtered query
+goyoke-archive show <id>        # Single session detail
+goyoke-archive stats            # Aggregate statistics
 ```
 
 **Why STDIN for hook mode?**
 
 - Claude Code hook infrastructure streams JSON directly (no intermediate files)
 - Atomic: All input arrives in single read
-- Testable: `echo '{"session_id": "test"}' | gogent-archive`
+- Testable: `echo '{"session_id": "test"}' | goyoke-archive`
 - No command-line argument parsing for complex JSON structures
 
 **Why subcommands for query mode?**
@@ -289,10 +289,10 @@ gogent-archive stats            # Aggregate statistics
 
 ### Project Directory Detection
 
-**Decision**: `GOGENT_PROJECT_DIR` environment variable with `pwd` fallback.
+**Decision**: `GOYOKE_PROJECT_DIR` environment variable with `pwd` fallback.
 
 ```go
-projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
 if projectDir == "" {
     projectDir, _ = os.Getwd()
 }
@@ -310,7 +310,7 @@ if projectDir == "" {
 **Decision**: Structured three-part error messages.
 
 ```
-[gogent-archive] Failed to write handoffs.jsonl: permission denied.
+[goyoke-archive] Failed to write handoffs.jsonl: permission denied.
   Directory .claude/memory/ is not writable.
   Fix: chmod 755 .claude/memory/ or check disk space.
 ```
@@ -377,8 +377,8 @@ Rationale: JSONL is source of truth. If it fails, session data is lost. Markdown
 
 1. **Queryable History**
    ```bash
-   gogent-archive list --since 7d --has-violations
-   gogent-archive stats
+   goyoke-archive list --since 7d --has-violations
+   goyoke-archive stats
    jq 'select(.artifacts.sharp_edges | length > 0)' handoffs.jsonl
    ```
 
@@ -411,7 +411,7 @@ Rationale: JSONL is source of truth. If it fails, session data is lost. Markdown
 
 2. **Disk Usage**
    - Append-only JSONL grows unbounded
-   - Mitigation: Future `gogent-archive rotate` command (not yet implemented)
+   - Mitigation: Future `goyoke-archive rotate` command (not yet implemented)
    - Estimate: ~2KB per session × 100 sessions = 200KB/project (negligible)
 
 3. **Potential Inconsistency**
@@ -427,7 +427,7 @@ Rationale: JSONL is source of truth. If it fails, session data is lost. Markdown
 
 | Phase | Action | Validation |
 |-------|--------|------------|
-| 1. Deploy | Install `gogent-archive` binary | Binary runs without error |
+| 1. Deploy | Install `goyoke-archive` binary | Binary runs without error |
 | 2. Parallel | Both hooks active, compare outputs | Metrics match between bash and Go |
 | 3. Cutover | Disable bash hook, Go only | `load-routing-context.sh` reads Go markdown |
 | 4. Cleanup | Remove bash hook | No regressions in session start |
@@ -459,7 +459,7 @@ Old bash-generated `last-handoff.md` files remain readable. They are simply over
 | `pkg/session/handoff_markdown.go` | Markdown rendering |
 | `pkg/session/handoff_artifacts.go` | Artifact loading from temp files |
 | `pkg/session/archive.go` | Post-handoff artifact archival |
-| `cmd/gogent-archive/main.go` | CLI entry point, subcommands |
+| `cmd/goyoke-archive/main.go` | CLI entry point, subcommands |
 
 ### Test Files
 
@@ -474,16 +474,16 @@ Old bash-generated `last-handoff.md` files remain readable. They are simply over
 
 | Ticket | Description |
 |--------|-------------|
-| GOgent-028 | Core handoff implementation |
-| GOgent-028a | CLI binary structure |
-| GOgent-028b | Metrics parity with bash |
-| GOgent-028g | Artifact validation |
-| GOgent-028l | Schema versioning |
-| GOgent-028m | Integration tests |
+| goYoke-028 | Core handoff implementation |
+| goYoke-028a | CLI binary structure |
+| goYoke-028b | Metrics parity with bash |
+| goYoke-028g | Artifact validation |
+| goYoke-028l | Schema versioning |
+| goYoke-028m | Integration tests |
 
 ### Original Bash Implementation
 
-`~/.claude/hooks/session-archive.sh` — Now deprecated, replaced by `gogent-archive` binary.
+`~/.claude/hooks/session-archive.sh` — Now deprecated, replaced by `goyoke-archive` binary.
 
 ---
 

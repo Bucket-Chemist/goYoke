@@ -7,7 +7,7 @@
       ".claude/memory/pending-learnings.jsonl": "{\"file\":\"pkg/routing/validate.go\",\"error_type\":\"concurrent_map_access\",\"consecutive_failures\":3,\"timestamp\":1705708800,\"context\":\"Tool: Bash\"}\n{\"file\":\"pkg/session/archive.go\",\"error_type\":\"nil_pointer\",\"consecutive_failures\":4,\"timestamp\":1705708860,\"context\":\"Tool: Edit\"}"
     },
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {

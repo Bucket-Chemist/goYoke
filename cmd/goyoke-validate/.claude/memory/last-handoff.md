@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Session ID**: 129ca591-4ae7-46a2-b982-96c588b33d1f
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-validate
+- **Project**: /home/doktersmol/Documents/goYoke/cmd/goyoke-validate
 
 ## Session Metrics
 
@@ -23,7 +23,7 @@
   - claude/tmp/unleash-backup-codeium-extension.json
   - claude/tmp/unleash-repo-schema-v1-codeium-language-server.json
   - ticket-config.json
-  - md/gogent-validate/main.go
+  - md/goyoke-validate/main.go
   - eprecated/internal/mcp/.claude/memory/handoffs.jsonl
   - eprecated/internal/mcp/.claude/memory/last-handoff.md
   - ackages/tui/.claude/memory/handoffs.jsonl

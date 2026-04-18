@@ -5,12 +5,12 @@
     "category": "logic",
     "file": "pkg/config/paths.go",
     "lines": "25-64",
-    "claim": "GetGOgentDir accepted XDG runtime/cache directories after mkdir alone, so an existing but unwritable runtime directory caused guard, counter, and other state writes to fail at runtime.",
-    "evidence": "Before the fix, GetGOgentDir returned immediately after os.MkdirAll on XDG paths and never verified that files could actually be created there; downstream code uses that path for guard locks and tool counters.",
+    "claim": "GetgoYokeDir accepted XDG runtime/cache directories after mkdir alone, so an existing but unwritable runtime directory caused guard, counter, and other state writes to fail at runtime.",
+    "evidence": "Before the fix, GetgoYokeDir returned immediately after os.MkdirAll on XDG paths and never verified that files could actually be created there; downstream code uses that path for guard locks and tool counters.",
     "runtimeTrigger": "Run the app with XDG_RUNTIME_DIR pointing to an existing but read-only directory; skill-guard and related state writers then fail or silently drop to fallback behavior.",
     "crossReferences": [
       "pkg/config/paths_test.go:66-99",
-      "cmd/gogent-skill-guard/main.go:76-104"
+      "cmd/goyoke-skill-guard/main.go:76-104"
     ],
     "confidenceScore": 94,
     "confidenceLabel": "high",
@@ -60,15 +60,15 @@
     "bugId": "BUG-4",
     "severity": "Medium",
     "category": "logic",
-    "file": "cmd/gogent-team-run/wave.go",
+    "file": "cmd/goyoke-team-run/wave.go",
     "lines": "67-83",
     "claim": "runWaves only returned an error when every member in a wave failed, so final-wave partial failures were reported as successful team runs even though failed members remained.",
     "evidence": "Before the fix, partial failures only emitted a warning and execution continued; if the partial failure happened on the last wave there was no later check, so runWaves returned nil and downstream callers treated the run as clean.",
     "runtimeTrigger": "Run a team where one member in the last wave fails while another succeeds; the command exits without surfacing the failed member state.",
     "crossReferences": [
-      "cmd/gogent-team-run/main_test.go:551-645",
-      "cmd/gogent-team-run/wave_test.go:485-541",
-      "cmd/gogent-team-run/wave_test.go:545-605"
+      "cmd/goyoke-team-run/main_test.go:551-645",
+      "cmd/goyoke-team-run/wave_test.go:485-541",
+      "cmd/goyoke-team-run/wave_test.go:545-605"
     ],
     "confidenceScore": 96,
     "confidenceLabel": "high",
@@ -136,9 +136,9 @@
     "category": "logic",
     "file": "pkg/config/paths.go",
     "lines": "286-311",
-    "claim": "GetGOgentDataDir accepted XDG data directories after mkdir alone, so existing but unwritable data directories caused telemetry and ML log writes to fail later at runtime.",
-    "evidence": "GetGOgentDataDir returned XDG_DATA_HOME or ~/.local/share/gogent after os.MkdirAll without verifying file creation, while telemetry writers later open files under that path for append.",
-    "runtimeTrigger": "Run with XDG_DATA_HOME or ~/.local/share/gogent present but unwritable, then attempt telemetry or ML logging such as agent lifecycle or tool-event writes.",
+    "claim": "GetgoYokeDataDir accepted XDG data directories after mkdir alone, so existing but unwritable data directories caused telemetry and ML log writes to fail later at runtime.",
+    "evidence": "GetgoYokeDataDir returned XDG_DATA_HOME or ~/.local/share/goyoke after os.MkdirAll without verifying file creation, while telemetry writers later open files under that path for append.",
+    "runtimeTrigger": "Run with XDG_DATA_HOME or ~/.local/share/goyoke present but unwritable, then attempt telemetry or ML logging such as agent lifecycle or tool-event writes.",
     "crossReferences": [
       "pkg/config/paths_test.go:1166-1197",
       "pkg/telemetry/agent_lifecycle.go:52-75",
@@ -153,14 +153,14 @@
     "bugId": "BUG-10",
     "severity": "Medium",
     "category": "logic",
-    "file": "cmd/gogent-permission-gate/cache.go",
+    "file": "cmd/goyoke-permission-gate/cache.go",
     "lines": "11-20",
     "claim": "Permission-gate cache filenames embedded raw session_id values, allowing path separator and traversal characters to escape the intended runtime directory.",
     "evidence": "cachePath(sessionID) previously formatted sessionID directly into the filename under XDG_RUNTIME_DIR or /tmp. SessionID is taken from stdin tool events, so slash-containing values changed the resolved path.",
     "runtimeTrigger": "Feed the permission gate a PreToolUse payload whose session_id contains path separators such as ../../escape/me, then write an allow_session cache entry.",
     "crossReferences": [
-      "cmd/gogent-permission-gate/main.go:31-63",
-      "cmd/gogent-permission-gate/main_test.go:175-189"
+      "cmd/goyoke-permission-gate/main.go:31-63",
+      "cmd/goyoke-permission-gate/main_test.go:175-189"
     ],
     "confidenceScore": 95,
     "confidenceLabel": "high",
@@ -171,14 +171,14 @@
     "bugId": "BUG-11",
     "severity": "Medium",
     "category": "logic",
-    "file": "cmd/gogent-aggregate/main.go",
+    "file": "cmd/goyoke-aggregate/main.go",
     "lines": "257-275",
     "claim": "The weekly aggregation tool counted JSONL records with the default scanner limit, so a single large archived record caused line counts to fail and summary stats to be zeroed or degraded.",
     "evidence": "aggregateFiles calls countLines before archiving each memory file. countLines previously used bufio.NewScanner with the default 64 KiB token cap, while archived JSONL rows can legitimately exceed that size.",
-    "runtimeTrigger": "Run gogent-aggregate on a memory JSONL file containing a single large valid line above 64 KiB.",
+    "runtimeTrigger": "Run goyoke-aggregate on a memory JSONL file containing a single large valid line above 64 KiB.",
     "crossReferences": [
-      "cmd/gogent-aggregate/main.go:182-219",
-      "cmd/gogent-aggregate/main_test.go:364-378"
+      "cmd/goyoke-aggregate/main.go:182-219",
+      "cmd/goyoke-aggregate/main_test.go:364-378"
     ],
     "confidenceScore": 94,
     "confidenceLabel": "high",
@@ -209,8 +209,8 @@
     "file": "internal/tui/bridge/server.go",
     "lines": "51-93",
     "claim": "IPC bridge startup built Unix socket paths directly from XDG runtime/temp directories without checking sockaddr_un length, so long base paths failed with bind: invalid argument before the TUI accepted MCP connections.",
-    "evidence": "buildSocketPath previously concatenated the base directory with gofortress-{pid}.sock unconditionally. Linux pathname Unix sockets cap the path length, and the failure reproduced once tests used long temp directory names.",
-    "runtimeTrigger": "Start the TUI with a long XDG_RUNTIME_DIR or TMPDIR path, or under long generated temp directory names; bridge creation fails and GOFORTRESS_SOCKET is never usable.",
+    "evidence": "buildSocketPath previously concatenated the base directory with goyoke-{pid}.sock unconditionally. Linux pathname Unix sockets cap the path length, and the failure reproduced once tests used long temp directory names.",
+    "runtimeTrigger": "Start the TUI with a long XDG_RUNTIME_DIR or TMPDIR path, or under long generated temp directory names; bridge creation fails and GOYOKE_SOCKET is never usable.",
     "crossReferences": [
       "internal/tui/bridge/server_test.go:334-342",
       "internal/tui/mcp/tools_test.go:201-204",

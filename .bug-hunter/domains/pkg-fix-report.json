@@ -19,7 +19,7 @@
         "pkg/config/paths.go:47-113",
         "pkg/config/paths_test.go:776-846"
       ],
-      "whatChanged": "Replaced the shared /tmp/gogent-fallback location with a per-user fallback directory, forced 0700 permissions on that fallback, and covered the unsafe-path cases in config tests.",
+      "whatChanged": "Replaced the shared /tmp/goyoke-fallback location with a per-user fallback directory, forced 0700 permissions on that fallback, and covered the unsafe-path cases in config tests.",
       "confidenceLabel": "high",
       "sideEffects": [
         "None"

@@ -1,12 +1,12 @@
 # Bioinformatics Review Team — Architecture
 
-How `/review-bioinformatics` executes end-to-end via `gogent-team-run`.
+How `/review-bioinformatics` executes end-to-end via `goyoke-team-run`.
 
 ---
 
 ## Overview
 
-The bioinformatics review team is a 2-wave pipeline orchestrated by `gogent-team-run` (a standalone Go binary). Wave 1 runs up to 6 domain-specialist Opus reviewers in parallel. An inter-wave Go script (`gogent-team-prepare-synthesis`) performs programmatic cross-referencing of findings. Wave 2 runs the Staff Bioinformatician, which applies a 7-layer synthesis framework to produce a unified verdict.
+The bioinformatics review team is a 2-wave pipeline orchestrated by `goyoke-team-run` (a standalone Go binary). Wave 1 runs up to 6 domain-specialist Opus reviewers in parallel. An inter-wave Go script (`goyoke-team-prepare-synthesis`) performs programmatic cross-referencing of findings. Wave 2 runs the Staff Bioinformatician, which applies a 7-layer synthesis framework to produce a unified verdict.
 
 **Cost model:** $10-25 per review depending on reviewer count (3-6 reviewers at $2-5 each + synthesizer at $2-5).
 
@@ -25,10 +25,10 @@ The bioinformatics review team is a 2-wave pipeline orchestrated by `gogent-team
     │       stdin_{reviewer}.json  (per bioinformatics-reviewer.json schema)
     │       stdin_staff-bioinformatician.json
     │
-    └─ 5. mcp__gofortress-interactive__team_run({team_dir})
+    └─ 5. mcp__goyoke-interactive__team_run({team_dir})
                 │
                 ▼
-        gogent-team-run (Go binary, background process)
+        goyoke-team-run (Go binary, background process)
                 │
                 ├─ Reads config.json → TeamRunner
                 ├─ Writes PID file + heartbeat
@@ -73,7 +73,7 @@ The bioinformatics review team is a 2-wave pipeline orchestrated by `gogent-team
                             │
                             ▼
     ┌───────────────────────────────────────────────────────┐
-    │        INTER-WAVE: gogent-team-prepare-synthesis       │
+    │        INTER-WAVE: goyoke-team-prepare-synthesis       │
     │                    (Go binary, NOT an LLM)             │
     │                                                        │
     │  1. Read all stdout_*.json from wave 1                 │
@@ -155,7 +155,7 @@ The bioinformatics review team is a 2-wave pipeline orchestrated by `gogent-team
     ┌───────────────────────────────────────────────────────┐
     │                     COMPLETION                         │
     │                                                        │
-    │  gogent-team-run:                                      │
+    │  goyoke-team-run:                                      │
     │    - status="completed" in config.json                 │
     │    - Releases PID file                                 │
     │    - Notifies TUI via UDS (toast)                      │
@@ -184,7 +184,7 @@ review-bioinformatics.json
 │   │   ├── proteoform-reviewer     (opus, 15min timeout)
 │   │   ├── mass-spec-reviewer      (opus, 15min timeout)
 │   │   └── bioinformatician-reviewer (opus, 15min timeout, always-run)
-│   │   on_complete_script: "gogent-team-prepare-synthesis"
+│   │   on_complete_script: "goyoke-team-prepare-synthesis"
 │   │
 │   └── wave 2: "7-layer cross-domain synthesis"
 │       └── staff-bioinformatician  (opus, 15min timeout)
@@ -241,7 +241,7 @@ The skill selects 2-4 domain reviewers based on detected file content. The bioin
 
 ---
 
-## Inter-Wave Script: `gogent-team-prepare-synthesis`
+## Inter-Wave Script: `goyoke-team-prepare-synthesis`
 
 This Go binary is the critical bridge between wave 1 and wave 2. It runs deterministic code (not an LLM) to pre-analyze findings before the Staff Bioinformatician sees them.
 
@@ -287,7 +287,7 @@ Typical costs per member:
 
 ## Health Monitoring
 
-`gogent-team-run` monitors each spawned agent via its NDJSON output stream:
+`goyoke-team-run` monitors each spawned agent via its NDJSON output stream:
 
 | Threshold | Status | Action |
 |-----------|--------|--------|
@@ -296,7 +296,7 @@ Typical costs per member:
 | 150s (3x warning) | stalled | Logged, counter incremented — NOT killed (Opus thinking can be legitimately silent) |
 | timeout_ms reached | timeout | SIGTERM → 5s grace → SIGKILL. Member marked status="timeout" |
 
-Heartbeat file updated every 30s with timestamp — external monitors (systemd, cron) can detect a hung `gogent-team-run` process.
+Heartbeat file updated every 30s with timestamp — external monitors (systemd, cron) can detect a hung `goyoke-team-run` process.
 
 ---
 
@@ -308,7 +308,7 @@ Heartbeat file updated every 30s with timestamp — external monitors (systemd, 
 | All reviewers fail | Wave 1 total failure → wave 2 skipped | Team status shows failure; no synthesis produced |
 | Staff-bio times out | Wave 2 fails | Individual reviewer stdout files still available via `/team-result` |
 | Budget exhausted mid-wave | Remaining members not spawned | Partial results from already-completed members available |
-| `gogent-team-run` crashes | PID file left behind; heartbeat stale | `/team-status` detects stale heartbeat; manual cleanup needed |
+| `goyoke-team-run` crashes | PID file left behind; heartbeat stale | `/team-status` detects stale heartbeat; manual cleanup needed |
 | Inter-wave script fails | Wave 2 proceeds with un-enriched stdin | Staff-bio gets wave_0_outputs but no pre-synthesis.md; Layer 1 less informed |
 
 ---
@@ -333,9 +333,9 @@ Heartbeat file updated every 30s with timestamp — external monitors (systemd, 
 ├── ...
 ├── pre-synthesis.md                         ← inter-wave script output (programmatic analysis)
 ├── detected-interactions.json               ← inter-wave script output (machine-readable)
-├── runner.log                               ← gogent-team-run execution log
+├── runner.log                               ← goyoke-team-run execution log
 ├── heartbeat                                ← timestamp file for external health monitoring
-└── gogent-team-run.pid                      ← PID file (removed on clean exit)
+└── goyoke-team-run.pid                      ← PID file (removed on clean exit)
 ```
 
 ---
@@ -368,7 +368,7 @@ The staff-bioinformatician's 7-layer framework connects reviewers via:
 - **FDR Detection Matrix** — DB inflation x FDR coupling patterns
 - **Coverage Matrix** — which pipeline stages are checked by which reviewers
 
-All wiring uses concrete `sharp_edge_id` values (not free-text descriptions), enabling programmatic detection by `gogent-team-prepare-synthesis`.
+All wiring uses concrete `sharp_edge_id` values (not free-text descriptions), enabling programmatic detection by `goyoke-team-prepare-synthesis`.
 
 ---
 
@@ -382,5 +382,5 @@ All wiring uses concrete `sharp_edge_id` values (not free-text descriptions), en
 | `.claude/schemas/stdin/review-bioinformatics-staff-bioinformatician.json` | Wave 2 stdin schema |
 | `.claude/agents/teams/bioinformatics/sharp-edge-conventions.md` | ID naming conventions (append-only) |
 | `.claude/agents/teams/bioinformatics/integration-report.md` | Cross-agent integration documentation |
-| `cmd/gogent-team-run/` | Team runner Go source |
-| `cmd/gogent-team-prepare-synthesis/` | Inter-wave script Go source |
+| `cmd/goyoke-team-run/` | Team runner Go source |
+| `cmd/goyoke-team-prepare-synthesis/` | Inter-wave script Go source |

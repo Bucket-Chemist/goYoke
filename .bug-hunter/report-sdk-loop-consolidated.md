@@ -1,7 +1,7 @@
 # Bug Hunter Consolidated Loop Report
 
 Generated: 2026-04-11T08:32:04+02:00
-Target: `/home/doktersmol/Documents/GOgent-Fortress`
+Target: `/home/doktersmol/Documents/goYoke`
 Loop state: `blocked`
 State file: `.bug-hunter/sdk-loop-state-runner3.json`
 
@@ -26,16 +26,16 @@ State file: `.bug-hunter/sdk-loop-state-runner3.json`
 
 | Bug ID | Domain | Severity | Category | File | Claim |
 | --- | --- | --- | --- | --- | --- |
-| BUG-13 | cmd | Medium | logic | `cmd/gogent-scout/main.go` | Stdin file-list mode discarded the explicit file list and widened scans to the parent directory. |
-| BUG-14 | cmd | Medium | logic | `cmd/gogent-archive/main.go` | Session-end cleanup targeted the old raw permission-cache filename instead of the hashed filename now written by permission-gate. |
+| BUG-13 | cmd | Medium | logic | `cmd/goyoke-scout/main.go` | Stdin file-list mode discarded the explicit file list and widened scans to the parent directory. |
+| BUG-14 | cmd | Medium | logic | `cmd/goyoke-archive/main.go` | Session-end cleanup targeted the old raw permission-cache filename instead of the hashed filename now written by permission-gate. |
 | BUG-15 | internal | Medium | logic | `internal/tui/cli/driver.go` | The TUI CLI driver disconnected on valid NDJSON events larger than 1 MB. |
 | BUG-16 | internal | Medium | logic | `internal/tui/mcp/spawner.go` | `spawn_agent` could lose the final result event after stdout truncation, dropping answer and metadata for verbose runs. |
-| BUG-17 | pkg | Medium | security | `pkg/config/paths.go` | Runtime fallback used a shared `/tmp/gogent-fallback` directory, exposing cache and guard state to other local users. |
-| BUG-18 | pkg | Medium | security | `pkg/config/paths.go` | Data fallback used a shared `/tmp/gogent-data` directory, exposing telemetry to local reads or tampering. |
+| BUG-17 | pkg | Medium | security | `pkg/config/paths.go` | Runtime fallback used a shared `/tmp/goyoke-fallback` directory, exposing cache and guard state to other local users. |
+| BUG-18 | pkg | Medium | security | `pkg/config/paths.go` | Data fallback used a shared `/tmp/goyoke-data` directory, exposing telemetry to local reads or tampering. |
 
 ## Fix Summary
 
-- `cmd`: fixed 2 bugs across `cmd/gogent-scout/*` and `cmd/gogent-archive/*`
+- `cmd`: fixed 2 bugs across `cmd/goyoke-scout/*` and `cmd/goyoke-archive/*`
 - `internal`: fixed 2 bugs across `internal/tui/cli/*` and `internal/tui/mcp/*`
 - `pkg`: fixed 2 bugs in `pkg/config/paths.go` plus related tests
 - No manual-review-only findings were recorded in the completed domains
@@ -43,15 +43,15 @@ State file: `.bug-hunter/sdk-loop-state-runner3.json`
 ## Verification
 
 - `cmd`
-  - `GOCACHE=/tmp/go-build-cache go test ./cmd/gogent-scout ./cmd/gogent-archive`
-  - `GOCACHE=/tmp/go-build-cache go test ./cmd/gogent-permission-gate -run 'TestCache_'`
+  - `GOCACHE=/tmp/go-build-cache go test ./cmd/goyoke-scout ./cmd/goyoke-archive`
+  - `GOCACHE=/tmp/go-build-cache go test ./cmd/goyoke-permission-gate -run 'TestCache_'`
 - `internal`
   - `GOCACHE=/tmp/go-build-cache go test ./internal/...`
   - `GOCACHE=/tmp/go-build-cache go test ./internal/tui/cli -run 'TestConsumeEvents_(LargeLineHandled|VeryLargeLineHandled)$'`
   - `GOCACHE=/tmp/go-build-cache go test ./internal/tui/mcp -run 'TestCLIOutputCollector_PreservesResultAfterTruncation|TestVerifyACDeliverables_OriginalNotMutated'`
 - `pkg`
-  - `GOCACHE=/tmp/go-build-cache go test ./pkg/config ./pkg/telemetry -run 'Test(GetGOgentDir_AllPathsFail|GetGOgentDir_HomeDirFails|GetGOgentDataDir_HomeDirFails|GetGOgentDataDir_AllPathsFail|XDGDataHomeFallback)$'`
-  - `GOCACHE=/tmp/go-build-cache go test ./pkg/config -run 'Test(GetGOgentDir_FallsBackWhenRuntimeDirIsNotWritable|InitializeToolCounter_FallsBackFromReadOnlyRuntimeDir|GetGOgentDataDir_FallsBackWhenDataDirIsNotWritable)$'`
+  - `GOCACHE=/tmp/go-build-cache go test ./pkg/config ./pkg/telemetry -run 'Test(GetgoYokeDir_AllPathsFail|GetgoYokeDir_HomeDirFails|GetgoYokeDataDir_HomeDirFails|GetgoYokeDataDir_AllPathsFail|XDGDataHomeFallback)$'`
+  - `GOCACHE=/tmp/go-build-cache go test ./pkg/config -run 'Test(GetgoYokeDir_FallsBackWhenRuntimeDirIsNotWritable|InitializeToolCounter_FallsBackFromReadOnlyRuntimeDir|GetgoYokeDataDir_FallsBackWhenDataDirIsNotWritable)$'`
   - `GOCACHE=/tmp/go-build-cache go test ./pkg/...`
 
 ## Coverage Assessment

@@ -111,7 +111,7 @@ func RenderHandoffMarkdown(h *Handoff) string {
 
 #### Phase 1: Generation
 - Create mock session data
-- Run `gogent-archive` to generate markdown
+- Run `goyoke-archive` to generate markdown
 - Verify output file exists
 
 #### Phase 2: Structure Analysis

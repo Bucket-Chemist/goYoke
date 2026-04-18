@@ -2,7 +2,7 @@
 
 ## Problem
 
-When gofortress TUI sends commands to Claude CLI that require file operations (Write, Edit, Bash), Claude CLI responds with permission denial events, blocking execution.
+When goyoke TUI sends commands to Claude CLI that require file operations (Write, Edit, Bash), Claude CLI responds with permission denial events, blocking execution.
 
 ## Investigation
 
@@ -45,7 +45,7 @@ cfg := cli.Config{
 
 ### What Changed
 
-**File:** `cmd/gofortress/main.go` (lines 99-106)
+**File:** `cmd/goyoke/main.go` (lines 99-106)
 
 Added `AllowedTools` to default config:
 ```go
@@ -64,7 +64,7 @@ Just needed to USE the existing feature.
 
 ### How It Works
 
-1. gofortress creates ClaudeProcess with AllowedTools config
+1. goyoke creates ClaudeProcess with AllowedTools config
 2. subprocess.go builds CLI args: `--allowed-tools Bash --allowed-tools Read ...`
 3. Claude CLI starts with pre-approved tools
 4. User commands execute without permission prompts
@@ -121,10 +121,10 @@ Created comprehensive documentation:
 
 ```bash
 # Build
-go build -o ~/.local/bin/gofortress ./cmd/gofortress
+go build -o ~/.local/bin/goyoke ./cmd/goyoke
 
 # Run
-gofortress
+goyoke
 
 # Test Write permission
 > create a python file at ~/test.py that prints "hello world"
@@ -163,7 +163,7 @@ If user control is desired, consider:
 ## Files Modified
 
 ```
-cmd/gofortress/main.go        - Added AllowedTools config (7 lines)
+cmd/goyoke/main.go        - Added AllowedTools config (7 lines)
 ```
 
 ## Files Created
@@ -198,7 +198,7 @@ docs/PERMISSION-SOLUTION-SUMMARY.md     - This file
 
 ## Next Steps
 
-1. **Manual Testing:** Run gofortress, verify no permission prompts
+1. **Manual Testing:** Run goyoke, verify no permission prompts
 2. **User Feedback:** Collect experiences with allowed tools
 3. **Future Features:** Consider Tool Management UI if requested
 4. **Documentation:** Add to main README

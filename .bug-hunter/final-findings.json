@@ -15,7 +15,7 @@
       "cwe": "N/A",
       "file": "pkg/config/paths.go",
       "lines": "25-64",
-      "claim": "GetGOgentDir trusted XDG directories without verifying writability, breaking guard and counter writes on read-only runtime dirs."
+      "claim": "GetgoYokeDir trusted XDG directories without verifying writability, breaking guard and counter writes on read-only runtime dirs."
     },
     {
       "id": "BUG-3",
@@ -43,7 +43,7 @@
       "category": "logic",
       "stride": "N/A",
       "cwe": "N/A",
-      "file": "cmd/gogent-team-run/wave.go",
+      "file": "cmd/goyoke-team-run/wave.go",
       "lines": "67-83",
       "claim": "Final-wave partial failures could still return a successful team-run exit even when failed members remained."
     },
@@ -85,7 +85,7 @@
       "cwe": "N/A",
       "file": "pkg/config/paths.go",
       "lines": "286-311",
-      "claim": "GetGOgentDataDir trusted XDG data directories without verifying writability, breaking telemetry and ML writes on read-only data dirs."
+      "claim": "GetgoYokeDataDir trusted XDG data directories without verifying writability, breaking telemetry and ML writes on read-only data dirs."
     },
     {
       "id": "BUG-10",
@@ -93,7 +93,7 @@
       "category": "logic",
       "stride": "N/A",
       "cwe": "N/A",
-      "file": "cmd/gogent-permission-gate/cache.go",
+      "file": "cmd/goyoke-permission-gate/cache.go",
       "lines": "11-20",
       "claim": "Permission-gate cache filenames embedded raw session IDs and allowed path-sensitive cache writes."
     },
@@ -103,7 +103,7 @@
       "category": "logic",
       "stride": "N/A",
       "cwe": "N/A",
-      "file": "cmd/gogent-aggregate/main.go",
+      "file": "cmd/goyoke-aggregate/main.go",
       "lines": "257-275",
       "claim": "The weekly aggregation tool counted JSONL rows with the default 64 KiB scanner token limit and degraded on large archived records."
     },

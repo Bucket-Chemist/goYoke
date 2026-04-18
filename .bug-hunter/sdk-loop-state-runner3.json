@@ -3,35 +3,35 @@
   "createdAt": "2026-04-11T05:31:35.848Z",
   "updatedAt": "2026-04-11T06:16:20.765Z",
   "status": "blocked",
-  "target": "/home/doktersmol/Documents/GOgent-Fortress",
-  "triagePath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/triage.json",
+  "target": "/home/doktersmol/Documents/goYoke",
+  "triagePath": "/home/doktersmol/Documents/goYoke/.bug-hunter/triage.json",
   "scanOnly": false,
   "iteration": 4,
   "maxIterations": 16,
   "threadId": "ephemeral-cmd",
   "currentDomain": null,
-  "stopFile": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop.stop",
-  "loopArtifactsDir": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop",
+  "stopFile": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop.stop",
+  "loopArtifactsDir": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop",
   "domains": [
     {
       "path": "cmd",
       "slug": "cmd",
       "tier": "HIGH",
       "fileCount": 121,
-      "filesJsonPath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/cmd-files.json",
+      "filesJsonPath": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/cmd-files.json",
       "status": "done",
       "startedAt": "2026-04-11T05:31:35.855Z",
       "completedAt": "2026-04-11T05:45:46.579Z",
-      "lastSummary": "Confirmed and fixed 2 cmd-domain runtime bugs: gogent-scout now honors stdin-scoped file lists, and gogent-archive now removes hashed permission-cache files.",
+      "lastSummary": "Confirmed and fixed 2 cmd-domain runtime bugs: goyoke-scout now honors stdin-scoped file lists, and goyoke-archive now removes hashed permission-cache files.",
       "lastTestsRun": [
-        "GOCACHE=/tmp/go-build-cache go test ./cmd/gogent-scout ./cmd/gogent-archive",
-        "GOCACHE=/tmp/go-build-cache go test ./cmd/gogent-permission-gate -run 'TestCache_'"
+        "GOCACHE=/tmp/go-build-cache go test ./cmd/goyoke-scout ./cmd/goyoke-archive",
+        "GOCACHE=/tmp/go-build-cache go test ./cmd/goyoke-permission-gate -run 'TestCache_'"
       ],
       "confirmedBugCount": 2,
       "notes": [
         "Wrote cmd-scope artifacts to .bug-hunter/domains/cmd-findings.json, cmd-skeptic.json, cmd-referee.json, and cmd-fix-report.json.",
         "Updated .bug-hunter/sdk-loop-state-runner3.json to mark the cmd domain completed while leaving other domains pending.",
-        "A full ./cmd/gogent-permission-gate test run was not used because sandboxed UDS listener tests fail with Unix-socket permission errors; the cache-focused verification passed."
+        "A full ./cmd/goyoke-permission-gate test run was not used because sandboxed UDS listener tests fail with Unix-socket permission errors; the cache-focused verification passed."
       ]
     },
     {
@@ -39,7 +39,7 @@
       "slug": "internal",
       "tier": "HIGH",
       "fileCount": 165,
-      "filesJsonPath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/internal-files.json",
+      "filesJsonPath": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/internal-files.json",
       "status": "done",
       "startedAt": "2026-04-11T05:45:46.579Z",
       "completedAt": "2026-04-11T05:53:32.084Z",
@@ -62,14 +62,14 @@
       "slug": "pkg",
       "tier": "HIGH",
       "fileCount": 147,
-      "filesJsonPath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/pkg-files.json",
+      "filesJsonPath": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/pkg-files.json",
       "status": "done",
       "startedAt": "2026-04-11T05:53:32.085Z",
       "completedAt": "2026-04-11T06:01:20.698Z",
       "lastSummary": "Confirmed and fixed 2 pkg-domain temp-directory bugs: cache/data fallbacks no longer spill shared state into world-readable /tmp paths when XDG/HOME directories are unwritable.",
       "lastTestsRun": [
-        "GOCACHE=/tmp/go-build-cache go test ./pkg/config ./pkg/telemetry -run 'Test(GetGOgentDir_AllPathsFail|GetGOgentDir_HomeDirFails|GetGOgentDataDir_HomeDirFails|GetGOgentDataDir_AllPathsFail|XDGDataHomeFallback)$'",
-        "GOCACHE=/tmp/go-build-cache go test ./pkg/config -run 'Test(GetGOgentDir_FallsBackWhenRuntimeDirIsNotWritable|InitializeToolCounter_FallsBackFromReadOnlyRuntimeDir|GetGOgentDataDir_FallsBackWhenDataDirIsNotWritable)$'",
+        "GOCACHE=/tmp/go-build-cache go test ./pkg/config ./pkg/telemetry -run 'Test(GetgoYokeDir_AllPathsFail|GetgoYokeDir_HomeDirFails|GetgoYokeDataDir_HomeDirFails|GetgoYokeDataDir_AllPathsFail|XDGDataHomeFallback)$'",
+        "GOCACHE=/tmp/go-build-cache go test ./pkg/config -run 'Test(GetgoYokeDir_FallsBackWhenRuntimeDirIsNotWritable|InitializeToolCounter_FallsBackFromReadOnlyRuntimeDir|GetgoYokeDataDir_FallsBackWhenDataDirIsNotWritable)$'",
         "GOCACHE=/tmp/go-build-cache go test ./pkg/..."
       ],
       "confirmedBugCount": 2,
@@ -84,15 +84,15 @@
       "slug": "dev",
       "tier": "MEDIUM",
       "fileCount": 2,
-      "filesJsonPath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/dev-files.json",
+      "filesJsonPath": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/dev-files.json",
       "status": "failed",
       "startedAt": "2026-04-11T06:01:20.698Z",
       "completedAt": "2026-04-11T06:16:20.765Z",
-      "lastSummary": "Command failed: /usr/bin/node /home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/GOgent-Fortress\nLoop state path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n",
+      "lastSummary": "Command failed: /usr/bin/node /home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/goYoke\nLoop state path: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/goYoke/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/goYoke/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n",
       "lastTestsRun": [],
       "confirmedBugCount": 0,
       "notes": [
-        "Command failed: /usr/bin/node /home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/GOgent-Fortress\nLoop state path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n"
+        "Command failed: /usr/bin/node /home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/goYoke\nLoop state path: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/goYoke/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/goYoke/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n"
       ]
     },
     {
@@ -100,7 +100,7 @@
       "slug": "docs",
       "tier": "LOW",
       "fileCount": 1,
-      "filesJsonPath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/docs-files.json",
+      "filesJsonPath": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/docs-files.json",
       "status": "pending",
       "startedAt": null,
       "completedAt": null,
@@ -114,7 +114,7 @@
       "slug": "scripts",
       "tier": "LOW",
       "fileCount": 2,
-      "filesJsonPath": "/home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/scripts-files.json",
+      "filesJsonPath": "/home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/scripts-files.json",
       "status": "pending",
       "startedAt": null,
       "completedAt": null,
@@ -130,7 +130,7 @@
       "domain": "cmd",
       "status": "done",
       "threadId": "ephemeral-cmd",
-      "summary": "Confirmed and fixed 2 cmd-domain runtime bugs: gogent-scout now honors stdin-scoped file lists, and gogent-archive now removes hashed permission-cache files.",
+      "summary": "Confirmed and fixed 2 cmd-domain runtime bugs: goyoke-scout now honors stdin-scoped file lists, and goyoke-archive now removes hashed permission-cache files.",
       "confirmedBugCount": 2,
       "usage": null,
       "completedAt": "2026-04-11T05:45:46.579Z"
@@ -160,11 +160,11 @@
       "domain": "dev",
       "status": "failed",
       "threadId": "ephemeral-cmd",
-      "summary": "Command failed: /usr/bin/node /home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/GOgent-Fortress\nLoop state path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n",
+      "summary": "Command failed: /usr/bin/node /home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/goYoke\nLoop state path: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/goYoke/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/goYoke/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n",
       "confirmedBugCount": 0,
       "usage": null,
       "completedAt": "2026-04-11T06:16:20.765Z"
     }
   ],
-  "lastError": "Command failed: /usr/bin/node /home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/GOgent-Fortress\nLoop state path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/GOgent-Fortress/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n"
+  "lastError": "Command failed: /usr/bin/node /home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/dev-runner-payload.json\nError: codex exec timed out after 15 minutes\nstdout log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stdout.log\nstderr log: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/runner/dev-codex.stderr.log\nstderr tail:\nContinue the installed bug-hunter skill as one SDK-driven outer-loop iteration.\nThis is not a full-repo completion turn. Audit only the queued domain below and then stop.\n\nRepository root: /home/doktersmol/Documents/goYoke\nLoop state path: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop-state-runner3.json\nTriage path: /home/doktersmol/Documents/goYoke/.bug-hunter/triage.json\nTarget domain: dev\nTarget files JSON: /home/doktersmol/Documents/goYoke/.bug-hunter/sdk-loop/domains/dev-files.json\nExisting artifacts dir: /home/doktersmol/Documents/goYoke/.bug-hunter\n\nRequired behavior:\n- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.\n- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.\n- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.\n- Fix confirmed bugs when safe, then run targeted verification.\n- Do not reset, delete, or overwrite existing findings for prior domains.\n- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.\n- Return only structured JSON matching the output schema.\n\nWhen you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.\n    at main (/home/doktersmol/Documents/goYoke/scripts/bug-hunter-codex-runner.cjs:159:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n"
 }

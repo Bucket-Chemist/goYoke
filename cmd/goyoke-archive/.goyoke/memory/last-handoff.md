@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Session ID**: test-getwd
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-archive
+- **Project**: /home/doktersmol/Documents/goYoke/cmd/goyoke-archive
 
 ## Session Metrics
 
@@ -17,53 +17,53 @@
 - **Status**: Uncommitted changes present
 - **Uncommitted Files**:
   - claude/settings.json
-  - md/gofortress-mcp/main.go
-  - md/gofortress/main.go
-  - md/gogent-agent-endstate/main.go
-  - md/gogent-agent-endstate/main_test.go
-  - md/gogent-aggregate/main.go
-  - md/gogent-aggregate/main_test.go
-  - md/gogent-archive/main.go
-  - md/gogent-archive/main_test.go
-  - md/gogent-archive/sharp_edges_test.go
-  - md/gogent-archive/subcommands_test.go
-  - md/gogent-capture-intent/main.go
-  - md/gogent-capture-intent/main_test.go
-  - md/gogent-doc-theater/main_test.go
-  - md/gogent-inject-context/main.go
-  - md/gogent-load-context/main_test.go
-  - md/gogent-ml-export/main.go
-  - md/gogent-ml-export/main_test.go
-  - md/gogent-permission-gate/uds_test.go
-  - md/gogent-plan-impl/generator.go
-  - md/gogent-plan-impl/main_test.go
-  - md/gogent-scout/main.go
-  - md/gogent-sharp-edge/main.go
-  - md/gogent-sharp-edge/main_test.go
-  - md/gogent-skill-guard/daemon.go
-  - md/gogent-skill-guard/guard_v2_test.go
-  - md/gogent-skill-guard/lifecycle_test.go
-  - md/gogent-skill-guard/main.go
-  - md/gogent-skill-guard/main_test.go
-  - md/gogent-skill-guard/setup_test.go
-  - md/gogent-skill-guard/testdata/agents-index.json
-  - md/gogent-skill-guard/tools_matrix_test.go
-  - md/gogent-team-prepare-synthesis/bioinformatics.go
-  - md/gogent-team-prepare-synthesis/config.go
-  - md/gogent-team-prepare-synthesis/main.go
-  - md/gogent-team-prepare-synthesis/markdown.go
-  - md/gogent-team-run/daemon.go
-  - md/gogent-team-run/envelope.go
-  - md/gogent-team-run/main.go
-  - md/gogent-team-run/ndjson_test.go
-  - md/gogent-team-run/spawn.go
-  - md/gogent-team-run/spawn_test.go
-  - md/gogent-validate-schemas/main.go
-  - md/gogent-validate/convention_injection_test.go
-  - md/gogent-validate/main.go
-  - md/gogent-validate/main_test.go
-  - md/gogent-version/main.go
-  - md/gogent-version/main_test.go
+  - md/goyoke-mcp/main.go
+  - md/goyoke/main.go
+  - md/goyoke-agent-endstate/main.go
+  - md/goyoke-agent-endstate/main_test.go
+  - md/goyoke-aggregate/main.go
+  - md/goyoke-aggregate/main_test.go
+  - md/goyoke-archive/main.go
+  - md/goyoke-archive/main_test.go
+  - md/goyoke-archive/sharp_edges_test.go
+  - md/goyoke-archive/subcommands_test.go
+  - md/goyoke-capture-intent/main.go
+  - md/goyoke-capture-intent/main_test.go
+  - md/goyoke-doc-theater/main_test.go
+  - md/goyoke-inject-context/main.go
+  - md/goyoke-load-context/main_test.go
+  - md/goyoke-ml-export/main.go
+  - md/goyoke-ml-export/main_test.go
+  - md/goyoke-permission-gate/uds_test.go
+  - md/goyoke-plan-impl/generator.go
+  - md/goyoke-plan-impl/main_test.go
+  - md/goyoke-scout/main.go
+  - md/goyoke-sharp-edge/main.go
+  - md/goyoke-sharp-edge/main_test.go
+  - md/goyoke-skill-guard/daemon.go
+  - md/goyoke-skill-guard/guard_v2_test.go
+  - md/goyoke-skill-guard/lifecycle_test.go
+  - md/goyoke-skill-guard/main.go
+  - md/goyoke-skill-guard/main_test.go
+  - md/goyoke-skill-guard/setup_test.go
+  - md/goyoke-skill-guard/testdata/agents-index.json
+  - md/goyoke-skill-guard/tools_matrix_test.go
+  - md/goyoke-team-prepare-synthesis/bioinformatics.go
+  - md/goyoke-team-prepare-synthesis/config.go
+  - md/goyoke-team-prepare-synthesis/main.go
+  - md/goyoke-team-prepare-synthesis/markdown.go
+  - md/goyoke-team-run/daemon.go
+  - md/goyoke-team-run/envelope.go
+  - md/goyoke-team-run/main.go
+  - md/goyoke-team-run/ndjson_test.go
+  - md/goyoke-team-run/spawn.go
+  - md/goyoke-team-run/spawn_test.go
+  - md/goyoke-validate-schemas/main.go
+  - md/goyoke-validate/convention_injection_test.go
+  - md/goyoke-validate/main.go
+  - md/goyoke-validate/main_test.go
+  - md/goyoke-version/main.go
+  - md/goyoke-version/main_test.go
   - istr/hooks/agentendstate/hook.go
   - istr/hooks/archive/hook.go
   - istr/hooks/configguard/hook.go
@@ -326,8 +326,8 @@
   - .claude/memory/
   - .claude/skills/sandbox/SKILL.md.bak
   - .codex
-  - cmd/gogent-archive/.goyoke/
-  - cmd/gogent-sharp-edge/.goyoke/
+  - cmd/goyoke-archive/.goyoke/
+  - cmd/goyoke-sharp-edge/.goyoke/
   - cmd/goyoke-skill-guard/
   - pkg/telemetry/.goyoke/
 

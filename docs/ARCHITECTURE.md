@@ -1,18 +1,18 @@
-# GOgent-Fortress Systems Architecture v1.8
+# goYoke Systems Architecture v1.8
 
 > **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
 > **Last Updated:** 2026-03-25
 > **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
-> **TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets) — superseded by TUI Migration
+> **TUI v1 (Legacy):** goYoke-109 through goYoke-121 (13 tickets) — superseded by TUI Migration
 > **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). ✅ ALL COMPLETE (42/42, 100%). Feature parity verified.
 > **TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, Phase 10). ✅ ALL COMPLETE (28/28, 100%). 29 packages, 1542 tests.
-> **Review Telemetry:** GOgent-122 through GOgent-139 (18 tasks)
+> **Review Telemetry:** goYoke-122 through goYoke-139 (18 tasks)
 
 ---
 
 ## Overview
 
-GOgent-Fortress is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, manages ML telemetry, and maintains session continuity through structured handoff documents.
+goYoke is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, manages ML telemetry, and maintains session continuity through structured handoff documents.
 
 The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToolUse, SubagentStop, SessionEnd) and applies validation, failure tracking, telemetry capture, and archival logic defined in `routing-schema.json`.
 
@@ -22,7 +22,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                           GOgent-Fortress Architecture                                               │
+│                                           goYoke Architecture                                               │
 │                                              (Production v1.0)                                                       │
 ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                                                      │
@@ -42,7 +42,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │                                           HOOK BINARIES (Go)                                                 │    │
 │  │                                                                                                              │    │
 │  │  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐             │    │
-│  │  │  gogent-load-      │  │   gogent-validate  │  │  gogent-sharp-edge │  │ gogent-agent-      │             │    │
+│  │  │  goyoke-load-      │  │   goyoke-validate  │  │  goyoke-sharp-edge │  │ goyoke-agent-      │             │    │
 │  │  │  context           │  │                    │  │                    │  │ endstate           │             │    │
 │  │  │                    │  │                    │  │                    │  │                    │             │    │
 │  │  │ • Language detect  │  │ • Schema validation│  │ • Tool counting    │  │ • Decision outcomes│             │    │
@@ -88,7 +88,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │  └────────────────────────────────┘  └────────────────────────────────┘  └────────────────────────────────┘ │    │
 │  │                                                                                                              │    │
 │  │  ┌────────────────────────────────┐                                                                          │    │
-│  │  │     GLOBAL SCOPE (~/.gogent/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
+│  │  │     GLOBAL SCOPE (~/.goyoke/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
 │  │  │                                │  │                  CONFIGURATION (~/.claude/)                        │ │    │
 │  │  │ • failure-tracker.jsonl        │  │                                                                    │ │    │
 │  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.5.0)    • agents/*.yaml                │ │    │
@@ -104,7 +104,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │                                                                                                                      │
 │  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐   │
 │  │                                                                                                               │   │
-│  │                                    🖥️  TUI SYSTEM (GOgent-109 to GOgent-121)                                  │   │
+│  │                                    🖥️  TUI SYSTEM (goYoke-109 to goYoke-121)                                  │   │
 │  │                                                                                                               │   │
 │  │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │   │
 │  │  │                                      Implemented Components                                              │ │   │
@@ -159,7 +159,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 
 ## 2. Hook Event Flow
 
-The following sequence diagram shows the complete lifecycle of a Claude Code session from the perspective of GOgent hooks.
+The following sequence diagram shows the complete lifecycle of a Claude Code session from the perspective of goYoke hooks.
 
 ```mermaid
 sequenceDiagram
@@ -172,7 +172,7 @@ sequenceDiagram
     participant SE as SessionEnd
 
     CC->>SS: Session begins
-    Note over SS: gogent-load-context
+    Note over SS: goyoke-load-context
     SS->>SS: DetectLanguage()
     SS->>SS: LoadConventions()
     SS->>SS: LoadHandoff()
@@ -181,7 +181,7 @@ sequenceDiagram
 
     loop Tool Usage
         CC->>PT: Task() invocation
-        Note over PT: gogent-validate
+        Note over PT: goyoke-validate
         PT->>PT: LoadSchema()
         PT->>PT: ValidateTask()
         PT->>PT: CheckDelegationCeiling()
@@ -196,7 +196,7 @@ sequenceDiagram
             Tool-->>CC: Result
 
             CC->>PO: Tool completed
-            Note over PO: gogent-sharp-edge
+            Note over PO: goyoke-sharp-edge
             PO->>PO: IncrementToolCounter()
             PO->>PO: LogRoutingDecision()
             PO->>PO: DetectFailure()
@@ -220,7 +220,7 @@ sequenceDiagram
 
     opt Agent Delegation
         CC->>SA: Subagent completes
-        Note over SA: gogent-agent-endstate
+        Note over SA: goyoke-agent-endstate
         SA->>SA: UpdateDecisionOutcome()
         SA->>SA: LogAgentCollaboration()
         SA->>SA: UpdateCollaborationOutcome()
@@ -228,7 +228,7 @@ sequenceDiagram
     end
 
     CC->>SE: Session ends
-    Note over SE: gogent-archive
+    Note over SE: goyoke-archive
     SE->>SE: CollectMetrics()
     SE->>SE: LoadArtifacts()
     SE->>SE: GenerateHandoff()
@@ -240,15 +240,15 @@ sequenceDiagram
 
 | Hook Event | CLI Binary | Primary Responsibilities | Trigger |
 |------------|------------|--------------------------|---------|
-| SessionStart | `gogent-load-context` | Language detection, convention loading, handoff restoration, git context | Session initialization |
-| PreToolUse | `gogent-validate` | Schema validation, Task() checks, tier enforcement, ceiling verification | Every tool call |
-| PostToolUse | `gogent-sharp-edge` | Tool counting, failure tracking, ML telemetry, sharp-edge detection, routing reminders | After tool execution |
-| SubagentStop | `gogent-agent-endstate` | Decision outcomes, collaboration tracking, ML updates, session metrics | Agent completion |
-| SessionEnd | `gogent-archive` | Metrics collection, artifact loading, handoff generation, markdown export | Session termination |
+| SessionStart | `goyoke-load-context` | Language detection, convention loading, handoff restoration, git context | Session initialization |
+| PreToolUse | `goyoke-validate` | Schema validation, Task() checks, tier enforcement, ceiling verification | Every tool call |
+| PostToolUse | `goyoke-sharp-edge` | Tool counting, failure tracking, ML telemetry, sharp-edge detection, routing reminders | After tool execution |
+| SubagentStop | `goyoke-agent-endstate` | Decision outcomes, collaboration tracking, ML updates, session metrics | Agent completion |
+| SessionEnd | `goyoke-archive` | Metrics collection, artifact loading, handoff generation, markdown export | Session termination |
 
 ### 2.2 PostToolUse Handler: Merged Responsibilities
 
-The `gogent-sharp-edge` PostToolUse handler consolidates five integrated responsibilities:
+The `goyoke-sharp-edge` PostToolUse handler consolidates five integrated responsibilities:
 
 #### 1. Tool Counter Management
 - **Trigger**: Every tool execution (Bash, Edit, Write, Read, Glob, Grep)
@@ -256,16 +256,16 @@ The `gogent-sharp-edge` PostToolUse handler consolidates five integrated respons
 - **Purpose**: Track tool usage frequency for routing reminders and auto-flush
 
 #### 2. Routing Compliance Reminders
-- **Trigger**: Every 10 tools (configurable via `GOGENT_REMINDER_THRESHOLD`)
+- **Trigger**: Every 10 tools (configurable via `GOYOKE_REMINDER_THRESHOLD`)
 - **Action**: Generates structured reminder injected into `additionalContext`
 - **Content**: Reminds agent to verify routing compliance with `routing-schema.json`
 
 #### 3. Pending Learnings Auto-Flush
-- **Trigger**: Every 20+ tools (configurable via `GOGENT_FLUSH_THRESHOLD`)
+- **Trigger**: Every 20+ tools (configurable via `GOYOKE_FLUSH_THRESHOLD`)
 - **Action**: Archives `pending-learnings.jsonl` to `session-archive/`
 - **Purpose**: Prevent unbounded growth of pending learnings file
 
-#### 4. ML Tool Event Logging (GOgent-087d)
+#### 4. ML Tool Event Logging (goYoke-087d)
 - **Trigger**: Every tool execution
 - **Action**: Logs RoutingDecision to `routing-decisions.jsonl`
 - **Fields**: Tool name, duration, input/output tokens, sequence index, model, tier
@@ -283,16 +283,16 @@ The `gogent-sharp-edge` PostToolUse handler consolidates five integrated respons
 ```mermaid
 graph TD
     subgraph "CLI Layer (cmd/)"
-        loadcontext[gogent-load-context<br/>SessionStart]
-        validate[gogent-validate<br/>PreToolUse]
-        sharpedge[gogent-sharp-edge<br/>PostToolUse]
-        endstate[gogent-agent-endstate<br/>SubagentStop]
-        archive[gogent-archive<br/>SessionEnd]
-        intent[gogent-capture-intent<br/>Manual]
-        aggregate[gogent-aggregate<br/>Analysis]
-        mlexport[gogent-ml-export<br/>ML Pipeline]
-        orchguard[gogent-orchestrator-guard<br/>Enforcement]
-        doctheater[gogent-doc-theater<br/>Detection]
+        loadcontext[goyoke-load-context<br/>SessionStart]
+        validate[goyoke-validate<br/>PreToolUse]
+        sharpedge[goyoke-sharp-edge<br/>PostToolUse]
+        endstate[goyoke-agent-endstate<br/>SubagentStop]
+        archive[goyoke-archive<br/>SessionEnd]
+        intent[goyoke-capture-intent<br/>Manual]
+        aggregate[goyoke-aggregate<br/>Analysis]
+        mlexport[goyoke-ml-export<br/>ML Pipeline]
+        orchguard[goyoke-orchestrator-guard<br/>Enforcement]
+        doctheater[goyoke-doc-theater<br/>Detection]
     end
 
     subgraph "Core Packages (pkg/)"
@@ -362,7 +362,7 @@ graph TD
 | `pkg/session` | Handoffs, events, metrics, intents, artifact loading, markdown export | `Handoff`, `SessionMetrics`, `UserIntent`, `SharpEdge`, `Action` |
 | `pkg/memory` | Failure tracking, debugging loop detection, pattern matching | `FailureInfo`, `LogFailure()`, `GetFailureCount()`, `PatternMatch` |
 | `pkg/telemetry` | Invocation tracking, cost calculation, escalations, scout recommendations, **review findings** | `AgentInvocation`, `TierPricing`, `EscalationEvent`, `ScoutRecommendation`, **`ReviewFinding`, `SharpEdgeHit`** |
-| `pkg/config` | Path resolution, tier configuration, environment detection | `GetGOgentDir()`, `GetViolationsLogPath()`, `GetCurrentTier()` |
+| `pkg/config` | Path resolution, tier configuration, environment detection | `GetgoYokeDir()`, `GetViolationsLogPath()`, `GetCurrentTier()` |
 | `pkg/workflow` | Response formatting, logging utilities, integration helpers | `HookResponse`, `BlockResponse`, `PassthroughResponse` |
 | `pkg/enforcement` | Blocking responses, pattern detection, documentation theater checks | `BlockingResponse`, `PatternDetector`, `DocTheater` |
 
@@ -377,8 +377,8 @@ The ML telemetry system provides comprehensive observability for routing optimiz
 ```mermaid
 graph TD
     subgraph "Data Capture Hooks"
-        PostToolUse[PostToolUse<br/>gogent-sharp-edge]
-        SubagentStop[SubagentStop<br/>gogent-agent-endstate]
+        PostToolUse[PostToolUse<br/>goyoke-sharp-edge]
+        SubagentStop[SubagentStop<br/>goyoke-agent-endstate]
     end
 
     subgraph "Initial Records (Append-Only)"
@@ -392,7 +392,7 @@ graph TD
     end
 
     subgraph "ML Pipeline"
-        MLExport["gogent-ml-export<br/>Reconciliation + Export"]
+        MLExport["goyoke-ml-export<br/>Reconciliation + Export"]
         Training["ML Training Pipeline"]
     end
 
@@ -503,28 +503,28 @@ type AgentCollaboration struct {
 
 ```bash
 # Export routing decisions with reconciled outcomes
-gogent-ml-export routing-decisions --output=decisions.jsonl [--since=YYYY-MM-DD]
+goyoke-ml-export routing-decisions --output=decisions.jsonl [--since=YYYY-MM-DD]
 
 # Export agent collaborations with outcomes
-gogent-ml-export agent-collaborations --output=collabs.jsonl
+goyoke-ml-export agent-collaborations --output=collabs.jsonl
 
 # Export review findings with outcomes (NEW in v2.4.0)
-gogent-ml-export review-findings --output=findings.jsonl
+goyoke-ml-export review-findings --output=findings.jsonl
 
 # Export sharp edge hits (correlation data) (NEW in v2.4.0)
-gogent-ml-export sharp-edge-hits --output=hits.jsonl
+goyoke-ml-export sharp-edge-hits --output=hits.jsonl
 
 # Generate review statistics summary (NEW in v2.4.0)
-gogent-ml-export review-stats
+goyoke-ml-export review-stats
 
 # Export with automatic pruning after export
-gogent-ml-export routing-decisions --output=decisions.jsonl --prune-after-export
+goyoke-ml-export routing-decisions --output=decisions.jsonl --prune-after-export
 
 # Validate reconciliation consistency
-gogent-ml-export validate --check=orphaned-updates --check=missing-outcomes
+goyoke-ml-export validate --check=orphaned-updates --check=missing-outcomes
 
 # Generate summary statistics
-gogent-ml-export stats
+goyoke-ml-export stats
 ```
 
 ### 4.5 Review Telemetry System (v2.4.0)
@@ -544,8 +544,8 @@ graph TD
     end
 
     subgraph "Telemetry Capture"
-        LogReview[gogent-log-review<br/>PreToolUse Hook]
-        UpdateOutcome[gogent-update-review-outcome<br/>Manual]
+        LogReview[goyoke-log-review<br/>PreToolUse Hook]
+        UpdateOutcome[goyoke-update-review-outcome<br/>Manual]
     end
 
     subgraph "Data Persistence"
@@ -555,7 +555,7 @@ graph TD
     end
 
     subgraph "ML Pipeline"
-        Export[gogent-ml-export]
+        Export[goyoke-ml-export]
         Training[ML Training Pipeline]
     end
 
@@ -599,8 +599,8 @@ The `/review` skill coordinates specialized reviewers and captures findings:
    - `severity`: "critical", "high", "medium", "low", "info"
    - `category`: "security", "performance", "maintainability", etc.
    - `sharp_edge_id`: Optional correlation to known sharp edge
-5. Findings piped to `gogent-log-review` (written to telemetry files)
-6. Skill outputs to `.gogent/tmp/review-telemetry.json`
+5. Findings piped to `goyoke-log-review` (written to telemetry files)
+6. Skill outputs to `.goyoke/tmp/review-telemetry.json`
 
 **Sharp Edge Correlation:**
 When findings correlate to previously captured sharp edges (from `pending-learnings.jsonl`), the system:
@@ -615,7 +615,7 @@ The `/ticket` skill tracks finding resolution:
 **Workflow:**
 1. User runs `/ticket <finding_id>` to implement fix
 2. Ticket workflow executes implementation
-3. On ticket completion, calls `gogent-update-review-outcome`
+3. On ticket completion, calls `goyoke-update-review-outcome`
 4. Outcome written to `review-outcomes.jsonl` with:
    - `finding_id`: Links back to original finding
    - `resolution`: "fixed", "accepted", "wontfix", "duplicate"
@@ -683,7 +683,7 @@ type SharpEdgeHit struct {
 
 The Sharp Edge Registry provides validation and enumeration of valid sharp edge IDs.
 
-**Location:** `~/.gogent/memory/pending-learnings.jsonl`
+**Location:** `~/.goyoke/memory/pending-learnings.jsonl`
 
 **Functions (pkg/telemetry/sharp_edge_registry.go):**
 
@@ -699,17 +699,17 @@ func GetAllSharpEdgeIDs() ([]string, error)
 ```
 
 **Registry Validation:**
-- `gogent-log-review` validates `sharp_edge_id` before writing
+- `goyoke-log-review` validates `sharp_edge_id` before writing
 - Invalid IDs rejected with error (not logged to `sharp-edge-hits.jsonl`)
-- Registry updates when new sharp edges captured by `gogent-sharp-edge`
+- Registry updates when new sharp edges captured by `goyoke-sharp-edge`
 
 **Example Usage:**
 ```bash
 # List all known sharp edge IDs
-gogent-ml-export sharp-edge-hits --list-ids
+goyoke-ml-export sharp-edge-hits --list-ids
 
 # Validate finding correlation
-gogent-log-review < finding_with_sharp_edge_id.json
+goyoke-log-review < finding_with_sharp_edge_id.json
 # → Checks registry, logs to sharp-edge-hits.jsonl if valid
 ```
 
@@ -727,7 +727,7 @@ flowchart TB
         patterns[/error-patterns.jsonl/]
     end
 
-    subgraph "Project Scope (.gogent/memory/)"
+    subgraph "Project Scope (.goyoke/memory/)"
         handoffs[/handoffs.jsonl/]
         intents[/user-intents.jsonl/]
         decisions[/decisions.jsonl/]
@@ -736,7 +736,7 @@ flowchart TB
         lasthandoff[/last-handoff.md/]
     end
 
-    subgraph "ML Scope ($XDG_DATA_HOME/gogent/)"
+    subgraph "ML Scope ($XDG_DATA_HOME/goyoke/)"
         routingdec[/routing-decisions.jsonl/]
         routingupdates[/routing-decision-updates.jsonl/]
         collaborations[/agent-collaborations.jsonl/]
@@ -746,7 +746,7 @@ flowchart TB
         sharpedgehits[/sharp-edge-hits.jsonl/]
     end
 
-    subgraph "Global Scope (~/.gogent/)"
+    subgraph "Global Scope (~/.goyoke/)"
         failures[/failure-tracker.jsonl/]
         invocations[/agent-invocations.jsonl/]
         escalations[/escalations.jsonl/]
@@ -758,21 +758,21 @@ flowchart TB
         sessions[/session-{id}.jsonl/]
     end
 
-    validate([gogent-validate]) --> violations
-    sharpedge([gogent-sharp-edge]) --> failures
+    validate([goyoke-validate]) --> violations
+    sharpedge([goyoke-sharp-edge]) --> failures
     sharpedge --> pending
     sharpedge --> routingdec
-    endstate([gogent-agent-endstate]) --> routingupdates
+    endstate([goyoke-agent-endstate]) --> routingupdates
     endstate --> collaborations
     endstate --> collabupd
-    logreview([gogent-log-review]) --> reviewfindings
+    logreview([goyoke-log-review]) --> reviewfindings
     logreview --> sharpedgehits
-    updatereview([gogent-update-review-outcome]) --> reviewoutcomes
-    archive([gogent-archive]) --> handoffs
+    updatereview([goyoke-update-review-outcome]) --> reviewoutcomes
+    archive([goyoke-archive]) --> handoffs
     archive --> lasthandoff
     archive --> archived
-    intent([gogent-capture-intent]) --> intents
-    mlexport([gogent-ml-export]) -.->|reads| routingdec
+    intent([goyoke-capture-intent]) --> intents
+    mlexport([goyoke-ml-export]) -.->|reads| routingdec
     mlexport -.->|reads| routingupdates
 ```
 
@@ -780,24 +780,24 @@ flowchart TB
 
 | File | Scope | Written By | Schema | Purpose |
 |------|-------|------------|--------|---------|
-| `handoffs.jsonl` | Project | gogent-archive | Handoff v1.3 | Session continuity |
-| `user-intents.jsonl` | Project | gogent-capture-intent | UserIntent | User preference tracking |
-| `decisions.jsonl` | Project | gogent-archive | Decision | Architectural decisions |
-| `preferences.jsonl` | Project | gogent-archive | PreferenceOverride | User overrides |
-| `pending-learnings.jsonl` | Project | gogent-sharp-edge | SharpEdge | Unreviewed learnings |
-| `last-handoff.md` | Project | gogent-archive | Markdown | Human-readable summary |
-| `failure-tracker.jsonl` | Global | gogent-sharp-edge | FailureInfo | Cross-session tracking |
-| `agent-invocations.jsonl` | Global | gogent-* | AgentInvocation | Invocation telemetry |
-| `escalations.jsonl` | Global | gogent-agent-endstate | EscalationEvent | Tier escalation tracking |
-| `scout-recommendations.jsonl` | Global | gogent-validate | ScoutRecommendation | Scout accuracy |
-| `routing-violations.jsonl` | Temp | gogent-validate | Violation | Session violations |
-| `routing-decisions.jsonl` | ML | gogent-sharp-edge | RoutingDecision | ML training data |
-| `routing-decision-updates.jsonl` | ML | gogent-agent-endstate | DecisionOutcome | Outcome updates |
-| `agent-collaborations.jsonl` | ML | gogent-agent-endstate | AgentCollaboration | Team patterns |
-| `agent-collaboration-updates.jsonl` | ML | gogent-agent-endstate | CollabOutcome | Outcome updates |
-| `review-findings.jsonl` | ML | gogent-log-review | ReviewFinding | Code review findings |
-| `review-outcomes.jsonl` | ML | gogent-update-review-outcome | ReviewOutcomeUpdate | Finding resolutions |
-| `sharp-edge-hits.jsonl` | ML | gogent-log-review | SharpEdgeHit | Sharp edge correlations |
+| `handoffs.jsonl` | Project | goyoke-archive | Handoff v1.3 | Session continuity |
+| `user-intents.jsonl` | Project | goyoke-capture-intent | UserIntent | User preference tracking |
+| `decisions.jsonl` | Project | goyoke-archive | Decision | Architectural decisions |
+| `preferences.jsonl` | Project | goyoke-archive | PreferenceOverride | User overrides |
+| `pending-learnings.jsonl` | Project | goyoke-sharp-edge | SharpEdge | Unreviewed learnings |
+| `last-handoff.md` | Project | goyoke-archive | Markdown | Human-readable summary |
+| `failure-tracker.jsonl` | Global | goyoke-sharp-edge | FailureInfo | Cross-session tracking |
+| `agent-invocations.jsonl` | Global | goyoke-* | AgentInvocation | Invocation telemetry |
+| `escalations.jsonl` | Global | goyoke-agent-endstate | EscalationEvent | Tier escalation tracking |
+| `scout-recommendations.jsonl` | Global | goyoke-validate | ScoutRecommendation | Scout accuracy |
+| `routing-violations.jsonl` | Temp | goyoke-validate | Violation | Session violations |
+| `routing-decisions.jsonl` | ML | goyoke-sharp-edge | RoutingDecision | ML training data |
+| `routing-decision-updates.jsonl` | ML | goyoke-agent-endstate | DecisionOutcome | Outcome updates |
+| `agent-collaborations.jsonl` | ML | goyoke-agent-endstate | AgentCollaboration | Team patterns |
+| `agent-collaboration-updates.jsonl` | ML | goyoke-agent-endstate | CollabOutcome | Outcome updates |
+| `review-findings.jsonl` | ML | goyoke-log-review | ReviewFinding | Code review findings |
+| `review-outcomes.jsonl` | ML | goyoke-update-review-outcome | ReviewOutcomeUpdate | Finding resolutions |
+| `sharp-edge-hits.jsonl` | ML | goyoke-log-review | SharpEdgeHit | Sharp edge correlations |
 | `impl-progress.json` | Project | impl-manager | ImplProgress | Task progress tracking |
 | `impl-violations.jsonl` | Project | impl-manager | ImplViolation | Convention violations during implementation |
 
@@ -805,7 +805,7 @@ flowchart TB
 
 ## 6. Validation Pipeline
 
-The `gogent-validate` binary orchestrates multiple validation checks for Task tool invocations.
+The `goyoke-validate` binary orchestrates multiple validation checks for Task tool invocations.
 
 ```mermaid
 flowchart TD
@@ -1001,51 +1001,51 @@ classDiagram
 
 | Binary | Hook Event | Input | Output | Lines |
 |--------|------------|-------|--------|-------|
-| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~350 |
-| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~200 |
-| `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON | ~500 |
-| `gogent-agent-endstate` | SubagentStop | SubagentEvent JSON | HookResponse JSON | ~400 |
-| `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1200 |
-| **`gogent-log-review`** | **PreToolUse** | **ReviewFinding JSON** | **HookResponse JSON** | **~250** |
-| **`gogent-update-review-outcome`** | **Manual** | **ReviewOutcomeUpdate JSON** | **Confirmation JSON** | **~150** |
-| **`gogent-orchestrator-guard`** | **SubagentStop** | **Agent lifecycle** | **Enforcement** | **~300** |
+| `goyoke-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~350 |
+| `goyoke-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~200 |
+| `goyoke-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON | ~500 |
+| `goyoke-agent-endstate` | SubagentStop | SubagentEvent JSON | HookResponse JSON | ~400 |
+| `goyoke-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1200 |
+| **`goyoke-log-review`** | **PreToolUse** | **ReviewFinding JSON** | **HookResponse JSON** | **~250** |
+| **`goyoke-update-review-outcome`** | **Manual** | **ReviewOutcomeUpdate JSON** | **Confirmation JSON** | **~150** |
+| **`goyoke-orchestrator-guard`** | **SubagentStop** | **Agent lifecycle** | **Enforcement** | **~300** |
 
-**Note:** `gogent-orchestrator-guard` recognizes `impl-manager` as an orchestrating agent (alongside `orchestrator` and `review-orchestrator`) for background task collection enforcement.
+**Note:** `goyoke-orchestrator-guard` recognizes `impl-manager` as an orchestrating agent (alongside `orchestrator` and `review-orchestrator`) for background task collection enforcement.
 
 ### 9.2 Utility Binaries
 
 | Binary | Purpose | Subcommands |
 |--------|---------|-------------|
-| `gogent-capture-intent` | Manual user intent logging | (stdin) |
-| `gogent-aggregate` | Session statistics | (flags) |
-| `gogent-ml-export` | ML training data export | routing-decisions, agent-collaborations, **review-findings, review-stats, sharp-edge-hits**, validate, stats |
-| `gogent-orchestrator-guard` | Completion enforcement | (integration) |
-| `gogent-doc-theater` | Documentation theater detection | (integration) |
-| **`gogent-scout`** | **Unified pre-routing reconnaissance** | **(standalone)** |
+| `goyoke-capture-intent` | Manual user intent logging | (stdin) |
+| `goyoke-aggregate` | Session statistics | (flags) |
+| `goyoke-ml-export` | ML training data export | routing-decisions, agent-collaborations, **review-findings, review-stats, sharp-edge-hits**, validate, stats |
+| `goyoke-orchestrator-guard` | Completion enforcement | (integration) |
+| `goyoke-doc-theater` | Documentation theater detection | (integration) |
+| **`goyoke-scout`** | **Unified pre-routing reconnaissance** | **(standalone)** |
 
 ### 9.3 Scout Utilities
 
-The `gogent-scout` binary provides unified pre-routing reconnaissance with smart backend selection.
+The `goyoke-scout` binary provides unified pre-routing reconnaissance with smart backend selection.
 
 | Aspect | Detail |
 |--------|--------|
 | **Purpose** | Assess scope before committing expensive resources |
 | **Backends** | Native Go (score < 40), Gemini 3 Flash (score ≥ 40), Synthetic fallback |
-| **Output** | JSON to stdout + `.gogent/tmp/scout_metrics.json` |
+| **Output** | JSON to stdout + `.goyoke/tmp/scout_metrics.json` |
 | **Latency** | Native: < 100ms (p50), Gemini: 1-3s |
 
 **Usage:**
 ```bash
 # Basic usage
-gogent-scout <target-directory> "<instruction>"
+goyoke-scout <target-directory> "<instruction>"
 
 # Examples
-gogent-scout ./pkg/routing "Assess scope for refactoring"
-gogent-scout ./cmd "How many files in cmd?"
+goyoke-scout ./pkg/routing "Assess scope for refactoring"
+goyoke-scout ./cmd "How many files in cmd?"
 
 # Environment overrides
-SCOUT_BACKEND=native gogent-scout ./large-module "Force native"
-SCOUT_THRESHOLD=60 gogent-scout ./module "Higher threshold"
+SCOUT_BACKEND=native goyoke-scout ./large-module "Force native"
+SCOUT_THRESHOLD=60 goyoke-scout ./module "Higher threshold"
 ```
 
 **Backend Selection (Multi-Factor Score):**
@@ -1078,15 +1078,15 @@ SCOUT_THRESHOLD=60 gogent-scout ./module "Higher threshold"
 ### 9.4 Archive Query Subcommands
 
 ```bash
-gogent-archive list [--since=DATE] [--has-sharp-edges]
-gogent-archive show <session_id>
-gogent-archive stats
-gogent-archive sharp-edges [--file=PATTERN] [--status=pending]
-gogent-archive user-intents [--category=CATEGORY]
-gogent-archive decisions [--since=DATE]
-gogent-archive preferences
-gogent-archive performance
-gogent-archive weekly
+goyoke-archive list [--since=DATE] [--has-sharp-edges]
+goyoke-archive show <session_id>
+goyoke-archive stats
+goyoke-archive sharp-edges [--file=PATTERN] [--status=pending]
+goyoke-archive user-intents [--category=CATEGORY]
+goyoke-archive decisions [--since=DATE]
+goyoke-archive preferences
+goyoke-archive performance
+goyoke-archive weekly
 ```
 
 ---
@@ -1112,7 +1112,7 @@ gogent-archive weekly
 | `pkg/session` | ~85% | GenerateHandoff, LoadArtifacts, DetectLanguage |
 | `pkg/memory` | ~82% | LogFailure, GetFailureCount, PatternMatch |
 | `pkg/telemetry` | ~80% | LogInvocation, CalculateCost, ClusterByAgent |
-| `pkg/config` | ~90% | GetGOgentDir, GetCurrentTier |
+| `pkg/config` | ~90% | GetgoYokeDir, GetCurrentTier |
 
 ### 10.3 CI/CD Workflows
 
@@ -1136,15 +1136,15 @@ coverage.yml:          # Coverage reporting
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `GOGENT_PROJECT_DIR` | Project root override | `$PWD` |
-| `GOGENT_ROUTING_SCHEMA` | Schema path override | `~/.claude/routing-schema.json` |
-| `GOGENT_STORAGE_PATH` | Failure tracker path | `~/.gogent/failure-tracker.jsonl` |
-| `GOGENT_MAX_FAILURES` | Debugging loop threshold | 3 |
-| `GOGENT_FAILURE_WINDOW` | Failure window (seconds) | 300 |
-| `GOGENT_REMINDER_THRESHOLD` | Routing reminder frequency | 10 |
-| `GOGENT_FLUSH_THRESHOLD` | Auto-flush threshold | 20 |
+| `GOYOKE_PROJECT_DIR` | Project root override | `$PWD` |
+| `GOYOKE_ROUTING_SCHEMA` | Schema path override | `~/.claude/routing-schema.json` |
+| `GOYOKE_STORAGE_PATH` | Failure tracker path | `~/.goyoke/failure-tracker.jsonl` |
+| `GOYOKE_MAX_FAILURES` | Debugging loop threshold | 3 |
+| `GOYOKE_FAILURE_WINDOW` | Failure window (seconds) | 300 |
+| `GOYOKE_REMINDER_THRESHOLD` | Routing reminder frequency | 10 |
+| `GOYOKE_FLUSH_THRESHOLD` | Auto-flush threshold | 20 |
 | `XDG_DATA_HOME` | ML telemetry base path | `~/.local/share` |
-| **`GOGENT_ENABLE_TELEMETRY`** | **Enable/disable review telemetry** | **1** |
+| **`GOYOKE_ENABLE_TELEMETRY`** | **Enable/disable review telemetry** | **1** |
 
 ---
 
@@ -1164,13 +1164,13 @@ Project/
 │   │   └── einstein-gap-*.md        # Escalation documents
 │   └── session-archive/             # Archived session data
 │
-~/.gogent/
+~/.goyoke/
 ├── failure-tracker.jsonl            # Cross-session failures
 ├── agent-invocations.jsonl          # Invocation telemetry
 ├── escalations.jsonl                # Tier escalations
 └── scout-recommendations.jsonl      # Scout accuracy data
 │
-$XDG_DATA_HOME/gogent/
+$XDG_DATA_HOME/goyoke/
 ├── routing-decisions.jsonl          # ML training (initial)
 ├── routing-decision-updates.jsonl   # ML training (outcomes)
 ├── agent-collaborations.jsonl       # Team patterns (initial)
@@ -1207,7 +1207,7 @@ $XDG_DATA_HOME/gogent/
 
 ### 13.1 Adding a New CLI
 
-1. Create `cmd/gogent-<name>/main.go`
+1. Create `cmd/goyoke-<name>/main.go`
 2. Implement STDIN parsing with timeout (see `pkg/routing/stdin.go`)
 3. Output hook-compatible JSON to STDOUT
 4. Add to `Makefile` build targets
@@ -1234,7 +1234,7 @@ $XDG_DATA_HOME/gogent/
 
 1. Add field to `RoutingDecision` or `AgentCollaboration`
 2. Update logging in appropriate hook handler
-3. Update `gogent-ml-export` reconciliation logic
+3. Update `goyoke-ml-export` reconciliation logic
 4. Add migration code for existing JSONL files
 5. Update training pipeline documentation
 
@@ -1253,11 +1253,11 @@ $XDG_DATA_HOME/gogent/
 
 ---
 
-## 15. TUI System Architecture (GOgent-109 to GOgent-121) — Legacy
+## 15. TUI System Architecture (goYoke-109 to goYoke-121) — Legacy
 
 > **Status: SUPERSEDED.** This section documents the original TUI implementation (React/Ink-adjacent Go prototype).
 > A complete rewrite is underway — see Section 16 for the TUI Migration (TUI-001 to TUI-042).
-> The old ticket IDs (GOgent-109 to GOgent-121) are mapped to new equivalents in `tickets/tui-migration/tickets/overview.md`.
+> The old ticket IDs (goYoke-109 to goYoke-121) are mapped to new equivalents in `tickets/tui-migration/tickets/overview.md`.
 
 The TUI system provides a complete terminal interface for Claude Code interaction with real-time telemetry visualization.
 
@@ -1326,19 +1326,19 @@ graph TD
 
 | Ticket | Component | Status | Test Coverage |
 |--------|-----------|--------|---------------|
-| GOgent-109 | Agent Lifecycle Telemetry | ✅ Complete | ~85% |
-| GOgent-110 | CLI Subprocess Management | ✅ Complete | ~85% |
-| GOgent-111 | Performance Dashboard Shell | ✅ Complete | ~80% |
-| GOgent-112 | Auto-Restart on Panic | ✅ Complete | ~88% |
-| GOgent-113 | File Watchers for Telemetry | ✅ Complete | ~82% |
-| GOgent-114 | Event System Integration | ✅ Complete | ~90% |
-| GOgent-115 | Agent Tree Model | ✅ Complete | ~92% |
-| GOgent-116 | Tree View Component | ✅ Complete | ~88% |
-| GOgent-117 | Agent Detail Sidebar | ✅ Complete | ~85% |
-| GOgent-118 | Claude Conversation Panel | ✅ Complete | ~90% |
-| GOgent-119 | 70/30 Layout Integration | ✅ Complete | ~88% |
-| GOgent-120 | Persistent Banner | ✅ Complete | ~85% |
-| GOgent-121 | Session Management | ✅ Complete | ~85% |
+| goYoke-109 | Agent Lifecycle Telemetry | ✅ Complete | ~85% |
+| goYoke-110 | CLI Subprocess Management | ✅ Complete | ~85% |
+| goYoke-111 | Performance Dashboard Shell | ✅ Complete | ~80% |
+| goYoke-112 | Auto-Restart on Panic | ✅ Complete | ~88% |
+| goYoke-113 | File Watchers for Telemetry | ✅ Complete | ~82% |
+| goYoke-114 | Event System Integration | ✅ Complete | ~90% |
+| goYoke-115 | Agent Tree Model | ✅ Complete | ~92% |
+| goYoke-116 | Tree View Component | ✅ Complete | ~88% |
+| goYoke-117 | Agent Detail Sidebar | ✅ Complete | ~85% |
+| goYoke-118 | Claude Conversation Panel | ✅ Complete | ~90% |
+| goYoke-119 | 70/30 Layout Integration | ✅ Complete | ~88% |
+| goYoke-120 | Persistent Banner | ✅ Complete | ~85% |
+| goYoke-121 | Session Management | ✅ Complete | ~85% |
 
 ### 15.4 Key Interfaces
 
@@ -1418,7 +1418,7 @@ Go TUI Process (single binary)
   |
   +--spawns--> Claude Code CLI (--output-format stream-json)
                   |
-                  +--spawns--> gofortress-mcp (Go MCP server, stdio transport)
+                  +--spawns--> goyoke-mcp (Go MCP server, stdio transport)
                                   |
                                   +--connects--> TUI via UDS side channel
 ```
@@ -1451,19 +1451,19 @@ Go TUI Process (single binary)
 
 | Old Ticket | New Ticket(s) | Disposition |
 |-----------|---------------|-------------|
-| GOgent-109 | TUI-019, TUI-021 | SUPERSEDED |
-| GOgent-110 | TUI-013 | SUPERSEDED |
-| GOgent-111 | TUI-010, TUI-032 | SUPERSEDED |
-| GOgent-112 | TUI-013, TUI-016 | PRESERVED |
-| GOgent-113 | TUI-027, TUI-032 | MODIFIED |
-| GOgent-114 | TUI-012 | SUPERSEDED |
-| GOgent-115 | TUI-019 | SUPERSEDED |
-| GOgent-116 | TUI-020 | SUPERSEDED |
-| GOgent-117 | TUI-020 | SUPERSEDED |
-| GOgent-118 | TUI-022 | SUPERSEDED |
-| GOgent-119 | TUI-010 | SUPERSEDED |
-| GOgent-120 | TUI-009 | SUPERSEDED |
-| GOgent-121 | TUI-033, TUI-034 | SUPERSEDED |
+| goYoke-109 | TUI-019, TUI-021 | SUPERSEDED |
+| goYoke-110 | TUI-013 | SUPERSEDED |
+| goYoke-111 | TUI-010, TUI-032 | SUPERSEDED |
+| goYoke-112 | TUI-013, TUI-016 | PRESERVED |
+| goYoke-113 | TUI-027, TUI-032 | MODIFIED |
+| goYoke-114 | TUI-012 | SUPERSEDED |
+| goYoke-115 | TUI-019 | SUPERSEDED |
+| goYoke-116 | TUI-020 | SUPERSEDED |
+| goYoke-117 | TUI-020 | SUPERSEDED |
+| goYoke-118 | TUI-022 | SUPERSEDED |
+| goYoke-119 | TUI-010 | SUPERSEDED |
+| goYoke-120 | TUI-009 | SUPERSEDED |
+| goYoke-121 | TUI-033, TUI-034 | SUPERSEDED |
 
 ### 16.6 Implemented Package Tree (Phases 2-5, see overview.md for full Phase 2-9 tree)
 
@@ -1508,8 +1508,8 @@ internal/tui/
     └── messages.go                   # 18 tea.Msg types (TUI-008/016)
 
 cmd/
-├── gofortress/main.go                # TUI entry point, stdlib flag (TUI-011)
-└── gofortress-mcp/main.go            # MCP server with spawn_agent + interactive tools (TUI-011)
+├── goyoke/main.go                # TUI entry point, stdlib flag (TUI-011)
+└── goyoke-mcp/main.go            # MCP server with spawn_agent + interactive tools (TUI-011)
 ```
 
 ~1153+ tests across 23+ packages (as of Phase 8). See `overview.md` for full package tree and current counts.
@@ -1553,12 +1553,12 @@ type sharedState struct {
 | Ticket index (70 tickets) | `tickets/tui-migration/tickets/tickets-index.json` |
 | Individual tickets (Phases 1-9) | `tickets/tui-migration/tickets/TUI-{001..042}.md` |
 | Individual tickets (Phase 10) | `tickets/tui-migration/tickets/TUI-{043..070}.md` |
-| Strategy plan (Phases 1-9) | `.gogent/sessions/20260316-plan-tickets-tui/strategy.md` |
-| Implementation specs (Phases 1-9) | `.gogent/sessions/20260316-plan-tickets-tui/specs.md` |
-| Staff architect review (Phases 1-9) | `.gogent/sessions/20260316-plan-tickets-tui/review-critique.md` |
-| Strategy plan (Phase 10) | `.gogent/sessions/20260323-plan-tickets-tui-phase10/strategy.md` |
-| Implementation specs (Phase 10) | `.gogent/sessions/20260323-plan-tickets-tui-phase10/specs.md` |
-| Staff architect review (Phase 10) | `.gogent/sessions/20260323-plan-tickets-tui-phase10/review-critique.md` |
+| Strategy plan (Phases 1-9) | `.goyoke/sessions/20260316-plan-tickets-tui/strategy.md` |
+| Implementation specs (Phases 1-9) | `.goyoke/sessions/20260316-plan-tickets-tui/specs.md` |
+| Staff architect review (Phases 1-9) | `.goyoke/sessions/20260316-plan-tickets-tui/review-critique.md` |
+| Strategy plan (Phase 10) | `.goyoke/sessions/20260323-plan-tickets-tui-phase10/strategy.md` |
+| Implementation specs (Phase 10) | `.goyoke/sessions/20260323-plan-tickets-tui-phase10/specs.md` |
+| Staff architect review (Phase 10) | `.goyoke/sessions/20260323-plan-tickets-tui-phase10/review-critique.md` |
 | Braintrust analysis | `tickets/tui-migration/braintrust-handoff-v2.md` |
 | Spike results | `tickets/tui-migration/spike-results/` |
 
@@ -1603,17 +1603,17 @@ type sharedState struct {
 | 1.6 | 2026-03-23 | Updated Section 16 for Phases 6-9 progress: Phases 6-8 COMPLETE, Phase 9 IN PROGRESS (5/7: TUI-036–040 done, TUI-041–042 pending). Updated test counts (~1153+ tests, 23+ packages). Added reference to overview.md for full package tree. Performance benchmarks all pass (TUI-040). |
 | 1.5 | 2026-03-23 | Updated Section 16 for Phases 4-5 completion: modal system (TUI-017/018), agent tree (TUI-019/020/021). Updated package tree to 12 packages/557 tests. Added import graph, sharedState diagram, cycle-prevention interfaces. Phase status 4+5 → COMPLETE. |
 | 1.4 | 2026-03-23 | Added Section 16: TUI Migration (TUI-001 to TUI-042). Marked Section 15 as legacy/superseded. Updated header to reflect v2 migration status. Fixed `.ticket-config.json` stale reference. |
-| 1.3 | 2026-02-02 | Added `gogent-scout` unified scout binary (Section 9.3): smart backend routing (native Go / Gemini 3 Flash), multi-factor scoring, fallback chain, updated routing-schema.json scout_protocol |
-| 1.2 | 2026-02-01 | Added Review Skill ML Telemetry System (v2.4.0): Section 4.5-4.7, 6 new agents, gogent-log-review/gogent-update-review-outcome binaries, review-findings.jsonl/review-outcomes.jsonl/sharp-edge-hits.jsonl telemetry files |
-| 1.1 | 2026-01-26 | Complete TUI implementation (GOgent-109 through GOgent-121), Section 15 added |
+| 1.3 | 2026-02-02 | Added `goyoke-scout` unified scout binary (Section 9.3): smart backend routing (native Go / Gemini 3 Flash), multi-factor scoring, fallback chain, updated routing-schema.json scout_protocol |
+| 1.2 | 2026-02-01 | Added Review Skill ML Telemetry System (v2.4.0): Section 4.5-4.7, 6 new agents, goyoke-log-review/goyoke-update-review-outcome binaries, review-findings.jsonl/review-outcomes.jsonl/sharp-edge-hits.jsonl telemetry files |
+| 1.1 | 2026-01-26 | Complete TUI implementation (goYoke-109 through goYoke-121), Section 15 added |
 | 1.0 | 2026-01-20 | Initial architecture documentation |
 
 ---
 
 **Version:** 1.9
 **Generated:** 2026-03-25
-**Maintainer:** GOgent-Fortress Development Team
-**TUI v1 (Legacy):** GOgent-109 through GOgent-121 (13 tickets, all tests passing) — superseded
+**Maintainer:** goYoke Development Team
+**TUI v1 (Legacy):** goYoke-109 through goYoke-121 (13 tickets, all tests passing) — superseded
 **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 42/42 COMPLETE ✅). Feature parity verified.
 **TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, 28/28 COMPLETE ✅). 29 packages, 1542 tests.
-**Review Telemetry Complete:** GOgent-122 through GOgent-139 (18 tasks, all tests passing)
+**Review Telemetry Complete:** goYoke-122 through goYoke-139 (18 tasks, all tests passing)

@@ -1,4 +1,4 @@
-# GOgent-117: Config Struct Extension for Agent Customization
+# goYoke-117: Config Struct Extension for Agent Customization
 
 ## Summary
 
@@ -283,13 +283,13 @@ claude \
 
 This implementation enables:
 
-1. **Preset Agent Configurations** (GOgent-117, Task #7)
+1. **Preset Agent Configurations** (goYoke-117, Task #7)
    - SecurityReviewerAgent, GoProAgent, etc. can now set custom prompts
 
-2. **TUI Agent Picker** (GOgent-117, Task #9)
+2. **TUI Agent Picker** (goYoke-117, Task #9)
    - Will display agent descriptions and model tiers
 
-3. **Dynamic Agent Spawning** (GOgent-117, Task #10)
+3. **Dynamic Agent Spawning** (goYoke-117, Task #10)
    - Tree view [q] key can spawn configured agents
 
 ## Next Steps
@@ -314,6 +314,6 @@ go tool cover -func=/tmp/coverage.out | grep -E "(subprocess.go|subagent.go)"
 
 ## References
 
-- **Task:** GOgent-117, Task #8
+- **Task:** goYoke-117, Task #8
 - **Related:** Task #7 (preset agents), Task #9 (TUI picker), Task #10 (query agent)
 - **Files:** `internal/cli/subprocess.go`, `internal/cli/subagent.go`, test files

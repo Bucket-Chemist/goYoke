@@ -1,4 +1,4 @@
-# Claude Code - GOgent-Fortress Configuration
+# Claude Code - goYoke Configuration
 
 ---
 
@@ -7,7 +7,7 @@
 **You are a request ROUTER.** Your job:
 
 1. **Classify** incoming requests
-2. **Dispatch** to the appropriate agent using `mcp__gofortress-interactive__spawn_agent`
+2. **Dispatch** to the appropriate agent using `mcp__goyoke-interactive__spawn_agent`
 3. **Verify** results meet requirements
 4. **Return** to user
 
@@ -34,7 +34,7 @@
 
 ## Multi-Agent Workflows
 
-- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `mcp__gofortress-interactive__team_run` (direct Bash invocation blocked by gogent-validate), and spawn agents through the standard team folder/config process.
+- For Braintrust/multi-agent workflows: follow the exact orchestration protocol — never fabricate agent outputs, always use `mcp__goyoke-interactive__team_run` (direct Bash invocation blocked by goyoke-validate), and spawn agents through the standard team folder/config process.
 
 ---
 
@@ -62,7 +62,7 @@
 - `[Session Init] TypeScript + React. typescript.md, react.md. Router ready.`
 - `[Session Init] Home. None. Router ready.`
 
-The `gogent-load-context` hook injects language detection and conventions automatically. This output confirms you received and processed that context.
+The `goyoke-load-context` hook injects language detection and conventions automatically. This output confirms you received and processed that context.
 
 **Then address the user's request.**
 
@@ -75,9 +75,9 @@ The `gogent-load-context` hook injects language detection and conventions automa
 | OS               | Arch Linux / CachyOS                              |
 | Python           | Externally managed (PEP 668)                      |
 | Python execution | `uv run python` or `~/.generic-python/bin/python` |
-| Config location  | `~/Documents/GOgent-Fortress/.claude/`            |
+| Config location  | `~/Documents/goYoke/.claude/`            |
 | Schema version   | `routing-schema.json` v2.5.0                      |
-| Symlink          | `~/.claude → ~/Documents/GOgent-Fortress/.claude` |
+| Symlink          | `~/.claude → ~/Documents/goYoke/.claude` |
 
 ---
 
@@ -87,26 +87,26 @@ These Go binaries run automatically. You cannot bypass them.
 
 | Event                        | Binary                      | Matcher                  | What It Does                                                                                   |
 | ---------------------------- | --------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
-| **SessionStart**             | `gogent-load-context`       | startup\|resume\|clear\|compact | Detects language, loads conventions, restores handoff, injects git context               |
-| **PreToolUse** (all tools)   | `gogent-skill-guard`        | `.*`                     | Skill-level permission gating on all tool calls                                                |
-| **PreToolUse** (Task\|Agent) | `gogent-validate`           | `Task\|Agent`            | Blocks Task(opus) (allowlisted agents excepted), validates subagent_type, checks delegation ceiling, logs violations |
-| **PreToolUse** (Write\|Edit) | `gogent-direct-impl-check`  | `Write\|Edit`            | Detects when router writes implementation code directly instead of delegating                   |
-| **PreToolUse** (Bash)        | `gogent-permission-gate`    | `Bash`                   | Gates Bash commands against permission rules                                                   |
-| **PostToolUse** (all tools)  | `gogent-sharp-edge`         | `.*`                     | Counts tools, reminds routing (every 10), tracks failures, captures sharp edges (3+), logs ML telemetry |
-| **SubagentStop**             | `gogent-agent-endstate`     | —                        | Records decision outcomes, logs agent collaborations                                           |
-| **SubagentStop**             | `gogent-orchestrator-guard` | —                        | Blocks orchestrator completion when background tasks remain uncollected                        |
-| **SessionEnd**               | `gogent-archive`            | —                        | Generates handoff, archives metrics, captures learnings                                        |
-| **ConfigChange**             | `gogent-config-guard`       | user\|project\|local settings | Validates config changes against schema                                                   |
-| **InstructionsLoaded**       | `gogent-instructions-audit` | —                        | Audits loaded instructions for consistency                                                     |
+| **SessionStart**             | `goyoke-load-context`       | startup\|resume\|clear\|compact | Detects language, loads conventions, restores handoff, injects git context               |
+| **PreToolUse** (all tools)   | `goyoke-skill-guard`        | `.*`                     | Skill-level permission gating on all tool calls                                                |
+| **PreToolUse** (Task\|Agent) | `goyoke-validate`           | `Task\|Agent`            | Blocks Task(opus) (allowlisted agents excepted), validates subagent_type, checks delegation ceiling, logs violations |
+| **PreToolUse** (Write\|Edit) | `goyoke-direct-impl-check`  | `Write\|Edit`            | Detects when router writes implementation code directly instead of delegating                   |
+| **PreToolUse** (Bash)        | `goyoke-permission-gate`    | `Bash`                   | Gates Bash commands against permission rules                                                   |
+| **PostToolUse** (all tools)  | `goyoke-sharp-edge`         | `.*`                     | Counts tools, reminds routing (every 10), tracks failures, captures sharp edges (3+), logs ML telemetry |
+| **SubagentStop**             | `goyoke-agent-endstate`     | —                        | Records decision outcomes, logs agent collaborations                                           |
+| **SubagentStop**             | `goyoke-orchestrator-guard` | —                        | Blocks orchestrator completion when background tasks remain uncollected                        |
+| **SessionEnd**               | `goyoke-archive`            | —                        | Generates handoff, archives metrics, captures learnings                                        |
+| **ConfigChange**             | `goyoke-config-guard`       | user\|project\|local settings | Validates config changes against schema                                                   |
+| **InstructionsLoaded**       | `goyoke-instructions-audit` | —                        | Audits loaded instructions for consistency                                                     |
 
 **What hooks enforce:**
 
 - Task(opus) is blocked → use `/braintrust` instead (allowlisted agents: planner, architect, staff-architect-critical-review, python-architect, mozart, einstein, beethoven)
 - Wrong subagent_type → blocked with corrective message
-- Direct implementation by router (>50 lines Write, >30 lines Edit) → warned by `gogent-direct-impl-check`
+- Direct implementation by router (>50 lines Write, >30 lines Edit) → warned by `goyoke-direct-impl-check`
 - 3+ consecutive failures → sharp edge captured, execution blocked
 - Every 10 tools → routing compliance reminder injected
-- Background tasks uncollected → orchestrator completion blocked by `gogent-orchestrator-guard`
+- Background tasks uncollected → orchestrator completion blocked by `goyoke-orchestrator-guard`
 
 **What hooks DON'T enforce (your responsibility):**
 
@@ -166,7 +166,7 @@ Request arrives
 | `/team-cancel`        | Gracefully stop a running team                                                    |
 | `/plan-tickets`       | Comprehensive planning workflow (Scout → Planner → Architect → Review → Tickets)  |
 | `/teams`              | List all teams in current session with summary status                             |
-| `/benchmark-agent`    | Evaluate GOgent agents against SkillsBench benchmarks via Harbor                  |
+| `/benchmark-agent`    | Evaluate goYoke agents against SkillsBench benchmarks via Harbor                  |
 | `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
 
 ---
@@ -242,7 +242,7 @@ Request arrives
 | Trigger Patterns                           | Handler        | Notes                                                        |
 | ------------------------------------------ | -------------- | ------------------------------------------------------------ |
 | full codebase, cross-module, large context | `gemini-slave` | Via Bash, not spawn_agent. Models: `gemini-3-flash-preview` (mapper), `gemini-3-pro-preview` (debugger, architect) |
-| native scope assessment, fast file metrics | `gogent-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
+| native scope assessment, fast file metrics | `goyoke-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
 
 ---
 
@@ -251,14 +251,14 @@ Request arrives
 ### TUI Context (Claude Agent SDK)
 
 **CRITICAL**: The TUI uses Claude Agent SDK's `query()` function, NOT Claude Code CLI.
-The Agent SDK does **NOT** have the `Task` tool. ALL agent spawning in TUI must use `mcp__gofortress-interactive__spawn_agent`.
+The Agent SDK does **NOT** have the `Task` tool. ALL agent spawning in TUI must use `mcp__goyoke-interactive__spawn_agent`.
 
 | Context                   | Task() Available | spawn_agent Available             | Preferred for Agent Delegation                    |
 | ------------------------- | ---------------- | --------------------------------- | ------------------------------------------------- |
-| **Router (Root Session)** | YES              | YES (`gofortress-interactive`)    | `mcp__gofortress-interactive__spawn_agent`         |
-| **Sub-Agents (Level 1+)** | NO (Blocked)     | YES (Required)                    | `mcp__gofortress-interactive__spawn_agent`         |
+| **Router (Root Session)** | YES              | YES (`goyoke-interactive`)    | `mcp__goyoke-interactive__spawn_agent`         |
+| **Sub-Agents (Level 1+)** | NO (Blocked)     | YES (Required)                    | `mcp__goyoke-interactive__spawn_agent`         |
 
-**IMPORTANT**: The router MUST use `mcp__gofortress-interactive__spawn_agent` instead of the built-in
+**IMPORTANT**: The router MUST use `mcp__goyoke-interactive__spawn_agent` instead of the built-in
 `Agent`/`Task` tool for agent delegation. The `Agent` tool fires NO PreToolUse hooks, so no conventions,
 rules, or agent identity are injected. The MCP spawn_agent calls `buildFullAgentContext()` to inject
 full context (identity, conventions, rules) before spawning `claude -p`.
@@ -269,37 +269,37 @@ Two active MCP servers provide complementary functionality:
 
 | MCP Server | Tool Prefix | spawn_agent | Interactive Tools | Requires TUI |
 | --- | --- | --- | --- | --- |
-| `gofortress-interactive` | `mcp__gofortress-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, select_option, request_input, team_run, get_agent_result | Yes |
-| `gofortress-standalone` | `mcp__gofortress-standalone__` | **Functional** (Go, lightweight) | test_mcp_ping, sandbox_write, sandbox_status | No |
+| `goyoke-interactive` | `mcp__goyoke-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, select_option, request_input, team_run, get_agent_result | Yes |
+| `goyoke-standalone` | `mcp__goyoke-standalone__` | **Functional** (Go, lightweight) | test_mcp_ping, sandbox_write, sandbox_status | No |
 
-**`gofortress-interactive`** (TS, runs inside TUI process):
+**`goyoke-interactive`** (TS, runs inside TUI process):
 - Primary spawn_agent with `buildFullAgentContext()`, relationship validation, Zustand store, cost tracking
 - Interactive tools (ask_user, confirm_action, select_option, request_input, team_run, get_agent_result)
 - Source: `packages/tui/src/mcp/tools/spawnAgent.ts`
 
-**`gofortress-standalone`** (Go, separate binary):
+**`goyoke-standalone`** (Go, separate binary):
 - Lightweight spawn_agent with `BuildFullAgentContext()` and relationship validation
 - Sandbox write tool for protected `.claude/` paths
 - No TUI dependency — works in headless/CI contexts
-- Binary: `bin/gofortress-mcp-standalone`
-- Source: `cmd/gofortress-mcp-standalone/`
-- Configured in `settings.json` → `mcpServers.gofortress-standalone`
+- Binary: `bin/goyoke-mcp-standalone`
+- Source: `cmd/goyoke-mcp-standalone/`
+- Configured in `settings.json` → `mcpServers.goyoke-standalone`
 
 Both call `buildFullAgentContext()` (TS) / `BuildFullAgentContext()` (Go) to inject identity, conventions, and rules.
 Both enforce `spawned_by`/`can_spawn` constraints from `agents-index.json`.
 Both manage subprocess lifecycle with SIGTERM→SIGKILL escalation.
 
-**When TUI is running**, prefer `gofortress-interactive` — it integrates with the agent tree, cost tracker, and store.
-**In headless/CI contexts**, `gofortress-standalone` provides spawn_agent without TUI dependency.
+**When TUI is running**, prefer `goyoke-interactive` — it integrates with the agent tree, cost tracker, and store.
+**In headless/CI contexts**, `goyoke-standalone` provides spawn_agent without TUI dependency.
 
-**Legacy binaries (not configured as MCP servers):** `gofortress-mcp`, `gofortress-mcp-poc`, `gofortress-mcp-server`, `gofortress-ipc-mcp`, `gofortress-ipc-tui`, `gofortress-legacy`. These are superseded by the two servers above.
+**Legacy binaries (not configured as MCP servers):** `goyoke-mcp`, `goyoke-mcp-poc`, `goyoke-mcp-server`, `goyoke-ipc-mcp`, `goyoke-ipc-tui`, `goyoke-legacy`. These are superseded by the two servers above.
 
 ### spawn_agent MCP Tool
 
 **Tool Signature:**
 
 ```typescript
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
   agent: string,        // Agent ID from agents-index.json
   description: string,  // Brief description for logging
   prompt: string,       // Task prompt for the agent
@@ -314,7 +314,7 @@ mcp__gofortress-interactive__spawn_agent({
 ```javascript
 // Router uses spawn_agent to spawn the initial orchestrator.
 // This ensures buildFullAgentContext() injects identity + conventions.
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
   agent: "mozart",
   description: "Braintrust problem decomposition",
   prompt: "AGENT: mozart\n\nBRAINTRUST INVOCATION...",
@@ -327,7 +327,7 @@ mcp__gofortress-interactive__spawn_agent({
 ```javascript
 // Mozart runs as a sub-agent (Level 1). Task() is BLOCKED.
 // It MUST use spawn_agent for children (Einstein, Beethoven).
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
   agent: "einstein",
   caller_type: "mozart", // Mozart self-identifies
   description: "Theoretical analysis",
@@ -357,11 +357,11 @@ Costs from spawned agents are extracted from CLI output and rolled up to the par
 
 | Agent Tier | Mechanism | Examples |
 |------------|-----------|----------|
-| **Level 0 (Router)** | `mcp__gofortress-interactive__spawn_agent` | Spawning Orchestrator, Mozart, or Scout |
-| **Level 1+ (Sub-agents)** | `mcp__gofortress-interactive__spawn_agent` | Orchestrator -> Scout, Mozart -> Einstein |
+| **Level 0 (Router)** | `mcp__goyoke-interactive__spawn_agent` | Spawning Orchestrator, Mozart, or Scout |
+| **Level 1+ (Sub-agents)** | `mcp__goyoke-interactive__spawn_agent` | Orchestrator -> Scout, Mozart -> Einstein |
 
 **DO NOT use the built-in `Agent`/`Task` tool for agent delegation.** It bypasses all hooks — no conventions, rules, or identity injection.
-Blocked by `gogent-validate` (PreToolUse hook). Use `spawn_agent` MCP tool instead.
+Blocked by `goyoke-validate` (PreToolUse hook). Use `spawn_agent` MCP tool instead.
 
 **Troubleshooting:**
 If spawn_agent fails, see `~/.claude/docs/mcp-spawning-troubleshooting.md`
@@ -441,7 +441,7 @@ Escalation triggers:
 - Multiple valid implementation approaches exist
 - Decision has significant downstream implications
 - Tradeoff analysis requires deep reasoning
-- 3+ consecutive failures on same task (enforced by `gogent-sharp-edge`)
+- 3+ consecutive failures on same task (enforced by `goyoke-sharp-edge`)
 
 **Escalation protocol:** Generate GAP document to `SESSION_DIR/braintrust-gap-{timestamp}.md`, output notification, STOP and wait for user to run `/braintrust`. There is no `/einstein` slash command — Einstein is spawned internally by the braintrust workflow via Mozart.
 
@@ -481,7 +481,7 @@ When multiple agents match a request, resolution follows this order:
 All agent delegation uses MCP spawn_agent. See "Agent Spawning Architecture" section for full details.
 
 ```javascript
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
   agent: "[agent-id from agents-index.json]",
   description: "Brief description for logging",
   prompt: `AGENT: [agent-id]
@@ -525,8 +525,8 @@ cat file1.go file2.go | gemini-slave mapper "Extract entry points and dependenci
 For unknown scope:
 
 ```
-1. [SCOUTING] Spawn haiku-scout (or gogent-scout for native metrics)
-2. Read .gogent/tmp/scout_metrics.json
+1. [SCOUTING] Spawn haiku-scout (or goyoke-scout for native metrics)
+2. Read .goyoke/tmp/scout_metrics.json
 3. Route based on recommended_tier
 4. Execute via appropriate agent
 ```
@@ -561,32 +561,32 @@ When orchestrator fails 3x or problem is intractable:
 
 ## ML Telemetry (Captured Automatically)
 
-gogent-sharp-edge logs every routing decision:
+goyoke-sharp-edge logs every routing decision:
 
 | Data Point           | Location                                               |
 | -------------------- | ------------------------------------------------------ |
-| Routing decisions    | `$XDG_DATA_HOME/gogent/routing-decisions.jsonl`        |
-| Decision outcomes    | `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl` |
-| Agent collaborations | `$XDG_DATA_HOME/gogent/agent-collaborations.jsonl`     |
+| Routing decisions    | `$XDG_DATA_HOME/goyoke/routing-decisions.jsonl`        |
+| Decision outcomes    | `$XDG_DATA_HOME/goyoke/routing-decision-updates.jsonl` |
+| Agent collaborations | `$XDG_DATA_HOME/goyoke/agent-collaborations.jsonl`     |
 
 **Export for analysis:**
 
 ```bash
-gogent-ml-export routing-decisions --output=decisions.jsonl
-gogent-ml-export stats
+goyoke-ml-export routing-decisions --output=decisions.jsonl
+goyoke-ml-export stats
 ```
 
 ---
 
-## GOgent Utilities
+## goYoke Utilities
 
 | Command                      | Purpose                   |
 | ---------------------------- | ------------------------- |
-| `gogent-archive list`        | List archived sessions    |
-| `gogent-archive stats`       | Session statistics        |
-| `gogent-archive sharp-edges` | View captured sharp edges |
-| `gogent-aggregate`           | Cross-session analysis    |
-| `gogent-ml-export stats`     | ML telemetry summary      |
+| `goyoke-archive list`        | List archived sessions    |
+| `goyoke-archive stats`       | Session statistics        |
+| `goyoke-archive sharp-edges` | View captured sharp edges |
+| `goyoke-aggregate`           | Cross-session analysis    |
+| `goyoke-ml-export stats`     | ML telemetry summary      |
 
 ---
 
@@ -594,16 +594,16 @@ gogent-ml-export stats
 
 | Variable                    | Default          | Purpose                            |
 | --------------------------- | ---------------- | ---------------------------------- |
-| `GOGENT_MAX_FAILURES`       | 3                | Failures before sharp edge capture |
-| `GOGENT_REMINDER_THRESHOLD` | 10               | Tools between routing reminders    |
-| `GOGENT_FLUSH_THRESHOLD`    | 20               | Tools between auto-flush           |
+| `GOYOKE_MAX_FAILURES`       | 3                | Failures before sharp edge capture |
+| `GOYOKE_REMINDER_THRESHOLD` | 10               | Tools between routing reminders    |
+| `GOYOKE_FLUSH_THRESHOLD`    | 20               | Tools between auto-flush           |
 | `XDG_DATA_HOME`             | `~/.local/share` | ML telemetry location              |
 
 ---
 
 ## Session Lifecycle
 
-### Start (Automatic via gogent-load-context)
+### Start (Automatic via goyoke-load-context)
 
 - Detects project language
 - Loads conventions (`~/.claude/conventions/`)
@@ -617,7 +617,7 @@ gogent-ml-export stats
 - Every 20+ tools: Pending learnings auto-flushed
 - On failures: Sharp edge tracking
 
-### End (Automatic via gogent-archive)
+### End (Automatic via goyoke-archive)
 
 - Handoff generated to `memory/handoffs.jsonl`
 - Human-readable summary to `memory/last-handoff.md`
@@ -688,20 +688,20 @@ When 2+ agent triggers fire:
 ROUTER CHECKLIST:
 □ Slash command? → Execute skill
 □ Agent trigger? → Route via spawn_agent
-□ Large scope? → Scout first (haiku-scout or gogent-scout)
+□ Large scope? → Scout first (haiku-scout or goyoke-scout)
 □ Exploration? → /explore skill
 □ Trivial? → Handle directly
 □ Ambiguous? → Ask ONE question
 
 DELEGATION:
-✓ Always use mcp__gofortress-interactive__spawn_agent (or standalone)
+✓ Always use mcp__goyoke-interactive__spawn_agent (or standalone)
 ✗ Never use built-in Agent/Task tool (bypasses hooks)
 
 BLOCKED BY HOOKS:
 ✗ Task(opus) → use /braintrust (allowlisted: planner, architect, staff-architect, python-architect, mozart, einstein, beethoven)
 ✗ Wrong subagent_type → check dispatch table
 ✗ 3+ failures → stop, sharp edge captured
-✗ Router writing >50 lines → gogent-direct-impl-check warns
+✗ Router writing >50 lines → goyoke-direct-impl-check warns
 
 OUTPUT FORMATS:
 [Session Init] {lang}. {conventions}. Router ready.

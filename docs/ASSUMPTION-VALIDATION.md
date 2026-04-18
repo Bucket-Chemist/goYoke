@@ -9,12 +9,12 @@ Source: Braintrust analysis `20260222.150000.braintrust`
 
 **Status:** NEEDS MANUAL VALIDATION
 **Priority:** HIGH
-**Blocking:** Yes (affects whether we can add GOgent-specific metadata to frontmatter)
+**Blocking:** Yes (affects whether we can add goYoke-specific metadata to frontmatter)
 
 ### Test Setup
 Created test agent at `.claude/agents/test-frontmatter/test-frontmatter.md` with:
 - Standard fields: `name`, `description`, `model`, `tools`
-- Unknown fields: `x-gogent-tier`, `x-gogent-custom-field`, `unknown_field_123`
+- Unknown fields: `x-goyoke-tier`, `x-goyoke-custom-field`, `unknown_field_123`
 
 ### Manual Test Procedure
 ```bash
@@ -27,10 +27,10 @@ grep -i "test-frontmatter\|warning\|error\|unknown" /tmp/agent-list.txt
 
 ### Expected Results
 - ✅ **PASS:** Agent appears in list without warnings about unknown fields
-- ❌ **FAIL:** Warnings/errors about `x-gogent-*` or `unknown_field_123`
+- ❌ **FAIL:** Warnings/errors about `x-goyoke-*` or `unknown_field_123`
 
 ### If FAIL
-Migrate GOgent-specific fields to a separate metadata file or remove from frontmatter entirely.
+Migrate goYoke-specific fields to a separate metadata file or remove from frontmatter entirely.
 
 ---
 
@@ -70,7 +70,7 @@ Based on Braintrust analysis: pipe mode likely does NOT load `.claude/agents/*.m
 
 ---
 
-## Assumption 3: GOgent-Fortress maintenance cost is <2 hours/month
+## Assumption 3: goYoke maintenance cost is <2 hours/month
 
 **Status:** TRACKING SETUP NEEDED
 **Priority:** MEDIUM
@@ -85,7 +85,7 @@ Add to `.claude/memory/MEMORY.md` monthly:
 ### 2026-02
 - agents-index.json changes: [count] edits, [minutes] total
 - identity_loader.go changes: [count] edits, [minutes] total
-- gogent-validate changes: [count] edits, [minutes] total
+- goyoke-validate changes: [count] edits, [minutes] total
 - Total agent-related maintenance: [minutes]
 ```
 
@@ -95,7 +95,7 @@ Add to `.claude/memory/MEMORY.md` monthly:
 git log --since="30 days ago" --oneline -- \
   .claude/agents/agents-index.json \
   pkg/routing/identity_loader.go \
-  cmd/gogent-validate/main.go
+  cmd/goyoke-validate/main.go
 ```
 
 ### Decision Trigger

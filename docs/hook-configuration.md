@@ -1,6 +1,6 @@
 # Hook Configuration
 
-This document shows how to configure GOgent-Fortress hooks in Claude Code.
+This document shows how to configure goYoke hooks in Claude Code.
 
 ## Settings.json Configuration
 
@@ -10,17 +10,17 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 {
   "hooks": {
     "SessionStart": {
-      "command": "gogent-load-context"
+      "command": "goyoke-load-context"
     },
     "PreToolUse": {
-      "command": "gogent-validate"
+      "command": "goyoke-validate"
     },
     "PostToolUse": {
-      "command": "gogent-sharp-edge",
+      "command": "goyoke-sharp-edge",
       "tools": ["Bash", "Edit", "Write"]
     },
     "SessionEnd": {
-      "command": "gogent-archive"
+      "command": "goyoke-archive"
     }
   }
 }
@@ -30,19 +30,19 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GOGENT_PROJECT_DIR` | Override project directory | Current working directory |
+| `GOYOKE_PROJECT_DIR` | Override project directory | Current working directory |
 | `CLAUDE_PROJECT_DIR` | Fallback project directory | Current working directory |
-| `GOGENT_ROUTING_SCHEMA` | Path to routing-schema.json | `~/.claude/routing-schema.json` |
+| `GOYOKE_ROUTING_SCHEMA` | Path to routing-schema.json | `~/.claude/routing-schema.json` |
 | `XDG_CACHE_HOME` | XDG cache directory | `~/.cache` |
 
 ## Verifying Installation
 
 ```bash
 # Check binaries are installed
-which gogent-load-context gogent-validate gogent-archive
+which goyoke-load-context goyoke-validate goyoke-archive
 
 # Test SessionStart hook manually
-echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' | gogent-load-context
+echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' | goyoke-load-context
 
 # Expected output: JSON with hookSpecificOutput containing session context
 ```
@@ -50,8 +50,8 @@ echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' |
 ## Troubleshooting
 
 ### Hook not executing
-- Verify binary is in PATH: `which gogent-load-context`
-- Check permissions: `ls -la $(which gogent-load-context)`
+- Verify binary is in PATH: `which goyoke-load-context`
+- Check permissions: `ls -la $(which goyoke-load-context)`
 - Test manually with echo | pipe
 
 ### Missing routing schema
@@ -59,5 +59,5 @@ echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' |
 - Hook will warn but continue without routing summary
 
 ### Tool counter not created
-- Check XDG_CACHE_HOME or ~/.cache/gogent/ permissions
+- Check XDG_CACHE_HOME or ~/.cache/goyoke/ permissions
 - Non-fatal - session continues but attention-gate won't work

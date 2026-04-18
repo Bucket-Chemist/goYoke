@@ -10,18 +10,18 @@ Complete troubleshooting reference for the MCP spawn_agent tool.
 
 ### 1. "spawn_agent tool not found"
 
-**Cause**: MCP server not registered or GOGENT_MCP_SPAWN_ENABLED=false
+**Cause**: MCP server not registered or GOYOKE_MCP_SPAWN_ENABLED=false
 
 **Solution**:
 ```bash
 # Check MCP server status
-ps aux | grep gofortress
+ps aux | grep goyoke
 
 # Verify environment variable
-echo $GOGENT_MCP_SPAWN_ENABLED  # Should be "true"
+echo $GOYOKE_MCP_SPAWN_ENABLED  # Should be "true"
 
 # Restart MCP server
-pkill -f gofortress
+pkill -f goyoke
 # Restart Claude CLI session
 ```
 
@@ -60,10 +60,10 @@ cat ~/.claude/agents/agents-index.json | jq '.agents | length'
 **Solution**:
 ```bash
 # Fix hook permissions
-chmod +x ~/.claude/hooks/gogent-*
+chmod +x ~/.claude/hooks/goyoke-*
 
 # Verify
-ls -la ~/.claude/hooks/gogent-*
+ls -la ~/.claude/hooks/goyoke-*
 
 # All should show -rwxr-xr-x
 ```
@@ -114,7 +114,7 @@ Router → Mozart → [Einstein, Staff-Architect, Beethoven] (parallel)
 
 1. **Increase timeout** in spawn_agent call:
    ```javascript
-   mcp__gofortress__spawn_agent({
+   mcp__goyoke__spawn_agent({
      agent: "einstein",
      prompt: "...",
      timeout: 600000  // 10 minutes instead of 5
@@ -251,7 +251,7 @@ delegation:
 
 ```bash
 # Tail MCP server logs
-tail -f /tmp/mcp-gofortress.log
+tail -f /tmp/mcp-goyoke.log
 
 # Look for:
 # - Tool registration errors
@@ -286,9 +286,9 @@ EOF
 env | grep GOGENT
 
 # Should see:
-# GOGENT_NESTING_LEVEL=0
-# GOGENT_MCP_SPAWN_ENABLED=true
-# GOGENT_PARENT_AGENT=(not set at level 0)
+# GOYOKE_NESTING_LEVEL=0
+# GOYOKE_MCP_SPAWN_ENABLED=true
+# GOYOKE_PARENT_AGENT=(not set at level 0)
 ```
 
 ### Step 5: Check Agent Index
@@ -312,7 +312,7 @@ cat ~/.claude/agents/agents-index.json | jq '.agents[] | select(.id == "einstein
 - [ ] Go ≥1.21 installed (`go version`)
 - [ ] `.claude` directory exists (`ls ~/.claude`)
 - [ ] Hooks are executable (`ls -la ~/.claude/hooks/`)
-- [ ] MCP server binary exists (`ls ~/.claude/bin/gofortress`)
+- [ ] MCP server binary exists (`ls ~/.claude/bin/goyoke`)
 
 ### Environment Variables
 
@@ -320,11 +320,11 @@ Create `.env.local` in project root:
 
 ```bash
 # Required for MCP spawning
-GOGENT_NESTING_LEVEL=0
-GOGENT_MCP_SPAWN_ENABLED=true
+GOYOKE_NESTING_LEVEL=0
+GOYOKE_MCP_SPAWN_ENABLED=true
 
 # Optional: Test mode
-GOGENT_TEST_MODE=false
+GOYOKE_TEST_MODE=false
 
 # Optional: Custom paths
 CLAUDE_PROJECT_DIR=/path/to/project
@@ -435,7 +435,7 @@ kill -KILL <pid>
 
 ```bash
 # Stop MCP server
-pkill -f gofortress
+pkill -f goyoke
 
 # Clear spawn registry
 rm -f /tmp/spawn-registry-*.json
@@ -488,13 +488,13 @@ If issue persists:
 1. **Collect diagnostic info**:
    ```bash
    # Save environment
-   env | grep GOGENT > /tmp/gogent-env.txt
+   env | grep GOGENT > /tmp/goyoke-env.txt
 
    # Save recent spawn logs
    tar czf /tmp/spawn-logs.tar.gz /tmp/spawn-*.log
 
    # Save MCP server log
-   cp /tmp/mcp-gofortress.log /tmp/mcp-diagnostics.log
+   cp /tmp/mcp-goyoke.log /tmp/mcp-diagnostics.log
    ```
 
 2. **Check for known issues** in `tickets/mcp-agent-teams-integration/mcp-spawn/`

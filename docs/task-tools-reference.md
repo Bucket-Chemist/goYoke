@@ -226,7 +226,7 @@ Ticket complete
 
 ---
 
-**Maintained By:** GOgent-Fortress System
+**Maintained By:** goYoke System
 **Related Docs:**
 - `docs/ARCHITECTURE.md` - Full system architecture
 - `.claude/agents/agents-index.json` - Agent definitions

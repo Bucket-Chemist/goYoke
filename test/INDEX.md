@@ -1,6 +1,6 @@
 # Test Audit Trail
 
-**Project**: GOgent Fortress (GOgent-Fortress)
+**Project**: goYoke (goYoke)
 **Purpose**: Track all test files, coverage, and testing deliverables per ticket
 **Last Updated**: 2026-01-21
 
@@ -22,12 +22,12 @@
 
 | File                    | Ticket          | Lines | Tests | Coverage | Created    | Status     |
 | ----------------------- | --------------- | ----- | ----- | -------- | ---------- | ---------- |
-| `schema_test.go`        | GOgent-002      | 376   | 7     | ~92%     | 2026-01-16 | ✅ Passing |
-| `schema_custom_test.go` | GOgent-002      | 70    | 1     | ~5%      | 2026-01-16 | ✅ Passing |
-| `agents_test.go`        | GOgent-003      | 796   | 14    | ~95%     | 2026-01-16 | ✅ Passing |
-| `events_test.go`        | GOgent-006/007  | 1072  | 13    | ~85%     | 2026-01-15 | ✅ Passing |
-| `stdin_test.go`         | GOgent-006/007  | 302   | 8     | ~80%     | 2026-01-15 | ✅ Passing |
-| `transcript_test.go`    | GOgent-027b/c/d | 839   | 30    | ~87%     | 2026-01-19 | ✅ Passing |
+| `schema_test.go`        | goYoke-002      | 376   | 7     | ~92%     | 2026-01-16 | ✅ Passing |
+| `schema_custom_test.go` | goYoke-002      | 70    | 1     | ~5%      | 2026-01-16 | ✅ Passing |
+| `agents_test.go`        | goYoke-003      | 796   | 14    | ~95%     | 2026-01-16 | ✅ Passing |
+| `events_test.go`        | goYoke-006/007  | 1072  | 13    | ~85%     | 2026-01-15 | ✅ Passing |
+| `stdin_test.go`         | goYoke-006/007  | 302   | 8     | ~80%     | 2026-01-15 | ✅ Passing |
+| `transcript_test.go`    | goYoke-027b/c/d | 839   | 30    | ~87%     | 2026-01-19 | ✅ Passing |
 
 **Total Unit Test Lines**: 3,455 lines
 **Total Test Functions**: 73 tests
@@ -36,24 +36,24 @@
 
 | File                                  | Ticket      | Lines | Tests | Coverage | Created    | Status     |
 | ------------------------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
-| `handoff_test.go`                     | GOgent-028l | 1100+ | 34    | ~86%     | 2026-01-21 | ✅ Passing |
-| `handoff_artifacts_validation_test.go` | GOgent-028g | 1707  | 5     | 100%     | 2026-01-20 | ✅ Passing |
-| `query_test.go`                       | GOgent-029/029a/029e | 1450+ | 70+  | ~92%     | 2026-01-21 | ✅ Passing |
+| `handoff_test.go`                     | goYoke-028l | 1100+ | 34    | ~86%     | 2026-01-21 | ✅ Passing |
+| `handoff_artifacts_validation_test.go` | goYoke-028g | 1707  | 5     | 100%     | 2026-01-20 | ✅ Passing |
+| `query_test.go`                       | goYoke-029/029a/029e | 1450+ | 70+  | ~92%     | 2026-01-21 | ✅ Passing |
 
-### cmd/gogent-archive (SessionEnd Hook CLI)
+### cmd/goyoke-archive (SessionEnd Hook CLI)
 
 | File                   | Ticket      | Lines | Tests | Coverage | Created    | Status     |
 | ---------------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
-| `main_test.go`         | GOgent-028a | 390   | 7     | 70.3%    | 2026-01-19 | ✅ Passing |
-| `sharp_edges_test.go`  | GOgent-029b | 400+  | 21    | 87.4%    | 2026-01-21 | ✅ Passing |
+| `main_test.go`         | goYoke-028a | 390   | 7     | 70.3%    | 2026-01-19 | ✅ Passing |
+| `sharp_edges_test.go`  | goYoke-029b | 400+  | 21    | 87.4%    | 2026-01-21 | ✅ Passing |
 
 **Note**: Coverage below 80% target on main_test.go due to untestable defensive error paths (main() os.Exit, filesystem permission failures). All business logic and integration points have 100% coverage.
 
-### cmd/gogent-aggregate (Weekly Learning Aggregation CLI)
+### cmd/goyoke-aggregate (Weekly Learning Aggregation CLI)
 
 | File           | Ticket      | Lines | Tests | Coverage | Created    | Status     |
 | -------------- | ----------- | ----- | ----- | -------- | ---------- | ---------- |
-| `main_test.go` | GOgent-029f | 700+  | 30    | 91.5%    | 2026-01-21 | ✅ Passing |
+| `main_test.go` | goYoke-029f | 700+  | 30    | 91.5%    | 2026-01-21 | ✅ Passing |
 
 **Test Coverage**: 91.5% (exceeds 90% target). All business logic functions at 100% coverage. Only untestable `main()` os.Exit code path reduces total.
 
@@ -69,11 +69,11 @@
 
 ### pkg/routing (Ecosystem Validation)
 
-**Purpose**: Retrospective integration tests validating that GOgent-002 and GOgent-003 work correctly together in the production ecosystem.
+**Purpose**: Retrospective integration tests validating that goYoke-002 and goYoke-003 work correctly together in the production ecosystem.
 
 | File                  | Ticket         | Lines | Tests | Coverage | Created    | Status     |
 | --------------------- | -------------- | ----- | ----- | -------- | ---------- | ---------- |
-| `integration_test.go` | GOgent-002/003 | 204   | 5     | ~95%     | 2026-01-16 | ✅ Passing |
+| `integration_test.go` | goYoke-002/003 | 204   | 5     | ~95%     | 2026-01-16 | ✅ Passing |
 
 ### test/integration (Cross-Package Validation)
 
@@ -81,16 +81,16 @@
 
 | File                                  | Ticket             | Lines | Tests | Coverage | Created    | Status     |
 | ------------------------------------- | ------------------ | ----- | ----- | -------- | ---------- | ---------- |
-| `harness.go`                          | GOgent-094         | 303   | N/A   | N/A      | 2026-01-25 | ✅ Library |
-| `metrics_parity_test.go`              | GOgent-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
-| `fallback_test.sh`                    | GOgent-028i        | 48    | 1     | N/A      | 2026-01-20 | ✅ Passing |
-| `session_handoff_integration_test.go` | GOgent-028m        | 650+  | 16    | 86%      | 2026-01-21 | ✅ Passing |
+| `harness.go`                          | goYoke-094         | 303   | N/A   | N/A      | 2026-01-25 | ✅ Library |
+| `metrics_parity_test.go`              | goYoke-028b-parity | 209   | 3     | 100%     | 2026-01-19 | ✅ Passing |
+| `fallback_test.sh`                    | goYoke-028i        | 48    | 1     | N/A      | 2026-01-20 | ✅ Passing |
+| `session_handoff_integration_test.go` | goYoke-028m        | 650+  | 16    | 86%      | 2026-01-21 | ✅ Passing |
 
 **Test Functions**:
 
-1. `TestEcosystem_GOgent002` - Validates schema loading pipeline (LoadSchema → Validate)
-2. `TestEcosystem_GOgent003` - Validates schema + agents integration (cross-reference validation)
-3. `TestEcosystem_GOgent004a` - Placeholder for validation engine (t.Skip)
+1. `TestEcosystem_goYoke002` - Validates schema loading pipeline (LoadSchema → Validate)
+2. `TestEcosystem_goYoke003` - Validates schema + agents integration (cross-reference validation)
+3. `TestEcosystem_goYoke004a` - Placeholder for validation engine (t.Skip)
 4. `TestEcosystem_AllAgentsMappedCorrectly` - Verifies all 21 production agents have valid subagent_type mappings
 5. `TestEcosystem_BackwardCompatibility` - Regression prevention for schema/agents APIs
 
@@ -111,11 +111,11 @@
 
 **Purpose**: Corpus-driven regression tests comparing Go hook implementations against original Bash scripts.
 
-**Corpus**: Requires `GOgent_CORPUS_PATH` environment variable pointing to event corpus from GOgent-000.
+**Corpus**: Requires `goYoke_CORPUS_PATH` environment variable pointing to event corpus from goYoke-000.
 
 | File                 | Ticket      | Lines | Tests | Coverage | Created    | Status       |
 | -------------------- | ----------- | ----- | ----- | -------- | ---------- | ------------ |
-| `regression_test.go` | GOgent-100  | 638   | 6     | N/A      | 2026-01-25 | ✅ Skippable |
+| `regression_test.go` | goYoke-100  | 638   | 6     | N/A      | 2026-01-25 | ✅ Skippable |
 
 **Test Functions**:
 
@@ -138,8 +138,8 @@
 **Usage**:
 
 ```bash
-# Set corpus path (from GOgent-000)
-export GOgent_CORPUS_PATH=/path/to/corpus.jsonl
+# Set corpus path (from goYoke-000)
+export goYoke_CORPUS_PATH=/path/to/corpus.jsonl
 
 # Run all regression tests
 go test ./test/regression -v
@@ -161,7 +161,7 @@ go test ./test/regression -v -run TestRegression_ValidateRouting
 ./scripts/test-ecosystem.sh
 
 # Explicit ticket labeling
-export GOgent_TICKET=003
+export goYoke_TICKET=003
 ./scripts/test-ecosystem.sh
 
 # Date-based fallback (no ticket/branch)
@@ -178,7 +178,7 @@ make test-ecosystem
 3. Race detector (`go test -race ./pkg/routing/...`)
 4. Coverage report (`go test -coverprofile=coverage.out`)
 
-**Audit Trail**: All outputs saved to `test/audit/GOgent-XXX/` with symlink at `test/audit/latest`.
+**Audit Trail**: All outputs saved to `test/audit/goYoke-XXX/` with symlink at `test/audit/latest`.
 
 **Output**: ANSI-colored summary with pass/fail status for each phase + audit location.
 
@@ -200,15 +200,15 @@ make test-ecosystem
 ```
 test/audit/
 ├── .gitkeep                    # Track directory in git
-├── latest -> GOgent-003/        # Symlink to most recent run
-├── GOgent-002/
+├── latest -> goYoke-003/        # Symlink to most recent run
+├── goYoke-002/
 │   ├── timestamp.txt           # ISO 8601 timestamp
 │   ├── unit-tests.log          # Full unit test output
 │   ├── integration-tests.log   # Integration test output
 │   ├── race-detector.log       # Race detection results
 │   ├── coverage.out            # Go coverage profile
 │   └── coverage-summary.txt    # Coverage percentage
-├── GOgent-003/
+├── goYoke-003/
 │   └── ...
 └── 2026-01-16/                 # Date-based fallback
     └── ...
@@ -216,8 +216,8 @@ test/audit/
 
 **Ticket Detection Priority**:
 
-1. **ENV var**: `export GOgent_TICKET=003` → `test/audit/GOgent-003/`
-2. **Git branch**: `feature/GOgent-004a` → `test/audit/GOgent-004a/`
+1. **ENV var**: `export goYoke_TICKET=003` → `test/audit/goYoke-003/`
+2. **Git branch**: `feature/goYoke-004a` → `test/audit/goYoke-004a/`
 3. **Fallback**: No ticket/branch → `test/audit/YYYY-MM-DD/`
 
 **Viewing Historical Results**:
@@ -227,7 +227,7 @@ test/audit/
 cat test/audit/latest/unit-tests.log
 
 # View specific ticket
-cat test/audit/GOgent-002/coverage-summary.txt
+cat test/audit/goYoke-002/coverage-summary.txt
 
 # List all audited test runs
 ls -lt test/audit/
@@ -253,7 +253,7 @@ cat test/audit/latest/coverage-summary.txt
 **Maintenance**:
 
 - Audit directories accumulate over time
-- Periodically clean old audits: `rm -rf test/audit/GOgent-00{1,2}/`
+- Periodically clean old audits: `rm -rf test/audit/goYoke-00{1,2}/`
 - Always keep `latest/` for quick reference
 
 ---
@@ -264,8 +264,8 @@ cat test/audit/latest/coverage-summary.txt
 
 | Test Suite            | Ticket      | Status     | Notes                    |
 | --------------------- | ----------- | ---------- | ------------------------ |
-| Hook integration      | GOgent-041+ | ⏳ Pending | Week 3 integration tests |
-| End-to-end validation | GOgent-041+ | ⏳ Pending | Week 3 integration tests |
+| Hook integration      | goYoke-041+ | ⏳ Pending | Week 3 integration tests |
+| End-to-end validation | goYoke-041+ | ⏳ Pending | Week 3 integration tests |
 
 ---
 
@@ -275,7 +275,7 @@ cat test/audit/latest/coverage-summary.txt
 
 | Benchmark  | Ticket     | Status     | Notes               |
 | ---------- | ---------- | ---------- | ------------------- |
-| _None yet_ | GOgent-000 | ⏳ Pending | Baseline benchmarks |
+| _None yet_ | goYoke-000 | ⏳ Pending | Baseline benchmarks |
 
 ---
 
@@ -295,7 +295,7 @@ cat test/audit/latest/coverage-summary.txt
 
 | Corpus       | Ticket      | Status     | Notes                          |
 | ------------ | ----------- | ---------- | ------------------------------ |
-| Event corpus | GOgent-008b | ⏳ Pending | Real Claude Code event samples |
+| Event corpus | goYoke-008b | ⏳ Pending | Real Claude Code event samples |
 
 ---
 
@@ -445,7 +445,7 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 ## Future Enhancements
 
-### Planned (Week 3 - GOgent-041+)
+### Planned (Week 3 - goYoke-041+)
 
 1. **Test Coverage Hook**: Block commits if coverage drops below 80%
 2. **Integration Test Suite**: End-to-end hook validation
@@ -492,7 +492,7 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 | Test Suite                       | Ticket      | Location                                    | Status     | Date       | Notes                                    |
 | -------------------------------- | ----------- | ------------------------------------------- | ---------- | ---------- | ---------------------------------------- |
-| Context Loading Compatibility    | GOgent-028f | test/compatibility/context_loading_test.sh  | ✅ Passing | 2026-01-20 | 23/23 tests pass, hook parsing verified  |
+| Context Loading Compatibility    | goYoke-028f | test/compatibility/context_loading_test.sh  | ✅ Passing | 2026-01-20 | 23/23 tests pass, hook parsing verified  |
 
 **Test Files**:
 - `test/compatibility/context_loading_test.sh` - Executable test script (23 tests)
@@ -514,24 +514,24 @@ When ending a session, document in `SESSION-HANDOFF.md`:
 
 | Ticket      | Type                     | Audit Location          | Status     | Date       | Notes                                       |
 | ----------- | ------------------------ | ----------------------- | ---------- | ---------- | ------------------------------------------- |
-| GOgent-028h | Git Info Collection      | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Git command execution + 5 test cases, ecosystem ✓ 94.2% |
-| GOgent-028f | Context Loading Compat   | test/audit/GOgent-028f/ | ✅ Passing | 2026-01-20 | Hook compatibility verified, ecosystem ✓ 94.2% |
-| GOgent-028e | Installation & PATH      | test/audit/GOgent-028e/ | ✅ Passing | 2026-01-20 | Makefile install/uninstall, ecosystem ✓ 94.2% |
-| GOgent-028d | Hook Deployment          | test/audit/GOgent-028d/ | ✅ Passing | 2026-01-20 | Hook registration documentation             |
-| GOgent-028c | Artifact Archival        | test/audit/GOgent-028c/ | ✅ Passing | 2026-01-20 | Archive CLI implementation                  |
-| GOgent-028b | Metrics Parity           | test/audit/GOgent-028b/ | ✅ Passing | 2026-01-19 | Bash vs Go metrics validation               |
-| GOgent-028a | Archive CLI Build        | test/audit/GOgent-028/  | ✅ Passing | 2026-01-19 | Initial gogent-archive implementation       |
-| GOgent-028g | Sharp Edge Schema        | test/audit/GOgent-028g/ | ✅ Passing | 2026-01-20 | JSON schema + validation, ecosystem ✓ 94.2% |
-| GOgent-028i | Error Recovery Wrapper   | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Go→Bash fallback wrapper, ecosystem ✓ 94.2% |
-| GOgent-028j | JSONL History Querying   | test/audit/GOgent-028j/ | ✅ Passing | 2026-01-20 | Subcommand CLI (list, show, stats) + 9 test functions, 58.3% coverage, ecosystem ✓ 94.2% |
-| GOgent-028k | Handoff Generation Metrics | test/audit/2026-01-21/ | ✅ Passing | 2026-01-21 | HandoffMetrics struct + countPatterns helper + 2 new tests, ecosystem ✓ 94.2% |
-| GOgent-028l | Handoff Schema Versioning | test/audit/GOgent-028l/ | ✅ Passing | 2026-01-21 | LoadHandoff version check + migrateHandoff + 9 new tests, ecosystem ✓ 94.2% |
-| GOgent-028m | Integration Tests Suite   | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | 16 integration tests (hook workflow + CLI subcommands), 86% coverage, ecosystem ✓ 94.2% |
-| GOgent-028n | Deployment Runbook        | test/audit/GOgent-028n/ | ✅ Passing | 2026-01-21 | Deployment runbook documentation, ecosystem ✓ 94.2% |
-| GOgent-028o | ADR: JSONL Handoff Format | test/audit/GOgent-028o/ | ✅ Passing | 2026-01-21 | Architecture Decision Record for dual format, ecosystem ✓ 94.2% |
-| GOgent-029f | Weekly Aggregation CLI    | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | gogent-aggregate (30 tests, 91.5% coverage), ecosystem ✓ 87.9% |
+| goYoke-028h | Git Info Collection      | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Git command execution + 5 test cases, ecosystem ✓ 94.2% |
+| goYoke-028f | Context Loading Compat   | test/audit/goYoke-028f/ | ✅ Passing | 2026-01-20 | Hook compatibility verified, ecosystem ✓ 94.2% |
+| goYoke-028e | Installation & PATH      | test/audit/goYoke-028e/ | ✅ Passing | 2026-01-20 | Makefile install/uninstall, ecosystem ✓ 94.2% |
+| goYoke-028d | Hook Deployment          | test/audit/goYoke-028d/ | ✅ Passing | 2026-01-20 | Hook registration documentation             |
+| goYoke-028c | Artifact Archival        | test/audit/goYoke-028c/ | ✅ Passing | 2026-01-20 | Archive CLI implementation                  |
+| goYoke-028b | Metrics Parity           | test/audit/goYoke-028b/ | ✅ Passing | 2026-01-19 | Bash vs Go metrics validation               |
+| goYoke-028a | Archive CLI Build        | test/audit/goYoke-028/  | ✅ Passing | 2026-01-19 | Initial goyoke-archive implementation       |
+| goYoke-028g | Sharp Edge Schema        | test/audit/goYoke-028g/ | ✅ Passing | 2026-01-20 | JSON schema + validation, ecosystem ✓ 94.2% |
+| goYoke-028i | Error Recovery Wrapper   | test/audit/2026-01-20/  | ✅ Passing | 2026-01-20 | Go→Bash fallback wrapper, ecosystem ✓ 94.2% |
+| goYoke-028j | JSONL History Querying   | test/audit/goYoke-028j/ | ✅ Passing | 2026-01-20 | Subcommand CLI (list, show, stats) + 9 test functions, 58.3% coverage, ecosystem ✓ 94.2% |
+| goYoke-028k | Handoff Generation Metrics | test/audit/2026-01-21/ | ✅ Passing | 2026-01-21 | HandoffMetrics struct + countPatterns helper + 2 new tests, ecosystem ✓ 94.2% |
+| goYoke-028l | Handoff Schema Versioning | test/audit/goYoke-028l/ | ✅ Passing | 2026-01-21 | LoadHandoff version check + migrateHandoff + 9 new tests, ecosystem ✓ 94.2% |
+| goYoke-028m | Integration Tests Suite   | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | 16 integration tests (hook workflow + CLI subcommands), 86% coverage, ecosystem ✓ 94.2% |
+| goYoke-028n | Deployment Runbook        | test/audit/goYoke-028n/ | ✅ Passing | 2026-01-21 | Deployment runbook documentation, ecosystem ✓ 94.2% |
+| goYoke-028o | ADR: JSONL Handoff Format | test/audit/goYoke-028o/ | ✅ Passing | 2026-01-21 | Architecture Decision Record for dual format, ecosystem ✓ 94.2% |
+| goYoke-029f | Weekly Aggregation CLI    | test/audit/2026-01-21/  | ✅ Passing | 2026-01-21 | goyoke-aggregate (30 tests, 91.5% coverage), ecosystem ✓ 87.9% |
 
 ---
 
-**Last Audit**: 2026-01-21 (GOgent-029f Weekly Learning Aggregation CLI)
+**Last Audit**: 2026-01-21 (goYoke-029f Weekly Learning Aggregation CLI)
 **Next Audit**: After next ticket completion

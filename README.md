@@ -1,4 +1,4 @@
-# GOgent Fortress
+# goYoke
 
 **Programmatically Enforced Agentic Cooperation**
 
@@ -10,7 +10,7 @@
 
 ## Overview
 
-GOgent Fortress is a Go-based hook orchestration framework for Claude Code that enforces tiered routing policies, tracks debugging loops, captures ML telemetry, and maintains session continuity through deterministic validation—not LLM instructions.
+goYoke is a Go-based hook orchestration framework for Claude Code that enforces tiered routing policies, tracks debugging loops, captures ML telemetry, and maintains session continuity through deterministic validation—not LLM instructions.
 
 **Key Insight:** Enforcement via code, not prompts. Text instructions are probabilistic suggestions; runtime hooks are deterministic rules.
 
@@ -30,14 +30,14 @@ A Go-based hook system that intercepts Claude Code tool events (SessionStart, Pr
 
 ```bash
 # Build and install
-cd ~/Documents/GOgent-Fortress
+cd ~/Documents/goYoke
 make build      # Builds Go TUI + all hooks
 make install    # Installs hooks to ~/.local/bin
 
 # Run Go TUI (default — single binary)
-./gofortress
+./goyoke
 
-# Or run Claude with GOgent-Fortress hooks (CLI only, no TUI)
+# Or run Claude with goYoke hooks (CLI only, no TUI)
 goclaude
 ```
 
@@ -52,14 +52,14 @@ The complete hook enforcement flow, from session initialization through tool val
 ```mermaid
 flowchart TD
     subgraph "SessionStart Hook"
-        SS[gogent-load-context] --> LH[Load Previous Handoff]
+        SS[goyoke-load-context] --> LH[Load Previous Handoff]
         LH --> DL[Detect Language]
         DL --> LC[Load Conventions]
         LC --> INJ[Inject Context]
     end
 
     subgraph "PreToolUse Hook - Task Validation"
-        PT[gogent-validate] --> CHK1{Tool == Task?}
+        PT[goyoke-validate] --> CHK1{Tool == Task?}
         CHK1 -->|No| PASS[Pass Through]
         CHK1 -->|Yes| LOAD[Load routing-schema.json]
         LOAD --> V1{Einstein/Opus Block?}
@@ -78,7 +78,7 @@ flowchart TD
     end
 
     subgraph "PostToolUse Hook - Merged Handler"
-        PO[gogent-sharp-edge] --> INC[Increment Tool Counter]
+        PO[goyoke-sharp-edge] --> INC[Increment Tool Counter]
         INC --> MLLOG[Log ML Telemetry]
         MLLOG --> CHK10{Every 10 Tools?}
         CHK10 -->|Yes| REM[Inject Routing Reminder]
@@ -100,13 +100,13 @@ flowchart TD
     end
 
     subgraph "SubagentStop Hook"
-        SA[gogent-agent-endstate] --> OUTCOME[Record Decision Outcome]
+        SA[goyoke-agent-endstate] --> OUTCOME[Record Decision Outcome]
         OUTCOME --> COLLAB[Log Collaboration]
         COLLAB --> COLLFILE[(agent-collaborations.jsonl)]
     end
 
     subgraph "SessionEnd Hook - Archive & Handoff"
-        SE[gogent-archive] --> METRICS[Collect Metrics]
+        SE[goyoke-archive] --> METRICS[Collect Metrics]
         METRICS --> ARTF[Load Artifacts]
         ARTF --> GEN[Generate Handoff]
         GEN --> SAVE[Save to Memory]
@@ -134,22 +134,22 @@ flowchart TD
 
 | Event | Binary | Responsibility |
 |-------|--------|----------------|
-| **SessionStart** | `gogent-load-context` | Language detection, convention loading, handoff restoration, git context |
-| **PreToolUse** | `gogent-validate` | Task validation, model checking, delegation ceiling, subagent_type enforcement |
-| **PostToolUse** | `gogent-sharp-edge` | Tool counting, routing reminders, failure tracking, ML telemetry, sharp-edge detection |
-| **SubagentStop** | `gogent-agent-endstate` | Decision outcomes, collaboration tracking, ML updates |
-| **SubagentStop** | `gogent-orchestrator-guard` | Background task collection enforcement |
-| **SessionEnd** | `gogent-archive` | Metrics collection, artifact loading, handoff generation |
+| **SessionStart** | `goyoke-load-context` | Language detection, convention loading, handoff restoration, git context |
+| **PreToolUse** | `goyoke-validate` | Task validation, model checking, delegation ceiling, subagent_type enforcement |
+| **PostToolUse** | `goyoke-sharp-edge` | Tool counting, routing reminders, failure tracking, ML telemetry, sharp-edge detection |
+| **SubagentStop** | `goyoke-agent-endstate` | Decision outcomes, collaboration tracking, ML updates |
+| **SubagentStop** | `goyoke-orchestrator-guard` | Background task collection enforcement |
+| **SessionEnd** | `goyoke-archive` | Metrics collection, artifact loading, handoff generation |
 
 ### Enforcement Guarantees
 
 | Hook | Enforcement Mechanism |
 |------|----------------------|
-| `gogent-validate` | Blocks Tool execution via `{"decision": "block"}` response |
-| `gogent-sharp-edge` | Tool counter + failure log → blocks after 3 consecutive failures |
-| `gogent-orchestrator-guard` | Blocks completion when background tasks pending |
-| `gogent-load-context` | Injects context before LLM receives prompt |
-| `gogent-archive` | Writes structured handoff for next session |
+| `goyoke-validate` | Blocks Tool execution via `{"decision": "block"}` response |
+| `goyoke-sharp-edge` | Tool counter + failure log → blocks after 3 consecutive failures |
+| `goyoke-orchestrator-guard` | Blocks completion when background tasks pending |
+| `goyoke-load-context` | Injects context before LLM receives prompt |
+| `goyoke-archive` | Writes structured handoff for next session |
 
 **Why this works:** Hooks run **before/after** the LLM, not inside it. Blocking decisions happen in code, not in token predictions.
 
@@ -158,20 +158,20 @@ flowchart TD
 ## Package Structure
 
 ```
-GOgent-Fortress/
+goYoke/
 ├── cmd/                          # Binaries
-│   ├── gofortress/               # Go TUI entry point (ACTIVE)
-│   ├── gofortress-mcp/           # Go MCP server (spawned by CLI)
-│   ├── gogent-validate/          # PreToolUse hook
-│   ├── gogent-sharp-edge/        # PostToolUse hook (merged)
-│   ├── gogent-load-context/      # SessionStart hook
-│   ├── gogent-agent-endstate/    # SubagentStop hook
-│   ├── gogent-orchestrator-guard/# Orchestrator completion guard
-│   ├── gogent-archive/           # SessionEnd hook
-│   ├── gogent-ml-export/         # ML telemetry export
-│   ├── gogent-aggregate/         # Session statistics
-│   ├── gogent-capture-intent/    # Manual intent logging
-│   └── gogent-doc-theater/       # Documentation theater detection
+│   ├── goyoke/               # Go TUI entry point (ACTIVE)
+│   ├── goyoke-mcp/           # Go MCP server (spawned by CLI)
+│   ├── goyoke-validate/          # PreToolUse hook
+│   ├── goyoke-sharp-edge/        # PostToolUse hook (merged)
+│   ├── goyoke-load-context/      # SessionStart hook
+│   ├── goyoke-agent-endstate/    # SubagentStop hook
+│   ├── goyoke-orchestrator-guard/# Orchestrator completion guard
+│   ├── goyoke-archive/           # SessionEnd hook
+│   ├── goyoke-ml-export/         # ML telemetry export
+│   ├── goyoke-aggregate/         # Session statistics
+│   ├── goyoke-capture-intent/    # Manual intent logging
+│   └── goyoke-doc-theater/       # Documentation theater detection
 ├── internal/tui/                 # Go TUI packages (ACTIVE — 23 packages)
 │   ├── model/                    # Root AppModel, Elm Architecture
 │   ├── cli/                      # CLI subprocess driver, NDJSON parser
@@ -233,16 +233,16 @@ GOgent-Fortress/
 
 ## ML Telemetry System
 
-GOgent-Fortress captures routing decisions and agent collaborations for optimization analysis.
+goYoke captures routing decisions and agent collaborations for optimization analysis.
 
 ### Data Captured
 
 | Data Type | Written By | Location |
 |-----------|------------|----------|
-| Routing Decisions | `gogent-sharp-edge` | `$XDG_DATA_HOME/gogent/routing-decisions.jsonl` |
-| Decision Outcomes | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent/routing-decision-updates.jsonl` |
-| Agent Collaborations | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent/agent-collaborations.jsonl` |
-| Collaboration Outcomes | `gogent-agent-endstate` | `$XDG_DATA_HOME/gogent/agent-collaboration-updates.jsonl` |
+| Routing Decisions | `goyoke-sharp-edge` | `$XDG_DATA_HOME/goyoke/routing-decisions.jsonl` |
+| Decision Outcomes | `goyoke-agent-endstate` | `$XDG_DATA_HOME/goyoke/routing-decision-updates.jsonl` |
+| Agent Collaborations | `goyoke-agent-endstate` | `$XDG_DATA_HOME/goyoke/agent-collaborations.jsonl` |
+| Collaboration Outcomes | `goyoke-agent-endstate` | `$XDG_DATA_HOME/goyoke/agent-collaboration-updates.jsonl` |
 
 ### Append-Only Pattern
 
@@ -262,16 +262,16 @@ exportTrainingData(decisions)
 
 ```bash
 # Export routing decisions with reconciled outcomes
-gogent-ml-export routing-decisions --output=decisions.jsonl
+goyoke-ml-export routing-decisions --output=decisions.jsonl
 
 # Export agent collaborations
-gogent-ml-export agent-collaborations --output=collabs.jsonl
+goyoke-ml-export agent-collaborations --output=collabs.jsonl
 
 # Generate summary statistics
-gogent-ml-export stats
+goyoke-ml-export stats
 
 # Validate data consistency
-gogent-ml-export validate --check=orphaned-updates
+goyoke-ml-export validate --check=orphaned-updates
 ```
 
 ---
@@ -287,7 +287,7 @@ gogent-ml-export validate --check=orphaned-updates
 ### Build & Install
 
 ```bash
-cd ~/Documents/GOgent-Fortress
+cd ~/Documents/goYoke
 
 # Build Go TUI + all hooks
 make build
@@ -296,18 +296,18 @@ make build
 make install
 
 # Verify installation
-which gogent-validate gogent-load-context gogent-sharp-edge gogent-archive
+which goyoke-validate goyoke-load-context goyoke-sharp-edge goyoke-archive
 ```
 
 ### Running the TUI
 
 ```bash
 # Go TUI (default, single binary)
-./gofortress
+./goyoke
 
 # With flags
-./gofortress --config-dir ~/.claude --session-id <prev-session>
-./gofortress --resume  # lists sessions to resume
+./goyoke --config-dir ~/.claude --session-id <prev-session>
+./goyoke --resume  # lists sessions to resume
 
 # Or run Claude with hooks only (no TUI)
 goclaude
@@ -317,7 +317,7 @@ goclaude -p "Explain this codebase"
 The `goclaude` command:
 - Verifies all binaries are installed
 - Ensures `~/.claude` symlink points to repo config
-- Launches Claude with GOgent-Fortress hooks active
+- Launches Claude with goYoke hooks active
 
 ### Migration from TypeScript to Go TUI
 
@@ -332,7 +332,7 @@ As of TUI-042 (2026-03-24), the Go TUI has reached full feature parity with the 
 **Legacy TypeScript TUI:**
 ```bash
 # Still available at packages/tui/ — will be removable after Phase 10
-./packages/tui/bin/gofortress-tui.js
+./packages/tui/bin/goyoke-tui.js
 ```
 
 ### Hook Configuration
@@ -346,7 +346,7 @@ Hooks are configured in `~/.claude/settings.json`:
       {
         "matcher": "startup|resume",
         "hooks": [
-          {"type": "command", "command": "gogent-load-context", "timeout": 10}
+          {"type": "command", "command": "goyoke-load-context", "timeout": 10}
         ]
       }
     ],
@@ -354,7 +354,7 @@ Hooks are configured in `~/.claude/settings.json`:
       {
         "matcher": "Task",
         "hooks": [
-          {"type": "command", "command": "gogent-validate", "timeout": 10}
+          {"type": "command", "command": "goyoke-validate", "timeout": 10}
         ]
       }
     ],
@@ -362,22 +362,22 @@ Hooks are configured in `~/.claude/settings.json`:
       {
         "matcher": "Bash|Edit|Write|Task",
         "hooks": [
-          {"type": "command", "command": "gogent-sharp-edge", "timeout": 5}
+          {"type": "command", "command": "goyoke-sharp-edge", "timeout": 5}
         ]
       }
     ],
     "SubagentStop": [
       {
         "hooks": [
-          {"type": "command", "command": "gogent-agent-endstate", "timeout": 15},
-          {"type": "command", "command": "gogent-orchestrator-guard", "timeout": 10}
+          {"type": "command", "command": "goyoke-agent-endstate", "timeout": 15},
+          {"type": "command", "command": "goyoke-orchestrator-guard", "timeout": 10}
         ]
       }
     ],
     "SessionEnd": [
       {
         "hooks": [
-          {"type": "command", "command": "gogent-archive", "timeout": 30}
+          {"type": "command", "command": "goyoke-archive", "timeout": 30}
         ]
       }
     ]
@@ -422,13 +422,13 @@ Project/
 │   │   └── last-handoff.md         # Human-readable summary
 │   └── session-archive/            # Archived session data
 
-~/.gogent/
+~/.goyoke/
 ├── failure-tracker.jsonl           # Cross-session failure tracking
 ├── agent-invocations.jsonl         # Invocation telemetry
 ├── escalations.jsonl               # Tier escalations
 └── scout-recommendations.jsonl     # Scout accuracy data
 
-$XDG_DATA_HOME/gogent/     # ML Telemetry (default: ~/.local/share)
+$XDG_DATA_HOME/goyoke/     # ML Telemetry (default: ~/.local/share)
 ├── routing-decisions.jsonl         # ML training data (initial)
 ├── routing-decision-updates.jsonl  # ML training data (outcomes)
 ├── agent-collaborations.jsonl      # Team patterns (initial)
@@ -453,12 +453,12 @@ $XDG_DATA_HOME/gogent/     # ML Telemetry (default: ~/.local/share)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `GOGENT_PROJECT_DIR` | `$PWD` | Project root |
-| `GOGENT_ROUTING_SCHEMA` | `~/.claude/routing-schema.json` | Schema path override |
-| `GOGENT_STORAGE_PATH` | `~/.gogent/failure-tracker.jsonl` | Failure tracker path |
-| `GOGENT_MAX_FAILURES` | 3 | Sharp-edge threshold |
-| `GOGENT_REMINDER_THRESHOLD` | 10 | Routing reminder frequency |
-| `GOGENT_FLUSH_THRESHOLD` | 20 | Auto-flush frequency |
+| `GOYOKE_PROJECT_DIR` | `$PWD` | Project root |
+| `GOYOKE_ROUTING_SCHEMA` | `~/.claude/routing-schema.json` | Schema path override |
+| `GOYOKE_STORAGE_PATH` | `~/.goyoke/failure-tracker.jsonl` | Failure tracker path |
+| `GOYOKE_MAX_FAILURES` | 3 | Sharp-edge threshold |
+| `GOYOKE_REMINDER_THRESHOLD` | 10 | Routing reminder frequency |
+| `GOYOKE_FLUSH_THRESHOLD` | 20 | Auto-flush frequency |
 | `XDG_DATA_HOME` | `~/.local/share` | ML telemetry base path |
 
 ---
@@ -469,33 +469,33 @@ $XDG_DATA_HOME/gogent/     # ML Telemetry (default: ~/.local/share)
 
 | Binary | Event | Purpose |
 |--------|-------|---------|
-| `gogent-load-context` | SessionStart | Context injection |
-| `gogent-validate` | PreToolUse | Task validation |
-| `gogent-sharp-edge` | PostToolUse | Failure tracking + ML telemetry |
-| `gogent-agent-endstate` | SubagentStop | Outcome recording |
-| `gogent-orchestrator-guard` | SubagentStop | Background task enforcement |
-| `gogent-archive` | SessionEnd | Handoff generation |
+| `goyoke-load-context` | SessionStart | Context injection |
+| `goyoke-validate` | PreToolUse | Task validation |
+| `goyoke-sharp-edge` | PostToolUse | Failure tracking + ML telemetry |
+| `goyoke-agent-endstate` | SubagentStop | Outcome recording |
+| `goyoke-orchestrator-guard` | SubagentStop | Background task enforcement |
+| `goyoke-archive` | SessionEnd | Handoff generation |
 
 ### Utility Binaries
 
 | Binary | Purpose |
 |--------|---------|
-| `gogent-ml-export` | Export ML training data |
-| `gogent-aggregate` | Session statistics |
-| `gogent-capture-intent` | Manual intent logging |
-| `gogent-doc-theater` | Documentation theater detection |
+| `goyoke-ml-export` | Export ML training data |
+| `goyoke-aggregate` | Session statistics |
+| `goyoke-capture-intent` | Manual intent logging |
+| `goyoke-doc-theater` | Documentation theater detection |
 
 ### Archive Query Subcommands
 
 ```bash
-gogent-archive list [--since=DATE] [--has-sharp-edges]
-gogent-archive show <session_id>
-gogent-archive stats
-gogent-archive sharp-edges [--file=PATTERN] [--status=pending]
-gogent-archive user-intents [--category=CATEGORY]
-gogent-archive decisions [--since=DATE]
-gogent-archive preferences
-gogent-archive performance
+goyoke-archive list [--since=DATE] [--has-sharp-edges]
+goyoke-archive show <session_id>
+goyoke-archive stats
+goyoke-archive sharp-edges [--file=PATTERN] [--status=pending]
+goyoke-archive user-intents [--category=CATEGORY]
+goyoke-archive decisions [--since=DATE]
+goyoke-archive preferences
+goyoke-archive performance
 ```
 
 ---
@@ -546,14 +546,14 @@ A Go-based terminal interface for Claude Code using a **two-process architecture
 ### Architecture
 
 ```
-Go TUI Process (single binary: gofortress)
+Go TUI Process (single binary: goyoke)
   |-- Bubble Tea event loop (owns terminal stdin/stdout)
   |-- CLI Driver (manages Claude CLI subprocess via pipes)
   |-- IPC Bridge (UDS listener for MCP server communication)
   |
   +--spawns--> Claude Code CLI (--output-format stream-json)
                   |
-                  +--spawns--> gofortress-mcp (Go MCP server, stdio transport)
+                  +--spawns--> goyoke-mcp (Go MCP server, stdio transport)
                                   |
                                   +--connects--> TUI via UDS side channel
 ```
@@ -616,7 +616,7 @@ Performance benchmarks (TUI-040): startup 0.31ms, modal 0.002ms, NDJSON 195K lin
 ### Commit Format
 
 ```
-GOgent-XXX: Title
+goYoke-XXX: Title
 
 - Implementation detail 1
 - Implementation detail 2
@@ -627,7 +627,7 @@ Co-Authored-By: Claude <model>@anthropic.com
 
 ### Workflow
 
-1. Create branch: `gogent-XXX-description`
+1. Create branch: `goyoke-XXX-description`
 2. Implement with tests: `go test ./...`
 3. Verify coverage: `go test ./... -cover`
 4. Run race detector: `go test -race ./...`
@@ -648,7 +648,7 @@ This software and its associated documentation, architecture, and design are pro
 
 **Status:** Production Ready
 **Version:** 2.0.0-rc1
-**Implementation:** GOgent-000 through TUI-042 (core), TUI-043–TUI-070 (UX overhaul, pending)
+**Implementation:** goYoke-000 through TUI-042 (core), TUI-043–TUI-070 (UX overhaul, pending)
 **All hooks:** Complete and operational
 **ML Telemetry:** Implemented with append-only pattern + review telemetry (v1.1)
 **TUI:** Go/Bubble Tea (default, 42/42 tickets complete), TypeScript/React (legacy)

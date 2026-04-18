@@ -2,7 +2,7 @@
   {
     "bugId": "BUG-1",
     "response": "ACCEPT",
-    "analysisSummary": "The failure is in repo code, not just the sandbox: GetGOgentDir previously returned a path after mkdir success even when later file creation on that directory failed, and skill-guard depends on that path for guard artifacts.",
+    "analysisSummary": "The failure is in repo code, not just the sandbox: GetgoYokeDir previously returned a path after mkdir success even when later file creation on that directory failed, and skill-guard depends on that path for guard artifacts.",
     "counterEvidence": "pkg/config/paths.go:25-64 now adds a write probe because the earlier behavior was insufficient."
   },
   {
@@ -21,7 +21,7 @@
     "bugId": "BUG-4",
     "response": "ACCEPT",
     "analysisSummary": "This is not just a test expectation mismatch. The old runWaves logic surfaced total-wave failure but explicitly tolerated partial failure with only a log line, which makes the last wave capable of returning nil while still containing failed members.",
-    "counterEvidence": "cmd/gogent-team-run/wave.go:70-82 now preserves continuation for intermediate partial failures but returns an error when the final wave still has failed members."
+    "counterEvidence": "cmd/goyoke-team-run/wave.go:70-82 now preserves continuation for intermediate partial failures but returns an error when the final wave still has failed members."
   },
   {
     "bugId": "BUG-5",
@@ -51,19 +51,19 @@
     "bugId": "BUG-9",
     "response": "ACCEPT",
     "analysisSummary": "This is a separate path bug from BUG-1: persistent data directory selection still trusted mkdir success without testing actual writability, leaving telemetry and ML writers to fail later on first append.",
-    "counterEvidence": "pkg/config/paths.go now applies the same write probe to GetGOgentDataDir, and the new regression forces fallback from a read-only XDG data dir."
+    "counterEvidence": "pkg/config/paths.go now applies the same write probe to GetgoYokeDataDir, and the new regression forces fallback from a read-only XDG data dir."
   },
   {
     "bugId": "BUG-10",
     "response": "ACCEPT",
     "analysisSummary": "The permission-gate cache path was built from raw session_id bytes coming from stdin events. That makes filename construction path-sensitive and allows cache writes outside the intended runtime dir for slash-containing IDs.",
-    "counterEvidence": "cmd/gogent-permission-gate/cache.go now hashes session IDs before filename construction, and the regression verifies containment plus cache round-trip."
+    "counterEvidence": "cmd/goyoke-permission-gate/cache.go now hashes session IDs before filename construction, and the regression verifies containment plus cache round-trip."
   },
   {
     "bugId": "BUG-11",
     "response": "ACCEPT",
     "analysisSummary": "The aggregate command consumes archived JSONL files that can carry the same large-line payloads already found elsewhere. Using the default scanner limit in countLines makes the weekly summary path miscount or degrade on valid archives.",
-    "counterEvidence": "cmd/gogent-aggregate/main.go now enlarges the scanner buffer, and the regression covers a >64 KiB line."
+    "counterEvidence": "cmd/goyoke-aggregate/main.go now enlarges the scanner buffer, and the regression covers a >64 KiB line."
   },
   {
     "bugId": "BUG-12",

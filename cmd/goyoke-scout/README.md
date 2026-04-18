@@ -1,10 +1,10 @@
-# gogent-scout
+# goyoke-scout
 
 Unified pre-routing reconnaissance binary with smart backend selection.
 
 ## Overview
 
-`gogent-scout` provides scope assessment and routing recommendations before task delegation. It automatically selects between native Go scout (fast, basic metrics) and Gemini-backed scout (semantic analysis) based on project complexity.
+`goyoke-scout` provides scope assessment and routing recommendations before task delegation. It automatically selects between native Go scout (fast, basic metrics) and Gemini-backed scout (semantic analysis) based on project complexity.
 
 ## Features
 
@@ -19,13 +19,13 @@ Unified pre-routing reconnaissance binary with smart backend selection.
 
 ```bash
 # Basic usage
-gogent-scout <target> "<instruction>"
+goyoke-scout <target> "<instruction>"
 
 # With output file
-gogent-scout ./pkg "Assess auth module" --output=.claude/tmp/scout_metrics.json
+goyoke-scout ./pkg "Assess auth module" --output=.claude/tmp/scout_metrics.json
 
 # Pipe file list
-find src -name "*.go" | gogent-scout - "Analyze Go codebase"
+find src -name "*.go" | goyoke-scout - "Analyze Go codebase"
 ```
 
 ## Environment Variables
@@ -108,7 +108,7 @@ Score is computed from:
 
 ### Small Project (Native Scout)
 ```bash
-$ gogent-scout ./cmd/gogent-scout "Assess implementation"
+$ goyoke-scout ./cmd/goyoke-scout "Assess implementation"
 # Backend: native
 # Score: 38 (8 files, 1353 lines)
 # Recommendation: sonnet
@@ -117,7 +117,7 @@ $ gogent-scout ./cmd/gogent-scout "Assess implementation"
 
 ### Large Project (Gemini Scout)
 ```bash
-$ gogent-scout ./cmd "Assess all binaries"
+$ goyoke-scout ./cmd "Assess all binaries"
 # Backend: gemini (falls back to native if unavailable)
 # Score: 95 (41 files, 21454 lines)
 # Recommendation: external
@@ -125,7 +125,7 @@ $ gogent-scout ./cmd "Assess all binaries"
 
 ### Force Native Backend
 ```bash
-$ SCOUT_BACKEND=native gogent-scout ./pkg/routing "Quick scan"
+$ SCOUT_BACKEND=native goyoke-scout ./pkg/routing "Quick scan"
 # Backend: native (forced)
 # Skips routing score calculation
 ```
@@ -149,13 +149,13 @@ $ SCOUT_BACKEND=native gogent-scout ./pkg/routing "Quick scan"
 
 ```bash
 # Run tests
-go test ./cmd/gogent-scout/ -v
+go test ./cmd/goyoke-scout/ -v
 
 # Run benchmarks
-go test ./cmd/gogent-scout/ -bench=. -benchmem
+go test ./cmd/goyoke-scout/ -bench=. -benchmem
 
 # Coverage
-go test ./cmd/gogent-scout/ -cover
+go test ./cmd/goyoke-scout/ -cover
 ```
 
 ## Integration
@@ -163,16 +163,16 @@ go test ./cmd/gogent-scout/ -cover
 ### From Router (CLAUDE.md)
 ```javascript
 // Pattern 1: Scout → Route → Execute
-[SCOUTING] Spawn gogent-scout
-Bash({command: "gogent-scout ./pkg 'Assess scope'"})
+[SCOUTING] Spawn goyoke-scout
+Bash({command: "goyoke-scout ./pkg 'Assess scope'"})
 // Read .claude/tmp/scout_metrics.json
 // Route based on recommended_tier
 ```
 
 ### From /explore Skill
 ```bash
-# Scout step automatically uses gogent-scout
-gogent-scout "${TARGET_DIR}" "Pre-routing reconnaissance"
+# Scout step automatically uses goyoke-scout
+goyoke-scout "${TARGET_DIR}" "Pre-routing reconnaissance"
 ```
 
 ## Error Handling
@@ -191,10 +191,10 @@ gogent-scout "${TARGET_DIR}" "Pre-routing reconnaissance"
 
 ## Specification
 
-Full specification: `.claude/tmp/gogent-scout-spec-v2.md`
+Full specification: `.claude/tmp/goyoke-scout-spec-v2.md`
 
 ## Related Components
 
 - `pkg/telemetry/scout.go`: Scout recommendation logging
 - `routing-schema.json`: Scout protocol configuration
-- `agents-index.json`: gogent-scout agent definition
+- `agents-index.json`: goyoke-scout agent definition

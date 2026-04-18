@@ -119,4 +119,4 @@ Without constrained decoding, enum constraints in a schema are validation-only: 
 
 For protocol fields, this is the correct behavior. For classification labels, this is accuracy loss — the model picks the closest approximation from a restricted set rather than expressing its actual assessment.
 
-The enum/string split in GOgent-Fortress schemas reflects this distinction: constrained decoding is used as a reliability mechanism for protocol fields, not as a normalization mechanism for judgment fields.
+The enum/string split in goYoke schemas reflects this distinction: constrained decoding is used as a reliability mechanism for protocol fields, not as a normalization mechanism for judgment fields.

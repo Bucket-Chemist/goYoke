@@ -27,7 +27,7 @@
       "executionStage": "completed",
       "maxSeverity": "MEDIUM",
       "bugIds": ["BUG-4"],
-      "files": ["cmd/gogent-team-run/wave.go"],
+      "files": ["cmd/goyoke-team-run/wave.go"],
       "summary": "Team-run now reports final-wave partial failure instead of silently succeeding.",
       "recommendedAction": "Keep the failure-propagation fix and the main/wave regression tests.",
       "reasons": ["High confidence", "Low blast radius", "Behavioral regression reproduced by tests"]
@@ -49,7 +49,7 @@
       "executionStage": "completed",
       "maxSeverity": "MEDIUM",
       "bugIds": ["BUG-10", "BUG-11", "BUG-12"],
-      "files": ["cmd/gogent-permission-gate/cache.go", "cmd/gogent-aggregate/main.go", "internal/tui/components/telemetry/telemetry.go"],
+      "files": ["cmd/goyoke-permission-gate/cache.go", "cmd/goyoke-aggregate/main.go", "internal/tui/components/telemetry/telemetry.go"],
       "summary": "Command-side cache containment and remaining UI/archive JSONL readers were fixed and regression-tested.",
       "recommendedAction": "Keep the path-safe cache filename, enlarged aggregate scanner, and enlarged TUI telemetry scanner with their regressions.",
       "reasons": ["High confidence", "Low blast radius", "Behavior verified by focused tests"]
