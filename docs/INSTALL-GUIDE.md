@@ -1,3 +1,9 @@
+---
+title: Installation Guide
+type: guide
+tags: [installation, setup]
+created: 2026-04-18
+---
 # goYoke Installation Guide
 
 > **Target Audience:** Users migrating from bash-based Claude Code hooks to goYoke Go binaries.
@@ -1199,3 +1205,12 @@ alias claudeGO='mv ~/.claude ~/.claude-bak && mv ~/.claude-goyoke ~/.claude && c
 ---
 
 **Questions?** See `docs/systems-architecture-overview.md` for technical details or open an issue on the repository.
+
+
+---
+
+## See Also
+
+- [[concepts/hook-system]] — Hook architecture
+- [[hook-configuration]] — Hook setup details
+- [[concepts/distribution-model]] — Planned single-binary distribution

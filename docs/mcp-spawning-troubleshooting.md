@@ -1,3 +1,10 @@
+---
+title: MCP Spawning Troubleshooting
+type: guide
+tags: [mcp, spawning, troubleshooting]
+related: [concepts/agent-spawning, concepts/ipc-bridge]
+created: 2026-04-18
+---
 # MCP Agent Spawning Troubleshooting Guide
 
 Complete troubleshooting reference for the MCP spawn_agent tool.
@@ -517,3 +524,12 @@ If issue persists:
 - **Review-Orchestrator Definition**: `~/.claude/agents/review-orchestrator/review-orchestrator.md`
 - **CLAUDE.md MCP Section**: `~/.claude/CLAUDE.md` (search for "MCP Agent Spawning")
 - **Cost Tracking**: `packages/tui/src/cost/tracker.ts`
+
+
+---
+
+## See Also
+
+- [[concepts/agent-spawning]] — Spawning architecture overview
+- [[concepts/ipc-bridge]] — UDS communication layer
+- [[agent-config-quick-reference]] — Agent config format

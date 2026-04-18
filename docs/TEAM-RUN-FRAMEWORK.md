@@ -1,3 +1,9 @@
+---
+title: Team-Run Framework
+type: reference
+tags: [teams, orchestration, multi-agent]
+created: 2026-04-18
+---
 # goYoke Team-Run Framework
 
 ## A Standardised Multi-Agent Orchestration System for LLM Workflows
@@ -998,3 +1004,12 @@ Budget:    $16.00 (actual ~$2.50)
 Runtime:   ~6.5 minutes
 Use case:  Deep multi-perspective analysis of complex problems
 ```
+
+
+---
+
+## See Also
+
+- [[concepts/agent-spawning]] — How agents are spawned
+- [[concepts/session-lifecycle]] — Session phases
+- [[ARCHITECTURE#17.3 MCP Tools]] — MCP tool registration

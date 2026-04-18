@@ -1,3 +1,10 @@
+---
+title: Hook Configuration
+type: guide
+tags: [hooks, configuration, settings]
+related: [concepts/hook-system]
+created: 2026-04-18
+---
 # Hook Configuration
 
 This document shows how to configure goYoke hooks in Claude Code.
@@ -61,3 +68,12 @@ echo '{"type":"startup","session_id":"test","hook_event_name":"SessionStart"}' |
 ### Tool counter not created
 - Check XDG_CACHE_HOME or ~/.cache/goyoke/ permissions
 - Non-fatal - session continues but attention-gate won't work
+
+
+---
+
+## See Also
+
+- [[concepts/hook-system]] — Hook lifecycle and event types
+- [[ARCHITECTURE#2. Hook Event Flow]] — Event flow diagrams
+- [[concepts/routing-tiers]] — How hooks enforce tier selection

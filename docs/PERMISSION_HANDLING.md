@@ -1,3 +1,9 @@
+---
+title: Permission Handling
+type: guide
+tags: [permissions, cli]
+created: 2026-04-18
+---
 # Claude CLI Permission Handling in goYoke
 
 ## Problem Statement

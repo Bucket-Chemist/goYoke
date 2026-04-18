@@ -248,6 +248,27 @@ When the request involves planning, use this tree to select the right command:
 | Coordinate implementation, manage worker agents | `impl-manager`       | Implementation Manager    |
 | Enrich plan, map review findings, validate deps   | `plan-harmonizer`    | Plan Harmonizer           |
 
+
+### Tier 2: Sonnet (Cleanup Reviewers — /cleanup skill)
+
+| Trigger Patterns                                    | Agent                  | subagent_type          |
+| --------------------------------------------------- | ---------------------- | ---------------------- |
+| duplicate code, copy-paste, near-identical functions | `dedup-reviewer`      | Dedup Reviewer         |
+| scattered types, redundant types, type consolidation | `type-consolidator`   | Type Consolidator      |
+| dead code, unused exports, orphaned functions        | `dead-code-reviewer`  | Dead Code Reviewer     |
+| circular deps, tight coupling, dependency graph      | `dependency-reviewer` | Dependency Reviewer    |
+| weak types, any, type assertions, escape hatches     | `type-safety-reviewer`| Type Safety Reviewer   |
+| unnecessary try/catch, error hiding, silent fallback | `error-hygiene-reviewer`| Error Hygiene Reviewer|
+| deprecated patterns, migration artifacts, shims      | `legacy-code-reviewer`| Legacy Code Reviewer   |
+| AI artifacts, placeholder stubs, LARPing code        | `slop-reviewer`       | Slop Reviewer          |
+
+### Tier 3: Opus (Cleanup Synthesis — /cleanup skill)
+
+| Trigger Patterns                                    | Agent                      | subagent_type              |
+| --------------------------------------------------- | -------------------------- | -------------------------- |
+| cleanup synthesis, remediation plan, dedup findings  | `cleanup-synthesizer`     | Cleanup Synthesizer        |
+| bioinformatics synthesis, cross-domain pipeline      | `staff-bioinformatician`  | Staff Bioinformatician     |
+
 ### Tier 3: Opus (Architecture Decisions — allowlisted for spawn_agent)
 
 | Trigger Patterns                                                                                         | Agent                             | subagent_type                   |
@@ -591,6 +612,12 @@ For unknown scope:
 4. Execute via appropriate agent
 ```
 
+### Pattern 2: Multi-Source Research
+
+For cross-module investigation:
+
+```
+1. Spawn multiple haiku-scouts (parallel file/pattern discovery)
 2. orchestrator (spawn_agent) → synthesizes findings
 3. architect (spawn_agent) → creates implementation plan
 ```

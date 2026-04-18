@@ -1,3 +1,9 @@
+---
+title: Ticket Skill Setup
+type: guide
+tags: [tickets, skills]
+created: 2026-04-18
+---
 # Ticket System Setup Complete
 
 ## Summary

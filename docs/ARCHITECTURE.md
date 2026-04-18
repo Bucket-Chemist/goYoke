@@ -1,15 +1,18 @@
-# goYoke Systems Architecture v1.8
+---
+title: Systems Architecture
+type: reference
+tags: [architecture, hooks, tui, mcp, telemetry]
+version: 2.0
+created: 2026-04-18
+---
+# goYoke Systems Architecture v2.0
 
-> **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1 (review)
-> **Last Updated:** 2026-03-25
-> **Status:** Production Ready - Complete Implementation (Hooks + TUI + Review Telemetry)
-> **TUI v1 (Legacy):** goYoke-109 through goYoke-121 (13 tickets) — superseded by TUI Migration
-> **TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 9 phases). ✅ ALL COMPLETE (42/42, 100%). Feature parity verified.
-> **TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, Phase 10). ✅ ALL COMPLETE (28/28, 100%). 29 packages, 1542 tests.
-> **Review Telemetry:** goYoke-122 through goYoke-139 (18 tasks)
+> **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1
+> **Last Updated:** 2026-04-18
+> **Status:** Production Ready — Hooks + Go TUI (70 tickets complete) + MCP + Review Telemetry
+> **Upcoming Features:** synthesis-extension (4 tickets), codebase-map (16 tickets), distribution (39 tickets)
 
 ---
-
 ## Overview
 
 goYoke is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, manages ML telemetry, and maintains session continuity through structured handoff documents.
@@ -1253,151 +1256,18 @@ $XDG_DATA_HOME/goyoke/
 
 ---
 
-## 15. TUI System Architecture (goYoke-109 to goYoke-121) — Legacy
+## 15. TUI History
 
-> **Status: SUPERSEDED.** This section documents the original TUI implementation (React/Ink-adjacent Go prototype).
-> A complete rewrite is underway — see Section 16 for the TUI Migration (TUI-001 to TUI-042).
-> The old ticket IDs (goYoke-109 to goYoke-121) are mapped to new equivalents in `tickets/tui-migration/tickets/overview.md`.
-
-The TUI system provides a complete terminal interface for Claude Code interaction with real-time telemetry visualization.
-
-### 15.1 Package Structure
-
-```
-internal/
-├── cli/                          # Claude CLI subprocess management
-│   ├── subprocess.go             # ClaudeProcess lifecycle, NDJSON I/O
-│   ├── events.go                 # Event types: system, assistant, result, error
-│   ├── streams.go                # NDJSONReader, NDJSONWriter
-│   ├── restart.go                # RestartPolicy, exponential backoff
-│   └── session.go                # SessionManager, Session struct
-│
-└── tui/                          # Bubbletea components
-    ├── agents/                   # Agent tree visualization
-    │   ├── model.go              # AgentTree, AgentNode, AgentStatus
-    │   ├── view.go               # TreeModel (tea.Model), styles
-    │   └── detail.go             # DetailModel, status indicators
-    │
-    ├── claude/                   # Claude conversation panel
-    │   ├── panel.go              # PanelModel, viewport, textarea
-    │   ├── input.go              # handleInput(), sendMessage()
-    │   ├── output.go             # updateViewport(), appendStreamingText()
-    │   └── events.go             # handleEvent(), renderHookSidebar()
-    │
-    ├── layout/                   # Main layout
-    │   ├── layout.go             # 70/30 split, focus management
-    │   └── banner.go             # BannerModel, navigation tabs
-    │
-    ├── session/                  # Session picker
-    │   └── picker.go             # PickerModel, list/resume/delete
-    │
-    └── dashboard/                # Performance dashboard shell
-```
-
-### 15.2 Component Dependencies
-
-```mermaid
-graph TD
-    subgraph "CLI Layer"
-        CP[ClaudeProcess] --> EV[Events]
-        CP --> ST[Streams]
-        CP --> RS[RestartPolicy]
-        SM[SessionManager] --> CP
-    end
-
-    subgraph "TUI Layer"
-        LO[Layout Model] --> CL[Claude Panel]
-        LO --> AG[Agent Tree]
-        LO --> DE[Agent Detail]
-        LO --> BN[Banner]
-        CL --> CP
-        AG --> TW[TelemetryWatcher]
-        SP[Session Picker] --> SM
-    end
-
-    subgraph "Data Sources"
-        TW --> |fsnotify| AL[agent-lifecycle.jsonl]
-        TW --> |fsnotify| RD[routing-decisions.jsonl]
-        TW --> |fsnotify| IP[impl-progress.json]
-    end
-```
-
-### 15.3 Implemented Tickets
-
-| Ticket | Component | Status | Test Coverage |
-|--------|-----------|--------|---------------|
-| goYoke-109 | Agent Lifecycle Telemetry | ✅ Complete | ~85% |
-| goYoke-110 | CLI Subprocess Management | ✅ Complete | ~85% |
-| goYoke-111 | Performance Dashboard Shell | ✅ Complete | ~80% |
-| goYoke-112 | Auto-Restart on Panic | ✅ Complete | ~88% |
-| goYoke-113 | File Watchers for Telemetry | ✅ Complete | ~82% |
-| goYoke-114 | Event System Integration | ✅ Complete | ~90% |
-| goYoke-115 | Agent Tree Model | ✅ Complete | ~92% |
-| goYoke-116 | Tree View Component | ✅ Complete | ~88% |
-| goYoke-117 | Agent Detail Sidebar | ✅ Complete | ~85% |
-| goYoke-118 | Claude Conversation Panel | ✅ Complete | ~90% |
-| goYoke-119 | 70/30 Layout Integration | ✅ Complete | ~88% |
-| goYoke-120 | Persistent Banner | ✅ Complete | ~85% |
-| goYoke-121 | Session Management | ✅ Complete | ~85% |
-
-### 15.4 Key Interfaces
-
-```go
-// internal/cli/subprocess.go
-type ClaudeProcess struct { ... }
-func (cp *ClaudeProcess) Start() error
-func (cp *ClaudeProcess) Stop() error
-func (cp *ClaudeProcess) Send(message string) error
-func (cp *ClaudeProcess) Events() <-chan Event
-func (cp *ClaudeProcess) SessionID() string
-func (cp *ClaudeProcess) IsRunning() bool
-
-// internal/tui/agents/model.go
-type AgentTree struct { ... }
-func (at *AgentTree) ProcessSpawn(event *telemetry.AgentLifecycleEvent) error
-func (at *AgentTree) ProcessComplete(event *telemetry.AgentLifecycleEvent) error
-func (at *AgentTree) GetNode(agentID string) (*AgentNode, bool)
-func (at *AgentTree) WalkTree(fn func(*AgentNode) bool)
-
-// internal/tui/layout/layout.go
-type Model struct { ... }
-func NewModel(claudePanel, agentTree, sessionID) Model
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd)
-func (m Model) View() string
-```
-
-### 15.5 Data Flow
-
-```
-Claude CLI (subprocess)
-    │
-    ├─── STDOUT (NDJSON) ──► NDJSONReader ──► Events() chan
-    │                                              │
-    │                                              ▼
-    │                                         Claude Panel
-    │                                         (streaming text)
-    │
-    └─── STDIN (NDJSON) ◄── NDJSONWriter ◄── Send()
-                                              │
-                                              ▲
-                                         User Input
-
-Telemetry Files (fsnotify)
-    │
-    ├─── agent-lifecycle.jsonl ──► TelemetryWatcher ──► AgentTree
-    │                                                      │
-    │                                                      ▼
-    └─── routing-decisions.jsonl                      Tree View
-                                                     Detail View
-```
+> **Original implementation (goYoke-109 to goYoke-121):** 13 tickets. Functional prototype using a React/Ink-adjacent Go pattern. Superseded by the Go/Bubbletea rewrite (Section 16).
+> **Migration (TUI-001 to TUI-042):** 42 tickets across 9 phases. All complete. Two-process topology replaced three-process design, eliminating Node.js dependency.
+> **UX Overhaul (TUI-043 to TUI-070):** 28 tickets across 7 sub-phases (10a-10g). All complete. 29 packages, 1542 tests.
+>
+> For legacy ticket traceability, see `tickets/tui-migration/tickets/overview.md`.
+> For spike results from Phase 1 (permission protocol, Go MCP SDK, NDJSON catalog, UDS IPC), see `tickets/tui-migration/spike-results/`.
 
 ---
 
-*This document is designed for incremental updates. When adding new components, update the relevant section and diagram rather than rewriting prose.*
-
----
-
-## 16. TUI Migration: Go/Bubble Tea Rewrite (TUI-001 to TUI-042)
+## 16. TUI Architecture (Go/Bubbletea — Current)
 
 > **Source of truth:** `tickets/tui-migration/tickets/overview.md`
 > **Braintrust analysis:** `tickets/tui-migration/braintrust-handoff-v2.md`
@@ -1593,10 +1463,95 @@ type sharedState struct {
 
 ---
 
+## 17. Extension Points
+
+The system exposes these architectural seams for adding new capabilities without modifying core code.
+
+### 17.1 Hook System
+
+New hooks are added by creating a Go binary in `cmd/goyoke-<name>/` and registering it in `.claude/settings.json`. Hooks receive structured JSON on stdin and return JSON on stdout. The hook event types (SessionStart, PreToolUse, PostToolUse, SubagentStop, SessionEnd, ConfigChange, InstructionsLoaded) determine when the binary is invoked.
+
+**Registration pattern:** Add an entry to `settings.json` hooks array with `type`, `event`, `matcher` (regex), and `command` (path to binary).
+
+### 17.2 Agent Definitions
+
+New agents are added by creating a Markdown file in `.claude/agents/<agent-name>/` with YAML frontmatter (model, triggers, spawned_by, can_spawn). The `agents-index.json` aggregates all agent definitions and is the source of truth for routing. Agent context injection happens via `pkg/routing/identity_loader.go:BuildFullAgentContext()`.
+
+### 17.3 MCP Tools
+
+New MCP tools are registered in `internal/tui/mcp/tools.go` via `mcpsdk.Server.AddTool()`. Tools that need TUI interaction send IPC messages through the UDS bridge (`internal/tui/mcp/protocol.go` message types). The tool prefix `mcp__goyoke-interactive__` is set by the MCP config key in `internal/tui/cli/driver.go`.
+
+### 17.4 Skills (Slash Commands)
+
+New skills are added by creating a `SKILL.md` file in `.claude/skills/<skill-name>/`. Skills define their own tool allowlists and are guarded by `goyoke-skill-guard` (PreToolUse hook). The `prepare_skill` MCP tool sets up the guard configuration at skill activation time.
+
+### 17.5 Routing Schema
+
+The `routing-schema.json` file defines tier thresholds, agent mappings, and enforcement rules. Changes here propagate to all hooks that parse it at runtime (`goyoke-validate`, `goyoke-load-context`, `goyoke-sharp-edge`).
+
+### 17.6 Convention Files
+
+Language-specific coding conventions in `.claude/conventions/*.md` are auto-loaded based on file patterns (see CLAUDE.md Convention Auto-Loading table). New conventions are added by creating a `.md` file and adding the pattern mapping to `goyoke-load-context`.
+
+### 17.7 TUI Components
+
+New Bubbletea components follow the pattern in `internal/tui/components/`: implement `tea.Model` with `Init()`, `Update()`, `View()`. Components access shared state via `*state.SharedState` pointer. New drawers are registered in `internal/tui/model/layout.go`.
+
+---
+
+
+## 18. Planned Features
+
+Three features are queued for implementation. They must land in order because distribution (Phase 4) packages everything into a single binary.
+
+**Master index:** `tickets/MASTER-INDEX.md`
+
+### 18.1 Synthesis Extension (4 tickets)
+
+**Status:** 0/4 pending | **Index:** `tickets/goyoke-synthesis-extension/tickets/tickets-index.json`
+
+Closes integration gaps in the review synthesis engine. The core engine is 80% built; these tickets add the `{algebra_factor}` template fix, stdin schema update, staff-bioinformatician Layer 4 v2 update, and golden file tests.
+
+**Architectural impact:** Updates to `interaction-rules.json` and stdin schema. No new binaries.
+
+### 18.2 Codebase Map (16 tickets)
+
+**Status:** 0/16 pending | **Index:** `tickets/codebase-map/tickets/tickets-index.json`
+
+Adds a `goyoke-codebase-extract` binary that parses Go AST to build a dependency graph, enriches it via Anthropic SDK, and exposes results through a `/codebase-map` skill. Includes a TUI figures drawer (CM-014) and git-aware incremental mapping.
+
+**Architectural impact:** New binary in `cmd/goyoke-codebase-extract/`, new skill in `.claude/skills/codebase-map/`, new graph schemas in `pkg/`, new TUI drawer component. Future phases add TypeScript/Python/R grammar support.
+
+**Critical path:** CM-001 → CM-005a → CM-005b → CM-005c → CM-009
+
+### 18.3 Distribution (39 tickets)
+
+**Status:** 3/39 done | **Index:** `tickets/distribution/tickets-index.json`
+
+Packages all hook binaries into a single multicall binary (`goyoke`), adds `goyoke init` / `goyoke upgrade` / `goyoke doctor` commands, embedded FS for config files, GoReleaser CI/CD, and a community agent marketplace.
+
+**Architectural impact:** All `cmd/goyoke-*` binaries get `HookMain()` exports for multicall dispatch. Embedded FS snapshots `.claude/` config tree. New override system preserves user customizations across upgrades. Community agent catalog with install/remove/TUI panel.
+
+**Critical path:** DIST-004/005/006 → DIST-007 → DIST-008 → DIST-009 → DIST-010 → DIST-011
+
+### 18.4 Cross-Feature Dependencies
+
+All features must complete before DIST-009 (embedded FS). Adding files after the FS snapshot means rework.
+
+```
+synthesis-extension ──┐
+                      ├──→ distribution (DIST-009: embedded FS)
+codebase-map ─────────┘
+```
+
+---
+
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | 2026-04-18 | **Architecture refresh.** Updated header to v2.0. Collapsed Section 15 (legacy TUI) to historical summary. Retitled Section 16 as current TUI architecture. Added Section 17 (Extension Points) and Section 18 (Planned Features: synthesis-extension, codebase-map, distribution). Updated footer. |
 | 1.9 | 2026-03-25 | **Phase 10 UX Overhaul COMPLETE.** 28/28 tickets done (TUI-043–TUI-070). 29 packages, 1542 tests (+468 from Phase 10). All sub-phases 10a–10g complete. 13 integration tests in phase10_integration_test.go. Updated header, Section 16.3 Phase 10 → COMPLETE, Section 16.9 status → COMPLETE. |
 | 1.8 | 2026-03-24 | **Phase 10 UX Overhaul planned.** 28 tickets (TUI-043–TUI-070) across 7 sub-phases (10a–10g). Review: APPROVE_WITH_CONDITIONS (2026-03-24). 4 approval conditions incorporated. 6 new packages: settingstree, slashcmd, search, hintbar, breadcrumb, skeleton. New dependency: charmbracelet/harmonica. Updated header, Section 16.3, 16.8, added Section 16.9. |
 | 1.7 | 2026-03-23 | **TUI MIGRATION COMPLETE.** All 42 tickets done (42/42). Phase 9 finished: TUI-041 resilience tests (91.2%), TUI-042 feature parity (18/18 pass — spawn_agent + team_run fully implemented). verify-parity.sh: 75 pass, 0 fail, 2 skip. Updated all status to COMPLETE. |
@@ -1610,10 +1565,8 @@ type sharedState struct {
 
 ---
 
-**Version:** 1.9
-**Generated:** 2026-03-25
+**Version:** 2.0
+**Generated:** 2026-04-18
 **Maintainer:** goYoke Development Team
-**TUI v1 (Legacy):** goYoke-109 through goYoke-121 (13 tickets, all tests passing) — superseded
-**TUI v2 (Migration):** TUI-001 through TUI-042 (42 tickets, 42/42 COMPLETE ✅). Feature parity verified.
-**TUI v2 (UX Overhaul):** TUI-043 through TUI-070 (28 tickets, 28/28 COMPLETE ✅). 29 packages, 1542 tests.
-**Review Telemetry Complete:** goYoke-122 through goYoke-139 (18 tasks, all tests passing)
+**TUI:** 70 tickets complete (TUI-001 to TUI-070). 29 packages, 1542 tests.
+**Upcoming:** synthesis-extension (4), codebase-map (16), distribution (39)
