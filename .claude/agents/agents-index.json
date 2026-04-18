@@ -3410,7 +3410,8 @@
         "mcp__goyoke-interactive__spawn_agent",
         "mcp__goyoke-interactive__team_run",
         "mcp__goyoke-interactive__get_agent_result",
-        "mcp__goyoke-interactive__ask_user"
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "braintrust"
     },
@@ -3428,7 +3429,8 @@
         "mcp__goyoke-interactive__spawn_agent",
         "mcp__goyoke-interactive__team_run",
         "mcp__goyoke-interactive__get_agent_result",
-        "mcp__goyoke-interactive__ask_user"
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "code-review"
     },
@@ -3446,7 +3448,8 @@
         "mcp__goyoke-interactive__spawn_agent",
         "mcp__goyoke-interactive__team_run",
         "mcp__goyoke-interactive__get_agent_result",
-        "mcp__goyoke-interactive__ask_user"
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "implementation"
     },
@@ -3464,7 +3467,8 @@
         "mcp__goyoke-interactive__spawn_agent",
         "mcp__goyoke-interactive__team_run",
         "mcp__goyoke-interactive__get_agent_result",
-        "mcp__goyoke-interactive__ask_user"
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "cleanup"
     }

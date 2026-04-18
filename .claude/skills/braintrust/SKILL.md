@@ -165,18 +165,23 @@ When user responds "scout" or "don't know" to Q2:
 
 ## Execution
 
-When `/braintrust` is invoked, the `goyoke-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{goyoke_session_dir}/teams/{timestamp}.braintrust/`)
-- Written `active-skill.json` with guard restrictions + `team_dir` path
-- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
+When `/braintrust` is invoked, the Router must first set up the skill environment
+by calling `prepare_skill` before following these instructions.
 
 The Router executes the following steps:
 
 ### Step 1: Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${session_dir}/active-skill.json` })
-// Extract team_dir from JSON response
+mcp__goyoke-interactive__prepare_skill({ skill: "braintrust" })
+// Returns: { team_dir, guard_active, router_allowed_tools, tui_translation }
+// Extract team_dir from the response.
+// If tui_translation is non-empty, follow it for all Task() calls below.
+//
+// Non-TUI fallback: Bash({ command: "goyoke-skill-guard --setup braintrust" })
+//
+// ERROR HANDLING: If prepare_skill returns an error or guard_active is false:
+//   Log warning, generate team_dir manually, continue without guard, skip release.
 ```
 
 The `goyoke_session_dir` is resolved by reading `{project_root}/.goyoke/current-session`.
@@ -196,7 +201,7 @@ BRAINTRUST INVOCATION
 
 USER INPUT: {user_input}
 INPUT TYPE: {raw_problem | gap_document | inline_question}
-TEAM_DIR: {team_dir from active-skill.json}
+TEAM_DIR: {team_dir from prepare_skill output}
 
 Execute Braintrust workflow:
 1. Parse input
@@ -220,7 +225,8 @@ If validation fails, clean up and report error:
 ```bash
 if [[ $? -ne 0 ]]; then
     echo "[braintrust] ERROR: Mozart produced invalid config.json"
-    rm -f "$session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "braintrust", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
     exit 1
 fi
 ```
@@ -245,7 +251,8 @@ if mozart_output contains "ERROR: team-run launch failed":
 ### Step 5: Remove Skill Guard
 
 ```bash
-rm -f "$session_dir/active-skill.json"
+mcp__goyoke-interactive__prepare_skill({ skill: "braintrust", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
 ```
 
 ### Step 6: Return to User

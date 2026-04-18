@@ -52,10 +52,8 @@ Systematic codebase cleanup through 8 coordinated specialist reviewers, each exa
 
 ## Workflow
 
-When \`/cleanup\` is invoked, the \`goyoke-skill-guard\` PreToolUse hook has already:
-- Created the team directory (\`{goyoke_session_dir}/teams/{timestamp}.cleanup/\`)
-- Written \`active-skill.json\` with guard restrictions + \`team_dir\` path
-- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
+When \`/cleanup\` is invoked, the Router must first set up the skill environment
+by calling \`prepare_skill\` before following these instructions.
 
 The \`goyoke_session_dir\` lives under \`{project_root}/.goyoke/sessions/\`, NOT \`.claude/sessions/\`. It is resolved by reading \`{project_root}/.goyoke/current-session\`.
 
@@ -64,8 +62,9 @@ The \`goyoke_session_dir\` lives under \`{project_root}/.goyoke/sessions/\`, NOT
 #### Step 1: Read Team Directory from Guard File
 
 \`\`\`javascript
-Read({ file_path: \`\${goyoke_session_dir}/active-skill.json\` })
-// Extract team_dir from JSON response
+mcp__goyoke-interactive__prepare_skill({ skill: "cleanup" })
+// Returns: { team_dir, guard_active, router_allowed_tools, tui_translation }
+// Non-TUI fallback: Bash({ command: "goyoke-skill-guard --setup cleanup" })
 \`\`\`
 
 #### Step 2: Determine Scope
@@ -205,7 +204,7 @@ result = mcp__goyoke-interactive__team_run({
 })
 if !result.success:
     echo "[cleanup] ERROR: \${result.result}"
-    rm -f "\$goyoke_session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "cleanup", release: true })
     exit 1
 background_pid = result.background_pid
 \`\`\`
@@ -213,7 +212,7 @@ background_pid = result.background_pid
 #### Step 4: Remove Skill Guard
 
 \`\`\`bash
-rm -f "\$goyoke_session_dir/active-skill.json"
+mcp__goyoke-interactive__prepare_skill({ skill: "cleanup", release: true })
 \`\`\`
 
 #### Step 5: Return to User

@@ -407,11 +407,11 @@ func TestIntegration_SpawnAgent(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// (d) TestIntegration_ToolManifest — all 8 tools present
+// (d) TestIntegration_ToolManifest — all 9 tools present
 // ---------------------------------------------------------------------------
 
 // TestIntegration_ToolManifest verifies that the MCP server exposes exactly
-// the 8 expected tools.
+// the 9 expected tools.
 func TestIntegration_ToolManifest(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -436,6 +436,7 @@ func TestIntegration_ToolManifest(t *testing.T) {
 		"spawn_agent",
 		"get_agent_result",
 		"team_run",
+		"prepare_skill",
 	}
 
 	assert.Len(t, names, len(expected), "server must expose exactly %d tools", len(expected))

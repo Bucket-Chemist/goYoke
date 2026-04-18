@@ -73,11 +73,15 @@ The `goyoke-load-context` hook injects language detection and conventions automa
 | Fact             | Value                                             |
 | ---------------- | ------------------------------------------------- |
 | OS               | Arch Linux / CachyOS                              |
+| Go version       | 1.25.5                                            |
+| TUI framework    | Bubbletea v1.3.10 (Go, Charmbracelet)             |
+| MCP SDK          | modelcontextprotocol/go-sdk v1.2.0                |
 | Python           | Externally managed (PEP 668)                      |
 | Python execution | `uv run python` or `~/.generic-python/bin/python` |
-| Config location  | `~/Documents/goYoke/.claude/`            |
+| Config location  | `~/Documents/goYoke/.claude/`                     |
 | Schema version   | `routing-schema.json` v2.5.0                      |
-| Symlink          | `~/.claude → ~/Documents/goYoke/.claude` |
+| Agents index     | `agents-index.json` v2.7.0 (78 agents)            |
+| Symlink          | `~/.claude → ~/Documents/goYoke/.claude`          |
 
 ---
 
@@ -88,7 +92,7 @@ These Go binaries run automatically. You cannot bypass them.
 | Event                        | Binary                      | Matcher                  | What It Does                                                                                   |
 | ---------------------------- | --------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
 | **SessionStart**             | `goyoke-load-context`       | startup\|resume\|clear\|compact | Detects language, loads conventions, restores handoff, injects git context               |
-| **PreToolUse** (all tools)   | `goyoke-skill-guard`        | `.*`                     | Skill-level permission gating on all tool calls                                                |
+| **PreToolUse** (all tools)   | `goyoke-skill-guard`        | `.*`                     | Guard mode: tool allowlist enforcement during active skills. Setup via `prepare_skill` MCP tool |
 | **PreToolUse** (Task\|Agent) | `goyoke-validate`           | `Task\|Agent`            | Blocks Task(opus) (allowlisted agents excepted), validates subagent_type, checks delegation ceiling, logs violations |
 | **PreToolUse** (Write\|Edit) | `goyoke-direct-impl-check`  | `Write\|Edit`            | Detects when router writes implementation code directly instead of delegating                   |
 | **PreToolUse** (Bash)        | `goyoke-permission-gate`    | `Bash`                   | Gates Bash commands against permission rules                                                   |
@@ -283,43 +287,95 @@ When the request involves planning, use this tree to select the right command:
 | ------------------------------------------ | -------------- | ------------------------------------------------------------ |
 | native scope assessment, fast file metrics | `goyoke-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
 
----
-
 ## Agent Spawning Architecture
 
-### TUI Context (Claude Agent SDK)
+### TUI Architecture (Go Bubbletea)
 
-**CRITICAL**: The TUI uses Claude Agent SDK's `query()` function, NOT Claude Code CLI.
-The Agent SDK does **NOT** have the `Task` tool. ALL agent spawning in TUI must use `mcp__goyoke-interactive__spawn_agent`.
+The TUI is a pure Go application built with Charmbracelet Bubbletea (`cmd/goyoke/main.go`).
+It spawns Claude Code CLI as a subprocess via `internal/tui/cli/driver.go` (CLIDriver).
+
+**Two-Process Topology:**
+
+```
+Go TUI Process (single binary)
+  |-- Bubbletea event loop (owns terminal stdin/stdout)
+  |-- CLIDriver (manages Claude CLI subprocess via pipes)
+  |-- IPCBridge (UDS listener for MCP server communication)
+  |
+  +--spawns--> Claude Code CLI (--output-format stream-json)
+                  |
+                  +--spawns--> goyoke-mcp (Go MCP server, stdio transport)
+                                  |
+                                  +--connects--> TUI via UDS side channel
+```
 
 | Context                   | Task() Available | spawn_agent Available             | Preferred for Agent Delegation                    |
 | ------------------------- | ---------------- | --------------------------------- | ------------------------------------------------- |
-| **Router (Root Session)** | YES              | YES (`goyoke-interactive`)    | `mcp__goyoke-interactive__spawn_agent`         |
-| **Sub-Agents (Level 1+)** | NO (Blocked)     | YES (Required)                    | `mcp__goyoke-interactive__spawn_agent`         |
+| **Router (Root Session)** | YES              | YES (`goyoke-interactive`)        | `mcp__goyoke-interactive__spawn_agent`            |
+| **Sub-Agents (Level 1+)** | NO (Blocked)     | YES (Required)                    | `mcp__goyoke-interactive__spawn_agent`            |
 
 **IMPORTANT**: The router MUST use `mcp__goyoke-interactive__spawn_agent` instead of the built-in
 `Agent`/`Task` tool for agent delegation. The `Agent` tool fires NO PreToolUse hooks, so no conventions,
-rules, or agent identity are injected. The MCP spawn_agent calls `buildFullAgentContext()` to inject
+rules, or agent identity are injected. The MCP spawn_agent calls `routing.BuildFullAgentContext()` to inject
 full context (identity, conventions, rules) before spawning `claude -p`.
 
-### MCP Servers
+### MCP Server
 
-One MCP server provides agent spawning and interactive tools:
+One Go MCP server provides agent spawning and interactive tools:
 
-| MCP Server | Tool Prefix | spawn_agent | Interactive Tools | Requires TUI |
-| --- | --- | --- | --- | --- |
-| `goyoke-interactive` | `mcp__goyoke-interactive__` | **Functional** (TS, full Zustand/cost integration) | ask_user, confirm_action, select_option, request_input, team_run, get_agent_result | Yes |
+| MCP Server | Tool Prefix | Binary | Interactive Tools |
+| --- | --- | --- | --- |
+| `goyoke-interactive` | `mcp__goyoke-interactive__` | `goyoke-mcp` (Go, `cmd/goyoke-mcp/main.go`) | ask_user, confirm_action, select_option, request_input, team_run, get_agent_result |
 
-**`goyoke-interactive`** (TS, runs inside TUI process):
-- Primary spawn_agent with `buildFullAgentContext()`, relationship validation, Zustand store, cost tracking
-- Interactive tools (ask_user, confirm_action, select_option, request_input, team_run, get_agent_result)
-- Source: `packages/tui/src/mcp/tools/spawnAgent.ts`
+**`goyoke-mcp`** (Go binary, registered as "goyoke-interactive" in MCP config):
+- Implements 8 MCP tools via `modelcontextprotocol/go-sdk` v1.2.0
+- spawn_agent with `routing.BuildFullAgentContext()` context injection (`pkg/routing/identity_loader.go`)
+- Agent state tracking via `AgentStore` (`internal/tui/mcp/agent_store.go`)
+- Subprocess lifecycle with SIGTERM→SIGKILL escalation (`internal/tui/mcp/spawner.go`)
+- Relationship validation via `internal/tui/mcp/validator.go`
+- Interactive tools relay through UDS to TUI bridge (see IPC section below)
 
-Calls `buildFullAgentContext()` to inject identity, conventions, and rules.
-Enforces `spawned_by`/`can_spawn` constraints from `agents-index.json`.
-Manages subprocess lifecycle with SIGTERM→SIGKILL escalation.
+**Key source files:**
+- Tool registration: `internal/tui/mcp/tools.go`
+- Agent spawning: `internal/tui/mcp/spawner.go`
+- Agent store: `internal/tui/mcp/agent_store.go`
+- IPC protocol: `internal/tui/mcp/protocol.go`
+- Context builder: `pkg/routing/identity_loader.go`
 
-**Legacy binaries (not MCP servers):** `goyoke-mcp`, `goyoke-mcp-poc`, `goyoke-mcp-server`, `goyoke-ipc-mcp`, `goyoke-ipc-tui`, `goyoke-legacy`, `goyoke-mcp-standalone`. These are superseded.
+**Legacy binaries (superseded):** `goyoke-mcp-poc`, `goyoke-mcp-server`, `goyoke-mcp-standalone`, `goyoke-ipc-mcp`, `goyoke-ipc-tui`, `goyoke-legacy`. These are NOT active MCP servers.
+
+### IPC Architecture (UDS Bridge)
+
+The TUI and MCP server communicate via a Unix domain socket side channel:
+
+```
+goyoke-mcp (MCP server)
+    |
+    +-- UDSClient (internal/tui/mcp/tools.go)
+    |       connects to GOYOKE_SOCKET
+    |
+    v
+IPCBridge (internal/tui/bridge/server.go)
+    |       listens on $XDG_RUNTIME_DIR/goyoke-{pid}.sock
+    |
+    +-- program.Send(tea.Msg)
+    |       injects messages into Bubbletea event loop
+    v
+AppModel.Update() --> UI renders
+```
+
+**Protocol:** Newline-delimited JSON (NDJSON) over persistent UDS connection.
+
+**Message types (MCP → TUI):**
+- `modal_request` — display modal, return user selection
+- `agent_register` / `agent_update` / `agent_activity` — agent lifecycle
+- `permission_gate_request` — permission gate UI
+- `team_update` — team orchestration status
+- `toast` — transient notifications
+
+**Message types (TUI → MCP):**
+- `modal_response` — user's modal selection
+- `permission_gate_response` — user's permission decision
 
 ### spawn_agent MCP Tool
 
@@ -331,7 +387,7 @@ mcp__goyoke-interactive__spawn_agent({
   description: string,  // Brief description for logging
   prompt: string,       // Task prompt for the agent
   model?: string,       // Optional model override (default: from agent config)
-  timeout?: number,     // Optional timeout in ms (default: 600000)
+  timeout?: number,     // Optional timeout in ms (default: 900000)
   caller_type?: string, // Self-identification for CLI-spawned agents
 })
 ```
@@ -339,8 +395,6 @@ mcp__goyoke-interactive__spawn_agent({
 **Router (Root Session) spawns Mozart:**
 
 ```javascript
-// Router uses spawn_agent to spawn the initial orchestrator.
-// This ensures buildFullAgentContext() injects identity + conventions.
 mcp__goyoke-interactive__spawn_agent({
   agent: "mozart",
   description: "Braintrust problem decomposition",
@@ -352,11 +406,9 @@ mcp__goyoke-interactive__spawn_agent({
 **Mozart (Sub-Agent) spawns children:**
 
 ```javascript
-// Mozart runs as a sub-agent (Level 1). Task() is BLOCKED.
-// It MUST use spawn_agent for children (Einstein, Beethoven).
 mcp__goyoke-interactive__spawn_agent({
   agent: "einstein",
-  caller_type: "mozart", // Mozart self-identifies
+  caller_type: "mozart",
   description: "Theoretical analysis",
   prompt: "AGENT: einstein\n\nAnalyze the problem...",
   model: "opus",
@@ -366,7 +418,7 @@ mcp__goyoke-interactive__spawn_agent({
 
 ### Validation
 
-The validation performs **bidirectional checks** when `caller_type` is used:
+The `internal/tui/mcp/validator.go` performs **bidirectional checks** when `caller_type` is used:
 
 1. Does Einstein's `spawned_by` include "mozart"? ✓
 2. Does Mozart's `can_spawn` include "einstein"? ✓
@@ -375,24 +427,23 @@ For router spawns (no caller_type), validation checks:
 
 1. Does Mozart's `spawned_by` include "router"? ✓
 
-````
-
 **Cost Attribution:**
-Costs from spawned agents are extracted from CLI output and rolled up to the parent session. Session summary includes breakdown of direct costs and spawn costs grouped by agent type.
+Costs from spawned agents are extracted from CLI output and rolled up to the parent session via `AgentStore`.
 
 **Spawning Mechanisms by Tier:**
 
 | Agent Tier | Mechanism | Examples |
 |------------|-----------|----------|
 | **Level 0 (Router)** | `mcp__goyoke-interactive__spawn_agent` | Spawning Orchestrator, Mozart, or Scout |
-| **Level 1+ (Sub-agents)** | `mcp__goyoke-interactive__spawn_agent` | Orchestrator -> Scout, Mozart -> Einstein |
+| **Level 1+ (Sub-agents)** | `mcp__goyoke-interactive__spawn_agent` | Orchestrator → Scout, Mozart → Einstein |
+
+**Nesting Limit:** Max 10 levels via `GOYOKE_NESTING_LEVEL` env var.
 
 **DO NOT use the built-in `Agent`/`Task` tool for agent delegation.** It bypasses all hooks — no conventions, rules, or identity injection.
 Blocked by `goyoke-validate` (PreToolUse hook). Use `spawn_agent` MCP tool instead.
 
 **Troubleshooting:**
-If spawn_agent fails, see `~/.claude/docs/mcp-spawning-troubleshooting.md`
-
+If spawn_agent fails, see `docs/mcp-spawning-troubleshooting.md`
 ---
 
 ## Convention Auto-Loading

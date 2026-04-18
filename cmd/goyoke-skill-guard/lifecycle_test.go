@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 	"path/filepath"
 	"testing"
 	"time"
@@ -31,7 +33,7 @@ func TestLifecycle_ReviewFull(t *testing.T) {
 	guardPath := filepath.Join(tmpDir, guardFileName)
 
 	// Phase 1: Setup - Write review guard
-	guard := &ActiveSkill{
+	guard := &config.ActiveSkill{
 		Skill:   "review",
 		TeamDir: "/tmp/test-team",
 		RouterAllowedTools: []string{
@@ -68,7 +70,7 @@ func TestLifecycle_ImplementFull(t *testing.T) {
 	guardPath := filepath.Join(tmpDir, guardFileName)
 
 	// Phase 1: Setup - Write implement guard
-	guard := &ActiveSkill{
+	guard := &config.ActiveSkill{
 		Skill:   "implement",
 		TeamDir: "/tmp/test-team",
 		RouterAllowedTools: []string{
@@ -104,7 +106,7 @@ func TestLifecycle_BraintrustFull(t *testing.T) {
 	guardPath := filepath.Join(tmpDir, guardFileName)
 
 	// Phase 1: Setup - Write braintrust guard
-	guard := &ActiveSkill{
+	guard := &config.ActiveSkill{
 		Skill:   "braintrust",
 		TeamDir: "/tmp/test-team",
 		RouterAllowedTools: []string{
@@ -142,7 +144,7 @@ func TestLifecycle_SkillSwitchOverwrite(t *testing.T) {
 	guardPath := filepath.Join(tmpDir, guardFileName)
 
 	// Phase 1: Setup review skill
-	reviewGuard := &ActiveSkill{
+	reviewGuard := &config.ActiveSkill{
 		Skill:   "review",
 		TeamDir: "/tmp/test-team",
 		RouterAllowedTools: []string{
@@ -156,7 +158,7 @@ func TestLifecycle_SkillSwitchOverwrite(t *testing.T) {
 	assertToolAllowed(t, guardPath, "Glob")
 
 	// Phase 3: Overwrite with braintrust skill
-	braintrustGuard := &ActiveSkill{
+	braintrustGuard := &config.ActiveSkill{
 		Skill:   "braintrust",
 		TeamDir: "/tmp/test-team-2",
 		RouterAllowedTools: []string{
@@ -180,7 +182,7 @@ func TestLifecycle_CleanupOnError(t *testing.T) {
 	guardPath := filepath.Join(tmpDir, guardFileName)
 
 	// Phase 1: Setup guard
-	guard := &ActiveSkill{
+	guard := &config.ActiveSkill{
 		Skill:   "review",
 		TeamDir: "/tmp/test-team",
 		RouterAllowedTools: []string{
@@ -212,7 +214,7 @@ func TestLifecycle_StalenessAutoCleanup(t *testing.T) {
 
 	// Phase 1: Setup guard with CreatedAt 31 minutes in the past
 	staleTime := time.Now().Add(-31 * time.Minute)
-	guard := &ActiveSkill{
+	guard := &config.ActiveSkill{
 		Skill:   "review",
 		TeamDir: "/tmp/test-team",
 		RouterAllowedTools: []string{

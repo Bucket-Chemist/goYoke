@@ -371,9 +371,10 @@ type TeamRunOutput struct {
 // Tool handler constructors
 // -----------------------------------------------------------------------------
 
-// RegisterAll registers all 7 MCP tools on server.
+// RegisterAll registers all 9 MCP tools on server.
 func RegisterAll(server *mcpsdk.Server, uds *UDSClient) {
 	store := NewAgentStore()
+	lockStore := NewLockStore()
 
 	registerTestMcpPing(server)
 	registerAskUser(server, uds)
@@ -383,6 +384,7 @@ func RegisterAll(server *mcpsdk.Server, uds *UDSClient) {
 	registerSpawnAgent(server, uds, store)
 	registerGetAgentResult(server, store)
 	registerTeamRun(server, uds)
+	registerPrepareSkill(server, uds, lockStore)
 }
 
 // registerTestMcpPing registers the test_mcp_ping tool.

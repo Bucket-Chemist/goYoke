@@ -30,9 +30,8 @@ Single command to go from feature description to working code:
 
 ## Workflow
 
-When `/implement` is invoked, the `goyoke-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{goyoke_session_dir}/teams/{timestamp}.implementation/`)
-- Written `active-skill.json` with guard restrictions + `team_dir` path
+When `/implement` is invoked, the Router must first set up the skill environment
+by calling `prepare_skill` before following these instructions.
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
 The Router executes the following steps:
@@ -65,8 +64,15 @@ Output:
 ### 2. Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${goyoke_session_dir}/active-skill.json` })
-// Extract team_dir from JSON response
+mcp__goyoke-interactive__prepare_skill({ skill: "implement" })
+// Returns: { team_dir, guard_active, router_allowed_tools, tui_translation }
+// Extract team_dir from the response.
+// If tui_translation is non-empty, follow it for all Task() calls below.
+//
+// Non-TUI fallback: Bash({ command: "goyoke-skill-guard --setup implement" })
+//
+// ERROR HANDLING: If prepare_skill returns an error or guard_active is false:
+//   Log warning, generate team_dir manually, continue without guard, skip release.
 ```
 
 The `goyoke_session_dir` is resolved by reading `{project_root}/.goyoke/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOYOKE_PROJECT_ROOT` env var.
@@ -128,7 +134,8 @@ plan_file="$goyoke_session_dir/implementation-plan.json"
 if [[ ! -f "$plan_file" ]]; then
     echo "[implement] ERROR: Architect did not produce implementation-plan.json"
     echo "[implement] Check $goyoke_session_dir/specs.md for details"
-    rm -f "$goyoke_session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "implement", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
     # STOP — do not proceed
 fi
 
@@ -141,10 +148,10 @@ echo "[implement] Plan: $task_count tasks"
 
 ### 5. Generate Team Config
 
-Use the hook-provided `team_dir` from `active-skill.json` (read in Step 2). No `mkdir -p` needed — the hook already created the directory.
+Use the `team_dir` from `prepare_skill` output (from Step 2). No `mkdir -p` needed — `prepare_skill` already created the directory.
 
 ```bash
-# team_dir was extracted from active-skill.json in Step 2
+# team_dir was extracted from prepare_skill output in Step 2
 goyoke-plan-impl \
     --plan="$plan_file" \
     --project-root="$(pwd)" \
@@ -153,7 +160,8 @@ goyoke-plan-impl \
 if [[ $? -ne 0 ]]; then
     echo "[implement] ERROR: goyoke-plan-impl failed"
     echo "[implement] Check plan validity: jq . $plan_file"
-    rm -f "$goyoke_session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "implement", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
     # STOP
 fi
 
@@ -190,7 +198,8 @@ else:
 ### 7. Remove Skill Guard
 
 ```bash
-rm -f "$goyoke_session_dir/active-skill.json"
+mcp__goyoke-interactive__prepare_skill({ skill: "implement", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
 ```
 
 ---

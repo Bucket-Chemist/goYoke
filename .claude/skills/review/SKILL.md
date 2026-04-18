@@ -49,9 +49,8 @@ None required. Works in any git repository.
 
 ## Workflow
 
-When `/review` is invoked, the `goyoke-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{goyoke_session_dir}/teams/{timestamp}.code-review/`)
-- Written `active-skill.json` with guard restrictions + `team_dir` path
+When `/review` is invoked, the Router must first set up the skill environment
+by calling `prepare_skill` before following these instructions.
 
 The `goyoke_session_dir` lives under `{project_root}/.goyoke/sessions/`, NOT `.claude/sessions/`. It is resolved by reading `{project_root}/.goyoke/current-session`.
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
@@ -63,8 +62,15 @@ The Router executes the following steps:
 #### Step 1: Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${goyoke_session_dir}/active-skill.json` })
-// Extract team_dir from JSON response
+mcp__goyoke-interactive__prepare_skill({ skill: "review" })
+// Returns: { team_dir, guard_active, router_allowed_tools, tui_translation }
+// Extract team_dir from the response.
+// If tui_translation is non-empty, follow it for all Task() calls below.
+//
+// Non-TUI fallback: Bash({ command: "goyoke-skill-guard --setup review" })
+//
+// ERROR HANDLING: If prepare_skill returns an error or guard_active is false:
+//   Log warning, generate team_dir manually, continue without guard, skip release.
 ```
 
 The `goyoke_session_dir` is resolved by reading `{project_root}/.goyoke/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOYOKE_PROJECT_ROOT` env var.
@@ -106,7 +112,8 @@ esac
 
 if [[ -z "$files" ]]; then
     echo "[review] No files to review."
-    rm -f "$goyoke_session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "review", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
     exit 0
 fi
 
@@ -269,7 +276,8 @@ result = mcp__goyoke-interactive__team_run({
 })
 if !result.success:
     echo "[review] ERROR: ${result.result}"
-    rm -f "$goyoke_session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "review", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
     exit 1
 background_pid = result.background_pid
 echo "[review] Team launched (PID $background_pid)"
@@ -280,7 +288,8 @@ echo "[review] Use /team-result when complete to see findings"
 #### Step 5: Remove Skill Guard
 
 ```bash
-rm -f "$goyoke_session_dir/active-skill.json"
+mcp__goyoke-interactive__prepare_skill({ skill: "review", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
 ```
 
 #### Step 6: Return to User

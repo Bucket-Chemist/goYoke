@@ -2,6 +2,8 @@ package main
 
 import (
 	"path/filepath"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 	"testing"
 	"time"
 
@@ -41,7 +43,7 @@ func TestToolsMatrix(t *testing.T) {
 					tmpDir := t.TempDir()
 					guardPath := filepath.Join(tmpDir, guardFileName)
 
-					guard := &ActiveSkill{
+					guard := &config.ActiveSkill{
 						Skill:              skillName,
 						TeamDir:            "/tmp/test-team",
 						RouterAllowedTools: skillCfg.allowed,
