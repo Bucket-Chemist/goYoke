@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-ecosystem.sh - Comprehensive test wrapper for GOgent-Fortress ecosystem
+# test-ecosystem.sh - Comprehensive test wrapper for goYoke ecosystem
 #
 # This script runs all tests in the correct order with proper reporting.
 # Goal: Replace 15+ manual test invocations with a single command.
@@ -8,10 +8,10 @@
 #   ./test-ecosystem.sh
 #
 # Audit Trail:
-#   Test outputs are saved to test/audit/GOgent-XXX/ for persistent tracking.
+#   Test outputs are saved to test/audit/goYoke-XXX/ for persistent tracking.
 #   Ticket label is auto-detected from:
-#     1. ENV var: GOgent_TICKET (e.g., export GOgent_TICKET=003)
-#     2. Git branch name (e.g., feature/GOgent-003 -> 003)
+#     1. ENV var: goYoke_TICKET (e.g., export goYoke_TICKET=003)
+#     2. Git branch name (e.g., feature/goYoke-003 -> 003)
 #     3. Fallback: Current date (YYYY-MM-DD)
 
 set -euo pipefail
@@ -26,16 +26,16 @@ RESET='\033[0m'
 # Detect ticket label for audit trail
 detect_ticket_label() {
     # Priority 1: Explicit ENV var
-    if [[ -n "${GOgent_TICKET:-}" ]]; then
-        echo "GOgent-${GOgent_TICKET}"
+    if [[ -n "${goYoke_TICKET:-}" ]]; then
+        echo "goYoke-${goYoke_TICKET}"
         return
     fi
 
-    # Priority 2: Git branch name (feature/GOgent-003 -> GOgent-003)
+    # Priority 2: Git branch name (feature/goYoke-003 -> goYoke-003)
     if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-        if [[ "$BRANCH" =~ GOgent-([0-9]+[a-z]?) ]]; then
-            echo "GOgent-${BASH_REMATCH[1]}"
+        if [[ "$BRANCH" =~ goYoke-([0-9]+[a-z]?) ]]; then
+            echo "goYoke-${BASH_REMATCH[1]}"
             return
         fi
     fi
@@ -53,7 +53,7 @@ mkdir -p "$AUDIT_DIR"
 date -Iseconds > "$AUDIT_DIR/timestamp.txt"
 
 echo -e "${BLUE}========================================${RESET}"
-echo -e "${BLUE}GOgent-Fortress Ecosystem Test Suite${RESET}"
+echo -e "${BLUE}goYoke Ecosystem Test Suite${RESET}"
 echo -e "${BLUE}========================================${RESET}"
 echo -e "${BLUE}Audit Label: ${TICKET_LABEL}${RESET}"
 echo ""

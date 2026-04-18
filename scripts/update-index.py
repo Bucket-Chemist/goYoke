@@ -7,21 +7,21 @@ from pathlib import Path
 
 # Ticket metadata from source document analysis
 TICKETS = [
-    {"id": "GOgent-056", "title": "SessionStart Event Struct & Parser", "time": "1h", "deps": [], "files": ["pkg/session/events.go", "pkg/session/session_start_test.go"], "priority": "high", "ac_count": 16},
-    {"id": "GOgent-057", "title": "Tool Counter Initialization", "time": "0.5h", "deps": ["GOgent-056"], "files": ["pkg/config/paths.go", "pkg/config/paths_test.go"], "priority": "high", "ac_count": 14},
-    {"id": "GOgent-058", "title": "Routing Schema Summary Formatter", "time": "1h", "deps": [], "files": ["pkg/routing/schema.go", "pkg/routing/schema_test.go"], "priority": "medium", "ac_count": 13},
-    {"id": "GOgent-059", "title": "Handoff Document Loader", "time": "1h", "deps": [], "files": ["pkg/session/context_loader.go", "pkg/session/context_loader_test.go"], "priority": "medium", "ac_count": 17},
-    {"id": "GOgent-060", "title": "Project Type Detection", "time": "1.5h", "deps": [], "files": ["pkg/session/project_detection.go", "pkg/session/project_detection_test.go"], "priority": "medium", "ac_count": 22},
-    {"id": "GOgent-061", "title": "Session Context Response Generator", "time": "1.5h", "deps": ["GOgent-056", "GOgent-058", "GOgent-059", "GOgent-060"], "files": ["pkg/session/context_response.go", "pkg/session/context_response_test.go"], "priority": "high", "ac_count": 15},
-    {"id": "GOgent-062", "title": "CLI Binary - Main Orchestrator", "time": "1.5h", "deps": ["GOgent-056", "GOgent-057", "GOgent-061"], "files": ["cmd/gogent-load-context/main.go", "cmd/gogent-load-context/main_test.go"], "priority": "high", "ac_count": 16},
-    {"id": "GOgent-063", "title": "Integration Tests", "time": "1h", "deps": ["GOgent-062"], "files": ["test/integration/session_start_test.go"], "priority": "medium", "ac_count": 10},
-    {"id": "GOgent-064", "title": "Makefile Updates", "time": "0.5h", "deps": ["GOgent-062"], "files": ["Makefile"], "priority": "low", "ac_count": 3},
-    {"id": "GOgent-065", "title": "Documentation Update", "time": "1h", "deps": ["GOgent-064"], "files": ["docs/systems-architecture-overview.md"], "priority": "low", "ac_count": 4},
-    {"id": "GOgent-066", "title": "Hook Configuration Template", "time": "0.5h", "deps": ["GOgent-064"], "files": ["docs/hook-configuration.md"], "priority": "medium", "ac_count": 5},
-    {"id": "GOgent-067", "title": "Extend Runner with SessionStart Category", "time": "1.5h", "deps": ["GOgent-062"], "files": ["harness/runner.go", "harness/runner_test.go"], "priority": "medium", "ac_count": 13},
-    {"id": "GOgent-068", "title": "Create SessionStart Test Fixtures", "time": "2h", "deps": ["GOgent-067"], "files": ["fixtures/sessionstart/*.json"], "priority": "medium", "ac_count": 12},
-    {"id": "GOgent-069", "title": "Update Harness CLI for SessionStart", "time": "1h", "deps": ["GOgent-067"], "files": ["cmd/harness/main.go"], "priority": "low", "ac_count": 6},
-    {"id": "GOgent-070", "title": "GitHub Actions Workflow Update", "time": "1.5h", "deps": ["GOgent-068", "GOgent-069"], "files": [".github/workflows/*.yml"], "priority": "low", "ac_count": 8},
+    {"id": "goYoke-056", "title": "SessionStart Event Struct & Parser", "time": "1h", "deps": [], "files": ["pkg/session/events.go", "pkg/session/session_start_test.go"], "priority": "high", "ac_count": 16},
+    {"id": "goYoke-057", "title": "Tool Counter Initialization", "time": "0.5h", "deps": ["goYoke-056"], "files": ["pkg/config/paths.go", "pkg/config/paths_test.go"], "priority": "high", "ac_count": 14},
+    {"id": "goYoke-058", "title": "Routing Schema Summary Formatter", "time": "1h", "deps": [], "files": ["pkg/routing/schema.go", "pkg/routing/schema_test.go"], "priority": "medium", "ac_count": 13},
+    {"id": "goYoke-059", "title": "Handoff Document Loader", "time": "1h", "deps": [], "files": ["pkg/session/context_loader.go", "pkg/session/context_loader_test.go"], "priority": "medium", "ac_count": 17},
+    {"id": "goYoke-060", "title": "Project Type Detection", "time": "1.5h", "deps": [], "files": ["pkg/session/project_detection.go", "pkg/session/project_detection_test.go"], "priority": "medium", "ac_count": 22},
+    {"id": "goYoke-061", "title": "Session Context Response Generator", "time": "1.5h", "deps": ["goYoke-056", "goYoke-058", "goYoke-059", "goYoke-060"], "files": ["pkg/session/context_response.go", "pkg/session/context_response_test.go"], "priority": "high", "ac_count": 15},
+    {"id": "goYoke-062", "title": "CLI Binary - Main Orchestrator", "time": "1.5h", "deps": ["goYoke-056", "goYoke-057", "goYoke-061"], "files": ["cmd/goyoke-load-context/main.go", "cmd/goyoke-load-context/main_test.go"], "priority": "high", "ac_count": 16},
+    {"id": "goYoke-063", "title": "Integration Tests", "time": "1h", "deps": ["goYoke-062"], "files": ["test/integration/session_start_test.go"], "priority": "medium", "ac_count": 10},
+    {"id": "goYoke-064", "title": "Makefile Updates", "time": "0.5h", "deps": ["goYoke-062"], "files": ["Makefile"], "priority": "low", "ac_count": 3},
+    {"id": "goYoke-065", "title": "Documentation Update", "time": "1h", "deps": ["goYoke-064"], "files": ["docs/systems-architecture-overview.md"], "priority": "low", "ac_count": 4},
+    {"id": "goYoke-066", "title": "Hook Configuration Template", "time": "0.5h", "deps": ["goYoke-064"], "files": ["docs/hook-configuration.md"], "priority": "medium", "ac_count": 5},
+    {"id": "goYoke-067", "title": "Extend Runner with SessionStart Category", "time": "1.5h", "deps": ["goYoke-062"], "files": ["harness/runner.go", "harness/runner_test.go"], "priority": "medium", "ac_count": 13},
+    {"id": "goYoke-068", "title": "Create SessionStart Test Fixtures", "time": "2h", "deps": ["goYoke-067"], "files": ["fixtures/sessionstart/*.json"], "priority": "medium", "ac_count": 12},
+    {"id": "goYoke-069", "title": "Update Harness CLI for SessionStart", "time": "1h", "deps": ["goYoke-067"], "files": ["cmd/harness/main.go"], "priority": "low", "ac_count": 6},
+    {"id": "goYoke-070", "title": "GitHub Actions Workflow Update", "time": "1.5h", "deps": ["goYoke-068", "goYoke-069"], "files": [".github/workflows/*.yml"], "priority": "low", "ac_count": 8},
 ]
 
 def calculate_blocks(tickets):

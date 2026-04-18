@@ -1,30 +1,30 @@
 #!/bin/bash
-# Check corpus capture progress for GOgent-008b
+# Check corpus capture progress for goYoke-008b
 
 set -euo pipefail
 
 # Determine corpus location (XDG-compliant)
 CORPUS_RAW=""
-if [[ -n "${XDG_RUNTIME_DIR:-}" && -f "$XDG_RUNTIME_DIR/gogent/event-corpus-raw.jsonl" ]]; then
-    CORPUS_RAW="$XDG_RUNTIME_DIR/gogent/event-corpus-raw.jsonl"
-elif [[ -n "${XDG_CACHE_HOME:-}" && -f "$XDG_CACHE_HOME/gogent/event-corpus-raw.jsonl" ]]; then
-    CORPUS_RAW="$XDG_CACHE_HOME/gogent/event-corpus-raw.jsonl"
-elif [[ -f "$HOME/.cache/gogent/event-corpus-raw.jsonl" ]]; then
-    CORPUS_RAW="$HOME/.cache/gogent/event-corpus-raw.jsonl"
+if [[ -n "${XDG_RUNTIME_DIR:-}" && -f "$XDG_RUNTIME_DIR/goyoke/event-corpus-raw.jsonl" ]]; then
+    CORPUS_RAW="$XDG_RUNTIME_DIR/goyoke/event-corpus-raw.jsonl"
+elif [[ -n "${XDG_CACHE_HOME:-}" && -f "$XDG_CACHE_HOME/goyoke/event-corpus-raw.jsonl" ]]; then
+    CORPUS_RAW="$XDG_CACHE_HOME/goyoke/event-corpus-raw.jsonl"
+elif [[ -f "$HOME/.cache/goyoke/event-corpus-raw.jsonl" ]]; then
+    CORPUS_RAW="$HOME/.cache/goyoke/event-corpus-raw.jsonl"
 else
     echo "❌ No corpus file found in XDG locations"
     echo ""
     echo "Expected locations:"
-    echo "  - \$XDG_RUNTIME_DIR/gogent/event-corpus-raw.jsonl"
-    echo "  - \$XDG_CACHE_HOME/gogent/event-corpus-raw.jsonl"
-    echo "  - ~/.cache/gogent/event-corpus-raw.jsonl"
+    echo "  - \$XDG_RUNTIME_DIR/goyoke/event-corpus-raw.jsonl"
+    echo "  - \$XDG_CACHE_HOME/goyoke/event-corpus-raw.jsonl"
+    echo "  - ~/.cache/goyoke/event-corpus-raw.jsonl"
     echo ""
     echo "The corpus logger may not have captured any events yet."
     echo "Use Claude Code normally and check again later."
     exit 1
 fi
 
-echo "📊 Corpus Capture Progress (GOgent-008b)"
+echo "📊 Corpus Capture Progress (goYoke-008b)"
 echo "======================================="
 echo ""
 echo "Corpus file: $CORPUS_RAW"

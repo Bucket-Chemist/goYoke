@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-SCHEMA="/home/doktersmol/Documents/GOgent-Fortress/.claude/routing-schema.json"
+SCHEMA="/home/doktersmol/Documents/goYoke/.claude/routing-schema.json"
 
 if ! command -v jq &>/dev/null; then
   echo "ERROR: jq not found" >&2

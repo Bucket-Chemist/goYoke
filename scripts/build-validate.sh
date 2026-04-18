@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build gogent-validate binary
+# Build goyoke-validate binary
 
 set -euo pipefail
 
@@ -8,10 +8,10 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 cd "$PROJECT_ROOT"
 
-echo "Building gogent-validate..."
-go build -o bin/gogent-validate cmd/gogent-validate/main.go
+echo "Building goyoke-validate..."
+go build -o bin/goyoke-validate cmd/goyoke-validate/main.go
 
-echo "✓ Built: bin/gogent-validate"
+echo "✓ Built: bin/goyoke-validate"
 echo ""
 echo "Test with:"
-echo "  echo '{\"tool_name\":\"Task\",\"tool_input\":{\"model\":\"opus\"},\"session_id\":\"test\"}' | ./bin/gogent-validate"
+echo "  echo '{\"tool_name\":\"Task\",\"tool_input\":{\"model\":\"opus\"},\"session_id\":\"test\"}' | ./bin/goyoke-validate"

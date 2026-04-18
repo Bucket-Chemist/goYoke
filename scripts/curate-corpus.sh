@@ -1,17 +1,17 @@
 #!/bin/bash
-# Curate event corpus for GOgent-008b
+# Curate event corpus for goYoke-008b
 # Converts raw JSONL to structured JSON array with validation
 
 set -euo pipefail
 
 # Determine corpus location (XDG-compliant)
 CORPUS_RAW=""
-if [[ -n "${XDG_RUNTIME_DIR:-}" && -f "$XDG_RUNTIME_DIR/gogent/event-corpus-raw.jsonl" ]]; then
-    CORPUS_RAW="$XDG_RUNTIME_DIR/gogent/event-corpus-raw.jsonl"
-elif [[ -n "${XDG_CACHE_HOME:-}" && -f "$XDG_CACHE_HOME/gogent/event-corpus-raw.jsonl" ]]; then
-    CORPUS_RAW="$XDG_CACHE_HOME/gogent/event-corpus-raw.jsonl"
-elif [[ -f "$HOME/.cache/gogent/event-corpus-raw.jsonl" ]]; then
-    CORPUS_RAW="$HOME/.cache/gogent/event-corpus-raw.jsonl"
+if [[ -n "${XDG_RUNTIME_DIR:-}" && -f "$XDG_RUNTIME_DIR/goyoke/event-corpus-raw.jsonl" ]]; then
+    CORPUS_RAW="$XDG_RUNTIME_DIR/goyoke/event-corpus-raw.jsonl"
+elif [[ -n "${XDG_CACHE_HOME:-}" && -f "$XDG_CACHE_HOME/goyoke/event-corpus-raw.jsonl" ]]; then
+    CORPUS_RAW="$XDG_CACHE_HOME/goyoke/event-corpus-raw.jsonl"
+elif [[ -f "$HOME/.cache/goyoke/event-corpus-raw.jsonl" ]]; then
+    CORPUS_RAW="$HOME/.cache/goyoke/event-corpus-raw.jsonl"
 else
     echo "❌ No corpus file found in XDG locations"
     exit 1
@@ -81,4 +81,4 @@ echo ""
 echo "Next steps:"
 echo "  1. Review: jq '.' $CORPUS_OUTPUT | less"
 echo "  2. Commit: git add $CORPUS_OUTPUT"
-echo "  3. Proceed with GOgent-006, GOgent-007, GOgent-008, GOgent-009"
+echo "  3. Proceed with goYoke-006, goYoke-007, goYoke-008, goYoke-009"

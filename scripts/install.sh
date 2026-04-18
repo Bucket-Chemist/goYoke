@@ -1,12 +1,12 @@
 #!/bin/bash
-# Installation script for gogent-fortress Go hooks
+# Installation script for goyoke-fortress Go hooks
 # Usage: ./scripts/install.sh [--test-only] [--skip-tests]
 
 set -e  # Exit on error
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_DIR="${HOME}/.claude/hooks"
-GOgent_DIR="${HOME}/.gogent"
+goYoke_DIR="${HOME}/.goyoke"
 
 # Colors for output
 RED='\033[0;31m'
@@ -102,9 +102,9 @@ fi
 log_info "Building Go binaries..."
 
 BINARIES=(
-    "cmd/gogent-validate:gogent-validate"
-    "cmd/gogent-archive:gogent-archive"
-    "cmd/gogent-sharp-edge:gogent-sharp-edge"
+    "cmd/goyoke-validate:goyoke-validate"
+    "cmd/goyoke-archive:goyoke-archive"
+    "cmd/goyoke-sharp-edge:goyoke-sharp-edge"
 )
 
 # Create bin directory if it doesn't exist
@@ -177,14 +177,14 @@ else
 fi
 
 # Step 7: Install binaries (but don't activate yet)
-log_info "Installing Go binaries to $GOgent_DIR/bin..."
+log_info "Installing Go binaries to $goYoke_DIR/bin..."
 
-mkdir -p "$GOgent_DIR/bin"
+mkdir -p "$goYoke_DIR/bin"
 
 for binary in "${BINARIES[@]}"; do
     BINARY_NAME="${binary##*:}"
-    cp "$PROJECT_ROOT/bin/$BINARY_NAME" "$GOgent_DIR/bin/$BINARY_NAME"
-    chmod +x "$GOgent_DIR/bin/$BINARY_NAME"
+    cp "$PROJECT_ROOT/bin/$BINARY_NAME" "$goYoke_DIR/bin/$BINARY_NAME"
+    chmod +x "$goYoke_DIR/bin/$BINARY_NAME"
     log_info "  Installed: $BINARY_NAME"
 done
 
@@ -194,7 +194,7 @@ log_info "=========================================="
 log_info "Installation Complete!"
 log_info "=========================================="
 log_info ""
-log_info "Go binaries installed to: $GOgent_DIR/bin/"
+log_info "Go binaries installed to: $goYoke_DIR/bin/"
 if [ "$BACKUP_NEEDED" = true ]; then
     log_info "Bash hooks backed up to:  $BACKUP_DIR/"
 fi

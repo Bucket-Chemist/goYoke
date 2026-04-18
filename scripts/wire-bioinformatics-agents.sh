@@ -367,7 +367,7 @@ Bioinformatics-domain code review through coordinated Opus-tier specialist revie
 2. **Classify** — Identify bioinformatics file types and omics domains
 3. **Select** — Choose relevant reviewers (max 4) + always include bioinformatician-reviewer
 4. **Execute** — Dispatch reviewers (wave 0) + pasteur (wave 1) via background team-run
-5. **Launch** — Start `gogent-team-run` in background, return immediately
+5. **Launch** — Start `goyoke-team-run` in background, return immediately
 
 **What this skill does NOT do:**
 
@@ -392,7 +392,7 @@ Bioinformatics-domain code review through coordinated Opus-tier specialist revie
 
 - `git` (for change detection)
 - `jq` (JSON processing)
-- `gogent-team-run` (team execution)
+- `goyoke-team-run` (team execution)
 
 ---
 
@@ -462,14 +462,14 @@ DDA, DIA, PRM, SRM, MRM, Thermo, Bruker, SCIEX, Waters, Orbitrap, TOF, calibrati
 5. Generate stdin file per `.claude/schemas/stdin/bioinformatics-pasteur.json` for pasteur
 6. Write config.json and all stdin files to team directory
 
-**Team directory:** `{gogent_session_dir}/teams/{timestamp}.bioinformatics-review/`
+**Team directory:** `{goyoke_session_dir}/teams/{timestamp}.bioinformatics-review/`
 
 **IMPORTANT:** Template values in review-bioinformatics.json are authoritative. Do NOT copy budget/timeout values from the /review SKILL.md (those are stale).
 
 ### Phase 5: Launch and Return
 
 ```
-result = mcp__gofortress-interactive__team_run({
+result = mcp__goyoke-interactive__team_run({
     team_dir: "$team_dir",
     wait_for_start: true,
     timeout_ms: 10000
@@ -556,7 +556,7 @@ If Pasteur fails:
 
 **"Team launch failed"**
 - Check `$team_dir/runner.log` for errors
-- Verify `gogent-team-run` is built and in PATH
+- Verify `goyoke-team-run` is built and in PATH
 - Validate `$team_dir/config.json` with `jq .`
 
 ---
@@ -582,7 +582,7 @@ $ /review-bioinformatics
   Reviewers: genomics-reviewer bioinformatician-reviewer
   Synthesizer: pasteur
   Files: 3 files across 1 domain
-  Team: .gogent/sessions/.../teams/1712649600.bioinformatics-review
+  Team: .goyoke/sessions/.../teams/1712649600.bioinformatics-review
   PID: 54321
 
 Use /team-status to check progress

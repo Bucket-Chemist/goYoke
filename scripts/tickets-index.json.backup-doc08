@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "project": "gogent-fortress",
+    "project": "goyoke-fortress",
     "phase": "Phase 0 - Go Translation",
     "total_tickets": 129,
     "total_weeks": 5,
@@ -10,7 +10,7 @@
   },
   "tickets": [
     {
-      "id": "GOgent-030",
+      "id": "goYoke-030",
       "title": "Format Violations Summary",
       "description": "Parse routing-violations.jsonl and format top 10 for handoff",
       "file": "tickets/session_archive/030.md",
@@ -18,11 +18,11 @@
       "day": 2,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-011"
+        "goYoke-011"
       ],
       "blocks": [
-        "GOgent-030b",
-        "GOgent-032"
+        "goYoke-030b",
+        "goYoke-032"
       ],
       "priority": "medium",
       "tags": [
@@ -34,7 +34,7 @@
         "pkg/session/violations_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-030-format-violations",
+      "git_branch": "goyoke-030-format-violations",
       "pr_labels": [
         "violations",
         "week-2",
@@ -44,7 +44,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030b",
+      "id": "goYoke-030b",
       "title": "Cluster Violations by Type",
       "description": "Group violations by type (subagent_type_mismatch, delegation_ceiling, etc.) to identify systemic patterns instead of showing flat list",
       "file": "tickets/session_archive/030b.md",
@@ -52,10 +52,10 @@
       "day": 3,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-030"
+        "goYoke-030"
       ],
       "blocks": [
-        "GOgent-030c"
+        "goYoke-030c"
       ],
       "priority": "major",
       "tags": [
@@ -66,7 +66,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-030b-cluster-violations-type",
+      "git_branch": "goyoke-030b-cluster-violations-type",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -76,7 +76,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030c",
+      "id": "goYoke-030c",
       "title": "Cluster Violations by Agent",
       "description": "Group violations by agent name to identify which agents have configuration issues",
       "file": "tickets/session_archive/030c.md",
@@ -84,10 +84,10 @@
       "day": 3,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-030b"
+        "goYoke-030b"
       ],
       "blocks": [
-        "GOgent-030d"
+        "goYoke-030d"
       ],
       "priority": "major",
       "tags": [
@@ -98,7 +98,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-030c-cluster-violations-agent",
+      "git_branch": "goyoke-030c-cluster-violations-agent",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -108,7 +108,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030d",
+      "id": "goYoke-030d",
       "title": "Analyze Violation Temporal Trends",
       "description": "Detect if violation rate is improving or worsening during session by analyzing timestamps",
       "file": "tickets/session_archive/030d.md",
@@ -116,7 +116,7 @@
       "day": 3,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-030c"
+        "goYoke-030c"
       ],
       "blocks": [],
       "priority": "major",
@@ -128,7 +128,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-030d-violation-trends",
+      "git_branch": "goyoke-030d-violation-trends",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -138,7 +138,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030e",
+      "id": "goYoke-030e",
       "title": "AgentInvocation Schema and Logging",
       "description": "Define AgentInvocation struct and implement LogInvocation() with dual-write pattern",
       "file": "tickets/session_archive/030e.md",
@@ -146,12 +146,12 @@
       "day": 4,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-030d"
+        "goYoke-030d"
       ],
       "blocks": [
-        "GOgent-030f",
-        "GOgent-030h",
-        "GOgent-030j"
+        "goYoke-030f",
+        "goYoke-030h",
+        "goYoke-030j"
       ],
       "priority": "critical",
       "tags": [
@@ -168,7 +168,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030f",
+      "id": "goYoke-030f",
       "title": "ClusterInvocationsByAgent Analysis",
       "description": "Implement clustering and aggregation functions for agent invocations",
       "file": "tickets/session_archive/030f.md",
@@ -176,10 +176,10 @@
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-030e"
+        "goYoke-030e"
       ],
       "blocks": [
-        "GOgent-030g"
+        "goYoke-030g"
       ],
       "priority": "critical",
       "tags": [
@@ -193,7 +193,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030g",
+      "id": "goYoke-030g",
       "title": "CostAttribution Calculation",
       "description": "Implement cost calculation functions using tier-specific pricing",
       "file": "tickets/session_archive/030g.md",
@@ -201,7 +201,7 @@
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-030f"
+        "goYoke-030f"
       ],
       "blocks": [],
       "priority": "critical",
@@ -219,7 +219,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030h",
+      "id": "goYoke-030h",
       "title": "EscalationEvent Schema and Logging",
       "description": "Define EscalationEvent struct and implement LogEscalation() with dual-write pattern",
       "file": "tickets/session_archive/030h.md",
@@ -227,10 +227,10 @@
       "day": 5,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-030e"
+        "goYoke-030e"
       ],
       "blocks": [
-        "GOgent-030i"
+        "goYoke-030i"
       ],
       "priority": "high",
       "tags": [
@@ -247,7 +247,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030i",
+      "id": "goYoke-030i",
       "title": "EscalationPattern Analysis",
       "description": "Implement aggregation and pattern detection for escalation events",
       "file": "tickets/session_archive/030i.md",
@@ -255,7 +255,7 @@
       "day": 5,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-030h"
+        "goYoke-030h"
       ],
       "blocks": [],
       "priority": "high",
@@ -270,7 +270,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030j",
+      "id": "goYoke-030j",
       "title": "ScoutRecommendation Schema and Logging",
       "description": "Define ScoutRecommendation struct and implement LogScoutRecommendation() with dual-write pattern",
       "file": "tickets/session_archive/030j.md",
@@ -278,10 +278,10 @@
       "day": 5,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-030e"
+        "goYoke-030e"
       ],
       "blocks": [
-        "GOgent-030k"
+        "goYoke-030k"
       ],
       "priority": "medium",
       "tags": [
@@ -298,7 +298,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030k",
+      "id": "goYoke-030k",
       "title": "ScoutAccuracy Calculation",
       "description": "Implement aggregation and accuracy analysis functions for scout recommendations",
       "file": "tickets/session_archive/030k.md",
@@ -306,7 +306,7 @@
       "day": 5,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-030j"
+        "goYoke-030j"
       ],
       "blocks": [],
       "priority": "medium",
@@ -321,14 +321,14 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030l",
+      "id": "goYoke-030l",
       "title": "Directory Structure & Test Schemas",
       "description": "Create foundational directory structure and test schemas for simulation harness",
       "file": "tickets/session_archive/030l.md",
       "time_estimate": "1.0h",
       "dependencies": [],
       "blocks": [
-        "GOgent-030m"
+        "goYoke-030m"
       ],
       "priority": "medium",
       "tags": [
@@ -345,19 +345,19 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030m",
+      "id": "goYoke-030m",
       "title": "Core Harness Interfaces",
       "description": "Define core Go interfaces: SimulationConfig, Scenario, ExpectedOutput, SimulationResult, Runner",
       "file": "tickets/session_archive/030m.md",
       "time_estimate": "2.0h",
       "dependencies": [
-        "GOgent-030l"
+        "goYoke-030l"
       ],
       "blocks": [
-        "GOgent-030n",
-        "GOgent-030o",
-        "GOgent-030r",
-        "GOgent-030t"
+        "goYoke-030n",
+        "goYoke-030o",
+        "goYoke-030r",
+        "goYoke-030t"
       ],
       "priority": "medium",
       "tags": [
@@ -373,19 +373,19 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030n",
+      "id": "goYoke-030n",
       "title": "Generator Implementation",
       "description": "Implement Generator interface for deterministic and randomized test inputs",
       "file": "tickets/session_archive/030n.md",
       "time_estimate": "3.0h",
       "dependencies": [
-        "GOgent-030m"
+        "goYoke-030m"
       ],
       "blocks": [
-        "GOgent-030o",
-        "GOgent-030p",
-        "GOgent-030q",
-        "GOgent-030s"
+        "goYoke-030o",
+        "goYoke-030p",
+        "goYoke-030q",
+        "goYoke-030s"
       ],
       "priority": "medium",
       "tags": [
@@ -401,18 +401,18 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030o",
+      "id": "goYoke-030o",
       "title": "Runner Implementation",
       "description": "Implement scenario execution engine that runs CLI commands, captures output, validates results",
       "file": "tickets/session_archive/030o.md",
       "time_estimate": "3.5h",
       "dependencies": [
-        "GOgent-030m",
-        "GOgent-030n"
+        "goYoke-030m",
+        "goYoke-030n"
       ],
       "blocks": [
-        "GOgent-030s",
-        "GOgent-030u"
+        "goYoke-030s",
+        "goYoke-030u"
       ],
       "priority": "medium",
       "tags": [
@@ -428,17 +428,17 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030p",
+      "id": "goYoke-030p",
       "title": "PreToolUse Fixtures (V001-V008)",
-      "description": "Create 8 deterministic test fixtures for gogent-validate scenarios",
+      "description": "Create 8 deterministic test fixtures for goyoke-validate scenarios",
       "file": "tickets/session_archive/030p.md",
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-030l",
-        "GOgent-030n"
+        "goYoke-030l",
+        "goYoke-030n"
       ],
       "blocks": [
-        "GOgent-030u"
+        "goYoke-030u"
       ],
       "priority": "medium",
       "tags": [
@@ -461,17 +461,17 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030q",
+      "id": "goYoke-030q",
       "title": "SessionEnd Fixtures (S001-S008)",
-      "description": "Create 8 deterministic test fixtures for gogent-archive scenarios",
+      "description": "Create 8 deterministic test fixtures for goyoke-archive scenarios",
       "file": "tickets/session_archive/030q.md",
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-030l",
-        "GOgent-030n"
+        "goYoke-030l",
+        "goYoke-030n"
       ],
       "blocks": [
-        "GOgent-030u"
+        "goYoke-030u"
       ],
       "priority": "medium",
       "tags": [
@@ -494,16 +494,16 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030r",
+      "id": "goYoke-030r",
       "title": "Invariant Definitions",
       "description": "Define property-based invariants that must hold for ALL inputs",
       "file": "tickets/session_archive/030r.md",
       "time_estimate": "2.0h",
       "dependencies": [
-        "GOgent-030m"
+        "goYoke-030m"
       ],
       "blocks": [
-        "GOgent-030s"
+        "goYoke-030s"
       ],
       "priority": "medium",
       "tags": [
@@ -520,18 +520,18 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030s",
+      "id": "goYoke-030s",
       "title": "Fuzz Runner Implementation",
       "description": "Implement randomized fuzzing with seed control, crash corpus capture, invariant checking",
       "file": "tickets/session_archive/030s.md",
       "time_estimate": "3.0h",
       "dependencies": [
-        "GOgent-030n",
-        "GOgent-030o",
-        "GOgent-030r"
+        "goYoke-030n",
+        "goYoke-030o",
+        "goYoke-030r"
       ],
       "blocks": [
-        "GOgent-030u"
+        "goYoke-030u"
       ],
       "priority": "medium",
       "tags": [
@@ -548,16 +548,16 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030t",
+      "id": "goYoke-030t",
       "title": "Reporter Implementation",
       "description": "Implement result aggregation and report generation (JSON, Markdown, TAP)",
       "file": "tickets/session_archive/030t.md",
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-030m"
+        "goYoke-030m"
       ],
       "blocks": [
-        "GOgent-030u"
+        "goYoke-030u"
       ],
       "priority": "medium",
       "tags": [
@@ -573,23 +573,23 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030u",
+      "id": "goYoke-030u",
       "title": "CLI Entry Point",
       "description": "Implement main.go CLI with flag parsing and orchestration",
       "file": "tickets/session_archive/030u.md",
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-030m",
-        "GOgent-030n",
-        "GOgent-030o",
-        "GOgent-030p",
-        "GOgent-030q",
-        "GOgent-030r",
-        "GOgent-030s",
-        "GOgent-030t"
+        "goYoke-030m",
+        "goYoke-030n",
+        "goYoke-030o",
+        "goYoke-030p",
+        "goYoke-030q",
+        "goYoke-030r",
+        "goYoke-030s",
+        "goYoke-030t"
       ],
       "blocks": [
-        "GOgent-030v"
+        "goYoke-030v"
       ],
       "priority": "medium",
       "tags": [
@@ -604,13 +604,13 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-030v",
+      "id": "goYoke-030v",
       "title": "CI/CD Workflow Integration",
       "description": "Create GitHub Actions workflow for simulation tests",
       "file": "tickets/session_archive/030v.md",
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-030u"
+        "goYoke-030u"
       ],
       "blocks": [],
       "priority": "medium",
@@ -627,7 +627,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-031",
+      "id": "goYoke-031",
       "title": "Archive Session Files",
       "description": "Copy transcript, move learnings/violations to archive",
       "file": "tickets/session_archive/031.md",
@@ -636,7 +636,7 @@
       "time_estimate": "1.5h",
       "dependencies": [],
       "blocks": [
-        "GOgent-032"
+        "goYoke-032"
       ],
       "priority": "high",
       "tags": [
@@ -648,7 +648,7 @@
         "pkg/session/archive_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-031-archive-files",
+      "git_branch": "goyoke-031-archive-files",
       "pr_labels": [
         "archival",
         "week-2",
@@ -658,7 +658,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-032",
+      "id": "goYoke-032",
       "title": "Session Archive Integration Test",
       "description": "End-to-end test of session archive workflow",
       "file": "tickets/session_archive/032.md",
@@ -666,13 +666,13 @@
       "day": 3,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-028",
-        "GOgent-029",
-        "GOgent-030",
-        "GOgent-031"
+        "goYoke-028",
+        "goYoke-029",
+        "goYoke-030",
+        "goYoke-031"
       ],
       "blocks": [
-        "GOgent-033"
+        "goYoke-033"
       ],
       "priority": "high",
       "tags": [
@@ -683,7 +683,7 @@
         "test/integration/session_archive_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-032-session-archive-integration",
+      "git_branch": "goyoke-032-session-archive-integration",
       "pr_labels": [
         "testing",
         "week-2",
@@ -693,18 +693,18 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-033",
-      "title": "Build gogent-archive CLI",
+      "id": "goYoke-033",
+      "title": "Build goyoke-archive CLI",
       "description": "Build session-archive hook binary",
       "file": "tickets/session_archive/033.md",
       "week": 2,
       "day": 3,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-032"
+        "goYoke-032"
       ],
       "blocks": [
-        "GOgent-096"
+        "goYoke-096"
       ],
       "priority": "critical",
       "tags": [
@@ -712,10 +712,10 @@
         "binary"
       ],
       "files_to_create": [
-        "cmd/gogent-archive/main.go"
+        "cmd/goyoke-archive/main.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-033-gogent-archive-cli",
+      "git_branch": "goyoke-033-goyoke-archive-cli",
       "pr_labels": [
         "cli",
         "week-2",
@@ -725,7 +725,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-034",
+      "id": "goYoke-034",
       "title": "Implement Failure Detection in pkg/routing",
       "description": "Add failure detection to pkg/routing that outputs SharpEdge-compatible JSON. Detects explicit success=false, non-zero exit codes, Python errors, and generic error keywords.",
       "file": "tickets/session_archive/034.md",
@@ -734,7 +734,7 @@
       "time_estimate": "2h",
       "dependencies": [],
       "blocks": [
-        "GOgent-035"
+        "goYoke-035"
       ],
       "priority": "high",
       "tags": [
@@ -747,7 +747,7 @@
         "pkg/routing/failure_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-034-failure-detection",
+      "git_branch": "goyoke-034-failure-detection",
       "pr_labels": [
         "detection",
         "week-2",
@@ -757,16 +757,16 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-035",
-      "title": "Build gogent-sharp-edge CLI with Session Archive Integration",
+      "id": "goYoke-035",
+      "title": "Build goyoke-sharp-edge CLI with Session Archive Integration",
       "description": "Pure Go binary for PostToolUse failure detection. Integrates pkg/routing/failure.go and pkg/memory/failure_tracking.go. Writes schema-compliant SharpEdge records to pending-learnings.jsonl.",
       "file": "tickets/session_archive/035.md",
       "week": 2,
       "day": 5,
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-034",
-        "GOgent-036"
+        "goYoke-034",
+        "goYoke-036"
       ],
       "blocks": [],
       "priority": "high",
@@ -777,15 +777,15 @@
         "integration"
       ],
       "files_to_create": [
-        "cmd/gogent-sharp-edge/main.go",
-        "cmd/gogent-sharp-edge/main_test.go",
+        "cmd/goyoke-sharp-edge/main.go",
+        "cmd/goyoke-sharp-edge/main_test.go",
         "test/simulation/fixtures/deterministic/posttooluse/F001_single_failure.json",
         "test/simulation/fixtures/deterministic/posttooluse/F002_threshold_reached.json",
         "test/simulation/fixtures/deterministic/posttooluse/F003_mixed_errors.json",
         "test/simulation/fixtures/deterministic/posttooluse/F004_schema_compliance.json"
       ],
       "tests_required": true,
-      "git_branch": "gogent-035-sharp-edge-cli",
+      "git_branch": "goyoke-035-sharp-edge-cli",
       "pr_labels": [
         "cli",
         "week-2",
@@ -795,19 +795,19 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-036",
+      "id": "goYoke-036",
       "title": "Implement Failure Tracking in pkg/memory",
-      "description": "Create pkg/memory package with failure tracking using composite key (file+error_type). Sliding time window, configurable threshold, persistent storage in ~/.gogent/. Includes composite key support (former 036b).",
+      "description": "Create pkg/memory package with failure tracking using composite key (file+error_type). Sliding time window, configurable threshold, persistent storage in ~/.goyoke/. Includes composite key support (former 036b).",
       "file": "tickets/session_archive/036.md",
       "week": 2,
       "day": 4,
       "time_estimate": "2.5h",
       "dependencies": [],
       "blocks": [
-        "GOgent-035",
-        "GOgent-036c",
-        "GOgent-037",
-        "GOgent-038"
+        "goYoke-035",
+        "goYoke-036c",
+        "goYoke-037",
+        "goYoke-038"
       ],
       "priority": "high",
       "tags": [
@@ -822,7 +822,7 @@
         "pkg/memory/failure_tracking_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-036-failure-tracking",
+      "git_branch": "goyoke-036-failure-tracking",
       "pr_labels": [
         "tracking",
         "week-2",
@@ -832,9 +832,9 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-036b",
+      "id": "goYoke-036b",
       "title": "[DEPRECATED] Track Failures by File + Error Type",
-      "description": "DEPRECATED: Merged into GOgent-036. Composite key support is now included from the start.",
+      "description": "DEPRECATED: Merged into goYoke-036. Composite key support is now included from the start.",
       "file": "tickets/session_archive/deprecated/036b.md",
       "week": 2,
       "day": 5,
@@ -856,7 +856,7 @@
       "status": "deprecated"
     },
     {
-      "id": "GOgent-036c",
+      "id": "goYoke-036c",
       "title": "Extract Function Name from Stack Traces (Optional)",
       "description": "Parse stack traces to extract function context, further refining failure tracking from file+error to file+error+function. Optional enhancement to 036.",
       "file": "tickets/session_archive/036c.md",
@@ -864,7 +864,7 @@
       "day": 5,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-036"
+        "goYoke-036"
       ],
       "blocks": [],
       "priority": "low",
@@ -880,7 +880,7 @@
         "pkg/memory/function_extraction_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-036c-function-extraction",
+      "git_branch": "goyoke-036c-function-extraction",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -891,9 +891,9 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-037",
-      "title": "[DEPRECATED] Sharp Edge Capture - Absorbed by GOgent-035",
-      "description": "DEPRECATED: Functionality absorbed by GOgent-035-R which implements sharp edge capture as part of the integrated CLI. See session_archive/deprecated/037.md.",
+      "id": "goYoke-037",
+      "title": "[DEPRECATED] Sharp Edge Capture - Absorbed by goYoke-035",
+      "description": "DEPRECATED: Functionality absorbed by goYoke-035-R which implements sharp edge capture as part of the integrated CLI. See session_archive/deprecated/037.md.",
       "file": "tickets/session_archive/deprecated/037.md",
       "week": 2,
       "day": 5,
@@ -913,10 +913,10 @@
       ],
       "acceptance_criteria_count": 0,
       "status": "deprecated",
-      "deprecation_note": "2026-01-23: Redundant with GOgent-035-R. Sharp edge capture is implemented inline in the CLI."
+      "deprecation_note": "2026-01-23: Redundant with goYoke-035-R. Sharp edge capture is implemented inline in the CLI."
     },
     {
-      "id": "GOgent-037b",
+      "id": "goYoke-037b",
       "title": "Extract 5-Line Code Context Window",
       "description": "Extract 5-line code context window around error location to provide visual context in sharp edges",
       "file": "tickets/session_archive/037b.md",
@@ -924,10 +924,10 @@
       "day": 5,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-035"
+        "goYoke-035"
       ],
       "blocks": [
-        "GOgent-037c"
+        "goYoke-037c"
       ],
       "priority": "high",
       "tags": [
@@ -938,7 +938,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-037b-code-context",
+      "git_branch": "goyoke-037b-code-context",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -948,7 +948,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-037c",
+      "id": "goYoke-037c",
       "title": "Log Attempted Changes from Tool Input",
       "description": "Capture what was attempted during tool failures by extracting old_string→new_string from Edit, content preview from Write, and commands from Bash",
       "file": "tickets/session_archive/037c.md",
@@ -956,7 +956,7 @@
       "day": 5,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-037b"
+        "goYoke-037b"
       ],
       "blocks": [],
       "priority": "high",
@@ -968,7 +968,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-037c-log-attempts",
+      "git_branch": "goyoke-037c-log-attempts",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -978,17 +978,17 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-037d",
+      "id": "goYoke-037d",
       "title": "User Intent Capture Hook",
       "description": "PostToolUse hook to capture user intents from AskUserQuestion responses",
       "file": "tickets/session_archive/037d.md",
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-029a",
-        "GOgent-035"
+        "goYoke-029a",
+        "goYoke-035"
       ],
       "blocks": [
-        "GOgent-041"
+        "goYoke-041"
       ],
       "priority": "high",
       "tags": [
@@ -997,15 +997,15 @@
         "behavioral-learning"
       ],
       "files_to_create": [
-        "cmd/gogent-capture-intent/main.go"
+        "cmd/goyoke-capture-intent/main.go"
       ],
       "tests_required": true,
       "status": "completed"
     },
     {
-      "id": "GOgent-038",
-      "title": "[DEPRECATED] Hook Response Generation - Absorbed by GOgent-035",
-      "description": "DEPRECATED: Functionality absorbed by GOgent-035-R which implements hook response generation inline. See session_archive/deprecated/038.md.",
+      "id": "goYoke-038",
+      "title": "[DEPRECATED] Hook Response Generation - Absorbed by goYoke-035",
+      "description": "DEPRECATED: Functionality absorbed by goYoke-035-R which implements hook response generation inline. See session_archive/deprecated/038.md.",
       "file": "tickets/session_archive/deprecated/038.md",
       "week": 2,
       "day": 5,
@@ -1025,10 +1025,10 @@
       ],
       "acceptance_criteria_count": 0,
       "status": "deprecated",
-      "deprecation_note": "2026-01-23: Redundant with GOgent-035-R. Response generation is implemented inline in the CLI."
+      "deprecation_note": "2026-01-23: Redundant with goYoke-035-R. Response generation is implemented inline in the CLI."
     },
     {
-      "id": "GOgent-038b",
+      "id": "goYoke-038b",
       "title": "Load and Index Sharp-Edges YAML",
       "description": "Load sharp-edges.yaml files from all agent directories and build searchable index for pattern matching. YAML format retained for human-editability.",
       "file": "tickets/session_archive/038b.md",
@@ -1036,14 +1036,14 @@
       "day": 6,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-035"
+        "goYoke-035"
       ],
       "blocks": [
-        "GOgent-038c"
+        "goYoke-038c"
       ],
       "revision": "R1",
       "revision_date": "2026-01-23",
-      "revision_note": "Dependency corrected: GOgent-038 deprecated, now depends on GOgent-035-R",
+      "revision_note": "Dependency corrected: goYoke-038 deprecated, now depends on goYoke-035-R",
       "priority": "major",
       "tags": [
         "pattern-matching",
@@ -1055,7 +1055,7 @@
         "pkg/memory/pattern_matching.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-038b-load-sharp-edges-index",
+      "git_branch": "goyoke-038b-load-sharp-edges-index",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -1065,7 +1065,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-038c",
+      "id": "goYoke-038c",
       "title": "Implement Pattern Similarity Matching",
       "description": "Match current sharp edge against indexed templates using multi-signal similarity scoring",
       "file": "tickets/session_archive/038c.md",
@@ -1073,10 +1073,10 @@
       "day": 6,
       "time_estimate": "0.75h",
       "dependencies": [
-        "GOgent-038b"
+        "goYoke-038b"
       ],
       "blocks": [
-        "GOgent-038d"
+        "goYoke-038d"
       ],
       "priority": "major",
       "tags": [
@@ -1087,7 +1087,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-038c-similarity-matching",
+      "git_branch": "goyoke-038c-similarity-matching",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -1097,7 +1097,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-038d",
+      "id": "goYoke-038d",
       "title": "Inject Remediation Suggestions in Blocking Response",
       "description": "Enhance GenerateBlockingResponse() to include matched patterns and remediation suggestions from sharp-edges.yaml",
       "file": "tickets/session_archive/038d.md",
@@ -1105,7 +1105,7 @@
       "day": 6,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-038c"
+        "goYoke-038c"
       ],
       "blocks": [],
       "priority": "major",
@@ -1117,7 +1117,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-038d-remediation-injection",
+      "git_branch": "goyoke-038d-remediation-injection",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -1127,7 +1127,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-039-R",
+      "id": "goYoke-039-R",
       "title": "Sharp Edge Detection Comprehensive Test Suite",
       "description": "MAJOR EXPANSION: Comprehensive test suite with 65+ test cases covering unit tests (routing, memory), integration tests, schema validation, edge cases, fallback behavior, and concurrent access. 90%+ line coverage target.",
       "file": "tickets/session_archive/039.md",
@@ -1135,8 +1135,8 @@
       "day": 1,
       "time_estimate": "6.0h",
       "dependencies": [
-        "GOgent-035",
-        "GOgent-036"
+        "goYoke-035",
+        "goYoke-036"
       ],
       "blocks": [],
       "priority": "critical",
@@ -1155,7 +1155,7 @@
         "test/simulation/fixtures/deterministic/posttooluse/F007_concurrent_files.json"
       ],
       "tests_required": true,
-      "git_branch": "gogent-039r-comprehensive-tests",
+      "git_branch": "goyoke-039r-comprehensive-tests",
       "pr_labels": [
         "testing",
         "week-3",
@@ -1169,9 +1169,9 @@
       "revision_note": "MAJOR expansion from 4 scenarios to 65+ tests. Dependencies corrected (037/038 deprecated). Time estimate 1.5h → 6.0h."
     },
     {
-      "id": "GOgent-040",
-      "title": "[DEPRECATED] Build gogent-sharp-edge CLI - Duplicate of GOgent-035",
-      "description": "DEPRECATED: Duplicate of GOgent-035-R which already implements the complete CLI. See session_archive/deprecated/040.md.",
+      "id": "goYoke-040",
+      "title": "[DEPRECATED] Build goyoke-sharp-edge CLI - Duplicate of goYoke-035",
+      "description": "DEPRECATED: Duplicate of goYoke-035-R which already implements the complete CLI. See session_archive/deprecated/040.md.",
       "file": "tickets/session_archive/deprecated/040.md",
       "week": 2,
       "day": 6,
@@ -1191,20 +1191,20 @@
       ],
       "acceptance_criteria_count": 0,
       "status": "deprecated",
-      "deprecation_note": "2026-01-23: Fully redundant with GOgent-035-R. CLI already implemented there."
+      "deprecation_note": "2026-01-23: Fully redundant with goYoke-035-R. CLI already implemented there."
     },
     {
-      "id": "GOgent-041",
+      "id": "goYoke-041",
       "title": "Intent Classification & Keyword Extraction",
       "description": "Automatic classification and keyword extraction for user intents",
       "file": "tickets/session_archive/041.md",
       "time_estimate": "3h",
       "dependencies": [
-        "GOgent-037d"
+        "goYoke-037d"
       ],
       "blocks": [
-        "GOgent-041b",
-        "GOgent-041c"
+        "goYoke-041b",
+        "goYoke-041c"
       ],
       "priority": "medium",
       "tags": [
@@ -1219,14 +1219,14 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-041b",
+      "id": "goYoke-041b",
       "title": "Weekly Intent Summary & Preference Drift Detection",
       "description": "Integrate intent patterns into weekly aggregation with drift detection",
       "file": "tickets/session_archive/041b.md",
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-041",
-        "GOgent-029f"
+        "goYoke-041",
+        "goYoke-029f"
       ],
       "blocks": [],
       "priority": "medium",
@@ -1242,13 +1242,13 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-041c",
+      "id": "goYoke-041c",
       "title": "Intent Outcome Tracking",
       "description": "Track whether user intents were honored during session",
       "file": "tickets/session_archive/041c.md",
       "time_estimate": "3h",
       "dependencies": [
-        "GOgent-041"
+        "goYoke-041"
       ],
       "blocks": [],
       "priority": "low",
@@ -1264,7 +1264,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-000",
+      "id": "goYoke-000",
       "title": "Baseline Measurement & Corpus Capture",
       "description": "Establish baseline performance metrics and capture 100+ real event corpus",
       "file": "tickets/completed/00-prework.md",
@@ -1273,16 +1273,16 @@
       "time_estimate": "2h",
       "dependencies": [],
       "blocks": [
-        "GOgent-001",
-        "GOgent-002",
-        "GOgent-003",
-        "GOgent-004a",
-        "GOgent-005",
-        "GOgent-006",
-        "GOgent-007",
-        "GOgent-008a",
-        "GOgent-008b",
-        "GOgent-009"
+        "goYoke-001",
+        "goYoke-002",
+        "goYoke-003",
+        "goYoke-004a",
+        "goYoke-005",
+        "goYoke-006",
+        "goYoke-007",
+        "goYoke-008a",
+        "goYoke-008b",
+        "goYoke-009"
       ],
       "priority": "critical",
       "tags": [
@@ -1295,7 +1295,7 @@
         "scripts/capture-corpus.sh"
       ],
       "tests_required": false,
-      "git_branch": "gogent-000-baseline-measurement",
+      "git_branch": "goyoke-000-baseline-measurement",
       "pr_labels": [
         "prework",
         "baseline",
@@ -1305,7 +1305,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-001",
+      "id": "goYoke-001",
       "title": "Setup Go Module & Directory Structure",
       "description": "Initialize Go module with standard project layout",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1313,12 +1313,12 @@
       "day": 1,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-000"
+        "goYoke-000"
       ],
       "blocks": [
-        "GOgent-002",
-        "GOgent-003",
-        "GOgent-004a"
+        "goYoke-002",
+        "goYoke-003",
+        "goYoke-004a"
       ],
       "priority": "critical",
       "tags": [
@@ -1328,9 +1328,9 @@
       "files_to_create": [
         "go.mod",
         "go.sum",
-        "cmd/gogent-validate/main.go",
-        "cmd/gogent-archive/main.go",
-        "cmd/gogent-sharp-edge/main.go",
+        "cmd/goyoke-validate/main.go",
+        "cmd/goyoke-archive/main.go",
+        "cmd/goyoke-sharp-edge/main.go",
         "pkg/routing/.gitkeep",
         "pkg/config/.gitkeep",
         "pkg/session/.gitkeep",
@@ -1339,7 +1339,7 @@
         "test/benchmark/.gitkeep"
       ],
       "tests_required": true,
-      "git_branch": "gogent-001-go-module-setup",
+      "git_branch": "goyoke-001-go-module-setup",
       "pr_labels": [
         "setup",
         "week-1",
@@ -1349,7 +1349,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-002",
+      "id": "goYoke-002",
       "title": "Implement STDIN Timeout Reading",
       "description": "Timeout-protected STDIN reader with 5s default (fixes M-6)",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1357,12 +1357,12 @@
       "day": 1,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-001"
+        "goYoke-001"
       ],
       "blocks": [
-        "GOgent-003",
-        "GOgent-005",
-        "GOgent-008a"
+        "goYoke-003",
+        "goYoke-005",
+        "goYoke-008a"
       ],
       "priority": "high",
       "tags": [
@@ -1375,7 +1375,7 @@
         "pkg/routing/stdin_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-002-stdin-timeout",
+      "git_branch": "goyoke-002-stdin-timeout",
       "pr_labels": [
         "core",
         "week-1",
@@ -1385,7 +1385,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-003",
+      "id": "goYoke-003",
       "title": "Parse ToolEvent JSON Schema",
       "description": "Parse PreToolUse/PostToolUse event JSON from STDIN",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1393,13 +1393,13 @@
       "day": 1,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-001",
-        "GOgent-002"
+        "goYoke-001",
+        "goYoke-002"
       ],
       "blocks": [
-        "GOgent-004a",
-        "GOgent-005",
-        "GOgent-013"
+        "goYoke-004a",
+        "goYoke-005",
+        "goYoke-013"
       ],
       "priority": "critical",
       "tags": [
@@ -1411,7 +1411,7 @@
         "pkg/routing/events_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-003-parse-tool-event",
+      "git_branch": "goyoke-003-parse-tool-event",
       "pr_labels": [
         "parsing",
         "week-1",
@@ -1421,7 +1421,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-004a",
+      "id": "goYoke-004a",
       "title": "Load Routing Schema JSON",
       "description": "Load and parse routing-schema.json with tier definitions",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1429,13 +1429,13 @@
       "day": 2,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-001",
-        "GOgent-003"
+        "goYoke-001",
+        "goYoke-003"
       ],
       "blocks": [
-        "GOgent-004b",
-        "GOgent-007",
-        "GOgent-013"
+        "goYoke-004b",
+        "goYoke-007",
+        "goYoke-013"
       ],
       "priority": "critical",
       "tags": [
@@ -1447,7 +1447,7 @@
         "pkg/routing/schema_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-004a-load-routing-schema",
+      "git_branch": "goyoke-004a-load-routing-schema",
       "pr_labels": [
         "config",
         "week-1",
@@ -1457,18 +1457,18 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-004b",
+      "id": "goYoke-004b",
       "title": "Read Current Tier from Filesystem",
-      "description": "Read ~/.gogent/current-tier with fallback to external",
+      "description": "Read ~/.goyoke/current-tier with fallback to external",
       "file": "tickets/completed/01-week1-foundation-events.md",
       "week": 1,
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-004a"
+        "goYoke-004a"
       ],
       "blocks": [
-        "GOgent-007"
+        "goYoke-007"
       ],
       "priority": "high",
       "tags": [
@@ -1480,7 +1480,7 @@
         "pkg/config/tier_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-004b-read-current-tier",
+      "git_branch": "goyoke-004b-read-current-tier",
       "pr_labels": [
         "config",
         "week-1",
@@ -1490,7 +1490,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-004c",
+      "id": "goYoke-004c",
       "title": "Config Circular Dependency Tests",
       "description": "Test config loading with circular dependencies (deferred from Week 1)",
       "file": "tickets/10-week5-integration-tests.md",
@@ -1498,8 +1498,8 @@
       "day": 1,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-004a",
-        "GOgent-004b"
+        "goYoke-004a",
+        "goYoke-004b"
       ],
       "blocks": [],
       "priority": "medium",
@@ -1512,7 +1512,7 @@
         "pkg/config/loader_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-004c-config-circular-tests",
+      "git_branch": "goyoke-004c-config-circular-tests",
       "pr_labels": [
         "testing",
         "week-3",
@@ -1522,7 +1522,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-005",
+      "id": "goYoke-005",
       "title": "Parse Task Input from tool_input",
       "description": "Extract model, prompt, subagent_type from Task tool_input",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1530,12 +1530,12 @@
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-002",
-        "GOgent-003"
+        "goYoke-002",
+        "goYoke-003"
       ],
       "blocks": [
-        "GOgent-020",
-        "GOgent-023"
+        "goYoke-020",
+        "goYoke-023"
       ],
       "priority": "high",
       "tags": [
@@ -1547,7 +1547,7 @@
         "pkg/routing/task_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-005-parse-task-input",
+      "git_branch": "goyoke-005-parse-task-input",
       "pr_labels": [
         "parsing",
         "week-1",
@@ -1557,19 +1557,19 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-006",
+      "id": "goYoke-006",
       "title": "XDG-Compliant Path Resolution",
-      "description": "XDG_RUNTIME_DIR > XDG_CACHE_HOME > ~/.cache/gogent (fixes M-2)",
+      "description": "XDG_RUNTIME_DIR > XDG_CACHE_HOME > ~/.cache/goyoke (fixes M-2)",
       "file": "tickets/completed/01-week1-foundation-events.md",
       "week": 1,
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-000"
+        "goYoke-000"
       ],
       "blocks": [
-        "GOgent-011",
-        "GOgent-027"
+        "goYoke-011",
+        "goYoke-027"
       ],
       "priority": "medium",
       "tags": [
@@ -1582,7 +1582,7 @@
         "pkg/config/paths_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-006-xdg-paths",
+      "git_branch": "goyoke-006-xdg-paths",
       "pr_labels": [
         "config",
         "week-1",
@@ -1592,7 +1592,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-007",
+      "id": "goYoke-007",
       "title": "Tool Permission Check",
       "description": "Check if tool allowed for current tier",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1600,12 +1600,12 @@
       "day": 2,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-004a",
-        "GOgent-004b"
+        "goYoke-004a",
+        "goYoke-004b"
       ],
       "blocks": [
-        "GOgent-017",
-        "GOgent-024b"
+        "goYoke-017",
+        "goYoke-024b"
       ],
       "priority": "critical",
       "tags": [
@@ -1617,7 +1617,7 @@
         "pkg/routing/permissions_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-007-tool-permissions",
+      "git_branch": "goyoke-007-tool-permissions",
       "pr_labels": [
         "validation",
         "week-1",
@@ -1627,7 +1627,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-008a",
+      "id": "goYoke-008a",
       "title": "Hook Response JSON Output",
       "description": "Generate JSON responses with decision, reason, hookSpecificOutput",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1635,11 +1635,11 @@
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-002"
+        "goYoke-002"
       ],
       "blocks": [
-        "GOgent-024b",
-        "GOgent-038"
+        "goYoke-024b",
+        "goYoke-038"
       ],
       "priority": "critical",
       "tags": [
@@ -1651,7 +1651,7 @@
         "pkg/routing/response_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-008a-hook-response",
+      "git_branch": "goyoke-008a-hook-response",
       "pr_labels": [
         "output",
         "week-1",
@@ -1661,7 +1661,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-008b",
+      "id": "goYoke-008b",
       "title": "Capture Real Event Corpus",
       "description": "Capture 100+ real PreToolUse/PostToolUse events (addresses C-3)",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1669,12 +1669,12 @@
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-000",
-        "GOgent-002"
+        "goYoke-000",
+        "goYoke-002"
       ],
       "blocks": [
-        "GOgent-094",
-        "GOgent-100"
+        "goYoke-094",
+        "goYoke-100"
       ],
       "priority": "high",
       "tags": [
@@ -1686,7 +1686,7 @@
         "test/corpus/events-100.jsonl"
       ],
       "tests_required": false,
-      "git_branch": "gogent-008b-capture-corpus",
+      "git_branch": "goyoke-008b-capture-corpus",
       "pr_labels": [
         "testing",
         "week-1",
@@ -1696,7 +1696,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-009",
+      "id": "goYoke-009",
       "title": "Test Event Parsing with Real Events",
       "description": "Verify event parsing handles production corpus",
       "file": "tickets/completed/01-week1-foundation-events.md",
@@ -1704,8 +1704,8 @@
       "day": 2,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-008",
-        "GOgent-008b"
+        "goYoke-008",
+        "goYoke-008b"
       ],
       "blocks": [],
       "priority": "high",
@@ -1718,7 +1718,7 @@
         "pkg/routing/events_integration_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-009-event-corpus-tests",
+      "git_branch": "goyoke-009-event-corpus-tests",
       "pr_labels": [
         "testing",
         "week-1",
@@ -1728,7 +1728,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-010",
+      "id": "goYoke-010",
       "title": "Implement Override Flags and XDG Paths",
       "description": "Parse --force-tier and --force-delegation flags, implement XDG-compliant path resolution",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1736,10 +1736,10 @@
       "day": 3,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-007"
+        "goYoke-007"
       ],
       "blocks": [
-        "GOgent-012"
+        "goYoke-012"
       ],
       "priority": "medium",
       "tags": [
@@ -1753,7 +1753,7 @@
         "pkg/routing/overrides_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-010-override-flags",
+      "git_branch": "goyoke-010-override-flags",
       "pr_labels": [
         "overrides",
         "week-1",
@@ -1763,7 +1763,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-011",
+      "id": "goYoke-011",
       "title": "Log Routing Violations to JSONL",
       "description": "Append violations to routing-violations.jsonl (fixes M-5)",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1771,10 +1771,10 @@
       "day": 3,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-006"
+        "goYoke-006"
       ],
       "blocks": [
-        "GOgent-030"
+        "goYoke-030"
       ],
       "priority": "medium",
       "tags": [
@@ -1787,7 +1787,7 @@
         "pkg/routing/violations_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-011-log-violations",
+      "git_branch": "goyoke-011-log-violations",
       "pr_labels": [
         "logging",
         "week-1",
@@ -1797,7 +1797,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-012",
+      "id": "goYoke-012",
       "title": "Override Flag Integration Test",
       "description": "Test override flags with violations logging",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1805,8 +1805,8 @@
       "day": 3,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-010",
-        "GOgent-011"
+        "goYoke-010",
+        "goYoke-011"
       ],
       "blocks": [],
       "priority": "medium",
@@ -1818,7 +1818,7 @@
         "test/integration/overrides_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-012-override-integration",
+      "git_branch": "goyoke-012-override-integration",
       "pr_labels": [
         "testing",
         "week-1",
@@ -1828,7 +1828,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-013",
+      "id": "goYoke-013",
       "title": "Detect Agent from Prompt Patterns",
       "description": "Parse 'AGENT: <agent-id>' from prompt field",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1836,12 +1836,12 @@
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-003",
-        "GOgent-004a"
+        "goYoke-003",
+        "goYoke-004a"
       ],
       "blocks": [
-        "GOgent-020",
-        "GOgent-023"
+        "goYoke-020",
+        "goYoke-023"
       ],
       "priority": "high",
       "tags": [
@@ -1853,7 +1853,7 @@
         "pkg/routing/agent_detection_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-013-agent-detection",
+      "git_branch": "goyoke-013-agent-detection",
       "pr_labels": [
         "parsing",
         "week-1",
@@ -1863,7 +1863,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-014",
+      "id": "goYoke-014",
       "title": "Map Agent to Subagent Type",
       "description": "Load agent_subagent_mapping from routing-schema.json",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1871,10 +1871,10 @@
       "day": 4,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-013"
+        "goYoke-013"
       ],
       "blocks": [
-        "GOgent-023"
+        "goYoke-023"
       ],
       "priority": "high",
       "tags": [
@@ -1886,7 +1886,7 @@
         "pkg/routing/agent_mapping_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-014-agent-mapping",
+      "git_branch": "goyoke-014-agent-mapping",
       "pr_labels": [
         "mapping",
         "week-1",
@@ -1896,7 +1896,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-015",
+      "id": "goYoke-015",
       "title": "Tier Permission Check (allowed_tools)",
       "description": "Verify tool against tier.allowed_tools list",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1904,10 +1904,10 @@
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-007"
+        "goYoke-007"
       ],
       "blocks": [
-        "GOgent-017"
+        "goYoke-017"
       ],
       "priority": "high",
       "tags": [
@@ -1919,7 +1919,7 @@
         "pkg/routing/tier_permissions_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-015-tier-permissions",
+      "git_branch": "goyoke-015-tier-permissions",
       "pr_labels": [
         "permissions",
         "week-1",
@@ -1929,7 +1929,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-016",
+      "id": "goYoke-016",
       "title": "Agent Permission Check",
       "description": "Load agent tool restrictions from agents-index.json",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1937,10 +1937,10 @@
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-013"
+        "goYoke-013"
       ],
       "blocks": [
-        "GOgent-017"
+        "goYoke-017"
       ],
       "priority": "medium",
       "tags": [
@@ -1952,7 +1952,7 @@
         "pkg/routing/agent_permissions_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-016-agent-permissions",
+      "git_branch": "goyoke-016-agent-permissions",
       "pr_labels": [
         "permissions",
         "week-1",
@@ -1962,7 +1962,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-017",
+      "id": "goYoke-017",
       "title": "Unified Permission Validator",
       "description": "Combine tier + agent permission checks (fixes M-1)",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -1970,12 +1970,12 @@
       "day": 5,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-015",
-        "GOgent-016",
-        "GOgent-007"
+        "goYoke-015",
+        "goYoke-016",
+        "goYoke-007"
       ],
       "blocks": [
-        "GOgent-024b"
+        "goYoke-024b"
       ],
       "priority": "critical",
       "tags": [
@@ -1988,7 +1988,7 @@
         "pkg/routing/unified_validator_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-017-unified-validator",
+      "git_branch": "goyoke-017-unified-validator",
       "pr_labels": [
         "validation",
         "week-1",
@@ -1998,7 +1998,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-018",
+      "id": "goYoke-018",
       "title": "Permission Validation Integration Test",
       "description": "End-to-end permission validation test",
       "file": "tickets/02-week1-overrides-permissions.md",
@@ -2006,7 +2006,7 @@
       "day": 5,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-017"
+        "goYoke-017"
       ],
       "blocks": [],
       "priority": "high",
@@ -2018,7 +2018,7 @@
         "test/integration/permission_validation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-018-permission-integration",
+      "git_branch": "goyoke-018-permission-integration",
       "pr_labels": [
         "testing",
         "week-1",
@@ -2028,18 +2028,18 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-019",
-      "title": "Read Delegation Ceiling from .gogent/max_delegation",
+      "id": "goYoke-019",
+      "title": "Read Delegation Ceiling from .goyoke/max_delegation",
       "description": "Read max delegation tier with external fallback",
       "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 6,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-006"
+        "goYoke-006"
       ],
       "blocks": [
-        "GOgent-022"
+        "goYoke-022"
       ],
       "priority": "high",
       "tags": [
@@ -2051,7 +2051,7 @@
         "pkg/config/delegation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-019-delegation-ceiling",
+      "git_branch": "goyoke-019-delegation-ceiling",
       "pr_labels": [
         "config",
         "week-1",
@@ -2061,7 +2061,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-020",
+      "id": "goYoke-020",
       "title": "Validate Model Against Agents Index",
       "description": "Verify requested model matches agent.yaml tier",
       "file": "tickets/completed/03-week1-validation-cli.md",
@@ -2069,11 +2069,11 @@
       "day": 6,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-005",
-        "GOgent-013"
+        "goYoke-005",
+        "goYoke-013"
       ],
       "blocks": [
-        "GOgent-024"
+        "goYoke-024"
       ],
       "priority": "high",
       "tags": [
@@ -2085,7 +2085,7 @@
         "pkg/routing/model_validation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-020-model-validation",
+      "git_branch": "goyoke-020-model-validation",
       "pr_labels": [
         "validation",
         "week-1",
@@ -2095,7 +2095,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-021",
+      "id": "goYoke-021",
       "title": "Validate Tool Permissions for Subagent Type",
       "description": "Check if tool allowed for subagent_type",
       "file": "tickets/completed/03-week1-validation-cli.md",
@@ -2103,10 +2103,10 @@
       "day": 6,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-015"
+        "goYoke-015"
       ],
       "blocks": [
-        "GOgent-024"
+        "goYoke-024"
       ],
       "priority": "medium",
       "tags": [
@@ -2118,7 +2118,7 @@
         "pkg/routing/subagent_permissions_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-021-subagent-permissions",
+      "git_branch": "goyoke-021-subagent-permissions",
       "pr_labels": [
         "validation",
         "week-1",
@@ -2128,7 +2128,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-022",
+      "id": "goYoke-022",
       "title": "Delegation Ceiling Enforcement",
       "description": "Block Task if requested tier exceeds max_delegation",
       "file": "tickets/completed/03-week1-validation-cli.md",
@@ -2136,10 +2136,10 @@
       "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-019"
+        "goYoke-019"
       ],
       "blocks": [
-        "GOgent-024"
+        "goYoke-024"
       ],
       "priority": "critical",
       "tags": [
@@ -2151,7 +2151,7 @@
         "pkg/routing/delegation_enforcement_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-022-delegation-enforcement",
+      "git_branch": "goyoke-022-delegation-enforcement",
       "pr_labels": [
         "enforcement",
         "week-1",
@@ -2161,7 +2161,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-023",
+      "id": "goYoke-023",
       "title": "Subagent_type Validation",
       "description": "Verify subagent_type matches agent_subagent_mapping (fixes M-3)",
       "file": "tickets/completed/03-week1-validation-cli.md",
@@ -2169,12 +2169,12 @@
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-005",
-        "GOgent-013",
-        "GOgent-014"
+        "goYoke-005",
+        "goYoke-013",
+        "goYoke-014"
       ],
       "blocks": [
-        "GOgent-024"
+        "goYoke-024"
       ],
       "priority": "critical",
       "tags": [
@@ -2187,7 +2187,7 @@
         "pkg/routing/subagent_validation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-023-subagent-validation",
+      "git_branch": "goyoke-023-subagent-validation",
       "pr_labels": [
         "validation",
         "week-1",
@@ -2197,7 +2197,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-024",
+      "id": "goYoke-024",
       "title": "Task Validation Tests",
       "description": "Comprehensive Task validation test suite",
       "file": "tickets/completed/03-week1-validation-cli.md",
@@ -2205,13 +2205,13 @@
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-020",
-        "GOgent-021",
-        "GOgent-022",
-        "GOgent-023"
+        "goYoke-020",
+        "goYoke-021",
+        "goYoke-022",
+        "goYoke-023"
       ],
       "blocks": [
-        "GOgent-024b"
+        "goYoke-024b"
       ],
       "priority": "high",
       "tags": [
@@ -2222,7 +2222,7 @@
         "test/integration/task_validation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-024-task-validation-tests",
+      "git_branch": "goyoke-024-task-validation-tests",
       "pr_labels": [
         "testing",
         "week-1",
@@ -2232,7 +2232,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-024b",
+      "id": "goYoke-024b",
       "title": "Wire Validation Orchestrator",
       "description": "Combine all validators into single orchestrator with priority ordering",
       "file": "tickets/completed/03-week1-validation-cli.md",
@@ -2240,13 +2240,13 @@
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-007",
-        "GOgent-008a",
-        "GOgent-017",
-        "GOgent-024"
+        "goYoke-007",
+        "goYoke-008a",
+        "goYoke-017",
+        "goYoke-024"
       ],
       "blocks": [
-        "GOgent-025"
+        "goYoke-025"
       ],
       "priority": "critical",
       "tags": [
@@ -2258,7 +2258,7 @@
         "pkg/routing/orchestrator_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-024b-validation-orchestrator",
+      "git_branch": "goyoke-024b-validation-orchestrator",
       "pr_labels": [
         "orchestration",
         "week-1",
@@ -2268,18 +2268,18 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-025",
-      "title": "Build gogent-validate CLI",
+      "id": "goYoke-025",
+      "title": "Build goyoke-validate CLI",
       "description": "Build complete validation hook binary",
       "file": "tickets/completed/03-week1-validation-cli.md",
       "week": 1,
       "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-024b"
+        "goYoke-024b"
       ],
       "blocks": [
-        "GOgent-095"
+        "goYoke-095"
       ],
       "priority": "critical",
       "tags": [
@@ -2287,10 +2287,10 @@
         "binary"
       ],
       "files_to_create": [
-        "cmd/gogent-validate/main.go"
+        "cmd/goyoke-validate/main.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-025-gogent-validate-cli",
+      "git_branch": "goyoke-025-goyoke-validate-cli",
       "pr_labels": [
         "cli",
         "week-1",
@@ -2300,7 +2300,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-026",
+      "id": "goYoke-026",
       "title": "Parse SessionEnd Event",
       "description": "Parse SessionEnd event with session_id and transcript_path",
       "file": "tickets/session_archive/026.md",
@@ -2309,8 +2309,8 @@
       "time_estimate": "1h",
       "dependencies": [],
       "blocks": [
-        "GOgent-027",
-        "GOgent-028"
+        "goYoke-027",
+        "goYoke-028"
       ],
       "priority": "high",
       "tags": [
@@ -2322,7 +2322,7 @@
         "pkg/session/events_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-026-parse-session-event",
+      "git_branch": "goyoke-026-parse-session-event",
       "pr_labels": [
         "parsing",
         "week-2",
@@ -2332,7 +2332,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-027",
+      "id": "goYoke-027",
       "title": "Collect Session Metrics",
       "description": "Count tool calls, errors, violations from log files",
       "file": "tickets/session_archive/027.md",
@@ -2340,12 +2340,12 @@
       "day": 1,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-006",
-        "GOgent-026"
+        "goYoke-006",
+        "goYoke-026"
       ],
       "blocks": [
-        "GOgent-027b",
-        "GOgent-028"
+        "goYoke-027b",
+        "goYoke-028"
       ],
       "priority": "high",
       "tags": [
@@ -2357,7 +2357,7 @@
         "pkg/session/metrics_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-027-session-metrics",
+      "git_branch": "goyoke-027-session-metrics",
       "pr_labels": [
         "metrics",
         "week-2",
@@ -2367,7 +2367,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-027b",
+      "id": "goYoke-027b",
       "title": "Implement ParseTranscript() for Semantic Analysis",
       "description": "Parse JSONL session transcript to extract tool events",
       "file": "tickets/session_archive/027b.md",
@@ -2375,10 +2375,10 @@
       "day": 2,
       "time_estimate": "2.0h",
       "dependencies": [
-        "GOgent-027"
+        "goYoke-027"
       ],
       "blocks": [
-        "GOgent-027c"
+        "goYoke-027c"
       ],
       "priority": "high",
       "tags": [
@@ -2391,7 +2391,7 @@
         "pkg/routing/transcript.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-027b-parse-transcript",
+      "git_branch": "goyoke-027b-parse-transcript",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2401,7 +2401,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-027c",
+      "id": "goYoke-027c",
       "title": "Implement AnalyzeToolDistribution()",
       "description": "Analyze tool usage patterns from parsed transcript to understand session characteristics",
       "file": "tickets/session_archive/027c.md",
@@ -2409,10 +2409,10 @@
       "day": 2,
       "time_estimate": "0.75h",
       "dependencies": [
-        "GOgent-027b"
+        "goYoke-027b"
       ],
       "blocks": [
-        "GOgent-027d"
+        "goYoke-027d"
       ],
       "priority": "high",
       "tags": [
@@ -2423,7 +2423,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-027c-tool-distribution",
+      "git_branch": "goyoke-027c-tool-distribution",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2433,7 +2433,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-027d",
+      "id": "goYoke-027d",
       "title": "Implement DetectPhases() for Session Characterization",
       "description": "Detect session phases (discovery, implementation, debugging) using sliding window analysis of tool distribution",
       "file": "tickets/session_archive/027d.md",
@@ -2441,10 +2441,10 @@
       "day": 2,
       "time_estimate": "0.75h",
       "dependencies": [
-        "GOgent-027c"
+        "goYoke-027c"
       ],
       "blocks": [
-        "GOgent-028b"
+        "goYoke-028b"
       ],
       "priority": "high",
       "tags": [
@@ -2455,7 +2455,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-027d-detect-phases",
+      "git_branch": "goyoke-027d-detect-phases",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2465,7 +2465,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028",
+      "id": "goYoke-028",
       "title": "Generate Handoff Document",
       "description": "Create last-handoff.md with metrics and context",
       "file": "tickets/session_archive/028.md",
@@ -2473,12 +2473,12 @@
       "day": 2,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-026",
-        "GOgent-027"
+        "goYoke-026",
+        "goYoke-027"
       ],
       "blocks": [
-        "GOgent-028b",
-        "GOgent-032"
+        "goYoke-028b",
+        "goYoke-032"
       ],
       "priority": "critical",
       "tags": [
@@ -2490,7 +2490,7 @@
         "pkg/session/handoff_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028-handoff-generation",
+      "git_branch": "goyoke-028-handoff-generation",
       "pr_labels": [
         "handoff",
         "week-2",
@@ -2500,21 +2500,21 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028a",
-      "title": "Build gogent-archive CLI",
+      "id": "goYoke-028a",
+      "title": "Build goyoke-archive CLI",
       "description": "Create CLI entry point for SessionEnd hook that orchestrates handoff generation",
       "file": "tickets/session_archive/028a.md",
       "week": 2,
       "day": 2,
       "time_estimate": "2.0h",
       "dependencies": [
-        "GOgent-027",
-        "GOgent-028"
+        "goYoke-027",
+        "goYoke-028"
       ],
       "blocks": [
-        "GOgent-028b",
-        "GOgent-028c",
-        "GOgent-028d"
+        "goYoke-028b",
+        "goYoke-028c",
+        "goYoke-028d"
       ],
       "priority": "critical",
       "tags": [
@@ -2523,11 +2523,11 @@
         "integration"
       ],
       "files_to_create": [
-        "cmd/gogent-archive/main.go",
-        "cmd/gogent-archive/main_test.go"
+        "cmd/goyoke-archive/main.go",
+        "cmd/goyoke-archive/main_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028a-archive-cli",
+      "git_branch": "goyoke-028a-archive-cli",
       "pr_labels": [
         "cli",
         "week-2",
@@ -2537,7 +2537,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028b-parity",
+      "id": "goYoke-028b-parity",
       "title": "Validate Metrics Parity (Bash vs Go)",
       "description": "Verify Go metrics collection matches bash hook implementation exactly",
       "file": "tickets/session_archive/028b.md",
@@ -2545,10 +2545,10 @@
       "day": 2,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028a"
+        "goYoke-028a"
       ],
       "blocks": [
-        "GOgent-028d"
+        "goYoke-028d"
       ],
       "priority": "critical",
       "tags": [
@@ -2560,7 +2560,7 @@
         "test/integration/metrics_parity_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028b-metrics-parity",
+      "git_branch": "goyoke-028b-metrics-parity",
       "pr_labels": [
         "testing",
         "week-2",
@@ -2570,7 +2570,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028c-archive",
+      "id": "goYoke-028c-archive",
       "title": "Implement Artifact Archival in Go",
       "description": "Move pending learnings and violations to session-archive/ after handoff generation",
       "file": "tickets/session_archive/028c.md",
@@ -2578,10 +2578,10 @@
       "day": 3,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-028a"
+        "goYoke-028a"
       ],
       "blocks": [
-        "GOgent-028d"
+        "goYoke-028d"
       ],
       "priority": "critical",
       "tags": [
@@ -2594,7 +2594,7 @@
         "pkg/session/archive_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028c-artifact-archival",
+      "git_branch": "goyoke-028c-artifact-archival",
       "pr_labels": [
         "archival",
         "week-2",
@@ -2604,20 +2604,20 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028d-deploy",
+      "id": "goYoke-028d-deploy",
       "title": "Hook Registration & Deployment",
-      "description": "Build script, hook configuration, and integration testing for gogent-archive deployment",
+      "description": "Build script, hook configuration, and integration testing for goyoke-archive deployment",
       "file": "tickets/session_archive/028d.md",
       "week": 2,
       "day": 3,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-028a",
-        "GOgent-028b-parity",
-        "GOgent-028c-archive"
+        "goYoke-028a",
+        "goYoke-028b-parity",
+        "goYoke-028c-archive"
       ],
       "blocks": [
-        "GOgent-028e"
+        "goYoke-028e"
       ],
       "priority": "critical",
       "tags": [
@@ -2630,7 +2630,7 @@
         "test/integration/session_end_hook_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028d-hook-deployment",
+      "git_branch": "goyoke-028d-hook-deployment",
       "pr_labels": [
         "deployment",
         "week-2",
@@ -2640,7 +2640,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028e",
+      "id": "goYoke-028e",
       "title": "Installation & PATH Configuration",
       "description": "Makefile install target and PATH configuration documentation",
       "file": "tickets/session_archive/028e.md",
@@ -2648,7 +2648,7 @@
       "day": 3,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-028d-deploy"
+        "goYoke-028d-deploy"
       ],
       "blocks": [],
       "priority": "critical",
@@ -2659,7 +2659,7 @@
       ],
       "files_to_create": [],
       "tests_required": false,
-      "git_branch": "gogent-028e-installation",
+      "git_branch": "goyoke-028e-installation",
       "pr_labels": [
         "installation",
         "week-2",
@@ -2669,7 +2669,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028f",
+      "id": "goYoke-028f",
       "title": "Context Loading Compatibility Test",
       "description": "Verify load-routing-context.sh hook can parse Go-generated markdown",
       "file": "tickets/completed/028f.md",
@@ -2677,7 +2677,7 @@
       "day": 3,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028a"
+        "goYoke-028a"
       ],
       "blocks": [],
       "priority": "high",
@@ -2691,7 +2691,7 @@
         "docs/compatibility/sessionstart-hook.md"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028f-context-compatibility",
+      "git_branch": "goyoke-028f-context-compatibility",
       "pr_labels": [
         "compatibility",
         "week-2",
@@ -2701,7 +2701,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028g",
+      "id": "goYoke-028g",
       "title": "Sharp Edge Schema Alignment",
       "description": "Document SharpEdge JSON schema and create validation function",
       "file": "tickets/session_archive/028g.md",
@@ -2709,7 +2709,7 @@
       "day": 3,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-028"
+        "goYoke-028"
       ],
       "blocks": [],
       "priority": "major",
@@ -2723,7 +2723,7 @@
         "pkg/session/handoff_artifacts_validation_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028g-sharp-edge-schema",
+      "git_branch": "goyoke-028g-sharp-edge-schema",
       "pr_labels": [
         "schema",
         "week-2",
@@ -2733,7 +2733,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028h",
+      "id": "goYoke-028h",
       "title": "Implement Git Info Collection",
       "description": "Replace collectGitInfo() stub with actual git command execution",
       "file": "tickets/session_archive/028h.md",
@@ -2741,7 +2741,7 @@
       "day": 4,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028a"
+        "goYoke-028a"
       ],
       "blocks": [],
       "priority": "minor",
@@ -2752,7 +2752,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-028h-git-info",
+      "git_branch": "goyoke-028h-git-info",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2762,7 +2762,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028i",
+      "id": "goYoke-028i",
       "title": "Error Recovery & Fallback",
       "description": "Wrapper script that falls back to bash hook if Go CLI fails",
       "file": "tickets/session_archive/028i.md",
@@ -2770,7 +2770,7 @@
       "day": 4,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028d-deploy"
+        "goYoke-028d-deploy"
       ],
       "blocks": [],
       "priority": "minor",
@@ -2784,7 +2784,7 @@
         "test/integration/fallback_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028i-error-fallback",
+      "git_branch": "goyoke-028i-error-fallback",
       "pr_labels": [
         "fallback",
         "week-2",
@@ -2794,15 +2794,15 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028j",
+      "id": "goYoke-028j",
       "title": "JSONL History Querying CLI",
-      "description": "Add subcommands to gogent-archive for querying handoff history",
+      "description": "Add subcommands to goyoke-archive for querying handoff history",
       "file": "tickets/session_archive/028j.md",
       "week": 2,
       "day": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-028"
+        "goYoke-028"
       ],
       "blocks": [],
       "priority": "minor",
@@ -2812,10 +2812,10 @@
         "enhancement"
       ],
       "files_to_create": [
-        "cmd/gogent-archive/subcommands_test.go"
+        "cmd/goyoke-archive/subcommands_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028j-history-querying",
+      "git_branch": "goyoke-028j-history-querying",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2825,7 +2825,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028k",
+      "id": "goYoke-028k",
       "title": "Handoff Generation Metrics",
       "description": "Log handoff generation performance metrics for observability",
       "file": "tickets/session_archive/028k.md",
@@ -2833,7 +2833,7 @@
       "day": 4,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-028a"
+        "goYoke-028a"
       ],
       "blocks": [],
       "priority": "minor",
@@ -2844,7 +2844,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-028k-handoff-metrics",
+      "git_branch": "goyoke-028k-handoff-metrics",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2854,7 +2854,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028l",
+      "id": "goYoke-028l",
       "title": "Handoff Schema Versioning",
       "description": "Implement backward-compatible schema migration for handoff JSONL",
       "file": "tickets/session_archive/028l.md",
@@ -2862,7 +2862,7 @@
       "day": 4,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028"
+        "goYoke-028"
       ],
       "blocks": [],
       "priority": "minor",
@@ -2873,7 +2873,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-028l-schema-versioning",
+      "git_branch": "goyoke-028l-schema-versioning",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -2883,7 +2883,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028m",
+      "id": "goYoke-028m",
       "title": "Integration Tests for Session Handoff",
       "description": "End-to-end integration test suite for full handoff workflow",
       "file": "tickets/session_archive/028m.md",
@@ -2891,9 +2891,9 @@
       "day": 4,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028a",
-        "GOgent-028b-parity",
-        "GOgent-028c-archive"
+        "goYoke-028a",
+        "goYoke-028b-parity",
+        "goYoke-028c-archive"
       ],
       "blocks": [],
       "priority": "high",
@@ -2906,7 +2906,7 @@
         "test/integration/session_handoff_integration_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-028m-integration-tests",
+      "git_branch": "goyoke-028m-integration-tests",
       "pr_labels": [
         "testing",
         "week-2",
@@ -2916,15 +2916,15 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028n",
+      "id": "goYoke-028n",
       "title": "Deployment Runbook",
-      "description": "Step-by-step deployment and rollback procedures for gogent-archive cutover",
+      "description": "Step-by-step deployment and rollback procedures for goyoke-archive cutover",
       "file": "tickets/session_archive/028n.md",
       "week": 2,
       "day": 5,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-028d-deploy"
+        "goYoke-028d-deploy"
       ],
       "blocks": [],
       "priority": "major",
@@ -2934,10 +2934,10 @@
         "runbook"
       ],
       "files_to_create": [
-        "docs/deployment/gogent-archive-cutover.md"
+        "docs/deployment/goyoke-archive-cutover.md"
       ],
       "tests_required": false,
-      "git_branch": "gogent-028n-deployment-runbook",
+      "git_branch": "goyoke-028n-deployment-runbook",
       "pr_labels": [
         "documentation",
         "week-2",
@@ -2947,7 +2947,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028o",
+      "id": "goYoke-028o",
       "title": "ADR: JSONL Handoff Format",
       "description": "Architecture Decision Record documenting rationale for dual JSONL + Markdown format",
       "file": "tickets/session_archive/028o.md",
@@ -2955,7 +2955,7 @@
       "day": 5,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-028"
+        "goYoke-028"
       ],
       "blocks": [],
       "priority": "major",
@@ -2968,7 +2968,7 @@
         "docs/decisions/ADR-028-jsonl-handoff-format.md"
       ],
       "tests_required": false,
-      "git_branch": "gogent-028o-adr-jsonl-format",
+      "git_branch": "goyoke-028o-adr-jsonl-format",
       "pr_labels": [
         "documentation",
         "week-2",
@@ -2978,7 +2978,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028b",
+      "id": "goYoke-028b",
       "title": "Implement GenerateAdaptiveHandoff()",
       "description": "Generate adaptive handoff document that changes format based on session characteristics",
       "file": "tickets/session_archive/028b.md",
@@ -2986,11 +2986,11 @@
       "day": 2,
       "time_estimate": "1.0h",
       "dependencies": [
-        "GOgent-027d",
-        "GOgent-028"
+        "goYoke-027d",
+        "goYoke-028"
       ],
       "blocks": [
-        "GOgent-028c"
+        "goYoke-028c"
       ],
       "priority": "high",
       "tags": [
@@ -3001,7 +3001,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-028b-adaptive-handoff",
+      "git_branch": "goyoke-028b-adaptive-handoff",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -3011,7 +3011,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028c",
+      "id": "goYoke-028c",
       "title": "Implement DetectWorkInProgress()",
       "description": "Detect if session ended mid-task by identifying the last Edit/Write operation and extracting context",
       "file": "tickets/session_archive/028c.md",
@@ -3019,10 +3019,10 @@
       "day": 2,
       "time_estimate": "0.75h",
       "dependencies": [
-        "GOgent-028b"
+        "goYoke-028b"
       ],
       "blocks": [
-        "GOgent-028d"
+        "goYoke-028d"
       ],
       "priority": "high",
       "tags": [
@@ -3033,7 +3033,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-028c-detect-wip",
+      "git_branch": "goyoke-028c-detect-wip",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -3043,7 +3043,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-028d",
+      "id": "goYoke-028d",
       "title": "Implement GenerateResumeGuidance()",
       "description": "Generate actionable resume guidance based on WIP context, pending learnings, and violations",
       "file": "tickets/session_archive/028d.md",
@@ -3051,7 +3051,7 @@
       "day": 2,
       "time_estimate": "0.75h",
       "dependencies": [
-        "GOgent-028c"
+        "goYoke-028c"
       ],
       "blocks": [],
       "priority": "high",
@@ -3063,7 +3063,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-028d-resume-guidance",
+      "git_branch": "goyoke-028d-resume-guidance",
       "pr_labels": [
         "enhancement",
         "week-2",
@@ -3073,7 +3073,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029",
+      "id": "goYoke-029",
       "title": "Unified Sharp Edge Schema & Query API",
       "description": "Extend SharpEdge schema with severity, resolution tracking, and create Query API for agentic retrieval",
       "file": "tickets/session_archive/029.md",
@@ -3082,12 +3082,12 @@
       "time_estimate": "2h",
       "dependencies": [],
       "blocks": [
-        "GOgent-029a",
-        "GOgent-029b",
-        "GOgent-029c",
-        "GOgent-029e",
-        "GOgent-029f",
-        "GOgent-032"
+        "goYoke-029a",
+        "goYoke-029b",
+        "goYoke-029c",
+        "goYoke-029e",
+        "goYoke-029f",
+        "goYoke-032"
       ],
       "priority": "critical",
       "tags": [
@@ -3101,7 +3101,7 @@
         "pkg/session/query_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-029-unified-sharp-edge",
+      "git_branch": "goyoke-029-unified-sharp-edge",
       "pr_labels": [
         "schema",
         "week-2",
@@ -3111,7 +3111,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029a",
+      "id": "goYoke-029a",
       "title": "User Intent Capture Schema & Storage",
       "description": "Create UserIntent artifact type for capturing user decisions, preferences, and intent during sessions",
       "file": "tickets/session_archive/029a.md",
@@ -3120,9 +3120,9 @@
       "time_estimate": "1.5h",
       "dependencies": [],
       "blocks": [
-        "GOgent-029b",
-        "GOgent-029e",
-        "GOgent-029f"
+        "goYoke-029b",
+        "goYoke-029e",
+        "goYoke-029f"
       ],
       "priority": "critical",
       "tags": [
@@ -3136,7 +3136,7 @@
         "pkg/session/user_intent_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-029a-user-intent",
+      "git_branch": "goyoke-029a-user-intent",
       "pr_labels": [
         "schema",
         "week-2",
@@ -3146,19 +3146,19 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029b",
+      "id": "goYoke-029b",
       "title": "CLI Subcommands for Sharp Edges & User Intents",
-      "description": "Add sharp-edges and user-intents subcommands to gogent-archive CLI for querying learning artifacts",
+      "description": "Add sharp-edges and user-intents subcommands to goyoke-archive CLI for querying learning artifacts",
       "file": "tickets/session_archive/029b.md",
       "week": 2,
       "day": 3,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-029",
-        "GOgent-029a"
+        "goYoke-029",
+        "goYoke-029a"
       ],
       "blocks": [
-        "GOgent-029d"
+        "goYoke-029d"
       ],
       "priority": "high",
       "tags": [
@@ -3169,7 +3169,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-029b-cli-sharp-edges",
+      "git_branch": "goyoke-029b-cli-sharp-edges",
       "pr_labels": [
         "cli",
         "week-2",
@@ -3179,7 +3179,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029c",
+      "id": "goYoke-029c",
       "title": "Expand Handoff Schema for Decisions/Preferences/Performance",
       "description": "Extend HandoffArtifacts struct to capture decisions, preferences, and performance metrics",
       "file": "tickets/session_archive/029c.md",
@@ -3187,12 +3187,12 @@
       "day": 3,
       "time_estimate": "3h",
       "dependencies": [
-        "GOgent-029"
+        "goYoke-029"
       ],
       "blocks": [
-        "GOgent-029d",
-        "GOgent-029e",
-        "GOgent-029f"
+        "goYoke-029d",
+        "goYoke-029e",
+        "goYoke-029f"
       ],
       "priority": "critical",
       "tags": [
@@ -3207,7 +3207,7 @@
         "pkg/session/performance.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-029c-expand-schema",
+      "git_branch": "goyoke-029c-expand-schema",
       "pr_labels": [
         "schema",
         "week-2",
@@ -3217,16 +3217,16 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029d",
+      "id": "goYoke-029d",
       "title": "CLI Query Subcommands for Extended Artifacts",
-      "description": "Extend gogent-archive CLI with decisions, preferences, performance subcommands for querying learning artifacts",
+      "description": "Extend goyoke-archive CLI with decisions, preferences, performance subcommands for querying learning artifacts",
       "file": "tickets/session_archive/029d.md",
       "week": 2,
       "day": 4,
       "time_estimate": "2.5h",
       "dependencies": [
-        "GOgent-029b",
-        "GOgent-029c"
+        "goYoke-029b",
+        "goYoke-029c"
       ],
       "blocks": [],
       "priority": "high",
@@ -3238,7 +3238,7 @@
       ],
       "files_to_create": [],
       "tests_required": true,
-      "git_branch": "gogent-029d-cli-queries",
+      "git_branch": "goyoke-029d-cli-queries",
       "pr_labels": [
         "cli",
         "week-2",
@@ -3248,7 +3248,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029e",
+      "id": "goYoke-029e",
       "title": "Go Query API for Agentic Retrieval",
       "description": "Create programmatic Go API for Claude agents to query decisions, preferences, and performance metrics",
       "file": "tickets/session_archive/completed/029e.md",
@@ -3256,9 +3256,9 @@
       "day": 4,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-029",
-        "GOgent-029a",
-        "GOgent-029c"
+        "goYoke-029",
+        "goYoke-029a",
+        "goYoke-029c"
       ],
       "blocks": [],
       "priority": "high",
@@ -3273,7 +3273,7 @@
         "pkg/session/query_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-029e-query-api",
+      "git_branch": "goyoke-029e-query-api",
       "pr_labels": [
         "api",
         "week-2",
@@ -3283,17 +3283,17 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-029f",
+      "id": "goYoke-029f",
       "title": "Weekly Learning Aggregation CLI",
-      "description": "Create gogent-aggregate CLI for weekly rollup of learning artifacts when files exceed size threshold",
+      "description": "Create goyoke-aggregate CLI for weekly rollup of learning artifacts when files exceed size threshold",
       "file": "tickets/session_archive/029f.md",
       "week": 2,
       "day": 5,
       "time_estimate": "3h",
       "dependencies": [
-        "GOgent-029",
-        "GOgent-029a",
-        "GOgent-029c"
+        "goYoke-029",
+        "goYoke-029a",
+        "goYoke-029c"
       ],
       "blocks": [],
       "priority": "medium",
@@ -3304,11 +3304,11 @@
         "phase-2"
       ],
       "files_to_create": [
-        "cmd/gogent-aggregate/main.go",
-        "cmd/gogent-aggregate/main_test.go"
+        "cmd/goyoke-aggregate/main.go",
+        "cmd/goyoke-aggregate/main_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-029f-aggregation",
+      "git_branch": "goyoke-029f-aggregation",
       "pr_labels": [
         "aggregation",
         "week-2",
@@ -3318,7 +3318,7 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-042",
+      "id": "goYoke-042",
       "title": "Behavioral Simulation CI/CD Pipeline",
       "description": "Extend the existing simulation testing infrastructure with behavioral testing that validates multi-turn session sequences, cross-session memory, and concurrent agent scenarios. Foundation for end-to-end learning pipeline validation.",
       "file": "tickets/042.md",
@@ -3326,7 +3326,7 @@
       "day": 1,
       "time_estimate": "6h",
       "dependencies": [
-        "GOgent-039-R"
+        "goYoke-039-R"
       ],
       "blocks": [],
       "priority": "high",
@@ -3349,7 +3349,7 @@
         "test/simulation/fixtures/sessions/multi-agent-spawn.jsonl"
       ],
       "tests_required": true,
-      "git_branch": "gogent-042-behavioral-simulation",
+      "git_branch": "goyoke-042-behavioral-simulation",
       "pr_labels": [
         "simulation",
         "behavioral",
@@ -3363,17 +3363,17 @@
       "revision_note": "Staff architect review: scoped down, added shared-key chaos test"
     },
     {
-      "id": "GOgent-056",
+      "id": "goYoke-056",
       "title": "SessionStart Event Struct & Parser",
       "description": "SessionStart Event Struct & Parser",
-      "file": "session-init-context/tickets/GOgent-056.md",
+      "file": "session-init-context/tickets/goYoke-056.md",
       "week": 4,
       "time_estimate": "1h",
       "dependencies": [],
       "blocks": [
-        "GOgent-057",
-        "GOgent-061",
-        "GOgent-062"
+        "goYoke-057",
+        "goYoke-061",
+        "goYoke-062"
       ],
       "priority": "high",
       "tags": [
@@ -3386,7 +3386,7 @@
         "pkg/session/session_start_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-056-sessionstart-event-struct-&-parser",
+      "git_branch": "goyoke-056-sessionstart-event-struct-&-parser",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3396,17 +3396,17 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-057",
+      "id": "goYoke-057",
       "title": "Tool Counter Initialization",
       "description": "Tool Counter Initialization",
-      "file": "session-init-context/tickets/GOgent-057.md",
+      "file": "session-init-context/tickets/goYoke-057.md",
       "week": 4,
       "time_estimate": "0.5h",
       "dependencies": [
-        "GOgent-056"
+        "goYoke-056"
       ],
       "blocks": [
-        "GOgent-062"
+        "goYoke-062"
       ],
       "priority": "high",
       "tags": [
@@ -3419,7 +3419,7 @@
         "pkg/config/paths_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-057-tool-counter-initialization",
+      "git_branch": "goyoke-057-tool-counter-initialization",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3429,15 +3429,15 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-058",
+      "id": "goYoke-058",
       "title": "Routing Schema Summary Formatter",
       "description": "Routing Schema Summary Formatter",
-      "file": "session-init-context/tickets/GOgent-058.md",
+      "file": "session-init-context/tickets/goYoke-058.md",
       "week": 4,
       "time_estimate": "1h",
       "dependencies": [],
       "blocks": [
-        "GOgent-061"
+        "goYoke-061"
       ],
       "priority": "medium",
       "tags": [
@@ -3450,7 +3450,7 @@
         "pkg/routing/schema_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-058-routing-schema-summary-formatter",
+      "git_branch": "goyoke-058-routing-schema-summary-formatter",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3460,15 +3460,15 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-059",
+      "id": "goYoke-059",
       "title": "Handoff Document Loader",
       "description": "Handoff Document Loader",
-      "file": "session-init-context/tickets/GOgent-059.md",
+      "file": "session-init-context/tickets/goYoke-059.md",
       "week": 4,
       "time_estimate": "1h",
       "dependencies": [],
       "blocks": [
-        "GOgent-061"
+        "goYoke-061"
       ],
       "priority": "medium",
       "tags": [
@@ -3481,7 +3481,7 @@
         "pkg/session/context_loader_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-059-handoff-document-loader",
+      "git_branch": "goyoke-059-handoff-document-loader",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3491,15 +3491,15 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-060",
+      "id": "goYoke-060",
       "title": "Project Type Detection",
       "description": "Project Type Detection",
-      "file": "session-init-context/tickets/GOgent-060.md",
+      "file": "session-init-context/tickets/goYoke-060.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [],
       "blocks": [
-        "GOgent-061"
+        "goYoke-061"
       ],
       "priority": "medium",
       "tags": [
@@ -3512,7 +3512,7 @@
         "pkg/session/project_detection_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-060-project-type-detection",
+      "git_branch": "goyoke-060-project-type-detection",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3522,20 +3522,20 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-061",
+      "id": "goYoke-061",
       "title": "Session Context Response Generator",
       "description": "Session Context Response Generator",
-      "file": "session-init-context/tickets/GOgent-061.md",
+      "file": "session-init-context/tickets/goYoke-061.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-056",
-        "GOgent-058",
-        "GOgent-059",
-        "GOgent-060"
+        "goYoke-056",
+        "goYoke-058",
+        "goYoke-059",
+        "goYoke-060"
       ],
       "blocks": [
-        "GOgent-062"
+        "goYoke-062"
       ],
       "priority": "high",
       "tags": [
@@ -3548,7 +3548,7 @@
         "pkg/session/context_response_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-061-session-context-response-generator",
+      "git_branch": "goyoke-061-session-context-response-generator",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3558,21 +3558,21 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-062",
+      "id": "goYoke-062",
       "title": "CLI Binary - Main Orchestrator",
       "description": "CLI Binary - Main Orchestrator",
-      "file": "session-init-context/tickets/GOgent-062.md",
+      "file": "session-init-context/tickets/goYoke-062.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-056",
-        "GOgent-057",
-        "GOgent-061"
+        "goYoke-056",
+        "goYoke-057",
+        "goYoke-061"
       ],
       "blocks": [
-        "GOgent-063",
-        "GOgent-064",
-        "GOgent-067"
+        "goYoke-063",
+        "goYoke-064",
+        "goYoke-067"
       ],
       "priority": "high",
       "tags": [
@@ -3581,11 +3581,11 @@
         "phase-0"
       ],
       "files_to_create": [
-        "cmd/gogent-load-context/main.go",
-        "cmd/gogent-load-context/main_test.go"
+        "cmd/goyoke-load-context/main.go",
+        "cmd/goyoke-load-context/main_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-062-cli-binary---main-orchestrator",
+      "git_branch": "goyoke-062-cli-binary---main-orchestrator",
       "pr_labels": [
         "session-start",
         "week-4",
@@ -3595,14 +3595,14 @@
       "status": "completed"
     },
     {
-      "id": "GOgent-063",
+      "id": "goYoke-063",
       "title": "Define SubagentStop Event Structs",
       "description": "Parse SubagentStop events and detect agent completion type",
-      "file": "agent-workflow-hooks/tickets/GOgent-063.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-063.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-056"
+        "goYoke-056"
       ],
       "priority": "high",
       "tags": [
@@ -3614,14 +3614,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-064",
+      "id": "goYoke-064",
       "title": "Tier-Specific Response Generation",
       "description": "Generate appropriate follow-up responses based on agent class and tier",
-      "file": "agent-workflow-hooks/tickets/GOgent-064.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-064.md",
       "week": 4,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-063"
+        "goYoke-063"
       ],
       "priority": "high",
       "tags": [
@@ -3633,14 +3633,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-065",
+      "id": "goYoke-065",
       "title": "Endstate Logging & Decision Storage",
       "description": "Store endstate decisions in JSONL format for analysis and audit trail",
-      "file": "agent-workflow-hooks/tickets/GOgent-065.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-065.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-064"
+        "goYoke-064"
       ],
       "priority": "high",
       "tags": [
@@ -3652,14 +3652,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-066",
+      "id": "goYoke-066",
       "title": "Integration Tests for agent-endstate",
       "description": "Comprehensive tests covering event parsing → response generation → logging workflow",
-      "file": "agent-workflow-hooks/tickets/GOgent-066.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-066.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-065"
+        "goYoke-065"
       ],
       "priority": "high",
       "tags": [
@@ -3671,14 +3671,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-067",
-      "title": "Build gogent-agent-endstate CLI",
+      "id": "goYoke-067",
+      "title": "Build goyoke-agent-endstate CLI",
       "description": "Build CLI binary that reads SubagentStop events and generates follow-up responses",
-      "file": "agent-workflow-hooks/tickets/GOgent-067.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-067.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-066"
+        "goYoke-066"
       ],
       "priority": "high",
       "tags": [
@@ -3690,14 +3690,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-068",
+      "id": "goYoke-068",
       "title": "Tool Counter Management",
       "description": "Manage persistent tool call counter for attention-gate triggering",
-      "file": "agent-workflow-hooks/tickets/GOgent-068.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-068.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-056"
+        "goYoke-056"
       ],
       "priority": "high",
       "tags": [
@@ -3709,14 +3709,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-069",
+      "id": "goYoke-069",
       "title": "Reminder & Flush Logic",
       "description": "Generate routing compliance reminders and auto-flush pending learnings",
-      "file": "agent-workflow-hooks/tickets/GOgent-069.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-069.md",
       "week": 4,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-068"
+        "goYoke-068"
       ],
       "priority": "high",
       "tags": [
@@ -3728,14 +3728,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-070",
+      "id": "goYoke-070",
       "title": "PostToolUse Event Parsing",
       "description": "Parse PostToolUse events that trigger attention-gate",
-      "file": "agent-workflow-hooks/tickets/GOgent-070.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-070.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-056"
+        "goYoke-056"
       ],
       "priority": "high",
       "tags": [
@@ -3747,14 +3747,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-071",
+      "id": "goYoke-071",
       "title": "Integration Tests for attention-gate",
       "description": "End-to-end tests for tool counter → reminder/flush workflow",
-      "file": "agent-workflow-hooks/tickets/GOgent-071.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-071.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-070"
+        "goYoke-070"
       ],
       "priority": "high",
       "tags": [
@@ -3766,14 +3766,14 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-072",
-      "title": "Build gogent-attention-gate CLI",
+      "id": "goYoke-072",
+      "title": "Build goyoke-attention-gate CLI",
       "description": "Build CLI binary for attention-gate hook",
-      "file": "agent-workflow-hooks/tickets/GOgent-072.md",
+      "file": "agent-workflow-hooks/tickets/goYoke-072.md",
       "week": 4,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-071"
+        "goYoke-071"
       ],
       "priority": "high",
       "tags": [
@@ -3785,7 +3785,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-094",
+      "id": "goYoke-094",
       "title": "Baseline Re-measurement (Post-Migration)",
       "description": "Re-run baseline benchmarks to measure performance gains from Go migration",
       "file": "tickets/10-week5-integration-tests.md",
@@ -3793,11 +3793,11 @@
       "day": 6,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-008b",
-        "GOgent-093"
+        "goYoke-008b",
+        "goYoke-093"
       ],
       "blocks": [
-        "GOgent-100"
+        "goYoke-100"
       ],
       "priority": "critical",
       "tags": [
@@ -3810,7 +3810,7 @@
         "test/benchmark/post_migration_test.go"
       ],
       "tests_required": true,
-      "git_branch": "gogent-094-post-migration-baseline",
+      "git_branch": "goyoke-094-post-migration-baseline",
       "pr_labels": [
         "benchmark",
         "week-5",
@@ -3820,18 +3820,18 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-095",
+      "id": "goYoke-095",
       "title": "Regression: Validate Hook Integration",
-      "description": "Test validate-routing.sh can invoke gogent-validate binary",
+      "description": "Test validate-routing.sh can invoke goyoke-validate binary",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
       "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-025"
+        "goYoke-025"
       ],
       "blocks": [
-        "GOgent-098"
+        "goYoke-098"
       ],
       "priority": "critical",
       "tags": [
@@ -3843,7 +3843,7 @@
         "test/integration/validate_hook_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-095-validate-hook-regression",
+      "git_branch": "goyoke-095-validate-hook-regression",
       "pr_labels": [
         "regression",
         "week-5",
@@ -3853,18 +3853,18 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-096",
+      "id": "goYoke-096",
       "title": "Regression: Archive Hook Integration",
-      "description": "Test session-archive.sh can invoke gogent-archive binary",
+      "description": "Test session-archive.sh can invoke goyoke-archive binary",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
       "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-033"
+        "goYoke-033"
       ],
       "blocks": [
-        "GOgent-098"
+        "goYoke-098"
       ],
       "priority": "critical",
       "tags": [
@@ -3876,7 +3876,7 @@
         "test/integration/archive_hook_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-096-archive-hook-regression",
+      "git_branch": "goyoke-096-archive-hook-regression",
       "pr_labels": [
         "regression",
         "week-5",
@@ -3886,18 +3886,18 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-097",
+      "id": "goYoke-097",
       "title": "Regression: Sharp Edge Hook Integration",
-      "description": "Test sharp-edge-detector.sh can invoke gogent-sharp-edge binary",
+      "description": "Test sharp-edge-detector.sh can invoke goyoke-sharp-edge binary",
       "file": "tickets/10-week5-integration-tests.md",
       "week": 5,
       "day": 7,
       "time_estimate": "1.5h",
       "dependencies": [
-        "GOgent-040"
+        "goYoke-040"
       ],
       "blocks": [
-        "GOgent-098"
+        "goYoke-098"
       ],
       "priority": "critical",
       "tags": [
@@ -3909,7 +3909,7 @@
         "test/integration/sharp_edge_hook_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-097-sharp-edge-hook-regression",
+      "git_branch": "goyoke-097-sharp-edge-hook-regression",
       "pr_labels": [
         "regression",
         "week-5",
@@ -3919,7 +3919,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-098",
+      "id": "goYoke-098",
       "title": "End-to-End Production Simulation",
       "description": "Simulate production workflow with real corpus events",
       "file": "tickets/10-week5-integration-tests.md",
@@ -3927,12 +3927,12 @@
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-095",
-        "GOgent-096",
-        "GOgent-097"
+        "goYoke-095",
+        "goYoke-096",
+        "goYoke-097"
       ],
       "blocks": [
-        "GOgent-099"
+        "goYoke-099"
       ],
       "priority": "critical",
       "tags": [
@@ -3944,7 +3944,7 @@
         "test/integration/e2e_production_test.sh"
       ],
       "tests_required": true,
-      "git_branch": "gogent-098-e2e-production-simulation",
+      "git_branch": "goyoke-098-e2e-production-simulation",
       "pr_labels": [
         "e2e",
         "week-5",
@@ -3954,7 +3954,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-099",
+      "id": "goYoke-099",
       "title": "Deployment Readiness Checklist",
       "description": "Final verification of migration readiness",
       "file": "tickets/10-week5-integration-tests.md",
@@ -3962,10 +3962,10 @@
       "day": 7,
       "time_estimate": "1h",
       "dependencies": [
-        "GOgent-098"
+        "goYoke-098"
       ],
       "blocks": [
-        "GOgent-100"
+        "goYoke-100"
       ],
       "priority": "critical",
       "tags": [
@@ -3977,7 +3977,7 @@
         "DEPLOYMENT_CHECKLIST.md"
       ],
       "tests_required": false,
-      "git_branch": "gogent-099-deployment-checklist",
+      "git_branch": "goyoke-099-deployment-checklist",
       "pr_labels": [
         "deployment",
         "week-5",
@@ -3987,7 +3987,7 @@
       "status": "pending"
     },
     {
-      "id": "GOgent-100",
+      "id": "goYoke-100",
       "title": "Performance Comparison Report",
       "description": "Generate comprehensive comparison of Python vs Go performance",
       "file": "tickets/10-week5-integration-tests.md",
@@ -3995,9 +3995,9 @@
       "day": 7,
       "time_estimate": "2h",
       "dependencies": [
-        "GOgent-008b",
-        "GOgent-094",
-        "GOgent-099"
+        "goYoke-008b",
+        "goYoke-094",
+        "goYoke-099"
       ],
       "blocks": [],
       "priority": "critical",
@@ -4011,7 +4011,7 @@
         "docs/PERFORMANCE_REPORT.md"
       ],
       "tests_required": false,
-      "git_branch": "gogent-100-performance-report",
+      "git_branch": "goyoke-100-performance-report",
       "pr_labels": [
         "reporting",
         "week-5",

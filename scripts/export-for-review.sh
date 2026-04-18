@@ -1,5 +1,5 @@
 #!/bin/bash
-# GOgent-Fortress Framework Export for Deep Research Review
+# goYoke Framework Export for Deep Research Review
 # Exports all configuration, agents, skills, conventions for external analysis
 
 set -euo pipefail
@@ -8,7 +8,7 @@ OUTPUT_DIR="${1:-./framework-export-$(date +%Y%m%d-%H%M%S)}"
 CLAUDE_DIR="${HOME}/.claude"
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "=== GOgent-Fortress Framework Export ==="
+echo "=== goYoke Framework Export ==="
 echo "Output: ${OUTPUT_DIR}"
 echo ""
 
@@ -76,7 +76,7 @@ cp "${PROJECT_DIR}/docs/systems-architecture-overview.md" "${OUTPUT_DIR}/docs/" 
 echo ""
 echo "=== Generating manifest ==="
 cat > "${OUTPUT_DIR}/MANIFEST.md" << 'MANIFEST'
-# GOgent-Fortress Framework Export
+# goYoke Framework Export
 
 **Generated:** $(date -Iseconds)
 **Purpose:** Deep research review of agent framework configuration
@@ -141,7 +141,7 @@ echo "=== Creating combined export file ==="
 COMBINED="${OUTPUT_DIR}/COMBINED-EXPORT.md"
 
 cat > "${COMBINED}" << 'HEADER'
-# GOgent-Fortress Framework - Combined Export
+# goYoke Framework - Combined Export
 
 This file contains all framework configuration for deep research review.
 

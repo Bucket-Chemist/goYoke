@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Add "agents/*" to excluded_patterns in routing-schema.json
-# so gogent-direct-impl-check stops warning on agent definition files.
+# so goyoke-direct-impl-check stops warning on agent definition files.
 
 set -euo pipefail
 
-SCHEMA="/home/doktersmol/Documents/GOgent-Fortress/.claude/routing-schema.json"
+SCHEMA="/home/doktersmol/Documents/goYoke/.claude/routing-schema.json"
 
 if ! command -v jq &>/dev/null; then
   echo "ERROR: jq not found" >&2
