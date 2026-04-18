@@ -1,0 +1,38 @@
+[
+  {
+    "bugId": "BUG-17",
+    "severity": "Medium",
+    "category": "security",
+    "file": "pkg/config/paths.go",
+    "lines": "47-64,116-128,468-475",
+    "claim": "GetGOgentDir fell back to a shared /tmp/gogent-fallback directory with 0755 permissions, exposing cache and guard state to other local users when XDG and HOME paths were unwritable.",
+    "evidence": "pkg/config/paths.go:47-64 previously built filepath.Join(os.TempDir(), \"gogent-fallback\"); pkg/config/paths.go:118-128 and 470-475 place tool-counter, violations, and guard files under that directory; pkg/telemetry/invocations.go:47-85 and pkg/workflow/logging.go:16-54 also write global logs there.",
+    "runtimeTrigger": "Run GOgent in a sandbox or container with read-only HOME/XDG directories; another local process can inspect or overwrite /tmp/gogent-fallback/{tool-counter,guards,...} and corrupt later runs.",
+    "crossReferences": [
+      "pkg/telemetry/invocations.go:47-85",
+      "pkg/workflow/logging.go:16-54"
+    ],
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "stride": "Tampering",
+    "cwe": "CWE-379"
+  },
+  {
+    "bugId": "BUG-18",
+    "severity": "Medium",
+    "category": "security",
+    "file": "pkg/config/paths.go",
+    "lines": "323-343,352-465",
+    "claim": "GetGOgentDataDir fell back to a shared /tmp/gogent-data directory with 0755 permissions, so routing and review telemetry from one user could be read or tampered with by another when XDG_DATA_HOME and HOME were unwritable.",
+    "evidence": "pkg/config/paths.go:323-343 previously built filepath.Join(os.TempDir(), \"gogent-data\"); pkg/config/paths.go:352-465 routes routing-decision, collaboration, review, and sharp-edge telemetry into that directory; pkg/telemetry/routing_decision.go:90-150 and pkg/telemetry/review_finding.go:58-83 append JSONL records there.",
+    "runtimeTrigger": "Run telemetry logging on a host where XDG_DATA_HOME and ~/.local/share are unavailable; files like routing-decisions.jsonl and review-findings.jsonl are written under /tmp/gogent-data where another local user can inspect or append records.",
+    "crossReferences": [
+      "pkg/telemetry/routing_decision.go:90-150",
+      "pkg/telemetry/review_finding.go:58-83"
+    ],
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "stride": "InfoDisclosure",
+    "cwe": "CWE-379"
+  }
+]

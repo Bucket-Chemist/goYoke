@@ -1,0 +1,14 @@
+[
+  {
+    "bugId": "BUG-13",
+    "response": "ACCEPT",
+    "analysisSummary": "The stdin branch never forwarded the collected file list to the scout backend, so the runtime path could only scan the common-root directory and over-report scope.",
+    "counterEvidence": ""
+  },
+  {
+    "bugId": "BUG-14",
+    "response": "ACCEPT",
+    "analysisSummary": "cleanupPermCache and permission-gate/cache.go use incompatible filename derivations. The session-end hook cannot remove the cache file that permission-gate actually writes.",
+    "counterEvidence": ""
+  }
+]

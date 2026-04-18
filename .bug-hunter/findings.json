@@ -1,0 +1,224 @@
+[
+  {
+    "bugId": "BUG-1",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/config/paths.go",
+    "lines": "25-64",
+    "claim": "GetGOgentDir accepted XDG runtime/cache directories after mkdir alone, so an existing but unwritable runtime directory caused guard, counter, and other state writes to fail at runtime.",
+    "evidence": "Before the fix, GetGOgentDir returned immediately after os.MkdirAll on XDG paths and never verified that files could actually be created there; downstream code uses that path for guard locks and tool counters.",
+    "runtimeTrigger": "Run the app with XDG_RUNTIME_DIR pointing to an existing but read-only directory; skill-guard and related state writers then fail or silently drop to fallback behavior.",
+    "crossReferences": [
+      "pkg/config/paths_test.go:66-99",
+      "cmd/gogent-skill-guard/main.go:76-104"
+    ],
+    "confidenceScore": 94,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-3",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/session/scanner.go",
+    "lines": "8-13",
+    "claim": "Session JSONL readers used the default bufio.Scanner token limit, so large pending-learning and sharp-edge records failed during resume, query, and artifact analysis flows.",
+    "evidence": "Context and artifact loaders in pkg/session consumed one JSONL record per scanner token without raising the default 64 KiB cap; the same pattern appeared in CheckPendingLearnings, LoadPendingLearnings, QuerySharpEdges, and related readers until a shared scanner helper was added.",
+    "runtimeTrigger": "Write a valid session artifact line above 64 KiB, then invoke resume/query flows such as CheckPendingLearnings, LoadPendingLearnings, or QuerySharpEdges.",
+    "crossReferences": [
+      "pkg/session/context_loader_test.go:168-180",
+      "pkg/session/handoff_artifacts_test.go:172-183",
+      "pkg/session/query_test.go:393-406"
+    ],
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-2",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/routing/transcript.go, pkg/routing/events.go",
+    "lines": "transcript.go:13-19,37-71,237-270; events.go:378-420",
+    "claim": "Routing transcript readers used the default bufio.Scanner token limit, so any single JSONL event above 64 KiB caused enforcement, metadata extraction, and task-analysis paths to fail on valid transcripts.",
+    "evidence": "ParseTranscript, TranscriptAnalyzer.Analyze, and ParseTranscriptForMetadata all consumed one transcript event per scanner token without raising the default 64 KiB cap, while transcript lines can include raw tool payloads and long assistant content.",
+    "runtimeTrigger": "Record a transcript containing a single large tool event, then run transcript-based enforcement or endstate metadata extraction such as CountChildAgentsFromTranscript, TranscriptAnalyzer.Analyze, or ParseTranscriptForMetadata.",
+    "crossReferences": [
+      "pkg/routing/transcript_test.go:176-204",
+      "pkg/routing/transcript_test.go:404-430",
+      "pkg/routing/events_test.go:1345-1370",
+      "pkg/routing/delegation.go:226-239"
+    ],
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-4",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "cmd/gogent-team-run/wave.go",
+    "lines": "67-83",
+    "claim": "runWaves only returned an error when every member in a wave failed, so final-wave partial failures were reported as successful team runs even though failed members remained.",
+    "evidence": "Before the fix, partial failures only emitted a warning and execution continued; if the partial failure happened on the last wave there was no later check, so runWaves returned nil and downstream callers treated the run as clean.",
+    "runtimeTrigger": "Run a team where one member in the last wave fails while another succeeds; the command exits without surfacing the failed member state.",
+    "crossReferences": [
+      "cmd/gogent-team-run/main_test.go:551-645",
+      "cmd/gogent-team-run/wave_test.go:485-541",
+      "cmd/gogent-team-run/wave_test.go:545-605"
+    ],
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-6",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/telemetry/scanner.go",
+    "lines": "8-13",
+    "claim": "Telemetry JSONL readers used the default bufio.Scanner token limit, so large valid records were dropped or caused load failures across invocation, escalation, scout, collaboration, and agent lifecycle analytics.",
+    "evidence": "LoadInvocations, LoadEscalations, LoadScoutRecommendations, ReadCollaborationLogs, and ReadAgentLifecycleLogs all scanned one JSONL record per token without increasing the default 64 KiB cap.",
+    "runtimeTrigger": "Store a telemetry record with a task description, reason, or other field above 64 KiB and then load it through the corresponding telemetry query path.",
+    "crossReferences": [
+      "pkg/telemetry/invocations_test.go:362-382",
+      "pkg/telemetry/escalations_test.go:359-379",
+      "pkg/telemetry/scout_test.go:343-363",
+      "pkg/telemetry/collaboration_test.go:352-377",
+      "pkg/telemetry/agent_lifecycle_test.go:311-337"
+    ],
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-7",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/workflow/logging.go",
+    "lines": "68-95",
+    "claim": "ReadEndstateLogs used the default bufio.Scanner token limit, so large valid endstate JSONL entries were skipped or surfaced as read errors during workflow analytics.",
+    "evidence": "Endstate logs serialize full recommendation arrays into one JSONL line, but ReadEndstateLogs previously used the default scanner without raising its token cap.",
+    "runtimeTrigger": "Write an endstate log entry whose serialized recommendations exceed 64 KiB and then call ReadEndstateLogs or GetAgentStats.",
+    "crossReferences": [
+      "pkg/workflow/logging_test.go:230-265"
+    ],
+    "confidenceScore": 94,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-8",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/memory/failure_tracking.go",
+    "lines": "143-166",
+    "claim": "Failure tracker scanning used the default bufio.Scanner token limit, so large valid failure entries stopped loop-detection and clearing logic from seeing matching records.",
+    "evidence": "scanFailures powers GetFailureCount and ClearFailures but previously scanned one JSONL failure record per default scanner token; large error_match payloads therefore broke matching on otherwise valid records.",
+    "runtimeTrigger": "Persist a failure-tracker entry with a long error_match field above 64 KiB, then call GetFailureCount or ClearFailures for that file/error combination.",
+    "crossReferences": [
+      "pkg/memory/failure_tracking_test.go:272-289"
+    ],
+    "confidenceScore": 94,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-9",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "pkg/config/paths.go",
+    "lines": "286-311",
+    "claim": "GetGOgentDataDir accepted XDG data directories after mkdir alone, so existing but unwritable data directories caused telemetry and ML log writes to fail later at runtime.",
+    "evidence": "GetGOgentDataDir returned XDG_DATA_HOME or ~/.local/share/gogent after os.MkdirAll without verifying file creation, while telemetry writers later open files under that path for append.",
+    "runtimeTrigger": "Run with XDG_DATA_HOME or ~/.local/share/gogent present but unwritable, then attempt telemetry or ML logging such as agent lifecycle or tool-event writes.",
+    "crossReferences": [
+      "pkg/config/paths_test.go:1166-1197",
+      "pkg/telemetry/agent_lifecycle.go:52-75",
+      "pkg/telemetry/ml_logging.go:24-38"
+    ],
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-10",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "cmd/gogent-permission-gate/cache.go",
+    "lines": "11-20",
+    "claim": "Permission-gate cache filenames embedded raw session_id values, allowing path separator and traversal characters to escape the intended runtime directory.",
+    "evidence": "cachePath(sessionID) previously formatted sessionID directly into the filename under XDG_RUNTIME_DIR or /tmp. SessionID is taken from stdin tool events, so slash-containing values changed the resolved path.",
+    "runtimeTrigger": "Feed the permission gate a PreToolUse payload whose session_id contains path separators such as ../../escape/me, then write an allow_session cache entry.",
+    "crossReferences": [
+      "cmd/gogent-permission-gate/main.go:31-63",
+      "cmd/gogent-permission-gate/main_test.go:175-189"
+    ],
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-11",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "cmd/gogent-aggregate/main.go",
+    "lines": "257-275",
+    "claim": "The weekly aggregation tool counted JSONL records with the default scanner limit, so a single large archived record caused line counts to fail and summary stats to be zeroed or degraded.",
+    "evidence": "aggregateFiles calls countLines before archiving each memory file. countLines previously used bufio.NewScanner with the default 64 KiB token cap, while archived JSONL rows can legitimately exceed that size.",
+    "runtimeTrigger": "Run gogent-aggregate on a memory JSONL file containing a single large valid line above 64 KiB.",
+    "crossReferences": [
+      "cmd/gogent-aggregate/main.go:182-219",
+      "cmd/gogent-aggregate/main_test.go:364-378"
+    ],
+    "confidenceScore": 94,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-12",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "internal/tui/components/telemetry/telemetry.go",
+    "lines": "134-161",
+    "claim": "The TUI telemetry panel still used the default scanner limit when reading routing-decisions JSONL, so large valid decisions could disappear from the UI or raise load errors even after backend readers were fixed.",
+    "evidence": "loadJSONL scanned each routing decision line with bufio.NewScanner and no enlarged buffer. The panel reads the same decision log that can contain large recommendation payloads.",
+    "runtimeTrigger": "Open the routing telemetry panel against a routing-decisions file containing a single valid entry above 64 KiB.",
+    "crossReferences": [
+      "internal/tui/components/telemetry/telemetry_test.go:177-196"
+    ],
+    "confidenceScore": 94,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-5",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "internal/tui/bridge/server.go",
+    "lines": "51-93",
+    "claim": "IPC bridge startup built Unix socket paths directly from XDG runtime/temp directories without checking sockaddr_un length, so long base paths failed with bind: invalid argument before the TUI accepted MCP connections.",
+    "evidence": "buildSocketPath previously concatenated the base directory with gofortress-{pid}.sock unconditionally. Linux pathname Unix sockets cap the path length, and the failure reproduced once tests used long temp directory names.",
+    "runtimeTrigger": "Start the TUI with a long XDG_RUNTIME_DIR or TMPDIR path, or under long generated temp directory names; bridge creation fails and GOFORTRESS_SOCKET is never usable.",
+    "crossReferences": [
+      "internal/tui/bridge/server_test.go:334-342",
+      "internal/tui/mcp/tools_test.go:201-204",
+      "internal/tui/mcp/tools_coverage_test.go:189-221"
+    ],
+    "confidenceScore": 93,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  }
+]

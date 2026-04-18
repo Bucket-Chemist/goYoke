@@ -229,6 +229,9 @@
     ]
   },
   "effortLevel": "high",
+    "env": {
+    "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING": "1"
+  },
   "autoUpdatesChannel": "latest",
   "minimumVersion": "2.1.69",
   "use_team_pattern": true,

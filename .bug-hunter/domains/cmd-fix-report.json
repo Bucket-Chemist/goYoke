@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-04-11T05:44:30.644Z",
+  "summary": {
+    "bugsAssigned": 2,
+    "bugsFixed": 2,
+    "bugsNeedingLargerRefactor": 0,
+    "bugsSkipped": 0,
+    "filesModified": [
+      "cmd/gogent-scout/main.go",
+      "cmd/gogent-scout/native_scout.go",
+      "cmd/gogent-scout/main_test.go",
+      "cmd/gogent-archive/main.go",
+      "cmd/gogent-archive/main_test.go"
+    ]
+  },
+  "fixes": [
+    {
+      "bugId": "BUG-13",
+      "severity": "Medium",
+      "filesChanged": [
+        "cmd/gogent-scout/main.go:22-160",
+        "cmd/gogent-scout/native_scout.go:42-166",
+        "cmd/gogent-scout/main_test.go:250-265"
+      ],
+      "whatChanged": "Threaded explicit stdin file lists through the scout entrypoint/backend so stdin-scoped runs now measure only the selected files, and added a regression test for that path.",
+      "confidenceLabel": "high",
+      "sideEffects": [
+        "None"
+      ],
+      "notes": "Also raises the stdin scanner buffer to 10MB so long file-list inputs do not truncate."
+    },
+    {
+      "bugId": "BUG-14",
+      "severity": "Medium",
+      "filesChanged": [
+        "cmd/gogent-archive/main.go:273-290",
+        "cmd/gogent-archive/main_test.go:957-978"
+      ],
+      "whatChanged": "Aligned session-end permission-cache cleanup with the hashed filename scheme used by gogent-permission-gate and updated the cleanup regression test.",
+      "confidenceLabel": "high",
+      "sideEffects": [
+        "None"
+      ],
+      "notes": "This preserves existing cache naming while finally removing stale cache files at session end."
+    }
+  ]
+}

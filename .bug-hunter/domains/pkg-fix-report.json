@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-04-11T06:01:01.710Z",
+  "summary": {
+    "bugsAssigned": 2,
+    "bugsFixed": 2,
+    "bugsNeedingLargerRefactor": 0,
+    "bugsSkipped": 0,
+    "filesModified": [
+      "pkg/config/paths.go",
+      "pkg/config/paths_test.go",
+      "pkg/telemetry/routing_decision_test.go"
+    ]
+  },
+  "fixes": [
+    {
+      "bugId": "BUG-17",
+      "severity": "Medium",
+      "filesChanged": [
+        "pkg/config/paths.go:47-113",
+        "pkg/config/paths_test.go:776-846"
+      ],
+      "whatChanged": "Replaced the shared /tmp/gogent-fallback location with a per-user fallback directory, forced 0700 permissions on that fallback, and covered the unsafe-path cases in config tests.",
+      "confidenceLabel": "high",
+      "sideEffects": [
+        "None"
+      ],
+      "notes": "The writability probe now preserves pre-existing directory permissions instead of broadening them during fallback checks."
+    },
+    {
+      "bugId": "BUG-18",
+      "severity": "Medium",
+      "filesChanged": [
+        "pkg/config/paths.go:323-343",
+        "pkg/config/paths_test.go:1134-1435",
+        "pkg/telemetry/routing_decision_test.go:357-378"
+      ],
+      "whatChanged": "Moved the data-directory fallback to a per-user 0700 temp path and stabilized the routing-decision fallback test by pinning HOME to a writable temp directory.",
+      "confidenceLabel": "high",
+      "sideEffects": [
+        "None"
+      ],
+      "notes": "This keeps routing/review telemetry isolated even in sandboxed or read-only-home environments."
+    }
+  ]
+}

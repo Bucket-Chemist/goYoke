@@ -1,0 +1,22 @@
+[
+  {
+    "bugId": "BUG-17",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed by tracing GetGOgentDir in pkg/config/paths.go and the cache/guard consumers that write beneath it. When XDG/HOME resolution fails, the runtime fell back to a predictable shared temp directory, allowing local tampering with tool counters, violations, guards, and global logs.",
+    "suggestedFix": "Scope the temp fallback directory per user, force 0700 permissions on that fallback path, and keep the writability probe from broadening existing directory modes."
+  },
+  {
+    "bugId": "BUG-18",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed by tracing GetGOgentDataDir and the routing/review telemetry writers. The data fallback path was a shared 0755 temp directory, so when HOME/XDG_DATA_HOME is unwritable the process emits long-term telemetry into a location another local user can read or append to.",
+    "suggestedFix": "Move data fallbacks to a per-user temp directory with 0700 permissions and keep telemetry fallback tests pinned to a writable HOME so the intended ~/.local/share path remains deterministic."
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "bugId": "BUG-13",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "cmd/gogent-scout/main.go",
+    "lines": "26-45",
+    "claim": "Stdin file-list mode discarded the provided file list and fell back to scanning the derived parent directory instead.",
+    "evidence": "cmd/gogent-scout/main.go:26-45 collected stdin paths but only derived a directory target; cmd/gogent-scout/native_scout.go:48-166 walked ns.Target unless explicit files were supplied.",
+    "runtimeTrigger": "Run `find src -name '*.go' | gogent-scout - \"Analyze Go codebase\"` and the report includes sibling files that were never piped on stdin.",
+    "crossReferences": [
+      "cmd/gogent-scout/native_scout.go:48-166"
+    ],
+    "confidenceScore": 98,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  },
+  {
+    "bugId": "BUG-14",
+    "severity": "Medium",
+    "category": "logic",
+    "file": "cmd/gogent-archive/main.go",
+    "lines": "273-290",
+    "claim": "Session-end cleanup still removed a raw session-id cache filename after permission-gate switched to hashed cache filenames, leaving stale allow-session caches behind.",
+    "evidence": "cmd/gogent-archive/main.go:281-289 built gofortress-perm-cache-{sessionID}.json, while cmd/gogent-permission-gate/cache.go:14-20 writes gofortress-perm-cache-{sha256(sessionID)}.json.",
+    "runtimeTrigger": "Allow a tool for the session through gogent-permission-gate, end the session, then start a later session with the same runtime dir and observe the old hashed cache file still present.",
+    "crossReferences": [
+      "cmd/gogent-permission-gate/cache.go:14-20"
+    ],
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "stride": "N/A",
+    "cwe": "N/A"
+  }
+]
