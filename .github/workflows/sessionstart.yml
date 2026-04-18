@@ -1,5 +1,5 @@
 # SessionStart Hook CI/CD Pipeline
-# Tests gogent-load-context in isolation for faster feedback
+# Tests goyoke-load-context in isolation for faster feedback
 
 name: SessionStart Hook
 
@@ -7,14 +7,14 @@ on:
   push:
     branches: [master]
     paths:
-      - 'cmd/gogent-load-context/**'
+      - 'cmd/goyoke-load-context/**'
       - 'pkg/session/**'
       - 'pkg/config/**'
       - 'test/simulation/fixtures/deterministic/sessionstart/**'
   pull_request:
     branches: [master]
     paths:
-      - 'cmd/gogent-load-context/**'
+      - 'cmd/goyoke-load-context/**'
       - 'pkg/session/**'
       - 'pkg/config/**'
       - 'test/simulation/fixtures/deterministic/sessionstart/**'
@@ -82,7 +82,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Build gogent-load-context
+      - name: Build goyoke-load-context
         run: make build-load-context
 
       - name: Run SessionStart Deterministic Tests
@@ -124,7 +124,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Build gogent-load-context
+      - name: Build goyoke-load-context
         run: make build-load-context
 
       - name: Run Integration Tests

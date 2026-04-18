@@ -13,13 +13,13 @@ The Go TUI replaced the TypeScript TUI as the default frontend. The `spawn_agent
 
 ## Decisions Made
 
-### D-1: MCP Server Name — `gofortress-interactive`
+### D-1: MCP Server Name — `goyoke-interactive`
 
-**Decision:** The Go TUI's MCP server config key is `gofortress-interactive` (matching the TS TUI's in-process server name).
+**Decision:** The Go TUI's MCP server config key is `goyoke-interactive` (matching the TS TUI's in-process server name).
 
-**Rationale:** CLAUDE.md instructs the LLM to call `mcp__gofortress-interactive__spawn_agent`. The config key determines the tool prefix. Using any other name causes tool-not-found.
+**Rationale:** CLAUDE.md instructs the LLM to call `mcp__goyoke-interactive__spawn_agent`. The config key determines the tool prefix. Using any other name causes tool-not-found.
 
-**Files:** `cmd/gofortress/main.go:453`, `internal/tui/cli/driver.go:287`
+**Files:** `cmd/goyoke/main.go:453`, `internal/tui/cli/driver.go:287`
 
 ### D-2: No `--config-dir` CLI flag
 
@@ -27,7 +27,7 @@ The Go TUI replaced the TypeScript TUI as the default frontend. The `spawn_agent
 
 **Rationale:** `claude --config-dir` returns `error: unknown option`. The env var is the only supported mechanism.
 
-**Files:** `cmd/gofortress/main.go:88`, `internal/tui/cli/driver.go:267-270`
+**Files:** `cmd/goyoke/main.go:88`, `internal/tui/cli/driver.go:267-270`
 
 ### D-3: `--verbose` mandatory for stream-json
 
@@ -43,7 +43,7 @@ The Go TUI replaced the TypeScript TUI as the default frontend. The `spawn_agent
 
 **Rationale:** `stream-json` requires `--verbose` and produces NDJSON which is harder to parse for one-shot results. The TS TUI also uses `json`. Simpler, more reliable, matches reference implementation.
 
-**Files:** `internal/tui/mcp/tools.go:872`, `cmd/gofortress-mcp-standalone/spawner.go:76`
+**Files:** `internal/tui/mcp/tools.go:872`, `cmd/goyoke-mcp-standalone/spawner.go:76`
 
 ### D-5: `--permission-mode bypassPermissions` for spawned agents
 
@@ -51,15 +51,15 @@ The Go TUI replaced the TypeScript TUI as the default frontend. The `spawn_agent
 
 **Rationale:** `-p` mode has no interactive terminal. Without explicit permission mode, Write/Edit operations block forever waiting for user approval that can never arrive.
 
-**Files:** `internal/tui/mcp/tools.go:872`, `cmd/gofortress-mcp-standalone/spawner.go:76`
+**Files:** `internal/tui/mcp/tools.go:872`, `cmd/goyoke-mcp-standalone/spawner.go:76`
 
 ### D-6: All binaries to `bin/`
 
-**Decision:** Makefile outputs both `gofortress` and `gofortress-mcp` to `bin/`. No binaries at project root.
+**Decision:** Makefile outputs both `goyoke` and `goyoke-mcp` to `bin/`. No binaries at project root.
 
 **Rationale:** `findMCPBinary()` searches same-dir-as-TUI first. When TUI was at root and MCP was in `bin/`, stale root MCP binaries were found first. Unified output prevents this.
 
-**Files:** `Makefile:108-109,114`, `~/.local/bin/zellij-gofortress-tui-go:28`
+**Files:** `Makefile:108-109,114`, `~/.local/bin/zellij-goyoke-tui-go:28`
 
 ### D-7: Default empty ParentID to root agent
 
@@ -106,8 +106,8 @@ The Go TUI replaced the TypeScript TUI as the default frontend. The `spawn_agent
 ```
 User types prompt in Go TUI
   → TUI sends via stream-json stdin to claude CLI
-    → Claude CLI (router) decides to call mcp__gofortress-interactive__spawn_agent
-      → Claude CLI forwards to gofortress-mcp binary (stdio MCP server)
+    → Claude CLI (router) decides to call mcp__goyoke-interactive__spawn_agent
+      → Claude CLI forwards to goyoke-mcp binary (stdio MCP server)
         → handleSpawnAgent() validates relationship, builds prompt
         → Sends agent_register IPC via UDS to TUI bridge
           → Bridge sends AgentRegisteredMsg to Bubbletea event loop

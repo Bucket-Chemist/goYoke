@@ -1,15 +1,15 @@
-# Makefile for GOgent Fortress Go migration
-# Project: GOgent-Fortress
+# Makefile for goYoke Go migration
+# Project: goYoke
 # Purpose: Convenient task automation
 
-BINARY_NAME=gogent
+BINARY_NAME=goyoke
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-doc-theater install install-archive install-aggregate install-wrapper install-load-context install-doc-theater uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context install install-archive install-aggregate install-wrapper install-load-context uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes all
 
 help:
-	@echo "GOgent Fortress - Available targets:"
+	@echo "goYoke - Available targets:"
 	@echo "  make test            - Run full test ecosystem (alias for test-ecosystem)"
 	@echo "  make test-ecosystem  - Run complete test suite with audit trail"
 	@echo "  make test-unit       - Run unit tests only"
@@ -20,26 +20,24 @@ help:
 	@echo "  make build-tui       - Build TypeScript TUI only"
 	@echo "  make build-legacy    - Build legacy Go TUI"
 	@echo "  make build-hooks     - Build all hook binaries"
-	@echo "  make build-validate  - Build gogent-validate binary"
-	@echo "  make build-archive   - Build gogent-archive binary"
-	@echo "  make build-aggregate - Build gogent-aggregate binary"
-	@echo "  make build-sharp-edge - Build gogent-sharp-edge binary"
-	@echo "  make build-capture-intent - Build gogent-capture-intent binary"
-	@echo "  make build-load-context   - Build gogent-load-context binary"
-	@echo "  make build-agent-endstate - Build gogent-agent-endstate binary"
-	@echo "  make build-orchestrator-guard - Build gogent-orchestrator-guard binary"
-	@echo "  make build-doc-theater    - Build gogent-doc-theater binary"
-	@echo "  make build-update-review-outcome - Build gogent-update-review-outcome binary"
-	@echo "  make build-log-review     - Build gogent-log-review binary"
+	@echo "  make build-validate  - Build goyoke-validate binary"
+	@echo "  make build-archive   - Build goyoke-archive binary"
+	@echo "  make build-aggregate - Build goyoke-aggregate binary"
+	@echo "  make build-sharp-edge - Build goyoke-sharp-edge binary"
+	@echo "  make build-capture-intent - Build goyoke-capture-intent binary"
+	@echo "  make build-load-context   - Build goyoke-load-context binary"
+	@echo "  make build-agent-endstate - Build goyoke-agent-endstate binary"
+	@echo "  make build-orchestrator-guard - Build goyoke-orchestrator-guard binary"
+	@echo "  make build-update-review-outcome - Build goyoke-update-review-outcome binary"
+	@echo "  make build-log-review     - Build goyoke-log-review binary"
 	@echo "  make build-all             - Build all hook binaries"
 	@echo "  make install         - Install all CLIs to ~/.local/bin"
-	@echo "  make install-archive - Install gogent-archive to ~/.local/bin"
-	@echo "  make install-aggregate - Install gogent-aggregate to ~/.local/bin"
-	@echo "  make install-load-context - Install gogent-load-context to ~/.local/bin"
-	@echo "  make install-orchestrator-guard - Install gogent-orchestrator-guard to ~/.local/bin"
-	@echo "  make install-doc-theater - Install gogent-doc-theater to ~/.local/bin"
-	@echo "  make install-update-review-outcome - Install gogent-update-review-outcome to ~/.local/bin"
-	@echo "  make install-log-review - Install gogent-log-review to ~/.local/bin"
+	@echo "  make install-archive - Install goyoke-archive to ~/.local/bin"
+	@echo "  make install-aggregate - Install goyoke-aggregate to ~/.local/bin"
+	@echo "  make install-load-context - Install goyoke-load-context to ~/.local/bin"
+	@echo "  make install-orchestrator-guard - Install goyoke-orchestrator-guard to ~/.local/bin"
+	@echo "  make install-update-review-outcome - Install goyoke-update-review-outcome to ~/.local/bin"
+	@echo "  make install-log-review - Install goyoke-log-review to ~/.local/bin"
 	@echo "  make install-wrapper - Install session-archive wrapper hook"
 	@echo "  make uninstall       - Remove all CLIs from ~/.local/bin"
 	@echo "  make check-path      - Verify ~/.local/bin is in PATH"
@@ -51,9 +49,9 @@ help:
 	@echo "  make test-simulation-fuzz         - Run fuzz tests only"
 	@echo "  make test-simulation-posttooluse  - Run posttooluse tests only (requires build-sharp-edge)"
 	@echo "  make test-simulation-sessionstart - Run sessionstart tests only (requires build-load-context)"
-	@echo "  make test-simulation-replay       - Run session replay tests (GOgent-042)"
-	@echo "  make test-simulation-behavioral   - Run behavioral property tests (GOgent-042)"
-	@echo "  make test-simulation-chaos        - Run chaos tests (GOgent-042)"
+	@echo "  make test-simulation-replay       - Run session replay tests (goYoke-042)"
+	@echo "  make test-simulation-behavioral   - Run behavioral property tests (goYoke-042)"
+	@echo "  make test-simulation-chaos        - Run chaos tests (goYoke-042)"
 	@echo "  make test-simulation-behavioral-all - Run all behavioral tests"
 	@echo "  make replay-crash CRASH=<file>    - Replay a specific crash"
 	@echo "  make clean-simulation             - Clean simulation artifacts"
@@ -99,7 +97,7 @@ build: build-hooks build-tui
 build-tui:
 	@echo "Building TypeScript TUI..."
 	@cd packages/tui && npm install && npm run build
-	@chmod +x packages/tui/bin/gofortress-tui.js
+	@chmod +x packages/tui/bin/goyoke-tui.js
 	@echo "✓ TypeScript TUI built at packages/tui/dist/index.js"
 
 # Build Go TUI + MCP server
@@ -107,177 +105,165 @@ build-go-tui:
 	@echo "Building Go TUI..."
 	@mkdir -p bin
 	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
-		-o bin/gofortress ./cmd/gofortress
-	@echo "✓ Go TUI built at bin/gofortress"
+		-o bin/goyoke ./cmd/goyoke
+	@echo "✓ Go TUI built at bin/goyoke"
 
 build-go-mcp:
 	@echo "Building Go MCP server..."
 	@mkdir -p bin
-	@go build -o bin/gofortress-mcp ./cmd/gofortress-mcp
-	@echo "✓ Go MCP server built at bin/gofortress-mcp"
+	@go build -o bin/goyoke-mcp ./cmd/goyoke-mcp
+	@echo "✓ Go MCP server built at bin/goyoke-mcp"
 
 build-go: build-go-tui build-go-mcp
 	@echo "✓ All Go TUI binaries built"
 
 # Remove stale binaries from project root (C-2 fix: all outputs go to bin/)
 clean-stale:
-	@rm -f gofortress gofortress-mcp gofortress-mcp-standalone
+	@rm -f goyoke goyoke-mcp goyoke-mcp-standalone
 	@echo "✓ Stale root binaries removed"
 
 # Build legacy Go TUI
 build-legacy:
 	@echo "Building legacy Go TUI..."
-	@go build -o bin/gofortress-legacy ./deprecated/cmd/gofortress
-	@echo "✓ Legacy Go TUI built at bin/gofortress-legacy"
+	@go build -o bin/goyoke-legacy ./deprecated/cmd/goyoke
+	@echo "✓ Legacy Go TUI built at bin/goyoke-legacy"
 
 # Build all hook binaries
-build-hooks: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review
+build-hooks: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review
 	@echo "✓ All hook binaries built"
 
 build-validate:
-	@echo "Building gogent-validate binary..."
-	go build -o bin/gogent-validate ./cmd/gogent-validate
-	@echo "✅ Binary created at bin/gogent-validate"
+	@echo "Building goyoke-validate binary..."
+	go build -o bin/goyoke-validate ./cmd/goyoke-validate
+	@echo "✅ Binary created at bin/goyoke-validate"
 
 build-archive:
-	@echo "Building gogent-archive binary..."
-	go build -o bin/gogent-archive ./cmd/gogent-archive
-	@echo "✅ Binary created at bin/gogent-archive"
+	@echo "Building goyoke-archive binary..."
+	go build -o bin/goyoke-archive ./cmd/goyoke-archive
+	@echo "✅ Binary created at bin/goyoke-archive"
 
 build-aggregate:
-	@echo "Building gogent-aggregate binary..."
-	go build -o bin/gogent-aggregate ./cmd/gogent-aggregate
-	@echo "✅ Binary created at bin/gogent-aggregate"
+	@echo "Building goyoke-aggregate binary..."
+	go build -o bin/goyoke-aggregate ./cmd/goyoke-aggregate
+	@echo "✅ Binary created at bin/goyoke-aggregate"
 
 build-sharp-edge:
-	@echo "Building gogent-sharp-edge binary..."
-	go build -o bin/gogent-sharp-edge ./cmd/gogent-sharp-edge
-	@echo "✅ Binary created at bin/gogent-sharp-edge"
+	@echo "Building goyoke-sharp-edge binary..."
+	go build -o bin/goyoke-sharp-edge ./cmd/goyoke-sharp-edge
+	@echo "✅ Binary created at bin/goyoke-sharp-edge"
 
 build-capture-intent:
-	@echo "Building gogent-capture-intent binary..."
-	go build -o bin/gogent-capture-intent ./cmd/gogent-capture-intent
-	@echo "✅ Binary created at bin/gogent-capture-intent"
+	@echo "Building goyoke-capture-intent binary..."
+	go build -o bin/goyoke-capture-intent ./cmd/goyoke-capture-intent
+	@echo "✅ Binary created at bin/goyoke-capture-intent"
 
 build-load-context:
-	@echo "Building gogent-load-context..."
-	@go build -o bin/gogent-load-context ./cmd/gogent-load-context
-	@echo "✓ Built: bin/gogent-load-context"
+	@echo "Building goyoke-load-context..."
+	@go build -o bin/goyoke-load-context ./cmd/goyoke-load-context
+	@echo "✓ Built: bin/goyoke-load-context"
 
 build-agent-endstate:
-	@echo "Building gogent-agent-endstate..."
-	@go build -o bin/gogent-agent-endstate ./cmd/gogent-agent-endstate
-	@echo "✓ Built: bin/gogent-agent-endstate"
+	@echo "Building goyoke-agent-endstate..."
+	@go build -o bin/goyoke-agent-endstate ./cmd/goyoke-agent-endstate
+	@echo "✓ Built: bin/goyoke-agent-endstate"
 
 build-orchestrator-guard:
 	@scripts/build-orchestrator-guard.sh
 
-build-doc-theater:
-	@scripts/build-doc-theater.sh
-
 build-update-review-outcome:
-	@echo "Building gogent-update-review-outcome..."
-	@go build -o bin/gogent-update-review-outcome ./cmd/gogent-update-review-outcome
-	@echo "✓ Built: bin/gogent-update-review-outcome"
+	@echo "Building goyoke-update-review-outcome..."
+	@go build -o bin/goyoke-update-review-outcome ./cmd/goyoke-update-review-outcome
+	@echo "✓ Built: bin/goyoke-update-review-outcome"
 
 build-log-review:
-	@echo "Building gogent-log-review..."
-	@go build -o bin/gogent-log-review ./cmd/gogent-log-review
-	@echo "✓ Built: bin/gogent-log-review"
+	@echo "Building goyoke-log-review..."
+	@go build -o bin/goyoke-log-review ./cmd/goyoke-log-review
+	@echo "✓ Built: bin/goyoke-log-review"
 
 telemetry-tools: build-log-review build-update-review-outcome
-	@echo "✓ Telemetry tools built: gogent-log-review, gogent-update-review-outcome"
+	@echo "✓ Telemetry tools built: goyoke-log-review, goyoke-update-review-outcome"
 
-build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review
 	@echo "✓ All hook binaries built"
 
 # Alias for build-all (matches plan documentation)
 all: build-all
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-doc-theater build-update-review-outcome build-log-review check-path
-	@echo "Installing GOgent-Fortress CLIs to ~/.local/bin/..."
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review check-path
+	@echo "Installing goYoke CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
-	cp bin/gogent-validate ~/.local/bin/gogent-validate
-	cp bin/gogent-archive ~/.local/bin/gogent-archive
-	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
-	cp bin/gogent-sharp-edge ~/.local/bin/gogent-sharp-edge
-	cp bin/gogent-capture-intent ~/.local/bin/gogent-capture-intent
-	cp bin/gogent-load-context ~/.local/bin/gogent-load-context
-	cp bin/gogent-agent-endstate ~/.local/bin/gogent-agent-endstate
-	cp bin/gogent-orchestrator-guard ~/.local/bin/gogent-orchestrator-guard
-	cp bin/gogent-doc-theater ~/.local/bin/gogent-doc-theater
-	cp bin/gogent-update-review-outcome ~/.local/bin/gogent-update-review-outcome
-	cp bin/gogent-log-review ~/.local/bin/gogent-log-review
-	chmod +x ~/.local/bin/gogent-validate
-	chmod +x ~/.local/bin/gogent-archive
-	chmod +x ~/.local/bin/gogent-aggregate
-	chmod +x ~/.local/bin/gogent-sharp-edge
-	chmod +x ~/.local/bin/gogent-capture-intent
-	chmod +x ~/.local/bin/gogent-load-context
-	chmod +x ~/.local/bin/gogent-agent-endstate
-	chmod +x ~/.local/bin/gogent-orchestrator-guard
-	chmod +x ~/.local/bin/gogent-doc-theater
-	chmod +x ~/.local/bin/gogent-update-review-outcome
-	chmod +x ~/.local/bin/gogent-log-review
-	@echo "✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard, gogent-doc-theater, gogent-update-review-outcome, gogent-log-review"
+	cp bin/goyoke-validate ~/.local/bin/goyoke-validate
+	cp bin/goyoke-archive ~/.local/bin/goyoke-archive
+	cp bin/goyoke-aggregate ~/.local/bin/goyoke-aggregate
+	cp bin/goyoke-sharp-edge ~/.local/bin/goyoke-sharp-edge
+	cp bin/goyoke-capture-intent ~/.local/bin/goyoke-capture-intent
+	cp bin/goyoke-load-context ~/.local/bin/goyoke-load-context
+	cp bin/goyoke-agent-endstate ~/.local/bin/goyoke-agent-endstate
+	cp bin/goyoke-orchestrator-guard ~/.local/bin/goyoke-orchestrator-guard
+	cp bin/goyoke-update-review-outcome ~/.local/bin/goyoke-update-review-outcome
+	cp bin/goyoke-log-review ~/.local/bin/goyoke-log-review
+	chmod +x ~/.local/bin/goyoke-validate
+	chmod +x ~/.local/bin/goyoke-archive
+	chmod +x ~/.local/bin/goyoke-aggregate
+	chmod +x ~/.local/bin/goyoke-sharp-edge
+	chmod +x ~/.local/bin/goyoke-capture-intent
+	chmod +x ~/.local/bin/goyoke-load-context
+	chmod +x ~/.local/bin/goyoke-agent-endstate
+	chmod +x ~/.local/bin/goyoke-orchestrator-guard
+	chmod +x ~/.local/bin/goyoke-update-review-outcome
+	chmod +x ~/.local/bin/goyoke-log-review
+	@echo "✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-update-review-outcome, goyoke-log-review"
 	@echo ""
 	@$(MAKE) check-path
 
 install-archive: build-archive
-	@echo "Installing gogent-archive to ~/.local/bin/..."
+	@echo "Installing goyoke-archive to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
-	cp bin/gogent-archive ~/.local/bin/gogent-archive
-	chmod +x ~/.local/bin/gogent-archive
-	@echo "✅ Installed to ~/.local/bin/gogent-archive"
+	cp bin/goyoke-archive ~/.local/bin/goyoke-archive
+	chmod +x ~/.local/bin/goyoke-archive
+	@echo "✅ Installed to ~/.local/bin/goyoke-archive"
 	@echo "Ensure ~/.local/bin is in your PATH"
 
 install-aggregate: build-aggregate
-	@echo "Installing gogent-aggregate to ~/.local/bin/..."
+	@echo "Installing goyoke-aggregate to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
-	cp bin/gogent-aggregate ~/.local/bin/gogent-aggregate
-	chmod +x ~/.local/bin/gogent-aggregate
-	@echo "✅ Installed to ~/.local/bin/gogent-aggregate"
+	cp bin/goyoke-aggregate ~/.local/bin/goyoke-aggregate
+	chmod +x ~/.local/bin/goyoke-aggregate
+	@echo "✅ Installed to ~/.local/bin/goyoke-aggregate"
 	@echo "Ensure ~/.local/bin is in your PATH"
 
 install-load-context: build-load-context
-	@echo "Installing gogent-load-context..."
+	@echo "Installing goyoke-load-context..."
 	@mkdir -p $(HOME)/.local/bin
-	cp bin/gogent-load-context $(HOME)/.local/bin/
-	chmod +x $(HOME)/.local/bin/gogent-load-context
-	@echo "✓ Installed: $(HOME)/.local/bin/gogent-load-context"
+	cp bin/goyoke-load-context $(HOME)/.local/bin/
+	chmod +x $(HOME)/.local/bin/goyoke-load-context
+	@echo "✓ Installed: $(HOME)/.local/bin/goyoke-load-context"
 
 install-orchestrator-guard: build-orchestrator-guard
-	@echo "Installing gogent-orchestrator-guard to ~/.local/bin..."
+	@echo "Installing goyoke-orchestrator-guard to ~/.local/bin..."
 	@mkdir -p ~/.local/bin
-	@cp bin/gogent-orchestrator-guard ~/.local/bin/
-	@chmod +x ~/.local/bin/gogent-orchestrator-guard
-	@echo "✓ Installed: ~/.local/bin/gogent-orchestrator-guard"
-
-install-doc-theater: build-doc-theater
-	@echo "Installing gogent-doc-theater to ~/.local/bin..."
-	@mkdir -p ~/.local/bin
-	@cp bin/gogent-doc-theater ~/.local/bin/
-	@chmod +x ~/.local/bin/gogent-doc-theater
-	@echo "✓ Installed: ~/.local/bin/gogent-doc-theater"
+	@cp bin/goyoke-orchestrator-guard ~/.local/bin/
+	@chmod +x ~/.local/bin/goyoke-orchestrator-guard
+	@echo "✓ Installed: ~/.local/bin/goyoke-orchestrator-guard"
 
 install-update-review-outcome: build-update-review-outcome
-	@echo "Installing gogent-update-review-outcome to ~/.local/bin..."
+	@echo "Installing goyoke-update-review-outcome to ~/.local/bin..."
 	@mkdir -p ~/.local/bin
-	@cp bin/gogent-update-review-outcome ~/.local/bin/
-	@chmod +x ~/.local/bin/gogent-update-review-outcome
-	@echo "✓ Installed: ~/.local/bin/gogent-update-review-outcome"
+	@cp bin/goyoke-update-review-outcome ~/.local/bin/
+	@chmod +x ~/.local/bin/goyoke-update-review-outcome
+	@echo "✓ Installed: ~/.local/bin/goyoke-update-review-outcome"
 
 install-log-review: build-log-review
-	@echo "Installing gogent-log-review to ~/.local/bin..."
+	@echo "Installing goyoke-log-review to ~/.local/bin..."
 	@mkdir -p ~/.local/bin
-	@cp bin/gogent-log-review ~/.local/bin/
-	@chmod +x ~/.local/bin/gogent-log-review
-	@echo "✓ Installed: ~/.local/bin/gogent-log-review"
+	@cp bin/goyoke-log-review ~/.local/bin/
+	@chmod +x ~/.local/bin/goyoke-log-review
+	@echo "✓ Installed: ~/.local/bin/goyoke-log-review"
 
 install-wrapper:
 	@echo "Installing session-archive wrapper hook..."
 	mkdir -p ~/.claude/hooks
-	mkdir -p ~/.gogent
+	mkdir -p ~/.goyoke
 	cp scripts/session-archive-wrapper.sh ~/.claude/hooks/session-archive-wrapper.sh
 	chmod +x ~/.claude/hooks/session-archive-wrapper.sh
 	@echo "✅ Wrapper installed"
@@ -296,39 +282,37 @@ check-path:
 	fi
 
 uninstall:
-	@echo "Uninstalling GOgent-Fortress CLIs from ~/.local/bin/..."
-	rm -f ~/.local/bin/gogent-validate
-	rm -f ~/.local/bin/gogent-archive
-	rm -f ~/.local/bin/gogent-aggregate
-	rm -f ~/.local/bin/gogent-sharp-edge
-	rm -f ~/.local/bin/gogent-capture-intent
-	rm -f ~/.local/bin/gogent-load-context
-	rm -f ~/.local/bin/gogent-agent-endstate
-	rm -f ~/.local/bin/gogent-orchestrator-guard
-	rm -f ~/.local/bin/gogent-doc-theater
-	rm -f ~/.local/bin/gogent-update-review-outcome
-	rm -f ~/.local/bin/gogent-log-review
+	@echo "Uninstalling goYoke CLIs from ~/.local/bin/..."
+	rm -f ~/.local/bin/goyoke-validate
+	rm -f ~/.local/bin/goyoke-archive
+	rm -f ~/.local/bin/goyoke-aggregate
+	rm -f ~/.local/bin/goyoke-sharp-edge
+	rm -f ~/.local/bin/goyoke-capture-intent
+	rm -f ~/.local/bin/goyoke-load-context
+	rm -f ~/.local/bin/goyoke-agent-endstate
+	rm -f ~/.local/bin/goyoke-orchestrator-guard
+	rm -f ~/.local/bin/goyoke-update-review-outcome
+	rm -f ~/.local/bin/goyoke-log-review
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
-	@echo "Removing gogent-aggregate from ~/.local/bin/..."
-	rm -f ~/.local/bin/gogent-aggregate
-	@echo "✅ gogent-aggregate removed"
+	@echo "Removing goyoke-aggregate from ~/.local/bin/..."
+	rm -f ~/.local/bin/goyoke-aggregate
+	@echo "✅ goyoke-aggregate removed"
 
 clean:
 	rm -f ${BINARY_NAME}
-	rm -f bin/gogent-validate
-	rm -f bin/gogent-archive
-	rm -f bin/gogent-aggregate
-	rm -f bin/gogent-sharp-edge
-	rm -f bin/gogent-capture-intent
-	rm -f bin/gogent-load-context
-	rm -f bin/gogent-agent-endstate
-	rm -f bin/gogent-orchestrator-guard
-	rm -f bin/gogent-doc-theater
-	rm -f bin/gogent-update-review-outcome
-	rm -f bin/gogent-log-review
-	rm -f bin/gofortress-legacy
+	rm -f bin/goyoke-validate
+	rm -f bin/goyoke-archive
+	rm -f bin/goyoke-aggregate
+	rm -f bin/goyoke-sharp-edge
+	rm -f bin/goyoke-capture-intent
+	rm -f bin/goyoke-load-context
+	rm -f bin/goyoke-agent-endstate
+	rm -f bin/goyoke-orchestrator-guard
+	rm -f bin/goyoke-update-review-outcome
+	rm -f bin/goyoke-log-review
+	rm -f bin/goyoke-legacy
 	rm -rf packages/tui/dist
 	rm -rf packages/tui/node_modules
 	rm -f coverage.out
@@ -428,7 +412,7 @@ test-sharp-edge-all: test-sharp-edge-unit test-sharp-edge-integration
 	@echo "✅ All sharp edge tests passed"
 
 # ==============================================================================
-# Behavioral Simulation Testing (GOgent-042)
+# Behavioral Simulation Testing (goYoke-042)
 # 4-level pipeline: Unit -> Session Replay -> Behavioral Properties -> Chaos
 # ==============================================================================
 

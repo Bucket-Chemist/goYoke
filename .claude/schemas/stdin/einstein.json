@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/einstein.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/einstein.json",
   "title": "Einstein Stdin Schema",
   "description": "Validates stdin for Einstein (theoretical analysis) in braintrust workflow",
   "version": "1.0.0",

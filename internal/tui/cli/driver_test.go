@@ -155,7 +155,7 @@ func TestBuildArgs(t *testing.T) {
 				"--resume", "sess-abc",
 				"--model", "claude-opus-4-6",
 				"--mcp-config", "/etc/mcp.json",
-				"--allowedTools", "mcp__gofortress-interactive__*",
+				"--allowedTools", "mcp__goyoke-interactive__*",
 				"--permission-mode", "plan",
 				"--verbose",
 			},

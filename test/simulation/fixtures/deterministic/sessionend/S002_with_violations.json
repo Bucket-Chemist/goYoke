@@ -5,7 +5,7 @@
       ".claude/memory/routing-violations.jsonl": "{\"timestamp\":\"2026-01-22T10:00:00Z\",\"agent\":\"codebase-search\",\"violation\":\"subagent_type_mismatch\"}\n{\"timestamp\":\"2026-01-22T10:01:00Z\",\"agent\":\"python-pro\",\"violation\":\"ceiling_exceeded\"}\n{\"timestamp\":\"2026-01-22T10:02:00Z\",\"agent\":\"einstein\",\"violation\":\"opus_blocked\"}"
     },
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {

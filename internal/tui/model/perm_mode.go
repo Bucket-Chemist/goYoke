@@ -1,11 +1,11 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file implements permission-mode cycling (Alt+p).
 package model
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
 )
 
 // permModes is the canonical cycle order for permission escalation modes.

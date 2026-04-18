@@ -29,13 +29,13 @@ const targetTeam = args.length > 0 ? args.join(' ') : null;
 ### 2. Discover Session Directory
 
 ```javascript
-// Resolve gogent session directory from .gogent/current-session: env var → current-session marker → fallback
+// Resolve goyoke session directory from .goyoke/current-session: env var → current-session marker → fallback
 Bash({
-    command: `project_root="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"; gogent_session_dir="$(cat "$project_root/.gogent/current-session" 2>/dev/null)"; gogent_session_dir="${gogent_session_dir:-$project_root/.gogent/sessions/unknown}"; echo "$gogent_session_dir"`,
-    description: "Resolve gogent session directory from .gogent/current-session"
+    command: `project_root="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"; goyoke_session_dir="$(cat "$project_root/.goyoke/current-session" 2>/dev/null)"; goyoke_session_dir="${goyoke_session_dir:-$project_root/.goyoke/sessions/unknown}"; echo "$goyoke_session_dir"`,
+    description: "Resolve goyoke session directory from .goyoke/current-session"
 })
 // Verify it exists
-Bash({command: `test -d "${gogentSessionDir}" && echo "exists" || echo "missing"`})
+Bash({command: `test -d "${goyokeSessionDir}" && echo "exists" || echo "missing"`})
 // If missing, error and exit
 ```
 
@@ -43,7 +43,7 @@ Bash({command: `test -d "${gogentSessionDir}" && echo "exists" || echo "missing"
 
 ```javascript
 Bash({
-    command: `find ${gogentSessionDir}/teams -maxdepth 1 -type d -name "*.*" | sort`,
+    command: `find ${goyokeSessionDir}/teams -maxdepth 1 -type d -name "*.*" | sort`,
     description: "List all team directories"
 })
 // Each directory format: {timestamp}.{name}
@@ -148,7 +148,7 @@ Normal mode (Unicode):
 - failed: ✗
 - retrying: 🔄
 
-ASCII mode (when TERM=dumb or GOGENT_ASCII=1):
+ASCII mode (when TERM=dumb or GOYOKE_ASCII=1):
 - completed: [OK]
 - running: [..]
 - pending: [--]
@@ -194,7 +194,7 @@ Use /braintrust, /review, or /ticket to start an orchestration team.
 ```
 Error: Session directory not found: {path}
 
-The session may have been moved or deleted. Check GOGENT_SESSION_DIR environment variable.
+The session may have been moved or deleted. Check GOYOKE_SESSION_DIR environment variable.
 ```
 
 **Config parsing error:**
@@ -226,9 +226,9 @@ Before formatting, detect ASCII mode:
 
 ```javascript
 Bash({command: `echo "$TERM"`})
-Bash({command: `echo "${GOGENT_ASCII:-0}"`})
+Bash({command: `echo "${GOYOKE_ASCII:-0}"`})
 
-const asciiMode = (term === "dumb") || (gogentAscii === "1");
+const asciiMode = (term === "dumb") || (goyokeAscii === "1");
 ```
 
 Use appropriate icon set based on `asciiMode`.

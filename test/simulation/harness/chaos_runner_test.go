@@ -148,8 +148,8 @@ func TestChaosRunner_SetupTempDir(t *testing.T) {
 
 	// Check directories exist
 	expectedDirs := []string{
-		filepath.Join(tmpDir, ".gogent", "memory"),
-		filepath.Join(tmpDir, ".gogent"),
+		filepath.Join(tmpDir, ".goyoke", "memory"),
+		filepath.Join(tmpDir, ".goyoke"),
 	}
 
 	for _, dir := range expectedDirs {
@@ -182,14 +182,14 @@ func TestChaosRunner_BuildEnv(t *testing.T) {
 		}
 	}
 
-	if envMap["GOGENT_PROJECT_DIR"] != "/tmp/chaos" {
-		t.Errorf("GOGENT_PROJECT_DIR: got %q", envMap["GOGENT_PROJECT_DIR"])
+	if envMap["GOYOKE_PROJECT_DIR"] != "/tmp/chaos" {
+		t.Errorf("GOYOKE_PROJECT_DIR: got %q", envMap["GOYOKE_PROJECT_DIR"])
 	}
-	if envMap["GOGENT_MAX_FAILURES"] != "5" {
-		t.Errorf("GOGENT_MAX_FAILURES: got %q, want %q", envMap["GOGENT_MAX_FAILURES"], "5")
+	if envMap["GOYOKE_MAX_FAILURES"] != "5" {
+		t.Errorf("GOYOKE_MAX_FAILURES: got %q, want %q", envMap["GOYOKE_MAX_FAILURES"], "5")
 	}
-	if envMap["GOGENT_ROUTING_SCHEMA"] != "/path/to/schema.json" {
-		t.Errorf("GOGENT_ROUTING_SCHEMA: got %q", envMap["GOGENT_ROUTING_SCHEMA"])
+	if envMap["GOYOKE_ROUTING_SCHEMA"] != "/path/to/schema.json" {
+		t.Errorf("GOYOKE_ROUTING_SCHEMA: got %q", envMap["GOYOKE_ROUTING_SCHEMA"])
 	}
 }
 
@@ -290,7 +290,7 @@ func TestChaosRunner_ValidateJSONL_ValidFiles(t *testing.T) {
 	runner.setupTempDir()
 
 	// Create valid JSONL
-	os.WriteFile(filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl"),
+	os.WriteFile(filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl"),
 		[]byte(`{"key":"value"}`+"\n"+`{"key2":"value2"}`+"\n"), 0644)
 
 	result, err := runner.validateJSONL()
@@ -320,7 +320,7 @@ func TestChaosRunner_ValidateJSONL_InvalidFiles(t *testing.T) {
 	runner.setupTempDir()
 
 	// Create JSONL with invalid line
-	os.WriteFile(filepath.Join(tmpDir, ".gogent", "failure-tracker.jsonl"),
+	os.WriteFile(filepath.Join(tmpDir, ".goyoke", "failure-tracker.jsonl"),
 		[]byte(`{"valid":"json"}`+"\n"+`{not valid json}`+"\n"), 0644)
 
 	result, err := runner.validateJSONL()

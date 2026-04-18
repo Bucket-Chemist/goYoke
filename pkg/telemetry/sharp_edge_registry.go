@@ -28,7 +28,7 @@ func LoadSharpEdgeIDs() error {
 
 		// Find .claude/agents directory
 		agentsDir := filepath.Join(os.Getenv("HOME"), ".claude", "agents")
-		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		if projectDir := os.Getenv("GOYOKE_PROJECT_DIR"); projectDir != "" {
 			agentsDir = filepath.Join(projectDir, ".claude", "agents")
 		}
 

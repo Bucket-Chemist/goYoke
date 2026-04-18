@@ -1,0 +1,14 @@
+[
+  {
+    "bugId": "BUG-17",
+    "response": "ACCEPT",
+    "analysisSummary": "The fallback path is a deterministic TempDir location and the writers in config/telemetry/workflow all route security-relevant state beneath it. There is no per-user suffix or permission tightening in the vulnerable version, so local cross-user reads and overwrites are reachable whenever HOME/XDG is unwritable.",
+    "counterEvidence": ""
+  },
+  {
+    "bugId": "BUG-18",
+    "response": "ACCEPT",
+    "analysisSummary": "The persistent telemetry paths also used a deterministic TempDir fallback and append JSONL data there without any user scoping. When HOME/XDG_DATA_HOME fails, routing/review telemetry is written to a shared directory that other local users can inspect or poison.",
+    "counterEvidence": ""
+  }
+]

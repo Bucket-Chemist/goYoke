@@ -1,0 +1,4 @@
+[
+  "dev/tools/corpus-logger/main.go",
+  "dev/tools/corpus-logger/main_test.go"
+]

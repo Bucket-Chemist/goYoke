@@ -1,5 +1,5 @@
 // Package providers implements the provider tab-bar component for the
-// GOgent-Fortress TUI. It renders a single-row strip of provider names and
+// goYoke TUI. It renders a single-row strip of provider names and
 // highlights the currently active provider.
 //
 // This component is display-only: key handling (Alt+] cycling) is wired
@@ -12,8 +12,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ProviderTabBarModel is the Bubbletea model for the horizontal provider tab

@@ -14,8 +14,8 @@ mkdir -p "$OUTPUT_DIR"
 echo "Scanning source file for tickets..."
 
 # Get all ticket headers and their line numbers
-mapfile -t ticket_lines < <(grep -n "^## GOgent-" "$SOURCE_FILE" | cut -d: -f1)
-mapfile -t ticket_ids < <(grep -o "^## GOgent-[0-9]\+:" "$SOURCE_FILE" | sed 's/^## //; s/://')
+mapfile -t ticket_lines < <(grep -n "^## goYoke-" "$SOURCE_FILE" | cut -d: -f1)
+mapfile -t ticket_ids < <(grep -o "^## goYoke-[0-9]\+:" "$SOURCE_FILE" | sed 's/^## //; s/://')
 
 echo "Found ${#ticket_ids[@]} tickets: ${ticket_ids[*]}"
 
@@ -37,22 +37,22 @@ for i in "${!ticket_ids[@]}"; do
     ticket_content=$(sed -n "${start_line},${end_line}p" "$SOURCE_FILE")
 
     # Parse metadata from content
-    title=$(echo "$ticket_content" | head -1 | sed 's/^## GOgent-[0-9]\+: //')
+    title=$(echo "$ticket_content" | head -1 | sed 's/^## goYoke-[0-9]\+: //')
     time=$(echo "$ticket_content" | grep "^\*\*Time\*\*:" | sed 's/\*\*Time\*\*: //' | sed 's/ hours\?/h/' | sed 's/ hour/h/')
     deps=$(echo "$ticket_content" | grep "^\*\*Dependencies\*\*:" | sed 's/\*\*Dependencies\*\*: //')
     priority=$(echo "$ticket_content" | grep "^\*\*Priority\*\*:" | sed 's/\*\*Priority\*\*: //' | cut -d' ' -f1)
 
     # Convert dependencies to YAML array
-    if [[ "$deps" == "None"* ]] || [[ "$deps" == "GOgent-062"* ]]; then
+    if [[ "$deps" == "None"* ]] || [[ "$deps" == "goYoke-062"* ]]; then
         if [[ "$deps" == "None"* ]]; then
             yaml_deps="[]"
         else
             # Parse dependency list
-            yaml_deps=$(echo "$deps" | sed 's/GOgent-/\n  - GOgent-/g' | sed '1d' | sed 's/, GOgent-/\n  - GOgent-/g')
+            yaml_deps=$(echo "$deps" | sed 's/goYoke-/\n  - goYoke-/g' | sed '1d' | sed 's/, goYoke-/\n  - goYoke-/g')
             yaml_deps="[$yaml_deps]"
         fi
     else
-        yaml_deps=$(echo "$deps" | sed 's/GOgent-/GOgent-/g' | sed 's/, / /g' | awk '{for(i=1;i<=NF;i++) printf "  - %s\n", $i}')
+        yaml_deps=$(echo "$deps" | sed 's/goYoke-/goYoke-/g' | sed 's/, / /g' | awk '{for(i=1;i<=NF;i++) printf "  - %s\n", $i}')
         if [[ -n "$yaml_deps" ]]; then
             yaml_deps="[\n$yaml_deps]"
         else

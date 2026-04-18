@@ -1,0 +1,34 @@
+OpenAI Codex v0.118.0 (research preview)
+--------
+workdir: /home/doktersmol/Documents/GOgent-Fortress
+model: gpt-5.4
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, /home/doktersmol/.codex/memories]
+reasoning effort: high
+reasoning summaries: none
+session id: 019d7b21-6aa9-7b13-8733-d622c592dc58
+--------
+user
+$bug-hunter
+
+Continue the installed bug-hunter skill as one SDK-driven outer-loop iteration.
+This is not a full-repo completion turn. Audit only the queued domain below and then stop.
+
+Repository root: /home/doktersmol/Documents/GOgent-Fortress
+Loop state path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop-state-runner3.json
+Triage path: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/triage.json
+Target domain: dev
+Target files JSON: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter/sdk-loop/domains/dev-files.json
+Existing artifacts dir: /home/doktersmol/Documents/GOgent-Fortress/.bug-hunter
+
+Required behavior:
+- Use the installed bug-hunter skill and continue from existing .bug-hunter artifacts.
+- Treat nested loop mode as disabled inside this iteration; the outer SDK loop will handle further domains.
+- Audit only the listed domain files unless a direct cross-file dependency is required to verify a runtime bug.
+- Fix confirmed bugs when safe, then run targeted verification.
+- Do not reset, delete, or overwrite existing findings for prior domains.
+- Do not claim the repository is fully audited unless every queued domain is done; this turn only covers one domain.
+- Return only structured JSON matching the output schema.
+
+When you finish, report JSON with status, domain, short summary, confirmedBugCount, artifactsUpdated, testsRun, and notes.

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Agents spawned by `gogent-team-run` via `claude -p` have **partial Task() access**:
+Agents spawned by `goyoke-team-run` via `claude -p` have **partial Task() access**:
 - ✅ Allowed: `Task(model: "haiku")`, `Task(model: "sonnet")`
 - ❌ Blocked: `Task(model: "opus")`
 
@@ -12,21 +12,21 @@ This differs from MCP-spawned agents (via `spawn_agent` tool), which have **no T
 
 ### Nesting Level
 
-The Go binary sets `GOGENT_NESTING_LEVEL=2` when spawning:
+The Go binary sets `GOYOKE_NESTING_LEVEL=2` when spawning:
 
 ```go
 cmd := exec.Command("claude", "-p", ...)
 cmd.Env = append(os.Environ(),
-    "GOGENT_NESTING_LEVEL=2",
+    "GOYOKE_NESTING_LEVEL=2",
     // ...
 )
 ```
 
 ### Validation Hook
 
-`gogent-validate` (PreToolUse hook) reads `GOGENT_NESTING_LEVEL` and applies rules.
+`goyoke-validate` (PreToolUse hook) reads `GOYOKE_NESTING_LEVEL` and applies rules.
 
-**Current behavior** (from `cmd/gogent-validate/main.go`):
+**Current behavior** (from `cmd/goyoke-validate/main.go`):
 
 ```go
 const MAX_TASK_NESTING_LEVEL = 0 // Only Router (Level 0) can use Task()
@@ -106,12 +106,12 @@ When building prompt envelopes for team members, include this capability notice:
 ```markdown
 ## Your Capabilities
 
-You are spawned via `gogent-team-run` at nesting level 2.
+You are spawned via `goyoke-team-run` at nesting level 2.
 
 **Available delegation**:
 - ✅ `Task(model: "haiku")` - For mechanical tasks (file search, pattern extraction)
 - ✅ `Task(model: "sonnet")` - For implementation or focused analysis
-- ❌ `Task(model: "opus")` - Blocked by gogent-validate
+- ❌ `Task(model: "opus")` - Blocked by goyoke-validate
 
 If you need Opus-level analysis, return a recommendation in your stdout instead.
 
@@ -133,14 +133,14 @@ During TC-008 implementation, verify with these test cases:
 ```bash
 # Prompt: "Use Task(haiku) to count files in src/"
 # Expected: Haiku agent spawns, returns count, Einstein continues
-# Assertion: No "blocked by gogent-validate" error
+# Assertion: No "blocked by goyoke-validate" error
 ```
 
 ### Test 2: Einstein cannot spawn opus
 
 ```bash
 # Prompt: "Use Task(opus) to analyze architecture"
-# Expected: gogent-validate blocks with clear message
+# Expected: goyoke-validate blocks with clear message
 # Assertion: Error contains "Task(opus) blocked at nesting level 2"
 ```
 
@@ -158,7 +158,7 @@ During TC-008 implementation, verify with these test cases:
 # Setup: Create minimal team config with Einstein
 cat > /tmp/test-team/config.json <<EOF
 {
-  "project_root": "/home/user/Documents/GOgent-Fortress",
+  "project_root": "/home/user/Documents/goYoke",
   "waves": [
     {
       "members": [
@@ -183,7 +183,7 @@ cat > /tmp/test-team/stdin_einstein.json <<EOF
 EOF
 
 # Run team
-gogent-team-run /tmp/test-team
+goyoke-team-run /tmp/test-team
 
 # Expected results:
 # 1. Task(haiku) succeeds
@@ -201,10 +201,10 @@ Team-spawned agents do NOT have `spawn_agent` tool (it's an MCP tool, not CLI to
 
 If agent tries:
 ```javascript
-mcp__gofortress__spawn_agent({agent: "beethoven", model: "opus", ...})
+mcp__goyoke__spawn_agent({agent: "beethoven", model: "opus", ...})
 ```
 
-**Result**: `tool_use` error: "Unknown tool: mcp__gofortress__spawn_agent"
+**Result**: `tool_use` error: "Unknown tool: mcp__goyoke__spawn_agent"
 
 This is correct behavior. Documented in the prompt envelope template above.
 
@@ -230,20 +230,20 @@ Einstein spawns haiku scout → scout exhausts remaining budget → scout errors
 
 | File | Lines | What |
 |------|-------|------|
-| `cmd/gogent-validate/main.go` | 98-109 | Nesting level validation |
-| `cmd/gogent-validate/main.go` | 156-167 | Task input parsing |
-| `cmd/gogent-validate/main.go` | 406-427 | Nesting block logging |
+| `cmd/goyoke-validate/main.go` | 98-109 | Nesting level validation |
+| `cmd/goyoke-validate/main.go` | 156-167 | Task input parsing |
+| `cmd/goyoke-validate/main.go` | 406-427 | Nesting block logging |
 | `pkg/routing/validator.go` | — | TaskInput parsing (used in validation) |
 | `packages/tui/src/lib/spawnAgent.ts` | ~170 | MCP spawn pattern (for comparison) |
 
 ## Feeds Into
 
-- **TC-008** (Go binary): Uses `GOGENT_NESTING_LEVEL=2` when spawning agents
+- **TC-008** (Go binary): Uses `GOYOKE_NESTING_LEVEL=2` when spawning agents
 - **TC-013** (orchestrator rewrites): Prompt envelopes reference this policy
 
 ## Future Work
 
-A separate ticket is needed to modify `gogent-validate` to allow Task(haiku/sonnet) at Level 2. This ticket documents the **intent**; implementation requires changes to `routing.BlockResponseForNesting()`.
+A separate ticket is needed to modify `goyoke-validate` to allow Task(haiku/sonnet) at Level 2. This ticket documents the **intent**; implementation requires changes to `routing.BlockResponseForNesting()`.
 
 ## Cross-References
 

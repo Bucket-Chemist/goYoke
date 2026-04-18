@@ -1,6 +1,6 @@
 package config
 
-// ActiveSkill represents the v2 guard file written by gogent-skill-guard when a skill is active.
+// ActiveSkill represents the v2 guard file written by goyoke-skill-guard when a skill is active.
 // Shared between skill-guard (writer) and archive (reader/cleanup).
 type ActiveSkill struct {
 	FormatVersion      int    `json:"format_version"`

@@ -408,7 +408,7 @@ func TestLoadArtifacts_PartialFailure(t *testing.T) {
 	}
 }
 
-// ===== Tests for Decision loader (GOgent-029c) =====
+// ===== Tests for Decision loader (goYoke-029c) =====
 
 func TestLoadDecisions_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -509,7 +509,7 @@ func TestLoadDecisions_Malformed(t *testing.T) {
 	}
 }
 
-// ===== Tests for PreferenceOverride loader (GOgent-029c) =====
+// ===== Tests for PreferenceOverride loader (goYoke-029c) =====
 
 func TestLoadPreferences_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -610,7 +610,7 @@ func TestLoadPreferences_Malformed(t *testing.T) {
 	}
 }
 
-// ===== Tests for PerformanceMetric loader (GOgent-029c) =====
+// ===== Tests for PerformanceMetric loader (goYoke-029c) =====
 
 func TestLoadPerformance_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -711,7 +711,7 @@ func TestLoadPerformance_Malformed(t *testing.T) {
 	}
 }
 
-// ===== Tests for LoadArtifacts integration with new loaders (GOgent-029c) =====
+// ===== Tests for LoadArtifacts integration with new loaders (goYoke-029c) =====
 
 func TestLoadArtifacts_AllMissing_IncludesNewFields(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -801,7 +801,7 @@ func TestLoadArtifacts_Complete_IncludesNewFields(t *testing.T) {
 	}
 }
 
-// ===== Backward compatibility test (GOgent-029c) =====
+// ===== Backward compatibility test (goYoke-029c) =====
 
 func TestLoadArtifacts_BackwardCompatibility_V10(t *testing.T) {
 	// This test verifies that a v1.0 handoff (without new fields) can still be loaded
@@ -859,29 +859,29 @@ func TestLoadArtifacts_BackwardCompatibility_V10(t *testing.T) {
 	}
 }
 
-// ===== DefaultHandoffConfig tests for new paths (GOgent-029c) =====
+// ===== DefaultHandoffConfig tests for new paths (goYoke-029c) =====
 
 func TestDefaultHandoffConfig_NewPaths(t *testing.T) {
 	projectDir := "/test/project"
 	config := DefaultHandoffConfig(projectDir)
 
-	expectedDecisionsPath := "/test/project/.gogent/memory/decisions.jsonl"
+	expectedDecisionsPath := "/test/project/.goyoke/memory/decisions.jsonl"
 	if config.DecisionsPath != expectedDecisionsPath {
 		t.Errorf("Expected DecisionsPath '%s', got: '%s'", expectedDecisionsPath, config.DecisionsPath)
 	}
 
-	expectedPreferencesPath := "/test/project/.gogent/memory/preferences.jsonl"
+	expectedPreferencesPath := "/test/project/.goyoke/memory/preferences.jsonl"
 	if config.PreferencesPath != expectedPreferencesPath {
 		t.Errorf("Expected PreferencesPath '%s', got: '%s'", expectedPreferencesPath, config.PreferencesPath)
 	}
 
-	expectedPerformancePath := "/test/project/.gogent/memory/performance.jsonl"
+	expectedPerformancePath := "/test/project/.goyoke/memory/performance.jsonl"
 	if config.PerformancePath != expectedPerformancePath {
 		t.Errorf("Expected PerformancePath '%s', got: '%s'", expectedPerformancePath, config.PerformancePath)
 	}
 }
 
-// ===== Tests for LoadAllUserIntents (GOgent-041c) =====
+// ===== Tests for LoadAllUserIntents (goYoke-041c) =====
 
 func TestLoadAllUserIntents_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -1022,12 +1022,12 @@ func TestLoadAllUserIntents_MinimalFields(t *testing.T) {
 	}
 }
 
-// ===== Tests for loadEndstates (GOgent-073) =====
+// ===== Tests for loadEndstates (goYoke-073) =====
 
 func TestLoadEndstates_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".goyoke", "memory", "agent-endstates.jsonl")
 
 	// Create directory structure
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
@@ -1106,7 +1106,7 @@ func TestLoadEndstates_MissingFile(t *testing.T) {
 func TestLoadEndstates_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".goyoke", "memory", "agent-endstates.jsonl")
 
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 	os.WriteFile(endstatesPath, []byte(""), 0644)
@@ -1125,7 +1125,7 @@ func TestLoadEndstates_EmptyFile(t *testing.T) {
 func TestLoadEndstates_Malformed(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".goyoke", "memory", "agent-endstates.jsonl")
 
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 
@@ -1154,7 +1154,7 @@ func TestLoadEndstates_Malformed(t *testing.T) {
 func TestLoadEndstates_WithBlankLines(t *testing.T) {
 	tmpDir := t.TempDir()
 	projectDir := filepath.Join(tmpDir, "project")
-	endstatesPath := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(projectDir, ".goyoke", "memory", "agent-endstates.jsonl")
 
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 
@@ -1178,7 +1178,7 @@ func TestLoadEndstates_WithBlankLines(t *testing.T) {
 	}
 }
 
-// ===== Tests for LoadArtifacts integration with AgentEndstates (GOgent-073) =====
+// ===== Tests for LoadArtifacts integration with AgentEndstates (goYoke-073) =====
 
 func TestLoadArtifacts_WithEndstates(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -1189,7 +1189,7 @@ func TestLoadArtifacts_WithEndstates(t *testing.T) {
 	config.ErrorPatternsPath = filepath.Join(tmpDir, "errors.jsonl")
 
 	// Create endstates file
-	endstatesPath := filepath.Join(tmpDir, ".gogent", "memory", "agent-endstates.jsonl")
+	endstatesPath := filepath.Join(tmpDir, ".goyoke", "memory", "agent-endstates.jsonl")
 	os.MkdirAll(filepath.Dir(endstatesPath), 0755)
 	endstatesData := `{"timestamp":"2026-01-24T10:00:00Z","agent_id":"python-pro","agent_class":"implementation","tier":"sonnet","exit_code":0,"duration_ms":1500,"output_tokens":500,"decision":"prompt","recommendations":["test"]}
 {"timestamp":"2026-01-24T11:00:00Z","agent_id":"codebase-search","agent_class":"search","tier":"haiku","exit_code":0,"duration_ms":250,"output_tokens":100,"decision":"silent","recommendations":[]}`

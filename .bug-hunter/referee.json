@@ -1,0 +1,122 @@
+[
+  {
+    "bugId": "BUG-1",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. The original XDG path selection trusted directory existence but not writability, which breaks runtime state creation under read-only runtime dirs and can drop guard enforcement into degraded behavior.",
+    "suggestedFix": "Probe candidate XDG directories with a real file create/remove step before accepting them, and fall back to the next writable location when the probe fails."
+  },
+  {
+    "bugId": "BUG-3",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Session artifact parsing reused default bufio.Scanner behavior across multiple JSONL readers, so valid large artifact lines broke context-resume and sharp-edge query flows in the same way the transcript parser did.",
+    "suggestedFix": "Use a shared high-capacity scanner helper for all session JSONL readers and keep regression tests on the affected resume/query paths."
+  },
+  {
+    "bugId": "BUG-2",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 97,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Routing transcript parsing treated each JSONL line as a scanner token without increasing the default cap, so valid high-volume tool events broke both routing/task-analysis code paths and metadata extraction for workflow endstate handling.",
+    "suggestedFix": "Use a shared scanner helper with an explicit multi-megabyte token limit anywhere transcript JSONL is consumed line-by-line."
+  },
+  {
+    "bugId": "BUG-4",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 97,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Team-run execution returned success for final-wave partial failures because only all-member failure was treated as fatal. That leaks failed member state past the command boundary and misreports the overall run outcome.",
+    "suggestedFix": "Keep intermediate partial failures non-fatal so later synthesizer waves can run, but return an error if failed members remain after the final wave completes."
+  },
+  {
+    "bugId": "BUG-5",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 94,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. The bridge's socket-path builder did not account for Unix pathname socket length limits, so certain valid runtime/temp directory configurations prevented the TUI bridge from binding at startup.",
+    "suggestedFix": "Select the first runtime/temp candidate whose full socket path fits within the Unix socket path limit, and fall back to a short path such as /tmp when needed."
+  },
+  {
+    "bugId": "BUG-6",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Telemetry analytics reused default bufio.Scanner behavior across multiple JSONL readers, so valid large telemetry records were dropped or surfaced as read failures across invocations, escalations, scout, collaboration, and lifecycle loaders.",
+    "suggestedFix": "Use a shared enlarged scanner helper for telemetry JSONL readers and keep direct large-line regressions on the public loader functions."
+  },
+  {
+    "bugId": "BUG-7",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Workflow endstate log reading relied on the default scanner cap even though serialized recommendation payloads can exceed it, breaking valid analytics input.",
+    "suggestedFix": "Use a dedicated enlarged scanner for endstate JSONL reads and keep the large-entry regression in logging_test."
+  },
+  {
+    "bugId": "BUG-8",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Failure-tracker scanning powered both counting and clearing operations and previously used the default scanner limit, making large valid entries effectively invisible to loop detection.",
+    "suggestedFix": "Switch failure-tracker reads to a shared enlarged scanner and keep a regression with a >64 KiB error_match field."
+  },
+  {
+    "bugId": "BUG-9",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Persistent data directory selection still trusted directory existence instead of actual writability, so telemetry and ML logging could fail at first write even after path selection succeeded.",
+    "suggestedFix": "Probe candidate data directories with a real create/remove write test before returning them, and fall back to the next writable location."
+  },
+  {
+    "bugId": "BUG-10",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 96,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Permission-gate cache filenames incorporated raw session IDs from stdin events, so slash-containing IDs altered the resolved cache path and escaped the intended runtime directory.",
+    "suggestedFix": "Derive cache filenames from a path-safe stable encoding such as a cryptographic hash of session_id rather than embedding session_id directly."
+  },
+  {
+    "bugId": "BUG-11",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. Weekly aggregation counted archived JSONL entries with the default scanner cap, so a single large valid line degraded artifact counts in the generated summary.",
+    "suggestedFix": "Use an enlarged scanner buffer in countLines and keep a regression on a >64 KiB archived line."
+  },
+  {
+    "bugId": "BUG-12",
+    "verdict": "REAL_BUG",
+    "trueSeverity": "Medium",
+    "confidenceScore": 95,
+    "confidenceLabel": "high",
+    "verificationMode": "INDEPENDENTLY_VERIFIED",
+    "analysisSummary": "Confirmed. The TUI routing telemetry panel still used the default scanner cap after backend readers were fixed, so valid large decisions could vanish from the UI or surface as load errors.",
+    "suggestedFix": "Use an enlarged scanner buffer in the panel's JSONL loader and keep the large-entry regression in telemetry_test."
+  }
+]

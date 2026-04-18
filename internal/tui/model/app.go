@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains the root AppModel: the single top-level tea.Model that
 // owns all application state and implements The Elm Architecture.
 package model
@@ -9,16 +9,16 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/session"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/banner"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/settingstree"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // Widget interfaces are defined in interfaces.go.
@@ -138,6 +138,9 @@ type sharedState struct {
 	// optionsViewModal is the full-screen options viewer overlay (alt+o).
 	optionsViewModal modals.OptionsViewModal
 
+	// modelModal is the interactive model selector overlay (/model).
+	modelModal modals.ModelModal
+
 	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
 	// It is activated by ctrl+f and queries all registered SearchSources.
 	searchOverlay searchOverlayWidget
@@ -153,7 +156,7 @@ type sharedState struct {
 	breadcrumb breadcrumbWidget
 
 	// cwdSelector is the modal overlay for changing the working directory.
-	// It propagates CWD changes to os.Chdir and GOGENT_CWD env var so that
+	// It propagates CWD changes to os.Chdir and GOYOKE_CWD env var so that
 	// spawned Claude CLI subprocesses inherit the desired scope.
 	cwdSelector cwdSelectorWidget
 
@@ -187,7 +190,7 @@ type sharedState struct {
 // AppModel
 // ---------------------------------------------------------------------------
 
-// AppModel is the root tea.Model for the GOgent-Fortress TUI.  It owns all
+// AppModel is the root tea.Model for the goYoke TUI.  It owns all
 // application state and delegates rendering and key handling to child
 // components.
 //
@@ -294,6 +297,7 @@ func NewAppModel() AppModel {
 		planViewModal:    modals.NewPlanViewModal(),
 		helpModal:        modals.NewHelpModal(),
 		optionsViewModal: modals.NewOptionsViewModal(),
+		modelModal:       modals.NewModelModal(),
 	}
 	m := AppModel{
 		focus:          FocusClaude,
@@ -400,6 +404,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case ModelSwitchRequestMsg:
 		return m.handleModelSwitchRequest(msg)
+
+	case modals.ModelSelectedMsg:
+		m.shared.modelModal.Hide()
+		return m.handleModelSwitchRequest(ModelSwitchRequestMsg{ModelID: msg.ModelID})
+
+	case modals.ModelModalClosedMsg:
+		m.shared.modelModal.Hide()
+		m.updateHintContext()
+		return m, nil
 
 	// -----------------------------------------------------------------
 	// Effort switching

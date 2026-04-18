@@ -1,7 +1,7 @@
 package enforcement
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // AnalyzeToolEventForDocTheater analyzes a ToolEvent for documentation theater patterns.
@@ -9,8 +9,8 @@ import (
 // or the content is clean.
 //
 // This function integrates:
-// - ToolEvent helper methods (GOgent-080) for event classification and content extraction
-// - PatternDetector (GOgent-081) for theater pattern detection
+// - ToolEvent helper methods (goYoke-080) for event classification and content extraction
+// - PatternDetector (goYoke-081) for theater pattern detection
 //
 // Filtering logic:
 //  1. Non-write operations (Read, Glob, etc.) → return nil

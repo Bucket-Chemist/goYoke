@@ -1,4 +1,4 @@
-// Package instructionsaudit implements the gogent-instructions-audit hook.
+// Package instructionsaudit implements the goyoke-instructions-audit hook.
 // It appends an audit record for each InstructionsLoaded event.
 package instructionsaudit
 
@@ -70,7 +70,7 @@ func ReadEvent(r io.Reader, timeout time.Duration) (*InstructionsLoadedEvent, er
 }
 
 // AuditLogPath resolves the path to the instructions-audit.jsonl file.
-// Uses $XDG_DATA_HOME/gogent/ or falls back to ~/.local/share/gogent/.
+// Uses $XDG_DATA_HOME/goyoke/ or falls back to ~/.local/share/goyoke/.
 func AuditLogPath() string {
 	dataHome := os.Getenv("XDG_DATA_HOME")
 	if dataHome == "" {
@@ -80,7 +80,7 @@ func AuditLogPath() string {
 		}
 		dataHome = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(dataHome, "gogent", "instructions-audit.jsonl")
+	return filepath.Join(dataHome, "goyoke", "instructions-audit.jsonl")
 }
 
 // AppendAuditRecord writes an audit record as a JSONL line to path.
@@ -107,12 +107,12 @@ func AppendAuditRecord(path string, record AuditRecord) error {
 	return nil
 }
 
-// Main is the entrypoint for the gogent-instructions-audit hook.
+// Main is the entrypoint for the goyoke-instructions-audit hook.
 func Main() {
 	event, err := ReadEvent(os.Stdin, DefaultTimeout)
 	if err != nil {
 		// Parse failure is non-fatal: this hook must never block.
-		fmt.Fprintf(os.Stderr, "[gogent-instructions-audit] Warning: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-instructions-audit] Warning: %v\n", err)
 		os.Exit(0)
 	}
 
@@ -127,7 +127,7 @@ func Main() {
 	}
 
 	if err := AppendAuditRecord(AuditLogPath(), record); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-instructions-audit] Warning: append failed: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-instructions-audit] Warning: append failed: %v\n", err)
 	}
 
 	os.Exit(0)

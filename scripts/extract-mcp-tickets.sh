@@ -55,8 +55,8 @@ BEGIN {
     ticket_count = 0
 }
 
-# Match ticket header: #### GOgent-MCP-XXX: Title
-/^#### GOgent-MCP-[0-9]+:/ {
+# Match ticket header: #### goYoke-MCP-XXX: Title
+/^#### goYoke-MCP-[0-9]+:/ {
     # If we were capturing a ticket, write it
     if (in_ticket && ticket_id != "") {
         write_ticket()
@@ -68,7 +68,7 @@ BEGIN {
 
     # Extract title (everything after the ID:)
     title = $0
-    sub(/^#### GOgent-MCP-[0-9]+: /, "", title)
+    sub(/^#### goYoke-MCP-[0-9]+: /, "", title)
 
     in_ticket = 1
     ticket_content = ""
@@ -186,7 +186,7 @@ else
     echo "|:---|:------|:---------|:-----|:-------------|" >> "$INDEX_FILE"
 
     # Parse each ticket file for index
-    for f in "$OUTPUT_DIR"/GOgent-MCP-*.md; do
+    for f in "$OUTPUT_DIR"/goYoke-MCP-*.md; do
         if [[ -f "$f" ]]; then
             # Extract frontmatter values
             id=$(grep "^id:" "$f" | head -1 | sed 's/^id: //')
@@ -204,11 +204,11 @@ else
     echo "" >> "$INDEX_FILE"
 
     for prio in CRITICAL HIGH MEDIUM LOW; do
-        tickets=$(grep -l "^priority: $prio" "$OUTPUT_DIR"/GOgent-MCP-*.md 2>/dev/null | wc -l || true)
+        tickets=$(grep -l "^priority: $prio" "$OUTPUT_DIR"/goYoke-MCP-*.md 2>/dev/null | wc -l || true)
         if [[ $tickets -gt 0 ]]; then
             echo "### $prio ($tickets)" >> "$INDEX_FILE"
             echo "" >> "$INDEX_FILE"
-            grep -l "^priority: $prio" "$OUTPUT_DIR"/GOgent-MCP-*.md 2>/dev/null | while read -r f; do
+            grep -l "^priority: $prio" "$OUTPUT_DIR"/goYoke-MCP-*.md 2>/dev/null | while read -r f; do
                 id=$(grep "^id:" "$f" | head -1 | sed 's/^id: //')
                 title=$(grep "^title:" "$f" | head -1 | sed 's/^title: "//' | sed 's/"$//')
                 echo "- [$id](./$id.md): $title" >> "$INDEX_FILE"

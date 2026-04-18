@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all CLI event handlers for AppModel's Update method.
 // Extracted from app.go as part of TUI-043.
 package model
@@ -14,8 +14,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // planStepPattern matches common plan step markers in assistant text.
@@ -62,9 +62,6 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 	m.cliReady = true
 	m.sessionID = msg.SessionID
 	m.activeModel = msg.Model
-	// Latch the 1M context flag on the first session init so it survives
-	// model switches. Once set, it is never cleared — the user's account
-	// capability does not change mid-session.
 	if strings.Contains(msg.Model, "[1m]") {
 		m.context1M = true
 	}

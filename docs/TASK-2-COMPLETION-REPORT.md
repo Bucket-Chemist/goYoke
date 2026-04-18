@@ -2,7 +2,7 @@
 
 ## Objective
 
-Determine the correct approach for handling Claude CLI permissions in gofortress TUI.
+Determine the correct approach for handling Claude CLI permissions in goyoke TUI.
 
 **Initial Hypothesis:** Use `--permission-mode delegate` to receive interactive permission request events and respond with approvals.
 
@@ -48,7 +48,7 @@ Tested all permission modes with `--output-format=stream-json`:
 
 Implemented pre-approval approach:
 
-**File:** `cmd/gofortress/main.go`
+**File:** `cmd/goyoke/main.go`
 ```go
 cfg = cli.Config{
     ClaudePath:   "claude",
@@ -78,7 +78,7 @@ The architecture is:
 
 ### Code Changes
 
-**1. Config Usage (cmd/gofortress/main.go:99-106)**
+**1. Config Usage (cmd/goyoke/main.go:99-106)**
 ```go
 AllowedTools: []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", "TaskOutput"},
 ```
@@ -104,10 +104,10 @@ AllowedTools: []string{"Bash", "Read", "Write", "Edit", "Glob", "Grep", "Task", 
 
 ```bash
 # Build
-go build -o ~/.local/bin/gofortress ./cmd/gofortress
+go build -o ~/.local/bin/goyoke ./cmd/goyoke
 
 # Run
-gofortress
+goyoke
 
 # Test command
 > create a python file that prints hello
@@ -166,7 +166,7 @@ Created comprehensive documentation:
 
 ## Recommendations
 
-### For gofortress
+### For goyoke
 
 1. **Ship with current AllowedTools list:** Safe, common tools
 2. **Add UI indicator:** Show allowed tools in status bar
@@ -203,7 +203,7 @@ Original plan was "Production Permission Handler". Now:
 ## Artifacts
 
 ### Code Changes
-- `cmd/gofortress/main.go`: Added AllowedTools config
+- `cmd/goyoke/main.go`: Added AllowedTools config
 - `internal/cli/subprocess.go`: Removed experimental PermissionMode code
 - Clean build, no test failures
 

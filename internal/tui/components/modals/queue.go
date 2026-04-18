@@ -3,7 +3,7 @@ package modals
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------

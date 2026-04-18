@@ -1,5 +1,5 @@
 // Package teamconfig defines the shared configuration types used by both
-// cmd/gogent-team-run (the team runner binary) and the TUI's team display
+// cmd/goyoke-team-run (the team runner binary) and the TUI's team display
 // components. Extracting these types into a non-main package eliminates the
 // type duplication that previously existed between the two and ensures changes
 // to the config.json schema produce compile-time errors in both consumers.
@@ -35,7 +35,7 @@ type Member struct {
 	StartedAt    *string `json:"started_at"`
 	CompletedAt  *string `json:"completed_at"`
 
-	// Health monitoring fields — written by gogent-team-run, read by TUI.
+	// Health monitoring fields — written by goyoke-team-run, read by TUI.
 	ProcessPID       *int    `json:"process_pid"`                  // PID of spawned CLI process
 	HealthStatus     string  `json:"health_status,omitempty"`      // healthy|stall_warning|stalled
 	LastActivityTime *string `json:"last_activity_time,omitempty"` // ISO 8601

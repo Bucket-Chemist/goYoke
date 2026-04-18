@@ -1,5 +1,5 @@
 // Package statusline implements the adaptive status-bar component for the
-// GOgent-Fortress TUI. It surfaces session cost, token usage, context
+// goYoke TUI. It surfaces session cost, token usage, context
 // percentage, permission mode, active model, provider, git branch, and
 // authentication status. At Standard width (80-119 cols) it renders one row;
 // at Wide+ (120+) it renders two rows.
@@ -15,9 +15,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------

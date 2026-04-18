@@ -121,7 +121,7 @@
     },
     "delegation_requirement": {
       "description": "When agent with must_delegate=true completes, verify child count >= min_delegations",
-      "enforcement": "gogent-orchestrator-guard hook or MCP spawn tool"
+      "enforcement": "goyoke-orchestrator-guard hook or MCP spawn tool"
     },
     "data_flow_check": {
       "description": "Warn if agent receives data not in its inputs list, or sends to agent not in outputs_to",

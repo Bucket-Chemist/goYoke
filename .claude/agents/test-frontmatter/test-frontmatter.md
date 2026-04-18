@@ -2,8 +2,8 @@
 name: Test Frontmatter Agent
 description: Agent to test if Claude Code ignores unknown frontmatter fields
 model: haiku
-x-gogent-tier: haiku
-x-gogent-custom-field: "this should be ignored"
+x-goyoke-tier: haiku
+x-goyoke-custom-field: "this should be ignored"
 unknown_field_123: "testing tolerance"
 tools:
   - Read

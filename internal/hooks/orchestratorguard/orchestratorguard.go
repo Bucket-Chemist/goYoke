@@ -1,4 +1,4 @@
-// Package orchestratorguard implements the gogent-orchestrator-guard hook.
+// Package orchestratorguard implements the goyoke-orchestrator-guard hook.
 // It validates background task collection before orchestrator completion.
 package orchestratorguard
 
@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/enforcement"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/enforcement"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // DefaultTimeout is the read timeout for stdin events.
 const DefaultTimeout = 5 * time.Second
 
-// Main is the entrypoint for the gogent-orchestrator-guard hook.
+// Main is the entrypoint for the goyoke-orchestrator-guard hook.
 func Main() {
 	event, err := routing.ParseSubagentStopEvent(os.Stdin, DefaultTimeout)
 	if err != nil {

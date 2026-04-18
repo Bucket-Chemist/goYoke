@@ -10,17 +10,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/test/integration"
+	"github.com/Bucket-Chemist/goYoke/test/integration"
 )
 
 // TestRegression_ValidateRouting compares Go vs Bash validate-routing output
 func TestRegression_ValidateRouting(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests (from GOgent-000)")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests (from goYoke-000)")
 	}
 
-	goBinary := "../../bin/gogent-validate"
+	goBinary := "../../bin/goyoke-validate"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/validate-routing.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -96,12 +96,12 @@ func TestRegression_ValidateRouting(t *testing.T) {
 
 // TestRegression_SessionArchive compares Go vs Bash session-archive output
 func TestRegression_SessionArchive(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../bin/gogent-archive"
+	goBinary := "../../bin/goyoke-archive"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/session-archive.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -137,15 +137,15 @@ func TestRegression_SessionArchive(t *testing.T) {
 
 		// Run Go implementation
 		goHandoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff-go.md")
-		os.Setenv("GOgent_HANDOFF_PATH", goHandoffPath)
+		os.Setenv("goYoke_HANDOFF_PATH", goHandoffPath)
 		_ = harness.RunHook(goBinary, event)
-		os.Unsetenv("GOgent_HANDOFF_PATH")
+		os.Unsetenv("goYoke_HANDOFF_PATH")
 
 		// Run Bash implementation
 		bashHandoffPath := filepath.Join(projectDir, ".claude", "memory", "last-handoff-bash.md")
-		os.Setenv("GOgent_HANDOFF_PATH", bashHandoffPath)
+		os.Setenv("goYoke_HANDOFF_PATH", bashHandoffPath)
 		_ = runBashHook(t, bashScript, event, projectDir)
-		os.Unsetenv("GOgent_HANDOFF_PATH")
+		os.Unsetenv("goYoke_HANDOFF_PATH")
 
 		// Compare handoff files (ignore timestamps)
 		if _, err := os.Stat(goHandoffPath); err != nil {
@@ -182,12 +182,12 @@ func TestRegression_SessionArchive(t *testing.T) {
 
 // TestRegression_SharpEdgeDetector compares Go vs Bash sharp-edge output
 func TestRegression_SharpEdgeDetector(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../bin/gogent-sharp-edge"
+	goBinary := "../../bin/goyoke-sharp-edge"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/sharp-edge-detector.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -246,12 +246,12 @@ func TestRegression_SharpEdgeDetector(t *testing.T) {
 
 // TestRegression_LoadContext compares Go vs Bash context loading for SessionStart
 func TestRegression_LoadContext(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../bin/gogent-load-context"
+	goBinary := "../../bin/goyoke-load-context"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/load-routing-context.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -333,12 +333,12 @@ func TestRegression_LoadContext(t *testing.T) {
 
 // TestRegression_AgentEndstate compares Go vs Bash agent endstate processing for SubagentStop
 func TestRegression_AgentEndstate(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
-	goBinary := "../../bin/gogent-agent-endstate"
+	goBinary := "../../bin/goyoke-agent-endstate"
 	bashScript := os.Getenv("HOME") + "/.claude/hooks/agent-endstate.sh"
 
 	if _, err := os.Stat(goBinary); err != nil {
@@ -414,9 +414,9 @@ func TestRegression_AgentEndstate(t *testing.T) {
 
 // TestRegression_MLTelemetry validates ML telemetry export consistency for hook tracing
 func TestRegression_MLTelemetry(t *testing.T) {
-	corpusPath := os.Getenv("GOgent_CORPUS_PATH")
+	corpusPath := os.Getenv("goYoke_CORPUS_PATH")
 	if corpusPath == "" {
-		t.Skip("Set GOgent_CORPUS_PATH to run regression tests")
+		t.Skip("Set goYoke_CORPUS_PATH to run regression tests")
 	}
 
 	projectDir := t.TempDir()
@@ -511,7 +511,7 @@ func runBashHook(t *testing.T, scriptPath string, event *integration.EventEntry,
 	cmd := exec.Command("/bin/bash", scriptPath)
 	cmd.Env = append(os.Environ(),
 		"CLAUDE_PROJECT_DIR="+projectDir,
-		"GOgent_TEST_MODE=1",
+		"goYoke_TEST_MODE=1",
 	)
 
 	cmd.Stdin = bytes.NewReader(event.RawJSON)
@@ -568,7 +568,7 @@ func setupRegressionProject(t *testing.T, projectDir string) {
 	}
 
 	// Set tier
-	tierPath := filepath.Join(projectDir, ".gogent", "current-tier")
+	tierPath := filepath.Join(projectDir, ".goyoke", "current-tier")
 	os.MkdirAll(filepath.Dir(tierPath), 0755)
 	os.WriteFile(tierPath, []byte("haiku\n"), 0644)
 }
@@ -585,7 +585,7 @@ func setupSessionFilesForEvent(t *testing.T, projectDir string, event *integrati
 	os.WriteFile(transcriptPath, []byte(""), 0644)
 
 	// Create minimal tool counter
-	counterPath := filepath.Join(projectDir, ".gogent", "tool-counter-read")
+	counterPath := filepath.Join(projectDir, ".goyoke", "tool-counter-read")
 	os.MkdirAll(filepath.Dir(counterPath), 0755)
 	os.WriteFile(counterPath, []byte("x\n"), 0644)
 }

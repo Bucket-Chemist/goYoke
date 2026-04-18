@@ -1,4 +1,4 @@
-# GOgent-Fortress System Simulation Test Specification
+# goYoke System Simulation Test Specification
 
 > **Document Type:** Einstein Analysis Output
 > **Generated:** 2026-01-22
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This document defines a simulation harness for end-to-end testing of the GOgent-Fortress hook system. The harness enables:
+This document defines a simulation harness for end-to-end testing of the goYoke hook system. The harness enables:
 
 1. **Deterministic replay** - Known inputs produce verifiable outputs
 2. **Randomized fuzzing** - Stress-test edge cases with varied payloads
@@ -80,9 +80,9 @@ This document defines a simulation harness for end-to-end testing of the GOgent-
 
 | Flow | Entry Point | Processing | Exit Point |
 |------|-------------|------------|------------|
-| **PreToolUse** | `gogent-validate` STDIN | `routing.ValidateTask()` | STDOUT JSON |
-| **SessionEnd** | `gogent-archive` STDIN | `session.GenerateHandoff()` | `.claude/memory/` files |
-| **Aggregation** | `gogent-aggregate` CLI | `telemetry.ClusterInvocations*()` | STDOUT report |
+| **PreToolUse** | `goyoke-validate` STDIN | `routing.ValidateTask()` | STDOUT JSON |
+| **SessionEnd** | `goyoke-archive` STDIN | `session.GenerateHandoff()` | `.claude/memory/` files |
+| **Aggregation** | `goyoke-aggregate` CLI | `telemetry.ClusterInvocations*()` | STDOUT report |
 
 ### 1.3 Core Data Types
 
@@ -141,7 +141,7 @@ type Handoff struct {
 
 Fixed inputs with expected outputs for regression testing.
 
-#### Scenario Matrix: PreToolUse (gogent-validate)
+#### Scenario Matrix: PreToolUse (goyoke-validate)
 
 | ID | Category | Input Characteristics | Expected Output |
 |----|----------|----------------------|-----------------|
@@ -154,7 +154,7 @@ Fixed inputs with expected outputs for regression testing.
 | V007 | Unknown Agent | Agent not in routing-schema | `{decision: "block"}` |
 | V008 | Empty Prompt | Task with empty prompt | `{decision: "block"}` |
 
-#### Scenario Matrix: SessionEnd (gogent-archive)
+#### Scenario Matrix: SessionEnd (goyoke-archive)
 
 | ID | Category | Input Characteristics | Expected Output |
 |----|----------|----------------------|-----------------|
@@ -303,12 +303,12 @@ type Scenario struct {
 
 // ExpectedOutput defines validation criteria
 type ExpectedOutput struct {
-    // For gogent-validate
+    // For goyoke-validate
     Decision     *string            // "allow" or "block"
     ReasonMatch  *regexp.Regexp     // Regex for reason field
     HasViolation *string            // Expected violation type
 
-    // For gogent-archive
+    // For goyoke-archive
     HandoffFields map[string]interface{} // JSON path assertions
     FilesCreated  []string              // Expected file paths
 
@@ -464,7 +464,7 @@ type FuzzParams struct {
       ".claude/memory/routing-violations.jsonl": ""
     },
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {
@@ -681,7 +681,7 @@ var SessionEndInvariants = []Invariant{
         Name: "handoff_created",
         Check: func(input *SessionEvent, output string, exitCode int) bool {
             // Check handoffs.jsonl was created/appended
-            return fileExists(filepath.Join(os.Getenv("GOGENT_PROJECT_DIR"), ".claude/memory/handoffs.jsonl"))
+            return fileExists(filepath.Join(os.Getenv("GOYOKE_PROJECT_DIR"), ".claude/memory/handoffs.jsonl"))
         },
     },
     {
@@ -694,7 +694,7 @@ var SessionEndInvariants = []Invariant{
     {
         Name: "markdown_created",
         Check: func(input *SessionEvent, output string, exitCode int) bool {
-            return fileExists(filepath.Join(os.Getenv("GOGENT_PROJECT_DIR"), ".claude/memory/last-handoff.md"))
+            return fileExists(filepath.Join(os.Getenv("GOYOKE_PROJECT_DIR"), ".claude/memory/last-handoff.md"))
         },
     },
 }
@@ -850,7 +850,7 @@ go run ./test/simulation/harness -mode=mixed -report=markdown > reports/simulati
 
 ### 8.1 Adding New Packages
 
-When adding new packages to GOgent-Fortress:
+When adding new packages to goYoke:
 
 1. **Update Architecture Diagram** (Section 1.1)
    - Add new package box with dependencies

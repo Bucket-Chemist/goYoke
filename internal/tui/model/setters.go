@@ -1,13 +1,13 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all setter/injector methods on AppModel.
 // Extracted from app.go as part of TUI-043.
 package model
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/session"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // SetTabBar injects a tab bar component into the model.  This setter exists

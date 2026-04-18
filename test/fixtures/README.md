@@ -1,4 +1,4 @@
-# Event Corpus (GOgent-008b)
+# Event Corpus (goYoke-008b)
 
 This directory will contain the curated event corpus for validation testing.
 
@@ -37,7 +37,7 @@ The corpus will be a JSON array of ToolEvent objects with the following structur
 ]
 ```
 
-### Required Fields (from GOgent-003/006)
+### Required Fields (from goYoke-003/006)
 
 - `tool_name` (string) - Name of the tool invoked
 - `tool_input` (object or null) - Tool parameters
@@ -64,11 +64,11 @@ This will:
 
 After curation, the corpus will be used for:
 
-- **GOgent-006**: XDG path resolution validation
-- **GOgent-007**: Tool permission check validation
-- **GOgent-008**: Hook response format validation
-- **GOgent-009**: Error message format validation
-- **GOgent-041**: Test harness for corpus replay
-- **GOgent-047**: Regression testing (Go vs Bash)
+- **goYoke-006**: XDG path resolution validation
+- **goYoke-007**: Tool permission check validation
+- **goYoke-008**: Hook response format validation
+- **goYoke-009**: Error message format validation
+- **goYoke-041**: Test harness for corpus replay
+- **goYoke-047**: Regression testing (Go vs Bash)
 
 The corpus provides real-world event data to ensure our Go implementation matches actual Claude Code behavior.

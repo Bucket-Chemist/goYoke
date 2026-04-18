@@ -144,7 +144,7 @@ func TestLoadAgentIdentity(t *testing.T) {
 func TestBuildFullAgentContext(t *testing.T) {
 	ClearConventionCache()
 	// Isolate from CC session env vars that would inject session markers
-	t.Setenv("GOGENT_SESSION_DIR", "")
+	t.Setenv("GOYOKE_SESSION_DIR", "")
 
 	t.Run("full context with identity + rules + conventions", func(t *testing.T) {
 		result, err := BuildFullAgentContext(
@@ -309,67 +309,67 @@ func TestGetSessionDir(t *testing.T) {
 		expectEmpty bool
 	}{
 		{
-			name: "GOGENT_SESSION_DIR set directly (team-run path)",
+			name: "GOYOKE_SESSION_DIR set directly (team-run path)",
 			setupEnv: func(t *testing.T) string {
 				sessionDir := "/tmp/fake-session-dir"
-				t.Setenv("GOGENT_SESSION_DIR", sessionDir)
-				t.Setenv("GOGENT_PROJECT_ROOT", "")
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", sessionDir)
+				t.Setenv("GOYOKE_PROJECT_ROOT", "")
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return sessionDir
 			},
 		},
 		{
-			name: "GOGENT_SESSION_DIR takes priority over file-based",
+			name: "GOYOKE_SESSION_DIR takes priority over file-based",
 			setupEnv: func(t *testing.T) string {
 				// Set up both: direct env var AND file-based marker
 				tmpDir := t.TempDir()
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte("/file-based-path"), 0644)
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
 				// Direct env var should win
-				t.Setenv("GOGENT_SESSION_DIR", "/direct-env-path")
+				t.Setenv("GOYOKE_SESSION_DIR", "/direct-env-path")
 				return "/direct-env-path"
 			},
 		},
 		{
 			name: "no env vars set",
 			setupEnv: func(t *testing.T) string {
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", "")
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", "")
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return ""
 			},
 			expectEmpty: true,
 		},
 		{
-			name: "GOGENT_PROJECT_ROOT set with current-session file",
+			name: "GOYOKE_PROJECT_ROOT set with current-session file",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "test-session")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "test-session")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return sessionDir
 			},
 		},
 		{
-			name: "GOGENT_PROJECT_DIR set (no ROOT)",
+			name: "GOYOKE_PROJECT_DIR set (no ROOT)",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "another-session")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "another-session")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", "")
-				t.Setenv("GOGENT_PROJECT_DIR", tmpDir)
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", "")
+				t.Setenv("GOYOKE_PROJECT_DIR", tmpDir)
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return sessionDir
 			},
@@ -378,13 +378,13 @@ func TestGetSessionDir(t *testing.T) {
 			name: "CLAUDE_PROJECT_DIR set (no ROOT, no DIR)",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "legacy-session")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "legacy-session")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", "")
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", "")
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", tmpDir)
 				return sessionDir
 			},
@@ -393,11 +393,11 @@ func TestGetSessionDir(t *testing.T) {
 			name: "env var set but current-session file missing",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				os.MkdirAll(filepath.Join(tmpDir, ".gogent"), 0755)
+				os.MkdirAll(filepath.Join(tmpDir, ".goyoke"), 0755)
 				// Don't write current-session file
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return ""
 			},
@@ -407,14 +407,14 @@ func TestGetSessionDir(t *testing.T) {
 			name: "current-session file has trailing whitespace",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "whitespace-test")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "whitespace-test")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				// Write with trailing whitespace and newlines
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir+"  \n\n"), 0644)
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return sessionDir // Expected result should be trimmed
 			},
@@ -454,13 +454,13 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 			name: "session dir present, session markers injected",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "test-123")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "test-123")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
-				t.Setenv("GOGENT_SESSION_DIR", "")
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
-				t.Setenv("GOGENT_PROJECT_DIR", "")
+				t.Setenv("GOYOKE_SESSION_DIR", "")
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_DIR", "")
 				t.Setenv("CLAUDE_PROJECT_DIR", "")
 				return sessionDir
 			},
@@ -488,11 +488,11 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 			name: "session context appears before identity marker",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "ordering-test")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "ordering-test")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
 				return sessionDir
 			},
 			agentID: "go-pro",
@@ -518,11 +518,11 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 			name: "prompt already contains session marker, no double injection",
 			setupEnv: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				sessionDir := filepath.Join(tmpDir, ".gogent", "sessions", "double-test")
-				claudeDir := filepath.Join(tmpDir, ".gogent")
+				sessionDir := filepath.Join(tmpDir, ".goyoke", "sessions", "double-test")
+				claudeDir := filepath.Join(tmpDir, ".goyoke")
 				os.MkdirAll(claudeDir, 0755)
 				os.WriteFile(filepath.Join(claudeDir, "current-session"), []byte(sessionDir), 0644)
-				t.Setenv("GOGENT_PROJECT_ROOT", tmpDir)
+				t.Setenv("GOYOKE_PROJECT_ROOT", tmpDir)
 				return sessionDir
 			},
 			agentID:      "go-pro",
@@ -552,10 +552,10 @@ func TestBuildFullAgentContext_SessionMarker(t *testing.T) {
 func TestBuildFullAgentContext_NoSessionDir(t *testing.T) {
 	ClearConventionCache()
 
-	// Clear all env vars (including GOGENT_SESSION_DIR which leaks from CC sessions)
-	t.Setenv("GOGENT_SESSION_DIR", "")
-	t.Setenv("GOGENT_PROJECT_ROOT", "")
-	t.Setenv("GOGENT_PROJECT_DIR", "")
+	// Clear all env vars (including GOYOKE_SESSION_DIR which leaks from CC sessions)
+	t.Setenv("GOYOKE_SESSION_DIR", "")
+	t.Setenv("GOYOKE_PROJECT_ROOT", "")
+	t.Setenv("GOYOKE_PROJECT_DIR", "")
 	t.Setenv("CLAUDE_PROJECT_DIR", "")
 
 	result, err := BuildFullAgentContext(

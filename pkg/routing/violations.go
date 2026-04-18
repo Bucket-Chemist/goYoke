@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // Violation represents a routing rule violation.
-// Logged to both XDG cache (global) and .gogent/memory/ (project-scoped).
+// Logged to both XDG cache (global) and .goyoke/memory/ (project-scoped).
 type Violation struct {
-	// Existing fields from GOgent-011
+	// Existing fields from goYoke-011
 	Timestamp     string `json:"timestamp"`
 	SessionID     string `json:"session_id"`
 	ViolationType string `json:"violation_type"`
@@ -42,8 +42,8 @@ type Violation struct {
 }
 
 // LogViolation appends violation to BOTH:
-// 1. Global XDG cache: ~/.cache/gogent/routing-violations.jsonl (survives project deletion)
-// 2. Project memory: <project>/.gogent/memory/routing-violations.jsonl (session integration)
+// 1. Global XDG cache: ~/.cache/goyoke/routing-violations.jsonl (survives project deletion)
+// 2. Project memory: <project>/.goyoke/memory/routing-violations.jsonl (session integration)
 //
 // Timestamp is auto-populated in RFC3339 format.
 // Project log failure does NOT fail the entire operation (graceful degradation).

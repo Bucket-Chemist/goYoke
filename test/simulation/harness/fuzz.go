@@ -137,7 +137,7 @@ func (f *FuzzRunner) fuzzSessionEnd(seed int64, iteration int) SimulationResult 
 
 	// Create temp directory for this iteration
 	iterDir := filepath.Join(f.config.TempDir, fmt.Sprintf("fuzz-%d", iteration))
-	os.MkdirAll(filepath.Join(iterDir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(iterDir, ".goyoke", "memory"), 0755)
 
 	// Set up random artifacts based on seed
 	f.setupRandomArtifacts(iterDir, seed)
@@ -203,7 +203,7 @@ func (f *FuzzRunner) setupRandomArtifacts(dir string, seed int64) {
 		for i := 0; i < violationCount; i++ {
 			violations += fmt.Sprintf(`{"timestamp":"2026-01-22T10:00:00Z","agent":"test-%d","violation":"test"}`+"\n", i)
 		}
-		os.WriteFile(filepath.Join(dir, ".gogent", "memory", "routing-violations.jsonl"), []byte(violations), 0644)
+		os.WriteFile(filepath.Join(dir, ".goyoke", "memory", "routing-violations.jsonl"), []byte(violations), 0644)
 	}
 
 	// Random sharp edges
@@ -213,7 +213,7 @@ func (f *FuzzRunner) setupRandomArtifacts(dir string, seed int64) {
 		for i := 0; i < edgeCount; i++ {
 			edges += fmt.Sprintf(`{"type":"sharp_edge","file":"test-%d.go","pattern":"test","timestamp":"2026-01-22T10:00:00Z"}`+"\n", i)
 		}
-		os.WriteFile(filepath.Join(dir, ".gogent", "memory", "pending-learnings.jsonl"), []byte(edges), 0644)
+		os.WriteFile(filepath.Join(dir, ".goyoke", "memory", "pending-learnings.jsonl"), []byte(edges), 0644)
 	}
 }
 

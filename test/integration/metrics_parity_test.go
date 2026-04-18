@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 // TestMetricsParity_ToolCalls verifies Go tool call counting reads from the counter file.
@@ -20,9 +20,9 @@ func TestMetricsParity_ToolCalls(t *testing.T) {
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
 	// Create tool counter with new format (single integer value)
-	gogentDir := filepath.Join(tmpDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
-	counterFile := filepath.Join(gogentDir, "tool-counter")
+	goyokeDir := filepath.Join(tmpDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
+	counterFile := filepath.Join(goyokeDir, "tool-counter")
 	os.WriteFile(counterFile, []byte("42"), 0644)
 
 	// Collect via Go
@@ -49,7 +49,7 @@ func TestMetricsParity_ErrorLog(t *testing.T) {
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
 	// Create error log with empty lines to test counting behavior
-	errorLog := filepath.Join(tmpDir, "gogent", "claude-error-patterns.jsonl")
+	errorLog := filepath.Join(tmpDir, "goyoke", "claude-error-patterns.jsonl")
 	os.MkdirAll(filepath.Dir(errorLog), 0755)
 
 	// Test data: 3 non-empty lines + 1 empty line = 4 total lines for wc -l
@@ -95,7 +95,7 @@ func TestMetricsParity_Violations(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", tmpDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	violationsLog := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	violationsLog := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 	os.MkdirAll(filepath.Dir(violationsLog), 0755)
 	os.WriteFile(violationsLog, []byte(`{"violation":"type1"}
 {"violation":"type2"}
@@ -124,7 +124,7 @@ func TestMetricsParity_Violations(t *testing.T) {
 // This replaces the old glob-based line counting approach.
 func countToolCallsBash(t *testing.T, runtimeDir string) int {
 	t.Helper()
-	counterFile := filepath.Join(runtimeDir, "gogent", "tool-counter")
+	counterFile := filepath.Join(runtimeDir, "goyoke", "tool-counter")
 
 	cmd := exec.Command("cat", counterFile)
 	output, err := cmd.Output()

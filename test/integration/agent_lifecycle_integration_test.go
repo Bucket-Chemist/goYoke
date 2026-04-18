@@ -6,26 +6,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
+	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
 
 // TestAgentLifecycle_SpawnAndCompleteIntegration verifies full lifecycle from spawn to completion
 func TestAgentLifecycle_SpawnAndCompleteIntegration(t *testing.T) {
 	// Setup: Use isolated test directory
 	testDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	sessionID := "test-lifecycle-session"
 
-	// 1. SPAWN EVENT: Simulate gogent-validate emitting a spawn event
+	// 1. SPAWN EVENT: Simulate goyoke-validate emitting a spawn event
 	spawnEvent := telemetry.NewAgentLifecycleEvent(
 		sessionID,
 		"spawn",
 		"python-pro",
 		"terminal",
 		"sonnet",
-		"Implement GOgent-109 feature",
+		"Implement goYoke-109 feature",
 		"decision-lifecycle-test",
 	)
 
@@ -33,7 +33,7 @@ func TestAgentLifecycle_SpawnAndCompleteIntegration(t *testing.T) {
 		t.Fatalf("Failed to log spawn event: %v", err)
 	}
 
-	// 2. COMPLETE EVENT: Simulate gogent-agent-endstate emitting a complete event
+	// 2. COMPLETE EVENT: Simulate goyoke-agent-endstate emitting a complete event
 	completeEvent := telemetry.NewAgentLifecycleEvent(
 		sessionID,
 		"complete",
@@ -106,8 +106,8 @@ func TestAgentLifecycle_SpawnAndCompleteIntegration(t *testing.T) {
 func TestAgentLifecycle_MultipleAgentsSession(t *testing.T) {
 	// Setup: Use isolated test directory
 	testDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	sessionID := "test-multi-agent-session"
 
@@ -196,8 +196,8 @@ func TestAgentLifecycle_MultipleAgentsSession(t *testing.T) {
 func TestAgentLifecycle_ErrorEvent(t *testing.T) {
 	// Setup: Use isolated test directory
 	testDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	sessionID := "test-error-session"
 
@@ -263,8 +263,8 @@ func TestAgentLifecycle_ErrorEvent(t *testing.T) {
 func TestAgentLifecycle_RealTimeTracking(t *testing.T) {
 	// Setup: Use isolated test directory
 	testDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	sessionID := "test-realtime-session"
 
@@ -360,8 +360,8 @@ func TestAgentLifecycle_RealTimeTracking(t *testing.T) {
 func TestAgentLifecycle_FileLocation(t *testing.T) {
 	// Setup: Use isolated test directory
 	testDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	sessionID := "test-file-location"
 
@@ -380,7 +380,7 @@ func TestAgentLifecycle_FileLocation(t *testing.T) {
 	}
 
 	// Verify file location
-	expectedPath := filepath.Join(testDir, ".gogent", "agent-lifecycle.jsonl")
+	expectedPath := filepath.Join(testDir, ".goyoke", "agent-lifecycle.jsonl")
 	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
 		t.Errorf("Expected file at %s, but it doesn't exist", expectedPath)
 	}
@@ -399,8 +399,8 @@ func TestAgentLifecycle_FileLocation(t *testing.T) {
 func TestAgentLifecycle_SessionIsolation(t *testing.T) {
 	// Setup: Use isolated test directory
 	testDir := t.TempDir()
-	os.Setenv("GOGENT_PROJECT_DIR", testDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	os.Setenv("GOYOKE_PROJECT_DIR", testDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
 	// Log events from multiple sessions
 	sessions := []string{"session-A", "session-B", "session-C"}

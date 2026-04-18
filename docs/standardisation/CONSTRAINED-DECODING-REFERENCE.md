@@ -1,6 +1,6 @@
 # Constrained Decoding Reference
 
-Technical reference for `--json-schema` constrained decoding in the GOgent-Fortress team-run pipeline.
+Technical reference for `--json-schema` constrained decoding in the goYoke team-run pipeline.
 
 ---
 
@@ -29,9 +29,9 @@ claude -p --output-format stream-json --json-schema '{"type":"object","required"
 claude -p --output-format stream-json --json-schema /path/to/schema.json
 ```
 
-The schema string must be passed directly on the command line. In `gogent-team-run`, this string is constructed at runtime by reading the formal schema from `.claude/schemas/stdout/`, stripping meta-fields, and serializing the result to a single-line JSON string.
+The schema string must be passed directly on the command line. In `goyoke-team-run`, this string is constructed at runtime by reading the formal schema from `.claude/schemas/stdout/`, stripping meta-fields, and serializing the result to a single-line JSON string.
 
-The constrained output appears in the `structured_output` field of the CLI's result entry (in `--output-format stream-json`), not in `result`. `gogent-team-run` extracts the agent's text response from the `result` field in `parseCLIOutput()` (`cmd/gogent-team-run/spawn.go`).
+The constrained output appears in the `structured_output` field of the CLI's result entry (in `--output-format stream-json`), not in `result`. `goyoke-team-run` extracts the agent's text response from the `result` field in `parseCLIOutput()` (`cmd/goyoke-team-run/spawn.go`).
 
 ---
 
@@ -95,7 +95,7 @@ Claude CLI rejects schemas containing meta-fields. Before passing a schema to `-
 - `$id`
 - `title`
 - `description` (top-level only; nested `description` inside `properties` entries should also be stripped to avoid wasting tokens in constrained mode)
-- `version` (GOgent-Fortress custom field)
+- `version` (goYoke custom field)
 
 The formal schemas in `.claude/schemas/stdout/` retain these fields for human readability and tooling compatibility. Stripping happens at runtime when building the CLI argument.
 
@@ -103,7 +103,7 @@ The formal schemas in `.claude/schemas/stdout/` retain these fields for human re
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdout/einstein.json",
+  "$id": "https://goyoke-fortress/schemas/stdout/einstein.json",
   "title": "Einstein Stdout Schema",
   "description": "Validates stdout for Einstein in braintrust workflow",
   "version": "1.0.0",
@@ -128,13 +128,13 @@ The formal schemas in `.claude/schemas/stdout/` retain these fields for human re
 
 When `--json-schema` is active, Claude CLI populates a `structured_output` field in the result entry of the stream-json output. This field contains the constrained-decoded JSON object.
 
-In `parseCLIOutput()` (`cmd/gogent-team-run/spawn.go`), the pipeline currently extracts the agent response from the `result` field (the text result), not `structured_output`. If `structured_output` is null, constrained decoding may not have been active — typically because no schema was resolved for this agent.
+In `parseCLIOutput()` (`cmd/goyoke-team-run/spawn.go`), the pipeline currently extracts the agent response from the `result` field (the text result), not `structured_output`. If `structured_output` is null, constrained decoding may not have been active — typically because no schema was resolved for this agent.
 
 ---
 
 ## Two Schema Systems
 
-GOgent-Fortress maintains two distinct schema systems with different purposes:
+goYoke maintains two distinct schema systems with different purposes:
 
 | System | Location | Format | Used For |
 |--------|----------|--------|----------|

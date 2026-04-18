@@ -15,18 +15,18 @@
 
 ## Event Corpus Strategy
 
-**Corpus Logger**: Go implementation at `/home/doktersmol/Documents/GOgent-Fortress/dev/tools/corpus-logger/`
+**Corpus Logger**: Go implementation at `/home/doktersmol/Documents/goYoke/dev/tools/corpus-logger/`
 
 **Approach**: Real production event capture
 
 - Hook installed at `~/.claude/hooks/zzz-corpus-logger` (Go binary)
-- Captures to `/run/user/1000/gogent/event-corpus-raw.jsonl` (XDG_RUNTIME_DIR)
+- Captures to `/run/user/1000/goyoke/event-corpus-raw.jsonl` (XDG_RUNTIME_DIR)
 - Pass-through design (doesn't interfere with Claude Code)
 - Schema validation: Events parsed into Go structs before capture
 
 **Why Go for corpus capture**:
 
-1. Validates our event schema before GOgent-001 implementation
+1. Validates our event schema before goYoke-001 implementation
 2. Same parsing logic that will process events in production
 3. Proves Go can handle real-time event capture (<1ms overhead)
 4. Output is both test fixture AND proof of correctness
@@ -52,10 +52,10 @@ type HookEvent struct {
 
 ## Corpus Locations
 
-- **Live Capture:** `/run/user/1000/gogent/event-corpus-raw.jsonl` (growing with usage)
+- **Live Capture:** `/run/user/1000/goyoke/event-corpus-raw.jsonl` (growing with usage)
 - **Curated Corpus:** Will be extracted after sufficient events captured
-- **Test Fixtures:** `/home/doktersmol/Documents/GOgent-Fortress/test/fixtures/event-corpus.json`
-- **Go Logger Source:** `/home/doktersmol/Documents/GOgent-Fortress/dev/tools/corpus-logger/`
+- **Test Fixtures:** `/home/doktersmol/Documents/goYoke/test/fixtures/event-corpus.json`
+- **Go Logger Source:** `/home/doktersmol/Documents/goYoke/dev/tools/corpus-logger/`
 
 ## Corpus Collection Status
 
@@ -92,12 +92,12 @@ type HookEvent struct {
 2. Once 100+ events captured, curate with jq:
    ```bash
    # Extract diverse sample
-   cat /run/user/1000/gogent/event-corpus-raw.jsonl | \
+   cat /run/user/1000/goyoke/event-corpus-raw.jsonl | \
      jq -s 'group_by(.tool_name) | map({tool: .[0].tool_name, events: .}) | ...' \
-     > ~/gogent-baseline/event-corpus.json
+     > ~/goyoke-baseline/event-corpus.json
    ```
 3. Copy curated corpus to project test fixtures
-4. Proceed to Week 1 (GOgent-001)
+4. Proceed to Week 1 (goYoke-001)
 
 ---
 

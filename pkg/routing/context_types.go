@@ -5,7 +5,7 @@ import (
 )
 
 // ContextRequirements defines what context an agent needs at spawn time.
-// This is used by gogent-validate to inject conventions into Task prompts.
+// This is used by goyoke-validate to inject conventions into Task prompts.
 type ContextRequirements struct {
 	// Rules lists rules files to inject (e.g., "agent-guidelines.md")
 	Rules []string `json:"rules,omitempty"`

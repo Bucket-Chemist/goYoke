@@ -1,4 +1,4 @@
-// Package modals implements the modal dialog system for the GOgent-Fortress TUI.
+// Package modals implements the modal dialog system for the goYoke TUI.
 // This file implements HelpModal: a full-screen, scrollable keyboard shortcut
 // reference overlay activated by alt+h.
 package modals
@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------

@@ -3,8 +3,8 @@ package enforcement_test
 import (
 	"fmt"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/enforcement"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/enforcement"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // ExampleAnalyzeToolEventForDocTheater demonstrates the complete workflow

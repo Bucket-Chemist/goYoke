@@ -189,7 +189,7 @@ func TestRenderHandoffMarkdown_WithActiveTicket(t *testing.T) {
 		SessionID:     "test-ticket",
 		Context: SessionContext{
 			ProjectDir:   "/test/project",
-			ActiveTicket: "GOgent-028",
+			ActiveTicket: "goYoke-028",
 			Metrics: SessionMetrics{
 				ToolCalls:         30,
 				ErrorsLogged:      1,
@@ -203,7 +203,7 @@ func TestRenderHandoffMarkdown_WithActiveTicket(t *testing.T) {
 
 	markdown := RenderHandoffMarkdown(handoff)
 
-	if !strings.Contains(markdown, "Active Ticket**: GOgent-028") {
+	if !strings.Contains(markdown, "Active Ticket**: goYoke-028") {
 		t.Error("Missing active ticket")
 	}
 }

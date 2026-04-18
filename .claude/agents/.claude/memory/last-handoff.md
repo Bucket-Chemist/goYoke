@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Session ID**: 4d4d516b-432b-4ad8-a298-92a5e200c9cb
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress/.claude/agents
+- **Project**: /home/doktersmol/Documents/goYoke/.claude/agents
 
 ## Session Metrics
 

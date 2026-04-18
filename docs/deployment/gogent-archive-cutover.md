@@ -1,4 +1,4 @@
-# gogent-archive Deployment Runbook
+# goyoke-archive Deployment Runbook
 
 **Version**: 1.0
 **Last Updated**: 2026-01-21
@@ -9,13 +9,13 @@
 
 ## Overview
 
-This runbook guides the cutover from bash `session-archive.sh` hook to Go `gogent-archive` CLI.
+This runbook guides the cutover from bash `session-archive.sh` hook to Go `goyoke-archive` CLI.
 
 **Critical Dependencies**:
-- GOgent-028a: CLI implementation
-- GOgent-028b: Metrics parity verified
-- GOgent-028c: Artifact archival implemented
-- GOgent-028d: Hook registration process
+- goYoke-028a: CLI implementation
+- goYoke-028b: Metrics parity verified
+- goYoke-028c: Artifact archival implemented
+- goYoke-028d: Hook registration process
 
 ---
 
@@ -23,16 +23,16 @@ This runbook guides the cutover from bash `session-archive.sh` hook to Go `gogen
 
 ### Build Verification
 - [ ] Run `make build-archive` successfully
-- [ ] Binary exists at `bin/gogent-archive`
-- [ ] Binary is executable: `chmod +x bin/gogent-archive`
-- [ ] Version check: `./bin/gogent-archive --version`
+- [ ] Binary exists at `bin/goyoke-archive`
+- [ ] Binary is executable: `chmod +x bin/goyoke-archive`
+- [ ] Version check: `./bin/goyoke-archive --version`
 
 ### Test Verification
 - [ ] All unit tests pass: `go test ./pkg/session/...`
 - [ ] All integration tests pass: `go test ./test/integration/...`
-- [ ] Metrics parity test passes (GOgent-028b)
+- [ ] Metrics parity test passes (goYoke-028b)
 - [ ] Ecosystem tests ALL PASS: `make test-ecosystem`
-- [ ] Context loading compatibility verified (GOgent-028f)
+- [ ] Context loading compatibility verified (goYoke-028f)
 
 ### Environment Verification
 - [ ] `~/.local/bin` directory exists: `mkdir -p ~/.local/bin`
@@ -51,11 +51,11 @@ This runbook guides the cutover from bash `session-archive.sh` hook to Go `gogen
 - [ ] Project `.claude/` directory permissions: `ls -ld .claude/memory/`
 
 ### CLI Subcommand Verification
-- [ ] `gogent-archive --version` returns version string
-- [ ] `gogent-archive --help` displays usage with all subcommands
-- [ ] Invalid JSON input returns actionable error: `echo "invalid" | gogent-archive`
-- [ ] STDIN timeout behavior: `timeout 1s gogent-archive < /dev/null` (should timeout gracefully)
-- [ ] Works from different directories: Test with and without GOGENT_PROJECT_DIR set
+- [ ] `goyoke-archive --version` returns version string
+- [ ] `goyoke-archive --help` displays usage with all subcommands
+- [ ] Invalid JSON input returns actionable error: `echo "invalid" | goyoke-archive`
+- [ ] STDIN timeout behavior: `timeout 1s goyoke-archive < /dev/null` (should timeout gracefully)
+- [ ] Works from different directories: Test with and without GOYOKE_PROJECT_DIR set
 - [ ] Exit codes: 0 on success, 1 on failure (verify with `echo $?`)
 
 ---
@@ -70,19 +70,19 @@ make install-archive
 
 **Verify**:
 ```bash
-which gogent-archive
-# Expected: /home/username/.local/bin/gogent-archive
+which goyoke-archive
+# Expected: /home/username/.local/bin/goyoke-archive
 ```
 
 ### 2. Test Binary Manually
 
 ```bash
-echo '{"session_id":"deployment-test","timestamp":1234567890,"hook_event_name":"SessionEnd"}' | gogent-archive
+echo '{"session_id":"deployment-test","timestamp":1234567890,"hook_event_name":"SessionEnd"}' | goyoke-archive
 ```
 
 **Expected**: JSON confirmation output
 
-**If error**: Check stderr, verify `GOGENT_PROJECT_DIR` or run from project root.
+**If error**: Check stderr, verify `GOYOKE_PROJECT_DIR` or run from project root.
 
 ### 3. Update Hook Configuration
 
@@ -98,7 +98,7 @@ echo '{"session_id":"deployment-test","timestamp":1234567890,"hook_event_name":"
 # command = "~/.claude/hooks/session-archive.sh"
 
 # NEW:
-command = "gogent-archive"
+command = "goyoke-archive"
 ```
 
 **Save and close editor.**
@@ -159,7 +159,7 @@ diff <(jq .tool_calls bash-handoff.json) <(jq .tool_calls go-handoff.json)
 
 Check logs:
 ```bash
-tail -f ~/.gogent/hook-failures.log
+tail -f ~/.goyoke/hook-failures.log
 ```
 
 **Expected**: No errors logged.
@@ -198,7 +198,7 @@ After 24 hours of production use:
 
 6. **Session Continuity**:
    - [ ] New sessions receive context from previous session
-   - [ ] load-routing-context.sh still works (GOgent-028f)
+   - [ ] load-routing-context.sh still works (goYoke-028f)
 
 7. **Metrics Accuracy**:
    - [ ] Tool call counts reasonable
@@ -219,7 +219,7 @@ After 24 hours of production use:
 ```bash
 # Restore hook config
 # Edit hook config file, change:
-command = "gogent-archive"
+command = "goyoke-archive"
 # Back to:
 command = "~/.claude/hooks/session-archive.sh"
 ```
@@ -248,20 +248,20 @@ File bug report with:
 - Go CLI error output
 - Example SessionEnd JSON that failed
 - Expected vs actual behavior
-- Logs from `~/.gogent/hook-failures.log`
+- Logs from `~/.goyoke/hook-failures.log`
 
 ---
 
 ## Troubleshooting
 
-### Issue: "command not found: gogent-archive"
+### Issue: "command not found: goyoke-archive"
 
 **Cause**: Binary not in PATH
 
 **Fix**:
 ```bash
 # Check installation
-which gogent-archive
+which goyoke-archive
 
 # If not found, reinstall
 make install-archive
@@ -280,7 +280,7 @@ export PATH="$HOME/.local/bin:$PATH"
 **Fix**:
 ```bash
 # Test with valid JSON
-echo '{"session_id":"test","timestamp":123,"hook_event_name":"SessionEnd"}' | gogent-archive
+echo '{"session_id":"test","timestamp":123,"hook_event_name":"SessionEnd"}' | goyoke-archive
 
 # Check STDIN timeout (default 5s)
 # Increase if needed (requires code change)
@@ -299,16 +299,16 @@ ls -ld .claude/memory/
 chmod 755 .claude/memory/
 
 # Check project dir env var
-echo $GOGENT_PROJECT_DIR
+echo $GOYOKE_PROJECT_DIR
 
 # Run from project root if unset
 cd /path/to/project
-gogent-archive < session.json
+goyoke-archive < session.json
 ```
 
 ### Issue: "Metrics don't match bash"
 
-**Cause**: Metrics parity test not run (GOgent-028b)
+**Cause**: Metrics parity test not run (goYoke-028b)
 
 **Fix**:
 ```bash
@@ -324,20 +324,20 @@ go test ./test/integration -run TestMetricsParity
 
 **Fix**:
 ```bash
-# Run context loading compatibility test (GOgent-028f)
+# Run context loading compatibility test (goYoke-028f)
 bash test/compatibility/context_loading_test.sh
 
 # If fails, fix pkg/session/handoff_markdown.go
 ```
 
-### Issue: "gogent-archive hangs on STDIN"
+### Issue: "goyoke-archive hangs on STDIN"
 
 **Cause**: STDIN timeout not configured or too long
 
 **Fix**:
 ```bash
 # Default timeout is 5s. Test timeout behavior:
-timeout 1s gogent-archive < /dev/null
+timeout 1s goyoke-archive < /dev/null
 
 # Expected: Error after 5s max with message about STDIN timeout
 # If hangs longer: Bug in STDIN reading logic
@@ -354,10 +354,10 @@ timeout 1s gogent-archive < /dev/null
 **Fix**:
 ```bash
 # Test exit codes
-echo '{"session_id":"test","timestamp":123,"hook_event_name":"SessionEnd"}' | gogent-archive
+echo '{"session_id":"test","timestamp":123,"hook_event_name":"SessionEnd"}' | goyoke-archive
 echo $?  # Should be 0
 
-echo 'invalid' | gogent-archive
+echo 'invalid' | goyoke-archive
 echo $?  # Should be 1
 ```
 

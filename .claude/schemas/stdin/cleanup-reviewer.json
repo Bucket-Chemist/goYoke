@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/cleanup-reviewer.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/cleanup-reviewer.json",
   "title": "Cleanup Reviewer Stdin Schema",
   "description": "Validates stdin for cleanup specialist reviewers (dedup, type, dead-code, dependency, type-safety, error-hygiene, legacy, slop)",
   "version": "1.0.0",

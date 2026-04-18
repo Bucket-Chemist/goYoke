@@ -128,7 +128,7 @@ This consistency suggests a systemic limitation, not agent-specific bug.
 
 ### Implication 1: Orchestrator Pattern is Fundamentally Broken
 
-The GOgent architecture assumes orchestrator agents can delegate:
+The goYoke architecture assumes orchestrator agents can delegate:
 
 ```
 Router → Orchestrator → Specialist Agents
@@ -375,7 +375,7 @@ Review-orchestrator was invoked similarly but exhibited different failure mode:
 
 ## Conclusion
 
-**The orchestrator pattern in GOgent-Fortress is architecturally incompatible with Claude Code's subagent model.**
+**The orchestrator pattern in goYoke is architecturally incompatible with Claude Code's subagent model.**
 
 Claude Code appears to restrict the Task tool to nesting level 0 (router only). Subagents cannot spawn sub-subagents. This limitation is not documented in agent definitions and contradicts the expected behavior.
 

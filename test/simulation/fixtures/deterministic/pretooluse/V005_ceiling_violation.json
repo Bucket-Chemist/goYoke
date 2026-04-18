@@ -13,7 +13,7 @@
   },
   "setup": {
     "env": {
-      "GOGENT_DELEGATION_CEILING": "haiku"
+      "GOYOKE_DELEGATION_CEILING": "haiku"
     }
   },
   "expected": {

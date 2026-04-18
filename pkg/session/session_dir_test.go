@@ -17,7 +17,7 @@ func TestCreateSessionDir_Basic(t *testing.T) {
 	sessionDir, err := CreateSessionDir(projectDir, sessionID)
 	require.NoError(t, err)
 
-	expectedPath := filepath.Join(projectDir, ".gogent", "sessions", sessionID)
+	expectedPath := filepath.Join(projectDir, ".goyoke", "sessions", sessionID)
 	assert.Equal(t, expectedPath, sessionDir)
 
 	// Verify directory exists
@@ -67,20 +67,20 @@ func TestCreateSessionDir_AlreadyExists(t *testing.T) {
 
 func TestWriteCurrentSession(t *testing.T) {
 	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".gogent", "sessions", "test-123")
+	sessionDir := filepath.Join(projectDir, ".goyoke", "sessions", "test-123")
 
 	err := WriteCurrentSession(projectDir, sessionDir)
 	require.NoError(t, err)
 
 	// Verify file contents
-	content, err := os.ReadFile(filepath.Join(projectDir, ".gogent", "current-session"))
+	content, err := os.ReadFile(filepath.Join(projectDir, ".goyoke", "current-session"))
 	require.NoError(t, err)
 	assert.Equal(t, sessionDir+"\n", string(content))
 }
 
 func TestReadCurrentSession_Exists(t *testing.T) {
 	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".gogent", "sessions", "test-456")
+	sessionDir := filepath.Join(projectDir, ".goyoke", "sessions", "test-456")
 
 	// Write first
 	err := WriteCurrentSession(projectDir, sessionDir)
@@ -102,7 +102,7 @@ func TestReadCurrentSession_Missing(t *testing.T) {
 
 func TestReadCurrentSessionFromEnv(t *testing.T) {
 	projectDir := t.TempDir()
-	sessionDir := filepath.Join(projectDir, ".gogent", "sessions", "env-test")
+	sessionDir := filepath.Join(projectDir, ".goyoke", "sessions", "env-test")
 
 	// Write current session
 	err := WriteCurrentSession(projectDir, sessionDir)
@@ -112,8 +112,8 @@ func TestReadCurrentSessionFromEnv(t *testing.T) {
 		name   string
 		envVar string
 	}{
-		{"GOGENT_PROJECT_ROOT", "GOGENT_PROJECT_ROOT"},
-		{"GOGENT_PROJECT_DIR", "GOGENT_PROJECT_DIR"},
+		{"GOYOKE_PROJECT_ROOT", "GOYOKE_PROJECT_ROOT"},
+		{"GOYOKE_PROJECT_DIR", "GOYOKE_PROJECT_DIR"},
 		{"CLAUDE_PROJECT_DIR", "CLAUDE_PROJECT_DIR"},
 	}
 
@@ -130,8 +130,8 @@ func TestReadCurrentSessionFromEnv(t *testing.T) {
 
 func TestReadCurrentSessionFromEnv_NoEnv(t *testing.T) {
 	// Ensure no env vars are set
-	t.Setenv("GOGENT_PROJECT_ROOT", "")
-	t.Setenv("GOGENT_PROJECT_DIR", "")
+	t.Setenv("GOYOKE_PROJECT_ROOT", "")
+	t.Setenv("GOYOKE_PROJECT_DIR", "")
 	t.Setenv("CLAUDE_PROJECT_DIR", "")
 
 	result, err := ReadCurrentSessionFromEnv()

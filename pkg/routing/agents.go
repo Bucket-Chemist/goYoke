@@ -161,15 +161,15 @@ type Cleanup struct {
 }
 
 // LoadAgentIndex loads and validates agents-index.json.
-// Priority: GOGENT_AGENTS_INDEX env var > GOGENT_PROJECT_DIR > XDG config directory default.
+// Priority: GOYOKE_AGENTS_INDEX env var > GOYOKE_PROJECT_DIR > XDG config directory default.
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadAgentIndex() (*AgentIndex, error) {
-	agentIndexPath := os.Getenv("GOGENT_AGENTS_INDEX")
+	agentIndexPath := os.Getenv("GOYOKE_AGENTS_INDEX")
 
 	// If explicit path not set, try project-specific or XDG default
 	if agentIndexPath == "" {
-		// Priority 1: GOGENT_PROJECT_DIR (test isolation)
-		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
+		// Priority 1: GOYOKE_PROJECT_DIR (test isolation)
+		if projectDir := os.Getenv("GOYOKE_PROJECT_DIR"); projectDir != "" {
 			path := filepath.Join(projectDir, ".claude", "agents", "agents-index.json")
 			if _, err := os.Stat(path); err == nil {
 				agentIndexPath = path

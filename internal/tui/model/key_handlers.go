@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all keyboard event handlers for AppModel.
 // Extracted from app.go as part of TUI-043.
 package model
@@ -10,11 +10,11 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // interruptConfirmRequestID is the modal request ID used for the ESC-while-streaming
@@ -66,6 +66,19 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.shared.optionsViewModal = updated
 		// Restore main context when options modal closes.
 		if !m.shared.optionsViewModal.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
+	// While the model modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.modelModal.IsActive() {
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("model")
+		}
+		updated, cmd := m.shared.modelModal.Update(msg)
+		m.shared.modelModal = updated
+		if !m.shared.modelModal.IsActive() {
 			m.updateHintContext()
 		}
 		return m, cmd
@@ -724,6 +737,8 @@ func (m *AppModel) updateHintContext() {
 		m.shared.hintBar.SetContext("plan")
 	case m.shared.optionsViewModal.IsActive():
 		m.shared.hintBar.SetContext("options")
+	case m.shared.modelModal.IsActive():
+		m.shared.hintBar.SetContext("model")
 	case m.shared.modalQueue != nil && m.shared.modalQueue.IsActive():
 		m.shared.hintBar.SetContext("modal")
 	case m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive():

@@ -61,7 +61,7 @@
     "output_instructions": {
       "format": "json",
       "delivery": "stdout",
-      "critical": "Your ENTIRE output must be a single JSON object. gogent-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis.",
+      "critical": "Your ENTIRE output must be a single JSON object. goyoke-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis.",
       "team_dir": "/absolute/path — READ files from here (stdout files, pre-synthesis.md), do not write"
     }
   },

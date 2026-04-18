@@ -8,17 +8,17 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 func setupSharpEdgeHitTestDir(t *testing.T) func() {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 
 	// Create minimal structure
-	os.MkdirAll(filepath.Join(dir, ".gogent"), 0755)
-	os.MkdirAll(filepath.Join(dir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".goyoke"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".goyoke", "memory"), 0755)
 
 	// Create test agent with sharp-edges.yaml for registry
 	agentDir := filepath.Join(dir, ".claude", "agents", "test-reviewer")

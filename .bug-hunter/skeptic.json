@@ -1,0 +1,74 @@
+[
+  {
+    "bugId": "BUG-1",
+    "response": "ACCEPT",
+    "analysisSummary": "The failure is in repo code, not just the sandbox: GetgoYokeDir previously returned a path after mkdir success even when later file creation on that directory failed, and skill-guard depends on that path for guard artifacts.",
+    "counterEvidence": "pkg/config/paths.go:25-64 now adds a write probe because the earlier behavior was insufficient."
+  },
+  {
+    "bugId": "BUG-3",
+    "response": "ACCEPT",
+    "analysisSummary": "The same scanner-limit failure mode extends beyond routing transcripts. Session artifact readers consumed whole JSONL lines using the default 64 KiB scanner cap, so large but valid records broke resume and query paths.",
+    "counterEvidence": "pkg/session/scanner.go:8-13 now centralizes a 10 MiB scanner, and the regressions cover large pending-learning and sharp-edge records."
+  },
+  {
+    "bugId": "BUG-2",
+    "response": "ACCEPT",
+    "analysisSummary": "Default bufio.Scanner limits are 64 KiB per token, and the routing package had multiple transcript readers handling each JSONL event as a single token. Large tool payloads therefore produced scanner errors on valid transcripts across both enforcement and metadata extraction.",
+    "counterEvidence": "pkg/routing/transcript.go and pkg/routing/events.go now share the enlarged transcript scanner, and the regressions cover >64 KiB transcript events on both paths."
+  },
+  {
+    "bugId": "BUG-4",
+    "response": "ACCEPT",
+    "analysisSummary": "This is not just a test expectation mismatch. The old runWaves logic surfaced total-wave failure but explicitly tolerated partial failure with only a log line, which makes the last wave capable of returning nil while still containing failed members.",
+    "counterEvidence": "cmd/goyoke-team-run/wave.go:70-82 now preserves continuation for intermediate partial failures but returns an error when the final wave still has failed members."
+  },
+  {
+    "bugId": "BUG-5",
+    "response": "ACCEPT",
+    "analysisSummary": "The bridge used environment-provided base paths verbatim for Unix socket creation. On Linux the pathname length limit is strict, so long temp/runtime roots caused deterministic startup failure before any MCP traffic could flow.",
+    "counterEvidence": "internal/tui/bridge/server.go:83-115 now chooses the first candidate base whose full socket path fits within the Unix socket pathname limit, with /tmp as a short fallback."
+  },
+  {
+    "bugId": "BUG-6",
+    "response": "ACCEPT",
+    "analysisSummary": "This is the same concrete JSONL failure mode seen elsewhere, but now on telemetry analytics paths. The loaders consumed one whole record per default scanner token, so large but valid telemetry rows were not reliably readable.",
+    "counterEvidence": "pkg/telemetry/scanner.go:8-13 now centralizes a 10 MiB scanner and the new regressions cover all major telemetry loaders."
+  },
+  {
+    "bugId": "BUG-7",
+    "response": "ACCEPT",
+    "analysisSummary": "Workflow endstate logs serialize full recommendation payloads into one JSONL line, so the default scanner cap is insufficient and can break statistics or downstream readers on valid data.",
+    "counterEvidence": "pkg/workflow/logging.go now uses a dedicated enlarged scanner, and logging_test covers a >64 KiB recommendation payload."
+  },
+  {
+    "bugId": "BUG-8",
+    "response": "ACCEPT",
+    "analysisSummary": "The failure tracker's core scanFailures routine is the single read path for GetFailureCount and ClearFailures. With the default scanner limit, a large valid failure record could disappear from loop detection entirely.",
+    "counterEvidence": "pkg/memory/scanner.go now raises the token limit for failure-tracker reads, and failure_tracking_test covers a >64 KiB error_match payload."
+  },
+  {
+    "bugId": "BUG-9",
+    "response": "ACCEPT",
+    "analysisSummary": "This is a separate path bug from BUG-1: persistent data directory selection still trusted mkdir success without testing actual writability, leaving telemetry and ML writers to fail later on first append.",
+    "counterEvidence": "pkg/config/paths.go now applies the same write probe to GetgoYokeDataDir, and the new regression forces fallback from a read-only XDG data dir."
+  },
+  {
+    "bugId": "BUG-10",
+    "response": "ACCEPT",
+    "analysisSummary": "The permission-gate cache path was built from raw session_id bytes coming from stdin events. That makes filename construction path-sensitive and allows cache writes outside the intended runtime dir for slash-containing IDs.",
+    "counterEvidence": "cmd/goyoke-permission-gate/cache.go now hashes session IDs before filename construction, and the regression verifies containment plus cache round-trip."
+  },
+  {
+    "bugId": "BUG-11",
+    "response": "ACCEPT",
+    "analysisSummary": "The aggregate command consumes archived JSONL files that can carry the same large-line payloads already found elsewhere. Using the default scanner limit in countLines makes the weekly summary path miscount or degrade on valid archives.",
+    "counterEvidence": "cmd/goyoke-aggregate/main.go now enlarges the scanner buffer, and the regression covers a >64 KiB line."
+  },
+  {
+    "bugId": "BUG-12",
+    "response": "ACCEPT",
+    "analysisSummary": "This is the TUI-facing copy of the same routing JSONL failure mode: backend loaders were fixed, but the panel still scanned decisions with the default cap and could therefore disagree with backend analytics on large entries.",
+    "counterEvidence": "internal/tui/components/telemetry/telemetry.go now enlarges the scanner buffer and telemetry_test covers a >64 KiB decision field."
+  }
+]

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // AgentInvocation captures a single agent execution (success or failure).
@@ -45,9 +45,9 @@ type AgentInvocation struct {
 }
 
 // GetInvocationsLogPath returns the global invocations log path.
-// Uses XDG Base Directory compliance: XDG_RUNTIME_DIR > XDG_CACHE_HOME > ~/.cache/gogent
+// Uses XDG Base Directory compliance: XDG_RUNTIME_DIR > XDG_CACHE_HOME > ~/.cache/goyoke
 func GetInvocationsLogPath() string {
-	baseDir := config.GetGOgentDir()
+	baseDir := config.GetgoYokeDir()
 	return filepath.Join(baseDir, "agent-invocations.jsonl")
 }
 
@@ -57,8 +57,8 @@ func GetProjectInvocationsLogPath(projectDir string) string {
 }
 
 // LogInvocation appends invocation to BOTH:
-// 1. Global XDG cache: ~/.cache/gogent/agent-invocations.jsonl (survives project deletion)
-// 2. Project memory: <project>/.gogent/memory/agent-invocations.jsonl (session integration)
+// 1. Global XDG cache: ~/.cache/goyoke/agent-invocations.jsonl (survives project deletion)
+// 2. Project memory: <project>/.goyoke/memory/agent-invocations.jsonl (session integration)
 //
 // Timestamp is auto-populated in RFC3339 format.
 // Project log failure does NOT fail the entire operation (graceful degradation).

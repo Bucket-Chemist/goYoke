@@ -488,11 +488,11 @@ func TestGetNestingLevel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set or clear env var
 			if tt.envValue == "" {
-				os.Unsetenv("GOGENT_NESTING_LEVEL")
+				os.Unsetenv("GOYOKE_NESTING_LEVEL")
 			} else {
-				os.Setenv("GOGENT_NESTING_LEVEL", tt.envValue)
+				os.Setenv("GOYOKE_NESTING_LEVEL", tt.envValue)
 			}
-			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+			defer os.Unsetenv("GOYOKE_NESTING_LEVEL")
 			// Also clear CLAUDE_CODE_NESTING_LEVEL to isolate tests
 			os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 			defer os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
@@ -508,21 +508,21 @@ func TestGetNestingLevel(t *testing.T) {
 
 func TestIsNestingLevelExplicit(t *testing.T) {
 	// Test when not set
-	os.Unsetenv("GOGENT_NESTING_LEVEL")
+	os.Unsetenv("GOYOKE_NESTING_LEVEL")
 	if IsNestingLevelExplicit() {
 		t.Error("IsNestingLevelExplicit() = true when env not set")
 	}
 
 	// Test when set (even to empty)
-	os.Setenv("GOGENT_NESTING_LEVEL", "")
+	os.Setenv("GOYOKE_NESTING_LEVEL", "")
 	// Note: os.Getenv returns "" for both unset and empty, so this tests implementation
 
-	os.Setenv("GOGENT_NESTING_LEVEL", "0")
+	os.Setenv("GOYOKE_NESTING_LEVEL", "0")
 	if !IsNestingLevelExplicit() {
 		t.Error("IsNestingLevelExplicit() = false when env is set")
 	}
 
-	os.Unsetenv("GOGENT_NESTING_LEVEL")
+	os.Unsetenv("GOYOKE_NESTING_LEVEL")
 }
 
 func TestValidateTaskNestingLevel(t *testing.T) {
@@ -556,11 +556,11 @@ func TestValidateTaskNestingLevel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.level == "" {
-				os.Unsetenv("GOGENT_NESTING_LEVEL")
+				os.Unsetenv("GOYOKE_NESTING_LEVEL")
 			} else {
-				os.Setenv("GOGENT_NESTING_LEVEL", tt.level)
+				os.Setenv("GOYOKE_NESTING_LEVEL", tt.level)
 			}
-			defer os.Unsetenv("GOGENT_NESTING_LEVEL")
+			defer os.Unsetenv("GOYOKE_NESTING_LEVEL")
 			os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 			defer os.Unsetenv("CLAUDE_CODE_NESTING_LEVEL")
 

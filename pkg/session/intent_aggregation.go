@@ -18,7 +18,7 @@ type WeeklyIntentSummary struct {
 	CategoryPercentages  map[string]float64        `json:"category_percentages"`
 	RecurringPreferences []RecurringPreference     `json:"recurring_preferences"`
 	DriftAlerts          []PreferenceDriftAlert    `json:"drift_alerts,omitempty"`
-	// GOgent-041c: Honor rate tracking
+	// goYoke-041c: Honor rate tracking
 	TotalAnalyzed        int                `json:"total_analyzed"`         // Intents with Honored != nil
 	TotalHonored         int                `json:"total_honored"`          // Intents with Honored == true
 	HonorRatePercent     float64            `json:"honor_rate_percent"`     // Overall honor rate
@@ -78,7 +78,7 @@ func AggregateWeeklyIntents(intents []UserIntent, weekStart, weekEnd time.Time) 
 		}
 	}
 
-	// GOgent-041c: Calculate honor rates
+	// goYoke-041c: Calculate honor rates
 	summary.HonorRateByCategory = make(map[string]float64)
 	categoryHonored := make(map[string]int)
 	categoryAnalyzed := make(map[string]int)

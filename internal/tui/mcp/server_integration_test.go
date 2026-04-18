@@ -44,9 +44,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
-	tuimcp "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/mcp"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/bridge"
+	tuimcp "github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ func waitForIntegrationMsg[T any](ms *integrationMockSender, timeout time.Durati
 }
 
 // integrationHarness wires together a real IPCBridge, real UDSClient, real
-// MCP server and an in-memory MCP client session.  GOFORTRESS_SOCKET is set
+// MCP server and an in-memory MCP client session.  GOYOKE_SOCKET is set
 // to the bridge's socket path for the duration of the test.
 type integrationHarness struct {
 	bridge  *bridge.IPCBridge
@@ -117,15 +117,15 @@ func newIntegrationHarness(t *testing.T) *integrationHarness {
 	require.NoError(t, err, "NewIPCBridge")
 	b.Start()
 
-	// 2. Point GOFORTRESS_SOCKET at the bridge so UDSClient can connect.
-	t.Setenv("GOFORTRESS_SOCKET", b.SocketPath())
+	// 2. Point GOYOKE_SOCKET at the bridge so UDSClient can connect.
+	t.Setenv("GOYOKE_SOCKET", b.SocketPath())
 
-	// 3. Create the real UDSClient (reads GOFORTRESS_SOCKET from env).
+	// 3. Create the real UDSClient (reads GOYOKE_SOCKET from env).
 	uds := tuimcp.NewUDSClient()
 
 	// 4. Build the real MCP server with all 8 tools registered.
 	server := mcpsdk.NewServer(
-		&mcpsdk.Implementation{Name: "gofortress-mcp-test", Version: "1.0.0"},
+		&mcpsdk.Implementation{Name: "goyoke-mcp-test", Version: "1.0.0"},
 		nil,
 	)
 	tuimcp.RegisterAll(server, uds)
@@ -227,7 +227,7 @@ func integrationAgentsIndex(agentID string) []byte {
     },
     "complexity_routing": {
       "description": "test",
-      "calculator": "gogent-score",
+      "calculator": "goyoke-score",
       "thresholds": {},
       "force_external_if": "tokens > 50000"
     },
@@ -363,8 +363,8 @@ func TestIntegration_SpawnAgent(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
-	if os.Getenv("GOFORTRESS_SPAWN_INTEGRATION") == "" {
-		t.Skip("set GOFORTRESS_SPAWN_INTEGRATION=1 to run live subprocess spawn tests")
+	if os.Getenv("GOYOKE_SPAWN_INTEGRATION") == "" {
+		t.Skip("set GOYOKE_SPAWN_INTEGRATION=1 to run live subprocess spawn tests")
 	}
 
 	// Set up a minimal agents-index.json so LoadAgentIndex succeeds.
@@ -375,9 +375,9 @@ func TestIntegration_SpawnAgent(t *testing.T) {
 		integrationAgentsIndex("go-pro"),
 		0o644,
 	))
-	// GOGENT_PROJECT_DIR must point to the directory that contains .claude/.
-	t.Setenv("GOGENT_AGENTS_INDEX", "") // clear any env-inherited override
-	t.Setenv("GOGENT_PROJECT_DIR", filepath.Dir(filepath.Dir(agentDir)))
+	// GOYOKE_PROJECT_DIR must point to the directory that contains .claude/.
+	t.Setenv("GOYOKE_AGENTS_INDEX", "") // clear any env-inherited override
+	t.Setenv("GOYOKE_PROJECT_DIR", filepath.Dir(filepath.Dir(agentDir)))
 
 	h := newIntegrationHarness(t)
 
@@ -407,11 +407,11 @@ func TestIntegration_SpawnAgent(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// (d) TestIntegration_ToolManifest — all 8 tools present
+// (d) TestIntegration_ToolManifest — all 9 tools present
 // ---------------------------------------------------------------------------
 
 // TestIntegration_ToolManifest verifies that the MCP server exposes exactly
-// the 8 expected tools.
+// the 9 expected tools.
 func TestIntegration_ToolManifest(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
@@ -436,6 +436,7 @@ func TestIntegration_ToolManifest(t *testing.T) {
 		"spawn_agent",
 		"get_agent_result",
 		"team_run",
+		"prepare_skill",
 	}
 
 	assert.Len(t, names, len(expected), "server must expose exactly %d tools", len(expected))
@@ -638,7 +639,7 @@ func TestIntegration_SelectOption(t *testing.T) {
 
 // TestIntegration_TeamRun_ExistingDir verifies that team_run returns a
 // structured (non-error) response for an existing directory, regardless of
-// whether the gogent-team-run binary is available.
+// whether the goyoke-team-run binary is available.
 func TestIntegration_TeamRun_ExistingDir(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")

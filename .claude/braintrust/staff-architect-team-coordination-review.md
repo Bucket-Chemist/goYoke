@@ -1,8 +1,8 @@
-# Critical Review: Background Team Orchestration via `gogent-team-run`
+# Critical Review: Background Team Orchestration via `goyoke-team-run`
 
 **Reviewed:** 2026-02-06
 **Reviewer:** Staff Architect Critical Review
-**Input:** `/home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/IMPLEMENTATION-PLAN.md`
+**Input:** `/home/doktersmol/Documents/goYoke/tickets/team-coordination/IMPLEMENTATION-PLAN.md`
 **Verdict:** APPROVE_WITH_CONDITIONS
 **Confidence:** MEDIUM
 
@@ -41,7 +41,7 @@ Fix the two critical issues (permission-mode and concurrent config.json writes),
 | A-7 | `jq` is available on the target system | Phase 1G inter-wave script, Phase 4 launch verification | **UNVERIFIED** -- CachyOS/Arch may not have jq in minimal installs | Inter-wave scripts fail; launch verification fails | MEDIUM |
 | A-8 | Claude CLI `-p` flag supports `--model` override | Phase 2, section 2.3 | **LIKELY TRUE** -- `spawnAgent.ts:buildCliArgs()` already uses this pattern | Low risk | LOW |
 | A-9 | Multiple goroutines can safely call `writeConfigAtomic` concurrently | Phase 2, section 2.3 (inside `spawnAndWait` called from goroutines) | **FALSE** -- no mutex protects config writes | Config.json corruption or lost updates when wave members finish simultaneously | CRITICAL |
-| A-10 | `CLAUDE_CODE_EFFORT_LEVEL` env var is respected by `claude -p` | Phase 2, section 2.3 line 1616 | **UNVERIFIED** -- this is a GOgent-specific convention, may only be read by hooks | Effort level has no effect on spawned agents | MEDIUM |
+| A-10 | `CLAUDE_CODE_EFFORT_LEVEL` env var is respected by `claude -p` | Phase 2, section 2.3 line 1616 | **UNVERIFIED** -- this is a goYoke-specific convention, may only be read by hooks | Effort level has no effect on spawned agents | MEDIUM |
 
 ---
 
@@ -52,7 +52,7 @@ Fix the two critical issues (permission-mode and concurrent config.json writes),
 "--permission-mode", "delegate", // Auto-approve tool use
 ```
 
-**Codebase evidence contradicts this.** From `/home/doktersmol/Documents/GOgent-Fortress/docs/PERMISSION_HANDLING.md` (lines 42-44):
+**Codebase evidence contradicts this.** From `/home/doktersmol/Documents/goYoke/docs/PERMISSION_HANDLING.md` (lines 42-44):
 
 > **Key Discovery:** The `--permission-mode` flag appears to be designed for interactive CLI sessions, not `stream-json` mode. In stream-json mode, permission events are always **error notifications**, not **permission requests**.
 
@@ -139,16 +139,16 @@ This is a fundamental concurrency issue that must be designed into the architect
 | `agents-index.json` schema | Go binary must parse `model`, `effortLevel` fields | MEDIUM -- schema changes break binary. Plan acknowledges this (A-2 in their register). |
 | Session directory structure | `packages/tui/.claude/sessions/{YYMMDD}.{sessionId}/` | MEDIUM -- if TUI changes session dir naming, Go binary can't find teams |
 | `processRegistry.ts` (TUI) | Parallel, not integrated | HIGH -- see Architecture Smells below |
-| Hook system (`gogent-validate`, etc.) | Not triggered by `gogent-team-run` spawns | HIGH -- see F-NEW-1 below |
+| Hook system (`goyoke-validate`, etc.) | Not triggered by `goyoke-team-run` spawns | HIGH -- see F-NEW-1 below |
 
 ### Hidden Dependency: Hook Bypass
 
-**The plan does not address this.** When `gogent-team-run` spawns `claude -p` processes directly, those processes are independent CLI sessions. They will load their own `.claude/settings.json` and hooks. This means:
+**The plan does not address this.** When `goyoke-team-run` spawns `claude -p` processes directly, those processes are independent CLI sessions. They will load their own `.claude/settings.json` and hooks. This means:
 
-1. `gogent-validate` (PreToolUse) WILL fire inside spawned agents -- this is fine
-2. `gogent-sharp-edge` (PostToolUse) WILL fire -- this is fine
-3. `gogent-agent-endstate` (SubagentStop) will fire for any Task() calls inside agents -- this is fine
-4. `gogent-archive` (SessionEnd) will fire when agents exit -- but writes to the AGENT's session dir, not the team dir
+1. `goyoke-validate` (PreToolUse) WILL fire inside spawned agents -- this is fine
+2. `goyoke-sharp-edge` (PostToolUse) WILL fire -- this is fine
+3. `goyoke-agent-endstate` (SubagentStop) will fire for any Task() calls inside agents -- this is fine
+4. `goyoke-archive` (SessionEnd) will fire when agents exit -- but writes to the AGENT's session dir, not the team dir
 
 **The implication:** ML telemetry, handoffs, and sharp-edge captures from team-spawned agents will scatter into individual agent session directories, not the team directory. This is not a blocker but means the `/team-result` command cannot use hook-generated artifacts. The plan's approach of having agents write stdout files directly is correct and side-steps this issue, but it should be explicitly documented.
 
@@ -166,7 +166,7 @@ The plan's F1-F10 catalog is good. Probabilities and impacts are reasonable. How
 
 | ID | Failure Mode | Probability | Impact | Detection | Recovery | Severity |
 |----|-------------|------------|--------|-----------|----------|----------|
-| F-NEW-1 | Agent uses Task() inside team-spawned session | MEDIUM | MEDIUM | `gogent-validate` blocks it | Agent fails the Task() call, may still complete via other means. BUT: if agent's workflow depends on Task(), it will fail entirely. | HIGH |
+| F-NEW-1 | Agent uses Task() inside team-spawned session | MEDIUM | MEDIUM | `goyoke-validate` blocks it | Agent fails the Task() call, may still complete via other means. BUT: if agent's workflow depends on Task(), it will fail entirely. | HIGH |
 | F-NEW-2 | Concurrent config.json writes corrupt state | HIGH (every multi-member wave) | HIGH | Inconsistent PID/status after wave | None without mutex -- see A-9 | CRITICAL |
 | F-NEW-3 | Agent writes stdout file in wrong format (valid JSON, wrong schema) | HIGH initially | MEDIUM | `validateStdout()` only checks envelope fields | Inter-wave script `jq` extractions silently produce empty output | MEDIUM |
 | F-NEW-4 | Go binary launched but team_dir doesn't exist | LOW | HIGH | `readConfig` fails | Binary exits immediately; runner.log shows error | LOW |
@@ -175,10 +175,10 @@ The plan's F1-F10 catalog is good. Probabilities and impacts are reasonable. How
 
 ### F-NEW-1 Detail: Task() Availability in Team-Spawned Agents
 
-Agents spawned by `gogent-team-run` via `claude -p` are Level 0 CLI sessions from Claude's perspective (they don't inherit `GOGENT_NESTING_LEVEL` context for Task() blocking -- wait, the plan DOES set `GOGENT_NESTING_LEVEL=2` in the env). This means:
+Agents spawned by `goyoke-team-run` via `claude -p` are Level 0 CLI sessions from Claude's perspective (they don't inherit `GOYOKE_NESTING_LEVEL` context for Task() blocking -- wait, the plan DOES set `GOYOKE_NESTING_LEVEL=2` in the env). This means:
 
-- `gogent-validate` sees `GOGENT_NESTING_LEVEL=2` and the agents are treated as Level 2 subagents
-- Task() calls from these agents will go through `gogent-validate` which checks the `task_invocation_blocked` rule
+- `goyoke-validate` sees `GOYOKE_NESTING_LEVEL=2` and the agents are treated as Level 2 subagents
+- Task() calls from these agents will go through `goyoke-validate` which checks the `task_invocation_blocked` rule
 - If Task(opus) is attempted, it will be blocked -- this is correct behavior
 
 However, the plan sets these agents as independent CLI sessions that CAN use Task() (unlike MCP-spawned agents which cannot). The `claude -p` process has full Task() capability. This means:
@@ -197,7 +197,7 @@ However, the plan sets these agents as independent CLI sessions that CAN use Tas
 |-------|--------------|------------|
 | Phase 0 | Revert signal handler changes | Clean -- isolated TypeScript changes |
 | Phase 1 | Delete schema files | Clean -- no runtime dependency yet |
-| Phase 2 | Remove binary, delete `cmd/gogent-team-run/` | Clean -- binary is additive |
+| Phase 2 | Remove binary, delete `cmd/goyoke-team-run/` | Clean -- binary is additive |
 | Phase 3 | Remove skill definitions | Clean -- skills are additive |
 | Phase 4 | Revert orchestrator prompts to current behavior | **Risky** -- current behavior is the fallback, but prompt changes may have subtle interactions |
 
@@ -222,10 +222,10 @@ The ROI is positive if orchestration is used 3+ times per week, which based on t
 
 This is the plan's biggest architectural cost. Today there are two spawn paths:
 1. `Task()` -- Claude Code native, router-level only
-2. `mcp__gofortress__spawn_agent` -- TypeScript MCP tool, TUI subagents
+2. `mcp__goyoke__spawn_agent` -- TypeScript MCP tool, TUI subagents
 
 The plan adds:
-3. `gogent-team-run` spawning `claude -p` -- Go binary, background orchestration
+3. `goyoke-team-run` spawning `claude -p` -- Go binary, background orchestration
 
 **Three paths means three places to update when:**
 - Claude CLI flags change
@@ -236,7 +236,7 @@ The plan adds:
 The plan partially mitigates this by having all three paths read `agents-index.json` for agent configuration. But CLI flag construction is duplicated between `spawnAgent.ts:buildCliArgs()` and the Go binary's `spawnAndWait()`.
 
 **Recommendation:** Extract CLI arg construction into a shared location. Options:
-- A Go function in `pkg/` that both `spawnAgent.ts` and `gogent-team-run` reference (requires spawnAgent.ts to call a Go binary for args -- too complex)
+- A Go function in `pkg/` that both `spawnAgent.ts` and `goyoke-team-run` reference (requires spawnAgent.ts to call a Go binary for args -- too complex)
 - A JSON config in `agents-index.json` that specifies per-agent CLI flags (simpler, both consumers read the same file)
 - Accept the duplication for now, document it as tech debt
 
@@ -293,7 +293,7 @@ Integration tests (with real CLI):
   - Agent timeout + retry
 
 Race condition tests:
-  - go test -race ./cmd/gogent-team-run/...
+  - go test -race ./cmd/goyoke-team-run/...
   - Specific test: 4 goroutines completing simultaneously, verify config.json consistency
 ```
 
@@ -434,11 +434,11 @@ Can a Go developer start Monday with zero questions?
 
 5. **H-3: Verify CLI JSON output field names.** Run `echo "hello" | claude -p --output-format json` and document the actual output structure. Update `extractCostFromCLIOutput()` to match reality. Consider using the `--max-budget-usd` flag as a secondary budget enforcement mechanism (the CLI itself would abort on budget).
 
-6. **H-4: Document Task() availability in team-spawned agents.** Explicitly state whether team agents should have Task() access. If not, add `GOGENT_TASK_BLOCKED=true` to the env and check it in `gogent-validate`.
+6. **H-4: Document Task() availability in team-spawned agents.** Explicitly state whether team agents should have Task() access. If not, add `GOYOKE_TASK_BLOCKED=true` to the env and check it in `goyoke-validate`.
 
 ### Consider (Post-MVP)
 
-7. **M-1: Replace `jq` dependency with Go-native extraction.** Write `gogent-team-prepare-synthesis` as a Go binary instead of a bash script. This eliminates the `jq` dependency and matches the `cmd/` pattern.
+7. **M-1: Replace `jq` dependency with Go-native extraction.** Write `goyoke-team-prepare-synthesis` as a Go binary instead of a bash script. This eliminates the `jq` dependency and matches the `cmd/` pattern.
 
 8. **M-2: Add unit test plan for Go binary.** Table-driven tests for `buildPromptEnvelope()`, `extractCostFromCLIOutput()`, `validateStdout()`, wave ordering.
 
@@ -452,7 +452,7 @@ Can a Go developer start Monday with zero questions?
 
 12. **L-1: Structured logging for runner.log.** Use JSON lines format to match the project's telemetry patterns (`ml-tool-events.jsonl`, etc.).
 
-13. **L-2: Add `GOGENT_TEAM_DIR` to spawned agent env.** Already in the plan (line 1620) -- just confirming this is good for agent self-orientation.
+13. **L-2: Add `GOYOKE_TEAM_DIR` to spawned agent env.** Already in the plan (line 1620) -- just confirming this is good for agent self-orientation.
 
 14. **L-3: Document that team-spawned agents are outside ProcessRegistry scope.** Add a note to the architecture docs so future developers don't try to wire them through the TUI's process tracking.
 

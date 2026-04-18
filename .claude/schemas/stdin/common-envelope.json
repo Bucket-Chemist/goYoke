@@ -1,11 +1,11 @@
 {
-  "$comment": "Common context fields required in all team stdin files. The Go binary (gogent-team-run) injects these when constructing agent prompts.",
+  "$comment": "Common context fields required in all team stdin files. The Go binary (goyoke-team-run) injects these when constructing agent prompts.",
   "paths": {
     "project_root": {
       "type": "string",
       "description": "Absolute path to project root. Agents spawn with cmd.Dir set to this path. Must start with /.",
       "pattern": "^/",
-      "examples": ["/home/user/Documents/GOgent-Fortress"]
+      "examples": ["/home/user/Documents/goYoke"]
     },
     "team_dir": {
       "type": "string",
@@ -18,7 +18,7 @@
     "$comment": "Injected by buildPromptEnvelope() to inform agents of their Task() access level. See TASK-ACCESS-POLICY.md for rationale.",
     "nesting_level": {
       "type": "integer",
-      "description": "GOGENT_NESTING_LEVEL set for this agent. Determines Task() access. Level 2 = team-spawned.",
+      "description": "GOYOKE_NESTING_LEVEL set for this agent. Determines Task() access. Level 2 = team-spawned.",
       "default": 2
     },
     "task_access": {
@@ -27,7 +27,7 @@
       "properties": {
         "haiku": { "type": "boolean", "const": true, "description": "Task(model: 'haiku') allowed for mechanical work" },
         "sonnet": { "type": "boolean", "const": true, "description": "Task(model: 'sonnet') allowed for focused analysis" },
-        "opus": { "type": "boolean", "const": false, "description": "Task(model: 'opus') blocked by gogent-validate" }
+        "opus": { "type": "boolean", "const": false, "description": "Task(model: 'opus') blocked by goyoke-validate" }
       }
     },
     "mcp_tools": {

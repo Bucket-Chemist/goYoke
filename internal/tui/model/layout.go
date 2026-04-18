@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains layout constants, dimension computation, and rendering
 // helpers for the Lipgloss-based terminal layout.
 package model
@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // truncateHeight truncates s to at most maxLines newline-delimited lines.
@@ -414,6 +414,11 @@ func (m AppModel) renderLayout() string {
 	// Help modal: composite the help box on top of the rendered layout.
 	if m.shared != nil && m.shared.helpModal.IsActive() {
 		result = overlayCenter(result, m.shared.helpModal.View(), m.width, m.height)
+	}
+
+	// Model selector modal: composite on top of the rendered layout.
+	if m.shared != nil && m.shared.modelModal.IsActive() {
+		result = overlayCenter(result, m.shared.modelModal.View(), m.width, m.height)
 	}
 
 	return result

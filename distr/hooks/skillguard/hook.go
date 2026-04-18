@@ -1,18 +1,18 @@
-// Package skillguard is a placeholder stub for the gogent-skill-guard hook.
+// Package skillguard is a placeholder stub for the goyoke-skill-guard hook.
 // The real implementation will be wired in DIST-002 from internal/hooks/skillguard.
 package skillguard
 
 import (
 	"fmt"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
 )
 
 func init() {
-	multicall.Register("gogent-skill-guard", Main)
+	multicall.Register("goyoke-skill-guard", Main)
 }
 
 // Main is a stub. Replaced in DIST-002.
 func Main() {
-	fmt.Println("not yet wired: gogent-skill-guard")
+	fmt.Println("not yet wired: goyoke-skill-guard")
 }

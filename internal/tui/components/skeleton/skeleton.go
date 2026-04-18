@@ -1,4 +1,4 @@
-// Package skeleton implements skeleton loading screens for the GOgent-Fortress
+// Package skeleton implements skeleton loading screens for the goYoke
 // TUI. Skeletons render a shimmering placeholder structure that visually
 // matches the target component's layout, reducing perceived loading time when
 // CLI initialisation takes longer than 500 ms.
@@ -26,8 +26,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------

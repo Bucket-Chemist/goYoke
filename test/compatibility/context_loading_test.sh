@@ -21,7 +21,7 @@ TEST_DIR=$(mktemp -d)
 SESSION_TEMP_DIR="/tmp/claude-session-test-session-028f"
 trap "rm -rf $TEST_DIR $SESSION_TEMP_DIR" EXIT
 
-export GOGENT_PROJECT_DIR="$TEST_DIR"
+export GOYOKE_PROJECT_DIR="$TEST_DIR"
 mkdir -p "$TEST_DIR/.claude/memory"
 
 HANDOFF_MD="$TEST_DIR/.claude/memory/last-handoff.md"
@@ -59,11 +59,11 @@ test_fail() {
 echo "Phase 1: Generate Go handoff markdown"
 echo "───────────────────────────────────────────────────────────────────────────────"
 
-test_start "gogent-archive CLI is installed"
-if command -v gogent-archive &>/dev/null; then
+test_start "goyoke-archive CLI is installed"
+if command -v goyoke-archive &>/dev/null; then
     test_pass
 else
-    test_fail "gogent-archive not found in PATH. Run: make install"
+    test_fail "goyoke-archive not found in PATH. Run: make install"
     exit 1
 fi
 
@@ -74,8 +74,8 @@ cat > "$HANDOFF_MD" <<'EOF'
 ## Session Context
 
 - **Session ID**: test-session-028f
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress
-- **Active Ticket**: GOgent-028f
+- **Project**: /home/doktersmol/Documents/goYoke
+- **Active Ticket**: GoYoke-028f
 - **Phase**: compatibility-testing
 
 ## Session Metrics

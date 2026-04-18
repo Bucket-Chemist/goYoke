@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// TestParseToolEvent_RealCorpus (GOgent-009) validates event parsing against
+// TestParseToolEvent_RealCorpus (goYoke-009) validates event parsing against
 // the captured real event corpus to verify it handles all production cases.
 //
 // This test ensures 100% parsing success rate across the entire corpus,
@@ -60,7 +60,7 @@ func TestParseToolEvent_RealCorpus(t *testing.T) {
 	}
 }
 
-// TestParseTaskInput_RealCorpus (GOgent-009) validates Task event parsing
+// TestParseTaskInput_RealCorpus (goYoke-009) validates Task event parsing
 // against real corpus data to ensure TaskInput extraction works correctly.
 //
 // This test filters corpus events to Task tools and validates that

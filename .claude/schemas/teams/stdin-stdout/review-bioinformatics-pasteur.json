@@ -18,13 +18,25 @@
     ],
     "review_scope_summary": {
       "total_files": 0,
-      "languages_detected": ["nextflow"],
-      "file_categories": ["pipeline", "config"]
+      "languages_detected": [
+        "nextflow"
+      ],
+      "file_categories": [
+        "pipeline",
+        "config"
+      ]
     },
     "omics_context": {
       "primary_domain": "genomics",
-      "data_formats_detected": ["FASTQ", "BAM", "VCF"],
-      "pipeline_tools_detected": ["BWA", "GATK"],
+      "data_formats_detected": [
+        "FASTQ",
+        "BAM",
+        "VCF"
+      ],
+      "pipeline_tools_detected": [
+        "BWA",
+        "GATK"
+      ],
       "workflow_manager": "nextflow"
     }
   },
@@ -39,16 +51,37 @@
     "cross_domain_issues": [
       {
         "title": "Issue title",
-        "domains": ["genomics", "proteogenomics"],
+        "domains": [
+          "genomics",
+          "proteogenomics"
+        ],
         "severity": "critical|warning|info",
         "description": "Description of cross-domain issue"
       }
     ],
     "findings": [],
-    "reviewers_completed": ["genomics-reviewer"],
+    "reviewers_completed": [
+      "genomics-reviewer"
+    ],
     "reviewers_failed": [],
     "metadata": {
       "thinking_budget_used": 0
-    }
+    },
+    "issue_register": [
+      {
+        "$comment": "Harmonizer-compatible issue register. Same shape as staff-architect review_metadata.json issue_register, with optional bioinformatics extensions.",
+        "id": "XD-1",
+        "severity": "critical|warning|info",
+        "title": "Brief issue title",
+        "description": "Detailed description of the finding",
+        "recommendation": "Specific actionable fix",
+        "affected_files": [
+          "path/to/file.nf"
+        ],
+        "source_reviewer": "genomics-reviewer",
+        "domain": "bioinformatics"
+      }
+    ],
+    "issue_register_comment": "Optional. When present, enables direct piping of Pasteur output into /refine-plan harmonizer workflow. source_reviewer and domain are optional extensions \u2014 standard staff-architect reviews omit them."
   }
 }

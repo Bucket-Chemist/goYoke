@@ -1,4 +1,4 @@
-# GOgent-Fortress Systems Architecture v1.0
+# goYoke Systems Architecture v1.0
 
 > **Schema Versions:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1
 > **Last Updated:** 2026-03-24
@@ -8,7 +8,7 @@
 
 ## Overview
 
-GOgent-Fortress is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, manages ML telemetry, and maintains session continuity through structured handoff documents.
+goYoke is a Go-based hook orchestration framework for Claude Code. It enforces tiered routing policies, tracks debugging loops, captures user intents, manages ML telemetry, and maintains session continuity through structured handoff documents.
 
 The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToolUse, SubagentStop, SessionEnd) and applies validation, failure tracking, telemetry capture, and archival logic defined in `routing-schema.json`.
 
@@ -18,7 +18,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                                           GOgent-Fortress Architecture                                               │
+│                                           goYoke Architecture                                               │
 │                                              (Production v1.0)                                                       │
 ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                                                      │
@@ -38,7 +38,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │                                           HOOK BINARIES (Go)                                                 │    │
 │  │                                                                                                              │    │
 │  │  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐             │    │
-│  │  │  gogent-load-      │  │   gogent-validate  │  │  gogent-sharp-edge │  │ gogent-agent-      │             │    │
+│  │  │  goyoke-load-      │  │   goyoke-validate  │  │  goyoke-sharp-edge │  │ goyoke-agent-      │             │    │
 │  │  │  context           │  │                    │  │                    │  │ endstate           │             │    │
 │  │  │                    │  │                    │  │                    │  │                    │             │    │
 │  │  │ • Language detect  │  │ • Schema validation│  │ • Tool counting    │  │ • Decision outcomes│             │    │
@@ -84,7 +84,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │  └────────────────────────────────┘  └────────────────────────────────┘  └────────────────────────────────┘ │    │
 │  │                                                                                                              │    │
 │  │  ┌────────────────────────────────┐                                                                          │    │
-│  │  │     GLOBAL SCOPE (~/.gogent/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
+│  │  │     GLOBAL SCOPE (~/.goyoke/)  │  ┌────────────────────────────────────────────────────────────────────┐ │    │
 │  │  │                                │  │                  CONFIGURATION (~/.claude/)                        │ │    │
 │  │  │ • failure-tracker.jsonl        │  │                                                                    │ │    │
 │  │  │ • agent-invocations.jsonl      │  │  • routing-schema.json (v2.5.0)    • agents/*.yaml                │ │    │
@@ -135,10 +135,10 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 │  │  │                                                                                                          │ │   │
 │  │  │   File Watchers (JSONL tailing)          CLI Queries                    Programmatic API                 │ │   │
 │  │  │   ─────────────────────────────          ───────────────                ─────────────────                 │ │   │
-│  │  │   • tail -f routing-decisions.jsonl     • gogent-archive stats         • pkg/telemetry.Load*()          │ │   │
-│  │  │   • inotify on handoffs.jsonl           • gogent-archive sharp-edges   • pkg/session.Query*()           │ │   │
-│  │  │   • fsnotify for Go integration         • gogent-ml-export stats       • pkg/routing.LoadSchema()       │ │   │
-│  │  │                                         • gogent-aggregate             • pkg/memory.GetFailureCount()   │ │   │
+│  │  │   • tail -f routing-decisions.jsonl     • goyoke-archive stats         • pkg/telemetry.Load*()          │ │   │
+│  │  │   • inotify on handoffs.jsonl           • goyoke-archive sharp-edges   • pkg/session.Query*()           │ │   │
+│  │  │   • fsnotify for Go integration         • goyoke-ml-export stats       • pkg/routing.LoadSchema()       │ │   │
+│  │  │                                         • goyoke-aggregate             • pkg/memory.GetFailureCount()   │ │   │
 │  │  │                                                                                                          │ │   │
 │  │  └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │   │
 │  │                                                                                                               │   │
@@ -151,7 +151,7 @@ The system intercepts Claude Code hook events (SessionStart, PreToolUse, PostToo
 
 ## 2. Hook Event Flow
 
-The following sequence diagram shows the complete lifecycle of a Claude Code session from the perspective of GOgent hooks.
+The following sequence diagram shows the complete lifecycle of a Claude Code session from the perspective of goYoke hooks.
 
 ```mermaid
 sequenceDiagram
@@ -164,7 +164,7 @@ sequenceDiagram
     participant SE as SessionEnd
 
     CC->>SS: Session begins
-    Note over SS: gogent-load-context
+    Note over SS: goyoke-load-context
     SS->>SS: DetectLanguage()
     SS->>SS: LoadConventions()
     SS->>SS: LoadHandoff()
@@ -173,7 +173,7 @@ sequenceDiagram
 
     loop Tool Usage
         CC->>PT: Task() invocation
-        Note over PT: gogent-validate
+        Note over PT: goyoke-validate
         PT->>PT: LoadSchema()
         PT->>PT: ValidateTask()
         PT->>PT: CheckDelegationCeiling()
@@ -188,7 +188,7 @@ sequenceDiagram
             Tool-->>CC: Result
 
             CC->>PO: Tool completed
-            Note over PO: gogent-sharp-edge
+            Note over PO: goyoke-sharp-edge
             PO->>PO: IncrementToolCounter()
             PO->>PO: LogRoutingDecision()
             PO->>PO: DetectFailure()
@@ -212,7 +212,7 @@ sequenceDiagram
 
     opt Agent Delegation
         CC->>SA: Subagent completes
-        Note over SA: gogent-agent-endstate
+        Note over SA: goyoke-agent-endstate
         SA->>SA: UpdateDecisionOutcome()
         SA->>SA: LogAgentCollaboration()
         SA->>SA: UpdateCollaborationOutcome()
@@ -220,7 +220,7 @@ sequenceDiagram
     end
 
     CC->>SE: Session ends
-    Note over SE: gogent-archive
+    Note over SE: goyoke-archive
     SE->>SE: CollectMetrics()
     SE->>SE: LoadArtifacts()
     SE->>SE: GenerateHandoff()
@@ -232,15 +232,15 @@ sequenceDiagram
 
 | Hook Event | CLI Binary | Primary Responsibilities | Trigger |
 |------------|------------|--------------------------|---------|
-| SessionStart | `gogent-load-context` | Language detection, convention loading, handoff restoration, git context | Session initialization |
-| PreToolUse | `gogent-validate` | Schema validation, Task() checks, tier enforcement, ceiling verification | Every tool call |
-| PostToolUse | `gogent-sharp-edge` | Tool counting, failure tracking, ML telemetry, sharp-edge detection, routing reminders | After tool execution |
-| SubagentStop | `gogent-agent-endstate` | Decision outcomes, collaboration tracking, ML updates, session metrics | Agent completion |
-| SessionEnd | `gogent-archive` | Metrics collection, artifact loading, handoff generation, markdown export | Session termination |
+| SessionStart | `goyoke-load-context` | Language detection, convention loading, handoff restoration, git context | Session initialization |
+| PreToolUse | `goyoke-validate` | Schema validation, Task() checks, tier enforcement, ceiling verification | Every tool call |
+| PostToolUse | `goyoke-sharp-edge` | Tool counting, failure tracking, ML telemetry, sharp-edge detection, routing reminders | After tool execution |
+| SubagentStop | `goyoke-agent-endstate` | Decision outcomes, collaboration tracking, ML updates, session metrics | Agent completion |
+| SessionEnd | `goyoke-archive` | Metrics collection, artifact loading, handoff generation, markdown export | Session termination |
 
 ### 2.2 PostToolUse Handler: Merged Responsibilities
 
-The `gogent-sharp-edge` PostToolUse handler consolidates five integrated responsibilities:
+The `goyoke-sharp-edge` PostToolUse handler consolidates five integrated responsibilities:
 
 #### 1. Tool Counter Management
 - **Trigger**: Every tool execution (Bash, Edit, Write, Read, Glob, Grep)
@@ -248,16 +248,16 @@ The `gogent-sharp-edge` PostToolUse handler consolidates five integrated respons
 - **Purpose**: Track tool usage frequency for routing reminders and auto-flush
 
 #### 2. Routing Compliance Reminders
-- **Trigger**: Every 10 tools (configurable via `GOGENT_REMINDER_THRESHOLD`)
+- **Trigger**: Every 10 tools (configurable via `GOYOKE_REMINDER_THRESHOLD`)
 - **Action**: Generates structured reminder injected into `additionalContext`
 - **Content**: Reminds agent to verify routing compliance with `routing-schema.json`
 
 #### 3. Pending Learnings Auto-Flush
-- **Trigger**: Every 20+ tools (configurable via `GOGENT_FLUSH_THRESHOLD`)
+- **Trigger**: Every 20+ tools (configurable via `GOYOKE_FLUSH_THRESHOLD`)
 - **Action**: Archives `pending-learnings.jsonl` to `session-archive/`
 - **Purpose**: Prevent unbounded growth of pending learnings file
 
-#### 4. ML Tool Event Logging (GOgent-087d)
+#### 4. ML Tool Event Logging (goYoke-087d)
 - **Trigger**: Every tool execution
 - **Action**: Logs RoutingDecision to `routing-decisions.jsonl`
 - **Fields**: Tool name, duration, input/output tokens, sequence index, model, tier
@@ -275,16 +275,16 @@ The `gogent-sharp-edge` PostToolUse handler consolidates five integrated respons
 ```mermaid
 graph TD
     subgraph "CLI Layer (cmd/)"
-        loadcontext[gogent-load-context<br/>SessionStart]
-        validate[gogent-validate<br/>PreToolUse]
-        sharpedge[gogent-sharp-edge<br/>PostToolUse]
-        endstate[gogent-agent-endstate<br/>SubagentStop]
-        archive[gogent-archive<br/>SessionEnd]
-        intent[gogent-capture-intent<br/>Manual]
-        aggregate[gogent-aggregate<br/>Analysis]
-        mlexport[gogent-ml-export<br/>ML Pipeline]
-        orchguard[gogent-orchestrator-guard<br/>Enforcement]
-        doctheater[gogent-doc-theater<br/>Detection]
+        loadcontext[goyoke-load-context<br/>SessionStart]
+        validate[goyoke-validate<br/>PreToolUse]
+        sharpedge[goyoke-sharp-edge<br/>PostToolUse]
+        endstate[goyoke-agent-endstate<br/>SubagentStop]
+        archive[goyoke-archive<br/>SessionEnd]
+        intent[goyoke-capture-intent<br/>Manual]
+        aggregate[goyoke-aggregate<br/>Analysis]
+        mlexport[goyoke-ml-export<br/>ML Pipeline]
+        orchguard[goyoke-orchestrator-guard<br/>Enforcement]
+        doctheater[goyoke-doc-theater<br/>Detection]
     end
 
     subgraph "Core Packages (pkg/)"
@@ -354,7 +354,7 @@ graph TD
 | `pkg/session` | Handoffs, events, metrics, intents, artifact loading, markdown export | `Handoff`, `SessionMetrics`, `UserIntent`, `SharpEdge`, `Action` |
 | `pkg/memory` | Failure tracking, debugging loop detection, pattern matching | `FailureInfo`, `LogFailure()`, `GetFailureCount()`, `PatternMatch` |
 | `pkg/telemetry` | Invocation tracking, cost calculation, escalations, scout recommendations | `AgentInvocation`, `TierPricing`, `EscalationEvent`, `ScoutRecommendation` |
-| `pkg/config` | Path resolution, tier configuration, environment detection | `GetGOgentDir()`, `GetViolationsLogPath()`, `GetCurrentTier()` |
+| `pkg/config` | Path resolution, tier configuration, environment detection | `GetgoYokeDir()`, `GetViolationsLogPath()`, `GetCurrentTier()` |
 | `pkg/workflow` | Response formatting, logging utilities, integration helpers | `HookResponse`, `BlockResponse`, `PassthroughResponse` |
 | `pkg/enforcement` | Blocking responses, pattern detection, documentation theater checks | `BlockingResponse`, `PatternDetector`, `DocTheater` |
 
@@ -369,8 +369,8 @@ The ML telemetry system provides comprehensive observability for routing optimiz
 ```mermaid
 graph TD
     subgraph "Data Capture Hooks"
-        PostToolUse[PostToolUse<br/>gogent-sharp-edge]
-        SubagentStop[SubagentStop<br/>gogent-agent-endstate]
+        PostToolUse[PostToolUse<br/>goyoke-sharp-edge]
+        SubagentStop[SubagentStop<br/>goyoke-agent-endstate]
     end
 
     subgraph "Initial Records (Append-Only)"
@@ -384,7 +384,7 @@ graph TD
     end
 
     subgraph "ML Pipeline"
-        MLExport["gogent-ml-export<br/>Reconciliation + Export"]
+        MLExport["goyoke-ml-export<br/>Reconciliation + Export"]
         Training["ML Training Pipeline"]
     end
 
@@ -495,19 +495,19 @@ type AgentCollaboration struct {
 
 ```bash
 # Export routing decisions with reconciled outcomes
-gogent-ml-export routing-decisions --output=decisions.jsonl [--since=YYYY-MM-DD]
+goyoke-ml-export routing-decisions --output=decisions.jsonl [--since=YYYY-MM-DD]
 
 # Export agent collaborations with outcomes
-gogent-ml-export agent-collaborations --output=collabs.jsonl
+goyoke-ml-export agent-collaborations --output=collabs.jsonl
 
 # Export with automatic pruning after export
-gogent-ml-export routing-decisions --output=decisions.jsonl --prune-after-export
+goyoke-ml-export routing-decisions --output=decisions.jsonl --prune-after-export
 
 # Validate reconciliation consistency
-gogent-ml-export validate --check=orphaned-updates --check=missing-outcomes
+goyoke-ml-export validate --check=orphaned-updates --check=missing-outcomes
 
 # Generate summary statistics
-gogent-ml-export stats
+goyoke-ml-export stats
 ```
 
 ---
@@ -533,14 +533,14 @@ flowchart TB
         lasthandoff[/last-handoff.md/]
     end
 
-    subgraph "ML Scope ($XDG_DATA_HOME/gogent/)"
+    subgraph "ML Scope ($XDG_DATA_HOME/goyoke/)"
         routingdec[/routing-decisions.jsonl/]
         routingupdates[/routing-decision-updates.jsonl/]
         collaborations[/agent-collaborations.jsonl/]
         collabupd[/agent-collaboration-updates.jsonl/]
     end
 
-    subgraph "Global Scope (~/.gogent/)"
+    subgraph "Global Scope (~/.goyoke/)"
         failures[/failure-tracker.jsonl/]
         invocations[/agent-invocations.jsonl/]
         escalations[/escalations.jsonl/]
@@ -552,18 +552,18 @@ flowchart TB
         sessions[/session-{id}.jsonl/]
     end
 
-    validate([gogent-validate]) --> violations
-    sharpedge([gogent-sharp-edge]) --> failures
+    validate([goyoke-validate]) --> violations
+    sharpedge([goyoke-sharp-edge]) --> failures
     sharpedge --> pending
     sharpedge --> routingdec
-    endstate([gogent-agent-endstate]) --> routingupdates
+    endstate([goyoke-agent-endstate]) --> routingupdates
     endstate --> collaborations
     endstate --> collabupd
-    archive([gogent-archive]) --> handoffs
+    archive([goyoke-archive]) --> handoffs
     archive --> lasthandoff
     archive --> archived
-    intent([gogent-capture-intent]) --> intents
-    mlexport([gogent-ml-export]) -.->|reads| routingdec
+    intent([goyoke-capture-intent]) --> intents
+    mlexport([goyoke-ml-export]) -.->|reads| routingdec
     mlexport -.->|reads| routingupdates
 ```
 
@@ -571,27 +571,27 @@ flowchart TB
 
 | File | Scope | Written By | Schema | Purpose |
 |------|-------|------------|--------|---------|
-| `handoffs.jsonl` | Project | gogent-archive | Handoff v1.3 | Session continuity |
-| `user-intents.jsonl` | Project | gogent-capture-intent | UserIntent | User preference tracking |
-| `decisions.jsonl` | Project | gogent-archive | Decision | Architectural decisions |
-| `preferences.jsonl` | Project | gogent-archive | PreferenceOverride | User overrides |
-| `pending-learnings.jsonl` | Project | gogent-sharp-edge | SharpEdge | Unreviewed learnings |
-| `last-handoff.md` | Project | gogent-archive | Markdown | Human-readable summary |
-| `failure-tracker.jsonl` | Global | gogent-sharp-edge | FailureInfo | Cross-session tracking |
-| `agent-invocations.jsonl` | Global | gogent-* | AgentInvocation | Invocation telemetry |
-| `escalations.jsonl` | Global | gogent-agent-endstate | EscalationEvent | Tier escalation tracking |
-| `scout-recommendations.jsonl` | Global | gogent-validate | ScoutRecommendation | Scout accuracy |
-| `routing-violations.jsonl` | Temp | gogent-validate | Violation | Session violations |
-| `routing-decisions.jsonl` | ML | gogent-sharp-edge | RoutingDecision | ML training data |
-| `routing-decision-updates.jsonl` | ML | gogent-agent-endstate | DecisionOutcome | Outcome updates |
-| `agent-collaborations.jsonl` | ML | gogent-agent-endstate | AgentCollaboration | Team patterns |
-| `agent-collaboration-updates.jsonl` | ML | gogent-agent-endstate | CollabOutcome | Outcome updates |
+| `handoffs.jsonl` | Project | goyoke-archive | Handoff v1.3 | Session continuity |
+| `user-intents.jsonl` | Project | goyoke-capture-intent | UserIntent | User preference tracking |
+| `decisions.jsonl` | Project | goyoke-archive | Decision | Architectural decisions |
+| `preferences.jsonl` | Project | goyoke-archive | PreferenceOverride | User overrides |
+| `pending-learnings.jsonl` | Project | goyoke-sharp-edge | SharpEdge | Unreviewed learnings |
+| `last-handoff.md` | Project | goyoke-archive | Markdown | Human-readable summary |
+| `failure-tracker.jsonl` | Global | goyoke-sharp-edge | FailureInfo | Cross-session tracking |
+| `agent-invocations.jsonl` | Global | goyoke-* | AgentInvocation | Invocation telemetry |
+| `escalations.jsonl` | Global | goyoke-agent-endstate | EscalationEvent | Tier escalation tracking |
+| `scout-recommendations.jsonl` | Global | goyoke-validate | ScoutRecommendation | Scout accuracy |
+| `routing-violations.jsonl` | Temp | goyoke-validate | Violation | Session violations |
+| `routing-decisions.jsonl` | ML | goyoke-sharp-edge | RoutingDecision | ML training data |
+| `routing-decision-updates.jsonl` | ML | goyoke-agent-endstate | DecisionOutcome | Outcome updates |
+| `agent-collaborations.jsonl` | ML | goyoke-agent-endstate | AgentCollaboration | Team patterns |
+| `agent-collaboration-updates.jsonl` | ML | goyoke-agent-endstate | CollabOutcome | Outcome updates |
 
 ---
 
 ## 6. Validation Pipeline
 
-The `gogent-validate` binary orchestrates multiple validation checks for Task tool invocations.
+The `goyoke-validate` binary orchestrates multiple validation checks for Task tool invocations.
 
 ```mermaid
 flowchart TD
@@ -767,34 +767,34 @@ classDiagram
 
 | Binary | Hook Event | Input | Output | Lines |
 |--------|------------|-------|--------|-------|
-| `gogent-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~350 |
-| `gogent-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~200 |
-| `gogent-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON | ~500 |
-| `gogent-agent-endstate` | SubagentStop | SubagentEvent JSON | HookResponse JSON | ~400 |
-| `gogent-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1200 |
+| `goyoke-load-context` | SessionStart | SessionStartEvent JSON | ContextInjection JSON | ~350 |
+| `goyoke-validate` | PreToolUse | ToolEvent JSON | ValidationResult JSON | ~200 |
+| `goyoke-sharp-edge` | PostToolUse | ToolEvent JSON | HookResponse JSON | ~500 |
+| `goyoke-agent-endstate` | SubagentStop | SubagentEvent JSON | HookResponse JSON | ~400 |
+| `goyoke-archive` | SessionEnd | SessionEvent JSON | Confirmation JSON | ~1200 |
 
 ### 9.2 Utility Binaries
 
 | Binary | Purpose | Subcommands |
 |--------|---------|-------------|
-| `gogent-capture-intent` | Manual user intent logging | (stdin) |
-| `gogent-aggregate` | Session statistics | (flags) |
-| `gogent-ml-export` | ML training data export | routing-decisions, agent-collaborations, validate, stats |
-| `gogent-orchestrator-guard` | Completion enforcement | (integration) |
-| `gogent-doc-theater` | Documentation theater detection | (integration) |
+| `goyoke-capture-intent` | Manual user intent logging | (stdin) |
+| `goyoke-aggregate` | Session statistics | (flags) |
+| `goyoke-ml-export` | ML training data export | routing-decisions, agent-collaborations, validate, stats |
+| `goyoke-orchestrator-guard` | Completion enforcement | (integration) |
+| `goyoke-doc-theater` | Documentation theater detection | (integration) |
 
 ### 9.3 Archive Query Subcommands
 
 ```bash
-gogent-archive list [--since=DATE] [--has-sharp-edges]
-gogent-archive show <session_id>
-gogent-archive stats
-gogent-archive sharp-edges [--file=PATTERN] [--status=pending]
-gogent-archive user-intents [--category=CATEGORY]
-gogent-archive decisions [--since=DATE]
-gogent-archive preferences
-gogent-archive performance
-gogent-archive weekly
+goyoke-archive list [--since=DATE] [--has-sharp-edges]
+goyoke-archive show <session_id>
+goyoke-archive stats
+goyoke-archive sharp-edges [--file=PATTERN] [--status=pending]
+goyoke-archive user-intents [--category=CATEGORY]
+goyoke-archive decisions [--since=DATE]
+goyoke-archive preferences
+goyoke-archive performance
+goyoke-archive weekly
 ```
 
 ---
@@ -820,7 +820,7 @@ gogent-archive weekly
 | `pkg/session` | ~85% | GenerateHandoff, LoadArtifacts, DetectLanguage |
 | `pkg/memory` | ~82% | LogFailure, GetFailureCount, PatternMatch |
 | `pkg/telemetry` | ~80% | LogInvocation, CalculateCost, ClusterByAgent |
-| `pkg/config` | ~90% | GetGOgentDir, GetCurrentTier |
+| `pkg/config` | ~90% | GetgoYokeDir, GetCurrentTier |
 
 ### 10.3 CI/CD Workflows
 
@@ -844,13 +844,13 @@ coverage.yml:          # Coverage reporting
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `GOGENT_PROJECT_DIR` | Project root override | `$PWD` |
-| `GOGENT_ROUTING_SCHEMA` | Schema path override | `~/.claude/routing-schema.json` |
-| `GOGENT_STORAGE_PATH` | Failure tracker path | `~/.gogent/failure-tracker.jsonl` |
-| `GOGENT_MAX_FAILURES` | Debugging loop threshold | 3 |
-| `GOGENT_FAILURE_WINDOW` | Failure window (seconds) | 300 |
-| `GOGENT_REMINDER_THRESHOLD` | Routing reminder frequency | 10 |
-| `GOGENT_FLUSH_THRESHOLD` | Auto-flush threshold | 20 |
+| `GOYOKE_PROJECT_DIR` | Project root override | `$PWD` |
+| `GOYOKE_ROUTING_SCHEMA` | Schema path override | `~/.claude/routing-schema.json` |
+| `GOYOKE_STORAGE_PATH` | Failure tracker path | `~/.goyoke/failure-tracker.jsonl` |
+| `GOYOKE_MAX_FAILURES` | Debugging loop threshold | 3 |
+| `GOYOKE_FAILURE_WINDOW` | Failure window (seconds) | 300 |
+| `GOYOKE_REMINDER_THRESHOLD` | Routing reminder frequency | 10 |
+| `GOYOKE_FLUSH_THRESHOLD` | Auto-flush threshold | 20 |
 | `XDG_DATA_HOME` | ML telemetry base path | `~/.local/share` |
 
 ---
@@ -871,13 +871,13 @@ Project/
 │   │   └── einstein-gap-*.md        # Escalation documents
 │   └── session-archive/             # Archived session data
 │
-~/.gogent/
+~/.goyoke/
 ├── failure-tracker.jsonl            # Cross-session failures
 ├── agent-invocations.jsonl          # Invocation telemetry
 ├── escalations.jsonl                # Tier escalations
 └── scout-recommendations.jsonl      # Scout accuracy data
 │
-$XDG_DATA_HOME/gogent/
+$XDG_DATA_HOME/goyoke/
 ├── routing-decisions.jsonl          # ML training (initial)
 ├── routing-decision-updates.jsonl   # ML training (outcomes)
 ├── agent-collaborations.jsonl       # Team patterns (initial)
@@ -910,7 +910,7 @@ $XDG_DATA_HOME/gogent/
 
 ### 13.1 Adding a New CLI
 
-1. Create `cmd/gogent-<name>/main.go`
+1. Create `cmd/goyoke-<name>/main.go`
 2. Implement STDIN parsing with timeout (see `pkg/routing/stdin.go`)
 3. Output hook-compatible JSON to STDOUT
 4. Add to `Makefile` build targets
@@ -937,7 +937,7 @@ $XDG_DATA_HOME/gogent/
 
 1. Add field to `RoutingDecision` or `AgentCollaboration`
 2. Update logging in appropriate hook handler
-3. Update `gogent-ml-export` reconciliation logic
+3. Update `goyoke-ml-export` reconciliation logic
 4. Add migration code for existing JSONL files
 5. Update training pipeline documentation
 
@@ -965,7 +965,7 @@ The following data streams are available for TUI integration:
 | Data Source | Update Frequency | Access Pattern |
 |-------------|------------------|----------------|
 | Tool counter | Every tool | `tail -f /tmp/claude-tool-counter-*.log` |
-| Routing decisions | Every tool | `tail -f $XDG_DATA_HOME/gogent/routing-decisions.jsonl` |
+| Routing decisions | Every tool | `tail -f $XDG_DATA_HOME/goyoke/routing-decisions.jsonl` |
 | Violations | On violation | `tail -f /tmp/claude-routing-violations.jsonl` |
 | Pending learnings | On sharp edge | `tail -f .claude/memory/pending-learnings.jsonl` |
 
@@ -973,9 +973,9 @@ The following data streams are available for TUI integration:
 
 | Metric | CLI Command | Package Function |
 |--------|-------------|------------------|
-| Session stats | `gogent-archive stats` | `session.CollectMetrics()` |
-| Cost breakdown | `gogent-ml-export stats` | `telemetry.CalculateSessionCostSummary()` |
-| Agent usage | `gogent-aggregate` | `telemetry.ClusterInvocationsByAgent()` |
+| Session stats | `goyoke-archive stats` | `session.CollectMetrics()` |
+| Cost breakdown | `goyoke-ml-export stats` | `telemetry.CalculateSessionCostSummary()` |
+| Agent usage | `goyoke-aggregate` | `telemetry.ClusterInvocationsByAgent()` |
 | Escalation ROI | (programmatic) | `telemetry.CalculateEscalationROI()` |
 | Scout accuracy | (programmatic) | `telemetry.GetScoutPerformanceSummary()` |
 
@@ -994,4 +994,4 @@ The following data streams are available for TUI integration:
 
 **Version:** 1.0
 **Generated:** 2026-01-26
-**Maintainer:** GOgent-Fortress Development Team
+**Maintainer:** goYoke Development Team

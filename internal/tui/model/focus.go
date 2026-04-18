@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // It contains pure data types with no I/O dependencies; all keyboard
 // handling and border switching live in the root AppModel (TUI-008).
 package model

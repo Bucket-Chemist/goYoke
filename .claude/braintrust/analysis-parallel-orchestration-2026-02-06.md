@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-The Parallel Orchestration Design proposes transforming orchestrator agents from blocking foreground processes to a three-phase pattern (PLAN → EXECUTE → DELIVER) using a Go binary (`gogent-team-run`) for background execution. While the **core insight is valid**—orchestrators should be backgroundable for TUI responsiveness—the proposed implementation introduces **significant architectural complexity** that may not be justified.
+The Parallel Orchestration Design proposes transforming orchestrator agents from blocking foreground processes to a three-phase pattern (PLAN → EXECUTE → DELIVER) using a Go binary (`goyoke-team-run`) for background execution. While the **core insight is valid**—orchestrators should be backgroundable for TUI responsiveness—the proposed implementation introduces **significant architectural complexity** that may not be justified.
 
 **Verdict**: The design is **architecturally coherent but over-engineered**. A simpler TypeScript-native alternative exists that achieves the same goals with 60% less effort and zero breaking changes to the TUI.
 
@@ -193,7 +193,7 @@ The design makes several assumptions that, if violated, would cause the architec
 
 ### 3.1 Assumption: Config.json is Single-Writer
 
-**What the design assumes**: Only `gogent-team-run` writes to config.json. Agents read it but don't modify it.
+**What the design assumes**: Only `goyoke-team-run` writes to config.json. Agents read it but don't modify it.
 
 **Why this matters**: JSON files don't support concurrent writes. Two writers would corrupt the file.
 
@@ -265,7 +265,7 @@ The design makes several assumptions that, if violated, would cause the architec
 **Current design has NO mitigation**:
 - No PID file for cleanup
 - No heartbeat from TUI to Go binary
-- No `gogent-team-cleanup` command
+- No `goyoke-team-cleanup` command
 - No session startup cleanup
 
 **This is the most severe gap in the design.**
@@ -279,7 +279,7 @@ The design makes several assumptions that, if violated, would cause the architec
 - Certain tools might have hardcoded prompts
 - Hook system behavior in headless mode is **unvalidated**
 
-**Specific concern**: Does `gogent-validate` run in headless CLI mode?
+**Specific concern**: Does `goyoke-validate` run in headless CLI mode?
 
 If not, agents spawned by Go binary:
 - Could use Task(opus) even though it's supposed to be blocked
@@ -296,7 +296,7 @@ If not, agents spawned by Go binary:
 
 **Scenario**:
 1. User runs `/braintrust`
-2. Mozart plans team, spawns `gogent-team-run` in background
+2. Mozart plans team, spawns `goyoke-team-run` in background
 3. Einstein and Staff-Architect start (Wave 1)
 4. User's laptop runs out of battery / TUI crashes / user kills terminal
 5. Go binary and agents continue running
@@ -314,7 +314,7 @@ If not, agents spawned by Go binary:
 
 **Required mitigation**:
 - Team PID file: `teams/{name}/team.pid` containing Go binary PID
-- Session startup: `gogent-team-cleanup --kill-orphans`
+- Session startup: `goyoke-team-cleanup --kill-orphans`
 - Heartbeat: Go binary checks for parent periodically, self-terminates if orphaned
 - Cost ceiling: Go binary enforces max cost per team
 
@@ -342,7 +342,7 @@ If not, agents spawned by Go binary:
 ### 4.3 The Hook Bypass Problem
 
 **Current system architecture**:
-- `gogent-validate` runs as PreToolUse hook
+- `goyoke-validate` runs as PreToolUse hook
 - Blocks Task(opus), enforces subagent_type, logs violations
 - Runs within Claude Code session
 
@@ -392,23 +392,23 @@ If not, agents spawned by Go binary:
 ### 4.5 The Nesting Depth Reset Problem
 
 **Current system**:
-- `GOGENT_NESTING_LEVEL` tracks agent spawn depth
+- `GOYOKE_NESTING_LEVEL` tracks agent spawn depth
 - Level 0: Router
 - Level 1: First-tier agents (mozart, go-pro)
 - Level 2: Sub-agents (einstein, scaffolder)
 - Hooks use this for validation
 
 **Go binary problem**:
-- Go binary doesn't know about `GOGENT_NESTING_LEVEL`
+- Go binary doesn't know about `GOYOKE_NESTING_LEVEL`
 - Spawned CLI processes start at Level 0 (default)
 - Agents think they're root-level
 - Can spawn when they shouldn't be able to
 
 **Mitigation**:
 ```go
-// In gogent-team-run
+// In goyoke-team-run
 env := os.Environ()
-env = append(env, "GOGENT_NESTING_LEVEL=2")  // or read from team config
+env = append(env, "GOYOKE_NESTING_LEVEL=2")  // or read from team config
 ```
 
 But this requires:
@@ -470,7 +470,7 @@ If no: The Go binary approach becomes justified, but still needs the mitigations
 | 1 | Orchestrators never write implementation files | Design doc §2, §3 | **UNVALIDATED** | HIGH | True by prompt convention only. Mozart, review-orchestrator, impl-manager prompts checked - none use Write/Edit on .go/.ts/.py files. But no structural enforcement exists. |
 | 2 | Config.json single-writer model works | Design doc §4 | **ASSUMED** | MEDIUM | Go binary is only writer by design. But no file locking, no atomic writes specified. Race conditions possible if agent reads during write. |
 | 3 | PID monitoring catches all failures | Design doc §4 | **PARTIALLY VALID** | MEDIUM | os.Process.Wait() catches most cases. OOM kills, resource exhaustion, zombie processes may not be handled. |
-| 4 | Hooks run in headless CLI mode | Implicit | **UNVALIDATED** | HIGH | Design assumes agents follow routing rules. But gogent-validate is a PreToolUse hook. Does it run when `claude --permission-mode delegate` spawns? No verification. |
+| 4 | Hooks run in headless CLI mode | Implicit | **UNVALIDATED** | HIGH | Design assumes agents follow routing rules. But goyoke-validate is a PreToolUse hook. Does it run when `claude --permission-mode delegate` spawns? No verification. |
 | 5 | TUI outlives all teams | Implicit | **ASSUMED** | HIGH | No heartbeat, no orphan detection, no cleanup mechanism. TUI crash leaves teams running indefinitely. |
 | 6 | CLI JSON output format is stable | Design doc §4 | **MEDIUM CONFIDENCE** | MEDIUM | Go binary parses CLI stdout for cost_usd. Claude CLI output format is undocumented and could change. |
 | 7 | Inter-wave bash scripts are reliable | Design doc §5 | **LOW RISK** | LOW | jq is robust. Scripts are optional optimization. |
@@ -494,8 +494,8 @@ If no: The Go binary approach becomes justified, but still needs the mitigations
 
 | Component | Depends On | Risk |
 |-----------|-----------|------|
-| gogent-team-run | agents-index.json, team config schema | MEDIUM - Schema changes break binary |
-| gogent-team-init | Team config templates, stdin schemas | MEDIUM - Template changes need binary updates |
+| goyoke-team-run | agents-index.json, team config schema | MEDIUM - Schema changes break binary |
+| goyoke-team-init | Team config templates, stdin schemas | MEDIUM - Template changes need binary updates |
 | /team-status | config.json structure | LOW - Read-only |
 | Orchestrator prompts | stdin/stdout schemas | HIGH - Schema changes need prompt rewrites |
 
@@ -512,7 +512,7 @@ The design creates two independent process management systems:
 - Tracking: Map<processId, ProcessInfo>
 - Cost aggregation: Built-in
 
-**System 2: gogent-team-run (Go)**
+**System 2: goyoke-team-run (Go)**
 - Manages: `claude` CLI processes spawned via exec.Command
 - Cleanup: Signal forwarding on SIGTERM
 - Tracking: PIDs in config.json
@@ -557,17 +557,17 @@ This is the most severe failure mode and deserves detailed analysis.
 ```
 T+0:00  User: /braintrust "analyze X"
 T+0:05  Mozart: Plans team, writes config
-T+0:10  Mozart: Bash({run_in_background: true, command: "gogent-team-run ..."})
+T+0:10  Mozart: Bash({run_in_background: true, command: "goyoke-team-run ..."})
 T+0:11  Mozart returns "Team dispatched"
 T+0:12  TUI shows prompt again (user thinks they can work)
-T+0:15  gogent-team-run: Spawns einstein (PID 12345), staff-architect (PID 12346)
+T+0:15  goyoke-team-run: Spawns einstein (PID 12345), staff-architect (PID 12346)
 T+1:30  User: Closes laptop lid (or: TUI crashes, or: user Cmd+Q)
 T+1:31  TUI process exits
 T+1:32  Node.js kills its direct children (none - Go binary was backgrounded)
-T+1:33  gogent-team-run: Still running (PID 12340)
+T+1:33  goyoke-team-run: Still running (PID 12340)
 T+1:33  einstein: Still running (PID 12345)
 T+1:33  staff-architect: Still running (PID 12346)
-T+3:00  Wave 1 completes, gogent-team-run spawns beethoven (PID 12347)
+T+3:00  Wave 1 completes, goyoke-team-run spawns beethoven (PID 12347)
 T+4:30  Team completes. Go binary exits.
 T+4:31  Agents exit.
 
@@ -585,8 +585,8 @@ T+4:31  Agents exit.
 **What the design should specify but doesn't**:
 - Heartbeat from TUI to Go binary (e.g., every 30s touch a heartbeat file)
 - Go binary monitors heartbeat, self-terminates if stale
-- Session startup: `gogent-team-cleanup --kill-orphans`
-- Team PID lockfile: `/tmp/gogent-team-{name}.pid`
+- Session startup: `goyoke-team-cleanup --kill-orphans`
+- Team PID lockfile: `/tmp/goyoke-team-{name}.pid`
 
 ### Layer 4: Cost/Benefit Analysis
 
@@ -596,8 +596,8 @@ T+4:31  Agents exit.
 |-------|-------|---------------|--------------|
 | **Phase 1: Background Engine** | | | |
 | 1.1 Team config JSON schema | Design + validate | 1-2 | None |
-| 1.2 gogent-team-init binary | Go development | 2-3 | Schema |
-| 1.3 gogent-team-run binary | Go development, PID mgmt, wave scheduling | 5-7 | Schema, init |
+| 1.2 goyoke-team-init binary | Go development | 2-3 | Schema |
+| 1.3 goyoke-team-run binary | Go development, PID mgmt, wave scheduling | 5-7 | Schema, init |
 | 1.4 Integration tests | Multi-process testing | 2-3 | Binaries |
 | **Phase 1 Subtotal** | | **8-12 days** | |
 | **Phase 2: Structured I/O** | | | |
@@ -1141,7 +1141,7 @@ class ProcessRegistry {
 
 **Option B: Go binary reports to TUI via Unix socket**
 ```
-TUI listens on: /tmp/gogent-tui-{session}.sock
+TUI listens on: /tmp/goyoke-tui-{session}.sock
 Go binary connects and sends:
   {"type": "spawn", "pid": 12345, "agent": "einstein"}
   {"type": "complete", "pid": 12345, "exit_code": 0, "cost_usd": 1.23}
@@ -1337,7 +1337,7 @@ Instead:
 ### Scout 4: Existing Orchestration Patterns
 - **Searched**: `orchestrat`, `wave`, `team`, `parallel.*spawn`
 - **Results**:
-  - review-orchestrator: Uses `mcp__gofortress__spawn_agent`, sequential spawns
+  - review-orchestrator: Uses `mcp__goyoke__spawn_agent`, sequential spawns
   - Mozart prompt: References spawning Einstein + Staff-Architect
   - No wave scheduling infrastructure
   - No dependency DAG implementation
@@ -1371,7 +1371,7 @@ Instead:
 | **Headless mode** | Claude CLI running without interactive terminal |
 | **stdin schema** | JSON structure defining input contract for an agent |
 | **stdout schema** | JSON structure defining output contract from an agent |
-| **gogent-team-run** | Proposed Go binary for background team execution |
+| **goyoke-team-run** | Proposed Go binary for background team execution |
 | **TeamManager** | Proposed TypeScript alternative to Go binary |
 
 ---

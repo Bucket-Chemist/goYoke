@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/memory"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/memory"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -186,7 +186,7 @@ func TestStorage_LogRotation(t *testing.T) {
 	defer func() { memory.DefaultStoragePath = originalPath }()
 
 	// Set short time window (long enough for test execution, short enough to filter old)
-	t.Setenv("GOGENT_FAILURE_WINDOW", "5") // 5 seconds
+	t.Setenv("GOYOKE_FAILURE_WINDOW", "5") // 5 seconds
 
 	now := time.Now().Unix()
 	old := now - 10 // 10 seconds ago

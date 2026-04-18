@@ -32,7 +32,7 @@ func TestLogViolation(t *testing.T) {
 	}
 
 	// Read log file
-	logPath := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file at %s: %v", logPath, err)
@@ -107,7 +107,7 @@ func TestLogViolation_AppendMode(t *testing.T) {
 	}
 
 	// Read entire log file
-	logPath := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log file: %v", err)
@@ -146,7 +146,7 @@ func TestLogViolation_CreatesLogFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	os.Setenv("XDG_RUNTIME_DIR", tmpDir)
 
-	logPath := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 
 	// Verify log doesn't exist yet
 	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
@@ -194,7 +194,7 @@ func TestLogViolation_AllFields(t *testing.T) {
 	}
 
 	// Read and verify
-	logPath := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log: %v", err)
@@ -255,7 +255,7 @@ func TestLogViolation_JSONLFormat(t *testing.T) {
 	}
 
 	// Read file
-	logPath := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log: %v", err)
@@ -300,7 +300,7 @@ func TestLogViolation_OmitemptyFields(t *testing.T) {
 	}
 
 	// Read raw JSON
-	logPath := filepath.Join(tmpDir, "gogent", "routing-violations.jsonl")
+	logPath := filepath.Join(tmpDir, "goyoke", "routing-violations.jsonl")
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatalf("Failed to read log: %v", err)
@@ -399,13 +399,13 @@ func TestLogViolation_DualWrite(t *testing.T) {
 	}
 
 	// Verify global log exists
-	globalPath := filepath.Join(tmpGlobal, "gogent", "routing-violations.jsonl")
+	globalPath := filepath.Join(tmpGlobal, "goyoke", "routing-violations.jsonl")
 	if _, err := os.Stat(globalPath); os.IsNotExist(err) {
 		t.Error("Global log not created")
 	}
 
 	// Verify project log exists
-	projectPath := filepath.Join(tmpProject, ".gogent", "memory", "routing-violations.jsonl")
+	projectPath := filepath.Join(tmpProject, ".goyoke", "memory", "routing-violations.jsonl")
 	if _, err := os.Stat(projectPath); os.IsNotExist(err) {
 		t.Error("Project log not created")
 	}
@@ -458,7 +458,7 @@ func TestLogViolation_ProjectLogFailureGraceful(t *testing.T) {
 	}
 
 	// Global log should still be written
-	globalPath := filepath.Join(tmpGlobal, "gogent", "routing-violations.jsonl")
+	globalPath := filepath.Join(tmpGlobal, "goyoke", "routing-violations.jsonl")
 	if _, err := os.Stat(globalPath); os.IsNotExist(err) {
 		t.Error("Global log should be created even if project log fails")
 	}

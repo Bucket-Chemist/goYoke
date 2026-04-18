@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# integrate-rust-pro.sh — Integrates rust-pro agent into GOgent-Fortress routing system
+# integrate-rust-pro.sh — Integrates rust-pro agent into goYoke routing system
 # Generated from staff-architect audit findings
 # Run from repo root: bash scripts/integrate-rust-pro.sh
 
 set -euo pipefail
 
-CLAUDE_DIR="$HOME/Documents/GOgent-Fortress/.claude"
+CLAUDE_DIR="$HOME/Documents/goYoke/.claude"
 
 echo "=== Phase 1: Rename convention file ==="
 if [ -f "$CLAUDE_DIR/conventions/rust-conventions.md" ]; then

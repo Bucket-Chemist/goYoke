@@ -33,12 +33,12 @@ The document says "add `description` as optional field to all stdin schemas" but
 ### Gap 3: D-3 acceptance criteria buried in wrong section
 The acceptance criteria for wave failure propagation are in the Implementation Pathway section, not next to D-3. The criteria are:
 > "After wave N completes, if any member has `status: failed`, skip subsequent waves and set their members to `status: skipped`."
-Add `cmd/gogent-team-run/wave.go` to TC-013c's Files to Create/Modify table. Add a corresponding test to `wave_test.go`.
+Add `cmd/goyoke-team-run/wave.go` to TC-013c's Files to Create/Modify table. Add a corresponding test to `wave_test.go`.
 
 ### Gap 4: No verification step for Phase 0
 After making all Phase 0 edits, run:
 ```bash
-go test ./cmd/gogent-team-run/... && echo "Phase 0 verified"
+go test ./cmd/goyoke-team-run/... && echo "Phase 0 verified"
 ```
 If envelope tests fail, the `description` field addition may need adjustment in test fixtures.
 
@@ -63,7 +63,7 @@ After these decisions, the tickets become implementable in sequence with high co
 ## Problem Statement
 
 ### Original Request
-Review the quality, specificity, and integration completeness of three decomposed implementation tickets (TC-013a: Review Workflow, TC-013b: Braintrust Workflow, TC-013c: Implementation Workflow) against the actual `gogent-team-run` backend system.
+Review the quality, specificity, and integration completeness of three decomposed implementation tickets (TC-013a: Review Workflow, TC-013b: Braintrust Workflow, TC-013c: Implementation Workflow) against the actual `goyoke-team-run` backend system.
 
 ### Clarified Problem
 These tickets were produced after the first Braintrust analysis recommended decomposing monolithic TC-013 into three workflow-specific tickets. The concern is whether the new tickets are specific enough for an implementer to execute without hitting runtime surprises -- particularly around stdin schema compliance, envelope builder validation, wave execution semantics, and config generation detail.
@@ -135,7 +135,7 @@ These tickets were produced after the first Braintrust analysis recommended deco
 | `focus_areas` has multiple incompatible representations | Three different shapes across schemas, contracts, and bridge docs | HIGH |
 | Feature flag (`use_team_pattern`) is undefined | `settings.json` does not exist; no schema, no default value, no code reads it | HIGH |
 | Session directory creation is underspecified | Tickets say "create team directory" but do not specify path conventions, naming, or env var source | MEDIUM |
-| Stdout filename mismatch in braintrust workflow | `braintrust.json` says `stdout_staff-architect.json`; `gogent-team-prepare-synthesis` reads `stdout_staff-arch.json` | HIGH (Einstein) / Not separately flagged (Staff-Architect) |
+| Stdout filename mismatch in braintrust workflow | `braintrust.json` says `stdout_staff-architect.json`; `goyoke-team-prepare-synthesis` reads `stdout_staff-arch.json` | HIGH (Einstein) / Not separately flagged (Staff-Architect) |
 
 ### Complementary Insights
 
@@ -212,7 +212,7 @@ This resolves the immediate blocker without taking on the risk of modifying a co
 **Resolution**: Einstein is correct that this is a real architectural gap, independent of the budget issue. Even with the budget fixed to $16.00, the question remains: how does Beethoven receive Wave 1 outputs?
 
 The answer is implicit in the system design but not documented in the tickets:
-- The inter-wave script (`gogent-team-prepare-synthesis`) writes `pre-synthesis.md`.
+- The inter-wave script (`goyoke-team-prepare-synthesis`) writes `pre-synthesis.md`.
 - Beethoven's stdin should reference the pre-synthesis file path (not embed the full analysis objects).
 - Beethoven (the LLM agent) reads the file at runtime using its Read tool.
 
@@ -226,13 +226,13 @@ This means Beethoven's formal schema (`beethoven.json`) needs revision: `einstei
 
 ### Divergence 5: Stdout Filename Mismatch (F-02)
 
-**Einstein**: Flags as CRITICAL. `braintrust.json` template says `stdout_staff-architect.json`; `gogent-team-prepare-synthesis` reads `stdout_staff-arch.json`. Silent data loss -- synthesis binary has graceful degradation, so the workflow "succeeds" but Beethoven receives one-sided input.
+**Einstein**: Flags as CRITICAL. `braintrust.json` template says `stdout_staff-architect.json`; `goyoke-team-prepare-synthesis` reads `stdout_staff-arch.json`. Silent data loss -- synthesis binary has graceful degradation, so the workflow "succeeds" but Beethoven receives one-sided input.
 
 **Staff-Architect**: Does not flag this as a separate finding. It may be implicitly covered under C-1/C-3 or may have been missed.
 
 **Resolution**: Einstein is correct. This is a concrete, verifiable bug with a one-line fix. The fact that it causes silent degradation (not a crash) makes it more dangerous -- the workflow appears to work but produces inferior output.
 
-**Unified position**: Fix the filename. Either change `braintrust.json` line 44 to `stdout_staff-arch.json` or change `gogent-team-prepare-synthesis/main.go` line 29 to `stdout_staff-architect.json`. The template should be changed (not the binary) because the binary was delivered by TC-010 which is marked complete, and the template is being actively modified by TC-013b.
+**Unified position**: Fix the filename. Either change `braintrust.json` line 44 to `stdout_staff-arch.json` or change `goyoke-team-prepare-synthesis/main.go` line 29 to `stdout_staff-architect.json`. The template should be changed (not the binary) because the binary was delivered by TC-010 which is marked complete, and the template is being actively modified by TC-013b.
 
 Add this as a concrete action item in TC-013b.
 
@@ -310,7 +310,7 @@ The tickets are well-decomposed and correctly sequenced. The issues found are in
    - Supports: TC-013a `/team-result` integration
    - Effort: 20 minutes
 
-7. **Use `GOGENT_SESSION_DIR`** (set by TUI) instead of `GOGENT_SESSION_ID` across all tickets.
+7. **Use `GOYOKE_SESSION_DIR`** (set by TUI) instead of `GOYOKE_SESSION_ID` across all tickets.
    - Priority: LOW
    - Supports: Correct session directory resolution
    - Effort: 10 minutes
@@ -331,19 +331,19 @@ The tickets are well-decomposed and correctly sequenced. The issues found are in
 
 - [ ] D-1: Add `description` (string, optional) to `reviewer.json`, `einstein.json`, `beethoven.json`, `worker.json` schemas. Adjust `additionalProperties` accordingly.
 - [ ] D-2: Change `budget_max_usd` from `5.00` to `16.00` in `schemas/teams/braintrust.json`.
-- [ ] D-3: Add `cmd/gogent-team-run/wave.go` to TC-013c Files to Create/Modify. Write acceptance criteria for failure propagation.
+- [ ] D-3: Add `cmd/goyoke-team-run/wave.go` to TC-013c Files to Create/Modify. Write acceptance criteria for failure propagation.
 - [ ] D-4: Add `files[]` to `review-architect.json` contract alongside `changed_files`.
 - [ ] D-5: Update `beethoven.json` schema: replace `einstein_analysis`/`staff_architect_review` objects with `pre_synthesis_path` string. Update TC-013b to document this mechanism.
 - [ ] D-6: Change `stdout_staff-architect.json` to `stdout_staff-arch.json` in `braintrust.json` template.
 - [ ] Create `.claude/settings.json` with `{"use_team_pattern": false}`.
-- [ ] Run `go test ./cmd/gogent-team-run/...` to verify no regressions from schema/template changes.
+- [ ] Run `go test ./cmd/goyoke-team-run/...` to verify no regressions from schema/template changes.
 
 ### Phase 1: TC-013a -- Review Workflow (1-2 days)
 
 - [ ] Implement `/review` skill's team dispatch path (feature flag gated)
 - [ ] Router generates config.json + reviewer stdin files (with `description` field)
 - [ ] Validate generated stdin against `schemas/stdin/reviewer.json`
-- [ ] Launch `gogent-team-run` and verify background PID
+- [ ] Launch `goyoke-team-run` and verify background PID
 - [ ] Test: review workflow produces valid stdout consumed by `/team-result`
 - [ ] Verify severity enum alignment between stdout and `/team-result` parsing
 
@@ -359,7 +359,7 @@ The tickets are well-decomposed and correctly sequenced. The issues found are in
 ### Phase 3: TC-013c -- Implementation Workflow (2-3 days)
 
 - [ ] Implement wave failure propagation in `wave.go` (per D-3 acceptance criteria)
-- [ ] Build `gogent-plan-impl` binary with specs.md parsing and Kahn's algorithm
+- [ ] Build `goyoke-plan-impl` binary with specs.md parsing and Kahn's algorithm
 - [ ] Test: multi-wave execution with deliberate Wave 1 failure
 - [ ] Test: various DAG structures (1 wave, 2 waves, circular dependency detection)
 
@@ -384,16 +384,16 @@ The tickets are well-decomposed and correctly sequenced. The issues found are in
 | Wave failure propagation test is untestable | Both (F-04, C-2) | Certain (without D-3 fix) | Medium (test failure, not runtime) | D-3: Scope `wave.go` change |
 | LLM generates invalid JSON for config | Staff-Architect (M-1) | Medium | High (launch fails) | Unit test validation; escalate to Go binary if >30% fail |
 | Reviewer agents produce unexpected stdout format | Staff-Architect (A-10) | Medium | Medium (team-result parsing fails) | `validateStdout` exists in spawn.go; handle malformed output gracefully |
-| `gogent-team-prepare-synthesis` not on PATH | Staff-Architect (M-7) | Low | High (Wave 2 never starts) | Document in prerequisites; consider absolute path in template |
+| `goyoke-team-prepare-synthesis` not on PATH | Staff-Architect (M-7) | Low | High (Wave 2 never starts) | Document in prerequisites; consider absolute path in template |
 | `settings.json` does not exist | Both (M-2, F-11) | Certain (without fix) | Low (LLM uses default) | Create file in Phase 0 |
 
 ### Assumptions to Validate
 
 | Assumption | How to Validate | Before Phase |
 |------------|-----------------|--------------|
-| Adding `description` to schemas does not break existing tests | Run `go test ./cmd/gogent-team-run/...` after schema modification | Phase 0 |
+| Adding `description` to schemas does not break existing tests | Run `go test ./cmd/goyoke-team-run/...` after schema modification | Phase 0 |
 | LLM can reliably generate schema-compliant JSON configs | Measure pass rate during TC-013a implementation | Phase 1 |
-| `gogent-team-prepare-synthesis` handles missing stdout gracefully | Run binary with one missing stdout file, verify degraded-but-functional output | Phase 2 |
+| `goyoke-team-prepare-synthesis` handles missing stdout gracefully | Run binary with one missing stdout file, verify degraded-but-functional output | Phase 2 |
 | Beethoven can read `pre-synthesis.md` via Read tool from a path in stdin | Test with a sample braintrust run | Phase 2 |
 | Wave failure propagation does not break existing review workflow (which has no inter-wave dependencies) | Run review workflow after wave.go modification | Phase 3 |
 
@@ -481,7 +481,7 @@ In any system with multiple schema layers, one of two conditions must hold:
 
 **Condition B (Authoritative Schema):** One layer is designated as authoritative. All other representations are derived from it. Contradictions are resolved by reference to the authority.
 
-The GOgent system satisfies neither condition:
+The goYoke system satisfies neither condition:
 - The envelope builder validates `task` (string), but formal schemas define `task` (object) or omit it entirely. These are not composable.
 - No single layer is designated as authoritative in the tickets. TC-013a says "must comply with `schemas/stdin/reviewer.json`" but the envelope builder will reject schema-compliant files.
 
@@ -522,7 +522,7 @@ The system actually needs a **fifth layer**: a "runtime-compatible schema" that 
 Affected tickets: TC-013a, TC-013b, TC-013c (all three). The envelope builder requires a top-level `task` (string) or `description` (string) field. None of the three formal schemas include this field. Schemas with `additionalProperties: false` will reject it if added. Schema-compliant stdin files will be rejected by the envelope builder at runtime.
 
 ### F-02: Stdout Filename Mismatch in Inter-Wave Script [CRITICAL]
-Affected ticket: TC-013b. The `braintrust.json` template names staff-architect stdout `stdout_staff-architect.json` but `gogent-team-prepare-synthesis` reads `stdout_staff-arch.json`. Silent data loss.
+Affected ticket: TC-013b. The `braintrust.json` template names staff-architect stdout `stdout_staff-architect.json` but `goyoke-team-prepare-synthesis` reads `stdout_staff-arch.json`. Silent data loss.
 
 ### F-03: Beethoven Stdin Lifecycle Gap [CRITICAL]
 Affected ticket: TC-013b. Beethoven's schema requires `einstein_analysis` and `staff_architect_review` as JSON objects, but stdin is written before Wave 1 runs. No mechanism to inject Wave 1 outputs into Wave 2 stdin.
@@ -583,7 +583,7 @@ The formal schemas are not enforced at runtime. The envelope builder is the real
 
 **Reviewed:** 2026-02-08T16:45:00Z
 **Reviewer:** Staff Architect Critical Review
-**Verified Against:** Go source (`cmd/gogent-team-run/*.go`), JSON schemas (`schemas/stdin/*.json`), team templates (`schemas/teams/*.json`), contract files (`schemas/teams/stdin-stdout/*.json`), review skill (`skills/review/SKILL.md`), team-result skill (`skills/team-result/SKILL.md`)
+**Verified Against:** Go source (`cmd/goyoke-team-run/*.go`), JSON schemas (`schemas/stdin/*.json`), team templates (`schemas/teams/*.json`), contract files (`schemas/teams/stdin-stdout/*.json`), review skill (`skills/review/SKILL.md`), team-result skill (`skills/team-result/SKILL.md`)
 
 ## Executive Assessment
 
@@ -625,7 +625,7 @@ TC-013c Test 4 expects behavior `wave.go` does not implement. `wave.go` not list
 
 ## Minor Issues
 
-- m-1: Session ID source unclear (`GOGENT_SESSION_ID` vs `GOGENT_SESSION_DIR`)
+- m-1: Session ID source unclear (`GOYOKE_SESSION_ID` vs `GOYOKE_SESSION_DIR`)
 - m-2: specs.md format not formally specified
 - m-3: Kahn's algorithm reference (minor documentation)
 - m-4: Feature flag checked by LLM, not programmatically
@@ -699,6 +699,6 @@ staff_architect_findings: 16 (3 critical, 7 major, 6 minor)
 staff_architect_commendations: 5
 
 source_analyses:
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/braintrust/einstein-tc013-review.md
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/braintrust/staff-architect-tc013-review.md
+  - /home/doktersmol/Documents/goYoke/.claude/braintrust/einstein-tc013-review.md
+  - /home/doktersmol/Documents/goYoke/.claude/braintrust/staff-architect-tc013-review.md
 ```

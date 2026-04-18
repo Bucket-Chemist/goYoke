@@ -1,8 +1,8 @@
-# Quick Reference: Permission Handling in gofortress
+# Quick Reference: Permission Handling in goyoke
 
 ## TL;DR
 
-**gofortress pre-approves common tools so Claude can work without permission prompts.**
+**goyoke pre-approves common tools so Claude can work without permission prompts.**
 
 Allowed tools:
 - `Bash` - Run shell commands
@@ -30,7 +30,7 @@ Allowed tools:
 
 ## How It Works
 
-When gofortress starts Claude CLI, it uses:
+When goyoke starts Claude CLI, it uses:
 ```bash
 claude --allowed-tools Bash --allowed-tools Read --allowed-tools Write ...
 ```
@@ -77,14 +77,14 @@ These are **OS permission errors**, not Claude permission errors.
 
 ### Want to restrict tools?
 
-Currently requires code change. Edit `cmd/gofortress/main.go:101`:
+Currently requires code change. Edit `cmd/goyoke/main.go:101`:
 ```go
 AllowedTools: []string{"Read", "Glob", "Grep"}, // Read-only mode
 ```
 
 Then rebuild:
 ```bash
-go build -o ~/.local/bin/gofortress ./cmd/gofortress
+go build -o ~/.local/bin/goyoke ./cmd/goyoke
 ```
 
 ### Want to allow more tools?
@@ -102,4 +102,4 @@ For developers, see:
 - `docs/PERMISSION_HANDLING.md` - Full investigation report
 - `docs/TASK-2-COMPLETION-REPORT.md` - Implementation details
 - `internal/cli/subprocess.go:62-65` - AllowedTools field
-- `cmd/gofortress/main.go:101` - Default configuration
+- `cmd/goyoke/main.go:101` - Default configuration

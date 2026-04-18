@@ -209,7 +209,7 @@ CONSTRAINTS:
 Spawn Mozart with the assembled prompt. Mozart handles the full workflow:
 
 ```javascript
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
     agent: "mozart",
     description: `Schema extension: ${agentId} (braintrust)`,
     prompt: assembledPrompt,
@@ -233,7 +233,7 @@ Output:
 Spawn a single Opus agent (use architect for analytical depth):
 
 ```javascript
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
     agent: "architect",
     description: `Schema refinement: ${agentId}`,
     prompt: assembledPrompt,

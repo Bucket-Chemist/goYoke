@@ -194,7 +194,7 @@ The `permissionPromptToolName` approach remains a valid fallback if `canUseTool`
 
 **Goal**: Permission prompts work using existing modal infrastructure
 
-**File**: `/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/hooks/useClaudeQuery.ts`
+**File**: `/home/doktersmol/Documents/goYoke/packages/tui/src/hooks/useClaudeQuery.ts`
 
 **Changes**:
 
@@ -204,7 +204,7 @@ The `permissionPromptToolName` approach remains a valid fallback if `canUseTool`
 const eventStream = query({
   prompt: message,
   options: {
-    // Load GOgent-Fortress settings (hooks, CLAUDE.md, etc.)
+    // Load goYoke settings (hooks, CLAUDE.md, etc.)
     settingSources: ['user', 'project', 'local'],
     mcpServers: [mcpServer] as unknown as NonNullable<Parameters<typeof query>[0]["options"]>["mcpServers"],
 
@@ -257,7 +257,7 @@ const eventStream = query({
 
 #### 2a. Slash Command Interception
 
-**File**: `/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/components/ClaudePanel.tsx`
+**File**: `/home/doktersmol/Documents/goYoke/packages/tui/src/components/ClaudePanel.tsx`
 
 **Changes** (in `handleSubmit` function around line 114):
 
@@ -300,7 +300,7 @@ const handleSubmit = (): void => {
 
 #### 2b. Plan Mode Detection
 
-**File**: `/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/hooks/useClaudeQuery.ts`
+**File**: `/home/doktersmol/Documents/goYoke/packages/tui/src/hooks/useClaudeQuery.ts`
 
 **Changes** (in event loop around line 276):
 

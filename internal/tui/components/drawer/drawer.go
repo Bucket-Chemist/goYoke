@@ -1,5 +1,5 @@
 // Package drawer implements a collapsible side-drawer component for the
-// GOgent-Fortress TUI. Drawers can be minimised (compact tab) or expanded
+// goYoke TUI. Drawers can be minimised (compact tab) or expanded
 // (bordered content pane with a scrollable viewport).
 package drawer
 
@@ -11,7 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ModalResponseMsg is emitted when the user selects or cancels a modal

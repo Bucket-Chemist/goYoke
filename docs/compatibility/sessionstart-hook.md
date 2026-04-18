@@ -69,8 +69,8 @@ The hook doesn't parse specific sections - it reads the entire first 30 lines. H
 ## Session Context
 
 - **Session ID**: test-session-028f
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress
-- **Active Ticket**: GOgent-028f
+- **Project**: /home/doktersmol/Documents/goYoke
+- **Active Ticket**: goYoke-028f
 - **Phase**: compatibility-testing
 
 ## Session Metrics
@@ -137,7 +137,7 @@ Typical line distribution:
 The compatibility test verifies:
 
 1. **Generation Phase**
-   - `gogent-archive` CLI is installed
+   - `goyoke-archive` CLI is installed
    - Mock session data can be created
    - Markdown generation succeeds
 
@@ -181,10 +181,10 @@ Context Loading Compatibility Test
 
 Phase 1: Generate Go handoff markdown
 ───────────────────────────────────────────────────────────────────────────────
-Test 1: gogent-archive CLI is installed... PASS
+Test 1: goyoke-archive CLI is installed... PASS
 Test 2: Create mock session event... PASS
 Test 3: Create mock handoffs.jsonl with sample data... PASS
-Test 4: Run gogent-archive to generate markdown... PASS
+Test 4: Run goyoke-archive to generate markdown... PASS
 Test 5: Verify last-handoff.md was created... PASS
 
 Phase 2: Analyze Go-generated markdown structure

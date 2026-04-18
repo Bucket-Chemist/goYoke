@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // Schema version for handoff format evolution
@@ -66,7 +66,7 @@ type SharpEdge struct {
 	Resolution   string `json:"resolution,omitempty"`    // What fixed it
 	ResolvedAt   int64  `json:"resolved_at,omitempty"`   // When resolved (0 = unresolved)
 
-	// NEW FIELDS (v1.2 - GOgent-037b/c, 038c/d series)
+	// NEW FIELDS (v1.2 - goYoke-037b/c, 038c/d series)
 	Type            string `json:"type,omitempty"`             // "sharp_edge"
 	Tool            string `json:"tool,omitempty"`             // "Edit", "Write", "Bash"
 	CodeSnippet     string `json:"code_snippet,omitempty"`     // Code context around error (037b)
@@ -144,15 +144,15 @@ type GitInfo struct {
 // HandoffConfig contains paths for handoff generation
 type HandoffConfig struct {
 	ProjectDir        string
-	HandoffPath       string // .gogent/memory/handoffs.jsonl
-	PendingPath       string // .gogent/memory/pending-learnings.jsonl
-	ViolationsPath    string // .gogent/memory/routing-violations.jsonl
+	HandoffPath       string // .goyoke/memory/handoffs.jsonl
+	PendingPath       string // .goyoke/memory/pending-learnings.jsonl
+	ViolationsPath    string // .goyoke/memory/routing-violations.jsonl
 	ErrorPatternsPath string // /tmp/claude-error-patterns.jsonl
 	TranscriptPath    string // Optional: session transcript for archival
-	UserIntentsPath   string // .gogent/memory/user-intents.jsonl
-	DecisionsPath     string // .gogent/memory/decisions.jsonl
-	PreferencesPath   string // .gogent/memory/preferences.jsonl
-	PerformancePath   string // .gogent/memory/performance.jsonl
+	UserIntentsPath   string // .goyoke/memory/user-intents.jsonl
+	DecisionsPath     string // .goyoke/memory/decisions.jsonl
+	PreferencesPath   string // .goyoke/memory/preferences.jsonl
+	PerformancePath   string // .goyoke/memory/performance.jsonl
 }
 
 // HandoffMetrics captures timing and artifact counts from handoff generation
@@ -367,10 +367,10 @@ func migrateHandoff(oldVersion string, data []byte) (*Handoff, error) {
 
 	case "":
 		// Empty version - treat as unknown
-		return nil, fmt.Errorf("[handoff] Unsupported schema version (empty). Expected v%s or older. Upgrade gogent-archive binary.", HandoffSchemaVersion)
+		return nil, fmt.Errorf("[handoff] Unsupported schema version (empty). Expected v%s or older. Upgrade goyoke-archive binary.", HandoffSchemaVersion)
 
 	default:
-		return nil, fmt.Errorf("[handoff] Unsupported schema version %s. Expected v%s or older. Upgrade gogent-archive binary.", oldVersion, HandoffSchemaVersion)
+		return nil, fmt.Errorf("[handoff] Unsupported schema version %s. Expected v%s or older. Upgrade goyoke-archive binary.", oldVersion, HandoffSchemaVersion)
 	}
 }
 

@@ -1,5 +1,5 @@
 // Package settingstree implements an interactive settings panel with
-// tree-style navigation for the GOgent-Fortress TUI.
+// tree-style navigation for the goYoke TUI.
 //
 // The component supports three node types:
 //   - SettingToggle:  boolean on/off that flips on Enter/Space
@@ -20,7 +20,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------

@@ -44,7 +44,7 @@ type PostToolEvent struct {
 	AgentID        string `json:"agent_id,omitempty"`
 	AgentType      string `json:"agent_type,omitempty"`
 
-	// === ML Telemetry Fields (GOgent-086b) ===
+	// === ML Telemetry Fields (goYoke-086b) ===
 	// All omitempty for backward compatibility
 
 	// Performance metrics
@@ -81,7 +81,7 @@ type PostToolEvent struct {
 	EntitiesFound    int     `json:"entities_found,omitempty"`
 }
 
-// VALIDATION NOTES (GOgent-006, updated GOgent-v2169):
+// VALIDATION NOTES (goYoke-006, updated goYoke-v2169):
 //
 // Struct validated against 100+ real production events from event-corpus.json.
 // All events conform to this structure. Key validation findings:
@@ -99,7 +99,7 @@ type PostToolEvent struct {
 // Original validation date: 2026-01-16
 // Schema update: 2026-03-06 (v2.1.69 compatibility)
 
-// ToolEvent Helper Methods (GOgent-080)
+// ToolEvent Helper Methods (goYoke-080)
 
 // ExtractFilePath gets file_path from tool_input.
 // Returns empty string if file_path is not present or not a string.
@@ -269,7 +269,7 @@ func ParseTaskInput(toolInput map[string]interface{}) (*TaskInput, error) {
 // SubagentStopEvent represents the Claude Code SubagentStop hook event.
 // As of v2.1.69, agent metadata is available directly in event fields.
 // For pre-v2.1.69 compatibility, metadata can also be extracted from transcript file.
-// Schema validated via GOgent-063a research, updated GOgent-v2169.
+// Schema validated via goYoke-063a research, updated goYoke-v2169.
 type SubagentStopEvent struct {
 	HookEventName  string `json:"hook_event_name"` // Always "SubagentStop"
 	SessionID      string `json:"session_id"`

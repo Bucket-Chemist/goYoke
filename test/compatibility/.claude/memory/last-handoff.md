@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Session ID**: 93911c53-a09c-4630-aada-79c026ad1748
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress/test/compatibility
+- **Project**: /home/doktersmol/Documents/goYoke/test/compatibility
 
 ## Session Metrics
 
@@ -19,7 +19,7 @@
   - claude/input-history.json
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
-  - md/gofortress/main.go
+  - md/goyoke/main.go
   - nternal/tui/model/layout_test.go
   - ickets/tui-agent-upgrade/tickets-index.json
   - .claude/backups/
@@ -46,11 +46,11 @@
   - .claude/telemetry/1p_failed_events.fdc0cb63-f675-4c84-8d57-545debf01ab0.50e6f311-a854-4f12-9c0d-4ff378252f79.json
   - .claude/telemetry/1p_failed_events.fdc0cb63-f675-4c84-8d57-545debf01ab0.971583ed-6c49-4126-8a31-fafc7c86adf9.json
   - .claude/tmp
-  - cmd/gofortress-mcp-standalone/.claude/
-  - cmd/gofortress-mcp-standalone/gofortress-mcp-standalone
-  - gofortress-mcp-standalone
-  - gogent-config-guard
-  - gogent-instructions-audit
+  - cmd/goyoke-mcp-standalone/.claude/
+  - cmd/goyoke-mcp-standalone/goyoke-mcp-standalone
+  - goyoke-mcp-standalone
+  - goyoke-config-guard
+  - goyoke-instructions-audit
   - interrupt-diagnostic-specs.md
   - test/compatibility/.claude/
   - test_files/tools/benchmark/__pycache__/

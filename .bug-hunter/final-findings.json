@@ -1,0 +1,141 @@
+{
+  "version": "3.0.0",
+  "scan_id": "scan-2026-04-11-bughunt",
+  "scan_date": "2026-04-11T00:00:00Z",
+  "mode": "local-sequential-large-codebase-partial-expanded-v3",
+  "target": ".",
+  "files_scanned": 29,
+  "threat_model_loaded": false,
+  "confirmed": [
+    {
+      "id": "BUG-1",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/config/paths.go",
+      "lines": "25-64",
+      "claim": "GetgoYokeDir trusted XDG directories without verifying writability, breaking guard and counter writes on read-only runtime dirs."
+    },
+    {
+      "id": "BUG-3",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/session/scanner.go",
+      "lines": "8-13",
+      "claim": "Session JSONL readers used the default 64 KiB scanner token limit and failed on large pending-learning and sharp-edge records."
+    },
+    {
+      "id": "BUG-2",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/routing/transcript.go, pkg/routing/events.go",
+      "lines": "transcript.go:13-19,37-71,237-270; events.go:378-420",
+      "claim": "Routing transcript readers used the default 64 KiB scanner token limit and failed on large JSONL events."
+    },
+    {
+      "id": "BUG-4",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "cmd/goyoke-team-run/wave.go",
+      "lines": "67-83",
+      "claim": "Final-wave partial failures could still return a successful team-run exit even when failed members remained."
+    },
+    {
+      "id": "BUG-6",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/telemetry/scanner.go",
+      "lines": "8-13",
+      "claim": "Telemetry JSONL readers used the default 64 KiB scanner token limit and failed on large analytics records."
+    },
+    {
+      "id": "BUG-7",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/workflow/logging.go",
+      "lines": "68-95",
+      "claim": "Workflow endstate log reading used the default 64 KiB scanner token limit and failed on large JSONL entries."
+    },
+    {
+      "id": "BUG-8",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/memory/failure_tracking.go",
+      "lines": "143-166",
+      "claim": "Failure tracker scanning used the default 64 KiB scanner token limit and failed on large JSONL entries."
+    },
+    {
+      "id": "BUG-9",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "pkg/config/paths.go",
+      "lines": "286-311",
+      "claim": "GetgoYokeDataDir trusted XDG data directories without verifying writability, breaking telemetry and ML writes on read-only data dirs."
+    },
+    {
+      "id": "BUG-10",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "cmd/goyoke-permission-gate/cache.go",
+      "lines": "11-20",
+      "claim": "Permission-gate cache filenames embedded raw session IDs and allowed path-sensitive cache writes."
+    },
+    {
+      "id": "BUG-11",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "cmd/goyoke-aggregate/main.go",
+      "lines": "257-275",
+      "claim": "The weekly aggregation tool counted JSONL rows with the default 64 KiB scanner token limit and degraded on large archived records."
+    },
+    {
+      "id": "BUG-12",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "internal/tui/components/telemetry/telemetry.go",
+      "lines": "134-161",
+      "claim": "The TUI telemetry panel used the default 64 KiB scanner token limit and failed on large routing-decision entries."
+    },
+    {
+      "id": "BUG-5",
+      "severity": "MEDIUM",
+      "category": "logic",
+      "stride": "N/A",
+      "cwe": "N/A",
+      "file": "internal/tui/bridge/server.go",
+      "lines": "51-93",
+      "claim": "Bridge startup built Unix socket paths without checking pathname length limits, causing bind failures on long runtime/temp paths."
+    }
+  ],
+  "dismissed": [],
+  "dependencies": [],
+  "summary": {
+    "total_reported": 12,
+    "confirmed": 12,
+    "dismissed": 0,
+    "by_severity": { "CRITICAL": 0, "HIGH": 0, "MEDIUM": 12, "LOW": 0 },
+    "by_stride": { "Tampering": 0, "InfoDisclosure": 0, "ElevationOfPrivilege": 0, "Spoofing": 0, "DoS": 0, "Repudiation": 0, "N/A": 12 },
+    "by_category": { "security": 0, "logic": 12, "error-handling": 0 }
+  }
+}

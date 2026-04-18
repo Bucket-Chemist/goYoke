@@ -16,7 +16,7 @@ func CachePath(sessionID string) string {
 		dir = os.TempDir()
 	}
 	sum := sha256.Sum256([]byte(sessionID))
-	return filepath.Join(dir, fmt.Sprintf("gofortress-perm-cache-%s.json", hex.EncodeToString(sum[:])))
+	return filepath.Join(dir, fmt.Sprintf("goyoke-perm-cache-%s.json", hex.EncodeToString(sum[:])))
 }
 
 func loadCache(sessionID string) (map[string]string, error) {
@@ -61,6 +61,6 @@ func WriteCache(sessionID, toolName, decision string) {
 	}
 	m[toolName] = decision
 	if err := saveCache(sessionID, m); err != nil {
-		fmt.Fprintf(os.Stderr, "[gogent-permission-gate] Warning: failed to write cache: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[goyoke-permission-gate] Warning: failed to write cache: %v\n", err)
 	}
 }

@@ -2,19 +2,19 @@
 
 > **⚠️ DEPRECATED (2026-01-26)**
 >
-> This document has been **superseded** by the completion verification in tickets GOgent-110/111/112.
+> This document has been **superseded** by the completion verification in tickets goYoke-110/111/112.
 >
 > **Final Status:** Most proposed work was already implemented at time of analysis.
 >
 > **What was implemented:**
-> - ✅ RoutingDecision logging in `gogent-validate` (lines 52-67)
-> - ✅ AgentCollaboration logging in `gogent-agent-endstate` (lines 70-98)
-> - ✅ PostToolEvent logging in `gogent-sharp-edge` (lines 92-97)
+> - ✅ RoutingDecision logging in `goyoke-validate` (lines 52-67)
+> - ✅ AgentCollaboration logging in `goyoke-agent-endstate` (lines 70-98)
+> - ✅ PostToolEvent logging in `goyoke-sharp-edge` (lines 92-97)
 > - ✅ `ClassifyTask()` in `pkg/telemetry/task_classifier.go`
-> - ✅ `extractAgentFromPrompt()` in `cmd/gogent-validate/main.go`
+> - ✅ `extractAgentFromPrompt()` in `cmd/goyoke-validate/main.go`
 >
 > **What remains (documented limitations):**
-> - ❌ Decision outcome recording (blocked by DecisionID propagation - see GOgent-111)
+> - ❌ Decision outcome recording (blocked by DecisionID propagation - see goYoke-111)
 > - 🔮 Phase 3 ML training (requires 100+ sessions of data accumulation)
 >
 > **See:** `docs/ml-telemetry-completion-report.md` for final verification results.
@@ -30,11 +30,11 @@
 
 ## Executive Summary
 
-GOgent-Fortress Phase 0 (deterministic enforcement) is complete. This document analyzes gaps in **Phase 2: Observability & Telemetry Layer**, which enables **Phase 3: Evolutionary Optimization** via ML-driven schema refinement.
+goYoke Phase 0 (deterministic enforcement) is complete. This document analyzes gaps in **Phase 2: Observability & Telemetry Layer**, which enables **Phase 3: Evolutionary Optimization** via ML-driven schema refinement.
 
 ### Strategic Vision
 
-GOgent-Fortress is not just a validation framework—it's a **self-improving agentic system**:
+goYoke is not just a validation framework—it's a **self-improving agentic system**:
 
 1. **Layer 1: Deterministic Enforcement** ✅ Complete
    - `routing-schema.json` defines rules
@@ -58,7 +58,7 @@ GOgent-Fortress is not just a validation framework—it's a **self-improving age
 
 - ✅ `routing.PostToolEvent` struct defined
 - ✅ `telemetry.LogMLToolEvent()` writes JSONL
-- ✅ `gogent-ml-export` CLI exports datasets
+- ✅ `goyoke-ml-export` CLI exports datasets
 - ❌ **Hooks don't call logging functions systematically**
 
 **Estimated effort to complete:** ~3.5 hours
@@ -99,20 +99,20 @@ type PostToolEvent struct {
 - ✅ `LogMLToolEvent(event *PostToolEvent, projectDir string)` - Dual-write pattern
 - ✅ `ReadMLToolEvents()` - Streaming JSONL reader
 - ✅ `CalculateMLSessionStats(events)` - Aggregate metrics
-- ✅ XDG-compliant paths (`~/.gogent/ml-tool-events.jsonl`)
+- ✅ XDG-compliant paths (`~/.goyoke/ml-tool-events.jsonl`)
 - ✅ Project-scoped writes (`.claude/memory/ml-tool-events.jsonl`)
 
 **Status:** Production-ready with proper error handling.
 
 #### 3. Export Infrastructure (100% Complete)
 
-**File:** `cmd/gogent-ml-export/main.go` (506 lines)
+**File:** `cmd/goyoke-ml-export/main.go` (506 lines)
 
 Commands:
-- ✅ `gogent-ml-export routing --format csv --since 7d`
-- ✅ `gogent-ml-export sequences --successful-only`
-- ✅ `gogent-ml-export collaborations --format json`
-- ✅ `gogent-ml-export training-dataset --output ./ml-data/`
+- ✅ `goyoke-ml-export routing --format csv --since 7d`
+- ✅ `goyoke-ml-export sequences --successful-only`
+- ✅ `goyoke-ml-export collaborations --format json`
+- ✅ `goyoke-ml-export training-dataset --output ./ml-data/`
 
 **Status:** Fully functional, tested with integration tests.
 
@@ -140,9 +140,9 @@ type AgentCollaboration struct {
 
 ### What's Missing ❌
 
-#### GAP 1: Systematic ML Capture in gogent-validate Hook
+#### GAP 1: Systematic ML Capture in goyoke-validate Hook
 
-**Location:** `cmd/gogent-validate/main.go`
+**Location:** `cmd/goyoke-validate/main.go`
 
 **Current behavior:**
 - Hook validates Task() calls
@@ -163,14 +163,14 @@ type AgentCollaboration struct {
 - Cannot detect optimal delegation patterns
 
 **Files affected:**
-- `cmd/gogent-validate/main.go` (add capture call)
+- `cmd/goyoke-validate/main.go` (add capture call)
 - Possibly new: `pkg/validation/ml_features.go` (feature extraction helpers)
 
 ---
 
-#### GAP 2: Collaboration Capture in gogent-sharp-edge Hook
+#### GAP 2: Collaboration Capture in goyoke-sharp-edge Hook
 
-**Location:** `cmd/gogent-sharp-edge/main.go`
+**Location:** `cmd/goyoke-sharp-edge/main.go`
 
 **Current behavior:**
 - Tracks tool counter (attention gates)
@@ -191,7 +191,7 @@ type AgentCollaboration struct {
 - Cannot optimize delegation chains
 
 **Files affected:**
-- `cmd/gogent-sharp-edge/main.go` (add SubagentStop handler)
+- `cmd/goyoke-sharp-edge/main.go` (add SubagentStop handler)
 - Hook must handle PostToolUse AND SubagentStop events
 
 ---
@@ -311,7 +311,7 @@ func ExtimateTokens(text string) int {
 
 ---
 
-#### Task 2.1.2: ML Capture in gogent-validate
+#### Task 2.1.2: ML Capture in goyoke-validate
 
 **Acceptance criteria:**
 - [ ] After Task validation decision, telemetry logged
@@ -322,12 +322,12 @@ func ExtimateTokens(text string) int {
 - [ ] Integration test `TestMLTelemetry_RoutingDecisionCapture` passes
 
 **Files to modify:**
-- `cmd/gogent-validate/main.go`
+- `cmd/goyoke-validate/main.go`
 
 **Implementation location:**
 
 ```go
-// In cmd/gogent-validate/main.go
+// In cmd/goyoke-validate/main.go
 func handleTaskValidation(event HookEvent) Response {
     // ... existing validation logic ...
 
@@ -343,7 +343,7 @@ func handleTaskValidation(event HookEvent) Response {
 }
 
 func captureMLTelemetry(event HookEvent, decision ValidationDecision) {
-    projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+    projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
     if projectDir == "" {
         projectDir, _ = os.Getwd()
     }
@@ -375,7 +375,7 @@ func captureMLTelemetry(event HookEvent, decision ValidationDecision) {
 
 ---
 
-#### Task 2.1.3: Collaboration Capture in gogent-sharp-edge
+#### Task 2.1.3: Collaboration Capture in goyoke-sharp-edge
 
 **Acceptance criteria:**
 - [ ] SubagentStop events trigger collaboration logging
@@ -385,12 +385,12 @@ func captureMLTelemetry(event HookEvent, decision ValidationDecision) {
 - [ ] Integration test `TestMLTelemetry_CollaborationTracking` passes
 
 **Files to modify:**
-- `cmd/gogent-sharp-edge/main.go`
+- `cmd/goyoke-sharp-edge/main.go`
 
 **Implementation:**
 
 ```go
-// In cmd/gogent-sharp-edge/main.go
+// In cmd/goyoke-sharp-edge/main.go
 func main() {
     // ... existing setup ...
 
@@ -409,7 +409,7 @@ func main() {
 }
 
 func handleSubagentStop(event HookEvent) {
-    projectDir := os.Getenv("GOGENT_PROJECT_DIR")
+    projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
     if projectDir == "" {
         projectDir, _ = os.Getwd()
     }
@@ -483,7 +483,7 @@ go test ./test/integration -v -run TestMLTelemetry
 
 1. **IMPLEMENTATION-MISSING.md**
    - Mark items #1 and #2 as COMPLETE
-   - Remove item #3 (gogent-ml-export already exists)
+   - Remove item #3 (goyoke-ml-export already exists)
    - Or delete entire file if all items complete
 
 2. **README.md**
@@ -515,18 +515,18 @@ go test ./test/integration -v -run TestMLTelemetry
 
 ```bash
 # Enable/disable ML capture (default: enabled)
-export GOGENT_ML_CAPTURE_ENABLED=true
+export GOYOKE_ML_CAPTURE_ENABLED=true
 
 # ML log retention (days)
-export GOGENT_ML_RETENTION_DAYS=90
+export GOYOKE_ML_RETENTION_DAYS=90
 
 # ML export path override
-export GOGENT_ML_EXPORT_PATH=/custom/path/ml-data
+export GOYOKE_ML_EXPORT_PATH=/custom/path/ml-data
 ```
 
 **Files to modify:**
 - `pkg/config/config.go` (add ML-specific config)
-- Hook CLIs check `GOGENT_ML_CAPTURE_ENABLED` before logging
+- Hook CLIs check `GOYOKE_ML_CAPTURE_ENABLED` before logging
 
 ---
 
@@ -694,7 +694,7 @@ export GOGENT_ML_EXPORT_PATH=/custom/path/ml-data
 - ✅ `routing.PostToolEvent` struct (exists)
 - ✅ `telemetry.LogMLToolEvent()` (exists)
 - ✅ `telemetry.AgentCollaboration` struct (exists)
-- ✅ `gogent-ml-export` CLI (exists)
+- ✅ `goyoke-ml-export` CLI (exists)
 - ❌ Feature extraction utilities (Task 2.1.1)
 
 ### External Dependencies
@@ -712,7 +712,7 @@ export GOGENT_ML_EXPORT_PATH=/custom/path/ml-data
 - `docs/systems-architecture-overview.md` - System architecture
 - `test/integration/ml_telemetry_test.go` - Integration tests (609 lines)
 - `pkg/telemetry/ml_logging.go` - Logging infrastructure
-- `cmd/gogent-ml-export/main.go` - Export CLI
+- `cmd/goyoke-ml-export/main.go` - Export CLI
 
 ### Code Locations
 
@@ -721,7 +721,7 @@ export GOGENT_ML_EXPORT_PATH=/custom/path/ml-data
 | PostToolEvent struct | `pkg/routing/post_tool_event.go` | 15 |
 | ML logging | `pkg/telemetry/ml_logging.go` | 150 |
 | Collaboration logging | `pkg/telemetry/collaboration.go` | 120 |
-| ML export CLI | `cmd/gogent-ml-export/main.go` | 506 |
+| ML export CLI | `cmd/goyoke-ml-export/main.go` | 506 |
 | Integration tests | `test/integration/ml_telemetry_test.go` | 609 |
 
 ### External Resources

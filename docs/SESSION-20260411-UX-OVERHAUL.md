@@ -136,7 +136,7 @@ Six commits for bugs discovered during recent sessions:
 | UX-009 | Tree: full-row color by agent status | go-tui (Sonnet) | $1.47 | 8m15s | Added `StatusRowStyle()` — running=dim green, complete=bold green, error=red, killed=yellow+strikethrough, pending=grey. Entire row colored, not just icon. |
 | UX-010 | Tree: inline cost per agent | direct (trivial) | $0.00 | <1m | Already implemented by UX-008's `buildTreeValue()`. Added 3 dedicated cost-display tests. |
 | UX-011 | Status line: team indicator | go-tui (Sonnet) | $1.04 | 2m42s | `renderTeamIndicator()` renders `⚡name ●●○○ 2/4 $0.38` in Row 1. Colored member dots. `TeamIndicatorData` struct + `TeamIndicator()` interface method. Wired to poll tick in app.go. 7 new tests. |
-| UX-012 | First-run orientation hints | go-tui (Sonnet) | $0.97 | 4m52s | Onboarding layer on `HintBarModel` — hints during sessions 1-3, per-hint dismissal, persistence to `$XDG_DATA_HOME/gogent/onboarding.json`. New `onboarding.go`. 25 new tests. |
+| UX-012 | First-run orientation hints | go-tui (Sonnet) | $0.97 | 4m52s | Onboarding layer on `HintBarModel` — hints during sessions 1-3, per-hint dismissal, persistence to `$XDG_DATA_HOME/goyoke/onboarding.json`. New `onboarding.go`. 25 new tests. |
 
 **P1 total agent cost:** $4.90
 **P1 commit:** `44f5696b` — 16 files, +1097/-116 lines
@@ -158,7 +158,7 @@ Six commits for bugs discovered during recent sessions:
 - Orientation hints for sessions 1-3: Tab/arrows/Enter
 - Cyan-styled keys to distinguish from normal muted hints
 - Per-hint dismissal when user performs the action
-- Persisted to `$XDG_DATA_HOME/gogent/onboarding.json`
+- Persisted to `$XDG_DATA_HOME/goyoke/onboarding.json`
 
 **Interfaces (`interfaces.go`):**
 - `TeamIndicatorData` struct for status line team data
@@ -207,7 +207,7 @@ Six commits for bugs discovered during recent sessions:
 - `Height()` method replaces hardcoded `statusLineHeight` constant in `layout.go`
 - Reduce-motion: static `⠿ streaming` replaces animated spinner
 
-**Team daemon (`cmd/gogent-team-run/`):**
+**Team daemon (`cmd/goyoke-team-run/`):**
 - Action-hinted toast notifications via UDS (`toastPayload`, `teamUpdatePayload`)
 - Budget warning toast (fires once when remaining drops below `WarningThresholdUSD`)
 - Member failure toasts with retry count
@@ -235,7 +235,7 @@ Six commits for bugs discovered during recent sessions:
 ### Test Coverage (P2)
 
 - 615 new lines of test code across 4 modified + 2 new test files
-- `cmd/gogent-team-run/toast_test.go` — **new**: toast payload, action hints, budget warning
+- `cmd/goyoke-team-run/toast_test.go` — **new**: toast payload, action hints, budget warning
 - `internal/tui/model/reduce_motion_test.go` — **new**: setting propagation, tab flash suppression
 - `statusline_test.go` — sparkline rendering, compact/full layout, height assertions
 - `panel_test.go` — tool duration formatting, tool expansion toggle/cycle, reduce-motion indicator
@@ -298,7 +298,7 @@ Six commits for bugs discovered during recent sessions:
 - Completion diff summary: parses member stdout NDJSON for Write/Edit file counts
 - Summary line: `"done — N files, +X/-Y lines — $Z.ZZ"`
 
-**Team daemon (`cmd/gogent-team-run/`):**
+**Team daemon (`cmd/goyoke-team-run/`):**
 - Enhanced completion toast includes diff summary when available
 - New `ndjson.go` parser for scanning stdout files
 
@@ -343,7 +343,7 @@ All agent timeout references aligned to 600000ms (10 min) across:
 - `.claude/braintrust/mcp-spawning-architecture-v2.md`
 - `docs/TEAM-RUN-FRAMEWORK.md`
 - `docs/teams/SKILL-AUTHORING-GUIDE.md`
-- `cmd/gogent-team-run/testdata/review_config.json`
+- `cmd/goyoke-team-run/testdata/review_config.json`
 
 ### Braintrust Skill Budget
 
@@ -397,8 +397,8 @@ All agent timeout references aligned to 600000ms (10 min) across:
 - `pkg/config/paths.go` — writable dir probe
 - `internal/tui/bridge/server.go` — socket path limit
 - `internal/tui/mcp/spawner.go` — output collector
-- `cmd/gogent-scout/main.go` — common root + stdin buffer
-- `cmd/gogent-scout/native_scout.go` — refactored file collection
+- `cmd/goyoke-scout/main.go` — common root + stdin buffer
+- `cmd/goyoke-scout/native_scout.go` — refactored file collection
 - + 20 more (tests, session, telemetry, routing packages)
 
 ### Go Source — P3 (committed `9d2e4b36`)
@@ -431,8 +431,8 @@ All agent timeout references aligned to 600000ms (10 min) across:
 - `internal/tui/model/layout_test.go` — updated mock + focus-aware ratio tests
 - `internal/tui/model/event_pipeline_test.go` — updated for pulse tick cmd
 - `internal/tui/model/team_drawer_test.go` — updated mock
-- `cmd/gogent-team-run/main.go` — enhanced completion toast with diff summary
-- `cmd/gogent-team-run/ndjson.go` — **new**: NDJSON stdout parser for Write/Edit file counts
+- `cmd/goyoke-team-run/main.go` — enhanced completion toast with diff summary
+- `cmd/goyoke-team-run/ndjson.go` — **new**: NDJSON stdout parser for Write/Edit file counts
 - `tickets/UX-redesign/UX-021..028.md` — frontmatter fixes (description, time_estimate)
 - `tickets/UX-redesign/tickets-index.json` — UX-021..028 marked completed
 
@@ -459,12 +459,12 @@ All agent timeout references aligned to 600000ms (10 min) across:
 - `internal/tui/model/ui_event_handlers.go` — team completion handler, reduce-motion wiring
 - `internal/tui/phase10_integration_test.go` — updated for interface changes
 - `internal/tui/state/provider.go` — `ToolBlock.StartedAt`, `ToolBlock.Duration`
-- `cmd/gogent-team-run/daemon.go` — `budgetWarnSent atomic.Bool`
-- `cmd/gogent-team-run/main.go` — completion/failure toasts, team update notifications
-- `cmd/gogent-team-run/spawn.go` — member failure toasts
-- `cmd/gogent-team-run/uds.go` — `toastPayload`, `teamUpdatePayload` types
-- `cmd/gogent-team-run/wave.go` — budget warning toast logic
-- `cmd/gogent-team-run/toast_test.go` — **new**: toast payload + action hint tests
+- `cmd/goyoke-team-run/daemon.go` — `budgetWarnSent atomic.Bool`
+- `cmd/goyoke-team-run/main.go` — completion/failure toasts, team update notifications
+- `cmd/goyoke-team-run/spawn.go` — member failure toasts
+- `cmd/goyoke-team-run/uds.go` — `toastPayload`, `teamUpdatePayload` types
+- `cmd/goyoke-team-run/wave.go` — budget warning toast logic
+- `cmd/goyoke-team-run/toast_test.go` — **new**: toast payload + action hint tests
 - `tickets/UX-redesign/tickets-index.json` — UX-013..020 marked completed
 
 ### Tickets/Docs (committed)

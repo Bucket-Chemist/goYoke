@@ -25,7 +25,7 @@ func TestSetSize(t *testing.T) {
 
 func TestSetConfig(t *testing.T) {
 	m := NewSettingsModel()
-	servers := []string{"gofortress", "other"}
+	servers := []string{"goyoke", "other"}
 	m.SetConfig("opus", "Anthropic", "acceptEdits", "/home/user/.claude/sessions/abc", servers)
 
 	if m.model != "opus" {
@@ -71,7 +71,7 @@ func TestView_ContainsHeader(t *testing.T) {
 
 func TestView_ContainsAllLabels(t *testing.T) {
 	m := NewSettingsModel()
-	m.SetConfig("opus", "Anthropic", "acceptEdits", "/home/user/sessions", []string{"gofortress"})
+	m.SetConfig("opus", "Anthropic", "acceptEdits", "/home/user/sessions", []string{"goyoke"})
 	view := m.View()
 
 	labels := []string{"Model:", "Provider:", "Permission:", "Session Dir:", "MCP Servers:"}
@@ -97,7 +97,7 @@ func TestView_MCPServersCount(t *testing.T) {
 		contains string
 	}{
 		{nil, "none"},
-		{[]string{"gofortress"}, "1 server"},
+		{[]string{"goyoke"}, "1 server"},
 		{[]string{"a", "b"}, "2 servers"},
 	}
 	for _, tc := range tests {

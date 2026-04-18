@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,26 +25,26 @@ import (
 // -----------------------------------------------------------------------------
 
 // UDSClient is a client for the side-channel Unix domain socket used to
-// communicate with the GOgent-Fortress TUI.  Its zero value is not usable;
+// communicate with the goYoke TUI.  Its zero value is not usable;
 // use NewUDSClient.
 type UDSClient struct {
 	mu      sync.Mutex
 	conn    net.Conn
 	enc     *json.Encoder
 	dec     *json.Decoder
-	sockEnv string // value of GOFORTRESS_SOCKET at construction time
+	sockEnv string // value of GOYOKE_SOCKET at construction time
 }
 
-// NewUDSClient creates a UDSClient.  If the GOFORTRESS_SOCKET environment
+// NewUDSClient creates a UDSClient.  If the GOYOKE_SOCKET environment
 // variable is not set the client is constructed but not connected; calls to
 // SendRequest will return ErrTUINotConnected.
 func NewUDSClient() *UDSClient {
-	return &UDSClient{sockEnv: os.Getenv("GOFORTRESS_SOCKET")}
+	return &UDSClient{sockEnv: os.Getenv("GOYOKE_SOCKET")}
 }
 
-// ErrTUINotConnected is returned by interactive tools when GOFORTRESS_SOCKET
+// ErrTUINotConnected is returned by interactive tools when GOYOKE_SOCKET
 // is not set (i.e. the TUI is not running).
-var ErrTUINotConnected = fmt.Errorf("TUI not connected: GOFORTRESS_SOCKET not set")
+var ErrTUINotConnected = fmt.Errorf("TUI not connected: GOYOKE_SOCKET not set")
 
 // Connect establishes the UDS connection with exponential backoff.
 // It is called lazily by SendRequest on the first interactive tool call.
@@ -351,7 +351,7 @@ type TeamRunInput struct {
 	// TeamDir is the absolute path to the team configuration directory.
 	// Required.
 	TeamDir string `json:"team_dir" jsonschema:"Absolute path to team directory"`
-	// WaitForStart blocks until gogent-team-run reports it has started.
+	// WaitForStart blocks until goyoke-team-run reports it has started.
 	WaitForStart bool `json:"wait_for_start,omitempty" jsonschema:"Block until team starts"`
 	// TimeoutMs is the deadline in milliseconds for the wait.
 	TimeoutMs int `json:"timeout_ms,omitempty" jsonschema:"Wait timeout in ms"`
@@ -371,9 +371,10 @@ type TeamRunOutput struct {
 // Tool handler constructors
 // -----------------------------------------------------------------------------
 
-// RegisterAll registers all 7 MCP tools on server.
+// RegisterAll registers all 9 MCP tools on server.
 func RegisterAll(server *mcpsdk.Server, uds *UDSClient) {
 	store := NewAgentStore()
+	lockStore := NewLockStore()
 
 	registerTestMcpPing(server)
 	registerAskUser(server, uds)
@@ -383,6 +384,7 @@ func RegisterAll(server *mcpsdk.Server, uds *UDSClient) {
 	registerSpawnAgent(server, uds, store)
 	registerGetAgentResult(server, store)
 	registerTeamRun(server, uds)
+	registerPrepareSkill(server, uds, lockStore)
 }
 
 // registerTestMcpPing registers the test_mcp_ping tool.
@@ -567,7 +569,7 @@ func handleSelectOption(
 func registerSpawnAgent(server *mcpsdk.Server, uds *UDSClient, store *AgentStore) {
 	mcpsdk.AddTool(server, &mcpsdk.Tool{
 		Name:        "spawn_agent",
-		Description: "Spawn a GOgent-Fortress subagent by ID. Launches the subprocess asynchronously and returns immediately with an agentId. Use get_agent_result to poll for the result.",
+		Description: "Spawn a goYoke subagent by ID. Launches the subprocess asynchronously and returns immediately with an agentId. Use get_agent_result to poll for the result.",
 	}, func(ctx context.Context, req *mcpsdk.CallToolRequest, input SpawnAgentInput) (*mcpsdk.CallToolResult, SpawnAgentOutput, error) {
 		return handleSpawnAgent(ctx, req, input, uds, store)
 	})
@@ -627,7 +629,7 @@ func handleSpawnAgent(
 	}
 
 	// 4b. Validate relationship constraints (M-3 fix: parity with standalone).
-	parentType := os.Getenv("GOGENT_PARENT_AGENT")
+	parentType := os.Getenv("GOYOKE_PARENT_AGENT")
 	vr := validateRelationship(index, parentType, input.Agent, input.CallerType)
 	if !vr.Valid {
 		return nil, SpawnAgentOutput{
@@ -933,14 +935,14 @@ func entryToOutput(entry *agentEntry) GetAgentResultOutput {
 func registerTeamRun(server *mcpsdk.Server, uds *UDSClient) {
 	mcpsdk.AddTool(server, &mcpsdk.Tool{
 		Name:        "team_run",
-		Description: "Invoke gogent-team-run for a pre-configured team directory. The team runs in the background. Returns PID and monitoring instructions.",
+		Description: "Invoke goyoke-team-run for a pre-configured team directory. The team runs in the background. Returns PID and monitoring instructions.",
 	}, func(ctx context.Context, req *mcpsdk.CallToolRequest, input TeamRunInput) (*mcpsdk.CallToolResult, TeamRunOutput, error) {
 		return handleTeamRun(ctx, req, input, uds)
 	})
 }
 
 // teamRunPollInterval is the initial backoff delay when polling config.json
-// for the background_pid written by gogent-team-run on startup.
+// for the background_pid written by goyoke-team-run on startup.
 const teamRunPollInterval = 100 * time.Millisecond
 
 // teamRunMaxPollInterval caps the exponential backoff used during polling.
@@ -950,14 +952,14 @@ const teamRunMaxPollInterval = 500 * time.Millisecond
 // TimeoutMs is not specified by the caller.
 const teamRunDefaultWaitTimeoutMs = 5_000
 
-// teamRunConfig is the minimal subset of gogent-team-run's config.json that
+// teamRunConfig is the minimal subset of goyoke-team-run's config.json that
 // team_run needs to read after launch.
 type teamRunConfig struct {
 	BackgroundPID int `json:"background_pid"`
 }
 
 // handleTeamRun handles the team_run tool call.
-// It launches gogent-team-run as a detached background process, registers
+// It launches goyoke-team-run as a detached background process, registers
 // a toast notification with the TUI, and optionally polls config.json for
 // the background_pid written by the daemon on startup.
 func handleTeamRun(
@@ -980,24 +982,24 @@ func handleTeamRun(
 		}, nil
 	}
 
-	// 2. Locate the gogent-team-run binary.
-	binary, err := exec.LookPath("gogent-team-run")
+	// 2. Locate the goyoke-team-run binary.
+	binary, err := exec.LookPath("goyoke-team-run")
 	if err != nil {
 		return nil, TeamRunOutput{
 			Success: false,
 			TeamDir: input.TeamDir,
-			Result:  "gogent-team-run binary not found in PATH",
+			Result:  "goyoke-team-run binary not found in PATH",
 		}, nil
 	}
 
 	// 3. Build the command.  Use exec.Command (NOT CommandContext) because
-	//    gogent-team-run is a long-lived daemon that must outlive this MCP call.
+	//    goyoke-team-run is a long-lived daemon that must outlive this MCP call.
 	//    exec.CommandContext would send SIGKILL when the handler's ctx is cancelled
 	//    (which happens as soon as handleTeamRun returns), killing the runner
 	//    mid-flight even though Setsid:true detaches it from the terminal.
 	//    The daemon manages its own lifecycle via context + signal handling.
 	cmd := exec.Command(binary, input.TeamDir) //nolint:gosec // binary path from LookPath, team_dir validated
-	// Explicitly inherit environment so GOFORTRESS_SOCKET reaches the daemon
+	// Explicitly inherit environment so GOYOKE_SOCKET reaches the daemon
 	// for UDS bridge agent notifications. When cmd.Env is nil Go inherits
 	// os.Environ() implicitly, but making this explicit prevents silent
 	// breakage if Env is set to a filtered list in the future.
@@ -1005,7 +1007,7 @@ func handleTeamRun(
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true, // Detach: create new process group so signals don't cascade.
 	}
-	// Discard stdout/stderr; gogent-team-run writes its own logs.
+	// Discard stdout/stderr; goyoke-team-run writes its own logs.
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	cmd.Stdin = nil
@@ -1024,7 +1026,7 @@ func handleTeamRun(
 		return nil, TeamRunOutput{
 			Success: false,
 			TeamDir: input.TeamDir,
-			Result:  fmt.Sprintf("failed to start gogent-team-run: %v", err),
+			Result:  fmt.Sprintf("failed to start goyoke-team-run: %v", err),
 		}, nil
 	}
 
@@ -1083,13 +1085,13 @@ func handleTeamRun(
 			TeamDir:       input.TeamDir,
 			BackgroundPID: pid,
 			Monitor:       "/team-status",
-			Result:        fmt.Sprintf("gogent-team-run started (pid %d)", pid),
+			Result:        fmt.Sprintf("goyoke-team-run started (pid %d)", pid),
 			Cancel:        "/team-cancel",
 		}, nil
 	}
 
 	// 8. Poll config.json for the background_pid written by the daemon.
-	//    gogent-team-run writes its background PID to config.json after
+	//    goyoke-team-run writes its background PID to config.json after
 	//    forking to the background; we poll until it appears or we time out.
 	timeoutMs := input.TimeoutMs
 	if timeoutMs <= 0 {
@@ -1135,7 +1137,7 @@ func handleTeamRun(
 		TeamDir:       input.TeamDir,
 		BackgroundPID: backgroundPID,
 		Monitor:       "/team-status",
-		Result:        fmt.Sprintf("gogent-team-run started (pid %d, background_pid %d)", pid, backgroundPID),
+		Result:        fmt.Sprintf("goyoke-team-run started (pid %d, background_pid %d)", pid, backgroundPID),
 		Cancel:        "/team-cancel",
 	}, nil
 }
@@ -1160,9 +1162,9 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	args = append(args, "--model", model)
 
 	// MCP config: only for interactive agents when the config path is available.
-	// GOFORTRESS_MCP_CONFIG is set exclusively by the TUI (cmd/gofortress/main.go),
-	// so hasMCP is true only in TUI context — never for gogent-team-run or plain CLI.
-	mcpConfigPath := os.Getenv("GOFORTRESS_MCP_CONFIG")
+	// GOYOKE_MCP_CONFIG is set exclusively by the TUI (cmd/goyoke/main.go),
+	// so hasMCP is true only in TUI context — never for goyoke-team-run or plain CLI.
+	mcpConfigPath := os.Getenv("GOYOKE_MCP_CONFIG")
 	hasMCP := agent.Interactive && mcpConfigPath != ""
 	if hasMCP {
 		args = append(args, "--mcp-config", mcpConfigPath)
@@ -1176,7 +1178,7 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 	if hasMCP {
 		// Merge MCP tool glob for interactive agents so spawned Claude can call
 		// ask_user, confirm_action, spawn_agent, etc.
-		tools = append(tools, "mcp__gofortress-interactive__*")
+		tools = append(tools, "mcp__goyoke-interactive__*")
 		// Block built-in equivalents — MCP provides these via the TUI bridge.
 		// --disallowedTools removes them from the model's context entirely,
 		// preventing the LLM from reaching for tools that don't work in -p mode.
@@ -1210,14 +1212,14 @@ func buildSpawnArgs(agent *routing.Agent, input SpawnAgentInput) []string {
 // ensureTeamVisible creates a symlink in the TUI's teams directory if the
 // team_dir is outside the TUI's session tree.  This bridges the gap between
 // Claude Code CLI sessions (~/.claude/sessions/) and TUI sessions
-// (~/.gogent/sessions/) so the TUI's 2-second poller discovers teams created
+// (~/.goyoke/sessions/) so the TUI's 2-second poller discovers teams created
 // by the router regardless of which session system created them.
 //
 // Errors are logged but never returned — team visibility in the drawer is
 // a nice-to-have, not a launch blocker.
 func ensureTeamVisible(teamDir string) {
 	// Resolve the TUI's current session from the correct config directory.
-	// Priority: CLAUDE_CONFIG_DIR → GOGENT_CONFIG_DIR → ~/.gogent
+	// Priority: CLAUDE_CONFIG_DIR → GOYOKE_CONFIG_DIR → ~/.goyoke
 	// This must match session.DefaultBaseDir() so we read the same marker
 	// file that the TUI's session store wrote.
 	home, err := os.UserHomeDir()
@@ -1225,15 +1227,15 @@ func ensureTeamVisible(teamDir string) {
 		slog.Warn("ensureTeamVisible: cannot resolve home dir", "err", err)
 		return
 	}
-	gogentDir := ""
+	goyokeDir := ""
 	if configDir := os.Getenv("CLAUDE_CONFIG_DIR"); configDir != "" {
-		gogentDir = configDir
-	} else if configDir := os.Getenv("GOGENT_CONFIG_DIR"); configDir != "" {
-		gogentDir = configDir
+		goyokeDir = configDir
+	} else if configDir := os.Getenv("GOYOKE_CONFIG_DIR"); configDir != "" {
+		goyokeDir = configDir
 	} else {
-		gogentDir = filepath.Join(home, ".gogent")
+		goyokeDir = filepath.Join(home, ".goyoke")
 	}
-	markerPath := filepath.Join(gogentDir, "current-session")
+	markerPath := filepath.Join(goyokeDir, "current-session")
 	data, err := os.ReadFile(markerPath)
 	if err != nil {
 		slog.Warn("ensureTeamVisible: no TUI session marker — team will be invisible to TUI poller",

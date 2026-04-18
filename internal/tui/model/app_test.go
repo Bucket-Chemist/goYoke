@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -361,9 +361,9 @@ func TestView_AfterReady_ContainsBannerText(t *testing.T) {
 	m = updated.(AppModel)
 
 	view := m.View()
-	// The banner renders "GOgent-Fortress" — verify it is present.
-	if !strings.Contains(view, "GOgent-Fortress") {
-		t.Errorf("View() does not contain banner text %q; got %q", "GOgent-Fortress", view)
+	// The banner renders "goYoke" — verify it is present.
+	if !strings.Contains(view, "goYoke") {
+		t.Errorf("View() does not contain banner text %q; got %q", "goYoke", view)
 	}
 }
 
@@ -2493,7 +2493,7 @@ func TestRenderLayout_ModalActive_ReturnsModalView(t *testing.T) {
 	}
 	// The view must not contain the normal banner text (the full layout is
 	// bypassed when a modal is active).
-	if strings.Contains(view, "GOgent-Fortress") {
+	if strings.Contains(view, "goYoke") {
 		t.Error("normal layout rendered while modal active; want modal overlay only")
 	}
 }

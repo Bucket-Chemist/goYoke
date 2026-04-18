@@ -1,6 +1,6 @@
 ---
 name: plan-tickets
-description: Comprehensive planning workflow with opus-tier agents. Scout -> Planner -> Architect -> Review -> Synthesis -> Tickets.
+description: Comprehensive planning workflow with opus-tier agents. Scout -> Planner -> Architect -> Review -> [Refine] -> Synthesis -> Tickets.
 ---
 
 # Plan-Tickets Skill v1.0
@@ -15,8 +15,9 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 2. **Plan** — High-level strategy via planner (opus, 32K thinking)
 3. **Architect** — Detailed implementation plan (opus, 32K thinking)
 4. **Review** — 7-layer critical review (opus, 32K thinking)
-5. **Resolve** — Einstein for critical issues (if needed)
-6. **Synthesize** — Generate overview.md + itemized tickets
+5. **Refine** _(optional)_ — Enrich plan with review findings via plan-harmonizer
+6. **Resolve** — Einstein for critical issues (if needed)
+7. **Synthesize** — Generate overview.md + itemized tickets
 
 **What this skill does NOT do:**
 
@@ -33,6 +34,7 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 | `/plan-tickets`               | Prompt for goal                           |
 | `/plan-tickets [goal]`        | Start with stated goal                    |
 | `/plan-tickets --skip-scout`  | Skip reconnaissance (when scope is known) |
+| `/plan-tickets --refine`      | Enable /refine-plan stage after review    |
 | `/plan-tickets --resume`      | Resume from last checkpoint               |
 
 ---
@@ -42,7 +44,7 @@ Transform a goal into a comprehensive, critically-reviewed implementation plan w
 **Required state:**
 
 - Project directory with identifiable language (go.mod, pyproject.toml, etc.)
-- Writeable `.gogent/sessions/` directory (auto-created by session hook)
+- Writeable `.goyoke/sessions/` directory (auto-created by session hook)
 - Session directory for artifacts (SESSION_DIR from session context)
 
 **Optional inputs:**
@@ -217,7 +219,36 @@ INSTRUCTIONS:
 4. Assess risks per phase
 5. Define validation criteria per phase
 6. Write specs.md to SESSION_DIR/specs.md
-7. Use TaskCreate to register tasks, TaskUpdate to set dependencies
+7. Write implementation-plan.json to SESSION_DIR/implementation-plan.json conforming to the canonical schema below
+8. Use TaskCreate to register tasks, TaskUpdate to set dependencies
+
+IMPLEMENTATION-PLAN.JSON SCHEMA (required fields):
+```json
+{
+  "version": "1.0.0",
+  "project": {
+    "language": "<detected language: go, python, typescript, r>",
+    "conventions_file": "<e.g. go.md, python.md>",
+    "build_verification": "<build command, e.g. go build ./...>",
+    "architecture_notes": "<key architectural decisions>"
+  },
+  "tasks": [
+    {
+      "task_id": "task-001",
+      "subject": "<short task title>",
+      "description": "<FULL implementation guidance — workers don't read specs.md>",
+      "agent": "<agent-id from agents-index.json, e.g. go-pro, python-pro>",
+      "target_packages": ["<package or file paths affected>"],
+      "blocked_by": [],
+      "acceptance_criteria": ["<criterion 1>", "<criterion 2>"]
+    }
+  ]
+}
+```
+task_id format: task-NNN (zero-padded: task-001, task-002, ...)
+blocked_by: list of task_id values this task depends on (empty array if none)
+Each task must have >=1 target_package and >=1 acceptance_criterion
+Schema reference: ~/.claude/schemas/architect/implementation-plan.json
 
 CONSTRAINTS:
 - Follow existing codebase patterns
@@ -237,6 +268,7 @@ Files affected: <count>
 Estimated tickets: <count>
 
 Specs saved to: SESSION_DIR/specs.md
+Plan JSON saved to: SESSION_DIR/implementation-plan.json
 
 Proceeding to critical review...
 ```
@@ -279,10 +311,10 @@ Be adversarial to the plan, but constructive to the outcome.
 
 ```bash
 # Read review verdict
-gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
-gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
-verdict=$(jq -r '.verdict' "$gogent_session_dir/review-metadata.json")
-critical_count=$(jq -r '.issue_counts.critical' "$gogent_session_dir/review-metadata.json")
+goyoke_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.goyoke/current-session" 2>/dev/null)"
+goyoke_session_dir="${goyoke_session_dir:-.goyoke/sessions/$(date +%Y%m%d-%H%M%S)}"
+verdict=$(jq -r '.verdict' "$goyoke_session_dir/review-metadata.json")
+critical_count=$(jq -r '.issue_counts.critical' "$goyoke_session_dir/review-metadata.json")
 ```
 
 **Branch based on verdict:**
@@ -332,9 +364,59 @@ Run /einstein to resolve, then /plan-tickets --resume to continue.
 
 **STOP and wait for user.**
 
+### Phase 5c: Plan Refinement (Optional)
+
+**When enabled** (`--refine` flag or user opts in at checkpoint):
+
+```
+[plan-tickets] Refine stage enabled.
+[plan-tickets] Invoking /refine-plan with plan + review findings...
+```
+
+**Invoke /refine-plan skill:**
+
+The /refine-plan skill spawns the plan-harmonizer agent (3-pass compiler):
+- Pass 1: Maps each review finding to affected tasks
+- Pass 2: Validates dependency graph against codebase
+- Pass 3: Produces readiness score (0-100)
+
+```javascript
+// /refine-plan uses:
+// - SESSION_DIR/implementation-plan.json (from architect)
+// - SESSION_DIR/review-metadata.json (from staff-architect)
+// Produces: SESSION_DIR/implementation-plan-enriched.json
+```
+
+**Checkpoint after refinement:**
+
+```
+[plan-tickets] Refinement complete.
+
+Readiness score: <score>/100 — <READY|READY WITH CAVEATS|NOT READY>
+Findings mapped: <mapped>/<total>
+Implicit dependencies: <count> detected
+
+Enriched plan: SESSION_DIR/implementation-plan-enriched.json
+
+Proceed to synthesis? (y/n)
+```
+
+**Branch based on readiness:**
+
+| Readiness | Action |
+| --------- | ------ |
+| >= 70 (READY) | Proceed to synthesis using enriched plan |
+| 50-69 (CAVEATS) | Show caveats, ask user to proceed or revise |
+| < 50 (NOT READY) | Show issues, recommend revising plan before synthesis |
+
+**When not enabled (default):**
+
+Phase 5c is skipped entirely. The pipeline proceeds directly from Phase 5/5b to Phase 6 (Synthesis). No behavioral change from v1.0.
+
 ### Phase 6: Synthesis
 
-After review passes (APPROVE or APPROVE_WITH_CONDITIONS acknowledged):
+After review passes (APPROVE or APPROVE_WITH_CONDITIONS acknowledged).
+If Phase 5c was enabled, synthesis uses the enriched plan (`implementation-plan-enriched.json`) for richer ticket generation with review annotations and implicit dependencies.
 
 **Generate overview.md:**
 
@@ -505,9 +587,11 @@ Ready for implementation. Run /ticket to begin.
 | ---------------------------------- | ----------------- | -------------------------- | ---------------------------- |
 | `SESSION_DIR/strategy.md`          | planner           | architect, synthesis       | High-level strategy          |
 | `SESSION_DIR/specs.md`             | architect         | staff-architect, synthesis | Detailed implementation plan |
+| `SESSION_DIR/implementation-plan.json` | architect     | /refine-plan, /implement   | Structured JSON plan (canonical schema) |
 | `SESSION_DIR/review-critique.md`   | staff-architect   | user, synthesis            | Critical review              |
 | `SESSION_DIR/review-metadata.json` | staff-architect   | /plan-tickets workflow             | Review verdict and counts    |
 | `SESSION_DIR/einstein-gap-*.md`    | /plan-tickets (if needed) | /einstein                  | Escalation context           |
+| `SESSION_DIR/implementation-plan-enriched.json` | /refine-plan              | synthesis, /implement      | Enriched plan with annotations |
 | `overview.md`                      | synthesis         | user                       | Human-readable summary       |
 | `tickets/*.md`                     | synthesis         | /ticket                    | Individual tickets           |
 | `tickets/tickets-index.json`       | synthesis         | /ticket                    | Ticket registry              |
@@ -523,7 +607,8 @@ Ready for implementation. Run /ticket to begin.
 | Architect | Opus         | 20-40K      | $0.90-1.80     |
 | Review    | Opus         | 15-30K      | $0.68-1.35     |
 | Synthesis | N/A          | 0           | $0.00          |
-| **Total** |              | 52-105K     | **$2.27-4.52** |
+| Refine _(opt)_ | Sonnet       | 10-20K      | $0.05-0.15     |
+| **Total** |              | 52-125K     | **$2.27-4.67** |
 
 **Note:** Einstein resolution (if triggered) adds ~$0.90 per invocation.
 
@@ -531,6 +616,7 @@ Ready for implementation. Run /ticket to begin.
 
 - Extended user review time (context accumulates)
 - Einstein escalation (+$0.90 per call)
+- Plan refinement (+$0.05-0.15 per /refine-plan invocation)
 - Retry loops on agent failures
 - haiku-scout fallback instead of gemini (slightly higher)
 
@@ -544,9 +630,10 @@ The /plan-tickets skill saves state at each phase:
 | --------------- | ---------------------------------- | ------------------- |
 | After scout     | `SESSION_DIR/scout_metrics.json`   | Phase 3 (planner)   |
 | After planner   | `SESSION_DIR/strategy.md`          | Phase 4 (architect) |
-| After architect | `SESSION_DIR/specs.md`             | Phase 5 (review)    |
+| After architect | `SESSION_DIR/specs.md`, `SESSION_DIR/implementation-plan.json` | Phase 5 (review) |
 | After review    | `SESSION_DIR/review-metadata.json` | Phase 6 (synthesis) |
 | Einstein needed | `SESSION_DIR/einstein-gap-*.md`    | After /einstein     |
+| After refine    | `SESSION_DIR/implementation-plan-enriched.json` | Phase 6 (synthesis) |
 
 **Resume command:**
 
@@ -559,11 +646,12 @@ The /plan-tickets skill saves state at each phase:
 ```
 Check in order (first match wins):
 1. einstein-gap-*.md exists → resume at synthesis (post-Einstein)
-2. review-metadata.json exists → resume at synthesis
-3. specs.md exists → resume at review
-4. strategy.md exists → resume at architect
-5. scout_metrics.json exists → resume at planner
-6. None → error "No checkpoint found. Run /plan-tickets to start fresh."
+2. implementation-plan-enriched.json exists → resume at synthesis (post-refine)
+3. review-metadata.json exists → resume at refine (if --refine) or synthesis
+4. specs.md exists → resume at review
+5. strategy.md exists → resume at architect
+6. scout_metrics.json exists → resume at planner
+7. None → error "No checkpoint found. Run /plan-tickets to start fresh."
 ```
 
 Detects last checkpoint and continues from there.
@@ -653,6 +741,7 @@ Files affected: 12
 Estimated tickets: 8
 
 Specs saved to: SESSION_DIR/specs.md
+Plan JSON saved to: SESSION_DIR/implementation-plan.json
 
 Proceeding to critical review...
 

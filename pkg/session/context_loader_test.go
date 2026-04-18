@@ -13,14 +13,14 @@ import (
 func TestLoadHandoffSummary_Exists(t *testing.T) {
 	// Setup: Create temp directory with handoff file
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeDir := filepath.Join(projectDir, ".goyoke", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	handoffPath := filepath.Join(claudeDir, "last-handoff.md")
 	content := `# Session Handoff
 
 ## Context
-Previous session completed GOgent-058.
+Previous session completed goYoke-058.
 
 ## Sharp Edges
 - File parsing failed on malformed JSON
@@ -28,7 +28,7 @@ Previous session completed GOgent-058.
 
 ## Actions
 1. Review pending learnings
-2. Continue with GOgent-059
+2. Continue with goYoke-059
 `
 	require.NoError(t, os.WriteFile(handoffPath, []byte(content), 0644))
 
@@ -38,7 +38,7 @@ Previous session completed GOgent-058.
 	// Verify
 	require.NoError(t, err)
 	assert.Contains(t, result, "# Session Handoff")
-	assert.Contains(t, result, "Previous session completed GOgent-058")
+	assert.Contains(t, result, "Previous session completed goYoke-058")
 	assert.Contains(t, result, "File parsing failed on malformed JSON")
 	assert.NotContains(t, result, "truncated") // File is short, no truncation
 }
@@ -58,7 +58,7 @@ func TestLoadHandoffSummary_Missing(t *testing.T) {
 func TestLoadHandoffSummary_Truncation(t *testing.T) {
 	// Setup: Create handoff file with 40 lines (should truncate to 30)
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeDir := filepath.Join(projectDir, ".goyoke", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	handoffPath := filepath.Join(claudeDir, "last-handoff.md")
@@ -94,7 +94,7 @@ func TestLoadHandoffSummary_Truncation(t *testing.T) {
 func TestLoadHandoffSummary_TooLarge(t *testing.T) {
 	// Setup: Create file larger than 50KB
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeDir := filepath.Join(projectDir, ".goyoke", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	handoffPath := filepath.Join(claudeDir, "last-handoff.md")
@@ -116,7 +116,7 @@ func TestLoadHandoffSummary_TooLarge(t *testing.T) {
 func TestCheckPendingLearnings_HasLearnings(t *testing.T) {
 	// Setup: Create pending learnings file with 3 sharp edges
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeDir := filepath.Join(projectDir, ".goyoke", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	learningsPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -151,7 +151,7 @@ func TestCheckPendingLearnings_None(t *testing.T) {
 func TestCheckPendingLearnings_EmptyFile(t *testing.T) {
 	// Setup: Empty pending learnings file
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeDir := filepath.Join(projectDir, ".goyoke", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	learningsPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -167,7 +167,7 @@ func TestCheckPendingLearnings_EmptyFile(t *testing.T) {
 
 func TestCheckPendingLearnings_LargeLine(t *testing.T) {
 	projectDir := t.TempDir()
-	claudeDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeDir := filepath.Join(projectDir, ".goyoke", "memory")
 	require.NoError(t, os.MkdirAll(claudeDir, 0755))
 
 	learningsPath := filepath.Join(claudeDir, "pending-learnings.jsonl")
@@ -191,7 +191,7 @@ func TestFormatGitInfo_NotGitRepo(t *testing.T) {
 	projectDir := t.TempDir()
 	result := FormatGitInfo(projectDir)
 
-	// If we're inside a git repo (tests run in GOgent-Fortress), accept git output
+	// If we're inside a git repo (tests run in goYoke), accept git output
 	// If truly not in git repo, expect empty string
 	if result != "" {
 		// Verify it has correct git format
@@ -203,7 +203,7 @@ func TestFormatGitInfo_NotGitRepo(t *testing.T) {
 }
 
 func TestFormatGitInfo_CleanRepo(t *testing.T) {
-	// Setup: This test runs in actual GOgent-Fortress repo
+	// Setup: This test runs in actual goYoke repo
 	// We'll test the format rather than exact values since git state varies
 
 	// Skip if not in git repo (CI environments)

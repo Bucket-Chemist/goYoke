@@ -1,4 +1,10 @@
-# Claude CLI Permission Handling in GOgent-Fortress
+---
+title: Permission Handling
+type: guide
+tags: [permissions, cli]
+created: 2026-04-18
+---
+# Claude CLI Permission Handling in goYoke
 
 ## Problem Statement
 
@@ -85,7 +91,7 @@ claude --allowed-tools Bash --allowed-tools Read --allowed-tools Write ...
 - Already has `AllowedTools []string` field in Config (lines 62-65)
 - Already wired into args building (lines 171-173)
 
-**File:** `cmd/gofortress/main.go`
+**File:** `cmd/goyoke/main.go`
 - Set default AllowedTools for new sessions (lines 99-106)
 
 ```go
@@ -134,8 +140,8 @@ claude --permission-mode delegate --output-format stream-json
 
 ### Manual Test Steps
 
-1. Build: `go build -o ~/.local/bin/gofortress ./cmd/gofortress`
-2. Run: `gofortress`
+1. Build: `go build -o ~/.local/bin/goyoke ./cmd/goyoke`
+2. Run: `goyoke`
 3. Command: "create a python file that prints hello"
 4. Expected: File created immediately, no permission prompt
 5. Verify: Check file exists at specified path
@@ -177,7 +183,7 @@ func TestAllowedToolsPreApproval(t *testing.T) {
 - Claude CLI documentation: `claude --help`
 - Config struct: `internal/cli/subprocess.go:18-79`
 - Subprocess args: `internal/cli/subprocess.go:139-191`
-- Main config: `cmd/gofortress/main.go:92-106`
+- Main config: `cmd/goyoke/main.go:92-106`
 
 ## Captured Event Examples
 

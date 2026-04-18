@@ -31,12 +31,12 @@ The recommended path forward: fix the three binary bugs first (0.5-1 day), compl
 | **Member nesting** | Flat `members[].wave` field | Nested `waves[].members[]` | HIGH -- config structure is fundamentally different |
 | **Stdin schema** | `$schema`, `agent_id`, `role`, `task`, `context.problem_brief` (path string), `reads_from`, `output_requirements` | `agent`, `workflow`, `context`, `problem_brief` (nested object with `title`, `statement`, `scope`, `complexity_signals`, `constraints`), `codebase_context` | CRITICAL -- entirely different required fields and nesting |
 | **Schema paths** | `schemas/stdin/braintrust-analyst-v1.json` | `schemas/stdin/einstein.json` | MEDIUM -- wrong filenames, no `-v1` suffix |
-| **Schema base URL** | `https://gogent.dev/schemas/` | `https://gogent-fortress/schemas/` | LOW -- cosmetic |
-| **Launch command** | `gogent-team-run "$team_dir/config.json" > "$team_dir/launch.log" 2>&1` | `gogent-team-run "$team_dir"` (positional dir arg, binary handles own logging/daemonization) | HIGH -- wrong CLI interface |
+| **Schema base URL** | `https://goyoke.dev/schemas/` | `https://goyoke-fortress/schemas/` | LOW -- cosmetic |
+| **Launch command** | `goyoke-team-run "$team_dir/config.json" > "$team_dir/launch.log" 2>&1` | `goyoke-team-run "$team_dir"` (positional dir arg, binary handles own logging/daemonization) | HIGH -- wrong CLI interface |
 | **Launch verification** | Reads `background_pid` from config.json | Field is never written by the binary (bug C-3) | CRITICAL -- every launch appears failed |
-| **Inter-wave script** | Not referenced | `gogent-team-prepare-synthesis` exists (TC-010) but `runInterWaveScript` in wave.go is a stub | CRITICAL -- braintrust Wave 2 receives no synthesis input |
-| **Helper binaries** | 4 new binaries (`gogent-team-init-review`, `gogent-team-init-impl`, `gogent-parse-specs`, `gogent-compute-waves`) | None exist; Einstein argues most are unnecessary | MAJOR -- over-engineering concern |
-| **Execution paths** | Background-only via `gogent-team-run` | TC-019 confirms MCP path remains viable; two paths must coexist | MAJOR -- missing fallback architecture |
+| **Inter-wave script** | Not referenced | `goyoke-team-prepare-synthesis` exists (TC-010) but `runInterWaveScript` in wave.go is a stub | CRITICAL -- braintrust Wave 2 receives no synthesis input |
+| **Helper binaries** | 4 new binaries (`goyoke-team-init-review`, `goyoke-team-init-impl`, `goyoke-parse-specs`, `goyoke-compute-waves`) | None exist; Einstein argues most are unnecessary | MAJOR -- over-engineering concern |
+| **Execution paths** | Background-only via `goyoke-team-run` | TC-019 confirms MCP path remains viable; two paths must coexist | MAJOR -- missing fallback architecture |
 
 ---
 
@@ -49,14 +49,14 @@ The recommended path forward: fix the three binary bugs first (0.5-1 day), compl
 **Key Insights**:
 1. TC-013's drift is structural, not cosmetic -- information debt accumulates proportionally to each upstream ticket's divergences from the original spec.
 2. TC-013 conflates three distinct concerns (architectural transition design, three separate workflow rewrites, specification for 4 new Go binaries) that have different dependency and risk profiles.
-3. The "orchestrator" abstraction dissolves in the background path -- when `gogent-team-run` is the orchestrator, what remains is config generation, a fundamentally different concern than LLM orchestration.
+3. The "orchestrator" abstraction dissolves in the background path -- when `goyoke-team-run` is the orchestrator, what remains is config generation, a fundamentally different concern than LLM orchestration.
 4. Mozart's Phase 2.5 stdin templates (added by TC-018) introduce a second drift layer -- they don't comply with TC-009 schemas either, creating a drift-on-drift situation.
 
 **Root Cause Identified**: Information decay in speculative specifications. TC-013 was written as a forward-looking spec before implementations existed, and each upstream ticket's implementation decisions diverged from TC-013's assumptions without backporting corrections.
 
 **Novel Approaches Proposed**:
 - Decompose TC-013 into TC-013a (Review, simplest), TC-013b (Braintrust, moderate), TC-013c (Implementation, complex)
-- Replace 4 helper binaries with 1 `gogent-team-init` with subcommands, or 0 for Review/Braintrust (LLM generates config + validation pass)
+- Replace 4 helper binaries with 1 `goyoke-team-init` with subcommands, or 0 for Review/Braintrust (LLM generates config + validation pass)
 - Hybrid approach: LLM-generated config for Review, Go-assisted for Implementation, hybrid for Braintrust
 
 **Assumptions Surfaced**: 8 assumptions identified, including that the 4 helper binaries add value (challenged) and that background is the only execution path (false per TC-019).
@@ -102,7 +102,7 @@ Phase 0 (binary fixes) -> Phase 0.5 (TC-020 bridge docs) -> Phase 1 (Review) -> 
 | Effort estimate is too low | 3-5 days is insufficient; 5-8 days is realistic (after prerequisite fixes) | HIGH |
 | Stdin inline examples are structurally wrong | TC-009 schemas use entirely different required fields and nesting depth | HIGH |
 | Mozart Phase 2.5 has its own drift | TC-018's stdin templates don't match TC-009 schemas -- a second layer of misalignment | MEDIUM |
-| Two execution paths must coexist | MCP spawn (foreground) + gogent-team-run (background) per TC-019 | HIGH |
+| Two execution paths must coexist | MCP spawn (foreground) + goyoke-team-run (background) per TC-019 | HIGH |
 
 ### Complementary Insights
 
@@ -119,11 +119,11 @@ Phase 0 (binary fixes) -> Phase 0.5 (TC-020 bridge docs) -> Phase 1 (Review) -> 
 
 ### Resolved Divergence 1: How Many Helper Binaries?
 
-**Einstein**: Replace 4 binaries with 1 `gogent-team-init` with subcommands, or zero for Review/Braintrust (LLM generates config directly with a validation pass).
+**Einstein**: Replace 4 binaries with 1 `goyoke-team-init` with subcommands, or zero for Review/Braintrust (LLM generates config directly with a validation pass).
 
-**Staff-Architect**: Reduce from 4 to 1, consolidating `gogent-team-init-review`, `gogent-team-init-impl`, `gogent-parse-specs`, and `gogent-compute-waves` into a single binary.
+**Staff-Architect**: Reduce from 4 to 1, consolidating `goyoke-team-init-review`, `goyoke-team-init-impl`, `goyoke-parse-specs`, and `goyoke-compute-waves` into a single binary.
 
-**Resolution**: Zero new binaries for Review and Braintrust. One new binary (`gogent-team-init`) for Implementation only.
+**Resolution**: Zero new binaries for Review and Braintrust. One new binary (`goyoke-team-init`) for Implementation only.
 
 **Reasoning**: For Review, the router already knows the file list and reviewer set -- generating 4-5 JSON files is trivial LLM work or even scriptable in bash. For Braintrust, Mozart already generates config + stdin files in Phase 2.5 (TC-018). Only Implementation requires non-trivial computation (DAG parsing, wave computation via Kahn's algorithm, dynamic member count) that justifies a Go binary.
 
@@ -181,11 +181,11 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 | Work Item | Description | Effort | Prerequisites |
 |-----------|-------------|--------|---------------|
-| **TC-013-prereq: Binary Bug Fixes** | Fix 3 bugs in `gogent-team-run`: (1) wire `runInterWaveScript` to actually execute the script, (2) remove double budget reservation in spawn.go (wave.go already reserves), (3) write `BackgroundPID` to config.json in main.go after startup | 0.5-1 day | None |
+| **TC-013-prereq: Binary Bug Fixes** | Fix 3 bugs in `goyoke-team-run`: (1) wire `runInterWaveScript` to actually execute the script, (2) remove double budget reservation in spawn.go (wave.go already reserves), (3) write `BackgroundPID` to config.json in main.go after startup | 0.5-1 day | None |
 | **TC-020: Bridge Docs** (in progress) | Complete the ReviewOrch and ImplMgr bridge docs + decision matrix. These serve as the specification source for the three workflow tickets. | 1-2 days | None |
-| **TC-013a: Review Workflow** | Router generates config.json + 4 reviewer stdin files + launches `gogent-team-run`. No LLM orchestrator needed. No helper binary needed. Simplest workflow -- validates the pattern. | 1-2 days | TC-013-prereq, TC-020 |
-| **TC-013b: Braintrust Workflow** | Mozart interview (foreground) then generates config.json + stdin files + launches `gogent-team-run`. Requires reconciling mozart.md Phase 2.5 templates with TC-009 schemas. Inter-wave script integration. | 2-3 days | TC-013a (validates pattern), TC-013-prereq |
-| **TC-013c: Implementation Workflow** | Router parses specs.md, computes wave DAG, generates dynamic config.json + stdin files + launches `gogent-team-run`. Requires `gogent-team-init` binary for DAG computation. Most complex. | 2-3 days | TC-013b (validates multi-wave pattern) |
+| **TC-013a: Review Workflow** | Router generates config.json + 4 reviewer stdin files + launches `goyoke-team-run`. No LLM orchestrator needed. No helper binary needed. Simplest workflow -- validates the pattern. | 1-2 days | TC-013-prereq, TC-020 |
+| **TC-013b: Braintrust Workflow** | Mozart interview (foreground) then generates config.json + stdin files + launches `goyoke-team-run`. Requires reconciling mozart.md Phase 2.5 templates with TC-009 schemas. Inter-wave script integration. | 2-3 days | TC-013a (validates pattern), TC-013-prereq |
+| **TC-013c: Implementation Workflow** | Router parses specs.md, computes wave DAG, generates dynamic config.json + stdin files + launches `goyoke-team-run`. Requires `goyoke-team-init` binary for DAG computation. Most complex. | 2-3 days | TC-013b (validates multi-wave pattern) |
 
 **Total revised effort**: 5-8 days (implementation) + 1-2.5 days (prerequisites) = 6.5-10.5 days
 
@@ -209,7 +209,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
    - Priority: CRITICAL
    - Supports: Launch verification (TC-013's step 7 in all three workflows)
 
-4. **Wire `runInterWaveScript` to execute the binary**: Replace the stub (wave.go:96-102) with actual `exec.CommandContext` invocation. The binary (`gogent-team-prepare-synthesis`) already exists and takes a team directory as its sole argument. This is part of TC-013-prereq.
+4. **Wire `runInterWaveScript` to execute the binary**: Replace the stub (wave.go:96-102) with actual `exec.CommandContext` invocation. The binary (`goyoke-team-prepare-synthesis`) already exists and takes a team directory as its sole argument. This is part of TC-013-prereq.
    - Priority: CRITICAL
    - Supports: Braintrust workflow (Beethoven receives synthesis inputs)
 
@@ -221,7 +221,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 1. **Patching TC-013 in place**: The inline examples are too far from reality. The pre-implementation notes (153 lines of corrections) demonstrate that the correction overhead exceeds the document's value.
 
-2. **Building all 4 helper binaries as specified**: `gogent-team-init-review` and `gogent-team-init-impl` (as separate binaries) add build/install/maintenance cost without proportional value. Review config generation is trivial; Braintrust config generation is already in Mozart.
+2. **Building all 4 helper binaries as specified**: `goyoke-team-init-review` and `goyoke-team-init-impl` (as separate binaries) add build/install/maintenance cost without proportional value. Review config generation is trivial; Braintrust config generation is already in Mozart.
 
 3. **Implementing all three workflows simultaneously**: Sequential implementation with validation at each step catches integration issues early and prevents wasted effort on workflows that depend on patterns not yet proven.
 
@@ -231,10 +231,10 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 ### Phase 0: Binary Bug Fixes (0.5-1 day)
 
-- [ ] **Fix 1**: Wire `runInterWaveScript` in wave.go to execute the script via `exec.CommandContext`. The script command is `gogent-team-prepare-synthesis <team-dir>`. Expand `$TEAM_DIR` variable in the script string. Test: verify `pre-synthesis.md` is written after Wave 1 completion.
+- [ ] **Fix 1**: Wire `runInterWaveScript` in wave.go to execute the script via `exec.CommandContext`. The script command is `goyoke-team-prepare-synthesis <team-dir>`. Expand `$TEAM_DIR` variable in the script string. Test: verify `pre-synthesis.md` is written after Wave 1 completion.
 - [ ] **Fix 2**: Remove budget reservation from `claudeSpawner.Spawn()` (spawn.go:63-76). Budget reservation already happens in `runWaves()` at wave.go:34-35. Test: verify a $6 budget can run 2 Opus agents ($5 estimated each) because wave-level reservation + reconciliation handles the lifecycle correctly.
 - [ ] **Fix 3**: Write `BackgroundPID` to config.json in main.go after `NewTeamRunner()`. Add `pid := os.Getpid(); runner.config.BackgroundPID = &pid; runner.SaveConfig()` after line 73 of main.go. Test: after launch, `jq '.background_pid' config.json` returns a valid PID.
-- [ ] Run `go test -race ./cmd/gogent-team-run/...` to verify no regressions.
+- [ ] Run `go test -race ./cmd/goyoke-team-run/...` to verify no regressions.
 
 ### Phase 0.5: Complete TC-020 Bridge Docs (1-2 days)
 
@@ -249,7 +249,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 - [ ] Router computes git diff, classifies files, selects reviewers
 - [ ] Router generates config.json from review template (no helper binary -- direct JSON generation)
 - [ ] Router generates stdin files per reviewer (validated against `schemas/stdin/reviewer.json`)
-- [ ] Router launches `gogent-team-run <team-dir>`
+- [ ] Router launches `goyoke-team-run <team-dir>`
 - [ ] Router verifies `background_pid` in config.json
 - [ ] Router returns immediately with team status message
 - [ ] Test: 3 successful review runs with different file types
@@ -258,7 +258,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 ### Phase 2: Braintrust Workflow -- TC-013b (2-3 days)
 
 - [ ] Reconcile mozart.md Phase 2.5 stdin templates with TC-009 schemas
-- [ ] Update Mozart's Phase 6 to include `gogent-team-run` dispatch path alongside MCP spawn
+- [ ] Update Mozart's Phase 6 to include `goyoke-team-run` dispatch path alongside MCP spawn
 - [ ] Verify inter-wave script execution (depends on Phase 0 Fix 1)
 - [ ] Verify Beethoven receives `pre-synthesis.md` with Einstein and Staff-Architect outputs
 - [ ] Test: 3 successful braintrust runs producing analysis documents at `.claude/braintrust/analysis-*.md`
@@ -266,10 +266,10 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 ### Phase 3: Implementation Workflow -- TC-013c (2-3 days)
 
-- [ ] Build `gogent-team-init` binary (consolidation of `gogent-parse-specs` + `gogent-compute-waves`)
+- [ ] Build `goyoke-team-init` binary (consolidation of `goyoke-parse-specs` + `goyoke-compute-waves`)
 - [ ] Implement specs.md parsing and DAG computation (Kahn's algorithm)
-- [ ] Router invokes `gogent-team-init` to generate config.json + stdin files
-- [ ] Router launches `gogent-team-run <team-dir>`
+- [ ] Router invokes `goyoke-team-init` to generate config.json + stdin files
+- [ ] Router launches `goyoke-team-run <team-dir>`
 - [ ] Test: 3 successful implementation runs with different DAG structures (1 wave, 2 waves, 3+ waves)
 - [ ] Test: circular dependency detection
 - [ ] Add fallback to direct Task() delegation for single-task tickets (no specs.md)
@@ -280,7 +280,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 2. **During Phase 2**: Does Mozart's config generation work with the corrected stdin schemas? If Mozart's Phase 2.5 templates require major surgery, allocate additional time.
 
-3. **Before Phase 3**: Is `gogent-team-init` justified, or can Implementation config generation be done by the LLM (like Review)? The answer depends on how complex the specs.md parsing turns out to be in practice.
+3. **Before Phase 3**: Is `goyoke-team-init` justified, or can Implementation config generation be done by the LLM (like Review)? The answer depends on how complex the specs.md parsing turns out to be in practice.
 
 ---
 
@@ -304,7 +304,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 |------------|-----------------|--------------|
 | Review config generation is simple enough for LLM/router | Implement it in Phase 1 and measure complexity | Phase 1 |
 | Mozart Phase 2.5 templates can be reconciled with TC-009 | Side-by-side comparison of mozart.md templates vs TC-009 required fields | Phase 2 |
-| `gogent-team-prepare-synthesis` produces valid pre-synthesis.md when given actual agent outputs | Run binary with sample stdout files from a real braintrust session | Phase 0 |
+| `goyoke-team-prepare-synthesis` produces valid pre-synthesis.md when given actual agent outputs | Run binary with sample stdout files from a real braintrust session | Phase 0 |
 | specs.md format is consistent enough for automated parsing | Survey existing specs.md files in the codebase | Phase 3 |
 
 ---
@@ -315,7 +315,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 2. **Should budget double-reservation be fixed before or during TC-013?** Before. The bug exists in the Go binary's core spawn path and affects ALL team workflows, not just the orchestrator rewrites. It is a TC-008 defect. Recommendation: TC-013-prereq, tested immediately.
 
-3. **What is the canonical specs.md format?** TC-013 shows a markdown format with `## Tasks` sections containing `**Task ID**`, `**Title**`, `**Agent**`, `**Files**`, `**Blocked By**` fields. But no formal spec exists. The `gogent-team-init` binary needs a defined input format. Recommendation: Define as part of TC-013c, or accept that the LLM can parse loosely-structured markdown.
+3. **What is the canonical specs.md format?** TC-013 shows a markdown format with `## Tasks` sections containing `**Task ID**`, `**Title**`, `**Agent**`, `**Files**`, `**Blocked By**` fields. But no formal spec exists. The `goyoke-team-init` binary needs a defined input format. Recommendation: Define as part of TC-013c, or accept that the LLM can parse loosely-structured markdown.
 
 4. **Should TC-013 be retired or rewritten?** Einstein argues rewrite; this analysis recommends retirement as a meta-ticket. The bridge docs + three new workflow tickets provide clearer, ground-truth-aligned specifications. Keeping TC-013's 1340 lines of mostly-stale implementation detail creates confusion.
 
@@ -327,7 +327,7 @@ The TC-020 bridge docs are the right intermediate step -- they document the corr
 
 ### Bug C-1: `runInterWaveScript` Stub
 
-**File**: `/home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/wave.go`, lines 96-102
+**File**: `/home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/wave.go`, lines 96-102
 
 ```go
 func runInterWaveScript(ctx context.Context, scriptPath string, teamDir string) error {
@@ -337,7 +337,7 @@ func runInterWaveScript(ctx context.Context, scriptPath string, teamDir string) 
 }
 ```
 
-**Impact**: In the braintrust workflow, `waves[0].on_complete_script` is set to `"gogent-team-prepare-synthesis $TEAM_DIR"`. This function is called (wave.go:51-55) but does nothing. The `pre-synthesis.md` file is never created. Beethoven (Wave 2) receives no inter-wave synthesis input and must work from raw stdout files alone -- or worse, references a non-existent file and errors.
+**Impact**: In the braintrust workflow, `waves[0].on_complete_script` is set to `"goyoke-team-prepare-synthesis $TEAM_DIR"`. This function is called (wave.go:51-55) but does nothing. The `pre-synthesis.md` file is never created. Beethoven (Wave 2) receives no inter-wave synthesis input and must work from raw stdout files alone -- or worse, references a non-existent file and errors.
 
 **Fix**: Replace with `exec.CommandContext` execution, expanding `$TEAM_DIR` to the actual team directory path.
 
@@ -345,13 +345,13 @@ func runInterWaveScript(ctx context.Context, scriptPath string, teamDir string) 
 
 ### Bug C-2: Budget Double-Reservation
 
-**File 1**: `/home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/wave.go`, lines 34-35
+**File 1**: `/home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/wave.go`, lines 34-35
 ```go
 estimated := tr.estimateCost(wave.Members[memberIdx].Agent)
 if !tr.tryReserveBudget(estimated) {
 ```
 
-**File 2**: `/home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/spawn.go`, lines 63-66
+**File 2**: `/home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/spawn.go`, lines 63-66
 ```go
 estimatedCost := tr.estimateCost(cfg.agentID)
 if !tr.tryReserveBudget(estimatedCost) {
@@ -369,7 +369,7 @@ if !tr.tryReserveBudget(estimatedCost) {
 
 ### Bug C-3: `background_pid` Never Written to Config
 
-**File**: `/home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/main.go`
+**File**: `/home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/main.go`
 
 The binary writes a PID *file* at `daemon.go:62` (`acquirePIDFile`), but never sets `config.BackgroundPID` in the TeamConfig struct. Searching main.go for `BackgroundPID` yields zero results. The field exists in the struct definition (`config.go:30`) but is never populated.
 
@@ -411,11 +411,11 @@ open_questions: 5
 source_files_examined:
   - tickets/team-coordination/tickets/TC-013.md (1340 lines)
   - tickets/team-coordination/tickets/TC-020.md (636 lines)
-  - cmd/gogent-team-run/wave.go (103 lines)
-  - cmd/gogent-team-run/spawn.go (449 lines)
-  - cmd/gogent-team-run/config.go (385 lines)
-  - cmd/gogent-team-run/daemon.go (276 lines)
-  - cmd/gogent-team-run/main.go (137 lines)
+  - cmd/goyoke-team-run/wave.go (103 lines)
+  - cmd/goyoke-team-run/spawn.go (449 lines)
+  - cmd/goyoke-team-run/config.go (385 lines)
+  - cmd/goyoke-team-run/daemon.go (276 lines)
+  - cmd/goyoke-team-run/main.go (137 lines)
   - .claude/schemas/stdin/einstein.json (177 lines)
   - .claude/braintrust/synthesis-team-coordination.md (788 lines)
   - .claude/braintrust/einstein-team-coordination-analysis.md (293 lines)

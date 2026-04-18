@@ -1,5 +1,5 @@
 // Package tabbar implements the horizontal tab-bar component for the
-// GOgent-Fortress TUI. It renders a single-row strip of named tabs and
+// goYoke TUI. It renders a single-row strip of named tabs and
 // handles Alt+key shortcuts that jump directly to each tab.
 package tabbar
 
@@ -11,8 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 // flashDuration is the total duration of the accent flash animation.

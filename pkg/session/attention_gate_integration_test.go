@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 func TestAttentionGateWorkflow_FullFlush(t *testing.T) {
 	// Use t.TempDir() for isolation
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings (6 entries, above default threshold of 5)
@@ -69,7 +69,7 @@ func TestAttentionGateWorkflow_FullFlush(t *testing.T) {
 
 func TestAttentionGateWorkflow_NoFlushBelowThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings (4 entries, BELOW default threshold of 5)
@@ -101,7 +101,7 @@ func TestAttentionGateWorkflow_SimulationHarness(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create initial pending learnings

@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The MCP-SPAWN architecture represents a creative engineering solution to a fundamental Claude Code limitation: subagents spawned via Task() cannot themselves spawn sub-subagents. This architectural workaround leverages MCP tools (which remain accessible at all nesting levels) to spawn CLI processes, thereby restoring the orchestrator pattern that GOgent-Fortress depends upon.
+The MCP-SPAWN architecture represents a creative engineering solution to a fundamental Claude Code limitation: subagents spawned via Task() cannot themselves spawn sub-subagents. This architectural workaround leverages MCP tools (which remain accessible at all nesting levels) to spawn CLI processes, thereby restoring the orchestrator pattern that goYoke depends upon.
 
 Both theoretical and practical analyses converge on a central finding: **the architecture is sound in principle but rests on a single untested assumption** (MCP-SPAWN-001). Einstein's theoretical lens reveals this as a "category shift" from in-process function calls to inter-process communication, introducing new failure modes around process lifecycle, context inheritance, and cost tracking. Staff-Architect's practical review validates the implementation approach while identifying four critical issues requiring remediation before deployment.
 
@@ -35,7 +35,7 @@ Both analyses strongly agree on the following points:
 
 ### 2. Fail-Closed Defaults Are Correct
 
-Both analyses commend the decision to treat missing `GOGENT_NESTING_LEVEL` as Level 1 (blocked):
+Both analyses commend the decision to treat missing `GOYOKE_NESTING_LEVEL` as Level 1 (blocked):
 
 - Einstein: Follows capability-based security principles; prevents unintended capability escalation
 - Staff-Architect: Correct defensive posture; may cause usability friction but safety trumps convenience
@@ -428,7 +428,7 @@ describe("concurrent spawn handling", () => {
 
 ### C3: Hook I/O Schema Definition
 
-**Problem:** Go hooks (gogent-validate, gogent-orchestrator-guard) use implicit JSON contracts.
+**Problem:** Go hooks (goyoke-validate, goyoke-orchestrator-guard) use implicit JSON contracts.
 
 **Solution:** Create formal JSON Schema at `~/.claude/schemas/hook-io-schema.json`.
 
@@ -437,8 +437,8 @@ describe("concurrent spawn handling", () => {
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/hook-io-schema.json",
-  "title": "GOgent Hook I/O Schema",
+  "$id": "https://goyoke-fortress/schemas/hook-io-schema.json",
+  "title": "goYoke Hook I/O Schema",
   "description": "Defines input/output contracts for Claude Code hooks",
   "version": "1.0.0",
 
@@ -664,7 +664,7 @@ func ValidateHookOutput(output interface{}) error {
 
 | Aspect | Specification |
 |--------|---------------|
-| **File Location** | `$XDG_RUNTIME_DIR/gogent/spawn-pids.json` (fallback: `/tmp/gogent-$UID/spawn-pids.json`) |
+| **File Location** | `$XDG_RUNTIME_DIR/goyoke/spawn-pids.json` (fallback: `/tmp/goyoke-$UID/spawn-pids.json`) |
 | **File Format** | JSON object mapping agentId → {pid, startTime, agentType} |
 | **Write Timing** | Immediately after `spawn()` succeeds, before waiting for completion |
 | **Remove Timing** | When process exits (success, error, or killed) |
@@ -694,12 +694,12 @@ const PID_FILE_NAME = "spawn-pids.json";
 function getPidFilePath(): string {
   const runtimeDir = process.env.XDG_RUNTIME_DIR;
   if (runtimeDir) {
-    const dir = path.join(runtimeDir, "gogent");
+    const dir = path.join(runtimeDir, "goyoke");
     fs.mkdirSync(dir, { recursive: true });
     return path.join(dir, PID_FILE_NAME);
   }
   // Fallback for systems without XDG_RUNTIME_DIR
-  const fallbackDir = path.join(os.tmpdir(), `gogent-${process.getuid()}`);
+  const fallbackDir = path.join(os.tmpdir(), `goyoke-${process.getuid()}`);
   fs.mkdirSync(fallbackDir, { recursive: true });
   return path.join(fallbackDir, PID_FILE_NAME);
 }

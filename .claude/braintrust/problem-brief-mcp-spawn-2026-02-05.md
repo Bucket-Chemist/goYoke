@@ -44,7 +44,7 @@ Evaluate whether the MCP-SPAWN architecture is:
 
 - **Hybrid architecture**: MCP tools + CLI spawning + Go hooks + TypeScript TUI
 - **Cross-language**: Go (hooks, validation), TypeScript (MCP server, spawn tool)
-- **Fail-closed defaults**: GOGENT_NESTING_LEVEL missing = assume nested (blocked)
+- **Fail-closed defaults**: GOYOKE_NESTING_LEVEL missing = assume nested (blocked)
 - **Circular dependency risk**: 013 must complete before 010/011
 - **Process lifecycle management**: SIGTERM → SIGKILL escalation, orphan prevention
 
@@ -125,7 +125,7 @@ tickets/mcp-agent-teams-integration/mcp-spawn/
 1. **Platform**: Arch Linux / CachyOS
 2. **Languages**: Go (hooks), TypeScript (MCP/TUI)
 3. **Claude Code SDK**: Must use @anthropic-ai/claude-agent-sdk
-4. **Existing Architecture**: Must integrate with GOgent-Fortress hooks, routing schema
+4. **Existing Architecture**: Must integrate with goYoke hooks, routing schema
 5. **Backward Compatibility**: Agent interface extension must not break existing code
 
 ---

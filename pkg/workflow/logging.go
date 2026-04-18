@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 // GetEndstateLogPath returns XDG-compliant path for endstate logs (global)
 func GetEndstateLogPath() string {
-	return filepath.Join(config.GetGOgentDir(), "agent-endstates.jsonl")
+	return filepath.Join(config.GetgoYokeDir(), "agent-endstates.jsonl")
 }
 
 // GetProjectEndstateLogPath returns project-scoped path for endstate logs

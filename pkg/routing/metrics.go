@@ -11,7 +11,7 @@ import (
 // ScoutMetrics represents output from haiku-scout agent.
 // Contains file counts, LoC, complexity signals for routing decisions.
 type ScoutMetrics struct {
-	// Base fields (required by GOgent-013)
+	// Base fields (required by goYoke-013)
 	FileCount       int      `json:"file_count"`
 	TotalLines      int      `json:"total_lines"`
 	ComplexityScore float64  `json:"complexity_score"`
@@ -19,7 +19,7 @@ type ScoutMetrics struct {
 	Timestamp       int64    `json:"timestamp"`
 	ScannedPaths    []string `json:"scanned_paths,omitempty"`
 
-	// Future expansion fields (GOgent-014+)
+	// Future expansion fields (goYoke-014+)
 	EstimatedTokens         int     `json:"estimated_tokens,omitempty"`
 	Confidence              float64 `json:"confidence,omitempty"`
 	ClarificationNeeded     bool    `json:"clarification_needed,omitempty"`

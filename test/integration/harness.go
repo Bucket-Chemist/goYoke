@@ -49,7 +49,7 @@ type TestHarness struct {
 // NewTestHarness creates a test harness for the given corpus file
 func NewTestHarness(corpusPath, projectDir string) (*TestHarness, error) {
 	if _, err := os.Stat(corpusPath); err != nil {
-		return nil, fmt.Errorf("[harness] Corpus file not found: %s. Error: %w. Run GOgent-000 first.", corpusPath, err)
+		return nil, fmt.Errorf("[harness] Corpus file not found: %s. Error: %w. Run goYoke-000 first.", corpusPath, err)
 	}
 
 	return &TestHarness{
@@ -93,7 +93,7 @@ func (h *TestHarness) LoadCorpus() error {
 	}
 
 	if len(h.Events) == 0 {
-		return fmt.Errorf("[harness] Corpus is empty. Expected events from GOgent-000.")
+		return fmt.Errorf("[harness] Corpus is empty. Expected events from goYoke-000.")
 	}
 
 	return nil
@@ -125,9 +125,9 @@ func (h *TestHarness) RunHook(binaryPath string, event *EventEntry) *HookResult 
 	cmd := exec.Command(binaryPath)
 	cmd.Env = append(os.Environ(),
 		"CLAUDE_PROJECT_DIR="+h.ProjectDir,
-		"GOGENT_PROJECT_DIR="+h.ProjectDir,
-		"GOGENT_STORAGE_PATH="+filepath.Join(h.ProjectDir, ".gogent", "failure-tracker.jsonl"),
-		"GOgent_TEST_MODE=1", // Signal test mode for hooks
+		"GOYOKE_PROJECT_DIR="+h.ProjectDir,
+		"GOYOKE_STORAGE_PATH="+filepath.Join(h.ProjectDir, ".goyoke", "failure-tracker.jsonl"),
+		"goYoke_TEST_MODE=1", // Signal test mode for hooks
 	)
 
 	// Use raw JSON to preserve exact formatting

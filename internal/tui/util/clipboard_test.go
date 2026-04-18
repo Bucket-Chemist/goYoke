@@ -3,7 +3,7 @@ package util_test
 import (
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // TestCopyToClipboard_FunctionExists verifies that CopyToClipboard is

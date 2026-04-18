@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all UI and bridge event handlers for AppModel's Update
 // method, plus the session persistence helper. Extracted from app.go as part
 // of TUI-043.
@@ -16,13 +16,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/settingstree"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // handleWindowSize handles tea.WindowSizeMsg: updates terminal dimensions,
@@ -50,10 +50,11 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	m.propagateContentSizes()
 
-	// Propagate size to the search overlay so centering is correct (TUI-059).
+	// Propagate size to overlays for correct centering.
 	if m.shared.searchOverlay != nil {
 		m.shared.searchOverlay.SetSize(msg.Width, msg.Height)
 	}
+	m.shared.modelModal.SetSize(msg.Width, msg.Height)
 
 	// Propagate terminal width to the hint bar for truncation (TUI-060).
 	if m.shared.hintBar != nil {
@@ -301,7 +302,7 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 			}
 
 			// Restart the CLI driver. SIGINT to the process group kills
-			// both the claude subprocess and gofortress-mcp (Go default
+			// both the claude subprocess and goyoke-mcp (Go default
 			// SIGINT = exit). The old driver is in DriverDead state and
 			// Start() requires DriverIdle, so we must create a fresh one.
 			// This mirrors the provider_switch.go and perm_mode.go patterns.
@@ -547,14 +548,14 @@ func (m AppModel) handleToastMsg(msg ToastMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleCWDChanged applies the new working directory: calls os.Chdir, sets
-// the GOGENT_CWD env var (read by spawner.go for cmd.Dir), and updates the
+// the GOYOKE_CWD env var (read by spawner.go for cmd.Dir), and updates the
 // status line display.
 func (m AppModel) handleCWDChanged(msg CWDChangedMsg) (tea.Model, tea.Cmd) {
 	if err := os.Chdir(msg.Path); err != nil {
 		log.Printf("[cwd] chdir failed: %v", err)
 		return m, nil
 	}
-	os.Setenv("GOGENT_CWD", msg.Path)
+	os.Setenv("GOYOKE_CWD", msg.Path)
 	m.statusLine.CWD = msg.Path
 	log.Printf("[cwd] changed to %s", msg.Path)
 	return m, func() tea.Msg {
@@ -800,23 +801,10 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 	ps := m.shared.providerState
 	cfg := ps.GetActiveConfig()
 
-	// No arg: list available models for the active provider.
+	// No arg: show the interactive model selector modal.
 	if msg.ModelID == "" {
-		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("Available models for %s:\n", cfg.Name))
-		currentModel := ps.GetActiveModel()
-		for _, mc := range cfg.Models {
-			marker := "  "
-			if mc.ID == currentModel {
-				marker = "▸ "
-			}
-			sb.WriteString(fmt.Sprintf("%s%s — %s\n", marker, mc.ID, mc.Description))
-		}
-		sb.WriteString("\nUsage: /model <name>")
-
-		if m.shared.claudePanel != nil {
-			m.shared.claudePanel.AppendSystemMessage(sb.String())
-		}
+		m.shared.modelModal.SetSize(m.width, m.height)
+		m.shared.modelModal.Show(cfg.Models, ps.GetActiveModel())
 		return m, nil
 	}
 
@@ -830,27 +818,18 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 		}
 	}
 
-	// Validate that the requested model belongs to the active provider.
-	var found bool
+	// Check known models; allow unknown IDs as passthrough to Claude CLI.
 	var displayName string
+	var isKnown bool
 	for _, mc := range cfg.Models {
 		if mc.ID == msg.ModelID {
-			found = true
 			displayName = mc.DisplayName
+			isKnown = true
 			break
 		}
 	}
-	if !found {
-		ids := make([]string, 0, len(cfg.Models))
-		for _, mc := range cfg.Models {
-			ids = append(ids, mc.ID)
-		}
-		return m, func() tea.Msg {
-			return ToastMsg{
-				Text:  fmt.Sprintf("Unknown model %q for %s. Valid: %s", msg.ModelID, cfg.Name, strings.Join(ids, ", ")),
-				Level: ToastLevelError,
-			}
-		}
+	if !isKnown {
+		displayName = msg.ModelID + " (custom)"
 	}
 
 	// Already on this model — no-op.

@@ -1,5 +1,5 @@
 // Package state provides shared, thread-safe state containers for the
-// GOgent-Fortress TUI. It has no dependency on the model, cli, bridge, or any
+// goYoke TUI. It has no dependency on the model, cli, bridge, or any
 // Bubbletea packages, keeping the import graph acyclic.
 package state
 
@@ -41,6 +41,16 @@ type ModelConfig struct {
 	Description string
 	// ContextWindow is the maximum context size in tokens.
 	ContextWindow int
+	// Tier groups models visually: "flagship", "balanced", "fast".
+	Tier string
+	// Speed is a human-readable speed indicator: "slow", "moderate", "fast".
+	Speed string
+	// Strengths lists key capabilities for display in the model modal.
+	Strengths []string
+	// CostTier is a relative cost indicator: "$$$", "$$", "$".
+	CostTier string
+	// APIModelID is the full API model identifier shown as reference.
+	APIModelID string
 }
 
 // ---------------------------------------------------------------------------
@@ -206,20 +216,30 @@ func (ps *ProviderState) SwitchProvider(id ProviderID) error {
 }
 
 // SetActiveModel sets the selected model for the currently active provider.
-//
-// Returns ErrModelNotFound if modelID is not offered by the active provider.
+// Unknown model IDs are accepted as passthrough to the Claude CLI.
 func (ps *ProviderState) SetActiveModel(modelID string) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
+	// Accept known models directly; allow unknown IDs as passthrough
+	// so users can specify any Claude CLI model ID (e.g. "claude-opus-4-6").
+	ps.models[ps.active] = modelID
+	return nil
+}
+
+// IsKnownModel reports whether modelID matches a configured model for the
+// active provider. Callers use this to distinguish known vs passthrough IDs.
+func (ps *ProviderState) IsKnownModel(modelID string) bool {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
 	cfg := ps.configs[ps.active]
 	for _, m := range cfg.Models {
 		if m.ID == modelID {
-			ps.models[ps.active] = modelID
-			return nil
+			return true
 		}
 	}
-	return fmt.Errorf("set model %q on provider %q: %w", modelID, ps.active, ErrModelNotFound)
+	return false
 }
 
 // AppendMessage appends msg to the message history of the active provider.
@@ -370,6 +390,23 @@ func (ps *ProviderState) GetActiveModel() string {
 	defer ps.mu.RUnlock()
 
 	return ps.models[ps.active]
+}
+
+// GetActiveCLIModel returns the CLI-compatible model ID for the active model.
+// If the active model has an APIModelID configured, that is returned;
+// otherwise the raw model ID is returned as a passthrough.
+func (ps *ProviderState) GetActiveCLIModel() string {
+	ps.mu.RLock()
+	defer ps.mu.RUnlock()
+
+	modelID := ps.models[ps.active]
+	cfg := ps.configs[ps.active]
+	for _, m := range cfg.Models {
+		if m.ID == modelID && m.APIModelID != "" {
+			return m.APIModelID
+		}
+	}
+	return modelID
 }
 
 // GetActiveMessages returns a copy of the message history for the active
@@ -536,22 +573,59 @@ func DefaultProviders() map[ProviderID]ProviderConfig {
 			EnvVars:     nil,
 			Models: []ModelConfig{
 				{
-					ID:            "opus",
-					DisplayName:   "Opus",
-					Description:   "Most capable - deep reasoning, complex tasks",
+					ID:            "opus-4-6",
+					DisplayName:   "Opus 4.6",
+					Description:   "Proven flagship — 1M context available",
 					ContextWindow: 200_000,
+					Tier:          "flagship",
+					Speed:         "slow",
+					Strengths:     []string{"deep reasoning", "complex analysis", "coding", "1M context"},
+					CostTier:      "$$$",
+					APIModelID:    "claude-opus-4-6[1m]",
+				},
+				{
+					ID:            "opus-4-7",
+					DisplayName:   "Opus 4.7",
+					Description:   "Newest flagship — fastest Opus, enhanced coding",
+					ContextWindow: 200_000,
+					Tier:          "flagship",
+					Speed:         "slow",
+					Strengths:     []string{"deep reasoning", "complex analysis", "coding", "creative writing"},
+					CostTier:      "$$$",
+					APIModelID:    "claude-opus-4-7",
+				},
+				{
+					ID:            "opus",
+					DisplayName:   "Opus (latest)",
+					Description:   "Alias — resolves to latest Opus (currently 4.7)",
+					ContextWindow: 200_000,
+					Tier:          "flagship",
+					Speed:         "slow",
+					Strengths:     []string{"deep reasoning", "complex analysis", "coding", "creative writing"},
+					CostTier:      "$$$",
+					APIModelID:    "claude-opus-4-7",
 				},
 				{
 					ID:            "sonnet",
-					DisplayName:   "Sonnet",
-					Description:   "Balanced - quality and speed",
+					DisplayName:   "Sonnet (latest)",
+					Description:   "Balanced — resolves to latest Sonnet",
 					ContextWindow: 200_000,
+					Tier:          "balanced",
+					Speed:         "moderate",
+					Strengths:     []string{"implementation", "analysis", "good value"},
+					CostTier:      "$$",
+					APIModelID:    "claude-sonnet-4-6",
 				},
 				{
 					ID:            "haiku",
-					DisplayName:   "Haiku",
-					Description:   "Fastest - simple tasks, low cost",
+					DisplayName:   "Haiku (latest)",
+					Description:   "Fastest — resolves to latest Haiku",
 					ContextWindow: 200_000,
+					Tier:          "fast",
+					Speed:         "fast",
+					Strengths:     []string{"simple tasks", "low latency", "cost efficient"},
+					CostTier:      "$",
+					APIModelID:    "claude-haiku-4-5-20251001",
 				},
 			},
 		},

@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 func TestNewTaskBoardModel(t *testing.T) {

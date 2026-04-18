@@ -1,0 +1,48 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "blocked",
+        "failed"
+      ]
+    },
+    "domain": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "confirmedBugCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "artifactsUpdated": {
+      "type": "boolean"
+    },
+    "testsRun": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "status",
+    "domain",
+    "summary",
+    "confirmedBugCount",
+    "artifactsUpdated",
+    "testsRun",
+    "notes"
+  ],
+  "additionalProperties": false
+}

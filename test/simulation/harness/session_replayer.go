@@ -28,7 +28,7 @@ type ReplayEvent struct {
 	Timestamp int64 `json:"ts"`
 
 	// HookType determines which CLI processes this event.
-	// Valid values: "PreToolUse" (gogent-validate), "PostToolUse" (gogent-sharp-edge)
+	// Valid values: "PreToolUse" (goyoke-validate), "PostToolUse" (goyoke-sharp-edge)
 	HookType string `json:"hook_type"`
 
 	// Tool identification (mirrors ToolEvent for consistency)
@@ -177,8 +177,8 @@ func (r *SessionReplayer) ReplaySession(session ReplaySession) ReplayResult {
 
 	// Initialize required directories for CLIs to write to
 	requiredDirs := []string{
-		filepath.Join(sessionTempDir, ".gogent", "memory"),
-		filepath.Join(sessionTempDir, ".gogent"),
+		filepath.Join(sessionTempDir, ".goyoke", "memory"),
+		filepath.Join(sessionTempDir, ".goyoke"),
 	}
 	for _, dir := range requiredDirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -213,7 +213,7 @@ func (r *SessionReplayer) ReplaySession(session ReplaySession) ReplayResult {
 
 		// Check for sharp edge creation after PostToolUse events
 		if event.HookType == "PostToolUse" {
-			pendingPath := filepath.Join(sessionTempDir, ".gogent", "memory", "pending-learnings.jsonl")
+			pendingPath := filepath.Join(sessionTempDir, ".goyoke", "memory", "pending-learnings.jsonl")
 			if content, err := os.ReadFile(pendingPath); err == nil {
 				sharpEdgesCreated = countJSONLLines(content)
 			}
@@ -349,20 +349,20 @@ func (r *SessionReplayer) buildEnv(tempDir string) []string {
 
 	// Test isolation paths
 	if r.schemaPath != "" {
-		env = append(env, "GOGENT_ROUTING_SCHEMA="+r.schemaPath)
+		env = append(env, "GOYOKE_ROUTING_SCHEMA="+r.schemaPath)
 	}
 	if r.agentsPath != "" {
-		env = append(env, "GOGENT_AGENTS_INDEX="+r.agentsPath)
+		env = append(env, "GOYOKE_AGENTS_INDEX="+r.agentsPath)
 	}
 	if tempDir != "" {
-		env = append(env, "GOGENT_PROJECT_DIR="+tempDir)
-		env = append(env, "GOGENT_STORAGE_PATH="+filepath.Join(tempDir, ".gogent", "failure-tracker.jsonl"))
+		env = append(env, "GOYOKE_PROJECT_DIR="+tempDir)
+		env = append(env, "GOYOKE_STORAGE_PATH="+filepath.Join(tempDir, ".goyoke", "failure-tracker.jsonl"))
 	}
 
 	// Set max failures for deterministic threshold testing
-	env = append(env, "GOGENT_MAX_FAILURES=3")
+	env = append(env, "GOYOKE_MAX_FAILURES=3")
 	// Very long window so time-based expiry doesn't affect tests
-	env = append(env, "GOGENT_FAILURE_WINDOW=999999999")
+	env = append(env, "GOYOKE_FAILURE_WINDOW=999999999")
 
 	return env
 }
@@ -385,7 +385,7 @@ func (r *SessionReplayer) validateExpectations(expected ReplayExpectations, temp
 
 	// Check handoff creation
 	if expected.HandoffCreated {
-		handoffPath := filepath.Join(tempDir, ".gogent", "memory", "handoffs.jsonl")
+		handoffPath := filepath.Join(tempDir, ".goyoke", "memory", "handoffs.jsonl")
 		if _, err := os.Stat(handoffPath); os.IsNotExist(err) {
 			errors = append(errors, "handoff_created: expected handoffs.jsonl to exist")
 		}

@@ -9,7 +9,7 @@
       ".claude/memory/decisions.json": "[{\"id\":\"dec-001\",\"decision\":\"Use Go for CLI\",\"rationale\":\"Performance\"}]"
     },
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {
@@ -30,5 +30,5 @@
     },
     "exit_code": 0
   },
-  "notes": "Tests that gogent-archive handles multiple artifact types in a single session"
+  "notes": "Tests that goyoke-archive handles multiple artifact types in a single session"
 }

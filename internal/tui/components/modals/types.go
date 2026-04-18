@@ -1,4 +1,4 @@
-// Package modals implements the modal dialog system for the GOgent-Fortress TUI.
+// Package modals implements the modal dialog system for the goYoke TUI.
 // It provides five modal types (Ask, Confirm, Input, Select, Permission) with
 // sequential queue management — only one modal is ever shown at a time.
 package modals

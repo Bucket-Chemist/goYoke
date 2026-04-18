@@ -7,7 +7,7 @@
 ---
 
 - **Owner:** go-pro (Sonnet)
-- **Files:** `cmd/gofortress/main.go`, fallback logic
+- **Files:** `cmd/goyoke/main.go`, fallback logic
 - **Complexity:** Medium
 - **Time:** 2 days
 - **Dependencies:** Task 3.1

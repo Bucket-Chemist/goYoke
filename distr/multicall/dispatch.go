@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Dispatch is the top-level entry point for the gofortress multi-call binary.
+// Dispatch is the top-level entry point for the goyoke multi-call binary.
 //
 // Resolution order:
 //  1. Derive invocation name from filepath.Base(os.Args[0]), stripping ".exe".
@@ -27,24 +27,24 @@ func Dispatch() {
 		return
 	}
 
-	// Fall through: the binary was invoked as "gofortress [subcommand]".
+	// Fall through: the binary was invoked as "goyoke [subcommand]".
 	if err := buildRootCmd().Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-// buildRootCmd constructs the Cobra command tree for the gofortress surface.
+// buildRootCmd constructs the Cobra command tree for the goyoke surface.
 // All subcommands are placeholder stubs; real implementations land in later tickets.
 func buildRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "gofortress",
-		Short: "GOgent Fortress — unified hook and tooling binary",
-		Long: `gofortress is the multi-call binary for GOgent Fortress.
+		Use:   "goyoke",
+		Short: "goYoke — unified hook and tooling binary",
+		Long: `goyoke is the multi-call binary for goYoke.
 
-When invoked via a symlink named after a hook (e.g. gogent-validate), it
+When invoked via a symlink named after a hook (e.g. goyoke-validate), it
 dispatches to the corresponding hook implementation.
 
-When invoked directly as 'gofortress', it exposes administrative subcommands
+When invoked directly as 'goyoke', it exposes administrative subcommands
 for managing the installation.`,
 	}
 
@@ -60,9 +60,9 @@ for managing the installation.`,
 func initSubCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "init",
-		Short: "Initialise GOgent Fortress in the current directory",
+		Short: "Initialise goYoke in the current directory",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("not yet wired: gofortress init")
+			fmt.Println("not yet wired: goyoke init")
 			return nil
 		},
 	}
@@ -71,9 +71,9 @@ func initSubCmd() *cobra.Command {
 func upgradeSubCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade GOgent Fortress binaries to the latest release",
+		Short: "Upgrade goYoke binaries to the latest release",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("not yet wired: gofortress upgrade")
+			fmt.Println("not yet wired: goyoke upgrade")
 			return nil
 		},
 	}
@@ -82,9 +82,9 @@ func upgradeSubCmd() *cobra.Command {
 func doctorSubCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
-		Short: "Check the GOgent Fortress installation for problems",
+		Short: "Check the goYoke installation for problems",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("not yet wired: gofortress doctor")
+			fmt.Println("not yet wired: goyoke doctor")
 			return nil
 		},
 	}
@@ -93,9 +93,9 @@ func doctorSubCmd() *cobra.Command {
 func versionSubCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print gofortress version information",
+		Short: "Print goyoke version information",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("not yet wired: gofortress version")
+			fmt.Println("not yet wired: goyoke version")
 			return nil
 		},
 	}
@@ -104,9 +104,9 @@ func versionSubCmd() *cobra.Command {
 func agentsSubCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "agents",
-		Short: "List or manage registered GOgent agents",
+		Short: "List or manage registered goYoke agents",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println("not yet wired: gofortress agents")
+			fmt.Println("not yet wired: goyoke agents")
 			return nil
 		},
 	}

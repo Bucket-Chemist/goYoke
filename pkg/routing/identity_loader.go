@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 const (
@@ -99,23 +99,23 @@ func StripYAMLFrontmatter(content string) string {
 }
 
 // GetSessionDir reads the current session directory path.
-// First checks GOGENT_SESSION_DIR (set directly by team-run for spawned agents),
+// First checks GOYOKE_SESSION_DIR (set directly by team-run for spawned agents),
 // then falls back to reading the current-session marker file using project dir resolution:
-// GOGENT_PROJECT_ROOT → GOGENT_PROJECT_DIR → CLAUDE_PROJECT_DIR → os.Getwd().
+// GOYOKE_PROJECT_ROOT → GOYOKE_PROJECT_DIR → CLAUDE_PROJECT_DIR → os.Getwd().
 // Returns empty string if unavailable.
 //
 // Note: Cannot import pkg/session (circular dependency via sharp_edge_utils.go),
 // so env var resolution is inlined here.
 func GetSessionDir() string {
 	// Direct path: team-run sets this for spawned CLI processes
-	if dir := os.Getenv("GOGENT_SESSION_DIR"); dir != "" {
+	if dir := os.Getenv("GOYOKE_SESSION_DIR"); dir != "" {
 		return dir
 	}
 
 	// File-based path: read from current-session marker
-	projectDir := os.Getenv("GOGENT_PROJECT_ROOT")
+	projectDir := os.Getenv("GOYOKE_PROJECT_ROOT")
 	if projectDir == "" {
-		projectDir = os.Getenv("GOGENT_PROJECT_DIR")
+		projectDir = os.Getenv("GOYOKE_PROJECT_DIR")
 	}
 	if projectDir == "" {
 		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
@@ -128,14 +128,14 @@ func GetSessionDir() string {
 	}
 	data, err := os.ReadFile(filepath.Join(config.RuntimeDir(projectDir), "current-session"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.gogent/current-session\n", projectDir)
+		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.goyoke/current-session\n", projectDir)
 		return ""
 	}
 	return strings.TrimSpace(string(data))
 }
 
 // BuildFullAgentContext builds complete agent context: identity + rules + conventions.
-// Unified entry point for both Task() (gogent-validate) and team-run (envelope.go) paths.
+// Unified entry point for both Task() (goyoke-validate) and team-run (envelope.go) paths.
 //
 // Injection order:
 //  1. Agent identity (from ~/.claude/agents/{agentID}/{agentID}.md body)

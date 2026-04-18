@@ -11,7 +11,7 @@ import (
 func TestUpdateTierFromMetrics_Fresh(t *testing.T) {
 	// Setup temp directories
 	tmpProject := t.TempDir()
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	metricsDir := filepath.Join(tmpProject, ".claude", "tmp")
 	if err := os.MkdirAll(metricsDir, 0755); err != nil {
@@ -21,7 +21,7 @@ func TestUpdateTierFromMetrics_Fresh(t *testing.T) {
 	// Override XDG_RUNTIME_DIR for testing
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
 	// Write fresh metrics recommending "haiku"
 	metrics := ScoutMetrics{
@@ -56,7 +56,7 @@ func TestUpdateTierFromMetrics_Fresh(t *testing.T) {
 
 func TestUpdateTierFromMetrics_Stale(t *testing.T) {
 	tmpProject := t.TempDir()
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	metricsDir := filepath.Join(tmpProject, ".claude", "tmp")
 	if err := os.MkdirAll(metricsDir, 0755); err != nil {
@@ -66,7 +66,7 @@ func TestUpdateTierFromMetrics_Stale(t *testing.T) {
 	// Override XDG_RUNTIME_DIR for testing
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
 	// Write stale metrics (7 minutes old)
 	metrics := ScoutMetrics{
@@ -100,12 +100,12 @@ func TestUpdateTierFromMetrics_Stale(t *testing.T) {
 }
 
 func TestGetCurrentTier_NoFile(t *testing.T) {
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	// Override XDG_RUNTIME_DIR for testing
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
 	// No tier file exists
 	tier, err := GetCurrentTier()
@@ -120,12 +120,12 @@ func TestGetCurrentTier_NoFile(t *testing.T) {
 
 func TestUpdateTierFromMetrics_NoMetrics(t *testing.T) {
 	tmpProject := t.TempDir()
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	// Override XDG_RUNTIME_DIR for testing
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
 	// No metrics file exists
 	err := UpdateTierFromMetrics(tmpProject)
@@ -135,21 +135,21 @@ func TestUpdateTierFromMetrics_NoMetrics(t *testing.T) {
 }
 
 func TestGetCurrentTier_EmptyFile(t *testing.T) {
-	tmpGOgent := t.TempDir()
+	tmpgoYoke := t.TempDir()
 
 	// Override XDG_RUNTIME_DIR for testing
 	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
 	defer os.Setenv("XDG_RUNTIME_DIR", origRuntime)
-	os.Setenv("XDG_RUNTIME_DIR", tmpGOgent)
+	os.Setenv("XDG_RUNTIME_DIR", tmpgoYoke)
 
-	// Create GOgent directory
-	gogentDir := filepath.Join(tmpGOgent, "gogent")
-	if err := os.MkdirAll(gogentDir, 0755); err != nil {
-		t.Fatalf("Failed to create gogent dir: %v", err)
+	// Create goYoke directory
+	goyokeDir := filepath.Join(tmpgoYoke, "goyoke")
+	if err := os.MkdirAll(goyokeDir, 0755); err != nil {
+		t.Fatalf("Failed to create goyoke dir: %v", err)
 	}
 
 	// Create empty tier file
-	tierPath := filepath.Join(gogentDir, "current-tier")
+	tierPath := filepath.Join(goyokeDir, "current-tier")
 	if err := os.WriteFile(tierPath, []byte(""), 0644); err != nil {
 		t.Fatalf("Failed to write empty tier file: %v", err)
 	}

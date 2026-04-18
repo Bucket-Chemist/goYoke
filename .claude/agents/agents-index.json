@@ -1052,7 +1052,7 @@
         "TaskCreate",
         "TaskUpdate",
         "TaskGet",
-        "mcp__gofortress__spawn_agent"
+        "mcp__goyoke__spawn_agent"
       ],
       "cli_flags": {
         "allowed_tools": [
@@ -1061,8 +1061,8 @@
           "Grep",
           "Bash",
           "Write",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -1199,7 +1199,7 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__ask_user"
+          "mcp__goyoke-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1281,7 +1281,7 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__ask_user"
+          "mcp__goyoke-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1395,10 +1395,10 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__ask_user",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result",
-          "mcp__gofortress-interactive__team_run"
+          "mcp__goyoke-interactive__ask_user",
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result",
+          "mcp__goyoke-interactive__team_run"
         ]
       },
       "auto_activate": null,
@@ -1635,9 +1635,9 @@
       "output_format": "json",
       "output_file": ".claude/tmp/scout_metrics.json",
       "cost_ceiling_usd": 0.02,
-      "fallback_for": "gogent-scout native backend",
+      "fallback_for": "goyoke-scout native backend",
       "sharp_edges_count": 2,
-      "description": "Legacy fallback scout. Prefer gogent-scout which auto-routes between native and Gemini backends.",
+      "description": "Legacy fallback scout. Prefer goyoke-scout which auto-routes between native and Gemini backends.",
       "context_requirements": {
         "rules": [],
         "conventions": {}
@@ -1645,13 +1645,13 @@
       "subagent_type": "Haiku Scout"
     },
     {
-      "id": "gogent-scout",
+      "id": "goyoke-scout",
       "parallelization_template": "A",
-      "name": "GOgent Smart Scout",
+      "name": "goYoke Smart Scout",
       "model": "native",
       "tier": 1,
       "category": "reconnaissance",
-      "path": "cmd/gogent-scout",
+      "path": "cmd/goyoke-scout",
       "triggers": [
         "assess scope",
         "scout",
@@ -1664,7 +1664,7 @@
       "tools": [
         "Bash"
       ],
-      "invocation": "Bash: gogent-scout <target> \"<instruction>\"",
+      "invocation": "Bash: goyoke-scout <target> \"<instruction>\"",
       "backends": {
         "native": "score < 40 (fast, basic metrics)",
         "gemini": "score >= 40 (Gemini 3 Flash, semantic analysis)"
@@ -1683,7 +1683,7 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "GOgent Smart Scout",
+      "subagent_type": "goYoke Smart Scout",
       "cli_flags": {
         "allowed_tools": [
           "Bash"
@@ -2043,7 +2043,7 @@
         "Read",
         "Glob",
         "Grep",
-        "mcp__gofortress__spawn_agent",
+        "mcp__goyoke__spawn_agent",
         "Write"
       ],
       "cli_flags": {
@@ -2052,8 +2052,8 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -2112,7 +2112,7 @@
         "TaskCreate",
         "TaskUpdate",
         "TaskGet",
-        "mcp__gofortress__spawn_agent"
+        "mcp__goyoke__spawn_agent"
       ],
       "cli_flags": {
         "allowed_tools": [
@@ -2120,8 +2120,8 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -3158,6 +3158,53 @@
       },
       "subagent_type": "Cleanup Synthesizer",
       "interactive": false
+    },
+    {
+      "id": "plan-harmonizer",
+      "parallelization_template": "D",
+      "name": "Plan Harmonizer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "analysis",
+      "path": "plan-harmonizer",
+      "triggers": [
+        "harmonize plan",
+        "refine plan",
+        "enrich plan"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Write"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Write"
+        ]
+      },
+      "auto_activate": null,
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "conventions_required": [
+        "go.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Enriches implementation plans with staff review findings, dependency validation, and readiness scoring",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Plan Harmonizer"
     }
   ],
   "routing_rules": {
@@ -3204,7 +3251,7 @@
         "single file operation",
         "trivial task (typo, config)"
       ],
-      "primary": "gogent-scout",
+      "primary": "goyoke-scout",
       "fallback": "haiku-scout",
       "output": ".claude/tmp/scout_metrics.json"
     },
@@ -3305,7 +3352,7 @@
     "files": {
       "scout_metrics.json": {
         "written_by": [
-          "gogent-scout",
+          "goyoke-scout",
           "haiku-scout"
         ],
         "read_by": [
@@ -3360,10 +3407,11 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "braintrust"
     },
@@ -3378,10 +3426,11 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "code-review"
     },
@@ -3396,10 +3445,11 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "implementation"
     },
@@ -3414,10 +3464,11 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "cleanup"
     }

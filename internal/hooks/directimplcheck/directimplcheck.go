@@ -1,4 +1,4 @@
-// Package directimplcheck implements the gogent-direct-impl-check hook.
+// Package directimplcheck implements the goyoke-direct-impl-check hook.
 // It warns when the router writes implementation code directly instead of delegating.
 package directimplcheck
 
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // DefaultTimeout is the read timeout for stdin events.
@@ -22,7 +22,7 @@ func GetLogPath() string {
 		home, _ := os.UserHomeDir()
 		dataHome = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(dataHome, "gogent-fortress", "direct-impl-check.jsonl")
+	return filepath.Join(dataHome, "goyoke-fortress", "direct-impl-check.jsonl")
 }
 
 // LogDirectImplCheck writes a direct implementation detection event to the log file.
@@ -129,7 +129,7 @@ func CountLines(content string) int {
 	return strings.Count(content, "\n") + 1
 }
 
-// Main is the entrypoint for the gogent-direct-impl-check hook.
+// Main is the entrypoint for the goyoke-direct-impl-check hook.
 func Main() {
 	schema, err := routing.LoadSchema()
 	if err != nil {

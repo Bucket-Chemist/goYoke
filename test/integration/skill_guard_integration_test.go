@@ -22,7 +22,7 @@ var (
 	buildErr         error
 )
 
-// buildSkillGuard builds the gogent-skill-guard binary once per test run
+// buildSkillGuard builds the goyoke-skill-guard binary once per test run
 func buildSkillGuard(t *testing.T) string {
 	t.Helper()
 	buildOnce.Do(func() {
@@ -36,8 +36,8 @@ func buildSkillGuard(t *testing.T) string {
 
 		// Use os.TempDir() not t.TempDir() - binary needs to persist across tests
 		tmpDir := os.TempDir()
-		skillGuardBinary = filepath.Join(tmpDir, fmt.Sprintf("gogent-skill-guard-test-%d", time.Now().UnixNano()))
-		cmd := exec.Command("go", "build", "-o", skillGuardBinary, "./cmd/gogent-skill-guard")
+		skillGuardBinary = filepath.Join(tmpDir, fmt.Sprintf("goyoke-skill-guard-test-%d", time.Now().UnixNano()))
+		cmd := exec.Command("go", "build", "-o", skillGuardBinary, "./cmd/goyoke-skill-guard")
 		cmd.Dir = projectRoot
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -105,7 +105,7 @@ func TestBinary_SkillSetupCreatesGuard(t *testing.T) {
 	stdin := `{"tool_name":"Skill","tool_input":{"skill":"review"}}`
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -149,7 +149,7 @@ func TestBinary_GuardBlocksTool(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -182,7 +182,7 @@ func TestBinary_GuardAllowsTool(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -206,7 +206,7 @@ func TestBinary_NoGuardPassesAll(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -234,7 +234,7 @@ func TestBinary_MultipleSkillsLastWins(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -278,7 +278,7 @@ func TestBinary_UnknownSkillPassesThrough(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -301,7 +301,7 @@ func TestBinary_TeamDirNaming(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -351,7 +351,7 @@ func TestBinary_InvalidJSON(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 
@@ -370,12 +370,12 @@ func TestBinary_InvalidJSON(t *testing.T) {
 	}
 }
 
-// TestBinary_MissingSessionDir tests behavior when GOGENT_SESSION_DIR is not set
+// TestBinary_MissingSessionDir tests behavior when GOYOKE_SESSION_DIR is not set
 func TestBinary_MissingSessionDir(t *testing.T) {
 	binary := buildSkillGuard(t)
 	configDir := setupConfigDir(t)
 
-	// No GOGENT_SESSION_DIR in environment - binary falls back to resolution chain
+	// No GOYOKE_SESSION_DIR in environment - binary falls back to resolution chain
 	env := append([]string{}, "CLAUDE_CONFIG_DIR="+configDir)
 
 	stdin := `{"tool_name":"Glob","tool_input":{"pattern":"*.go"}}`
@@ -393,7 +393,7 @@ func TestBinary_SkillToolAllowedDuringGuard(t *testing.T) {
 	configDir := setupConfigDir(t)
 
 	env := append(os.Environ(),
-		"GOGENT_SESSION_DIR="+sessionDir,
+		"GOYOKE_SESSION_DIR="+sessionDir,
 		"CLAUDE_CONFIG_DIR="+configDir,
 	)
 

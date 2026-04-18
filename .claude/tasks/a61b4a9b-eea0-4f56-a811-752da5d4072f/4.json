@@ -1,8 +1,8 @@
 {
   "id": "4",
-  "subject": "Update gogent-sharp-edge to include new agents in directory list",
-  "description": "**Priority**: CRITICAL\n**Agent**: go-pro\n**File**: cmd/gogent-sharp-edge/main.go\n\nThe `getAgentDirectories()` function is missing new agents, preventing sharp edge pattern matching.\n\n**Requirements**:\n1. Locate `getAgentDirectories()` function (lines 32-68)\n\n2. Add missing agents to the `agents` slice:\n   ```go\n   agents := []string{\n       // ... existing agents ...\n       \"typescript-pro\",\n       \"react-pro\",\n       \"backend-reviewer\",\n       \"frontend-reviewer\",\n       \"standards-reviewer\",\n       \"review-orchestrator\",\n   }\n   ```\n\n3. Verify the agent directories exist at runtime (the function already handles missing dirs gracefully)\n\n4. Add test case to main_test.go verifying new agents are in the list\n\n**Impact**: Without this fix, sharp edges from new agents won't be loaded for pattern matching during failure detection.",
-  "activeForm": "Updating gogent-sharp-edge agent list",
+  "subject": "Update goyoke-sharp-edge to include new agents in directory list",
+  "description": "**Priority**: CRITICAL\n**Agent**: go-pro\n**File**: cmd/goyoke-sharp-edge/main.go\n\nThe `getAgentDirectories()` function is missing new agents, preventing sharp edge pattern matching.\n\n**Requirements**:\n1. Locate `getAgentDirectories()` function (lines 32-68)\n\n2. Add missing agents to the `agents` slice:\n   ```go\n   agents := []string{\n       // ... existing agents ...\n       \"typescript-pro\",\n       \"react-pro\",\n       \"backend-reviewer\",\n       \"frontend-reviewer\",\n       \"standards-reviewer\",\n       \"review-orchestrator\",\n   }\n   ```\n\n3. Verify the agent directories exist at runtime (the function already handles missing dirs gracefully)\n\n4. Add test case to main_test.go verifying new agents are in the list\n\n**Impact**: Without this fix, sharp edges from new agents won't be loaded for pattern matching during failure detection.",
+  "activeForm": "Updating goyoke-sharp-edge agent list",
   "status": "pending",
   "blocks": [],
   "blockedBy": []

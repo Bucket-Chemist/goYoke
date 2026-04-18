@@ -1073,12 +1073,12 @@ func TestParseTaskInput_FromCorpus(t *testing.T) {
 }
 
 // ============================================================================
-// SubagentStop Event Tests (GOgent-063)
+// SubagentStop Event Tests (goYoke-063)
 // ============================================================================
 
 // Test ParseSubagentStopEvent with valid ACTUAL schema
 func TestParseSubagentStopEvent_Success(t *testing.T) {
-	// ACTUAL schema from GOgent-063a validation
+	// ACTUAL schema from goYoke-063a validation
 	jsonInput := `{
 		"hook_event_name": "SubagentStop",
 		"session_id": "test-session-12345",
@@ -1854,7 +1854,7 @@ func TestNormalizeAgentType(t *testing.T) {
 }
 
 // ============================================================================
-// ToolEvent Helper Methods Tests (GOgent-080)
+// ToolEvent Helper Methods Tests (goYoke-080)
 // ============================================================================
 
 func TestToolEvent_ExtractFilePath(t *testing.T) {
@@ -1996,7 +1996,7 @@ func TestToolEvent_IsWriteOperation(t *testing.T) {
 }
 
 // ============================================================================
-// PostToolEvent ML Telemetry Tests (GOgent-086b)
+// PostToolEvent ML Telemetry Tests (goYoke-086b)
 // ============================================================================
 
 // TestPostToolEvent_MLFields tests marshaling and unmarshaling of ML telemetry fields

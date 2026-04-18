@@ -1,5 +1,5 @@
 // Package agents implements the agent tree view and detail components for the
-// GOgent-Fortress TUI. It has no dependency on the model package; it imports
+// goYoke TUI. It has no dependency on the model package; it imports
 // only state and config to keep the import graph acyclic.
 package agents
 
@@ -11,9 +11,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------
