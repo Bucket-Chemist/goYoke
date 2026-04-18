@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/staff-architect.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/staff-architect.json",
   "title": "Staff-Architect Stdin Schema",
   "description": "Validates stdin for Staff-Architect (practical critical review) in braintrust workflow",
   "version": "1.0.0",

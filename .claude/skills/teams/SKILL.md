@@ -22,14 +22,14 @@ Follow these steps to generate the team listing:
 
 ### Step 1: Discover Session Directory
 
-1. Check environment variable `GOGENT_SESSION_DIR` first
-2. If unset, read `{project_root}/.gogent/current-session` marker file
-3. If neither exists, fallback to `{project_root}/.gogent/sessions/unknown`
-4. Team directories are located at: `{gogent_session_dir}/teams/*/config.json`
+1. Check environment variable `GOYOKE_SESSION_DIR` first
+2. If unset, read `{project_root}/.goyoke/current-session` marker file
+3. If neither exists, fallback to `{project_root}/.goyoke/sessions/unknown`
+4. Team directories are located at: `{goyoke_session_dir}/teams/*/config.json`
 
 If no session directory found:
 ```
-No active session found. Start a session first or set GOGENT_SESSION_DIR.
+No active session found. Start a session first or set GOYOKE_SESSION_DIR.
 ```
 
 If session found but no teams/ directory:
@@ -41,7 +41,7 @@ No teams found in current session.
 
 Use Bash to enumerate team directories:
 ```bash
-find $GOGENT_SESSION_DIR/teams -mindepth 1 -maxdepth 1 -type d -name '*.*'
+find $GOYOKE_SESSION_DIR/teams -mindepth 1 -maxdepth 1 -type d -name '*.*'
 ```
 
 Expected format: `{timestamp}.{name}/config.json`
@@ -170,7 +170,7 @@ Total: 4 teams | Running: 1 | Cost: $10.84
 
 | Error | Response |
 |-------|----------|
-| Session dir not found | "No active session found. Start a session first or set GOGENT_SESSION_DIR." |
+| Session dir not found | "No active session found. Start a session first or set GOYOKE_SESSION_DIR." |
 | No teams/ directory | "No teams found in current session." |
 | Malformed config.json | Skip team, log warning to user |
 | PID verification fails | Mark team as FAILED with stale indicator |

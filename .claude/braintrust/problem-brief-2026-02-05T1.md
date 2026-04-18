@@ -22,7 +22,7 @@ The user has confirmed:
 - **Session list behavior**: The 12+ entries are a BUG - should show only ONE current session
 - **Constraints**: Open to restructuring component hierarchy if it improves UX
 
-**Critical clarification from code review**: There is NO `SessionList.tsx` component. What appears as "session list" in the screenshot is actually the **AgentTree** component (`/home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/components/AgentTree.tsx`). The 12+ identical entries are likely agents being added repeatedly to the store, not sessions.
+**Critical clarification from code review**: There is NO `SessionList.tsx` component. What appears as "session list" in the screenshot is actually the **AgentTree** component (`/home/doktersmol/Documents/goYoke/packages/tui/src/components/AgentTree.tsx`). The 12+ identical entries are likely agents being added repeatedly to the store, not sessions.
 
 ### Success Criteria
 1. **Bug diagnosis**: Root cause analysis for each rendering issue

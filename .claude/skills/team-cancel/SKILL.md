@@ -6,7 +6,7 @@ version: 1.0.0
 
 # Team Cancel
 
-Gracefully stops a running orchestration team by sending SIGTERM to the gogent-team-run process. The process implements a graceful shutdown cascade: it catches SIGTERM, forwards it to all child Claude processes, waits up to 5 seconds for children to exit, sends SIGKILL to any remaining children, and cleans up.
+Gracefully stops a running orchestration team by sending SIGTERM to the goyoke-team-run process. The process implements a graceful shutdown cascade: it catches SIGTERM, forwards it to all child Claude processes, waits up to 5 seconds for children to exit, sends SIGKILL to any remaining children, and cleans up.
 
 ## Usage
 
@@ -32,9 +32,9 @@ Usage: /team-cancel <team-name>
 ### 2. Discover Session Directory
 
 Check in order:
-1. Environment variable `GOGENT_SESSION_DIR`
-2. Read `{project_root}/.gogent/current-session` marker file
-3. Fallback: `{project_root}/.gogent/sessions/unknown`
+1. Environment variable `GOYOKE_SESSION_DIR`
+2. Read `{project_root}/.goyoke/current-session` marker file
+3. Fallback: `{project_root}/.goyoke/sessions/unknown`
 
 If no session found:
 ```
@@ -43,12 +43,12 @@ Error: No active session directory found
 
 ### 3. Locate Team Directory
 
-Team directory pattern: `{gogent_session_dir}/teams/{team_name}/`
+Team directory pattern: `{goyoke_session_dir}/teams/{team_name}/`
 
 If directory doesn't exist:
 ```bash
 # List available teams
-ls -1 {gogent_session_dir}/teams/ 2>/dev/null || echo "none"
+ls -1 {goyoke_session_dir}/teams/ 2>/dev/null || echo "none"
 ```
 
 Output:
@@ -239,7 +239,7 @@ for wave in waves:
 
 ## Signal Cascade Behavior
 
-When gogent-team-run receives SIGTERM:
+When goyoke-team-run receives SIGTERM:
 1. Catches signal via Go signal.Notify
 2. Sends SIGTERM to all child Claude processes (tracked in ProcessRegistry)
 3. Waits up to 5 seconds for children to exit

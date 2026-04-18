@@ -1,6 +1,6 @@
 # Compound Engineering Plugin Integration Guide
 
-**For GOgent-Fortress Multi-Agent Architecture**
+**For goYoke Multi-Agent Architecture**
 
 Version: 1.0.0
 Date: 2026-01-30
@@ -100,9 +100,9 @@ export GEMINI_API_KEY="your-api-key"
 
 ## Architecture Comparison
 
-### GOgent-Fortress vs Compound Engineering
+### goYoke vs Compound Engineering
 
-| Aspect | GOgent-Fortress | Compound Engineering |
+| Aspect | goYoke | Compound Engineering |
 |--------|-----------------|----------------------|
 | **Philosophy** | Routing efficiency, cost optimization | Knowledge compounding, thorough review |
 | **Enforcement** | Hook binaries (deterministic) | Prompt-based (probabilistic) |
@@ -114,7 +114,7 @@ export GEMINI_API_KEY="your-api-key"
 
 ### Complementary Strengths
 
-**GOgent excels at:**
+**goYoke excels at:**
 - Cost-efficient routing (Haiku for mechanical work)
 - Hook-enforced constraints (cannot be bypassed)
 - ML telemetry and pattern learning
@@ -134,7 +134,7 @@ export GEMINI_API_KEY="your-api-key"
 
 ### No Conflicts (Safe to Use Immediately)
 
-| Plugin Component | GOgent Interaction | Status |
+| Plugin Component | goYoke Interaction | Status |
 |------------------|-------------------|--------|
 | `/workflows:plan` | Complements architect agent | ✅ Compatible |
 | `/workflows:work` | Complements orchestrator | ✅ Compatible |
@@ -146,23 +146,23 @@ export GEMINI_API_KEY="your-api-key"
 
 | Area | Issue | Mitigation |
 |------|-------|------------|
-| **Reviewer naming** | Plugin has `code-simplicity-reviewer`; GOgent has `code-reviewer` | Different tools - no collision |
-| **Task() validation** | Plugin spawns agents without subagent_type | `gogent-validate` may warn on unexpected patterns |
+| **Reviewer naming** | Plugin has `code-simplicity-reviewer`; goYoke has `code-reviewer` | Different tools - no collision |
+| **Task() validation** | Plugin spawns agents without subagent_type | `goyoke-validate` may warn on unexpected patterns |
 | **Model selection** | Plugin doesn't use tiered model routing | Plugin agents run at default model, not cost-optimized |
 
 ### Hook Interactions
 
-**PreToolUse (gogent-validate):**
+**PreToolUse (goyoke-validate):**
 - Plugin's `Task` calls don't specify `subagent_type`
 - Validation hook may inject warnings
 - **Impact:** Cosmetic warnings only; execution continues
 
-**PostToolUse (gogent-sharp-edge):**
+**PostToolUse (goyoke-sharp-edge):**
 - Plugin tool usage counted in telemetry
 - Routing reminders still fire every 10 tools
 - **Impact:** Normal behavior; no conflicts
 
-**SubagentStop (gogent-agent-endstate):**
+**SubagentStop (goyoke-agent-endstate):**
 - Plugin agents recorded in decision outcomes
 - **Impact:** Good - provides telemetry on plugin agent usage
 
@@ -177,15 +177,15 @@ User Request
      │
      ├─► Is this a Rails/Ruby task? ──YES──► Use Compound workflows
      │
-     ├─► Is this a Go task? ──YES──► Use GOgent routing (go-pro, go-tui, etc.)
+     ├─► Is this a Go task? ──YES──► Use goYoke routing (go-pro, go-tui, etc.)
      │
-     ├─► Unknown scope? ──YES──► Scout first (GOgent), then decide
+     ├─► Unknown scope? ──YES──► Scout first (goYoke), then decide
      │
      ├─► Multi-agent review needed? ──YES──► /workflows:review (Compound)
      │
      ├─► Document a solution? ──YES──► /workflows:compound
      │
-     └─► Otherwise ──► Standard GOgent routing
+     └─► Otherwise ──► Standard goYoke routing
 ```
 
 ### When to Use Compound
@@ -196,7 +196,7 @@ User Request
 4. **Rails development** - Use DHH/Kieran reviewers for Rails-specific patterns
 5. **Brainstorming** - Use `/workflows:brainstorm` before planning complex features
 
-### When to Use GOgent
+### When to Use goYoke
 
 1. **Go development** - Route to go-pro, go-tui, go-cli, go-concurrent
 2. **Cost optimization** - Haiku scouts before expensive work
@@ -211,7 +211,7 @@ User Request
 
 **Purpose:** Explore requirements before committing to a plan.
 
-**GOgent equivalent:** orchestrator (user interview mode)
+**goYoke equivalent:** orchestrator (user interview mode)
 
 **When to use:**
 - Feature is vague or has multiple valid approaches
@@ -228,7 +228,7 @@ User Request
 
 **Purpose:** Transform ideas into implementation plans.
 
-**GOgent equivalent:** architect (produces specs.md)
+**goYoke equivalent:** architect (produces specs.md)
 
 **Phases:**
 1. Idea refinement (or use existing brainstorm)
@@ -239,8 +239,8 @@ User Request
 **Output:** Structured markdown plan with checkboxes
 
 **Integration tip:**
-- For Go projects, run `scout` first via GOgent, then `/workflows:plan`
-- The plan command's local research complements GOgent's codebase-search
+- For Go projects, run `scout` first via goYoke, then `/workflows:plan`
+- The plan command's local research complements goYoke's codebase-search
 
 ---
 
@@ -248,7 +248,7 @@ User Request
 
 **Purpose:** Execute plans systematically.
 
-**GOgent equivalent:** orchestrator + implementation agents
+**goYoke equivalent:** orchestrator + implementation agents
 
 **Key features:**
 - Git worktree management (parallel development)
@@ -256,7 +256,7 @@ User Request
 - Incremental commits at logical boundaries
 
 **Integration tip:**
-- Works well with GOgent's TaskCreate/TaskUpdate tools
+- Works well with goYoke's TaskCreate/TaskUpdate tools
 - Respects your existing git workflow
 - Branch naming follows your conventions
 
@@ -266,7 +266,7 @@ User Request
 
 **Purpose:** Multi-agent code review before merge.
 
-**GOgent equivalent:** code-reviewer (single agent, Haiku)
+**goYoke equivalent:** code-reviewer (single agent, Haiku)
 
 **Agents launched in parallel:**
 
@@ -282,7 +282,7 @@ User Request
 
 **When to use:** Before merging significant PRs, especially Rails code.
 
-**Integration tip:** This is MORE thorough than GOgent's code-reviewer. Use for important PRs; use GOgent's code-reviewer for quick style checks.
+**Integration tip:** This is MORE thorough than goYoke's code-reviewer. Use for important PRs; use goYoke's code-reviewer for quick style checks.
 
 ---
 
@@ -290,7 +290,7 @@ User Request
 
 **Purpose:** Document solved problems for future reference.
 
-**GOgent equivalent:** memory-archivist (archives to .claude/memory/)
+**goYoke equivalent:** memory-archivist (archives to .claude/memory/)
 
 **Creates:** `docs/solutions/{category}/{filename}.md`
 
@@ -306,7 +306,7 @@ User Request
 - logic-errors/
 
 **Integration tip:**
-- GOgent archives to `.claude/memory/` (Claude-readable)
+- goYoke archives to `.claude/memory/` (Claude-readable)
 - Compound archives to `docs/solutions/` (human/team-readable)
 - Use BOTH for different audiences
 
@@ -316,7 +316,7 @@ User Request
 
 ### Review Agents (Compound)
 
-None of these conflict with GOgent's `code-reviewer`:
+None of these conflict with goYoke's `code-reviewer`:
 
 | Agent | Specialty | Use When |
 |-------|-----------|----------|
@@ -331,7 +331,7 @@ None of these conflict with GOgent's `code-reviewer`:
 
 ### Research Agents (Compound)
 
-These complement GOgent's `librarian`:
+These complement goYoke's `librarian`:
 
 | Agent | Specialty |
 |-------|-----------|
@@ -340,9 +340,9 @@ These complement GOgent's `librarian`:
 | `repo-research-analyst` | Repository conventions |
 | `git-history-analyzer` | Code evolution |
 
-### GOgent Agents (No Plugin Equivalent)
+### goYoke Agents (No Plugin Equivalent)
 
-| GOgent Agent | Keep Using For |
+| goYoke Agent | Keep Using For |
 |--------------|----------------|
 | `go-pro` | Go implementation |
 | `go-tui` | Bubbletea TUI |
@@ -375,7 +375,7 @@ Claude: [Uses Context7 MCP]
   3. Returns relevant Rails 8 documentation
 ```
 
-### Integration with GOgent
+### Integration with goYoke
 
 Context7 complements `librarian` agent:
 
@@ -406,7 +406,7 @@ skill: git-worktree
 # Keeps main branch clean
 ```
 
-**GOgent integration:** Works with any branch workflow. Worktrees are git-native.
+**goYoke integration:** Works with any branch workflow. Worktrees are git-native.
 
 #### 2. compound-docs
 
@@ -414,7 +414,7 @@ skill: git-worktree
 
 **Why useful:** Team knowledge persistence.
 
-**GOgent integration:** Complements memory-archivist:
+**goYoke integration:** Complements memory-archivist:
 - `compound-docs` → `docs/solutions/` (human-readable, team-shared)
 - `memory-archivist` → `.claude/memory/` (Claude-readable, session state)
 
@@ -422,7 +422,7 @@ skill: git-worktree
 
 **What:** Build AI agents using prompt-native patterns.
 
-**Why useful:** Designing your GOgent agents to be action + context parity compliant.
+**Why useful:** Designing your goYoke agents to be action + context parity compliant.
 
 **Key principle:** Every feature should be achievable by an AI agent, not just humans.
 
@@ -430,7 +430,7 @@ skill: git-worktree
 
 **What:** Guide for creating Claude Code skills.
 
-**Why useful:** Extending GOgent-Fortress with new skills.
+**Why useful:** Extending goYoke with new skills.
 
 #### 5. gemini-imagegen
 
@@ -440,7 +440,7 @@ skill: git-worktree
 - `GEMINI_API_KEY` environment variable
 - Python: `pip install google-genai pillow`
 
-**Not available in GOgent:** New capability.
+**Not available in goYoke:** New capability.
 
 #### 6. rclone
 
@@ -467,14 +467,14 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-### Recipe 2: Integrate Compound Docs with GOgent Memory
+### Recipe 2: Integrate Compound Docs with goYoke Memory
 
 Create a post-compound hook to notify memory-archivist:
 
 ```bash
 # .claude/hooks/post-compound.sh
 #!/bin/bash
-# After /workflows:compound creates a doc, also log to GOgent memory
+# After /workflows:compound creates a doc, also log to goYoke memory
 
 DOC_PATH="$1"
 if [ -f "$DOC_PATH" ]; then
@@ -487,7 +487,7 @@ if [ -f "$DOC_PATH" ]; then
 fi
 ```
 
-### Recipe 3: Route Rails Tasks to Compound, Go Tasks to GOgent
+### Recipe 3: Route Rails Tasks to Compound, Go Tasks to goYoke
 
 Add to your workflow decision prompt:
 
@@ -496,23 +496,23 @@ Add to your workflow decision prompt:
 
 When the task involves:
 - Rails, Ruby, ActiveRecord, ERB → Use `/workflows:*` commands
-- Go, Cobra, Bubbletea, JSONL → Use GOgent routing (go-pro, go-tui, etc.)
-- Unknown scope → Scout first (GOgent), then decide
+- Go, Cobra, Bubbletea, JSONL → Use goYoke routing (go-pro, go-tui, etc.)
+- Unknown scope → Scout first (goYoke), then decide
 ```
 
-### Recipe 4: Parallel Review (GOgent Scout + Compound Review)
+### Recipe 4: Parallel Review (goYoke Scout + Compound Review)
 
 For significant PRs:
 
 ```
-1. [GOgent Scout] Assess scope
+1. [goYoke Scout] Assess scope
    - Produces: .claude/tmp/scout_metrics.json
 
 2. [Compound Review] Multi-agent analysis
    - /workflows:review [PR number]
    - 14 agents in parallel
 
-3. [GOgent Archive] Capture learnings
+3. [goYoke Archive] Capture learnings
    - memory-archivist archives review outcomes
 ```
 
@@ -535,7 +535,7 @@ For significant PRs:
    ↓ (documents to docs/solutions/)
 ```
 
-### Pattern 2: Quick Go Implementation (GOgent Only)
+### Pattern 2: Quick Go Implementation (goYoke Only)
 
 ```
 User: "Add a --verbose flag to the CLI"
@@ -554,9 +554,9 @@ Output: Implementation complete
 ```
 User: "Refactor the authentication module"
 
-1. [GOgent Scout] Assess scope
+1. [goYoke Scout] Assess scope
 
-2. [GOgent Architect] Create plan
+2. [goYoke Architect] Create plan
    Task(architect) → specs.md with todos
 
 3. [Compound Work] Execute with worktrees
@@ -565,7 +565,7 @@ User: "Refactor the authentication module"
 4. [Compound Review] Pre-merge analysis
    /workflows:review PR# → 14-agent review
 
-5. [GOgent Archive + Compound Capture]
+5. [goYoke Archive + Compound Capture]
    - memory-archivist → .claude/memory/
    - /workflows:compound → docs/solutions/
 ```
@@ -581,7 +581,7 @@ User: "How do I use Hotwire Turbo frames in Rails?"
 2. [Compound Researcher] Deepen understanding
    Task(framework-docs-researcher) → Best practices
 
-3. [GOgent Librarian] Find examples
+3. [goYoke Librarian] Find examples
    Task(librarian) → GitHub permalinks to real implementations
 ```
 
@@ -595,22 +595,22 @@ User: "How do I use Hotwire Turbo frames in Rails?"
 
 **Fix:** Add manually to settings.json (see Recipe 1).
 
-### Issue: "gogent-validate warns about subagent_type"
+### Issue: "goyoke-validate warns about subagent_type"
 
 **Symptom:** Warnings when plugin spawns agents.
 
-**Why:** Plugin doesn't use GOgent's subagent_type convention.
+**Why:** Plugin doesn't use goYoke's subagent_type convention.
 
 **Impact:** Cosmetic only. Execution continues.
 
-**Optional fix:** Suppress warnings for plugin agents in gogent-validate.
+**Optional fix:** Suppress warnings for plugin agents in goyoke-validate.
 
 ### Issue: "Duplicate review effort"
 
-**Symptom:** Using both GOgent code-reviewer AND /workflows:review.
+**Symptom:** Using both goYoke code-reviewer AND /workflows:review.
 
 **Fix:** Choose one:
-- Quick checks → GOgent code-reviewer (Haiku, cheap)
+- Quick checks → goYoke code-reviewer (Haiku, cheap)
 - Thorough PR review → /workflows:review (14 agents, comprehensive)
 
 ### Issue: "Knowledge spread across two systems"
@@ -629,9 +629,9 @@ User: "How do I use Hotwire Turbo frames in Rails?"
 
 **Why:** Plugin doesn't implement tiered model selection.
 
-**Impact:** May cost more than equivalent GOgent routing.
+**Impact:** May cost more than equivalent goYoke routing.
 
-**Recommendation:** Use plugin for Rails/review (where expertise matters), use GOgent for Go (where cost optimization + expertise both apply).
+**Recommendation:** Use plugin for Rails/review (where expertise matters), use goYoke for Go (where cost optimization + expertise both apply).
 
 ---
 
@@ -639,15 +639,15 @@ User: "How do I use Hotwire Turbo frames in Rails?"
 
 | Situation | Use |
 |-----------|-----|
-| Go implementation | GOgent (go-pro, go-tui, go-cli) |
+| Go implementation | goYoke (go-pro, go-tui, go-cli) |
 | Rails implementation | Compound (kieran/dhh reviewers) |
-| Quick code check | GOgent (code-reviewer) |
+| Quick code check | goYoke (code-reviewer) |
 | Thorough PR review | Compound (/workflows:review) |
 | Framework docs lookup | Compound (Context7 MCP) |
-| Library source reading | GOgent (librarian) |
+| Library source reading | goYoke (librarian) |
 | Document a solution | Compound (/workflows:compound) |
-| Archive session state | GOgent (memory-archivist) |
-| Deep analysis | GOgent (/einstein) |
+| Archive session state | goYoke (memory-archivist) |
+| Deep analysis | goYoke (/einstein) |
 | Feature brainstorming | Compound (/workflows:brainstorm) |
 | Implementation planning | Either (architect vs /workflows:plan) |
 | Work execution | Compound (/workflows:work) for worktree isolation |

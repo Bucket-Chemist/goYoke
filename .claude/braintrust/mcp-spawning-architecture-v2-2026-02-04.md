@@ -224,7 +224,7 @@ export const spawnAgentTool = tool(
   The spawned agent runs as a real Claude Code CLI process with:
   - Full tool access (Read, Write, Bash, Glob, Grep, Edit, etc.)
   - Project context (CLAUDE.md, working directory, git state)
-  - Hook integration (gogent-validate, gogent-sharp-edge, etc.)
+  - Hook integration (goyoke-validate, goyoke-sharp-edge, etc.)
 
   Use this to delegate work from orchestrator agents to specialists.`,
   {
@@ -330,8 +330,8 @@ async function spawnCliAgent(
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
-        GOGENT_PARENT_AGENT: agentId,
-        GOGENT_EPIC_ID: args.epicId,
+        GOYOKE_PARENT_AGENT: agentId,
+        GOYOKE_EPIC_ID: args.epicId,
       },
     });
 
@@ -790,26 +790,26 @@ export function EpicOverview() {
 The MCP spawn_agent passes environment variables to track hierarchy:
 
 ```bash
-GOGENT_PARENT_AGENT=<parent-agent-id>
-GOGENT_EPIC_ID=<epic-id>
-GOGENT_SPAWN_METHOD=mcp-cli
-GOGENT_DEPTH=<nesting-depth>
+GOYOKE_PARENT_AGENT=<parent-agent-id>
+GOYOKE_EPIC_ID=<epic-id>
+GOYOKE_SPAWN_METHOD=mcp-cli
+GOYOKE_DEPTH=<nesting-depth>
 ```
 
-### 5.2 Enhanced gogent-validate Hook
+### 5.2 Enhanced goyoke-validate Hook
 
 Update to recognize MCP-spawned agents:
 
 ```go
-// cmd/gogent-validate/main.go additions
+// cmd/goyoke-validate/main.go additions
 
 func main() {
     // ... existing code ...
 
     // Check if this is an MCP-spawned agent
-    parentAgent := os.Getenv("GOGENT_PARENT_AGENT")
-    epicID := os.Getenv("GOGENT_EPIC_ID")
-    spawnMethod := os.Getenv("GOGENT_SPAWN_METHOD")
+    parentAgent := os.Getenv("GOYOKE_PARENT_AGENT")
+    epicID := os.Getenv("GOYOKE_EPIC_ID")
+    spawnMethod := os.Getenv("GOYOKE_SPAWN_METHOD")
 
     // Log with hierarchy context
     if parentAgent != "" {
@@ -865,7 +865,7 @@ The TUI watches telemetry files for real-time updates:
 import { watch } from 'chokidar';
 import { useAgentsStore } from '../store/slices/agents';
 
-const LIFECYCLE_PATH = `${process.env.XDG_DATA_HOME}/gogent/agent-lifecycle.jsonl`;
+const LIFECYCLE_PATH = `${process.env.XDG_DATA_HOME}/goyoke/agent-lifecycle.jsonl`;
 
 export function useTelemetry() {
   const { updateAgent, addAgent } = useAgentsStore();
@@ -921,7 +921,7 @@ Router spawns Mozart (via Task)
 │    - Compiles problem brief                                  │
 │                                                              │
 │ 3. Spawns Einstein via MCP:                                  │
-│    mcp__gofortress__spawn_agent({                            │
+│    mcp__goyoke__spawn_agent({                            │
 │      agent: "einstein",                                      │
 │      epicId: "braintrust-2026-02-04-abc123",                 │
 │      prompt: "AGENT: einstein\n\n[problem brief]\n\n..."     │
@@ -936,7 +936,7 @@ Router spawns Mozart (via Task)
 │    └─────────────────────────────────────────────────────┘   │
 │                                                              │
 │ 4. Spawns Staff-Architect via MCP (parallel with Einstein):  │
-│    mcp__gofortress__spawn_agent({                            │
+│    mcp__goyoke__spawn_agent({                            │
 │      agent: "staff-architect-critical-review",               │
 │      epicId: "braintrust-2026-02-04-abc123",                 │
 │      prompt: "AGENT: staff-architect...\n\n[problem brief]"  │
@@ -953,7 +953,7 @@ Router spawns Mozart (via Task)
 │ 5. Collects both analyses                                    │
 │                                                              │
 │ 6. Spawns Beethoven via MCP:                                 │
-│    mcp__gofortress__spawn_agent({                            │
+│    mcp__goyoke__spawn_agent({                            │
 │      agent: "beethoven",                                     │
 │      epicId: "braintrust-2026-02-04-abc123",                 │
 │      prompt: "AGENT: beethoven\n\n[both analyses]\n\n..."    │
@@ -988,7 +988,7 @@ Router spawns review-orchestrator (via Task)
 │ 2. Analyzes files to determine domains                       │
 │                                                              │
 │ 3. Spawns reviewers in PARALLEL via MCP:                     │
-│    mcp__gofortress__spawn_agents_parallel({                  │
+│    mcp__goyoke__spawn_agents_parallel({                  │
 │      epicId: "review-2026-02-04-xyz789",                     │
 │      agents: [                                               │
 │        { agent: "backend-reviewer", prompt: "..." },         │
@@ -1088,7 +1088,7 @@ Spawn Method Icons:
 
 ### Phase 3: Hook Integration
 - [ ] Add environment variables to spawned CLIs
-- [ ] Update gogent-validate for hierarchy tracking
+- [ ] Update goyoke-validate for hierarchy tracking
 - [ ] Update telemetry schema
 - [ ] Add telemetry file watching
 

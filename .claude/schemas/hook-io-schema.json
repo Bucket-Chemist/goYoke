@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/hook-io-schema.json",
-  "title": "GOgent Hook I/O Schema",
+  "$id": "https://goyoke-fortress/schemas/hook-io-schema.json",
+  "title": "goYoke Hook I/O Schema",
   "description": "Defines input/output contracts for Claude Code hooks",
   "version": "1.0.0",
 

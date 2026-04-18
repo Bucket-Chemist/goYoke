@@ -7,7 +7,7 @@
 ---
 
 - **Owner:** go-tui (Sonnet)
-- **Files:** `cmd/gofortress/main.go`
+- **Files:** `cmd/goyoke/main.go`
 - **Complexity:** Medium
 - **Time:** 2 days
 - **Dependencies:** Tasks 2.2, 2.3, 2.5
@@ -17,12 +17,12 @@
 2. Create channels for IPC
 3. Pass channels to TUI and MCP server
 4. Configure Claude CLI with MCP config (ISOLATED, not global)
-5. Add mcp__gofortress__ask_user to AllowedTools
+5. Add mcp__goyoke__ask_user to AllowedTools
 6. Manual testing
 7. Integration tests
 
 **Acceptance:**
-- [ ] gofortress starts with MCP server
+- [ ] goyoke starts with MCP server
 - [ ] Claude CLI connects to MCP server
 - [ ] ask_user tool calls work end-to-end
 - [ ] User can see and respond to prompts
@@ -32,12 +32,12 @@
 **Implementation Example:**
 
 ```go
-// cmd/gofortress/main.go
+// cmd/goyoke/main.go
 func main() {
     // Get unique paths for this instance
     pid := os.Getpid()
-    socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("gofortress-mcp-%d.sock", pid))
-    mcpConfigPath := filepath.Join(os.TempDir(), fmt.Sprintf("gofortress-mcp-%d.json", pid))
+    socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("goyoke-mcp-%d.sock", pid))
+    mcpConfigPath := filepath.Join(os.TempDir(), fmt.Sprintf("goyoke-mcp-%d.json", pid))
 
     // Start embedded MCP server
     mcpServer, err := mcp.NewServer(mcp.Config{
@@ -52,10 +52,10 @@ func main() {
         defer mcpServer.Stop()
         defer os.Remove(socketPath)
 
-        // Generate MCP config for THIS gofortress instance only
+        // Generate MCP config for THIS goyoke instance only
         mcpConfigJSON := fmt.Sprintf(`{
           "mcpServers": {
-            "gofortress": {
+            "goyoke": {
               "command": "%s",
               "transport": "unix"
             }
@@ -76,7 +76,7 @@ func main() {
     // Add MCP config ONLY if server started successfully
     if mcpServer != nil {
         claudeCfg.MCPConfig = mcpConfigPath  // Isolated, not global!
-        claudeCfg.AllowedTools = append(claudeCfg.AllowedTools, "mcp__gofortress__ask_user")
+        claudeCfg.AllowedTools = append(claudeCfg.AllowedTools, "mcp__goyoke__ask_user")
     }
 
     // Start TUI with channels connected to MCP server

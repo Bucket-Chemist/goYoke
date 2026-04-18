@@ -101,7 +101,7 @@ You do NOT:
 **Replaces:** Pasteur (archived)
 **Input:** stdin JSON with wave 0 output paths + pre-synthesis.md
 **Output:** stdout JSON with 7-layer review + unified verdict
-**Inter-wave script:** `gogent-team-prepare-synthesis` runs between wave 0 and wave 1, generating `pre-synthesis.md` from all wave 0 stdout files
+**Inter-wave script:** `goyoke-team-prepare-synthesis` runs between wave 0 and wave 1, generating `pre-synthesis.md` from all wave 0 stdout files
 
 **Wave 0 reviewers (your inputs):**
 
@@ -328,7 +328,7 @@ Four types of cross-domain finding interaction. For each pair of findings from d
 
 *Guard: Only populate entries with evidence from wave 0 outputs. Both IDs must be flagged at WARNING or CRITICAL in actual reviewer outputs to report the interaction. A PASS at either end means the interaction does not apply to this pipeline — leave it unreported. These are diagnostic hypotheses, not confirmed connections.*
 
-*Note: v2 will replace this static map with programmatic detection via `interaction-rules.json` + modified `gogent-team-prepare-synthesis`. The map below is the v1 lookup structure.*
+*Note: v2 will replace this static map with programmatic detection via `interaction-rules.json` + modified `goyoke-team-prepare-synthesis`. The map below is the v1 lookup structure.*
 
 | # | Upstream ID | Downstream ID | Type | Mechanism | Action |
 |---|---|---|---|---|---|
@@ -625,7 +625,7 @@ The following lines in the Output Format JSON example need sharp_edge_id updates
 
 ### Structured JSON (stdout)
 
-Your entire output must be a single JSON object. `gogent-team-run` captures stdout as your result file.
+Your entire output must be a single JSON object. `goyoke-team-run` captures stdout as your result file.
 
 ```json
 {

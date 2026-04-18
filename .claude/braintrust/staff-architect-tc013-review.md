@@ -4,7 +4,7 @@
 **Reviewer:** Staff Architect Critical Review
 **Input:** `tickets/team-coordination/tickets/TC-013a.md`, `TC-013b.md`, `TC-013c.md`
 **Supporting:** `ReviewOrch-team-bridge.md`, `ImplMgr-team-bridge.md`, `TC-020.md`
-**Verified Against:** Go source (`cmd/gogent-team-run/*.go`), JSON schemas (`schemas/stdin/*.json`), team templates (`schemas/teams/*.json`), contract files (`schemas/teams/stdin-stdout/*.json`), review skill (`skills/review/SKILL.md`), team-result skill (`skills/team-result/SKILL.md`)
+**Verified Against:** Go source (`cmd/goyoke-team-run/*.go`), JSON schemas (`schemas/stdin/*.json`), team templates (`schemas/teams/*.json`), contract files (`schemas/teams/stdin-stdout/*.json`), review skill (`skills/review/SKILL.md`), team-result skill (`skills/team-result/SKILL.md`)
 
 ---
 
@@ -61,7 +61,7 @@ This is presented as "options" without a decision. The arithmetic is worse than 
 2. Einstein spawns. `tryReserveBudget($5.00)` succeeds. Remaining = $0.00.
 3. Staff-Architect attempts spawn. `tryReserveBudget($5.00)` fails. Budget gate blocks.
 4. Wave 1 completes with only Einstein. Staff-Architect status = `pending` (never started).
-5. Inter-wave script runs `gogent-team-prepare-synthesis`. It reads `stdout_einstein.json` (exists) and `stdout_staff-architect.json` (DOES NOT EXIST). The prepare-synthesis binary has graceful degradation but produces a one-sided pre-synthesis.
+5. Inter-wave script runs `goyoke-team-prepare-synthesis`. It reads `stdout_einstein.json` (exists) and `stdout_staff-architect.json` (DOES NOT EXIST). The prepare-synthesis binary has graceful degradation but produces a one-sided pre-synthesis.
 6. Wave 2: Beethoven attempts spawn. Budget = (reconciled after Einstein, probably ~$0-2 remaining). `tryReserveBudget($5.00)` almost certainly fails.
 7. Result: Beethoven never runs. No synthesis produced. Braintrust is broken.
 
@@ -85,9 +85,9 @@ The ImplMgr-team-bridge.md (line 253) explicitly documents:
 
 Verified in `wave.go` lines 14-59: `runWaves` iterates `for waveIdx, wave := range tr.config.Waves` unconditionally. There is no check for failed members in previous waves. The only stops are budget exhaustion (line 19) and context cancellation (line 27-31).
 
-TC-013c presents this test case without scoping the `runWaves` code change as a deliverable. The Files to Create/Modify table (lines 155-165) lists only the new `gogent-plan-impl` binary and the SKILL.md. It does NOT list `cmd/gogent-team-run/wave.go`.
+TC-013c presents this test case without scoping the `runWaves` code change as a deliverable. The Files to Create/Modify table (lines 155-165) lists only the new `goyoke-plan-impl` binary and the SKILL.md. It does NOT list `cmd/goyoke-team-run/wave.go`.
 
-**Recommendation:** Add `cmd/gogent-team-run/wave.go` to TC-013c's Files to Create/Modify table. Scope the change explicitly: after each wave completes, check if any member has `status == "failed"`. If yes, skip subsequent waves and set their members to `status: "skipped"`. Add a new test to `wave_test.go`. Estimate: 0.5 day additional effort.
+**Recommendation:** Add `cmd/goyoke-team-run/wave.go` to TC-013c's Files to Create/Modify table. Scope the change explicitly: after each wave completes, check if any member has `status == "failed"`. If yes, skip subsequent waves and set their members to `status: "skipped"`. Add a new test to `wave_test.go`. Estimate: 0.5 day additional effort.
 
 ---
 
@@ -141,7 +141,7 @@ Option A is simpler and recommended. The contract file just needs a `files` arra
 | M-4 | Testing | TC-013a-c | No unit tests specified for config generators | Config generation is the core deliverable but only e2e tests described | Add unit test requirements |
 | M-5 | Architecture Smells | TC-013a | Review SKILL.md has no team-run path | Current skill describes only foreground orchestrator dispatch | Scope the SKILL.md rewrite |
 | M-6 | Contractor Readiness | TC-013b Section 1 | Mozart stdin template location unspecified | "Phase 2.5 (lines 370-429)" but line numbers will change after edit | Use section headers, not line numbers |
-| M-7 | Failure Modes | TC-013b Section 3 | Inter-wave script path resolution unverified | `on_complete_script: "gogent-team-prepare-synthesis"` -- binary must be on PATH | Add PATH verification step |
+| M-7 | Failure Modes | TC-013b Section 3 | Inter-wave script path resolution unverified | `on_complete_script: "goyoke-team-prepare-synthesis"` -- binary must be on PATH | Add PATH verification step |
 
 ---
 
@@ -157,7 +157,7 @@ TC-013a says "router generates config.json + stdin files directly" (line 21) and
 
 The bridge document provides a complete stdin example (lines 66-111) and launch sequence (lines 133-162). But the ticket itself does not reference these sections or say "follow the bridge doc steps."
 
-**Recommendation:** Add to TC-013a Section 1: "Follow the config generation procedure in `ReviewOrch-team-bridge.md` Sections 3-4 exactly. The bridge doc's stdin example is the authoritative template." Additionally, consider whether this should be a Go binary (like `gogent-plan-impl` for TC-013c) rather than LLM-generated JSON. LLM JSON generation is fragile; a small Go helper that takes git diff output and emits config.json + stdin files would be more reliable.
+**Recommendation:** Add to TC-013a Section 1: "Follow the config generation procedure in `ReviewOrch-team-bridge.md` Sections 3-4 exactly. The bridge doc's stdin example is the authoritative template." Additionally, consider whether this should be a Go binary (like `goyoke-plan-impl` for TC-013c) rather than LLM-generated JSON. LLM JSON generation is fragile; a small Go helper that takes git diff output and emits config.json + stdin files would be more reliable.
 
 ---
 
@@ -215,7 +215,7 @@ TC-013a has 4 test cases, TC-013b has 4, TC-013c has 5. All are end-to-end integ
 - Reviewer selection logic (file extension mapping)
 - Dynamic member exclusion (TC-013a: only selected reviewers in config)
 
-TC-013c does specify unit tests for `gogent-plan-impl` (line 163: `main_test.go`), but TC-013a and TC-013b have no unit test files listed.
+TC-013c does specify unit tests for `goyoke-plan-impl` (line 163: `main_test.go`), but TC-013a and TC-013b have no unit test files listed.
 
 **Recommendation:** For TC-013a, add a unit test that generates a reviewer stdin file and validates it against `schemas/stdin/reviewer.json` using `ajv validate` or equivalent. For TC-013b, add a unit test that generates Einstein and Staff-Architect stdin files and validates against respective schemas.
 
@@ -223,7 +223,7 @@ TC-013c does specify unit tests for `gogent-plan-impl` (line 163: `main_test.go`
 
 **Detail for M-5: Review SKILL.md has no team-run path**
 
-The current `skills/review/SKILL.md` (read above) describes only the foreground path: Phase 3 dispatches to `review-orchestrator` via `Task(sonnet)`. There is no mention of `gogent-team-run`, team directories, config.json generation, or the background dispatch path.
+The current `skills/review/SKILL.md` (read above) describes only the foreground path: Phase 3 dispatches to `review-orchestrator` via `Task(sonnet)`. There is no mention of `goyoke-team-run`, team directories, config.json generation, or the background dispatch path.
 
 TC-013a's Files to Create/Modify (line 97) says "Modify -- Add team-run dispatch path alongside existing foreground path." This is correct but undersells the scope. The SKILL.md needs:
 - A new Phase 3 alternative (team-run path)
@@ -250,17 +250,17 @@ TC-013b Section 1 references "Phase 2.5 (lines 370-429)" in `mozart.md`. Line nu
 
 **Detail for M-7: Inter-wave script path resolution**
 
-`braintrust.json` template sets `on_complete_script: "gogent-team-prepare-synthesis"` (a bare binary name, not an absolute path). `runInterWaveScript` in `wave.go` line 101 executes:
+`braintrust.json` template sets `on_complete_script: "goyoke-team-prepare-synthesis"` (a bare binary name, not an absolute path). `runInterWaveScript` in `wave.go` line 101 executes:
 ```go
 cmd := exec.CommandContext(ctx, scriptPath, teamDir)
 cmd.Dir = teamDir
 ```
 
-This relies on the binary being on `$PATH`. If the user has not run `go install ./cmd/gogent-team-prepare-synthesis/`, the script will fail with "executable file not found in $PATH."
+This relies on the binary being on `$PATH`. If the user has not run `go install ./cmd/goyoke-team-prepare-synthesis/`, the script will fail with "executable file not found in $PATH."
 
-TC-013b Section 3 (line 100) says "Verify: `gogent-team-prepare-synthesis` binary is on PATH" but this is a note, not a deliverable or test case.
+TC-013b Section 3 (line 100) says "Verify: `goyoke-team-prepare-synthesis` binary is on PATH" but this is a note, not a deliverable or test case.
 
-**Recommendation:** Add to TC-013b Test Case 3 (inter-wave script failure): verify that the error message in config.json is actionable ("gogent-team-prepare-synthesis not found in PATH. Run: go install ./cmd/gogent-team-prepare-synthesis/"). Also consider using absolute path in the template (`${GOPATH}/bin/gogent-team-prepare-synthesis`) instead of relying on PATH.
+**Recommendation:** Add to TC-013b Test Case 3 (inter-wave script failure): verify that the error message in config.json is actionable ("goyoke-team-prepare-synthesis not found in PATH. Run: go install ./cmd/goyoke-team-prepare-synthesis/"). Also consider using absolute path in the template (`${GOPATH}/bin/goyoke-team-prepare-synthesis`) instead of relying on PATH.
 
 ---
 
@@ -268,25 +268,25 @@ TC-013b Section 3 (line 100) says "Verify: `gogent-team-prepare-synthesis` binar
 
 | ID | Layer | Location | Issue | Impact | Recommendation |
 |----|-------|----------|-------|--------|----------------|
-| m-1 | Assumptions | TC-013a line 52 | Session ID source unclear | `$GOGENT_SESSION_ID` or generate -- inconsistent with TUI | Align with TUI's `GOGENT_SESSION_DIR` env var |
+| m-1 | Assumptions | TC-013a line 52 | Session ID source unclear | `$GOYOKE_SESSION_ID` or generate -- inconsistent with TUI | Align with TUI's `GOYOKE_SESSION_DIR` env var |
 | m-2 | Contractor Readiness | TC-013c | specs.md format not formally specified | Parser tolerance unclear | Add 2-3 example specs.md files as test fixtures |
 | m-3 | Cost-Benefit | TC-013c | Kahn's algorithm in Go is ~50 LoC | Ticket spends significant space describing it | Reference a known implementation or provide skeleton |
 | m-4 | Architecture Smells | TC-013a-c | Feature flag checked by LLM, not programmatically | LLM may forget or misread settings.json | Consider hook-based enforcement |
 | m-5 | Testing | TC-013b | Test 2 (Einstein-only) requires Mozart to detect single-agent request | No specification of how Mozart determines "just Einstein" | Document the detection logic |
-| m-6 | Contractor Readiness | TC-013c line 215 | Agent validation recommended but not required | Unclear if `gogent-plan-impl` should fail on unknown agent | Make it a MUST with clear error message |
+| m-6 | Contractor Readiness | TC-013c line 215 | Agent validation recommended but not required | Unclear if `goyoke-plan-impl` should fail on unknown agent | Make it a MUST with clear error message |
 
 ---
 
 **Detail for m-1: Session directory provenance**
 
-TC-013a line 52 says: `session_id: from $GOGENT_SESSION_ID or generate`. The TUI actually sets `GOGENT_SESSION_DIR` (verified in `packages/tui/src/App.tsx` line 18):
+TC-013a line 52 says: `session_id: from $GOYOKE_SESSION_ID or generate`. The TUI actually sets `GOYOKE_SESSION_DIR` (verified in `packages/tui/src/App.tsx` line 18):
 ```typescript
-process.env["GOGENT_SESSION_DIR"] = join(home, ".claude", "sessions", sessionId);
+process.env["GOYOKE_SESSION_DIR"] = join(home, ".claude", "sessions", sessionId);
 ```
 
-There is no `GOGENT_SESSION_ID` env var -- the TUI sets `GOGENT_SESSION_DIR` (the full path, not just the ID). The bridge doc (line 135) uses a different pattern: `session_dir=".claude/sessions/${GOGENT_SESSION_ID:-...}"`.
+There is no `GOYOKE_SESSION_ID` env var -- the TUI sets `GOYOKE_SESSION_DIR` (the full path, not just the ID). The bridge doc (line 135) uses a different pattern: `session_dir=".claude/sessions/${GOYOKE_SESSION_ID:-...}"`.
 
-**Recommendation:** Use `GOGENT_SESSION_DIR` (which the TUI actually sets) and extract the session ID from the path if needed. Document this in all three tickets.
+**Recommendation:** Use `GOYOKE_SESSION_DIR` (which the TUI actually sets) and extract the session ID from the path if needed. Document this in all three tickets.
 
 ---
 
@@ -297,7 +297,7 @@ The `use_team_pattern` flag is read by the LLM from `settings.json`. This is "do
 - Misread the JSON
 - Check a cached/stale value
 
-**Recommendation:** For the initial implementation, LLM-based flag checking is acceptable (pragmatic). But log a follow-up ticket to move this to a hook (e.g., `gogent-validate` could inject the flag state into tool context, or the `/review` skill could check it programmatically via Bash before deciding the dispatch path).
+**Recommendation:** For the initial implementation, LLM-based flag checking is acceptable (pragmatic). But log a follow-up ticket to move this to a hook (e.g., `goyoke-validate` could inject the flag state into tool context, or the `/review` skill could check it programmatically via Bash before deciding the dispatch path).
 
 ---
 
@@ -305,12 +305,12 @@ The `use_team_pattern` flag is read by the LLM from `settings.json`. This is "do
 
 | # | Assumption | Source | Verified? | Risk if False | Mitigation |
 |---|-----------|--------|-----------|---------------|------------|
-| A-1 | `gogent-team-run` daemon writes `background_pid` before parent reads it | TC-013a Section 4, bridge doc line 156 | Verified (main.go lines 76-87 writes PID synchronously before `runWaves`) | Race condition: parent reads null PID | `sleep 2` + retry in launch script (bridge doc already has this) |
+| A-1 | `goyoke-team-run` daemon writes `background_pid` before parent reads it | TC-013a Section 4, bridge doc line 156 | Verified (main.go lines 76-87 writes PID synchronously before `runWaves`) | Race condition: parent reads null PID | `sleep 2` + retry in launch script (bridge doc already has this) |
 | A-2 | `buildPromptEnvelope` passes through all stdin JSON to agents | TC-013a Section 3 | Verified (envelope.go lines 96-108: uses `stdin.raw` for full JSON preservation) | Agents receive partial data | None needed -- verified |
 | A-3 | Review workflow needs no inter-wave script | TC-013a | Verified (single wave, `on_complete_script: null` in template) | N/A | None needed |
 | A-4 | `estimateCost` returns $5.00 for opus agents | TC-013b Section 5 | Verified (config.go line 379: `return 5.00`) | Budget calculations wrong | None needed -- verified |
-| A-5 | `gogent-team-prepare-synthesis` handles missing stdout files gracefully | TC-013b Section 3 | Partially verified (TC-010 states "graceful degradation" but not verified in source) | Crashed binary blocks Wave 2 | Add to TC-013b Test Case 3 |
-| A-6 | Agents spawned at nesting level 2 can use Task(haiku/sonnet) | Envelope.go line 117 | Verified (envelope says so; `gogent-validate` blocks opus only) | Agents are inert (cannot delegate) | None needed |
+| A-5 | `goyoke-team-prepare-synthesis` handles missing stdout files gracefully | TC-013b Section 3 | Partially verified (TC-010 states "graceful degradation" but not verified in source) | Crashed binary blocks Wave 2 | Add to TC-013b Test Case 3 |
+| A-6 | Agents spawned at nesting level 2 can use Task(haiku/sonnet) | Envelope.go line 117 | Verified (envelope says so; `goyoke-validate` blocks opus only) | Agents are inert (cannot delegate) | None needed |
 | A-7 | `settings.json` exists and is readable by the LLM | All tickets | NOT verified -- file does not exist | Feature flag check fails, unknown behavior | Create the file (see M-2) |
 | A-8 | Wave members within a wave are independent (no intra-wave deps) | TC-013c Kahn's algorithm | Verified by design (Kahn's ensures wave N contains only tasks whose deps are in waves 0..N-1) | Parallel execution of dependent tasks | None needed |
 | A-9 | The `claude` CLI binary is available on PATH inside spawned processes | All tickets | Assumed (spawn.go line 127: `exec.Command("claude", ...)`) | All agent spawns fail | Add to prerequisites |
@@ -324,7 +324,7 @@ The `use_team_pattern` flag is read by the LLM from `settings.json`. This is "do
 TC-013a (Review)
   Depends on:
     [x] TC-020 (bridge docs -- completed)
-    [x] TC-008 (gogent-team-run binary -- completed)
+    [x] TC-008 (goyoke-team-run binary -- completed)
     [x] TC-009 (schemas -- completed)
     [x] TC-012 (/team-status, /team-result, /team-cancel -- completed)
     [ ] settings.json creation (NOT scoped anywhere -- see M-2)
@@ -334,7 +334,7 @@ TC-013a (Review)
 TC-013b (Braintrust)
   Depends on:
     [x] TC-013a (validates pattern)
-    [x] TC-010 (gogent-team-prepare-synthesis -- completed)
+    [x] TC-010 (goyoke-team-prepare-synthesis -- completed)
     [ ] Budget decision (NOT made -- see C-1)
     [ ] Mozart stdin template reconciliation (scoped in ticket)
   Blocks: TC-013c
@@ -373,7 +373,7 @@ TC-013c (Implementation)
 
 1. **C-1: Raise braintrust budget to $16.00** in `schemas/teams/braintrust.json`. This is a one-line change. Without it, braintrust produces no synthesis. Decision required, not implementation work.
 
-2. **C-2: Scope `wave.go` modification in TC-013c.** Add `cmd/gogent-team-run/wave.go` to Files to Create/Modify. Write the acceptance criteria: "After wave N completes, if any member has `status: failed`, subsequent waves are skipped and their members set to `status: skipped`." Add to test cases.
+2. **C-2: Scope `wave.go` modification in TC-013c.** Add `cmd/goyoke-team-run/wave.go` to Files to Create/Modify. Write the acceptance criteria: "After wave N completes, if any member has `status: failed`, subsequent waves are skipped and their members set to `status: skipped`." Add to test cases.
 
 3. **C-3: Resolve schema/contract authority.** Recommended: add `files[]` array to `review-architect.json` contract (keep `changed_files` as supplementary). Update any other contracts that omit required schema fields.
 
@@ -383,13 +383,13 @@ TC-013c (Implementation)
 
 5. **M-3: Align severity enums** between `/team-result` SKILL.md and reviewer contracts. Pick 3-level or 5-level, normalize case.
 
-6. **M-1: Add pseudocode or Go helper** for TC-013a config generation. Consider whether a lightweight Go binary (like `gogent-plan-review`) is more reliable than LLM-generated JSON.
+6. **M-1: Add pseudocode or Go helper** for TC-013a config generation. Consider whether a lightweight Go binary (like `goyoke-plan-review`) is more reliable than LLM-generated JSON.
 
 7. **M-4: Add schema validation unit tests** for generated stdin files in TC-013a and TC-013b.
 
 ### Low Priority (Post-Implementation Improvements)
 
-8. **m-1: Use `GOGENT_SESSION_DIR`** (set by TUI) instead of `GOGENT_SESSION_ID` across all tickets.
+8. **m-1: Use `GOYOKE_SESSION_DIR`** (set by TUI) instead of `GOYOKE_SESSION_ID` across all tickets.
 
 9. **m-4: Log follow-up ticket** to move `use_team_pattern` checking from LLM responsibility to hook enforcement.
 
@@ -404,7 +404,7 @@ TC-013c (Implementation)
 | TC-013a | LLM generates invalid JSON | Medium | High (launch fails) | Partially (envelope validates minimally) |
 | TC-013a | Reviewer agents produce unexpected stdout | Medium | Medium (team-result parsing fails) | Partially (malformed JSON handling in SKILL.md) |
 | TC-013b | Budget blocks Beethoven | **Certain** | **Critical** (no synthesis) | **No** -- see C-1 |
-| TC-013b | `gogent-team-prepare-synthesis` not on PATH | Low | High (Wave 2 never starts) | Partially (TC-013b notes it) |
+| TC-013b | `goyoke-team-prepare-synthesis` not on PATH | Low | High (Wave 2 never starts) | Partially (TC-013b notes it) |
 | TC-013c | specs.md format variations break parser | Medium | High (no config generated) | Partially (parser should be tolerant) |
 | TC-013c | Wave 2 runs despite Wave 1 failure | **Certain** | Medium (wasted LLM spend) | **No** -- see C-2 |
 | All | `settings.json` does not exist | **Certain** | Low (LLM uses default) | **No** -- see M-2 |

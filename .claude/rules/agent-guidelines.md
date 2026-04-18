@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-Guidelines for subagents executing tasks within GOgent-Fortress.
+Guidelines for subagents executing tasks within goYoke.
 
 ## 1. Coding Discipline
 
@@ -101,7 +101,7 @@ previous call to determine this call's parameters?" If no → batch it.
 
 ### 2.2 MANDATORY: Background Task Collection
 
-**Enforcement:** `gogent-orchestrator-guard` (SubagentStop hook) blocks orchestrator completion when background tasks remain uncollected.
+**Enforcement:** `goyoke-orchestrator-guard` (SubagentStop hook) blocks orchestrator completion when background tasks remain uncollected.
 
 **If you spawn background tasks, you MUST:**
 
@@ -118,7 +118,7 @@ previous call to determine this call's parameters?" If no → batch it.
 Bash({..., run_in_background: true})  // Spawned
 Bash({..., run_in_background: true})  // Spawned
 // ... do other work ...
-// Output synthesis WITHOUT calling TaskOutput → BLOCKED by gogent-orchestrator-guard
+// Output synthesis WITHOUT calling TaskOutput → BLOCKED by goyoke-orchestrator-guard
 ```
 
 ### 2.3 Fan-Out, Fan-In Pattern
@@ -365,9 +365,9 @@ Use:
 |--------------|---------|------------------|
 | Retrying identically after failure | Wastes tokens, won't help | Modify approach (different tool, smaller scope, more context) |
 | Using Sonnet for file search | 50x cost waste | Use Haiku/codebase-search |
-| Spawning background tasks without collecting | Orphaned work, blocked by gogent-orchestrator-guard | Always call TaskOutput before final synthesis |
+| Spawning background tasks without collecting | Orphaned work, blocked by goyoke-orchestrator-guard | Always call TaskOutput before final synthesis |
 | Ignoring hook injections | Misses guidance/enforcement | Read and follow additionalContext from hooks |
-| Skipping scout on unknown scope | Potential mis-routing to expensive tier | Scout first with haiku-scout or gogent-scout |
+| Skipping scout on unknown scope | Potential mis-routing to expensive tier | Scout first with haiku-scout or goyoke-scout |
 
 ---
 

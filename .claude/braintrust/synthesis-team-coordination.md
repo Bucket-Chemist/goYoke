@@ -1,23 +1,23 @@
-# Braintrust Synthesis: Background Team Orchestration via `gogent-team-run`
+# Braintrust Synthesis: Background Team Orchestration via `goyoke-team-run`
 
 > **Synthesized by Beethoven** (Final revision with user decisions locked in)
 > **Timestamp**: 2026-02-06T14:15:00Z
 > **Inputs**:
->   - Implementation Plan: `/home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/IMPLEMENTATION-PLAN.md`
->   - Einstein Analysis: `/home/doktersmol/Documents/GOgent-Fortress/.claude/braintrust/einstein-team-coordination-analysis.md`
->   - Staff-Architect Review: `/home/doktersmol/Documents/GOgent-Fortress/.claude/braintrust/staff-architect-team-coordination-review.md`
+>   - Implementation Plan: `/home/doktersmol/Documents/goYoke/tickets/team-coordination/IMPLEMENTATION-PLAN.md`
+>   - Einstein Analysis: `/home/doktersmol/Documents/goYoke/.claude/braintrust/einstein-team-coordination-analysis.md`
+>   - Staff-Architect Review: `/home/doktersmol/Documents/goYoke/.claude/braintrust/staff-architect-team-coordination-review.md`
 
 ---
 
 ## 1. Executive Summary
 
-The implementation plan for `gogent-team-run` is **approved with conditions**. Both analysts agree the plan addresses a real problem (TUI freezing during multi-agent orchestration) with a sound architectural approach (separating planning from execution). The structured I/O schemas are the plan's strongest contribution.
+The implementation plan for `goyoke-team-run` is **approved with conditions**. Both analysts agree the plan addresses a real problem (TUI freezing during multi-agent orchestration) with a sound architectural approach (separating planning from execution). The structured I/O schemas are the plan's strongest contribution.
 
 **Decisions locked in:**
 
 1. **All three templates** (braintrust, review, implementation) ship in Phase 1, with all three orchestrator rewrites in Phase 4. This broadens MVP scope but delivers full platform value.
 2. **Full daemon pattern** for process detachment: `SysProcAttr{Setsid: true}`, close stdin, redirect stdout/stderr to log, PID file write/cleanup. This supports concurrent teams (braintrust + review running simultaneously) with proper double-start prevention.
-3. **Go binary** for inter-wave scripts: `cmd/gogent-team-prepare-synthesis/main.go` replaces the bash/jq script. No external dependencies; typed JSON parsing; matches the `cmd/` pattern.
+3. **Go binary** for inter-wave scripts: `cmd/goyoke-team-prepare-synthesis/main.go` replaces the bash/jq script. No external dependencies; typed JSON parsing; matches the `cmd/` pattern.
 4. **TUI concurrency** is a separate ticket. Does not block the Go binary work. Einstein's root cause analysis (streaming mutex in `useClaudeQuery.ts`) is captured in that ticket's description.
 
 Two critical bugs must be fixed before implementation begins: the `--permission-mode delegate` flag does not grant tool access in pipe mode (use `--allowedTools` instead), and concurrent goroutines writing to a shared `config` struct without a mutex will cause data races. A third bug (recursive retry causing WaitGroup panic) must be fixed during Phase 2.
@@ -126,7 +126,7 @@ This is the correct choice given the user's plan to run concurrent teams (braint
 
 **Staff-Architect's Position**: Flagged as F-NEW-1 (HIGH severity design decision). Team-spawned agents via `claude -p` CAN use Task(), unlike MCP-spawned agents.
 
-**Resolution**: Team-spawned agents SHOULD have Task() access at Level 2. `GOGENT_NESTING_LEVEL=2` means `gogent-validate` blocks Task(opus) but allows Task(haiku) and Task(sonnet). This is correct behavior -- Einstein should be able to spawn a haiku scout for codebase exploration but should not spawn another Opus agent. Document explicitly in Phase 1 and verify in Phase 2.
+**Resolution**: Team-spawned agents SHOULD have Task() access at Level 2. `GOYOKE_NESTING_LEVEL=2` means `goyoke-validate` blocks Task(opus) but allows Task(haiku) and Task(sonnet). This is correct behavior -- Einstein should be able to spawn a haiku scout for codebase exploration but should not spawn another Opus agent. Document explicitly in Phase 1 and verify in Phase 2.
 
 **Priority**: MEDIUM
 **Phase affected**: Phase 1 (documentation), Phase 2 (verify behavior)
@@ -163,7 +163,7 @@ This is the correct choice given the user's plan to run concurrent teams (braint
 | Option | Chosen | Implementation |
 |--------|--------|---------------|
 | A: Keep bash + jq | No | -- |
-| **B: Rewrite as Go binary** | **YES** | `cmd/gogent-team-prepare-synthesis/main.go` |
+| **B: Rewrite as Go binary** | **YES** | `cmd/goyoke-team-prepare-synthesis/main.go` |
 | C: Ship with jq, add Go later | No | -- |
 
 **Rationale**: No jq dependency. Matches existing `cmd/` pattern. Typed JSON parsing with proper error handling. +1-2 days effort.
@@ -302,13 +302,13 @@ Add `project_root` as a top-level field in the team config.json schema. The plan
 **Effort**: 0.5 days
 
 **Description**:
-Agents spawned by `gogent-team-run` via `claude -p` are independent CLI sessions with full Task() capability. This differs from MCP-spawned agents where Task() is unavailable. The plan sets `GOGENT_NESTING_LEVEL=2`, so `gogent-validate` blocks Task(opus) but allows Task(haiku/sonnet).
+Agents spawned by `goyoke-team-run` via `claude -p` are independent CLI sessions with full Task() capability. This differs from MCP-spawned agents where Task() is unavailable. The plan sets `GOYOKE_NESTING_LEVEL=2`, so `goyoke-validate` blocks Task(opus) but allows Task(haiku/sonnet).
 
-Explicitly document this design decision: "Team-spawned agents have Task() access at Level 2, which means Task(haiku) and Task(sonnet) are allowed but Task(opus) is blocked by gogent-validate."
+Explicitly document this design decision: "Team-spawned agents have Task() access at Level 2, which means Task(haiku) and Task(sonnet) are allowed but Task(opus) is blocked by goyoke-validate."
 
 **Acceptance Criteria**:
 - [ ] Design decision documented in implementation plan and prompt envelope docs
-- [ ] Verified during Phase 2: Einstein can call Task(haiku) but not Task(opus) when spawned by gogent-team-run
+- [ ] Verified during Phase 2: Einstein can call Task(haiku) but not Task(opus) when spawned by goyoke-team-run
 - [ ] Prompt envelope mentions available capabilities
 
 **Source**: Staff-Architect F-NEW-1 (HIGH)
@@ -355,7 +355,7 @@ For each template, deliver:
 **Effort**: 1 day
 
 **Description**:
-Three spawn paths (`Task()`, `spawnAgent.ts`, `gogent-team-run`) each construct CLI args independently. Adding a `cli_flags` field (or `allowed_tools` list) to agents-index.json lets all three paths read from the same source for per-agent tool permissions and other flags.
+Three spawn paths (`Task()`, `spawnAgent.ts`, `goyoke-team-run`) each construct CLI args independently. Adding a `cli_flags` field (or `allowed_tools` list) to agents-index.json lets all three paths read from the same source for per-agent tool permissions and other flags.
 
 This mitigates the "three spawn paths drift" risk identified by both analysts.
 
@@ -379,21 +379,21 @@ This mitigates the "three spawn paths drift" risk identified by both analysts.
 **Effort**: 1 day
 
 **Description**:
-Implement proper process detachment for `gogent-team-run`:
+Implement proper process detachment for `goyoke-team-run`:
 
 1. **Process group isolation**: `cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}` when the Go binary spawns child `claude` processes. The binary itself should also call `syscall.Setsid()` early in `main()`.
 2. **Close stdin**: The Go binary does not need stdin after reading config.json. Close it to prevent accidental terminal interaction.
 3. **Redirect stdout/stderr**: Write to `{team_dir}/runner.log` (already in the plan; formalize it as part of daemon pattern).
-4. **PID file**: Write `{team_dir}/gogent-team-run.pid` on startup. Remove on clean exit. Check on startup for double-start prevention.
+4. **PID file**: Write `{team_dir}/goyoke-team-run.pid` on startup. Remove on clean exit. Check on startup for double-start prevention.
 5. **Clean shutdown**: Signal handler removes PID file before exit.
 
-The launch command changes from `nohup gogent-team-run ...` to a direct invocation with output redirection (the binary handles its own detachment).
+The launch command changes from `nohup goyoke-team-run ...` to a direct invocation with output redirection (the binary handles its own detachment).
 
 **Acceptance Criteria**:
 - [ ] Pressing Ctrl+C in TUI does NOT kill the Go binary or its children
 - [ ] Closing the TUI terminal does NOT kill the Go binary or its children
 - [ ] `/team-cancel` (explicit SIGTERM via PID) still works
-- [ ] `gogent-team-run` is in its own session/process group (verify with `ps -o pid,pgid,sid`)
+- [ ] `goyoke-team-run` is in its own session/process group (verify with `ps -o pid,pgid,sid`)
 - [ ] PID file created on startup, removed on clean exit
 - [ ] Second launch attempt to same team directory fails with clear error message
 - [ ] `kill -9` of binary leaves PID file (stale PID detection works on next session)
@@ -402,7 +402,7 @@ The launch command changes from `nohup gogent-team-run ...` to a direct invocati
 
 ---
 
-#### TC-008: Implement `gogent-team-run` Go Binary
+#### TC-008: Implement `goyoke-team-run` Go Binary
 
 **Priority**: CRITICAL
 **Phase**: 2
@@ -410,7 +410,7 @@ The launch command changes from `nohup gogent-team-run ...` to a direct invocati
 **Effort**: 5-7 days
 
 **Description**:
-Implement the core Go binary at `cmd/gogent-team-run/main.go`. This is the primary Phase 2 deliverable. It incorporates the designs from TC-001 (permission flags), TC-002 (mutex), TC-004 (daemon pattern), TC-006 (projectRoot), and TC-014 (cli_flags).
+Implement the core Go binary at `cmd/goyoke-team-run/main.go`. This is the primary Phase 2 deliverable. It incorporates the designs from TC-001 (permission flags), TC-002 (mutex), TC-004 (daemon pattern), TC-006 (projectRoot), and TC-014 (cli_flags).
 
 Core components:
 1. **Config reader**: Parse `config.json` with `TeamRunner` struct (mutex-protected per TC-002)
@@ -427,14 +427,14 @@ Core components:
 Retry logic must use a for-loop, NOT recursion (fixes TC-003).
 
 **Acceptance Criteria**:
-- [ ] Binary compiles and runs: `go build ./cmd/gogent-team-run/...`
+- [ ] Binary compiles and runs: `go build ./cmd/goyoke-team-run/...`
 - [ ] At least 3 successful executions with real Claude CLI
 - [ ] Budget ceiling prevents runaway (test with $0.50 budget)
 - [ ] SIGTERM to team runner kills all children within 10 seconds
 - [ ] Heartbeat file touched regularly, stale detection works
 - [ ] Agent failure -> retry once -> failure correctly marked in config.json
 - [ ] Atomic config.json writes verified (no corruption on kill -9)
-- [ ] `go test -race ./cmd/gogent-team-run/...` passes with zero race warnings
+- [ ] `go test -race ./cmd/goyoke-team-run/...` passes with zero race warnings
 - [ ] Agents can successfully use Read, Write, Glob, Grep, Bash, Edit tools
 - [ ] Cost tracking accurate to within 10% of actual API spend across 3+ runs
 
@@ -513,7 +513,7 @@ Steps:
 **Effort**: 1-2 days
 
 **Description**:
-Rewrite `gogent-team-prepare-synthesis.sh` as `cmd/gogent-team-prepare-synthesis/main.go`. This eliminates the `jq` dependency and provides typed JSON parsing with proper error handling.
+Rewrite `goyoke-team-prepare-synthesis.sh` as `cmd/goyoke-team-prepare-synthesis/main.go`. This eliminates the `jq` dependency and provides typed JSON parsing with proper error handling.
 
 The Go binary:
 1. Reads `stdout_einstein.json` and `stdout_staff-arch.json` from the team directory
@@ -521,16 +521,16 @@ The Go binary:
 3. Writes `pre-synthesis.md` as a curated markdown summary
 4. Handles missing/malformed JSON gracefully (same resilience as the bash `2>/dev/null || echo "(fallback)"` pattern)
 
-Usage: `gogent-team-prepare-synthesis <team-dir>`
+Usage: `goyoke-team-prepare-synthesis <team-dir>`
 
 The `waves.{N}.on_complete_script` field in braintrust template references this binary instead of the bash script.
 
 **Acceptance Criteria**:
-- [ ] `gogent-team-prepare-synthesis` Go binary produces equivalent output to the shell script
+- [ ] `goyoke-team-prepare-synthesis` Go binary produces equivalent output to the shell script
 - [ ] No `jq` dependency
 - [ ] Handles missing stdout files gracefully (writes fallback text)
 - [ ] Handles malformed JSON gracefully (writes fallback text, does not crash)
-- [ ] `go build ./cmd/gogent-team-prepare-synthesis/...` succeeds
+- [ ] `go build ./cmd/goyoke-team-prepare-synthesis/...` succeeds
 - [ ] Integration test: runs between wave 1 and wave 2 in a real team execution
 
 **Source**: Staff-Architect M-1, A-7; User Decision 3 (Go binary)
@@ -557,9 +557,9 @@ Test areas:
 
 **Acceptance Criteria**:
 - [ ] Table-driven tests for all 6 areas above
-- [ ] `go test -race -cover ./cmd/gogent-team-run/...` passes
+- [ ] `go test -race -cover ./cmd/goyoke-team-run/...` passes
 - [ ] Coverage target: 80%+ for core logic (not necessarily for CLI-interfacing code)
-- [ ] `go test -race -cover ./cmd/gogent-team-prepare-synthesis/...` passes
+- [ ] `go test -race -cover ./cmd/goyoke-team-prepare-synthesis/...` passes
 
 **Source**: Staff-Architect Layer 5 (HIGH)
 
@@ -581,7 +581,7 @@ Implement four slash commands for team management:
 
 2. **`/team-result`**: Read stdout file of final-wave agent. For braintrust: extract `content.executive_summary` and `content.unified_recommendations` from `stdout_beethoven.json`. For review: aggregate findings by severity across all reviewer stdout files.
 
-3. **`/team-cancel`**: Read config.json for `background_pid`. Send SIGTERM to `gogent-team-run` process, which cascades to children.
+3. **`/team-cancel`**: Read config.json for `background_pid`. Send SIGTERM to `goyoke-team-run` process, which cascades to children.
 
 4. **`/teams`**: List all teams in current session with status summary.
 
@@ -616,21 +616,21 @@ Rewrite all three orchestrator workflows to use the team pattern:
    - Foreground (~30s): Interview user, scout scope, determine team composition
    - Write config.json from braintrust template
    - Write stdin files for einstein, staff-arch, beethoven (absolute paths resolved)
-   - Launch `gogent-team-run` (daemon mode)
+   - Launch `goyoke-team-run` (daemon mode)
    - Verify PID in config.json
    - Return: "Braintrust team dispatched. Use /team-status to check progress."
 
 2. **Review-Orchestrator (`/review`)** -- Fully backgroundable:
    - Router handles directly (~5s): compute git diff, fill stdin templates for 4 reviewers
    - Write config.json from review template
-   - Launch `gogent-team-run` (daemon mode)
+   - Launch `goyoke-team-run` (daemon mode)
    - Return immediately
 
 3. **Impl-Manager (`/ticket`)** -- Fully backgroundable:
    - Router handles directly (~10s): read specs.md, build task DAG, identify waves
    - Write config.json from implementation template with dynamic members
    - Write stdin files for each worker agent
-   - Launch `gogent-team-run` (daemon mode)
+   - Launch `goyoke-team-run` (daemon mode)
    - Return immediately
 
 **Acceptance Criteria**:
@@ -689,7 +689,7 @@ The freeze is not in the JavaScript event loop -- Node.js can still process time
 **Effort**: 0.5 days
 
 **Description**:
-Prevent two `gogent-team-run` instances from launching for the same team directory. If the launch command is accidentally run twice, the second instance would overwrite the first's config.json.
+Prevent two `goyoke-team-run` instances from launching for the same team directory. If the launch command is accidentally run twice, the second instance would overwrite the first's config.json.
 
 This is partially addressed by TC-004 (PID file as part of daemon pattern). This ticket covers the edge case of stale PID file recovery.
 
@@ -750,7 +750,7 @@ These emerged from both analyses and need answers before or during implementatio
 
 2. **Does `claude -p` respect `CLAUDE_CODE_EFFORT_LEVEL`?** (Einstein Q2, Staff-Arch A-10) -- Verify by running `CLAUDE_CODE_EFFORT_LEVEL=high claude -p "hello"` and checking behavior. Low-cost check during Phase 2.
 
-3. **What happens on `kill -9` of `gogent-team-run`?** (Einstein Q3) -- Children may become orphans. PID file will be stale. Heartbeat stops. Next session detects stale heartbeat and cleans up PIDs. Document this as a known limitation.
+3. **What happens on `kill -9` of `goyoke-team-run`?** (Einstein Q3) -- Children may become orphans. PID file will be stale. Heartbeat stops. Next session detects stale heartbeat and cleans up PIDs. Document this as a known limitation.
 
 4. **How do slash commands discover the current session directory?** (Staff-Arch M-5) -- Blocks TC-012 (Phase 3). Needs an answer before Phase 3 begins. Options: env var, TUI state, filesystem scan.
 

@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Session ID**: 5bb2aecc-4df7-473c-b358-0166531bd8bb
-- **Project**: /home/doktersmol/Documents/GOgent-Fortress
+- **Project**: /home/doktersmol/Documents/goYoke
 
 ## Session Metrics
 
@@ -19,7 +19,7 @@
   - claude/input-history.json
   - claude/memory/handoffs.jsonl
   - claude/memory/last-handoff.md
-  - md/gofortress/main.go
+  - md/goyoke/main.go
   - ofortress
   - nternal/tui/components/drawer/drawer.go
   - nternal/tui/components/drawer/drawer_test.go
@@ -63,13 +63,13 @@
   - .claude/telemetry/1p_failed_events.fdc0cb63-f675-4c84-8d57-545debf01ab0.50e6f311-a854-4f12-9c0d-4ff378252f79.json
   - .claude/telemetry/1p_failed_events.fdc0cb63-f675-4c84-8d57-545debf01ab0.971583ed-6c49-4126-8a31-fafc7c86adf9.json
   - .claude/tmp
-  - .gogent/
-  - cmd/gofortress-mcp-standalone/.claude/
-  - cmd/gofortress-mcp-standalone/gofortress-mcp-standalone
+  - .goyoke/
+  - cmd/goyoke-mcp-standalone/.claude/
+  - cmd/goyoke-mcp-standalone/goyoke-mcp-standalone
   - fix-permissions.sh
-  - gofortress-mcp-standalone
-  - gogent-config-guard
-  - gogent-instructions-audit
+  - goyoke-mcp-standalone
+  - goyoke-config-guard
+  - goyoke-instructions-audit
   - interrupt-diagnostic-specs.md
   - run-bin
   - test/compatibility/.claude/

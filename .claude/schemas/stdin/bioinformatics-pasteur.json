@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/bioinformatics-pasteur.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/bioinformatics-pasteur.json",
   "title": "Bioinformatics Pasteur Synthesizer Stdin Schema",
   "description": "Validates stdin for the pasteur bioinformatics review synthesizer (wave 1)",
   "version": "1.0.0",

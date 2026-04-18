@@ -1,6 +1,6 @@
 # Team Configuration Templates
 
-This directory contains template files for multi-agent team coordination workflows in GOgent-Fortress.
+This directory contains template files for multi-agent team coordination workflows in goYoke.
 
 ## Purpose
 
@@ -68,7 +68,7 @@ Templates are instantiated by the router when spawning a team:
 2. Template is copied to `sessions/{YYMMDD}.{id}/teams/{timestamp}.{workflow}/config.json`
 3. Placeholders (`{timestamp}`, `{uuid}`, etc.) are filled
 4. Orchestrator (Mozart/review-orchestrator) populates stdin files from codebase context
-5. `gogent-team-run` reads config, spawns agents with stdin, collects stdout
+5. `goyoke-team-run` reads config, spawns agents with stdin, collects stdout
 6. Go binary writes final output files from agent stdout JSON
 
 ## Field Contract
@@ -81,7 +81,7 @@ See `common-types.md` for complete field definitions, types, and validation rule
 
 **Tool permissions**: Agents in team pattern use `Read`, `Glob`, `Grep` only. No `Write`/`Edit` needed — agents output JSON to stdout, Go binary handles file writes. See `tickets/team-coordination/PERMISSION-DESIGN.md`.
 
-**Two-layer parsing**: CLI output is a JSON array (Layer 1: cost extraction). Agent response is inside `result.Result` string (Layer 2: agent-specific stdout schema). See `cmd/gogent-team-run/docs/claude-cli-output-format.md`.
+**Two-layer parsing**: CLI output is a JSON array (Layer 1: cost extraction). Agent response is inside `result.Result` string (Layer 2: agent-specific stdout schema). See `cmd/goyoke-team-run/docs/claude-cli-output-format.md`.
 
 ## Related Tickets
 

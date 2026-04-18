@@ -14,7 +14,7 @@ Systematic codebase cleanup through 8 coordinated specialist reviewers, each exa
 1. **Scope** — Determine cleanup target (whole project, specific path, or glob)
 2. **Detect** — Identify languages present and gather file inventory
 3. **Execute** — Dispatch all 8 reviewers (wave 0) + synthesizer (wave 1) via background team-run
-4. **Launch** — Start \`gogent-team-run\` in background, return immediately
+4. **Launch** — Start \`goyoke-team-run\` in background, return immediately
 
 **What this skill does NOT do:**
 
@@ -39,7 +39,7 @@ Systematic codebase cleanup through 8 coordinated specialist reviewers, each exa
 
 - \`git\` (for project root detection)
 - \`jq\` (JSON processing)
-- \`gogent-team-run\` (team execution)
+- \`goyoke-team-run\` (team execution)
 
 **Optional tools (enhance analysis):**
 
@@ -52,19 +52,19 @@ Systematic codebase cleanup through 8 coordinated specialist reviewers, each exa
 
 ## Workflow
 
-When \`/cleanup\` is invoked, the \`gogent-skill-guard\` PreToolUse hook has already:
-- Created the team directory (\`{gogent_session_dir}/teams/{timestamp}.cleanup/\`)
+When \`/cleanup\` is invoked, the \`goyoke-skill-guard\` PreToolUse hook has already:
+- Created the team directory (\`{goyoke_session_dir}/teams/{timestamp}.cleanup/\`)
 - Written \`active-skill.json\` with guard restrictions + \`team_dir\` path
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
-The \`gogent_session_dir\` lives under \`{project_root}/.gogent/sessions/\`, NOT \`.claude/sessions/\`. It is resolved by reading \`{project_root}/.gogent/current-session\`.
+The \`goyoke_session_dir\` lives under \`{project_root}/.goyoke/sessions/\`, NOT \`.claude/sessions/\`. It is resolved by reading \`{project_root}/.goyoke/current-session\`.
 
 ### Phase 1: Read Guard File and Determine Scope
 
 #### Step 1: Read Team Directory from Guard File
 
 \`\`\`javascript
-Read({ file_path: \`\${gogent_session_dir}/active-skill.json\` })
+Read({ file_path: \`\${goyoke_session_dir}/active-skill.json\` })
 // Extract team_dir from JSON response
 \`\`\`
 
@@ -127,7 +127,7 @@ Read the template from \`.claude/schemas/teams/cleanup.json\` and populate:
 - \`team_name\`: \`"cleanup-\$(date +%Y%m%d-%H%M%S)"\`
 - \`workflow_type\`: \`"cleanup"\`
 - \`project_root\`: \`\$(git rev-parse --show-toplevel)\`
-- \`session_id\`: basename of \`\$GOGENT_SESSION_DIR\`
+- \`session_id\`: basename of \`\$GOYOKE_SESSION_DIR\`
 - \`created_at\`: \`\$(date -u +%Y-%m-%dT%H:%M:%SZ)\`
 - \`budget_max_usd\`: \`25.0\`
 - \`budget_remaining_usd\`: \`25.0\`
@@ -198,14 +198,14 @@ Write to \`\$team_dir/stdin_cleanup-synthesizer.json\`.
 ### Phase 3: Launch and Return
 
 \`\`\`
-result = mcp__gofortress-interactive__team_run({
+result = mcp__goyoke-interactive__team_run({
     team_dir: "\$team_dir",
     wait_for_start: true,
     timeout_ms: 10000
 })
 if !result.success:
     echo "[cleanup] ERROR: \${result.result}"
-    rm -f "\$gogent_session_dir/active-skill.json"
+    rm -f "\$goyoke_session_dir/active-skill.json"
     exit 1
 background_pid = result.background_pid
 \`\`\`
@@ -213,7 +213,7 @@ background_pid = result.background_pid
 #### Step 4: Remove Skill Guard
 
 \`\`\`bash
-rm -f "\$gogent_session_dir/active-skill.json"
+rm -f "\$goyoke_session_dir/active-skill.json"
 \`\`\`
 
 #### Step 5: Return to User
@@ -361,7 +361,7 @@ All 8 reviewers produce JSON with this structure (synthesizer consumes it):
 
 **"Team launch failed"**
 - Check \`\$team_dir/runner.log\` for errors
-- Verify \`gogent-team-run\` is built and in PATH
+- Verify \`goyoke-team-run\` is built and in PATH
 - Validate \`\$team_dir/config.json\`: \`jq . "\$team_dir/config.json"\`
 
 **"Synthesizer has no data"**
@@ -381,7 +381,7 @@ $ /cleanup
   Reviewers (wave 0): dedup, types, dead-code, dependencies, type-safety, error-hygiene, legacy, slop
   Synthesizer (wave 1): cleanup-synthesizer (Opus)
   Scope: 127 files across 3 languages
-  Team: .gogent/sessions/.../teams/1713196800.cleanup
+  Team: .goyoke/sessions/.../teams/1713196800.cleanup
   PID: 67890
 
 Use /team-status to check progress

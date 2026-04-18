@@ -81,7 +81,7 @@
     "output_instructions": {
       "format": "json",
       "delivery": "stdout",
-      "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout section of this schema. gogent-team-run captures your process stdout as your result file (stdout_plan-harmonizer.json). Do NOT use the Write() tool \u2014 Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail silently, wasting your time budget. Output JSON to stdout only.",
+      "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout section of this schema. goyoke-team-run captures your process stdout as your result file (stdout_plan-harmonizer.json). Do NOT use the Write() tool \u2014 Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail silently, wasting your time budget. Output JSON to stdout only.",
       "team_dir_note": "context.plan_path and context.review_path are for READING only. Do not write to them."
     }
   },

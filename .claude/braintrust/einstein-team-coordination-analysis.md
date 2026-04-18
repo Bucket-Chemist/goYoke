@@ -1,6 +1,6 @@
 # Einstein Theoretical Analysis: Background Team Orchestration
 
-> **Problem Brief**: `/home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/IMPLEMENTATION-PLAN.md`
+> **Problem Brief**: `/home/doktersmol/Documents/goYoke/tickets/team-coordination/IMPLEMENTATION-PLAN.md`
 > **Analysis Focus**: First principles decomposition, root cause analysis, challenged assumptions, novel approaches
 > **Timestamp**: 2026-02-06T12:00:00Z
 
@@ -48,23 +48,23 @@ Therefore: the TUI does not freeze because the event loop is blocked. It freezes
 
 ### Primary Lens: Process Supervision Theory (Erlang/OTP Model)
 
-The GOgent-Fortress system now has three distinct process supervision topologies:
+The goYoke system now has three distinct process supervision topologies:
 
 | Topology | Supervisor | Children | Lifecycle Binding | Restart Strategy |
 |----------|-----------|----------|-------------------|-----------------|
 | **TUI-native** (ProcessRegistry) | TUI Node.js process | `claude` CLI via `spawn()` | Bound to TUI process | SIGTERM cascade on TUI exit |
 | **MCP spawn_agent** | `spawnAgent.ts` within TUI | `claude` CLI via `spawn()` | Bound to TUI process via registry | SIGTERM + timeout + SIGKILL |
-| **gogent-team-run** (proposed) | Go binary (detached) | `claude -p` via `exec.Command` | **Intentionally unbound** from TUI | SIGTERM cascade on SIGTERM; heartbeat for orphan detection |
+| **goyoke-team-run** (proposed) | Go binary (detached) | `claude -p` via `exec.Command` | **Intentionally unbound** from TUI | SIGTERM cascade on SIGTERM; heartbeat for orphan detection |
 
 In Erlang/OTP terms, the first two are **linked processes** (crash propagation) while the third is a **detached supervisor** (independent lifecycle). This is a correct decomposition for the stated goal -- background execution should survive TUI restarts -- but it creates a **split-brain problem** for process accounting:
 
-**Key Insight 1**: Two systems now track `claude` processes. The ProcessRegistry tracks TUI-spawned processes. `gogent-team-run` tracks its own children via config.json PIDs. Neither knows about the other's children. On TUI shutdown, ProcessRegistry cleans up its children but has no knowledge of `gogent-team-run`'s children (which are intentionally kept alive). On `gogent-team-run` crash, its children become orphans that the TUI's ProcessRegistry cannot clean up (it never registered them).
+**Key Insight 1**: Two systems now track `claude` processes. The ProcessRegistry tracks TUI-spawned processes. `goyoke-team-run` tracks its own children via config.json PIDs. Neither knows about the other's children. On TUI shutdown, ProcessRegistry cleans up its children but has no knowledge of `goyoke-team-run`'s children (which are intentionally kept alive). On `goyoke-team-run` crash, its children become orphans that the TUI's ProcessRegistry cannot clean up (it never registered them).
 
 **Key Insight 2**: The heartbeat file is the only bridge between these two supervision domains. If the Go binary crashes, the heartbeat goes stale, and "the next TUI session start" can detect orphans. But this means orphan detection is **eventually consistent with a granularity of "next session start"** -- potentially hours or never if the user does not start a new session.
 
 ### Alternative Lens: Unix Process Group Model
 
-The plan uses `nohup` to detach `gogent-team-run` from the TUI's process group. This is the correct Unix primitive for "survive parent death," but it has implications:
+The plan uses `nohup` to detach `goyoke-team-run` from the TUI's process group. This is the correct Unix primitive for "survive parent death," but it has implications:
 
 1. `nohup` does not create a new process group. The Go binary inherits the TUI's process group unless it explicitly calls `setsid()` or `setpgid()`.
 2. If the Go binary inherits the TUI's process group, `kill -TERM -<pgid>` (sent by the shell on job control operations) will hit both the TUI and the Go binary.
@@ -97,7 +97,7 @@ The plan's signal handling (section 2.4) assumes the Go binary receives SIGTERM 
 
 **From Axiom 2**: The Go binary approach correctly addresses this. However, Axiom 2 does not require a *separate process*. It requires decoupling the background work from the UI's interaction state machine. An alternative satisfying the same axiom: make the TUI's query consumption non-blocking (multiple concurrent `query()` streams, UI accepts input during streaming).
 
-**From Axiom 3**: The plan violates this axiom by design. There are now two supervisors for `claude` processes: ProcessRegistry (TUI-bound) and `gogent-team-run` (detached). The plan acknowledges this ("dual process management" architecture smell in the stdout schema example) but defers unification to "Phase 5." This is a technical debt decision, not a principled one.
+**From Axiom 3**: The plan violates this axiom by design. There are now two supervisors for `claude` processes: ProcessRegistry (TUI-bound) and `goyoke-team-run` (detached). The plan acknowledges this ("dual process management" architecture smell in the stdout schema example) but defers unification to "Phase 5." This is a technical debt decision, not a principled one.
 
 **From Axiom 4**: The structured I/O schemas are the strongest part of the plan. They transform agents from opaque text-in/text-out boxes into components with defined interfaces. This unlocks jq-based tooling, programmatic validation, and inter-wave preprocessing. This value exists independent of whether the execution engine is a Go binary, a shell script, or a modified TUI.
 
@@ -133,7 +133,7 @@ The `useClaudeQuery` hook currently treats the streaming state as a global mutex
 
 ### Approach 2: Socket-Based Supervisor (Proper Daemon Pattern)
 
-**Concept**: Instead of `nohup` with file-based IPC, implement `gogent-team-run` as a proper daemon with a Unix domain socket for real-time communication.
+**Concept**: Instead of `nohup` with file-based IPC, implement `goyoke-team-run` as a proper daemon with a Unix domain socket for real-time communication.
 
 The Go binary:
 - Starts as a daemon (fork, setsid, close fds)
@@ -161,7 +161,7 @@ The TUI:
 - Writes the child's PID to a file for later management
 - Does NOT wait for the process to complete
 
-The wave scheduling logic could live in a simple shell script (`gogent-wave-run.sh`) that:
+The wave scheduling logic could live in a simple shell script (`goyoke-wave-run.sh`) that:
 - Reads config.json
 - For each wave: spawns all members, waits for PIDs, runs inter-wave scripts
 - Updates config.json between waves
@@ -183,7 +183,7 @@ The strongest design combines elements:
 
 3. **From Approach 2**: Use a Unix domain socket for real-time status instead of polling config.json. This can be Phase 5 work -- start with file-based IPC, upgrade to sockets when the polling becomes inadequate.
 
-4. **From Approach 3**: Unify the config reading. `gogent-team-run` should read `agents-index.json` through the same parsed types as `spawnAgent.ts`. Consider generating Go types from the JSON schema to prevent drift.
+4. **From Approach 3**: Unify the config reading. `goyoke-team-run` should read `agents-index.json` through the same parsed types as `spawnAgent.ts`. Consider generating Go types from the JSON schema to prevent drift.
 
 5. **Critical addition not in any approach**: Implement proper daemon lifecycle (setsid, PID file, clean shutdown) instead of `nohup`. This prevents SIGINT propagation and ensures clean process group isolation.
 
@@ -228,7 +228,7 @@ Questions that require further investigation or are outside theoretical scope:
 
 2. **Does `claude -p` respect `CLAUDE_CODE_EFFORT_LEVEL` as an environment variable?** The plan assumes this, and `spawnAgent.ts` sets it, but I have not verified that the CLI actually reads this env var. If not, effortLevel injection is inert.
 
-3. **What happens when `gogent-team-run` is killed with `kill -9` (SIGKILL)?** The signal handler (section 2.4) cannot catch SIGKILL. Children inherit SIGKILL behavior only if the OS implements it via process groups. Otherwise, children become orphans with no heartbeat cleanup trigger until the next session.
+3. **What happens when `goyoke-team-run` is killed with `kill -9` (SIGKILL)?** The signal handler (section 2.4) cannot catch SIGKILL. Children inherit SIGKILL behavior only if the OS implements it via process groups. Otherwise, children become orphans with no heartbeat cleanup trigger until the next session.
 
 4. **Is the `--permission-mode delegate` flag sufficient for headless agents?** If any tool requires explicit permission that `delegate` does not cover, the headless agent will hang waiting for user input that never arrives, eventually timing out.
 
@@ -244,7 +244,7 @@ Questions that require further investigation or are outside theoretical scope:
 
 1. **The root cause is the TUI's application-level streaming mutex, not the JavaScript event loop.** The `for await` loop yields cooperatively; the freeze comes from `isStreaming` locking out user input. A Go binary is a correct solution but not the only one.
 
-2. **Three supervision topologies is a significant architectural risk.** ProcessRegistry (TUI), spawn_agent (MCP/TUI), and gogent-team-run (detached Go) each track processes independently. The heartbeat-based orphan detection is eventually consistent with session-start granularity. This should be flagged as a first-class concern, not a "Phase 5" deferral.
+2. **Three supervision topologies is a significant architectural risk.** ProcessRegistry (TUI), spawn_agent (MCP/TUI), and goyoke-team-run (detached Go) each track processes independently. The heartbeat-based orphan detection is eventually consistent with session-start granularity. This should be flagged as a first-class concern, not a "Phase 5" deferral.
 
 3. **The structured I/O schemas are independently valuable** and should be designed as a reusable primitive, not coupled to the Go binary. They benefit the existing spawn_agent path equally.
 
@@ -281,12 +281,12 @@ frameworks_applied:
 assumptions_surfaced: 9
 novel_approaches_proposed: 4 (3 alternatives + 1 synthesis)
 files_examined:
-  - /home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/IMPLEMENTATION-PLAN.md
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/agents/agents-index.json
-  - /home/doktersmol/Documents/GOgent-Fortress/PARALLEL-ORCHESTRATION-DESIGN.md
-  - /home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/mcp/tools/spawnAgent.ts
-  - /home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/spawn/processRegistry.ts
-  - /home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/lifecycle/shutdown.ts
-  - /home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/index.tsx
-  - /home/doktersmol/Documents/GOgent-Fortress/packages/tui/src/hooks/useClaudeQuery.ts
+  - /home/doktersmol/Documents/goYoke/tickets/team-coordination/IMPLEMENTATION-PLAN.md
+  - /home/doktersmol/Documents/goYoke/.claude/agents/agents-index.json
+  - /home/doktersmol/Documents/goYoke/PARALLEL-ORCHESTRATION-DESIGN.md
+  - /home/doktersmol/Documents/goYoke/packages/tui/src/mcp/tools/spawnAgent.ts
+  - /home/doktersmol/Documents/goYoke/packages/tui/src/spawn/processRegistry.ts
+  - /home/doktersmol/Documents/goYoke/packages/tui/src/lifecycle/shutdown.ts
+  - /home/doktersmol/Documents/goYoke/packages/tui/src/index.tsx
+  - /home/doktersmol/Documents/goYoke/packages/tui/src/hooks/useClaudeQuery.ts
 ```

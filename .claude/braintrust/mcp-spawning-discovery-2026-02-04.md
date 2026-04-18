@@ -50,7 +50,7 @@ MCP tools ARE available to subagents:
 ```
 Mozart (subagent, no Task tool)
     │
-    │ calls: mcp__gofortress__spawn_agent({
+    │ calls: mcp__goyoke__spawn_agent({
     │   agent: "einstein",
     │   prompt: "Analyze the problem...",
     │   model: "opus"
@@ -58,7 +58,7 @@ Mozart (subagent, no Task tool)
     │
     ▼
 ┌─────────────────────────────────────────────┐
-│  gofortress-tui (Node.js process)           │
+│  goyoke-tui (Node.js process)           │
 │                                             │
 │  MCP Handler: spawn_agent                   │
 │    → Receives spawn request                 │
@@ -142,7 +142,7 @@ export const spawnAgentTool = tool(
 import { spawnAgentTool } from "./tools/spawnAgent";
 
 export const mcpServer = createSdkMcpServer({
-  name: "gofortress-interactive",
+  name: "goyoke-interactive",
   version: "1.0.0",
   tools: [
     askUserTool,
@@ -168,7 +168,7 @@ Task({
 
 Use:
 ```javascript
-mcp__gofortress__spawn_agent({
+mcp__goyoke__spawn_agent({
   agent: "einstein",
   description: "Einstein analysis",
   model: "opus",
@@ -185,7 +185,7 @@ Add to orchestrator section:
 Orchestrator agents spawn subagents via MCP, not Task tool:
 
 \`\`\`javascript
-mcp__gofortress__spawn_agent({
+mcp__goyoke__spawn_agent({
   agent: "backend-reviewer",
   model: "haiku",
   prompt: "AGENT: backend-reviewer\n\nTASK: Review security..."

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.0.0",
-  "description": "Cross-domain interaction detection rules for gogent-team-prepare-synthesis",
+  "description": "Cross-domain interaction detection rules for goyoke-team-prepare-synthesis",
   "rules": [
     {
       "id": "fdr-chain-inflation",

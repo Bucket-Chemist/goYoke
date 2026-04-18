@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/review-bioinformatics-staff-bioinformatician.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/review-bioinformatics-staff-bioinformatician.json",
   "title": "Staff Bioinformatician Stdin Schema",
   "description": "Validates stdin for the staff-bioinformatician review synthesizer (wave 1)",
   "version": "1.0.0",

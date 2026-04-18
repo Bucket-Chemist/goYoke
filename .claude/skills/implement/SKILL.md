@@ -13,7 +13,7 @@ Single command to go from feature description to working code:
 /implement "Add a health-check HTTP endpoint at /healthz"
 ```
 
-**Pipeline:** Architect → gogent-plan-impl → gogent-team-run (background)
+**Pipeline:** Architect → goyoke-plan-impl → goyoke-team-run (background)
 
 **Returns to user in <15 seconds after architect completes.**
 
@@ -30,8 +30,8 @@ Single command to go from feature description to working code:
 
 ## Workflow
 
-When `/implement` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{gogent_session_dir}/teams/{timestamp}.implementation/`)
+When `/implement` is invoked, the `goyoke-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{goyoke_session_dir}/teams/{timestamp}.implementation/`)
 - Written `active-skill.json` with guard restrictions + `team_dir` path
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
@@ -65,11 +65,11 @@ Output:
 ### 2. Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${gogent_session_dir}/active-skill.json` })
+Read({ file_path: `${goyoke_session_dir}/active-skill.json` })
 // Extract team_dir from JSON response
 ```
 
-The `gogent_session_dir` is resolved by reading `{project_root}/.gogent/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOGENT_PROJECT_ROOT` env var.
+The `goyoke_session_dir` is resolved by reading `{project_root}/.goyoke/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOYOKE_PROJECT_ROOT` env var.
 
 ### 3. Spawn Architect
 
@@ -121,14 +121,14 @@ After architect completes:
 ### 4. Validate Plan Exists
 
 ```bash
-gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
-gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
-plan_file="$gogent_session_dir/implementation-plan.json"
+goyoke_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.goyoke/current-session" 2>/dev/null)"
+goyoke_session_dir="${goyoke_session_dir:-.goyoke/sessions/$(date +%Y%m%d-%H%M%S)}"
+plan_file="$goyoke_session_dir/implementation-plan.json"
 
 if [[ ! -f "$plan_file" ]]; then
     echo "[implement] ERROR: Architect did not produce implementation-plan.json"
-    echo "[implement] Check $gogent_session_dir/specs.md for details"
-    rm -f "$gogent_session_dir/active-skill.json"
+    echo "[implement] Check $goyoke_session_dir/specs.md for details"
+    rm -f "$goyoke_session_dir/active-skill.json"
     # STOP — do not proceed
 fi
 
@@ -145,15 +145,15 @@ Use the hook-provided `team_dir` from `active-skill.json` (read in Step 2). No `
 
 ```bash
 # team_dir was extracted from active-skill.json in Step 2
-gogent-plan-impl \
+goyoke-plan-impl \
     --plan="$plan_file" \
     --project-root="$(pwd)" \
     --output="$team_dir"
 
 if [[ $? -ne 0 ]]; then
-    echo "[implement] ERROR: gogent-plan-impl failed"
+    echo "[implement] ERROR: goyoke-plan-impl failed"
     echo "[implement] Check plan validity: jq . $plan_file"
-    rm -f "$gogent_session_dir/active-skill.json"
+    rm -f "$goyoke_session_dir/active-skill.json"
     # STOP
 fi
 
@@ -163,7 +163,7 @@ echo "[implement] Team config: $team_dir"
 ### 6. Launch Background Execution
 
 ```
-result = mcp__gofortress-interactive__team_run({
+result = mcp__goyoke-interactive__team_run({
     team_dir: "$team_dir",
     wait_for_start: true,
     timeout_ms: 10000
@@ -190,7 +190,7 @@ else:
 ### 7. Remove Skill Guard
 
 ```bash
-rm -f "$gogent_session_dir/active-skill.json"
+rm -f "$goyoke_session_dir/active-skill.json"
 ```
 
 ---
@@ -198,9 +198,9 @@ rm -f "$gogent_session_dir/active-skill.json"
 ## Example Session
 
 ```
-> /implement "Add a gogent-version binary that prints version and build time, with --json flag"
+> /implement "Add a goyoke-version binary that prints version and build time, with --json flag"
 
-[implement] Feature: Add a gogent-version binary that prints version and build time, with --json flag
+[implement] Feature: Add a goyoke-version binary that prints version and build time, with --json flag
 [implement] Planning...
 
 [architect explores codebase, creates plan]
@@ -209,7 +209,7 @@ rm -f "$gogent_session_dir/active-skill.json"
 [implement] Specs: SESSION_DIR/specs.md
 [implement] Plan: 2 tasks
 
-[implement] Team config: .gogent/sessions/20260209-143000/teams/1770551000.implementation
+[implement] Team config: .goyoke/sessions/20260209-143000/teams/1770551000.implementation
 
 [implement] Team launched (PID 12345)
 [implement] Budget: $10.00
@@ -228,8 +228,8 @@ rm -f "$gogent_session_dir/active-skill.json"
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | Architect didn't produce JSON | Feature too vague or architect confused | Check specs.md for details, re-run with clearer description |
-| gogent-plan-impl failed | Invalid plan JSON (bad task_ids, circular deps) | Check error output, fix plan manually or re-run architect |
-| Team failed to start | Binary not found or permission issue | Verify `gogent-team-run` is built: `go build -o ./gogent-team-run ./cmd/gogent-team-run/` |
+| goyoke-plan-impl failed | Invalid plan JSON (bad task_ids, circular deps) | Check error output, fix plan manually or re-run architect |
+| Team failed to start | Binary not found or permission issue | Verify `goyoke-team-run` is built: `go build -o ./goyoke-team-run ./cmd/goyoke-team-run/` |
 | Workers can't write files | Missing Write/Edit in allowed tools | Verify `augmentToolsForImplementation()` in spawn.go |
 
 ---
@@ -241,7 +241,7 @@ rm -f "$gogent_session_dir/active-skill.json"
 - Workers within a wave run in parallel
 - Wave failure propagation: failed wave N → subsequent waves skipped
 - The architect decides the DAG structure via `blocked_by` relationships
-- `gogent-plan-impl` computes parallel waves via Kahn's algorithm
+- `goyoke-plan-impl` computes parallel waves via Kahn's algorithm
 
 ---
 

@@ -33,7 +33,7 @@ Complete technical reference for configuration:
 ### For Project Managers
 
 See audit configuration in your project's CLAUDE.md:
-- `/home/doktersmol/Documents/GOgent-Fortress/CLAUDE.md`
+- `/home/doktersmol/Documents/goYoke/CLAUDE.md`
 
 ---
 
@@ -299,7 +299,7 @@ See **audit-quick-start.md** and **audit-config-schema.md** for detailed solutio
 | run-audit.sh | Implementation of audit system |
 | audit-quick-start.md | 3-minute user guide |
 | audit-config-schema.md | Complete technical reference |
-| GOgent-Fortress/CLAUDE.md | Project-specific configuration |
+| goYoke/CLAUDE.md | Project-specific configuration |
 
 ---
 
@@ -312,7 +312,7 @@ See **audit-quick-start.md** and **audit-config-schema.md** for detailed solutio
 → See **audit-config-schema.md** (complete reference)
 
 ### Project-Specific
-→ See `/home/doktersmol/Documents/GOgent-Fortress/CLAUDE.md`
+→ See `/home/doktersmol/Documents/goYoke/CLAUDE.md`
 
 ### Issues
 → See Troubleshooting in **audit-config-schema.md**

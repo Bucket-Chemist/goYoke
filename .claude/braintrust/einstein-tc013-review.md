@@ -61,7 +61,7 @@ In any system with multiple schema layers, one of two conditions must hold:
 
 **Condition B (Authoritative Schema):** One layer is designated as authoritative. All other representations are derived from it. Contradictions are resolved by reference to the authority.
 
-The GOgent system satisfies neither condition:
+The goYoke system satisfies neither condition:
 - The envelope builder validates `task` (string), but formal schemas define `task` (object) or omit it entirely. These are not composable.
 - No single layer is designated as authoritative in the tickets. TC-013a says "must comply with `schemas/stdin/reviewer.json`" but the envelope builder will reject schema-compliant files.
 
@@ -133,11 +133,11 @@ The system actually needs a **fifth layer**: a "runtime-compatible schema" that 
 
 **Affected ticket:** TC-013b
 
-**Problem:** The `braintrust.json` team template names the staff-architect's stdout file `stdout_staff-architect.json` (line 44), but `gogent-team-prepare-synthesis` reads from `stdout_staff-arch.json` (main.go line 29: `staffArchStdoutFile = "stdout_staff-arch.json"`). The inter-wave script will fail to find the file, producing a degraded pre-synthesis document with no staff-architect content.
+**Problem:** The `braintrust.json` team template names the staff-architect's stdout file `stdout_staff-architect.json` (line 44), but `goyoke-team-prepare-synthesis` reads from `stdout_staff-arch.json` (main.go line 29: `staffArchStdoutFile = "stdout_staff-arch.json"`). The inter-wave script will fail to find the file, producing a degraded pre-synthesis document with no staff-architect content.
 
 **Evidence:**
-- `/home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/braintrust.json` line 44: `"stdout_file": "stdout_staff-architect.json"`
-- `/home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-prepare-synthesis/main.go` line 29: `staffArchStdoutFile = "stdout_staff-arch.json"`
+- `/home/doktersmol/Documents/goYoke/.claude/schemas/teams/braintrust.json` line 44: `"stdout_file": "stdout_staff-architect.json"`
+- `/home/doktersmol/Documents/goYoke/cmd/goyoke-team-prepare-synthesis/main.go` line 29: `staffArchStdoutFile = "stdout_staff-arch.json"`
 
 **Impact:** The synthesis binary uses graceful degradation (it does not fail on missing files), so the braintrust workflow will "succeed" but Beethoven will receive a pre-synthesis document that says staff-architect output was missing/malformed. The actual analysis would be lost.
 
@@ -149,7 +149,7 @@ The system actually needs a **fifth layer**: a "runtime-compatible schema" that 
 
 **Affected ticket:** TC-013b
 
-**Problem:** Beethoven's stdin schema (`beethoven.json`) requires `einstein_analysis` (object) and `staff_architect_review` (object) -- the actual Wave 1 output data. But stdin files are written at config generation time (before Wave 1 runs). The inter-wave script (`gogent-team-prepare-synthesis`) writes `pre-synthesis.md`, a markdown summary, NOT a modified beethoven stdin JSON with the actual analysis objects injected.
+**Problem:** Beethoven's stdin schema (`beethoven.json`) requires `einstein_analysis` (object) and `staff_architect_review` (object) -- the actual Wave 1 output data. But stdin files are written at config generation time (before Wave 1 runs). The inter-wave script (`goyoke-team-prepare-synthesis`) writes `pre-synthesis.md`, a markdown summary, NOT a modified beethoven stdin JSON with the actual analysis objects injected.
 
 TC-013b Section 4 says: "Beethoven's stdin file must include paths to Wave 1 outputs." But the schema requires the actual objects, not paths. And nothing in the system rewrites stdin files between waves.
 
@@ -181,7 +181,7 @@ The ImplMgr bridge document (Section 5) explicitly acknowledges this: "If a memb
 **TC-013c does not specify whether:**
 1. `runWaves` should be modified to check for failures (and what "check" means -- fail-fast? skip dependents? continue anyway?)
 2. The test case expectation should be weakened to match current behavior
-3. `gogent-plan-impl` should inject inter-wave scripts that check for failures
+3. `goyoke-plan-impl` should inject inter-wave scripts that check for failures
 
 This is a design decision the ticket should make, not leave to the implementer.
 
@@ -262,12 +262,12 @@ An implementer must reverse-engineer these from the templates (`review.json`, `b
 
 **Problem:** The tickets say "Create team directory" but do not specify:
 - Where to create it (the session directory path convention)
-- How to derive `session_id` (from `$GOGENT_SESSION_ID` env var? generate one?)
+- How to derive `session_id` (from `$GOYOKE_SESSION_ID` env var? generate one?)
 - The naming convention (`{timestamp}.{workflow-type}`)
 - Required permissions
 - Whether the session directory itself must exist
 
-The bridge documents show the path convention (`sessions/${GOGENT_SESSION_ID}/teams/$(date +%s).code-review`) but the tickets do not reference this.
+The bridge documents show the path convention (`sessions/${GOYOKE_SESSION_ID}/teams/$(date +%s).code-review`) but the tickets do not reference this.
 
 ---
 
@@ -320,7 +320,7 @@ The envelope builder's `task` string requirement was designed for a simpler era 
 
 ### Analogy: The Adapter Pattern
 
-The system needs an adapter between "schema-compliant stdin" and "envelope-builder-compatible stdin." In software design, when two interfaces are incompatible, you introduce an adapter rather than modifying either interface. The inter-wave script (`gogent-team-prepare-synthesis`) is already such an adapter for the Wave 1 -> Wave 2 transition. A similar "stdin adapter" step could be added to config generation: generate schema-compliant JSON, then add the `task`/`description` string required by the envelope builder.
+The system needs an adapter between "schema-compliant stdin" and "envelope-builder-compatible stdin." In software design, when two interfaces are incompatible, you introduce an adapter rather than modifying either interface. The inter-wave script (`goyoke-team-prepare-synthesis`) is already such an adapter for the Wave 1 -> Wave 2 transition. A similar "stdin adapter" step could be added to config generation: generate schema-compliant JSON, then add the `task`/`description` string required by the envelope builder.
 
 ### Contrarian View: Are the Formal Schemas Even Needed at Runtime?
 
@@ -373,7 +373,7 @@ Questions that require either a design decision or empirical data, outside pure 
 
 1. **The four-layer schema authority problem (F-01) is the most critical finding.** Every workflow will fail at runtime because schema-compliant stdin files lack the envelope builder's required `task` string. This is not documented in any ticket. The root fix is a small change to `envelope.go`, not to the schemas.
 
-2. **The stdout filename mismatch (F-02) is a silent data loss bug.** The braintrust workflow will appear to succeed but Beethoven will receive degraded input because the inter-wave script looks for a filename that does not match the config template. This is a 1-line fix in either `braintrust.json` or `gogent-team-prepare-synthesis/main.go`.
+2. **The stdout filename mismatch (F-02) is a silent data loss bug.** The braintrust workflow will appear to succeed but Beethoven will receive degraded input because the inter-wave script looks for a filename that does not match the config template. This is a 1-line fix in either `braintrust.json` or `goyoke-team-prepare-synthesis/main.go`.
 
 3. **The Beethoven stdin lifecycle gap (F-03) is an architectural design hole.** No mechanism exists to inject Wave 1 outputs into Wave 2 stdin. The inter-wave script writes markdown, not JSON. The tickets acknowledge this vaguely but do not specify a solution.
 
@@ -421,28 +421,28 @@ findings_high: 5
 findings_medium: 3
 findings_low: 1
 source_files_examined:
-  - /home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/tickets/TC-013a.md
-  - /home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/tickets/TC-013b.md
-  - /home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/tickets/TC-013c.md
-  - /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/envelope.go
-  - /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/envelope_test.go
-  - /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/wave.go
-  - /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/spawn.go
-  - /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-run/main.go
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/stdin/reviewer.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/stdin/einstein.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/stdin/beethoven.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/stdin/worker.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/stdin/common-envelope.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/review.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/braintrust.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/stdin-stdout/review-architect.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/stdin-stdout/review-backend.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/stdin-stdout/braintrust-einstein.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/stdin-stdout/braintrust-beethoven.json
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/schemas/teams/stdin-stdout/implementation-worker.json
-  - /home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/ReviewOrch-team-bridge.md
-  - /home/doktersmol/Documents/GOgent-Fortress/tickets/team-coordination/ImplMgr-team-bridge.md
-  - /home/doktersmol/Documents/GOgent-Fortress/cmd/gogent-team-prepare-synthesis/main.go
-  - /home/doktersmol/Documents/GOgent-Fortress/.claude/braintrust/analysis-tc013-alignment-review.md
+  - /home/doktersmol/Documents/goYoke/tickets/team-coordination/tickets/TC-013a.md
+  - /home/doktersmol/Documents/goYoke/tickets/team-coordination/tickets/TC-013b.md
+  - /home/doktersmol/Documents/goYoke/tickets/team-coordination/tickets/TC-013c.md
+  - /home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/envelope.go
+  - /home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/envelope_test.go
+  - /home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/wave.go
+  - /home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/spawn.go
+  - /home/doktersmol/Documents/goYoke/cmd/goyoke-team-run/main.go
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/stdin/reviewer.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/stdin/einstein.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/stdin/beethoven.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/stdin/worker.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/stdin/common-envelope.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/review.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/braintrust.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/stdin-stdout/review-architect.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/stdin-stdout/review-backend.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/stdin-stdout/braintrust-einstein.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/stdin-stdout/braintrust-beethoven.json
+  - /home/doktersmol/Documents/goYoke/.claude/schemas/teams/stdin-stdout/implementation-worker.json
+  - /home/doktersmol/Documents/goYoke/tickets/team-coordination/ReviewOrch-team-bridge.md
+  - /home/doktersmol/Documents/goYoke/tickets/team-coordination/ImplMgr-team-bridge.md
+  - /home/doktersmol/Documents/goYoke/cmd/goyoke-team-prepare-synthesis/main.go
+  - /home/doktersmol/Documents/goYoke/.claude/braintrust/analysis-tc013-alignment-review.md
 ```

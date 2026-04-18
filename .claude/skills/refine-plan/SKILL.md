@@ -30,7 +30,7 @@ Requires a prior `/review-plan` run that produced `review-metadata.json` with an
 **Good Use Cases:**
 
 - After `/review-plan` produces `review-metadata.json`, before handing off to team-run automation
-- To get a readiness score that determines if `gogent-plan-impl` should proceed
+- To get a readiness score that determines if `goyoke-plan-impl` should proceed
 - To surface which tasks need rework based on review findings
 
 **When to Skip:**
@@ -180,7 +180,7 @@ Output(`[Refine] Pass 2: Dependency validation (up to 15 codebase calls)`);
 Output(`[Refine] Pass 3: Readiness scoring (0–100)`);
 Output(`[Refine] Cost: ~$0.05-0.15 (sonnet+thinking tier)`);
 
-const spawnResult = mcp__gofortress_interactive__spawn_agent({
+const spawnResult = mcp__goyoke_interactive__spawn_agent({
   agent: "plan-harmonizer",
   description: `Enrich plan with review findings: ${planPath}`,
   prompt: `AGENT: plan-harmonizer
@@ -201,7 +201,7 @@ ${JSON.stringify(payload, null, 2)}`,
 **Step 6:** Collect agent result
 
 ```javascript
-const result = mcp__gofortress_interactive__get_agent_result({
+const result = mcp__goyoke_interactive__get_agent_result({
   agent_id: spawnResult.agent_id,
 });
 ```
@@ -357,7 +357,7 @@ if (score === null) {
   Output(`See warnings above. Fix inputs and re-run: /refine-plan ${planPath} ${reviewPath}`);
 } else if (score.total >= 70) {
   Output(`Plan is READY for team-run automation.`);
-  Output(`\nNext: /implement (uses enriched plan) or gogent-plan-impl directly`);
+  Output(`\nNext: /implement (uses enriched plan) or goyoke-plan-impl directly`);
   if (implicitDeps.length > 0) {
     Output(`\nNote: Review ${implicitDeps.length} implicit dependencies before automation.`);
   }
@@ -567,8 +567,8 @@ Output(`\nThen: /refine-plan ${args[0]} .claude/tmp/review-metadata.json`);
 
 ```javascript
 try {
-  const spawnResult = mcp__gofortress_interactive__spawn_agent({...});
-  const result = mcp__gofortress_interactive__get_agent_result({ agent_id: spawnResult.agent_id });
+  const spawnResult = mcp__goyoke_interactive__spawn_agent({...});
+  const result = mcp__goyoke_interactive__get_agent_result({ agent_id: spawnResult.agent_id });
 } catch (error) {
   Output(`[Error] Plan-harmonizer failed: ${error.message}`);
   Output(`\nOriginal plan unchanged: ${planPath}`);

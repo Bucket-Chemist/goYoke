@@ -118,7 +118,7 @@ Each ticket includes:
 
 ## Integration with Task System
 
-To use with gofortress task tracking:
+To use with goyoke task tracking:
 
 ```bash
 # In a future session, create tasks from tickets

@@ -219,7 +219,7 @@ Check for dependencies the architect may have missed:
 
 **CRITICAL: Write implicit dependencies to the `implicit_dependencies` field on each task, NOT to `blocked_by`.**
 
-The `blocked_by` field is consumed by Kahn's algorithm in `gogent-plan-impl` for wave computation. Modifying it without cycle detection would break wave ordering. The `implicit_dependencies` field is a separate advisory field that requires human review before promotion to `blocked_by`.
+The `blocked_by` field is consumed by Kahn's algorithm in `goyoke-plan-impl` for wave computation. Modifying it without cycle detection would break wave ordering. The `implicit_dependencies` field is a separate advisory field that requires human review before promotion to `blocked_by`.
 
 Each implicit dependency entry:
 ```json
@@ -399,7 +399,7 @@ Uses the ralph-features classification examples above. Codebase grounding target
 
 | Anti-Pattern                            | Why Bad                                                              | Correct Approach                                                       |
 | --------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Modifying `blocked_by` directly          | Breaks Kahn's wave computation in gogent-plan-impl                   | Write to `implicit_dependencies` field; promotion is done by /refine-plan skill with cycle detection |
+| Modifying `blocked_by` directly          | Breaks Kahn's wave computation in goyoke-plan-impl                   | Write to `implicit_dependencies` field; promotion is done by /refine-plan skill with cycle detection |
 | Auto-applying corrections               | Corrections change plan direction — requires human judgment          | Set `auto_applied: false`, flag for review                             |
 | Exceeding codebase call cap             | Wastes budget, may cause timeout                                     | Respect `max(10, min(cap, task_count * 2))` limit                      |
 | Skipping unmapped findings              | Loses review information                                            | Include in `mapping_report.unmapped_findings` with reason              |

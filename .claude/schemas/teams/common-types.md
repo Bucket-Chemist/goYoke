@@ -1,6 +1,6 @@
 # Team Configuration Field Contracts
 
-This document defines the field contracts for team configuration JSON files used by `gogent-team-run`.
+This document defines the field contracts for team configuration JSON files used by `goyoke-team-run`.
 
 ## Top-Level Fields
 
@@ -11,7 +11,7 @@ This document defines the field contracts for team configuration JSON files used
 | `project_root` | string | yes | Absolute path to project. Must exist at runtime. |
 | `session_id` | string | yes | UUID format. Links team to spawning session. |
 | `created_at` | string | yes | ISO-8601 timestamp of team creation. |
-| `background_pid` | int/null | yes | Initially `null`. Written by `gogent-team-run` after spawning background process. |
+| `background_pid` | int/null | yes | Initially `null`. Written by `goyoke-team-run` after spawning background process. |
 | `budget_max_usd` | float64 | yes | Maximum USD budget for entire team. **Top-level flat field** (not nested). |
 | `budget_remaining_usd` | float64 | yes | Remaining budget. Decremented as agents complete. **Top-level flat field** (not nested). |
 | `warning_threshold_usd` | float64 | yes | Budget warning threshold. Typically 80% of `budget_max_usd`. |
@@ -39,7 +39,7 @@ This document defines the field contracts for team configuration JSON files used
 | `stdin_file` | string | yes | Filename for agent input. Convention: `stdin_{name}.json` (use `name`, not `agent`). |
 | `stdout_file` | string | yes | Filename for agent output. Convention: `stdout_{name}.json` (use `name`, not `agent`). |
 | `status` | enum | yes | Initially `pending`. Runtime values: `running`, `completed`, `failed`. |
-| `process_pid` | int/null | yes | Initially `null`. Written by `gogent-team-run`. (Renamed from `pid` to match Go struct.) |
+| `process_pid` | int/null | yes | Initially `null`. Written by `goyoke-team-run`. (Renamed from `pid` to match Go struct.) |
 | `exit_code` | int/null | yes | Process exit code. Initially `null`. Written on completion. |
 | `error_message` | string | yes | Error details if failed. Initially empty string. |
 | `started_at` | int64/null | yes | Unix timestamp when member started. Initially `null`. |
@@ -57,7 +57,7 @@ Budget fields are **top-level flat** (`budget_max_usd`, `budget_remaining_usd`),
 **Rationale**: This resolves the TC-009/TC-008/TC-013 contradiction flagged by multiple reviewers. Flat structure:
 - Simplifies JSON unmarshaling in Go
 - Reduces nesting depth
-- Matches existing GOgent convention patterns
+- Matches existing goYoke convention patterns
 
 **Example**:
 ```json
@@ -132,7 +132,7 @@ Each agent type has a comprehensive stdin/stdout JSON schema in `stdin-stdout/`:
 ```
 Mozart → stdin_einstein.json → Einstein → stdout_einstein.json
 Mozart → stdin_staff-architect.json → Staff-Architect → stdout_staff-architect.json
-gogent-team-prepare-synthesis → stdin_beethoven.json (includes both Wave 1 outputs)
+goyoke-team-prepare-synthesis → stdin_beethoven.json (includes both Wave 1 outputs)
 stdin_beethoven.json → Beethoven → stdout_beethoven.json → Go binary writes analysis.md
 ```
 
@@ -151,7 +151,7 @@ The Go binary parses CLI output in two layers:
 1. **Layer 1**: CLI wrapper JSON array → result event → `total_cost_usd` (cost tracking)
 2. **Layer 2**: `result.Result` string → agent-specific stdout schema → file writes
 
-See `cmd/gogent-team-run/docs/claude-cli-output-format.md` for Layer 1.
+See `cmd/goyoke-team-run/docs/claude-cli-output-format.md` for Layer 1.
 See `stdin-stdout/*.json` files for Layer 2.
 
 ## Validation Requirements

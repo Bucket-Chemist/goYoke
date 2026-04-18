@@ -36,7 +36,7 @@
 The conventions (go.md, python.md, R.md, etc.) are **NOT** loaded at session start:
 - `go.md` has NO frontmatter → never auto-loads
 - `python.md` has `paths: ["**/*.py"]` → only loads when touching .py files
-- The `gogent-load-context` hook DETECTS project type but doesn't LOAD convention content
+- The `goyoke-load-context` hook DETECTS project type but doesn't LOAD convention content
 
 ---
 
@@ -196,7 +196,7 @@ At spawn time, inject these via the Task() prompt parameter.
 
 ### Q2: Should session-init skip conventions for the router?
 
-**Already does.** Session-init (gogent-load-context) DETECTS project type but doesn't LOAD conventions. Conventions load via frontmatter when files are touched.
+**Already does.** Session-init (goyoke-load-context) DETECTS project type but doesn't LOAD conventions. Conventions load via frontmatter when files are touched.
 
 **No changes needed** to session-init behavior.
 
@@ -333,7 +333,7 @@ At spawn time, inject these via the Task() prompt parameter.
 - Implemented LoadConventionContent with caching
 - Implemented BuildAugmentedPrompt with double-injection prevention
 - Added updatedInput support to HookResponse
-- Integrated convention injection into gogent-validate
+- Integrated convention injection into goyoke-validate
 - 9/9 integration tests passing
 - Removed frontmatter from 3 convention files
 - Actual savings: ~13,386 tokens no longer auto-loaded
@@ -356,7 +356,7 @@ At spawn time, inject these via the Task() prompt parameter.
 | Deleted rules | agent-behavior.md, LLM-guidelines.md |
 | Modified | CLAUDE.md, agents-index.json |
 | New Go code | context_types.go, context_loader.go, prompt_builder.go |
-| Modified Go code | gogent-validate/main.go, response.go, events.go |
+| Modified Go code | goyoke-validate/main.go, response.go, events.go |
 | Convention frontmatter removed | python.md, R.md, R-shiny.md |
 
 ### Verification

@@ -15,7 +15,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 2. **Classify** — Identify languages and architectural layers present
 3. **Select** — Choose relevant reviewers (backend, frontend, standards, architecture)
 4. **Execute** — Dispatch reviewers via background team-run
-5. **Launch** — Start `gogent-team-run` in background, return immediately
+5. **Launch** — Start `goyoke-team-run` in background, return immediately
 
 **What this skill does NOT do:**
 
@@ -40,7 +40,7 @@ Automated code review through coordinated specialist reviewers. Analyzes changed
 
 - `git` (for change detection)
 - `jq` (JSON processing)
-- `gogent-team-run` (team execution)
+- `goyoke-team-run` (team execution)
 
 **Project setup:**
 None required. Works in any git repository.
@@ -49,11 +49,11 @@ None required. Works in any git repository.
 
 ## Workflow
 
-When `/review` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{gogent_session_dir}/teams/{timestamp}.code-review/`)
+When `/review` is invoked, the `goyoke-skill-guard` PreToolUse hook has already:
+- Created the team directory (`{goyoke_session_dir}/teams/{timestamp}.code-review/`)
 - Written `active-skill.json` with guard restrictions + `team_dir` path
 
-The `gogent_session_dir` lives under `{project_root}/.gogent/sessions/`, NOT `.claude/sessions/`. It is resolved by reading `{project_root}/.gogent/current-session`.
+The `goyoke_session_dir` lives under `{project_root}/.goyoke/sessions/`, NOT `.claude/sessions/`. It is resolved by reading `{project_root}/.goyoke/current-session`.
 - Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
 
 The Router executes the following steps:
@@ -63,11 +63,11 @@ The Router executes the following steps:
 #### Step 1: Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${gogent_session_dir}/active-skill.json` })
+Read({ file_path: `${goyoke_session_dir}/active-skill.json` })
 // Extract team_dir from JSON response
 ```
 
-The `gogent_session_dir` is resolved by reading `{project_root}/.gogent/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOGENT_PROJECT_ROOT` env var.
+The `goyoke_session_dir` is resolved by reading `{project_root}/.goyoke/current-session`. The project root can be found via `git rev-parse --show-toplevel` or `GOYOKE_PROJECT_ROOT` env var.
 
 #### Step 2: Detect Changed Files
 
@@ -106,7 +106,7 @@ esac
 
 if [[ -z "$files" ]]; then
     echo "[review] No files to review."
-    rm -f "$gogent_session_dir/active-skill.json"
+    rm -f "$goyoke_session_dir/active-skill.json"
     exit 0
 fi
 
@@ -163,7 +163,7 @@ Read the review template from `.claude/schemas/teams/review.json` and populate w
 - `team_name`: `"review-$(date +%Y%m%d-%H%M%S)"`
 - `workflow_type`: `"review"`
 - `project_root`: `$(git rev-parse --show-toplevel)`
-- `session_id`: basename of `$GOGENT_SESSION_DIR`
+- `session_id`: basename of `$GOYOKE_SESSION_DIR`
 - `created_at`: `$(date -u +%Y-%m-%dT%H:%M:%SZ)`
 - `budget_max_usd`: `5.0`
 - `budget_remaining_usd`: `5.0`
@@ -262,14 +262,14 @@ Write each stdin file to `$team_dir/stdin_{reviewer-name}.json`.
 #### Step 3: Launch
 
 ```
-result = mcp__gofortress-interactive__team_run({
+result = mcp__goyoke-interactive__team_run({
     team_dir: "$team_dir",
     wait_for_start: true,
     timeout_ms: 10000
 })
 if !result.success:
     echo "[review] ERROR: ${result.result}"
-    rm -f "$gogent_session_dir/active-skill.json"
+    rm -f "$goyoke_session_dir/active-skill.json"
     exit 1
 background_pid = result.background_pid
 echo "[review] Team launched (PID $background_pid)"
@@ -280,7 +280,7 @@ echo "[review] Use /team-result when complete to see findings"
 #### Step 5: Remove Skill Guard
 
 ```bash
-rm -f "$gogent_session_dir/active-skill.json"
+rm -f "$goyoke_session_dir/active-skill.json"
 ```
 
 #### Step 6: Return to User
@@ -314,7 +314,7 @@ After collecting review results, log to ML telemetry (non-blocking):
 
 ```bash
 # Check if telemetry is enabled (default: enabled)
-if [[ "${GOGENT_ENABLE_TELEMETRY:-1}" == "1" ]]; then
+if [[ "${GOYOKE_ENABLE_TELEMETRY:-1}" == "1" ]]; then
     # Extract session_id from context or generate one
     session_id="${CLAUDE_SESSION_ID:-$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)}"
 
@@ -322,10 +322,10 @@ if [[ "${GOGENT_ENABLE_TELEMETRY:-1}" == "1" ]]; then
     review_scope="${review_scope:-staged}"
     files_count=$(echo "$files" | wc -l | tr -d ' ')
 
-    # Pipe to gogent-log-review (non-blocking, errors to /dev/null)
+    # Pipe to goyoke-log-review (non-blocking, errors to /dev/null)
     echo "$review_result" | jq --arg sid "$session_id" --arg scope "$review_scope" --argjson files "$files_count" \
         '{session_id: $sid, review_scope: $scope, files_reviewed: $files, findings: .findings}' \
-        | gogent-log-review > .claude/tmp/review-telemetry.json 2>/dev/null || true
+        | goyoke-log-review > .claude/tmp/review-telemetry.json 2>/dev/null || true
 fi
 ```
 
@@ -485,7 +485,7 @@ fi
 | `{team_dir}/stdout_*.json`      | Per-reviewer output        | JSON with findings                  |
 | `{team_dir}/runner.log`         | Execution log              | Plain text                          |
 
-`{team_dir}` = `{gogent_session_dir}/teams/{timestamp}.code-review/` (created by `gogent-skill-guard` hook)
+`{team_dir}` = `{goyoke_session_dir}/teams/{timestamp}.code-review/` (created by `goyoke-skill-guard` hook)
 
 ---
 
@@ -517,7 +517,7 @@ fi
 **"Team launch failed"**
 
 - Check `$team_dir/runner.log` for errors
-- Verify `gogent-team-run` is built and in PATH
+- Verify `goyoke-team-run` is built and in PATH
 - Check `$team_dir/config.json` is valid JSON: `jq . "$team_dir/config.json"`
 
 ---
@@ -541,7 +541,7 @@ $ /review
 [review] Review team launched in background
   Reviewers: backend-reviewer standards-reviewer
   Files: 3 files across 1 languages
-  Team: /home/user/project/.gogent/sessions/20260208.a1b2c3d4/teams/1738901234.code-review
+  Team: /home/user/project/.goyoke/sessions/20260208.a1b2c3d4/teams/1738901234.code-review
   PID: 12345
 
 Use /team-status to check progress
@@ -585,18 +585,18 @@ This skill logs all findings to ML telemetry for downstream analysis:
 
 | File                                          | Purpose                                |
 | --------------------------------------------- | -------------------------------------- |
-| `$XDG_DATA_HOME/gogent/review-findings.jsonl` | All review findings                    |
-| `$XDG_DATA_HOME/gogent/sharp-edge-hits.jsonl` | Sharp edge correlations                |
+| `$XDG_DATA_HOME/goyoke/review-findings.jsonl` | All review findings                    |
+| `$XDG_DATA_HOME/goyoke/sharp-edge-hits.jsonl` | Sharp edge correlations                |
 | `.claude/tmp/review-telemetry.json`           | Session telemetry output (finding IDs) |
 
 Telemetry is non-blocking - skill continues even if logging fails.
 
 ### Disabling Telemetry
 
-Set `GOGENT_ENABLE_TELEMETRY=0` to disable telemetry logging:
+Set `GOYOKE_ENABLE_TELEMETRY=0` to disable telemetry logging:
 
 ```bash
-GOGENT_ENABLE_TELEMETRY=0 /review
+GOYOKE_ENABLE_TELEMETRY=0 /review
 ```
 
 ### Telemetry Schema

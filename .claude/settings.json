@@ -22,83 +22,83 @@
       "Bash(make:*)",
       "Write(**)",
       "Edit(**)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/debug-injection:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/debug-injection:*)",
       "Bash(bin/debug-injection:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress:*)",
-      "Bash(bin/gofortress:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-ipc-mcp:*)",
-      "Bash(bin/gofortress-ipc-mcp:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-ipc-tui:*)",
-      "Bash(bin/gofortress-ipc-tui:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-legacy:*)",
-      "Bash(bin/gofortress-legacy:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-mcp:*)",
-      "Bash(bin/gofortress-mcp:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-mcp-poc:*)",
-      "Bash(bin/gofortress-mcp-poc:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gofortress-mcp-server:*)",
-      "Bash(bin/gofortress-mcp-server:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-agent-endstate:*)",
-      "Bash(bin/gogent-agent-endstate:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-aggregate:*)",
-      "Bash(bin/gogent-aggregate:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-archive:*)",
-      "Bash(bin/gogent-archive:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-capture-intent:*)",
-      "Bash(bin/gogent-capture-intent:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-config-guard:*)",
-      "Bash(bin/gogent-config-guard:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-direct-impl-check:*)",
-      "Bash(bin/gogent-direct-impl-check:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-doc-theater:*)",
-      "Bash(bin/gogent-doc-theater:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-e2e-diamond:*)",
-      "Bash(bin/gogent-e2e-diamond:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-e2e-fanout:*)",
-      "Bash(bin/gogent-e2e-fanout:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-e2e-team-a:*)",
-      "Bash(bin/gogent-e2e-team-a:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-e2e-team-b:*)",
-      "Bash(bin/gogent-e2e-team-b:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-e2e-wide:*)",
-      "Bash(bin/gogent-e2e-wide:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-inject-context:*)",
-      "Bash(bin/gogent-inject-context:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-instructions-audit:*)",
-      "Bash(bin/gogent-instructions-audit:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-load-context:*)",
-      "Bash(bin/gogent-load-context:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-load-context.tmp:*)",
-      "Bash(bin/gogent-load-context.tmp:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-log-review:*)",
-      "Bash(bin/gogent-log-review:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-ml-export:*)",
-      "Bash(bin/gogent-ml-export:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-orchestrator-guard:*)",
-      "Bash(bin/gogent-orchestrator-guard:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-plan-impl:*)",
-      "Bash(bin/gogent-plan-impl:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-scout:*)",
-      "Bash(bin/gogent-scout:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-sharp-edge:*)",
-      "Bash(bin/gogent-sharp-edge:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-skill-guard:*)",
-      "Bash(bin/gogent-skill-guard:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-team-prepare-synthesis:*)",
-      "Bash(bin/gogent-team-prepare-synthesis:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-team-run:*)",
-      "Bash(bin/gogent-team-run:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-timeout-test:*)",
-      "Bash(bin/gogent-timeout-test:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-update-review-outcome:*)",
-      "Bash(bin/gogent-update-review-outcome:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-validate:*)",
-      "Bash(bin/gogent-validate:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-validate-schemas:*)",
-      "Bash(bin/gogent-validate-schemas:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-version:*)",
-      "Bash(bin/gogent-version:*)",
-      "Bash(/home/doktersmol/Documents/GOgent-Fortress/bin/mousetest:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke:*)",
+      "Bash(bin/goyoke:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-ipc-mcp:*)",
+      "Bash(bin/goyoke-ipc-mcp:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-ipc-tui:*)",
+      "Bash(bin/goyoke-ipc-tui:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-legacy:*)",
+      "Bash(bin/goyoke-legacy:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-mcp:*)",
+      "Bash(bin/goyoke-mcp:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-mcp-poc:*)",
+      "Bash(bin/goyoke-mcp-poc:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-mcp-server:*)",
+      "Bash(bin/goyoke-mcp-server:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-agent-endstate:*)",
+      "Bash(bin/goyoke-agent-endstate:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-aggregate:*)",
+      "Bash(bin/goyoke-aggregate:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-archive:*)",
+      "Bash(bin/goyoke-archive:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-capture-intent:*)",
+      "Bash(bin/goyoke-capture-intent:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-config-guard:*)",
+      "Bash(bin/goyoke-config-guard:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-direct-impl-check:*)",
+      "Bash(bin/goyoke-direct-impl-check:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-doc-theater:*)",
+      "Bash(bin/goyoke-doc-theater:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-e2e-diamond:*)",
+      "Bash(bin/goyoke-e2e-diamond:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-e2e-fanout:*)",
+      "Bash(bin/goyoke-e2e-fanout:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-e2e-team-a:*)",
+      "Bash(bin/goyoke-e2e-team-a:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-e2e-team-b:*)",
+      "Bash(bin/goyoke-e2e-team-b:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-e2e-wide:*)",
+      "Bash(bin/goyoke-e2e-wide:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-inject-context:*)",
+      "Bash(bin/goyoke-inject-context:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-instructions-audit:*)",
+      "Bash(bin/goyoke-instructions-audit:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-load-context:*)",
+      "Bash(bin/goyoke-load-context:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-load-context.tmp:*)",
+      "Bash(bin/goyoke-load-context.tmp:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-log-review:*)",
+      "Bash(bin/goyoke-log-review:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-ml-export:*)",
+      "Bash(bin/goyoke-ml-export:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-orchestrator-guard:*)",
+      "Bash(bin/goyoke-orchestrator-guard:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-plan-impl:*)",
+      "Bash(bin/goyoke-plan-impl:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-scout:*)",
+      "Bash(bin/goyoke-scout:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-sharp-edge:*)",
+      "Bash(bin/goyoke-sharp-edge:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-skill-guard:*)",
+      "Bash(bin/goyoke-skill-guard:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-team-prepare-synthesis:*)",
+      "Bash(bin/goyoke-team-prepare-synthesis:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-team-run:*)",
+      "Bash(bin/goyoke-team-run:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-timeout-test:*)",
+      "Bash(bin/goyoke-timeout-test:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-update-review-outcome:*)",
+      "Bash(bin/goyoke-update-review-outcome:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-validate:*)",
+      "Bash(bin/goyoke-validate:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-validate-schemas:*)",
+      "Bash(bin/goyoke-validate-schemas:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/goyoke-version:*)",
+      "Bash(bin/goyoke-version:*)",
+      "Bash(/home/doktersmol/Documents/goYoke/bin/mousetest:*)",
       "Bash(bin/mousetest:*)",
       "Bash(./run-bin:*)"
     ],
@@ -117,7 +117,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-load-context",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-load-context",
             "timeout": 10
           }
         ]
@@ -129,7 +129,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-skill-guard",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-skill-guard",
             "timeout": 5
           }
         ]
@@ -139,7 +139,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-validate",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-validate",
             "timeout": 10
           }
         ]
@@ -149,7 +149,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-direct-impl-check",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-direct-impl-check",
             "timeout": 5
           }
         ]
@@ -159,7 +159,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-permission-gate",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-permission-gate",
             "timeout": 5
           }
         ]
@@ -171,7 +171,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-sharp-edge",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-sharp-edge",
             "timeout": 5
           }
         ]
@@ -182,12 +182,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-agent-endstate",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-agent-endstate",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-orchestrator-guard",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-orchestrator-guard",
             "timeout": 10
           }
         ]
@@ -198,7 +198,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-archive",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-archive",
             "timeout": 30
           }
         ]
@@ -210,7 +210,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-config-guard",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-config-guard",
             "timeout": 5
           }
         ]
@@ -221,7 +221,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/doktersmol/Documents/GOgent-Fortress/bin/gogent-instructions-audit",
+            "command": "/home/doktersmol/Documents/goYoke/bin/goyoke-instructions-audit",
             "timeout": 3
           }
         ]

@@ -105,7 +105,7 @@ sharp_edges:
     category: view
     description: "Message role not handled in View switch drops content"
     symptom: "Messages added to state but never appear in UI"
-    learned_from: "GOgent-Fortress TUI /model command fix (2026-01-26)"
+    learned_from: "goYoke TUI /model command fix (2026-01-26)"
     solution: |
       WRONG: Missing case silently drops messages
       for _, msg := range m.messages {
@@ -142,7 +142,7 @@ sharp_edges:
     category: lifecycle
     description: "After subprocess restart, must re-subscribe to channels"
     symptom: "Events stop arriving after process restart or model change"
-    learned_from: "GOgent-Fortress TUI model change fix (2026-01-26)"
+    learned_from: "goYoke TUI model change fix (2026-01-26)"
     solution: |
       When process restarts (e.g., model change), the TUI must
       re-subscribe to the new process's event channels.
@@ -171,7 +171,7 @@ sharp_edges:
     category: integration
     description: "Subprocess channel sends need closure guards"
     symptom: "Panic on send to closed channel during shutdown"
-    learned_from: "GOgent-Fortress subprocess panic fix (2026-01-26)"
+    learned_from: "goYoke subprocess panic fix (2026-01-26)"
     solution: |
       When TUI triggers subprocess Stop() (e.g., model change),
       background goroutines may still try to send to channels.
@@ -201,7 +201,7 @@ sharp_edges:
     category: input
     description: "Native TUI commands must be intercepted before subprocess"
     symptom: "Commands like /model sent to Claude instead of handled locally"
-    learned_from: "GOgent-Fortress TUI slash commands (2026-01-26)"
+    learned_from: "goYoke TUI slash commands (2026-01-26)"
     solution: |
       Some commands need TUI handling (e.g., /model requires restart).
       Intercept before sending to subprocess.

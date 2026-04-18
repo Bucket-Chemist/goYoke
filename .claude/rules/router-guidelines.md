@@ -4,7 +4,7 @@ alwaysApply: true
 
 # Router Guidelines
 
-Router-essential guidance for the GOgent-Fortress system. This file contains ONLY the subset of rules that apply to Claude's routing decisions and system awareness.
+Router-essential guidance for the goYoke system. This file contains ONLY the subset of rules that apply to Claude's routing decisions and system awareness.
 
 ---
 
@@ -63,12 +63,12 @@ The following Go binaries run as hooks and inject context automatically:
 
 | Binary | Event | What You'll See |
 |--------|-------|-----------------|
-| `gogent-load-context` | SessionStart | Routing schema, previous handoff, git context |
-| `gogent-validate` | PreToolUse (Task) | Block/allow decision, subagent_type enforcement |
-| `gogent-sharp-edge` | PostToolUse | Tool counter, routing reminders (every 10), failure tracking |
-| `gogent-agent-endstate` | SubagentStop | Decision outcomes, tier-specific follow-up prompts |
-| `gogent-orchestrator-guard` | SubagentStop | Background task collection enforcement |
-| `gogent-archive` | SessionEnd | Handoff generation, metrics capture |
+| `goyoke-load-context` | SessionStart | Routing schema, previous handoff, git context |
+| `goyoke-validate` | PreToolUse (Task) | Block/allow decision, subagent_type enforcement |
+| `goyoke-sharp-edge` | PostToolUse | Tool counter, routing reminders (every 10), failure tracking |
+| `goyoke-agent-endstate` | SubagentStop | Decision outcomes, tier-specific follow-up prompts |
+| `goyoke-orchestrator-guard` | SubagentStop | Background task collection enforcement |
+| `goyoke-archive` | SessionEnd | Handoff generation, metrics capture |
 
 ### 2.2 Responding to Hook Injections
 
@@ -83,7 +83,7 @@ When you see `additionalContext` in a hook response:
 
 ### 3.1 Escalate to Einstein Protocol
 
-**Enforcement:** `gogent-validate` (Go binary, PreToolUse hook) **blocks** `Task(model: "opus")` calls. Must use `/einstein` slash command.
+**Enforcement:** `goyoke-validate` (Go binary, PreToolUse hook) **blocks** `Task(model: "opus")` calls. Must use `/einstein` slash command.
 
 #### Trigger Conditions
 
@@ -252,14 +252,14 @@ For Go implementation tasks, consider:
    - Parsed by hooks at runtime
    - Example: `"task_invocation_blocked": true`
 
-2. **Programmatic Enforcement** (Go hook binary, e.g., `gogent-validate`)
+2. **Programmatic Enforcement** (Go hook binary, e.g., `goyoke-validate`)
    - Actually runs before/after tool use
    - Can block, warn, or modify behavior
    - Example: Check schema rule, return `routing.BlockResponse()` with reason
 
 3. **Reference Documentation** (`CLAUDE.md`)
    - Points to enforcement, doesn't replace it
-   - Example: "Blocked by gogent-validate (PreToolUse hook)"
+   - Example: "Blocked by goyoke-validate (PreToolUse hook)"
    - Provides context for WHY, not enforcement of WHAT
 
 ### 6.3 Decision Tree: Where Does This Go?
@@ -272,7 +272,7 @@ Is this enforcement of a behavior?
 │   ├─ YES: What kind of enforcement?
 │   │   │
 │   │   ├─ Block action → routing-schema.json rule
-│   │   │                 + gogent-validate check (Go binary)
+│   │   │                 + goyoke-validate check (Go binary)
 │   │   │                 + CLAUDE.md reference
 │   │   │
 │   │   ├─ Require action → Hook injects reminder at trigger
@@ -298,7 +298,7 @@ Is this enforcement of a behavior?
 
 | Need | ❌ Wrong | ✅ Right |
 |------|----------|----------|
-| Block a tool pattern | "You MUST NOT use X" in CLAUDE.md | `routing-schema.json` rule + `gogent-validate` enforcement + CLAUDE.md reference |
+| Block a tool pattern | "You MUST NOT use X" in CLAUDE.md | `routing-schema.json` rule + `goyoke-validate` enforcement + CLAUDE.md reference |
 | Require pre-check | "ALWAYS check Y first" in CLAUDE.md | Hook injects reminder at trigger point |
 | Prevent anti-pattern | "NEVER do Z" in CLAUDE.md | This section in LLM-guidelines.md + warning hook |
 | Document workflow | Gates 1-5 in CLAUDE.md | ✅ Appropriate (this IS documentation) |
@@ -353,11 +353,11 @@ If any answer is wrong, implement programmatic enforcement first.
 }
 ```
 
-2. `cmd/gogent-validate/main.go`:
+2. `cmd/goyoke-validate/main.go`:
 ```go
 if event.Task != nil && event.Task.Model == "opus" {
     return routing.BlockResponse(
-        "Task(opus) blocked by gogent-validate. Use /einstein instead.",
+        "Task(opus) blocked by goyoke-validate. Use /einstein instead.",
     )
 }
 ```
@@ -366,7 +366,7 @@ if event.Task != nil && event.Task.Model == "opus" {
 ```markdown
 ## Gate 6: Einstein Escalation
 
-Einstein invocation via Task tool is blocked by `gogent-validate` (PreToolUse hook).
+Einstein invocation via Task tool is blocked by `goyoke-validate` (PreToolUse hook).
 See `routing-schema.json` → `opus.task_invocation_blocked`.
 
 When Einstein triggers fire, use `escalate_to_einstein` protocol instead.
@@ -403,7 +403,7 @@ If task is <$0.01 of work, do it directly rather than delegating. Delegation its
 
 ## 8. System-Level Anti-Patterns
 
-These anti-patterns apply to Claude's internal behavior when executing tasks within the GOgent-Fortress system.
+These anti-patterns apply to Claude's internal behavior when executing tasks within the goYoke system.
 
 ### 8.1 FORBIDDEN Behaviors
 
@@ -411,9 +411,9 @@ These anti-patterns apply to Claude's internal behavior when executing tasks wit
 |--------------|---------|------------------|
 | Retrying identically after failure | Wastes tokens, won't help | Modify approach (different tool, smaller scope, more context) |
 | Using Sonnet for file search | 50x cost waste | Use Haiku/codebase-search |
-| Spawning background tasks without collecting | Orphaned work, blocked by gogent-orchestrator-guard | Always call TaskOutput before final synthesis |
+| Spawning background tasks without collecting | Orphaned work, blocked by goyoke-orchestrator-guard | Always call TaskOutput before final synthesis |
 | Ignoring hook injections | Misses guidance/enforcement | Read and follow additionalContext from hooks |
-| Skipping scout on unknown scope | Potential mis-routing to expensive tier | Scout first with haiku-scout or gogent-scout |
+| Skipping scout on unknown scope | Potential mis-routing to expensive tier | Scout first with haiku-scout or goyoke-scout |
 
 ### 8.2 WARNING Behaviors
 

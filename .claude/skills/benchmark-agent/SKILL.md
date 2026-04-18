@@ -1,6 +1,6 @@
 ---
 name: benchmark-agent
-description: Evaluate GOgent agents against SkillsBench benchmarks via Harbor
+description: Evaluate goYoke agents against SkillsBench benchmarks via Harbor
 triggers:
   - /benchmark-agent
   - benchmark agent
@@ -11,7 +11,7 @@ triggers:
 # Benchmark Agent Skill
 
 ## Overview
-Evaluates GOgent-Fortress agents against SkillsBench tasks using Harbor's evaluation framework.
+Evaluates goYoke agents against SkillsBench tasks using Harbor's evaluation framework.
 Measures whether agent identity injection (personality, conventions, rules) improves task performance.
 
 ## Usage
@@ -31,8 +31,8 @@ Measures whether agent identity injection (personality, conventions, rules) impr
 ## Constants
 
 ```
-GOGENT_DIR="/home/doktersmol/Documents/GOgent-Fortress"
-BENCHMARK_TOOLS="${GOGENT_DIR}/tools/benchmark"
+GOYOKE_DIR="/home/doktersmol/Documents/goYoke"
+BENCHMARK_TOOLS="${GOYOKE_DIR}/tools/benchmark"
 DEFAULT_TASKS_DIR="/home/doktersmol/Documents/skillsbench/tasks-no-skills"
 # DEFAULT_MODEL is resolved at runtime from agents-index.json via get_agent_model()
 ```
@@ -45,7 +45,7 @@ Parse the user's input to extract:
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
-| `agent_id` | positional | (required unless --list) | GOgent agent ID |
+| `agent_id` | positional | (required unless --list) | goYoke agent ID |
 | `--task` | string | (all matching) | Run specific task by name |
 | `--raw` | flag | false | Run without identity injection |
 | `--compare` | flag | false | Run both with/without identity, show delta |
@@ -58,7 +58,7 @@ Parse the user's input to extract:
 ### Model Resolution (if `--model` not provided)
 
 ```bash
-PYTHONPATH=/home/doktersmol/Documents/GOgent-Fortress/tools/benchmark \
+PYTHONPATH=/home/doktersmol/Documents/goYoke/tools/benchmark \
   uv run python -c "
 from identity_injector import get_agent_model
 print(get_agent_model('${AGENT_ID}'))
@@ -73,7 +73,7 @@ The mapping (`MODEL_TIER_MAP`) lives in `identity_injector.py` -- update it ther
 Run the following and display the output, then STOP:
 
 ```bash
-PYTHONPATH=/home/doktersmol/Documents/GOgent-Fortress/tools/benchmark \
+PYTHONPATH=/home/doktersmol/Documents/goYoke/tools/benchmark \
   uv run python -c "
 from task_matcher import scan_tasks, match_tasks, list_available_agents
 from pathlib import Path
@@ -102,7 +102,7 @@ for agent_id in list_available_agents():
 Find tasks matching the agent. If `--task` is specified, find just that task.
 
 ```bash
-PYTHONPATH=/home/doktersmol/Documents/GOgent-Fortress/tools/benchmark \
+PYTHONPATH=/home/doktersmol/Documents/goYoke/tools/benchmark \
   uv run python -c "
 from task_matcher import scan_tasks, match_tasks, filter_by_difficulty
 from pathlib import Path
@@ -148,16 +148,16 @@ RESULTS_DIR="/tmp/benchmark-agent-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "${RESULTS_DIR}"
 ```
 
-### With GOgent Identity Injection
+### With goYoke Identity Injection
 
 ```bash
-PYTHONPATH=/home/doktersmol/Documents/GOgent-Fortress/tools/benchmark \
+PYTHONPATH=/home/doktersmol/Documents/goYoke/tools/benchmark \
   harbor run \
     -p "${TASK_PATH}" \
-    --agent-import-path "gogent_adapter:GOgentAgent" \
+    --agent-import-path "goyoke_adapter:goYokeAgent" \
     --ak "agent_id=${AGENT_ID}" \
     -m "${MODEL}" \
-    --jobs-dir "${RESULTS_DIR}/gogent" \
+    --jobs-dir "${RESULTS_DIR}/goyoke" \
     -n 1 -k 1
 ```
 
@@ -200,8 +200,8 @@ jobs-dir/
 Parse results:
 
 ```bash
-# Collect GOgent results
-for reward_file in ${RESULTS_DIR}/gogent/*/trials/*/attempt-0/reward.txt; do
+# Collect goYoke results
+for reward_file in ${RESULTS_DIR}/goyoke/*/trials/*/attempt-0/reward.txt; do
     task_name=$(basename $(dirname $(dirname "$reward_file")))
     reward=$(cat "$reward_file" 2>/dev/null || echo "ERROR")
     echo "${task_name}: ${reward}"
@@ -233,17 +233,17 @@ Generate a markdown report with the collected results.
 
 ## Results
 
-| Task | Difficulty | GOgent | Baseline | Delta |
+| Task | Difficulty | goYoke | Baseline | Delta |
 |------|-----------|--------|----------|-------|
 | {task_name} | {difficulty} | {PASS/FAIL} | {PASS/FAIL/-} | {+1/0/-1/-} |
 
-**Pass Rate:** GOgent {X}/{N} ({pct}%) | Baseline {Y}/{N} ({pct}%)
+**Pass Rate:** goYoke {X}/{N} ({pct}%) | Baseline {Y}/{N} ({pct}%)
 
 ## Identity Injection Stats
 
 ```bash
 # Get injection size
-PYTHONPATH=/home/doktersmol/Documents/GOgent-Fortress/tools/benchmark \
+PYTHONPATH=/home/doktersmol/Documents/goYoke/tools/benchmark \
   uv run python -c "
 from identity_injector import build_full_agent_context, load_agent_context_requirements
 reqs = load_agent_context_requirements('${AGENT_ID}')
@@ -262,7 +262,7 @@ Look at which tasks differ and whether the pattern makes sense.}
 ````
 
 If `--compare` is not set, omit the Baseline and Delta columns.
-If `--raw` is set, only show the Baseline column (no GOgent column).
+If `--raw` is set, only show the Baseline column (no goYoke column).
 
 ---
 
