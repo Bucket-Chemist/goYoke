@@ -6,6 +6,11 @@
 **Version:** 2.0.0-rc1
 **Schema:** routing-schema v2.5.0 | handoff v1.3 | ML telemetry v1.1
 
+## Author
+
+Created and maintained by [Dokter Smol](https://github.com/Bucket-Chemist)  
+Released under [Exact Mass](https://github.com/Exact-Mass)
+
 ---
 
 ## Overview
