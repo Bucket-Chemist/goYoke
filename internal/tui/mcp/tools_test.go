@@ -573,7 +573,7 @@ func TestEnsureTeamVisible_RespectsClaudeConfigDir(t *testing.T) {
 	assert.Equal(t, ccTeamDir, target)
 }
 
-func TestEnsureTeamVisible_RespectsGogentConfigDir(t *testing.T) {
+func TestEnsureTeamVisible_RespectsGoyokeConfigDir(t *testing.T) {
 	// GOYOKE_CONFIG_DIR takes second priority after CLAUDE_CONFIG_DIR.
 	fakeHome := t.TempDir()
 	customConfig := filepath.Join(fakeHome, ".custom-goyoke")

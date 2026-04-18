@@ -509,12 +509,12 @@ func TestIntegration_WithCLAUDE_PROJECT_DIR(t *testing.T) {
 	projectDir := t.TempDir()
 
 	// Unset GOYOKE_PROJECT_DIR, set CLAUDE_PROJECT_DIR
-	oldGogent := os.Getenv("GOYOKE_PROJECT_DIR")
+	oldGoyoke := os.Getenv("GOYOKE_PROJECT_DIR")
 	oldClaude := os.Getenv("CLAUDE_PROJECT_DIR")
 	os.Unsetenv("GOYOKE_PROJECT_DIR")
 	os.Setenv("CLAUDE_PROJECT_DIR", projectDir)
 	defer func() {
-		os.Setenv("GOYOKE_PROJECT_DIR", oldGogent)
+		os.Setenv("GOYOKE_PROJECT_DIR", oldGoyoke)
 		os.Setenv("CLAUDE_PROJECT_DIR", oldClaude)
 	}()
 

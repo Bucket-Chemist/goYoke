@@ -75,11 +75,11 @@ func TestGetProjectDir(t *testing.T) {
 
 func TestGetProjectDir_Priority(t *testing.T) {
 	// Save original env
-	origGogent := os.Getenv("GOYOKE_PROJECT_DIR")
+	origGoyoke := os.Getenv("GOYOKE_PROJECT_DIR")
 	origClaude := os.Getenv("CLAUDE_PROJECT_DIR")
 	defer func() {
-		if origGogent != "" {
-			os.Setenv("GOYOKE_PROJECT_DIR", origGogent)
+		if origGoyoke != "" {
+			os.Setenv("GOYOKE_PROJECT_DIR", origGoyoke)
 		} else {
 			os.Unsetenv("GOYOKE_PROJECT_DIR")
 		}

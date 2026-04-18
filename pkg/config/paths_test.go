@@ -74,16 +74,16 @@ func TestGetgoYokeDir_FallsBackWhenRuntimeDirIsNotWritable(t *testing.T) {
 
 	runtimeRoot := t.TempDir()
 	cacheRoot := t.TempDir()
-	runtimeGogent := filepath.Join(runtimeRoot, "goyoke")
-	if err := os.MkdirAll(runtimeGogent, 0755); err != nil {
+	runtimeGoyoke := filepath.Join(runtimeRoot, "goyoke")
+	if err := os.MkdirAll(runtimeGoyoke, 0755); err != nil {
 		t.Fatalf("Failed to create runtime dir: %v", err)
 	}
-	if err := os.Chmod(runtimeGogent, 0555); err != nil {
+	if err := os.Chmod(runtimeGoyoke, 0555); err != nil {
 		t.Fatalf("Failed to chmod runtime dir: %v", err)
 	}
-	defer os.Chmod(runtimeGogent, 0755) //nolint:errcheck
+	defer os.Chmod(runtimeGoyoke, 0755) //nolint:errcheck
 
-	probePath := filepath.Join(runtimeGogent, "probe")
+	probePath := filepath.Join(runtimeGoyoke, "probe")
 	if err := os.WriteFile(probePath, []byte("x"), 0644); err == nil {
 		_ = os.Remove(probePath)
 		t.Skip("filesystem permissions do not block writes in this environment")
@@ -1484,7 +1484,7 @@ func TestProjectMemoryDir(t *testing.T) {
 	}
 }
 
-func TestGetProjectViolationsLogPath_UsesGogentMemory(t *testing.T) {
+func TestGetProjectViolationsLogPath_UsesGoyokeMemory(t *testing.T) {
 	orig := os.Getenv("GOYOKE_RUNTIME_DIR")
 	defer func() { os.Setenv("GOYOKE_RUNTIME_DIR", orig) }()
 	os.Unsetenv("GOYOKE_RUNTIME_DIR")
