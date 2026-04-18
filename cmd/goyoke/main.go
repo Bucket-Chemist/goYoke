@@ -281,10 +281,17 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[goyoke] hint: run 'make build-go-mcp' to build it, or pass --mcp-binary=/path/to/goyoke-mcp\n")
 	}
 
+	// Resolve the initial model: explicit --model flag takes precedence;
+	// otherwise use the provider config's default (first Anthropic model).
+	initialModel := *modelOverride
+	if initialModel == "" && ps != nil {
+		initialModel = ps.GetActiveCLIModel()
+	}
+
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
 		SessionID:      *sessionID,
-		Model:          *modelOverride,
+		Model:          initialModel,
 		ProjectDir:     ".", // current working directory
 		PermissionMode: *permMode,
 		Verbose:        *verbose,

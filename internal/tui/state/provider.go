@@ -581,7 +581,7 @@ func DefaultProviders() map[ProviderID]ProviderConfig {
 					Speed:         "slow",
 					Strengths:     []string{"deep reasoning", "complex analysis", "coding", "1M context"},
 					CostTier:      "$$$",
-					APIModelID:    "claude-opus-4-6",
+					APIModelID:    "claude-opus-4-6[1m]",
 				},
 				{
 					ID:            "opus-4-7",
