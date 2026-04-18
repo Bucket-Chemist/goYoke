@@ -11,10 +11,10 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user"
       ],
       "team_dir_suffix": "braintrust"
     },
@@ -29,10 +29,10 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user"
       ],
       "team_dir_suffix": "code-review"
     },
@@ -47,10 +47,10 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user"
       ],
       "team_dir_suffix": "implementation"
     }
