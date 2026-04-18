@@ -400,6 +400,20 @@ List what the plan does **well**:
     "major": 2,
     "minor": 5
   },
+  "issue_register": [
+    {
+      "id": "C-1",
+      "severity": "critical|major|minor",
+      "layer": "assumptions|dependencies|failure_modes|cost_benefit|testing|architecture_smells|contractor_readiness",
+      "title": "Brief issue title",
+      "description": "Detailed description of the issue",
+      "evidence": "Supporting evidence (plan section quoted, code reference)",
+      "impact": "What happens if this is not addressed",
+      "recommendation": "Specific actionable fix (WHAT/WHY/HOW)",
+      "affected_tickets": ["TC-XXX"],
+      "affected_files": ["path/to/file.go"]
+    }
+  ],
   "scouts_spawned": [
     {
       "agent": "haiku-scout",
@@ -577,6 +591,7 @@ AGENT: staff-architect-critical-review
    - Include commendations (what was done well)
    - Stay within 16K thinking budget
    - Generate both output files
+   - Populate issue_register in review-metadata.json with ALL findings, each including affected_files (list file paths implicated by the finding; use [] if no specific files are implicated)
    - Respect time boxing (2/4/8 hour limits)
 
 6. MUST NOT DO:

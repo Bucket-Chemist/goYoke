@@ -123,16 +123,25 @@ func generateConfig(waves [][]Task, projectRoot, teamDir, configPath string) err
 	return nil
 }
 
+// stdinReviewFindings holds review annotation buckets injected into each task's stdin.
+// Only present when the plan contains review_annotations mapped to this task.
+type stdinReviewFindings struct {
+	CorrectionsToAddress []string `json:"corrections_to_address,omitempty"`
+	ReviewNotes          []string `json:"review_notes,omitempty"`
+	FixesIncorporated    []string `json:"fixes_incorporated,omitempty"`
+}
+
 // stdinSchema represents the stdin JSON structure for each task
 type stdinSchema struct {
-	Agent              string                 `json:"agent"`
-	Workflow           string                 `json:"workflow"`
-	Context            stdinContext           `json:"context"`
-	Task               stdinTask              `json:"task"`
-	ImplementationScope stdinImplScope        `json:"implementation_scope"`
-	Conventions        stdinConventions       `json:"conventions"`
-	CodebaseContext    stdinCodebaseContext   `json:"codebase_context"`
-	Description        string                 `json:"description"`
+	Agent               string               `json:"agent"`
+	Workflow            string               `json:"workflow"`
+	Context             stdinContext         `json:"context"`
+	Task                stdinTask            `json:"task"`
+	ImplementationScope stdinImplScope       `json:"implementation_scope"`
+	Conventions         stdinConventions     `json:"conventions"`
+	CodebaseContext     stdinCodebaseContext `json:"codebase_context"`
+	Description         string               `json:"description"`
+	ReviewFindings      *stdinReviewFindings `json:"review_findings,omitempty"`
 }
 
 type stdinContext struct {
@@ -177,6 +186,42 @@ func generateStdinFiles(plan ImplementationPlan, waves [][]Task, projectRoot, te
 	for _, task := range plan.Tasks {
 		for _, dep := range task.BlockedBy {
 			blocksMap[dep] = append(blocksMap[dep], task.TaskID)
+		}
+	}
+
+	// Build per-task annotation index from plan-level review_annotations (enrichment).
+	// Annotations without mapped_tasks are plan-level only and not injected into any task.
+	type taskAnnotations struct {
+		corrections []string
+		notes       []string
+		fixes       []string
+	}
+	annotationsByTask := make(map[string]*taskAnnotations)
+	for _, ann := range plan.ReviewAnnotations {
+		var entry, bucket string
+		if ann.AutoApplied {
+			entry = fmt.Sprintf("[%s] %s (auto-applied)", ann.FindingID, ann.Recommendation)
+			bucket = "fixes"
+		} else if ann.Classification == "correction" {
+			entry = fmt.Sprintf("[%s] %s", ann.FindingID, ann.Recommendation)
+			bucket = "corrections"
+		} else {
+			entry = fmt.Sprintf("[%s] %s", ann.FindingID, ann.Recommendation)
+			bucket = "notes"
+		}
+		for _, taskID := range ann.MappedTasks {
+			if annotationsByTask[taskID] == nil {
+				annotationsByTask[taskID] = &taskAnnotations{}
+			}
+			ta := annotationsByTask[taskID]
+			switch bucket {
+			case "fixes":
+				ta.fixes = append(ta.fixes, entry)
+			case "corrections":
+				ta.corrections = append(ta.corrections, entry)
+			default:
+				ta.notes = append(ta.notes, entry)
+			}
 		}
 	}
 
@@ -230,6 +275,22 @@ func generateStdinFiles(plan ImplementationPlan, waves [][]Task, projectRoot, te
 			}
 			if stdin.Task.BlockedBy == nil {
 				stdin.Task.BlockedBy = []string{}
+			}
+
+			// Inject review findings from plan-harmonizer annotations (enrichment).
+			// Omitted when no annotations are mapped to this task.
+			if ta := annotationsByTask[task.TaskID]; ta != nil {
+				rf := &stdinReviewFindings{}
+				if len(ta.corrections) > 0 {
+					rf.CorrectionsToAddress = ta.corrections
+				}
+				if len(ta.notes) > 0 {
+					rf.ReviewNotes = ta.notes
+				}
+				if len(ta.fixes) > 0 {
+					rf.FixesIncorporated = ta.fixes
+				}
+				stdin.ReviewFindings = rf
 			}
 
 			// Write stdin file

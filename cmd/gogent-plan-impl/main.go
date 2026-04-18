@@ -6,13 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 // ImplementationPlan represents the input JSON schema
 type ImplementationPlan struct {
-	Version string  `json:"version"`
-	Project Project `json:"project"`
-	Tasks   []Task  `json:"tasks"`
+	Version           string             `json:"version"`
+	Project           Project            `json:"project"`
+	Tasks             []Task             `json:"tasks"`
+	ReviewAnnotations []ReviewAnnotation `json:"review_annotations,omitempty"`
+	ReadinessScore    *ReadinessScore    `json:"readiness_score,omitempty"`
 }
 
 // Project contains project-level metadata
@@ -29,22 +33,49 @@ type Project struct {
 
 // Task represents a single implementation task
 type Task struct {
-	TaskID             string        `json:"task_id"`
-	Subject            string        `json:"subject"`
-	Description        string        `json:"description"`
-	Agent              string        `json:"agent"`
-	TargetPackages     []string      `json:"target_packages"`
-	RelatedFiles       []RelatedFile `json:"related_files,omitempty"`
-	BlockedBy          []string      `json:"blocked_by"`
-	AcceptanceCriteria []string      `json:"acceptance_criteria"`
-	TestsRequired      *bool         `json:"tests_required,omitempty"`
-	CoverageTarget     *int          `json:"coverage_target,omitempty"`
+	TaskID               string               `json:"task_id"`
+	Subject              string               `json:"subject"`
+	Description          string               `json:"description"`
+	Agent                string               `json:"agent"`
+	TargetPackages       []string             `json:"target_packages"`
+	RelatedFiles         []RelatedFile        `json:"related_files,omitempty"`
+	BlockedBy            []string             `json:"blocked_by"`
+	AcceptanceCriteria   []string             `json:"acceptance_criteria"`
+	TestsRequired        *bool                `json:"tests_required,omitempty"`
+	CoverageTarget       *int                 `json:"coverage_target,omitempty"`
+	ImplicitDependencies []ImplicitDependency `json:"implicit_dependencies,omitempty"`
 }
 
 // RelatedFile represents a file related to a task
 type RelatedFile struct {
 	Path      string `json:"path"`
 	Relevance string `json:"relevance"`
+}
+
+// ImplicitDependency represents an inferred (not promoted) dependency from plan-harmonizer
+type ImplicitDependency struct {
+	DependsOn  string  `json:"depends_on"`
+	Reason     string  `json:"reason"`
+	Confidence float64 `json:"confidence"`
+	Promoted   bool    `json:"promoted"`
+}
+
+// ReviewAnnotation represents a review finding mapped to tasks by plan-harmonizer
+type ReviewAnnotation struct {
+	FindingID                string   `json:"finding_id"`
+	Severity                 string   `json:"severity"`
+	Classification           string   `json:"classification"`
+	ClassificationConfidence float64  `json:"classification_confidence"`
+	MappedTasks              []string `json:"mapped_tasks"`
+	Description              string   `json:"description"`
+	Recommendation           string   `json:"recommendation"`
+	AutoApplied              bool     `json:"auto_applied"`
+}
+
+// ReadinessScore represents the enriched plan readiness score from plan-harmonizer
+type ReadinessScore struct {
+	Total      int            `json:"total"`
+	Dimensions map[string]int `json:"dimensions"`
 }
 
 func main() {
@@ -92,6 +123,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Emit implicit dependency warnings (enrichment — warnings only, never blocks)
+	for _, w := range warnImplicitDeps(&plan) {
+		fmt.Fprintln(os.Stderr, w)
+	}
+
+	// Emit readiness score summary (enrichment — before wave execution)
+	if score := formatReadinessScore(&plan); score != "" {
+		fmt.Print(score)
+	}
+	if w := readinessScoreWarning(&plan); w != "" {
+		fmt.Fprintln(os.Stderr, w)
+	}
+
 	// Compute waves
 	waves, err := computeWaves(plan.Tasks)
 	if err != nil {
@@ -123,4 +167,66 @@ func main() {
 
 	// Print summary
 	fmt.Printf("Generated %d tasks in %d waves → %s\n", len(plan.Tasks), len(waves), *outputDir)
+}
+
+// warnImplicitDeps returns warning lines for unpromoted implicit dependencies.
+// Returns nil when no tasks have unpromoted implicit dependencies.
+func warnImplicitDeps(plan *ImplementationPlan) []string {
+	var warnings []string
+	for _, task := range plan.Tasks {
+		for _, dep := range task.ImplicitDependencies {
+			if dep.Promoted {
+				continue
+			}
+			warnings = append(warnings,
+				fmt.Sprintf("⚠ %s has unpromoted implicit dependency on %s (confidence: %.2f)",
+					task.TaskID, dep.DependsOn, dep.Confidence),
+				fmt.Sprintf("  Reason: %s", dep.Reason),
+				fmt.Sprintf("  Consider: /refine-plan --promote-dep %s:%s", task.TaskID, dep.DependsOn),
+			)
+		}
+	}
+	return warnings
+}
+
+// formatReadinessScore returns the readiness score summary string for stdout.
+// Returns "" when no readiness_score is present in the plan.
+func formatReadinessScore(plan *ImplementationPlan) string {
+	if plan.ReadinessScore == nil {
+		return ""
+	}
+	rs := plan.ReadinessScore
+
+	label := "not ready"
+	switch {
+	case rs.Total >= 70:
+		label = "ready"
+	case rs.Total >= 50:
+		label = "caveats"
+	}
+
+	// Sort dimension names for deterministic output (map iteration is random)
+	dimNames := make([]string, 0, len(rs.Dimensions))
+	for k := range rs.Dimensions {
+		dimNames = append(dimNames, k)
+	}
+	sort.Strings(dimNames)
+
+	dimParts := make([]string, len(dimNames))
+	for i, k := range dimNames {
+		dimParts[i] = fmt.Sprintf("%s: %d/5", k, rs.Dimensions[k])
+	}
+
+	return fmt.Sprintf("Readiness Score: %d/100 (%s)\n  %s\n",
+		rs.Total, label, strings.Join(dimParts, " | "))
+}
+
+// readinessScoreWarning returns a warning string when readiness_score.total < 50.
+// Returns "" when no readiness_score is present or the score is >= 50.
+func readinessScoreWarning(plan *ImplementationPlan) string {
+	if plan.ReadinessScore == nil || plan.ReadinessScore.Total >= 50 {
+		return ""
+	}
+	return fmt.Sprintf("⚠ Readiness score %d/100 < 50 — implementation may encounter significant gaps",
+		plan.ReadinessScore.Total)
 }

@@ -5,7 +5,38 @@
   "description": "Structured architect output for team-run automation. Maps 1:1 to worker.json stdin.",
   "version": "1.0.0",
   "type": "object",
-  "required": ["version", "project", "tasks"],
+  "required": [
+    "version",
+    "project",
+    "tasks"
+  ],
+  "$defs": {
+    "harmonization_entry": {
+      "type": "object",
+      "required": [
+        "change",
+        "rationale",
+        "affected_tasks"
+      ],
+      "properties": {
+        "change": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "affected_tasks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_finding": {
+          "type": "string"
+        }
+      }
+    }
+  },
   "properties": {
     "version": {
       "type": "string",
@@ -14,7 +45,10 @@
     },
     "project": {
       "type": "object",
-      "required": ["language", "conventions_file"],
+      "required": [
+        "language",
+        "conventions_file"
+      ],
       "properties": {
         "language": {
           "type": "string",
@@ -39,11 +73,15 @@
         },
         "patterns_to_follow": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "anti_patterns": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -52,7 +90,14 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["task_id", "subject", "description", "agent", "target_packages", "acceptance_criteria"],
+        "required": [
+          "task_id",
+          "subject",
+          "description",
+          "agent",
+          "target_packages",
+          "acceptance_criteria"
+        ],
         "properties": {
           "task_id": {
             "type": "string",
@@ -65,7 +110,7 @@
           },
           "description": {
             "type": "string",
-            "description": "FULL implementation guidance — workers don't read specs.md"
+            "description": "FULL implementation guidance \u2014 workers don't read specs.md"
           },
           "agent": {
             "type": "string",
@@ -73,28 +118,74 @@
           },
           "target_packages": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1
           },
           "related_files": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["path", "relevance"],
+              "required": [
+                "path",
+                "relevance"
+              ],
               "properties": {
-                "path": { "type": "string" },
-                "relevance": { "type": "string" }
+                "path": {
+                  "type": "string"
+                },
+                "relevance": {
+                  "type": "string"
+                }
               }
             }
           },
           "blocked_by": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "default": []
+          },
+          "implicit_dependencies": {
+            "type": "array",
+            "description": "Inferred dependencies not expressed as hard blocks in blocked_by",
+            "items": {
+              "type": "object",
+              "required": [
+                "depends_on",
+                "reason",
+                "confidence"
+              ],
+              "properties": {
+                "depends_on": {
+                  "type": "string",
+                  "description": "task_id of the dependency"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Why this dependency exists"
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Confidence in the dependency (0\u20131)"
+                },
+                "promoted": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether this has been promoted to a hard blocked_by dependency"
+                }
+              }
+            }
           },
           "acceptance_criteria": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1
           },
           "tests_required": {
@@ -109,7 +200,218 @@
           }
         }
       }
+    },
+    "enrichment_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Version of enrichment applied. Absent = unenriched plan."
+    },
+    "review_annotations": {
+      "type": "array",
+      "description": "Findings from plan review mapped to tasks",
+      "items": {
+        "type": "object",
+        "required": [
+          "finding_id",
+          "severity",
+          "classification",
+          "mapped_tasks",
+          "description"
+        ],
+        "properties": {
+          "finding_id": {
+            "type": "string",
+            "description": "Unique identifier for this finding"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "major",
+              "minor"
+            ],
+            "description": "Severity of the finding"
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "correction",
+              "augmentation",
+              "warning"
+            ],
+            "description": "Whether the finding corrects an error, augments the plan, or warns"
+          },
+          "classification_confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Confidence in the classification (0\u20131)"
+          },
+          "mapped_tasks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "task_ids affected by this finding"
+          },
+          "mapping_method": {
+            "type": "string",
+            "enum": [
+              "file_intersection",
+              "semantic",
+              "manual"
+            ],
+            "description": "How tasks were mapped to this finding"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the finding"
+          },
+          "recommendation": {
+            "type": "string",
+            "description": "Recommended action to address the finding"
+          },
+          "auto_applied": {
+            "type": "boolean",
+            "description": "Whether the recommendation was automatically applied to the plan"
+          }
+        }
+      }
+    },
+    "harmonization_log": {
+      "type": "array",
+      "description": "Record of changes made during enrichment harmonization",
+      "items": {
+        "$ref": "#/$defs/harmonization_entry"
+      }
+    },
+    "prior_harmonization_logs": {
+      "type": "array",
+      "description": "Harmonization logs from previous enrichment passes",
+      "items": {
+        "type": "object",
+        "required": [
+          "enrichment_version",
+          "entries"
+        ],
+        "properties": {
+          "enrichment_version": {
+            "type": "string",
+            "description": "Enrichment version that produced this log"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this enrichment pass ran"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/harmonization_entry"
+            }
+          }
+        }
+      }
+    },
+    "readiness_score": {
+      "type": "object",
+      "description": "Computed readiness score for team-run automation",
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Aggregate readiness score (0\u2013100)"
+        },
+        "dimensions": {
+          "type": "object",
+          "description": "Per-dimension scores contributing to total",
+          "properties": {
+            "fix_coverage": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Coverage of critical/major findings by tasks (0\u20135)"
+            },
+            "dep_validity": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Validity of dependency graph (0\u20135)"
+            },
+            "schema_completeness": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "Completeness of required schema fields (0\u20135)"
+            },
+            "parameter_propagation": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "(Bioinformatics only) Consistency of shared parameters across pipeline steps (0-5)"
+            },
+            "reference_data_validity": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "(Bioinformatics only) Version pinning of reference data paths (0-5)"
+            },
+            "container_reproducibility": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5,
+              "description": "(Bioinformatics only) Container/environment version pinning (0-5)"
+            }
+          }
+        },
+        "formula": {
+          "type": "string",
+          "description": "Formula used. Software: (fix_coverage*7)+(dep_validity*7)+(schema_completeness*6). Bioinformatics: (fix_coverage*5)+(dep_validity*5)+(schema_completeness*3)+(parameter_propagation*3)+(reference_data_validity*2)+(container_reproducibility*2)"
+        },
+        "floor_rule": {
+          "type": "string",
+          "const": "if fix_coverage < 2, total is capped at min(computed_total, 49)",
+          "description": "Floor rule applied after formula computation"
+        },
+        "thresholds": {
+          "type": "object",
+          "description": "Score thresholds for readiness classification",
+          "properties": {
+            "ready": {
+              "type": "integer",
+              "const": 70,
+              "description": "Minimum score for READY status"
+            },
+            "caveats": {
+              "type": "integer",
+              "const": 50,
+              "description": "Minimum score for READY WITH CAVEATS status"
+            },
+            "not_ready": {
+              "type": "integer",
+              "const": 0,
+              "description": "Minimum score for NOT READY status"
+            }
+          }
+        },
+        "domain": {
+          "type": "string",
+          "description": "Domain that determined which formula was applied",
+          "enum": [
+            "software",
+            "bioinformatics"
+          ]
+        },
+        "formula_used": {
+          "type": "string",
+          "description": "Which formula variant was applied: base_3dim (software) or extended_6dim (bioinformatics)",
+          "enum": [
+            "base_3dim",
+            "extended_6dim"
+          ]
+        }
+      }
     }
-  },
-  "additionalProperties": false
+  }
 }

@@ -3158,6 +3158,53 @@
       },
       "subagent_type": "Cleanup Synthesizer",
       "interactive": false
+    },
+    {
+      "id": "plan-harmonizer",
+      "parallelization_template": "D",
+      "name": "Plan Harmonizer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "analysis",
+      "path": "plan-harmonizer",
+      "triggers": [
+        "harmonize plan",
+        "refine plan",
+        "enrich plan"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Write"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Write"
+        ]
+      },
+      "auto_activate": null,
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "conventions_required": [
+        "go.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Enriches implementation plans with staff review findings, dependency validation, and readiness scoring",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Plan Harmonizer"
     }
   ],
   "routing_rules": {

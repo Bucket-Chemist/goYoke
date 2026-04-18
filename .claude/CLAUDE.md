@@ -145,6 +145,30 @@ Request arrives
 
 ---
 
+
+### Planning Command Decision Tree
+
+When the request involves planning, use this tree to select the right command:
+
+```
+"I want to plan a feature from scratch"
+    → /plan-tickets (full pipeline: scout → planner → architect → review → tickets)
+
+"I have a plan and want expert review"
+    → /review-plan (standalone staff-architect critical review)
+
+"I have a reviewed plan and want fixes incorporated automatically"
+    → /refine-plan (harmonizer: maps review fixes → validates deps → scores readiness)
+
+"I have a plan and want to implement it now"
+    → /implement (architect → plan-impl → team-run)
+
+"I want the full pipeline including harmonization"
+    → /plan-tickets --refine (adds /refine-plan as optional stage after review)
+```
+
+---
+
 ## Slash Commands (Skills)
 
 | Command               | What It Does                                                                      |
@@ -154,6 +178,7 @@ Request arrives
 | `/review`             | Multi-domain code review with severity-grouped findings                           |
 | `/review-bioinformatics` | Bioinformatics domain review with Opus specialist reviewers (6 domains + Pasteur synthesis) |
 | `/review-plan`        | Critical 7-layer review of implementation plans                                   |
+| `/refine-plan`        | Enrich plan with review findings via plan-harmonizer (3-pass: fix mapping → dep validation → readiness scoring) |
 | `/ticket`             | Ticket-driven implementation workflow                                             |
 | `/implement`          | Plan + implement a feature (architect → team-run background)                      |
 | `/init-auto`          | Initialize project with CLAUDE.md scaffold                                        |
@@ -165,7 +190,7 @@ Request arrives
 | `/team-status`        | Show detailed progress for running or completed teams                             |
 | `/team-result`        | Display final output from a completed team                                        |
 | `/team-cancel`        | Gracefully stop a running team                                                    |
-| `/plan-tickets`       | Comprehensive planning workflow (Scout → Planner → Architect → Review → Tickets)  |
+| `/plan-tickets`       | Comprehensive planning workflow (Scout → Planner → Architect → Review → [Refine] → Tickets) |
 | `/teams`              | List all teams in current session with summary status                             |
 | `/benchmark-agent`    | Evaluate GOgent agents against SkillsBench benchmarks via Harbor                  |
 | `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
@@ -217,6 +242,7 @@ Request arrives
 | code review, full review, review changes        | `review-orchestrator` | Review Orchestrator       |
 | Ambiguous scope, synthesize, think through      | `orchestrator`        | Orchestrator              |
 | Coordinate implementation, manage worker agents | `impl-manager`       | Implementation Manager    |
+| Enrich plan, map review findings, validate deps   | `plan-harmonizer`    | Plan Harmonizer           |
 
 ### Tier 3: Opus (Architecture Decisions — allowlisted for spawn_agent)
 
