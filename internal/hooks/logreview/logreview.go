@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
+	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
 
 // ReviewInput represents the JSON input from /review skill.

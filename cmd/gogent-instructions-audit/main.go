@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	instructionsauditlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/instructionsaudit"
+	instructionsauditlib "github.com/Bucket-Chemist/goYoke/internal/hooks/instructionsaudit"
 )
 
 // instructionsLoadedEvent aliases the library type for package-internal tests.

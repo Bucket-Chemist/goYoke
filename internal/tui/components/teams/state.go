@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/teamconfig"
+	"github.com/Bucket-Chemist/goYoke/internal/teamconfig"
 )
 
 // Re-export types from teamconfig for backward compatibility within this

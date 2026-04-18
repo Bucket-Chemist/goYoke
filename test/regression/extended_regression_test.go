@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/test/integration"
+	"github.com/Bucket-Chemist/goYoke/test/integration"
 )
 
 // TestExtendedRegression_LoadContext validates gogent-load-context vs load-routing-context.sh

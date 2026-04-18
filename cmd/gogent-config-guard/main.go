@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	configguardlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/configguard"
+	configguardlib "github.com/Bucket-Chemist/goYoke/internal/hooks/configguard"
 )
 
 // configChangeEvent aliases the library type for package-internal tests.

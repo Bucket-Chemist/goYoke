@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	versionlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/version"
+	versionlib "github.com/Bucket-Chemist/goYoke/internal/hooks/version"
 )
 
 const Version = "0.1.0"

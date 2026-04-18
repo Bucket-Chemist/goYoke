@@ -2,8 +2,8 @@
 package permissiongate
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	permissiongatelib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/permissiongate"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	permissiongatelib "github.com/Bucket-Chemist/goYoke/internal/hooks/permissiongate"
 )
 
 func init() { multicall.Register("gogent-permission-gate", Main) }

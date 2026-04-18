@@ -55,8 +55,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/bridge"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
 )
 
 // ---------------------------------------------------------------------------

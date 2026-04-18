@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 // TestMetricsParity_ToolCalls verifies Go tool call counting reads from the counter file.

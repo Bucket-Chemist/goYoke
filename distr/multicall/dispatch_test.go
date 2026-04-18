@@ -3,7 +3,7 @@ package multicall_test
 import (
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
 )
 
 func TestRegisterAndLookup(t *testing.T) {

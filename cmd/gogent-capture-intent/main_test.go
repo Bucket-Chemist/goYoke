@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 func TestExtractIntent_SingleQuestionWithOptions(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/providers"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/providers"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // newPS is a test helper that returns a default ProviderState with all four

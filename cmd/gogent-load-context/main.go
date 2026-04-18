@@ -1,7 +1,7 @@
 package main
 
 import (
-	loadcontextlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/loadcontext"
+	loadcontextlib "github.com/Bucket-Chemist/goYoke/internal/hooks/loadcontext"
 )
 
 // DEFAULT_TIMEOUT aliases the library constant so package-internal tests can

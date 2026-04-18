@@ -17,13 +17,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wordwrap"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/scrollbar"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/slashcmd"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/scrollbar"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/slashcmd"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // timestampTickMsg is fired every 60 seconds when timestamp display is

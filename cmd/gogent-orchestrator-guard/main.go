@@ -1,7 +1,7 @@
 package main
 
 import (
-	orchestratorguardlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/orchestratorguard"
+	orchestratorguardlib "github.com/Bucket-Chemist/goYoke/internal/hooks/orchestratorguard"
 )
 
 // Unexported shims delegate to the library so that package-internal tests

@@ -2,8 +2,8 @@
 package version
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	versionlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/version"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	versionlib "github.com/Bucket-Chemist/goYoke/internal/hooks/version"
 )
 
 func init() { multicall.Register("gogent-version", Main) }

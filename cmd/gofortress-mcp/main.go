@@ -21,7 +21,7 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	tuimcp "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/mcp"
+	tuimcp "github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
 )
 
 func main() {

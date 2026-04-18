@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/test/simulation/harness"
+	"github.com/Bucket-Chemist/goYoke/test/simulation/harness"
 )
 
 func main() {

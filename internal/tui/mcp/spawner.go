@@ -22,9 +22,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	routing "github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // acWrittenToRe matches "<filename> written to <path>" in criterion text.

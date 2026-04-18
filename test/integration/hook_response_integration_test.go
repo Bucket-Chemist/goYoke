@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // TestHookWorkflow_FullPipeline demonstrates the complete workflow:

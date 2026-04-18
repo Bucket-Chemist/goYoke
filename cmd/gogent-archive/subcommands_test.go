@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 func TestListSessions_EmptyFile(t *testing.T) {

@@ -1,8 +1,8 @@
 package main
 
 import (
-	directimplchecklib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/directimplcheck"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	directimplchecklib "github.com/Bucket-Chemist/goYoke/internal/hooks/directimplcheck"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // Unexported shims delegate to the library so that package-internal tests

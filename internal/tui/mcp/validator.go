@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	routing "github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // ValidationResult holds the outcome of a relationship validation check.

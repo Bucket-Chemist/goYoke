@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 func TestLogMLToolEvent_GlobalPath(t *testing.T) {

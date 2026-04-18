@@ -13,28 +13,28 @@
 package main
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
 
 	// Hook packages — each init() calls multicall.Register("<binary-name>", Main).
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/agentendstate"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/archive"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/configguard"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/directimplcheck"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/doctheater"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/instructionsaudit"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/loadcontext"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/logreview"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/mlexport"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/orchestratorguard"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/permissiongate"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/planimpl"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/scout"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/sharpedge"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/skillguard"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/teamrun"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/updatereviewoutcome"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/validate"
-	_ "github.com/Bucket-Chemist/GOgent-Fortress/distr/hooks/version"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/agentendstate"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/archive"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/configguard"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/directimplcheck"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/doctheater"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/instructionsaudit"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/loadcontext"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/logreview"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/mlexport"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/orchestratorguard"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/permissiongate"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/planimpl"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/scout"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/sharpedge"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/skillguard"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/teamrun"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/updatereviewoutcome"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/validate"
+	_ "github.com/Bucket-Chemist/goYoke/distr/hooks/version"
 )
 
 func main() {

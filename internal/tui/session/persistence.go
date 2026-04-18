@@ -14,7 +14,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 	"github.com/google/uuid"
 )
 

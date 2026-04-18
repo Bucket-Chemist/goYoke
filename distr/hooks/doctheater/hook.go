@@ -2,8 +2,8 @@
 package doctheater
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	doctheaterlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/doctheater"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	doctheaterlib "github.com/Bucket-Chemist/goYoke/internal/hooks/doctheater"
 )
 
 func init() { multicall.Register("gogent-doc-theater", Main) }

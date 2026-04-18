@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/banner"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/banner"
 )
 
 func TestNewBannerModel(t *testing.T) {

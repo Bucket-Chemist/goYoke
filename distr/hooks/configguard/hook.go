@@ -2,8 +2,8 @@
 package configguard
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	configguardlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/configguard"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	configguardlib "github.com/Bucket-Chemist/goYoke/internal/hooks/configguard"
 )
 
 func init() { multicall.Register("gogent-config-guard", Main) }

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/mcp"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

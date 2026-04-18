@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // TestOrchestratorGuardWorkflow_AllTasksCollected verifies allow when all tasks collected.

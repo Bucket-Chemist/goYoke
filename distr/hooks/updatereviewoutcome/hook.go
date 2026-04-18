@@ -2,8 +2,8 @@
 package updatereviewoutcome
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	updatereviewoutcomelib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/updatereviewoutcome"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	updatereviewoutcomelib "github.com/Bucket-Chemist/goYoke/internal/hooks/updatereviewoutcome"
 )
 
 func init() { multicall.Register("gogent-update-review-outcome", Main) }

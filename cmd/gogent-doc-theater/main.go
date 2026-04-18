@@ -1,6 +1,6 @@
 package main
 
-import doctheaterlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/doctheater"
+import doctheaterlib "github.com/Bucket-Chemist/goYoke/internal/hooks/doctheater"
 
 func escapeJSON(s string) string          { return doctheaterlib.EscapeJSON(s) }
 func allowResponse() string               { return doctheaterlib.AllowResponse() }

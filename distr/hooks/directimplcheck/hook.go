@@ -2,8 +2,8 @@
 package directimplcheck
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	directimplchecklib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/directimplcheck"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	directimplchecklib "github.com/Bucket-Chemist/goYoke/internal/hooks/directimplcheck"
 )
 
 func init() { multicall.Register("gogent-direct-impl-check", Main) }

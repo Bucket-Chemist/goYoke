@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/test/integration"
+	"github.com/Bucket-Chemist/goYoke/test/integration"
 )
 
 // TestRegression_ValidateRouting compares Go vs Bash validate-routing output

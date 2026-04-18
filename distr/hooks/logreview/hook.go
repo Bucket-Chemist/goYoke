@@ -2,8 +2,8 @@
 package logreview
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	logreviewlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/logreview"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	logreviewlib "github.com/Bucket-Chemist/goYoke/internal/hooks/logreview"
 )
 
 func init() { multicall.Register("gogent-log-review", Main) }

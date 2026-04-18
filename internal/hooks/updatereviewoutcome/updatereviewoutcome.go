@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
+	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
 
 // Main is the entrypoint for the gogent-update-review-outcome hook.

@@ -1,7 +1,7 @@
 package telemetry
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // TotalTokens returns input + output tokens from a PostToolEvent

@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	permissiongatelib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/permissiongate"
+	permissiongatelib "github.com/Bucket-Chemist/goYoke/internal/hooks/permissiongate"
 )
 
 // toolEvent aliases the library type so package-internal tests continue to use

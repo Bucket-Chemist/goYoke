@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/enforcement"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/enforcement"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // DefaultTimeout is the parse timeout for stdin events.

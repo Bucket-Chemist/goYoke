@@ -2,8 +2,8 @@
 package loadcontext
 
 import (
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
-	loadcontextlib "github.com/Bucket-Chemist/GOgent-Fortress/internal/hooks/loadcontext"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
+	loadcontextlib "github.com/Bucket-Chemist/goYoke/internal/hooks/loadcontext"
 )
 
 func init() { multicall.Register("gogent-load-context", Main) }

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
+	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
 
 // TestAgentLifecycle_SpawnAndCompleteIntegration verifies full lifecycle from spawn to completion

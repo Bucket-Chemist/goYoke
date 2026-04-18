@@ -18,17 +18,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/dashboard"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/search"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/skeleton"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/slashcmd"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/dashboard"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/search"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/settingstree"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/skeleton"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/slashcmd"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------

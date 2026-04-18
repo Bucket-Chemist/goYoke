@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/memory"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/telemetry"
+	"github.com/Bucket-Chemist/goYoke/pkg/memory"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
 
 func TestGetProjectDir(t *testing.T) {

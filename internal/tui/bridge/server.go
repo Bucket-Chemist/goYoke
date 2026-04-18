@@ -23,8 +23,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/mcp"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 const maxUnixSocketPathBytes = 107

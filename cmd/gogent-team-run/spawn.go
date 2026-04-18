@@ -16,8 +16,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 // Spawner defines the interface for spawning Claude CLI processes.

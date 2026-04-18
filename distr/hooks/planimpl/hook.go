@@ -5,7 +5,7 @@ package planimpl
 import (
 	"fmt"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/distr/multicall"
+	"github.com/Bucket-Chemist/goYoke/distr/multicall"
 )
 
 func init() {

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/mcp"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
 	"github.com/google/uuid"
 )
 

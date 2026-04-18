@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // CreateSessionDir creates the session directory at {projectDir}/.gogent/sessions/{sessionID}/
