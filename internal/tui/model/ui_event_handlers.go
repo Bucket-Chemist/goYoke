@@ -50,10 +50,11 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	m.propagateContentSizes()
 
-	// Propagate size to the search overlay so centering is correct (TUI-059).
+	// Propagate size to overlays for correct centering.
 	if m.shared.searchOverlay != nil {
 		m.shared.searchOverlay.SetSize(msg.Width, msg.Height)
 	}
+	m.shared.modelModal.SetSize(msg.Width, msg.Height)
 
 	// Propagate terminal width to the hint bar for truncation (TUI-060).
 	if m.shared.hintBar != nil {
@@ -800,23 +801,10 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 	ps := m.shared.providerState
 	cfg := ps.GetActiveConfig()
 
-	// No arg: list available models for the active provider.
+	// No arg: show the interactive model selector modal.
 	if msg.ModelID == "" {
-		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("Available models for %s:\n", cfg.Name))
-		currentModel := ps.GetActiveModel()
-		for _, mc := range cfg.Models {
-			marker := "  "
-			if mc.ID == currentModel {
-				marker = "▸ "
-			}
-			sb.WriteString(fmt.Sprintf("%s%s — %s\n", marker, mc.ID, mc.Description))
-		}
-		sb.WriteString("\nUsage: /model <name>")
-
-		if m.shared.claudePanel != nil {
-			m.shared.claudePanel.AppendSystemMessage(sb.String())
-		}
+		m.shared.modelModal.SetSize(m.width, m.height)
+		m.shared.modelModal.Show(cfg.Models, ps.GetActiveModel())
 		return m, nil
 	}
 
@@ -830,27 +818,18 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 		}
 	}
 
-	// Validate that the requested model belongs to the active provider.
-	var found bool
+	// Check known models; allow unknown IDs as passthrough to Claude CLI.
 	var displayName string
+	var isKnown bool
 	for _, mc := range cfg.Models {
 		if mc.ID == msg.ModelID {
-			found = true
 			displayName = mc.DisplayName
+			isKnown = true
 			break
 		}
 	}
-	if !found {
-		ids := make([]string, 0, len(cfg.Models))
-		for _, mc := range cfg.Models {
-			ids = append(ids, mc.ID)
-		}
-		return m, func() tea.Msg {
-			return ToastMsg{
-				Text:  fmt.Sprintf("Unknown model %q for %s. Valid: %s", msg.ModelID, cfg.Name, strings.Join(ids, ", ")),
-				Level: ToastLevelError,
-			}
-		}
+	if !isKnown {
+		displayName = msg.ModelID + " (custom)"
 	}
 
 	// Already on this model — no-op.

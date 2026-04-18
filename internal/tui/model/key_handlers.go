@@ -71,6 +71,19 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	// While the model modal is open, forward all keys to it.
+	if m.shared != nil && m.shared.modelModal.IsActive() {
+		if m.shared.hintBar != nil {
+			m.shared.hintBar.SetContext("model")
+		}
+		updated, cmd := m.shared.modelModal.Update(msg)
+		m.shared.modelModal = updated
+		if !m.shared.modelModal.IsActive() {
+			m.updateHintContext()
+		}
+		return m, cmd
+	}
+
 	// While a modal is open only modal keys are active.
 	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
 		// Set hint context to "modal" while a permission modal is active (TUI-060).
@@ -724,6 +737,8 @@ func (m *AppModel) updateHintContext() {
 		m.shared.hintBar.SetContext("plan")
 	case m.shared.optionsViewModal.IsActive():
 		m.shared.hintBar.SetContext("options")
+	case m.shared.modelModal.IsActive():
+		m.shared.hintBar.SetContext("model")
 	case m.shared.modalQueue != nil && m.shared.modalQueue.IsActive():
 		m.shared.hintBar.SetContext("modal")
 	case m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive():
