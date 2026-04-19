@@ -6,7 +6,7 @@ BINARY_NAME=goyoke
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context install install-archive install-aggregate install-wrapper install-load-context uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-codebase-extract install install-archive install-aggregate install-wrapper install-load-context install-codebase-extract uninstall uninstall-aggregate check-path clean test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes test-codebase-extract-coverage all
 
 help:
 	@echo "goYoke - Available targets:"
@@ -183,13 +183,26 @@ build-log-review:
 telemetry-tools: build-log-review build-update-review-outcome
 	@echo "✓ Telemetry tools built: goyoke-log-review, goyoke-update-review-outcome"
 
-build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review
+build-codebase-extract:
+	@echo "Building goyoke-codebase-extract..."
+	@mkdir -p bin
+	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
+		-o bin/goyoke-codebase-extract ./cmd/goyoke-codebase-extract
+	@echo "✓ goyoke-codebase-extract built at bin/goyoke-codebase-extract"
+
+install-codebase-extract: build-codebase-extract
+	@echo "Installing goyoke-codebase-extract to ~/.local/bin/..."
+	@mkdir -p ~/.local/bin
+	@cp bin/goyoke-codebase-extract ~/.local/bin/goyoke-codebase-extract
+	@echo "✓ Installed to ~/.local/bin/goyoke-codebase-extract"
+
+build-all: build-validate build-archive build-sharp-edge build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review build-codebase-extract
 	@echo "✓ All hook binaries built"
 
 # Alias for build-all (matches plan documentation)
 all: build-all
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review check-path
+install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review build-codebase-extract check-path
 	@echo "Installing goYoke CLIs to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
 	cp bin/goyoke-validate ~/.local/bin/goyoke-validate
@@ -202,6 +215,7 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	cp bin/goyoke-orchestrator-guard ~/.local/bin/goyoke-orchestrator-guard
 	cp bin/goyoke-update-review-outcome ~/.local/bin/goyoke-update-review-outcome
 	cp bin/goyoke-log-review ~/.local/bin/goyoke-log-review
+	cp bin/goyoke-codebase-extract ~/.local/bin/goyoke-codebase-extract
 	chmod +x ~/.local/bin/goyoke-validate
 	chmod +x ~/.local/bin/goyoke-archive
 	chmod +x ~/.local/bin/goyoke-aggregate
@@ -212,7 +226,8 @@ install: build-validate build-archive build-aggregate build-sharp-edge build-cap
 	chmod +x ~/.local/bin/goyoke-orchestrator-guard
 	chmod +x ~/.local/bin/goyoke-update-review-outcome
 	chmod +x ~/.local/bin/goyoke-log-review
-	@echo "✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-update-review-outcome, goyoke-log-review"
+	chmod +x ~/.local/bin/goyoke-codebase-extract
+	@echo "✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-update-review-outcome, goyoke-log-review, goyoke-codebase-extract"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -293,6 +308,7 @@ uninstall:
 	rm -f ~/.local/bin/goyoke-orchestrator-guard
 	rm -f ~/.local/bin/goyoke-update-review-outcome
 	rm -f ~/.local/bin/goyoke-log-review
+	rm -f ~/.local/bin/goyoke-codebase-extract
 	@echo "✅ Uninstalled all CLIs"
 
 uninstall-aggregate:
@@ -455,6 +471,11 @@ test-simulation-behavioral-all: test-simulation-deterministic test-simulation-re
 # Full simulation suite including chaos (use sparingly - takes longer)
 test-simulation-all: test-simulation-deterministic test-simulation-fuzz test-simulation-replay test-simulation-behavioral
 	@echo "✅ All simulation tests passed (excluding chaos)"
+
+test-codebase-extract-coverage:
+	@echo "Running codebase-extract coverage..."
+	@go test -coverprofile=coverage-codemap.out ./internal/codemap/...
+	@go tool cover -func=coverage-codemap.out
 
 # CI check: ensure no residual .claude/ runtime write paths in production code
 check-claude-writes:

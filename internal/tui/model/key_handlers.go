@@ -5,8 +5,10 @@ package model
 
 import (
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -29,113 +31,116 @@ const agentKillConfirmPrefix = "agent-kill-confirm:"
 
 // handleKey routes a KeyMsg based on modal and focus state.
 func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// While the help modal is open, forward all keys to it.
-	if m.shared != nil && m.shared.helpModal.IsActive() {
+	if handled, model, cmd := m.handleOverlayKey(msg); handled {
+		return model, cmd
+	}
+	if model, cmd := m.handleGlobalKey(msg); model != nil {
+		return model, cmd
+	}
+	return m.handleFocusedKey(msg)
+}
+
+// handleOverlayKey checks whether any overlay (modal, search, vim, etc.) is
+// active and should capture the key exclusively. Returns (true, ...) when
+// the key was consumed so handleKey can return immediately.
+func (m AppModel) handleOverlayKey(msg tea.KeyMsg) (handled bool, model tea.Model, cmd tea.Cmd) {
+	if m.shared == nil {
+		return false, m, nil
+	}
+
+	if m.shared.helpModal.IsActive() {
 		if m.shared.hintBar != nil {
 			m.shared.hintBar.SetContext("help")
 		}
-		updated, cmd := m.shared.helpModal.Update(msg)
+		updated, c := m.shared.helpModal.Update(msg)
 		m.shared.helpModal = updated
 		if !m.shared.helpModal.IsActive() {
 			m.updateHintContext()
 		}
-		return m, cmd
+		return true, m, c
 	}
 
-	// While the plan view modal is open, forward all keys to it.
-	if m.shared != nil && m.shared.planViewModal.IsActive() {
-		// Set hint context to "plan" while plan modal is active (TUI-060).
+	if m.shared.planViewModal.IsActive() {
 		if m.shared.hintBar != nil {
 			m.shared.hintBar.SetContext("plan")
 		}
-		updated, cmd := m.shared.planViewModal.Update(msg)
+		updated, c := m.shared.planViewModal.Update(msg)
 		m.shared.planViewModal = updated
-		// Restore main context when plan modal closes.
 		if !m.shared.planViewModal.IsActive() {
 			m.updateHintContext()
 		}
-		return m, cmd
+		return true, m, c
 	}
 
-	// While the options view modal is open, forward all keys to it.
-	if m.shared != nil && m.shared.optionsViewModal.IsActive() {
+	if m.shared.optionsViewModal.IsActive() {
 		if m.shared.hintBar != nil {
 			m.shared.hintBar.SetContext("options")
 		}
-		updated, cmd := m.shared.optionsViewModal.Update(msg)
+		updated, c := m.shared.optionsViewModal.Update(msg)
 		m.shared.optionsViewModal = updated
-		// Restore main context when options modal closes.
 		if !m.shared.optionsViewModal.IsActive() {
 			m.updateHintContext()
 		}
-		return m, cmd
+		return true, m, c
 	}
 
-	// While the model modal is open, forward all keys to it.
-	if m.shared != nil && m.shared.modelModal.IsActive() {
+	if m.shared.modelModal.IsActive() {
 		if m.shared.hintBar != nil {
 			m.shared.hintBar.SetContext("model")
 		}
-		updated, cmd := m.shared.modelModal.Update(msg)
+		updated, c := m.shared.modelModal.Update(msg)
 		m.shared.modelModal = updated
 		if !m.shared.modelModal.IsActive() {
 			m.updateHintContext()
 		}
-		return m, cmd
+		return true, m, c
 	}
 
-	// While a modal is open only modal keys are active.
-	if m.shared != nil && m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
-		// Set hint context to "modal" while a permission modal is active (TUI-060).
+	if m.shared.modalQueue != nil && m.shared.modalQueue.IsActive() {
 		if m.shared.hintBar != nil {
 			m.shared.hintBar.SetContext("modal")
 		}
-		return m.handleModalKey(msg)
+		result, c := m.handleModalKey(msg)
+		return true, result, c
 	}
 
-	// While the CWD selector is active it captures all key events.
-	if m.shared != nil && m.shared.cwdSelector != nil && m.shared.cwdSelector.IsActive() {
-		cmd := m.shared.cwdSelector.HandleMsg(msg)
+	if m.shared.cwdSelector != nil && m.shared.cwdSelector.IsActive() {
+		c := m.shared.cwdSelector.HandleMsg(msg)
 		if !m.shared.cwdSelector.IsActive() {
 			m.updateHintContext()
 		}
-		return m, cmd
+		return true, m, c
 	}
 
-	// While the search overlay is active it captures all key events.
-	// Dismiss the search overlay if a modal opens (handled in renderLayout).
-	if m.shared != nil && m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive() {
-		cmd := m.shared.searchOverlay.HandleMsg(msg)
-		// Restore main context when search overlay deactivates (TUI-060).
+	if m.shared.searchOverlay != nil && m.shared.searchOverlay.IsActive() {
+		c := m.shared.searchOverlay.HandleMsg(msg)
 		if !m.shared.searchOverlay.IsActive() {
 			m.updateHintContext()
 		}
-		return m, cmd
+		return true, m, c
 	}
 
-	// Vim mode overlay (TUI-062).
-	// In VimNormal mode j/k/h/l are consumed as navigation commands and do
-	// NOT fall through to the standard handlers below.  In VimInsert mode all
-	// keys pass through unchanged so text input works normally.
+	// Vim mode (TUI-062): VimNormal consumes navigation keys; VimInsert passes through.
 	if m.keys.VimEnabled {
-		if consumed, model, cmd := m.handleVimKey(msg); consumed {
-			return model, cmd
+		if consumed, result, c := m.handleVimKey(msg); consumed {
+			return true, result, c
 		}
 	}
 
-	// Global keys are checked before focus-specific routing.
+	return false, m, nil
+}
+
+// handleGlobalKey checks keys that should work regardless of focus. Returns a
+// non-nil tea.Model when the key was consumed. Returns (nil, nil) to signal
+// that the key should fall through to handleFocusedKey (only the Interrupt key
+// when not streaming does this).
+func (m AppModel) handleGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keys.Global.ForceQuit):
-		// Double-Ctrl+C: second press forces immediate exit (TUI-034).
 		if m.shutdownInProgress {
 			return m, tea.Quit
 		}
-
-		// First Ctrl+C: initiate graceful shutdown sequence.
 		m.shutdownInProgress = true
-
-		// If ShutdownManager is wired, run sequenced shutdown in background
-		// and quit when it completes. Otherwise, fall back to save + quit.
 		if m.shared != nil && m.shared.shutdownFunc != nil {
 			shutdownFn := m.shared.shutdownFunc
 			return m, func() tea.Msg {
@@ -143,8 +148,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return ShutdownCompleteMsg{Err: err}
 			}
 		}
-
-		// Fallback: save session directly and quit (pre-TUI-034 behaviour).
 		m.saveSession()
 		return m, tea.Quit
 
@@ -159,10 +162,8 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.updateHintContext()
 		m.updateBreadcrumbs()
 		m.propagateContentSizes()
-		// Flash the active tab to acknowledge the focus change (TUI-061).
 		return m, tabFlashCmd(int(m.activeTab))
 
-	// TUI-052: Shift+Tab triggers reverse focus cycling.
 	case key.Matches(msg, m.keys.Global.ReverseToggleFocus):
 		var expanded []string
 		if m.shared != nil && m.shared.drawerStack != nil {
@@ -174,7 +175,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.updateHintContext()
 		m.updateBreadcrumbs()
 		m.propagateContentSizes()
-		// Flash the active tab to acknowledge the focus change (TUI-061).
 		return m, tabFlashCmd(int(m.activeTab))
 
 	case key.Matches(msg, m.keys.Global.CycleRightPanel):
@@ -184,14 +184,9 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.CycleProvider):
-		// Block provider switching while an assistant response is streaming.
 		if m.shared != nil && m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
 			return m, nil
 		}
-		// Debounce: increment the sequence counter and fire a 300 ms timer.
-		// Only the timer carrying the latest Seq will execute the switch;
-		// any earlier timers are silently discarded in the
-		// ProviderSwitchExecuteMsg handler.
 		m.providerSwitchSeq++
 		seq := m.providerSwitchSeq
 		return m, tea.Tick(300*time.Millisecond, func(_ time.Time) tea.Msg {
@@ -199,8 +194,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		})
 
 	case key.Matches(msg, m.keys.Global.CyclePermMode):
-		// Block mode switching while streaming — the CLI driver restart would
-		// interrupt the active response.
 		if m.shared != nil && m.shared.claudePanel != nil && m.shared.claudePanel.IsStreaming() {
 			return m, nil
 		}
@@ -214,7 +207,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.ViewPlan):
-		// Open the full-screen plan viewer when plan content is available.
 		if m.shared != nil && m.shared.planPreview != nil {
 			markdown := m.shared.planPreview.Content()
 			if markdown != "" {
@@ -229,9 +221,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.ViewOptions):
-		// Route alt+o to the options drawer's HandleKey so it emits
-		// OptionsViewRequestMsg with the full drawer state (content or
-		// interactive modal data). The message is then handled in Update.
 		if m.shared != nil && m.shared.drawerStack != nil {
 			cmd := m.shared.drawerStack.HandleKey(string(drawer.DrawerOptions), msg)
 			return m, cmd
@@ -239,15 +228,11 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.Interrupt):
-		// Escape while a turn is active: show a confirmation modal before
-		// sending SIGINT to the CLI subprocess.  We check statusLine.Streaming
-		// (not claudePanel.IsStreaming()) because the latter is only true during
-		// LLM text generation (~100ms bursts) and false during tool execution
-		// (seconds to minutes), making the interrupt window effectively zero
-		// for a router that primarily calls tools.  statusLine.Streaming stays
-		// true for the entire turn and clears only on ResultEvent.
+		// Escape while streaming: confirm before sending SIGINT. Uses
+		// statusLine.Streaming (not claudePanel.IsStreaming) because the panel
+		// flag is only true during LLM text bursts, not during tool execution.
 		if m.statusLine.Streaming {
-			if m.shared.modalQueue != nil {
+			if m.shared != nil && m.shared.modalQueue != nil {
 				m.shared.modalQueue.Push(modals.ModalRequest{
 					ID:      interruptConfirmRequestID,
 					Type:    modals.Confirm,
@@ -260,10 +245,10 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
-		// Not streaming — fall through to focus-specific routing.
+		// Not streaming — signal not consumed; caller routes to handleFocusedKey.
+		return nil, nil
 
 	case key.Matches(msg, m.keys.Global.Search):
-		// ctrl+f opens the unified cross-panel search overlay (TUI-059).
 		if m.shared != nil && m.shared.searchOverlay != nil {
 			m.shared.searchOverlay.SetSize(m.width, m.height)
 			m.shared.searchOverlay.Activate()
@@ -274,7 +259,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Global.ChangeCWD):
-		// ctrl+d opens the CWD selector modal.
 		if m.shared != nil && m.shared.cwdSelector != nil {
 			m.shared.cwdSelector.SetSize(m.width, m.height)
 			m.shared.cwdSelector.Show()
@@ -294,6 +278,13 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.propagateContentSizes()
 		return m, nil
 
+	case key.Matches(msg, m.keys.Global.ToggleFigures):
+		if m.shared != nil && m.shared.drawerStack != nil {
+			m.shared.drawerStack.ToggleFiguresDrawer()
+			m.propagateContentSizes()
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keys.Global.ShowHelp):
 		if m.shared != nil {
 			m.shared.helpModal.SetSize(m.width, m.height)
@@ -304,8 +295,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	// Tab switching keys (Alt+C, Alt+A, Alt+T, Alt+Y).
-	// These must be in the global section so they work regardless of focus.
 	case key.Matches(msg, m.keys.Tab.TabChat),
 		key.Matches(msg, m.keys.Tab.TabAgentConfig),
 		key.Matches(msg, m.keys.Tab.TabTeamConfig),
@@ -313,8 +302,6 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.tabBar != nil {
 			cmd := m.tabBar.HandleMsg(msg)
 			m.activeTab = m.tabBar.ActiveTab()
-			// Auto-switch right panel: Teams tab shows team detail, all others
-			// revert to agents view (unless another mode was previously chosen).
 			if m.activeTab == TabTeamConfig {
 				m.rightPanelMode = RPMTeams
 			} else if m.rightPanelMode == RPMTeams {
@@ -327,7 +314,16 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Focus-specific routing.
+	return nil, nil
+}
+
+// handleFocusedKey routes keys to the currently focused panel.
+func (m AppModel) handleFocusedKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Figures drawer: Tab/Shift+Tab cycle diagrams rather than advancing
+	// the global focus ring (CM-014).
+	if m.focus == FocusFiguresDrawer && (msg.String() == "tab" || msg.String() == "shift+tab") {
+		return m.handleFiguresDrawerKey(msg)
+	}
 	switch m.focus {
 	case FocusClaude:
 		return m.handleClaudeKey(msg)
@@ -335,8 +331,9 @@ func (m AppModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleAgentsKey(msg)
 	case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
 		return m.handleDrawerKey(msg)
+	case FocusFiguresDrawer:
+		return m.handleFiguresDrawerKey(msg)
 	}
-
 	return m, nil
 }
 
@@ -505,6 +502,77 @@ func (m AppModel) handleDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// handleFiguresDrawerKey processes key events when the figures drawer holds
+// focus. Tab/Shift+Tab cycle the selected diagram. Enter opens the current
+// diagram in a browser. y copies the source to the clipboard (best-effort).
+// All other keys are forwarded to the drawer for scroll and esc handling.
+func (m AppModel) handleFiguresDrawerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.drawerStack == nil {
+		return m, nil
+	}
+
+	switch msg.String() {
+	case "tab":
+		n := len(m.shared.figuresState.Diagrams)
+		if n > 0 {
+			m.shared.figuresState.Selected = (m.shared.figuresState.Selected + 1) % n
+			m.shared.drawerStack.RefreshFiguresContent(
+				drawer.FormatFiguresContent(m.shared.figuresState),
+			)
+		}
+		return m, nil
+
+	case "shift+tab":
+		n := len(m.shared.figuresState.Diagrams)
+		if n > 0 {
+			m.shared.figuresState.Selected = (m.shared.figuresState.Selected - 1 + n) % n
+			m.shared.drawerStack.RefreshFiguresContent(
+				drawer.FormatFiguresContent(m.shared.figuresState),
+			)
+		}
+		return m, nil
+
+	case "enter":
+		if len(m.shared.figuresState.Diagrams) > 0 {
+			d := m.shared.figuresState.Diagrams[m.shared.figuresState.Selected]
+			if content, err := os.ReadFile(d.Path); err == nil {
+				_ = drawer.OpenInBrowser(d.Name, string(content))
+			}
+		}
+		return m, nil
+
+	case "y":
+		if len(m.shared.figuresState.Diagrams) > 0 {
+			d := m.shared.figuresState.Diagrams[m.shared.figuresState.Selected]
+			if content, err := os.ReadFile(d.Path); err == nil {
+				_ = clipboard.WriteAll(string(content))
+			}
+		}
+		return m, nil
+
+	default:
+		cmd := m.shared.drawerStack.HandleKey(string(drawer.DrawerFigures), msg)
+		// If Esc minimized the drawer, snap focus back to Claude.
+		expanded := m.shared.drawerStack.ExpandedDrawers()
+		ring := FocusRing(expanded)
+		found := false
+		for _, t := range ring {
+			if t == FocusFiguresDrawer {
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.focus = FocusClaude
+			m.syncFocusState()
+			m.updateHintContext()
+			m.updateBreadcrumbs()
+			m.propagateContentSizes()
+		}
+		return m, cmd
+	}
+}
+
 // syncFocusState propagates the current focus state to child components.
 func (m *AppModel) syncFocusState() {
 	if m.shared != nil && m.shared.claudePanel != nil {
@@ -519,6 +587,7 @@ func (m *AppModel) syncFocusState() {
 		m.shared.drawerStack.SetPlanFocused(m.focus == FocusPlanDrawer)
 		m.shared.drawerStack.SetOptionsFocused(m.focus == FocusOptionsDrawer)
 		m.shared.drawerStack.SetTeamsFocused(m.focus == FocusTeamsDrawer)
+		m.shared.drawerStack.SetFiguresFocused(m.focus == FocusFiguresDrawer)
 	}
 }
 
@@ -709,6 +778,9 @@ func (m *AppModel) updateBreadcrumbs() {
 	case FocusTeamsDrawer:
 		crumbs = []string{"Drawer", "Teams"}
 
+	case FocusFiguresDrawer:
+		crumbs = []string{"Drawer", "Figures"}
+
 	default:
 		crumbs = []string{m.focus.String()}
 	}
@@ -745,7 +817,7 @@ func (m *AppModel) updateHintContext() {
 		m.shared.hintBar.SetContext("search")
 	case m.rightPanelMode == RPMSettings:
 		m.shared.hintBar.SetContext("settings")
-	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer || m.focus == FocusTeamsDrawer:
+	case m.focus == FocusPlanDrawer || m.focus == FocusOptionsDrawer || m.focus == FocusTeamsDrawer || m.focus == FocusFiguresDrawer:
 		m.shared.hintBar.SetContext("drawer")
 	default:
 		m.shared.hintBar.SetContext("main")

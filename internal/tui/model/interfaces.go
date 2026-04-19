@@ -539,6 +539,14 @@ type drawerStackWidget interface {
 	OptionsActiveRequestID() string
 	OptionsSelectedOption() string
 	ClearOptionsModal()
+	// Figures drawer (CM-014).
+	SetFiguresContent(content string)
+	ClearFiguresContent()
+	FiguresHasContent() bool
+	RefreshFiguresContent(content string)
+	FiguresIsMinimized() bool
+	SetFiguresFocused(focused bool)
+	ToggleFiguresDrawer()
 }
 
 // ---------------------------------------------------------------------------

@@ -68,8 +68,13 @@ func TestFocusNext(t *testing.T) {
 			expected: FocusTeamsDrawer,
 		},
 		{
-			name:     "TeamsDrawer wraps around to Claude",
+			name:     "TeamsDrawer advances to FiguresDrawer",
 			current:  FocusTeamsDrawer,
+			expected: FocusFiguresDrawer,
+		},
+		{
+			name:     "FiguresDrawer wraps around to Claude",
+			current:  FocusFiguresDrawer,
 			expected: FocusClaude,
 		},
 	}
@@ -106,9 +111,14 @@ func TestFocusPrev(t *testing.T) {
 			expected: FocusClaude,
 		},
 		{
-			name:     "Claude wraps around to TeamsDrawer",
+			name:     "TeamsDrawer steps back to OptionsDrawer",
+			current:  FocusTeamsDrawer,
+			expected: FocusOptionsDrawer,
+		},
+		{
+			name:     "Claude wraps around to FiguresDrawer",
 			current:  FocusClaude,
-			expected: FocusTeamsDrawer,
+			expected: FocusFiguresDrawer,
 		},
 	}
 

@@ -468,6 +468,13 @@ func (s *stubDrawerStack) HasActiveModal() bool                            { ret
 func (s *stubDrawerStack) OptionsActiveRequestID() string                  { return "" }
 func (s *stubDrawerStack) OptionsSelectedOption() string                   { return "" }
 func (s *stubDrawerStack) ClearOptionsModal()                              {}
+func (s *stubDrawerStack) SetFiguresContent(_ string)                      {}
+func (s *stubDrawerStack) ClearFiguresContent()                            {}
+func (s *stubDrawerStack) FiguresHasContent() bool                         { return false }
+func (s *stubDrawerStack) RefreshFiguresContent(_ string)                  {}
+func (s *stubDrawerStack) FiguresIsMinimized() bool                        { return true }
+func (s *stubDrawerStack) SetFiguresFocused(_ bool)                        {}
+func (s *stubDrawerStack) ToggleFiguresDrawer()                            {}
 
 func TestComputeDrawerLayout(t *testing.T) {
 	t.Parallel()

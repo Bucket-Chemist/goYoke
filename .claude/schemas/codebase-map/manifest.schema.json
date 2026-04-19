@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codebase Map Manifest",
+  "description": "Tracks extraction state, per-file timestamps, and incremental update metadata. Written by goyoke-codebase-extract, read by /codebase-map skill for incremental diffing.",
+  "type": "object",
+  "required": ["version", "repo_name", "project_root", "languages", "modules", "last_full_map", "stats"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Manifest schema version",
+      "const": "1.0"
+    },
+    "repo_name": {
+      "type": "string",
+      "description": "Repository name resolved via git remote > directory name > 'unknown-repo'"
+    },
+    "project_root": {
+      "type": "string",
+      "description": "Absolute path to project root at time of extraction"
+    },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Languages detected in the repo (e.g., ['go', 'python'])"
+    },
+    "modules": {
+      "type": "object",
+      "description": "Per-module tracking. Key = module path (slash-separated, e.g., 'cmd/goyoke-validate').",
+      "additionalProperties": { "$ref": "#/$defs/ModuleEntry" }
+    },
+    "last_full_map": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp of last full (non-incremental) map. Null if never run."
+    },
+    "last_incremental": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp of last incremental update. Null if never run."
+    },
+    "stats": { "$ref": "#/$defs/Stats" },
+    "extractor_version": {
+      "type": "string",
+      "description": "Version of goyoke-codebase-extract that produced this manifest"
+    },
+    "git_commit": {
+      "type": "string",
+      "description": "Git commit SHA at time of extraction"
+    }
+  },
+  "$defs": {
+    "ModuleEntry": {
+      "type": "object",
+      "required": ["files", "last_extracted", "status"],
+      "properties": {
+        "files": {
+          "type": "object",
+          "description": "Per-file timestamps. Key = file path relative to project root.",
+          "additionalProperties": { "$ref": "#/$defs/FileEntry" }
+        },
+        "last_extracted": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of last extraction for this module"
+        },
+        "last_enriched": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp of last LLM enrichment. Null if not yet enriched."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["extracted", "enriched", "stale", "error"],
+          "description": "Current state of this module's extraction"
+        }
+      }
+    },
+    "FileEntry": {
+      "type": "object",
+      "required": ["mtime", "extracted_at"],
+      "properties": {
+        "mtime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "File modification time at extraction"
+        },
+        "extracted_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this file was last extracted"
+        },
+        "enriched_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "When this file's module was last enriched. Null if not yet."
+        },
+        "line_count": {
+          "type": "integer",
+          "description": "Total lines in the file at extraction time"
+        },
+        "symbol_count": {
+          "type": "integer",
+          "description": "Number of symbols extracted from this file"
+        }
+      }
+    },
+    "Stats": {
+      "type": "object",
+      "required": ["total_files", "total_modules", "total_symbols"],
+      "properties": {
+        "total_files": {
+          "type": "integer",
+          "description": "Total source files tracked"
+        },
+        "total_modules": {
+          "type": "integer",
+          "description": "Total modules tracked"
+        },
+        "total_symbols": {
+          "type": "integer",
+          "description": "Total symbols extracted across all modules"
+        },
+        "total_functions": {
+          "type": "integer",
+          "description": "Total function/method symbols"
+        },
+        "total_types": {
+          "type": "integer",
+          "description": "Total type/interface/class symbols"
+        },
+        "languages": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" },
+          "description": "File count per language (e.g., { 'go': 45, 'python': 12 })"
+        }
+      }
+    }
+  }
+}

@@ -199,6 +199,7 @@ When the request involves planning, use this tree to select the right command:
 | `/benchmark-agent`    | Evaluate goYoke agents against SkillsBench benchmarks via Harbor                  |
 | `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
 | `/schema-extend`          | Extend boilerplate agent with domain expertise via braintrust, or refine expanded agent |
+| `/codebase-map`           | Map codebase structure, generate ARCHITECTURE.md with Mermaid diagrams                  |
 
 ---
 
@@ -307,6 +308,8 @@ When the request involves planning, use this tree to select the right command:
 | Trigger Patterns                           | Handler        | Notes                                                        |
 | ------------------------------------------ | -------------- | ------------------------------------------------------------ |
 | native scope assessment, fast file metrics | `goyoke-scout` | Via Bash. Native Go binary, ~100ms latency. Output: `.claude/tmp/scout_metrics.json` |
+
+| map codebase, architecture docs, dependency graph | `/codebase-map` skill | Via Bash. Go binary `goyoke-codebase-extract`. |
 
 ## Agent Spawning Architecture
 

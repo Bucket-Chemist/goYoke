@@ -94,34 +94,42 @@ type DiffEntry struct {
 // sharedState holds the external component references shared between main.go
 // and the AppModel copy held inside tea.Program.
 type sharedState struct {
-	cliDriver      cliDriverWidget
-	bridge         bridgeWidget
-	modalQueue     *modals.ModalQueue
-	permHandler    *modals.PermissionHandler
-	agentRegistry  *state.AgentRegistry
-	costTracker    *state.CostTracker
-	claudePanel    claudePanelWidget
-	toasts         toastWidget
-	teamList       teamListWidget
-	providerState  *state.ProviderState
-	providerTabBar providerTabBarWidget
+	// ── CLI / Bridge ──────────────────────────────────────────────────────
+	cliDriver cliDriverWidget
+	bridge    bridgeWidget
 	// baseCLIOpts holds the CLI driver options supplied at startup (C-2).
 	// handleProviderSwitch copies this struct and overrides only the fields
 	// that change per provider (Model, SessionID, AdapterPath, ProjectDir,
 	// EnvVars), so that Verbose, Debug, PermissionMode, MCPConfigPath, and
 	// any other flags are transparently preserved across provider switches.
 	baseCLIOpts cli.CLIDriverOpts
-	// Right-panel widgets (TUI-032).
+
+	// ── State registries ──────────────────────────────────────────────────
+	agentRegistry *state.AgentRegistry
+	costTracker   *state.CostTracker
+	providerState *state.ProviderState
+
+	// ── Permission / modal queue ──────────────────────────────────────────
+	modalQueue  *modals.ModalQueue
+	permHandler *modals.PermissionHandler
+
+	// ── Primary panel widgets ─────────────────────────────────────────────
+	claudePanel    claudePanelWidget
+	toasts         toastWidget
+	teamList       teamListWidget
+	providerTabBar providerTabBarWidget
+
+	// ── Right-panel widgets (TUI-032) ─────────────────────────────────────
 	dashboard   dashboardWidget
 	settings    settingsWidget
 	telemetry   telemetryWidget
 	planPreview planPreviewWidget
 	teamDetail  TeamDetailWidget
-	// drawerStack is the collapsible drawer stack (TDS-004).
-	// It manages the options and plan drawers in the right panel.
+
+	// ── Drawer stack (TDS-004) ────────────────────────────────────────────
 	drawerStack drawerStackWidget
-	// teamsHealth is the team health dashboard widget (TUI-003).
-	// Concrete implementation lives in the teams package (TUI-005).
+
+	// ── Team health (TUI-003 / TUI-005) ──────────────────────────────────
 	teamsHealth teamsHealthWidget
 	// teamNotifiedAt records when the last TeamUpdateMsg arrived.
 	// The poll-tick handler suppresses ClearTeamsContent within a 10s
@@ -130,60 +138,39 @@ type sharedState struct {
 	teamNotifiedAt time.Time
 	taskBoard      taskBoardWidget
 
+	// ── Overlay modals ────────────────────────────────────────────────────
 	// planViewModal is the full-screen plan viewer overlay (TUI-056).
-	// It is activated by alt+v when rightPanelMode == RPMPlanPreview.
-	planViewModal modals.PlanViewModal
-	helpModal     modals.HelpModal // full-screen keyboard shortcut reference (alt+h)
-
-	// optionsViewModal is the full-screen options viewer overlay (alt+o).
+	planViewModal    modals.PlanViewModal
+	helpModal        modals.HelpModal // full-screen keyboard shortcut reference (alt+h)
 	optionsViewModal modals.OptionsViewModal
+	modelModal       modals.ModelModal
 
-	// modelModal is the interactive model selector overlay (/model).
-	modelModal modals.ModelModal
-
-	// searchOverlay is the unified cross-panel fuzzy search overlay (TUI-059).
-	// It is activated by ctrl+f and queries all registered SearchSources.
+	// ── Navigation overlays ───────────────────────────────────────────────
 	searchOverlay searchOverlayWidget
+	hintBar       hintBarWidget
+	breadcrumb    breadcrumbWidget
+	cwdSelector   cwdSelectorWidget
 
-	// hintBar is the context-aware keyboard hint bar (TUI-060).
-	// It renders a single muted row of key:description pairs between the
-	// task board / toasts and the status line.
-	hintBar hintBarWidget
-
-	// breadcrumb is the navigation breadcrumb trail (TUI-063).
-	// It renders a single row between the tab bar / provider bar and the
-	// main content area showing the current navigation context.
-	breadcrumb breadcrumbWidget
-
-	// cwdSelector is the modal overlay for changing the working directory.
-	// It propagates CWD changes to os.Chdir and GOYOKE_CWD env var so that
-	// spawned Claude CLI subprocesses inherit the desired scope.
-	cwdSelector cwdSelectorWidget
-
-	// Session persistence (TUI-033).
+	// ── Session persistence (TUI-033) ─────────────────────────────────────
 	sessionStore *session.Store
 	sessionData  *session.SessionData
 
-	// Graceful shutdown (TUI-034).
-	// shutdownFunc is called to trigger the sequenced shutdown.  It is a
-	// func() error (ShutdownManager.Shutdown) stored as a closure so the
-	// model package does not import the lifecycle package.
+	// ── Lifecycle ─────────────────────────────────────────────────────────
+	// shutdownFunc is called to trigger the sequenced shutdown (TUI-034).
+	// Stored as a closure so the model package does not import lifecycle.
 	shutdownFunc func() error
 
-	// Theme (TUI-046).
-	// activeTheme is the current color theme.  It is always non-nil after
-	// NewAppModel() runs; the zero value of Theme is unusable (styles are
-	// empty lipgloss.Style values), so we store a pointer and initialise it
-	// in NewAppModel with DefaultTheme().
-	activeTheme *config.Theme
-	// themeVariant tracks which variant produced activeTheme so it can be
-	// persisted to SessionData without re-deriving the variant from the Theme
-	// value (which would require a reverse lookup).
+	// ── Theme / display (TUI-046) ─────────────────────────────────────────
+	// activeTheme is always non-nil after NewAppModel(); zero value unusable.
+	activeTheme  *config.Theme
 	themeVariant config.ThemeVariant
-
 	// reduceMotion disables animations when true (WCAG 2.3.1).
-	// Set via Settings → Display → Reduce Motion toggle.
 	reduceMotion bool
+
+	// ── Figures state (CM-014) ────────────────────────────────────────────
+	// figuresState tracks the diagrams loaded in the figures drawer and
+	// which is currently selected for cycling/opening.
+	figuresState drawer.FiguresState
 }
 
 // ---------------------------------------------------------------------------
@@ -329,6 +316,7 @@ func (m AppModel) Init() tea.Cmd {
 		m.startCLI(),
 		m.statusLine.StartTicks(),
 		m.startTeamPolling(),
+		m.discoverFiguresCmd(),
 	)
 }
 
@@ -352,405 +340,113 @@ func (m AppModel) startTeamPolling() tea.Cmd {
 	return m.shared.teamList.PollNow()
 }
 
-// Update is the sole mutation point for AppModel state.  It dispatches all
-// incoming tea.Msg values to focused handler methods and returns the updated
-// model together with any commands to run.
+// Update is the sole mutation point for AppModel state. Each case delegates
+// to a named handler; no inline bodies are permitted here.
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.handleWindowSize(msg)
-
 	case tea.KeyMsg:
 		return m.handleKey(msg)
-
-	// -----------------------------------------------------------------
-	// CLI lifecycle events (TUI-016)
-	// -----------------------------------------------------------------
-
+	// CLI lifecycle (TUI-016)
 	case cli.CLIStartedMsg:
 		return m.handleCLIStarted()
-
 	case cli.SystemInitEvent:
 		return m.handleSystemInit(msg)
-
 	case cli.AssistantEvent:
 		return m.handleAssistantEvent(msg)
-
 	case cli.UserEvent:
 		return m.handleUserEvent(msg)
-
 	case cli.ResultEvent:
 		return m.handleResultEvent(msg)
-
 	case cli.CLIDisconnectedMsg:
 		return m.handleCLIDisconnected(msg)
-
 	case CLIReconnectMsg:
 		return m.handleCLIReconnect(msg)
-
-	// -----------------------------------------------------------------
 	// Provider switching (TUI-029)
-	// -----------------------------------------------------------------
-
 	case ProviderSwitchMsg:
 		return m.handleProviderSwitchMsg()
-
 	case ProviderSwitchExecuteMsg:
 		return m.handleProviderSwitchExecuteMsg(msg)
-
-	// -----------------------------------------------------------------
-	// Model switching
-	// -----------------------------------------------------------------
-
+	// Model / effort switching
 	case ModelSwitchRequestMsg:
 		return m.handleModelSwitchRequest(msg)
-
 	case modals.ModelSelectedMsg:
-		m.shared.modelModal.Hide()
-		return m.handleModelSwitchRequest(ModelSwitchRequestMsg{ModelID: msg.ModelID})
-
+		return m.handleModelSelected(msg)
 	case modals.ModelModalClosedMsg:
-		m.shared.modelModal.Hide()
-		m.updateHintContext()
-		return m, nil
-
-	// -----------------------------------------------------------------
-	// Effort switching
-	// -----------------------------------------------------------------
-
+		return m.handleModelModalClosed()
 	case EffortChangeRequestMsg:
 		return m.handleEffortChangeRequest(msg)
-
-	// -----------------------------------------------------------------
-	// Bridge events (from MCP server via UDS)
-	// -----------------------------------------------------------------
-
+	// Bridge events (MCP server via UDS)
 	case BridgeModalRequestMsg:
 		return m.handleBridgeModalRequest(msg)
-
 	case CLIPermissionRequestMsg:
 		return m.handleCLIPermissionRequest(msg)
-
 	case drawer.ModalResponseMsg:
-		// TDS-006: Drawer resolved a modal — deliver response to the bridge.
-		if m.shared != nil && m.shared.bridge != nil {
-			value := msg.Value
-			if msg.Cancelled {
-				value = ""
-			}
-			m.shared.bridge.ResolveModalSimple(msg.RequestID, value)
-		}
-		// Clear stale drawer modal state when the response came from the
-		// full-screen OptionsViewModal (which doesn't call ClearActiveModal).
-		if m.shared != nil && m.shared.drawerStack != nil &&
-			m.shared.drawerStack.OptionsActiveRequestID() == msg.RequestID {
-			m.shared.drawerStack.ClearOptionsModal()
-		}
-		// Snap focus back to Claude if the options drawer just minimized.
-		if m.focus == FocusOptionsDrawer && m.shared != nil && m.shared.drawerStack != nil {
-			if !m.shared.drawerStack.OptionsHasContent() {
-				m.focus = FocusClaude
-				m.syncFocusState()
-				m.updateHintContext()
-				m.updateBreadcrumbs()
-				m.propagateContentSizes()
-			}
-		}
-		return m, nil
-
+		return m.handleDrawerModalResponse(msg)
 	case drawer.PlanViewRequestMsg:
-		// TDS-007: Open full-screen plan view modal (same as alt+v from RPMPlanPreview).
-		if m.shared != nil && m.shared.planPreview != nil {
-			content := m.shared.planPreview.Content()
-			if content != "" {
-				m.shared.planViewModal.SetContent(content, m.width)
-				m.shared.planViewModal.SetSize(m.width, m.height)
-				m.shared.planViewModal.Show()
-			}
-		}
-		return m, nil
-
+		return m.handlePlanViewRequest()
 	case drawer.OptionsViewRequestMsg:
 		return m.handleOptionsViewRequest(msg)
-
 	case modals.OptionsViewClosedMsg:
 		return m, nil
-
 	case modals.ModalResponseMsg:
 		return m.handleModalResponse(msg)
-
-	// -----------------------------------------------------------------
 	// CWD selector
-	// -----------------------------------------------------------------
-
 	case OpenCWDSelectorMsg:
-		if m.shared != nil && m.shared.cwdSelector != nil {
-			m.shared.cwdSelector.SetSize(m.width, m.height)
-			m.shared.cwdSelector.Show()
-		}
-		return m, nil
-
+		return m.handleOpenCWDSelector()
 	case CWDChangedMsg:
 		return m.handleCWDChanged(msg)
-
-	// -----------------------------------------------------------------
-	// Agent and team events (from bridge)
-	// -----------------------------------------------------------------
-
+	// Agent and team events
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
 		return m.handleAgentRegistryMsg(msg)
-
 	case AgentTodoUpdateMsg:
 		return m.handleAgentTodoUpdate(msg)
-
 	case agents.AgentSelectedMsg:
 		return m.handleAgentSelected(msg)
-
 	case agents.AgentDetailFocusMsg:
-		// Transfer focus from tree to detail panel.
-		m.agentTree.SetFocused(false)
-		m.agentDetail.SetFocused(true)
-		// Also select the agent.
-		if m.shared.agentRegistry != nil {
-			if a := m.shared.agentRegistry.Get(msg.AgentID); a != nil {
-				m.agentDetail.SetAgent(a)
-			}
-		}
-		return m, nil
-
+		return m.handleAgentDetailFocus(msg)
 	case agents.AgentTreeFocusMsg:
-		// Transfer focus back from detail to tree.
-		m.agentDetail.SetFocused(false)
-		m.agentTree.SetFocused(true)
-		return m, nil
-
+		return m.handleAgentTreeFocus()
 	case agents.TreePulseTickMsg:
-		// Forward pulse tick to the tree; the tree self-reschedules lazily.
-		result, cmd := m.agentTree.Update(msg)
-		if updated, ok := result.(agents.AgentTreeModel); ok {
-			m.agentTree = updated
-		}
-		return m, cmd
-
+		return m.handleTreePulseTick(msg)
 	case ToastMsg:
 		return m.handleToastMsg(msg)
-
-	// -----------------------------------------------------------------
 	// Shutdown (TUI-034)
-	// -----------------------------------------------------------------
-
 	case ShutdownRequestMsg:
-		// /exit or /quit from the ClaudePanel — same path as first Ctrl+C.
-		if m.shutdownInProgress {
-			return m, nil
-		}
-		m.shutdownInProgress = true
-		if m.shared != nil && m.shared.shutdownFunc != nil {
-			shutdownFn := m.shared.shutdownFunc
-			return m, func() tea.Msg {
-				err := shutdownFn()
-				return ShutdownCompleteMsg{Err: err}
-			}
-		}
-		m.saveSession()
-		return m, tea.Quit
-
+		return m.handleShutdownRequest()
 	case ShutdownCompleteMsg:
 		return m.handleShutdownComplete(msg)
-
-	// -----------------------------------------------------------------
-	// Session persistence (TUI-033)
-	// -----------------------------------------------------------------
-
+	// Session / theme / settings / plan
 	case SessionAutoSaveMsg:
 		return m.handleSessionAutoSave(msg)
-
-	// -----------------------------------------------------------------
-	// Theme switching (TUI-046)
-	// -----------------------------------------------------------------
-
 	case ThemeChangedMsg:
 		return m.handleThemeChanged(msg)
-
-	// -----------------------------------------------------------------
-	// Settings panel changes (TUI-051)
-	// -----------------------------------------------------------------
-
 	case settingstree.SettingChangedMsg:
 		return m.handleSettingChanged(msg)
-
-	// -----------------------------------------------------------------
-	// Plan mode tracking (TUI-057)
-	// -----------------------------------------------------------------
-
 	case PlanStepMsg:
 		return m.handlePlanStep(msg)
-
-	// -----------------------------------------------------------------
 	// Drawer messages (TDS-005)
-	// -----------------------------------------------------------------
-
 	case DrawerContentMsg:
-		if m.shared != nil && m.shared.drawerStack != nil {
-			switch msg.DrawerID {
-			case "options":
-				m.shared.drawerStack.SetOptionsContent(msg.Content)
-			case "plan":
-				m.shared.drawerStack.SetPlanContent(msg.Content)
-			}
-		}
-		return m, nil
-
+		return m.handleDrawerContent(msg)
 	case DrawerMinimizeMsg:
-		if m.shared != nil && m.shared.drawerStack != nil {
-			switch msg.DrawerID {
-			case "options":
-				m.shared.drawerStack.ClearOptionsContent()
-			case "plan":
-				m.shared.drawerStack.ClearPlanContent()
-			}
-		}
-		return m, nil
-
-	// -----------------------------------------------------------------
-	// Team update (immediate scan + drawer expand)
-	// -----------------------------------------------------------------
-
+		return m.handleDrawerMinimize(msg)
+	case drawer.FiguresContentMsg:
+		return m.handleFiguresContent(msg)
+	// Team update and tab flash
 	case TeamUpdateMsg:
 		return m.handleTeamUpdate(msg)
-
-	// -----------------------------------------------------------------
-	// Tab flash animation (TUI-061)
-	// -----------------------------------------------------------------
-
 	case TabFlashMsg:
 		return m.handleTabFlash(msg)
-
-	// -----------------------------------------------------------------
-	// Plan view / help modals — deactivate themselves on Esc/q.
-	// -----------------------------------------------------------------
-
+	// Modals that self-deactivate on Esc/q
 	case modals.PlanViewClosedMsg, modals.HelpClosedMsg:
 		return m, nil
-
-	// -----------------------------------------------------------------
-	// Remaining CLI event types — re-subscribe without side effects.
-	// -----------------------------------------------------------------
-
+	// Remaining CLI events — re-subscribe without side effects
 	case cli.SystemHookEvent, cli.SystemStatusEvent, cli.RateLimitEvent,
 		cli.StreamEvent, cli.CLIUnknownEvent:
 		return m, m.waitForCLIEvent()
 	}
-
-	// ─── FORWARDING CASCADE ──────────────────────────────────────────────
-	// Contract: each forwarder returns non-nil ONLY for its own package's
-	// unexported tick type. The cascade exits on the first non-nil cmd, so
-	// a forwarder that claims a foreign type starves downstream forwarders.
-	// All tick types are distinct named structs — do NOT use interface
-	// matching here.
-	// Order: 1. StatusLine  2. Toast  3. TabBar  4. TeamList  5. TeamDetail
-	// ─────────────────────────────────────────────────────────────────────
-
-	// Forward unhandled messages to status line (handles its own tick types).
-	{
-		updated, cmd := m.statusLine.Update(msg)
-		if cmd != nil {
-			m.statusLine = updated
-			return m, cmd
-		}
-		m.statusLine = updated
-	}
-
-	// Forward unhandled messages to toast for tick-based expiry.
-	if m.shared != nil && m.shared.toasts != nil {
-		prevToastH := m.shared.toasts.Height()
-		cmd := m.shared.toasts.HandleMsg(msg)
-		if m.shared.toasts.Height() != prevToastH {
-			m.propagateContentSizes()
-		}
-		if cmd != nil {
-			return m, cmd
-		}
-	}
-
-	// Forward unhandled messages to the tab bar for flash tick processing
-	// (TUI-061).  The tabFlashTickMsg type is unexported from the tabbar
-	// package, so AppModel cannot type-switch on it; forwarding all
-	// unhandled messages here ensures the tick clears the flash state.
-	if m.tabBar != nil {
-		cmd := m.tabBar.HandleMsg(msg)
-		if cmd != nil {
-			return m, cmd
-		}
-	}
-
-	// Forward unhandled messages to the team list for autonomous 2-second
-	// poll ticks.  pollTickMsg is unexported from the teams package, so
-	// AppModel cannot type-switch on it; forwarding here ensures the poll
-	// cycle is self-sustaining once started by Init → startTeamPolling.
-	if m.shared != nil && m.shared.teamList != nil {
-		cmd := m.shared.teamList.HandleMsg(msg)
-		if cmd != nil {
-			// Poll tick processed — refresh teams drawer with latest health data.
-			if m.shared.drawerStack != nil && m.shared.teamsHealth != nil {
-				if m.shared.teamsHealth.HasData() {
-					if !m.shared.drawerStack.TeamsHasContent() {
-						// First team discovered — force-expand the drawer.
-						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
-					} else if m.shared.teamsHealth.HasRunningTeam() &&
-						m.shared.drawerStack.TeamsIsMinimized() {
-						// A team is actively running and the drawer was minimized —
-						// force-expand so the user sees live progress without manually
-						// reopening the drawer.
-						m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
-					} else {
-						m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
-					}
-				} else {
-					// Don't clear teams drawer within 10s of a TeamUpdateMsg —
-					// the team may not yet be visible to the filesystem scanner
-					// (ensureTeamVisible race or symlink propagation delay).
-					if m.shared.teamNotifiedAt.IsZero() || time.Since(m.shared.teamNotifiedAt) > 10*time.Second {
-						m.shared.drawerStack.ClearTeamsContent()
-					}
-				}
-			}
-			// Populate status line team indicator from teamsHealth.
-			tid := m.shared.teamsHealth.TeamIndicator()
-			m.statusLine.TeamActive = tid.Active
-			m.statusLine.TeamName = tid.Name
-			m.statusLine.TeamMemberStatuses = tid.MemberStatuses
-			m.statusLine.TeamCurrentWave = tid.CurrentWave
-			m.statusLine.TeamTotalWaves = tid.TotalWaves
-			m.statusLine.TeamCost = tid.Cost
-
-			// Refresh the team detail panel so it shows up-to-date member state.
-			if m.shared.teamDetail != nil {
-				m.shared.teamDetail.Refresh()
-			}
-			return m, cmd
-		}
-	}
-
-	// Forward unhandled messages to the team detail for TeamSelectedMsg
-	// (emitted as a tea.Cmd result by the team list when the cursor moves).
-	// TeamSelectedMsg is unexported from the teams package so AppModel cannot
-	// type-switch on it directly; the detail model handles it internally.
-	if m.shared != nil && m.shared.teamDetail != nil {
-		m.shared.teamDetail.HandleMsg(msg)
-	}
-
-	// Forward unhandled messages to the claude panel for timestamp tick
-	// processing (UX-024). timestampTickMsg is unexported from the claude
-	// package, so AppModel cannot type-switch on it; forwarding here keeps the
-	// self-scheduling 60-second tick alive as long as timestamps are enabled.
-	if m.shared != nil && m.shared.claudePanel != nil {
-		if cmd := m.shared.claudePanel.HandleMsg(msg); cmd != nil {
-			return m, cmd
-		}
-	}
-
-	return m, nil
+	return m.handleUnrouted(msg)
 }
 
 // View renders the current application state to a string.  It is called by

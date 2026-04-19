@@ -23,11 +23,14 @@ const (
 
 	// FocusTeamsDrawer indicates that the teams health drawer holds focus.
 	FocusTeamsDrawer
+
+	// FocusFiguresDrawer indicates that the figures/diagram viewer drawer holds focus.
+	FocusFiguresDrawer
 )
 
 // focusTargetCount is the total number of FocusTarget values.
 // Update this constant whenever a new FocusTarget is added.
-const focusTargetCount = int(FocusTeamsDrawer) + 1
+const focusTargetCount = int(FocusFiguresDrawer) + 1
 
 // String returns a human-readable name for the FocusTarget.
 func (f FocusTarget) String() string {
@@ -42,6 +45,8 @@ func (f FocusTarget) String() string {
 		return "Options Drawer"
 	case FocusTeamsDrawer:
 		return "Teams Drawer"
+	case FocusFiguresDrawer:
+		return "Figures Drawer"
 	default:
 		return "Unknown"
 	}
@@ -61,7 +66,7 @@ func FocusPrev(current FocusTarget) FocusTarget {
 
 // FocusRing builds the current focus ring based on which drawers are expanded.
 // The base ring is always [FocusClaude, FocusAgents]. Expanded drawers are
-// appended: plan first, then options (TDS-008).
+// appended: plan first, then options, then teams, then figures (TDS-008).
 func FocusRing(expandedDrawers []string) []FocusTarget {
 	ring := []FocusTarget{FocusClaude, FocusAgents}
 	for _, id := range expandedDrawers {
@@ -72,6 +77,8 @@ func FocusRing(expandedDrawers []string) []FocusTarget {
 			ring = append(ring, FocusOptionsDrawer)
 		case "teams":
 			ring = append(ring, FocusTeamsDrawer)
+		case "figures":
+			ring = append(ring, FocusFiguresDrawer)
 		}
 	}
 	return ring

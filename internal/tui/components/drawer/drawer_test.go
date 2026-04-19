@@ -263,7 +263,7 @@ func TestExpandedDrawers(t *testing.T) {
 }
 
 func TestSetSizeHeightDistribution(t *testing.T) {
-	// With 3 drawers stacked vertically, each minimized drawer = 3 rows
+	// With 4 drawers stacked vertically, each minimized drawer = 3 rows
 	// (border top + label + border bottom). Expanded drawers split the
 	// remaining height; remainder goes to the first expanded.
 	tests := []struct {
@@ -281,42 +281,42 @@ func TestSetSizeHeightDistribution(t *testing.T) {
 			wantPlanH: 3,
 		},
 		{
-			// h=20, 2 minimized (plan+teams) = 6 rows, options = 20-6 = 14.
+			// h=20, 3 minimized (plan+teams+figures) = 9 rows, options = 20-9 = 11.
 			name:      "options expanded plan minimized",
 			setup:     func(s *DrawerStack) { s.Options().Expand() },
 			h:         20,
-			wantOptH:  14,
+			wantOptH:  11,
 			wantPlanH: 3,
 		},
 		{
-			// h=20, 2 minimized (options+teams) = 6 rows, plan = 20-6 = 14.
+			// h=20, 3 minimized (options+teams+figures) = 9 rows, plan = 20-9 = 11.
 			name:      "plan expanded options minimized",
 			setup:     func(s *DrawerStack) { s.Plan().Expand() },
 			h:         20,
 			wantOptH:  3,
-			wantPlanH: 14,
+			wantPlanH: 11,
 		},
 		{
-			// h=20, 1 minimized (teams) = 3 rows, expanded = 17, 17/2=8 rem 1 → opt=9, plan=8.
+			// h=20, 2 minimized (teams+figures) = 6 rows, expanded = 14, 14/2=7 each.
 			name: "both expanded teams minimized",
 			setup: func(s *DrawerStack) {
 				s.Options().Expand()
 				s.Plan().Expand()
 			},
 			h:         20,
-			wantOptH:  9,
-			wantPlanH: 8,
+			wantOptH:  7,
+			wantPlanH: 7,
 		},
 		{
-			// h=21, 1 minimized (teams) = 3 rows, expanded = 18, 18/2=9 each.
+			// h=21, 2 minimized (teams+figures) = 6 rows, expanded = 15, 15/2=7 rem 1 → opt=8, plan=7.
 			name: "both expanded even split",
 			setup: func(s *DrawerStack) {
 				s.Options().Expand()
 				s.Plan().Expand()
 			},
 			h:         21,
-			wantOptH:  9,
-			wantPlanH: 9,
+			wantOptH:  8,
+			wantPlanH: 7,
 		},
 	}
 

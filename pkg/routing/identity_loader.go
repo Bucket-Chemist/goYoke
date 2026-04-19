@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
+
+var validAgentID = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 
 const (
 	// IdentityMarker prevents double-injection of agent identity
@@ -29,6 +32,10 @@ func LoadAgentIdentity(agentID string) (string, error) {
 		return "", nil
 	}
 
+	if !validAgentID.MatchString(agentID) {
+		return "", fmt.Errorf("invalid agentID %q: must match [a-z][a-z0-9-]*", agentID)
+	}
+
 	cacheKey := "identity:" + agentID
 
 	// Check cache
@@ -45,7 +52,10 @@ func LoadAgentIdentity(agentID string) (string, error) {
 		return "", err
 	}
 
-	path := filepath.Join(configDir, "agents", agentID, agentID+".md")
+	path := filepath.Clean(filepath.Join(configDir, "agents", agentID, agentID+".md"))
+	if !strings.HasPrefix(path, filepath.Clean(configDir)+string(os.PathSeparator)) {
+		return "", fmt.Errorf("invalid agentID %q: path traversal detected", agentID)
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -128,7 +138,6 @@ func GetSessionDir() string {
 	}
 	data, err := os.ReadFile(filepath.Join(config.RuntimeDir(projectDir), "current-session"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.goyoke/current-session\n", projectDir)
 		return ""
 	}
 	return strings.TrimSpace(string(data))
@@ -223,6 +232,12 @@ func BuildFullAgentContext(agentID string, requirements *ContextRequirements, ta
 				injected = true
 			}
 		}
+	}
+
+	// 4. Codebase map context (controlled by GOYOKE_CODEBASE_MAP_INJECT; skipped gracefully if absent)
+	if mapCtx := InjectCodebaseMapContext(agentID, originalPrompt, findProjectRoot()); mapCtx != "" {
+		sections = append(sections, mapCtx)
+		injected = true
 	}
 
 	if !injected {

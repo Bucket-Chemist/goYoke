@@ -1,0 +1,332 @@
+package codemap
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	gitignore "github.com/sabhiram/go-gitignore"
+)
+
+var defaultSkipDirs = map[string]bool{
+	".git":         true,
+	"vendor":       true,
+	"node_modules": true,
+	"__pycache__":  true,
+	".venv":        true,
+	".claude":      true,
+	"dist":         true,
+	"build":        true,
+	"testdata":     true,
+	"target":       true, // Rust build output
+}
+
+var defaultExcludePatterns = []string{
+	"*.pb.go",
+	"*_generated.go",
+	"*.min.js",
+	"*.min.css",
+	"*.pyc",
+	"*.pyo",
+	"*_pb2.py",
+	"*_pb2_grpc.py",
+}
+
+// extToLang maps file extensions to language identifiers.
+var extToLang = map[string]string{
+	".go":  "go",
+	".rs":  "rust",
+	".ts":  "typescript",
+	".tsx": "typescript",
+	".py":  "python",
+	".R":   "r",
+	".r":   "r",
+}
+
+// allSupportedExts returns the file extensions recognized by the extractor.
+func allSupportedExts() []string {
+	exts := make([]string, 0, len(extToLang))
+	for ext := range extToLang {
+		exts = append(exts, ext)
+	}
+	return exts
+}
+
+// DiscoverFiles walks root and returns a map of ModuleKey → []file-path (both relative to root).
+// ModuleKey groups files by (directory, language) so a mixed-language directory produces
+// separate keys per language.
+func DiscoverFiles(root string, opts DiscoveryOpts) (map[ModuleKey][]string, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, fmt.Errorf("resolve root path: %w", err)
+	}
+
+	info, err := os.Stat(absRoot)
+	if err != nil {
+		return nil, fmt.Errorf("stat root: %w", err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory", absRoot)
+	}
+
+	// Load root .gitignore if present.
+	var ignorer *gitignore.GitIgnore
+	gitignorePath := filepath.Join(absRoot, ".gitignore")
+	if _, statErr := os.Stat(gitignorePath); statErr == nil {
+		ignorer, err = gitignore.CompileIgnoreFile(gitignorePath)
+		if err != nil {
+			return nil, fmt.Errorf("parse .gitignore: %w", err)
+		}
+	}
+
+	// Merge default + user-supplied exclude patterns.
+	excludePatterns := make([]string, 0, len(defaultExcludePatterns)+len(opts.ExcludePatterns))
+	excludePatterns = append(excludePatterns, defaultExcludePatterns...)
+	excludePatterns = append(excludePatterns, opts.ExcludePatterns...)
+
+	// Build fast-lookup set for SpecificFiles (converted to absolute paths).
+	specificFiles := make(map[string]bool, len(opts.SpecificFiles))
+	for _, f := range opts.SpecificFiles {
+		absF, absErr := filepath.Abs(f)
+		if absErr != nil {
+			return nil, fmt.Errorf("resolve specific file %s: %w", f, absErr)
+		}
+		specificFiles[absF] = true
+	}
+
+	result := make(map[ModuleKey][]string)
+
+	err = filepath.WalkDir(absRoot, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+
+		if d.IsDir() {
+			if defaultSkipDirs[d.Name()] {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		ext := filepath.Ext(path)
+		lang, supported := extToLang[ext]
+		if !supported {
+			return nil
+		}
+
+		// Language filter.
+		if opts.Lang != "" && opts.Lang != "auto" && opts.Lang != lang {
+			return nil
+		}
+
+		// Exclude Go test files — not part of API surface.
+		if lang == "go" && strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		rel, relErr := filepath.Rel(absRoot, path)
+		if relErr != nil {
+			return fmt.Errorf("compute relative path for %s: %w", path, relErr)
+		}
+		rel = filepath.ToSlash(rel)
+
+		// Gitignore check (use forward-slash relative path).
+		if ignorer != nil && ignorer.MatchesPath(rel) {
+			return nil
+		}
+
+		// Default + extra exclude-pattern check against the filename.
+		base := filepath.Base(path)
+		for _, pattern := range excludePatterns {
+			matched, matchErr := filepath.Match(pattern, base)
+			if matchErr != nil {
+				continue
+			}
+			if matched {
+				return nil
+			}
+		}
+
+		// SpecificFiles filter.
+		if len(specificFiles) > 0 && !specificFiles[path] {
+			return nil
+		}
+
+		// Generated-file detection (Go only — other languages have separate exclude patterns).
+		if lang == "go" && !opts.IncludeGenerated && isGeneratedFile(path) {
+			return nil
+		}
+
+		// Module path = directory containing the file, relative to root.
+		dir := filepath.ToSlash(filepath.Dir(rel))
+		if dir == "." {
+			dir = ""
+		}
+
+		key := ModuleKey{Path: dir, Language: lang}
+		result[key] = append(result[key], rel)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("walk directory: %w", err)
+	}
+
+	return result, nil
+}
+
+// isGeneratedFile reports true when the first 10 lines of path contain a generated-file marker.
+func isGeneratedFile(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for i := 0; i < 10 && scanner.Scan(); i++ {
+		line := scanner.Text()
+		if strings.Contains(line, "Code generated") ||
+			strings.Contains(line, "DO NOT EDIT") ||
+			strings.Contains(line, "Generated by") {
+			return true
+		}
+	}
+	return false
+}
+
+// DetectLanguage returns the language identifier for a source file.
+func DetectLanguage(path string) string {
+	lang, ok := extToLang[filepath.Ext(path)]
+	if !ok {
+		return "unknown"
+	}
+	return lang
+}
+
+// moduleToFilename converts a module path like "cmd/goyoke-validate" to "cmd--goyoke-validate".
+// Empty string (root directory) returns "_root".
+func moduleToFilename(module string) string {
+	if module == "" {
+		return "_root"
+	}
+	return strings.ReplaceAll(module, "/", "--")
+}
+
+// ResolveProjectModule reads the module path from the go.mod in root.
+func ResolveProjectModule(root string) (string, error) {
+	gomodPath := filepath.Join(root, "go.mod")
+	f, err := os.Open(gomodPath)
+	if err != nil {
+		return "", fmt.Errorf("open go.mod: %w", err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if mod, ok := strings.CutPrefix(line, "module "); ok {
+			return strings.TrimSpace(mod), nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("scan go.mod: %w", err)
+	}
+	return "", fmt.Errorf("module declaration not found in go.mod")
+}
+
+// ResolveProjectName returns the project name for a given language by reading
+// the language-specific project descriptor file.
+func ResolveProjectName(root, language string) (string, error) {
+	switch language {
+	case "go":
+		return ResolveProjectModule(root)
+	case "rust":
+		return resolveRustProjectName(root)
+	case "typescript":
+		return resolveTypeScriptProjectName(root)
+	case "python":
+		return resolvePythonProjectName(root)
+	case "r":
+		return resolveRProjectName(root)
+	}
+	return "", fmt.Errorf("unsupported language: %s", language)
+}
+
+// extractNameFromTOML scans TOML bytes for the first `name = "..."` field.
+// Works for Cargo.toml ([package] is always first) and pyproject.toml/setup.cfg.
+func extractNameFromTOML(data []byte) string {
+	for line := range strings.SplitSeq(string(data), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if after, ok := strings.CutPrefix(trimmed, "name"); ok {
+			after = strings.TrimSpace(after)
+			if strings.HasPrefix(after, "=") {
+				name := strings.Trim(strings.TrimSpace(after[1:]), `"'`)
+				if name != "" {
+					return name
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func resolveRustProjectName(root string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "Cargo.toml"))
+	if err != nil {
+		return "", fmt.Errorf("open Cargo.toml: %w", err)
+	}
+	if name := extractNameFromTOML(data); name != "" {
+		return name, nil
+	}
+	return "", fmt.Errorf("name not found in Cargo.toml")
+}
+
+func resolveTypeScriptProjectName(root string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "package.json"))
+	if err != nil {
+		return "", fmt.Errorf("open package.json: %w", err)
+	}
+	var pkg struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(data, &pkg); err != nil {
+		return "", fmt.Errorf("parse package.json: %w", err)
+	}
+	if pkg.Name == "" {
+		return "", fmt.Errorf("name not found in package.json")
+	}
+	return pkg.Name, nil
+}
+
+func resolvePythonProjectName(root string) (string, error) {
+	if data, err := os.ReadFile(filepath.Join(root, "pyproject.toml")); err == nil {
+		if name := extractNameFromTOML(data); name != "" {
+			return name, nil
+		}
+	}
+	if data, err := os.ReadFile(filepath.Join(root, "setup.cfg")); err == nil {
+		if name := extractNameFromTOML(data); name != "" {
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("project name not found (checked pyproject.toml, setup.cfg)")
+}
+
+func resolveRProjectName(root string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "DESCRIPTION"))
+	if err != nil {
+		return "", fmt.Errorf("open DESCRIPTION: %w", err)
+	}
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if after, ok := strings.CutPrefix(strings.TrimSpace(line), "Package:"); ok {
+			name := strings.TrimSpace(after)
+			if name != "" {
+				return name, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("Package field not found in DESCRIPTION")
+}

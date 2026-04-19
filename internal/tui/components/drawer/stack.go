@@ -5,24 +5,26 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// DrawerStack manages three DrawerModels (options, plan, teams) as a vertical
-// stack rendered at the bottom of the right panel. The zero value is not usable;
-// use NewDrawerStack instead.
+// DrawerStack manages four DrawerModels (options, plan, teams, figures) as a
+// vertical stack rendered at the bottom of the right panel. The zero value is
+// not usable; use NewDrawerStack instead.
 type DrawerStack struct {
 	options DrawerModel
 	plan    DrawerModel
 	teams   DrawerModel
+	figures DrawerModel
 	width   int
 	height  int
 }
 
-// NewDrawerStack creates a DrawerStack with options, plan, and teams drawers,
-// all starting in the minimised state.
+// NewDrawerStack creates a DrawerStack with options, plan, teams, and figures
+// drawers, all starting in the minimised state.
 func NewDrawerStack() DrawerStack {
 	return DrawerStack{
 		options: NewDrawerModel(DrawerOptions, "Options", "⚙"),
 		plan:    NewDrawerModel(DrawerPlan, "Plan", "📋"),
 		teams:   NewDrawerModel(DrawerTeams, "Teams", "📊"),
+		figures: NewDrawerModel(DrawerFigures, "Figures", "📈"),
 	}
 }
 
@@ -37,7 +39,7 @@ func (s *DrawerStack) SetSize(w, h int) {
 	s.width = w
 	s.height = h
 
-	drawers := []*DrawerModel{&s.options, &s.plan, &s.teams}
+	drawers := []*DrawerModel{&s.options, &s.plan, &s.teams, &s.figures}
 
 	var expandedCount int
 	minimizedRows := 0
@@ -87,11 +89,17 @@ func (s *DrawerStack) Plan() *DrawerModel { return &s.plan }
 // Teams returns a pointer to the teams DrawerModel.
 func (s *DrawerStack) Teams() *DrawerModel { return &s.teams }
 
+// Figures returns a pointer to the figures DrawerModel.
+func (s *DrawerStack) Figures() *DrawerModel { return &s.figures }
+
 // TeamsIsMinimized returns true when the teams drawer is in the minimized state.
-// This is a proxy for model.drawerStackWidget that avoids exposing the concrete
-// DrawerModel type through the interface.
 func (s *DrawerStack) TeamsIsMinimized() bool {
 	return s.teams.State() == DrawerMinimized
+}
+
+// FiguresIsMinimized returns true when the figures drawer is in the minimized state.
+func (s *DrawerStack) FiguresIsMinimized() bool {
+	return s.figures.State() == DrawerMinimized
 }
 
 // ExpandedDrawers returns the DrawerID strings for all currently expanded drawers.
@@ -106,6 +114,9 @@ func (s DrawerStack) ExpandedDrawers() []string {
 	if s.teams.State() == DrawerExpanded {
 		ids = append(ids, string(DrawerTeams))
 	}
+	if s.figures.State() == DrawerExpanded {
+		ids = append(ids, string(DrawerFigures))
+	}
 	return ids
 }
 
@@ -114,7 +125,7 @@ func (s DrawerStack) ExpandedDrawers() []string {
 // compact label.
 func (s DrawerStack) View() string {
 	var parts []string
-	for _, d := range []DrawerModel{s.options, s.plan, s.teams} {
+	for _, d := range []DrawerModel{s.options, s.plan, s.teams, s.figures} {
 		parts = append(parts, d.View())
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
@@ -129,6 +140,8 @@ func (s *DrawerStack) HandleKey(focusedDrawer string, msg tea.KeyMsg) tea.Cmd {
 		return s.plan.HandleKey(msg)
 	case DrawerTeams:
 		return s.teams.HandleKey(msg)
+	case DrawerFigures:
+		return s.figures.HandleKey(msg)
 	}
 	return nil
 }
@@ -187,9 +200,35 @@ func (s *DrawerStack) ClearTeamsContent() { s.teams.ClearContent() }
 func (s *DrawerStack) TeamsHasContent() bool { return s.teams.HasContent() }
 
 // RefreshTeamsContent updates the teams drawer content without changing
-// expansion state when content already exists. Used for live-updating the
-// teams health display on each poll tick.
+// expansion state when content already exists.
 func (s *DrawerStack) RefreshTeamsContent(content string) { s.teams.RefreshContent(content) }
 
 // SetTeamsFocused marks the teams drawer as focused or unfocused.
 func (s *DrawerStack) SetTeamsFocused(focused bool) { s.teams.SetFocused(focused) }
+
+// ---------------------------------------------------------------------------
+// Figures drawer accessors
+// ---------------------------------------------------------------------------
+
+// SetFiguresContent sets content in the figures drawer (auto-expands it).
+func (s *DrawerStack) SetFiguresContent(content string) { s.figures.SetContent(content) }
+
+// ClearFiguresContent clears figures drawer content (auto-minimises it).
+func (s *DrawerStack) ClearFiguresContent() {
+	s.figures.ClearContent()
+}
+
+// FiguresHasContent reports whether the figures drawer holds any content.
+func (s *DrawerStack) FiguresHasContent() bool { return s.figures.HasContent() }
+
+// RefreshFiguresContent updates the figures drawer content without changing
+// expansion state when content already exists.
+func (s *DrawerStack) RefreshFiguresContent(content string) { s.figures.RefreshContent(content) }
+
+// SetFiguresFocused marks the figures drawer as focused or unfocused.
+func (s *DrawerStack) SetFiguresFocused(focused bool) { s.figures.SetFocused(focused) }
+
+// ToggleFiguresDrawer expands the figures drawer if minimized, or minimizes it
+// if expanded, without clearing the loaded diagram content.
+func (s *DrawerStack) ToggleFiguresDrawer() { s.figures.Toggle() }
+

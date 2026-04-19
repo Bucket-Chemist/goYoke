@@ -1028,3 +1028,242 @@ func (m AppModel) handleOptionsViewRequest(msg drawer.OptionsViewRequestMsg) (te
 	}
 	return m, nil
 }
+
+// handleDrawerModalResponse delivers a drawer modal response to the bridge and
+// snaps focus back to Claude if the options drawer just minimized (TDS-006).
+func (m AppModel) handleDrawerModalResponse(msg drawer.ModalResponseMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.bridge != nil {
+		value := msg.Value
+		if msg.Cancelled {
+			value = ""
+		}
+		m.shared.bridge.ResolveModalSimple(msg.RequestID, value)
+	}
+	// Clear stale drawer modal state when the response came from the
+	// full-screen OptionsViewModal (which doesn't call ClearActiveModal).
+	if m.shared != nil && m.shared.drawerStack != nil &&
+		m.shared.drawerStack.OptionsActiveRequestID() == msg.RequestID {
+		m.shared.drawerStack.ClearOptionsModal()
+	}
+	// Snap focus back to Claude if the options drawer just minimized.
+	if m.focus == FocusOptionsDrawer && m.shared != nil && m.shared.drawerStack != nil {
+		if !m.shared.drawerStack.OptionsHasContent() {
+			m.focus = FocusClaude
+			m.syncFocusState()
+			m.updateHintContext()
+			m.updateBreadcrumbs()
+			m.propagateContentSizes()
+		}
+	}
+	return m, nil
+}
+
+// handlePlanViewRequest opens the full-screen plan view modal from a drawer
+// request (TDS-007).
+func (m AppModel) handlePlanViewRequest() (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.planPreview != nil {
+		content := m.shared.planPreview.Content()
+		if content != "" {
+			m.shared.planViewModal.SetContent(content, m.width)
+			m.shared.planViewModal.SetSize(m.width, m.height)
+			m.shared.planViewModal.Show()
+		}
+	}
+	return m, nil
+}
+
+// handleAgentDetailFocus transfers focus from the agent tree to the detail panel.
+func (m AppModel) handleAgentDetailFocus(msg agents.AgentDetailFocusMsg) (tea.Model, tea.Cmd) {
+	m.agentTree.SetFocused(false)
+	m.agentDetail.SetFocused(true)
+	if m.shared != nil && m.shared.agentRegistry != nil {
+		if a := m.shared.agentRegistry.Get(msg.AgentID); a != nil {
+			m.agentDetail.SetAgent(a)
+		}
+	}
+	return m, nil
+}
+
+// handleShutdownRequest initiates graceful shutdown from a /exit or /quit command.
+func (m AppModel) handleShutdownRequest() (tea.Model, tea.Cmd) {
+	if m.shutdownInProgress {
+		return m, nil
+	}
+	m.shutdownInProgress = true
+	if m.shared != nil && m.shared.shutdownFunc != nil {
+		shutdownFn := m.shared.shutdownFunc
+		return m, func() tea.Msg {
+			err := shutdownFn()
+			return ShutdownCompleteMsg{Err: err}
+		}
+	}
+	m.saveSession()
+	return m, tea.Quit
+}
+
+// handleUnrouted forwards messages that the typed switch in Update() did not
+// match to the components that own unexported tick types.
+//
+// Contract: each forwarder returns non-nil ONLY for its own package's
+// unexported tick type. The cascade exits on the first non-nil cmd, so a
+// forwarder that claims a foreign type starves downstream forwarders.
+// Order: 1. StatusLine  2. Toast  3. TabBar  4. TeamList  5. TeamDetail  6. ClaudePanel
+func (m AppModel) handleUnrouted(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// StatusLine handles its own tick types.
+	{
+		updated, cmd := m.statusLine.Update(msg)
+		m.statusLine = updated
+		if cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Toast tick-based expiry.
+	if m.shared != nil && m.shared.toasts != nil {
+		prevToastH := m.shared.toasts.Height()
+		cmd := m.shared.toasts.HandleMsg(msg)
+		if m.shared.toasts.Height() != prevToastH {
+			m.propagateContentSizes()
+		}
+		if cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Tab bar flash tick (tabFlashTickMsg is unexported from tabbar).
+	if m.tabBar != nil {
+		if cmd := m.tabBar.HandleMsg(msg); cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Team list poll tick (pollTickMsg is unexported from teams).
+	if m.shared != nil && m.shared.teamList != nil {
+		if cmd := m.shared.teamList.HandleMsg(msg); cmd != nil {
+			m.refreshTeamsDrawerAfterPoll()
+			return m, cmd
+		}
+	}
+
+	// Team detail: handles TeamSelectedMsg emitted by the team list.
+	if m.shared != nil && m.shared.teamDetail != nil {
+		m.shared.teamDetail.HandleMsg(msg)
+	}
+
+	// Claude panel timestamp tick (timestampTickMsg is unexported from claude).
+	if m.shared != nil && m.shared.claudePanel != nil {
+		if cmd := m.shared.claudePanel.HandleMsg(msg); cmd != nil {
+			return m, cmd
+		}
+	}
+
+	return m, nil
+}
+
+// handleModelSelected hides the model modal and applies the selected model.
+func (m AppModel) handleModelSelected(msg modals.ModelSelectedMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil {
+		m.shared.modelModal.Hide()
+	}
+	return m.handleModelSwitchRequest(ModelSwitchRequestMsg{ModelID: msg.ModelID})
+}
+
+// handleModelModalClosed hides the model modal and restores the hint context.
+func (m AppModel) handleModelModalClosed() (tea.Model, tea.Cmd) {
+	if m.shared != nil {
+		m.shared.modelModal.Hide()
+	}
+	m.updateHintContext()
+	return m, nil
+}
+
+// handleOpenCWDSelector opens the CWD selector modal.
+func (m AppModel) handleOpenCWDSelector() (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.cwdSelector != nil {
+		m.shared.cwdSelector.SetSize(m.width, m.height)
+		m.shared.cwdSelector.Show()
+	}
+	return m, nil
+}
+
+// handleAgentTreeFocus transfers focus from the detail panel back to the tree.
+func (m AppModel) handleAgentTreeFocus() (tea.Model, tea.Cmd) {
+	m.agentDetail.SetFocused(false)
+	m.agentTree.SetFocused(true)
+	return m, nil
+}
+
+// handleTreePulseTick forwards a pulse tick to the agent tree.
+func (m AppModel) handleTreePulseTick(msg agents.TreePulseTickMsg) (tea.Model, tea.Cmd) {
+	result, cmd := m.agentTree.Update(msg)
+	if updated, ok := result.(agents.AgentTreeModel); ok {
+		m.agentTree = updated
+	}
+	return m, cmd
+}
+
+// handleDrawerContent routes a DrawerContentMsg to the appropriate drawer.
+func (m AppModel) handleDrawerContent(msg DrawerContentMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.drawerStack != nil {
+		switch msg.DrawerID {
+		case "options":
+			m.shared.drawerStack.SetOptionsContent(msg.Content)
+		case "plan":
+			m.shared.drawerStack.SetPlanContent(msg.Content)
+		}
+	}
+	return m, nil
+}
+
+// handleDrawerMinimize routes a DrawerMinimizeMsg to the appropriate drawer.
+func (m AppModel) handleDrawerMinimize(msg DrawerMinimizeMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.drawerStack != nil {
+		switch msg.DrawerID {
+		case "options":
+			m.shared.drawerStack.ClearOptionsContent()
+		case "plan":
+			m.shared.drawerStack.ClearPlanContent()
+		}
+	}
+	return m, nil
+}
+
+// handleFiguresContent loads diagrams into the figures drawer and figuresState.
+func (m AppModel) handleFiguresContent(msg drawer.FiguresContentMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.drawerStack != nil && len(msg.Diagrams) > 0 {
+		m.shared.figuresState = drawer.FiguresState{Diagrams: msg.Diagrams, Selected: 0}
+		m.shared.drawerStack.SetFiguresContent(drawer.FormatFiguresContent(m.shared.figuresState))
+	}
+	return m, nil
+}
+
+// refreshTeamsDrawerAfterPoll updates the teams drawer and status line after a
+// poll tick fires from the team list component.
+func (m *AppModel) refreshTeamsDrawerAfterPoll() {
+	if m.shared == nil || m.shared.drawerStack == nil || m.shared.teamsHealth == nil {
+		return
+	}
+	if m.shared.teamsHealth.HasData() {
+		if !m.shared.drawerStack.TeamsHasContent() {
+			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		} else if m.shared.teamsHealth.HasRunningTeam() && m.shared.drawerStack.TeamsIsMinimized() {
+			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		} else {
+			m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+		}
+	} else if m.shared.teamNotifiedAt.IsZero() || time.Since(m.shared.teamNotifiedAt) > 10*time.Second {
+		m.shared.drawerStack.ClearTeamsContent()
+	}
+
+	tid := m.shared.teamsHealth.TeamIndicator()
+	m.statusLine.TeamActive = tid.Active
+	m.statusLine.TeamName = tid.Name
+	m.statusLine.TeamMemberStatuses = tid.MemberStatuses
+	m.statusLine.TeamCurrentWave = tid.CurrentWave
+	m.statusLine.TeamTotalWaves = tid.TotalWaves
+	m.statusLine.TeamCost = tid.Cost
+
+	if m.shared.teamDetail != nil {
+		m.shared.teamDetail.Refresh()
+	}
+}

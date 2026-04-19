@@ -4,9 +4,12 @@
 package model
 
 import (
+	"os"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
 )
 
 // maxReconnectAttempts is the maximum number of times AppModel will try to
@@ -14,6 +17,19 @@ import (
 // limit is reached the model stops retrying and remains in a disconnected
 // state until the user exits.
 const maxReconnectAttempts = 3
+
+// discoverFiguresCmd returns a tea.Cmd that runs DiscoverDiagrams against the
+// current working directory and delivers a drawer.FiguresContentMsg on completion.
+func (m AppModel) discoverFiguresCmd() tea.Cmd {
+	return func() tea.Msg {
+		cwd, err := os.Getwd()
+		if err != nil {
+			cwd = "."
+		}
+		diagrams := drawer.DiscoverDiagrams(cwd)
+		return drawer.FiguresContentMsg{Diagrams: diagrams}
+	}
+}
 
 // reconnectAfterDelay returns a tea.Cmd that fires a CLIReconnectMsg after a
 // back-off delay proportional to the attempt number.

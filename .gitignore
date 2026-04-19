@@ -27,6 +27,9 @@ test/audit/**
 .idea/
 *.swp
 *.swo
+# Codebase map runtime data (regenerated on demand)
+.claude/codebase-map/
+
 # Claude Config - Track structure, ignore ephemeral/sensitive
 .claude/.credentials.json
 .claude/history.jsonl

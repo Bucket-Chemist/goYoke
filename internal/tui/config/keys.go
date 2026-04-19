@@ -76,6 +76,9 @@ type GlobalKeys struct {
 	// When active the conversation panel expands to full terminal width.
 	// Keybinding: alt+\ (backslash evokes a vertical split).
 	ToggleSimpleMode key.Binding
+
+	// ToggleFigures shows or hides the figures/diagram viewer drawer.
+	ToggleFigures key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -254,6 +257,10 @@ func DefaultKeyMap() KeyMap {
 			ToggleSimpleMode: key.NewBinding(
 				key.WithKeys("alt+\\"),
 				key.WithHelp("alt+\\", "toggle panels"),
+			),
+			ToggleFigures: key.NewBinding(
+				key.WithKeys("alt+f"),
+				key.WithHelp("alt+f", "toggle figures"),
 			),
 		},
 
