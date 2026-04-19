@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codebase Enrichment Output",
+  "description": "Extends extraction.schema.json with LLM-generated semantic fields. Produced by Stage 2 enrichment pipeline. Each Symbol gains description, module_identity, complexity, is_entrypoint, architectural_role, and tags; the module gains module_description, module_category, key_types, and key_functions.",
+  "type": "object",
+  "allOf": [
+    { "$ref": "extraction.schema.json" }
+  ],
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/EnrichedFileExtraction" }
+    },
+    "module_description": {
+      "type": "string",
+      "description": "1-3 sentence description of the module's purpose and responsibilities"
+    },
+    "module_category": {
+      "type": "string",
+      "enum": ["command", "library", "internal", "test", "config", "documentation"],
+      "description": "What kind of module this is"
+    },
+    "key_types": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 5,
+      "description": "The 1-5 most important type/class names in this module"
+    },
+    "key_functions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 5,
+      "description": "The 1-5 most important function names in this module"
+    },
+    "enriched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of enrichment"
+    },
+    "enricher_model": {
+      "type": "string",
+      "description": "Model ID used for enrichment (e.g., claude-sonnet-4-6)"
+    }
+  },
+  "$defs": {
+    "EnrichedFileExtraction": {
+      "allOf": [
+        { "$ref": "extraction.schema.json#/$defs/FileExtraction" }
+      ],
+      "properties": {
+        "symbols": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EnrichedSymbol" }
+        }
+      }
+    },
+    "EnrichedSymbol": {
+      "allOf": [
+        { "$ref": "extraction.schema.json#/$defs/Symbol" }
+      ],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable 1-2 sentence description of what this symbol does",
+          "examples": ["Validates Task() invocations against routing schema, blocking opus-tier calls and wrong subagent_types"]
+        },
+        "module_identity": {
+          "type": "string",
+          "enum": ["core", "helper", "glue", "config", "test", "generated"],
+          "description": "Role of this symbol within its module. core=primary business logic; helper=utility used by core, not meaningful alone; glue=connects modules (adapters, wrappers, converters); config=configuration loading/constants/defaults; test=test code; generated=auto-generated code"
+        },
+        "complexity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Cognitive complexity assessment. low=<10 lines, linear flow, obvious purpose; medium=10-50 lines, branching/loops, requires reading to understand; high=>50 lines, complex state/concurrency/non-obvious algorithms"
+        },
+        "is_entrypoint": {
+          "type": "boolean",
+          "description": "Whether this symbol is a primary entry point (main, handler, exported API surface)"
+        },
+        "architectural_role": {
+          "type": "string",
+          "enum": ["handler", "service", "repository", "middleware", "utility", "model", "factory", "orchestrator", "validator", "none"],
+          "description": "Architectural pattern this symbol implements. Use 'none' if no pattern applies."
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Cross-cutting concern tags",
+          "examples": [["concurrency", "mutex"], ["io", "filesystem"], ["serialization", "json"]]
+        }
+      }
+    }
+  }
+}

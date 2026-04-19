@@ -20,6 +20,7 @@ case "$mode" in
     ;;
   --write)
     file="${2:?Missing file}"
+    mkdir -p "$(dirname "$file")"
     cat > "$file"
     echo "OK: wrote $file"
     ;;
