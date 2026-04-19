@@ -115,7 +115,7 @@
       "title": "Migrate LoadSkillCommands() to Resolver — drop configDir param, update panel.go caller",
       "file": "task-009.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
