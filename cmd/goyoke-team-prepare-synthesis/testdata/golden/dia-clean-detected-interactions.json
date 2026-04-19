@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "rules_version": "1.0.0",
+  "generated_at": "",
+  "summary": {
+    "rules_evaluated": 10,
+    "findings_total": 4,
+    "interactions_detected": 0,
+    "findings_matched": 0,
+    "findings_unmatched": 4
+  },
+  "interactions": [],
+  "unmatched_findings": [
+    {
+      "reviewer_id": "bioinformatician-reviewer",
+      "finding_id": "BIO-1",
+      "severity": "info",
+      "category": "workflow",
+      "title": "Output manifest does not record software versions used"
+    },
+    {
+      "reviewer_id": "mass-spec-reviewer",
+      "finding_id": "MSMS-1",
+      "severity": "info",
+      "category": "calibration",
+      "title": "Isolation window scheme not documented in method file"
+    },
+    {
+      "reviewer_id": "proteomics-reviewer",
+      "finding_id": "PROT-1",
+      "severity": "info",
+      "category": "identification",
+      "title": "Spectronaut calibration strategy could be improved with iRT peptides"
+    },
+    {
+      "reviewer_id": "proteomics-reviewer",
+      "finding_id": "PROT-2",
+      "severity": "info",
+      "category": "quantification",
+      "title": "Consider enabling cross-run normalisation for inter-batch comparison"
+    }
+  ]
+}

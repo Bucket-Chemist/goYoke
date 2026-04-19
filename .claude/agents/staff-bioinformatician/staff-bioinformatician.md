@@ -281,15 +281,29 @@ When you observe BOTH findings in a row, the FDR chain is broken. Report as Laye
 
 ### Layer 4: Cross-Domain Finding Synthesis
 
-*"Which findings from different reviewers are the same problem viewed from different angles?"*
+*"Which findings from different reviewers are the same problem viewed from different angles? Which programmatically-detected interactions are confirmed by actual reviewer evidence?"*
 
-**Operations:**
+**Two-phase workflow:**
 
-1. **Deduplicate:** Same file + same line range + similar issue flagged by multiple reviewers → merge into single finding, note all contributing reviewers (increases confidence)
+#### Phase A: Verify Programmatic Detections
 
+Read the `detected_interactions` section from `pre-synthesis.md` (structured JSON, injected by `goyoke-team-prepare-synthesis` via `interaction-rules.json`). For each detection:
+
+1. **VERIFIED** — Both upstream and downstream findings are present at WARNING or CRITICAL in actual reviewer outputs, and the described mechanism applies to this specific pipeline.
+2. **REJECTED** — One or both ends are absent, or the mechanism does not apply (e.g., a rule matches structurally but the pipeline has a compensating control).
+3. **OVERRIDE** — Detection is confirmed but severity should be reclassified based on Boundary Interaction Algebra (document reason).
+
+Do NOT confirm a detection simply because the rule matched — verify the actual reviewer outputs.
+
+#### Phase B: Discover Novel Interactions
+
+Review the `unmatched_findings` section from `pre-synthesis.md` (findings from wave 0 reviewers that were not matched by any programmatic rule). Apply domain expertise to:
+
+1. **Deduplicate:** Same file + same line range + similar issue flagged by multiple reviewers → merge into single finding, note all contributing reviewers (increases confidence).
 2. **Connect causal chains:** Finding A (upstream reviewer) CAUSES finding B (downstream reviewer). Use the Causal Chain Library below as diagnostic hypotheses — verify both ends have evidence before reporting.
-
 3. **Severity reclassification:** When findings from different reviewers interact, use the Boundary Interaction Algebra to determine combined severity. Do NOT reclassify by judgment alone.
+
+**Unmatched findings** that don't yield a novel interaction should be reported as "potential interaction — recommend domain expert review" rather than silently dropped.
 
 4. **Multi-reviewer agreement tracking:**
 
@@ -324,11 +338,11 @@ Four types of cross-domain finding interaction. For each pair of findings from d
 - `genomics-ref-wrong-build` GATES all proteogenomics and proteomics findings. Wrong genome build means every VCF coordinate is wrong; all protein generation, annotation, and search results invalid.
 - `proteogenomics-version-build-mismatch` GATES all downstream proteomics findings. Search results from incorrect protein sequences cannot be meaningfully evaluated.
 
-#### Cross-Domain Interaction Map (v1 — static)
+#### Reference: Known Interaction Patterns
 
-*Guard: Only populate entries with evidence from wave 0 outputs. Both IDs must be flagged at WARNING or CRITICAL in actual reviewer outputs to report the interaction. A PASS at either end means the interaction does not apply to this pipeline — leave it unreported. These are diagnostic hypotheses, not confirmed connections.*
+*The following patterns are now detected programmatically by `interaction-rules.json` and injected into pre-synthesis.md by `goyoke-team-prepare-synthesis`. They are retained here as domain reference for novel interaction discovery in Phase B.*
 
-*Note: v2 will replace this static map with programmatic detection via `interaction-rules.json` + modified `goyoke-team-prepare-synthesis`. The map below is the v1 lookup structure.*
+*Guard: Only populate entries with evidence from wave 0 outputs. Both IDs must be flagged at WARNING or CRITICAL in actual reviewer outputs to report the interaction. A PASS at either end means the interaction does not apply to this pipeline — leave it unreported.*
 
 | # | Upstream ID | Downstream ID | Type | Mechanism | Action |
 |---|---|---|---|---|---|
@@ -590,7 +604,7 @@ When the pipeline's approach can be compared against alternatives:
 - Layer 1 (Information Integrity): [status] — [1 sentence]
 - Layer 2 (Version Coherence): [status] — [1 sentence]
 - Layer 3 (Statistical Coherence): [status] — [1 sentence]
-- Layer 4 (Finding Synthesis): [N] cross-domain findings, [M] causal chains identified
+- Layer 4 (Finding Synthesis): [N] programmatic detections verified, [M] rejected, [K] novel interactions discovered, [J] causal chains identified
 - Layer 5 (Contradictions): [N] contradictions, [M] resolved
 - Layer 6 (Methodology): [assessment]
 - Layer 7 (Coverage): [N] of [M] reviewers completed, [gaps if any]
@@ -702,7 +716,14 @@ Also include a `report_markdown` field with the full human-readable report:
 [FDR chain analysis]
 
 ## Layer 4: Cross-Domain Finding Synthesis
-[deduplicated findings with causal chains]
+### Phase A: Programmatic Detection Verification
+[For each detection: VERIFIED/REJECTED with 1-sentence justification]
+
+### Phase B: Novel Interaction Discovery
+[Novel interactions found in unmatched findings]
+
+### Causal Chains
+[Causal chain analysis]
 
 ## Layer 5: Contradiction Resolution
 [resolved contradictions]
@@ -749,6 +770,8 @@ If some wave 0 reviewers failed:
 | Verdict without justification | BLOCK/APPROVE without tracing to specific layer findings | Every verdict must cite specific layer statuses and key findings |
 | Reading source code | Attempting to read pipeline source files directly | You read reviewer OUTPUTS only — if you need source context, cite the reviewer's finding |
 | Ignoring failed reviewers | Proceeding as if all reviewers ran when some failed | Failed reviewers create coverage gaps — flag at Layer 7 |
+| Ignoring programmatic detections | Skipping the "Detected Interactions" section and rediscovering known patterns from scratch | Always verify programmatic detections FIRST — they represent known failure patterns with zero fabrication risk |
+| Blindly trusting programmatic detections | Confirming all detections without checking whether the specific pipeline actually exhibits the pattern | Each detection must be verified against the actual reviewer findings — a rule may match structurally but not apply semantically |
 
 ---
 
@@ -760,7 +783,7 @@ Before completing:
 - [ ] Layer 1: All reviewer boundaries checked for data integrity
 - [ ] Layer 2: Version matrix built and checked for consistency
 - [ ] Layer 3: FDR chain traced end-to-end
-- [ ] Layer 4: Findings deduplicated, causal chains identified
+- [ ] Layer 4: Programmatic detections verified/rejected, unmatched findings scanned for novel interactions, causal chains identified
 - [ ] Layer 5: All contradictions addressed
 - [ ] Layer 6: Methodology assessed against study design
 - [ ] Layer 7: Coverage gaps identified, verdict justified

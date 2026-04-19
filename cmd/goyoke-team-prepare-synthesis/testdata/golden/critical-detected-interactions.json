@@ -1,0 +1,172 @@
+{
+  "schema_version": "1.0.0",
+  "rules_version": "1.0.0",
+  "generated_at": "",
+  "summary": {
+    "rules_evaluated": 10,
+    "findings_total": 11,
+    "interactions_detected": 4,
+    "findings_matched": 7,
+    "findings_unmatched": 4
+  },
+  "interactions": [
+    {
+      "rule_id": "fdr-chain-inflation",
+      "rule_name": "FDR Chain Inflation from Custom Database",
+      "algebra": "multiplicative",
+      "severity": "critical",
+      "layer": 3,
+      "tags": [
+        "fdr",
+        "search-space",
+        "statistical-coherence"
+      ],
+      "message": "Database inflation (proteogenomics-db-search-inflation from proteogenomics-reviewer) combined with proteomics-fdr-global-only from proteomics-reviewer — actual variant-class FDR may be 3-5x nominal. See Nesvizhskii 2014 framework for class-specific FDR.",
+      "matched_findings": [
+        {
+          "reviewer_id": "proteogenomics-reviewer",
+          "finding_id": "PG-2",
+          "sharp_edge_id": "proteogenomics-db-search-inflation",
+          "severity": "warning",
+          "category": "database-construction",
+          "title": "Search database 3.2x reference proteome — FDR impact unaddressed"
+        },
+        {
+          "reviewer_id": "proteomics-reviewer",
+          "finding_id": "PROT-1",
+          "sharp_edge_id": "proteomics-fdr-global-only",
+          "severity": "warning",
+          "category": "fdr-control",
+          "title": "Only PSM-level FDR applied — protein-level FDR absent"
+        }
+      ]
+    },
+    {
+      "rule_id": "spectral-quality-gates-identification",
+      "rule_name": "Spectral Quality Gating Identification Chain",
+      "algebra": "gating",
+      "severity": "warning",
+      "layer": 1,
+      "tags": [
+        "spectral-quality",
+        "gating",
+        "identification"
+      ],
+      "message": "Spectral quality concern (mass-spec-spectral-quality) may invalidate proteomics identification findings. Verify spectral quality before trusting identification results.",
+      "matched_findings": [
+        {
+          "reviewer_id": "mass-spec-reviewer",
+          "finding_id": "MSMS-1",
+          "sharp_edge_id": "mass-spec-spectral-quality",
+          "severity": "critical",
+          "category": "spectral-quality",
+          "title": "Spectral quality critically degraded — 42% of spectra below S/N threshold"
+        },
+        {
+          "reviewer_id": "proteomics-reviewer",
+          "finding_id": "PROT-1",
+          "sharp_edge_id": "proteomics-fdr-global-only",
+          "severity": "warning",
+          "category": "fdr-control",
+          "title": "Only PSM-level FDR applied — protein-level FDR absent"
+        }
+      ]
+    },
+    {
+      "rule_id": "variant-normalization-cascade",
+      "rule_name": "Missing Variant Normalization Cascading Through Pipeline",
+      "algebra": "additive",
+      "severity": "critical",
+      "layer": 4,
+      "tags": [
+        "normalization",
+        "cascade",
+        "dedup"
+      ],
+      "message": "Missing variant normalization (genomics-reviewer) causes duplicate protein entries (proteogenomics-reviewer), inflating search database. Root cause is upstream, not in protein generation.",
+      "matched_findings": [
+        {
+          "reviewer_id": "genomics-reviewer",
+          "finding_id": "GEN-1",
+          "sharp_edge_id": "genomics-vc-no-normalization",
+          "severity": "critical",
+          "category": "variant-calling",
+          "title": "Variant normalization absent before VEP annotation"
+        },
+        {
+          "reviewer_id": "proteogenomics-reviewer",
+          "finding_id": "PG-1",
+          "sharp_edge_id": "proteogenomics-fasta-dedup-missing",
+          "severity": "warning",
+          "category": "fasta-generation",
+          "title": "Identical protein sequences not deduplicated before database export"
+        }
+      ]
+    },
+    {
+      "rule_id": "mbr-no-spectral-in-diffex",
+      "rule_name": "MBR Proteins in Differential Expression",
+      "algebra": "additive",
+      "severity": "warning",
+      "layer": 3,
+      "tags": [
+        "mbr",
+        "statistics",
+        "identification-quantification-crossover"
+      ],
+      "message": "MBR-transferred identifications (proteomics-mbr-no-fdr) feeding into statistical testing. MBR-only proteins have no spectral evidence — differential expression results for these proteins are unreliable.",
+      "matched_findings": [
+        {
+          "reviewer_id": "proteomics-reviewer",
+          "finding_id": "PROT-2",
+          "sharp_edge_id": "proteomics-mbr-no-fdr",
+          "severity": "warning",
+          "category": "identification",
+          "title": "Match-Between-Runs enabled without FDR control for transferred identifications"
+        },
+        {
+          "reviewer_id": "proteomics-reviewer",
+          "finding_id": "PROT-3",
+          "sharp_edge_id": "proteomics-stats-no-correction",
+          "severity": "warning",
+          "category": "statistical-analysis",
+          "title": "No multiple testing correction applied in differential expression analysis"
+        }
+      ]
+    }
+  ],
+  "unmatched_findings": [
+    {
+      "reviewer_id": "genomics-reviewer",
+      "finding_id": "GEN-2",
+      "sharp_edge_id": "genomics-vc-no-filter",
+      "severity": "warning",
+      "category": "variant-calling",
+      "title": "No hard filters or VQSR applied to raw variant callset"
+    },
+    {
+      "reviewer_id": "genomics-reviewer",
+      "finding_id": "GEN-3",
+      "sharp_edge_id": "genomics-align-no-dedup",
+      "severity": "warning",
+      "category": "alignment",
+      "title": "Duplicate marking absent from alignment pipeline"
+    },
+    {
+      "reviewer_id": "mass-spec-reviewer",
+      "finding_id": "MSMS-2",
+      "sharp_edge_id": "mass-spec-calibration-drift",
+      "severity": "warning",
+      "category": "calibration",
+      "title": "Mass accuracy drift detected: 8.7 ppm median error vs 1-2 ppm expected"
+    },
+    {
+      "reviewer_id": "proteogenomics-reviewer",
+      "finding_id": "PG-3",
+      "sharp_edge_id": "proteogenomics-protein-nmd-included",
+      "severity": "warning",
+      "category": "database-construction",
+      "title": "NMD-susceptible truncated proteins included in search database"
+    }
+  ]
+}

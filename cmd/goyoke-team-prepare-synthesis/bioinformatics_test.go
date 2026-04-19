@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ import (
 )
 
 // buildBioConfig constructs a TeamConfig with a wave of reviewers + a pasteur wave.
-func buildBioConfig(teamDir string, reviewers []MemberInfo, pasteurStdinFile string) *TeamConfig {
+func buildBioConfig(_ string, reviewers []MemberInfo, pasteurStdinFile string) *TeamConfig {
 	return &TeamConfig{
 		WorkflowType: "review-bioinformatics",
 		Waves: []WaveInfo{
@@ -24,25 +25,23 @@ func buildBioConfig(teamDir string, reviewers []MemberInfo, pasteurStdinFile str
 }
 
 // writePasteurStdin writes a minimal pasteur stdin JSON to the given path.
-func writePasteurStdin(t *testing.T, path string, extra map[string]interface{}) {
+func writePasteurStdin(t *testing.T, path string, extra map[string]any) {
 	t.Helper()
-	data := map[string]interface{}{
+	data := map[string]any{
 		"problem_brief": "test brief",
 	}
-	for k, v := range extra {
-		data[k] = v
-	}
+	maps.Copy(data, extra)
 	b, err := json.Marshal(data)
 	require.NoError(t, err)
 	err = os.WriteFile(path, b, 0644)
 	require.NoError(t, err)
 }
 
-func readPasteurStdin(t *testing.T, path string) map[string]interface{} {
+func readPasteurStdin(t *testing.T, path string) map[string]any {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
-	var result map[string]interface{}
+	var result map[string]any
 	err = json.Unmarshal(data, &result)
 	require.NoError(t, err)
 	return result
@@ -64,18 +63,22 @@ func TestPrepareBioinformaticsReview_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 
 	result := readPasteurStdin(t, stdinPath)
-	outputs, ok := result["wave_0_outputs"].([]interface{})
+	outputs, ok := result["wave_0_outputs"].([]any)
 	require.True(t, ok, "wave_0_outputs should be a slice")
 	assert.Len(t, outputs, 3)
 
 	// Verify each entry
 	for _, entry := range outputs {
-		m, ok := entry.(map[string]interface{})
+		m, ok := entry.(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, "completed", m["status"])
 		assert.NotEmpty(t, m["reviewer_id"])
 		assert.NotEmpty(t, m["stdout_file_path"])
 	}
+
+	// Verify runtime-injected path fields (SYNTH-002 contract)
+	assert.NotEmpty(t, result["wave0_findings_path"], "wave0_findings_path should be injected into synthesizer stdin")
+	assert.NotEmpty(t, result["detected_interactions_path"], "detected_interactions_path should be injected into synthesizer stdin")
 }
 
 func TestPrepareBioinformaticsReview_MixedResults(t *testing.T) {
@@ -94,13 +97,13 @@ func TestPrepareBioinformaticsReview_MixedResults(t *testing.T) {
 	require.NoError(t, err)
 
 	result := readPasteurStdin(t, stdinPath)
-	outputs, ok := result["wave_0_outputs"].([]interface{})
+	outputs, ok := result["wave_0_outputs"].([]any)
 	require.True(t, ok)
 	require.Len(t, outputs, 3)
 
 	statusByID := make(map[string]string)
 	for _, entry := range outputs {
-		m := entry.(map[string]interface{})
+		m := entry.(map[string]any)
 		statusByID[m["reviewer_id"].(string)] = m["status"].(string)
 	}
 	assert.Equal(t, "completed", statusByID["genomics-reviewer"])
@@ -195,10 +198,10 @@ func TestPrepareBioinformaticsReview_StdoutFilePathIsAbsolute(t *testing.T) {
 	require.NoError(t, err)
 
 	result := readPasteurStdin(t, stdinPath)
-	outputs := result["wave_0_outputs"].([]interface{})
+	outputs := result["wave_0_outputs"].([]any)
 	require.Len(t, outputs, 1)
 
-	m := outputs[0].(map[string]interface{})
+	m := outputs[0].(map[string]any)
 	stdoutPath := m["stdout_file_path"].(string)
 	assert.True(t, filepath.IsAbs(stdoutPath), "stdout_file_path should be absolute, got: %s", stdoutPath)
 	assert.Equal(t, filepath.Join(dir, "stdout_genomics.json"), stdoutPath)
