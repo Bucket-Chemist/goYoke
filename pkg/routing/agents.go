@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 // EXPECTED_AGENT_INDEX_VERSION is the version this code is built for.
@@ -161,50 +162,55 @@ type Cleanup struct {
 }
 
 // LoadAgentIndex loads and validates agents-index.json.
-// Priority: GOYOKE_AGENTS_INDEX env var > GOYOKE_PROJECT_DIR > XDG config directory default.
+// Priority: GOYOKE_AGENTS_INDEX env var (Tier 0) > resolve.Default() layered resolver.
+// When both userFS and embedFS layers exist, agents are merged by ID (embedFS=base, userFS=override).
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadAgentIndex() (*AgentIndex, error) {
-	agentIndexPath := os.Getenv("GOYOKE_AGENTS_INDEX")
-
-	// If explicit path not set, try project-specific or XDG default
-	if agentIndexPath == "" {
-		// Priority 1: GOYOKE_PROJECT_DIR (test isolation)
-		if projectDir := os.Getenv("GOYOKE_PROJECT_DIR"); projectDir != "" {
-			path := filepath.Join(projectDir, ".claude", "agents", "agents-index.json")
-			if _, err := os.Stat(path); err == nil {
-				agentIndexPath = path
-			}
+	// Tier 0: explicit path override (test isolation, CI)
+	if agentIndexPath := os.Getenv("GOYOKE_AGENTS_INDEX"); agentIndexPath != "" {
+		data, err := os.ReadFile(agentIndexPath)
+		if err != nil {
+			return nil, fmt.Errorf("[routing] Failed to read agents-index.json from %s: %w", agentIndexPath, err)
 		}
-
-		// Priority 2: XDG default
-		if agentIndexPath == "" {
-			configHome := os.Getenv("XDG_CONFIG_HOME")
-			if configHome == "" {
-				home := os.Getenv("HOME")
-				if home == "" {
-					return nil, fmt.Errorf("[routing] HOME environment variable not set")
-				}
-				configHome = filepath.Join(home, ".config")
-			}
-			agentIndexPath = filepath.Join(configHome, "..", ".claude", "agents", "agents-index.json")
-		}
+		return unmarshalAndValidateAgentIndex(data)
 	}
 
-	data, err := os.ReadFile(agentIndexPath)
+	// Per-call resolver (not singleton) so env-var changes take effect at call time.
+	r, resolverErr := resolve.NewFromEnv()
+	if resolverErr != nil {
+		return nil, fmt.Errorf("[routing] %w", resolverErr)
+	}
+
+	results, err := r.ReadFileAll("agents/agents-index.json")
 	if err != nil {
-		return nil, fmt.Errorf("[routing] Failed to read agents-index.json from %s: %w", agentIndexPath, err)
+		return nil, fmt.Errorf("[routing] Failed to read agents-index.json: %w", err)
 	}
 
+	var data []byte
+	switch len(results) {
+	case 1:
+		data = results[0]
+	case 2:
+		// results order: [userFS, embedFS]; merge with embedFS as base, userFS as override
+		data, err = resolve.MergeAgentIndexJSON(results[1], results[0])
+		if err != nil {
+			return nil, fmt.Errorf("[routing] Failed to merge agents-index.json layers: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("[routing] Unexpected number of agents-index.json layers: %d", len(results))
+	}
+
+	return unmarshalAndValidateAgentIndex(data)
+}
+
+func unmarshalAndValidateAgentIndex(data []byte) (*AgentIndex, error) {
 	var index AgentIndex
 	if err := json.Unmarshal(data, &index); err != nil {
 		return nil, fmt.Errorf("[routing] Failed to parse agents-index.json: %w", err)
 	}
-
-	// Validate agent index version
 	if err := index.Validate(); err != nil {
 		return nil, err
 	}
-
 	return &index, nil
 }
 

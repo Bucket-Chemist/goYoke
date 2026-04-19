@@ -34,7 +34,7 @@
       "title": "Implement agents-index.json merge-by-ID with skill_guards union merge",
       "file": "task-003.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 1,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -47,7 +47,7 @@
       "title": "Migrate LoadAgentIndex() to Resolver with ReadFileAll + merge",
       "file": "task-004.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [

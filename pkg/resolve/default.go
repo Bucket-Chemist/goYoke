@@ -1,6 +1,7 @@
 package resolve
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -73,6 +74,35 @@ func ResetDefault() {
 	defaultOnce = sync.Once{}
 	defaultSet = false
 	defaultLazied = false
+}
+
+// NewFromEnv creates a Resolver rooted at the config directory derived from the
+// current environment. Unlike Default(), this is NOT a singleton — each call reads
+// env vars fresh, making it suitable for callers that need env-var changes to take
+// effect per call (e.g. LoadAgentIndex which tests manipulate HOME/XDG_CONFIG_HOME).
+//
+// Resolution order:
+//  1. $GOYOKE_PROJECT_DIR/.claude/
+//  2. $CLAUDE_CONFIG_DIR
+//  3. $XDG_CONFIG_HOME/../.claude/  (mirrors legacy XDG config path)
+//  4. $HOME/.claude/
+//
+// Returns an error when HOME is required but not available.
+func NewFromEnv() (*Resolver, error) {
+	if dir := os.Getenv("GOYOKE_PROJECT_DIR"); dir != "" {
+		return New(diskFS{inner: os.DirFS(filepath.Join(dir, ".claude"))}, nil), nil
+	}
+	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
+		return New(diskFS{inner: os.DirFS(dir)}, nil), nil
+	}
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return New(diskFS{inner: os.DirFS(filepath.Join(xdg, "..", ".claude"))}, nil), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("HOME environment variable not set")
+	}
+	return New(diskFS{inner: os.DirFS(filepath.Join(home, ".claude"))}, nil), nil
 }
 
 // newDiskFS constructs an fs.ReadFileFS rooted at the resolved config directory.
