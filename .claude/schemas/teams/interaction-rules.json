@@ -24,7 +24,7 @@
           }
         ]
       },
-      "message_template": "Database inflation ({finding_a.sharp_edge_id} from {finding_a.reviewer}) combined with {finding_b.sharp_edge_id} from {finding_b.reviewer} — actual variant-class FDR may be {algebra_factor}x nominal. See Nesvizhskii 2014 framework for class-specific FDR.",
+      "message_template": "Database inflation ({finding_a.sharp_edge_id} from {finding_a.reviewer}) combined with {finding_b.sharp_edge_id} from {finding_b.reviewer} — actual variant-class FDR may be 3-5x nominal. See Nesvizhskii 2014 framework for class-specific FDR.",
       "layer": 3,
       "tags": ["fdr", "search-space", "statistical-coherence"]
     },
