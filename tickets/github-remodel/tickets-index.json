@@ -10,7 +10,7 @@
       "title": "Create pkg/resolve/ Resolver core with ReadFile, ReadDir, ReadFileAll, HasFile",
       "file": "task-001.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 1,
       "time_estimate": "1-2d",
       "dependencies": [],
@@ -21,7 +21,7 @@
       "title": "Add Default() singleton, SetDefault(), env-var-aware disk root, and compile-time fs.ReadFileFS assertion",
       "file": "task-002.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 1,
       "time_estimate": "1-2d",
       "dependencies": [
