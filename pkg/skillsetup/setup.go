@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
-	"github.com/Bucket-Chemist/goYoke/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/google/uuid"
 )
 
@@ -24,12 +24,38 @@ type SkillGuardConfig struct {
 // agents-index.json. Returns nil, nil if the skill has no guard config
 // (non-team skill like /dummies-guide).
 func LoadSkillGuardConfig(skillName string) (*SkillGuardConfig, error) {
-	configDir, err := routing.GetClaudeConfigDir()
+	r, err := resolve.NewFromEnv()
 	if err != nil {
 		return nil, fmt.Errorf("resolve config dir: %w", err)
 	}
-	indexPath := filepath.Join(configDir, "agents", "agents-index.json")
-	return LoadSkillGuardConfigFrom(skillName, indexPath)
+	results, err := r.ReadFileAll("agents/agents-index.json")
+	if err != nil {
+		return nil, fmt.Errorf("read agents-index.json: %w", err)
+	}
+
+	var data []byte
+	if len(results) >= 2 {
+		merged, mergeErr := resolve.MergeAgentIndexJSON(results[1], results[0])
+		if mergeErr != nil {
+			return nil, fmt.Errorf("merge agents-index.json: %w", mergeErr)
+		}
+		data = merged
+	} else {
+		data = results[0]
+	}
+
+	var index struct {
+		SkillGuards map[string]*SkillGuardConfig `json:"skill_guards"`
+	}
+	if err := json.Unmarshal(data, &index); err != nil {
+		return nil, fmt.Errorf("parse agents-index.json: %w", err)
+	}
+
+	if index.SkillGuards == nil {
+		return nil, nil
+	}
+
+	return index.SkillGuards[skillName], nil
 }
 
 // LoadSkillGuardConfigFrom loads the skill guard config from a specific
