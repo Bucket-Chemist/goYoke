@@ -1,13 +1,16 @@
 package routing
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 var validAgentID = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
@@ -46,19 +49,14 @@ func LoadAgentIdentity(agentID string) (string, error) {
 	}
 	cacheMutex.RUnlock()
 
-	// Load from disk
-	configDir, err := GetClaudeConfigDir()
+	// Load from disk via Resolver
+	r, err := resolve.NewFromEnv()
 	if err != nil {
 		return "", err
 	}
-
-	path := filepath.Clean(filepath.Join(configDir, "agents", agentID, agentID+".md"))
-	if !strings.HasPrefix(path, filepath.Clean(configDir)+string(os.PathSeparator)) {
-		return "", fmt.Errorf("invalid agentID %q: path traversal detected", agentID)
-	}
-	data, err := os.ReadFile(path)
+	data, err := r.ReadFile("agents/" + agentID + "/" + agentID + ".md")
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			// Cache empty result to avoid repeated disk checks
 			cacheMutex.Lock()
 			conventionCache[cacheKey] = ""

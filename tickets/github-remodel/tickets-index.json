@@ -74,7 +74,7 @@
       "title": "Migrate LoadConventionContent() and LoadRulesContent() to Resolver",
       "file": "task-006.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -87,7 +87,7 @@
       "title": "Migrate LoadAgentIdentity() and verify BuildFullAgentContext()",
       "file": "task-007.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
