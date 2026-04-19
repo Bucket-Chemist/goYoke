@@ -47,7 +47,7 @@
       "title": "Migrate LoadAgentIndex() to Resolver with ReadFileAll + merge",
       "file": "task-004.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -61,7 +61,7 @@
       "title": "Migrate LoadSchema() to Resolver with ReadFile first-found",
       "file": "task-005.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
