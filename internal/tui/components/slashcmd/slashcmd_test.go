@@ -681,7 +681,8 @@ func TestLoadSkillCommands_TableDriven(t *testing.T) {
 				configDir = makeSkillsDir(t, tc.skills)
 			}
 
-			cmds := LoadSkillCommands(configDir)
+			t.Setenv("CLAUDE_CONFIG_DIR", configDir)
+			cmds := LoadSkillCommands()
 
 			names := make(map[string]bool, len(cmds))
 			descs := make(map[string]string, len(cmds))
@@ -723,7 +724,8 @@ func TestLoadSkillCommands_NonDirEntriesIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cmds := LoadSkillCommands(configDir)
+	t.Setenv("CLAUDE_CONFIG_DIR", configDir)
+	cmds := LoadSkillCommands()
 	names := make(map[string]bool, len(cmds))
 	for _, c := range cmds {
 		names[c.Name] = true

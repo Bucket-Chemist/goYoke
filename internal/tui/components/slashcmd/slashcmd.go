@@ -10,14 +10,13 @@ package slashcmd
 
 import (
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 // ---------------------------------------------------------------------------
@@ -163,12 +162,16 @@ var localCommandNames = map[string]struct{}{
 //
 // The function is fault-tolerant: unreadable directories or files produce
 // slog warnings but do not stop discovery of other skills.
-func LoadSkillCommands(configDir string) []SlashCommand {
-	skillsDir := filepath.Join(configDir, "skills")
-
-	entries, err := os.ReadDir(skillsDir)
+func LoadSkillCommands() []SlashCommand {
+	r, err := resolve.NewFromEnv()
 	if err != nil {
-		slog.Warn("slashcmd: cannot read skills directory", "dir", skillsDir, "err", err)
+		slog.Warn("slashcmd: cannot create resolver", "err", err)
+		return nil
+	}
+
+	entries, err := r.ReadDir("skills")
+	if err != nil {
+		slog.Warn("slashcmd: cannot read skills directory", "err", err)
 		return nil
 	}
 
@@ -183,7 +186,7 @@ func LoadSkillCommands(configDir string) []SlashCommand {
 			continue
 		}
 
-		desc := extractSkillDescription(filepath.Join(skillsDir, name, "SKILL.md"), name)
+		desc := extractSkillDescription(r, name)
 		cmds = append(cmds, SlashCommand{Name: name, Description: desc})
 	}
 
@@ -193,10 +196,10 @@ func LoadSkillCommands(configDir string) []SlashCommand {
 // extractSkillDescription reads skillFile and tries to extract a description:
 // field from YAML frontmatter. Returns "Skill: <name>" when the file is
 // missing, unreadable, lacks frontmatter, or has no description field.
-func extractSkillDescription(skillFile, name string) string {
+func extractSkillDescription(r *resolve.Resolver, name string) string {
 	defaultDesc := "Skill: " + name
 
-	data, err := os.ReadFile(skillFile)
+	data, err := r.ReadFile("skills/" + name + "/SKILL.md")
 	if err != nil {
 		return defaultDesc
 	}

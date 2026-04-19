@@ -23,7 +23,6 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
-	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // timestampTickMsg is fired every 60 seconds when timestamp display is
@@ -220,10 +219,7 @@ func NewClaudePanelModel(keys config.KeyMap) ClaudePanelModel {
 
 	vp := viewport.New(0, 0)
 
-	var skillCmds []slashcmd.SlashCommand
-	if configDir, err := routing.GetClaudeConfigDir(); err == nil {
-		skillCmds = slashcmd.LoadSkillCommands(configDir)
-	}
+	skillCmds := slashcmd.LoadSkillCommands()
 
 	return ClaudePanelModel{
 		vp:         vp,
