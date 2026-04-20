@@ -285,6 +285,35 @@ make check-size     # Report embedded binary sizes
 
 ---
 
+## Roadmap
+
+### Obsidian Memory Persistence
+- [ ] Obsidian vault as persistent memory backend (decisions, sharp edges, learnings)
+- [ ] SessionStart hook to inject relevant memories from vault into context
+- [ ] PostToolUse hook on `get_agent_result` to intercept and persist learnings automatically
+- [ ] Memory deduplication and decay (stale memories surfaced less frequently)
+
+### Multi-Provider Support
+- [ ] OpenAI Codex provider adapter (`codex-adapter` binary)
+- [ ] Provider-neutral agent spawning (agents declare capabilities, not models)
+- [ ] Cross-provider agent calls (e.g., Opus architect delegates to Codex worker)
+- [ ] Provider cost normalization for telemetry comparison
+
+### TUI: Agent & Team Editor
+- [ ] Inline agent config editing in the agents tab (identity prompt, model, triggers)
+- [ ] Team config editor (add/remove waves, members, adjust budget)
+- [ ] Stdin/stdout editor with schema validation (edit team I/O contracts directly)
+- [ ] Live preview of team topology changes before execution
+
+### TUI: Telemetry Dashboard
+- [ ] Agent performance charts (success rate, avg cost, avg duration over time)
+- [ ] Skill/workflow comparison views (which workflows are most cost-effective)
+- [ ] Team execution timeline visualization (wave parallelism, stalls, failures)
+- [ ] Sharp edge trend analysis (recurring failure patterns across sessions)
+- [ ] Export to CSV/JSON for external analysis
+
+---
+
 ## License
 
 [MIT](LICENSE) - Copyright (c) 2025-2026 William Klare
