@@ -1,0 +1,96 @@
+name: Publish to Public Repo
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Generate defaults
+        run: make defaults
+
+      - name: Run smoke test
+        run: make test-defaults
+
+      - name: Run zero-install test
+        run: scripts/test-zero-install.sh --skip-claude
+
+      - name: Build check
+        run: go build ./...
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          path: private
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: private/go.mod
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Generate defaults
+        working-directory: private
+        run: make defaults
+
+      - name: Checkout public repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.PUBLIC_REPO }}
+          ssh-key: ${{ secrets.PUBLIC_REPO_DEPLOY_KEY }}
+          path: public
+
+      - name: Sync to public repo
+        run: |
+          # Clear public repo (except .git)
+          find public -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} +
+
+          # Sync source (exclude private content)
+          rsync -a \
+            --exclude='.claude/' \
+            --exclude='.goyoke/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='tickets/' \
+            --exclude='.git/' \
+            --exclude='bin/' \
+            private/ public/
+
+      - name: Get tag name
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        working-directory: public
+        run: |
+          git config user.name "goYoke CI"
+          git config user.email "ci@goyoke.dev"
+          git add -A
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Release ${{ steps.tag.outputs.TAG }}"
+          git tag "${{ steps.tag.outputs.TAG }}"
+          git push origin main
+          git push origin "${{ steps.tag.outputs.TAG }}"

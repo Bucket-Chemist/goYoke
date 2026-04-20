@@ -267,7 +267,7 @@
       "title": "Create GitHub Action for public repo sync on tag",
       "file": "task-020.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 5,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -310,7 +310,7 @@
       "title": "Zero-install integration test (consumer-perspective E2E)",
       "file": "task-023.md",
       "priority": "HIGH",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 5,
       "time_estimate": "1-2d",
       "dependencies": [
