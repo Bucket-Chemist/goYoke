@@ -125,9 +125,10 @@ echo "[generate-defaults] Copying root files..."
 cp "${SOURCE}/routing-schema.json" "${DEST}/routing-schema.json" 2>/dev/null || true
 # CLAUDE.md: embed the real one so the binary has full routing knowledge
 cp "${SOURCE}/CLAUDE.md" "${DEST}/CLAUDE.md"
-# settings-template.json: extract hooks, replace absolute paths with binary names
+# settings-template.json: extract hooks, convert to multicall format (goyoke hook <name>)
 jq '{hooks: .hooks}' "${SOURCE}/settings.json" | \
-    sed 's|/[^"]*bin/\(goyoke-[^"]*\)|\1|g' > "${DEST}/settings-template.json"
+    sed 's|/[^"]*bin/\(goyoke-[^"]*\)|\1|g' | \
+    sed 's|"goyoke-\([^"]*\)"|"goyoke hook \1"|g' > "${DEST}/settings-template.json"
 
 # --- 8. Post-copy cleanup ---
 # Remove dotfiles copied transitively from source (not allowed in distribution)
