@@ -1,9 +1,0 @@
-{
-  "id": "6",
-  "subject": "Integration test: TUI end-to-end streaming",
-  "description": "Add integration test that verifies the full flow: user input → subprocess send → Claude response → TUI receives events → display updates. Use mock Claude process.",
-  "activeForm": "Adding TUI integration tests",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

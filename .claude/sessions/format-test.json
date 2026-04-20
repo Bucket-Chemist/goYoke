@@ -1,8 +1,0 @@
-{
-  "id": "format-test",
-  "name": "Format Test",
-  "created_at": "2026-02-01T10:00:00Z",
-  "last_used": "2026-02-03T12:22:07.752Z",
-  "cost": 0.42,
-  "tool_calls": 127
-}

@@ -1,9 +1,0 @@
-{
-  "id": "21",
-  "subject": "Verify and fix react-pro sharp edges count",
-  "description": "**Priority**: LOW\n**Agent**: go-pro (or direct edit)\n**File**: .claude/agents/react-pro/sharp-edges.yaml\n\nThe review-summary.md says react-pro has 11 sharp edges, but agents-index.json may say different.\n\n**Requirements**:\n1. Count actual sharp edges in react-pro/sharp-edges.yaml\n\n2. Verify the count matches what will be added to agents-index.json\n\n3. If mismatch, determine correct count and update agents-index.json\n\n4. Document sharp edge IDs for reference:\n   - List all IDs present\n   - Ensure IDs follow naming convention (kebab-case)\n   - Ensure no duplicate IDs\n\n**Note**: This is a verification task to ensure consistency.",
-  "activeForm": "Verifying react-pro sharp edges count",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

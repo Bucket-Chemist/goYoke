@@ -30,9 +30,14 @@ test/audit/**
 # Codebase map runtime data (regenerated on demand)
 .claude/codebase-map/
 
-# Claude Config - Track structure, ignore ephemeral/sensitive
+# Claude Config — track source-of-truth config (agents/, conventions/, rules/,
+# schemas/, skills/, CLAUDE.md, routing-schema.json), ignore everything else.
+.claude/settings.json
+.claude/settings.local.json
 .claude/.credentials.json
+.claude/.claude.json
 .claude/history.jsonl
+.claude/input-history.json
 .claude/file-history/
 .claude/debug/
 .claude/paste-cache/
@@ -41,16 +46,31 @@ test/audit/**
 .claude/plugins/
 .claude/plans/
 .claude/projects/
-.claude/session-archive/*.jsonl
-.claude/memory/pending-learnings.jsonl
-.claude/tmp/*.md
-.claude/settings.local.json
-.claude/tmp/*
-.claude/sessions/*/
+.claude/sessions/
 .claude/current-session
+.claude/session-archive/
+.claude/tmp/
 .claude/tmp.pre-sessions
-.claude/statsig/*
-.claude/usage-data/*
+.claude/statsig/
+.claude/usage-data/
+.claude/telemetry/
+.claude/backups/
+.claude/tasks/
+.claude/todos/
+.claude/shell-snapshots/
+.claude/memory/
+.claude/braintrust/
+.claude/hooks/
+.claude/templates/
+.claude/tickets/
+.claude/tests/
+.claude/guides/
+.claude/mcp/
+.claude/scripts/
+.claude/codebase-map/
+.claude/mcp-needs-auth-cache.json
+.claude/*.bak
+.claude/Pasted*.txt
 
 # Obsidian
 .obsidian/
@@ -63,10 +83,8 @@ test/audit/**
 /test/simulation/tmp/
 /test/simulation/reports/
 
-# Claude Code ephemeral data
-.claude/shell-snapshots/
-.claude/tasks/
-.claude/todos/
+# Nested .claude/memory/ in subdirectories (session artifacts)
+**/.claude/memory/
 
 # Debug logs
 /debug/
@@ -88,9 +106,6 @@ cmd/mousetest/
 # TypeScript/Node.js
 node_modules/
 
-# Claude memory
-.claude/memory/ml-tool-events.jsonl
-/.claude/memory/*.jsonl
 
 # goYoke runtime state (sessions, memory, teams)
 .goyoke/
@@ -105,16 +120,6 @@ node_modules/
 /review-metadata.json
 /.ticket-config.json
 
-# Claude ephemeral
-.claude/.claude.json
-.claude/*.bak
-.claude/mcp-needs-auth-cache.json
-.claude/telemetry/
-.claude/input-history.json
-.claude/memory/session-archive/
-.claude/backups/
-.claude/sessions/*.json
-.claude/Pasted*.txt
 /.bug-hunter/
 /.codex
 /distr/

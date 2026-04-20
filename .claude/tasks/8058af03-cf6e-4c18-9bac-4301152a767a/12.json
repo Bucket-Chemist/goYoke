@@ -1,9 +1,0 @@
-{
-  "id": "12",
-  "subject": "Update ticket skill with code review phase",
-  "description": "Add Phase 7.6 (Code Review) to ~/.claude/skills/ticket/SKILL.md between acceptance verification and completion. Fully blocking behavior - critical issues prevent completion. Controlled by audit_config.code_review.enabled in .ticket-config.json. Invoke review-orchestrator with changed files scope.",
-  "activeForm": "Updating ticket skill",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

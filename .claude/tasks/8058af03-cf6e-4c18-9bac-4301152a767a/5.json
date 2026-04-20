@@ -1,9 +1,0 @@
-{
-  "id": "5",
-  "subject": "Create backend-reviewer agent",
-  "description": "Create ~/.claude/agents/backend-reviewer/ with: agent.md (API design, data handling, error patterns, security), agent.yaml (model: haiku, thinking: true, tier: 1.5, subagent_type: Explore), sharp-edges.yaml (SQL injection, auth bypass, data leaks, etc), CLAUDE.md. Multi-language aware (Go, Python, R, TS).",
-  "activeForm": "Creating backend-reviewer agent",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}
