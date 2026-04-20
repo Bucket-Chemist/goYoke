@@ -273,7 +273,33 @@ test/                   Integration tests, simulation harness, regression
 
 ## Development
 
+### First-time setup (collaborators)
+
 ```bash
+git clone git@github.com:Bucket-Chemist/goYoke-dev.git
+cd goYoke-dev
+make dev-setup
+```
+
+This builds all 25 binaries, symlinks `~/.claude` to the repo's `.claude/` directory, and generates `settings.json` and `mcp.json` with paths pointing to your local `bin/`. After setup:
+
+```bash
+./bin/goyoke        # Launch the TUI
+claude              # Use claude directly — hooks fire automatically via ~/.claude symlink
+```
+
+### After pulling changes
+
+```bash
+make build          # Rebuild hook binaries
+# If new hooks were added:
+make dev-setup      # Or: ./scripts/dev-setup.sh --regen-settings
+```
+
+### Make targets
+
+```bash
+make dev-setup      # One-time dev environment setup (builds, symlink, settings)
 make build          # Build TUI + all hook binaries
 make test           # Run full test suite
 make defaults       # Generate embedded config from source
