@@ -3,12 +3,15 @@
 package loadcontext
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
@@ -90,6 +93,15 @@ func Main() {
 
 	ctx.GitInfo = session.FormatGitInfo(projectDir)
 	ctx.ProjectInfo = session.DetectProjectType(projectDir)
+
+	claudeMDPath := filepath.Join(projectDir, ".claude", "CLAUDE.md")
+	if _, statErr := os.Stat(claudeMDPath); os.IsNotExist(statErr) {
+		if data, readErr := resolve.Default().ReadFile("CLAUDE.md"); readErr == nil {
+			ctx.RouterInstructions = string(data)
+		} else if !errors.Is(readErr, fs.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "[goyoke-load-context] Warning: embedded CLAUDE.md read error: %v\n", readErr)
+		}
+	}
 
 	response, err := session.GenerateSessionStartResponse(ctx)
 	if err != nil {
