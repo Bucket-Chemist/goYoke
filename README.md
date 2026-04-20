@@ -4,6 +4,13 @@
 
 goYoke is a Go-based orchestration framework that wraps Claude Code with runtime hooks, tiered agent routing, and a terminal UI. Enforcement happens in compiled Go binaries that intercept Claude Code events — not in prompt instructions.
 
+## Author
+
+Created and maintained by [Dokter Smol](https://github.com/Bucket-Chemist)  
+Released under [Exact Mass](https://github.com/Exact-Mass)
+
+---
+
 ## What It Does
 
 - **Hook enforcement** — Go binaries run at SessionStart, PreToolUse, PostToolUse, SubagentStop, and SessionEnd to validate, track, and gate Claude Code behavior
