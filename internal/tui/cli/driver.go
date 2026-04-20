@@ -131,6 +131,10 @@ type CLIDriverOpts struct {
 
 	// ConfigDir overrides the Claude config directory (e.g. ~/.claude-em). Empty means default.
 	ConfigDir string
+
+	// SettingsPath is the path to an additional settings file passed via --settings.
+	// Used for hook injection on zero-install (settings-template.json from embedded FS).
+	SettingsPath string
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +301,10 @@ func (d *CLIDriver) buildArgs() []string {
 
 	if d.opts.Effort != "" && d.opts.Effort != "auto" {
 		args = append(args, "--effort", d.opts.Effort)
+	}
+
+	if d.opts.SettingsPath != "" {
+		args = append(args, "--settings", d.opts.SettingsPath)
 	}
 
 	if d.opts.MCPConfigPath != "" {

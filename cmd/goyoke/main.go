@@ -291,6 +291,24 @@ func main() {
 		initialModel = ps.GetActiveCLIModel()
 	}
 
+	// Write embedded settings-template.json to temp file for --settings injection.
+	var settingsPath string
+	if tmplData, tmplErr := resolve.Default().ReadFile("settings-template.json"); tmplErr == nil {
+		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+		if runtimeDir == "" {
+			runtimeDir = os.TempDir()
+		}
+		tmpPath := filepath.Join(runtimeDir, fmt.Sprintf("goyoke-hooks-%d.json", os.Getpid()))
+		if writeErr := os.WriteFile(tmpPath, tmplData, 0600); writeErr == nil {
+			settingsPath = tmpPath
+			defer os.Remove(tmpPath)
+		} else {
+			log.Printf("[goyoke] Warning: failed to write settings temp file: %v", writeErr)
+		}
+	} else {
+		log.Printf("[goyoke] Warning: settings-template.json not found in embedded FS, hooks not injected")
+	}
+
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
 		SessionID:      *sessionID,
@@ -301,6 +319,7 @@ func main() {
 		Debug:          *debug,
 		ConfigDir:      *configDir,
 		MCPConfigPath:  mcpConfigPath,
+		SettingsPath:   settingsPath,
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)

@@ -215,7 +215,7 @@
       "title": "Implement CLAUDE.md runtime injection via goyoke-load-context additionalContext",
       "file": "task-016.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 4,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -228,7 +228,7 @@
       "title": "Hook injection via --settings CLI flag (zero disk writes)",
       "file": "task-017.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 4,
       "time_estimate": "1-2d",
       "dependencies": [
