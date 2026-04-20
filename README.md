@@ -7,7 +7,6 @@ goYoke is a Go-based orchestration framework that wraps Claude Code with runtime
 ## Author
 
 Created and maintained by [Dokter Smol](https://github.com/Bucket-Chemist)  
-Released under [Exact Mass](https://github.com/Exact-Mass)
 
 ---
 
