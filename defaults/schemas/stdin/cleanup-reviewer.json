@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goyoke-fortress/schemas/stdin/cleanup-reviewer.json",
+  "title": "Cleanup Reviewer Stdin Schema",
+  "description": "Validates stdin for cleanup specialist reviewers (dedup, type, dead-code, dependency, type-safety, error-hygiene, legacy, slop)",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "agent",
+    "workflow",
+    "context",
+    "scope",
+    "project_conventions"
+  ],
+  "properties": {
+    "agent": {
+      "type": "string",
+      "enum": [
+        "dedup-reviewer",
+        "type-consolidator",
+        "dead-code-reviewer",
+        "dependency-reviewer",
+        "type-safety-reviewer",
+        "error-hygiene-reviewer",
+        "legacy-code-reviewer",
+        "slop-reviewer",
+        "cleanup-synthesizer"
+      ],
+      "description": "Cleanup reviewer or synthesizer identifier"
+    },
+    "workflow": {
+      "type": "string",
+      "const": "cleanup",
+      "description": "Workflow type"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief task description for logging"
+    },
+    "context": {
+      "type": "object",
+      "required": ["project_root", "team_dir"],
+      "properties": {
+        "project_root": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to project root"
+        },
+        "team_dir": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to team directory"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "required": ["target", "include", "exclude", "file_count", "languages_detected"],
+      "properties": {
+        "target": {
+          "type": "string",
+          "enum": ["project", "glob", "explicit"],
+          "description": "Scope targeting mode"
+        },
+        "include": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Glob patterns or explicit paths to analyze"
+        },
+        "exclude": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Glob patterns to exclude (vendor, node_modules, etc.)"
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of files in scope"
+        },
+        "languages_detected": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Programming languages detected in scope"
+        }
+      }
+    },
+    "project_conventions": {
+      "type": "object",
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Project languages"
+        },
+        "conventions_files": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Matching convention files (e.g., go.md, typescript.md)"
+        }
+      }
+    },
+    "reviewer_outputs": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "For synthesizer only: list of reviewer stdout filenames to read"
+    }
+  }
+}

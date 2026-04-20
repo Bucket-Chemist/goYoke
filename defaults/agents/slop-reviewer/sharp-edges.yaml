@@ -1,0 +1,62 @@
+version: "1.0"
+updated: "2026-04-15"
+
+sharp_edges:
+  - id: ai-slop-comment
+    severity: medium
+    category: slop
+    description: "AI-generated verbose comment explaining obvious code"
+    symptom: "Noise drowns signal, codebase feels padded"
+    solution: |
+      Delete the comment. If there IS a non-obvious WHY, rewrite
+      to a single concise line explaining only the WHY.
+      Indicators: starts with "This function/method", uses "comprehensive",
+      "robust", "elegant", is longer than the code it describes.
+    auto_inject: true
+
+  - id: stub-code
+    severity: medium
+    category: stubs
+    description: "Placeholder implementation (TODO: implement, NotImplementedError, pass)"
+    symptom: "False sense of completeness, runtime failures if called"
+    solution: |
+      If the feature is needed: implement it.
+      If the feature is not needed: delete the stub entirely.
+      If it's in active development (git blame < 2 weeks): leave it.
+      Check issue tracker for linked ticket before deleting.
+    auto_inject: true
+
+  - id: larp-code
+    severity: high
+    category: larp
+    description: "Code that appears functional but actually does nothing useful"
+    symptom: "Misleads developers into thinking functionality exists"
+    solution: |
+      Delete if unused. If callers exist, either implement properly
+      or remove callers too. LARP code is worse than no code —
+      it creates false confidence.
+    auto_inject: true
+
+  - id: in-motion-comment
+    severity: medium
+    category: stale-comments
+    description: "Comment describing a change in progress that's now complete"
+    symptom: "Misleading temporal context, confuses new developers"
+    solution: |
+      Delete comments like: "replaced old X with new Y",
+      "migrated from Z", "new implementation", "updated for v2".
+      The code IS the current state — it doesn't need to narrate
+      how it got there. That's what git blame is for.
+    auto_inject: true
+
+  - id: commented-out-code
+    severity: medium
+    category: dead-code
+    description: "Block of commented-out code (more than 2 lines)"
+    symptom: "Clutter, unclear if intentional backup or forgotten deletion"
+    solution: |
+      Delete. Version control preserves history.
+      If the code represents an alternative approach worth documenting,
+      add a one-line comment explaining the approach and link to the
+      commit that had it, then delete the code block.
+    auto_inject: true

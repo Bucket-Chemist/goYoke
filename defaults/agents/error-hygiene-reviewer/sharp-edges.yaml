@@ -1,0 +1,64 @@
+version: "1.0"
+updated: "2026-04-15"
+
+sharp_edges:
+  - id: empty-catch
+    severity: high
+    category: error-hiding
+    description: "Empty catch/except block that silently swallows errors"
+    symptom: "Failures invisible, bugs appear as mysterious wrong behavior"
+    solution: |
+      Either:
+      1. Remove the try/catch if the code can't actually throw
+      2. Handle the error properly (retry, propagate, user message)
+      3. At minimum: re-throw with context
+    auto_inject: true
+
+  - id: log-and-swallow
+    severity: high
+    category: error-hiding
+    description: "Error is logged but execution continues as if success"
+    symptom: "Error appears in logs but system produces wrong results"
+    solution: |
+      Log AND propagate. Logging is not handling.
+      Return the error, throw it, or invoke a recovery strategy.
+      If the operation is truly optional, make that explicit in the
+      function's contract (return value indicates partial success).
+    auto_inject: true
+
+  - id: catch-and-default
+    severity: high
+    category: error-hiding
+    description: "Catch block returns a hardcoded default value instead of error"
+    symptom: "Callers get plausible-looking wrong data without knowing it failed"
+    solution: |
+      Return the error alongside or instead of the default.
+      If a default is genuinely acceptable, document why in a comment
+      and make the fallback behavior visible to callers (e.g., via
+      a second return value or a discriminated result type).
+    auto_inject: true
+
+  - id: unnecessary-guard
+    severity: medium
+    category: defensive-noise
+    description: "Try/catch wrapping code that provably cannot throw"
+    symptom: "False sense of safety, misleading about what can fail"
+    solution: |
+      Remove the try/catch. The code inside is safe:
+      - Pure computation (math, string ops)
+      - Own struct field access
+      - Internal functions with known contracts
+      If you're unsure whether it can throw, that's a type-safety
+      issue — fix the types, not the error handling.
+    auto_inject: true
+
+  - id: broad-catch
+    severity: medium
+    category: defensive-noise
+    description: "Overly broad catch handling all errors identically"
+    symptom: "Different failure modes get same response, masking root cause"
+    solution: |
+      Narrow the catch to specific error types.
+      Handle each type appropriately.
+      Let unexpected errors propagate to the global handler.
+    auto_inject: true

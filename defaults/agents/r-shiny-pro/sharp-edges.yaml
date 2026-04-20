@@ -1,0 +1,189 @@
+edges:
+  - name: grid_plot_rendering
+    severity: critical
+    description: >
+      Grid plots (arrangeGrob, grid.arrange) fail to render correctly in
+      Shiny without special handling. Direct rendering creates phantom
+      files or empty plots.
+    mitigation: >
+      Use pdf(NULL) to open null device, create arrangement with
+      arrangeGrob(), close device, then grid.draw() the result.
+    example:
+      wrong: |
+        output$grid <- renderPlot({
+          gridExtra::grid.arrange(p1, p2, ncol = 2)  # May fail silently
+        })
+      right: |
+        output$grid <- renderPlot({
+          grDevices::pdf(NULL)
+          on.exit(grDevices::dev.off(), add = TRUE)
+          arranged <- gridExtra::arrangeGrob(p1, p2, ncol = 2)
+          grid::grid.draw(arranged)
+        })
+
+  - name: dynamic_ui_race_conditions
+    severity: critical
+    description: >
+      Using renderUI for structural elements creates race conditions.
+      IDs generated dynamically may not exist when observers fire.
+      Use slot-based static IDs instead.
+    mitigation: >
+      Create static UI structure with uiOutput slots. Only fill content
+      dynamically. Use req() to guard against missing elements.
+    example:
+      wrong: |
+        # Dynamic structure - race condition prone
+        output$dynamic <- renderUI({
+          if (show_section) {
+            tagList(
+              selectInput(ns("dynamic_select"), "Choose:", choices),
+              actionButton(ns("dynamic_action"), "Go")
+            )
+          }
+        })
+
+        observeEvent(input$dynamic_action, {  # May not exist!
+          # ...
+        })
+      right: |
+        # Static structure with slot
+        # In UI:
+        uiOutput(ns("content_slot"))
+
+        # In server - only fill content, structure is stable:
+        output$content_slot <- renderUI({
+          req(show_section)
+          tagList(
+            selectInput(ns("select"), "Choose:", choices),
+            actionButton(ns("action"), "Go")
+          )
+        })
+
+  - name: logger_reactive_context
+    severity: critical
+    description: >
+      Logger's {} interpolation FAILS in reactive contexts and tryCatch.
+      Messages appear empty or cause silent failures.
+    mitigation: >
+      Use paste() or sprintf() for ALL log messages in Shiny code.
+      Never use glue-style {} interpolation.
+    example:
+      wrong: |
+        observeEvent(input$action, {
+          logger::log_info("User selected {input$choice}")  # FAILS
+          tryCatch({
+            result <- process()
+            logger::log_info("Result: {result}")  # FAILS
+          }, error = function(e) {
+            logger::log_error("Error: {e$message}")  # FAILS
+          })
+        })
+      right: |
+        observeEvent(input$action, {
+          logger::log_info(paste("User selected", input$choice))
+          tryCatch({
+            result <- process()
+            logger::log_info(paste("Result:", result))
+          }, error = function(e) {
+            logger::log_error(paste("Error:", e$message))
+          })
+        })
+
+  - name: s4_rds_integrity
+    severity: high
+    description: >
+      S4 objects loaded from RDS may have invalid slots if class definition
+      changed. Loading without validation causes silent data corruption.
+    mitigation: >
+      Always validate S4 objects after loading. Check slot types and
+      run validObject(). Handle upgrade paths for changed classes.
+    example:
+      wrong: |
+        load_data <- function(path) {
+          readRDS(path)  # May be invalid if class changed
+        }
+      right: |
+        load_data <- function(path) {
+          obj <- readRDS(path)
+          if (isS4(obj)) {
+            tryCatch({
+              validObject(obj)
+              obj
+            }, error = function(e) {
+              logger::log_error(paste("Invalid S4 object:", e$message))
+              NULL
+            })
+          } else {
+            obj
+          }
+        }
+
+  - name: matrix_dataframe_roundtrip
+    severity: high
+    description: >
+      Converting between matrix and data.frame can silently change data
+      types. Numeric matrices become character if any character column
+      exists. Row/column names may be lost.
+    mitigation: >
+      Preserve attributes explicitly. Check types after conversion.
+      Use tibble for data.frame operations on numeric data.
+    example:
+      wrong: |
+        # Type may change silently
+        df <- as.data.frame(numeric_matrix)
+        matrix_back <- as.matrix(df)  # May be character now!
+      right: |
+        # Preserve types explicitly
+        df <- as.data.frame(numeric_matrix)
+        # Ensure numeric
+        matrix_back <- as.matrix(sapply(df, as.numeric))
+        # Or use tibble which preserves better
+        tbl <- tibble::as_tibble(numeric_matrix, rownames = "id")
+
+  - name: namespace_shiny_functions
+    severity: high
+    description: >
+      Shiny functions must be namespaced in package code. Bare function
+      names cause CRAN check failures and can conflict with user functions.
+    mitigation: >
+      Always use shiny:: prefix for all Shiny functions in packages.
+      Consider using box or explicit imports.
+    example:
+      wrong: |
+        mod_ui <- function(id) {
+          ns <- NS(id)  # Where is NS from?
+          tagList(
+            selectInput(ns("x"), "X", choices = NULL)
+          )
+        }
+      right: |
+        mod_ui <- function(id) {
+          ns <- shiny::NS(id)
+          shiny::tagList(
+            shiny::selectInput(ns("x"), "X", choices = NULL)
+          )
+        }
+
+  - name: fileinput_limitations
+    severity: high
+    description: >
+      fileInput() has severe limitations: can't browse directories,
+      limited file type filtering, no recent files, poor UX for
+      power users.
+    mitigation: >
+      Use shinyFiles package for any non-trivial file selection.
+      shinyFilesButton + shinyFileChoose gives full filesystem access.
+    example:
+      wrong: |
+        # Limited file selection
+        fileInput("upload", "Select file")
+      right: |
+        # Full filesystem access
+        shinyFiles::shinyFilesButton(
+          "file_select", "Select File", "Choose file",
+          multiple = FALSE
+        )
+
+        # In server:
+        volumes <- c(Home = fs::path_home(), shinyFiles::getVolumes()())
+        shinyFiles::shinyFileChoose(input, "file_select", roots = volumes)

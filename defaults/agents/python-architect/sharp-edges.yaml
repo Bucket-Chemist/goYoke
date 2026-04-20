@@ -1,0 +1,139 @@
+version: "1.0"
+agent: python-architect
+description: Domain-specific failure patterns for ML architecture decisions
+
+sharp_edges:
+  # Attention Mechanism Issues
+  - id: attention-sequence-length
+    pattern: "Recommended full attention for sequence > 2000"
+    severity: high
+    context: "Full attention is O(n²). For n=2500, that's 6.25M operations per head."
+    mitigation: |
+      Check sequence length before recommending attention type:
+      - n < 1000: Full attention acceptable
+      - 1000 < n < 4000: Local or linear attention
+      - n > 4000: Must use linear/performer or chunked
+
+  - id: linformer-k-too-small
+    pattern: "Linformer k < 128 for sequence > 2000"
+    severity: medium
+    context: "Too aggressive compression loses important patterns."
+    mitigation: |
+      k should be at least sqrt(n) for reasonable approximation.
+      For n=2500: k >= 50, recommend k=256 for safety margin.
+
+  # Loss Function Issues
+  - id: loss-imbalance-ignored
+    pattern: "Recommended BCE/CE for imbalanced classification"
+    severity: high
+    context: "Class imbalance >10:1 makes standard losses ineffective."
+    mitigation: |
+      Check class distribution before recommending loss:
+      - Balanced: BCE/CE fine
+      - 3:1 to 10:1: Class weights
+      - >10:1: Focal loss required
+
+  - id: masking-logic-inverted
+    pattern: "Used cumsum for existence probability"
+    severity: critical
+    context: "Common bug: cumsum gives P(n <= k), not P(n >= k)."
+    mitigation: |
+      CORRECT: P(exists_i) = 1 - cumsum(probs)[:, :i-1]
+      NOT: cumsum(probs)[:, :i]
+
+      See python-ml.md section 3.4 for correct implementation.
+
+  - id: permutation-invariance-missed
+    pattern: "Used MSE for set prediction without Hungarian matching"
+    severity: high
+    context: "Set prediction where order doesn't matter needs permutation-invariant loss."
+    mitigation: |
+      For set outputs (multiple series, multiple objects):
+      - Use Hungarian matching to find optimal assignment
+      - Or use Sinkhorn for differentiable approximation
+      - Only then compute element-wise loss
+
+  - id: ordinal-as-categorical
+    pattern: "Used softmax for ordered categories"
+    severity: medium
+    context: "Ordered categories (1,2,3,4,5) should use ordinal regression."
+    mitigation: |
+      For ordered outputs where 3 is 'closer' to 2 than to 5:
+      - Use cumulative logits (ordinal regression)
+      - NOT softmax classification
+
+      See python-ml.md section 3.3.
+
+  # Architecture Issues
+  - id: batchnorm-variable-batch
+    pattern: "Recommended BatchNorm for variable batch size"
+    severity: medium
+    context: "BatchNorm statistics are unreliable with small/variable batches."
+    mitigation: |
+      Use GroupNorm or LayerNorm when:
+      - Batch size varies
+      - Batch size < 16
+      - Single-sample inference needed
+
+  - id: dilated-vs-strided
+    pattern: "Used strided convolutions when resolution preservation needed"
+    severity: medium
+    context: "Strided conv loses resolution. Dilated conv expands RF without loss."
+    mitigation: |
+      If downstream needs full resolution:
+      - Use dilated convolutions
+      - Or use strided with skip connections for recovery
+
+      If downsampling is acceptable:
+      - Strided conv is faster
+
+  - id: receptive-field-too-small
+    pattern: "Designed encoder with insufficient receptive field"
+    severity: high
+    context: "Isotope patterns span 5-100 Da. RF must cover this."
+    mitigation: |
+      Calculate RF at each level:
+      RF_n = RF_{n-1} + (kernel_size - 1) * stride_product
+
+      For 0.1 Da binning, 5 Da pattern = 50 bins.
+      First layer RF should be >= 50 bins.
+
+  # Training Issues
+  - id: synthetic-real-gap-ignored
+    pattern: "Recommended pure synthetic training without domain adaptation"
+    severity: medium
+    context: "Synthetic-to-real gap is typically large in spectral data."
+    mitigation: |
+      Include real data exposure:
+      - Semi-synthetic: real background + synthetic signal
+      - Curriculum: 100% synthetic → 70% real
+      - Domain adaptation techniques if gap is large
+
+  - id: multitask-gradient-conflict
+    pattern: "Fixed loss weights without gradient analysis"
+    severity: medium
+    context: "Tasks may have conflicting gradients, causing optimization issues."
+    mitigation: |
+      Consider:
+      - GradNorm for dynamic weight adjustment
+      - Uncertainty weighting
+      - Gradient surgery if conflicts detected
+
+  # Deployment Issues
+  - id: onnx-compatibility-unchecked
+    pattern: "Recommended architecture without ONNX compatibility check"
+    severity: medium
+    context: "Some operations don't export to ONNX cleanly."
+    mitigation: |
+      Before finalizing:
+      - Check ops are in target opset
+      - Avoid dynamic control flow
+      - Test export early in development
+      - Validate output matches PyTorch
+
+remediation_protocol: |
+  When a sharp edge is detected:
+  1. Acknowledge the issue explicitly
+  2. Explain why the alternative is better
+  3. Update decision document with correct recommendation
+  4. Flag for convention update if pattern is common

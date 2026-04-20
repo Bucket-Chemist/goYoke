@@ -1,0 +1,58 @@
+# Sharp Edges for Review Orchestrator Agent
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: reviewer-timeout
+    severity: medium
+    category: coordination
+    description: "Specialist reviewer times out or fails"
+    symptom: "Incomplete review, missing domain coverage"
+    solution: |
+      If any reviewer fails:
+      1. Note failure in summary
+      2. Proceed with available results
+      3. Add caveat about incomplete review
+      4. Consider WARNING status due to uncertainty
+    auto_inject: true
+
+  - id: finding-duplication
+    severity: low
+    category: synthesis
+    description: "Same issue reported by multiple reviewers"
+    symptom: "Inflated issue count, redundant findings"
+    solution: |
+      Deduplicate findings before output:
+      - Same file + same line + similar message = duplicate
+      - Keep most specific finding
+      - Note "flagged by multiple reviewers"
+    auto_inject: true
+
+  - id: severity-inflation
+    severity: medium
+    category: assessment
+    description: "Marking issues as critical when they're warnings"
+    symptom: "False BLOCK recommendations"
+    solution: |
+      Critical is ONLY for:
+      - Security vulnerabilities
+      - Data corruption risks
+      - Memory leaks
+      - Accessibility blockers
+
+      Style issues are NEVER critical.
+    auto_inject: true
+
+  - id: missing-telemetry
+    severity: high
+    category: output
+    description: "Review output missing telemetry fields"
+    symptom: "Findings not captured in ML telemetry"
+    solution: |
+      ALWAYS include in output:
+      - session_id (required)
+      - status: BLOCKED/WARNING/APPROVE
+      - summary: {critical, warnings, info}
+      - findings array with required fields
+    auto_inject: true

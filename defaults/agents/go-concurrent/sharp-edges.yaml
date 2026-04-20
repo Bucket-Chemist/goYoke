@@ -1,0 +1,251 @@
+# Sharp Edges for GO Concurrent Agent
+# Common concurrency pitfalls
+
+version: "1.1"
+updated: "2026-01-26"
+
+sharp_edges:
+  - id: loop-variable-capture
+    severity: critical
+    category: goroutines
+    description: "Loop variable captured by reference in goroutine"
+    symptom: "All goroutines see final value of loop variable"
+    solution: |
+      WRONG: All goroutines see same value
+      for _, item := range items {
+          go func() {
+              process(item)  // BUG!
+          }()
+      }
+      
+      CORRECT: Shadow the variable
+      for _, item := range items {
+          item := item  // CRITICAL
+          go func() {
+              process(item)
+          }()
+      }
+    auto_inject: true
+
+  - id: goroutine-leak
+    severity: critical
+    category: resource-management
+    description: "Goroutine never exits"
+    symptom: "Memory grows, CPU usage increases over time"
+    solution: |
+      ALWAYS provide cancellation path via context:
+      
+      func worker(ctx context.Context, jobs <-chan Job) {
+          for {
+              select {
+              case <-ctx.Done():
+                  return  // Exit when cancelled
+              case job, ok := <-jobs:
+                  if !ok {
+                      return  // Exit when channel closed
+                  }
+                  process(job)
+              }
+          }
+      }
+    auto_inject: true
+
+  - id: channel-sender-closes
+    severity: high
+    category: channels
+    description: "Receiver closes channel, sender panics"
+    symptom: "Panic: send on closed channel"
+    solution: |
+      ONLY the sender should close the channel.
+      Never close from receiver side.
+      
+      // Sender
+      func producer(ch chan<- int) {
+          defer close(ch)  // Sender closes
+          for i := 0; i < 10; i++ {
+              ch <- i
+          }
+      }
+      
+      // Receiver never closes
+      func consumer(ch <-chan int) {
+          for n := range ch {
+              process(n)
+          }
+      }
+    auto_inject: true
+
+  - id: close-twice-panic
+    severity: high
+    category: channels
+    description: "Closing channel twice causes panic"
+    symptom: "Panic: close of closed channel"
+    solution: |
+      Use sync.Once for single close:
+      
+      type SafeChannel struct {
+          ch     chan int
+          closer sync.Once
+      }
+      
+      func (sc *SafeChannel) Close() {
+          sc.closer.Do(func() {
+              close(sc.ch)
+          })
+      }
+    auto_inject: true
+
+  - id: context-not-checked
+    severity: high
+    category: cancellation
+    description: "Context cancellation not checked in long operations"
+    symptom: "Cancellation has no effect, work continues"
+    solution: |
+      Check context periodically in long-running operations:
+      
+      for _, item := range largeList {
+          select {
+          case <-ctx.Done():
+              return ctx.Err()
+          default:
+          }
+          processSlowly(item)
+      }
+    auto_inject: true
+
+  - id: race-with-shared-map
+    severity: critical
+    category: data-race
+    description: "Concurrent map access without synchronization"
+    symptom: "Fatal error: concurrent map read and map write"
+    solution: |
+      Use sync.Map or mutex:
+
+      // Option 1: sync.Map
+      var m sync.Map
+      m.Store("key", value)
+      v, ok := m.Load("key")
+
+      // Option 2: Mutex
+      type SafeMap struct {
+          mu sync.RWMutex
+          m  map[string]int
+      }
+      func (sm *SafeMap) Get(k string) int {
+          sm.mu.RLock()
+          defer sm.mu.RUnlock()
+          return sm.m[k]
+      }
+    auto_inject: true
+
+  - id: send-on-closed-guard
+    severity: critical
+    category: channels
+    description: "Send to channel that might be closed causes panic"
+    symptom: "Panic: send on closed channel"
+    learned_from: "goYoke TUI streaming fix (2026-01-26)"
+    solution: |
+      WRONG: Unguarded send panics if channel closed
+      if shouldSend {
+          ch <- value  // PANIC if ch is closed!
+      }
+
+      CORRECT: Guard with done channel
+      if shouldSend {
+          select {
+          case ch <- value:
+          case <-done:
+              // Channel closing, exit gracefully
+          }
+      }
+
+      This pattern is REQUIRED when:
+      - Channel might be closed by another goroutine (e.g., Stop())
+      - Sender doesn't control channel lifecycle
+      - Process shutdown races with event emission
+    auto_inject: true
+
+  - id: waitgroup-pointer-type
+    severity: high
+    category: sync-primitives
+    description: "sync.WaitGroup copied by value causes issues"
+    symptom: "copylocks warning, undefined WaitGroup behavior"
+    learned_from: "goYoke subprocess restart fix (2026-01-26)"
+    solution: |
+      WRONG: WaitGroup as value in struct
+      type Process struct {
+          wg sync.WaitGroup  // Copied on assignment!
+      }
+
+      newProc.wg = oldProc.wg  // ERROR: copies lock value
+
+      CORRECT: WaitGroup as pointer
+      type Process struct {
+          wg *sync.WaitGroup
+      }
+
+      // Initialize
+      proc := &Process{
+          wg: &sync.WaitGroup{},
+      }
+
+      // Safe to assign pointer
+      newProc.wg = &sync.WaitGroup{}
+    auto_inject: true
+
+  - id: single-reader-goroutine
+    severity: high
+    category: goroutines
+    description: "Spawning goroutine per read with timeout causes leaks"
+    symptom: "Goroutine accumulation, data loss on slow reads"
+    learned_from: "goYoke readEvents fix (2026-01-26)"
+    solution: |
+      WRONG: New goroutine per read iteration
+      for {
+          ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+          dataChan := make(chan []byte, 1)  // New channel each time!
+
+          go func() {
+              data, _ := reader.Read()  // Blocks
+              dataChan <- data
+          }()
+
+          select {
+          case <-ctx.Done():
+              cancel()
+              continue  // OLD GOROUTINE STILL BLOCKED, data lost!
+          case data := <-dataChan:
+              // ...
+          }
+      }
+
+      CORRECT: Single persistent reader goroutine
+      dataChan := make(chan []byte, 1)  // Shared channel
+      errChan := make(chan error, 1)
+
+      go func() {  // ONE goroutine for entire lifecycle
+          for {
+              data, err := reader.Read()
+              if err != nil {
+                  errChan <- err
+                  return
+              }
+              select {
+              case dataChan <- data:
+              case <-done:
+                  return
+              }
+          }
+      }()
+
+      for {
+          select {
+          case <-done:
+              return
+          case err := <-errChan:
+              // Handle error
+          case data := <-dataChan:
+              // Process data
+          }
+      }
+    auto_inject: true

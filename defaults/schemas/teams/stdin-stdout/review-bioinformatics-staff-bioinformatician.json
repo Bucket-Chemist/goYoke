@@ -1,0 +1,223 @@
+{
+  "$comment": "Stdin/stdout contract for Staff Bioinformatician synthesizer in review-bioinformatics workflow. Replaces Pasteur as wave 1 agent.",
+  "stdin": {
+    "agent": "staff-bioinformatician",
+    "workflow": "review-bioinformatics",
+    "description": "7-layer cross-domain pipeline synthesis and methodology evaluation",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
+    "wave_0_outputs": [
+      {
+        "reviewer_id": "genomics-reviewer",
+        "stdout_file_path": "/absolute/path/to/team/dir/stdout_genomics-reviewer.json",
+        "status": "completed|failed|timeout",
+        "cost_usd": 0.0
+      },
+      {
+        "reviewer_id": "proteomics-reviewer",
+        "stdout_file_path": "/absolute/path/to/team/dir/stdout_proteomics-reviewer.json",
+        "status": "completed|failed|timeout",
+        "cost_usd": 0.0
+      },
+      {
+        "reviewer_id": "proteogenomics-reviewer",
+        "stdout_file_path": "/absolute/path/to/team/dir/stdout_proteogenomics-reviewer.json",
+        "status": "completed|failed|timeout",
+        "cost_usd": 0.0
+      },
+      {
+        "reviewer_id": "proteoform-reviewer",
+        "stdout_file_path": "/absolute/path/to/team/dir/stdout_proteoform-reviewer.json",
+        "status": "completed|failed|timeout",
+        "cost_usd": 0.0
+      },
+      {
+        "reviewer_id": "mass-spec-reviewer",
+        "stdout_file_path": "/absolute/path/to/team/dir/stdout_mass-spec-reviewer.json",
+        "status": "completed|failed|timeout",
+        "cost_usd": 0.0
+      },
+      {
+        "reviewer_id": "bioinformatician-reviewer",
+        "stdout_file_path": "/absolute/path/to/team/dir/stdout_bioinformatician-reviewer.json",
+        "status": "completed|failed|timeout",
+        "cost_usd": 0.0
+      }
+    ],
+    "review_scope_summary": {
+      "total_files": 0,
+      "languages_detected": [
+        "python",
+        "nextflow"
+      ],
+      "file_categories": [
+        "pipeline",
+        "config",
+        "data-processing"
+      ]
+    },
+    "omics_context": {
+      "primary_domain": "proteogenomics",
+      "data_formats_detected": [
+        "VCF",
+        "FASTA",
+        "mzML"
+      ],
+      "pipeline_tools_detected": [
+        "VEP",
+        "PyEnsembl",
+        "MSFragger"
+      ],
+      "workflow_manager": "custom"
+    },
+    "output_instructions": {
+      "format": "json",
+      "delivery": "stdout",
+      "critical": "Your ENTIRE output must be a single JSON object. goyoke-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis.",
+      "team_dir": "/absolute/path — READ files from here (stdout files, pre-synthesis.md), do not write"
+    },
+    "$comment_runtime_fields": "wave0_findings_path and detected_interactions_path are injected at runtime by goyoke-team-prepare-synthesis (bioinformatics.go:100-103). Both are optional — absent when interaction detection is skipped.",
+    "wave0_findings_path": {
+      "type": "string",
+      "description": "Absolute path to pre-synthesis.md containing merged wave 0 findings and programmatic interaction detection results. Injected by goyoke-team-prepare-synthesis."
+    },
+    "detected_interactions_path": {
+      "type": "string",
+      "description": "Absolute path to detected-interactions.json containing programmatically detected cross-domain interactions from wave 0 reviewer outputs. Injected by goyoke-team-prepare-synthesis when interaction-rules.json is available. Absent if no rules are configured."
+    }
+  },
+  "stdout": {
+    "agent": "staff-bioinformatician",
+    "workflow": "review-bioinformatics",
+    "layers": [
+      {
+        "layer": 1,
+        "name": "Information Integrity Chain",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [
+          {
+            "description": "Finding description",
+            "source_reviewers": [
+              "reviewer-a",
+              "reviewer-b"
+            ],
+            "severity": "critical|warning|info",
+            "cross_domain": true,
+            "causal_chain": "reviewer-a #N → reviewer-b #M"
+          }
+        ],
+        "assessment": "One-sentence layer assessment"
+      },
+      {
+        "layer": 2,
+        "name": "Version & Reference Coherence",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [],
+        "assessment": ""
+      },
+      {
+        "layer": 3,
+        "name": "Statistical Coherence",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [],
+        "assessment": ""
+      },
+      {
+        "layer": 4,
+        "name": "Cross-Domain Finding Synthesis",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [],
+        "assessment": ""
+      },
+      {
+        "layer": 5,
+        "name": "Contradiction Resolution",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [],
+        "assessment": ""
+      },
+      {
+        "layer": 6,
+        "name": "Methodology Assessment",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [],
+        "assessment": ""
+      },
+      {
+        "layer": 7,
+        "name": "Coverage, Completeness & Verdict",
+        "status": "PASS|CONCERN|FAIL",
+        "findings": [],
+        "assessment": ""
+      }
+    ],
+    "unified_verdict": "BLOCK|WARNING|APPROVE",
+    "verdict_justification": "Per-layer status summary with key finding cited",
+    "cross_domain_findings": [
+      {
+        "title": "Issue title",
+        "domains": [
+          "genomics",
+          "proteogenomics"
+        ],
+        "severity": "critical|warning|info",
+        "description": "Cross-domain issue description",
+        "causal_chain": "upstream finding → downstream impact"
+      }
+    ],
+    "contradictions_resolved": [
+      {
+        "title": "Contradiction title",
+        "reviewer_a": "reviewer-id",
+        "reviewer_a_finding": "finding summary",
+        "reviewer_b": "reviewer-id",
+        "reviewer_b_finding": "finding summary",
+        "resolution": "Which is correct and why",
+        "impact_on_verdict": "How this affects the final assessment"
+      }
+    ],
+    "coverage_gaps": [
+      {
+        "gap": "Pipeline stage or concern not covered",
+        "reason": "Why no reviewer checked this",
+        "impact": "Potential risk from the gap"
+      }
+    ],
+    "causal_chains": [
+      {
+        "chain": [
+          "genomics #N (description)",
+          "proteogenomics #M (description)",
+          "proteomics #P (description)"
+        ],
+        "root_cause": "Upstream issue that cascades",
+        "systemic_severity": "critical|warning"
+      }
+    ],
+    "methodology_assessment": {
+      "search_strategy": "appropriate|suboptimal|inappropriate",
+      "quantification_method": "appropriate|suboptimal|inappropriate",
+      "annotation_strategy": "appropriate|suboptimal|inappropriate",
+      "overall": "Assessment summary"
+    },
+    "reviewer_summary": {
+      "completed": [
+        "reviewer-ids"
+      ],
+      "failed": [],
+      "total_findings": {
+        "critical": 0,
+        "warning": 0,
+        "info": 0
+      }
+    },
+    "report_markdown": "# Full human-readable report...",
+    "metadata": {
+      "layers_evaluated": 7,
+      "thinking_budget_used": 0,
+      "total_wave0_findings_processed": 0
+    }
+  }
+}

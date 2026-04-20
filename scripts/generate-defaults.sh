@@ -123,12 +123,20 @@ done
 # --- 7. Copy root-level files ---
 echo "[generate-defaults] Copying root files..."
 cp "${SOURCE}/routing-schema.json" "${DEST}/routing-schema.json" 2>/dev/null || true
-# CLAUDE.md: embed the real one so the binary has full routing knowledge
-cp "${SOURCE}/CLAUDE.md" "${DEST}/CLAUDE.md"
-# settings-template.json: extract hooks, convert to multicall format (goyoke hook <name>)
-jq '{hooks: .hooks}' "${SOURCE}/settings.json" | \
-    sed 's|/[^"]*bin/\(goyoke-[^"]*\)|\1|g' | \
-    sed 's|"goyoke-\([^"]*\)"|"goyoke hook \1"|g' > "${DEST}/settings-template.json"
+# CLAUDE.md: embed the real one (skip if not present — CI uses committed version)
+if [[ -f "${SOURCE}/CLAUDE.md" ]]; then
+    cp "${SOURCE}/CLAUDE.md" "${DEST}/CLAUDE.md"
+elif [[ ! -f "${DEST}/CLAUDE.md" ]]; then
+    echo "WARNING: No CLAUDE.md source and no committed version in defaults/"
+fi
+# settings-template.json: extract hooks, convert to multicall format
+if [[ -f "${SOURCE}/settings.json" ]]; then
+    jq '{hooks: .hooks}' "${SOURCE}/settings.json" | \
+        sed 's|/[^"]*bin/\(goyoke-[^"]*\)|\1|g' | \
+        sed 's|"goyoke-\([^"]*\)"|"goyoke hook \1"|g' > "${DEST}/settings-template.json"
+elif [[ ! -f "${DEST}/settings-template.json" ]]; then
+    echo "WARNING: No settings.json source and no committed settings-template.json in defaults/"
+fi
 
 # --- 8. Post-copy cleanup ---
 # Remove dotfiles copied transitively from source (not allowed in distribution)

@@ -1,0 +1,158 @@
+# Sharp Edges for Backend Reviewer Agent
+# Security and performance pitfalls in backend code
+
+version: "1.1"
+updated: "2026-04-11"
+
+sharp_edges:
+  - id: sql-injection
+    severity: critical
+    category: security
+    description: "SQL injection via string concatenation"
+    symptom: "Raw SQL queries with user input concatenation"
+    solution: |
+      NEVER concatenate user input into SQL
+      Use parameterized queries or ORM methods
+      Example (Python): cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    auto_inject: true
+
+  - id: command-injection
+    severity: critical
+    category: security
+    description: "Command injection in shell execution"
+    symptom: "os.system(), exec(), subprocess with user input"
+    solution: |
+      NEVER pass unsanitized user input to shell
+      Use subprocess with args list, not shell=True
+      Example: subprocess.run(["git", "clone", url]) NOT subprocess.run(f"git clone {url}", shell=True)
+    auto_inject: true
+
+  - id: auth-bypass
+    severity: critical
+    category: security
+    description: "Missing authentication on sensitive endpoints"
+    symptom: "Handlers without auth middleware, admin routes publicly accessible"
+    solution: |
+      Apply authentication middleware to ALL protected routes
+      Check authorization BEFORE processing request
+      Never rely on client-side auth checks alone
+    auto_inject: true
+
+  - id: hardcoded-secrets
+    severity: critical
+    category: security
+    description: "Secrets in source code"
+    symptom: "API keys, passwords, tokens as string literals"
+    solution: |
+      NEVER commit secrets to source
+      Use environment variables or secret management service
+      Rotate compromised secrets immediately
+    auto_inject: true
+
+  - id: missing-input-validation
+    severity: high
+    category: security
+    description: "Unvalidated user input"
+    symptom: "Direct use of request data without validation"
+    solution: |
+      Validate ALL user input before processing
+      Check type, range, format, length
+      Use schema validation libraries (pydantic, joi, etc.)
+    auto_inject: true
+
+  - id: n-plus-one-queries
+    severity: high
+    category: performance
+    description: "N+1 query problem in loops"
+    symptom: "Database query inside loop over results"
+    solution: |
+      Use eager loading / prefetch / JOIN
+      Example (Django): .select_related(), .prefetch_related()
+      Example (Go): Use preload or join queries
+    auto_inject: true
+
+  - id: missing-rate-limits
+    severity: high
+    category: security
+    description: "No rate limiting on public endpoints"
+    symptom: "Endpoints vulnerable to abuse/DoS"
+    solution: |
+      Apply rate limiting middleware to public APIs
+      Different limits for authenticated vs anonymous
+      Consider IP-based, user-based, and endpoint-based limits
+    auto_inject: true
+
+  - id: insecure-deserialization
+    severity: critical
+    category: security
+    description: "Unsafe deserialization of user data"
+    symptom: "pickle.loads(), eval(), YAML unsafe load with user input"
+    solution: |
+      NEVER deserialize untrusted data with unsafe methods
+      Use JSON for data interchange
+      If pickle needed, sign/encrypt payloads
+    auto_inject: true
+
+  - id: missing-error-context
+    severity: medium
+    category: observability
+    description: "Generic error responses without logging context"
+    symptom: "Cannot debug production issues"
+    solution: |
+      Log errors with request ID, user ID, timestamp
+      Return generic errors to client, log details server-side
+      Use structured logging (JSON)
+    auto_inject: true
+
+  - id: exposed-stack-traces
+    severity: high
+    category: security
+    description: "Stack traces leaked to client"
+    symptom: "Debug mode enabled in production"
+    solution: |
+      NEVER return stack traces to clients
+      Use error handling middleware to catch and sanitize
+      Log full traces server-side only
+    auto_inject: true
+
+  - id: jsonl-ndjson-scanner-limits
+    severity: high
+    category: reliability
+    description: "Default scanner limits break valid JSONL or NDJSON payloads"
+    symptom: "Large telemetry, transcript, session, or CLI stream records vanish or abort the reader"
+    solution: |
+      Review all bufio.Scanner-based readers that process structured line-based
+      payloads. Require an explicit raised buffer limit or a safer reader when
+      payloads can exceed the default token cap.
+    auto_inject: true
+
+  - id: shared-temp-fallback
+    severity: high
+    category: security
+    description: "Shared temp-directory fallbacks expose runtime or telemetry state"
+    symptom: "Caches, guard files, or telemetry land in predictable /tmp paths with weak permissions"
+    solution: |
+      Flag deterministic shared temp fallbacks for any persistent or
+      security-relevant data. Require per-user scoping and 0700 permissions.
+    auto_inject: true
+
+  - id: path-derived-filename
+    severity: high
+    category: security
+    description: "Raw session or user identifiers are joined into filenames without sanitization"
+    symptom: "Path separators or traversal characters alter the resolved target path"
+    solution: |
+      Treat session IDs, tool names, and external identifiers as untrusted path
+      components. Hash or sanitize them before writing cache or state files.
+    auto_inject: true
+
+  - id: partial-failure-reported-success
+    severity: high
+    category: reliability
+    description: "Multi-unit backend operations return success despite unresolved failures"
+    symptom: "Wave, batch, or fan-out operations log warnings but still exit cleanly"
+    solution: |
+      Inspect aggregate success semantics. If any unit failed and the external
+      contract implies full completion, the command should fail or report partial
+      status explicitly.
+    auto_inject: true

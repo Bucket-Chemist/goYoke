@@ -1,0 +1,296 @@
+edges:
+
+  # ============================================================
+  # CATEGORY: PARAMETER VERIFICATION FAILURES
+  # These cause cascading errors in all downstream analysis
+  # ============================================================
+
+  - name: trusting_documentation_defaults
+    severity: critical
+    description: >
+      Using model parameters from documentation, README files, blog posts, or
+      HuggingFace model card prose instead of fetching the actual config.json.
+      Class defaults in transformers code (e.g., num_hidden_layers=32) are
+      frequently wrong for specific model sizes. Example: Qwen3-8B has 36 layers,
+      not the class default of 32. This 12% error propagates through every memory
+      calculation in the analysis.
+    mitigation: >
+      ALWAYS fetch config.json from HuggingFace raw URL before any calculation.
+      Cross-reference n_layers, n_kv_heads, head_dim against any numbers in the
+      plan being reviewed. If numbers disagree, the config.json wins. Quote the
+      URL in your output: "Verified from huggingface.co/{org}/{model}/raw/main/config.json".
+
+  - name: confusing_q_heads_with_kv_heads
+    severity: critical
+    description: >
+      Using num_attention_heads (Q heads) where num_key_value_heads (KV heads)
+      is required in KV cache calculations. With GQA, these differ by 4-8x.
+      Using Q heads makes KV cache appear 4-8x larger than reality, leading to
+      false "infeasible" verdicts that kill viable projects. Conversely, using
+      KV heads where Q heads are needed underestimates compute requirements.
+    mitigation: >
+      KV cache formula uses n_kv_heads exclusively. Attention compute uses
+      n_q_heads. Always label which you're using. When extracting from config.json,
+      extract BOTH and note the GQA ratio (q_heads / kv_heads).
+
+  - name: moe_kv_multiplication_error
+    severity: critical
+    description: >
+      Calculating MoE model KV cache as (dense KV) × (num_experts) or
+      (dense KV) × (active_experts). MoE routing applies ONLY to FFN layers.
+      Attention layers (and therefore KV cache) are shared across all experts.
+      KV cache size for an MoE model equals that of a dense model with the
+      same attention configuration.
+    mitigation: >
+      For MoE models: identify the attention parameters (n_layers, n_kv_heads,
+      head_dim) separately from FFN/expert parameters. Explicitly state:
+      "Attention is shared across experts. KV cache is independent of expert count."
+      Verify by checking if config.json has separate attention vs expert layer counts.
+
+  # ============================================================
+  # CATEGORY: HARDWARE ASSUMPTION FAILURES
+  # Assuming capabilities without verifying against actual hardware
+  # ============================================================
+
+  - name: assuming_vulkan_flash_attention_works
+    severity: critical
+    description: >
+      Planning around Vulkan flash attention on AMD GPUs. llama.cpp's Vulkan FA
+      implementation requires NV_cooperative_matrix2, an NVIDIA-only Vulkan
+      extension. On ALL AMD GPUs (RDNA 1/2/3/3.5, including iGPUs), enabling
+      --flash-attn causes either CPU fallback (100x slower) or crashes. This
+      has been confirmed by multiple community reports and closed PRs. Planning
+      around FA on AMD leads to infeasible memory projections (FA eliminates
+      O(n²) attention intermediates; without it, long contexts OOM).
+    mitigation: >
+      When target is AMD Vulkan: explicitly state "Flash attention is non-functional
+      on AMD in llama.cpp." Plan for standard tiled attention. Note that KV cache
+      eviction (TriAttention, etc.) is MORE valuable on AMD because it caps the
+      effective context length, reducing the O(n²) attention overhead that FA
+      would otherwise eliminate.
+
+  - name: assuming_uma_zero_copy
+    severity: high
+    description: >
+      Claiming "UMA means zero-copy" without verifying Vulkan memory type flags.
+      AMD APUs expose multiple memory types on the device-local heap. Some have
+      HOST_VISIBLE (CPU can read), others don't. If the Vulkan backend allocates
+      KV buffers with a type that lacks HOST_VISIBLE, CPU cannot directly read
+      GPU-written data regardless of UMA. Additionally, the allocation code may
+      iterate memory types starting from index 0, picking a non-host-visible type
+      before reaching the host-visible one.
+    mitigation: >
+      Require vulkaninfo output showing memoryType with all three flags:
+      DEVICE_LOCAL_BIT, HOST_VISIBLE_BIT, HOST_COHERENT_BIT on the same type.
+      Then verify the application actually uses that type for KV buffer allocation.
+      Generate a preflight check script. Always document a fallback path via
+      explicit buffer copy (vk_buffer_read) if zero-copy is unverified.
+
+  - name: assuming_api_exists_without_grep
+    severity: high
+    description: >
+      Designing integration around llama.cpp APIs (defrag(), context_shift(),
+      kv_cache_compact(), etc.) without verifying they exist in the current
+      codebase. llama.cpp evolves rapidly (10-20 merged PRs per week). APIs are
+      added, renamed, and removed frequently. defrag() was removed entirely in
+      early 2026. Context shifting was replaced by the slot allocator. Building
+      a plan around a non-existent API wastes the entire integration phase.
+    mitigation: >
+      Before designing against ANY llama.cpp API: grep the source tree.
+      "grep -rn 'function_name' src/" takes 2 seconds and prevents 2 weeks
+      of wasted work. Document the grep result in your analysis. If the API
+      doesn't exist, note what DOES exist and how to achieve the same goal.
+
+  - name: theoretical_bandwidth_as_real
+    severity: high
+    description: >
+      Using DDR5-5600 theoretical bandwidth (89.6 GB/s) as achievable throughput.
+      Real-world bandwidth is 65-80% of theoretical. On UMA systems, bandwidth
+      is shared between CPU and GPU with no hardware partitioning. During active
+      GPU inference, CPU gets 25-40% of available bandwidth. Scoring pass time
+      estimates based on theoretical bandwidth will be 2-4x too optimistic.
+    mitigation: >
+      Use 65% of theoretical as baseline. For UMA with concurrent GPU work, use
+      30% of theoretical for CPU-side scoring estimates. Always state the
+      assumption: "Estimated at X GB/s real-world (Y% of Z GB/s theoretical,
+      accounting for GPU contention)."
+
+  - name: ignoring_vulkan_heap_vs_bios_vram
+    severity: medium
+    description: >
+      Using BIOS VRAM allocation (e.g., "32 GB set in BIOS") as the available
+      Vulkan heap size. The actual Vulkan heap is reduced by driver allocations,
+      OS overhead, and GTT management. A "32 GB" BIOS setting may yield only
+      28-30 GB of usable Vulkan heap. Plans that are tight on memory fail
+      in practice despite appearing feasible on paper.
+    mitigation: >
+      Use vulkaninfo heap size as truth: "vulkaninfo | grep -A 5 memoryHeaps".
+      Report the actual budget field, not the size field (budget accounts for
+      in-use allocations). Note: budget changes dynamically as other processes
+      allocate GPU memory.
+
+  # ============================================================
+  # CATEGORY: ARCHITECTURAL REASONING FAILURES
+  # Getting the systems engineering wrong
+  # ============================================================
+
+  - name: ignoring_compression_composability
+    severity: high
+    description: >
+      Evaluating KV compression techniques in isolation when they can stack.
+      Token eviction (TriAttention, H2O) removes entire entries. Bit compression
+      (TurboQuant, Q4_0) reduces size per entry. These are orthogonal and multiply.
+      Failing to consider stacking either misses the optimal solution (when
+      individual techniques are insufficient) or over-engineers (when a simpler
+      stack would suffice).
+    mitigation: >
+      Always evaluate compression as a stack: eviction × quantization.
+      Show the combined compression ratio and resulting memory. A plan using
+      aggressive eviction (10×) on f16 KV may be outperformed by moderate
+      eviction (5×) on Q4_0 KV (5× × 4× = 20×) with less quality impact.
+
+  - name: planning_around_removed_infrastructure
+    severity: critical
+    description: >
+      Building eviction/compaction logic around llama.cpp's defragmentation
+      system, which has been completely removed from the codebase. The current
+      architecture uses a slot allocator where freed cells (via seq_rm) are
+      reused by find_slot() without compaction. Plans that call defrag() will
+      fail to compile. Plans that manually compact cells will fight the slot
+      allocator and corrupt cache state.
+    mitigation: >
+      The correct eviction pattern is: score entries → call seq_rm(seq_id, pos,
+      pos+1) for each evicted position → done. No compaction. The slot allocator
+      sets head to the freed cell, and find_slot() fills holes naturally. The
+      attention mask is rebuilt from live cell metadata each decode step and
+      automatically handles non-contiguous positions.
+
+  - name: ignoring_rope_inversion_precision
+    severity: medium
+    description: >
+      Assuming RoPE inversion is free and exact. While mathematically exact
+      (orthogonal matrix), FP16 cached keys lose precision during the forward
+      RoPE application. Inverting in FP16 compounds this error. Over 128
+      dimensions with large position indices and high-frequency rotation
+      components, the accumulated error can meaningfully shift cosine similarity
+      scores used for KV importance scoring.
+    mitigation: >
+      Always compute RoPE inversion in FP32 using precomputed sin/cos tables.
+      llama.cpp already maintains FP32 cos/sin tables for K-shift. Validate
+      with roundtrip test: apply RoPE then inverse, verify ||recovered - original||
+      < ε per head. Document the precision budget in the plan.
+
+  - name: scoring_post_rope_keys_directly
+    severity: high
+    description: >
+      Using post-RoPE keys for importance scoring with pre-RoPE calibration
+      centers. This contradicts the fundamental insight of methods like
+      TriAttention: Q/K vectors cluster in pre-RoPE space BECAUSE RoPE
+      applies position-dependent rotations that destroy the clustering.
+      Post-RoPE scoring degrades to a weaker form of attention-score
+      approximation, losing the entire advantage of the technique.
+    mitigation: >
+      If scoring requires pre-RoPE keys and the cache stores post-RoPE keys:
+      apply inverse RoPE before scoring. Do NOT skip this step. Do NOT claim
+      "cosine similarity is approximately preserved through rotation" — it is
+      for nearby positions but fails catastrophically at large position deltas.
+
+  - name: ignoring_hadamard_rotation_in_scoring
+    severity: medium
+    description: >
+      When KV cache uses quantized types (q4_0, q8_0, tq3_0), llama.cpp's
+      PR #21038 applies Hadamard rotation to Q/K/V activations BEFORE cache
+      insertion. The cached K vectors are in Hadamard-rotated space, not
+      standard space. Scoring these against non-rotated calibration centers
+      produces meaningless results. The Hadamard rotation distributes
+      information across dimensions, so cosine similarity with non-rotated
+      centers is essentially random.
+    mitigation: >
+      Check if the KV cache type triggers Hadamard rotation (any quantized
+      type when head_dim % 64 == 0). If so, apply inverse Hadamard (WHT is
+      self-inverse) after dequantization and before scoring. For initial
+      implementation, use f16 KV cache to avoid this complexity. Add
+      Hadamard-aware scoring as a separate phase.
+
+  # ============================================================
+  # CATEGORY: PROCESS FAILURES
+  # Getting the engineering process wrong
+  # ============================================================
+
+  - name: skipping_preflight_verification
+    severity: high
+    description: >
+      Starting implementation without verifying hardware and software
+      assumptions. "We'll find out if it works when we try" is acceptable
+      for a 10-minute experiment. For a multi-week project, discovering
+      that Vulkan FA doesn't work on your GPU, or that defrag doesn't
+      exist, or that your memory types aren't host-visible, wastes
+      significant engineering time.
+    mitigation: >
+      Generate and run a preflight verification script BEFORE Phase 1.
+      Each check should print PASS/FAIL/NEEDS_REVIEW with evidence.
+      The script should test: memory type flags, GPU sync model, API
+      existence, flash attention status, instruction set support, and
+      actual heap sizes. 30 minutes of verification prevents 2 weeks
+      of wasted implementation.
+
+  - name: single_context_length_analysis
+    severity: medium
+    description: >
+      Showing memory feasibility at only one context length (typically the
+      target maximum). This hides the crossover point where the system
+      transitions from feasible to infeasible. It also hides whether
+      compression is needed at short contexts (it usually isn't) and
+      where the performance benefit of compression actually kicks in.
+    mitigation: >
+      Always show memory arithmetic at 8K, 16K, 32K, 64K, and 128K
+      context lengths. Show both with and without compression. This
+      reveals the crossover point and helps users choose budgets
+      appropriate to their actual context needs.
+
+  - name: underestimating_upstream_churn
+    severity: medium
+    description: >
+      Allocating zero time for llama.cpp rebasing and API adaptation.
+      The project merges 10-20 PRs per week. Over an 8-12 week project,
+      2-3 PRs will affect KV cache code, 1-2 will change Vulkan backend
+      interfaces, and at least one will rename or restructure a file
+      you depend on. Not budgeting for this leads to schedule overruns
+      and integration panics.
+    mitigation: >
+      Budget 15-20% of total project time for upstream tracking and
+      rebasing. Pin to a specific commit at project start. Rebase
+      weekly or after each phase. Keep patches minimal and isolated
+      to reduce merge conflict surface area.
+
+  - name: feasibility_without_fallback
+    severity: medium
+    description: >
+      Declaring a deployment "feasible" without specifying what happens
+      when the marginal case tips over (OOM at runtime, quality degradation
+      under load, thermal throttling on mobile). "It fits with 1.2 GB
+      headroom" is not the same as "it will reliably run in production."
+    mitigation: >
+      For every "feasible" verdict, specify:
+      1. What the margin is (GB of headroom)
+      2. What consumes headroom dynamically (multi-user, long conversations)
+      3. What the fallback is when margin is exhausted (reduce context,
+         increase compression, offload layers)
+      4. How the system detects and responds to memory pressure
+
+  - name: ignoring_non_fa_attention_cost
+    severity: high
+    description: >
+      On hardware where flash attention doesn't work (all AMD Vulkan),
+      standard attention materializes O(n²) intermediate matrices. Plans
+      that show KV cache fitting in memory may still OOM because the
+      attention computation itself requires n_heads × seq_len × seq_len × 4
+      bytes of temporary memory. At 32K context with 32 heads, this is
+      ~131 GB — obviously infeasible. Even with tiled attention, the
+      compute cost scales quadratically.
+    mitigation: >
+      When FA is non-functional, always note: "Standard attention path:
+      compute scales O(n²) with context length." If proposing KV eviction,
+      note that eviction caps effective context, making the O(n²) term
+      manageable. Compute the attention intermediate size at the budgeted
+      context length, not the raw context length.

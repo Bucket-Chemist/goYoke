@@ -1,0 +1,307 @@
+---
+name: explore
+description: Structured exploration for complex or ambiguous tasks. Spawns scout for reconnaissance, delegates to architect for planning. Use when scope is unknown or multi-file changes are likely.
+---
+
+# Explore Skill v2.1
+
+## Purpose
+
+Turn vague intent into an executable plan through reconnaissance and structured planning.
+
+**What this skill does:**
+1. Scout — Assess scope before committing expensive resources
+2. Plan — Delegate to architect for phased implementation plan
+3. Approve — Present plan to user, await confirmation
+
+**What this skill does NOT do:**
+- Implement code (delegate to language agents)
+- Enforce routing rules (handled by `validate-routing.sh` hook)
+- Load/match other skills (use `librarian` if needed)
+
+---
+
+## Invocation
+
+- `/explore` — Start exploration, prompt for goal
+- `/explore [goal]` — Start with stated goal
+
+---
+
+## Workflow
+
+### Phase 1: Acknowledge
+
+```
+[explore] Starting exploration.
+[explore] Goal: <stated or pending>
+```
+
+If no goal provided, ask:
+```
+What do you want to achieve? One sentence.
+```
+
+### Phase 2: Scout
+
+**Purpose:** Determine scope before committing resources.
+
+**When to scout:**
+- Scope is unknown ("refactor X", "improve Y")
+- Task mentions modules, systems, or architectural components
+- Could involve 5+ files
+
+**When to skip scout:**
+- User specified exact files
+- Single file operation
+- Trivial task (typo, config change)
+
+**Scout invocation (Bash-first workflow):**
+
+```bash
+# Stage 1: Gather deterministic metrics via Bash
+~/.claude/scripts/gather-scout-metrics.sh <target> > /tmp/bash_metrics.txt
+
+# Stage 2: Pipe metrics to scout for pattern analysis
+{
+  cat /tmp/bash_metrics.txt
+  echo "---FILES---"
+  find <target> -type f \( -name "*.py" -o -name "*.R" -o -name "*.md" \)
+
+# Stage 3: Calculate complexity score from scout JSON
+.claude/scripts/calculate-complexity.sh
+```
+
+**After scout, read the results:**
+
+```bash
+# Read complexity score
+cat .claude/tmp/complexity_score
+# Read recommended tier
+cat .claude/tmp/recommended_tier
+# Read full scout report
+cat .claude/tmp/scout_metrics.json
+```
+
+**Scout returns JSON:**
+```json
+{
+  "scout_report": {
+    "scope_metrics": {"total_files": N, "total_lines": N, "estimated_tokens": N},
+    "complexity_signals": {"import_density": "low|medium|high", "cross_file_dependencies": N},
+    "routing_recommendation": {
+      "recommended_tier": "haiku|sonnet|external",
+      "confidence": "high|medium|low",
+      "clarification_needed": "<question or null>"
+    }
+  }
+}
+```
+
+**Announce result:**
+```
+[scout] Files: X | Lines: Y | Tokens: ~Z
+[scout] Complexity score: S → Recommended tier: T (confidence: C)
+[scout] Delegation ceiling: D
+```
+
+**Delegation ceiling determines which agents can be spawned:**
+
+| Ceiling | Allowed Agents |
+|---------|----------------|
+| haiku | codebase-search, haiku-scout |
+| haiku_thinking | + scaffolder, tech-docs-writer, code-reviewer, librarian, memory-archivist |
+| sonnet | + python-pro, python-ux, r-pro, r-shiny-pro, orchestrator, architect |
+
+If a phase requires agents above the ceiling, explore will prompt:
+```
+[explore] Phase 2 requires python-pro (sonnet), but ceiling is haiku_thinking.
+[explore] Override ceiling? (y/n)
+```
+
+### Phase 3: Route Based on Scout
+
+| Scout Result | Action |
+|--------------|--------|
+| confidence: high, tier: haiku/sonnet | Proceed to architect |
+| confidence: low | Ask the clarification question, then proceed |
+
+**If clarification needed:**
+
+Scout may return `clarification_needed: "Should this include the test suite?"`. Ask that exact question. One question only. Then proceed.
+
+### Phase 4: Architect
+
+**Delegate planning to architect agent:**
+
+```javascript
+Task({
+  description: "Create implementation plan",
+  subagent_type: "Plan",
+  model: "sonnet",
+  prompt: `AGENT: architect
+
+1. TASK: Create phased implementation plan for: <goal>
+2. EXPECTED OUTCOME: specs.md file + TaskCreate calls
+3. REQUIRED SKILLS: Dependency mapping, risk assessment
+4. REQUIRED TOOLS: Read, Glob, Grep, Write
+5. MUST DO:
+   - Parse scout report (attached)
+   - If scout confidence was low, incorporate clarification response
+   - Create .claude/tmp/specs.md with decisions and rationale
+   - Use TaskCreate to register actionable tasks
+6. MUST NOT DO:
+   - Implement code (planning only)
+   - Skip specs.md
+7. CONTEXT:
+   Scout report: <paste JSON>
+   User goal: <goal>
+   Clarification (if any): <response>`
+})
+```
+
+### Phase 5: Present Plan
+
+After architect completes, present to user:
+
+```
+[plan] Implementation plan ready.
+
+Phases:
+1. <phase 1 summary>
+2. <phase 2 summary>
+...
+
+Files affected: X
+Estimated complexity: <from specs.md>
+
+Specs saved to: .claude/tmp/specs.md
+Todos registered: Y tasks
+
+Proceed with implementation? (y/n/edit)
+```
+
+**On user response:**
+- `y` or `yes` → Proceed to execution
+- `n` or `no` → Exit exploration
+- `edit` or feedback → Re-invoke architect with feedback
+
+### Phase 6: Execute
+
+Delegate implementation to appropriate agents based on plan phases.
+
+**Routing (handled by hook, but for reference):**
+
+| Task Type | Agent | Tier |
+|-----------|-------|------|
+| File discovery | codebase-search | haiku |
+| Boilerplate/scaffolding | scaffolder | haiku+think |
+| Documentation | tech-docs-writer | haiku+think |
+| Python implementation | python-pro | sonnet |
+| R implementation | r-pro | sonnet |
+| Cross-module coordination | orchestrator | sonnet |
+| Deep analysis | einstein | opus |
+
+**Example delegation:**
+
+```javascript
+Task({
+  description: "Implement phase 1: Add logging utility",
+  subagent_type: "general-purpose",
+  model: "sonnet",
+  prompt: `AGENT: python-pro
+
+1. TASK: Create logging utility as specified in phase 1
+2. EXPECTED OUTCOME: src/utils/logger.py with tests
+3. REQUIRED SKILLS: Python implementation
+4. REQUIRED TOOLS: Write, Edit, Bash
+5. MUST DO: Follow specs.md requirements, add tests
+6. MUST NOT DO: Modify files outside scope
+7. CONTEXT: See .claude/tmp/specs.md phase 1`
+})
+```
+
+---
+
+## Quick Reference
+
+```
+User Request
+     │
+     ▼
+┌─────────────┐
+│  (optional) │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  ARCHITECT  │ ← Sonnet: specs.md + TaskCreate
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   APPROVE   │ ← User confirms plan
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   EXECUTE   │ ← Tiered agents per phase
+└─────────────┘
+```
+
+---
+
+## Cost Targets
+
+| Phase | Max Cost |
+|-------|----------|
+| Scout | $0.01 |
+| Architect | $0.15 |
+| Total exploration (pre-execution) | $0.20 |
+
+---
+
+## Memory Integration
+
+After architect creates specs.md, and after successful execution, delegate to `memory-archivist`:
+
+```javascript
+Task({
+  description: "Archive exploration learnings",
+  subagent_type: "general-purpose",
+  model: "haiku",
+  prompt: `AGENT: memory-archivist
+
+1. TASK: Archive specs.md and session learnings
+2. EXPECTED OUTCOME: 
+   - specs.md archived to .claude/memory/decisions/
+   - Pending learnings processed
+   - Tmp files cleaned
+3. REQUIRED TOOLS: Read, Write, Glob
+4. MUST DO:
+   - Add frontmatter to archived files
+   - Delete .claude/tmp/specs.md after archiving
+   - Clean stale tmp files (scout_metrics.json, complexity_score)
+5. MUST NOT DO:
+   - Archive trivial items
+   - Create duplicates
+6. CONTEXT: End of exploration session`
+})
+```
+
+This ensures future sessions can query:
+- "Why did we structure X this way?" → Search `.claude/memory/decisions/`
+- "What broke before?" → Search `.claude/memory/sharp-edges/`
+
+---
+
+## State Files Reference
+
+| File | Written By | Read By | Purpose |
+|------|------------|---------|---------|
+| `.claude/tmp/scout_metrics.json` | scout | calculate-complexity.sh, architect | Scout output |
+| `.claude/tmp/complexity_score` | calculate-complexity.sh | validate-routing.sh | Numeric complexity |
+| `.claude/tmp/recommended_tier` | calculate-complexity.sh | validate-routing.sh | Tier recommendation |
+| `.claude/tmp/specs.md` | architect | memory-archivist | Planning decisions |
+| `.claude/memory/decisions/*.md` | memory-archivist | future sessions | Archived decisions |
+| `.claude/memory/sharp-edges/*.md` | memory-archivist | future sessions | Archived problems |

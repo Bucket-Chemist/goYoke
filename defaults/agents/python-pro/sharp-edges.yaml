@@ -1,0 +1,134 @@
+edges:
+  - name: mutable_default_arguments
+    severity: critical
+    description: >
+      Mutable default arguments (list, dict, set) are shared across all calls.
+      This is one of Python's most common gotchas.
+    mitigation: >
+      Use None as default and create mutable inside function.
+    example:
+      wrong: |
+        def append_to(element, lst=[]):
+            lst.append(element)
+            return lst
+      right: |
+        def append_to(element, lst=None):
+            if lst is None:
+                lst = []
+            lst.append(element)
+            return lst
+
+  - name: gil_cpu_bound
+    severity: high
+    description: >
+      The GIL (Global Interpreter Lock) prevents true parallelism for CPU-bound
+      work with threads. Only I/O-bound work benefits from threading.
+    mitigation: >
+      Use ProcessPoolExecutor for CPU-bound work, asyncio or ThreadPoolExecutor
+      for I/O-bound work.
+    example:
+      wrong: |
+        # CPU-bound with threads - GIL blocks parallelism
+        with ThreadPoolExecutor() as executor:
+            results = executor.map(cpu_intensive_func, data)
+      right: |
+        # CPU-bound with processes - bypasses GIL
+        with ProcessPoolExecutor() as executor:
+            results = executor.map(cpu_intensive_func, data)
+
+  - name: asyncio_run_nested
+    severity: high
+    description: >
+      asyncio.run() cannot be called from within an already-running event loop.
+      This fails in Jupyter notebooks and some frameworks.
+    mitigation: >
+      Check for running loop first, or use nest_asyncio in notebooks.
+    example:
+      wrong: |
+        async def main():
+            result = asyncio.run(other_async())  # RuntimeError!
+      right: |
+        async def main():
+            result = await other_async()
+
+  - name: import_cycles
+    severity: high
+    description: >
+      Circular imports cause ImportError or partial imports. Common when
+      modules reference each other's classes.
+    mitigation: >
+      Use TYPE_CHECKING for type-only imports, or restructure modules.
+    example:
+      wrong: |
+        # module_a.py
+        from module_b import B
+        class A:
+            def method(self) -> B: ...
+
+        # module_b.py
+        from module_a import A  # ImportError!
+        class B:
+            def method(self) -> A: ...
+      right: |
+        # module_a.py
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from module_b import B
+        class A:
+            def method(self) -> "B": ...
+
+  - name: slots_vs_dict
+    severity: medium
+    description: >
+      __slots__ saves memory but prevents dynamic attributes and some
+      introspection. __dict__ is flexible but uses more memory.
+    mitigation: >
+      Use __slots__ for data classes with fixed attributes. Skip for classes
+      needing dynamic attributes or inheritance flexibility.
+    example:
+      wrong: |
+        class Point:  # Each instance has __dict__ overhead
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+      right: |
+        class Point:
+            __slots__ = ("x", "y")  # 40-50% memory savings
+            def __init__(self, x, y):
+                self.x = x
+                self.y = y
+
+  - name: arch_linux_pep668
+    severity: critical
+    description: >
+      This system uses Arch Linux with externally-managed Python (PEP 668).
+      Direct python and pip commands will fail.
+    mitigation: >
+      Use uv for package management and script execution.
+    example:
+      wrong: |
+        python script.py
+        pip install package
+      right: |
+        uv run python script.py
+        uv add package
+        ~/.generic-python/bin/python script.py  # For standalone
+
+  - name: equality_vs_identity
+    severity: medium
+    description: >
+      `is` checks identity (same object), `==` checks equality (same value).
+      Confusing these causes subtle bugs, especially with None and small ints.
+    mitigation: >
+      Use `is` only for None, True, False. Use `==` for value comparison.
+    example:
+      wrong: |
+        if x is 1:  # Works by accident (int caching)
+            ...
+        if x == None:  # Works but not idiomatic
+            ...
+      right: |
+        if x == 1:
+            ...
+        if x is None:
+            ...

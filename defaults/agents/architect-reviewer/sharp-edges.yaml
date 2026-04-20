@@ -1,0 +1,140 @@
+# Sharp Edges for Architect Reviewer Agent
+# Structural and design anti-patterns in code organization
+
+version: "1.0"
+updated: "2026-02-02"
+
+sharp_edges:
+  - id: circular-dependency
+    severity: critical
+    category: architecture
+    description: "Circular dependency between packages/modules"
+    symptom: "Package A imports B imports C imports A; build order undefined"
+    solution: |
+      Extract shared types to a new package that both depend on
+      Use dependency inversion (interface in consumer, impl in provider)
+      Consider whether modules should be merged or one direction eliminated
+    auto_inject: true
+
+  - id: god-module
+    severity: critical
+    category: architecture
+    description: "Module with excessive responsibilities"
+    symptom: "> 1000 LOC, > 20 exports, > 10 dependencies, 'Manager/Handler/Utils' names"
+    solution: |
+      Identify distinct responsibilities
+      Split into cohesive sub-modules
+      Extract to bounded contexts
+      Apply single responsibility principle at module level
+    auto_inject: true
+
+  - id: leaky-abstraction
+    severity: critical
+    category: architecture
+    description: "Internal implementation details exposed in public API"
+    symptom: "Public function returns internal type; API reveals storage structure"
+    solution: |
+      Define public types at API boundary
+      Map internal types to DTOs at boundary
+      Return interfaces instead of concrete types
+      Never expose database models in API responses
+    auto_inject: true
+
+  - id: tight-coupling
+    severity: high
+    category: architecture
+    description: "Modules tightly coupled through concrete implementations"
+    symptom: "Direct instantiation of dependencies; no interfaces at boundaries"
+    solution: |
+      Depend on interfaces, not concrete types
+      Use dependency injection
+      Apply stable dependencies principle (depend on what changes less)
+    auto_inject: true
+
+  - id: high-fan-out
+    severity: high
+    category: architecture
+    description: "Module with excessive outgoing dependencies"
+    symptom: "File imports 10+ packages; orchestrator knows everything"
+    solution: |
+      Apply facade pattern to group related deps
+      Use dependency injection to limit direct imports
+      Consider if module is doing too much (SRP violation)
+    auto_inject: true
+
+  - id: shotgun-surgery
+    severity: high
+    category: architecture
+    description: "Single logical change requires modifying many files"
+    symptom: "Adding enum value requires touching 5+ files; switch statements scattered"
+    solution: |
+      Colocate related logic
+      Use polymorphism instead of type switches
+      Consider strategy or registry pattern
+    auto_inject: true
+
+  - id: missing-abstraction
+    severity: medium
+    category: architecture
+    description: "Repeated pattern not extracted to shared code"
+    symptom: "Same 5+ lines appear in 3+ files with minor variations"
+    solution: |
+      Extract to shared function/method
+      Create utility package if truly cross-cutting
+      Consider if pattern indicates missing domain concept
+    auto_inject: true
+
+  - id: premature-abstraction
+    severity: medium
+    category: architecture
+    description: "Abstraction created before third use case"
+    symptom: "Factory with single product; interface with single implementation (not for testing)"
+    solution: |
+      Wait for 3 concrete use cases before abstracting
+      Delete unused abstractions
+      Prefer inline code over premature extraction
+    auto_inject: true
+
+  - id: feature-envy
+    severity: medium
+    category: architecture
+    description: "Code manipulates another module's data more than its own"
+    symptom: "Method uses 5+ fields from other struct, 1 from own"
+    solution: |
+      Move method to the class it envies
+      Or pass a subset of needed data as parameters
+      Consider if domain model is misaligned
+    auto_inject: true
+
+  - id: inappropriate-intimacy
+    severity: medium
+    category: architecture
+    description: "Modules know too much about each other's internals"
+    symptom: "Accessing private/unexported fields; assumptions about internal state"
+    solution: |
+      Communicate through public interface only
+      Use mediator pattern if interaction is complex
+      Consider if modules should be merged
+    auto_inject: true
+
+  - id: unstable-dependency
+    severity: medium
+    category: architecture
+    description: "Stable module depends on frequently changing module"
+    symptom: "Core domain imports UI layer; database layer imports HTTP handlers"
+    solution: |
+      Apply stable dependencies principle
+      Use dependency inversion
+      Core should never import edge
+    auto_inject: true
+
+  - id: missing-interface
+    severity: low
+    category: architecture
+    description: "Concrete type used where interface would enable testing/flexibility"
+    symptom: "Cannot mock dependency in tests; tied to single implementation"
+    solution: |
+      Extract interface at usage site (not provider)
+      Make dependency injectable
+      Define small, focused interfaces (ISP)
+    auto_inject: true
