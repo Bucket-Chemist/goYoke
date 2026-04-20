@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
 )
@@ -336,22 +337,31 @@ func extractAgentFromPrompt(prompt string) string {
 	return "unknown"
 }
 
-// buildAgentTaskNames builds a map of agent-id → Task tool name from agents-index.json.
-// This allows validation to accept both category names (e.g., "Analyst") and
-// agent display names (e.g., "Einstein") as valid subagent_type values.
+func readMergedAgentsIndex() ([]byte, error) {
+	r, err := resolve.NewFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	results, err := r.ReadFileAll("agents/agents-index.json")
+	if err != nil {
+		return nil, err
+	}
+	switch len(results) {
+	case 1:
+		return results[0], nil
+	case 2:
+		return resolve.MergeAgentIndexJSON(results[1], results[0])
+	default:
+		return nil, fmt.Errorf("unexpected number of agents-index.json layers: %d", len(results))
+	}
+}
+
 func buildAgentTaskNames() map[string]string {
-	configDir, err := routing.GetClaudeConfigDir()
+	data, err := readMergedAgentsIndex()
 	if err != nil {
 		return nil
 	}
 
-	indexPath := filepath.Join(configDir, "agents", "agents-index.json")
-	data, err := os.ReadFile(indexPath)
-	if err != nil {
-		return nil
-	}
-
-	// Parse the index structure
 	var index struct {
 		Agents []struct {
 			ID   string `json:"id"`
@@ -362,32 +372,21 @@ func buildAgentTaskNames() map[string]string {
 		return nil
 	}
 
-	// Build map: agent-id → name (Task tool subagent_type)
 	result := make(map[string]string)
 	for _, agent := range index.Agents {
 		if agent.ID != "" && agent.Name != "" {
 			result[agent.ID] = agent.Name
 		}
 	}
-
 	return result
 }
 
-// loadAgentConfig loads agent configuration from agents-index.json.
-// Returns nil without error if agent is not found (not all agents are in index).
 func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
-	configDir, err := routing.GetClaudeConfigDir()
-	if err != nil {
-		return nil, err
-	}
-
-	indexPath := filepath.Join(configDir, "agents", "agents-index.json")
-	data, err := os.ReadFile(indexPath)
+	data, err := readMergedAgentsIndex()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read agents-index.json: %w", err)
 	}
 
-	// Parse the index structure (agents is an array)
 	var index struct {
 		Agents []struct {
 			ID                  string                       `json:"id"`
@@ -402,7 +401,6 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 		return nil, fmt.Errorf("failed to parse agents-index.json: %w", err)
 	}
 
-	// Search for agent by ID
 	for _, agent := range index.Agents {
 		if agent.ID == agentID {
 			return &routing.AgentConfig{
@@ -415,7 +413,7 @@ func loadAgentConfig(agentID string) (*routing.AgentConfig, error) {
 		}
 	}
 
-	return nil, nil // Agent not found, return nil (not an error)
+	return nil, nil
 }
 
 // logNestingBlock logs Task() blocks due to nesting level for telemetry
