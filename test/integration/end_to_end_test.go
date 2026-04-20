@@ -61,18 +61,18 @@ func setupTestRoutingSchema(t *testing.T, projectDir string) {
 
 // TestEndToEnd_FullMLPipeline tests complete lifecycle with ML reconciliation
 func TestEndToEnd_FullMLPipeline(t *testing.T) {
-	validateBinary := "../../bin/gogent-validate"
-	sharpEdgeBinary := "../../bin/gogent-sharp-edge"
-	archiveBinary := "../../bin/gogent-archive"
+	validateBinary := "../../bin/goyoke-validate"
+	sharpEdgeBinary := "../../bin/goyoke-sharp-edge"
+	archiveBinary := "../../bin/goyoke-archive"
 
 	if _, err := os.Stat(validateBinary); err != nil {
-		t.Skip("gogent-validate binary not found")
+		t.Skip("goyoke-validate binary not found")
 	}
 	if _, err := os.Stat(sharpEdgeBinary); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 	if _, err := os.Stat(archiveBinary); err != nil {
-		t.Skip("gogent-archive binary not found")
+		t.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -274,7 +274,7 @@ func TestEndToEnd_FullMLPipeline(t *testing.T) {
 	}
 
 	// Phase 6: Verify artifacts
-	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Handoff not created: %v", err)
 	}
@@ -305,9 +305,9 @@ func TestEndToEnd_FullMLPipeline(t *testing.T) {
 
 //TestEndToEnd_SessionStartToValidate tests context injection at session start
 func TestEndToEnd_SessionStartToValidate(t *testing.T) {
-	validateBinary := "../../bin/gogent-validate"
+	validateBinary := "../../bin/goyoke-validate"
 	if _, err := os.Stat(validateBinary); err != nil {
-		t.Skip("gogent-validate binary not found")
+		t.Skip("goyoke-validate binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -316,7 +316,7 @@ func TestEndToEnd_SessionStartToValidate(t *testing.T) {
 	sessionID := "context-injection-test"
 
 	// Create previous handoff
-	memoryDir := filepath.Join(projectDir, ".gogent", "memory")
+	memoryDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	previousHandoff := `# Previous Session Handoff
@@ -389,9 +389,9 @@ func TestEndToEnd_SessionStartToValidate(t *testing.T) {
 
 // TestEndToEnd_SubagentStopToArchive tests collaboration tracking through archival
 func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
-	archiveBinary := "../../bin/gogent-archive"
+	archiveBinary := "../../bin/goyoke-archive"
 	if _, err := os.Stat(archiveBinary); err != nil {
-		t.Skip("gogent-archive binary not found")
+		t.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -477,7 +477,7 @@ func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
 	}
 
 	// Verify handoff created
-	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Handoff not created: %v", err)
 	}
@@ -490,14 +490,14 @@ func TestEndToEnd_SubagentStopToArchive(t *testing.T) {
 
 // TestEndToEnd_ValidationToSharpEdge tests validation failure → sharp edge capture
 func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
-	validateBinary := "../../bin/gogent-validate"
-	sharpEdgeBinary := "../../bin/gogent-sharp-edge"
+	validateBinary := "../../bin/goyoke-validate"
+	sharpEdgeBinary := "../../bin/goyoke-sharp-edge"
 
 	if _, err := os.Stat(validateBinary); err != nil {
-		t.Skip("gogent-validate binary not found")
+		t.Skip("goyoke-validate binary not found")
 	}
 	if _, err := os.Stat(sharpEdgeBinary); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -602,7 +602,7 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 	}
 
 	// Verify sharp edge captured
-	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings not created: %v", err)
 	}
@@ -610,18 +610,18 @@ func TestEndToEnd_ValidationToSharpEdge(t *testing.T) {
 
 // TestEndToEnd_SessionArchivalWorkflow tests complete session lifecycle  
 func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
-	validateBinary := "../../bin/gogent-validate"
-	sharpEdgeBinary := "../../bin/gogent-sharp-edge"
-	archiveBinary := "../../bin/gogent-archive"
+	validateBinary := "../../bin/goyoke-validate"
+	sharpEdgeBinary := "../../bin/goyoke-sharp-edge"
+	archiveBinary := "../../bin/goyoke-archive"
 
 	if _, err := os.Stat(validateBinary); err != nil {
-		t.Skip("gogent-validate binary not found")
+		t.Skip("goyoke-validate binary not found")
 	}
 	if _, err := os.Stat(sharpEdgeBinary); err != nil {
-		t.Skip("gogent-sharp-edge binary not found")
+		t.Skip("goyoke-sharp-edge binary not found")
 	}
 	if _, err := os.Stat(archiveBinary); err != nil {
-		t.Skip("gogent-archive binary not found")
+		t.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -632,15 +632,15 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	// Set GOGENT_PROJECT_DIR so validate/archive binaries use project-scoped paths
-	os.Setenv("GOGENT_PROJECT_DIR", projectDir)
-	defer os.Unsetenv("GOGENT_PROJECT_DIR")
+	// Set GOYOKE_PROJECT_DIR so validate/archive binaries use project-scoped paths
+	os.Setenv("GOYOKE_PROJECT_DIR", projectDir)
+	defer os.Unsetenv("GOYOKE_PROJECT_DIR")
 
-	gogentDir := filepath.Join(runtimeDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(runtimeDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
-	// Create project-scoped .gogent/memory for archive to find
-	os.MkdirAll(filepath.Join(projectDir, ".gogent", "memory"), 0755)
+	// Create project-scoped .goyoke/memory for archive to find
+	os.MkdirAll(filepath.Join(projectDir, ".goyoke", "memory"), 0755)
 
 	// Step 1: Run validation creating violations
 	validateEvents := []map[string]interface{}{
@@ -663,7 +663,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	}
 
 	// Set tier to haiku (will violate on Write and Task(opus))
-	tierPath := filepath.Join(gogentDir, "current-tier")
+	tierPath := filepath.Join(goyokeDir, "current-tier")
 	os.WriteFile(tierPath, []byte("haiku\n"), 0644)
 
 	tmpValidateCorpus := filepath.Join(t.TempDir(), "validate-corpus.jsonl")
@@ -685,7 +685,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	validateHarness.RunHookBatch(validateBinary, "PreToolUse")
 
 	// Verify violations logged
-	violationsPath := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsPath := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	if _, err := os.Stat(violationsPath); err != nil {
 		t.Errorf("Violations log not created: %v", err)
 	}
@@ -738,14 +738,14 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	sharpEdgeHarness.RunHookBatch(sharpEdgeBinary, "PostToolUse")
 
 	// Verify pending learnings created
-	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	learningsPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if _, err := os.Stat(learningsPath); err != nil {
 		t.Errorf("Pending learnings not created: %v", err)
 	}
 
 	// Copy violations from XDG path to project path so archive can find them
-	xdgViolations := filepath.Join(gogentDir, "routing-violations.jsonl")
-	projectViolations := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
+	xdgViolations := filepath.Join(goyokeDir, "routing-violations.jsonl")
+	projectViolations := filepath.Join(projectDir, ".goyoke", "memory", "routing-violations.jsonl")
 	if data, err := os.ReadFile(xdgViolations); err == nil {
 		os.WriteFile(projectViolations, data, 0644)
 	}
@@ -780,7 +780,7 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	}
 
 	// Step 4: Verify handoff file created with all sections
-	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Handoff not created: %v", err)
 	}
@@ -799,10 +799,10 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 	}
 
 	// Step 5: Verify files archived
-	archiveDir := filepath.Join(projectDir, ".gogent", "memory", "session-archive")
+	archiveDir := filepath.Join(projectDir, ".goyoke", "memory", "session-archive")
 
 	// Violations should be moved (from project dir, not runtime dir)
-	projectViolationsPath := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
+	projectViolationsPath := filepath.Join(projectDir, ".goyoke", "memory", "routing-violations.jsonl")
 	if _, err := os.Stat(projectViolationsPath); !os.IsNotExist(err) {
 		t.Error("Violations file should be removed after archival")
 	}
@@ -825,9 +825,9 @@ func TestEndToEnd_SessionArchivalWorkflow(t *testing.T) {
 
 // TestEndToEnd_MultiSessionHandoff tests handoff continuity across sessions
 func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
-	archiveBinary := "../../bin/gogent-archive"
+	archiveBinary := "../../bin/goyoke-archive"
 	if _, err := os.Stat(archiveBinary); err != nil {
-		t.Skip("gogent-archive binary not found")
+		t.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -837,8 +837,8 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	gogentDir := filepath.Join(runtimeDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(runtimeDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Session 1: Create handoff
 	session1Event := map[string]interface{}{
@@ -849,7 +849,7 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 
 	os.WriteFile(filepath.Join(projectDir, "transcript-1.jsonl"), []byte(""), 0644)
 
-	createToolCounterLog(t, gogentDir, "read", 10)
+	createToolCounterLog(t, goyokeDir, "read", 10)
 
 	tmpCorpus1 := filepath.Join(t.TempDir(), "session1-corpus.jsonl")
 	session1JSON, _ := json.Marshal(session1Event)
@@ -870,7 +870,7 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 	}
 
 	// Verify handoff created
-	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Fatalf("Session 1 handoff not created: %v", err)
 	}
@@ -886,7 +886,7 @@ func TestEndToEnd_MultiSessionHandoff(t *testing.T) {
 
 	os.WriteFile(filepath.Join(projectDir, "transcript-2.jsonl"), []byte(""), 0644)
 
-	createToolCounterLog(t, gogentDir, "write", 5)
+	createToolCounterLog(t, goyokeDir, "write", 5)
 
 	tmpCorpus2 := filepath.Join(t.TempDir(), "session2-corpus.jsonl")
 	session2JSON, _ := json.Marshal(session2Event)

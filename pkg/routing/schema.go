@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 // EXPECTED_SCHEMA_VERSION is the version this code is built for.
@@ -348,50 +349,40 @@ type DocumentationTheater struct {
 }
 
 // LoadSchema loads and validates routing-schema.json.
-// Priority: GOGENT_ROUTING_SCHEMA env var > XDG config directory default.
+// Priority: GOYOKE_ROUTING_SCHEMA env var (Tier 0) > resolve.NewFromEnv() first-found.
 // Returns an error if file is missing, malformed, or version mismatch detected.
 func LoadSchema() (*Schema, error) {
-	schemaPath := os.Getenv("GOGENT_ROUTING_SCHEMA")
-
-	// If explicit path not set, try project-specific or XDG default
-	if schemaPath == "" {
-		// Priority 1: GOGENT_PROJECT_DIR (test isolation)
-		if projectDir := os.Getenv("GOGENT_PROJECT_DIR"); projectDir != "" {
-			path := filepath.Join(projectDir, ".claude", "routing-schema.json")
-			if _, err := os.Stat(path); err == nil {
-				schemaPath = path
-			}
+	// Tier 0: explicit path override (test isolation, CI)
+	if schemaPath := os.Getenv("GOYOKE_ROUTING_SCHEMA"); schemaPath != "" {
+		data, err := os.ReadFile(schemaPath)
+		if err != nil {
+			return nil, fmt.Errorf("[routing] Failed to read routing-schema.json from %s: %w", schemaPath, err)
 		}
-
-		// Priority 2: XDG default
-		if schemaPath == "" {
-			configHome := os.Getenv("XDG_CONFIG_HOME")
-			if configHome == "" {
-				home := os.Getenv("HOME")
-				if home == "" {
-					return nil, fmt.Errorf("[routing] HOME environment variable not set")
-				}
-				configHome = filepath.Join(home, ".config")
-			}
-			schemaPath = filepath.Join(configHome, "..", ".claude", "routing-schema.json")
-		}
+		return unmarshalAndValidateSchema(data)
 	}
 
-	data, err := os.ReadFile(schemaPath)
+	// Per-call resolver (not singleton) so env-var changes take effect at call time.
+	r, err := resolve.NewFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("[routing] Failed to read routing-schema.json from %s: %w", schemaPath, err)
+		return nil, fmt.Errorf("[routing] %w", err)
 	}
 
+	data, err := r.ReadFile("routing-schema.json")
+	if err != nil {
+		return nil, fmt.Errorf("[routing] Failed to read routing-schema.json: %w", err)
+	}
+
+	return unmarshalAndValidateSchema(data)
+}
+
+func unmarshalAndValidateSchema(data []byte) (*Schema, error) {
 	var schema Schema
 	if err := json.Unmarshal(data, &schema); err != nil {
 		return nil, fmt.Errorf("[routing] Failed to parse routing-schema.json: %w", err)
 	}
-
-	// Validate schema version
 	if err := schema.Validate(); err != nil {
 		return nil, err
 	}
-
 	return &schema, nil
 }
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // ArchiveArtifacts moves session artifacts to session-ID-named archive files
@@ -37,7 +37,7 @@ func ArchiveArtifacts(cfg HandoffConfig, sessionID string) error {
 		}
 	}
 
-	// GOgent-011: Also cleanup global violations log to maintain sync
+	// goYoke-011: Also cleanup global violations log to maintain sync
 	globalViolations := config.GetViolationsLogPath()
 	if _, err := os.Stat(globalViolations); err == nil {
 		// If project-scoped was missing, archive global one instead
@@ -114,10 +114,10 @@ func copyFile(src, dst string) error {
 // CleanupTempFiles removes session-specific temporary files
 // Missing files are not treated as errors - only unexpected failures are reported
 func CleanupTempFiles() error {
-	gogentDir := config.GetGOgentDir()
+	goyokeDir := config.GetgoYokeDir()
 
 	// Clean tool counter logs (glob pattern)
-	counterPattern := filepath.Join(gogentDir, "claude-tool-counter-*.log")
+	counterPattern := filepath.Join(goyokeDir, "claude-tool-counter-*.log")
 	matches, err := filepath.Glob(counterPattern)
 	if err != nil {
 		return fmt.Errorf("[session-archive] Failed to glob pattern %s: %w", counterPattern, err)
@@ -129,13 +129,13 @@ func CleanupTempFiles() error {
 	}
 
 	// Clean current-tier file
-	currentTierPath := filepath.Join(gogentDir, "current-tier")
+	currentTierPath := filepath.Join(goyokeDir, "current-tier")
 	if err := os.Remove(currentTierPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("[session-archive] Failed to remove %s: %w", currentTierPath, err)
 	}
 
 	// Clean max_delegation file
-	maxDelegationPath := filepath.Join(gogentDir, "max_delegation")
+	maxDelegationPath := filepath.Join(goyokeDir, "max_delegation")
 	if err := os.Remove(maxDelegationPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("[session-archive] Failed to remove %s: %w", maxDelegationPath, err)
 	}

@@ -14,7 +14,7 @@ package modals
 import (
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // BenchmarkModalRoundTrip benchmarks Push → Activate → Resolve for a single

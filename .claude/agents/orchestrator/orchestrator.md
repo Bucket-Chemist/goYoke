@@ -34,7 +34,7 @@ tools:
   - TaskCreate
   - TaskUpdate
   - TaskGet
-  - mcp__gofortress__spawn_agent
+  - mcp__goyoke__spawn_agent
 
 delegation:
   cannot_spawn:

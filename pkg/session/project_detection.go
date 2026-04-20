@@ -49,7 +49,7 @@ func DetectProjectType(projectDir string) *ProjectDetectionResult {
 
 	// === BACKEND LANGUAGES (priority for routing) ===
 
-	// Go detection (highest priority - this is GOgent-Fortress)
+	// Go detection (highest priority - this is goYoke)
 	if fileExists(filepath.Join(projectDir, "go.mod")) {
 		result.Types = append(result.Types, ProjectGo)
 		result.Indicators = append(result.Indicators, "go.mod")

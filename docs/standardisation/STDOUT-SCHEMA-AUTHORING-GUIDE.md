@@ -1,6 +1,6 @@
 # Stdout Schema Authoring Guide
 
-Practical guide for creating and maintaining stdout schemas in the GOgent-Fortress team-run pipeline.
+Practical guide for creating and maintaining stdout schemas in the goYoke team-run pipeline.
 
 ---
 
@@ -26,7 +26,7 @@ Current schemas:
 
 Location: `.claude/schemas/teams/stdin-stdout/`
 
-Simplified JSON documents containing both the stdin structure and stdout structure for a specific workflow+agent combination. These are embedded in the agent's prompt envelope by `buildPromptEnvelope()` in `cmd/gogent-team-run/envelope.go`. They provide prompt-level guidance; they are not used for constrained decoding.
+Simplified JSON documents containing both the stdin structure and stdout structure for a specific workflow+agent combination. These are embedded in the agent's prompt envelope by `buildPromptEnvelope()` in `cmd/goyoke-team-run/envelope.go`. They provide prompt-level guidance; they are not used for constrained decoding.
 
 Current contract files:
 
@@ -70,7 +70,7 @@ Save to `.claude/schemas/stdout/{role}.json`. The filename is the role name, not
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdout/{role}.json",
+  "$id": "https://goyoke-fortress/schemas/stdout/{role}.json",
   "title": "{Role} Stdout Schema",
   "description": "Validates stdout for {agent description}",
   "version": "1.0.0",
@@ -112,7 +112,7 @@ Save to `.claude/schemas/stdout/{role}.json`. The filename is the role name, not
 
 ### Step 4: Wire up schema resolution
 
-Schema resolution in `resolveStdoutSchema()` (`cmd/gogent-team-run/envelope.go`) uses the contract example files, not the formal schema files directly. The formal schema gets passed to `--json-schema` via a separate resolution path.
+Schema resolution in `resolveStdoutSchema()` (`cmd/goyoke-team-run/envelope.go`) uses the contract example files, not the formal schema files directly. The formal schema gets passed to `--json-schema` via a separate resolution path.
 
 For the contract example, create `.claude/schemas/teams/stdin-stdout/{workflow}-{role}.json` with the structure:
 
@@ -162,7 +162,7 @@ Every agent stdout must include a `schema_id` field for self-identification. Thi
 
 ## Schema Resolution Algorithm
 
-`resolveStdoutSchema(workflowType, agentID)` in `cmd/gogent-team-run/envelope.go` finds the contract example to embed in the prompt. The resolution order is:
+`resolveStdoutSchema(workflowType, agentID)` in `cmd/goyoke-team-run/envelope.go` finds the contract example to embed in the prompt. The resolution order is:
 
 1. **Exact match**: `{workflowType}-{agentID}.json`
    - Example: `review-backend-reviewer.json` for agentID `backend-reviewer`

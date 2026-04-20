@@ -1,6 +1,6 @@
 # Agent Contract End-to-End Guide
 
-Lifecycle guide for adding a new agent with constrained decoding to the GOgent-Fortress team-run pipeline.
+Lifecycle guide for adding a new agent with constrained decoding to the goYoke team-run pipeline.
 
 ---
 
@@ -19,7 +19,7 @@ agents-index.json       meta-fields stripped         embedded in prompt
        +--------+--------------+------------------------------+
                 |
                 v
-        gogent-team-run
+        goyoke-team-run
         config.json (wave/member definitions)
                 |
                 v
@@ -88,7 +88,7 @@ Add an entry to `.claude/agents/agents-index.json`:
 }
 ```
 
-Note: `cli_flags.allowed_tools` is READ-ONLY for analysis agents. If the agent needs to create or modify files (implementation workflow), `augmentToolsForImplementation()` in `cmd/gogent-team-run/spawn.go` adds `Write` and `Edit` automatically when `workflowType == "implementation"`.
+Note: `cli_flags.allowed_tools` is READ-ONLY for analysis agents. If the agent needs to create or modify files (implementation workflow), `augmentToolsForImplementation()` in `cmd/goyoke-team-run/spawn.go` adds `Write` and `Edit` automatically when `workflowType == "implementation"`.
 
 ### Step 3: Create the Formal Stdout Schema
 
@@ -135,7 +135,7 @@ The `stdout` value is embedded verbatim in the prompt with instructions to follo
 
 ### Step 5: Schema Resolution — How team-run Finds the Schema
 
-`resolveStdoutSchema(workflowType, agentID)` in `cmd/gogent-team-run/envelope.go` builds candidates in order:
+`resolveStdoutSchema(workflowType, agentID)` in `cmd/goyoke-team-run/envelope.go` builds candidates in order:
 
 ```
 1. "{workflowType}-{agentID}.json"           → "analysis-my-analyst.json"
@@ -155,7 +155,7 @@ For `staff-architect-critical-review` with workflowType `braintrust`, candidate 
 
 ### Step 6: Runtime Flow
 
-When `gogent-team-run` spawns the agent:
+When `goyoke-team-run` spawns the agent:
 
 1. `prepareSpawn()` reads member config from `config.json`
 2. `loadAgentConfig()` reads `agents-index.json` for tools, model, context requirements
@@ -185,7 +185,7 @@ Check these in order:
 
 ### `--json-schema` flag not appearing in CLI args
 
-`buildCLIArgs()` in `cmd/gogent-team-run/spawn.go` adds `--json-schema` only when a formal schema is found for the agent. Check:
+`buildCLIArgs()` in `cmd/goyoke-team-run/spawn.go` adds `--json-schema` only when a formal schema is found for the agent. Check:
 
 1. Does `.claude/schemas/stdout/{role}.json` exist for this agent's role?
 2. Does the schema resolution chain in `buildSchemaCandidates()` produce a match? Add logging to verify which candidate matches.

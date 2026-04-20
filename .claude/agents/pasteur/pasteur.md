@@ -1,3 +1,6 @@
+# [ARCHIVED] Superseded by staff-bioinformatician (2026-04-13)
+# This agent is retained for reference. Use staff-bioinformatician for wave 1 synthesis.
+
 ---
 id: pasteur
 name: Pasteur
@@ -170,10 +173,30 @@ For findings that overlap across reviewers:
     }
   ],
   "findings": [/* all deduplicated findings */],
+  "issue_register": [
+    {
+      "id": "XD-1",
+      "severity": "critical",
+      "title": "Reference build inconsistency",
+      "description": "Alignment uses hg38 but proteogenomics DB built from hg19 annotations",
+      "recommendation": "Rebuild proteogenomics database using hg38 gene models",
+      "affected_files": ["workflows/alignment.nf", "workflows/proteogenomics.nf"],
+      "source_reviewer": "genomics-reviewer",
+      "domain": "bioinformatics"
+    }
+  ],
   "reviewers_completed": ["genomics-reviewer", "proteomics-reviewer", "bioinformatician-reviewer"],
   "reviewers_failed": []
 }
 ```
+
+**`issue_register` format:** Each entry in the `issue_register` array uses the same shape as staff-architect `review_metadata.json` findings, with two optional extensions:
+- `source_reviewer` (string): Which of the 6 domain reviewers originated this finding (e.g., `"genomics-reviewer"`, `"proteomics-reviewer"`)
+- `domain` (string): Always `"bioinformatics"` for Pasteur output — enables domain-specific classification in the plan-harmonizer
+
+This format is directly compatible with `/refine-plan` harmonizer input. When Pasteur output is used as harmonizer input, the `issue_register` array maps to `review_findings.issue_register` and `source_reviewer`/`domain` fields enable domain-aware classification.
+
+**Building the `issue_register`:** After deduplication and cross-domain analysis, transform each deduplicated finding into an `issue_register` entry. Cross-domain issues get their own entries with `source_reviewer` set to the primary originating reviewer. Both `source_reviewer` and `domain` are optional — standard staff-architect reviews work without them.
 
 ---
 

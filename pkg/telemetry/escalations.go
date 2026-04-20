@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // EscalationEvent captures when an agent escalates to a higher tier.
@@ -62,7 +62,7 @@ var ValidOutcomes = map[string]bool{
 
 // GetEscalationsLogPath returns the global escalations log path.
 func GetEscalationsLogPath() string {
-	baseDir := config.GetGOgentDir()
+	baseDir := config.GetgoYokeDir()
 	return filepath.Join(baseDir, "escalations.jsonl")
 }
 

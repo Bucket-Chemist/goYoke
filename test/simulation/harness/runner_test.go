@@ -193,25 +193,25 @@ func TestRunner_BuildEnv(t *testing.T) {
 	hasProject := false
 
 	for _, e := range env {
-		if e == "GOGENT_ROUTING_SCHEMA=/test/schema.json" {
+		if e == "GOYOKE_ROUTING_SCHEMA=/test/schema.json" {
 			hasSchema = true
 		}
-		if e == "GOGENT_AGENTS_INDEX=/test/agents.json" {
+		if e == "GOYOKE_AGENTS_INDEX=/test/agents.json" {
 			hasAgents = true
 		}
-		if e == "GOGENT_PROJECT_DIR=/tmp/sim" {
+		if e == "GOYOKE_PROJECT_DIR=/tmp/sim" {
 			hasProject = true
 		}
 	}
 
 	if !hasSchema {
-		t.Error("Expected GOGENT_ROUTING_SCHEMA to be set")
+		t.Error("Expected GOYOKE_ROUTING_SCHEMA to be set")
 	}
 	if !hasAgents {
-		t.Error("Expected GOGENT_AGENTS_INDEX to be set")
+		t.Error("Expected GOYOKE_AGENTS_INDEX to be set")
 	}
 	if !hasProject {
-		t.Error("Expected GOGENT_PROJECT_DIR to be set")
+		t.Error("Expected GOYOKE_PROJECT_DIR to be set")
 	}
 }
 
@@ -222,7 +222,7 @@ func TestRunner_BuildEnv_EmptyPaths(t *testing.T) {
 
 	env := r.buildEnv()
 
-	// Should still return environment, just without GOGENT_ overrides
+	// Should still return environment, just without GOYOKE_ overrides
 	if len(env) == 0 {
 		t.Error("Expected environment to be non-empty")
 	}
@@ -548,10 +548,10 @@ func TestRunner_Run_Integration(t *testing.T) {
 }
 
 func TestRunner_ExecuteScenario_RealCLI(t *testing.T) {
-	// Check if gogent-validate exists (skip test if not available)
-	validatePath, err := exec.LookPath("gogent-validate")
+	// Check if goyoke-validate exists (skip test if not available)
+	validatePath, err := exec.LookPath("goyoke-validate")
 	if err != nil {
-		t.Skip("gogent-validate not found in PATH, skipping real CLI test")
+		t.Skip("goyoke-validate not found in PATH, skipping real CLI test")
 	}
 
 	r := &DefaultRunner{
@@ -1328,7 +1328,7 @@ func TestValidateSessionStartExpectations_ToolCounterInitialized(t *testing.T) {
 	}
 
 	// Create the tool counter file
-	counterPath := filepath.Join(tmpDir, ".cache", "gogent", "tool-counter")
+	counterPath := filepath.Join(tmpDir, ".cache", "goyoke", "tool-counter")
 	if err := os.MkdirAll(filepath.Dir(counterPath), 0755); err != nil {
 		t.Fatalf("Failed to create counter dir: %v", err)
 	}

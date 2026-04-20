@@ -9,8 +9,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -1280,5 +1280,215 @@ func TestPulseTick_NotFocused(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Error("tick should reschedule even when tree is unfocused (running agents present)")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// nodeHeight (FIX 2)
+// ---------------------------------------------------------------------------
+
+// TestNodeHeight_StandardDensity_NoInline verifies that nodeHeight returns 1
+// for all nodes when density is Standard and inlineDetail is empty.
+func TestNodeHeight_StandardDensity_NoInline(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityStandard)
+	// No inline detail set (default "").
+
+	for i := range 3 {
+		if h := m.NodeHeight(i); h != 1 {
+			t.Errorf("NodeHeight(%d) = %d; want 1 (no inline detail)", i, h)
+		}
+	}
+}
+
+// TestNodeHeight_VerboseDensity_NoInline verifies that nodeHeight returns 2 for
+// verbose density (every node gets an extra metadata line).
+func TestNodeHeight_VerboseDensity_NoInline(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityVerbose)
+
+	for i := range 3 {
+		if h := m.NodeHeight(i); h != 2 {
+			t.Errorf("verbose NodeHeight(%d) = %d; want 2", i, h)
+		}
+	}
+}
+
+// TestNodeHeight_SelectedNodeWithInlineDetail verifies that nodeHeight adds the
+// inline detail line count only to the selected node.
+func TestNodeHeight_SelectedNodeWithInlineDetail(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityStandard)
+
+	// Set a 3-line inline detail (2 newlines = 3 lines).
+	m.SetInlineDetail("  Running · go-pro · $1.24\n  ✓ Bash foo\n  ✓ Bash bar")
+
+	// Index 0 is the selected node (selectedIdx starts at 0).
+	if h := m.NodeHeight(0); h != 4 { // 1 standard + 3 inline
+		t.Errorf("NodeHeight(0) with 3-line inline = %d; want 4", h)
+	}
+	// Non-selected nodes should be unaffected.
+	if h := m.NodeHeight(1); h != 1 {
+		t.Errorf("NodeHeight(1) (non-selected) = %d; want 1", h)
+	}
+	if h := m.NodeHeight(2); h != 1 {
+		t.Errorf("NodeHeight(2) (non-selected) = %d; want 1", h)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// SetInlineDetail / inline detail rendering (FIX 2)
+// ---------------------------------------------------------------------------
+
+// TestSetInlineDetail_AppearsUnderSelectedNode verifies that the inline detail
+// string is rendered directly under the selected node in standard density View().
+func TestSetInlineDetail_AppearsUnderSelectedNode(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree()) // root selected by default (idx 0)
+	m.SetSize(80, 20)
+
+	m.SetInlineDetail("  Running · sonnet · $0.12")
+
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+
+	// Should now be 4 lines: root, inline-detail, c1, c2.
+	if len(lines) != 4 {
+		t.Errorf("expected 4 lines with inline detail; got %d:\n%s", len(lines), view)
+	}
+	// Line 0: root node.
+	if !strings.Contains(lines[0], "orchestrator") {
+		t.Errorf("line 0 should be root node; got %q", lines[0])
+	}
+	// Line 1: inline detail (zero depth prefix = "" + "  Running…").
+	if !strings.Contains(lines[1], "Running") {
+		t.Errorf("line 1 should contain inline detail; got %q", lines[1])
+	}
+}
+
+// TestSetInlineDetail_NotShownForNonSelected verifies that inline detail only
+// appears under the selected node, not other nodes.
+func TestSetInlineDetail_NotShownForNonSelected(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetFocused(true)
+	m.SetSize(80, 20)
+
+	// Navigate to c1 (idx 1).
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = newM.(agents.AgentTreeModel)
+
+	m.SetInlineDetail("  Running · sonnet")
+
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+
+	// Lines: root, c1, inline-detail-under-c1, c2 → 4 lines.
+	if len(lines) != 4 {
+		t.Errorf("expected 4 lines (c1 selected with inline detail); got %d:\n%s", len(lines), view)
+	}
+	// root has no inline detail: line 0 is root.
+	if !strings.Contains(lines[0], "orchestrator") {
+		t.Errorf("line 0 should be root; got %q", lines[0])
+	}
+	// c1 is selected: line 1.
+	if !strings.Contains(lines[1], "go-pro") {
+		t.Errorf("line 1 should be c1 (go-pro); got %q", lines[1])
+	}
+	// Inline detail under c1: line 2.
+	if !strings.Contains(lines[2], "Running") {
+		t.Errorf("line 2 should be inline detail; got %q", lines[2])
+	}
+	// c2 follows: line 3.
+	if !strings.Contains(lines[3], "code-reviewer") {
+		t.Errorf("line 3 should be c2; got %q", lines[3])
+	}
+}
+
+// TestSetInlineDetail_EmptyStringNoEffect verifies that an empty inline detail
+// string does not change the line count.
+func TestSetInlineDetail_EmptyStringNoEffect(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetInlineDetail("")
+
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Errorf("empty inline detail should produce 3 lines; got %d", len(lines))
+	}
+}
+
+// TestSetInlineDetail_DepthIndent verifies that the inline detail lines are
+// prefixed with depth*2 spaces for a depth-1 node.
+func TestSetInlineDetail_DepthIndent(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetFocused(true)
+	m.SetSize(80, 20)
+
+	// Navigate to c1 (depth=1).
+	newM, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	m = newM.(agents.AgentTreeModel)
+
+	// Detail line has 2 spaces from renderOverviewCompact; tree adds depth*2=2 more.
+	m.SetInlineDetail("  detail-content")
+
+	view := m.View()
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+
+	// Find the inline detail line (after c1).
+	var detailLine string
+	for _, l := range lines {
+		if strings.Contains(l, "detail-content") {
+			detailLine = l
+			break
+		}
+	}
+	if detailLine == "" {
+		t.Fatalf("inline detail not found in view:\n%s", view)
+	}
+	// Depth 1: tree prepends 2 spaces ("  ") to the detail line's own "  " prefix.
+	if !strings.HasPrefix(detailLine, "    ") {
+		t.Errorf("depth-1 inline detail should start with 4 spaces; got %q", detailLine)
+	}
+}
+
+// TestSetInlineDetail_CompactDensity verifies inline detail appears in compact mode.
+func TestSetInlineDetail_CompactDensity(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityCompact)
+	m.SetInlineDetail("  Running · sonnet")
+
+	view := m.Render(agents.RenderFull, 80)
+	if !strings.Contains(view, "Running") {
+		t.Errorf("compact density should show inline detail; got:\n%s", view)
+	}
+}
+
+// TestSetInlineDetail_VerboseDensity verifies inline detail appears after the
+// metadata line in verbose mode.
+func TestSetInlineDetail_VerboseDensity(t *testing.T) {
+	m := agents.NewAgentTreeModel()
+	m.SetNodes(threeNodeTree())
+	m.SetSize(80, 20)
+	m.SetDensity(agents.DensityVerbose)
+	m.SetInlineDetail("  Running · sonnet")
+
+	view := m.Render(agents.RenderFull, 80)
+	lines := strings.Split(strings.TrimRight(view, "\n"), "\n")
+
+	// 3 nodes × 2 verbose lines + 1 inline detail = 7 lines.
+	if len(lines) != 7 {
+		t.Errorf("verbose density with inline detail on selected node: expected 7 lines; got %d:\n%s", len(lines), view)
 	}
 }

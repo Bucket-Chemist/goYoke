@@ -50,7 +50,7 @@ func TestReplaySession_JSONRoundtrip(t *testing.T) {
 		Expected: ReplayExpectations{
 			SharpEdgesCreated: 1,
 			BlockingResponses: 1,
-			FilesCreated:      []string{".gogent/memory/pending-learnings.jsonl"},
+			FilesCreated:      []string{".goyoke/memory/pending-learnings.jsonl"},
 		},
 	}
 
@@ -204,10 +204,10 @@ func TestSessionReplayer_ValidateExpectations(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Setup files
-	os.MkdirAll(filepath.Join(tmpDir, ".gogent", "memory"), 0755)
-	os.WriteFile(filepath.Join(tmpDir, ".gogent", "memory", "pending-learnings.jsonl"),
+	os.MkdirAll(filepath.Join(tmpDir, ".goyoke", "memory"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, ".goyoke", "memory", "pending-learnings.jsonl"),
 		[]byte(`{"test":1}`), 0644)
-	os.WriteFile(filepath.Join(tmpDir, ".gogent", "memory", "handoffs.jsonl"),
+	os.WriteFile(filepath.Join(tmpDir, ".goyoke", "memory", "handoffs.jsonl"),
 		[]byte(`{"schema_version":"1.3"}`), 0644)
 
 	replayer := NewSessionReplayer("", "", "", "")
@@ -217,7 +217,7 @@ func TestSessionReplayer_ValidateExpectations(t *testing.T) {
 			SharpEdgesCreated: 1,
 			BlockingResponses: 1,
 			HandoffCreated:    true,
-			FilesCreated:      []string{".gogent/memory/pending-learnings.jsonl"},
+			FilesCreated:      []string{".goyoke/memory/pending-learnings.jsonl"},
 		}
 		errors := replayer.validateExpectations(expected, tmpDir, 1, 1)
 		if len(errors) != 0 {
@@ -237,7 +237,7 @@ func TestSessionReplayer_ValidateExpectations(t *testing.T) {
 
 	t.Run("missing file", func(t *testing.T) {
 		expected := ReplayExpectations{
-			FilesCreated: []string{".gogent/memory/nonexistent.jsonl"},
+			FilesCreated: []string{".goyoke/memory/nonexistent.jsonl"},
 		}
 		errors := replayer.validateExpectations(expected, tmpDir, 0, 0)
 		if len(errors) != 1 {
@@ -247,7 +247,7 @@ func TestSessionReplayer_ValidateExpectations(t *testing.T) {
 
 	t.Run("file should not exist", func(t *testing.T) {
 		expected := ReplayExpectations{
-			FilesNotCreated: []string{".gogent/memory/pending-learnings.jsonl"},
+			FilesNotCreated: []string{".goyoke/memory/pending-learnings.jsonl"},
 		}
 		errors := replayer.validateExpectations(expected, tmpDir, 0, 0)
 		if len(errors) != 1 {
@@ -274,14 +274,14 @@ func TestSessionReplayer_BuildEnv(t *testing.T) {
 		}
 	}
 
-	if envMap["GOGENT_PROJECT_DIR"] != tempDir {
-		t.Errorf("GOGENT_PROJECT_DIR: got %q, want %q", envMap["GOGENT_PROJECT_DIR"], tempDir)
+	if envMap["GOYOKE_PROJECT_DIR"] != tempDir {
+		t.Errorf("GOYOKE_PROJECT_DIR: got %q, want %q", envMap["GOYOKE_PROJECT_DIR"], tempDir)
 	}
-	if envMap["GOGENT_ROUTING_SCHEMA"] != "/path/to/schema.json" {
-		t.Errorf("GOGENT_ROUTING_SCHEMA not set correctly")
+	if envMap["GOYOKE_ROUTING_SCHEMA"] != "/path/to/schema.json" {
+		t.Errorf("GOYOKE_ROUTING_SCHEMA not set correctly")
 	}
-	if envMap["GOGENT_MAX_FAILURES"] != "3" {
-		t.Errorf("GOGENT_MAX_FAILURES: got %q, want %q", envMap["GOGENT_MAX_FAILURES"], "3")
+	if envMap["GOYOKE_MAX_FAILURES"] != "3" {
+		t.Errorf("GOYOKE_MAX_FAILURES: got %q, want %q", envMap["GOYOKE_MAX_FAILURES"], "3")
 	}
 }
 

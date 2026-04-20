@@ -1,4 +1,4 @@
-// Package config provides the foundational theme system for the GOgent-Fortress TUI.
+// Package config provides the foundational theme system for the goYoke TUI.
 // It defines colors, styles, and icon constants used across all TUI components.
 package config
 
@@ -585,7 +585,7 @@ func RainbowGradient(text string) string {
 	return b.String()
 }
 
-// DefaultTheme returns the standard GOgent-Fortress theme.
+// DefaultTheme returns the standard goYoke theme.
 // All existing fields are unchanged; InfoColor is set to ColorPrimary (cyan).
 func DefaultTheme() Theme {
 	return Theme{

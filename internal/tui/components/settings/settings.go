@@ -1,4 +1,4 @@
-// Package settings implements the settings panel for the GOgent-Fortress TUI.
+// Package settings implements the settings panel for the goYoke TUI.
 // It displays static configuration values in a compact key-value layout.
 //
 // The component is display-only: Update is a no-op and state is set
@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------

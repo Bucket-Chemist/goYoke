@@ -1,5 +1,5 @@
 // Package search implements the unified cross-panel fuzzy search overlay for
-// the GOgent-Fortress TUI (TUI-059).
+// the goYoke TUI (TUI-059).
 //
 // The overlay is activated globally by ctrl+f and queries all registered
 // state.SearchSource implementations simultaneously, merging results by score.
@@ -14,7 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------

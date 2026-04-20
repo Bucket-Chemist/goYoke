@@ -25,7 +25,7 @@
 
 ## 1. Architecture Overview
 
-The GOgent-Fortress team orchestration system enables complex multi-agent workflows to run in the background while users maintain control over their terminal. This system has proven effective in production with three validated workflows: `/review`, `/braintrust`, and `/implement`.
+The goYoke team orchestration system enables complex multi-agent workflows to run in the background while users maintain control over their terminal. This system has proven effective in production with three validated workflows: `/review`, `/braintrust`, and `/implement`.
 
 ### Three-Layer Architecture
 
@@ -41,7 +41,7 @@ The GOgent-Fortress team orchestration system enables complex multi-agent workfl
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              LAYER 2: GO ORCHESTRATION ENGINE               │
-│  Background execution (gogent-team-run)                     │
+│  Background execution (goyoke-team-run)                     │
 │  - Wave-by-wave agent spawning                              │
 │  - Budget tracking with cost reconciliation                 │
 │  - Process management (spawn, monitor, kill)                │
@@ -67,12 +67,12 @@ User invokes skill (e.g., /security-audit)
   ├─► [SKILL] Populate dynamic fields (session_id, timestamps, project_root)
   ├─► [SKILL] Write {team_dir}/config.json
   ├─► [SKILL] For each member: generate stdin_{member_id}.json from contract
-  ├─► [SKILL] Launch: gogent-team-run "{team_dir}" & (background)
+  ├─► [SKILL] Launch: goyoke-team-run "{team_dir}" & (background)
   ├─► [SKILL] Verify launch (check config.json for background_pid)
   └─► [SKILL] Return to user with monitoring instructions
         │
         ▼
-  gogent-team-run daemon (background)
+  goyoke-team-run daemon (background)
     │
     ├─► Wave 1: Spawn agents in parallel
     │     ├─► For each member: tryReserveBudget(estimated)
@@ -81,7 +81,7 @@ User invokes skill (e.g., /security-audit)
     │     └─► Extract: Parse stdout files, reconcileCost(estimated, actual)
     │
     ├─► (Optional) Run on_complete_script between waves
-    │     └─► Example: gogent-team-prepare-synthesis merges Wave 1 outputs
+    │     └─► Example: goyoke-team-prepare-synthesis merges Wave 1 outputs
     │
     ├─► Wave 2: Spawn next wave (may read artifacts from Wave 1)
     │     └─► Repeat spawn → monitor → extract cycle
@@ -270,7 +270,7 @@ This is the master template for your workflow. It defines waves, members, budget
       "status": "pending",
       "started_at": null,
       "completed_at": null,
-      "on_complete_script": "gogent-team-prepare-synthesis",
+      "on_complete_script": "goyoke-team-prepare-synthesis",
       "members": [
         {
           "member_id": "vulnerability-scanner",
@@ -397,15 +397,15 @@ If your workflow has multiple waves where Wave 2+ needs synthesized output from 
 
 **Option A: Reuse existing synthesis script**
 
-Use `gogent-team-prepare-synthesis` (most common). This script:
+Use `goyoke-team-prepare-synthesis` (most common). This script:
 - Reads all stdout files from completed wave
 - Merges them into `pre-synthesis.md` in team directory
 - Wave 2 agent reads this file via stdin reference: `pre_synthesis_path`
 
 **Option B: Write custom inter-wave script**
 
-Create a Go binary in `cmd/gogent-{workflow}-prepare/` that:
-- Takes team directory as first argument: `./gogent-custom-prepare /path/to/team-dir`
+Create a Go binary in `cmd/goyoke-{workflow}-prepare/` that:
+- Takes team directory as first argument: `./goyoke-custom-prepare /path/to/team-dir`
 - Reads stdout files from previous wave
 - Writes artifact(s) for next wave
 - Exits 0 on success, non-zero on failure
@@ -780,7 +780,7 @@ Create four contract files in `~/.claude/schemas/teams/stdin-stdout/`:
 }
 ```
 
-**CRITICAL PATTERN:** Notice `security-analyst` has `pre_synthesis_path` in stdin. This file doesn't exist when you write the stdin file. It's created by the inter-wave script (`gogent-team-prepare-synthesis`) after Wave 1 completes. The analyst reads it at runtime.
+**CRITICAL PATTERN:** Notice `security-analyst` has `pre_synthesis_path` in stdin. This file doesn't exist when you write the stdin file. It's created by the inter-wave script (`goyoke-team-prepare-synthesis`) after Wave 1 completes. The analyst reads it at runtime.
 
 ### Step 3.3: Create the Team Config Template
 
@@ -807,7 +807,7 @@ Create `~/.claude/schemas/teams/security-audit.json`:
       "status": "pending",
       "started_at": null,
       "completed_at": null,
-      "on_complete_script": "gogent-team-prepare-synthesis",
+      "on_complete_script": "goyoke-team-prepare-synthesis",
       "members": [
         {
           "member_id": "vulnerability-scanner",
@@ -947,7 +947,7 @@ Performs comprehensive security audit with parallel scanning and synthesis.
 - `dependency-checker` (haiku): CVE database checks
 - `secret-detector` (haiku): Hardcoded secret detection
 
-**Inter-Wave**: `gogent-team-prepare-synthesis` merges findings
+**Inter-Wave**: `goyoke-team-prepare-synthesis` merges findings
 
 **Wave 2** (~60 seconds):
 - `security-analyst` (sonnet): Prioritized remediation report
@@ -960,8 +960,8 @@ Performs comprehensive security audit with parallel scanning and synthesis.
 ```javascript
 // Check if team-run infrastructure is available
 const useTeamPattern = settings.use_team_pattern &&
-                       binaryExists("gogent-team-run") &&
-                       binaryExists("gogent-team-prepare-synthesis");
+                       binaryExists("goyoke-team-run") &&
+                       binaryExists("goyoke-team-prepare-synthesis");
 
 if (useTeamPattern) {
   // Phase 3B: Background orchestration
@@ -979,7 +979,7 @@ if (useTeamPattern) {
 ```javascript
 // 1. Create team directory
 const timestamp = Date.now();
-const sessionDir = process.env.GOGENT_SESSION_DIR || `~/.cache/gogent/sessions/${sessionId}`;
+const sessionDir = process.env.GOYOKE_SESSION_DIR || `~/.cache/goyoke/sessions/${sessionId}`;
 const teamDir = `${sessionDir}/teams/${timestamp}.security-audit`;
 fs.mkdirSync(teamDir, { recursive: true });
 
@@ -1083,7 +1083,7 @@ fs.writeFileSync(
 ```javascript
 // 6. Launch team-run in background
 const { spawn } = require("child_process");
-const teamRunProc = spawn("gogent-team-run", [teamDir], {
+const teamRunProc = spawn("goyoke-team-run", [teamDir], {
   detached: true,
   stdio: "ignore"
 });
@@ -1182,7 +1182,7 @@ After launching, user sees:
   • security-analyst — Findings synthesis
 
 **Budget:** $3.00
-**Team Directory:** /home/user/.cache/gogent/sessions/abc123/teams/1707412345.security-audit
+**Team Directory:** /home/user/.cache/goyoke/sessions/abc123/teams/1707412345.security-audit
 
 **Monitor progress:**
   /team-status
@@ -1225,7 +1225,7 @@ cat stdin_vulnerability-scanner.json | jq '.scan_scope'
 ### Manual Launch
 
 ```bash
-gogent-team-run /path/to/team-dir
+goyoke-team-run /path/to/team-dir
 ```
 
 Monitor in real-time:
@@ -1310,7 +1310,7 @@ Compare actual vs. estimated. If actual consistently exceeds estimated by >50%, 
 
 ### Step 3.5: Create an Inter-Wave Script (Optional)
 
-For this workflow, we reuse the existing `gogent-team-prepare-synthesis` binary. It:
+For this workflow, we reuse the existing `goyoke-team-prepare-synthesis` binary. It:
 
 1. Reads `stdout_vulnerability-scanner.json`, `stdout_dependency-checker.json`, `stdout_secret-detector.json`
 2. Merges findings into human-readable `pre-synthesis.md`
@@ -1320,7 +1320,7 @@ The `security-analyst` agent reads this file via the `pre_synthesis_path` field 
 
 **If you needed a custom script**, you'd create:
 
-`cmd/gogent-security-audit-prepare/main.go`:
+`cmd/goyoke-security-audit-prepare/main.go`:
 
 ```go
 package main
@@ -1406,8 +1406,8 @@ func main() {
 Compile and place in `$PATH`:
 
 ```bash
-cd cmd/gogent-security-audit-prepare
-go build -o ~/.local/bin/gogent-security-audit-prepare
+cd cmd/goyoke-security-audit-prepare
+go build -o ~/.local/bin/goyoke-security-audit-prepare
 ```
 
 Update template to use your custom script:
@@ -1415,7 +1415,7 @@ Update template to use your custom script:
 ```json
 {
   "wave_number": 1,
-  "on_complete_script": "gogent-security-audit-prepare"
+  "on_complete_script": "goyoke-security-audit-prepare"
 }
 ```
 
@@ -1423,7 +1423,7 @@ Update template to use your custom script:
 
 ## 4. Schema Resolution Deep Dive
 
-When `gogent-team-run` spawns an agent, it needs to:
+When `goyoke-team-run` spawns an agent, it needs to:
 1. Determine which stdout contract to embed in the agent's prompt
 2. Validate stdout against that contract after execution
 
@@ -1499,7 +1499,7 @@ Use this when multiple agents share the same stdout structure.
 
 ### What Gets Embedded
 
-When a schema is resolved, `gogent-team-run` injects the `stdout` section into the agent's prompt:
+When a schema is resolved, `goyoke-team-run` injects the `stdout` section into the agent's prompt:
 
 ```
 AGENT: vulnerability-scanner
@@ -1737,7 +1737,7 @@ Status: complete
 Wave 1: [agent-A, agent-B]
   ↓ Both spawn simultaneously
   ↓ Both complete
-  ↓ on_complete_script: gogent-team-prepare-synthesis
+  ↓ on_complete_script: goyoke-team-prepare-synthesis
   ↓ Generates: pre-synthesis.md
 Wave 2: [agent-C]
   ↓ Reads pre-synthesis.md at runtime
@@ -1756,7 +1756,7 @@ Status: complete
   "waves": [
     {
       "wave_number": 1,
-      "on_complete_script": "gogent-team-prepare-synthesis",
+      "on_complete_script": "goyoke-team-prepare-synthesis",
       "members": [
         {"agent": "einstein", "model": "opus", ...},
         {"agent": "staff-architect", "model": "opus", ...}
@@ -1789,7 +1789,7 @@ Wave 2 stdin references a file that doesn't exist yet:
 }
 ```
 
-This file is created by `gogent-team-prepare-synthesis` AFTER Wave 1 completes. The agent reads it at runtime using the Read tool.
+This file is created by `goyoke-team-prepare-synthesis` AFTER Wave 1 completes. The agent reads it at runtime using the Read tool.
 
 **Inter-wave script contract:**
 
@@ -1874,7 +1874,7 @@ Status: complete
 
 **DAG computation:**
 
-For `/implement`, the `gogent-plan-impl` binary computes waves using Kahn's algorithm (topological sort):
+For `/implement`, the `goyoke-plan-impl` binary computes waves using Kahn's algorithm (topological sort):
 
 ```go
 func computeWaves(tasks []Task) []Wave {
@@ -2080,7 +2080,7 @@ const stdinVulnScanner = generateStdin(
   {id: "vulnerability-scanner", description: "Scan for vulnerabilities"},
   "security-audit",
   "/home/user/project",
-  "/home/user/.cache/gogent/sessions/abc/teams/123.security-audit",
+  "/home/user/.cache/goyoke/sessions/abc/teams/123.security-audit",
   {
     scan_scope: {
       file_patterns: ["**/*.go"],
@@ -2132,7 +2132,7 @@ function validateStdin(stdin) {
 
 ## 8. Stdout Extraction Pipeline
 
-After an agent completes, `gogent-team-run` extracts and validates its output. The system uses a **three-tier extraction** approach to handle varying output formats.
+After an agent completes, `goyoke-team-run` extracts and validates its output. The system uses a **three-tier extraction** approach to handle varying output formats.
 
 ### Tier 1: Direct JSON Parse
 
@@ -2331,7 +2331,7 @@ if (args.includes("--dry-run")) {
   cat stdin_vulnerability-scanner.json | jq '.'
 
 **Launch manually:**
-  gogent-team-run ${teamDir}
+  goyoke-team-run ${teamDir}
   `;
 }
 ```
@@ -2366,10 +2366,10 @@ cat config.json | jq '.waves[0].members[0] | {status, process_pid, cost_actual_u
 
 ### 9.2 Manual Launch
 
-Run `gogent-team-run` directly from terminal:
+Run `goyoke-team-run` directly from terminal:
 
 ```bash
-gogent-team-run /path/to/team-dir
+goyoke-team-run /path/to/team-dir
 ```
 
 **Monitor in real-time:**
@@ -2388,10 +2388,10 @@ watch -n 1 'cat /path/to/team-dir/heartbeat'
 **Expected log output:**
 
 ```
-[gogent-team-run] Starting team execution
-[gogent-team-run] Team: security-audit-1707412345
-[gogent-team-run] Workflow: security-audit
-[gogent-team-run] Budget: $3.00
+[goyoke-team-run] Starting team execution
+[goyoke-team-run] Team: security-audit-1707412345
+[goyoke-team-run] Workflow: security-audit
+[goyoke-team-run] Budget: $3.00
 
 [Wave 1] Starting wave 1 (3 members)
 [Wave 1] Spawning: vulnerability-scanner (haiku, $0.10)
@@ -2411,10 +2411,10 @@ watch -n 1 'cat /path/to/team-dir/heartbeat'
 [secret-detector] Cost: $0.06 (estimated $0.10, returned $0.04)
 
 [Wave 1] All members complete
-[Wave 1] Running inter-wave script: gogent-team-prepare-synthesis
+[Wave 1] Running inter-wave script: goyoke-team-prepare-synthesis
 
-[gogent-team-prepare-synthesis] Merging 3 stdout files
-[gogent-team-prepare-synthesis] Wrote: pre-synthesis.md (14KB)
+[goyoke-team-prepare-synthesis] Merging 3 stdout files
+[goyoke-team-prepare-synthesis] Wrote: pre-synthesis.md (14KB)
 
 [Wave 2] Starting wave 2 (1 member)
 [Wave 2] Spawning: security-analyst (sonnet, $1.50)
@@ -2426,9 +2426,9 @@ watch -n 1 'cat /path/to/team-dir/heartbeat'
 
 [Wave 2] All members complete
 
-[gogent-team-run] Team complete in 90s
-[gogent-team-run] Total cost: $0.63 / $3.00 (21% used)
-[gogent-team-run] Budget remaining: $2.37
+[goyoke-team-run] Team complete in 90s
+[goyoke-team-run] Total cost: $0.63 / $3.00 (21% used)
+[goyoke-team-run] Budget remaining: $2.37
 ```
 
 ### 9.3 Verify Stdout Contracts
@@ -2598,7 +2598,7 @@ done
 
 # 6. Launch team-run
 echo "Launching team-run..."
-gogent-team-run "$TEAM_DIR" > "$TEST_OUTPUT/team-run.log" 2>&1 &
+goyoke-team-run "$TEAM_DIR" > "$TEST_OUTPUT/team-run.log" 2>&1 &
 TEAM_RUN_PID=$!
 
 # 7. Wait for completion (timeout 5 minutes)
@@ -2670,7 +2670,7 @@ Learn from production-validated workflows.
 | Workflow | Waves | Models | Budget | Actual Cost | Runtime | Inter-Wave Script | Validation Date |
 |----------|-------|--------|--------|-------------|---------|-------------------|-----------------|
 | **review** | 1 | 3 haiku<br>1 sonnet | $2.00 | $0.068 | 38s | None | 2026-02-08 (TC-013a) |
-| **braintrust** | 2 | 3 opus | $16.00 | $2.48 | 6.5min | gogent-team-prepare-synthesis | 2026-02-08 (TC-013b) |
+| **braintrust** | 2 | 3 opus | $16.00 | $2.48 | 6.5min | goyoke-team-prepare-synthesis | 2026-02-08 (TC-013b) |
 | **implementation** | N (DAG) | N sonnet | $10.00 | $0.86 | ~5min | None | 2026-02-08 (TC-013c) |
 
 ### Review Workflow
@@ -2729,7 +2729,7 @@ Wave 1 (parallel):
   • einstein (opus) — Theoretical analysis
   • staff-architect (opus) — Critical review
     ↓
-    on_complete_script: gogent-team-prepare-synthesis
+    on_complete_script: goyoke-team-prepare-synthesis
     Creates: pre-synthesis.md (45KB)
     ↓
 Wave 2 (sequential):
@@ -2770,7 +2770,7 @@ Wave 2 (sequential):
 
 - Template: `~/.claude/schemas/teams/braintrust.json`
 - Skill: `~/.claude/skills/braintrust/SKILL.md`
-- Synthesis script: `cmd/gogent-team-prepare-synthesis/main.go`
+- Synthesis script: `cmd/goyoke-team-prepare-synthesis/main.go`
 - Validation: `tickets/team-coordination/tickets/TC-013b.md`
 
 ### Implementation Workflow
@@ -2793,7 +2793,7 @@ Wave 2:
 **Key characteristics:**
 
 - N waves computed from task DAG
-- Uses `gogent-plan-impl` to convert implementation-plan.json → team config
+- Uses `goyoke-plan-impl` to convert implementation-plan.json → team config
 - Agents create source files using Write/Edit tools
 - `augmentToolsForImplementation()` adds Write/Edit to allowed_tools at runtime
 - Failure propagation: If task-001 fails → task-002 skipped
@@ -2815,7 +2815,7 @@ Wave 2:
 
 - Template: `~/.claude/schemas/teams/implementation.json`
 - Skill: `~/.claude/skills/implement/SKILL.md`
-- Plan converter: `cmd/gogent-plan-impl/main.go`
+- Plan converter: `cmd/goyoke-plan-impl/main.go`
 - Validation: `tickets/team-coordination/tickets/TC-013c.md`
 
 **Critical bug fix (TC-013c):**
@@ -2854,9 +2854,9 @@ All files involved in the team orchestration system.
 
 | Binary | Location | Purpose | Used By |
 |--------|----------|---------|---------|
-| `gogent-team-run` | `cmd/gogent-team-run/` | Main orchestrator daemon (spawns agents, tracks costs, manages waves) | All team workflows |
-| `gogent-team-prepare-synthesis` | `cmd/gogent-team-prepare-synthesis/` | Inter-wave synthesis (merges Wave N stdout into pre-synthesis.md) | braintrust, security-audit |
-| `gogent-plan-impl` | `cmd/gogent-plan-impl/` | Converts implementation-plan.json → team config + stdin files | implementation |
+| `goyoke-team-run` | `cmd/goyoke-team-run/` | Main orchestrator daemon (spawns agents, tracks costs, manages waves) | All team workflows |
+| `goyoke-team-prepare-synthesis` | `cmd/goyoke-team-prepare-synthesis/` | Inter-wave synthesis (merges Wave N stdout into pre-synthesis.md) | braintrust, security-audit |
+| `goyoke-plan-impl` | `cmd/goyoke-plan-impl/` | Converts implementation-plan.json → team config + stdin files | implementation |
 
 ### Schemas (Contract Layer)
 
@@ -2897,17 +2897,17 @@ All files involved in the team orchestration system.
 
 ### Runtime Files (Per Team Execution)
 
-Created in: `$GOGENT_SESSION_DIR/teams/{timestamp}.{workflow_name}/`
+Created in: `$GOYOKE_SESSION_DIR/teams/{timestamp}.{workflow_name}/`
 
 | File | Purpose | Written By | Read By |
 |------|---------|------------|---------|
-| `config.json` | Team state (waves, members, status, budget) | Skill → gogent-team-run | gogent-team-run, monitoring tools |
-| `stdin_{member_id}.json` | Agent input (N files, one per member) | Skill or gogent-plan-impl | claude CLI (via stdin pipe) |
-| `stdout_{member_id}.json` | Agent output (N files, one per member) | claude CLI (via stdout capture) | gogent-team-run, Wave 2 agents, user |
-| `runner.log` | Execution log (verbose) | gogent-team-run | User (for debugging) |
-| `heartbeat` | Health monitoring (updated every 10s) | gogent-team-run | Monitoring tools |
-| `gogent-team-run.pid` | PID file (for signal handling) | gogent-team-run | User (for manual kill) |
-| `pre-synthesis.md` | Inter-wave artifact (Wave 1 → Wave 2) | gogent-team-prepare-synthesis | Wave 2 agents (via Read tool) |
+| `config.json` | Team state (waves, members, status, budget) | Skill → goyoke-team-run | goyoke-team-run, monitoring tools |
+| `stdin_{member_id}.json` | Agent input (N files, one per member) | Skill or goyoke-plan-impl | claude CLI (via stdin pipe) |
+| `stdout_{member_id}.json` | Agent output (N files, one per member) | claude CLI (via stdout capture) | goyoke-team-run, Wave 2 agents, user |
+| `runner.log` | Execution log (verbose) | goyoke-team-run | User (for debugging) |
+| `heartbeat` | Health monitoring (updated every 10s) | goyoke-team-run | Monitoring tools |
+| `goyoke-team-run.pid` | PID file (for signal handling) | goyoke-team-run | User (for manual kill) |
+| `pre-synthesis.md` | Inter-wave artifact (Wave 1 → Wave 2) | goyoke-team-prepare-synthesis | Wave 2 agents (via Read tool) |
 
 ### Skills (User Interface Layer)
 
@@ -2989,7 +2989,7 @@ Use this checklist when creating a new team composition skill.
 - [ ] Stdin generation creates file for each member
 - [ ] Stdin files include common envelope + workflow-specific fields
 - [ ] Config.json write happens after stdin files
-- [ ] Background launch uses `gogent-team-run "$team_dir" &`
+- [ ] Background launch uses `goyoke-team-run "$team_dir" &`
 - [ ] Launch verification checks for `background_pid` in config
 - [ ] User-facing output includes /team-status, /team-result, /team-cancel instructions
 
@@ -3007,7 +3007,7 @@ Use this checklist when creating a new team composition skill.
 
 - [ ] Dry run flag implemented (generates config without launching)
 - [ ] Dry run verified: config.json + stdin files correct
-- [ ] Manual launch tested: `gogent-team-run /path/to/team-dir`
+- [ ] Manual launch tested: `goyoke-team-run /path/to/team-dir`
 - [ ] Runner log monitored: all agents spawn and complete
 - [ ] Stdout files validated: all have `$schema` and `status` fields
 - [ ] Cost verification: actual vs estimated compared
@@ -3123,10 +3123,10 @@ template.waves = waves;
 
 ### Technique 1: Verbose Runner Logging
 
-Set `GOGENT_DEBUG=1` before launching:
+Set `GOYOKE_DEBUG=1` before launching:
 
 ```bash
-GOGENT_DEBUG=1 gogent-team-run /path/to/team-dir
+GOYOKE_DEBUG=1 goyoke-team-run /path/to/team-dir
 ```
 
 Produces detailed logs:
@@ -3299,4 +3299,4 @@ If typically using <50% of budget, reduce allocation.
 
 ---
 
-This guide provides everything you need to author robust, production-quality team composition skills for GOgent-Fortress. Start with the examples, test thoroughly, and iterate based on actual cost and runtime data. The system is designed for extensibility—your workflow is a first-class citizen alongside `/review`, `/braintrust`, and `/implement`.
+This guide provides everything you need to author robust, production-quality team composition skills for goYoke. Start with the examples, test thoroughly, and iterate based on actual cost and runtime data. The system is designed for extensibility—your workflow is a first-class citizen alongside `/review`, `/braintrust`, and `/implement`.

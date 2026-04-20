@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/test/simulation/harness"
+	"github.com/Bucket-Chemist/goYoke/test/simulation/harness"
 )
 
 func main() {
@@ -89,27 +89,27 @@ func main() {
 	os.MkdirAll(cfg.TempDir, 0755)
 
 	// Find CLI binaries
-	validatePath, err := findBinary("gogent-validate")
+	validatePath, err := findBinary("goyoke-validate")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding gogent-validate: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error finding goyoke-validate: %v\n", err)
 		os.Exit(1)
 	}
-	archivePath, err := findBinary("gogent-archive")
+	archivePath, err := findBinary("goyoke-archive")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding gogent-archive: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error finding goyoke-archive: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Find optional sharp-edge binary for posttooluse scenarios
-	sharpEdgePath, sharpEdgeErr := findBinary("gogent-sharp-edge")
+	sharpEdgePath, sharpEdgeErr := findBinary("goyoke-sharp-edge")
 	if sharpEdgeErr != nil && *verbose {
-		fmt.Printf("[INFO] gogent-sharp-edge not found, posttooluse scenarios will be skipped\n")
+		fmt.Printf("[INFO] goyoke-sharp-edge not found, posttooluse scenarios will be skipped\n")
 	}
 
 	// Find optional load-context binary for sessionstart scenarios
-	loadContextPath, loadContextErr := findBinary("gogent-load-context")
+	loadContextPath, loadContextErr := findBinary("goyoke-load-context")
 	if loadContextErr != nil && *verbose {
-		fmt.Printf("[INFO] gogent-load-context not found, sessionstart scenarios will be skipped\n")
+		fmt.Printf("[INFO] goyoke-load-context not found, sessionstart scenarios will be skipped\n")
 	}
 
 	// Initialize components
@@ -144,15 +144,15 @@ func main() {
 	case "mixed":
 		results, fuzzCrashes, err = runMixed(cfg, gen, runner)
 	case "replay":
-		// Session replay mode (GOgent-042)
+		// Session replay mode (goYoke-042)
 		exitCode := runSessionReplay(cfg, validatePath, archivePath, sharpEdgePath, *verbose, *outputDir)
 		os.Exit(exitCode)
 	case "behavioral":
-		// Behavioral property testing mode (GOgent-042)
+		// Behavioral property testing mode (goYoke-042)
 		exitCode := runBehavioral(cfg, validatePath, archivePath, sharpEdgePath, *verbose, *outputDir)
 		os.Exit(exitCode)
 	case "chaos":
-		// Chaos testing mode (GOgent-042)
+		// Chaos testing mode (goYoke-042)
 		exitCode := runChaos(cfg, sharpEdgePath, *chaosAgents, *chaosSharedRatio, *verbose, *outputDir)
 		os.Exit(exitCode)
 	default:
@@ -284,9 +284,9 @@ func validateConfig(cfg harness.SimulationConfig) error {
 		"deterministic": true,
 		"fuzz":          true,
 		"mixed":         true,
-		"replay":        true,     // GOgent-042
-		"behavioral":    true,     // GOgent-042
-		"chaos":         true,     // GOgent-042
+		"replay":        true,     // goYoke-042
+		"behavioral":    true,     // goYoke-042
+		"chaos":         true,     // goYoke-042
 	}
 	if !validModes[cfg.Mode] {
 		return fmt.Errorf("invalid mode: %s (must be deterministic, fuzz, mixed, replay, behavioral, or chaos)", cfg.Mode)
@@ -381,12 +381,12 @@ func runReplay(crashPath string, cfg harness.SimulationConfig, gen *harness.Defa
 	return 1
 }
 
-// runSessionReplay executes session replay testing (GOgent-042 Level 2).
+// runSessionReplay executes session replay testing (goYoke-042 Level 2).
 func runSessionReplay(cfg harness.SimulationConfig, validatePath, archivePath, sharpEdgePath string, verbose bool, outputDir string) int {
 	fmt.Println("Running session replay tests...")
 
 	if sharpEdgePath == "" {
-		fmt.Fprintf(os.Stderr, "Error: gogent-sharp-edge binary required for session replay\n")
+		fmt.Fprintf(os.Stderr, "Error: goyoke-sharp-edge binary required for session replay\n")
 		return 1
 	}
 
@@ -444,12 +444,12 @@ func runSessionReplay(cfg harness.SimulationConfig, validatePath, archivePath, s
 	return 0
 }
 
-// runBehavioral executes behavioral property testing (GOgent-042 Level 3).
+// runBehavioral executes behavioral property testing (goYoke-042 Level 3).
 func runBehavioral(cfg harness.SimulationConfig, validatePath, archivePath, sharpEdgePath string, verbose bool, outputDir string) int {
 	fmt.Println("Running behavioral property tests...")
 
 	if sharpEdgePath == "" {
-		fmt.Fprintf(os.Stderr, "Error: gogent-sharp-edge binary required for behavioral tests\n")
+		fmt.Fprintf(os.Stderr, "Error: goyoke-sharp-edge binary required for behavioral tests\n")
 		return 1
 	}
 
@@ -492,24 +492,24 @@ func runBehavioral(cfg harness.SimulationConfig, validatePath, archivePath, shar
 	defer os.RemoveAll(testTempDir)
 
 	// Setup directories
-	os.MkdirAll(filepath.Join(testTempDir, ".gogent", "memory"), 0755)
-	os.MkdirAll(filepath.Join(testTempDir, ".gogent"), 0755)
+	os.MkdirAll(filepath.Join(testTempDir, ".goyoke", "memory"), 0755)
+	os.MkdirAll(filepath.Join(testTempDir, ".goyoke"), 0755)
 
 	// Create test sharp edge with valid schema
 	sharpEdgeContent := `{"file":"test.py","error_type":"TypeError","consecutive_failures":3,"timestamp":1705000020}`
-	os.WriteFile(filepath.Join(testTempDir, ".gogent", "memory", "pending-learnings.jsonl"),
+	os.WriteFile(filepath.Join(testTempDir, ".goyoke", "memory", "pending-learnings.jsonl"),
 		[]byte(sharpEdgeContent+"\n"), 0644)
 
 	// Create test handoff with correct schema version
 	handoffContent := `{"schema_version":"1.3","session_id":"test","timestamp":"2026-01-23T10:00:00Z"}`
-	os.WriteFile(filepath.Join(testTempDir, ".gogent", "memory", "handoffs.jsonl"),
+	os.WriteFile(filepath.Join(testTempDir, ".goyoke", "memory", "handoffs.jsonl"),
 		[]byte(handoffContent+"\n"), 0644)
 
 	// Create failure tracker
 	trackerContent := `{"file":"test.py","error_type":"TypeError","timestamp":1705000000}
 {"file":"test.py","error_type":"TypeError","timestamp":1705000010}
 {"file":"test.py","error_type":"TypeError","timestamp":1705000020}`
-	os.WriteFile(filepath.Join(testTempDir, ".gogent", "failure-tracker.jsonl"),
+	os.WriteFile(filepath.Join(testTempDir, ".goyoke", "failure-tracker.jsonl"),
 		[]byte(trackerContent+"\n"), 0644)
 
 	// Load and check context
@@ -562,12 +562,12 @@ func runBehavioral(cfg harness.SimulationConfig, validatePath, archivePath, shar
 	return 0
 }
 
-// runChaos executes chaos testing (GOgent-042 Level 4).
+// runChaos executes chaos testing (goYoke-042 Level 4).
 func runChaos(cfg harness.SimulationConfig, sharpEdgePath string, numAgents int, sharedRatio float64, verbose bool, outputDir string) int {
 	fmt.Printf("Running chaos tests (%d agents, %.0f%% shared keys)...\n", numAgents, sharedRatio*100)
 
 	if sharpEdgePath == "" {
-		fmt.Fprintf(os.Stderr, "Error: gogent-sharp-edge binary required for chaos testing\n")
+		fmt.Fprintf(os.Stderr, "Error: goyoke-sharp-edge binary required for chaos testing\n")
 		return 1
 	}
 

@@ -90,7 +90,7 @@ const reviewTask = Task({
 
 2. EXPECTED OUTCOME:
    - review-critique.md with structured assessment
-   - review-metadata.json with verdict and counts
+   - review-metadata.json with verdict, counts, AND full issue_register (each finding must include affected_files)
 
 3. REQUIRED SKILLS:
    - 7-layer critical review framework (staff-architect-critical-review.md)
@@ -116,6 +116,7 @@ const reviewTask = Task({
    - Include commendations for what was done well
    - Stay within 16K thinking budget
    - Generate both output files (critique + metadata)
+   - Populate issue_register in review-metadata.json with ALL findings, each including affected_files (file paths implicated by the finding; use [] if none)
    - Reference original user goal in critique
 
 6. MUST NOT DO:

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------

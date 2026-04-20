@@ -1,2 +1,190 @@
-# Sharp edges for Proteomics Reviewer - none captured yet
-edges: []
+# Sharp edges for Proteomics Reviewer
+# 14 principle-level IDs from the expanded agent body.
+
+edges:
+  - id: proteomics-search-precursor-tolerance
+    severity: critical
+    description: >
+      Precursor mass tolerance unit mismatch (ppm vs Da). Comet peptide_mass_units=0
+      means Daltons — setting tolerance=20 with units=0 gives ±20 Da, matching random
+      peptides freely. FDR itself is distorted because decoy distribution is equally wrong.
+    detection: >
+      Check Comet peptide_mass_units, MSFragger precursor_mass_units, MaxQuant mainSearchTol.
+      Value 0 in Comet = amu (Daltons). Cross-reference tolerance value with units.
+    mitigation: >
+      Verify units match instrument capability. Typical: 10-20 ppm for Orbitrap,
+      0.5 Da for ion trap.
+
+  - id: proteomics-search-enzyme-mismatch
+    severity: critical
+    description: >
+      Enzyme configured in search engine differs from experimental protocol.
+      Wrong enzyme produces completely wrong peptide boundaries — near-zero
+      identifications or systematic misidentification.
+    detection: >
+      Check Comet search_enzyme_number, MSFragger search_enzyme_name, MaxQuant
+      enzymes XML, MSGF+ -e flag, DIA-NN --cut. Cross-reference with sample
+      preparation protocol.
+    mitigation: >
+      Verify enzyme matches wet-lab protocol. Document any intentional semi-specific
+      or non-specific search.
+
+  - id: proteomics-search-header-incompatible
+    severity: critical
+    description: >
+      FASTA header format incompatible with search engine protein ID parser.
+      PSMs match correctly but protein-level grouping fails silently — protein
+      inference, protein-level FDR, and razor peptide assignment all produce
+      garbage output.
+    detection: >
+      Compare FASTA header format with search engine's expected parsing pattern.
+      MSFragger/Philosopher: first whitespace-delimited token. MaxQuant: UniProt
+      sp|P12345|GENE format. Custom pipe-delimited headers may break parsing.
+    mitigation: >
+      Verify search engine's protein ID regex matches header format. Reformat
+      headers if needed.
+
+  - id: proteomics-fdr-global-only
+    severity: critical
+    description: >
+      Only PSM-level FDR applied; protein-level FDR missing. PSM-level 1% FDR
+      allows ~5-10% false positive proteins due to many-to-one PSM→protein
+      mapping. Ghost proteins contaminate pathway analysis.
+    detection: >
+      Check for separate protein-level FDR filtering step. Philosopher --protxml
+      with --prot threshold. MaxQuant proteinFdrCutoff in mqpar.xml.
+    mitigation: >
+      Apply FDR at all three levels: PSM, peptide, and protein independently.
+
+  - id: proteomics-fdr-no-parsimony
+    severity: warning
+    description: >
+      Protein inference without parsimony principle. Every protein containing
+      a shared peptide reported independently, inflating protein count 2-5x.
+      Dilutes fold-change calculations and corrupts pathway enrichment.
+    detection: >
+      Check for protein grouping or razor peptide assignment. Philosopher --razor,
+      MaxQuant razor peptides, ProteinProphet.
+    mitigation: >
+      Apply parsimony-based protein inference. Assign shared peptides to minimal
+      protein set.
+
+  - id: proteomics-fdr-multistage-dependent
+    severity: warning
+    description: >
+      Multi-stage or iterative search FDR treated as independent when stages share
+      spectra. Score distributions are correlated — unmatched spectra from Stage 1
+      used to build Stage 2 DB creates confirmation bias. Actual FDR can be 3-5x
+      nominal.
+    detection: >
+      Multi-stage search where Stage 1 results inform Stage 2 database construction
+      or parameter selection. Check if overall FDR accounts for stage dependency.
+    mitigation: >
+      Use entrapment database or independent FDR estimation for multi-stage results.
+      Do not treat stage FDRs as independent.
+
+  - id: proteomics-fdr-open-search
+    severity: critical
+    description: >
+      Open modification search without adjusted FDR. Effective search space
+      multiplied by number of allowed mass shifts (10-100x). Standard 1% FDR
+      becomes 10-100% actual false discovery.
+    detection: >
+      MSFragger open search with wide precursor_mass_lower/upper range. Check if
+      mass-shift-aware FDR or separate validation is applied.
+    mitigation: >
+      Use mass-shift-aware FDR (e.g., MSFragger's built-in open search FDR) or
+      validate with independent method.
+
+  - id: proteomics-rescore-training-mismatch
+    severity: critical
+    description: >
+      Rescoring model (Percolator/mokapot) trained on mismatched organism or
+      instrument data. Score distributions differ between organisms/instruments —
+      miscalibrated model inflates scores producing false identifications.
+    detection: >
+      Check Percolator/mokapot training data source. Training on HeLa applied to
+      tissue-specific samples is a mismatch. Check dataset size (>1000 PSMs needed).
+    mitigation: >
+      Train rescoring model on data matching the analysis organism and instrument.
+      Verify adequate training set size.
+
+  - id: proteomics-mbr-no-fdr
+    severity: warning
+    description: >
+      Match-Between-Runs enabled without FDR assessment. MBR transfers
+      identifications using RT alignment only — no spectral evidence, no
+      established FDR framework. If RT alignment is wrong in a region, ALL
+      transfers in that region are wrong.
+    detection: >
+      MaxQuant matchBetweenRuns=True (default). MSFragger/IonQuant --mbr 1.
+      Check for MBR transfer rate reporting and RT alignment quality assessment.
+    mitigation: >
+      Document MBR usage. Assess transfer rate. Ensure MBR-only identifications
+      are distinguishable in output.
+
+  - id: proteomics-mbr-protein-inflation
+    severity: warning
+    description: >
+      MBR-only proteins included in differential expression without flagging.
+      A protein "absent" in one condition and "present" by MBR in another appears
+      differentially expressed, but the "presence" is based on RT alignment, not
+      actual measurement.
+    detection: >
+      Check if proteins identified ONLY by MBR transfer are flagged or excluded
+      from statistical testing. MaxQuant Type column = MATCH-BETWEEN-RUNS.
+    mitigation: >
+      Exclude or flag MBR-only proteins in differential expression analysis.
+
+  - id: proteomics-quant-mnar-as-mcar
+    severity: critical
+    description: >
+      MNAR missing values imputed with MCAR methods (KNN, mean). Proteomics
+      missing values are predominantly MNAR — below detection limit. MCAR methods
+      impute toward population mean, systematically overestimating every
+      low-abundance protein. Creates false differential expression across
+      entire dataset.
+    detection: >
+      Check imputation method: MinProb/QRILC for MNAR, KNN/mean for MCAR.
+      Check if missingness mechanism was assessed (missing rate vs intensity plot).
+    mitigation: >
+      Assess missingness mechanism. Use MNAR-aware imputation (MinProb, QRILC)
+      for proteomics data.
+
+  - id: proteomics-quant-tmt-no-compression
+    severity: warning
+    description: >
+      TMT ratio compression not acknowledged. MS2-level quantification has
+      co-isolation interference that systematically compresses fold changes
+      toward 1:1. A true 4-fold change may appear as 2-fold.
+    detection: >
+      Check for SPS-MS3 vs MS2 methodology documentation. If MS2: check for
+      computational ratio compression correction.
+    mitigation: >
+      Acknowledge ratio compression. Use SPS-MS3 or apply computational
+      correction. Document the methodology.
+
+  - id: proteomics-quant-normalization-mismatch
+    severity: warning
+    description: >
+      Normalization method inappropriate for quantification type. Wrong
+      normalization (e.g., LFQ normalization on TMT data) introduces systematic
+      bias in fold changes.
+    detection: >
+      Check normalization method matches quantification type. MaxLFQ for LFQ,
+      IRS for multi-plex TMT, median centering for single-plex.
+    mitigation: >
+      Match normalization to quantification method. Document choice.
+
+  - id: proteomics-dia-library-provenance
+    severity: warning
+    description: >
+      DIA spectral library provenance undocumented. Library from different
+      instrument or chromatography produces miscalibrated RT predictions.
+      Incomplete library causes systematic false negatives.
+    detection: >
+      Check library source documentation. DIA-NN --lib (empirical) vs --fasta
+      --predict (library-free). Library organism and instrument match.
+    mitigation: >
+      Document library source. Verify instrument/chromatography match.
+      Assess library proteome coverage.

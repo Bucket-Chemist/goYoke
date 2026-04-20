@@ -1,9 +1,0 @@
-{
-  "id": "8",
-  "subject": "Create review-orchestrator agent",
-  "description": "Create ~/.claude/agents/review-orchestrator/ with: agent.md (coordinates parallel reviews, synthesizes findings, generates unified report), agent.yaml (model: sonnet, tier: 2, subagent_type: Plan), CLAUDE.md. Orchestrates backend-reviewer, frontend-reviewer, standards-reviewer based on detected languages.",
-  "activeForm": "Creating review-orchestrator agent",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

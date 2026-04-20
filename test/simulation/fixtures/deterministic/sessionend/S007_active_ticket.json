@@ -2,11 +2,11 @@
   "setup": {
     "create_dirs": [".claude/memory", "migration_plan/tickets"],
     "files": {
-      ".ticket-current": "GOgent-030p",
-      "migration_plan/tickets/030p.md": "---\nticket_id: GOgent-030p\ntitle: Test Ticket\nstatus: in_progress\n---"
+      ".ticket-current": "goYoke-030p",
+      "migration_plan/tickets/030p.md": "---\nticket_id: goYoke-030p\ntitle: Test Ticket\nstatus: in_progress\n---"
     },
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {
@@ -21,7 +21,7 @@
     ],
     "handoff_fields": {
       "schema_version": "1.2",
-      "active_ticket": "GOgent-030p"
+      "active_ticket": "goYoke-030p"
     },
     "exit_code": 0
   }

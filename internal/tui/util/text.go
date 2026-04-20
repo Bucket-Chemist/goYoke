@@ -1,4 +1,4 @@
-// Package util provides shared utility functions for the GOgent-Fortress TUI.
+// Package util provides shared utility functions for the goYoke TUI.
 // It has no dependency on any TUI, model, or Bubbletea packages so it can be
 // imported from any layer of the package hierarchy without creating cycles.
 package util

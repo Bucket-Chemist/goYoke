@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // GenerateBlockingResponse creates an enhanced hook response with pattern-matched remediation suggestions.

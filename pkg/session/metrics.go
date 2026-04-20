@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // CollectSessionMetrics gathers statistics from session logs and temp files.
@@ -78,5 +78,5 @@ func countLogLines(path string) (int, error) {
 // getErrorLogPath returns the path to the error patterns log.
 // Uses XDG-compliant location from config package.
 func getErrorLogPath() string {
-	return filepath.Join(config.GetGOgentDir(), "claude-error-patterns.jsonl")
+	return filepath.Join(config.GetgoYokeDir(), "claude-error-patterns.jsonl")
 }

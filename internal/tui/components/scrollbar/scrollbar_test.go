@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/scrollbar"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/scrollbar"
 )
 
 // lineCount counts the number of lines in s by counting "\n" separators.

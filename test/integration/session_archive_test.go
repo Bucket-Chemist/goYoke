@@ -13,9 +13,9 @@ import (
 )
 
 func TestSessionArchive_Integration(t *testing.T) {
-	binaryPath := "../../bin/gogent-archive"
+	binaryPath := "../../bin/goyoke-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-archive binary not found. Run: go build -o cmd/gogent-archive/gogent-archive cmd/gogent-archive/main.go")
+		t.Skip("goyoke-archive binary not found. Run: go build -o cmd/goyoke-archive/goyoke-archive cmd/goyoke-archive/main.go")
 	}
 
 	// Setup test project directory
@@ -31,9 +31,9 @@ func TestSessionArchive_Integration(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(event)
 
-	// Invoke gogent-archive
+	// Invoke goyoke-archive
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -52,7 +52,7 @@ func TestSessionArchive_Integration(t *testing.T) {
 	}
 
 	// Verify handoff file created
-	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".goyoke", "memory", "last-handoff.md")
 	if _, err := os.Stat(handoffPath); err != nil {
 		t.Errorf("Handoff file not created: %v", err)
 	}
@@ -93,9 +93,9 @@ func TestSessionArchive_Integration(t *testing.T) {
 }
 
 func TestSessionArchive_MetricsCollection(t *testing.T) {
-	binaryPath := "../../bin/gogent-archive"
+	binaryPath := "../../bin/goyoke-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-archive binary not found")
+		t.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := t.TempDir()
@@ -105,16 +105,16 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	gogentDir := filepath.Join(runtimeDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(runtimeDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Create tool counter logs
-	createToolCounterLog(t, gogentDir, "task", 10)
-	createToolCounterLog(t, gogentDir, "read", 25)
-	createToolCounterLog(t, gogentDir, "write", 5)
+	createToolCounterLog(t, goyokeDir, "task", 10)
+	createToolCounterLog(t, goyokeDir, "read", 25)
+	createToolCounterLog(t, goyokeDir, "write", 5)
 
 	// Create error patterns log
-	errorLogPath := filepath.Join(gogentDir, "claude-error-patterns.jsonl")
+	errorLogPath := filepath.Join(goyokeDir, "claude-error-patterns.jsonl")
 	errorLogs := []string{
 		`{"timestamp":1234567890,"file":"test1.go","error_type":"TypeError"}`,
 		`{"timestamp":1234567891,"file":"test2.go","error_type":"ValueError"}`,
@@ -123,7 +123,7 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 	os.WriteFile(errorLogPath, []byte(strings.Join(errorLogs, "\n")+"\n"), 0644)
 
 	// Create violations log
-	violationsLogPath := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsLogPath := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	violations := []string{
 		`{"violation_type":"tool_permission","tool":"Write"}`,
 		`{"violation_type":"delegation_ceiling","agent":"architect"}`,
@@ -139,9 +139,9 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(event)
 
-	// Invoke gogent-archive
+	// Invoke goyoke-archive
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -154,7 +154,7 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 	}
 
 	// Verify handoff contains correct counts
-	handoffPath := filepath.Join(projectDir, ".gogent", "memory", "last-handoff.md")
+	handoffPath := filepath.Join(projectDir, ".goyoke", "memory", "last-handoff.md")
 	handoffData, _ := os.ReadFile(handoffPath)
 	handoffContent := string(handoffData)
 
@@ -178,16 +178,16 @@ func TestSessionArchive_MetricsCollection(t *testing.T) {
 }
 
 func TestSessionArchive_FileArchival(t *testing.T) {
-	binaryPath := "../../bin/gogent-archive"
+	binaryPath := "../../bin/goyoke-archive"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-archive binary not found")
+		t.Skip("goyoke-archive binary not found")
 	}
 
 	projectDir := t.TempDir()
 
-	// Create files to archive (both in .gogent/memory)
-	learningsPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
-	violationsPath := filepath.Join(projectDir, ".gogent", "memory", "routing-violations.jsonl")
+	// Create files to archive (both in .goyoke/memory)
+	learningsPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
+	violationsPath := filepath.Join(projectDir, ".goyoke", "memory", "routing-violations.jsonl")
 
 	os.MkdirAll(filepath.Dir(learningsPath), 0755)
 
@@ -203,9 +203,9 @@ func TestSessionArchive_FileArchival(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(event)
 
-	// Invoke gogent-archive
+	// Invoke goyoke-archive
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+projectDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+projectDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -218,7 +218,7 @@ func TestSessionArchive_FileArchival(t *testing.T) {
 	}
 
 	// Verify files archived
-	archiveDir := filepath.Join(projectDir, ".gogent", "memory", "session-archive")
+	archiveDir := filepath.Join(projectDir, ".goyoke", "memory", "session-archive")
 
 	// Learnings should be moved (deleted from original location)
 	if _, err := os.Stat(learningsPath); !os.IsNotExist(err) {
@@ -260,11 +260,11 @@ func setupTestSessionFiles(t *testing.T, projectDir string) {
 	runtimeDir := t.TempDir()
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 
-	gogentDir := filepath.Join(runtimeDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(runtimeDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Create minimal tool counter logs
-	createToolCounterLog(t, gogentDir, "task", 5)
+	createToolCounterLog(t, goyokeDir, "task", 5)
 
 	// Create .claude directory structure
 	claudeDir := filepath.Join(projectDir, ".claude")
@@ -272,8 +272,8 @@ func setupTestSessionFiles(t *testing.T, projectDir string) {
 }
 
 // Helper: Create tool counter log (new single-file format)
-func createToolCounterLog(t *testing.T, gogentDir, tool string, count int) {
-	counterPath := filepath.Join(gogentDir, "tool-counter")
+func createToolCounterLog(t *testing.T, goyokeDir, tool string, count int) {
+	counterPath := filepath.Join(goyokeDir, "tool-counter")
 
 	// Read existing count if file exists
 	var existingCount int

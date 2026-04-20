@@ -1,4 +1,4 @@
-# Claude CLI Flags Reference — GOgent-Fortress
+# Claude CLI Flags Reference — goYoke
 
 **Created:** 2026-03-25
 **Last Updated:** 2026-03-25
@@ -15,8 +15,8 @@ The Go TUI launches `claude` as a subprocess in interactive mode (not `-p`):
 ```
 claude --input-format stream-json --output-format stream-json --verbose
        --include-partial-messages --permission-mode acceptEdits
-       [--mcp-config /tmp/gofortress-mcp-*.json]
-       [--allowedTools mcp__gofortress-interactive__*]
+       [--mcp-config /tmp/goyoke-mcp-*.json]
+       [--allowedTools mcp__goyoke-interactive__*]
        [--resume <session-id>] [--model <model>]
 ```
 
@@ -27,8 +27,8 @@ claude --input-format stream-json --output-format stream-json --verbose
 | `--input-format stream-json` | Yes | TUI sends JSON messages over stdin | — |
 | `--include-partial-messages` | Yes | Get streaming updates during generation | — |
 | `--permission-mode` | Yes | Default is "default" which asks user; TUI needs `acceptEdits` | — |
-| `--mcp-config` | Optional | Points to temp file with gofortress-interactive MCP server | MCP server name mismatch broke tool discovery |
-| `--allowedTools` | Optional | Pattern must match MCP server name in config | Was `mcp__gofortress__*` but needed `mcp__gofortress-interactive__*` |
+| `--mcp-config` | Optional | Points to temp file with goyoke-interactive MCP server | MCP server name mismatch broke tool discovery |
+| `--allowedTools` | Optional | Pattern must match MCP server name in config | Was `mcp__goyoke__*` but needed `mcp__goyoke-interactive__*` |
 
 ### Flags that DO NOT exist
 
@@ -63,10 +63,10 @@ claude -p --output-format json --permission-mode bypassPermissions
 
 | Variable | Set where | Used by | Purpose |
 |----------|-----------|---------|---------|
-| `CLAUDE_CONFIG_DIR` | `cmd/gofortress/main.go:88` | claude CLI subprocess | Override config directory (e.g. `~/.claude-em`) |
-| `GOFORTRESS_SOCKET` | `cmd/gofortress/main.go:315` | gofortress-mcp binary | UDS path for IPC bridge to TUI |
-| `GOGENT_NESTING_LEVEL` | `internal/tui/mcp/spawner.go:71` | spawned agents | Prevent infinite nesting |
-| `GOGENT_PARENT_AGENT` | `internal/tui/mcp/spawner.go:72` | spawned agents | Tree hierarchy linkage |
+| `CLAUDE_CONFIG_DIR` | `cmd/goyoke/main.go:88` | claude CLI subprocess | Override config directory (e.g. `~/.claude-em`) |
+| `GOYOKE_SOCKET` | `cmd/goyoke/main.go:315` | goyoke-mcp binary | UDS path for IPC bridge to TUI |
+| `GOYOKE_NESTING_LEVEL` | `internal/tui/mcp/spawner.go:71` | spawned agents | Prevent infinite nesting |
+| `GOYOKE_PARENT_AGENT` | `internal/tui/mcp/spawner.go:72` | spawned agents | Tree hierarchy linkage |
 
 ---
 
@@ -74,9 +74,9 @@ claude -p --output-format json --permission-mode bypassPermissions
 
 | Config key | Binary | Tool prefix | Used by |
 |------------|--------|-------------|---------|
-| `gofortress-interactive` | `bin/gofortress-mcp` | `mcp__gofortress-interactive__*` | Go TUI (via `--mcp-config`) |
+| `goyoke-interactive` | `bin/goyoke-mcp` | `mcp__goyoke-interactive__*` | Go TUI (via `--mcp-config`) |
 
-**Critical:** The config key in `writeMCPConfig()` determines the tool prefix. CLAUDE.md tells the LLM to call `mcp__gofortress-interactive__spawn_agent`. If the config key doesn't match, the LLM can't find the tool.
+**Critical:** The config key in `writeMCPConfig()` determines the tool prefix. CLAUDE.md tells the LLM to call `mcp__goyoke-interactive__spawn_agent`. If the config key doesn't match, the LLM can't find the tool.
 
 ---
 
@@ -85,8 +85,8 @@ claude -p --output-format json --permission-mode bypassPermissions
 All binaries output to `bin/` (fixed 2026-03-25):
 
 ```makefile
-build-go-tui:  -o bin/gofortress
-build-go-mcp:  -o bin/gofortress-mcp
+build-go-tui:  -o bin/goyoke
+build-go-mcp:  -o bin/goyoke-mcp
 ```
 
 **`findMCPBinary()`** searches: same dir as TUI binary → `bin/` subdir → `../bin/` → PATH.
@@ -114,9 +114,9 @@ When claude CLI updates, check:
 
 | Bug | Root Cause | Fix |
 |-----|-----------|-----|
-| spawn_agent "is a stub" | MCP server name `gofortress` didn't match CLAUDE.md's `gofortress-interactive` | Changed `writeMCPConfig()` key to `gofortress-interactive` |
-| gofortress-EM-go: CLI never called | `--config-dir` is not a valid claude CLI flag | Removed; use `CLAUDE_CONFIG_DIR` env var |
-| gofortress-EM-go: blank screen | `--output-format stream-json` requires `--verbose` since 2.1.81 | Added `--verbose` to `buildArgs()` |
+| spawn_agent "is a stub" | MCP server name `goyoke` didn't match CLAUDE.md's `goyoke-interactive` | Changed `writeMCPConfig()` key to `goyoke-interactive` |
+| goyoke-EM-go: CLI never called | `--config-dir` is not a valid claude CLI flag | Removed; use `CLAUDE_CONFIG_DIR` env var |
+| goyoke-EM-go: blank screen | `--output-format stream-json` requires `--verbose` since 2.1.81 | Added `--verbose` to `buildArgs()` |
 | Spawned agents blocked on Write | `-p` mode can't prompt for permissions | Added `--permission-mode bypassPermissions` |
 | Spawned agents hang | `--output-format stream-json` hangs in one-shot mode | Changed to `--output-format json` |
 | Stale binary picked up | Makefile output TUI to root, MCP to `bin/` | All outputs to `bin/`, added `clean-stale` target |

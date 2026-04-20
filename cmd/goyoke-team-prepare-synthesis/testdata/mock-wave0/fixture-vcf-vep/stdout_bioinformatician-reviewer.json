@@ -1,0 +1,61 @@
+{
+  "schema_id": "reviewer",
+  "reviewer": "bioinformatician-reviewer",
+  "status": "complete",
+  "overall_assessment": "WARNING",
+  "summary": "Pipeline lacks container image pinning and reference integrity checksums. Results are not reproducible across environments. Three pipeline infrastructure concerns identified.",
+  "findings": [
+    {
+      "id": "BIO-1",
+      "severity": "INFO",
+      "category": "containers",
+      "file": "nextflow.config",
+      "line": 22,
+      "end_line": 29,
+      "title": "Container images not pinned to digest — silent version drift risk",
+      "message": "nextflow.config specifies container images by tag (e.g., 'nfcore/bwamem2:2.2.1') rather than by SHA256 digest. Docker tags are mutable: a registry update can change the image behind a tag without changing the config file. This means two pipeline runs from the same config file may use different software versions.",
+      "impact": "Results may silently differ between pipeline runs separated by a container update. Audit trail is incomplete — the exact software used cannot be reconstructed from config alone.",
+      "recommendation": "Pin images by digest: 'nfcore/bwamem2@sha256:abc123...'. Record image digests in pipeline provenance output. Use 'docker pull --quiet' + 'docker inspect --format={{.Id}}' to capture digests at run time.",
+      "code_snippet": "process.container = 'nfcore/bwamem2:2.2.1'\n// Should be:\n// process.container = 'nfcore/bwamem2@sha256:3d2a...'",
+      "sharp_edge_id": null,
+      "references": ["https://www.nextflow.io/docs/latest/container.html"]
+    },
+    {
+      "id": "BIO-2",
+      "severity": "INFO",
+      "category": "workflow",
+      "file": "pipeline/alignment.nf",
+      "line": 5,
+      "end_line": 11,
+      "title": "Reference genome checksums not validated at pipeline startup",
+      "message": "The pipeline downloads and uses reference FASTA and index files without verifying MD5/SHA256 checksums. A partially downloaded or corrupted reference file would cause alignment or variant calling to fail silently or produce subtly wrong results.",
+      "impact": "Corrupted reference detected late (or not at all). Debugging reference corruption is expensive — typically requires re-running the entire alignment step.",
+      "recommendation": "Add a validation step at pipeline startup: verify MD5/SHA256 checksums for all reference files against published values (GATK resource bundle checksums are published). Fail fast if checksums do not match.",
+      "code_snippet": "// Current: no checksum validation\nparams.ref = 'refs/hg19/Homo_sapiens_assembly19.fasta'\n// Add: validate_checksum(params.ref, 'expected_md5_hash')",
+      "sharp_edge_id": null,
+      "references": []
+    },
+    {
+      "id": "BIO-3",
+      "severity": "INFO",
+      "category": "documentation",
+      "file": "README.md",
+      "line": 1,
+      "end_line": 1,
+      "title": "Pipeline parameters undocumented — no README or parameter schema",
+      "message": "No README.md or parameter documentation found. The pipeline has 23 configurable parameters in nextflow.config but none are described. Users cannot determine valid input ranges, required vs optional parameters, or expected output structure without reading all config files.",
+      "impact": "Collaboration and maintenance risk. New users must reverse-engineer parameter semantics from code. Parameter validation errors produce cryptic messages.",
+      "recommendation": "Add README.md with: purpose, input formats, required parameters, optional parameters with defaults, expected outputs, and example invocation. Consider adding a nextflow-schema.json for automated parameter validation.",
+      "code_snippet": "// README.md: not present\n// nextflow-schema.json: not present",
+      "sharp_edge_id": null,
+      "references": ["https://nf-co.re/docs/contributing/pipeline_git_submodule"]
+    }
+  ],
+  "files_reviewed": 4,
+  "files_skipped": 0,
+  "metadata": {
+    "duration_ms": 28600,
+    "thinking_budget_used": 4200,
+    "attempt_number": 1
+  }
+}

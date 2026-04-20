@@ -34,7 +34,7 @@ type FixtureSetup struct {
 	// Files maps relative paths to file contents
 	Files map[string]string `json:"files,omitempty"`
 	// Env maps environment variable names to values.
-	// Special handling: GOGENT_DELEGATION_CEILING writes to .gogent/tmp/max_delegation
+	// Special handling: GOYOKE_DELEGATION_CEILING writes to .goyoke/tmp/max_delegation
 	Env map[string]string `json:"env,omitempty"`
 }
 

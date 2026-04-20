@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 // conventionCache caches loaded convention content to avoid repeated disk I/O.
@@ -16,6 +18,8 @@ var (
 
 // GetClaudeConfigDir returns the path to ~/.claude directory.
 // Uses CLAUDE_CONFIG_DIR env var if set, otherwise ~/.claude
+//
+// Deprecated: use resolve.NewFromEnv() instead.
 func GetClaudeConfigDir() (string, error) {
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
 		return dir, nil
@@ -41,41 +45,36 @@ func LoadConventionContent(conventionName string) (string, error) {
 	}
 	cacheMutex.RUnlock()
 
-	// Load from disk
-	configDir, err := GetClaudeConfigDir()
+	// Load from disk via Resolver
+	r, err := resolve.NewFromEnv()
 	if err != nil {
 		return "", err
 	}
-
-	path := filepath.Join(configDir, "conventions", conventionName)
-	content, err := os.ReadFile(path)
+	data, err := r.ReadFile("conventions/" + conventionName)
 	if err != nil {
 		return "", fmt.Errorf("failed to load convention %s: %w", conventionName, err)
 	}
 
 	// Cache the result
 	cacheMutex.Lock()
-	conventionCache[conventionName] = string(content)
+	conventionCache[conventionName] = string(data)
 	cacheMutex.Unlock()
 
-	return string(content), nil
+	return string(data), nil
 }
 
 // LoadRulesContent loads a rules file by name.
 // Returns the file content as a string.
 func LoadRulesContent(rulesName string) (string, error) {
-	configDir, err := GetClaudeConfigDir()
+	r, err := resolve.NewFromEnv()
 	if err != nil {
 		return "", err
 	}
-
-	path := filepath.Join(configDir, "rules", rulesName)
-	content, err := os.ReadFile(path)
+	data, err := r.ReadFile("rules/" + rulesName)
 	if err != nil {
 		return "", fmt.Errorf("failed to load rules %s: %w", rulesName, err)
 	}
-
-	return string(content), nil
+	return string(data), nil
 }
 
 // LoadMultipleConventions loads multiple convention files and returns them as a map.

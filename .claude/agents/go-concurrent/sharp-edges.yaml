@@ -143,7 +143,7 @@ sharp_edges:
     category: channels
     description: "Send to channel that might be closed causes panic"
     symptom: "Panic: send on closed channel"
-    learned_from: "GOgent-Fortress TUI streaming fix (2026-01-26)"
+    learned_from: "goYoke TUI streaming fix (2026-01-26)"
     solution: |
       WRONG: Unguarded send panics if channel closed
       if shouldSend {
@@ -170,7 +170,7 @@ sharp_edges:
     category: sync-primitives
     description: "sync.WaitGroup copied by value causes issues"
     symptom: "copylocks warning, undefined WaitGroup behavior"
-    learned_from: "GOgent-Fortress subprocess restart fix (2026-01-26)"
+    learned_from: "goYoke subprocess restart fix (2026-01-26)"
     solution: |
       WRONG: WaitGroup as value in struct
       type Process struct {
@@ -198,7 +198,7 @@ sharp_edges:
     category: goroutines
     description: "Spawning goroutine per read with timeout causes leaks"
     symptom: "Goroutine accumulation, data loss on slow reads"
-    learned_from: "GOgent-Fortress readEvents fix (2026-01-26)"
+    learned_from: "goYoke readEvents fix (2026-01-26)"
     solution: |
       WRONG: New goroutine per read iteration
       for {

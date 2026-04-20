@@ -1,0 +1,134 @@
+// Package instructionsaudit implements the goyoke-instructions-audit hook.
+// It appends an audit record for each InstructionsLoaded event.
+package instructionsaudit
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"time"
+)
+
+// DefaultTimeout is the read timeout for stdin events.
+const DefaultTimeout = 3 * time.Second
+
+// InstructionsLoadedEvent represents the Claude Code InstructionsLoaded hook event.
+type InstructionsLoadedEvent struct {
+	SessionID  string `json:"session_id"`
+	FilePath   string `json:"file_path"`
+	MemoryType string `json:"memory_type"`
+	LoadReason string `json:"load_reason"`
+	AgentID    string `json:"agent_id"`
+	AgentType  string `json:"agent_type"`
+	CWD        string `json:"cwd"`
+}
+
+// AuditRecord is the JSONL record written for each InstructionsLoaded event.
+type AuditRecord struct {
+	Timestamp  int64  `json:"timestamp"`
+	SessionID  string `json:"session_id"`
+	FilePath   string `json:"file_path"`
+	MemoryType string `json:"memory_type"`
+	LoadReason string `json:"load_reason"`
+	AgentID    string `json:"agent_id"`
+	AgentType  string `json:"agent_type"`
+}
+
+// ReadEvent reads and parses the InstructionsLoaded event from r with a timeout.
+func ReadEvent(r io.Reader, timeout time.Duration) (*InstructionsLoadedEvent, error) {
+	type result struct {
+		event *InstructionsLoadedEvent
+		err   error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		data, err := io.ReadAll(r)
+		if err != nil {
+			ch <- result{nil, fmt.Errorf("read stdin: %w", err)}
+			return
+		}
+		if len(data) == 0 {
+			ch <- result{nil, fmt.Errorf("empty stdin")}
+			return
+		}
+		var event InstructionsLoadedEvent
+		if err := json.Unmarshal(data, &event); err != nil {
+			ch <- result{nil, fmt.Errorf("parse JSON: %w", err)}
+			return
+		}
+		ch <- result{&event, nil}
+	}()
+
+	select {
+	case res := <-ch:
+		return res.event, res.err
+	case <-time.After(timeout):
+		return nil, fmt.Errorf("stdin read timeout after %v", timeout)
+	}
+}
+
+// AuditLogPath resolves the path to the instructions-audit.jsonl file.
+// Uses $XDG_DATA_HOME/goyoke/ or falls back to ~/.local/share/goyoke/.
+func AuditLogPath() string {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			home = os.Getenv("HOME")
+		}
+		dataHome = filepath.Join(home, ".local", "share")
+	}
+	return filepath.Join(dataHome, "goyoke", "instructions-audit.jsonl")
+}
+
+// AppendAuditRecord writes an audit record as a JSONL line to path.
+func AppendAuditRecord(path string, record AuditRecord) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create directory: %w", err)
+	}
+
+	data, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("marshal record: %w", err)
+	}
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("open file: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(append(data, '\n')); err != nil {
+		return fmt.Errorf("write record: %w", err)
+	}
+
+	return nil
+}
+
+// Main is the entrypoint for the goyoke-instructions-audit hook.
+func Main() {
+	event, err := ReadEvent(os.Stdin, DefaultTimeout)
+	if err != nil {
+		// Parse failure is non-fatal: this hook must never block.
+		fmt.Fprintf(os.Stderr, "[goyoke-instructions-audit] Warning: %v\n", err)
+		os.Exit(0)
+	}
+
+	record := AuditRecord{
+		Timestamp:  time.Now().Unix(),
+		SessionID:  event.SessionID,
+		FilePath:   event.FilePath,
+		MemoryType: event.MemoryType,
+		LoadReason: event.LoadReason,
+		AgentID:    event.AgentID,
+		AgentType:  event.AgentType,
+	}
+
+	if err := AppendAuditRecord(AuditLogPath(), record); err != nil {
+		fmt.Fprintf(os.Stderr, "[goyoke-instructions-audit] Warning: append failed: %v\n", err)
+	}
+
+	os.Exit(0)
+}

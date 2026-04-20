@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all widget interface definitions used by AppModel to
 // decouple from concrete component types and avoid circular imports.
 package model
@@ -8,7 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -538,6 +538,15 @@ type drawerStackWidget interface {
 	HasActiveModal() bool
 	OptionsActiveRequestID() string
 	OptionsSelectedOption() string
+	ClearOptionsModal()
+	// Figures drawer (CM-014).
+	SetFiguresContent(content string)
+	ClearFiguresContent()
+	FiguresHasContent() bool
+	RefreshFiguresContent(content string)
+	FiguresIsMinimized() bool
+	SetFiguresFocused(focused bool)
+	ToggleFiguresDrawer()
 }
 
 // ---------------------------------------------------------------------------

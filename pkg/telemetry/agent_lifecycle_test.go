@@ -481,13 +481,13 @@ func TestXDGComplianceAgentLifecycle(t *testing.T) {
 	testPath := "/tmp/test-xdg-lifecycle"
 	os.Setenv("XDG_DATA_HOME", testPath)
 
-	// Clear GOGENT_PROJECT_DIR to ensure XDG path is used
-	origProject := os.Getenv("GOGENT_PROJECT_DIR")
-	os.Unsetenv("GOGENT_PROJECT_DIR")
-	defer os.Setenv("GOGENT_PROJECT_DIR", origProject)
+	// Clear GOYOKE_PROJECT_DIR to ensure XDG path is used
+	origProject := os.Getenv("GOYOKE_PROJECT_DIR")
+	os.Unsetenv("GOYOKE_PROJECT_DIR")
+	defer os.Setenv("GOYOKE_PROJECT_DIR", origProject)
 
 	path := getAgentLifecyclePath()
-	expected := filepath.Join(testPath, "gogent", "agent-lifecycle.jsonl")
+	expected := filepath.Join(testPath, "goyoke", "agent-lifecycle.jsonl")
 
 	if path != expected {
 		t.Errorf("XDG_DATA_HOME not respected. Got %s, expected %s", path, expected)

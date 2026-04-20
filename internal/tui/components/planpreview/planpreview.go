@@ -1,5 +1,5 @@
 // Package planpreview implements the plan preview panel for the
-// GOgent-Fortress TUI. It renders a Markdown implementation plan in a
+// goYoke TUI. It renders a Markdown implementation plan in a
 // scrollable viewport using Glamour.
 //
 // The component is display-only: markdown rendering is performed in
@@ -11,9 +11,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // ---------------------------------------------------------------------------

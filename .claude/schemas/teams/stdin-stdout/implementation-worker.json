@@ -19,7 +19,7 @@
       "blocks": ["task-003"]
     },
     "implementation_scope": {
-      "target_packages": ["pkg/routing", "cmd/gogent-validate"],
+      "target_packages": ["pkg/routing", "cmd/goyoke-validate"],
       "related_files": [
         {
           "path": "relative/path/to/file.go",

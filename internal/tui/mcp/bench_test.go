@@ -28,9 +28,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/bridge"
-	tuimcp "github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/mcp"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/bridge"
+	tuimcp "github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------
@@ -69,7 +69,7 @@ func (s *benchAutoResolveSender) Send(msg tea.Msg) {
 // newBenchBridgeHarness
 //
 // Starts a real IPCBridge + connects a UDSClient.  Uses b.Setenv so that
-// GOFORTRESS_SOCKET and XDG_RUNTIME_DIR are automatically restored after the
+// GOYOKE_SOCKET and XDG_RUNTIME_DIR are automatically restored after the
 // benchmark.  The cleanup function shuts down the bridge.
 // ---------------------------------------------------------------------------
 
@@ -87,7 +87,7 @@ func newBenchBridgeHarness(b *testing.B) (*bridge.IPCBridge, *tuimcp.UDSClient, 
 	as.setBridge(br)
 	br.Start()
 
-	b.Setenv("GOFORTRESS_SOCKET", br.SocketPath())
+	b.Setenv("GOYOKE_SOCKET", br.SocketPath())
 	uds := tuimcp.NewUDSClient()
 
 	// Eagerly connect so the benchmark loop does not pay dial overhead.

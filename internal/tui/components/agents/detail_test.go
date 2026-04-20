@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -673,6 +673,58 @@ func TestDetailRender_CompactWidthBoundaries(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// RenderInlineContent
+// ---------------------------------------------------------------------------
+
+func TestRenderInlineContent_NilAgent(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	got := m.RenderInlineContent()
+	if got != "" {
+		t.Errorf("RenderInlineContent on nil agent should return \"\"; got %q", got)
+	}
+}
+
+func TestRenderInlineContent_ContainsSectionHeaders(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 20)
+	a := fullyPopulatedAgent()
+	m.SetAgent(a)
+
+	got := m.RenderInlineContent()
+	if got == "" {
+		t.Fatal("RenderInlineContent should not be empty for a set agent")
+	}
+	for _, section := range []string{"Overview", "Context", "Activity"} {
+		if !strings.Contains(got, section) {
+			t.Errorf("RenderInlineContent should contain section %q; got:\n%s", section, got)
+		}
+	}
+}
+
+func TestRenderInlineContent_MatchesSyncViewport(t *testing.T) {
+	m := agents.NewAgentDetailModel()
+	m.SetSize(80, 40)
+	a := fullyPopulatedAgent()
+	success := true
+	a.RecentActivity = []state.AgentActivity{
+		{Type: "tool_use", ToolName: "Read", Target: "foo.go", Success: &success},
+	}
+	m.SetAgent(a)
+
+	inline := m.RenderInlineContent()
+	viewContent := m.View()
+	if inline == "" {
+		t.Fatal("RenderInlineContent should not be empty")
+	}
+	if viewContent == "" {
+		t.Fatal("View should not be empty")
+	}
+	if !strings.Contains(inline, "Overview") {
+		t.Error("inline content missing Overview section")
 	}
 }
 

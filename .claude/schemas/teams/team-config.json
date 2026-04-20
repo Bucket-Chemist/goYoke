@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/teams/team-config.json",
+  "$id": "https://goyoke-fortress/schemas/teams/team-config.json",
   "title": "Team Configuration Schema",
-  "description": "Validates team config files for GOgent-Fortress team coordination workflows",
+  "description": "Validates team config files for goYoke team coordination workflows",
   "version": "1.0.0",
   "type": "object",
   "required": [
@@ -183,7 +183,7 @@
           },
           "on_complete_script": {
             "type": ["string", "null"],
-            "description": "Optional script to run after this wave completes (e.g., gogent-team-prepare-synthesis)"
+            "description": "Optional script to run after this wave completes (e.g., goyoke-team-prepare-synthesis)"
           }
         }
       }

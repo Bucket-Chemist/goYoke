@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file defines all tea.Msg types used across the event-driven architecture.
 // Message types are the contracts between components; define them here so all
 // components can import without circular dependencies.
@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -190,7 +190,7 @@ type AgentTodoUpdateMsg struct {
 // ---------------------------------------------------------------------------
 // Team messages
 //
-// These messages reflect lifecycle events for gogent-team-run sessions.
+// These messages reflect lifecycle events for goyoke-team-run sessions.
 // ---------------------------------------------------------------------------
 
 // TeamUpdateMsg is emitted when a team's overall status or an individual
@@ -460,7 +460,7 @@ type DrawerMinimizeMsg struct {
 
 // CWDChangedMsg is emitted when the user selects a new working directory
 // via the CWD selector modal. The AppModel handles this by calling
-// os.Chdir and setting the GOGENT_CWD env var for subprocess propagation.
+// os.Chdir and setting the GOYOKE_CWD env var for subprocess propagation.
 type CWDChangedMsg struct {
 	Path string
 }

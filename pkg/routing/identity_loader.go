@@ -1,13 +1,19 @@
 package routing
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
+
+var validAgentID = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 
 const (
 	// IdentityMarker prevents double-injection of agent identity
@@ -29,6 +35,10 @@ func LoadAgentIdentity(agentID string) (string, error) {
 		return "", nil
 	}
 
+	if !validAgentID.MatchString(agentID) {
+		return "", fmt.Errorf("invalid agentID %q: must match [a-z][a-z0-9-]*", agentID)
+	}
+
 	cacheKey := "identity:" + agentID
 
 	// Check cache
@@ -39,16 +49,14 @@ func LoadAgentIdentity(agentID string) (string, error) {
 	}
 	cacheMutex.RUnlock()
 
-	// Load from disk
-	configDir, err := GetClaudeConfigDir()
+	// Load from disk via Resolver
+	r, err := resolve.NewFromEnv()
 	if err != nil {
 		return "", err
 	}
-
-	path := filepath.Join(configDir, "agents", agentID, agentID+".md")
-	data, err := os.ReadFile(path)
+	data, err := r.ReadFile("agents/" + agentID + "/" + agentID + ".md")
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			// Cache empty result to avoid repeated disk checks
 			cacheMutex.Lock()
 			conventionCache[cacheKey] = ""
@@ -99,23 +107,23 @@ func StripYAMLFrontmatter(content string) string {
 }
 
 // GetSessionDir reads the current session directory path.
-// First checks GOGENT_SESSION_DIR (set directly by team-run for spawned agents),
+// First checks GOYOKE_SESSION_DIR (set directly by team-run for spawned agents),
 // then falls back to reading the current-session marker file using project dir resolution:
-// GOGENT_PROJECT_ROOT → GOGENT_PROJECT_DIR → CLAUDE_PROJECT_DIR → os.Getwd().
+// GOYOKE_PROJECT_ROOT → GOYOKE_PROJECT_DIR → CLAUDE_PROJECT_DIR → os.Getwd().
 // Returns empty string if unavailable.
 //
 // Note: Cannot import pkg/session (circular dependency via sharp_edge_utils.go),
 // so env var resolution is inlined here.
 func GetSessionDir() string {
 	// Direct path: team-run sets this for spawned CLI processes
-	if dir := os.Getenv("GOGENT_SESSION_DIR"); dir != "" {
+	if dir := os.Getenv("GOYOKE_SESSION_DIR"); dir != "" {
 		return dir
 	}
 
 	// File-based path: read from current-session marker
-	projectDir := os.Getenv("GOGENT_PROJECT_ROOT")
+	projectDir := os.Getenv("GOYOKE_PROJECT_ROOT")
 	if projectDir == "" {
-		projectDir = os.Getenv("GOGENT_PROJECT_DIR")
+		projectDir = os.Getenv("GOYOKE_PROJECT_DIR")
 	}
 	if projectDir == "" {
 		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")
@@ -128,14 +136,13 @@ func GetSessionDir() string {
 	}
 	data, err := os.ReadFile(filepath.Join(config.RuntimeDir(projectDir), "current-session"))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[identity-loader] current-session not found at %s/.gogent/current-session\n", projectDir)
 		return ""
 	}
 	return strings.TrimSpace(string(data))
 }
 
 // BuildFullAgentContext builds complete agent context: identity + rules + conventions.
-// Unified entry point for both Task() (gogent-validate) and team-run (envelope.go) paths.
+// Unified entry point for both Task() (goyoke-validate) and team-run (envelope.go) paths.
 //
 // Injection order:
 //  1. Agent identity (from ~/.claude/agents/{agentID}/{agentID}.md body)
@@ -223,6 +230,12 @@ func BuildFullAgentContext(agentID string, requirements *ContextRequirements, ta
 				injected = true
 			}
 		}
+	}
+
+	// 4. Codebase map context (controlled by GOYOKE_CODEBASE_MAP_INJECT; skipped gracefully if absent)
+	if mapCtx := InjectCodebaseMapContext(agentID, originalPrompt, findProjectRoot()); mapCtx != "" {
+		sections = append(sections, mapCtx)
+		injected = true
 	}
 
 	if !injected {

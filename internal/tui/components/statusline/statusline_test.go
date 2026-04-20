@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/statusline"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/statusline"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------

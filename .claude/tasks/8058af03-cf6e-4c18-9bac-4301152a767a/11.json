@@ -1,9 +1,0 @@
-{
-  "id": "11",
-  "subject": "Update routing-schema.json with new agents",
-  "description": "Update ~/.claude/routing-schema.json to include: typescript-pro and react-pro in sonnet tier, all 3 reviewers in haiku_thinking tier, review-orchestrator in sonnet tier. Add agent_subagent_mapping entries. Update version to 2.4.0.",
-  "activeForm": "Updating routing-schema.json",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

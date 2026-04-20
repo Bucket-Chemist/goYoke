@@ -9,7 +9,7 @@ import (
 
 func TestArchiveArtifacts_Success(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create artifacts
@@ -80,7 +80,7 @@ func TestArchiveArtifacts_Success(t *testing.T) {
 
 func TestArchiveArtifacts_MissingFiles(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	cfg := HandoffConfig{
@@ -97,7 +97,7 @@ func TestArchiveArtifacts_MissingFiles(t *testing.T) {
 
 func TestArchiveArtifacts_TranscriptCopy(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	transcriptPath := filepath.Join(tmpDir, "transcript.jsonl")
@@ -133,7 +133,7 @@ func TestArchiveArtifacts_ErrorFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Use non-writable directory to trigger error
-	memoryDir := filepath.Join(tmpDir, "readonly", ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, "readonly", ".goyoke", "memory")
 	os.MkdirAll(filepath.Dir(memoryDir), 0755)
 	os.Chmod(filepath.Dir(memoryDir), 0444) // Read-only
 	defer os.Chmod(filepath.Dir(memoryDir), 0755)
@@ -154,10 +154,10 @@ func TestArchiveArtifacts_ErrorFormat(t *testing.T) {
 }
 
 func TestCleanupTempFiles(t *testing.T) {
-	// Setup: Create temp directory and set GOgentDir via XDG_CACHE_HOME
+	// Setup: Create temp directory and set goYokeDir via XDG_CACHE_HOME
 	tmpDir := t.TempDir()
-	gogentDir := filepath.Join(tmpDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(tmpDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Override XDG environment variables for this test
 	originalRuntime := os.Getenv("XDG_RUNTIME_DIR")
@@ -172,10 +172,10 @@ func TestCleanupTempFiles(t *testing.T) {
 	}()
 
 	// Create temp files that should be cleaned
-	counterLog1 := filepath.Join(gogentDir, "claude-tool-counter-12345.log")
-	counterLog2 := filepath.Join(gogentDir, "claude-tool-counter-67890.log")
-	currentTier := filepath.Join(gogentDir, "current-tier")
-	maxDelegation := filepath.Join(gogentDir, "max_delegation")
+	counterLog1 := filepath.Join(goyokeDir, "claude-tool-counter-12345.log")
+	counterLog2 := filepath.Join(goyokeDir, "claude-tool-counter-67890.log")
+	currentTier := filepath.Join(goyokeDir, "current-tier")
+	maxDelegation := filepath.Join(goyokeDir, "max_delegation")
 
 	os.WriteFile(counterLog1, []byte("test counter 1"), 0644)
 	os.WriteFile(counterLog2, []byte("test counter 2"), 0644)
@@ -183,7 +183,7 @@ func TestCleanupTempFiles(t *testing.T) {
 	os.WriteFile(maxDelegation, []byte("opus"), 0644)
 
 	// Create a file that should NOT be cleaned
-	keepFile := filepath.Join(gogentDir, "routing-violations.jsonl")
+	keepFile := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	os.WriteFile(keepFile, []byte("test violation"), 0644)
 
 	// Execute cleanup
@@ -215,8 +215,8 @@ func TestCleanupTempFiles(t *testing.T) {
 func TestCleanupTempFiles_MissingFiles(t *testing.T) {
 	// Setup: Create empty temp directory
 	tmpDir := t.TempDir()
-	gogentDir := filepath.Join(tmpDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(tmpDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Override XDG environment variables
 	originalRuntime := os.Getenv("XDG_RUNTIME_DIR")
@@ -313,7 +313,7 @@ func TestCopyFile_WriteError(t *testing.T) {
 
 func TestArchiveArtifacts_CopyFileError(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create a transcript that exists but is inaccessible for copy
@@ -337,8 +337,8 @@ func TestArchiveArtifacts_CopyFileError(t *testing.T) {
 func TestCleanupTempFiles_GlobError(t *testing.T) {
 	// Setup: Create temp directory
 	tmpDir := t.TempDir()
-	gogentDir := filepath.Join(tmpDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(tmpDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Override XDG environment variables
 	originalRuntime := os.Getenv("XDG_RUNTIME_DIR")
@@ -353,8 +353,8 @@ func TestCleanupTempFiles_GlobError(t *testing.T) {
 	}()
 
 	// Create counter log files
-	counterLog1 := filepath.Join(gogentDir, "claude-tool-counter-111.log")
-	counterLog2 := filepath.Join(gogentDir, "claude-tool-counter-222.log")
+	counterLog1 := filepath.Join(goyokeDir, "claude-tool-counter-111.log")
+	counterLog2 := filepath.Join(goyokeDir, "claude-tool-counter-222.log")
 	os.WriteFile(counterLog1, []byte("counter 1"), 0644)
 	os.WriteFile(counterLog2, []byte("counter 2"), 0644)
 

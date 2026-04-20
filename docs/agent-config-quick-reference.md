@@ -1,10 +1,17 @@
+---
+title: Agent Configuration Quick Reference
+type: reference
+tags: [agents, configuration]
+related: [concepts/agent-spawning]
+created: 2026-04-18
+---
 # Agent Configuration Quick Reference
 
 ## Config Struct Fields
 
 ```go
 type Config struct {
-    // Agent Customization Fields (GOgent-117)
+    // Agent Customization Fields (goYoke-117)
     SystemPrompt    string   // Override default system prompt
     AppendPrompt    string   // Append to default system prompt
     AllowedTools    []string // Whitelist of permitted tools
@@ -193,6 +200,15 @@ go test ./internal/cli -v
 
 ## References
 
-- Implementation: `docs/GOgent-117-IMPLEMENTATION.md`
+- Implementation: `docs/goYoke-117-IMPLEMENTATION.md`
 - Source: `internal/cli/subprocess.go`, `internal/cli/subagent.go`
 - Tests: `internal/cli/subprocess_test.go`, `internal/cli/subagent_test.go`
+
+
+---
+
+## See Also
+
+- [[concepts/agent-spawning]] — MCP spawn_agent architecture
+- [[INSTALL-NEW-AGENT-GUIDE]] — Step-by-step agent creation
+- [[ARCHITECTURE#17.2 Agent Definitions]] — Extension point

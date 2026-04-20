@@ -26,9 +26,10 @@ tools:
   - Glob
   - Grep
   - Write
-  - mcp__gofortress-interactive__ask_user
-  - mcp__gofortress-interactive__spawn_agent
-  - mcp__gofortress-interactive__get_agent_result
+  - mcp__goyoke-interactive__ask_user
+  - mcp__goyoke-interactive__spawn_agent
+  - mcp__goyoke-interactive__get_agent_result
+  - mcp__goyoke-interactive__team_run
 
 delegation:
   can_spawn:
@@ -108,7 +109,7 @@ On receiving input:
 
 ## Phase 2: Interview Protocol (TC-018)
 
-> **CRITICAL: User interaction tool is `mcp__gofortress-interactive__ask_user`.**
+> **CRITICAL: User interaction tool is `mcp__goyoke-interactive__ask_user`.**
 > This is the ONLY tool that reaches the user. Do NOT use `AskUserQuestion` (not available).
 > Do NOT skip the interview — it is mandatory before any heavy spend.
 
@@ -138,7 +139,7 @@ Mozart conducts a structured 4-question interview to populate team configuration
 
 **MCP ask_user Example:**
 ```javascript
-mcp__gofortress-interactive__ask_user({
+mcp__goyoke-interactive__ask_user({
   message: "What problem or question do you want the Braintrust to analyze?"
 });
 ```
@@ -165,7 +166,7 @@ mcp__gofortress-interactive__ask_user({
 **Scout-First Path:**
 ```javascript
 // 1. Spawn haiku scout via MCP
-const result = mcp__gofortress-interactive__spawn_agent({
+const result = mcp__goyoke-interactive__spawn_agent({
   agent: "haiku-scout",
   description: "Assess problem scope for Braintrust",
   prompt: `AGENT: haiku-scout
@@ -179,7 +180,7 @@ OUTPUT FILE: .claude/tmp/scout_metrics.json`,
 });
 
 // 2. Collect result (blocks until scout completes)
-const scoutResult = mcp__gofortress-interactive__get_agent_result({
+const scoutResult = mcp__goyoke-interactive__get_agent_result({
   agentId: result.agentId, wait: true
 });
 // 3. Read .claude/tmp/scout_metrics.json
@@ -197,7 +198,7 @@ for (const filepath of userProvidedPaths) {
     relevantFiles.push(filepath);
   } else {
     // Error handling: warn and allow retry/skip
-    mcp__gofortress-interactive__ask_user({
+    mcp__goyoke-interactive__ask_user({
       message: `Could not read ${filepath}. Continue without it, or provide different path?`,
       options: ["Continue without", "Provide different path"]
     });
@@ -234,7 +235,7 @@ for (const filepath of userProvidedPaths) {
 
 **MCP ask_user Example:**
 ```javascript
-mcp__gofortress-interactive__ask_user({
+mcp__goyoke-interactive__ask_user({
   message: "Should I include both Einstein (theoretical analysis) and Staff-Architect (practical review), or just Einstein?",
   options: ["Both (full braintrust, ~$4.50)", "Just Einstein (~$1.50)"],
   default: "Both (full braintrust, ~$4.50)"
@@ -273,7 +274,7 @@ mcp__gofortress-interactive__ask_user({
 ```javascript
 // If Q4 budget < estimated cost, warn user
 if (userBudget < estimatedCost) {
-  mcp__gofortress-interactive__ask_user({
+  mcp__goyoke-interactive__ask_user({
     message: `Budget $${userBudget} may not cover full team (estimated $${estimatedCost}). Proceed anyway, or increase budget?`,
     options: ["Proceed anyway", "Increase budget", "Cancel"],
     default: "Increase budget"
@@ -324,7 +325,7 @@ START
 | **Invalid file paths** | Warn: "Could not read {file}. Continue without it, or provide different path?" Allow retry or skip |
 | **Scout timeout (60s)** | Abort scout, fallback to manual file specification (Q2 file-path mode) |
 | **Budget too low for team** | Warn: "Budget ${budget} may not cover full team (estimated ${estimate}). Proceed anyway, or increase budget?" |
-| **User cancels during confirmation** | Delete partially generated config/stdin files, return to router without spawning gogent-team-run |
+| **User cancels during confirmation** | Delete partially generated config/stdin files, return to router without spawning goyoke-team-run |
 
 ---
 
@@ -346,12 +347,12 @@ After interview confirmation, generate team configuration files from interview o
 | Q4 response | `budget_remaining_usd` | float | `5.0` |
 | Q3 response | `waves[0].members[].name` | string | `"einstein"`, `"staff-architect-critical-review"` ← **REQUIRED: member name must be set** |
 | Q3 response | `waves[0].members[].agent` | string | same as name |
-| (computed) | `waves[0].members[].stdin_file` | string | `"stdin_einstein.json"` ← **REQUIRED: gogent-team-run reads this field, NOT `stdin`** |
-| (computed) | `waves[0].members[].stdout_file` | string | `"stdout_einstein.json"` ← **REQUIRED: gogent-team-run reads this field, NOT `stdout`** |
+| (computed) | `waves[0].members[].stdin_file` | string | `"stdin_einstein.json"` ← **REQUIRED: goyoke-team-run reads this field, NOT `stdin`** |
+| (computed) | `waves[0].members[].stdout_file` | string | `"stdout_einstein.json"` ← **REQUIRED: goyoke-team-run reads this field, NOT `stdout`** |
 | (computed) | `waves[0].outputs_to` | string | `"wave1-synthesis.md"` |
 | Q3 response | `waves[1].members[].name` | string | `"beethoven"` (if full team) |
 
-> ⚠️ **CRITICAL**: `workflow_type` MUST be `"braintrust"`. If empty, gogent-team-run uses a 15-minute default timeout instead of 30 minutes. Member `name` fields MUST be set — empty names break health monitoring and logging.
+> ⚠️ **CRITICAL**: `workflow_type` MUST be `"braintrust"`. If empty, goyoke-team-run uses a 15-minute default timeout instead of 30 minutes. Member `name` fields MUST be set — empty names break health monitoring and logging.
 
 ### stdin File Generation Templates
 
@@ -419,7 +420,7 @@ The `description` field is required for envelope builder compatibility.
     "format": "json",
     "schema_ref": "~/.claude/schemas/teams/stdin-stdout/braintrust-einstein.json (stdout section)",
     "delivery": "stdout",
-    "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout schema. gogent-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail. Output JSON to stdout only.",
+    "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout schema. goyoke-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail. Output JSON to stdout only.",
     "team_dir": "<absolute path to team directory — READ files from here (e.g. problem-brief.md), do not write>"
   }
 }
@@ -480,7 +481,7 @@ The `description` field is required for envelope builder compatibility.
     "format": "json",
     "schema_ref": "~/.claude/schemas/teams/stdin-stdout/braintrust-staff-architect.json (stdout section)",
     "delivery": "stdout",
-    "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout schema. gogent-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail. Output JSON to stdout only.",
+    "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout schema. goyoke-team-run captures your process stdout as your result file. Do NOT use the Write() tool to save your analysis — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail. Output JSON to stdout only.",
     "team_dir": "<absolute path to team directory — READ files from here, do not write>"
   }
 }
@@ -512,14 +513,14 @@ The `description` field is required for envelope builder compatibility.
 **Beethoven `pre_synthesis_path` lifecycle:**
 1. Mozart writes `stdin_beethoven.json` with `pre_synthesis_path` pointing to `{team_dir}/pre-synthesis.md` — this file does NOT exist yet
 2. Wave 1 runs: Einstein + Staff-Architect produce `stdout_einstein.json` and `stdout_staff-arch.json`
-3. Inter-wave script (`gogent-team-prepare-synthesis`) reads Wave 1 stdout files → writes `pre-synthesis.md`
+3. Inter-wave script (`goyoke-team-prepare-synthesis`) reads Wave 1 stdout files → writes `pre-synthesis.md`
 4. Wave 2 starts: Beethoven reads the file at `pre_synthesis_path` via Read tool at runtime
 
 **File Locations:**
 - Team directory: `{session_dir}/teams/{timestamp}.braintrust/` (resolved via env var → current-session marker → `.claude/sessions/` fallback)
 - Config: `{team_dir}/config.json`
 - Stdin files: `{team_dir}/stdin_{agent}.json`
-- Stdout files: `{team_dir}/stdout_{agent}.json` (written by `gogent-team-run` after agent completion)
+- Stdout files: `{team_dir}/stdout_{agent}.json` (written by `goyoke-team-run` after agent completion)
 
 ---
 
@@ -529,11 +530,11 @@ The `description` field is required for envelope builder compatibility.
 
 After interview (or if skipped), spawn scouts to gather context:
 
-**NOTE: Use `mcp__gofortress-interactive__spawn_agent` for ALL agent spawning, including scouts.**
+**NOTE: Use `mcp__goyoke-interactive__spawn_agent` for ALL agent spawning, including scouts.**
 
 ```javascript
 // Spawn scouts in PARALLEL
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
   agent: "haiku-scout",
   description: "Assess problem scope and file landscape",
   prompt: `AGENT: haiku-scout
@@ -545,7 +546,7 @@ FOCUS: Identify files/modules relevant to this problem`,
   model: "haiku"
 });
 
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
   agent: "codebase-search",
   description: "Find existing patterns and prior art",
   prompt: `AGENT: codebase-search
@@ -557,17 +558,17 @@ FOCUS: Prior solutions, related code, documentation`,
 });
 
 // Collect results with get_agent_result
-mcp__gofortress-interactive__get_agent_result({ agentId: scoutId, wait: true });
-mcp__gofortress-interactive__get_agent_result({ agentId: searchId, wait: true });
+mcp__goyoke-interactive__get_agent_result({ agentId: scoutId, wait: true });
+mcp__goyoke-interactive__get_agent_result({ agentId: searchId, wait: true });
 ```
 
 ### Spawning Pattern Summary
 
 | Agent Tier | Spawning Mechanism | Examples |
 |------------|-------------------|----------|
-| **All agents** | `mcp__gofortress-interactive__spawn_agent` | haiku-scout, codebase-search |
+| **All agents** | `mcp__goyoke-interactive__spawn_agent` | haiku-scout, codebase-search |
 
-**Note:** Mozart no longer spawns Opus agents directly. After interview + config generation, Mozart returns. The router launches `gogent-team-run` which handles all Opus agent spawning.
+**Note:** After interview + config generation, Mozart launches `goyoke-team-run` via MCP tool, then returns with the background PID. The team-run process handles all Opus agent spawning independently.
 
 ### Scout Results Processing
 
@@ -690,10 +691,10 @@ Estimated cost: ~$4-6 (4 Opus agents)
 Proceed with Braintrust analysis?
 ```
 
-Use `mcp__gofortress-interactive__ask_user`:
+Use `mcp__goyoke-interactive__ask_user`:
 
 ```javascript
-mcp__gofortress-interactive__ask_user({
+mcp__goyoke-interactive__ask_user({
   message: "Proceed with Braintrust analysis?",
   options: ["Proceed", "Adjust scope", "Abort"],
   default: "Proceed"
@@ -735,7 +736,7 @@ Write({
 Write team configuration to `{team_dir}/config.json`. **Read `~/.claude/schemas/teams/braintrust.json` first** — it is the canonical template with all required fields. Use it as the base structure:
 
 - 2 waves: Einstein + Staff-Architect in Wave 1, Beethoven in Wave 2
-- `on_complete_script: "gogent-team-prepare-synthesis"` on Wave 1
+- `on_complete_script: "goyoke-team-prepare-synthesis"` on Wave 1
 - Q3 adaptation: if user chose "just Einstein", remove staff-architect from Wave 1, remove Wave 2
 - Q4 adaptation: adjust `budget_max_usd`, `budget_remaining_usd`, `warning_threshold_usd` per user response
 
@@ -756,26 +757,42 @@ Write({ file_path: `${teamDir}/stdin_staff-architect.json`, content: JSON.string
 Write({ file_path: `${teamDir}/stdin_beethoven.json`, content: JSON.stringify(beethovenStdin, null, 2) });
 ```
 
-**Beethoven's `pre_synthesis_path`** must be set to `{teamDir}/pre-synthesis.md` — this file doesn't exist yet; it will be created by `gogent-team-prepare-synthesis` between Wave 1 and Wave 2.
+**Beethoven's `pre_synthesis_path`** must be set to `{teamDir}/pre-synthesis.md` — this file doesn't exist yet; it will be created by `goyoke-team-prepare-synthesis` between Wave 1 and Wave 2.
 
-### Mozart Completion
+### Mozart Completion: Launch Team-Run
 
-Mozart outputs a single completion message and returns:
+After writing all config and stdin files, Mozart launches team-run via MCP:
+
+```javascript
+const teamResult = mcp__goyoke-interactive__team_run({
+  team_dir: teamDir,
+  wait_for_start: true
+});
+
+if (!teamResult.success) {
+  // Report failure with team_dir so router can retry manually
+  output("[Mozart] ERROR: team-run launch failed");
+  output("[Mozart] Team directory: " + teamDir);
+  output("[Mozart] Router can retry with: /team-run " + teamDir);
+  return;
+}
+```
+
+Then Mozart outputs completion and returns:
 
 ```
 [Mozart] Braintrust configuration complete.
 [Mozart] Team directory: {teamDir}
-[Mozart] Config: config.json + 3 stdin files written
-[Mozart] Router will launch gogent-team-run.
+[Mozart] Config: config.json + {N} stdin files written (einstein, staff-architect, beethoven)
+[Mozart] Budget: ${budget} | Workflow: braintrust | Waves: {wave_count}
+[Mozart] Team-run launched (PID: {pid}).
+[Mozart] Use /team-status to monitor progress.
 ```
 
-**Mozart exits here. Do NOT:**
-- Launch gogent-team-run
-- Use mcp__gofortress__spawn_agent
-- Spawn Einstein, Staff-Architect, or Beethoven
+**Mozart exits after launching team-run. Do NOT:**
+- Spawn Einstein, Staff-Architect, or Beethoven directly
 - Use Bash for any shell operations
-
-The router handles all dispatch after Mozart returns.
+- Wait for team-run to complete (it runs in background)
 
 ---
 

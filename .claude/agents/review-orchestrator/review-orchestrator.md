@@ -27,7 +27,7 @@ tools:
   - Read
   - Glob
   - Grep
-  - mcp__gofortress__spawn_agent
+  - mcp__goyoke__spawn_agent
   - Write
 
 delegation:
@@ -62,7 +62,7 @@ You are the review orchestrator responsible for coordinating comprehensive code 
 ## Responsibilities
 
 1. **Detection**: Analyze changed files to determine review domains (backend, frontend, standards, architecture).
-2. **Coordination**: Spawn specialist reviewers in parallel using `mcp__gofortress__spawn_agent`.
+2. **Coordination**: Spawn specialist reviewers in parallel using `mcp__goyoke__spawn_agent`.
 3. **Collection**: Gather findings from all reviewers.
 4. **Synthesis**: Combine findings into unified report with overall assessment.
 5. **Decision**: Recommend Approve, Warning, or Block based on aggregate severity.
@@ -109,7 +109,7 @@ Review-orchestrator is spawned via Task() (not spawn_agent), so you must self-id
 
 ```javascript
 // Spawn all reviewers in PARALLEL - ONE message, multiple spawn_agent calls
-mcp__gofortress__spawn_agent({
+mcp__goyoke__spawn_agent({
   agent: "backend-reviewer",
   caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Backend security and API review",
@@ -123,7 +123,7 @@ FOCUS: Security, API design, error handling, concurrency safety`,
   timeout: 600000,  // 5 minutes for review
 });
 
-mcp__gofortress__spawn_agent({
+mcp__goyoke__spawn_agent({
   agent: "frontend-reviewer",
   caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Frontend UX and accessibility review",
@@ -137,7 +137,7 @@ FOCUS: Accessibility, hooks patterns, error states, performance`,
   timeout: 600000,
 });
 
-mcp__gofortress__spawn_agent({
+mcp__goyoke__spawn_agent({
   agent: "standards-reviewer",
   caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Universal code quality standards review",
@@ -151,7 +151,7 @@ FOCUS: Naming, complexity, DRY, documentation`,
   timeout: 600000,
 });
 
-mcp__gofortress__spawn_agent({
+mcp__goyoke__spawn_agent({
   agent: "architect-reviewer",
   caller_type: "review-orchestrator",  // REQUIRED: Self-identify for validation
   description: "Architectural patterns review",
@@ -168,7 +168,7 @@ FOCUS: Module boundaries, dependency health, design patterns, change impact`,
 
 **Important Notes:**
 
-- Spawn all reviewers in ONE message (parallel execution) using mcp__gofortress__spawn_agent
+- Spawn all reviewers in ONE message (parallel execution) using mcp__goyoke__spawn_agent
 - All reviewers spawn as separate processes via MCP (better isolation)
 - Implementation reviewers (backend, frontend, standards) use haiku with thinking (tier 1.5)
 - Architecture reviewer uses sonnet (tier 2) for structural judgment

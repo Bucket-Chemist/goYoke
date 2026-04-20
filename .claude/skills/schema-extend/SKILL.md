@@ -201,7 +201,7 @@ CONSTRAINTS:
 Spawn Mozart with the assembled prompt. Mozart handles the full workflow:
 
 ```javascript
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
     agent: "mozart",
     description: `Schema extension: ${agentId} (braintrust)`,
     prompt: assembledPrompt,
@@ -225,7 +225,7 @@ Output:
 Spawn the schema-architect agent (domain specialist for agent content refinement, replacing the generic architect for targeted schema improvements):
 
 ```javascript
-mcp__gofortress-interactive__spawn_agent({
+mcp__goyoke-interactive__spawn_agent({
     agent: "schema-architect",
     description: `Schema refinement: ${agentId}`,
     prompt: assembledPrompt,

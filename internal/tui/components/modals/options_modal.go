@@ -1,4 +1,4 @@
-// Package modals implements the modal dialog system for the GOgent-Fortress TUI.
+// Package modals implements the modal dialog system for the goYoke TUI.
 // This file implements OptionsViewModal: a full-screen options viewer that
 // activates via alt+o when the options drawer has content or an active modal.
 //
@@ -15,8 +15,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -245,12 +245,14 @@ func (m OptionsViewModal) handleInteractiveKey(msg tea.KeyMsg) (OptionsViewModal
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
 			m.viewport.SetContent(m.formatInteractiveContent())
+			m.scrollToSelected()
 		}
 		return m, nil
 	case "down", "j":
 		if m.selectedIdx < len(m.options)-1 {
 			m.selectedIdx++
 			m.viewport.SetContent(m.formatInteractiveContent())
+			m.scrollToSelected()
 		}
 		return m, nil
 	case "enter":
@@ -271,6 +273,21 @@ func (m OptionsViewModal) handleInteractiveKey(msg tea.KeyMsg) (OptionsViewModal
 		}
 	}
 	return m, nil
+}
+
+// scrollToSelected adjusts the viewport offset so the currently selected
+// option line is visible.
+func (m *OptionsViewModal) scrollToSelected() {
+	if len(m.options) == 0 {
+		return
+	}
+	msgLines := strings.Count(m.message, "\n") + 1
+	targetLine := msgLines + 1 + m.selectedIdx // +1 for blank line after message
+	if targetLine < m.viewport.YOffset {
+		m.viewport.YOffset = targetLine
+	} else if targetLine >= m.viewport.YOffset+m.viewport.Height {
+		m.viewport.YOffset = targetLine - m.viewport.Height + 1
+	}
 }
 
 // ---------------------------------------------------------------------------

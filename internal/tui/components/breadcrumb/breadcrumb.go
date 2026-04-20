@@ -1,5 +1,5 @@
 // Package breadcrumb implements a navigation breadcrumb trail for the
-// GOgent-Fortress TUI. It renders a single-row trail of navigation context
+// goYoke TUI. It renders a single-row trail of navigation context
 // items between the tab bar and main content area, updating as the user
 // switches focus or panel modes.
 package breadcrumb
@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ---------------------------------------------------------------------------

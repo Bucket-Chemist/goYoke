@@ -10,23 +10,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// createTestYAML creates a temporary YAML file with the given content
-func createTestYAML(t *testing.T, dir, content string) string {
+// createAgentYAML creates agents/{agentID}/sharp-edges.yaml under baseDir
+// and sets CLAUDE_CONFIG_DIR to baseDir so the Resolver finds it.
+// Returns agentID for passing to LoadSharpEdgesIndex.
+func createAgentYAML(t *testing.T, baseDir, agentID, content string) string {
 	t.Helper()
-	yamlPath := filepath.Join(dir, "sharp-edges.yaml")
-	err := os.WriteFile(yamlPath, []byte(content), 0644)
-	require.NoError(t, err, "Failed to create test YAML file")
-	return yamlPath
+	agentDir := filepath.Join(baseDir, "agents", agentID)
+	require.NoError(t, os.MkdirAll(agentDir, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(agentDir, "sharp-edges.yaml"), []byte(content), 0644))
+	return agentID
 }
 
-// TestLoadSharpEdgesIndex_SingleDirectory tests loading from a single agent directory
+// TestLoadSharpEdgesIndex_SingleDirectory tests loading from a single agent
 func TestLoadSharpEdgesIndex_SingleDirectory(t *testing.T) {
-	// Create temporary directory
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Create valid YAML content
 	yamlContent := `- id: "test-001"
   error_type: "TypeError"
   file_pattern: "*.py"
@@ -41,59 +40,44 @@ func TestLoadSharpEdgesIndex_SingleDirectory(t *testing.T) {
   description: "Accessing map without checking if key exists"
   solution: "Use two-value form: value, ok := map[key]"
 `
-	createTestYAML(t, tmpDir, yamlContent)
+	agentID := createAgentYAML(t, baseDir, "test-agent", yamlContent)
 
-	// Load index
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	index, err := LoadSharpEdgesIndex([]string{agentID})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify All contains both templates
 	assert.Len(t, index.All, 2, "Expected 2 templates in All")
 
-	// Verify ByErrorType index
 	assert.Len(t, index.ByErrorType["TypeError"], 1)
 	assert.Equal(t, "test-001", index.ByErrorType["TypeError"][0].ID)
 
 	assert.Len(t, index.ByErrorType["nil_pointer"], 1)
 	assert.Equal(t, "test-002", index.ByErrorType["nil_pointer"][0].ID)
 
-	// Verify ByKeyword index
 	assert.Len(t, index.ByKeyword["type assertion"], 1)
 	assert.Equal(t, "test-001", index.ByKeyword["type assertion"][0].ID)
 
 	assert.Len(t, index.ByKeyword["map access"], 1)
 	assert.Equal(t, "test-002", index.ByKeyword["map access"][0].ID)
 
-	// Verify Source field is populated
 	for _, tmpl := range index.All {
 		assert.Contains(t, tmpl.Source, "sharp-edges.yaml")
 	}
 }
 
-// TestLoadSharpEdgesIndex_MultipleDirectories tests loading from multiple agent directories
+// TestLoadSharpEdgesIndex_MultipleDirectories tests loading from multiple agents
 func TestLoadSharpEdgesIndex_MultipleDirectories(t *testing.T) {
-	// Create two temporary directories
-	tmpDir1, err := os.MkdirTemp("", "sharp-edges-test-1-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir1)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	tmpDir2, err := os.MkdirTemp("", "sharp-edges-test-2-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir2)
-
-	// Create YAML in first directory
-	yamlContent1 := `- id: "python-001"
+	agentID1 := createAgentYAML(t, baseDir, "python-agent", `- id: "python-001"
   error_type: "TypeError"
   file_pattern: "*.py"
   keywords: ["python", "type"]
   description: "Python type error"
   solution: "Check types"
-`
-	createTestYAML(t, tmpDir1, yamlContent1)
-
-	// Create YAML in second directory
-	yamlContent2 := `- id: "go-001"
+`)
+	agentID2 := createAgentYAML(t, baseDir, "go-agent", `- id: "go-001"
   error_type: "nil_pointer"
   file_pattern: "*.go"
   keywords: ["go", "nil"]
@@ -106,46 +90,39 @@ func TestLoadSharpEdgesIndex_MultipleDirectories(t *testing.T) {
   keywords: ["go", "concurrent"]
   description: "Race condition detected"
   solution: "Use mutex or channels"
-`
-	createTestYAML(t, tmpDir2, yamlContent2)
+`)
 
-	// Load index from both directories
-	index, err := LoadSharpEdgesIndex([]string{tmpDir1, tmpDir2})
+	index, err := LoadSharpEdgesIndex([]string{agentID1, agentID2})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify All contains templates from both directories
 	assert.Len(t, index.All, 3, "Expected 3 templates total")
 
-	// Verify templates from first directory
 	assert.Len(t, index.ByErrorType["TypeError"], 1)
 	assert.Equal(t, "python-001", index.ByErrorType["TypeError"][0].ID)
 
-	// Verify templates from second directory
 	assert.Len(t, index.ByErrorType["nil_pointer"], 1)
 	assert.Equal(t, "go-001", index.ByErrorType["nil_pointer"][0].ID)
 
 	assert.Len(t, index.ByErrorType["race_condition"], 1)
 	assert.Equal(t, "go-002", index.ByErrorType["race_condition"][0].ID)
 
-	// Verify keyword index includes entries from both directories
 	assert.Len(t, index.ByKeyword["python"], 1)
 	assert.Len(t, index.ByKeyword["go"], 2)
 }
 
 // TestLoadSharpEdgesIndex_MissingFile tests graceful handling of missing sharp-edges.yaml
 func TestLoadSharpEdgesIndex_MissingFile(t *testing.T) {
-	// Create temporary directory without sharp-edges.yaml
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Load index - should succeed with empty index
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	// Agent directory exists but has no sharp-edges.yaml
+	require.NoError(t, os.MkdirAll(filepath.Join(baseDir, "agents", "no-file-agent"), 0755))
+
+	index, err := LoadSharpEdgesIndex([]string{"no-file-agent"})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify empty indexes
 	assert.Empty(t, index.All)
 	assert.Empty(t, index.ByErrorType)
 	assert.Empty(t, index.ByKeyword)
@@ -153,79 +130,58 @@ func TestLoadSharpEdgesIndex_MissingFile(t *testing.T) {
 
 // TestLoadSharpEdgesIndex_MalformedYAML tests graceful handling of malformed YAML
 func TestLoadSharpEdgesIndex_MalformedYAML(t *testing.T) {
-	// Create temporary directory
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Create malformed YAML (invalid indentation)
 	malformedYAML := `- id: "test-001"
   error_type: "TypeError"
  keywords: ["invalid indent"]  # Wrong indentation
   description: "This is malformed"
 `
-	createTestYAML(t, tmpDir, malformedYAML)
+	agentID := createAgentYAML(t, baseDir, "malformed-agent", malformedYAML)
 
-	// Capture stderr to verify warning is logged
-	// (In production, this would write to stderr)
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	index, err := LoadSharpEdgesIndex([]string{agentID})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify empty indexes (malformed file skipped)
 	assert.Empty(t, index.All)
 	assert.Empty(t, index.ByErrorType)
 	assert.Empty(t, index.ByKeyword)
 }
 
-// TestLoadSharpEdgesIndex_MixedValidInvalid tests handling of mixed valid/invalid directories
+// TestLoadSharpEdgesIndex_MixedValidInvalid tests handling of mixed valid/invalid agents
 func TestLoadSharpEdgesIndex_MixedValidInvalid(t *testing.T) {
-	// Create three directories
-	validDir, err := os.MkdirTemp("", "sharp-edges-valid-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(validDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	missingDir, err := os.MkdirTemp("", "sharp-edges-missing-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(missingDir)
-
-	malformedDir, err := os.MkdirTemp("", "sharp-edges-malformed-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(malformedDir)
-
-	// Create valid YAML
-	validYAML := `- id: "valid-001"
+	validID := createAgentYAML(t, baseDir, "valid-agent", `- id: "valid-001"
   error_type: "ValidError"
   file_pattern: "*.test"
   keywords: ["valid"]
   description: "Valid template"
   solution: "This should be loaded"
-`
-	createTestYAML(t, validDir, validYAML)
+`)
+	// Missing: agent dir exists but no yaml
+	require.NoError(t, os.MkdirAll(filepath.Join(baseDir, "agents", "missing-agent"), 0755))
 
-	// Create malformed YAML
-	malformedYAML := `{invalid yaml content: [unclosed`
-	createTestYAML(t, malformedDir, malformedYAML)
+	createAgentYAML(t, baseDir, "malformed-agent", `{invalid yaml content: [unclosed`)
 
-	// Load from all three directories
-	index, err := LoadSharpEdgesIndex([]string{validDir, missingDir, malformedDir})
+	index, err := LoadSharpEdgesIndex([]string{validID, "missing-agent", "malformed-agent"})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify only valid template is loaded
 	assert.Len(t, index.All, 1)
 	assert.Equal(t, "valid-001", index.All[0].ID)
 	assert.Len(t, index.ByErrorType["ValidError"], 1)
 	assert.Len(t, index.ByKeyword["valid"], 1)
 }
 
-// TestLoadSharpEdgesIndex_EmptyDirectoryList tests handling of empty directory list
+// TestLoadSharpEdgesIndex_EmptyDirectoryList tests handling of empty agent list
 func TestLoadSharpEdgesIndex_EmptyDirectoryList(t *testing.T) {
 	index, err := LoadSharpEdgesIndex([]string{})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify empty indexes
 	assert.Empty(t, index.All)
 	assert.Empty(t, index.ByErrorType)
 	assert.Empty(t, index.ByKeyword)
@@ -233,24 +189,20 @@ func TestLoadSharpEdgesIndex_EmptyDirectoryList(t *testing.T) {
 
 // TestLoadSharpEdgesIndex_MultipleKeywords tests indexing with multiple keywords
 func TestLoadSharpEdgesIndex_MultipleKeywords(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Create template with multiple keywords
-	yamlContent := `- id: "multi-keyword-001"
+	agentID := createAgentYAML(t, baseDir, "multi-kw-agent", `- id: "multi-keyword-001"
   error_type: "ComplexError"
   file_pattern: "*.test"
   keywords: ["keyword1", "keyword2", "keyword3"]
   description: "Template with multiple keywords"
   solution: "Test keyword indexing"
-`
-	createTestYAML(t, tmpDir, yamlContent)
+`)
 
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	index, err := LoadSharpEdgesIndex([]string{agentID})
 	require.NoError(t, err)
 
-	// Verify each keyword is indexed
 	for _, keyword := range []string{"keyword1", "keyword2", "keyword3"} {
 		assert.Len(t, index.ByKeyword[keyword], 1, "Keyword %s should have 1 template", keyword)
 		assert.Equal(t, "multi-keyword-001", index.ByKeyword[keyword][0].ID)
@@ -259,12 +211,10 @@ func TestLoadSharpEdgesIndex_MultipleKeywords(t *testing.T) {
 
 // TestLoadSharpEdgesIndex_DuplicateErrorTypes tests handling of multiple templates with same error type
 func TestLoadSharpEdgesIndex_DuplicateErrorTypes(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Create multiple templates with same error type
-	yamlContent := `- id: "dup-001"
+	agentID := createAgentYAML(t, baseDir, "dup-agent", `- id: "dup-001"
   error_type: "TypeError"
   file_pattern: "*.py"
   keywords: ["type1"]
@@ -277,13 +227,11 @@ func TestLoadSharpEdgesIndex_DuplicateErrorTypes(t *testing.T) {
   keywords: ["type2"]
   description: "Second type error"
   solution: "Solution 2"
-`
-	createTestYAML(t, tmpDir, yamlContent)
+`)
 
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	index, err := LoadSharpEdgesIndex([]string{agentID})
 	require.NoError(t, err)
 
-	// Verify both templates are indexed under same error type
 	assert.Len(t, index.ByErrorType["TypeError"], 2)
 	ids := []string{
 		index.ByErrorType["TypeError"][0].ID,
@@ -295,18 +243,15 @@ func TestLoadSharpEdgesIndex_DuplicateErrorTypes(t *testing.T) {
 
 // TestLoadSharpEdgesIndex_EmptyYAML tests handling of empty YAML file
 func TestLoadSharpEdgesIndex_EmptyYAML(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Create empty YAML file
-	createTestYAML(t, tmpDir, "")
+	agentID := createAgentYAML(t, baseDir, "empty-agent", "")
 
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	index, err := LoadSharpEdgesIndex([]string{agentID})
 	require.NoError(t, err)
 	assert.NotNil(t, index)
 
-	// Verify empty indexes (empty YAML is valid, just contains no templates)
 	assert.Empty(t, index.All)
 	assert.Empty(t, index.ByErrorType)
 	assert.Empty(t, index.ByKeyword)
@@ -314,21 +259,18 @@ func TestLoadSharpEdgesIndex_EmptyYAML(t *testing.T) {
 
 // TestSharpEdgeTemplate_AllFields tests that all fields are correctly parsed
 func TestSharpEdgeTemplate_AllFields(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	baseDir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-	// Create template with all fields populated
-	yamlContent := `- id: "full-001"
+	agentID := createAgentYAML(t, baseDir, "full-agent", `- id: "full-001"
   error_type: "FullError"
   file_pattern: "*.full"
   keywords: ["full", "complete"]
   description: "Complete description with all fields"
   solution: "Comprehensive solution explanation"
-`
-	yamlPath := createTestYAML(t, tmpDir, yamlContent)
+`)
 
-	index, err := LoadSharpEdgesIndex([]string{tmpDir})
+	index, err := LoadSharpEdgesIndex([]string{agentID})
 	require.NoError(t, err)
 	require.Len(t, index.All, 1)
 
@@ -339,38 +281,35 @@ func TestSharpEdgeTemplate_AllFields(t *testing.T) {
 	assert.Equal(t, []string{"full", "complete"}, tmpl.Keywords)
 	assert.Equal(t, "Complete description with all fields", tmpl.Description)
 	assert.Equal(t, "Comprehensive solution explanation", tmpl.Solution)
-	assert.Equal(t, yamlPath, tmpl.Source)
+	assert.Equal(t, "agents/full-agent/sharp-edges.yaml", tmpl.Source)
 }
 
 // TestLoadSharpEdgesIndex_Coverage tests edge cases for coverage
 func TestLoadSharpEdgesIndex_Coverage(t *testing.T) {
-	t.Run("nonexistent directory", func(t *testing.T) {
-		// Directory doesn't exist at all
-		index, err := LoadSharpEdgesIndex([]string{"/nonexistent/path/to/nowhere"})
+	t.Run("nonexistent agent", func(t *testing.T) {
+		baseDir := t.TempDir()
+		t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
+		index, err := LoadSharpEdgesIndex([]string{"nonexistent-agent"})
 		require.NoError(t, err)
 		assert.Empty(t, index.All)
 	})
 
 	t.Run("empty keywords list", func(t *testing.T) {
-		tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		baseDir := t.TempDir()
+		t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-		// Template with empty keywords array
-		yamlContent := `- id: "no-keywords"
+		agentID := createAgentYAML(t, baseDir, "no-kw-agent", `- id: "no-keywords"
   error_type: "TestError"
   file_pattern: "*.test"
   keywords: []
   description: "No keywords"
   solution: "Test solution"
-`
-		createTestYAML(t, tmpDir, yamlContent)
+`)
 
-		index, err := LoadSharpEdgesIndex([]string{tmpDir})
+		index, err := LoadSharpEdgesIndex([]string{agentID})
 		require.NoError(t, err)
 		assert.Len(t, index.All, 1)
 		assert.Empty(t, index.All[0].Keywords)
-		// ByKeyword should not have any entries for this template
 		assert.Empty(t, index.ByKeyword)
 	})
 
@@ -379,19 +318,19 @@ func TestLoadSharpEdgesIndex_Coverage(t *testing.T) {
 			t.Skip("Skipping permission test when running as root")
 		}
 
-		tmpDir, err := os.MkdirTemp("", "sharp-edges-test-*")
-		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		baseDir := t.TempDir()
+		t.Setenv("CLAUDE_CONFIG_DIR", baseDir)
 
-		yamlPath := createTestYAML(t, tmpDir, "test")
-		// Make file unreadable
-		err = os.Chmod(yamlPath, 0000)
-		require.NoError(t, err)
+		agentID := "perm-agent"
+		agentDir := filepath.Join(baseDir, "agents", agentID)
+		require.NoError(t, os.MkdirAll(agentDir, 0755))
+		yamlPath := filepath.Join(agentDir, "sharp-edges.yaml")
+		require.NoError(t, os.WriteFile(yamlPath, []byte("test"), 0644))
+		require.NoError(t, os.Chmod(yamlPath, 0000))
 
-		// Should handle gracefully (warning to stderr, continue)
-		index, err := LoadSharpEdgesIndex([]string{tmpDir})
+		index, err := LoadSharpEdgesIndex([]string{agentID})
 		require.NoError(t, err)
-		assert.Empty(t, index.All) // File couldn't be read
+		assert.Empty(t, index.All)
 	})
 }
 
@@ -642,13 +581,12 @@ func TestFindSimilar_NoMatches(t *testing.T) {
 
 	edge := &SharpEdge{
 		ErrorType:    "SyntaxError", // Different error type
-		File:         "test.go",      // Different file pattern
+		File:         "test.go",     // Different file pattern
 		ErrorMessage: "unexpected token", // No matching keywords
 	}
 
 	matches := FindSimilar(edge, index)
 
-	// No matches should be returned (all scores below threshold)
 	assert.Empty(t, matches)
 }
 
@@ -710,9 +648,8 @@ func TestFindSimilar_MultipleMatchesTop3(t *testing.T) {
 
 	matches := FindSimilar(edge, index)
 
-	// Should return at most 3 matches
 	assert.LessOrEqual(t, len(matches), 3)
-	assert.GreaterOrEqual(t, len(matches), 1) // Should have at least one match
+	assert.GreaterOrEqual(t, len(matches), 1)
 }
 
 // TestFindSimilar_ScoreRanking tests that matches are correctly ranked by score
@@ -778,7 +715,6 @@ func TestFindSimilar_ScoreRanking(t *testing.T) {
 
 	matches := FindSimilar(edge, index)
 
-	// Verify scores are in descending order
 	require.GreaterOrEqual(t, len(matches), 2)
 	for i := 0; i < len(matches)-1; i++ {
 		assert.GreaterOrEqual(t, matches[i].Score, matches[i+1].Score,
@@ -786,7 +722,6 @@ func TestFindSimilar_ScoreRanking(t *testing.T) {
 			i, matches[i].Score, i+1, matches[i+1].Score)
 	}
 
-	// High score should be first
 	assert.Equal(t, "high-score", matches[0].Template.ID)
 	assert.Equal(t, 12, matches[0].Score) // error_type(5) + file_pattern(3) + 2 keywords(4) = 12
 }
@@ -806,7 +741,6 @@ func TestFindSimilar_EmptyIndex(t *testing.T) {
 
 	matches := FindSimilar(edge, index)
 
-	// Should return empty slice, not nil
 	assert.NotNil(t, matches)
 	assert.Empty(t, matches)
 }
@@ -848,7 +782,6 @@ func TestFindSimilar_CaseInsensitiveKeywords(t *testing.T) {
 
 	matches := FindSimilar(edge, index)
 
-	// Should match despite case differences
 	require.Len(t, matches, 1)
 	assert.Contains(t, matches[0].MatchedOn, "keyword:Type")
 	assert.Contains(t, matches[0].MatchedOn, "keyword:Assertion")

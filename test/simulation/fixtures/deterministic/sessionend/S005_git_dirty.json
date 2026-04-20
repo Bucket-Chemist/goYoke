@@ -8,7 +8,7 @@
     "git_init": true,
     "git_dirty": true,
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {

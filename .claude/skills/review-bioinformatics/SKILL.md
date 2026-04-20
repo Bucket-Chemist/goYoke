@@ -1,21 +1,21 @@
 ---
 name: review-bioinformatics
-description: Bioinformatics pipeline and omics data processing review with domain-specialist Opus reviewers and Pasteur synthesis
+description: Bioinformatics pipeline and omics data processing review with domain-specialist Opus reviewers and Staff Bioinformatician 7-layer synthesis
 ---
 
 # Review Bioinformatics Skill v1.0
 
 ## Purpose
 
-Bioinformatics-domain code review through coordinated Opus-tier specialist reviewers. Analyzes changed files, detects omics domains, spawns relevant reviewers via background team-run, then synthesizes findings via Pasteur (wave 2).
+Bioinformatics-domain code review through coordinated Opus-tier specialist reviewers. Analyzes changed files, detects omics domains, spawns relevant reviewers via background team-run, then synthesizes findings via Staff Bioinformatician 7-layer review (wave 2).
 
 **What this skill does:**
 
 1. **Detect** — Find changed files via git diff or specified scope
 2. **Classify** — Identify bioinformatics file types and omics domains
 3. **Select** — Choose relevant reviewers (max 4) + always include bioinformatician-reviewer
-4. **Execute** — Dispatch reviewers (wave 0) + pasteur (wave 1) via background team-run
-5. **Launch** — Start `gogent-team-run` in background, return immediately
+4. **Execute** — Dispatch reviewers (wave 0) + staff-bioinformatician (wave 1) via background team-run
+5. **Launch** — Start `goyoke-team-run` in background, return immediately
 
 **What this skill does NOT do:**
 
@@ -40,7 +40,7 @@ Bioinformatics-domain code review through coordinated Opus-tier specialist revie
 
 - `git` (for change detection)
 - `jq` (JSON processing)
-- `gogent-team-run` (team execution)
+- `goyoke-team-run` (team execution)
 
 ---
 
@@ -105,19 +105,19 @@ DDA, DIA, PRM, SRM, MRM, Thermo, Bruker, SCIEX, Waters, Orbitrap, TOF, calibrati
 
 1. Read template from `.claude/schemas/teams/review-bioinformatics.json`
 2. Filter waves[0].members to only selected reviewers
-3. waves[1] (pasteur) always included
+3. waves[1] (staff-bioinformatician) always included
 4. Generate stdin files per `.claude/schemas/stdin/bioinformatics-reviewer.json` for each reviewer
-5. Generate stdin file per `.claude/schemas/stdin/bioinformatics-pasteur.json` for pasteur
+5. Generate stdin file per review-bioinformatics-staff-bioinformatician.json schema for staff-bioinformatician
 6. Write config.json and all stdin files to team directory
 
-**Team directory:** `{gogent_session_dir}/teams/{timestamp}.bioinformatics-review/`
+**Team directory:** `{goyoke_session_dir}/teams/{timestamp}.bioinformatics-review/`
 
 **IMPORTANT:** Template values in review-bioinformatics.json are authoritative. Do NOT copy budget/timeout values from the /review SKILL.md (those are stale).
 
 ### Phase 5: Launch and Return
 
 ```
-result = mcp__gofortress-interactive__team_run({
+result = mcp__goyoke-interactive__team_run({
     team_dir: "$team_dir",
     wait_for_start: true,
     timeout_ms: 10000
@@ -129,7 +129,7 @@ Output summary and return immediately:
 ```
 [review-bioinformatics] Review team launched in background
   Reviewers: {selected reviewers}
-  Synthesizer: pasteur (wave 2)
+  Synthesizer: staff-bioinformatician (wave 2)
   Files: {count} files across {domain-count} domains
   Team: {team_dir}
   PID: {pid}
@@ -160,9 +160,9 @@ Use /team-result to view findings when complete
 | Detection + Classification | Bash | 0 | $0.00 |
 | Config generation | Router | ~2K | $0.00 |
 | Per Opus Reviewer | Opus | 30-60K | $2.50-$5.00 |
-| Pasteur (synthesis) | Opus | 20-40K | $2.50-$5.00 |
-| **Typical (3 reviewers + pasteur)** | | 110-220K | **$10.00-$20.00** |
-| **Maximum (4 reviewers + pasteur)** | | 140-280K | **$12.50-$25.00** |
+| Staff Bioinformatician (synthesis) | Opus | 20-40K | $2.50-$5.00 |
+| **Typical (3 reviewers + staff-bioinformatician)** | | 110-220K | **$10.00-$20.00** |
+| **Maximum (4 reviewers + staff-bioinformatician)** | | 140-280K | **$12.50-$25.00** |
 | Budget cap | | | **$30.00** |
 
 ---
@@ -170,12 +170,12 @@ Use /team-result to view findings when complete
 ## Partial Failure Handling
 
 If one or more wave 0 reviewers fail:
-- Pasteur synthesizes from available results
-- Failed reviewers noted prominently in Pasteur's report
+- Staff Bioinformatician synthesizes from available results
+- Failed reviewers noted prominently in Staff Bioinformatician's report
 - Caveat added: "Review incomplete — N of M reviewers completed"
 - Consider WARNING status due to incomplete coverage
 
-If Pasteur fails:
+If Staff Bioinformatician fails:
 - Individual reviewer stdout files are still available via `/team-result`
 - No cross-domain synthesis, but domain-specific findings are intact
 
@@ -186,8 +186,8 @@ If Pasteur fails:
 | File | Purpose | Format |
 |------|---------|--------|
 | `{team_dir}/config.json` | Team execution config | JSON |
-| `{team_dir}/stdin_*.json` | Per-reviewer/pasteur input | JSON |
-| `{team_dir}/stdout_*.json` | Per-reviewer/pasteur output | JSON |
+| `{team_dir}/stdin_*.json` | Per-reviewer/staff-bioinformatician input | JSON |
+| `{team_dir}/stdout_*.json` | Per-reviewer/staff-bioinformatician output | JSON |
 | `{team_dir}/runner.log` | Execution log | Text |
 
 ---
@@ -204,7 +204,7 @@ If Pasteur fails:
 
 **"Team launch failed"**
 - Check `$team_dir/runner.log` for errors
-- Verify `gogent-team-run` is built and in PATH
+- Verify `goyoke-team-run` is built and in PATH
 - Validate `$team_dir/config.json` with `jq .`
 
 ---
@@ -224,13 +224,13 @@ $ /review-bioinformatics
 [review-bioinformatics] Found 3 files to review
 [review-bioinformatics] Detected domains: genomics (alignment, variant calling)
 [review-bioinformatics] Selected reviewers: genomics-reviewer, bioinformatician-reviewer
-[review-bioinformatics] Synthesizer: pasteur (wave 2)
+[review-bioinformatics] Synthesizer: staff-bioinformatician (wave 2)
 
 [review-bioinformatics] Review team launched in background
   Reviewers: genomics-reviewer bioinformatician-reviewer
-  Synthesizer: pasteur
+  Synthesizer: staff-bioinformatician
   Files: 3 files across 1 domain
-  Team: .gogent/sessions/.../teams/1712649600.bioinformatics-review
+  Team: .goyoke/sessions/.../teams/1712649600.bioinformatics-review
   PID: 54321
 
 Use /team-status to check progress

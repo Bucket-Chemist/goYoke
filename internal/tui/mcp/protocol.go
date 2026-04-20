@@ -1,5 +1,5 @@
 // Package mcp defines the IPC protocol types for communication between
-// the gofortress-mcp MCP server and the GOgent-Fortress TUI over a Unix
+// the goyoke-mcp MCP server and the goYoke TUI over a Unix
 // domain socket.
 //
 // The transport is newline-delimited JSON over a single persistent UDS

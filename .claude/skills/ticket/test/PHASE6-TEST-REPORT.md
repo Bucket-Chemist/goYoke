@@ -100,7 +100,7 @@ Comprehensive test suite successfully implemented and validated for run-audit.sh
 
 ### Multi-Language Support
 
-- ✅ Go: Validated with real project (GOgent-Fortress)
+- ✅ Go: Validated with real project (goYoke)
 - ✅ Python: Tested with mocked pyproject.toml/setup.py
 - ✅ R: Tested with mocked DESCRIPTION
 - ✅ JavaScript/TypeScript: Tested with package.json/tsconfig.json
@@ -109,12 +109,12 @@ Comprehensive test suite successfully implemented and validated for run-audit.sh
 
 ## Real-World Validation
 
-### GOgent-Fortress Project Test
+### goYoke Project Test
 
 **Command**:
 ```bash
-cd /home/doktersmol/Documents/GOgent-Fortress
-run-audit.sh --ticket-id GOgent-TEST-PHASE6
+cd /home/doktersmol/Documents/goYoke
+run-audit.sh --ticket-id goYoke-TEST-PHASE6
 ```
 
 **Results**:

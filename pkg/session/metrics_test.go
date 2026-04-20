@@ -95,14 +95,14 @@ func TestCountToolCalls(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", tmpdir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	// Create gogent subdirectory
-	gogentDir := filepath.Join(tmpdir, "gogent")
-	if err := os.MkdirAll(gogentDir, 0755); err != nil {
-		t.Fatalf("Failed to create gogent dir: %v", err)
+	// Create goyoke subdirectory
+	goyokeDir := filepath.Join(tmpdir, "goyoke")
+	if err := os.MkdirAll(goyokeDir, 0755); err != nil {
+		t.Fatalf("Failed to create goyoke dir: %v", err)
 	}
 
 	// Create single tool-counter file with integer value (new format)
-	counterFile := filepath.Join(gogentDir, "tool-counter")
+	counterFile := filepath.Join(goyokeDir, "tool-counter")
 	if err := os.WriteFile(counterFile, []byte("42"), 0644); err != nil {
 		t.Fatalf("Failed to write counter file: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestCollectSessionMetrics_MissingLogs(t *testing.T) {
 func TestGetErrorLogPath(t *testing.T) {
 	// Test that getErrorLogPath returns XDG-compliant path
 	path := getErrorLogPath()
-	// Should contain gogent directory and correct filename
+	// Should contain goyoke directory and correct filename
 	if !filepath.IsAbs(path) {
 		t.Errorf("getErrorLogPath() returned relative path: %s", path)
 	}

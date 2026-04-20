@@ -1,6 +1,12 @@
-# GOgent-Fortress Installation Guide
+---
+title: Installation Guide
+type: guide
+tags: [installation, setup]
+created: 2026-04-18
+---
+# goYoke Installation Guide
 
-> **Target Audience:** Users migrating from bash-based Claude Code hooks to GOgent-Fortress Go binaries.
+> **Target Audience:** Users migrating from bash-based Claude Code hooks to goYoke Go binaries.
 >
 > **Prerequisites:** Go 1.21+, Claude Code CLI installed, `~/.local/bin` in PATH.
 >
@@ -29,7 +35,7 @@
 
 ### What This Guide Does
 
-This guide helps you replace your existing bash-based Claude Code hooks with compiled Go binaries from GOgent-Fortress.
+This guide helps you replace your existing bash-based Claude Code hooks with compiled Go binaries from goYoke.
 
 ### Architecture Change
 
@@ -40,20 +46,20 @@ Claude Code → ~/.claude/hooks/validate-routing.sh → routing-schema.json
 
 **After (Go Binaries):**
 ```
-Claude Code → gogent-validate (binary) → routing-schema.json
+Claude Code → goyoke-validate (binary) → routing-schema.json
 ```
 
 ### Binary to Hook Mapping
 
 | Hook Event | Bash Script | Go Binary |
 |------------|-------------|-----------|
-| SessionStart | `load-routing-context.sh` | `gogent-load-context` |
-| PreToolUse (Task) | `validate-routing.sh` | `gogent-validate` |
-| PostToolUse | `sharp-edge-detector.sh` | `gogent-sharp-edge` |
-| PostToolUse | `attention-gate.sh` | (merged into `gogent-sharp-edge`) |
-| SubagentStop | `agent-endstate.sh` | `gogent-agent-endstate` |
-| SubagentStop | `orchestrator-completion-guard.sh` | `gogent-orchestrator-guard` |
-| SessionEnd | `session-archive.sh` | `gogent-archive` |
+| SessionStart | `load-routing-context.sh` | `goyoke-load-context` |
+| PreToolUse (Task) | `validate-routing.sh` | `goyoke-validate` |
+| PostToolUse | `sharp-edge-detector.sh` | `goyoke-sharp-edge` |
+| PostToolUse | `attention-gate.sh` | (merged into `goyoke-sharp-edge`) |
+| SubagentStop | `agent-endstate.sh` | `goyoke-agent-endstate` |
+| SubagentStop | `orchestrator-completion-guard.sh` | `goyoke-orchestrator-guard` |
+| SessionEnd | `session-archive.sh` | `goyoke-archive` |
 
 ---
 
@@ -129,7 +135,7 @@ echo $PATH | grep -q ".local/bin" && echo "SUCCESS: ~/.local/bin is in PATH" || 
 ### 3.1 Navigate to Project Directory
 
 ```bash
-cd ~/Documents/GOgent-Fortress
+cd ~/Documents/goYoke
 ```
 
 Verify you're in the right place:
@@ -157,20 +163,20 @@ make build-all
 
 **Expected output:**
 ```
-Building gogent-validate binary...
-✅ Binary created at bin/gogent-validate
-Building gogent-archive binary...
-✅ Binary created at bin/gogent-archive
-Building gogent-sharp-edge binary...
-✅ Binary created at bin/gogent-sharp-edge
-Building gogent-load-context...
-✓ Built: bin/gogent-load-context
-Building gogent-agent-endstate...
-✓ Built: bin/gogent-agent-endstate
-Building gogent-orchestrator-guard...
-✓ Built: bin/gogent-orchestrator-guard
-Building gogent-doc-theater...
-✓ Built: bin/gogent-doc-theater
+Building goyoke-validate binary...
+✅ Binary created at bin/goyoke-validate
+Building goyoke-archive binary...
+✅ Binary created at bin/goyoke-archive
+Building goyoke-sharp-edge binary...
+✅ Binary created at bin/goyoke-sharp-edge
+Building goyoke-load-context...
+✓ Built: bin/goyoke-load-context
+Building goyoke-agent-endstate...
+✓ Built: bin/goyoke-agent-endstate
+Building goyoke-orchestrator-guard...
+✓ Built: bin/goyoke-orchestrator-guard
+Building goyoke-doc-theater...
+✓ Built: bin/goyoke-doc-theater
 ✓ All hook binaries built
 ```
 
@@ -182,13 +188,13 @@ ls -la bin/
 
 **Expected output (7 binaries):**
 ```
--rwxr-xr-x 1 user user XXXXXXX ... gogent-agent-endstate
--rwxr-xr-x 1 user user XXXXXXX ... gogent-archive
--rwxr-xr-x 1 user user XXXXXXX ... gogent-doc-theater
--rwxr-xr-x 1 user user XXXXXXX ... gogent-load-context
--rwxr-xr-x 1 user user XXXXXXX ... gogent-orchestrator-guard
--rwxr-xr-x 1 user user XXXXXXX ... gogent-sharp-edge
--rwxr-xr-x 1 user user XXXXXXX ... gogent-validate
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-agent-endstate
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-archive
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-doc-theater
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-load-context
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-orchestrator-guard
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-sharp-edge
+-rwxr-xr-x 1 user user XXXXXXX ... goyoke-validate
 ```
 
 ### 3.5 Run Tests (Optional but Recommended)
@@ -211,8 +217,8 @@ make install
 
 **Expected output:**
 ```
-Installing GOgent-Fortress CLIs to ~/.local/bin/...
-✅ Installed gogent-validate, gogent-archive, gogent-aggregate, gogent-sharp-edge, gogent-capture-intent, gogent-load-context, gogent-agent-endstate, gogent-orchestrator-guard, gogent-doc-theater
+Installing goYoke CLIs to ~/.local/bin/...
+✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-doc-theater
 ✅ ~/.local/bin is in PATH
 ```
 
@@ -221,12 +227,12 @@ Installing GOgent-Fortress CLIs to ~/.local/bin/...
 Run each binary to confirm it's accessible:
 
 ```bash
-gogent-validate --help 2>/dev/null || echo '{}' | gogent-validate
-gogent-load-context --help 2>/dev/null || echo '{}' | gogent-load-context
-gogent-sharp-edge --help 2>/dev/null || echo '{}' | gogent-sharp-edge
-gogent-archive --help 2>/dev/null || echo '{}' | gogent-archive
-gogent-agent-endstate --help 2>/dev/null || echo '{}' | gogent-agent-endstate
-gogent-orchestrator-guard --help 2>/dev/null || echo '{}' | gogent-orchestrator-guard
+goyoke-validate --help 2>/dev/null || echo '{}' | goyoke-validate
+goyoke-load-context --help 2>/dev/null || echo '{}' | goyoke-load-context
+goyoke-sharp-edge --help 2>/dev/null || echo '{}' | goyoke-sharp-edge
+goyoke-archive --help 2>/dev/null || echo '{}' | goyoke-archive
+goyoke-agent-endstate --help 2>/dev/null || echo '{}' | goyoke-agent-endstate
+goyoke-orchestrator-guard --help 2>/dev/null || echo '{}' | goyoke-orchestrator-guard
 ```
 
 Each should either print help or produce JSON output (not "command not found").
@@ -234,17 +240,17 @@ Each should either print help or produce JSON output (not "command not found").
 ### 4.3 Verify Binary Locations
 
 ```bash
-which gogent-validate gogent-load-context gogent-sharp-edge gogent-archive gogent-agent-endstate gogent-orchestrator-guard
+which goyoke-validate goyoke-load-context goyoke-sharp-edge goyoke-archive goyoke-agent-endstate goyoke-orchestrator-guard
 ```
 
 **Expected output:**
 ```
-/home/YOUR_USERNAME/.local/bin/gogent-validate
-/home/YOUR_USERNAME/.local/bin/gogent-load-context
-/home/YOUR_USERNAME/.local/bin/gogent-sharp-edge
-/home/YOUR_USERNAME/.local/bin/gogent-archive
-/home/YOUR_USERNAME/.local/bin/gogent-agent-endstate
-/home/YOUR_USERNAME/.local/bin/gogent-orchestrator-guard
+/home/YOUR_USERNAME/.local/bin/goyoke-validate
+/home/YOUR_USERNAME/.local/bin/goyoke-load-context
+/home/YOUR_USERNAME/.local/bin/goyoke-sharp-edge
+/home/YOUR_USERNAME/.local/bin/goyoke-archive
+/home/YOUR_USERNAME/.local/bin/goyoke-agent-endstate
+/home/YOUR_USERNAME/.local/bin/goyoke-orchestrator-guard
 ```
 
 ---
@@ -286,13 +292,13 @@ cp -r ~/.claude/docs ~/.claude-test/ 2>/dev/null || true
 
 ```bash
 # Create symlinks from test hooks directory to installed binaries
-ln -sf ~/.local/bin/gogent-validate ~/.claude-test/hooks/gogent-validate
-ln -sf ~/.local/bin/gogent-load-context ~/.claude-test/hooks/gogent-load-context
-ln -sf ~/.local/bin/gogent-sharp-edge ~/.claude-test/hooks/gogent-sharp-edge
-ln -sf ~/.local/bin/gogent-archive ~/.claude-test/hooks/gogent-archive
-ln -sf ~/.local/bin/gogent-agent-endstate ~/.claude-test/hooks/gogent-agent-endstate
-ln -sf ~/.local/bin/gogent-orchestrator-guard ~/.claude-test/hooks/gogent-orchestrator-guard
-ln -sf ~/.local/bin/gogent-doc-theater ~/.claude-test/hooks/gogent-doc-theater
+ln -sf ~/.local/bin/goyoke-validate ~/.claude-test/hooks/goyoke-validate
+ln -sf ~/.local/bin/goyoke-load-context ~/.claude-test/hooks/goyoke-load-context
+ln -sf ~/.local/bin/goyoke-sharp-edge ~/.claude-test/hooks/goyoke-sharp-edge
+ln -sf ~/.local/bin/goyoke-archive ~/.claude-test/hooks/goyoke-archive
+ln -sf ~/.local/bin/goyoke-agent-endstate ~/.claude-test/hooks/goyoke-agent-endstate
+ln -sf ~/.local/bin/goyoke-orchestrator-guard ~/.claude-test/hooks/goyoke-orchestrator-guard
+ln -sf ~/.local/bin/goyoke-doc-theater ~/.claude-test/hooks/goyoke-doc-theater
 ```
 
 ### 5.4 Verify Test Environment Structure
@@ -363,7 +369,7 @@ cat > ~/.claude-test/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-load-context",
+            "command": "goyoke-load-context",
             "timeout": 10
           }
         ]
@@ -375,7 +381,7 @@ cat > ~/.claude-test/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-validate",
+            "command": "goyoke-validate",
             "timeout": 10
           }
         ]
@@ -387,7 +393,7 @@ cat > ~/.claude-test/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-sharp-edge",
+            "command": "goyoke-sharp-edge",
             "timeout": 5
           }
         ]
@@ -398,12 +404,12 @@ cat > ~/.claude-test/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-agent-endstate",
+            "command": "goyoke-agent-endstate",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "gogent-orchestrator-guard",
+            "command": "goyoke-orchestrator-guard",
             "timeout": 10
           }
         ]
@@ -414,7 +420,7 @@ cat > ~/.claude-test/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-archive",
+            "command": "goyoke-archive",
             "timeout": 30
           }
         ]
@@ -438,8 +444,8 @@ cat ~/.claude-test/settings.json | python3 -m json.tool > /dev/null && echo "SUC
 ### 6.3 Create Required Runtime Directories
 
 ```bash
-mkdir -p ~/.gogent
-touch ~/.gogent/failure-tracker.jsonl
+mkdir -p ~/.goyoke
+touch ~/.goyoke/failure-tracker.jsonl
 ```
 
 ---
@@ -489,13 +495,13 @@ Create a test project with its own `.claude/` directory:
 
 ```bash
 # Create test project
-mkdir -p ~/gogent-test-project/.claude
+mkdir -p ~/goyoke-test-project/.claude
 
 # Copy test config into project
-cp -r ~/.claude-test/* ~/gogent-test-project/.claude/
+cp -r ~/.claude-test/* ~/goyoke-test-project/.claude/
 
 # Navigate to test project
-cd ~/gogent-test-project
+cd ~/goyoke-test-project
 
 # Run Claude (it will use the local .claude/ directory)
 claude
@@ -516,7 +522,7 @@ When you start a Claude session, you should see the session initialization outpu
 **If NOT working:**
 ```bash
 # Test the binary directly
-echo '{"event":"session_start","cwd":"/tmp"}' | gogent-load-context
+echo '{"event":"session_start","cwd":"/tmp"}' | goyoke-load-context
 ```
 
 ### 8.2 Check PreToolUse Hook (Task Validation)
@@ -535,7 +541,7 @@ Use Task tool with subagent_type "Explore" and agent "tech-docs-writer"
 **If NOT working:**
 ```bash
 # Test the binary directly
-echo '{"tool_name":"Task","tool_input":{"subagent_type":"Explore","prompt":"AGENT: tech-docs-writer"}}' | gogent-validate
+echo '{"tool_name":"Task","tool_input":{"subagent_type":"Explore","prompt":"AGENT: tech-docs-writer"}}' | goyoke-validate
 ```
 
 ### 8.3 Check PostToolUse Hook (Sharp Edge Detection)
@@ -600,13 +606,13 @@ Edit `~/.claude/settings.json` to replace bash scripts with Go binaries:
 
 | Old (Bash) | New (Go Binary) |
 |------------|-----------------|
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/load-routing-context.sh` | `gogent-load-context` |
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/validate-routing.sh` | `gogent-validate` |
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/sharp-edge-detector.sh` | `gogent-sharp-edge` |
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/attention-gate.sh` | (remove - merged into gogent-sharp-edge) |
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/agent-endstate.sh` | `gogent-agent-endstate` |
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/orchestrator-completion-guard.sh` | `gogent-orchestrator-guard` |
-| `$CLAUDE_PROJECT_DIR/.claude/hooks/session-archive.sh` | `gogent-archive` |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/load-routing-context.sh` | `goyoke-load-context` |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/validate-routing.sh` | `goyoke-validate` |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/sharp-edge-detector.sh` | `goyoke-sharp-edge` |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/attention-gate.sh` | (remove - merged into goyoke-sharp-edge) |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/agent-endstate.sh` | `goyoke-agent-endstate` |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/orchestrator-completion-guard.sh` | `goyoke-orchestrator-guard` |
+| `$CLAUDE_PROJECT_DIR/.claude/hooks/session-archive.sh` | `goyoke-archive` |
 
 ### 9.4 Verify Production Config
 
@@ -652,7 +658,7 @@ cp ~/.claude/settings.json.backup-* ~/.claude/settings.json
 
 ## 11. Troubleshooting
 
-### Problem: "command not found: gogent-validate"
+### Problem: "command not found: goyoke-validate"
 
 **Cause:** `~/.local/bin` is not in PATH.
 
@@ -672,7 +678,7 @@ source ~/.bashrc
 ```json
 {
   "type": "command",
-  "command": "gogent-validate",
+  "command": "goyoke-validate",
   "timeout": 30  // Increased from 10
 }
 ```
@@ -683,7 +689,7 @@ source ~/.bashrc
 
 **Debug:**
 ```bash
-echo '{"tool_name":"Task","tool_input":{}}' | gogent-validate 2>&1
+echo '{"tool_name":"Task","tool_input":{}}' | goyoke-validate 2>&1
 ```
 
 Check stderr for errors separate from stdout JSON.
@@ -703,24 +709,24 @@ grep -A5 '"hooks"' ~/.claude/settings.json
 
 ### Problem: Sharp edges not being captured
 
-**Cause:** Missing `~/.gogent/` directory or permissions issue.
+**Cause:** Missing `~/.goyoke/` directory or permissions issue.
 
 **Fix:**
 ```bash
-mkdir -p ~/.gogent
-chmod 755 ~/.gogent
-touch ~/.gogent/failure-tracker.jsonl
-chmod 644 ~/.gogent/failure-tracker.jsonl
+mkdir -p ~/.goyoke
+chmod 755 ~/.goyoke
+touch ~/.goyoke/failure-tracker.jsonl
+chmod 644 ~/.goyoke/failure-tracker.jsonl
 ```
 
 ### Problem: Session handoffs not generated
 
-**Cause:** `gogent-archive` failing silently.
+**Cause:** `goyoke-archive` failing silently.
 
 **Debug:**
 ```bash
 # Test archive binary directly
-echo '{"event":"session_end","session_id":"test-123"}' | gogent-archive
+echo '{"event":"session_end","session_id":"test-123"}' | goyoke-archive
 
 # Check for memory directory
 ls -la ~/.claude/memory/
@@ -732,7 +738,7 @@ ls -la ~/.claude/memory/
 
 **Fix:**
 ```bash
-chmod +x ~/.local/bin/gogent-*
+chmod +x ~/.local/bin/goyoke-*
 ```
 
 ---
@@ -741,7 +747,7 @@ chmod +x ~/.local/bin/gogent-*
 
 ### Build & Install
 ```bash
-cd ~/Documents/GOgent-Fortress
+cd ~/Documents/goYoke
 make build-all
 make install
 ```
@@ -762,8 +768,8 @@ mv ~/.claude ~/.claude-test && mv ~/.claude-backup ~/.claude  # Restore
 
 ### Verify Installation
 ```bash
-which gogent-validate gogent-load-context gogent-sharp-edge gogent-archive
-echo '{}' | gogent-validate  # Should output JSON
+which goyoke-validate goyoke-load-context goyoke-sharp-edge goyoke-archive
+echo '{}' | goyoke-validate  # Should output JSON
 ```
 
 ### Rollback
@@ -775,13 +781,13 @@ cp ~/.claude/settings.json.backup-* ~/.claude/settings.json
 
 ## 12. Running as `claudeGO` Command
 
-This section explains how to run Claude with GOgent-Fortress hooks using the command `claudeGO`, while keeping your production `claude` command unchanged.
+This section explains how to run Claude with goYoke hooks using the command `claudeGO`, while keeping your production `claude` command unchanged.
 
 ### 12.1 How It Works
 
 ```
 claude     → Uses ~/.claude/ (your production bash-based config)
-claudeGO   → Uses ~/.claude-gogent/ (GOgent-Fortress Go binaries)
+claudeGO   → Uses ~/.claude-goyoke/ (goYoke Go binaries)
 ```
 
 Both commands run the same Claude Code CLI, but with different configuration directories.
@@ -793,23 +799,23 @@ Before proceeding, ensure:
 - [ ] You completed section 5-6 (test environment created at `~/.claude-test/`)
 - [ ] You validated the installation (section 8)
 
-### 12.3 Create Permanent GOgent Config Directory
+### 12.3 Create Permanent goYoke Config Directory
 
 Move your test config to a permanent location:
 
 ```bash
 # If you still have ~/.claude-test from earlier testing
-mv ~/.claude-test ~/.claude-gogent
+mv ~/.claude-test ~/.claude-goyoke
 
 # OR if starting fresh, create it now
-mkdir -p ~/.claude-gogent/{hooks,memory,tmp,session-archive}
-cp ~/.claude/CLAUDE.md ~/.claude-gogent/
-cp ~/.claude/routing-schema.json ~/.claude-gogent/
-cp -r ~/.claude/agents ~/.claude-gogent/
-cp -r ~/.claude/conventions ~/.claude-gogent/
-cp -r ~/.claude/rules ~/.claude-gogent/
-cp -r ~/.claude/skills ~/.claude-gogent/
-cp -r ~/.claude/docs ~/.claude-gogent/ 2>/dev/null || true
+mkdir -p ~/.claude-goyoke/{hooks,memory,tmp,session-archive}
+cp ~/.claude/CLAUDE.md ~/.claude-goyoke/
+cp ~/.claude/routing-schema.json ~/.claude-goyoke/
+cp -r ~/.claude/agents ~/.claude-goyoke/
+cp -r ~/.claude/conventions ~/.claude-goyoke/
+cp -r ~/.claude/rules ~/.claude-goyoke/
+cp -r ~/.claude/skills ~/.claude-goyoke/
+cp -r ~/.claude/docs ~/.claude-goyoke/ 2>/dev/null || true
 ```
 
 ### 12.4 Create the Wrapper Script
@@ -820,9 +826,9 @@ Create the `claudeGO` wrapper script:
 cat > ~/.local/bin/claudeGO << 'WRAPPER_EOF'
 #!/bin/bash
 #
-# claudeGO - Run Claude Code with GOgent-Fortress hooks
+# claudeGO - Run Claude Code with goYoke hooks
 #
-# This wrapper temporarily swaps ~/.claude with ~/.claude-gogent,
+# This wrapper temporarily swaps ~/.claude with ~/.claude-goyoke,
 # runs Claude, then restores the original config on exit.
 #
 # Usage: claudeGO [claude arguments...]
@@ -832,7 +838,7 @@ set -e
 
 # Configuration
 PRODUCTION_CONFIG="$HOME/.claude"
-GOGENT_CONFIG="$HOME/.claude-gogent"
+GOYOKE_CONFIG="$HOME/.claude-goyoke"
 BACKUP_CONFIG="$HOME/.claude-production-tmp"
 
 # Colors for output
@@ -851,10 +857,10 @@ cleanup() {
 
     # Restore production config
     if [[ -d "$BACKUP_CONFIG" ]]; then
-        # Move GOgent config back
+        # Move goYoke config back
         if [[ -d "$PRODUCTION_CONFIG" ]]; then
-            rm -rf "$GOGENT_CONFIG"
-            mv "$PRODUCTION_CONFIG" "$GOGENT_CONFIG"
+            rm -rf "$GOYOKE_CONFIG"
+            mv "$PRODUCTION_CONFIG" "$GOYOKE_CONFIG"
         fi
 
         # Restore production
@@ -862,7 +868,7 @@ cleanup() {
         echo -e "${GREEN}[claudeGO]${NC} Production config restored."
     else
         echo -e "${RED}[claudeGO]${NC} WARNING: Backup not found. Config may be in inconsistent state."
-        echo -e "${RED}[claudeGO]${NC} Check ~/.claude and ~/.claude-gogent manually."
+        echo -e "${RED}[claudeGO]${NC} Check ~/.claude and ~/.claude-goyoke manually."
     fi
 
     exit $exit_code
@@ -873,20 +879,20 @@ trap cleanup EXIT INT TERM
 
 # Preflight checks
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${CYAN}  GOgent-Fortress - Go Hook Orchestration Framework${NC}"
+echo -e "${CYAN}  goYoke - Go Hook Orchestration Framework${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Check GOgent config exists
-if [[ ! -d "$GOGENT_CONFIG" ]]; then
-    echo -e "${RED}[claudeGO]${NC} ERROR: GOgent config not found at $GOGENT_CONFIG"
+# Check goYoke config exists
+if [[ ! -d "$GOYOKE_CONFIG" ]]; then
+    echo -e "${RED}[claudeGO]${NC} ERROR: goYoke config not found at $GOYOKE_CONFIG"
     echo -e "${RED}[claudeGO]${NC} Run the installation steps first. See INSTALL-GUIDE.md section 12.3"
     exit 1
 fi
 
-# Check settings.json exists in GOgent config
-if [[ ! -f "$GOGENT_CONFIG/settings.json" ]]; then
-    echo -e "${RED}[claudeGO]${NC} ERROR: settings.json not found in $GOGENT_CONFIG"
+# Check settings.json exists in goYoke config
+if [[ ! -f "$GOYOKE_CONFIG/settings.json" ]]; then
+    echo -e "${RED}[claudeGO]${NC} ERROR: settings.json not found in $GOYOKE_CONFIG"
     echo -e "${RED}[claudeGO]${NC} Create settings.json per INSTALL-GUIDE.md section 6.1"
     exit 1
 fi
@@ -920,12 +926,12 @@ fi
 
 # Check binaries are installed
 REQUIRED_BINARIES=(
-    "gogent-validate"
-    "gogent-load-context"
-    "gogent-sharp-edge"
-    "gogent-archive"
-    "gogent-agent-endstate"
-    "gogent-orchestrator-guard"
+    "goyoke-validate"
+    "goyoke-load-context"
+    "goyoke-sharp-edge"
+    "goyoke-archive"
+    "goyoke-agent-endstate"
+    "goyoke-orchestrator-guard"
 )
 
 MISSING_BINARIES=()
@@ -941,7 +947,7 @@ if [[ ${#MISSING_BINARIES[@]} -gt 0 ]]; then
         echo -e "  - $bin"
     done
     echo ""
-    echo -e "${RED}[claudeGO]${NC} Run: cd ~/Documents/GOgent-Fortress && make install"
+    echo -e "${RED}[claudeGO]${NC} Run: cd ~/Documents/goYoke && make install"
     exit 1
 fi
 
@@ -949,15 +955,15 @@ echo -e "${GREEN}[claudeGO]${NC} Preflight checks passed."
 echo ""
 
 # Swap configurations
-echo -e "${YELLOW}[claudeGO]${NC} Activating GOgent-Fortress config..."
+echo -e "${YELLOW}[claudeGO]${NC} Activating goYoke config..."
 
 # Step 1: Move production to backup
 mv "$PRODUCTION_CONFIG" "$BACKUP_CONFIG"
 
-# Step 2: Move GOgent to production location
-mv "$GOGENT_CONFIG" "$PRODUCTION_CONFIG"
+# Step 2: Move goYoke to production location
+mv "$GOYOKE_CONFIG" "$PRODUCTION_CONFIG"
 
-echo -e "${GREEN}[claudeGO]${NC} GOgent-Fortress active."
+echo -e "${GREEN}[claudeGO]${NC} goYoke active."
 echo -e "${GREEN}[claudeGO]${NC} Starting Claude..."
 echo ""
 
@@ -985,12 +991,12 @@ which claudeGO
 /home/YOUR_USERNAME/.local/bin/claudeGO
 ```
 
-### 12.7 Ensure settings.json Exists in GOgent Config
+### 12.7 Ensure settings.json Exists in goYoke Config
 
-If you haven't already created `~/.claude-gogent/settings.json`, do it now:
+If you haven't already created `~/.claude-goyoke/settings.json`, do it now:
 
 ```bash
-cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
+cat > ~/.claude-goyoke/settings.json << 'SETTINGS_EOF'
 {
   "permissions": {
     "allow": [
@@ -1026,7 +1032,7 @@ cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-load-context",
+            "command": "goyoke-load-context",
             "timeout": 10
           }
         ]
@@ -1038,7 +1044,7 @@ cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-validate",
+            "command": "goyoke-validate",
             "timeout": 10
           }
         ]
@@ -1050,7 +1056,7 @@ cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-sharp-edge",
+            "command": "goyoke-sharp-edge",
             "timeout": 5
           }
         ]
@@ -1061,12 +1067,12 @@ cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-agent-endstate",
+            "command": "goyoke-agent-endstate",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "gogent-orchestrator-guard",
+            "command": "goyoke-orchestrator-guard",
             "timeout": 10
           }
         ]
@@ -1077,7 +1083,7 @@ cat > ~/.claude-gogent/settings.json << 'SETTINGS_EOF'
         "hooks": [
           {
             "type": "command",
-            "command": "gogent-archive",
+            "command": "goyoke-archive",
             "timeout": 30
           }
         ]
@@ -1099,9 +1105,9 @@ claudeGO
 ```
 
 **Expected behavior:**
-1. You see the GOgent-Fortress banner
+1. You see the goYoke banner
 2. Preflight checks pass
-3. "GOgent-Fortress active" message appears
+3. "goYoke active" message appears
 4. Claude starts normally
 5. Session Init shows with language detection
 6. When you exit (Ctrl+D), production config is automatically restored
@@ -1114,8 +1120,8 @@ After exiting claudeGO, verify your production config is restored:
 # Check production config is back
 ls ~/.claude/settings.json
 
-# Check GOgent config is back in its place
-ls ~/.claude-gogent/settings.json
+# Check goYoke config is back in its place
+ls ~/.claude-goyoke/settings.json
 
 # Both should exist
 ```
@@ -1149,32 +1155,32 @@ If the cleanup somehow fails, you'll see a warning next time you run `claudeGO`.
 **Manual recovery if needed:**
 ```bash
 # Check current state
-ls -la ~/.claude ~/.claude-gogent ~/.claude-production-tmp
+ls -la ~/.claude ~/.claude-goyoke ~/.claude-production-tmp
 
 # If ~/.claude-production-tmp exists, production config is there
-mv ~/.claude ~/.claude-gogent
+mv ~/.claude ~/.claude-goyoke
 mv ~/.claude-production-tmp ~/.claude
 ```
 
-### 12.12 Updating GOgent-Fortress
+### 12.12 Updating goYoke
 
 When you update the Go binaries, both `claude` (if using Go) and `claudeGO` will use the new versions:
 
 ```bash
-cd ~/Documents/GOgent-Fortress
+cd ~/Documents/goYoke
 git pull
 make build-all
 make install
 ```
 
-The `~/.claude-gogent/` config directory remains unchanged; only the binaries in `~/.local/bin/` are updated.
+The `~/.claude-goyoke/` config directory remains unchanged; only the binaries in `~/.local/bin/` are updated.
 
 ### 12.13 Quick Reference
 
 | Command | Config Used | Hooks |
 |---------|-------------|-------|
 | `claude` | `~/.claude/` | Your production config (bash or Go) |
-| `claudeGO` | `~/.claude-gogent/` (swapped to `~/.claude/`) | GOgent-Fortress Go binaries |
+| `claudeGO` | `~/.claude-goyoke/` (swapped to `~/.claude/`) | goYoke Go binaries |
 
 ### 12.14 Alternative: Shell Alias (Simpler but Less Safe)
 
@@ -1182,7 +1188,7 @@ If you prefer a simpler approach without the safety features, you can use an ali
 
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-alias claudeGO='mv ~/.claude ~/.claude-bak && mv ~/.claude-gogent ~/.claude && claude; mv ~/.claude ~/.claude-gogent && mv ~/.claude-bak ~/.claude'
+alias claudeGO='mv ~/.claude ~/.claude-bak && mv ~/.claude-goyoke ~/.claude && claude; mv ~/.claude ~/.claude-goyoke && mv ~/.claude-bak ~/.claude'
 ```
 
 **WARNING:** This alias has no error handling. If Claude crashes, your config will be in the wrong state. The wrapper script (section 12.4) is strongly recommended.
@@ -1199,3 +1205,12 @@ alias claudeGO='mv ~/.claude ~/.claude-bak && mv ~/.claude-gogent ~/.claude && c
 ---
 
 **Questions?** See `docs/systems-architecture-overview.md` for technical details or open an issue on the repository.
+
+
+---
+
+## See Also
+
+- [[concepts/hook-system]] — Hook architecture
+- [[hook-configuration]] — Hook setup details
+- [[concepts/distribution-model]] — Planned single-binary distribution

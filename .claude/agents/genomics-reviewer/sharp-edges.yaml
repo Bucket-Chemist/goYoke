@@ -1,2 +1,240 @@
-# Sharp edges for Genomics Reviewer - none captured yet
-edges: []
+# Sharp edges for Genomics Reviewer
+# Derived from the agent's Sharp Edge Correlation table (20 IDs).
+
+edges:
+  - id: genomics-ref-wrong-build
+    severity: critical
+    description: >
+      Mismatched genome build across pipeline steps. A pipeline can run to completion
+      with hg19 BAMs and hg38 annotation — all coordinates are valid integers in both —
+      producing subtly wrong gene assignments across the entire callset.
+    detection: >
+      Grep for hg19, hg38, GRCh37, GRCh38, T2T across all config, wrapper scripts,
+      and reference paths. Any disagreement is a critical failure.
+    mitigation: >
+      Enforce single build declaration consumed by all pipeline stages. Validate at
+      pipeline entry point.
+
+  - id: genomics-ref-missing-index
+    severity: critical
+    description: >
+      Reference, BAM, or VCF files missing required index files (.fai, .dict, .bai/.csi,
+      .tbi). Tools may use stale indexes or fail silently, producing truncated output
+      or phantom variants.
+    detection: >
+      Check that index files exist and are newer than parent files for all references,
+      BAMs, and VCFs in the pipeline.
+    mitigation: >
+      Add index validation step at pipeline entry. Regenerate indexes when parent
+      file modification time is newer.
+
+  - id: genomics-align-no-mapq
+    severity: warning
+    description: >
+      No mapping quality threshold applied before variant calling. Low-MAPQ reads
+      from multimapped regions (segmental duplications) produce false positive variants.
+    detection: >
+      Check for samtools view -q or GATK --minimum-mapping-quality in the pipeline
+      between alignment and variant calling.
+    mitigation: >
+      Apply MAPQ >= 20 filter for WGS, >= 10 for targeted panels. Document threshold
+      choice.
+
+  - id: genomics-align-wrong-aligner
+    severity: warning
+    description: >
+      Aligner inappropriate for sequencing data type. BWA-MEM2 for short-read,
+      minimap2 for long-read, bowtie2 for targeted panels.
+    detection: >
+      Check aligner binary name against data type indicators (read length, platform
+      in FASTQ headers, config).
+    mitigation: >
+      Match aligner to data type. Document choice rationale.
+
+  - id: genomics-align-no-dedup
+    severity: warning
+    description: >
+      Duplicate marking step missing. PCR/optical duplicates inflate allele counts,
+      producing false confident heterozygous calls. Especially dangerous for targeted
+      panels and WES with aggressive PCR amplification.
+    detection: >
+      Check for Picard MarkDuplicates or samtools markdup in pipeline. For PCR-free
+      WGS, optical duplicate marking is still required.
+    mitigation: >
+      Add duplicate marking step. For PCR-free libraries, use optical-only mode.
+
+  - id: genomics-align-no-readgroups
+    severity: critical
+    description: >
+      BAM files missing @RG read group information (SM, LB, PL, PU fields). GATK
+      BQSR and joint calling fail or silently skip samples. Samples may be merged
+      incorrectly in joint calling.
+    detection: >
+      Check BAM headers for @RG lines with all required fields.
+    mitigation: >
+      Add read groups during alignment (bwa mem -R flag) or post-hoc with
+      Picard AddOrReplaceReadGroups.
+
+  - id: genomics-align-no-bqsr
+    severity: warning
+    description: >
+      BQSR skipped without documented justification. Raw Illumina quality scores
+      have systematic errors that propagate to variant quality scores (~2-5% FP
+      increase at Q20 boundary). Exception: DeepVariant performs internal
+      recalibration, making BQSR unnecessary.
+    detection: >
+      Check for GATK BaseRecalibrator + ApplyBQSR in pipeline. If absent, check
+      if DeepVariant is the downstream caller (justified skip).
+    mitigation: >
+      Apply BQSR with matching --known-sites build, or document DeepVariant
+      exception.
+
+  - id: genomics-align-no-contamination
+    severity: critical
+    description: >
+      No contamination estimation performed. Cross-sample contamination >= 2%
+      severely degrades variant calling accuracy. Contaminant germline variants
+      appear as low-VAF false calls in both germline and somatic pipelines.
+    detection: >
+      Check for VerifyBamID2 (germline) or GetPileupSummaries + CalculateContamination
+      (Mutect2 somatic). FREEMIX > 0.02 flags contaminated samples.
+    mitigation: >
+      Add contamination check. For somatic, feed CalculateContamination output
+      to FilterMutectCalls --contamination-table.
+
+  - id: genomics-vc-wrong-caller
+    severity: critical
+    description: >
+      Variant caller mismatched to variant type or analysis context. SNV caller
+      misses structural variants entirely. Germline caller on tumor produces
+      massive false positives. Somatic caller on germline misses common variants.
+    detection: >
+      Check caller binary (HaplotypeCaller, Mutect2, DeepVariant, Manta, DELLY,
+      CNVkit) against expected variant types and sample context.
+    mitigation: >
+      Match caller to variant type and analysis context.
+
+  - id: genomics-vc-no-normalization
+    severity: critical
+    description: >
+      Variants not normalized before annotation/comparison. Same indel represented
+      differently across samples causes missed matches in cohort comparison and
+      annotation lookup failures. Cascades to proteogenomics: unnormalized variants
+      produce duplicate protein entries inflating search database.
+    detection: >
+      Check for bcftools norm -m or vt normalize before annotation or
+      cross-sample comparison steps.
+    mitigation: >
+      Add bcftools norm -m -both -f reference.fa before annotation.
+
+  - id: genomics-vc-no-multiallelic
+    severity: critical
+    description: >
+      Multi-allelic sites not decomposed. Per-allele frequency and consequence
+      incorrectly assigned — ALT allele 2 inherits allele 1's annotation. gnomAD
+      lookup returns wrong AF.
+    detection: >
+      Check for bcftools norm -m -both or equivalent multi-allelic decomposition.
+    mitigation: >
+      Decompose multi-allelic sites before annotation.
+
+  - id: genomics-vc-no-filter
+    severity: warning
+    description: >
+      No hard filters or VQSR applied to variant callset; or wrong filter type
+      for caller (VQSR on Mutect2 output violates HWE assumption). Unfiltered
+      callsets have 10-30% false positive rate.
+    detection: >
+      Check for GATK VariantFiltration, VQSR, or DeepVariant QUAL threshold.
+      For Mutect2, check for FilterMutectCalls (not VQSR).
+    mitigation: >
+      Apply appropriate filters for caller type.
+
+  - id: genomics-vc-no-gq-filter
+    severity: warning
+    description: >
+      No genotype quality threshold in variant filtering. Low-confidence genotypes
+      treated as definitive inflate Mendelian error rates and false associations.
+    detection: >
+      Check for GQ >= 20 filter or configurable threshold in downstream filtering.
+    mitigation: >
+      Apply GQ >= 20 minimum threshold. Document choice.
+
+  - id: genomics-vc-wrong-dv-model
+    severity: critical
+    description: >
+      DeepVariant model type doesn't match sequencing data type. WGS model on WES
+      data causes 5-15% sensitivity loss for indels. PACBIO model uses completely
+      different error profile.
+    detection: >
+      Check --model_type flag in DeepVariant call against data type.
+    mitigation: >
+      Match model type to data: WGS, WES, or PACBIO.
+
+  - id: genomics-vc-wrong-ploidy
+    severity: warning
+    description: >
+      Sex chromosome or mitochondrial ploidy not handled. Default diploid calling
+      on male chrX (non-PAR) reports hemizygous variants as homozygous with inflated
+      quality. chrM requires specialized caller (Mutect2 --mitochondria-mode).
+    detection: >
+      Check for ploidy map, sex-aware calling, or chrM-specific calling configuration.
+    mitigation: >
+      Use ploidy map for sex chromosomes, Mutect2 --mitochondria-mode for chrM.
+
+  - id: genomics-anno-build-mismatch
+    severity: critical
+    description: >
+      Annotation database, VEP cache, or population frequency database build doesn't
+      match reference genome. Returns empty or wrong results for valid variants.
+      Known pathogenic variants may be filtered as common due to wrong frequency data.
+    detection: >
+      Cross-check VEP --cache_version, --assembly, dbSNP build, gnomAD version
+      against reference genome build.
+    mitigation: >
+      Pin all annotation databases to matching build. Validate at pipeline startup.
+
+  - id: genomics-anno-no-transcript
+    severity: warning
+    description: >
+      No transcript selection strategy defined for VEP/SnpEff. Default returns longest
+      transcript, not clinically relevant one. Pathogenic splice variant may be reported
+      as intronic on a non-MANE transcript.
+    detection: >
+      Check for --pick, --mane_select, or --canonical flag in VEP/SnpEff config.
+    mitigation: >
+      Use --mane_select for clinical, --canonical for research. Document choice.
+
+  - id: genomics-fmt-invalid-vcf
+    severity: warning
+    description: >
+      VCF or BAM violates file format specification. Downstream parsers handle
+      malformed files unpredictably — silently skipping variants or producing
+      partial callsets.
+    detection: >
+      Run bcftools view -h for VCF header validation, samtools flagstat for BAM.
+    mitigation: >
+      Add format validation step at pipeline entry.
+
+  - id: genomics-fmt-bad-coordinates
+    severity: warning
+    description: >
+      Coordinate system error — BED (0-based half-open) mixed with VCF (1-based)
+      or GFF (1-based closed). Off-by-one errors at interval boundaries cause
+      variants to be missed or double-counted.
+    detection: >
+      Check BED files for 0-based convention (first field starts at 0, end = start + length).
+    mitigation: >
+      Standardize coordinate handling. Document which system each file uses.
+
+  - id: genomics-xstage-contig-mismatch
+    severity: critical
+    description: >
+      Inconsistent contig naming convention across pipeline steps (chr1 vs 1).
+      bcftools and GATK silently drop non-matching contigs — entire chromosomes
+      vanish from analysis with no error message.
+    detection: >
+      Check contig names in BAM header, VCF header, BED files, and reference
+      for consistent chr prefix usage.
+    mitigation: >
+      Normalize contig names at pipeline entry or use a contig mapping table.

@@ -198,7 +198,7 @@ edges:
   - name: schema_frontmatter_removed_fields
     severity: medium
     description: >
-      During GOgent integration (2026-04-09), the following non-standard
+      During goYoke integration (2026-04-09), the following non-standard
       frontmatter fields were removed from the original agent definition:
       delegation.cannot_spawn (replaced by can_spawn allowlist), delegation.max_parallel,
       delegation.cost_ceiling, output_format (type/sections), scope_thresholds
@@ -208,4 +208,4 @@ edges:
     mitigation: >
       If the agent exhibits unexpected behavior around parallelization, clarification
       questions, or scope decisions, check the body sections rather than frontmatter.
-      The removed fields were non-standard and not parsed by any GOgent binary.
+      The removed fields were non-standard and not parsed by any goYoke binary.

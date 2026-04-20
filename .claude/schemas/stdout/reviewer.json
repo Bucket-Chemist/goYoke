@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdout/reviewer.json",
+  "$id": "https://goyoke-fortress/schemas/stdout/reviewer.json",
   "title": "Generic Reviewer Stdout Schema",
   "description": "Validates stdout for all review workflow reviewers (backend, frontend, standards, architect)",
   "version": "1.0.0",

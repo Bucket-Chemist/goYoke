@@ -22,9 +22,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	routing "github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // acWrittenToRe matches "<filename> written to <path>" in criterion text.
@@ -35,7 +35,7 @@ var acWrittenToRe = regexp.MustCompile(`(?i)(\S+)\s+written\s+to\s+(\S+)`)
 var acWrittenToDirRe = regexp.MustCompile(`(?i)written\s+to\s+(\S+/)`)
 
 const (
-	defaultTimeoutMS = 600_000          // 10 minutes
+	defaultTimeoutMS = 900_000          // 15 minutes
 	sigkillGraceMS   = 5_000            // 5s between SIGTERM and SIGKILL
 	maxBufferBytes   = 10 * 1024 * 1024 // 10MB stdout buffer limit
 	maxNestingDepth  = 10
@@ -93,7 +93,7 @@ func (c *cliOutputCollector) fallbackResult() *cliResult {
 	return nil
 }
 
-// validateNestingDepth checks GOGENT_NESTING_LEVEL and returns an error if the
+// validateNestingDepth checks GOYOKE_NESTING_LEVEL and returns an error if the
 // maximum nesting depth has been reached.
 func validateNestingDepth() error {
 	level := getCurrentNestingLevel()
@@ -103,9 +103,9 @@ func validateNestingDepth() error {
 	return nil
 }
 
-// getCurrentNestingLevel reads GOGENT_NESTING_LEVEL and returns it as an int.
+// getCurrentNestingLevel reads GOYOKE_NESTING_LEVEL and returns it as an int.
 func getCurrentNestingLevel() int {
-	val := os.Getenv("GOGENT_NESTING_LEVEL")
+	val := os.Getenv("GOYOKE_NESTING_LEVEL")
 	if val == "" {
 		return 0
 	}
@@ -120,9 +120,9 @@ func getCurrentNestingLevel() int {
 func buildSpawnEnv(nestingLevel int, agentID string) []string {
 	env := filterEnv(os.Environ(), "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT")
 	env = append(env,
-		"GOGENT_NESTING_LEVEL="+strconv.Itoa(nestingLevel+1),
-		"GOGENT_PARENT_AGENT="+agentID,
-		"GOGENT_SPAWN_METHOD=mcp-cli",
+		"GOYOKE_NESTING_LEVEL="+strconv.Itoa(nestingLevel+1),
+		"GOYOKE_PARENT_AGENT="+agentID,
+		"GOYOKE_SPAWN_METHOD=mcp-cli",
 	)
 	return env
 }
@@ -454,9 +454,9 @@ func writeACSidecar(agentID string, todos []TodoItem, acState []state.Acceptance
 	}
 	updated := state.MatchTodosToAC(acState, updates)
 
-	sessionDir := os.Getenv("GOGENT_SESSION_DIR")
+	sessionDir := os.Getenv("GOYOKE_SESSION_DIR")
 	if sessionDir == "" {
-		slog.Warn("writeACSidecar: GOGENT_SESSION_DIR not set, skipping sidecar write",
+		slog.Warn("writeACSidecar: GOYOKE_SESSION_DIR not set, skipping sidecar write",
 			"agentID", agentID)
 		return updated
 	}

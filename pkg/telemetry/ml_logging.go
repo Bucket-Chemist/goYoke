@@ -6,13 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // LogMLToolEvent writes ML routing tool event metrics to JSONL files (dual-write: global + project)
 // Uses routing.PostToolEvent and config.GetMLToolEventsPathWithProjectDir() for XDG compliance
-// with GOGENT_PROJECT_DIR override support for test isolation
+// with GOYOKE_PROJECT_DIR override support for test isolation
 func LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error {
 	// Marshal PostToolEvent directly to JSON
 	data, err := json.Marshal(event)
@@ -23,15 +23,15 @@ func LogMLToolEvent(event *routing.PostToolEvent, projectDir string) error {
 	// Add newline for JSONL format
 	jsonlLine := append(data, '\n')
 
-	// Write to global path using config helper (respects GOGENT_PROJECT_DIR)
+	// Write to global path using config helper (respects GOYOKE_PROJECT_DIR)
 	globalPath := config.GetMLToolEventsPathWithProjectDir()
 	if err := appendMLToolEvent(globalPath, jsonlLine); err != nil {
 		return err
 	}
 
-	// Write to project-scoped path (if directory exists and not already covered by GOGENT_PROJECT_DIR)
-	// Skip project-scoped write if GOGENT_PROJECT_DIR is set to avoid duplicate writes
-	if os.Getenv("GOGENT_PROJECT_DIR") == "" {
+	// Write to project-scoped path (if directory exists and not already covered by GOYOKE_PROJECT_DIR)
+	// Skip project-scoped write if GOYOKE_PROJECT_DIR is set to avoid duplicate writes
+	if os.Getenv("GOYOKE_PROJECT_DIR") == "" {
 		projectPath := filepath.Join(config.ProjectMemoryDir(projectDir), "ml-tool-events.jsonl")
 		if dirExists(filepath.Dir(projectPath)) {
 			appendMLToolEvent(projectPath, jsonlLine) // Ignore errors for project-scoped writes
@@ -70,7 +70,7 @@ func appendMLToolEvent(path string, data []byte) error {
 
 // ReadMLToolEvents reads all ML tool events from the global path
 // Returns routing.PostToolEvent slice directly
-// Respects GOGENT_PROJECT_DIR for test isolation
+// Respects GOYOKE_PROJECT_DIR for test isolation
 func ReadMLToolEvents() ([]routing.PostToolEvent, error) {
 	logPath := config.GetMLToolEventsPathWithProjectDir()
 

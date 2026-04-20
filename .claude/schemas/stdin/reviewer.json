@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/reviewer.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/reviewer.json",
   "title": "Generic Reviewer Stdin Schema",
   "description": "Validates stdin for all review workflow reviewers (backend, frontend, standards, architect)",
   "version": "1.0.0",

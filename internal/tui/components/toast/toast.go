@@ -1,5 +1,5 @@
 // Package toast implements a transient notification overlay for the
-// GOgent-Fortress TUI. Toasts are small bordered boxes that appear at the
+// goYoke TUI. Toasts are small bordered boxes that appear at the
 // top-right of the terminal and expire automatically after a configurable
 // duration.
 //
@@ -16,8 +16,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 // ---------------------------------------------------------------------------

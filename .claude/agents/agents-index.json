@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0",
   "generated_at": "2026-02-01T00:00:00Z",
   "description": "Agent index for Intent Gate routing and auto-activation.",
   "agents": [
@@ -53,7 +53,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Memory Archivist"
+      "subagent_type": "Memory Archivist",
+      "distribution": "public"
     },
     {
       "id": "codebase-search",
@@ -92,7 +93,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Codebase Search"
+      "subagent_type": "Codebase Search",
+      "distribution": "public"
     },
     {
       "id": "librarian",
@@ -141,7 +143,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Librarian"
+      "subagent_type": "Librarian",
+      "distribution": "public"
     },
     {
       "id": "scaffolder",
@@ -183,7 +186,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Scaffolder"
+      "subagent_type": "Scaffolder",
+      "distribution": "public"
     },
     {
       "id": "tech-docs-writer",
@@ -234,7 +238,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Tech Docs Writer"
+      "subagent_type": "Tech Docs Writer",
+      "distribution": "public"
     },
     {
       "id": "code-reviewer",
@@ -272,7 +277,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Code Reviewer"
+      "subagent_type": "Code Reviewer",
+      "distribution": "public"
     },
     {
       "id": "python-pro",
@@ -360,7 +366,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Python Pro"
+      "subagent_type": "Python Pro",
+      "distribution": "public"
     },
     {
       "id": "python-ux",
@@ -433,7 +440,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Python UX (PySide6)"
+      "subagent_type": "Python UX (PySide6)",
+      "distribution": "public"
     },
     {
       "id": "r-pro",
@@ -502,7 +510,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "R Pro"
+      "subagent_type": "R Pro",
+      "distribution": "public"
     },
     {
       "id": "r-shiny-pro",
@@ -578,7 +587,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "R Shiny Pro"
+      "subagent_type": "R Shiny Pro",
+      "distribution": "public"
     },
     {
       "id": "go-pro",
@@ -650,7 +660,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO Pro"
+      "subagent_type": "GO Pro",
+      "distribution": "public"
     },
     {
       "id": "rust-pro",
@@ -732,7 +743,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Rust Pro"
+      "subagent_type": "Rust Pro",
+      "distribution": "public"
     },
     {
       "id": "go-cli",
@@ -806,7 +818,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO CLI (Cobra)"
+      "subagent_type": "GO CLI (Cobra)",
+      "distribution": "public"
     },
     {
       "id": "go-tui",
@@ -879,7 +892,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO TUI (Bubbletea)"
+      "subagent_type": "GO TUI (Bubbletea)",
+      "distribution": "public"
     },
     {
       "id": "go-api",
@@ -947,7 +961,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO API (HTTP Client)"
+      "subagent_type": "GO API (HTTP Client)",
+      "distribution": "public"
     },
     {
       "id": "go-concurrent",
@@ -1016,7 +1031,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO Concurrent"
+      "subagent_type": "GO Concurrent",
+      "distribution": "public"
     },
     {
       "id": "orchestrator",
@@ -1052,7 +1068,7 @@
         "TaskCreate",
         "TaskUpdate",
         "TaskGet",
-        "mcp__gofortress__spawn_agent"
+        "mcp__goyoke__spawn_agent"
       ],
       "cli_flags": {
         "allowed_tools": [
@@ -1061,8 +1077,8 @@
           "Grep",
           "Bash",
           "Write",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -1094,7 +1110,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Orchestrator"
+      "subagent_type": "Orchestrator",
+      "distribution": "public"
     },
     {
       "id": "architect",
@@ -1157,7 +1174,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Architect"
+      "subagent_type": "Architect",
+      "distribution": "public"
     },
     {
       "id": "python-architect",
@@ -1199,7 +1217,7 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__ask_user"
+          "mcp__goyoke-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1247,7 +1265,8 @@
           "conditional": []
         }
       },
-      "subagent_type": "Python ML Architect"
+      "subagent_type": "Python ML Architect",
+      "distribution": "public"
     },
     {
       "id": "planner",
@@ -1281,7 +1300,7 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__ask_user"
+          "mcp__goyoke-interactive__ask_user"
         ]
       },
       "auto_activate": null,
@@ -1310,7 +1329,8 @@
       "interactive": true,
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "public"
     },
     {
       "id": "einstein",
@@ -1368,7 +1388,8 @@
         "librarian",
         "llm-inference-architect"
       ],
-      "interactive": true
+      "interactive": true,
+      "distribution": "public"
     },
     {
       "id": "mozart",
@@ -1395,9 +1416,10 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__ask_user",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__ask_user",
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result",
+          "mcp__goyoke-interactive__team_run"
         ]
       },
       "auto_activate": null,
@@ -1424,7 +1446,8 @@
         ],
         "conventions": {}
       },
-      "interactive": true
+      "interactive": true,
+      "distribution": "public"
     },
     {
       "id": "beethoven",
@@ -1477,7 +1500,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "distribution": "public"
     },
     {
       "id": "staff-architect-critical-review",
@@ -1535,7 +1559,8 @@
         "llm-inference-architect"
       ],
       "subagent_type": "Staff Architect Critical Review",
-      "interactive": true
+      "interactive": true,
+      "distribution": "public"
     },
     {
       "id": "schema-architect",
@@ -1593,7 +1618,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Schema Architect"
+      "subagent_type": "Schema Architect",
+      "distribution": "public"
     },
     {
       "id": "haiku-scout",
@@ -1634,23 +1660,24 @@
       "output_format": "json",
       "output_file": ".claude/tmp/scout_metrics.json",
       "cost_ceiling_usd": 0.02,
-      "fallback_for": "gogent-scout native backend",
+      "fallback_for": "goyoke-scout native backend",
       "sharp_edges_count": 2,
-      "description": "Legacy fallback scout. Prefer gogent-scout which auto-routes between native and Gemini backends.",
+      "description": "Legacy fallback scout. Prefer goyoke-scout which auto-routes between native and Gemini backends.",
       "context_requirements": {
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Haiku Scout"
+      "subagent_type": "Haiku Scout",
+      "distribution": "public"
     },
     {
-      "id": "gogent-scout",
+      "id": "goyoke-scout",
       "parallelization_template": "A",
-      "name": "GOgent Smart Scout",
+      "name": "goYoke Smart Scout",
       "model": "native",
       "tier": 1,
       "category": "reconnaissance",
-      "path": "cmd/gogent-scout",
+      "path": "cmd/goyoke-scout",
       "triggers": [
         "assess scope",
         "scout",
@@ -1663,7 +1690,7 @@
       "tools": [
         "Bash"
       ],
-      "invocation": "Bash: gogent-scout <target> \"<instruction>\"",
+      "invocation": "Bash: goyoke-scout <target> \"<instruction>\"",
       "backends": {
         "native": "score < 40 (fast, basic metrics)",
         "gemini": "score >= 40 (Gemini 3 Flash, semantic analysis)"
@@ -1682,12 +1709,13 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "GOgent Smart Scout",
+      "subagent_type": "goYoke Smart Scout",
       "cli_flags": {
         "allowed_tools": [
           "Bash"
         ]
-      }
+      },
+      "distribution": "public"
     },
     {
       "id": "typescript-pro",
@@ -1759,7 +1787,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "TypeScript Pro"
+      "subagent_type": "TypeScript Pro",
+      "distribution": "public"
     },
     {
       "id": "react-pro",
@@ -1831,7 +1860,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "React Pro"
+      "subagent_type": "React Pro",
+      "distribution": "public"
     },
     {
       "id": "backend-reviewer",
@@ -1880,7 +1910,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Backend Reviewer"
+      "subagent_type": "Backend Reviewer",
+      "distribution": "public"
     },
     {
       "id": "frontend-reviewer",
@@ -1927,7 +1958,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Frontend Reviewer"
+      "subagent_type": "Frontend Reviewer",
+      "distribution": "public"
     },
     {
       "id": "standards-reviewer",
@@ -1970,7 +2002,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Standards Reviewer"
+      "subagent_type": "Standards Reviewer",
+      "distribution": "public"
     },
     {
       "id": "architect-reviewer",
@@ -2019,7 +2052,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Architect Reviewer"
+      "subagent_type": "Architect Reviewer",
+      "distribution": "public"
     },
     {
       "id": "review-orchestrator",
@@ -2042,7 +2076,7 @@
         "Read",
         "Glob",
         "Grep",
-        "mcp__gofortress__spawn_agent",
+        "mcp__goyoke__spawn_agent",
         "Write"
       ],
       "cli_flags": {
@@ -2051,8 +2085,8 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -2081,7 +2115,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Review Orchestrator"
+      "subagent_type": "Review Orchestrator",
+      "distribution": "public"
     },
     {
       "id": "impl-manager",
@@ -2111,7 +2146,7 @@
         "TaskCreate",
         "TaskUpdate",
         "TaskGet",
-        "mcp__gofortress__spawn_agent"
+        "mcp__goyoke__spawn_agent"
       ],
       "cli_flags": {
         "allowed_tools": [
@@ -2119,8 +2154,8 @@
           "Glob",
           "Grep",
           "Write",
-          "mcp__gofortress-interactive__spawn_agent",
-          "mcp__gofortress-interactive__get_agent_result"
+          "mcp__goyoke-interactive__spawn_agent",
+          "mcp__goyoke-interactive__get_agent_result"
         ]
       },
       "auto_activate": null,
@@ -2164,7 +2199,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Implementation Manager"
+      "subagent_type": "Implementation Manager",
+      "distribution": "public"
     },
     {
       "id": "llm-inference-architect",
@@ -2247,7 +2283,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "distribution": "public"
     },
     {
       "id": "genomics-reviewer",
@@ -2301,7 +2338,8 @@
       "subagent_type": "Genomics Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "proteomics-reviewer",
@@ -2354,7 +2392,8 @@
       "subagent_type": "Proteomics Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "proteogenomics-reviewer",
@@ -2407,7 +2446,8 @@
       "subagent_type": "Proteogenomics Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "proteoform-reviewer",
@@ -2444,7 +2484,7 @@
         "python.md",
         "R.md"
       ],
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 15,
       "description": "Top-down proteomics and proteoform analysis review. Intact mass, PTM combinatorics, proteoform families, deconvolution, sequence coverage.",
       "context_requirements": {
         "rules": [
@@ -2460,7 +2500,8 @@
       "subagent_type": "Proteoform Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "mass-spec-reviewer",
@@ -2498,7 +2539,7 @@
       "conventions_required": [
         "python.md"
       ],
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 17,
       "description": "MS instrumentation and data acquisition review. DDA/DIA/PRM methods, calibration, raw data quality, vendor formats (Thermo/Bruker/SCIEX/Waters), spectral processing.",
       "context_requirements": {
         "rules": [
@@ -2514,7 +2555,8 @@
       "subagent_type": "Mass Spectrometry Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "bioinformatician-reviewer",
@@ -2553,7 +2595,7 @@
         "python.md",
         "R.md"
       ],
-      "sharp_edges_count": 0,
+      "sharp_edges_count": 20,
       "description": "Pipeline architecture and methodology review. Nextflow/Snakemake/WDL workflows, Docker/Singularity/Conda reproducibility, statistics, data provenance.",
       "context_requirements": {
         "rules": [
@@ -2569,7 +2611,8 @@
       "subagent_type": "Bioinformatician Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "pasteur",
@@ -2613,7 +2656,609 @@
       "subagent_type": "Pasteur",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
+    },
+    {
+      "id": "staff-bioinformatician",
+      "parallelization_template": "E",
+      "name": "Staff Bioinformatician",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "bioinformatics-review",
+      "path": "staff-bioinformatician",
+      "subagent_type": "Staff Bioinformatician",
+      "triggers": [],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "invoked_by": "team-run wave 1 only (replaces Pasteur)",
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "must_delegate": false,
+      "min_delegations": 0,
+      "outputs": [
+        "stdout JSON with 7-layer review + unified verdict"
+      ],
+      "description": "Cross-domain bioinformatics pipeline synthesis with 7-layer review framework. Replaces Pasteur as wave 1 synthesizer in /review-bioinformatics.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "interactive": false,
+      "distribution": "private"
+    },
+    {
+      "id": "dedup-reviewer",
+      "parallelization_template": "C",
+      "name": "Dedup Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "dedup-reviewer",
+      "triggers": [
+        "find duplicates",
+        "dedup review",
+        "dry violations",
+        "code consolidation",
+        "copy paste"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "python.md",
+        "typescript.md",
+        "rust.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 15,
+      "description": "Structural and semantic code duplication detector. Finds copy-paste blocks, near-identical functions, and consolidation opportunities.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Dedup Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "type-consolidator",
+      "parallelization_template": "C",
+      "name": "Type Consolidator",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "type-consolidator",
+      "triggers": [
+        "consolidate types",
+        "type review",
+        "shared types",
+        "scattered types",
+        "type organization"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md",
+        "rust.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 11,
+      "description": "Finds scattered, redundant, and orphaned type definitions. Identifies types that should be shared or consolidated.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include file:line references",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Type Consolidator",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "dead-code-reviewer",
+      "parallelization_template": "C",
+      "name": "Dead Code Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "dead-code-reviewer",
+      "triggers": [
+        "dead code",
+        "unused code",
+        "remove unused",
+        "knip",
+        "tree shaking"
+      ],
+      "tools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Bash",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md"
+      ],
+      "sharp_edges_count": 12,
+      "description": "Detects genuinely unused code via static analysis and manual verification. Finds unreferenced exports, orphaned files, unused dependencies.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Findings include verification method",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Dead Code Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "dependency-reviewer",
+      "parallelization_template": "C",
+      "name": "Dependency Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "dependency-reviewer",
+      "triggers": [
+        "circular dependency",
+        "dependency graph",
+        "import cycle",
+        "coupling review",
+        "madge",
+        "module structure"
+      ],
+      "tools": [
+        "Read",
+        "Bash",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Bash",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md",
+        "rust.md"
+      ],
+      "sharp_edges_count": 14,
+      "description": "Maps dependency graphs, detects circular dependencies, identifies tightly coupled modules. Uses madge, go list, and import analysis.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Cycle paths fully documented",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Dependency Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "type-safety-reviewer",
+      "parallelization_template": "C",
+      "name": "Type Safety Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "type-safety-reviewer",
+      "triggers": [
+        "type safety",
+        "weak types",
+        "remove any",
+        "strong typing",
+        "type assertions"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md",
+        "rust.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 11,
+      "description": "Finds weak types (any, unknown, interface{}) and researches correct strong types by tracing data flow and checking library definitions.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Recommendations include specific types",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Type Safety Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "error-hygiene-reviewer",
+      "parallelization_template": "C",
+      "name": "Error Hygiene Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "error-hygiene-reviewer",
+      "triggers": [
+        "error handling review",
+        "try catch review",
+        "defensive programming",
+        "error hiding",
+        "silent failures"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md",
+        "rust.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 16,
+      "description": "Finds unnecessary try/catch, error hiding, silent fallbacks, and cargo-cult defensive programming.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Each finding explains why error handling is unnecessary",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Error Hygiene Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "legacy-code-reviewer",
+      "parallelization_template": "C",
+      "name": "Legacy Code Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "legacy-code-reviewer",
+      "triggers": [
+        "legacy code",
+        "deprecated code",
+        "fallback removal",
+        "migration cleanup",
+        "feature flag cleanup"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md",
+        "rust.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 14,
+      "description": "Finds deprecated patterns, backward-compat shims, migration artifacts, stale feature flags, and dual code paths.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Evidence of removability included",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Legacy Code Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "slop-reviewer",
+      "parallelization_template": "C",
+      "name": "Slop Reviewer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "cleanup",
+      "path": "slop-reviewer",
+      "triggers": [
+        "slop review",
+        "ai slop",
+        "comment cleanup",
+        "stub removal",
+        "code polish"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob"
+        ]
+      },
+      "auto_activate": null,
+      "conventions_required": [
+        "go.md",
+        "typescript.md",
+        "python.md",
+        "rust.md",
+        "R.md"
+      ],
+      "sharp_edges_count": 14,
+      "description": "Detects AI-generated artifacts, placeholder stubs, LARPing code, unnecessary comments, and in-motion commentary.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "default_acceptance_criteria": [
+        "All files read before generating findings",
+        "Rewrite recommendations include replacement text",
+        "Output matches cleanup reviewer contract"
+      ],
+      "subagent_type": "Slop Reviewer",
+      "spawned_by": [
+        "router"
+      ],
+      "cost_ceiling": 2.00,
+      "distribution": "public"
+    },
+    {
+      "id": "cleanup-synthesizer",
+      "parallelization_template": "E",
+      "name": "Cleanup Synthesizer",
+      "model": "opus",
+      "effortLevel": "high",
+      "thinking": true,
+      "thinking_budget": 32000,
+      "tier": 3,
+      "category": "cleanup",
+      "path": "cleanup-synthesizer",
+      "triggers": [],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Glob",
+          "Grep"
+        ]
+      },
+      "auto_activate": null,
+      "invoked_by": "team-run wave 1 only",
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "must_delegate": false,
+      "min_delegations": 0,
+      "outputs": [
+        "stdout JSON with phased remediation plan"
+      ],
+      "sharp_edges_count": 3,
+      "description": "Opus synthesizer for /cleanup skill. Deduplicates findings, identifies causal chains, resolves conflicts, produces phased remediation plan.",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Cleanup Synthesizer",
+      "interactive": false,
+      "distribution": "public"
+    },
+    {
+      "id": "plan-harmonizer",
+      "parallelization_template": "D",
+      "name": "Plan Harmonizer",
+      "model": "sonnet",
+      "thinking": true,
+      "thinking_budget": 10000,
+      "tier": 2,
+      "category": "analysis",
+      "path": "plan-harmonizer",
+      "triggers": [
+        "harmonize plan",
+        "refine plan",
+        "enrich plan"
+      ],
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Write"
+      ],
+      "cli_flags": {
+        "allowed_tools": [
+          "Read",
+          "Grep",
+          "Glob",
+          "Write"
+        ]
+      },
+      "auto_activate": null,
+      "spawned_by": [
+        "router"
+      ],
+      "can_spawn": [],
+      "conventions_required": [
+        "go.md"
+      ],
+      "sharp_edges_count": 0,
+      "description": "Enriches implementation plans with staff review findings, dependency validation, and readiness scoring",
+      "context_requirements": {
+        "rules": [
+          "agent-guidelines.md"
+        ],
+        "conventions": {}
+      },
+      "subagent_type": "Plan Harmonizer",
+      "distribution": "public"
     }
   ],
   "routing_rules": {
@@ -2660,7 +3305,7 @@
         "single file operation",
         "trivial task (typo, config)"
       ],
-      "primary": "gogent-scout",
+      "primary": "goyoke-scout",
       "fallback": "haiku-scout",
       "output": ".claude/tmp/scout_metrics.json"
     },
@@ -2724,7 +3369,15 @@
         "react-pro",
         "review-orchestrator",
         "architect-reviewer",
-        "rust-pro"
+        "rust-pro",
+        "dedup-reviewer",
+        "type-consolidator",
+        "dead-code-reviewer",
+        "dependency-reviewer",
+        "type-safety-reviewer",
+        "error-hygiene-reviewer",
+        "legacy-code-reviewer",
+        "slop-reviewer"
       ],
       "opus": [
         "einstein",
@@ -2741,7 +3394,8 @@
         "proteoform-reviewer",
         "mass-spec-reviewer",
         "bioinformatician-reviewer",
-        "pasteur"
+        "pasteur",
+        "cleanup-synthesizer"
       ]
     },
     "trigger_keywords": null
@@ -2752,7 +3406,7 @@
     "files": {
       "scout_metrics.json": {
         "written_by": [
-          "gogent-scout",
+          "goyoke-scout",
           "haiku-scout"
         ],
         "read_by": [
@@ -2807,10 +3461,11 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "braintrust"
     },
@@ -2825,10 +3480,11 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "code-review"
     },
@@ -2843,12 +3499,44 @@
         "ToolSearch",
         "AskUserQuestion",
         "Skill",
-        "mcp__gofortress-interactive__spawn_agent",
-        "mcp__gofortress-interactive__team_run",
-        "mcp__gofortress-interactive__get_agent_result",
-        "mcp__gofortress-interactive__ask_user"
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
       ],
       "team_dir_suffix": "implementation"
+    },
+    "cleanup": {
+      "router_allowed_tools": [
+        "Task",
+        "Agent",
+        "Bash",
+        "Read",
+        "Glob",
+        "Grep",
+        "ToolSearch",
+        "AskUserQuestion",
+        "Skill",
+        "mcp__goyoke-interactive__spawn_agent",
+        "mcp__goyoke-interactive__team_run",
+        "mcp__goyoke-interactive__get_agent_result",
+        "mcp__goyoke-interactive__ask_user",
+        "mcp__goyoke-interactive__prepare_skill"
+      ],
+      "team_dir_suffix": "cleanup"
     }
+  },
+  "distribution": {
+    "private_conventions": [
+      "python-datasci.md",
+      "python-ml.md"
+    ],
+    "private_skills": [
+      "review-bioinformatics"
+    ],
+    "private_schema_prefixes": [
+      "review-bioinformatics"
+    ]
   }
 }

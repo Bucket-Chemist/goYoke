@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -361,9 +361,9 @@ func TestView_AfterReady_ContainsBannerText(t *testing.T) {
 	m = updated.(AppModel)
 
 	view := m.View()
-	// The banner renders "GOgent-Fortress" — verify it is present.
-	if !strings.Contains(view, "GOgent-Fortress") {
-		t.Errorf("View() does not contain banner text %q; got %q", "GOgent-Fortress", view)
+	// The banner renders "goYoke" — verify it is present.
+	if !strings.Contains(view, "goYoke") {
+		t.Errorf("View() does not contain banner text %q; got %q", "goYoke", view)
 	}
 }
 
@@ -393,7 +393,7 @@ func TestView_AfterReady_NonEmpty(t *testing.T) {
 // Layout — responsive breakpoints
 // ---------------------------------------------------------------------------
 
-func TestComputeLayout_WideTerminal_ShowsRightPanel60_40(t *testing.T) {
+func TestComputeLayout_WideTerminal_ShowsRightPanel65_35(t *testing.T) {
 	m := NewAppModel()
 	m.width = 120
 	m.height = 40
@@ -405,13 +405,13 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel60_40(t *testing.T) {
 		t.Error("showRightPanel = false at width 120; want true")
 	}
 
-	// UX-021: FocusClaude at LayoutWide uses 55/45 split.
-	// At width=120, left outer = 66 (55%), right outer = 54 (45%).
+	// UX-021: FocusClaude at LayoutWide uses 65/35 split.
+	// At width=120, left outer = 78 (65%), right outer = 42 (35%).
 	// Inner widths subtract borderFrame (2).
 	w120 := float64(120)
-	leftOuter120 := int(w120 * 0.55)                          // 66
-	wantLeftInner := leftOuter120 - borderFrame                // 64
-	wantRightInner := (120 - leftOuter120) - borderFrame       // 52
+	leftOuter120 := int(w120 * 0.65)                          // 78
+	wantLeftInner := leftOuter120 - borderFrame                // 76
+	wantRightInner := (120 - leftOuter120) - borderFrame       // 40
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -421,7 +421,7 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel60_40(t *testing.T) {
 	}
 }
 
-func TestComputeLayout_MediumTerminal_ShowsRightPanel75_25(t *testing.T) {
+func TestComputeLayout_MediumTerminal_ShowsRightPanel70_30(t *testing.T) {
 	m := NewAppModel()
 	m.width = 90
 	m.height = 30
@@ -433,10 +433,10 @@ func TestComputeLayout_MediumTerminal_ShowsRightPanel75_25(t *testing.T) {
 		t.Error("showRightPanel = false at width 90; want true")
 	}
 
-	// UX-021: FocusClaude at LayoutStandard uses 55/45 split.
-	// At width=90, left outer = floor(90*0.55) = 49, right outer = 41.
+	// UX-021: FocusClaude at LayoutStandard uses 70/30 split.
+	// At width=90, left outer = floor(90*0.70) = 63, right outer = 27.
 	width90 := m.width
-	leftOuter := int(float64(width90) * 0.55) // 49
+	leftOuter := int(float64(width90) * 0.70) // 63
 	wantLeftInner := leftOuter - borderFrame
 	wantRightInner := (width90 - leftOuter) - borderFrame
 
@@ -485,10 +485,10 @@ func TestComputeLayout_ExactBreakpointAt100_Uses70_30(t *testing.T) {
 
 	dims := m.computeLayout()
 
-	// UX-021: FocusClaude at LayoutStandard uses 55/45. Use a variable to
-	// avoid compile-time constant truncation of 100*0.55.
+	// UX-021: FocusClaude at LayoutStandard uses 70/30. Use a variable to
+	// avoid compile-time constant truncation of 100*0.70.
 	w100 := float64(100)
-	leftOuter := int(w100 * 0.55) // 55
+	leftOuter := int(w100 * 0.70) // 70
 	wantLeftInner := leftOuter - borderFrame
 	wantRightInner := (100 - leftOuter) - borderFrame
 
@@ -2493,7 +2493,7 @@ func TestRenderLayout_ModalActive_ReturnsModalView(t *testing.T) {
 	}
 	// The view must not contain the normal banner text (the full layout is
 	// bypassed when a modal is active).
-	if strings.Contains(view, "GOgent-Fortress") {
+	if strings.Contains(view, "goYoke") {
 		t.Error("normal layout rendered while modal active; want modal overlay only")
 	}
 }

@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains all UI and bridge event handlers for AppModel's Update
 // method, plus the session persistence helper. Extracted from app.go as part
 // of TUI-043.
@@ -16,13 +16,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/cli"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/drawer"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/modals"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/settingstree"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/modals"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/settingstree"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // handleWindowSize handles tea.WindowSizeMsg: updates terminal dimensions,
@@ -50,10 +50,11 @@ func (m AppModel) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 
 	m.propagateContentSizes()
 
-	// Propagate size to the search overlay so centering is correct (TUI-059).
+	// Propagate size to overlays for correct centering.
 	if m.shared.searchOverlay != nil {
 		m.shared.searchOverlay.SetSize(msg.Width, msg.Height)
 	}
+	m.shared.modelModal.SetSize(msg.Width, msg.Height)
 
 	// Propagate terminal width to the hint bar for truncation (TUI-060).
 	if m.shared.hintBar != nil {
@@ -116,8 +117,12 @@ func (m *AppModel) propagateContentSizes() {
 		// leaving the layout composition in renderLeftPanel to fill all rows.
 		m.shared.claudePanel.SetSize(dims.leftWidth, dims.contentHeight-separatorHeight)
 	}
-	m.agentTree.SetSize(dims.rightWidth, mainH/2)
-	m.agentDetail.SetSize(dims.rightWidth, mainH/2)
+	// Tree receives the full content height — the detail panel is no longer
+	// rendered as a separate block below the tree (it is inlined under the
+	// selected node). Detail still gets its size for the viewport used in
+	// focus/detail mode (Enter navigates into the detail panel).
+	m.agentTree.SetSize(dims.rightWidth, mainH)
+	m.agentDetail.SetSize(dims.rightWidth, mainH)
 	if m.shared.toasts != nil {
 		m.shared.toasts.SetSize(m.width, m.height)
 	}
@@ -203,11 +208,17 @@ func (m AppModel) handleProviderSwitchExecuteMsg(msg ProviderSwitchExecuteMsg) (
 // drawer on Standard+ tiers, or falls back to the ModalQueue overlay on Compact.
 func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model, tea.Cmd) {
 	// TDS-006: Route to options drawer when available and not Compact tier.
+	// All request types (with or without options) go to the drawer so that
+	// ask_user / request_input requests don't fall through to the modal overlay.
 	dims := m.computeLayout()
 	if dims.tier != LayoutCompact &&
-		m.shared != nil && m.shared.drawerStack != nil &&
-		len(msg.Options) > 0 {
+		m.shared != nil && m.shared.drawerStack != nil {
 		m.shared.drawerStack.SetActiveModal(msg.RequestID, msg.Message, msg.Options)
+		m.focus = FocusOptionsDrawer
+		m.syncFocusState()
+		m.updateHintContext()
+		m.updateBreadcrumbs()
+		m.propagateContentSizes()
 		return m, nil
 	}
 
@@ -291,7 +302,7 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 			}
 
 			// Restart the CLI driver. SIGINT to the process group kills
-			// both the claude subprocess and gofortress-mcp (Go default
+			// both the claude subprocess and goyoke-mcp (Go default
 			// SIGINT = exit). The old driver is in DriverDead state and
 			// Start() requires DriverIdle, so we must create a fresh one.
 			// This mirrors the provider_switch.go and perm_mode.go patterns.
@@ -537,14 +548,14 @@ func (m AppModel) handleToastMsg(msg ToastMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleCWDChanged applies the new working directory: calls os.Chdir, sets
-// the GOGENT_CWD env var (read by spawner.go for cmd.Dir), and updates the
+// the GOYOKE_CWD env var (read by spawner.go for cmd.Dir), and updates the
 // status line display.
 func (m AppModel) handleCWDChanged(msg CWDChangedMsg) (tea.Model, tea.Cmd) {
 	if err := os.Chdir(msg.Path); err != nil {
 		log.Printf("[cwd] chdir failed: %v", err)
 		return m, nil
 	}
-	os.Setenv("GOGENT_CWD", msg.Path)
+	os.Setenv("GOYOKE_CWD", msg.Path)
 	m.statusLine.CWD = msg.Path
 	log.Printf("[cwd] changed to %s", msg.Path)
 	return m, func() tea.Msg {
@@ -790,23 +801,10 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 	ps := m.shared.providerState
 	cfg := ps.GetActiveConfig()
 
-	// No arg: list available models for the active provider.
+	// No arg: show the interactive model selector modal.
 	if msg.ModelID == "" {
-		var sb strings.Builder
-		sb.WriteString(fmt.Sprintf("Available models for %s:\n", cfg.Name))
-		currentModel := ps.GetActiveModel()
-		for _, mc := range cfg.Models {
-			marker := "  "
-			if mc.ID == currentModel {
-				marker = "▸ "
-			}
-			sb.WriteString(fmt.Sprintf("%s%s — %s\n", marker, mc.ID, mc.Description))
-		}
-		sb.WriteString("\nUsage: /model <name>")
-
-		if m.shared.claudePanel != nil {
-			m.shared.claudePanel.AppendSystemMessage(sb.String())
-		}
+		m.shared.modelModal.SetSize(m.width, m.height)
+		m.shared.modelModal.Show(cfg.Models, ps.GetActiveModel())
 		return m, nil
 	}
 
@@ -820,27 +818,18 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 		}
 	}
 
-	// Validate that the requested model belongs to the active provider.
-	var found bool
+	// Check known models; allow unknown IDs as passthrough to Claude CLI.
 	var displayName string
+	var isKnown bool
 	for _, mc := range cfg.Models {
 		if mc.ID == msg.ModelID {
-			found = true
 			displayName = mc.DisplayName
+			isKnown = true
 			break
 		}
 	}
-	if !found {
-		ids := make([]string, 0, len(cfg.Models))
-		for _, mc := range cfg.Models {
-			ids = append(ids, mc.ID)
-		}
-		return m, func() tea.Msg {
-			return ToastMsg{
-				Text:  fmt.Sprintf("Unknown model %q for %s. Valid: %s", msg.ModelID, cfg.Name, strings.Join(ids, ", ")),
-				Level: ToastLevelError,
-			}
-		}
+	if !isKnown {
+		displayName = msg.ModelID + " (custom)"
 	}
 
 	// Already on this model — no-op.
@@ -1038,4 +1027,243 @@ func (m AppModel) handleOptionsViewRequest(msg drawer.OptionsViewRequestMsg) (te
 		m.shared.optionsViewModal.ShowContent(msg.Content, m.width, m.height)
 	}
 	return m, nil
+}
+
+// handleDrawerModalResponse delivers a drawer modal response to the bridge and
+// snaps focus back to Claude if the options drawer just minimized (TDS-006).
+func (m AppModel) handleDrawerModalResponse(msg drawer.ModalResponseMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.bridge != nil {
+		value := msg.Value
+		if msg.Cancelled {
+			value = ""
+		}
+		m.shared.bridge.ResolveModalSimple(msg.RequestID, value)
+	}
+	// Clear stale drawer modal state when the response came from the
+	// full-screen OptionsViewModal (which doesn't call ClearActiveModal).
+	if m.shared != nil && m.shared.drawerStack != nil &&
+		m.shared.drawerStack.OptionsActiveRequestID() == msg.RequestID {
+		m.shared.drawerStack.ClearOptionsModal()
+	}
+	// Snap focus back to Claude if the options drawer just minimized.
+	if m.focus == FocusOptionsDrawer && m.shared != nil && m.shared.drawerStack != nil {
+		if !m.shared.drawerStack.OptionsHasContent() {
+			m.focus = FocusClaude
+			m.syncFocusState()
+			m.updateHintContext()
+			m.updateBreadcrumbs()
+			m.propagateContentSizes()
+		}
+	}
+	return m, nil
+}
+
+// handlePlanViewRequest opens the full-screen plan view modal from a drawer
+// request (TDS-007).
+func (m AppModel) handlePlanViewRequest() (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.planPreview != nil {
+		content := m.shared.planPreview.Content()
+		if content != "" {
+			m.shared.planViewModal.SetContent(content, m.width)
+			m.shared.planViewModal.SetSize(m.width, m.height)
+			m.shared.planViewModal.Show()
+		}
+	}
+	return m, nil
+}
+
+// handleAgentDetailFocus transfers focus from the agent tree to the detail panel.
+func (m AppModel) handleAgentDetailFocus(msg agents.AgentDetailFocusMsg) (tea.Model, tea.Cmd) {
+	m.agentTree.SetFocused(false)
+	m.agentDetail.SetFocused(true)
+	if m.shared != nil && m.shared.agentRegistry != nil {
+		if a := m.shared.agentRegistry.Get(msg.AgentID); a != nil {
+			m.agentDetail.SetAgent(a)
+		}
+	}
+	return m, nil
+}
+
+// handleShutdownRequest initiates graceful shutdown from a /exit or /quit command.
+func (m AppModel) handleShutdownRequest() (tea.Model, tea.Cmd) {
+	if m.shutdownInProgress {
+		return m, nil
+	}
+	m.shutdownInProgress = true
+	if m.shared != nil && m.shared.shutdownFunc != nil {
+		shutdownFn := m.shared.shutdownFunc
+		return m, func() tea.Msg {
+			err := shutdownFn()
+			return ShutdownCompleteMsg{Err: err}
+		}
+	}
+	m.saveSession()
+	return m, tea.Quit
+}
+
+// handleUnrouted forwards messages that the typed switch in Update() did not
+// match to the components that own unexported tick types.
+//
+// Contract: each forwarder returns non-nil ONLY for its own package's
+// unexported tick type. The cascade exits on the first non-nil cmd, so a
+// forwarder that claims a foreign type starves downstream forwarders.
+// Order: 1. StatusLine  2. Toast  3. TabBar  4. TeamList  5. TeamDetail  6. ClaudePanel
+func (m AppModel) handleUnrouted(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// StatusLine handles its own tick types.
+	{
+		updated, cmd := m.statusLine.Update(msg)
+		m.statusLine = updated
+		if cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Toast tick-based expiry.
+	if m.shared != nil && m.shared.toasts != nil {
+		prevToastH := m.shared.toasts.Height()
+		cmd := m.shared.toasts.HandleMsg(msg)
+		if m.shared.toasts.Height() != prevToastH {
+			m.propagateContentSizes()
+		}
+		if cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Tab bar flash tick (tabFlashTickMsg is unexported from tabbar).
+	if m.tabBar != nil {
+		if cmd := m.tabBar.HandleMsg(msg); cmd != nil {
+			return m, cmd
+		}
+	}
+
+	// Team list poll tick (pollTickMsg is unexported from teams).
+	if m.shared != nil && m.shared.teamList != nil {
+		if cmd := m.shared.teamList.HandleMsg(msg); cmd != nil {
+			m.refreshTeamsDrawerAfterPoll()
+			return m, cmd
+		}
+	}
+
+	// Team detail: handles TeamSelectedMsg emitted by the team list.
+	if m.shared != nil && m.shared.teamDetail != nil {
+		m.shared.teamDetail.HandleMsg(msg)
+	}
+
+	// Claude panel timestamp tick (timestampTickMsg is unexported from claude).
+	if m.shared != nil && m.shared.claudePanel != nil {
+		if cmd := m.shared.claudePanel.HandleMsg(msg); cmd != nil {
+			return m, cmd
+		}
+	}
+
+	return m, nil
+}
+
+// handleModelSelected hides the model modal and applies the selected model.
+func (m AppModel) handleModelSelected(msg modals.ModelSelectedMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil {
+		m.shared.modelModal.Hide()
+	}
+	return m.handleModelSwitchRequest(ModelSwitchRequestMsg{ModelID: msg.ModelID})
+}
+
+// handleModelModalClosed hides the model modal and restores the hint context.
+func (m AppModel) handleModelModalClosed() (tea.Model, tea.Cmd) {
+	if m.shared != nil {
+		m.shared.modelModal.Hide()
+	}
+	m.updateHintContext()
+	return m, nil
+}
+
+// handleOpenCWDSelector opens the CWD selector modal.
+func (m AppModel) handleOpenCWDSelector() (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.cwdSelector != nil {
+		m.shared.cwdSelector.SetSize(m.width, m.height)
+		m.shared.cwdSelector.Show()
+	}
+	return m, nil
+}
+
+// handleAgentTreeFocus transfers focus from the detail panel back to the tree.
+func (m AppModel) handleAgentTreeFocus() (tea.Model, tea.Cmd) {
+	m.agentDetail.SetFocused(false)
+	m.agentTree.SetFocused(true)
+	return m, nil
+}
+
+// handleTreePulseTick forwards a pulse tick to the agent tree.
+func (m AppModel) handleTreePulseTick(msg agents.TreePulseTickMsg) (tea.Model, tea.Cmd) {
+	result, cmd := m.agentTree.Update(msg)
+	if updated, ok := result.(agents.AgentTreeModel); ok {
+		m.agentTree = updated
+	}
+	return m, cmd
+}
+
+// handleDrawerContent routes a DrawerContentMsg to the appropriate drawer.
+func (m AppModel) handleDrawerContent(msg DrawerContentMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.drawerStack != nil {
+		switch msg.DrawerID {
+		case "options":
+			m.shared.drawerStack.SetOptionsContent(msg.Content)
+		case "plan":
+			m.shared.drawerStack.SetPlanContent(msg.Content)
+		}
+	}
+	return m, nil
+}
+
+// handleDrawerMinimize routes a DrawerMinimizeMsg to the appropriate drawer.
+func (m AppModel) handleDrawerMinimize(msg DrawerMinimizeMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.drawerStack != nil {
+		switch msg.DrawerID {
+		case "options":
+			m.shared.drawerStack.ClearOptionsContent()
+		case "plan":
+			m.shared.drawerStack.ClearPlanContent()
+		}
+	}
+	return m, nil
+}
+
+// handleFiguresContent loads diagrams into the figures drawer and figuresState.
+func (m AppModel) handleFiguresContent(msg drawer.FiguresContentMsg) (tea.Model, tea.Cmd) {
+	if m.shared != nil && m.shared.drawerStack != nil && len(msg.Diagrams) > 0 {
+		m.shared.figuresState = drawer.FiguresState{Diagrams: msg.Diagrams, Selected: 0}
+		m.shared.drawerStack.SetFiguresContent(drawer.FormatFiguresContent(m.shared.figuresState))
+	}
+	return m, nil
+}
+
+// refreshTeamsDrawerAfterPoll updates the teams drawer and status line after a
+// poll tick fires from the team list component.
+func (m *AppModel) refreshTeamsDrawerAfterPoll() {
+	if m.shared == nil || m.shared.drawerStack == nil || m.shared.teamsHealth == nil {
+		return
+	}
+	if m.shared.teamsHealth.HasData() {
+		if !m.shared.drawerStack.TeamsHasContent() {
+			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		} else if m.shared.teamsHealth.HasRunningTeam() && m.shared.drawerStack.TeamsIsMinimized() {
+			m.shared.drawerStack.SetTeamsContent(m.shared.teamsHealth.View())
+		} else {
+			m.shared.drawerStack.RefreshTeamsContent(m.shared.teamsHealth.View())
+		}
+	} else if m.shared.teamNotifiedAt.IsZero() || time.Since(m.shared.teamNotifiedAt) > 10*time.Second {
+		m.shared.drawerStack.ClearTeamsContent()
+	}
+
+	tid := m.shared.teamsHealth.TeamIndicator()
+	m.statusLine.TeamActive = tid.Active
+	m.statusLine.TeamName = tid.Name
+	m.statusLine.TeamMemberStatuses = tid.MemberStatuses
+	m.statusLine.TeamCurrentWave = tid.CurrentWave
+	m.statusLine.TeamTotalWaves = tid.TotalWaves
+	m.statusLine.TeamCost = tid.Cost
+
+	if m.shared.teamDetail != nil {
+		m.shared.teamDetail.Refresh()
+	}
 }

@@ -1,9 +1,0 @@
-{
-  "id": "3",
-  "subject": "Add comprehensive subprocess streaming tests",
-  "description": "Add tests verifying that subprocess correctly handles stream-json input/output in interactive mode. Target >80% coverage. Test cases: send message, receive events, handle multiple messages, error handling.",
-  "activeForm": "Adding subprocess streaming tests",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

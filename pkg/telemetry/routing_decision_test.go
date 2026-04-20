@@ -72,7 +72,7 @@ func TestLogRoutingDecision(t *testing.T) {
 	}
 
 	// Verify file was created and contains decision
-	path := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	path := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("Expected file to be created, got error: %v", err)
@@ -110,7 +110,7 @@ func TestLogRoutingDecision_MultipleDecisions(t *testing.T) {
 	}
 
 	// Verify both are in file
-	path := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	path := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -147,7 +147,7 @@ func TestUpdateDecisionOutcome(t *testing.T) {
 	}
 
 	// Verify outcome was appended to updates file
-	updatesPath := filepath.Join(tmpDir, "gogent", "routing-decision-updates.jsonl")
+	updatesPath := filepath.Join(tmpDir, "goyoke", "routing-decision-updates.jsonl")
 	data, err := os.ReadFile(updatesPath)
 	if err != nil {
 		t.Fatalf("Failed to read updates file: %v", err)
@@ -186,7 +186,7 @@ func TestUpdateDecisionOutcome_MultipleUpdates(t *testing.T) {
 	}
 
 	// Verify both updates exist in separate lines
-	updatesPath := filepath.Join(tmpDir, "gogent", "routing-decision-updates.jsonl")
+	updatesPath := filepath.Join(tmpDir, "goyoke", "routing-decision-updates.jsonl")
 	data, err := os.ReadFile(updatesPath)
 	if err != nil {
 		t.Fatalf("Failed to read updates: %v", err)
@@ -214,7 +214,7 @@ func TestUnderstandingQualityFields(t *testing.T) {
 		t.Fatalf("Failed to log decision: %v", err)
 	}
 
-	path := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
+	path := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("Failed to read file: %v", err)
@@ -279,13 +279,13 @@ func TestLogRoutingDecision_ErrorMessages(t *testing.T) {
 	t.Setenv("XDG_DATA_HOME", tmpDir)
 
 	// Make directory read-only to trigger error
-	gogentDir := filepath.Join(tmpDir, "gogent")
-	if err := os.MkdirAll(gogentDir, 0755); err != nil {
+	goyokeDir := filepath.Join(tmpDir, "goyoke")
+	if err := os.MkdirAll(goyokeDir, 0755); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
 	// Create a file where we expect directory to be
-	testFile := filepath.Join(gogentDir, "routing-decisions.jsonl")
+	testFile := filepath.Join(goyokeDir, "routing-decisions.jsonl")
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
@@ -330,8 +330,8 @@ func TestDecisionFileSeparation(t *testing.T) {
 	}
 
 	// Verify separate files exist
-	decisionsPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
-	updatesPath := filepath.Join(tmpDir, "gogent", "routing-decision-updates.jsonl")
+	decisionsPath := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
+	updatesPath := filepath.Join(tmpDir, "goyoke", "routing-decision-updates.jsonl")
 
 	if _, err := os.Stat(decisionsPath); os.IsNotExist(err) {
 		t.Error("Expected decisions file to exist")
@@ -367,13 +367,13 @@ func TestXDGDataHomeFallback(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
 	path := getRoutingDecisionPath()
-	if !strings.Contains(path, ".local/share/gogent") {
-		t.Errorf("Expected path to contain .local/share/gogent, got %s", path)
+	if !strings.Contains(path, ".local/share/goyoke") {
+		t.Errorf("Expected path to contain .local/share/goyoke, got %s", path)
 	}
 
 	updatesPath := getRoutingDecisionUpdatesPath()
-	if !strings.Contains(updatesPath, ".local/share/gogent") {
-		t.Errorf("Expected updates path to contain .local/share/gogent, got %s", updatesPath)
+	if !strings.Contains(updatesPath, ".local/share/goyoke") {
+		t.Errorf("Expected updates path to contain .local/share/goyoke, got %s", updatesPath)
 	}
 }
 
@@ -387,7 +387,7 @@ func TestAppendDecisionUpdate_CreatesDirectoryIfNeeded(t *testing.T) {
 		t.Fatalf("Expected UpdateDecisionOutcome to create directory, got error: %v", err)
 	}
 
-	updatesPath := filepath.Join(tmpDir, "gogent", "routing-decision-updates.jsonl")
+	updatesPath := filepath.Join(tmpDir, "goyoke", "routing-decision-updates.jsonl")
 	if _, err := os.Stat(updatesPath); os.IsNotExist(err) {
 		t.Error("Expected updates file to be created")
 	}
@@ -418,8 +418,8 @@ func TestCompleteRoutingDecisionWorkflow(t *testing.T) {
 	}
 
 	// Step 4: Verify both files exist and contain correct data
-	decisionsPath := filepath.Join(tmpDir, "gogent", "routing-decisions.jsonl")
-	updatesPath := filepath.Join(tmpDir, "gogent", "routing-decision-updates.jsonl")
+	decisionsPath := filepath.Join(tmpDir, "goyoke", "routing-decisions.jsonl")
+	updatesPath := filepath.Join(tmpDir, "goyoke", "routing-decision-updates.jsonl")
 
 	decisionsData, _ := os.ReadFile(decisionsPath)
 	if !strings.Contains(string(decisionsData), decision.DecisionID) {

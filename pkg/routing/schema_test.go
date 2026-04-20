@@ -463,13 +463,13 @@ func TestLoadAndFormatSchemaSummary(t *testing.T) {
 // TestLoadAndFormatSchemaSummary_MissingFile tests graceful handling of missing schema.
 func TestLoadAndFormatSchemaSummary_MissingFile(t *testing.T) {
 	// Temporarily set env var to a non-existent path
-	originalEnv := os.Getenv("GOGENT_ROUTING_SCHEMA")
-	os.Setenv("GOGENT_ROUTING_SCHEMA", "/nonexistent/path/to/schema.json")
+	originalEnv := os.Getenv("GOYOKE_ROUTING_SCHEMA")
+	os.Setenv("GOYOKE_ROUTING_SCHEMA", "/nonexistent/path/to/schema.json")
 	defer func() {
 		if originalEnv != "" {
-			os.Setenv("GOGENT_ROUTING_SCHEMA", originalEnv)
+			os.Setenv("GOYOKE_ROUTING_SCHEMA", originalEnv)
 		} else {
-			os.Unsetenv("GOGENT_ROUTING_SCHEMA")
+			os.Unsetenv("GOYOKE_ROUTING_SCHEMA")
 		}
 	}()
 

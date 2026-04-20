@@ -8,15 +8,15 @@ echo "Testing Go → Bash fallback..."
 TMPDIR=$(mktemp -d)
 trap 'rm -rf "$TMPDIR"' EXIT
 
-# Create fake gogent-archive that fails
+# Create fake goyoke-archive that fails
 mkdir -p "$TMPDIR/bin"
-cat > "$TMPDIR/bin/gogent-archive" <<'EOF'
+cat > "$TMPDIR/bin/goyoke-archive" <<'EOF'
 #!/bin/bash
-# Fake gogent-archive that always fails
+# Fake goyoke-archive that always fails
 echo "FATAL: Mock failure for testing" >&2
 exit 1
 EOF
-chmod +x "$TMPDIR/bin/gogent-archive"
+chmod +x "$TMPDIR/bin/goyoke-archive"
 
 # Put fake binary first in PATH
 export PATH="$TMPDIR/bin:$PATH"

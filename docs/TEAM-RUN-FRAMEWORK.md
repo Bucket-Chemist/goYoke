@@ -1,4 +1,10 @@
-# GOgent Team-Run Framework
+---
+title: Team-Run Framework
+type: reference
+tags: [teams, orchestration, multi-agent]
+created: 2026-04-18
+---
+# goYoke Team-Run Framework
 
 ## A Standardised Multi-Agent Orchestration System for LLM Workflows
 
@@ -12,7 +18,7 @@
 
 ## 1. What This Is
 
-GOgent Team-Run is a **language-agnostic, schema-driven multi-agent orchestration framework** that turns any complex LLM task into a reproducible, observable, budget-controlled background process.
+goYoke Team-Run is a **language-agnostic, schema-driven multi-agent orchestration framework** that turns any complex LLM task into a reproducible, observable, budget-controlled background process.
 
 It solves the fundamental problem of multi-agent LLM systems: **how do you reliably coordinate multiple AI agents working on the same problem, track their costs, ensure structured outputs, and deliver results without blocking the user?**
 
@@ -20,7 +26,7 @@ It solves the fundamental problem of multi-agent LLM systems: **how do you relia
 
 Most multi-agent systems treat orchestration as prompt engineering — one LLM spawns another and parses free-text responses. This approach is fragile, unobservable, and impossible to budget.
 
-GOgent Team-Run introduces **industrial-grade orchestration primitives**:
+goYoke Team-Run introduces **industrial-grade orchestration primitives**:
 
 | Primitive | What It Does | Analogy |
 |-----------|-------------|---------|
@@ -64,7 +70,7 @@ User invokes /skill
      |
      v
 +------------------+
-|  gogent-team-run |  Go binary, runs as background daemon
+|  goyoke-team-run |  Go binary, runs as background daemon
 |                  |
 |  For each wave:  |
 |    1. Reserve budget per member
@@ -268,7 +274,7 @@ The team-run binary calls them automatically between waves when `on_complete_scr
 |-----------|---------------|-------------------|---------|
 | New workflow | No | Yes (3-5 JSON files) | `/deep-debug`, `/security-audit` |
 | New agent role | No | Yes (1-2 JSON files) | `security-reviewer`, `ux-analyst` |
-| New inter-wave script | Yes (Go binary) | No | `gogent-team-merge-findings` |
+| New inter-wave script | Yes (Go binary) | No | `goyoke-team-merge-findings` |
 | New model backend | Yes (spawn.go) | No | OpenAI, local Ollama |
 | New budget strategy | Yes (cost.go) | No | Per-org limits, usage tiers |
 | New output format | No | Yes (stdout contract) | XML, YAML, custom |
@@ -292,7 +298,7 @@ The team-run binary calls them automatically between waves when `on_complete_scr
 | Metric | Result |
 |--------|--------|
 | Wave 1 parallel execution | Confirmed (2 Opus agents, same-second start) |
-| Inter-wave script | `gogent-team-prepare-synthesis` produced 45KB `pre-synthesis.md` |
+| Inter-wave script | `goyoke-team-prepare-synthesis` produced 45KB `pre-synthesis.md` |
 | Wave 2 synthesis | Beethoven read pre-synthesis, produced structured output |
 | Structured stdout compliance | 100% (all 3 Opus agents: `$schema` present, full contract compliance) |
 | Total cost | $2.48 (Einstein $0.95, Staff-Arch $1.13, Beethoven $0.40) |
@@ -427,7 +433,7 @@ Wave 2 (sequential): security-synthesiser (reads all Wave 1 outputs)
           "completed_at": null
         }
       ],
-      "on_complete_script": "gogent-team-merge-findings"
+      "on_complete_script": "goyoke-team-merge-findings"
     },
     {
       "wave_number": 2,
@@ -761,7 +767,7 @@ Add entries to `agents-index.json`:
 
 ### 7.7 Create the Inter-Wave Script
 
-**File:** `cmd/gogent-team-merge-findings/main.go`
+**File:** `cmd/goyoke-team-merge-findings/main.go`
 
 A Go binary that:
 1. Reads `stdout_owasp-reviewer.json`, `stdout_dependency-reviewer.json`, `stdout_secrets-scanner.json`
@@ -769,7 +775,7 @@ A Go binary that:
 3. Writes `merged-findings.md` with all findings grouped by severity
 4. Exits 0 (or gracefully degrades with `(unavailable: ...)` if any input is missing)
 
-This follows the exact same pattern as `gogent-team-prepare-synthesis` — the braintrust inter-wave script that is already production-validated.
+This follows the exact same pattern as `goyoke-team-prepare-synthesis` — the braintrust inter-wave script that is already production-validated.
 
 ### 7.8 Create the Slash Command
 
@@ -796,7 +802,7 @@ version: 1.0.0
 1. Router scans changed files (or specified path)
 2. Classifies files by security relevance
 3. Generates team config + stdin files
-4. Launches `gogent-team-run` in background
+4. Launches `goyoke-team-run` in background
 5. Returns immediately with team ID
 
 ## Monitoring
@@ -868,13 +874,13 @@ SKILL CREATION (no code required)
   [ ] Skill definition:  skills/{workflow}/SKILL.md
 
 OPTIONAL: INTER-WAVE SCRIPT (requires Go code)
-  [ ] Binary:            cmd/gogent-team-{script-name}/main.go
+  [ ] Binary:            cmd/goyoke-team-{script-name}/main.go
   [ ] Build & install:   go install && ln -sf ~/go/bin/{name} ~/.local/bin/
   [ ] Graceful fallback: Handle missing/malformed inputs without crashing
 
 VALIDATION
   [ ] Create test team directory with manual config + stdin files
-  [ ] Run gogent-team-run against test directory
+  [ ] Run goyoke-team-run against test directory
   [ ] Verify all stdout files contain structured JSON with $schema field
   [ ] Verify inter-wave script produces expected artifacts
   [ ] Verify budget tracking is accurate (reservation vs actual)
@@ -949,12 +955,12 @@ Include "$schema": "{schema-name}" in your JSON output.
 - Manual workflow creation via JSON schemas
 
 ### Phase 2: Workflow SDK
-- CLI tool to scaffold new workflows: `gogent-workflow init security-audit`
+- CLI tool to scaffold new workflows: `goyoke-workflow init security-audit`
 - Schema validation at creation time
 - Template library for common patterns (review, analysis, pipeline)
 
 ### Phase 3: Team Server
-- HTTP API wrapping `gogent-team-run`
+- HTTP API wrapping `goyoke-team-run`
 - WebSocket for real-time status updates
 - Multi-user with per-user budget quotas
 - Team directory stored in object storage (S3/GCS)
@@ -993,8 +999,17 @@ Use case:  Code review with domain-specialised reviewers
 Waves:     2 (parallel → sequential)
 Agents:    Wave 1: einstein (opus) + staff-architect (opus)
            Wave 2: beethoven (opus)
-Inter-wave: gogent-team-prepare-synthesis (merges Wave 1 → pre-synthesis.md)
+Inter-wave: goyoke-team-prepare-synthesis (merges Wave 1 → pre-synthesis.md)
 Budget:    $16.00 (actual ~$2.50)
 Runtime:   ~6.5 minutes
 Use case:  Deep multi-perspective analysis of complex problems
 ```
+
+
+---
+
+## See Also
+
+- [[concepts/agent-spawning]] — How agents are spawned
+- [[concepts/session-lifecycle]] — Session phases
+- [[ARCHITECTURE#17.3 MCP Tools]] — MCP tool registration

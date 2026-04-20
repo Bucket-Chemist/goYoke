@@ -22,9 +22,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/claude"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/claude"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------

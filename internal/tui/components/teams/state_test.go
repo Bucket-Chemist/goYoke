@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/teams"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/teams"
 )
 
 // ---------------------------------------------------------------------------

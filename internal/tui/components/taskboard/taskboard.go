@@ -1,5 +1,5 @@
 // Package taskboard implements the task board overlay for the
-// GOgent-Fortress TUI. It renders a compact strip showing active or completed
+// goYoke TUI. It renders a compact strip showing active or completed
 // tasks and is toggled by the Alt+B keybinding.
 //
 // The component is interactive: cursor navigation (j/k or up/down) moves
@@ -13,10 +13,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/util"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/util"
 )
 
 // TaskEntry is re-exported from the state package for backward compatibility.

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	routing "github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	routing "github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // ValidationResult holds the outcome of a relationship validation check.
@@ -24,7 +24,7 @@ type ValidationResult struct {
 //
 // Parameters:
 //   - index: the loaded agent index (caller must have already resolved it)
-//   - parentType: the verified parent identity, sourced from GOGENT_PARENT_AGENT env var
+//   - parentType: the verified parent identity, sourced from GOYOKE_PARENT_AGENT env var
 //   - childAgentID: the agent being spawned
 //   - callerType: self-reported identity passed via caller_type input field (unverified)
 //

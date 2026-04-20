@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // Query provides programmatic access to session learning artifacts
@@ -106,10 +106,10 @@ type UserIntentFilters struct {
 	HasAction  bool     // Only return intents with ActionTaken != ""
 	Since      *int64   // Filter by timestamp (intents after this time)
 	Limit      int      // Maximum results to return (0 = unlimited)
-	Category   *string  // Filter by category (routing, tooling, style, etc.) - GOgent-041
-	Keywords   []string // Filter by keywords (matches if ANY keyword present) - GOgent-041
-	SessionID  *string  // Filter by session ID - GOgent-041c
-	Honored    *bool    // Filter by honored status (nil = don't filter) - GOgent-041c
+	Category   *string  // Filter by category (routing, tooling, style, etc.) - goYoke-041
+	Keywords   []string // Filter by keywords (matches if ANY keyword present) - goYoke-041
+	SessionID  *string  // Filter by session ID - goYoke-041c
+	Honored    *bool    // Filter by honored status (nil = don't filter) - goYoke-041c
 }
 
 // QueryUserIntents retrieves user intents with optional filters
@@ -163,11 +163,11 @@ func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error
 		if filters.Since != nil && intent.Timestamp < *filters.Since {
 			continue
 		}
-		// GOgent-041: Category filter
+		// goYoke-041: Category filter
 		if filters.Category != nil && intent.Category != *filters.Category {
 			continue
 		}
-		// GOgent-041: Keywords filter (matches if ANY keyword present)
+		// goYoke-041: Keywords filter (matches if ANY keyword present)
 		if len(filters.Keywords) > 0 {
 			hasKeyword := false
 			for _, kw := range filters.Keywords {
@@ -185,11 +185,11 @@ func (q *Query) QueryUserIntents(filters UserIntentFilters) ([]UserIntent, error
 				continue
 			}
 		}
-		// GOgent-041c: SessionID filter
+		// goYoke-041c: SessionID filter
 		if filters.SessionID != nil && intent.SessionID != *filters.SessionID {
 			continue
 		}
-		// GOgent-041c: Honored filter
+		// goYoke-041c: Honored filter
 		if filters.Honored != nil {
 			if intent.Honored == nil {
 				continue // Skip unanalyzed intents

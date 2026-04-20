@@ -1,9 +1,0 @@
-{
-  "id": "18",
-  "subject": "Implement cross-session sharp edge candidate detection",
-  "description": "**Priority**: MEDIUM (Nice to Have)\n**Agent**: go-pro\n**Files**:\n- pkg/telemetry/sharp_edge_candidate.go (NEW)\n- cmd/gogent-aggregate/main.go (extend)\n\nAuto-generate sharp edge candidates when same finding appears repeatedly.\n\n**Requirements**:\n1. Create `SharpEdgeCandidate` struct:\n```go\ntype SharpEdgeCandidate struct {\n    CandidateID     string   `json:\"candidate_id\"`\n    Pattern         string   `json:\"pattern\"`         // Common message pattern\n    Category        string   `json:\"category\"`\n    OccurrenceCount int      `json:\"occurrence_count\"`\n    SessionIDs      []string `json:\"session_ids\"`     // Where it appeared\n    Files           []string `json:\"files\"`           // Affected files\n    Severity        string   `json:\"suggested_severity\"`\n    ProposedID      string   `json:\"proposed_id\"`     // e.g., \"missing-error-check\"\n    Status          string   `json:\"status\"`          // \"pending\", \"accepted\", \"rejected\"\n}\n```\n\n2. Add detection logic to `gogent-aggregate`:\n```bash\ngogent-aggregate sharp-edge-candidates\n```\n\nAlgorithm:\n- Read all review-findings.jsonl\n- Group by (category, message_pattern) using fuzzy matching\n- If count >= 3 across different sessions, create candidate\n- Output to sharp-edge-candidates.jsonl\n\n3. Create `gogent-accept-sharp-edge` command:\n   - Takes candidate ID\n   - Generates sharp-edges.yaml entry\n   - Appends to appropriate agent's sharp-edges.yaml\n\n**Purpose**: Automatically surfaces new sharp edges from review patterns, enabling continuous system improvement.",
-  "activeForm": "Implementing sharp edge candidate detection",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

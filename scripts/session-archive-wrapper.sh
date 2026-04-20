@@ -10,28 +10,28 @@ trap 'rm -f "$TMPFILE"' EXIT
 cat > "$TMPFILE"
 
 # Ensure log directory exists
-mkdir -p ~/.gogent
+mkdir -p ~/.goyoke
 
 # Try Go implementation first
-if command -v gogent-archive &>/dev/null; then
-    if gogent-archive < "$TMPFILE" 2>/dev/null; then
+if command -v goyoke-archive &>/dev/null; then
+    if goyoke-archive < "$TMPFILE" 2>/dev/null; then
         # Success
         echo "[INFO] Go hook succeeded" >&2
         exit 0
     else
         EXIT_CODE=$?
         echo "[ERROR] Go hook failed with exit code $EXIT_CODE" >&2
-        echo "$(date): gogent-archive failed (exit $EXIT_CODE)" >> ~/.gogent/hook-failures.log
+        echo "$(date): goyoke-archive failed (exit $EXIT_CODE)" >> ~/.goyoke/hook-failures.log
     fi
 else
-    echo "[WARN] gogent-archive not found in PATH" >&2
+    echo "[WARN] goyoke-archive not found in PATH" >&2
 fi
 
 # Fallback to bash hook
 echo "[INFO] Falling back to bash hook" >&2
 if [[ -f ~/.claude/hooks/session-archive.sh ]]; then
     ~/.claude/hooks/session-archive.sh < "$TMPFILE"
-    echo "$(date): Bash fallback succeeded" >> ~/.gogent/hook-failures.log
+    echo "$(date): Bash fallback succeeded" >> ~/.goyoke/hook-failures.log
     exit 0
 else
     echo "[ERROR] Bash hook not found at ~/.claude/hooks/session-archive.sh" >&2

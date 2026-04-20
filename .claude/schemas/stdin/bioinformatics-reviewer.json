@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdin/bioinformatics-reviewer.json",
+  "$id": "https://goyoke-fortress/schemas/stdin/bioinformatics-reviewer.json",
   "title": "Bioinformatics Reviewer Stdin Schema",
   "description": "Validates stdin for bioinformatics domain reviewers (genomics, proteomics, proteogenomics, proteoform, mass-spectrometry, pipeline)",
   "version": "1.0.0",

@@ -57,8 +57,8 @@ func DefaultBehavioralConfig() BehavioralConfig {
 //
 // NOTE: B2 (code_snippet) and B3 (Category) are DEFERRED to ticket 042b.
 // Rationale:
-// - B2 requires GOgent-037b (code snippet extraction feature)
-// - B3 requires GOgent-041 (intent category classification)
+// - B2 requires goYoke-037b (code snippet extraction feature)
+// - B3 requires goYoke-041 (intent category classification)
 // Implementing stubs for unreleased features creates false confidence.
 var BehavioralInvariants = []BehavioralInvariant{
 	{
@@ -206,9 +206,9 @@ var BehavioralInvariants = []BehavioralInvariant{
 		Check: func(ctx *BehavioralContext) (bool, string) {
 			// Check all JSONL files the system writes to
 			jsonlFiles := []string{
-				".gogent/memory/pending-learnings.jsonl",
-				".gogent/memory/handoffs.jsonl",
-				".gogent/failure-tracker.jsonl",
+				".goyoke/memory/pending-learnings.jsonl",
+				".goyoke/memory/handoffs.jsonl",
+				".goyoke/failure-tracker.jsonl",
 			}
 
 			for _, relPath := range jsonlFiles {
@@ -253,12 +253,12 @@ var BehavioralInvariants = []BehavioralInvariant{
 // FUTURE INVARIANTS (add in 042b when dependencies complete)
 //
 // B2: sharp_edges_have_code_snippet
-// Requires: GOgent-037b (code snippet extraction)
+// Requires: goYoke-037b (code snippet extraction)
 // Check: edge["code_snippet"] exists OR edge["code_snippet_skip_reason"] exists
 // Rationale: Code context is critical for learning review
 //
 // B3: user_intents_have_category
-// Requires: GOgent-041 (intent category classification)
+// Requires: goYoke-041 (intent category classification)
 // Check: intent["category"] is non-empty string
 // Rationale: Categories enable preference drift detection
 
@@ -270,19 +270,19 @@ func LoadBehavioralContext(tempDir string, config BehavioralConfig) (*Behavioral
 	}
 
 	// Load sharp edges
-	pendingPath := filepath.Join(tempDir, ".gogent", "memory", "pending-learnings.jsonl")
+	pendingPath := filepath.Join(tempDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if edges, err := loadJSONLFile(pendingPath); err == nil {
 		ctx.SharpEdges = edges
 	}
 
 	// Load failure tracker
-	trackerPath := filepath.Join(tempDir, ".gogent", "failure-tracker.jsonl")
+	trackerPath := filepath.Join(tempDir, ".goyoke", "failure-tracker.jsonl")
 	if entries, err := loadJSONLFile(trackerPath); err == nil {
 		ctx.FailureTrackerLog = entries
 	}
 
 	// Load last handoff
-	handoffPath := filepath.Join(tempDir, ".gogent", "memory", "handoffs.jsonl")
+	handoffPath := filepath.Join(tempDir, ".goyoke", "memory", "handoffs.jsonl")
 	if handoffs, err := loadJSONLFile(handoffPath); err == nil && len(handoffs) > 0 {
 		ctx.Handoff = handoffs[len(handoffs)-1] // Last entry is most recent
 	}

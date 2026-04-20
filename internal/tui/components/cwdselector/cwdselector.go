@@ -20,8 +20,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 )
 
 // preset is a directory entry in the selector list.
@@ -274,9 +274,9 @@ func discoverPresets() []preset {
 		home = "/"
 	}
 
-	projectRoot := os.Getenv("GOGENT_PROJECT_ROOT")
+	projectRoot := os.Getenv("GOYOKE_PROJECT_ROOT")
 	if projectRoot == "" {
-		projectRoot = filepath.Join(home, "Documents", "GOgent-Fortress")
+		projectRoot = filepath.Join(home, "Documents", "goYoke")
 	}
 
 	presets := []preset{

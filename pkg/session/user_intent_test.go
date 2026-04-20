@@ -11,7 +11,7 @@ import (
 // TestLoadUserIntents_ValidJSONL tests loading valid JSONL file
 func TestLoadUserIntents_ValidJSONL(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestLoadUserIntents_AllFields(t *testing.T) {
 // TestQueryUserIntents_NoFilters tests query without any filters
 func TestQueryUserIntents_NoFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestQueryUserIntents_NoFilters(t *testing.T) {
 // TestQueryUserIntents_SourceFilter tests filtering by source
 func TestQueryUserIntents_SourceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestQueryUserIntents_SourceFilter(t *testing.T) {
 // TestQueryUserIntents_ConfidenceFilter tests filtering by confidence level
 func TestQueryUserIntents_ConfidenceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -278,7 +278,7 @@ func TestQueryUserIntents_ConfidenceFilter(t *testing.T) {
 // TestQueryUserIntents_HasActionFilter tests filtering by action presence
 func TestQueryUserIntents_HasActionFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestQueryUserIntents_HasActionFilter(t *testing.T) {
 // TestQueryUserIntents_SinceFilter tests filtering by timestamp
 func TestQueryUserIntents_SinceFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ func TestQueryUserIntents_SinceFilter(t *testing.T) {
 // TestQueryUserIntents_LimitFilter tests limiting results
 func TestQueryUserIntents_LimitFilter(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +370,7 @@ func TestQueryUserIntents_LimitFilter(t *testing.T) {
 // TestQueryUserIntents_CombinedFilters tests multiple filters together
 func TestQueryUserIntents_CombinedFilters(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +424,7 @@ func TestQueryUserIntents_MissingFile(t *testing.T) {
 // TestQueryUserIntents_MalformedLines tests that malformed lines are skipped in query
 func TestQueryUserIntents_MalformedLines(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -622,7 +622,7 @@ func TestFormatUserIntents_Multiple(t *testing.T) {
 // TestLoadArtifacts_IncludesUserIntents tests that LoadArtifacts includes user intents
 func TestLoadArtifacts_IncludesUserIntents(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -661,7 +661,7 @@ func TestLoadArtifacts_IncludesUserIntents(t *testing.T) {
 // TestLoadArtifacts_MissingUserIntentsFile tests that missing user intents file is OK
 func TestLoadArtifacts_MissingUserIntentsFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	claudeDir := filepath.Join(tmpDir, ".gogent", "memory")
+	claudeDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	if err := os.MkdirAll(claudeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -693,7 +693,7 @@ func TestLoadArtifacts_MissingUserIntentsFile(t *testing.T) {
 func TestDefaultHandoffConfig_IncludesUserIntentsPath(t *testing.T) {
 	cfg := DefaultHandoffConfig("/test/project")
 
-	expectedPath := "/test/project/.gogent/memory/user-intents.jsonl"
+	expectedPath := "/test/project/.goyoke/memory/user-intents.jsonl"
 	if cfg.UserIntentsPath != expectedPath {
 		t.Errorf("Expected UserIntentsPath '%s', got: '%s'", expectedPath, cfg.UserIntentsPath)
 	}

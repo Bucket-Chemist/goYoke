@@ -7,16 +7,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestEcosystem_GOgent002 validates the complete schema loading pipeline.
-// This retrospectively tests GOgent-002 (schema.go) from an ecosystem perspective.
-func TestEcosystem_GOgent002(t *testing.T) {
+// TestEcosystem_goYoke002 validates the complete schema loading pipeline.
+// This retrospectively tests goYoke-002 (schema.go) from an ecosystem perspective.
+func TestEcosystem_goYoke002(t *testing.T) {
 	// Load production schema
 	schema, err := LoadSchema()
-	require.NoError(t, err, "LoadSchema() failed - GOgent-002 regression")
+	require.NoError(t, err, "LoadSchema() failed - goYoke-002 regression")
 
 	// Validate schema passes validation
 	err = schema.Validate()
-	require.NoError(t, err, "Schema validation failed - GOgent-002 regression")
+	require.NoError(t, err, "Schema validation failed - goYoke-002 regression")
 
 	// Verify critical v2.5.0 fields are present
 	assert.Equal(t, "2.5.0", schema.Version)
@@ -24,18 +24,18 @@ func TestEcosystem_GOgent002(t *testing.T) {
 	assert.NotEmpty(t, schema.SubagentTypesConfig.Exploration.Tools, "SubagentTypes config incomplete")
 	assert.NotEmpty(t, schema.AgentSubagentMapping.CodebaseSearch, "AgentSubagentMapping incomplete")
 
-	t.Log("✅ Ecosystem Test GOgent-002: Schema loading pipeline operational")
+	t.Log("✅ Ecosystem Test goYoke-002: Schema loading pipeline operational")
 }
 
-// TestEcosystem_GOgent003 validates schema + agents integration.
-// This retrospectively tests GOgent-003 (agents.go) integration with schema.
-func TestEcosystem_GOgent003(t *testing.T) {
+// TestEcosystem_goYoke003 validates schema + agents integration.
+// This retrospectively tests goYoke-003 (agents.go) integration with schema.
+func TestEcosystem_goYoke003(t *testing.T) {
 	// Load both production artifacts
 	schema, err := LoadSchema()
 	require.NoError(t, err, "Schema load failed")
 
 	index, err := LoadAgentIndex()
-	require.NoError(t, err, "AgentIndex load failed - GOgent-003 regression")
+	require.NoError(t, err, "AgentIndex load failed - goYoke-003 regression")
 
 	// Cross-validate: Verify schema's agent mappings reference agents that exist in index
 	agentIDs := []struct {
@@ -63,13 +63,13 @@ func TestEcosystem_GOgent003(t *testing.T) {
 		require.NoError(t, err, "Invalid agent-subagent pairing for %s", agent.id)
 	}
 
-	t.Log("✅ Ecosystem Test GOgent-003: Schema-Agent integration validated")
+	t.Log("✅ Ecosystem Test goYoke-003: Schema-Agent integration validated")
 }
 
-// TestEcosystem_GOgent004a is a placeholder for future validation integration.
-// GOgent-004a ticket has not yet been implemented.
-func TestEcosystem_GOgent004a(t *testing.T) {
-	t.Skip("GOgent-004a not yet implemented - validation engine pending")
+// TestEcosystem_goYoke004a is a placeholder for future validation integration.
+// goYoke-004a ticket has not yet been implemented.
+func TestEcosystem_goYoke004a(t *testing.T) {
+	t.Skip("goYoke-004a not yet implemented - validation engine pending")
 }
 
 // TestEcosystem_AllAgentsMappedCorrectly verifies all agents in production agents-index.json
@@ -127,7 +127,7 @@ func TestEcosystem_AllAgentsMappedCorrectly(t *testing.T) {
 }
 
 // TestEcosystem_BackwardCompatibility validates that no breaking changes were introduced
-// to the schema or agents APIs between GOgent-002 and GOgent-003.
+// to the schema or agents APIs between goYoke-002 and goYoke-003.
 func TestEcosystem_BackwardCompatibility(t *testing.T) {
 	schema, err := LoadSchema()
 	require.NoError(t, err)

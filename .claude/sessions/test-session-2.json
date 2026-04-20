@@ -1,8 +1,0 @@
-{
-  "id": "test-session-2",
-  "name": "Load Test",
-  "created_at": "2026-02-01T10:00:00Z",
-  "last_used": "2026-02-03T12:22:07.719Z",
-  "cost": 1.23,
-  "tool_calls": 45
-}

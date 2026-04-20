@@ -13,12 +13,12 @@ import (
 func setupJSONLTestDir(t *testing.T) func() {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("GOGENT_PROJECT_DIR", dir)
+	t.Setenv("GOYOKE_PROJECT_DIR", dir)
 
 	// Create minimal .claude structure
-	os.MkdirAll(filepath.Join(dir, ".gogent", "memory"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".goyoke", "memory"), 0755)
 	os.MkdirAll(filepath.Join(dir, ".claude", "agents"), 0755)
-	os.MkdirAll(filepath.Join(dir, ".gogent"), 0755)
+	os.MkdirAll(filepath.Join(dir, ".goyoke"), 0755)
 
 	return func() { /* TempDir auto-cleans */ }
 }
@@ -27,7 +27,7 @@ func TestAppendJSONL_Basic(t *testing.T) {
 	cleanup := setupJSONLTestDir(t)
 	defer cleanup()
 
-	path := filepath.Join(os.Getenv("GOGENT_PROJECT_DIR"), ".gogent", "test.jsonl")
+	path := filepath.Join(os.Getenv("GOYOKE_PROJECT_DIR"), ".goyoke", "test.jsonl")
 
 	data := []byte(`{"id":1,"msg":"hello"}`)
 	err := AppendJSONL(path, data)
@@ -51,7 +51,7 @@ func TestAppendJSONL_CreatesDir(t *testing.T) {
 	defer cleanup()
 
 	// Path with nested non-existent directories
-	path := filepath.Join(os.Getenv("GOGENT_PROJECT_DIR"), "deep", "nested", "path", "test.jsonl")
+	path := filepath.Join(os.Getenv("GOYOKE_PROJECT_DIR"), "deep", "nested", "path", "test.jsonl")
 
 	data := []byte(`{"test":"creates-dir"}`)
 	err := AppendJSONL(path, data)
@@ -68,7 +68,7 @@ func TestAppendJSONL_Concurrent(t *testing.T) {
 	cleanup := setupJSONLTestDir(t)
 	defer cleanup()
 
-	path := filepath.Join(os.Getenv("GOGENT_PROJECT_DIR"), ".gogent", "concurrent.jsonl")
+	path := filepath.Join(os.Getenv("GOYOKE_PROJECT_DIR"), ".goyoke", "concurrent.jsonl")
 
 	// Spawn 100 goroutines writing simultaneously
 	var wg sync.WaitGroup
@@ -109,7 +109,7 @@ func TestAppendJSONL_MultipleAppends(t *testing.T) {
 	cleanup := setupJSONLTestDir(t)
 	defer cleanup()
 
-	path := filepath.Join(os.Getenv("GOGENT_PROJECT_DIR"), ".gogent", "multi.jsonl")
+	path := filepath.Join(os.Getenv("GOYOKE_PROJECT_DIR"), ".goyoke", "multi.jsonl")
 
 	// Append multiple lines sequentially
 	for i := 0; i < 5; i++ {

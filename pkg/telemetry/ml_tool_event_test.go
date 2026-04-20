@@ -3,7 +3,7 @@ package telemetry
 import (
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 func TestTotalTokens(t *testing.T) {

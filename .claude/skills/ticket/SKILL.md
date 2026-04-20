@@ -269,22 +269,22 @@ if [[ "$use_team" == "true" ]] && [[ -f "$plan_file" ]]; then
     echo "[ticket] Team-run dispatch: implementation-plan.json found"
 
     # Determine team directory
-    gogent_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.gogent/current-session" 2>/dev/null)"
-    gogent_session_dir="${gogent_session_dir:-.gogent/sessions/$(date +%Y%m%d-%H%M%S)}"
+    goyoke_session_dir="$(cat "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/.goyoke/current-session" 2>/dev/null)"
+    goyoke_session_dir="${goyoke_session_dir:-.goyoke/sessions/$(date +%Y%m%d-%H%M%S)}"
     team_dir="$session_dir/teams/$(date +%s).implementation"
 
     # Generate config + stdin files
-    gogent-plan-impl \
+    goyoke-plan-impl \
         --plan="$plan_file" \
         --project-root="$(pwd)" \
         --output="$team_dir"
 
     if [[ $? -ne 0 ]]; then
-        echo "[ticket] ERROR: gogent-plan-impl failed. Falling back to foreground."
+        echo "[ticket] ERROR: goyoke-plan-impl failed. Falling back to foreground."
         # Fall through to Phase 6 (foreground)
     else
         # Launch background execution
-        result = mcp__gofortress-interactive__team_run({
+        result = mcp__goyoke-interactive__team_run({
             team_dir: "$team_dir",
             wait_for_start: true,
             timeout_ms: 10000
@@ -306,7 +306,7 @@ fi
 
 **When team-run is used:**
 - TUI returns to user in <15 seconds
-- `gogent-team-run` executes waves in the background
+- `goyoke-team-run` executes waves in the background
 - Tasks within a wave run in parallel
 - Wave failure propagation: if any task in Wave N fails, Wave N+1 members get status "skipped"
 - Monitor via `/team-status`, collect results via `/team-result`
@@ -314,7 +314,7 @@ fi
 **When team-run is NOT used (fallback):**
 - `use_team_pattern: false` in settings.json
 - `implementation-plan.json` not produced by architect
-- `gogent-plan-impl` binary not found or fails
+- `goyoke-plan-impl` binary not found or fails
 - Single-task tickets (no specs.md / no multi-task plan)
 
 ---
@@ -437,7 +437,7 @@ fi
 ```json
 {
   "tickets_dir": "migration_plan/tickets",
-  "project_name": "GOgent-Fortress",
+  "project_name": "goYoke",
   "audit_config": {
     "enabled": true,
     "test_commands": {
@@ -524,7 +524,7 @@ if [[ "$review_enabled" == "true" ]]; then
     fi
 
     # Store finding IDs for outcome tracking (if telemetry enabled)
-    if [[ "${GOGENT_ENABLE_TELEMETRY:-1}" == "1" ]] && [[ -f .claude/tmp/review-telemetry.json ]]; then
+    if [[ "${GOYOKE_ENABLE_TELEMETRY:-1}" == "1" ]] && [[ -f .claude/tmp/review-telemetry.json ]]; then
         jq -r '.finding_ids[]' .claude/tmp/review-telemetry.json > "$tickets_dir/.review-findings-$ticket_id" 2>/dev/null || true
     fi
 fi
@@ -543,7 +543,7 @@ fi
 ```json
 {
   "tickets_dir": "migration_plan/tickets",
-  "project_name": "GOgent-Fortress",
+  "project_name": "goYoke",
   "audit_config": {
     "enabled": true,
     "code_review": {
@@ -607,10 +607,10 @@ git commit -m "$commit_msg"
 rm -f "$tickets_dir/.current-ticket"
 
 # Log review outcomes if code review was run (if telemetry enabled)
-if [[ "${GOGENT_ENABLE_TELEMETRY:-1}" == "1" ]] && [[ -f "$tickets_dir/.review-findings-$ticket_id" ]]; then
+if [[ "${GOYOKE_ENABLE_TELEMETRY:-1}" == "1" ]] && [[ -f "$tickets_dir/.review-findings-$ticket_id" ]]; then
     commit_hash=$(git rev-parse HEAD 2>/dev/null || echo "")
     while IFS= read -r finding_id; do
-        gogent-update-review-outcome \
+        goyoke-update-review-outcome \
             --finding-id="$finding_id" \
             --resolution="fixed" \
             --ticket-id="$ticket_id" \
@@ -665,7 +665,7 @@ echo "[ticket] Next available tickets:"
 | ----------------------- | ----------- | ----------- | ----------------- |
 | Discovery–Validation    | Bash/Python | 0           | $0.000            |
 | Planning                | Sonnet      | 10-15K      | $0.09-$0.14       |
-| gogent-plan-impl        | Go binary   | 0           | $0.000            |
+| goyoke-plan-impl        | Go binary   | 0           | $0.000            |
 | Worker agents (per task)| Sonnet      | 10-20K each | $0.09-$0.18 each  |
 | **Total (3-task plan)** |             | 40-75K      | **$0.36-$0.68**   |
 

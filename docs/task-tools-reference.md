@@ -1,3 +1,9 @@
+---
+title: Task Tools Reference
+type: reference
+tags: [tasks, tools]
+created: 2026-04-18
+---
 # Task Tools Reference
 
 **Version:** 1.0
@@ -226,7 +232,7 @@ Ticket complete
 
 ---
 
-**Maintained By:** GOgent-Fortress System
+**Maintained By:** goYoke System
 **Related Docs:**
 - `docs/ARCHITECTURE.md` - Full system architecture
 - `.claude/agents/agents-index.json` - Agent definitions

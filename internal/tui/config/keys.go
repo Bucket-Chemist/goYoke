@@ -1,4 +1,4 @@
-// Package config provides the foundational theme system for the GOgent-Fortress TUI.
+// Package config provides the foundational theme system for the goYoke TUI.
 // This file defines the keybinding registry using charmbracelet/bubbles/key.
 package config
 
@@ -76,6 +76,9 @@ type GlobalKeys struct {
 	// When active the conversation panel expands to full terminal width.
 	// Keybinding: alt+\ (backslash evokes a vertical split).
 	ToggleSimpleMode key.Binding
+
+	// ToggleFigures shows or hides the figures/diagram viewer drawer.
+	ToggleFigures key.Binding
 }
 
 // TabKeys groups the alt-key shortcuts that jump directly to a named tab.
@@ -184,7 +187,7 @@ type KeyMap struct {
 // DefaultKeyMap
 // ---------------------------------------------------------------------------
 
-// DefaultKeyMap returns a KeyMap populated with the standard GOgent-Fortress
+// DefaultKeyMap returns a KeyMap populated with the standard goYoke
 // keybindings.  Each binding includes Help text so the bubbles/help component
 // can render a contextual cheat-sheet.
 func DefaultKeyMap() KeyMap {
@@ -254,6 +257,10 @@ func DefaultKeyMap() KeyMap {
 			ToggleSimpleMode: key.NewBinding(
 				key.WithKeys("alt+\\"),
 				key.WithHelp("alt+\\", "toggle panels"),
+			),
+			ToggleFigures: key.NewBinding(
+				key.WithKeys("alt+f"),
+				key.WithHelp("alt+f", "toggle figures"),
 			),
 		},
 

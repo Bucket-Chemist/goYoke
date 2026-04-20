@@ -1,5 +1,5 @@
 // Package state provides shared, thread-safe state containers for the
-// GOgent-Fortress TUI.
+// goYoke TUI.
 //
 // TaskEntry is defined here so that both the model package (interface
 // definition) and the taskboard component can reference it without model

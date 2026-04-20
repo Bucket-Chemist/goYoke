@@ -1,0 +1,210 @@
+agent: dedup-reviewer
+version: "1.0"
+
+sharp_edges:
+  # === CRITICAL: Data Integrity ===
+
+  - id: dedup-knowledge-coupling
+    category: Data Integrity
+    severity: critical
+    description: >
+      Same business knowledge (pricing rule, validation logic, permission check)
+      encoded in 2+ code locations. The Change Test fails: updating this knowledge
+      requires touching multiple locations, and missing one produces silently wrong results.
+    detection_pattern: >
+      grep -rn "calculate|compute|derive|policy|rule|threshold" across packages.
+      Compare function bodies for identical formulas, decision trees, or state machines.
+      Apply Change Test: "If this logic changes, how many files must change?"
+    false_positive_risk: low
+    languages: [go, python, rust, r, typescript]
+
+  # === HIGH: Structural Duplication ===
+
+  - id: dedup-handler-boilerplate
+    category: Structural
+    severity: high
+    description: >
+      HTTP or CLI handler boilerplate (parse request, validate, call service, format
+      response) repeated across entry points with >80% structural overlap. Common
+      pattern changes (new auth header, logging format) require updating all copies.
+    detection_pattern: >
+      Go: grep -rn "func.*Handler(w http.ResponseWriter" --include="*.go"
+      Python: grep -rn "@app.route\|@router" --include="*.py"
+      Compare handler bodies for identical parse/validate/respond structure.
+    false_positive_risk: medium
+    languages: [go, python, typescript]
+
+  - id: dedup-error-wrapping
+    category: Structural
+    severity: high
+    description: >
+      Identical error wrapping/handling blocks (>5 lines) across 3+ call sites.
+      Beyond simple if-err-nil one-liners — multi-line blocks combining logging,
+      metric emission, and contextual wrapping with identical formatting.
+    detection_pattern: >
+      Go: grep -rn 'fmt.Errorf("failed to' --include="*.go" and compare surrounding
+      blocks. Look for identical log.Error + metric + return patterns.
+    false_positive_risk: medium
+    languages: [go, rust, python]
+
+  - id: dedup-validation-logic
+    category: Data Integrity
+    severity: high
+    description: >
+      Input validation for the same entity duplicated across endpoints without a
+      shared validator. When one endpoint's validation is updated, others lag behind,
+      allowing invalid data through un-updated paths.
+    detection_pattern: >
+      grep -rn "validate|Validate|is_valid|stopifnot" and check if the same fields
+      are validated in multiple handler/endpoint functions.
+    false_positive_risk: low
+    languages: [go, python, r, typescript]
+
+  - id: dedup-serialization-dup
+    category: Structural
+    severity: high
+    description: >
+      Custom JSON/protobuf/XML marshaling logic duplicated across types with
+      identical transformation patterns. Format changes require updating every
+      custom implementation.
+    detection_pattern: >
+      Go: grep -rn "MarshalJSON\|UnmarshalJSON" --include="*.go"
+      Python: grep -rn "to_dict\|from_dict\|to_json" --include="*.py"
+      Rust: grep -rn "impl.*Serialize\|impl.*Deserialize" --include="*.rs"
+      Compare method bodies for identical transformation logic.
+    false_positive_risk: medium
+    languages: [go, python, rust, typescript]
+
+  - id: dedup-pipeline-clone
+    category: Structural
+    severity: high
+    description: >
+      Data processing pipeline steps (read, filter, transform, aggregate) identical
+      across modules processing the same data source. A transformation change must
+      be applied to each copy.
+    detection_pattern: >
+      Python: grep -rn "groupby\|agg\|merge\|concat" --include="*.py"
+      R: grep -rn "filter.*mutate\|summarize\|group_by" --include="*.R"
+      Compare step sequences — same operations in same order = duplication.
+    false_positive_risk: medium
+    languages: [python, r]
+
+  - id: dedup-premature-abstraction
+    category: Judgment
+    severity: high
+    description: >
+      Consolidation recommendation that would couple unrelated domains. The
+      abstraction serves the DRY principle but creates a shared dependency that
+      both domains must coordinate around. Prefer duplication over the wrong
+      abstraction (Sandi Metz's Rule).
+    detection_pattern: >
+      Review your own consolidation recommendations. If shared code would create
+      import edges between unrelated packages (billing/ ↔ shipping/, auth/ ↔ analytics/),
+      this sharp edge applies.
+    false_positive_risk: low
+    languages: [go, python, rust, r, typescript]
+
+  # === MEDIUM: Consolidation Opportunities ===
+
+  - id: dedup-config-scattering
+    category: Data Integrity
+    severity: medium
+    description: >
+      Same configuration values or constants defined in 3+ locations. When the
+      value changes, missed locations silently use stale values.
+    detection_pattern: >
+      grep -rn "timeout|max_retries|MAX_|LIMIT|DEFAULT_" across packages.
+      Compare numeric values and string literals for matches.
+    false_positive_risk: low
+    languages: [go, python, rust, r, typescript]
+
+  - id: dedup-test-fixture-clone
+    category: Structural
+    severity: medium
+    description: >
+      Test setup code (>15 lines) duplicated across 4+ test files. The setup
+      represents a well-defined reusable scenario, not intentional test isolation.
+    detection_pattern: >
+      Compare test setup/helper functions across *_test.go, test_*.py, or
+      test-*.R files. Flag only when the setup is a coherent, reusable scenario.
+    false_positive_risk: high
+    languages: [go, python, rust, r]
+
+  - id: dedup-parametric-explosion
+    category: Judgment
+    severity: medium
+    description: >
+      Proposed shared function would need >3 parameters or flags to handle all
+      the cases currently served by the duplicated copies. The abstraction cost
+      exceeds the duplication cost.
+    detection_pattern: >
+      Count the differences between copies identified as duplicates. If >3
+      behavioral differences exist, consolidation would require parametric
+      explosion. Flag the duplication but recommend against extraction.
+    false_positive_risk: low
+    languages: [go, python, rust, r, typescript]
+
+  - id: dedup-temporal-coupling
+    category: Judgment
+    severity: medium
+    description: >
+      Copies that will intentionally diverge as requirements evolve. Current
+      similarity is temporary; consolidation would need to be re-split later.
+    detection_pattern: >
+      Check git blame for independent modification history. If copies are being
+      changed by different authors or for different reasons, they are diverging.
+      Consult lifecycle classification in Phase 2.
+    false_positive_risk: medium
+    languages: [go, python, rust, r, typescript]
+
+  # === LOW: False Positive Patterns ===
+
+  - id: dedup-go-error-boilerplate
+    category: False Positive
+    severity: low
+    description: >
+      Go if-err-nil one-liners or simple two-line error returns flagged as
+      duplication. This is language idiom, not knowledge duplication. Only
+      escalate when the handler body beyond the check (>5 lines) is duplicated.
+    detection_pattern: >
+      If a finding flags "if err != nil { return err }" or "if err != nil {
+      return fmt.Errorf(...) }" as standalone duplication, suppress it.
+    false_positive_risk: high
+    languages: [go]
+
+  - id: dedup-rust-trait-boilerplate
+    category: False Positive
+    severity: low
+    description: >
+      Rust trait impl blocks (impl Display, impl From, impl Default) flagged
+      as duplication. Structural similarity is inherent to trait compliance.
+      Each impl encodes type-specific formatting knowledge.
+    detection_pattern: >
+      If a finding flags "impl X for Y" blocks with similar structure as
+      duplication, verify that the bodies encode different knowledge per type.
+    false_positive_risk: high
+    languages: [rust]
+
+  - id: dedup-python-init-pattern
+    category: False Positive
+    severity: low
+    description: >
+      Python __init__ self-assignment ceremony (self.x = x, self.y = y) flagged
+      as duplication. This is language-mandated constructor boilerplate.
+    detection_pattern: >
+      If a finding flags "self.x = x" assignment blocks as duplication, suppress.
+    false_positive_risk: high
+    languages: [python]
+
+  - id: dedup-r-pipe-pattern
+    category: False Positive
+    severity: low
+    description: >
+      R pipe chains (%>% or |>) with similar structure flagged as duplication.
+      Pipe chains with the same verbs (filter, mutate, summarize) often serve
+      different data transformations. Verify column names and operations differ.
+    detection_pattern: >
+      If a finding flags %>% chains as duplication, verify that column names
+      and transformation logic are actually identical, not just structurally similar.
+    false_positive_risk: high
+    languages: [r]

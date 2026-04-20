@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gogent-fortress/schemas/stdout/einstein.json",
+  "$id": "https://goyoke-fortress/schemas/stdout/einstein.json",
   "title": "Einstein Stdout Schema",
   "description": "Validates stdout for Einstein (theoretical analysis) in braintrust workflow",
   "version": "1.0.0",

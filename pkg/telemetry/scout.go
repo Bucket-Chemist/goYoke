@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // ScopeMetrics captures the scope assessment from a scout run.
@@ -64,7 +64,7 @@ var ValidTaskOutcomes = map[string]bool{
 
 // GetScoutLogPath returns the global scout recommendations log path.
 func GetScoutLogPath() string {
-	baseDir := config.GetGOgentDir()
+	baseDir := config.GetgoYokeDir()
 	return filepath.Join(baseDir, "scout-recommendations.jsonl")
 }
 

@@ -2,11 +2,11 @@
 
 ## Overview
 
-`project_root` is resolved by the planner (Mozart, review-orchestrator, or impl-manager) at team creation time and written into `config.json`. The Go binary (`gogent-team-run`) reads it and sets `cmd.Dir` for all spawned agent processes.
+`project_root` is resolved by the planner (Mozart, review-orchestrator, or impl-manager) at team creation time and written into `config.json`. The Go binary (`goyoke-team-run`) reads it and sets `cmd.Dir` for all spawned agent processes.
 
 ## Resolution Priority
 
-1. **Explicit environment**: `GOGENT_PROJECT_DIR`
+1. **Explicit environment**: `GOYOKE_PROJECT_DIR`
 2. **Claude CLI environment**: `CLAUDE_PROJECT_DIR`
 3. **Current working directory**: `os.Getwd()`
 
@@ -16,7 +16,7 @@
 
 ```go
 func resolveProjectRoot() string {
-    if root := os.Getenv("GOGENT_PROJECT_DIR"); root != "" {
+    if root := os.Getenv("GOYOKE_PROJECT_DIR"); root != "" {
         return root
     }
     if root := os.Getenv("CLAUDE_PROJECT_DIR"); root != "" {
@@ -29,7 +29,7 @@ func resolveProjectRoot() string {
 
 Write this to `config.json` at team creation.
 
-### In Go Binary (gogent-team-run)
+### In Go Binary (goyoke-team-run)
 
 Read from config.json and use for spawning:
 
@@ -62,7 +62,7 @@ Agents receive `project_root` in their stdin context. Relative paths in the task
 
 ## Cross-Reference
 
-- `cmd/gogent-validate/main.go:66-74`: Same env var resolution pattern
+- `cmd/goyoke-validate/main.go:66-74`: Same env var resolution pattern
 - `spawnAgent.ts`: MCP-spawned agents inherit TUI's cwd (no explicit project_root)
 - TC-006: Schema design for this field
 - TC-008: Go binary implementation that uses this field

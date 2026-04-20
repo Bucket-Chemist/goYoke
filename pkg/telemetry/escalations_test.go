@@ -188,7 +188,7 @@ func TestLogEscalation_ProjectWriteFailure_GracefulDegradation(t *testing.T) {
 
 	// Create a non-writable project directory
 	projectDir := filepath.Join(tmpDir, "readonly-project")
-	claudeMemDir := filepath.Join(projectDir, ".gogent", "memory")
+	claudeMemDir := filepath.Join(projectDir, ".goyoke", "memory")
 	os.MkdirAll(claudeMemDir, 0755)
 
 	// Create the escalations file as a directory (will cause write failure)
@@ -706,7 +706,7 @@ func TestGetProjectEscalationsLogPath(t *testing.T) {
 	projectDir := "/home/user/my-project"
 	path := GetProjectEscalationsLogPath(projectDir)
 
-	expectedPath := filepath.Join(projectDir, ".gogent", "memory", "escalations.jsonl")
+	expectedPath := filepath.Join(projectDir, ".goyoke", "memory", "escalations.jsonl")
 	if path != expectedPath {
 		t.Errorf("Expected path '%s', got: '%s'", expectedPath, path)
 	}

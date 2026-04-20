@@ -1,0 +1,91 @@
+{
+  "schema_id": "reviewer",
+  "reviewer": "genomics-reviewer",
+  "status": "complete",
+  "overall_assessment": "BLOCK",
+  "summary": "Critical reference build mismatch detected across pipeline stages — hg19 alignment fed to hg38 VEP annotation cache. All downstream variant coordinates and annotations are invalid.",
+  "findings": [
+    {
+      "id": "GEN-1",
+      "severity": "CRITICAL",
+      "category": "cross-stage",
+      "file": "pipeline/variant_calling.nf",
+      "line": 18,
+      "end_line": 24,
+      "title": "Reference build mismatch: hg19 alignment fed to hg38 VEP cache",
+      "message": "Alignment step uses GRCh37/hg19 reference (params.ref = 'refs/hg19/Homo_sapiens_assembly19.fasta') but VEP annotation step configures GRCh38 cache (--assembly GRCh38 --dir_cache /data/vep_cache/GRCh38). All variant coordinates are valid integers in both builds, so this fails silently — no runtime error is raised.",
+      "impact": "All VEP annotations are wrong. Variant genomic coordinates from hg19 alignment are interpreted against hg38 gene models. Coding variants may be reported as intronic, and vice versa. All downstream proteogenomics database entries carry incorrect gene assignments.",
+      "recommendation": "Align reference builds throughout: either migrate alignment to hg38 (recommended for new studies) or switch VEP cache to GRCh37 v108. Verify genome build is declared as a single top-level parameter propagated to all steps.",
+      "code_snippet": "params.ref = 'refs/hg19/Homo_sapiens_assembly19.fasta'\n// ...\nprocess VEP_ANNOTATE {\n    params.vep_cache = '/data/vep_cache/GRCh38'\n    params.vep_assembly = 'GRCh38'",
+      "sharp_edge_id": "genomics-ref-wrong-build",
+      "references": ["https://www.ensembl.org/info/docs/tools/vep/script/vep_options.html#opt_assembly"]
+    },
+    {
+      "id": "GEN-2",
+      "severity": "WARNING",
+      "category": "alignment",
+      "file": "pipeline/alignment.nf",
+      "line": 54,
+      "end_line": 63,
+      "title": "Duplicate marking step absent from alignment pipeline",
+      "message": "The alignment pipeline runs BWA-MEM2 and applies BQSR but omits duplicate marking. No Picard MarkDuplicates or samtools markdup step found between alignment and BQSR. PCR duplicates will inflate allele depths in downstream variant calling.",
+      "impact": "Allele depth (AD field) inflated for amplified fragments. Heterozygous/homozygous ratio skewed. For WES data with aggressive PCR amplification, false-confident homozygous calls expected from duplicate fragments.",
+      "recommendation": "Add Picard MarkDuplicates or GATK MarkDuplicatesSpark between BWA-MEM2 and BQSR. Ensure optical duplicate distance is set appropriately for the sequencer (2500 for patterned flow cells).",
+      "code_snippet": "process BWA_ALIGN {\n    // ...\n    bwa-mem2 mem -t ${task.cpus} ${params.ref} ${reads} | samtools sort -o ${sample}.sorted.bam\n    // MISSING: MarkDuplicates\n    // Goes directly to BQSR",
+      "sharp_edge_id": "genomics-align-no-dedup",
+      "references": []
+    },
+    {
+      "id": "GEN-3",
+      "severity": "WARNING",
+      "category": "variant-calling",
+      "file": "pipeline/variant_calling.nf",
+      "line": 87,
+      "end_line": 94,
+      "title": "No hard filters or VQSR applied to germline variant callset",
+      "message": "HaplotypeCaller is run and VCF produced, but no VariantFiltration or VQSR step is present in the pipeline. The raw callset is passed directly to annotation. Typical raw HaplotypeCaller callsets have 10-30% false positive rate.",
+      "impact": "Unfiltered false positive variants propagate to VEP annotation and subsequently to the proteogenomics custom database. These phantom variants generate peptide candidates that will never be detected by mass spectrometry, inflating the search space.",
+      "recommendation": "Apply VQSR for cohorts >30 samples. For smaller cohorts, apply hard filters per GATK best practices: QD < 2.0, FS > 60.0, MQ < 40.0 for SNPs; QD < 2.0, FS > 200.0, ReadPosRankSum < -20.0 for indels.",
+      "code_snippet": "process HAPLOTYPECALLER {\n    // ...\n    gatk HaplotypeCaller -R ${params.ref} -I ${bam} -O ${sample}.g.vcf.gz -ERC GVCF\n}\n// No VQSR or VariantFiltration process defined",
+      "sharp_edge_id": "genomics-vc-no-filter",
+      "references": ["https://gatk.broadinstitute.org/hc/en-us/articles/360035531112"]
+    },
+    {
+      "id": "GEN-4",
+      "severity": "WARNING",
+      "category": "annotation",
+      "file": "pipeline/annotation/vep_annotation.py",
+      "line": 31,
+      "end_line": 38,
+      "title": "No transcript selection strategy configured in VEP",
+      "message": "VEP is run without --pick, --mane_select, or --canonical flag. Default behaviour returns all transcripts for each variant. Downstream proteogenomics pipeline selects one transcript per variant using a non-documented heuristic (longest transcript by default), which may not match the clinically or biologically relevant isoform.",
+      "impact": "Pathogenic splice variants may be annotated on a non-MANE transcript as intronic, while the MANE transcript annotation (coding_sequence_variant or splice_region_variant) is discarded. Protein sequences generated may not correspond to the dominant expressed isoform.",
+      "recommendation": "Add --mane_select --mane_plus_clinical --pick_order mane_select,mane_plus_clinical,canonical to VEP invocation. Ensures MANE SELECT isoform is prioritised for clinical/functional annotation.",
+      "code_snippet": "vep_cmd = [\n    'vep',\n    '--input_file', vcf_path,\n    '--output_file', output_path,\n    '--format', 'vcf',\n    '--vcf',\n    '--assembly', assembly,\n    '--dir_cache', cache_dir,\n    # MISSING: --mane_select or --canonical\n]",
+      "sharp_edge_id": "genomics-anno-no-transcript",
+      "references": ["https://www.ensembl.org/info/docs/tools/vep/script/vep_options.html#opt_pick"]
+    },
+    {
+      "id": "GEN-5",
+      "severity": "INFO",
+      "category": "alignment",
+      "file": "pipeline/alignment.nf",
+      "line": 12,
+      "end_line": 12,
+      "title": "Using BWA-MEM instead of BWA-MEM2",
+      "message": "Pipeline uses bwa mem. BWA-MEM2 is a drop-in replacement that is 2-3x faster with identical output for standard short-read WGS/WES alignment.",
+      "impact": "No correctness impact. Runtime cost increase only.",
+      "recommendation": "Replace 'bwa mem' with 'bwa-mem2 mem'. No parameter changes required. Verify BWA-MEM2 is available in the container/environment.",
+      "code_snippet": "bwa mem -t ${task.cpus} ${params.ref} ${reads}",
+      "sharp_edge_id": null,
+      "references": ["https://github.com/bwa-mem2/bwa-mem2"]
+    }
+  ],
+  "files_reviewed": 5,
+  "files_skipped": 0,
+  "metadata": {
+    "duration_ms": 52400,
+    "thinking_budget_used": 9800,
+    "attempt_number": 1
+  }
+}

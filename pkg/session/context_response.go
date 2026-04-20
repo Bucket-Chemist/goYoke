@@ -8,13 +8,14 @@ import (
 
 // ContextComponents holds all context pieces for session initialization
 type ContextComponents struct {
-	SessionType      string                  // "startup" or "resume"
-	RoutingSummary   string                  // From schema.FormatTierSummary()
-	HandoffSummary   string                  // From LoadHandoffSummary() - resume only
-	PendingLearnings string                  // From CheckPendingLearnings()
-	GitInfo          string                  // From FormatGitInfo()
-	ProjectInfo      *ProjectDetectionResult // From DetectProjectType()
-	SessionDir       string                  // From CreateSessionDir() - absolute path
+	SessionType        string                  // "startup" or "resume"
+	RoutingSummary     string                  // From schema.FormatTierSummary()
+	HandoffSummary     string                  // From LoadHandoffSummary() - resume only
+	PendingLearnings   string                  // From CheckPendingLearnings()
+	GitInfo            string                  // From FormatGitInfo()
+	ProjectInfo        *ProjectDetectionResult // From DetectProjectType()
+	SessionDir         string                  // From CreateSessionDir() - absolute path
+	RouterInstructions string                  // Embedded CLAUDE.md content (zero-install injection)
 }
 
 // SessionStartResponse is the hook output format for SessionStart
@@ -68,8 +69,13 @@ func GenerateSessionStartResponse(ctx *ContextComponents) (string, error) {
 
 	// Session directory
 	if ctx.SessionDir != "" {
-		sessionInfo := fmt.Sprintf("SESSION_DIR: %s\nAll session artifacts are written to this directory. .gogent/tmp/ symlinks here.", ctx.SessionDir)
+		sessionInfo := fmt.Sprintf("SESSION_DIR: %s\nAll session artifacts are written to this directory. .goyoke/tmp/ symlinks here.", ctx.SessionDir)
 		contextParts = append(contextParts, sessionInfo)
+	}
+
+	// Router instructions (embedded CLAUDE.md for zero-install)
+	if ctx.RouterInstructions != "" {
+		contextParts = append(contextParts, ctx.RouterInstructions)
 	}
 
 	// Hook status footer

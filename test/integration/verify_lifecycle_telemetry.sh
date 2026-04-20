@@ -9,15 +9,15 @@ echo ""
 
 # Setup test environment
 TEST_DIR=$(mktemp -d)
-export GOGENT_PROJECT_DIR="$TEST_DIR"
-LIFECYCLE_FILE="$TEST_DIR/.gogent/agent-lifecycle.jsonl"
+export GOYOKE_PROJECT_DIR="$TEST_DIR"
+LIFECYCLE_FILE="$TEST_DIR/.goyoke/agent-lifecycle.jsonl"
 
 echo "Test directory: $TEST_DIR"
 echo "Lifecycle file: $LIFECYCLE_FILE"
 echo ""
 
 # Create sample lifecycle events (simulating a session with multiple agents)
-mkdir -p "$TEST_DIR/.gogent"
+mkdir -p "$TEST_DIR/.goyoke"
 
 cat > "$LIFECYCLE_FILE" <<'EOF'
 {"event_id":"spawn-1","session_id":"test-session","timestamp":1234567890,"event_type":"spawn","agent_id":"python-pro","parent_agent":"terminal","tier":"sonnet","task_description":"Implement feature X","decision_id":"dec-1"}

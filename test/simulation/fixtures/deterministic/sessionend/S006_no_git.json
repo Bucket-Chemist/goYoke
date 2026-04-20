@@ -3,7 +3,7 @@
     "create_dirs": [".claude/memory"],
     "files": {},
     "env": {
-      "GOGENT_PROJECT_DIR": "${TEMP_DIR}"
+      "GOYOKE_PROJECT_DIR": "${TEMP_DIR}"
     }
   },
   "input": {

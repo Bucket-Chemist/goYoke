@@ -76,7 +76,7 @@ func CleanupStaleSockets() error {
 		runtimeDir = os.TempDir()
 	}
 
-	pattern := filepath.Join(runtimeDir, "gofortress-*.sock")
+	pattern := filepath.Join(runtimeDir, "goyoke-*.sock")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return fmt.Errorf("[lifecycle] Failed to glob socket pattern: %w", err)
@@ -102,10 +102,10 @@ func CleanupStaleSockets() error {
 	return nil
 }
 
-// extractPIDFromPath extracts PID from socket filename like "gofortress-12345.sock"
+// extractPIDFromPath extracts PID from socket filename like "goyoke-12345.sock"
 func extractPIDFromPath(path string) int {
 	base := filepath.Base(path)
-	base = strings.TrimPrefix(base, "gofortress-")
+	base = strings.TrimPrefix(base, "goyoke-")
 	base = strings.TrimSuffix(base, ".sock")
 
 	pid, err := strconv.Atoi(base)

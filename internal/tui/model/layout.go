@@ -1,4 +1,4 @@
-// Package model defines shared state types for the GOgent-Fortress TUI.
+// Package model defines shared state types for the goYoke TUI.
 // This file contains layout constants, dimension computation, and rendering
 // helpers for the Lipgloss-based terminal layout.
 package model
@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/components/agents"
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // truncateHeight truncates s to at most maxLines newline-delimited lines.
@@ -61,7 +61,7 @@ const (
 	LayoutCompact LayoutTier = iota
 
 	// LayoutStandard covers 80–119 columns.  Both panels are visible with
-	// focus-driven ratios: FocusClaude 55/45, FocusAgents 70/30, drawer
+	// focus-driven ratios: FocusClaude 70/30, FocusAgents 30/70, drawer
 	// focuses 30/70 (UX-021).
 	LayoutStandard
 
@@ -129,8 +129,8 @@ type layoutDims struct {
 //
 // Focus-driven left-panel ratios (UX-021):
 //
-//	FocusClaude:                      Standard 55/45, Wide 55/45, Ultra 50/50
-//	FocusAgents:                      Standard 70/30, Wide 65/35, Ultra 60/40
+//	FocusClaude:                      Standard 70/30, Wide 65/35, Ultra 60/40
+//	FocusAgents:                      Standard 30/70, Wide 35/65, Ultra 40/60
 //	Drawer focus (Plan/Options/Teams): Standard 30/70, Wide 35/65, Ultra 40/60
 //
 // Border frame (1 char per edge = 2 per axis) is subtracted from each panel
@@ -196,7 +196,7 @@ func (m AppModel) computeLayout() layoutDims {
 
 	// Per-tier, focus-aware left-panel ratio (UX-021).
 	// Allocation shifts based on where keyboard focus lives:
-	//   FocusAgents       → left panel grows, giving right panel a compact slot
+	//   FocusAgents       → right panel grows, left panel shrinks to make room
 	//   Drawer focuses    → right panel grows, left panel shrinks to make room
 	//   FocusClaude       → balanced split favouring left slightly (or equal at Ultra)
 	var leftRatio float64
@@ -204,29 +204,29 @@ func (m AppModel) computeLayout() layoutDims {
 	case LayoutStandard:
 		switch m.focus {
 		case FocusAgents:
-			leftRatio = 0.70
+			leftRatio = 0.30
 		case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
 			leftRatio = 0.30
 		default: // FocusClaude (and any future targets)
-			leftRatio = 0.55
+			leftRatio = 0.70
 		}
 	case LayoutWide:
 		switch m.focus {
 		case FocusAgents:
-			leftRatio = 0.65
+			leftRatio = 0.35
 		case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
 			leftRatio = 0.35
 		default: // FocusClaude
-			leftRatio = 0.55
+			leftRatio = 0.65
 		}
 	case LayoutUltra:
 		switch m.focus {
 		case FocusAgents:
-			leftRatio = 0.60
+			leftRatio = 0.40
 		case FocusPlanDrawer, FocusOptionsDrawer, FocusTeamsDrawer:
 			leftRatio = 0.40
 		default: // FocusClaude
-			leftRatio = 0.50
+			leftRatio = 0.60
 		}
 	}
 
@@ -416,6 +416,11 @@ func (m AppModel) renderLayout() string {
 		result = overlayCenter(result, m.shared.helpModal.View(), m.width, m.height)
 	}
 
+	// Model selector modal: composite on top of the rendered layout.
+	if m.shared != nil && m.shared.modelModal.IsActive() {
+		result = overlayCenter(result, m.shared.modelModal.View(), m.width, m.height)
+	}
+
 	return result
 }
 
@@ -563,9 +568,11 @@ func (m AppModel) renderRightPanel(dims layoutDims, panelH int) string {
 		if m.iconRailMode {
 			renderMode = agents.RenderIconRail
 		}
-		treeView := m.agentTree.Render(renderMode, dims.rightWidth)
-		detailView := m.agentDetail.Render(renderMode, dims.rightWidth)
-		content = lipgloss.JoinVertical(lipgloss.Left, treeView, detailView)
+		// Render full collapsible detail sections and inject into tree so they
+		// appear directly under the selected node.
+		inlineContent := m.agentDetail.RenderInlineContent()
+		m.agentTree.SetInlineDetail(inlineContent)
+		content = m.agentTree.Render(renderMode, dims.rightWidth)
 	case RPMDashboard:
 		if m.shared != nil && m.shared.dashboard != nil {
 			content = m.shared.dashboard.View()

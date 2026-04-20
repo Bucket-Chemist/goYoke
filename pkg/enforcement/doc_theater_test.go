@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // TestAnalyzeToolEventForDocTheater_WriteWithTheater verifies theater detection on Write operations

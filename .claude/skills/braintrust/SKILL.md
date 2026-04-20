@@ -165,21 +165,26 @@ When user responds "scout" or "don't know" to Q2:
 
 ## Execution
 
-When `/braintrust` is invoked, the `gogent-skill-guard` PreToolUse hook has already:
-- Created the team directory (`{gogent_session_dir}/teams/{timestamp}.braintrust/`)
-- Written `active-skill.json` with guard restrictions + `team_dir` path
-- Restricted the router to: Task, Bash, Read, AskUserQuestion, Skill
+When `/braintrust` is invoked, the Router must first set up the skill environment
+by calling `prepare_skill` before following these instructions.
 
 The Router executes the following steps:
 
 ### Step 1: Read Team Directory from Guard File
 
 ```javascript
-Read({ file_path: `${session_dir}/active-skill.json` })
-// Extract team_dir from JSON response
+mcp__goyoke-interactive__prepare_skill({ skill: "braintrust" })
+// Returns: { team_dir, guard_active, router_allowed_tools, tui_translation }
+// Extract team_dir from the response.
+// If tui_translation is non-empty, follow it for all Task() calls below.
+//
+// Non-TUI fallback: Bash({ command: "goyoke-skill-guard --setup braintrust" })
+//
+// ERROR HANDLING: If prepare_skill returns an error or guard_active is false:
+//   Log warning, generate team_dir manually, continue without guard, skip release.
 ```
 
-The `gogent_session_dir` is resolved by reading `{project_root}/.gogent/current-session`.
+The `goyoke_session_dir` is resolved by reading `{project_root}/.goyoke/current-session`.
 
 ### Step 2: Spawn Mozart via Task(opus)
 
@@ -196,7 +201,7 @@ BRAINTRUST INVOCATION
 
 USER INPUT: {user_input}
 INPUT TYPE: {raw_problem | gap_document | inline_question}
-TEAM_DIR: {team_dir from active-skill.json}
+TEAM_DIR: {team_dir from prepare_skill output}
 
 Execute Braintrust workflow:
 1. Parse input
@@ -205,7 +210,8 @@ Execute Braintrust workflow:
 4. Assemble Problem Brief
 5. Confirm with user before proceeding
 6. Write config.json + stdin files + problem-brief.md to TEAM_DIR
-7. RETURN — do NOT launch team-run or spawn agents. Router handles dispatch.`,
+7. Launch team-run via mcp__goyoke-interactive__team_run({ team_dir: TEAM_DIR, wait_for_start: true })
+8. RETURN with team-run PID and team directory.`,
 });
 ```
 
@@ -219,30 +225,34 @@ If validation fails, clean up and report error:
 ```bash
 if [[ $? -ne 0 ]]; then
     echo "[braintrust] ERROR: Mozart produced invalid config.json"
-    rm -f "$session_dir/active-skill.json"
+    mcp__goyoke-interactive__prepare_skill({ skill: "braintrust", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
     exit 1
 fi
 ```
 
-### Step 4: Launch Team-Run
+### Step 4: Verify Team-Run Launch
+
+Mozart now launches team-run internally. Check Mozart's output for the PID:
 
 ```
-result = mcp__gofortress-interactive__team_run({
-    team_dir: "$team_dir",
-    wait_for_start: true,
-    timeout_ms: 10000
-})
-if !result.success:
-    echo "[braintrust] ERROR: ${result.result}"
-    rm -f "$session_dir/active-skill.json"
-    exit 1
-background_pid = result.background_pid
+# Mozart output includes: "[Mozart] Team-run launched (PID: {pid})."
+# Extract background_pid from Mozart result.
+# If Mozart reports team-run launch failure, retry from router:
+if mozart_output contains "ERROR: team-run launch failed":
+    result = mcp__goyoke-interactive__team_run({
+        team_dir: "$team_dir",
+        wait_for_start: true,
+        timeout_ms: 10000
+    })
+    background_pid = result.background_pid
 ```
 
 ### Step 5: Remove Skill Guard
 
 ```bash
-rm -f "$session_dir/active-skill.json"
+mcp__goyoke-interactive__prepare_skill({ skill: "braintrust", release: true })
+# Non-TUI fallback: Bash({ command: "goyoke-skill-guard --release" })
 ```
 
 ### Step 6: Return to User
@@ -311,18 +321,18 @@ The final Braintrust Analysis document includes:
 ### Team-Run Mode (Background)
 | File                                    | Written By                       | Read By                | Purpose                      |
 | --------------------------------------- | -------------------------------- | ---------------------- | ---------------------------- |
-| `{team_dir}/config.json`               | Mozart                           | gogent-team-run        | Team execution configuration |
+| `{team_dir}/config.json`               | Mozart                           | goyoke-team-run        | Team execution configuration |
 | `{team_dir}/problem-brief.md`          | Mozart                           | Agents (via stdin)     | Problem decomposition        |
-| `{team_dir}/stdin_einstein.json`       | Mozart                           | gogent-team-run        | Einstein input               |
-| `{team_dir}/stdin_staff-architect.json` | Mozart                          | gogent-team-run        | Staff-Architect input        |
-| `{team_dir}/stdin_beethoven.json`      | Mozart                           | gogent-team-run        | Beethoven input              |
-| `{team_dir}/stdout_einstein.json`      | gogent-team-run                  | prepare-synthesis      | Einstein structured output   |
-| `{team_dir}/stdout_staff-arch.json`    | gogent-team-run                  | prepare-synthesis      | Staff-Architect output       |
-| `{team_dir}/pre-synthesis.md`          | gogent-team-prepare-synthesis    | Beethoven (Read tool)  | Merged Wave 1 analyses       |
-| `{team_dir}/stdout_beethoven.json`     | gogent-team-run                  | /team-result           | Final synthesis output       |
-| `{team_dir}/runner.log`               | gogent-team-run                  | /team-status           | Execution log                |
+| `{team_dir}/stdin_einstein.json`       | Mozart                           | goyoke-team-run        | Einstein input               |
+| `{team_dir}/stdin_staff-architect.json` | Mozart                          | goyoke-team-run        | Staff-Architect input        |
+| `{team_dir}/stdin_beethoven.json`      | Mozart                           | goyoke-team-run        | Beethoven input              |
+| `{team_dir}/stdout_einstein.json`      | goyoke-team-run                  | prepare-synthesis      | Einstein structured output   |
+| `{team_dir}/stdout_staff-arch.json`    | goyoke-team-run                  | prepare-synthesis      | Staff-Architect output       |
+| `{team_dir}/pre-synthesis.md`          | goyoke-team-prepare-synthesis    | Beethoven (Read tool)  | Merged Wave 1 analyses       |
+| `{team_dir}/stdout_beethoven.json`     | goyoke-team-run                  | /team-result           | Final synthesis output       |
+| `{team_dir}/runner.log`               | goyoke-team-run                  | /team-status           | Execution log                |
 
-`{team_dir}` = `{gogent_session_dir}/teams/{timestamp}.braintrust/` (gogent_session_dir resolved via `{project_root}/.gogent/current-session`)
+`{team_dir}` = `{goyoke_session_dir}/teams/{timestamp}.braintrust/` (goyoke_session_dir resolved via `{project_root}/.goyoke/current-session`)
 
 ---
 

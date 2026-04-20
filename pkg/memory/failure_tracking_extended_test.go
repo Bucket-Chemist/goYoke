@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
 // ===========================================================================
@@ -378,11 +378,11 @@ func TestRewriteFailures_RenameFailure(t *testing.T) {
 // EXTENDED TESTS FOR GETSTORAGEPATH() - TARGETING 66.7% → 92%+ COVERAGE
 // ===========================================================================
 
-// TestGetStoragePath_EnvironmentVariable tests GOGENT_STORAGE_PATH override
+// TestGetStoragePath_EnvironmentVariable tests GOYOKE_STORAGE_PATH override
 func TestGetStoragePath_EnvironmentVariable(t *testing.T) {
 	customPath := "/custom/path/tracker.jsonl"
-	os.Setenv("GOGENT_STORAGE_PATH", customPath)
-	defer os.Unsetenv("GOGENT_STORAGE_PATH")
+	os.Setenv("GOYOKE_STORAGE_PATH", customPath)
+	defer os.Unsetenv("GOYOKE_STORAGE_PATH")
 
 	got := getStoragePath()
 	if got != customPath {
@@ -392,7 +392,7 @@ func TestGetStoragePath_EnvironmentVariable(t *testing.T) {
 
 // TestGetStoragePath_DefaultWhenEnvEmpty tests fallback to default
 func TestGetStoragePath_DefaultWhenEnvEmpty(t *testing.T) {
-	os.Unsetenv("GOGENT_STORAGE_PATH")
+	os.Unsetenv("GOYOKE_STORAGE_PATH")
 
 	got := getStoragePath()
 	if got != DefaultStoragePath {
@@ -402,8 +402,8 @@ func TestGetStoragePath_DefaultWhenEnvEmpty(t *testing.T) {
 
 // TestGetStoragePath_EmptyEnvValue tests behavior when env var is set but empty
 func TestGetStoragePath_EmptyEnvValue(t *testing.T) {
-	os.Setenv("GOGENT_STORAGE_PATH", "")
-	defer os.Unsetenv("GOGENT_STORAGE_PATH")
+	os.Setenv("GOYOKE_STORAGE_PATH", "")
+	defer os.Unsetenv("GOYOKE_STORAGE_PATH")
 
 	got := getStoragePath()
 	if got != DefaultStoragePath {

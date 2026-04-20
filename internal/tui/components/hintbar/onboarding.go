@@ -1,6 +1,6 @@
 // Package hintbar — onboarding.go provides persistence for the first-run
 // orientation hint state. It reads/writes a JSON file at
-// $XDG_DATA_HOME/gogent/onboarding.json (fallback: ~/.local/share/gogent/onboarding.json).
+// $XDG_DATA_HOME/goyoke/onboarding.json (fallback: ~/.local/share/goyoke/onboarding.json).
 package hintbar
 
 import (
@@ -27,7 +27,7 @@ func onboardingPath() string {
 		}
 		base = filepath.Join(home, ".local", "share")
 	}
-	return filepath.Join(base, "gogent", "onboarding.json")
+	return filepath.Join(base, "goyoke", "onboarding.json")
 }
 
 // LoadOnboarding reads the onboarding state from the default path.

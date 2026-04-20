@@ -2,12 +2,15 @@
 package memory
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,7 +30,7 @@ type SharpEdgeTemplate struct {
 	Category    string   `yaml:"category,omitempty"`    // e.g., "concurrency", "networking"
 	Symptom     string   `yaml:"symptom,omitempty"`     // Human-readable symptom description
 	AutoInject  bool     `yaml:"auto_inject,omitempty"` // Whether to auto-inject on match
-	Source      string   `yaml:"-"`                     // File path where loaded from
+	Source      string   `yaml:"-"`                     // Resolver path where loaded from
 }
 
 // GetID returns the template ID, preferring ID over Name for backwards compatibility.
@@ -69,59 +72,47 @@ type SharpEdgeIndex struct {
 	All         []SharpEdgeTemplate
 }
 
-// LoadSharpEdgesIndex loads sharp-edges.yaml files from multiple agent directories
+// LoadSharpEdgesIndex loads sharp-edges.yaml files for the given agent IDs via Resolver
 // and builds a searchable index for pattern matching.
 //
-// The function scans each provided agent directory for a sharp-edges.yaml file,
-// parses the YAML content, and builds three indexes:
-// - ByErrorType: Map from error type to matching templates
-// - ByKeyword: Map from keyword to matching templates
-// - All: Complete list of all templates
+// The Resolver union-reads from disk and embedded layers, so agents in either layer
+// are automatically discovered. For each agent ID, the path
+// "agents/{id}/sharp-edges.yaml" is resolved.
 //
-// Missing or malformed YAML files are handled gracefully:
-// - Missing files are silently skipped
-// - Parse errors are logged to stderr and the file is skipped
-// - Processing continues with remaining valid files
+// Missing files are silently skipped. Parse errors are logged to stderr and the
+// file is skipped. Processing continues with remaining valid files.
 //
 // Parameters:
-//   - agentDirs: List of directories to scan for sharp-edges.yaml files
+//   - agentIDs: Agent IDs to load (e.g., "go-pro", "python-pro")
 //
 // Returns:
 //   - *SharpEdgeIndex: Populated index structure (never nil)
 //   - error: Always returns nil (errors are logged as warnings)
-//
-// Example usage:
-//
-//	agentDirs := []string{
-//		filepath.Join(os.Getenv("HOME"), ".claude", "agents", "python-pro"),
-//		filepath.Join(os.Getenv("HOME"), ".claude", "agents", "go-pro"),
-//	}
-//	index, err := LoadSharpEdgesIndex(agentDirs)
-//	if err != nil {
-//		// Handle error (currently never returns error)
-//	}
-//	// Look up templates by error type
-//	templates := index.ByErrorType["TypeError"]
-func LoadSharpEdgesIndex(agentDirs []string) (*SharpEdgeIndex, error) {
+func LoadSharpEdgesIndex(agentIDs []string) (*SharpEdgeIndex, error) {
 	index := &SharpEdgeIndex{
 		ByErrorType: make(map[string][]SharpEdgeTemplate),
 		ByKeyword:   make(map[string][]SharpEdgeTemplate),
 		All:         []SharpEdgeTemplate{},
 	}
 
-	for _, dir := range agentDirs {
-		yamlPath := filepath.Join(dir, "sharp-edges.yaml")
+	if len(agentIDs) == 0 {
+		return index, nil
+	}
 
-		// Skip if doesn't exist (not an error - agents may not have sharp edges yet)
-		if _, err := os.Stat(yamlPath); os.IsNotExist(err) {
-			continue
-		}
+	r, err := resolve.NewFromEnv()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to create resolver: %v\n", err)
+		return index, nil
+	}
 
-		// Read YAML file
-		data, err := os.ReadFile(yamlPath)
+	for _, id := range agentIDs {
+		agentPath := "agents/" + id + "/sharp-edges.yaml"
+
+		data, err := r.ReadFile(agentPath)
 		if err != nil {
-			// Log warning but continue with other files
-			fmt.Fprintf(os.Stderr, "Warning: Failed to read %s: %v\n", yamlPath, err)
+			if !errors.Is(err, fs.ErrNotExist) {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to read %s: %v\n", agentPath, err)
+			}
 			continue
 		}
 
@@ -141,25 +132,19 @@ func LoadSharpEdgesIndex(agentDirs []string) (*SharpEdgeIndex, error) {
 		if len(templates) == 0 {
 			if err := yaml.Unmarshal(data, &templates); err != nil {
 				// Neither format worked - skip silently (agents may have different schemas)
-				// This is not an error: agent sharp-edges.yaml files may use different schemas
-				// that are meant for documentation/reference rather than pattern matching
 				continue
 			}
 		}
 
 		// Index each template
 		for _, tmpl := range templates {
-			// Store source file path for debugging/tracing
-			tmpl.Source = yamlPath
+			tmpl.Source = agentPath
 
-			// Add to complete list
 			index.All = append(index.All, tmpl)
 
-			// Index by error type
 			index.ByErrorType[tmpl.ErrorType] = append(
 				index.ByErrorType[tmpl.ErrorType], tmpl)
 
-			// Index by each keyword
 			for _, keyword := range tmpl.Keywords {
 				index.ByKeyword[keyword] = append(
 					index.ByKeyword[keyword], tmpl)
@@ -198,39 +183,6 @@ const (
 
 // FindSimilar compares a SharpEdge against an index of templates and returns
 // the top 3 most similar matches ranked by similarity score.
-//
-// The function uses multi-signal scoring:
-//   - ERROR_TYPE_EXACT (5 points): Exact match on error type
-//   - FILE_PATTERN (3 points): File matches template's glob pattern
-//   - KEYWORD (2 points per keyword): Error message contains keyword (case-insensitive)
-//
-// Only matches with score >= SCORE_THRESHOLD (5) are returned.
-// If fewer than 3 matches meet the threshold, returns fewer matches.
-//
-// Matching strategy:
-//  1. Try exact error type matches first (highest priority)
-//  2. Try keyword matches from different error types (lower priority)
-//  3. Sort by score descending
-//  4. Return top 3 matches
-//
-// Parameters:
-//   - edge: The current sharp edge to match against templates
-//   - index: Pre-built index of sharp edge templates
-//
-// Returns:
-//   - []Match: Up to 3 best matches, sorted by score (highest first)
-//
-// Example:
-//
-//	edge := &SharpEdge{
-//		ErrorType:    "TypeError",
-//		File:         "pkg/routing/task_validation.go",
-//		ErrorMessage: "invalid type assertion: field is bool, not interface{}",
-//	}
-//	matches := FindSimilar(edge, index)
-//	for _, match := range matches {
-//		fmt.Printf("Match: %s (score=%d, matched=%v)\n", match.Template.ID, match.Score, match.MatchedOn)
-//	}
 func FindSimilar(edge *SharpEdge, index *SharpEdgeIndex) []Match {
 	// Use map to deduplicate matches by template ID
 	matchMap := make(map[string]*Match)

@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codebase Graph",
+  "description": "Multi-layer cross-module topology graph produced by Stage 1.5 aggregation. Contract between Stage 1.5 and Stages 2, 3a, 3b.",
+  "type": "object",
+  "required": ["version", "repo", "generated_at", "git_commit", "layers", "stats"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version (e.g., '1.0')"
+    },
+    "repo": {
+      "type": "string",
+      "description": "Repository name"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of graph generation"
+    },
+    "git_commit": {
+      "type": "string",
+      "description": "Git commit hash at time of generation"
+    },
+    "layers": {
+      "type": "object",
+      "required": ["module_dependencies", "type_relationships", "call_graph"],
+      "properties": {
+        "module_dependencies": { "$ref": "#/$defs/ModuleDependencyLayer" },
+        "type_relationships": { "$ref": "#/$defs/TypeRelationshipLayer" },
+        "call_graph": { "$ref": "#/$defs/CallGraphLayer" }
+      }
+    },
+    "stats": { "$ref": "#/$defs/Stats" }
+  },
+  "$defs": {
+    "ModuleDependencyLayer": {
+      "type": "object",
+      "required": ["description", "nodes", "edges"],
+      "description": "Which modules import which other modules",
+      "properties": {
+        "description": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ModuleNode" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ModuleDependencyEdge" }
+        }
+      }
+    },
+    "TypeRelationshipLayer": {
+      "type": "object",
+      "required": ["description", "nodes", "edges"],
+      "description": "Struct composition, interface implementation, type dependencies",
+      "properties": {
+        "description": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TypeNode" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/TypeRelationshipEdge" }
+        }
+      }
+    },
+    "CallGraphLayer": {
+      "type": "object",
+      "required": ["description", "nodes", "edges"],
+      "description": "Function/method call relationships",
+      "properties": {
+        "description": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CallGraphNode" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CallGraphEdge" }
+        }
+      }
+    },
+    "ModuleNode": {
+      "type": "object",
+      "required": ["id", "category", "language", "symbol_count", "file_count"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Module path relative to project root (e.g., 'cmd/goyoke-validate')"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["command", "internal", "pkg", "test"],
+          "description": "Module category derived from directory structure"
+        },
+        "language": {
+          "type": "string",
+          "enum": ["go", "python", "typescript", "r"],
+          "description": "Primary language in this module"
+        },
+        "symbol_count": {
+          "type": "integer",
+          "description": "Total number of symbols extracted from this module"
+        },
+        "file_count": {
+          "type": "integer",
+          "description": "Number of source files in this module"
+        },
+        "description": {
+          "type": ["string", "null"],
+          "description": "Human-readable summary. Null until Stage 2 LLM enrichment."
+        },
+        "key_types": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Most important exported types. Null until Stage 2 LLM enrichment."
+        },
+        "key_functions": {
+          "type": ["array", "null"],
+          "items": { "type": "string" },
+          "description": "Most important exported functions/methods. Null until Stage 2 LLM enrichment."
+        }
+      }
+    },
+    "TypeNode": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Fully qualified type name (module.TypeName, e.g., 'internal/routing.ValidationOrchestrator')"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["type", "interface", "class", "enum"],
+          "description": "Type kind"
+        },
+        "module": {
+          "type": "string",
+          "description": "Module path containing this type"
+        }
+      }
+    },
+    "CallGraphNode": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Fully qualified symbol name (module.symbol, e.g., 'cmd/goyoke-validate.main')"
+        },
+        "module": {
+          "type": "string",
+          "description": "Module path containing this function"
+        }
+      }
+    },
+    "ModuleDependencyEdge": {
+      "type": "object",
+      "required": ["from", "to", "type"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Importing module id"
+        },
+        "to": {
+          "type": "string",
+          "description": "Imported module id"
+        },
+        "type": {
+          "type": "string",
+          "const": "imports"
+        },
+        "symbols_referenced": {
+          "type": "integer",
+          "description": "Number of symbols from 'to' module used in 'from' module"
+        }
+      }
+    },
+    "TypeRelationshipEdge": {
+      "type": "object",
+      "required": ["from", "to", "type"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Source type id (module.TypeName)"
+        },
+        "to": {
+          "type": "string",
+          "description": "Target type id (module.TypeName)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["composition", "implementation", "embedding", "alias"],
+          "description": "Nature of the relationship"
+        },
+        "field": {
+          "type": "string",
+          "description": "Field name for composition relationships (optional)"
+        }
+      }
+    },
+    "CallGraphEdge": {
+      "type": "object",
+      "required": ["from", "to", "cross_module"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Calling symbol id (module.symbol)"
+        },
+        "to": {
+          "type": "string",
+          "description": "Called symbol id (module.symbol)"
+        },
+        "cross_module": {
+          "type": "boolean",
+          "description": "True when caller and callee are in different modules"
+        }
+      }
+    },
+    "DegreeInfo": {
+      "type": "object",
+      "required": ["module", "degree"],
+      "properties": {
+        "module": {
+          "type": "string",
+          "description": "Module id with the highest degree"
+        },
+        "degree": {
+          "type": "integer",
+          "description": "Edge count at this module"
+        }
+      }
+    },
+    "Stats": {
+      "type": "object",
+      "required": ["total_modules", "total_symbols", "total_dependency_edges", "total_type_edges", "total_call_edges"],
+      "description": "Topology metrics for the whole graph",
+      "properties": {
+        "total_modules": {
+          "type": "integer",
+          "description": "Number of module nodes in module_dependencies layer"
+        },
+        "total_symbols": {
+          "type": "integer",
+          "description": "Total symbols across all modules"
+        },
+        "total_dependency_edges": {
+          "type": "integer",
+          "description": "Number of edges in module_dependencies layer"
+        },
+        "total_type_edges": {
+          "type": "integer",
+          "description": "Number of edges in type_relationships layer"
+        },
+        "total_call_edges": {
+          "type": "integer",
+          "description": "Number of edges in call_graph layer"
+        },
+        "avg_in_degree": {
+          "type": "number",
+          "description": "Average number of modules that import a given module"
+        },
+        "max_in_degree": {
+          "$ref": "#/$defs/DegreeInfo",
+          "description": "Module with the most importers"
+        },
+        "max_out_degree": {
+          "$ref": "#/$defs/DegreeInfo",
+          "description": "Module with the most imports"
+        }
+      }
+    }
+  }
+}

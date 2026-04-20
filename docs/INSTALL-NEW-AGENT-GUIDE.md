@@ -1,9 +1,9 @@
-# Installing a New Subagent in GOgent-Fortress
+# Installing a New Subagent in goYoke
 
 > **Version:** 1.0
 > **Author:** Einstein Analysis
 > **Last Updated:** 2026-01-25
-> **Prerequisite:** GOgent-Fortress framework installed (see INSTALL-GUIDE.md)
+> **Prerequisite:** goYoke framework installed (see INSTALL-GUIDE.md)
 
 ---
 

@@ -1,16 +1,17 @@
 // Package drawer implements a collapsible side-drawer component for the
-// GOgent-Fortress TUI. Drawers can be minimised (compact tab) or expanded
+// goYoke TUI. Drawers can be minimised (compact tab) or expanded
 // (bordered content pane with a scrollable viewport).
 package drawer
 
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 )
 
 // ModalResponseMsg is emitted when the user selects or cancels a modal
@@ -64,6 +65,8 @@ const (
 	DrawerPlan DrawerID = "plan"
 	// DrawerTeams is the id for the teams health drawer.
 	DrawerTeams DrawerID = "teams"
+	// DrawerFigures is the id for the diagram/figures viewer drawer.
+	DrawerFigures DrawerID = "figures"
 )
 
 // DrawerModel is the Bubbletea model for a single drawer pane.
@@ -88,17 +91,26 @@ type DrawerModel struct {
 	activeMessage   string
 	activeOptions   []string
 	selectedIdx     int
+
+	// textInput is used when a modal has no options (ask_user / request_input).
+	// In that mode the drawer renders a free-text input field instead of an
+	// option list.
+	textInput textinput.Model
 }
 
 // NewDrawerModel returns a DrawerModel in the minimised state with no content.
 func NewDrawerModel(id DrawerID, label string, icon string) DrawerModel {
 	vp := viewport.New(0, 0)
+	ti := textinput.New()
+	ti.Placeholder = "Type your response..."
+	ti.CharLimit = 500
 	return DrawerModel{
-		id:       id,
-		state:    DrawerMinimized,
-		label:    label,
-		icon:     icon,
-		viewport: vp,
+		id:        id,
+		state:     DrawerMinimized,
+		label:     label,
+		icon:      icon,
+		viewport:  vp,
+		textInput: ti,
 	}
 }
 
@@ -194,18 +206,36 @@ func (m DrawerModel) ID() DrawerID { return m.id }
 // IsFocused reports whether the drawer currently holds focus.
 func (m DrawerModel) IsFocused() bool { return m.focused }
 
-// SetActiveModal stores the modal request state and renders options into the
-// drawer content area, expanding it automatically.
+// SetActiveModal stores the modal request state and renders the appropriate
+// interaction into the drawer content area, expanding it automatically.
+// When options is non-empty the drawer shows a selection list; when options
+// is empty it shows a free-text input field (ask_user / request_input mode).
 func (m *DrawerModel) SetActiveModal(requestID string, message string, options []string) {
 	m.activeRequestID = requestID
 	m.activeMessage = message
 	m.activeOptions = options
 	m.selectedIdx = 0
 	m.state = DrawerExpanded
-	formatted := m.formatModalContent(message, options, 0)
-	m.content = formatted
-	m.hasContent = true
-	m.viewport.SetContent(formatted)
+
+	if len(options) == 0 {
+		m.textInput.Reset()
+		m.textInput.Focus()
+		formatted := m.formatTextInputContent(message)
+		m.content = formatted
+		m.hasContent = true
+		m.viewport.SetContent(formatted)
+	} else {
+		formatted := m.formatModalContent(message, options, 0)
+		m.content = formatted
+		m.hasContent = true
+		m.viewport.SetContent(formatted)
+	}
+}
+
+// IsTextInputMode reports whether the drawer is currently showing a free-text
+// input prompt (i.e. an active modal with no options list).
+func (m DrawerModel) IsTextInputMode() bool {
+	return m.HasActiveModal() && len(m.activeOptions) == 0
 }
 
 // HasActiveModal returns true when the drawer is displaying a modal choice.
@@ -259,6 +289,32 @@ func (m DrawerModel) formatModalContent(message string, options []string, select
 	return sb.String()
 }
 
+// formatTextInputContent renders the modal prompt together with the current
+// state of the free-text input field.
+func (m DrawerModel) formatTextInputContent(message string) string {
+	var sb strings.Builder
+	sb.WriteString(message)
+	sb.WriteString("\n\n")
+	sb.WriteString(m.textInput.View())
+	sb.WriteString("\n\n[Enter] Submit  [Esc] Cancel")
+	return sb.String()
+}
+
+// scrollToSelected adjusts the viewport offset so the currently selected
+// option line is visible. Called after changing selectedIdx.
+func (m *DrawerModel) scrollToSelected() {
+	if len(m.activeOptions) == 0 {
+		return
+	}
+	msgLines := strings.Count(m.activeMessage, "\n") + 1
+	targetLine := msgLines + 1 + m.selectedIdx // +1 for blank line after message
+	if targetLine < m.viewport.YOffset {
+		m.viewport.YOffset = targetLine
+	} else if targetLine >= m.viewport.YOffset+m.viewport.Height {
+		m.viewport.YOffset = targetLine - m.viewport.Height + 1
+	}
+}
+
 // ViewMinimized renders a compact bordered row: icon + label.
 func (m DrawerModel) ViewMinimized() string {
 	tab := config.StyleSubtle.Render(m.icon + " " + m.label)
@@ -300,6 +356,8 @@ func (m DrawerModel) ViewExpanded() string {
 		hint = "↑/↓ scroll • alt+v full view • esc minimize"
 	} else if m.id == DrawerOptions {
 		hint = "↑/↓ scroll • alt+o full view • esc minimize"
+	} else if m.id == DrawerFigures {
+		hint = "↑/↓ scroll • tab next • enter open • esc minimize"
 	}
 	hint = config.StyleMuted.Render(hint)
 
@@ -328,51 +386,83 @@ func (m DrawerModel) View() string {
 // Otherwise, esc minimises and up/down/pgup/pgdn scroll the viewport.
 // Returns any resulting tea.Cmd (nil for most operations).
 func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
-	// Modal-active key handling (TDS-006).
 	if m.HasActiveModal() {
-		switch msg.String() {
-		case "up", "k":
-			if m.selectedIdx > 0 {
-				m.selectedIdx--
-			}
-			formatted := m.formatModalContent(m.activeMessage, m.activeOptions, m.selectedIdx)
-			m.content = formatted
-			m.viewport.SetContent(formatted)
-		case "down", "j":
-			if m.selectedIdx < len(m.activeOptions)-1 {
-				m.selectedIdx++
-			}
-			formatted := m.formatModalContent(m.activeMessage, m.activeOptions, m.selectedIdx)
-			m.content = formatted
-			m.viewport.SetContent(formatted)
-		case "enter":
-			selected := m.SelectedOption()
-			reqID := m.activeRequestID
-			m.ClearActiveModal()
-			m.ClearContent()
-			return func() tea.Msg {
-				return ModalResponseMsg{RequestID: reqID, Value: selected}
-			}
-		case "esc":
-			reqID := m.activeRequestID
-			m.ClearActiveModal()
-			m.ClearContent()
-			return func() tea.Msg {
-				return ModalResponseMsg{RequestID: reqID, Value: "", Cancelled: true}
-			}
+		if m.IsTextInputMode() {
+			return m.handleTextInputKey(msg)
 		}
-		// Swallow all other keys during modal interaction.
-		return nil
+		return m.handleModalSelectionKey(msg)
 	}
+	return m.handleNormalKey(msg)
+}
 
-	// Plan drawer: Alt+V opens full-screen plan view (TDS-007).
-	if msg.String() == "alt+v" && m.id == DrawerPlan {
-		return func() tea.Msg { return PlanViewRequestMsg{} }
+// handleTextInputKey handles key events in free-text input mode (ask_user / request_input).
+func (m *DrawerModel) handleTextInputKey(msg tea.KeyMsg) tea.Cmd {
+	switch msg.String() {
+	case "enter":
+		value := m.textInput.Value()
+		reqID := m.activeRequestID
+		m.textInput.Reset()
+		m.textInput.Blur()
+		m.ClearActiveModal()
+		m.ClearContent()
+		return func() tea.Msg {
+			return ModalResponseMsg{RequestID: reqID, Value: value}
+		}
+	case "esc":
+		reqID := m.activeRequestID
+		m.textInput.Reset()
+		m.textInput.Blur()
+		m.ClearActiveModal()
+		m.ClearContent()
+		return func() tea.Msg {
+			return ModalResponseMsg{RequestID: reqID, Value: "", Cancelled: true}
+		}
+	default:
+		var cmd tea.Cmd
+		m.textInput, cmd = m.textInput.Update(msg)
+		formatted := m.formatTextInputContent(m.activeMessage)
+		m.content = formatted
+		m.viewport.SetContent(formatted)
+		return cmd
 	}
+}
 
-	// Options drawer: Alt+O opens full-screen options view.
-	if msg.String() == "alt+o" && m.id == DrawerOptions {
-		if m.HasActiveModal() {
+// handleModalSelectionKey handles key events in option-list selection mode.
+func (m *DrawerModel) handleModalSelectionKey(msg tea.KeyMsg) tea.Cmd {
+	switch msg.String() {
+	case "up", "k":
+		if m.selectedIdx > 0 {
+			m.selectedIdx--
+		}
+		formatted := m.formatModalContent(m.activeMessage, m.activeOptions, m.selectedIdx)
+		m.content = formatted
+		m.viewport.SetContent(formatted)
+		m.scrollToSelected()
+	case "down", "j":
+		if m.selectedIdx < len(m.activeOptions)-1 {
+			m.selectedIdx++
+		}
+		formatted := m.formatModalContent(m.activeMessage, m.activeOptions, m.selectedIdx)
+		m.content = formatted
+		m.viewport.SetContent(formatted)
+		m.scrollToSelected()
+	case "enter":
+		selected := m.SelectedOption()
+		reqID := m.activeRequestID
+		m.ClearActiveModal()
+		m.ClearContent()
+		return func() tea.Msg {
+			return ModalResponseMsg{RequestID: reqID, Value: selected}
+		}
+	case "esc":
+		reqID := m.activeRequestID
+		m.ClearActiveModal()
+		m.ClearContent()
+		return func() tea.Msg {
+			return ModalResponseMsg{RequestID: reqID, Value: "", Cancelled: true}
+		}
+	case "alt+o":
+		if m.id == DrawerOptions {
 			reqID := m.activeRequestID
 			message := m.activeMessage
 			opts := m.activeOptions
@@ -387,13 +477,25 @@ func (m *DrawerModel) HandleKey(msg tea.KeyMsg) tea.Cmd {
 				}
 			}
 		}
+	}
+	return nil
+}
+
+// handleNormalKey handles key events when no modal is active.
+func (m *DrawerModel) handleNormalKey(msg tea.KeyMsg) tea.Cmd {
+	// Plan drawer: Alt+V opens full-screen plan view (TDS-007).
+	if msg.String() == "alt+v" && m.id == DrawerPlan {
+		return func() tea.Msg { return PlanViewRequestMsg{} }
+	}
+
+	// Options drawer: Alt+O opens full-screen options view.
+	if msg.String() == "alt+o" && m.id == DrawerOptions {
 		content := m.content
 		return func() tea.Msg {
 			return OptionsViewRequestMsg{Content: content}
 		}
 	}
 
-	// Normal (non-modal) key handling.
 	switch msg.String() {
 	case "esc":
 		m.Minimize()

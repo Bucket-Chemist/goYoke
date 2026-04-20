@@ -263,7 +263,7 @@ func TestExpandedDrawers(t *testing.T) {
 }
 
 func TestSetSizeHeightDistribution(t *testing.T) {
-	// With 3 drawers stacked vertically, each minimized drawer = 3 rows
+	// With 4 drawers stacked vertically, each minimized drawer = 3 rows
 	// (border top + label + border bottom). Expanded drawers split the
 	// remaining height; remainder goes to the first expanded.
 	tests := []struct {
@@ -281,42 +281,42 @@ func TestSetSizeHeightDistribution(t *testing.T) {
 			wantPlanH: 3,
 		},
 		{
-			// h=20, 2 minimized (plan+teams) = 6 rows, options = 20-6 = 14.
+			// h=20, 3 minimized (plan+teams+figures) = 9 rows, options = 20-9 = 11.
 			name:      "options expanded plan minimized",
 			setup:     func(s *DrawerStack) { s.Options().Expand() },
 			h:         20,
-			wantOptH:  14,
+			wantOptH:  11,
 			wantPlanH: 3,
 		},
 		{
-			// h=20, 2 minimized (options+teams) = 6 rows, plan = 20-6 = 14.
+			// h=20, 3 minimized (options+teams+figures) = 9 rows, plan = 20-9 = 11.
 			name:      "plan expanded options minimized",
 			setup:     func(s *DrawerStack) { s.Plan().Expand() },
 			h:         20,
 			wantOptH:  3,
-			wantPlanH: 14,
+			wantPlanH: 11,
 		},
 		{
-			// h=20, 1 minimized (teams) = 3 rows, expanded = 17, 17/2=8 rem 1 → opt=9, plan=8.
+			// h=20, 2 minimized (teams+figures) = 6 rows, expanded = 14, 14/2=7 each.
 			name: "both expanded teams minimized",
 			setup: func(s *DrawerStack) {
 				s.Options().Expand()
 				s.Plan().Expand()
 			},
 			h:         20,
-			wantOptH:  9,
-			wantPlanH: 8,
+			wantOptH:  7,
+			wantPlanH: 7,
 		},
 		{
-			// h=21, 1 minimized (teams) = 3 rows, expanded = 18, 18/2=9 each.
+			// h=21, 2 minimized (teams+figures) = 6 rows, expanded = 15, 15/2=7 rem 1 → opt=8, plan=7.
 			name: "both expanded even split",
 			setup: func(s *DrawerStack) {
 				s.Options().Expand()
 				s.Plan().Expand()
 			},
 			h:         21,
-			wantOptH:  9,
-			wantPlanH: 9,
+			wantOptH:  8,
+			wantPlanH: 7,
 		},
 	}
 
@@ -408,6 +408,124 @@ func TestDrawerStackViewNonEmpty(t *testing.T) {
 	s.SetPlanContent("some plan")
 	if s.View() == "" {
 		t.Error("View() should be non-empty when both expanded")
+	}
+}
+
+// ---- Text-input modal mode tests ----
+
+func TestSetActiveModalTextInputMode(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetActiveModal("req-1", "What is your name?", nil)
+
+	if !m.HasActiveModal() {
+		t.Error("HasActiveModal should be true after SetActiveModal with no options")
+	}
+	if !m.IsTextInputMode() {
+		t.Error("IsTextInputMode should be true when options is nil")
+	}
+	if m.State() != DrawerExpanded {
+		t.Error("SetActiveModal should expand the drawer")
+	}
+	if !m.HasContent() {
+		t.Error("SetActiveModal should set hasContent")
+	}
+	if !strings.Contains(m.Content(), "What is your name?") {
+		t.Error("drawer content should contain the modal message")
+	}
+	if !strings.Contains(m.Content(), "[Enter] Submit") {
+		t.Error("drawer content should contain the submit hint")
+	}
+}
+
+func TestSetActiveModalEmptySliceIsTextInputMode(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetActiveModal("req-2", "Confirm?", []string{})
+
+	if !m.IsTextInputMode() {
+		t.Error("IsTextInputMode should be true when options is empty slice")
+	}
+}
+
+func TestIsTextInputModeFalseWhenOptionsPresent(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetActiveModal("req-3", "Choose:", []string{"A", "B"})
+
+	if m.IsTextInputMode() {
+		t.Error("IsTextInputMode should be false when options are present")
+	}
+}
+
+func TestTextInputModeKeyTypingUpdatesContent(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetSize(80, 20)
+	m.SetActiveModal("req-4", "Enter value:", nil)
+
+	// Type 'h', 'i'
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+
+	if !strings.Contains(m.Content(), "hi") {
+		t.Errorf("drawer content should contain typed text 'hi', got: %q", m.Content())
+	}
+}
+
+func TestTextInputModeEnterSubmitsValue(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetSize(80, 20)
+	m.SetActiveModal("req-5", "What?", nil)
+
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'o'}})
+	m.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+
+	cmd := m.HandleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("Enter in text-input mode should return a non-nil cmd")
+	}
+
+	msg := cmd()
+	resp, ok := msg.(ModalResponseMsg)
+	if !ok {
+		t.Fatalf("cmd() should return ModalResponseMsg, got %T", msg)
+	}
+	if resp.RequestID != "req-5" {
+		t.Errorf("RequestID=%q, want %q", resp.RequestID, "req-5")
+	}
+	if resp.Value != "ok" {
+		t.Errorf("Value=%q, want %q", resp.Value, "ok")
+	}
+	if resp.Cancelled {
+		t.Error("Cancelled should be false on Enter submit")
+	}
+
+	// Modal should be cleared after submit
+	if m.HasActiveModal() {
+		t.Error("HasActiveModal should be false after Enter submit")
+	}
+}
+
+func TestTextInputModeEscCancels(t *testing.T) {
+	m := NewDrawerModel(DrawerOptions, "Options", "⚙")
+	m.SetSize(80, 20)
+	m.SetActiveModal("req-6", "Prompt?", nil)
+
+	cmd := m.HandleKey(tea.KeyMsg{Type: tea.KeyEsc})
+	if cmd == nil {
+		t.Fatal("Esc in text-input mode should return a non-nil cmd")
+	}
+
+	msg := cmd()
+	resp, ok := msg.(ModalResponseMsg)
+	if !ok {
+		t.Fatalf("cmd() should return ModalResponseMsg, got %T", msg)
+	}
+	if resp.RequestID != "req-6" {
+		t.Errorf("RequestID=%q, want %q", resp.RequestID, "req-6")
+	}
+	if !resp.Cancelled {
+		t.Error("Cancelled should be true on Esc")
+	}
+	if resp.Value != "" {
+		t.Errorf("Value should be empty on cancel, got %q", resp.Value)
 	}
 }
 

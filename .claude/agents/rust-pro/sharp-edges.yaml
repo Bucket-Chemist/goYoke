@@ -1,8 +1,8 @@
 # Sharp Edges for Rust Pro Agent
 # These are common pitfalls and learned gotchas
 
-version: "1.0"
-updated: "2026-04-02"
+version: "1.1"
+updated: "2026-04-17"
 
 sharp_edges:
   - id: integer-overflow-debug-release
@@ -521,4 +521,98 @@ sharp_edges:
       cargo clippy --all-targets -- -D warnings
 
       Fix all warnings before returning output to the user.
+    auto_inject: true
+
+  - id: unnecessary-async-state-machine
+    severity: high
+    category: async-optimization
+    description: "async fn with no .await generates unnecessary state machine overhead"
+    symptom: "Inflated binary size and future size for functions that never yield"
+    solution: |
+      Functions marked async that contain no .await still generate a full
+      state machine. This adds dead weight to binary size and future size.
+
+      Clippy PR #16244 (rust-clippy) will lint this, but is not yet stable.
+
+      WRONG: pointless async state machine
+      async fn load_default() -> Config {
+          Config::new()  // No .await — generates state machine for nothing
+      }
+
+      CORRECT: return a ready future (zero-cost)
+      fn load_default() -> impl Future<Output = Config> {
+          std::future::ready(Config::new())
+      }
+
+      This is especially impactful for trait implementations where many
+      methods may have synchronous default implementations.
+
+      Edition 2024 note: Future is in the prelude, so no import needed.
+    auto_inject: true
+
+  - id: owned-values-inflate-future-size
+    severity: high
+    category: async-optimization
+    description: "Passing owned large values to async fn duplicates them in the state machine"
+    symptom: "Unexpectedly large future sizes, high stack usage, poor optimizer output"
+    solution: |
+      Owned values passed to async functions are stored TWICE: once as the
+      parameter and once inside the generated state machine. This compounds
+      with buffer sizes.
+
+      Measured on Rust 1.94, x86_64:
+      async fn big(mut buffer: [u8; 1024]) { ... }   // Future = 2080 bytes
+      async fn small(buffer: &mut [u8; 1024]) { ... } // Future = 40 bytes
+
+      That is a 52x difference (98% reduction) from one signature change.
+
+      WRONG: owned buffer in async fn
+      async fn process(data: Vec<u8>) -> Result<()> {
+          // Vec is 24 bytes (ptr+len+cap) but the principle applies
+          // to any large value type: arrays, structs with buffers
+          do_io(&data).await
+      }
+
+      CORRECT: pass by reference
+      async fn process(data: &[u8]) -> Result<()> {
+          do_io(data).await
+      }
+
+      Rule of thumb: if a type is larger than a pointer (8 bytes on x86_64),
+      pass it by reference into async functions.
+    auto_inject: true
+
+  - id: async-passthrough-wrapper
+    severity: medium
+    category: async-optimization
+    description: "Trait impl that just .awaits inner future creates unnecessary wrapper state machine"
+    symptom: "Extra state machine layer per delegation, inflated binary size"
+    solution: |
+      Trait implementations that simply forward to an inner method and
+      .await the result generate a redundant wrapper state machine.
+
+      WRONG: wrapper state machine
+      impl Service for MyWrapper {
+          async fn call(&self, req: Request) -> Result<Response> {
+              self.inner.call(req).await  // Extra state machine just to forward
+          }
+      }
+
+      CORRECT: return the inner future directly
+      impl Service for MyWrapper {
+          fn call(&self, req: Request) -> impl Future<Output = Result<Response>> {
+              self.inner.call(req)  // Zero-cost: no wrapper state machine
+          }
+      }
+
+      For functions with postamble logic, use futures::FutureExt::map():
+      use futures::FutureExt;
+
+      fn call(&self, req: Request) -> impl Future<Output = Result<Response>> {
+          self.inner.call(req).map(|res| res.map(|r| r.with_header("x-via", "wrapper")))
+      }
+
+      Caveat: preamble code (before the future) now executes eagerly on
+      call, not lazily on first poll. This is usually fine but changes
+      behavior if callers construct futures without polling them.
     auto_inject: true

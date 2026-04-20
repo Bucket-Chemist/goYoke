@@ -1,5 +1,5 @@
 /einstein please critically evaluate the implementation tickets planned in  
-GOgent86a-093 in the context (and all subtickets)
+goYoke86a-093 in the context (and all subtickets)
 of the system in which they operate. if you need to orient yourself please see  
  systems-architecture-overview. whilst you are analysing, delegate an overview to
 staff-architect (force override model to opus) as a  
@@ -29,16 +29,16 @@ Implementation Plan
 
 Phase 1: Critical Fixes (4 tickets, 6-8 hours)
 
-1. cmd/gogent-load-context: 0% → 80% (no tests exist)
-2. cmd/gogent-sharp-edge: 18.8% → 75% (missing main() tests)
-3. cmd/gogent-capture-intent: 52.6% → 80% (missing run/append tests)
-4. cmd/gogent-validate: 56.9% → 85% (only missing main() integration tests)
+1. cmd/goyoke-load-context: 0% → 80% (no tests exist)
+2. cmd/goyoke-sharp-edge: 18.8% → 75% (missing main() tests)
+3. cmd/goyoke-capture-intent: 52.6% → 80% (missing run/append tests)
+4. cmd/goyoke-validate: 56.9% → 85% (only missing main() integration tests)
 
 Expected outcome: +6-8pp gain → ~83-85% overall coverage ✅ Exceeds 80%  
  requirement
 
 Phase 2: Medium Priority (2 tickets, 6-8 hours)  
- 5. cmd/gogent-archive: 76.9% → 85%  
+ 5. cmd/goyoke-archive: 76.9% → 85%  
  6. pkg/config: 74.7% → 85%
 
 Phase 3: Polish (2 tickets, 5-6 hours)  
@@ -50,7 +50,7 @@ Key Recommendations
 - Exclude test harness from coverage (meta-testing, low ROI)
 - Parallel execution possible within each phase
 - Race detector required for all concurrent code tests
-- Follow existing patterns from cmd/gogent-aggregate and cmd/gogent-validate  
+- Follow existing patterns from cmd/goyoke-aggregate and cmd/goyoke-validate  
   tests
 
 Next Steps
@@ -70,7 +70,7 @@ Which approach would you prefer?
 ● Ran 1 stop hook  
  ⎿ Stop hook error: Failed with non-blocking status code: /bin/sh: line  
  1:  
- /home/doktersmol/Documents/GOgent-Fortress/.claude/hooks/stop-gate.sh:  
+ /home/doktersmol/Documents/goYoke/.claude/hooks/stop-gate.sh:  
  No such file or directory
 
 ✻ Brewed for 3m 10s
@@ -88,15 +88,15 @@ Spawning 8 parallel go-pro agents for comprehensive coverage improvement. Each
 agent handles one module independently.
 
 ● 8 Task agents launched (ctrl+o to expand)  
- ├─ Coverage: cmd/gogent-load-context 0%→80%  
+ ├─ Coverage: cmd/goyoke-load-context 0%→80%  
  │ ⎿ Running in the background (↓ to manage)  
- ├─ Coverage: cmd/gogent-sharp-edge 18.8%→75%  
+ ├─ Coverage: cmd/goyoke-sharp-edge 18.8%→75%  
  │ ⎿ Running in the background (↓ to manage)  
- ├─ Coverage: cmd/gogent-capture-intent 52.6%→80%  
+ ├─ Coverage: cmd/goyoke-capture-intent 52.6%→80%  
  │ ⎿ Running in the background (↓ to manage)  
- ├─ Coverage: cmd/gogent-validate 56.9%→85%  
+ ├─ Coverage: cmd/goyoke-validate 56.9%→85%  
  │ ⎿ Running in the background (↓ to manage)  
- ├─ Coverage: cmd/gogent-archive 76.9%→85%  
+ ├─ Coverage: cmd/goyoke-archive 76.9%→85%  
  │ ⎿ Running in the background (↓ to manage)  
  ├─ Coverage: pkg/config 74.7%→85%  
  │ ⎿ Running in the background (↓ to manage)  
@@ -129,13 +129,13 @@ When you spawned 8 agents with run_in_background: true, the system executed:
 
 claude-code (PID 1000)  
  ├─ go-pro agent 1 (PID 1001) → pkg/config  
- ├─ go-pro agent 2 (PID 1002) → cmd/gogent-sharp-edge  
- ├─ go-pro agent 3 (PID 1003) → cmd/gogent-capture-intent  
- ├─ go-pro agent 4 (PID 1004) → cmd/gogent-validate  
- ├─ go-pro agent 5 (PID 1005) → cmd/gogent-archive  
+ ├─ go-pro agent 2 (PID 1002) → cmd/goyoke-sharp-edge  
+ ├─ go-pro agent 3 (PID 1003) → cmd/goyoke-capture-intent  
+ ├─ go-pro agent 4 (PID 1004) → cmd/goyoke-validate  
+ ├─ go-pro agent 5 (PID 1005) → cmd/goyoke-archive  
  ├─ go-pro agent 6 (PID 1006) → pkg/session  
  ├─ go-pro agent 7 (PID 1007) → pkg/memory  
- └─ go-pro agent 8 (PID 1008) → cmd/gogent-load-context
+ └─ go-pro agent 8 (PID 1008) → cmd/goyoke-load-context
 
 Each agent is a separate operating system process:
 
@@ -173,25 +173,25 @@ Recommended Solution: Ticket-Driven Parallel Orchestration
 Architecture Pattern: Dependency Graph Execution
 
 Given tickets like:  
- GOgent-087 (no deps) ─────────┐  
- ├─→ GOgent-088 (deps: 087) ──→ GOgent-090 (deps: 089)  
- GOgent-089 (no deps) ─────────┘
+ goYoke-087 (no deps) ─────────┐  
+ ├─→ goYoke-088 (deps: 087) ──→ goYoke-090 (deps: 089)  
+ goYoke-089 (no deps) ─────────┘
 
 Execution phases:
 
 Phase 1: Build dependency graph  
  graph = {  
- "GOgent-087": {"deps": [], "status": "pending"},  
- "GOgent-088": {"deps": ["GOgent-087"], "status": "blocked"},  
- "GOgent-089": {"deps": [], "status": "pending"},  
- "GOgent-090": {"deps": ["GOgent-089"], "status": "blocked"}  
+ "goYoke-087": {"deps": [], "status": "pending"},  
+ "goYoke-088": {"deps": ["goYoke-087"], "status": "blocked"},  
+ "goYoke-089": {"deps": [], "status": "pending"},  
+ "goYoke-090": {"deps": ["goYoke-089"], "status": "blocked"}  
  }
 
 Phase 2: Execute ready tickets in parallel  
  ready = [ticket for ticket in graph if not ticket["deps"] and ticket["status"]
 == "pending"]
 
-# ready = ["GOgent-087", "GOgent-089"]
+# ready = ["goYoke-087", "goYoke-089"]
 
 # Spawn parallel agents
 
@@ -200,11 +200,11 @@ for ticket_id in ready:
 
 Phase 3: On completion, unblock dependents
 
-# When GOgent-087 completes:
+# When goYoke-087 completes:
 
 for ticket in graph:  
- if "GOgent-087" in ticket["deps"]:  
- ticket["deps"].remove("GOgent-087")  
+ if "goYoke-087" in ticket["deps"]:  
+ ticket["deps"].remove("goYoke-087")  
  if len(ticket["deps"]) == 0:  
  ticket["status"] = "pending" # Now ready
 
@@ -213,11 +213,11 @@ for ticket in graph:
 newly_ready = [ticket for ticket in graph if not ticket["deps"] and  
  ticket["status"] == "pending"]
 
-# newly_ready = ["GOgent-088"]
+# newly_ready = ["goYoke-088"]
 
 # Spawn next wave
 
-spawn_agent("GOgent-088", background=True)
+spawn_agent("goYoke-088", background=True)
 
 Implementation Steps
 
@@ -287,19 +287,19 @@ File: ~/.claude/skills/ticket-parallel/SKILL.md
 ## Output
 
 [Wave 1] Spawning 3 parallel agents:  
- → GOgent-087 (agent a123456)  
- → GOgent-089 (agent a234567)  
- → GOgent-091 (agent a345678)
+ → goYoke-087 (agent a123456)  
+ → goYoke-089 (agent a234567)  
+ → goYoke-091 (agent a345678)
 
 [Wave 1] Waiting for completions...
 
-[Completed] GOgent-087 (2.3 minutes)  
+[Completed] goYoke-087 (2.3 minutes)  
  [Wave 2] Spawning 1 agent:  
- → GOgent-088 (agent a456789)
+ → goYoke-088 (agent a456789)
 
-[Completed] GOgent-089 (1.8 minutes)  
+[Completed] goYoke-089 (1.8 minutes)  
  [Wave 2] Spawning 1 agent:  
- → GOgent-090 (agent a567890)
+ → goYoke-090 (agent a567890)
 
 ...
 
@@ -321,9 +321,9 @@ This would:
 1. Find all ready tickets (no dependencies)
 2. Present user with multi-select:  
    Ready tickets (no dependencies):  
-   [ ] GOgent-087 - PostToolUse Event for Benchmarking  
-   [ ] GOgent-089 - Hook Integration Setup  
-   [ ] GOgent-091 - Stop-Gate Investigation
+   [ ] goYoke-087 - PostToolUse Event for Benchmarking  
+   [ ] goYoke-089 - Hook Integration Setup  
+   [ ] goYoke-091 - Stop-Gate Investigation
 
 Select tickets to execute in parallel:  
  3. Spawn selected tickets as background agents  
@@ -351,7 +351,7 @@ Your ticket format contains everything needed for isolated execution:
 
 1. Complete Specification
 
-# From GOgent-087
+# From goYoke-087
 
 File: pkg/observability/benchmark_events.go  
  Imports: [...full list...]  
@@ -369,11 +369,11 @@ No context needed beyond ticket contents.
 
 2. Explicit Dependencies
 
-dependencies: ["GOgent-069"]
+dependencies: ["goYoke-069"]
 
 Orchestrator knows:
 
-- Can't start until GOgent-069 completes
+- Can't start until goYoke-069 completes
 - No implicit dependencies (all declared)
 - Can safely run all non-dependent tickets in parallel
 
@@ -423,10 +423,10 @@ Dependency Chain Performance
 
 Example ticket set:  
  Wave 1 (parallel):  
- ├─ GOgent-087 (1h) ─┐  
- ├─ GOgent-089 (1.5h)├─→ Wave 2  
- └─ GOgent-091 (2h) ─┘ ├─ GOgent-088 (1.5h) ─→ Wave 3  
- └─ GOgent-090 (1h) ─→ └─ GOgent-092 (1h)
+ ├─ goYoke-087 (1h) ─┐  
+ ├─ goYoke-089 (1.5h)├─→ Wave 2  
+ └─ goYoke-091 (2h) ─┘ ├─ goYoke-088 (1.5h) ─→ Wave 3  
+ └─ goYoke-090 (1h) ─→ └─ goYoke-092 (1h)
 
 Sequential execution: 1 + 1.5 + 2 + 1.5 + 1 + 1 = 8 hours  
  Parallel execution: max(1, 1.5, 2) + max(1.5, 1) + 1 = 2 + 1.5 + 1 = 4.5 hours
@@ -458,7 +458,7 @@ What Could Go Wrong?
    - Monitoring: Track token usage per agent
 
 4. Dependency Cycle Detection
-   - Risk: GOgent-087 depends on GOgent-088 which depends on GOgent-087
+   - Risk: goYoke-087 depends on goYoke-088 which depends on goYoke-087
    - Mitigation: Pre-flight graph analysis (topological sort)
    - Error: Abort with cycle report
 
@@ -533,36 +533,36 @@ Long-Term (Productionization)
 Practical Example: Executing observability-remaining Tickets
 
 Given your ticket set:  
- GOgent-087: PostToolUse Event (deps: GOgent-069) - 1h  
- GOgent-088: Benchmark Logging (deps: GOgent-087) - 1.5h  
- GOgent-089: Hook Integration (deps: None) - 1h  
- GOgent-090: Build CLI (deps: GOgent-089) - 1h  
- GOgent-091: Stop-Gate Investigation (deps: None) - 2h  
- GOgent-092: Schema Updates (deps: GOgent-091) - 1h  
- GOgent-093: Integration Tests (deps: GOgent-088, GOgent-090, GOgent-092) - 2h
+ goYoke-087: PostToolUse Event (deps: goYoke-069) - 1h  
+ goYoke-088: Benchmark Logging (deps: goYoke-087) - 1.5h  
+ goYoke-089: Hook Integration (deps: None) - 1h  
+ goYoke-090: Build CLI (deps: goYoke-089) - 1h  
+ goYoke-091: Stop-Gate Investigation (deps: None) - 2h  
+ goYoke-092: Schema Updates (deps: goYoke-091) - 1h  
+ goYoke-093: Integration Tests (deps: goYoke-088, goYoke-090, goYoke-092) - 2h
 
 Execution Plan:
 
-Wave 1 (3 parallel agents, assuming GOgent-069 complete):  
- ├─ GOgent-087 (1h, agent-A)  
- ├─ GOgent-089 (1h, agent-B)  
- └─ GOgent-091 (2h, agent-C)
+Wave 1 (3 parallel agents, assuming goYoke-069 complete):  
+ ├─ goYoke-087 (1h, agent-A)  
+ ├─ goYoke-089 (1h, agent-B)  
+ └─ goYoke-091 (2h, agent-C)
 
 ↓ (wait max(1h, 1h, 2h) = 2h)
 
 Wave 2 (2 parallel agents):  
- ├─ GOgent-088 (1.5h, agent-D) [unblocked by 087]  
- └─ GOgent-090 (1h, agent-E) [unblocked by 089]
+ ├─ goYoke-088 (1.5h, agent-D) [unblocked by 087]  
+ └─ goYoke-090 (1h, agent-E) [unblocked by 089]
 
 ↓ (wait max(1.5h, 1h) = 1.5h)
 
 Wave 3 (1 agent):  
- └─ GOgent-092 (1h, agent-F) [unblocked by 091]
+ └─ goYoke-092 (1h, agent-F) [unblocked by 091]
 
 ↓ (wait 1h)
 
 Wave 4 (1 agent):  
- └─ GOgent-093 (2h, agent-G) [unblocked by 088, 090, 092]
+ └─ goYoke-093 (2h, agent-G) [unblocked by 088, 090, 092]
 
 Total time: 2h + 1.5h + 1h + 2h = 6.5 hours  
  Sequential time: 1 + 1.5 + 1 + 1 + 2 + 1 + 2 = 9.5 hours  
@@ -579,23 +579,23 @@ Command execution:
 
 [Analysis] Found 7 tickets  
  [Graph] 4 waves detected  
- [Wave 1] Ready: GOgent-087, GOgent-089, GOgent-091
+ [Wave 1] Ready: goYoke-087, goYoke-089, goYoke-091
 
 Execute Wave 1? (y/n): y
 
-[Spawning] GOgent-087 → agent-A (background)  
- [Spawning] GOgent-089 → agent-B (background)  
- [Spawning] GOgent-091 → agent-C (background)
+[Spawning] goYoke-087 → agent-A (background)  
+ [Spawning] goYoke-089 → agent-B (background)  
+ [Spawning] goYoke-091 → agent-C (background)
 
 [Wave 1] 3 agents running. Monitoring...
 
 ... (2 hours later) ...
 
-[Completed] GOgent-087 (1.2h, agent-A)  
- [Completed] GOgent-089 (0.9h, agent-B)  
- [Completed] GOgent-091 (2.1h, agent-C)
+[Completed] goYoke-087 (1.2h, agent-A)  
+ [Completed] goYoke-089 (0.9h, agent-B)  
+ [Completed] goYoke-091 (2.1h, agent-C)
 
-[Wave 2] Ready: GOgent-088, GOgent-090  
+[Wave 2] Ready: goYoke-088, goYoke-090  
  Execute Wave 2? (y/n): y
 
 ... continues ...
@@ -624,5 +624,5 @@ existing /ticket skill.
 ● Ran 1 stop hook  
  ⎿ Stop hook error: Failed with non-blocking status code: /bin/sh: line  
  1:  
- /home/doktersmol/Documents/GOgent-Fortress/.claude/hooks/stop-gate.sh:  
+ /home/doktersmol/Documents/goYoke/.claude/hooks/stop-gate.sh:  
  No such file or directory

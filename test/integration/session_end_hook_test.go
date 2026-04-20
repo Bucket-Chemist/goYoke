@@ -11,14 +11,14 @@ import (
 
 func TestSessionEndHook_EndToEnd(t *testing.T) {
 	// Skip if binary not built
-	binaryPath := "../../bin/gogent-archive"
+	binaryPath := "../../bin/goyoke-archive"
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Skip("gogent-archive binary not built. Run: make build-archive")
+		t.Skip("goyoke-archive binary not built. Run: make build-archive")
 	}
 
 	// Setup temp project directory
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create temp metrics files
@@ -26,20 +26,20 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 	os.Setenv("XDG_RUNTIME_DIR", runtimeDir)
 	defer os.Unsetenv("XDG_RUNTIME_DIR")
 
-	gogentDir := filepath.Join(runtimeDir, "gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(runtimeDir, "goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Tool counter (new format: single file with count)
-	counterFile := filepath.Join(gogentDir, "tool-counter")
+	counterFile := filepath.Join(goyokeDir, "tool-counter")
 	os.WriteFile(counterFile, []byte("3"), 0644)
 
 	// Error log
-	errorLog := filepath.Join(gogentDir, "claude-error-patterns.jsonl")
+	errorLog := filepath.Join(goyokeDir, "claude-error-patterns.jsonl")
 	os.WriteFile(errorLog, []byte(`{"error":"test"}
 `), 0644)
 
 	// Violations log (in runtime dir - matches config.GetViolationsLogPath())
-	violationsLog := filepath.Join(gogentDir, "routing-violations.jsonl")
+	violationsLog := filepath.Join(goyokeDir, "routing-violations.jsonl")
 	os.WriteFile(violationsLog, []byte(`{"violation":"test"}
 `), 0644)
 
@@ -51,9 +51,9 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 	}
 	eventJSON, _ := json.Marshal(sessionEvent)
 
-	// Invoke gogent-archive
+	// Invoke goyoke-archive
 	cmd := exec.Command(binaryPath)
-	cmd.Env = append(os.Environ(), "GOGENT_PROJECT_DIR="+tmpDir)
+	cmd.Env = append(os.Environ(), "GOYOKE_PROJECT_DIR="+tmpDir)
 	cmd.Stdin = bytes.NewReader(eventJSON)
 
 	var stdout, stderr bytes.Buffer
@@ -62,7 +62,7 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 
 	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("gogent-archive execution failed: %v\nStderr: %s", err, stderr.String())
+		t.Fatalf("goyoke-archive execution failed: %v\nStderr: %s", err, stderr.String())
 	}
 
 	// SessionEnd hooks output empty JSON per Claude Code schema
@@ -101,9 +101,9 @@ func TestSessionEndHook_EndToEnd(t *testing.T) {
 }
 
 func TestSessionEndHook_ErrorHandling(t *testing.T) {
-	binaryPath := "../../bin/gogent-archive"
+	binaryPath := "../../bin/goyoke-archive"
 	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Skip("gogent-archive binary not built")
+		t.Skip("goyoke-archive binary not built")
 	}
 
 	// Invalid JSON input
@@ -127,8 +127,8 @@ func TestSessionEndHook_ErrorHandling(t *testing.T) {
 
 	// Error message should be on stderr with component tag
 	stderrOutput := stderr.String()
-	if !bytes.Contains(stderr.Bytes(), []byte("[gogent-archive]")) {
-		t.Errorf("Error message should contain [gogent-archive] component tag on stderr: %s", stderrOutput)
+	if !bytes.Contains(stderr.Bytes(), []byte("[goyoke-archive]")) {
+		t.Errorf("Error message should contain [goyoke-archive] component tag on stderr: %s", stderrOutput)
 	}
 
 	// Error emoji should be present

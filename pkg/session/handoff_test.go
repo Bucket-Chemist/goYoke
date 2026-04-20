@@ -18,12 +18,12 @@ func TestDefaultHandoffConfig(t *testing.T) {
 		t.Errorf("Expected ProjectDir %s, got: %s", projectDir, config.ProjectDir)
 	}
 
-	expectedHandoffPath := filepath.Join(projectDir, ".gogent", "memory", "handoffs.jsonl")
+	expectedHandoffPath := filepath.Join(projectDir, ".goyoke", "memory", "handoffs.jsonl")
 	if config.HandoffPath != expectedHandoffPath {
 		t.Errorf("Expected HandoffPath %s, got: %s", expectedHandoffPath, config.HandoffPath)
 	}
 
-	expectedPendingPath := filepath.Join(projectDir, ".gogent", "memory", "pending-learnings.jsonl")
+	expectedPendingPath := filepath.Join(projectDir, ".goyoke", "memory", "pending-learnings.jsonl")
 	if config.PendingPath != expectedPendingPath {
 		t.Errorf("Expected PendingPath %s, got: %s", expectedPendingPath, config.PendingPath)
 	}
@@ -91,7 +91,7 @@ func TestGenerateHandoff_MinimalSession(t *testing.T) {
 	tmpDir := t.TempDir()
 	config := DefaultHandoffConfig(tmpDir)
 	// Override ViolationsPath to use temp dir (avoid picking up system-wide violations)
-	config.ViolationsPath = filepath.Join(tmpDir, ".gogent", "memory", "routing-violations.jsonl")
+	config.ViolationsPath = filepath.Join(tmpDir, ".goyoke", "memory", "routing-violations.jsonl")
 
 	metrics := &SessionMetrics{
 		ToolCalls:         5,
@@ -423,8 +423,8 @@ func TestLoadHandoff_UnsupportedVersion(t *testing.T) {
 		t.Errorf("Expected 'Unsupported schema version 3.5' in error, got: %v", err)
 	}
 
-	if !strings.Contains(err.Error(), "Upgrade gogent-archive") {
-		t.Errorf("Expected 'Upgrade gogent-archive' guidance in error, got: %v", err)
+	if !strings.Contains(err.Error(), "Upgrade goyoke-archive") {
+		t.Errorf("Expected 'Upgrade goyoke-archive' guidance in error, got: %v", err)
 	}
 }
 
@@ -653,8 +653,8 @@ func TestMigrateHandoff_UnknownVersion(t *testing.T) {
 		t.Errorf("Expected 'Unsupported schema version 99.0' in error, got: %v", err)
 	}
 
-	if !strings.Contains(err.Error(), "Upgrade gogent-archive") {
-		t.Errorf("Expected 'Upgrade gogent-archive' guidance in error, got: %v", err)
+	if !strings.Contains(err.Error(), "Upgrade goyoke-archive") {
+		t.Errorf("Expected 'Upgrade goyoke-archive' guidance in error, got: %v", err)
 	}
 }
 
@@ -770,12 +770,12 @@ func TestGetActiveTicket_MissingFile(t *testing.T) {
 func TestGetActiveTicket_ValidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	ticketPath := filepath.Join(tmpDir, ".ticket-current")
-	os.WriteFile(ticketPath, []byte("GOgent-028\n"), 0644)
+	os.WriteFile(ticketPath, []byte("goYoke-028\n"), 0644)
 
 	ticket := getActiveTicket(tmpDir)
 
-	if ticket != "GOgent-028" {
-		t.Errorf("Expected 'GOgent-028', got: %s", ticket)
+	if ticket != "goYoke-028" {
+		t.Errorf("Expected 'goYoke-028', got: %s", ticket)
 	}
 }
 
@@ -811,7 +811,7 @@ func TestCollectGitInfo_ValidRepo(t *testing.T) {
 		t.Skip("Not in git repo, skipping git info test")
 	}
 
-	// Use current directory (the GOgent-Fortress repo itself)
+	// Use current directory (the goYoke repo itself)
 	info := collectGitInfo(".")
 
 	// In a valid git repo, we should get a branch name
@@ -1179,7 +1179,7 @@ func TestHandoffMetrics_TimingAccuracy(t *testing.T) {
 	tmpDir := t.TempDir()
 	config := DefaultHandoffConfig(tmpDir)
 	// Override ViolationsPath to use temp dir (avoid picking up system-wide violations)
-	config.ViolationsPath = filepath.Join(tmpDir, ".gogent", "memory", "routing-violations.jsonl")
+	config.ViolationsPath = filepath.Join(tmpDir, ".goyoke", "memory", "routing-violations.jsonl")
 
 	metrics := &SessionMetrics{
 		ToolCalls:         1,

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/routing"
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/routing"
+	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
 func TestGetEndstateLogPath(t *testing.T) {
@@ -18,7 +18,7 @@ func TestGetEndstateLogPath(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
 
 	path := GetEndstateLogPath()
-	expected := filepath.Join(tmpDir, "gogent", "agent-endstates.jsonl")
+	expected := filepath.Join(tmpDir, "goyoke", "agent-endstates.jsonl")
 
 	if path != expected {
 		t.Errorf("GetEndstateLogPath() = %s, want %s", path, expected)
@@ -28,7 +28,7 @@ func TestGetEndstateLogPath(t *testing.T) {
 func TestGetProjectEndstateLogPath(t *testing.T) {
 	projectDir := "/home/user/project"
 	path := GetProjectEndstateLogPath(projectDir)
-	expected := filepath.Join(projectDir, ".gogent", "memory", "agent-endstates.jsonl")
+	expected := filepath.Join(projectDir, ".goyoke", "memory", "agent-endstates.jsonl")
 
 	if path != expected {
 		t.Errorf("GetProjectEndstateLogPath() = %s, want %s", path, expected)
@@ -103,8 +103,8 @@ func TestLogEndstate_CreatesDirectory(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
 
 	// Directory doesn't exist yet
-	gogentDir := filepath.Join(tmpDir, "gogent")
-	if _, err := os.Stat(gogentDir); !os.IsNotExist(err) {
+	goyokeDir := filepath.Join(tmpDir, "goyoke")
+	if _, err := os.Stat(goyokeDir); !os.IsNotExist(err) {
 		t.Fatal("Directory should not exist before LogEndstate")
 	}
 
@@ -130,7 +130,7 @@ func TestLogEndstate_CreatesDirectory(t *testing.T) {
 	}
 
 	// Verify directory was created
-	if _, err := os.Stat(gogentDir); os.IsNotExist(err) {
+	if _, err := os.Stat(goyokeDir); os.IsNotExist(err) {
 		t.Error("Directory was not created by LogEndstate")
 	}
 }
@@ -423,11 +423,11 @@ func TestLogEndstate_UsesXDGPath(t *testing.T) {
 	// Clear any other XDG vars to ensure XDG_RUNTIME_DIR is used
 	t.Setenv("XDG_CACHE_HOME", "")
 
-	gogentDir := config.GetGOgentDir()
-	expectedDir := filepath.Join(tmpDir, "gogent")
+	goyokeDir := config.GetgoYokeDir()
+	expectedDir := filepath.Join(tmpDir, "goyoke")
 
-	if gogentDir != expectedDir {
-		t.Fatalf("GetGOgentDir() = %s, want %s", gogentDir, expectedDir)
+	if goyokeDir != expectedDir {
+		t.Fatalf("GetgoYokeDir() = %s, want %s", goyokeDir, expectedDir)
 	}
 
 	// Verify log path uses this directory
@@ -519,7 +519,7 @@ func TestLogEndstate_DirectoryCreationFails(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a file where the directory should be (to cause mkdir failure)
-	badPath := filepath.Join(tmpDir, "gogent")
+	badPath := filepath.Join(tmpDir, "goyoke")
 	if err := os.WriteFile(badPath, []byte("blocking file"), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -543,7 +543,7 @@ func TestLogEndstate_DirectoryCreationFails(t *testing.T) {
 		Decision: "silent",
 	}
 
-	// Note: config.GetGOgentDir() has fallback logic to /tmp, so this test
+	// Note: config.GetgoYokeDir() has fallback logic to /tmp, so this test
 	// demonstrates fallback behavior rather than actual failure.
 	// The function will succeed using fallback directory.
 	err := LogEndstate(event, metadata, response)

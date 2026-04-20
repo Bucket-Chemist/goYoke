@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
-// CreateSessionDir creates the session directory at {projectDir}/.gogent/sessions/{sessionID}/
+// CreateSessionDir creates the session directory at {projectDir}/.goyoke/sessions/{sessionID}/
 // If sessionID is "unknown" or empty, generates a timestamp-based fallback.
 // Returns the absolute path to the created directory.
 func CreateSessionDir(projectDir, sessionID string) (string, error) {
@@ -26,7 +26,7 @@ func CreateSessionDir(projectDir, sessionID string) (string, error) {
 	return sessionDir, nil
 }
 
-// WriteCurrentSession writes the session directory path to {projectDir}/.gogent/current-session
+// WriteCurrentSession writes the session directory path to {projectDir}/.goyoke/current-session
 func WriteCurrentSession(projectDir, sessionDir string) error {
 	runtimeDir := config.RuntimeDir(projectDir)
 
@@ -38,7 +38,7 @@ func WriteCurrentSession(projectDir, sessionDir string) error {
 	return nil
 }
 
-// ReadCurrentSession reads the current session directory path from {projectDir}/.gogent/current-session
+// ReadCurrentSession reads the current session directory path from {projectDir}/.goyoke/current-session
 // Returns empty string (no error) if the file doesn't exist.
 func ReadCurrentSession(projectDir string) (string, error) {
 	currentSessionPath := filepath.Join(config.RuntimeDir(projectDir), "current-session")
@@ -54,12 +54,12 @@ func ReadCurrentSession(projectDir string) (string, error) {
 
 // ReadCurrentSessionFromEnv resolves the project directory from environment variables
 // and reads the current session directory path.
-// Checks GOGENT_PROJECT_ROOT → GOGENT_PROJECT_DIR → CLAUDE_PROJECT_DIR in order.
+// Checks GOYOKE_PROJECT_ROOT → GOYOKE_PROJECT_DIR → CLAUDE_PROJECT_DIR in order.
 // Returns empty string (no error) if no env var is set.
 func ReadCurrentSessionFromEnv() (string, error) {
-	projectDir := os.Getenv("GOGENT_PROJECT_ROOT")
+	projectDir := os.Getenv("GOYOKE_PROJECT_ROOT")
 	if projectDir == "" {
-		projectDir = os.Getenv("GOGENT_PROJECT_DIR")
+		projectDir = os.Getenv("GOYOKE_PROJECT_DIR")
 	}
 	if projectDir == "" {
 		projectDir = os.Getenv("CLAUDE_PROJECT_DIR")

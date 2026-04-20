@@ -1,0 +1,274 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - 'test -f defaults/agents/agents-index.json || (echo "defaults/ not populated" && exit 1)'
+
+builds:
+  - id: goyoke
+    main: ./cmd/goyoke
+    binary: goyoke
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+  - id: goyoke-mcp
+    main: ./cmd/goyoke-mcp
+    binary: goyoke-mcp
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-team-run
+    main: ./cmd/goyoke-team-run
+    binary: goyoke-team-run
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-load-context
+    main: ./cmd/goyoke-load-context
+    binary: goyoke-load-context
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-validate
+    main: ./cmd/goyoke-validate
+    binary: goyoke-validate
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-agent-endstate
+    main: ./cmd/goyoke-agent-endstate
+    binary: goyoke-agent-endstate
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-aggregate
+    main: ./cmd/goyoke-aggregate
+    binary: goyoke-aggregate
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-archive
+    main: ./cmd/goyoke-archive
+    binary: goyoke-archive
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-capture-intent
+    main: ./cmd/goyoke-capture-intent
+    binary: goyoke-capture-intent
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-codebase-extract
+    main: ./cmd/goyoke-codebase-extract
+    binary: goyoke-codebase-extract
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+  - id: goyoke-config-guard
+    main: ./cmd/goyoke-config-guard
+    binary: goyoke-config-guard
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-direct-impl-check
+    main: ./cmd/goyoke-direct-impl-check
+    binary: goyoke-direct-impl-check
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-instructions-audit
+    main: ./cmd/goyoke-instructions-audit
+    binary: goyoke-instructions-audit
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-log-review
+    main: ./cmd/goyoke-log-review
+    binary: goyoke-log-review
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-ml-export
+    main: ./cmd/goyoke-ml-export
+    binary: goyoke-ml-export
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-orchestrator-guard
+    main: ./cmd/goyoke-orchestrator-guard
+    binary: goyoke-orchestrator-guard
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-permission-gate
+    main: ./cmd/goyoke-permission-gate
+    binary: goyoke-permission-gate
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-plan-impl
+    main: ./cmd/goyoke-plan-impl
+    binary: goyoke-plan-impl
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-scout
+    main: ./cmd/goyoke-scout
+    binary: goyoke-scout
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-sharp-edge
+    main: ./cmd/goyoke-sharp-edge
+    binary: goyoke-sharp-edge
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-skill-guard
+    main: ./cmd/goyoke-skill-guard
+    binary: goyoke-skill-guard
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-team-prepare-synthesis
+    main: ./cmd/goyoke-team-prepare-synthesis
+    binary: goyoke-team-prepare-synthesis
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-update-review-outcome
+    main: ./cmd/goyoke-update-review-outcome
+    binary: goyoke-update-review-outcome
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-validate-schemas
+    main: ./cmd/goyoke-validate-schemas
+    binary: goyoke-validate-schemas
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+  - id: goyoke-version
+    main: ./cmd/goyoke-version
+    binary: goyoke-version
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: [-s -w]
+
+archives:
+  - id: default
+    ids:
+      - goyoke
+      - goyoke-mcp
+      - goyoke-team-run
+      - goyoke-load-context
+      - goyoke-validate
+      - goyoke-agent-endstate
+      - goyoke-aggregate
+      - goyoke-archive
+      - goyoke-capture-intent
+      - goyoke-codebase-extract
+      - goyoke-config-guard
+      - goyoke-direct-impl-check
+      - goyoke-instructions-audit
+      - goyoke-log-review
+      - goyoke-ml-export
+      - goyoke-orchestrator-guard
+      - goyoke-permission-gate
+      - goyoke-plan-impl
+      - goyoke-scout
+      - goyoke-sharp-edge
+      - goyoke-skill-guard
+      - goyoke-team-prepare-synthesis
+      - goyoke-update-review-outcome
+      - goyoke-validate-schemas
+      - goyoke-version
+    name_template: "goYoke_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^chore:"
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+
+release:
+  draft: false
+  prerelease: auto
+  name_template: "goYoke {{ .Version }}"
+  header: |
+    ## Installation
+
+    **Go install** (requires Go 1.25+):
+    ```bash
+    go install github.com/{{ .Env.GITHUB_REPOSITORY }}/cmd/...@{{ .Tag }}
+    ```
+
+    **Standalone** (download and extract to a directory on your PATH):
+    See assets below for your platform.
+
+    **Prerequisites:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated.

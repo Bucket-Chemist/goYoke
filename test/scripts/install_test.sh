@@ -15,10 +15,10 @@ if ! "$PROJECT_ROOT/scripts/install.sh" --test-only; then
 fi
 
 # Verify no binaries created in bin/ (may already exist from previous runs)
-# Just verify install didn't modify ~/.gogent
-if [ -d "${HOME}/.gogent/bin" ]; then
+# Just verify install didn't modify ~/.goyoke
+if [ -d "${HOME}/.goyoke/bin" ]; then
     # Count files before test
-    BEFORE_COUNT=$(ls -1 "${HOME}/.gogent/bin" 2>/dev/null | wc -l)
+    BEFORE_COUNT=$(ls -1 "${HOME}/.goyoke/bin" 2>/dev/null | wc -l)
 fi
 
 echo "[PASS] Test-only mode works"
@@ -31,7 +31,7 @@ if ! "$PROJECT_ROOT/scripts/install.sh" --skip-tests; then
 fi
 
 # Verify binaries created in project bin/
-BINARIES=("gogent-validate" "gogent-archive" "gogent-sharp-edge")
+BINARIES=("goyoke-validate" "goyoke-archive" "goyoke-sharp-edge")
 
 for binary in "${BINARIES[@]}"; do
     if [ ! -x "$PROJECT_ROOT/bin/$binary" ]; then
@@ -42,22 +42,22 @@ done
 
 echo "[PASS] Full install works"
 
-# Test 3: Verify binaries in ~/.gogent/bin
-GOgent_BIN="${HOME}/.gogent/bin"
+# Test 3: Verify binaries in ~/.goyoke/bin
+Goyoke_BIN="${HOME}/.goyoke/bin"
 
-if [ ! -d "$GOgent_BIN" ]; then
-    echo "[FAIL] $GOgent_BIN not created"
+if [ ! -d "$Goyoke_BIN" ]; then
+    echo "[FAIL] $Goyoke_BIN not created"
     exit 1
 fi
 
 for binary in "${BINARIES[@]}"; do
-    if [ ! -x "$GOgent_BIN/$binary" ]; then
-        echo "[FAIL] Binary not installed to $GOgent_BIN: $binary"
+    if [ ! -x "$Goyoke_BIN/$binary" ]; then
+        echo "[FAIL] Binary not installed to $Goyoke_BIN: $binary"
         exit 1
     fi
 done
 
-echo "[PASS] Binaries installed to ~/.gogent/bin"
+echo "[PASS] Binaries installed to ~/.goyoke/bin"
 
 # Test 4: Verify backups created (if hooks existed)
 HOOKS_DIR="${HOME}/.claude/hooks"
@@ -87,7 +87,7 @@ echo "[PASS] Script is idempotent"
 # Test 6: Verify binaries respond to --help
 echo "[TEST] Verifying binary functionality..."
 for binary in "${BINARIES[@]}"; do
-    if "$GOgent_BIN/$binary" --help &> /dev/null; then
+    if "$Goyoke_BIN/$binary" --help &> /dev/null; then
         echo "[PASS] $binary responds to --help"
     else
         echo "[WARN] $binary does not support --help (may be expected for hooks)"

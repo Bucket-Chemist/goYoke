@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
 
 // ---------------------------------------------------------------------------
@@ -55,6 +55,14 @@ func (s *trackingDrawerStack) SetActiveModal(_, _ string, _ []string) {}
 func (s *trackingDrawerStack) HasActiveModal() bool             { return false }
 func (s *trackingDrawerStack) OptionsActiveRequestID() string   { return "" }
 func (s *trackingDrawerStack) OptionsSelectedOption() string    { return "" }
+func (s *trackingDrawerStack) ClearOptionsModal()               {}
+func (s *trackingDrawerStack) SetFiguresContent(_ string)       {}
+func (s *trackingDrawerStack) ClearFiguresContent()             {}
+func (s *trackingDrawerStack) FiguresHasContent() bool          { return false }
+func (s *trackingDrawerStack) RefreshFiguresContent(_ string)   {}
+func (s *trackingDrawerStack) FiguresIsMinimized() bool         { return true }
+func (s *trackingDrawerStack) SetFiguresFocused(_ bool)         {}
+func (s *trackingDrawerStack) ToggleFiguresDrawer()             {}
 
 // trackingTeamsHealth controls HasData/HasRunningTeam for tests.
 type trackingTeamsHealth struct {

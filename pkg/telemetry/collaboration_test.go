@@ -173,7 +173,7 @@ func TestXDGComplianceCollaboration(t *testing.T) {
 	os.Setenv("XDG_DATA_HOME", testPath)
 
 	path := getGlobalCollaborationPath()
-	expected := filepath.Join(testPath, "gogent", "agent-collaborations.jsonl")
+	expected := filepath.Join(testPath, "goyoke", "agent-collaborations.jsonl")
 
 	if path != expected {
 		t.Errorf("XDG_DATA_HOME not respected. Got %s, expected %s", path, expected)

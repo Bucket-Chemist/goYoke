@@ -42,17 +42,17 @@ type CollaborationUpdate struct {
 
 // TestSubagentStop_Integration verifies complete SubagentStop workflow across various agent scenarios
 func TestSubagentStop_Integration(t *testing.T) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-agent-endstate binary not found. Run: go build -o cmd/gogent-agent-endstate/gogent-agent-endstate cmd/gogent-agent-endstate/main.go")
+		t.Skip("goyoke-agent-endstate binary not found. Run: go build -o cmd/goyoke-agent-endstate/goyoke-agent-endstate cmd/goyoke-agent-endstate/main.go")
 	}
 
 	projectDir := t.TempDir()
 	setupTestRoutingSchema(t, projectDir)
 
-	// Create .gogent directory for ML logs
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	// Create .goyoke directory for ML logs
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	// Create test transcript files with agent metadata
 	transcriptDir := filepath.Join(projectDir, "transcripts")
@@ -138,7 +138,7 @@ func TestSubagentStop_Integration(t *testing.T) {
 	}
 
 	// Verify collaboration log created
-	collabPath := filepath.Join(projectDir, ".gogent", "agent-collaboration-updates.jsonl")
+	collabPath := filepath.Join(projectDir, ".goyoke", "agent-collaboration-updates.jsonl")
 	if _, err := os.Stat(collabPath); err != nil {
 		t.Logf("Note: Collaboration log not created (may be optional): %v", err)
 	} else {
@@ -152,16 +152,16 @@ func TestSubagentStop_Integration(t *testing.T) {
 
 // TestSubagentStop_MLOutcomeLogging verifies routing-decision-updates.jsonl contains complete outcome data
 func TestSubagentStop_MLOutcomeLogging(t *testing.T) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-agent-endstate binary not found")
+		t.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := t.TempDir()
 	setupTestRoutingSchema(t, projectDir)
 
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	transcriptDir := filepath.Join(projectDir, "transcripts")
 	os.MkdirAll(transcriptDir, 0755)
@@ -213,16 +213,16 @@ func TestSubagentStop_MLOutcomeLogging(t *testing.T) {
 
 // TestSubagentStop_CollaborationUpdates verifies agent-collaboration-updates.jsonl tracks agent interactions
 func TestSubagentStop_CollaborationUpdates(t *testing.T) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-agent-endstate binary not found")
+		t.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := t.TempDir()
 	setupTestRoutingSchema(t, projectDir)
 
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	transcriptDir := filepath.Join(projectDir, "transcripts")
 	os.MkdirAll(transcriptDir, 0755)
@@ -283,7 +283,7 @@ func TestSubagentStop_CollaborationUpdates(t *testing.T) {
 	}
 
 	// Verify collaboration log
-	collabPath := filepath.Join(projectDir, ".gogent", "agent-collaboration-updates.jsonl")
+	collabPath := filepath.Join(projectDir, ".goyoke", "agent-collaboration-updates.jsonl")
 	if _, err := os.Stat(collabPath); err != nil {
 		t.Logf("Collaboration log not created: %v", err)
 		// Non-blocking: collaboration logging may be optional
@@ -298,16 +298,16 @@ func TestSubagentStop_CollaborationUpdates(t *testing.T) {
 
 // TestSubagentStop_DecisionCorrelation verifies agent events are logged with unique identifiers
 func TestSubagentStop_DecisionCorrelation(t *testing.T) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-agent-endstate binary not found")
+		t.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := t.TempDir()
 	setupTestRoutingSchema(t, projectDir)
 
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	transcriptDir := filepath.Join(projectDir, "transcripts")
 	os.MkdirAll(transcriptDir, 0755)
@@ -361,7 +361,7 @@ func TestSubagentStop_DecisionCorrelation(t *testing.T) {
 	}
 
 	// Verify all agents logged
-	collabPath := filepath.Join(projectDir, ".gogent", "agent-collaboration-updates.jsonl")
+	collabPath := filepath.Join(projectDir, ".goyoke", "agent-collaboration-updates.jsonl")
 	if _, err := os.Stat(collabPath); err != nil {
 		t.Logf("Collaboration log not created (may be optional)")
 		return
@@ -375,16 +375,16 @@ func TestSubagentStop_DecisionCorrelation(t *testing.T) {
 
 // TestSubagentStop_ParallelAgentCompletion verifies 5 agents completing in parallel without race conditions
 func TestSubagentStop_ParallelAgentCompletion(t *testing.T) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-agent-endstate binary not found")
+		t.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := t.TempDir()
 	setupTestRoutingSchema(t, projectDir)
 
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	transcriptDir := filepath.Join(projectDir, "transcripts")
 	os.MkdirAll(transcriptDir, 0755)
@@ -456,7 +456,7 @@ func TestSubagentStop_ParallelAgentCompletion(t *testing.T) {
 	}
 
 	// Verify collaboration log not corrupted
-	collabPath := filepath.Join(projectDir, ".gogent", "agent-collaboration-updates.jsonl")
+	collabPath := filepath.Join(projectDir, ".goyoke", "agent-collaboration-updates.jsonl")
 	if _, err := os.Stat(collabPath); err != nil {
 		t.Logf("Collaboration log not created (may be optional)")
 		return
@@ -483,16 +483,16 @@ func TestSubagentStop_ParallelAgentCompletion(t *testing.T) {
 
 // TestSubagentStop_TierSpecificPrompts verifies tier-specific prompt generation for haiku, sonnet, and orchestrator
 func TestSubagentStop_TierSpecificPrompts(t *testing.T) {
-	binaryPath := "../../bin/gogent-agent-endstate"
+	binaryPath := "../../bin/goyoke-agent-endstate"
 	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("gogent-agent-endstate binary not found")
+		t.Skip("goyoke-agent-endstate binary not found")
 	}
 
 	projectDir := t.TempDir()
 	setupTestRoutingSchema(t, projectDir)
 
-	gogentDir := filepath.Join(projectDir, ".gogent")
-	os.MkdirAll(gogentDir, 0755)
+	goyokeDir := filepath.Join(projectDir, ".goyoke")
+	os.MkdirAll(goyokeDir, 0755)
 
 	transcriptDir := filepath.Join(projectDir, "transcripts")
 	os.MkdirAll(transcriptDir, 0755)

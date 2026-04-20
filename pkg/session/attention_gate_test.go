@@ -9,7 +9,7 @@ import (
 
 func TestGetFlushThreshold_Default(t *testing.T) {
 	// Clear env var
-	os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	threshold := GetFlushThreshold()
 	if threshold != DefaultFlushThreshold {
@@ -19,8 +19,8 @@ func TestGetFlushThreshold_Default(t *testing.T) {
 
 func TestGetFlushThreshold_EnvVar(t *testing.T) {
 	// Set custom threshold
-	os.Setenv("GOGENT_FLUSH_THRESHOLD", "10")
-	defer os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Setenv("GOYOKE_FLUSH_THRESHOLD", "10")
+	defer os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	threshold := GetFlushThreshold()
 	if threshold != 10 {
@@ -30,8 +30,8 @@ func TestGetFlushThreshold_EnvVar(t *testing.T) {
 
 func TestGetFlushThreshold_InvalidEnvVar(t *testing.T) {
 	// Set invalid threshold
-	os.Setenv("GOGENT_FLUSH_THRESHOLD", "invalid")
-	defer os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Setenv("GOYOKE_FLUSH_THRESHOLD", "invalid")
+	defer os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	threshold := GetFlushThreshold()
 	if threshold != DefaultFlushThreshold {
@@ -41,8 +41,8 @@ func TestGetFlushThreshold_InvalidEnvVar(t *testing.T) {
 
 func TestGetFlushThreshold_ZeroEnvVar(t *testing.T) {
 	// Set zero threshold (invalid - must be positive)
-	os.Setenv("GOGENT_FLUSH_THRESHOLD", "0")
-	defer os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Setenv("GOYOKE_FLUSH_THRESHOLD", "0")
+	defer os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	threshold := GetFlushThreshold()
 	if threshold != DefaultFlushThreshold {
@@ -52,8 +52,8 @@ func TestGetFlushThreshold_ZeroEnvVar(t *testing.T) {
 
 func TestGetFlushThreshold_NegativeEnvVar(t *testing.T) {
 	// Set negative threshold (invalid - must be positive)
-	os.Setenv("GOGENT_FLUSH_THRESHOLD", "-5")
-	defer os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Setenv("GOYOKE_FLUSH_THRESHOLD", "-5")
+	defer os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	threshold := GetFlushThreshold()
 	if threshold != DefaultFlushThreshold {
@@ -84,7 +84,7 @@ func TestGenerateRoutingReminder(t *testing.T) {
 
 func TestCountPendingLearnings(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings file
@@ -121,7 +121,7 @@ func TestCountPendingLearnings_NoFile(t *testing.T) {
 
 func TestCountPendingLearnings_EmptyFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	pendingPath := filepath.Join(memoryDir, "pending-learnings.jsonl")
@@ -140,12 +140,12 @@ func TestCountPendingLearnings_EmptyFile(t *testing.T) {
 
 func TestShouldFlushLearnings_BelowThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Set custom threshold
-	os.Setenv("GOGENT_FLUSH_THRESHOLD", "5")
-	defer os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Setenv("GOYOKE_FLUSH_THRESHOLD", "5")
+	defer os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	// Create pending learnings with 3 entries (below threshold of 5)
 	pendingPath := filepath.Join(memoryDir, "pending-learnings.jsonl")
@@ -173,12 +173,12 @@ func TestShouldFlushLearnings_BelowThreshold(t *testing.T) {
 
 func TestShouldFlushLearnings_ConfigurableThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Set custom threshold
-	os.Setenv("GOGENT_FLUSH_THRESHOLD", "3")
-	defer os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Setenv("GOYOKE_FLUSH_THRESHOLD", "3")
+	defer os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	// Create pending learnings with 4 entries (above threshold of 3)
 	pendingPath := filepath.Join(memoryDir, "pending-learnings.jsonl")
@@ -206,11 +206,11 @@ func TestShouldFlushLearnings_ConfigurableThreshold(t *testing.T) {
 
 func TestShouldFlushLearnings_ExactlyAtThreshold(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Use default threshold
-	os.Unsetenv("GOGENT_FLUSH_THRESHOLD")
+	os.Unsetenv("GOYOKE_FLUSH_THRESHOLD")
 
 	// Create exactly DefaultFlushThreshold entries
 	pendingPath := filepath.Join(memoryDir, "pending-learnings.jsonl")
@@ -238,7 +238,7 @@ func TestShouldFlushLearnings_ExactlyAtThreshold(t *testing.T) {
 
 func TestArchivePendingLearnings(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings
@@ -270,7 +270,7 @@ func TestArchivePendingLearnings(t *testing.T) {
 	}
 
 	// Verify archive directory was created
-	sharpEdgesDir := filepath.Join(tmpDir, ".gogent", "memory", "sharp-edges")
+	sharpEdgesDir := filepath.Join(tmpDir, ".goyoke", "memory", "sharp-edges")
 	if _, err := os.Stat(sharpEdgesDir); os.IsNotExist(err) {
 		t.Error("Archive directory should be created")
 	}
@@ -305,7 +305,7 @@ func TestArchivePendingLearnings_NoFile(t *testing.T) {
 
 func TestArchivePendingLearnings_CreatesDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
-	memoryDir := filepath.Join(tmpDir, ".gogent", "memory")
+	memoryDir := filepath.Join(tmpDir, ".goyoke", "memory")
 	os.MkdirAll(memoryDir, 0755)
 
 	// Create pending learnings
@@ -313,7 +313,7 @@ func TestArchivePendingLearnings_CreatesDirectory(t *testing.T) {
 	os.WriteFile(pendingPath, []byte("{}\n"), 0644)
 
 	// sharp-edges directory should NOT exist yet
-	sharpEdgesDir := filepath.Join(tmpDir, ".gogent", "memory", "sharp-edges")
+	sharpEdgesDir := filepath.Join(tmpDir, ".goyoke", "memory", "sharp-edges")
 	if _, err := os.Stat(sharpEdgesDir); !os.IsNotExist(err) {
 		t.Fatal("sharp-edges directory should not exist before archival")
 	}

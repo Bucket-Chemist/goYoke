@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Bucket-Chemist/GOgent-Fortress/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 // ReminderContext represents routing reminder context
@@ -34,7 +34,7 @@ const (
 // GetFlushThreshold returns configurable flush threshold from env var.
 // Defaults to 5 if not set or invalid.
 func GetFlushThreshold() int {
-	if v := os.Getenv("GOGENT_FLUSH_THRESHOLD"); v != "" {
+	if v := os.Getenv("GOYOKE_FLUSH_THRESHOLD"); v != "" {
 		if i, err := strconv.Atoi(v); err == nil && i > 0 {
 			return i
 		}
