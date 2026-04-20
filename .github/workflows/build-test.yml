@@ -1,0 +1,59 @@
+name: Build Test Binaries
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Generate defaults
+        run: make defaults
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=$(git describe --tags --always --dirty)" >> "$GITHUB_OUTPUT"
+
+      - name: Build Linux amd64
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o dist/goyoke-${{ steps.version.outputs.VERSION }}-linux-amd64 \
+            ./cmd/goyoke/
+
+      - name: Build macOS amd64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build \
+            -ldflags "-w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o dist/goyoke-${{ steps.version.outputs.VERSION }}-darwin-amd64 \
+            ./cmd/goyoke/
+
+      - name: Build macOS arm64
+        run: |
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build \
+            -ldflags "-w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o dist/goyoke-${{ steps.version.outputs.VERSION }}-darwin-arm64 \
+            ./cmd/goyoke/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: goyoke-${{ steps.version.outputs.VERSION }}
+          path: dist/goyoke-*
+          retention-days: 14
