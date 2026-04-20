@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.8.0",
   "generated_at": "2026-02-01T00:00:00Z",
   "description": "Agent index for Intent Gate routing and auto-activation.",
   "agents": [
@@ -53,7 +53,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Memory Archivist"
+      "subagent_type": "Memory Archivist",
+      "distribution": "public"
     },
     {
       "id": "codebase-search",
@@ -92,7 +93,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Codebase Search"
+      "subagent_type": "Codebase Search",
+      "distribution": "public"
     },
     {
       "id": "librarian",
@@ -141,7 +143,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Librarian"
+      "subagent_type": "Librarian",
+      "distribution": "public"
     },
     {
       "id": "scaffolder",
@@ -183,7 +186,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Scaffolder"
+      "subagent_type": "Scaffolder",
+      "distribution": "public"
     },
     {
       "id": "tech-docs-writer",
@@ -234,7 +238,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Tech Docs Writer"
+      "subagent_type": "Tech Docs Writer",
+      "distribution": "public"
     },
     {
       "id": "code-reviewer",
@@ -272,7 +277,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Code Reviewer"
+      "subagent_type": "Code Reviewer",
+      "distribution": "public"
     },
     {
       "id": "python-pro",
@@ -360,7 +366,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Python Pro"
+      "subagent_type": "Python Pro",
+      "distribution": "public"
     },
     {
       "id": "python-ux",
@@ -433,7 +440,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Python UX (PySide6)"
+      "subagent_type": "Python UX (PySide6)",
+      "distribution": "public"
     },
     {
       "id": "r-pro",
@@ -502,7 +510,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "R Pro"
+      "subagent_type": "R Pro",
+      "distribution": "public"
     },
     {
       "id": "r-shiny-pro",
@@ -578,7 +587,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "R Shiny Pro"
+      "subagent_type": "R Shiny Pro",
+      "distribution": "public"
     },
     {
       "id": "go-pro",
@@ -650,7 +660,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO Pro"
+      "subagent_type": "GO Pro",
+      "distribution": "public"
     },
     {
       "id": "rust-pro",
@@ -732,7 +743,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Rust Pro"
+      "subagent_type": "Rust Pro",
+      "distribution": "public"
     },
     {
       "id": "go-cli",
@@ -806,7 +818,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO CLI (Cobra)"
+      "subagent_type": "GO CLI (Cobra)",
+      "distribution": "public"
     },
     {
       "id": "go-tui",
@@ -879,7 +892,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO TUI (Bubbletea)"
+      "subagent_type": "GO TUI (Bubbletea)",
+      "distribution": "public"
     },
     {
       "id": "go-api",
@@ -947,7 +961,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO API (HTTP Client)"
+      "subagent_type": "GO API (HTTP Client)",
+      "distribution": "public"
     },
     {
       "id": "go-concurrent",
@@ -1016,7 +1031,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "GO Concurrent"
+      "subagent_type": "GO Concurrent",
+      "distribution": "public"
     },
     {
       "id": "orchestrator",
@@ -1094,7 +1110,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Orchestrator"
+      "subagent_type": "Orchestrator",
+      "distribution": "public"
     },
     {
       "id": "architect",
@@ -1157,7 +1174,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Architect"
+      "subagent_type": "Architect",
+      "distribution": "public"
     },
     {
       "id": "python-architect",
@@ -1247,7 +1265,8 @@
           "conditional": []
         }
       },
-      "subagent_type": "Python ML Architect"
+      "subagent_type": "Python ML Architect",
+      "distribution": "public"
     },
     {
       "id": "planner",
@@ -1310,7 +1329,8 @@
       "interactive": true,
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "public"
     },
     {
       "id": "einstein",
@@ -1368,7 +1388,8 @@
         "librarian",
         "llm-inference-architect"
       ],
-      "interactive": true
+      "interactive": true,
+      "distribution": "public"
     },
     {
       "id": "mozart",
@@ -1425,7 +1446,8 @@
         ],
         "conventions": {}
       },
-      "interactive": true
+      "interactive": true,
+      "distribution": "public"
     },
     {
       "id": "beethoven",
@@ -1478,7 +1500,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "distribution": "public"
     },
     {
       "id": "staff-architect-critical-review",
@@ -1536,7 +1559,8 @@
         "llm-inference-architect"
       ],
       "subagent_type": "Staff Architect Critical Review",
-      "interactive": true
+      "interactive": true,
+      "distribution": "public"
     },
     {
       "id": "schema-architect",
@@ -1594,7 +1618,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Schema Architect"
+      "subagent_type": "Schema Architect",
+      "distribution": "public"
     },
     {
       "id": "haiku-scout",
@@ -1642,7 +1667,8 @@
         "rules": [],
         "conventions": {}
       },
-      "subagent_type": "Haiku Scout"
+      "subagent_type": "Haiku Scout",
+      "distribution": "public"
     },
     {
       "id": "goyoke-scout",
@@ -1688,7 +1714,8 @@
         "allowed_tools": [
           "Bash"
         ]
-      }
+      },
+      "distribution": "public"
     },
     {
       "id": "typescript-pro",
@@ -1760,7 +1787,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "TypeScript Pro"
+      "subagent_type": "TypeScript Pro",
+      "distribution": "public"
     },
     {
       "id": "react-pro",
@@ -1832,7 +1860,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "React Pro"
+      "subagent_type": "React Pro",
+      "distribution": "public"
     },
     {
       "id": "backend-reviewer",
@@ -1881,7 +1910,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Backend Reviewer"
+      "subagent_type": "Backend Reviewer",
+      "distribution": "public"
     },
     {
       "id": "frontend-reviewer",
@@ -1928,7 +1958,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Frontend Reviewer"
+      "subagent_type": "Frontend Reviewer",
+      "distribution": "public"
     },
     {
       "id": "standards-reviewer",
@@ -1971,7 +2002,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Standards Reviewer"
+      "subagent_type": "Standards Reviewer",
+      "distribution": "public"
     },
     {
       "id": "architect-reviewer",
@@ -2020,7 +2052,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Architect Reviewer"
+      "subagent_type": "Architect Reviewer",
+      "distribution": "public"
     },
     {
       "id": "review-orchestrator",
@@ -2082,7 +2115,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Review Orchestrator"
+      "subagent_type": "Review Orchestrator",
+      "distribution": "public"
     },
     {
       "id": "impl-manager",
@@ -2165,7 +2199,8 @@
         "All existing tests pass",
         "Conventions followed"
       ],
-      "subagent_type": "Implementation Manager"
+      "subagent_type": "Implementation Manager",
+      "distribution": "public"
     },
     {
       "id": "llm-inference-architect",
@@ -2248,7 +2283,8 @@
           "agent-guidelines.md"
         ],
         "conventions": {}
-      }
+      },
+      "distribution": "public"
     },
     {
       "id": "genomics-reviewer",
@@ -2302,7 +2338,8 @@
       "subagent_type": "Genomics Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "proteomics-reviewer",
@@ -2355,7 +2392,8 @@
       "subagent_type": "Proteomics Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "proteogenomics-reviewer",
@@ -2408,7 +2446,8 @@
       "subagent_type": "Proteogenomics Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "proteoform-reviewer",
@@ -2461,7 +2500,8 @@
       "subagent_type": "Proteoform Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "mass-spec-reviewer",
@@ -2515,7 +2555,8 @@
       "subagent_type": "Mass Spectrometry Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "bioinformatician-reviewer",
@@ -2570,7 +2611,8 @@
       "subagent_type": "Bioinformatician Reviewer",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "pasteur",
@@ -2614,7 +2656,8 @@
       "subagent_type": "Pasteur",
       "spawned_by": [
         "router"
-      ]
+      ],
+      "distribution": "private"
     },
     {
       "id": "staff-bioinformatician",
@@ -2659,7 +2702,8 @@
         ],
         "conventions": {}
       },
-      "interactive": false
+      "interactive": false,
+      "distribution": "private"
     },
     {
       "id": "dedup-reviewer",
@@ -2715,7 +2759,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "type-consolidator",
@@ -2771,7 +2816,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "dead-code-reviewer",
@@ -2827,7 +2873,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "dependency-reviewer",
@@ -2885,7 +2932,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "type-safety-reviewer",
@@ -2941,7 +2989,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "error-hygiene-reviewer",
@@ -2997,7 +3046,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "legacy-code-reviewer",
@@ -3055,7 +3105,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "slop-reviewer",
@@ -3111,7 +3162,8 @@
       "spawned_by": [
         "router"
       ],
-      "cost_ceiling": 2.00
+      "cost_ceiling": 2.00,
+      "distribution": "public"
     },
     {
       "id": "cleanup-synthesizer",
@@ -3157,7 +3209,8 @@
         "conventions": {}
       },
       "subagent_type": "Cleanup Synthesizer",
-      "interactive": false
+      "interactive": false,
+      "distribution": "public"
     },
     {
       "id": "plan-harmonizer",
@@ -3204,7 +3257,8 @@
         ],
         "conventions": {}
       },
-      "subagent_type": "Plan Harmonizer"
+      "subagent_type": "Plan Harmonizer",
+      "distribution": "public"
     }
   ],
   "routing_rules": {
@@ -3472,5 +3526,17 @@
       ],
       "team_dir_suffix": "cleanup"
     }
+  },
+  "distribution": {
+    "private_conventions": [
+      "python-datasci.md",
+      "python-ml.md"
+    ],
+    "private_skills": [
+      "review-bioinformatics"
+    ],
+    "private_schema_prefixes": [
+      "review-bioinformatics"
+    ]
   }
 }

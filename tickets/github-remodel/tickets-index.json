@@ -267,7 +267,7 @@
       "title": "Create GitHub Action for public repo sync on tag",
       "file": "task-020.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 5,
       "time_estimate": "1-2d",
       "dependencies": [
