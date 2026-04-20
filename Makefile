@@ -6,7 +6,7 @@ BINARY_NAME=goyoke
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-codebase-extract install install-archive install-aggregate install-wrapper install-load-context install-codebase-extract uninstall uninstall-aggregate check-path clean defaults dist check-size clean-defaults test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes test-codebase-extract-coverage all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-codebase-extract install install-archive install-aggregate install-wrapper install-load-context install-codebase-extract uninstall uninstall-aggregate check-path clean defaults dist check-size clean-defaults test-defaults test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes test-codebase-extract-coverage all
 
 help:
 	@echo "goYoke - Available targets:"
@@ -499,6 +499,9 @@ check-size: dist
 		if [ $$size -gt 3145728 ]; then echo "ERROR: $$bin exceeds 3MB"; exit 1; fi; \
 	done
 	@echo "✓ All binaries under 3MB"
+
+test-defaults: defaults
+	@scripts/test-defaults.sh
 
 clean-defaults:
 	@echo "Cleaning defaults/ generated content..."

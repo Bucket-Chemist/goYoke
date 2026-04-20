@@ -241,7 +241,7 @@
       "title": "Add startup FS validation and binary size regression test",
       "file": "task-018.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 4,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -297,7 +297,7 @@
       "title": "Smoke test for generate-defaults.sh",
       "file": "task-022.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 5,
       "time_estimate": "1-2d",
       "dependencies": [
