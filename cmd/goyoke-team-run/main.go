@@ -10,9 +10,13 @@ import (
 	"runtime/debug"
 	"syscall"
 	"time"
+
+	"github.com/Bucket-Chemist/goYoke/defaults"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 func main() {
+	resolve.SetDefault(defaults.FS)
 	// Crash diagnostics: log any panic or unexpected exit before output is redirected.
 	// SIGKILL cannot be caught, but panics and os.Exit(1) paths will appear here.
 	defer func() {

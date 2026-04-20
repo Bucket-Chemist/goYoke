@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
@@ -84,6 +85,7 @@ func TestOutputError_JSONFormat(t *testing.T) {
 // =============================================================================
 
 func TestIntegration_ValidStartupSession(t *testing.T) {
+	resolve.ResetDefault()
 	// Setup temp environment
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -168,6 +170,7 @@ func TestIntegration_ValidStartupSession(t *testing.T) {
 }
 
 func TestIntegration_ValidResumeSession(t *testing.T) {
+	resolve.ResetDefault()
 	// Setup temp environment
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -265,6 +268,7 @@ func TestIntegration_InvalidType(t *testing.T) {
 }
 
 func TestIntegration_FileReadError_MissingHandoff(t *testing.T) {
+	resolve.ResetDefault()
 	// Setup temp environment without handoff file
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -355,6 +359,7 @@ func TestIntegration_EmptyInput(t *testing.T) {
 }
 
 func TestIntegration_PendingLearnings(t *testing.T) {
+	resolve.ResetDefault()
 	// Setup environment with pending learnings
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -422,6 +427,7 @@ func TestIntegration_PendingLearnings(t *testing.T) {
 }
 
 func TestIntegration_GitInfoDetection(t *testing.T) {
+	resolve.ResetDefault()
 	// Setup git repo
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -493,6 +499,7 @@ func TestIntegration_GitInfoDetection(t *testing.T) {
 // =============================================================================
 
 func TestIntegration_WithCLAUDE_PROJECT_DIR(t *testing.T) {
+	resolve.ResetDefault()
 	// Test fallback to CLAUDE_PROJECT_DIR when GOYOKE_PROJECT_DIR not set
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -553,6 +560,7 @@ func TestIntegration_WithCLAUDE_PROJECT_DIR(t *testing.T) {
 }
 
 func TestIntegration_NoPendingLearnings(t *testing.T) {
+	resolve.ResetDefault()
 	// Test when no pending learnings exist
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
@@ -610,6 +618,7 @@ func TestIntegration_NoPendingLearnings(t *testing.T) {
 }
 
 func TestIntegration_WithToolCounterInitialization(t *testing.T) {
+	resolve.ResetDefault()
 	// Test tool counter initialization path
 	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")

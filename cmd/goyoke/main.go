@@ -34,6 +34,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/Bucket-Chemist/goYoke/defaults"
 	"github.com/Bucket-Chemist/goYoke/internal/lifecycle"
 	tuiLifecycle "github.com/Bucket-Chemist/goYoke/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/bridge"
@@ -53,6 +54,7 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 // version is injected at build time via:
@@ -61,6 +63,7 @@ import (
 var version = "dev"
 
 func main() {
+	resolve.SetDefault(defaults.FS)
 	sessionID := flag.String("session-id", "", "resume a specific session by ID")
 	verbose := flag.Bool("verbose", false, "enable verbose logging to stderr")
 	debug := flag.Bool("debug", false, "write all tea.Msg values to a debug log file")

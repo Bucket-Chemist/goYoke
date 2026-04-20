@@ -192,7 +192,7 @@
       "title": "Wire SetDefault(defaults.FS) in 5 binaries",
       "file": "task-015.md",
       "priority": "HIGH",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -283,7 +283,7 @@
       "title": "Migrate goyoke-validate consumers (buildAgentTaskNames, loadAgentConfig) to Resolver with ReadFileAll + merge",
       "file": "task-021.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 5,
       "time_estimate": "1-2d",
       "dependencies": [

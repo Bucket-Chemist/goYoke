@@ -21,10 +21,13 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/Bucket-Chemist/goYoke/defaults"
 	tuimcp "github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 func main() {
+	resolve.SetDefault(defaults.FS)
 	// Structured logging to stderr so it is visible via --debug on the claude
 	// CLI.  MCP server stdout is reserved for the JSON-RPC framing.
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{

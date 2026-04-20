@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Bucket-Chemist/goYoke/defaults"
 	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
@@ -64,6 +65,7 @@ func logValidation(sessionID, agent, model, decision, reason string) {
 }
 
 func main() {
+	resolve.SetDefault(defaults.FS)
 	// Get project directory from environment or current directory
 	// Priority: GOYOKE_PROJECT_DIR > CLAUDE_PROJECT_DIR > cwd
 	projectDir := os.Getenv("GOYOKE_PROJECT_DIR")
