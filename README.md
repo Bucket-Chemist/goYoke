@@ -281,19 +281,17 @@ cd goYoke-dev
 make dev-setup
 ```
 
-This builds all 25 binaries, symlinks `~/.claude` to the repo's `.claude/` directory, and generates `settings.json` and `mcp.json` with paths pointing to your local `bin/`. After setup:
+This generates embedded defaults, builds all 25 binaries, and installs them to `~/.local/bin/`. Your `~/.claude/` directory is never touched — hooks are injected at runtime via `--settings`, agent definitions and conventions come from the embedded FS.
 
 ```bash
-./bin/goyoke        # Launch the TUI
-claude              # Use claude directly — hooks fire automatically via ~/.claude symlink
+goyoke              # Launch the TUI
 ```
 
 ### After pulling changes
 
 ```bash
-make build          # Rebuild hook binaries
-# If new hooks were added:
-make dev-setup      # Or: ./scripts/dev-setup.sh --regen-settings
+cd goYoke-dev
+make dist && cp bin/* ~/.local/bin/
 ```
 
 ### Make targets
