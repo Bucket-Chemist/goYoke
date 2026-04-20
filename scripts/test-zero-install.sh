@@ -51,7 +51,7 @@ echo "  Temp dir: $TEMP_DIR"
 # STEP 1: Build from simulated public repo
 # ============================================================
 echo ""
-echo "=== Step 1: Build from simulated public repo ==="
+echo "=== Step 1: Build single binary from simulated public repo ==="
 
 echo "  Syncing public content..."
 rsync -a \
@@ -61,9 +61,6 @@ rsync -a \
     --exclude='tickets/' \
     --exclude='.git/' \
     --exclude='bin/' \
-    --exclude='cmd/goyoke-archive/.goyoke/' \
-    --exclude='cmd/goyoke-sharp-edge/.goyoke/' \
-    --exclude='pkg/telemetry/.goyoke/' \
     "$PROJECT_ROOT/" "$TEMP_PUBLIC/"
 
 # Ensure defaults/ is populated
@@ -72,18 +69,17 @@ if [ ! -f "${TEMP_PUBLIC}/defaults/agents/agents-index.json" ]; then
     cp -r "${PROJECT_ROOT}/defaults/"* "${TEMP_PUBLIC}/defaults/" 2>/dev/null || true
 fi
 
-echo "  Building binaries from public repo..."
-if (cd "$TEMP_PUBLIC" && go build -o "$TEMP_BIN/" ./cmd/... 2>&1); then
-    echo "  PASS: all binaries build from public repo"
+echo "  Building goyoke binary from public repo..."
+if (cd "$TEMP_PUBLIC" && go build -o "$TEMP_BIN/goyoke" ./cmd/goyoke 2>&1); then
+    echo "  PASS: goyoke binary builds from public repo"
     PASS=$((PASS + 1))
 else
     echo "  FAIL: build failed from public repo"
     FAIL=$((FAIL + 1))
 fi
 
-BINARY_COUNT=$(ls "$TEMP_BIN" 2>/dev/null | wc -l)
-echo "  Built $BINARY_COUNT binaries"
-check "at least 20 binaries built" test "$BINARY_COUNT" -ge 20
+check "goyoke binary exists" test -f "${TEMP_BIN}/goyoke"
+check "goyoke binary is executable" test -x "${TEMP_BIN}/goyoke"
 
 # ============================================================
 # STEP 2: Hook injection test (requires Claude auth)
@@ -147,61 +143,77 @@ if [ -f "$TEMPLATE" ]; then
     echo "  Found $HOOK_COUNT hook entries"
     check "at least 10 hook entries" test "$HOOK_COUNT" -ge 10
 
-    # Verify no absolute paths in hook commands
-    ABS_PATHS=$(jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command // empty] | .[]' "$TEMPLATE" 2>/dev/null | grep '/' || true)
-    if [ -z "$ABS_PATHS" ]; then
-        echo "  PASS: all hook commands use binary names (no absolute paths)"
+    # Verify all commands use multicall format (goyoke hook <name>)
+    COMMANDS=$(jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command // empty] | unique | .[]' "$TEMPLATE" 2>/dev/null)
+    ALL_MULTICALL=true
+    for cmd in $COMMANDS; do
+        if [[ "$cmd" != goyoke\ hook\ * ]]; then
+            echo "  WARN: non-multicall command: $cmd"
+            ALL_MULTICALL=false
+        fi
+    done
+    if [ "$ALL_MULTICALL" = true ]; then
+        echo "  PASS: all hook commands use multicall format (goyoke hook <name>)"
         PASS=$((PASS + 1))
     else
-        echo "  FAIL: absolute paths found in hook commands: $ABS_PATHS"
+        echo "  FAIL: some commands don't use multicall format"
         FAIL=$((FAIL + 1))
     fi
 
-    # Verify each referenced binary exists in temp bin
-    COMMANDS=$(jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command // empty] | unique | .[]' "$TEMPLATE" 2>/dev/null)
-    MISSING_BINS=""
+    # Verify goyoke binary can dispatch each hook command
+    GOYOKE="${TEMP_BIN}/goyoke"
+    HOOK_DISPATCH_OK=true
     for cmd in $COMMANDS; do
-        if [ ! -f "${TEMP_BIN}/${cmd}" ]; then
-            MISSING_BINS="${MISSING_BINS} ${cmd}"
+        # Extract hook name from "goyoke hook <name>"
+        HOOK_NAME="${cmd#goyoke hook }"
+        MOCK_EVENT='{"hook_event_name":"test","tool_name":"Bash","session_id":"test"}'
+        if ! echo "$MOCK_EVENT" | "$GOYOKE" hook "$HOOK_NAME" >/dev/null 2>&1; then
+            # Exit code 1 is OK (hook ran but rejected event), only panic/crash is bad
+            OUTPUT=$(echo "$MOCK_EVENT" | "$GOYOKE" hook "$HOOK_NAME" 2>&1 || true)
+            if echo "$OUTPUT" | grep -q 'panic:'; then
+                echo "  FAIL: hook '$HOOK_NAME' panicked"
+                HOOK_DISPATCH_OK=false
+            fi
         fi
     done
-    if [ -z "$MISSING_BINS" ]; then
-        echo "  PASS: all hook binaries found in build output"
+    if [ "$HOOK_DISPATCH_OK" = true ]; then
+        echo "  PASS: all hooks dispatch without panic"
         PASS=$((PASS + 1))
     else
-        echo "  FAIL: missing hook binaries:${MISSING_BINS}"
         FAIL=$((FAIL + 1))
     fi
 fi
 
 # ============================================================
-# STEP 4: Non-embedded hook degradation
+# STEP 4: Multicall dispatch verification
 # ============================================================
 echo ""
-echo "=== Step 4: Hook degradation (no config) ==="
+echo "=== Step 4: Multicall dispatch ==="
 
-HOOKS="goyoke-skill-guard goyoke-direct-impl-check goyoke-permission-gate goyoke-orchestrator-guard goyoke-config-guard goyoke-instructions-audit"
+GOYOKE="${TEMP_BIN}/goyoke"
+
+# Test version subcommand
+VERSION_OUT=$("$GOYOKE" version 2>&1 || true)
+if echo "$VERSION_OUT" | grep -qi 'version\|dev'; then
+    echo "  PASS: goyoke version works"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: goyoke version unexpected output: $VERSION_OUT"
+    FAIL=$((FAIL + 1))
+fi
+
+# Test hook dispatch with mock event
+MOCK_EVENT='{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo test"},"session_id":"test"}'
+HOOKS="skill-guard direct-impl-check permission-gate orchestrator-guard config-guard instructions-audit"
 
 for hook in $HOOKS; do
-    BIN="${TEMP_BIN}/${hook}"
-    if [ ! -f "$BIN" ]; then
-        echo "  SKIP: $hook not built"
-        SKIP=$((SKIP + 1))
-        continue
-    fi
-
-    MOCK_EVENT='{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo test"},"session_id":"test"}'
-    STDERR_OUT=$("$BIN" <<< "$MOCK_EVENT" 2>&1 >/dev/null || true)
-    EXIT_CODE=$?
+    STDERR_OUT=$(echo "$MOCK_EVENT" | "$GOYOKE" hook "$hook" 2>&1 >/dev/null || true)
 
     if echo "$STDERR_OUT" | grep -q 'panic:'; then
-        echo "  FAIL: $hook panicked"
-        FAIL=$((FAIL + 1))
-    elif [ "$EXIT_CODE" -gt 1 ]; then
-        echo "  FAIL: $hook exit code $EXIT_CODE (>1)"
+        echo "  FAIL: hook $hook panicked"
         FAIL=$((FAIL + 1))
     else
-        echo "  PASS: $hook degrades gracefully (exit $EXIT_CODE)"
+        echo "  PASS: hook $hook degrades gracefully"
         PASS=$((PASS + 1))
     fi
 done
@@ -212,16 +224,15 @@ done
 echo ""
 echo "=== Step 5: Build verification ==="
 
-# Embedded binary sizes
-EMBEDDED_BINS="goyoke goyoke-mcp goyoke-team-run goyoke-load-context goyoke-validate"
-for bin in $EMBEDDED_BINS; do
-    BIN_PATH="${TEMP_BIN}/${bin}"
-    if [ -f "$BIN_PATH" ]; then
-        SIZE=$(stat -c%s "$BIN_PATH" 2>/dev/null || stat -f%z "$BIN_PATH")
-        MB=$(echo "scale=1; $SIZE / 1048576" | bc)
-        echo "  $bin: ${MB}MB"
-    fi
-done
+# Single binary size check
+BIN_PATH="${TEMP_BIN}/goyoke"
+if [ -f "$BIN_PATH" ]; then
+    SIZE=$(stat -c%s "$BIN_PATH" 2>/dev/null || stat -f%z "$BIN_PATH")
+    MB=$(echo "scale=1; $SIZE / 1048576" | bc)
+    echo "  goyoke: ${MB}MB"
+    # Should be under 40MB (dev build without stripping)
+    check "binary size under 40MB" test "$SIZE" -lt 41943040
+fi
 
 # No private agents
 PRIVATE_IN_INDEX=$(jq -r '.agents[] | select(.distribution == "private") | .id' "${PROJECT_ROOT}/defaults/agents/agents-index.json" 2>/dev/null || true)

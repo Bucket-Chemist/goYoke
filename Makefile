@@ -90,8 +90,12 @@ coverage:
 	@echo "  go tool cover -html=coverage.out"
 
 # Build targets
-# New default: TypeScript TUI + hooks
-build: build-hooks build-tui
+# Single multicall binary
+build:
+	@echo "Building goyoke binary..."
+	@mkdir -p bin
+	@go build $(LDFLAGS) -o bin/goyoke ./cmd/goyoke
+	@echo "✓ goyoke built at bin/goyoke"
 
 # Build TypeScript TUI
 build-tui:
@@ -202,32 +206,12 @@ build-all: build-validate build-archive build-sharp-edge build-load-context buil
 # Alias for build-all (matches plan documentation)
 all: build-all
 
-install: build-validate build-archive build-aggregate build-sharp-edge build-capture-intent build-load-context build-agent-endstate build-orchestrator-guard build-update-review-outcome build-log-review build-codebase-extract check-path
-	@echo "Installing goYoke CLIs to ~/.local/bin/..."
-	mkdir -p ~/.local/bin
-	cp bin/goyoke-validate ~/.local/bin/goyoke-validate
-	cp bin/goyoke-archive ~/.local/bin/goyoke-archive
-	cp bin/goyoke-aggregate ~/.local/bin/goyoke-aggregate
-	cp bin/goyoke-sharp-edge ~/.local/bin/goyoke-sharp-edge
-	cp bin/goyoke-capture-intent ~/.local/bin/goyoke-capture-intent
-	cp bin/goyoke-load-context ~/.local/bin/goyoke-load-context
-	cp bin/goyoke-agent-endstate ~/.local/bin/goyoke-agent-endstate
-	cp bin/goyoke-orchestrator-guard ~/.local/bin/goyoke-orchestrator-guard
-	cp bin/goyoke-update-review-outcome ~/.local/bin/goyoke-update-review-outcome
-	cp bin/goyoke-log-review ~/.local/bin/goyoke-log-review
-	cp bin/goyoke-codebase-extract ~/.local/bin/goyoke-codebase-extract
-	chmod +x ~/.local/bin/goyoke-validate
-	chmod +x ~/.local/bin/goyoke-archive
-	chmod +x ~/.local/bin/goyoke-aggregate
-	chmod +x ~/.local/bin/goyoke-sharp-edge
-	chmod +x ~/.local/bin/goyoke-capture-intent
-	chmod +x ~/.local/bin/goyoke-load-context
-	chmod +x ~/.local/bin/goyoke-agent-endstate
-	chmod +x ~/.local/bin/goyoke-orchestrator-guard
-	chmod +x ~/.local/bin/goyoke-update-review-outcome
-	chmod +x ~/.local/bin/goyoke-log-review
-	chmod +x ~/.local/bin/goyoke-codebase-extract
-	@echo "✅ Installed goyoke-validate, goyoke-archive, goyoke-aggregate, goyoke-sharp-edge, goyoke-capture-intent, goyoke-load-context, goyoke-agent-endstate, goyoke-orchestrator-guard, goyoke-update-review-outcome, goyoke-log-review, goyoke-codebase-extract"
+install: build check-path
+	@echo "Installing goyoke to ~/.local/bin/..."
+	@mkdir -p ~/.local/bin
+	@cp bin/goyoke ~/.local/bin/goyoke
+	@chmod +x ~/.local/bin/goyoke
+	@echo "✅ Installed single binary: ~/.local/bin/goyoke"
 	@echo ""
 	@$(MAKE) check-path
 
@@ -485,20 +469,18 @@ defaults:
 	@scripts/generate-defaults.sh
 
 dist: defaults
-	@echo "Building distribution binaries..."
+	@echo "Building distribution binary..."
 	@mkdir -p bin
-	@go build -o bin/ ./cmd/...
-	@echo "✓ Distribution build complete"
+	@go build -ldflags "-w -X main.version=${VERSION}" -o bin/goyoke ./cmd/goyoke
+	@echo "✓ Distribution build complete (single binary)"
 
 check-size: dist
-	@echo "Checking embedded binary sizes (3MB limit)..."
-	@for bin in goyoke goyoke-mcp goyoke-team-run goyoke-load-context goyoke-validate; do \
-		size=$$(stat -c%s bin/$$bin 2>/dev/null || stat -f%z bin/$$bin); \
+	@echo "Checking binary size (40MB limit)..."
+	@size=$$(stat -c%s bin/goyoke 2>/dev/null || stat -f%z bin/goyoke); \
 		mb=$$(echo "scale=1; $$size / 1048576" | bc); \
-		echo "  $$bin: $${mb}MB ($$size bytes)"; \
-		if [ $$size -gt 3145728 ]; then echo "ERROR: $$bin exceeds 3MB"; exit 1; fi; \
-	done
-	@echo "✓ All binaries under 3MB"
+		echo "  goyoke: $${mb}MB ($$size bytes)"; \
+		if [ $$size -gt 41943040 ]; then echo "ERROR: goyoke exceeds 40MB"; exit 1; fi
+	@echo "✓ Binary under 40MB"
 
 dev-setup:
 	@scripts/dev-setup.sh
