@@ -24,6 +24,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -35,7 +36,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/goYoke/defaults"
+	"github.com/Bucket-Chemist/goYoke/internal/hooks"
 	"github.com/Bucket-Chemist/goYoke/internal/lifecycle"
+	"github.com/Bucket-Chemist/goYoke/internal/subcmd"
+	mcpcmd "github.com/Bucket-Chemist/goYoke/internal/subcmd/mcp"
+	"github.com/Bucket-Chemist/goYoke/internal/subcmd/utils"
 	tuiLifecycle "github.com/Bucket-Chemist/goYoke/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/bridge"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
@@ -64,6 +69,30 @@ var version = "dev"
 
 func main() {
 	resolve.SetDefault(defaults.FS)
+
+	// Multicall dispatch: check argv[0] for busybox-style symlink invocation,
+	// then check for explicit subcommands. Both must run before flag.Parse()
+	// so subcommand names are not misinterpreted as unknown flags.
+	reg := buildRegistry()
+	if fn, remainingArgs, ok := subcmd.DispatchByArgv0(os.Args[0], reg); ok {
+		if err := fn(context.Background(), remainingArgs, os.Stdin, os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if len(os.Args) > 1 {
+		err := reg.Dispatch(context.Background(), os.Args[1:], os.Stdin, os.Stdout)
+		if err == nil {
+			return
+		}
+		if !errors.Is(err, subcmd.ErrUnknownCommand) && !errors.Is(err, subcmd.ErrNoCommand) {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		// ErrUnknownCommand / ErrNoCommand → fall through to flag parsing + TUI
+	}
+
 	sessionID := flag.String("session-id", "", "resume a specific session by ID")
 	verbose := flag.Bool("verbose", false, "enable verbose logging to stderr")
 	debug := flag.Bool("debug", false, "write all tea.Msg values to a debug log file")
@@ -83,8 +112,10 @@ func main() {
 	}
 
 	if *mcpServer {
-		fmt.Fprintln(os.Stderr, "MCP server mode not yet implemented. Use goyoke-mcp binary.")
-		os.Exit(1)
+		if err := mcpcmd.Run(context.Background(), nil, os.Stdin, os.Stdout); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 
 	// If --config-dir is set, propagate to environment so the claude subprocess
@@ -515,6 +546,15 @@ type mcpServerEntry struct {
 	Command string            `json:"command"`
 	Args    []string          `json:"args,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
+}
+
+// buildRegistry wires all multicall subcommands into a single dispatch registry.
+func buildRegistry() *subcmd.Registry {
+	reg := subcmd.NewRegistry()
+	hooks.RegisterAll(reg)
+	utils.RegisterAll(reg)
+	reg.Register("mcp", mcpcmd.Run)
+	return reg
 }
 
 // writeMCPConfig writes a temporary MCP configuration JSON file pointing at
