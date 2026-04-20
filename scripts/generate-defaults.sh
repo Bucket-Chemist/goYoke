@@ -123,8 +123,8 @@ done
 # --- 7. Copy root-level files ---
 echo "[generate-defaults] Copying root files..."
 cp "${SOURCE}/routing-schema.json" "${DEST}/routing-schema.json" 2>/dev/null || true
-# CLAUDE.md: use a distribution-safe version (no private paths)
-printf '# goYoke Configuration\n\nEmbedded default configuration. User files in ~/.claude/ override these.\n' > "${DEST}/CLAUDE.md"
+# CLAUDE.md: embed the real one so the binary has full routing knowledge
+cp "${SOURCE}/CLAUDE.md" "${DEST}/CLAUDE.md"
 # settings-template.json: extract hooks, replace absolute paths with binary names
 jq '{hooks: .hooks}' "${SOURCE}/settings.json" | \
     sed 's|/[^"]*bin/\(goyoke-[^"]*\)|\1|g' > "${DEST}/settings-template.json"
