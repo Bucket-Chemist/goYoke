@@ -3,6 +3,7 @@ package resolve
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -47,6 +48,9 @@ func SetDefault(embedFS fs.ReadFileFS) {
 		panic("resolve: SetDefault called more than once")
 	}
 	defaultSet = true
+	if err := ValidateEmbeddedFS(embedFS); err != nil {
+		log.Printf("resolve: embedded FS validation warnings: %v", err)
+	}
 	defaultResolver = New(newDiskFS(), embedFS)
 }
 
