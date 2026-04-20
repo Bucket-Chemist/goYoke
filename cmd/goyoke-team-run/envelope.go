@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
 // StdinEnvelope represents the minimal validation structure for stdin JSON files.
@@ -49,16 +51,21 @@ var stdoutSchemasBaseDir string
 // or empty strings if no matching schema is found.
 // This is a best-effort lookup — missing schemas are not errors.
 func resolveStdoutSchema(workflowType, agentID string) (stdoutJSON string, schemaName string) {
-	dir := stdoutSchemasBaseDir
-	if dir == "" {
-		dir = filepath.Join(os.Getenv("HOME"), ".claude", "schemas", "teams", "stdin-stdout")
-	}
-
 	candidates := buildSchemaCandidates(workflowType, agentID)
 
+	readCandidate := func(candidate string) ([]byte, error) {
+		if stdoutSchemasBaseDir != "" {
+			return os.ReadFile(filepath.Join(stdoutSchemasBaseDir, candidate))
+		}
+		r, err := resolve.NewFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		return r.ReadFile("schemas/teams/stdin-stdout/" + candidate)
+	}
+
 	for _, candidate := range candidates {
-		path := filepath.Join(dir, candidate)
-		data, err := os.ReadFile(path)
+		data, err := readCandidate(candidate)
 		if err != nil {
 			continue
 		}
@@ -101,16 +108,21 @@ var formalSchemasBaseDir string
 //   - role fallback: backend-reviewer → reviewer.json
 //   - generic: go-pro → worker.json
 func resolveFormalSchema(agentID string) (string, bool) {
-	dir := formalSchemasBaseDir
-	if dir == "" {
-		dir = filepath.Join(os.Getenv("HOME"), ".claude", "schemas", "stdout")
-	}
-
 	candidates := buildFormalSchemaCandidates(agentID)
 
+	readCandidate := func(candidate string) ([]byte, error) {
+		if formalSchemasBaseDir != "" {
+			return os.ReadFile(filepath.Join(formalSchemasBaseDir, candidate))
+		}
+		r, err := resolve.NewFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		return r.ReadFile("schemas/stdout/" + candidate)
+	}
+
 	for _, candidate := range candidates {
-		path := filepath.Join(dir, candidate)
-		data, err := os.ReadFile(path)
+		data, err := readCandidate(candidate)
 		if err != nil {
 			continue
 		}
