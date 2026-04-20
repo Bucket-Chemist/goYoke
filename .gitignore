@@ -118,3 +118,14 @@ node_modules/
 /.bug-hunter/
 /.codex
 /distr/
+
+# defaults/ generated content (populated by generate-defaults.sh)
+# Only embed.go is tracked in git
+defaults/agents/
+defaults/conventions/
+defaults/rules/
+defaults/schemas/
+defaults/skills/
+defaults/routing-schema.json
+defaults/CLAUDE.md
+defaults/settings-template.json

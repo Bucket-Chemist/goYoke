@@ -155,7 +155,7 @@
       "title": "Migrate LoadSharpEdgeIDs() and LoadSharpEdgesIndex() to Resolver",
       "file": "task-012.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -168,7 +168,7 @@
       "title": "Create defaults/ package with embed.go and directory structure",
       "file": "task-013.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "time_estimate": "1-2d",
       "dependencies": [],
