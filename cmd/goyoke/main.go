@@ -296,23 +296,22 @@ func main() {
 	// -----------------------------------------------------------------------
 
 	mcpConfigPath := ""
-	mcpBinary, mcpFound := findMCPBinary(*mcpBinaryFlag)
-	if mcpFound {
-		path, err := writeMCPConfig(mcpBinary)
+	mcpCmd, mcpArgs, mcpErr := getMCPCommand(*mcpBinaryFlag)
+	if mcpErr == nil {
+		path, err := writeMCPConfig(mcpCmd, mcpArgs)
 		if err != nil {
 			// Always warn — a broken MCP config means spawn_agent silently fails.
 			fmt.Fprintf(os.Stderr, "[goyoke] warning: could not write MCP config: %v\n", err)
 		} else {
 			mcpConfigPath = path
 			if *verbose {
-				log.Printf("[goyoke] MCP config: %s (binary: %s)", path, mcpBinary)
+				log.Printf("[goyoke] MCP config: %s (command: %s mcp)", path, mcpCmd)
 			}
 		}
 	} else {
 		// Always emit this warning regardless of --verbose; silent degradation is
 		// the root cause of spawn_agent appearing broken.
-		fmt.Fprintf(os.Stderr, "[goyoke] warning: goyoke-mcp binary not found; MCP tools (spawn_agent, ask_user, etc.) will be unavailable\n")
-		fmt.Fprintf(os.Stderr, "[goyoke] hint: run 'make build-go-mcp' to build it, or pass --mcp-binary=/path/to/goyoke-mcp\n")
+		fmt.Fprintf(os.Stderr, "[goyoke] warning: could not determine MCP command: %v; MCP tools (spawn_agent, ask_user, etc.) will be unavailable\n", mcpErr)
 	}
 
 	// Resolve the initial model: explicit --model flag takes precedence;
@@ -486,55 +485,32 @@ func openDebugLog() (*os.File, error) {
 	return os.Create(path)
 }
 
-// findMCPBinary searches for the goyoke-mcp binary.
+// getMCPCommand returns the command and args to use for the MCP server.
 //
-// Resolution order:
-//  1. explicit override (non-empty explicitPath is used as-is)
-//  2. filesystem candidates relative to the running binary
-//  3. exec.LookPath (searches $PATH)
+// By default it returns the running binary itself with ["mcp"], so the
+// unified goyoke binary serves as its own MCP server via multicall dispatch.
 //
-// Returns the absolute path and true if found, or ("", false) otherwise.
-func findMCPBinary(explicitPath string) (string, bool) {
-	// 1. Honour explicit --mcp-binary flag.
+// If explicitPath is non-empty (--mcp-binary flag), it is used directly with
+// ["mcp"] after printing a deprecation warning.
+func getMCPCommand(explicitPath string) (string, []string, error) {
 	if explicitPath != "" {
+		fmt.Fprintf(os.Stderr, "[goyoke] warning: --mcp-binary is deprecated; the goyoke binary now serves as its own MCP server via 'goyoke mcp'\n")
 		abs, err := filepath.Abs(explicitPath)
 		if err != nil {
-			return "", false
+			return "", nil, fmt.Errorf("resolve --mcp-binary path: %w", err)
 		}
-		if info, err := os.Stat(abs); err == nil && !info.IsDir() {
-			return abs, true
-		}
-		// Explicit path provided but not found — report the problem clearly.
-		fmt.Fprintf(os.Stderr, "[goyoke] warning: --mcp-binary path not found: %s\n", abs)
-		return "", false
+		return abs, []string{"mcp"}, nil
 	}
 
-	exe, _ := os.Executable()
-	exeDir := filepath.Dir(exe)
-
-	// 2. Filesystem candidates (ordered by likelihood in dev and installed layouts).
-	candidates := []string{
-		filepath.Join(exeDir, "goyoke-mcp"),              // same dir as TUI binary
-		filepath.Join(exeDir, "bin", "goyoke-mcp"),       // bin/ subdir
-		filepath.Join(exeDir, "..", "bin", "goyoke-mcp"), // parent/bin (dev layout)
-	}
-
-	for _, path := range candidates {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			continue
+	exe, err := os.Executable()
+	if err != nil {
+		path, lookErr := exec.LookPath("goyoke")
+		if lookErr != nil {
+			return "", nil, fmt.Errorf("cannot find goyoke binary: %w (original: %w)", lookErr, err)
 		}
-		if info, err := os.Stat(abs); err == nil && !info.IsDir() {
-			return abs, true
-		}
+		exe = path
 	}
-
-	// 3. Fall back to $PATH search.
-	if path, err := exec.LookPath("goyoke-mcp"); err == nil {
-		return path, true
-	}
-
-	return "", false
+	return exe, []string{"mcp"}, nil
 }
 
 // mcpConfig is the JSON structure expected by claude --mcp-config.
@@ -557,14 +533,15 @@ func buildRegistry() *subcmd.Registry {
 	return reg
 }
 
-// writeMCPConfig writes a temporary MCP configuration JSON file pointing at
-// the given goyoke-mcp binary.  Returns the path to the created file.
+// writeMCPConfig writes a temporary MCP configuration JSON file.
+// command and args are passed directly as the MCP server invocation.
 // The file is created in os.TempDir and will be cleaned up by the OS.
-func writeMCPConfig(mcpBinaryPath string) (string, error) {
+func writeMCPConfig(command string, args []string) (string, error) {
 	cfg := mcpConfig{
 		MCPServers: map[string]mcpServerEntry{
 			"goyoke-interactive": {
-				Command: mcpBinaryPath,
+				Command: command,
+				Args:    args,
 				Env:     map[string]string{},
 			},
 		},
