@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 const (
@@ -206,10 +205,10 @@ func IncrementToolCount() error {
 	defer file.Close()
 
 	// Acquire exclusive lock (blocks until available)
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
+	if err := lockFile(file); err != nil {
 		return fmt.Errorf("failed to lock counter file: %w", err)
 	}
-	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	defer unlockFile(file)
 
 	// Read current count
 	data, err := os.ReadFile(path)
@@ -259,10 +258,10 @@ func GetToolCountAndIncrement() (int, error) {
 	defer file.Close()
 
 	// Acquire exclusive lock (blocks until available)
-	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
+	if err := lockFile(file); err != nil {
 		return 0, fmt.Errorf("[config] failed to lock counter file: %w", err)
 	}
-	defer syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
+	defer unlockFile(file)
 
 	// Read current count
 	var count int
