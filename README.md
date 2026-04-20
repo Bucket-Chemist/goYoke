@@ -161,6 +161,52 @@ Hook binaries without embedded config degrade gracefully — they log warnings b
 | `/plan-tickets` | Scout → Planner → Architect → Review → Tickets | Full planning pipeline |
 | `/ticket` | Select → Validate → Plan → Implement → Verify | Ticket-driven development |
 
+### Team Orchestration
+
+Teams are the reproducibility primitive. Every multi-agent workflow is defined as a declarative `config.json` with typed stdin/stdout contracts — the same team config produces the same agent topology every time.
+
+```
+config.json (declarative)
+│
+├── team_name: "braintrust"
+├── workflow_type: "braintrust"
+├── budget_max_usd: 5.00
+│
+├── Wave 1 (parallel)
+│   ├── einstein   ← stdin/wave1-einstein.json
+│   └── staff-arch ← stdin/wave1-staff-architect.json
+│
+└── Wave 2 (after Wave 1 completes)
+    └── beethoven  ← stdin/wave2-beethoven.json
+                      (receives Wave 1 stdout as input)
+
+Each agent's I/O is schema-validated:
+
+    ┌─────────────────────────────────────────────┐
+    │         stdin-stdout contract                │
+    │  schemas/teams/stdin-stdout/{workflow}.json  │
+    ├─────────────────────────────────────────────┤
+    │  stdin:  { task, context, conventions, ... } │
+    │  stdout: { status, summary, findings, ... }  │
+    └─────────────────────────────────────────────┘
+           │                          │
+           ▼                          ▼
+    stdin/{member}.json        stdout/{member}.json
+    (written before spawn)     (captured after completion)
+```
+
+**How it works:**
+
+1. **Config declares topology** — waves, members, agents, models, budget
+2. **Stdin files provide typed input** — each agent gets a JSON file matching the stdin schema
+3. **Agents run in parallel within waves** — Wave N+1 waits for Wave N to complete
+4. **Stdout is captured and validated** — output written to `stdout/{member}.json`
+5. **Later waves consume earlier output** — synthesizers (Beethoven, Pasteur) read Wave 1 results
+6. **Budget gates prevent runaway costs** — per-agent estimates checked before spawn
+7. **Partial failure continues** — if 2/3 Wave 1 agents succeed, the synthesizer works with what's available
+
+The `goyoke-team-run` binary handles all execution. The `goyoke-plan-impl` binary generates team configs from architect plans. The TUI displays live progress via IPC.
+
 ---
 
 ## Hook System
