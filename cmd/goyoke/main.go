@@ -339,17 +339,34 @@ func main() {
 		log.Printf("[goyoke] Warning: settings-template.json not found in embedded FS, hooks not injected")
 	}
 
+	// Write embedded CLAUDE.md to temp file for --append-system-prompt-file injection.
+	// This ensures Claude treats goYoke routing instructions as proper system instructions
+	// even in zero-install environments where no CLAUDE.md exists on disk.
+	var systemPromptFile string
+	if claudeMD, claudeErr := resolve.Default().ReadFile("CLAUDE.md"); claudeErr == nil {
+		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+		if runtimeDir == "" {
+			runtimeDir = os.TempDir()
+		}
+		tmpPath := filepath.Join(runtimeDir, fmt.Sprintf("goyoke-claude-md-%d.md", os.Getpid()))
+		if writeErr := os.WriteFile(tmpPath, claudeMD, 0600); writeErr == nil {
+			systemPromptFile = tmpPath
+			defer os.Remove(tmpPath)
+		}
+	}
+
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
-		SessionID:      *sessionID,
-		Model:          initialModel,
-		ProjectDir:     ".", // current working directory
-		PermissionMode: *permMode,
-		Verbose:        *verbose,
-		Debug:          *debug,
-		ConfigDir:      *configDir,
-		MCPConfigPath:  mcpConfigPath,
-		SettingsPath:   settingsPath,
+		SessionID:          *sessionID,
+		Model:              initialModel,
+		ProjectDir:         ".", // current working directory
+		PermissionMode:     *permMode,
+		Verbose:            *verbose,
+		Debug:              *debug,
+		ConfigDir:          *configDir,
+		MCPConfigPath:      mcpConfigPath,
+		SettingsPath:       settingsPath,
+		SystemPromptFile:   systemPromptFile,
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)
