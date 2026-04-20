@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
@@ -534,22 +535,32 @@ func (s *claudeSpawner) finalizeSpawn(tr *TeamRunner, waveIdx, memIdx int, resul
 
 // loadAgentConfig reads CLI flags from agents-index.json for a given agent.
 func loadAgentConfig(agentID string) (*agentCLIConfig, error) {
-	configDir, err := routing.GetClaudeConfigDir()
+	resolver, err := resolve.NewFromEnv()
 	if err != nil {
 		return nil, fmt.Errorf("resolve config dir: %w", err)
 	}
-	agentsIndexPath := filepath.Join(configDir, "agents", "agents-index.json")
 
-	data, err := os.ReadFile(agentsIndexPath)
+	results, err := resolver.ReadFileAll("agents/agents-index.json")
 	if err != nil {
 		return nil, fmt.Errorf("read agents-index.json: %w", err)
 	}
 
+	var data []byte
+	if len(results) == 2 {
+		// results[0]=userFS, results[1]=embedFS; embedFS is base, userFS is override.
+		data, err = resolve.MergeAgentIndexJSON(results[1], results[0])
+		if err != nil {
+			return nil, fmt.Errorf("merge agents-index.json: %w", err)
+		}
+	} else {
+		data = results[0]
+	}
+
 	var index struct {
 		Agents []struct {
-			ID                  string                       `json:"id"`
-			Model               string                       `json:"model"`
-			CLIFlags            struct {
+			ID       string `json:"id"`
+			Model    string `json:"model"`
+			CLIFlags struct {
 				AllowedTools    []string `json:"allowed_tools"`
 				AdditionalFlags []string `json:"additional_flags"`
 			} `json:"cli_flags"`
