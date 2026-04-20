@@ -361,21 +361,16 @@ func LoadSchema() (*Schema, error) {
 		return unmarshalAndValidateSchema(data)
 	}
 
-	// Try per-call resolver first (respects env-var overrides at call time),
-	// fall back to default resolver which includes embedded FS.
+	// Per-call resolver (not singleton) so env-var changes take effect at call time.
+	// When SetDefault was called, NewFromEnv includes embedded FS as fallback layer.
 	r, err := resolve.NewFromEnv()
 	if err != nil {
-		r = resolve.Default()
+		return nil, fmt.Errorf("[routing] %w", err)
 	}
 
 	data, err := r.ReadFile("routing-schema.json")
 	if err != nil {
-		// NewFromEnv resolver failed — try default (embedded FS)
-		r = resolve.Default()
-		data, err = r.ReadFile("routing-schema.json")
-		if err != nil {
-			return nil, fmt.Errorf("[routing] Failed to read routing-schema.json: %w", err)
-		}
+		return nil, fmt.Errorf("[routing] Failed to read routing-schema.json: %w", err)
 	}
 
 	return unmarshalAndValidateSchema(data)

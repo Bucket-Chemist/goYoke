@@ -28,6 +28,7 @@ func (d diskFS) ReadFile(name string) ([]byte, error) {
 
 var (
 	defaultResolver *Resolver
+	defaultEmbedFS  fs.ReadFileFS // stored separately so NewFromEnv can use it
 	defaultOnce     sync.Once
 	defaultMu       sync.Mutex
 	defaultSet      bool // SetDefault was explicitly called
@@ -48,6 +49,7 @@ func SetDefault(embedFS fs.ReadFileFS) {
 		panic("resolve: SetDefault called more than once")
 	}
 	defaultSet = true
+	defaultEmbedFS = embedFS
 	if err := ValidateEmbeddedFS(embedFS); err != nil {
 		log.Printf("resolve: embedded FS validation warnings: %v", err)
 	}
@@ -93,20 +95,23 @@ func ResetDefault() {
 //
 // Returns an error when HOME is required but not available.
 func NewFromEnv() (*Resolver, error) {
+	// Use embedded FS as fallback layer when SetDefault has been called.
+	embed := defaultEmbedFS // nil if SetDefault wasn't called — that's fine
+
 	if dir := os.Getenv("GOYOKE_PROJECT_DIR"); dir != "" {
-		return New(diskFS{inner: os.DirFS(filepath.Join(dir, ".claude"))}, nil), nil
+		return New(diskFS{inner: os.DirFS(filepath.Join(dir, ".claude"))}, embed), nil
 	}
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
-		return New(diskFS{inner: os.DirFS(dir)}, nil), nil
+		return New(diskFS{inner: os.DirFS(dir)}, embed), nil
 	}
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return New(diskFS{inner: os.DirFS(filepath.Join(xdg, "..", ".claude"))}, nil), nil
+		return New(diskFS{inner: os.DirFS(filepath.Join(xdg, "..", ".claude"))}, embed), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("HOME environment variable not set")
 	}
-	return New(diskFS{inner: os.DirFS(filepath.Join(home, ".claude"))}, nil), nil
+	return New(diskFS{inner: os.DirFS(filepath.Join(home, ".claude"))}, embed), nil
 }
 
 // newDiskFS constructs an fs.ReadFileFS rooted at the resolved config directory.
