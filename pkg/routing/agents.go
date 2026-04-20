@@ -3,6 +3,7 @@ package routing
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"slices"
 
@@ -243,7 +244,8 @@ func (a *AgentIndex) Validate() error {
 		}
 	}
 
-	// Validate model tier mappings reference existing agents
+	// Validate model tier mappings reference existing agents (warn, don't error —
+	// zero-install environments may have partial agent index without user layer).
 	for tier, agentIDs := range a.RoutingRules.ModelTiers {
 		for _, agentID := range agentIDs {
 			found := false
@@ -254,11 +256,7 @@ func (a *AgentIndex) Validate() error {
 				}
 			}
 			if !found {
-				return fmt.Errorf(
-					"[routing] Model tier %q references unknown agent: %s",
-					tier,
-					agentID,
-				)
+				log.Printf("[routing] warning: model tier %q references unknown agent: %s (may be in user layer)", tier, agentID)
 			}
 		}
 	}
