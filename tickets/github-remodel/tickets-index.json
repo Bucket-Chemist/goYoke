@@ -168,7 +168,7 @@
       "title": "Create defaults/ package with embed.go and directory structure",
       "file": "task-013.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 3,
       "time_estimate": "1-2d",
       "dependencies": [],
@@ -179,7 +179,7 @@
       "title": "Create generate-defaults.sh with distribution flag filtering and dotfile validation",
       "file": "task-014.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 3,
       "time_estimate": "1-2d",
       "dependencies": [

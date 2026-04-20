@@ -10,7 +10,7 @@ import (
 )
 
 // EXPECTED_AGENT_INDEX_VERSION is the version this code is built for.
-const EXPECTED_AGENT_INDEX_VERSION = "2.7.0"
+const EXPECTED_AGENT_INDEX_VERSION = "2.8.0"
 
 // AgentIndex represents the complete agents-index.json v2.2.0 structure.
 // This defines the agent catalog for Claude Code routing and auto-activation.
