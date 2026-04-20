@@ -31,6 +31,11 @@ curl -L https://github.com/Bucket-Chemist/goYoke/releases/latest/download/goYoke
 
 # macOS (Apple Silicon)
 curl -L https://github.com/Bucket-Chemist/goYoke/releases/latest/download/goYoke_*_darwin_arm64.tar.gz | tar xz -C /usr/local/bin/
+
+# Windows (PowerShell) — extract to a directory on your PATH
+Invoke-WebRequest -Uri https://github.com/Bucket-Chemist/goYoke/releases/latest/download/goYoke_*_windows_amd64.zip -OutFile goYoke.zip
+Expand-Archive goYoke.zip -DestinationPath "$env:LOCALAPPDATA\goYoke"
+# Add $env:LOCALAPPDATA\goYoke to your PATH
 ```
 
 ### Build from source
