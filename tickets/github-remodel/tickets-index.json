@@ -141,7 +141,7 @@
       "title": "Migrate loadAgentConfig() in goyoke-team-run to Resolver with ReadFileAll + merge",
       "file": "task-011.md",
       "priority": "MEDIUM",
-      "status": "in_progress",
+      "status": "completed",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [
@@ -155,7 +155,7 @@
       "title": "Migrate LoadSharpEdgeIDs() and LoadSharpEdgesIndex() to Resolver",
       "file": "task-012.md",
       "priority": "MEDIUM",
-      "status": "pending",
+      "status": "in_progress",
       "phase": 2,
       "time_estimate": "1-2d",
       "dependencies": [

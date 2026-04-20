@@ -1,10 +1,9 @@
 package telemetry
 
 import (
-	"os"
-	"path/filepath"
 	"sync"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,14 +25,13 @@ func LoadSharpEdgeIDs() error {
 	sharpEdgeIDsOnce.Do(func() {
 		sharpEdgeIDs = make(map[string]bool)
 
-		// Find .claude/agents directory
-		agentsDir := filepath.Join(os.Getenv("HOME"), ".claude", "agents")
-		if projectDir := os.Getenv("GOYOKE_PROJECT_DIR"); projectDir != "" {
-			agentsDir = filepath.Join(projectDir, ".claude", "agents")
+		r, err := resolve.NewFromEnv()
+		if err != nil {
+			loadErr = err
+			return
 		}
 
-		// Walk agent directories
-		entries, err := os.ReadDir(agentsDir)
+		entries, err := r.ReadDir("agents")
 		if err != nil {
 			loadErr = err
 			return
@@ -43,8 +41,7 @@ func LoadSharpEdgeIDs() error {
 			if !entry.IsDir() {
 				continue
 			}
-			yamlPath := filepath.Join(agentsDir, entry.Name(), "sharp-edges.yaml")
-			data, err := os.ReadFile(yamlPath)
+			data, err := r.ReadFile("agents/" + entry.Name() + "/sharp-edges.yaml")
 			if err != nil {
 				continue // Agent may not have sharp edges
 			}

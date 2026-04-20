@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
 	"github.com/Bucket-Chemist/goYoke/pkg/memory"
+	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/Bucket-Chemist/goYoke/pkg/session"
 	"github.com/Bucket-Chemist/goYoke/pkg/telemetry"
@@ -21,32 +22,22 @@ const (
 	DEFAULT_TIMEOUT = 5 * time.Second
 )
 
-// getAgentDirectories returns a list of agent directories to scan for sharp-edges.yaml files.
-// It dynamically discovers all agent directories under ~/.claude/agents/ so that
-// newly added agents are automatically included without code changes.
-//
-// Returns:
-//   - []string: List of absolute paths to agent directories
-//
-// Directories starting with "." or "_" are skipped (e.g., .git, _archive).
-// If the agents directory does not exist, returns nil gracefully.
-// LoadSharpEdgesIndex will skip any directories that lack sharp-edges.yaml files.
-func getAgentDirectories() []string {
-	home := os.Getenv("HOME")
-	if home == "" {
-		// Fallback to current user's home directory
-		home = filepath.Join("/home", os.Getenv("USER"))
-	}
-
-	claudeAgentsDir := filepath.Join(home, ".claude", "agents")
-
-	entries, err := os.ReadDir(claudeAgentsDir)
+// getAgentIDs returns agent IDs discovered via the Resolver union layer.
+// Skips entries starting with "." or "_". Returns nil gracefully on error.
+func getAgentIDs() []string {
+	r, err := resolve.NewFromEnv()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: could not read agents dir %s: %v\n", claudeAgentsDir, err)
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: could not create resolver: %v\n", err)
 		return nil
 	}
 
-	var dirs []string
+	entries, err := r.ReadDir("agents")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: could not read agents dir: %v\n", err)
+		return nil
+	}
+
+	var ids []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -55,11 +46,11 @@ func getAgentDirectories() []string {
 		if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
 			continue
 		}
-		dirs = append(dirs, filepath.Join(claudeAgentsDir, name))
+		ids = append(ids, name)
 	}
 
-	fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Loaded %d agent directories\n", len(dirs))
-	return dirs
+	fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Loaded %d agent IDs\n", len(ids))
+	return ids
 }
 
 func main() {
@@ -68,8 +59,8 @@ func main() {
 
 	// Load sharp edges index early (before event parsing)
 	// This allows pattern matching to work even if loading fails gracefully
-	agentDirs := getAgentDirectories()
-	index, err := memory.LoadSharpEdgesIndex(agentDirs)
+	agentIDs := getAgentIDs()
+	index, err := memory.LoadSharpEdgesIndex(agentIDs)
 	if err != nil {
 		// Log warning but continue - we'll just not have pattern matching
 		fmt.Fprintf(os.Stderr, "[goyoke-sharp-edge] Warning: Failed to load sharp edges index: %v\n", err)

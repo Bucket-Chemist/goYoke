@@ -431,70 +431,57 @@ func TestSchemaCompliance(t *testing.T) {
 }
 
 // =============================================================================
-// getAgentDirectories Tests
+// getAgentIDs Tests
 // =============================================================================
 
-func TestGetAgentDirectories_MultipleAgents(t *testing.T) {
-	dirs := getAgentDirectories()
-	if len(dirs) == 0 {
-		t.Fatal("Expected multiple agent directories, got empty list")
+func TestGetAgentIDs_MultipleAgents(t *testing.T) {
+	ids := getAgentIDs()
+	if len(ids) == 0 {
+		t.Fatal("Expected multiple agent IDs, got empty list")
 	}
 	expectedAgents := []string{"python-pro", "go-pro", "r-pro", "codebase-search", "orchestrator", "architect"}
 	for _, agent := range expectedAgents {
 		found := false
-		for _, dir := range dirs {
-			if strings.Contains(dir, agent) {
+		for _, id := range ids {
+			if strings.Contains(id, agent) {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("Expected agent '%s' in directories, but not found", agent)
+			t.Errorf("Expected agent '%s' in IDs, but not found", agent)
 		}
 	}
 }
 
-func TestGetAgentDirectories_PathStructure(t *testing.T) {
-	dirs := getAgentDirectories()
-	for _, dir := range dirs {
-		if !strings.Contains(dir, ".claude/agents/") {
-			t.Errorf("Expected path to contain '.claude/agents/', got: %s", dir)
+func TestGetAgentIDs_Format(t *testing.T) {
+	ids := getAgentIDs()
+	for _, id := range ids {
+		if strings.Contains(id, "/") {
+			t.Errorf("Expected plain agent ID (no slashes), got: %s", id)
 		}
 	}
 }
 
-func TestGetAgentDirectories_HomeFallback(t *testing.T) {
-	oldHome := os.Getenv("HOME")
-	oldUser := os.Getenv("USER")
-	defer func() {
-		os.Setenv("HOME", oldHome)
-		os.Setenv("USER", oldUser)
-	}()
-	os.Unsetenv("HOME")
-	os.Setenv("USER", "testuser")
-	// With HOME unset, the fallback constructs /home/testuser/.claude/agents/
-	// which won't exist on this machine. The function should return nil gracefully
-	// rather than panicking. LoadSharpEdgesIndex handles nil input safely.
-	dirs := getAgentDirectories()
-	if dirs != nil {
-		// If somehow /home/testuser/.claude/agents/ exists, verify path structure
-		for _, dir := range dirs {
-			if !strings.Contains(dir, "/home/testuser/") {
-				t.Errorf("Expected fallback to /home/testuser, got: %s", dir)
-			}
-		}
-	}
+func TestGetAgentIDs_HomeFallback(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("GOYOKE_PROJECT_DIR", "")
+	t.Setenv("CLAUDE_CONFIG_DIR", "")
+	t.Setenv("XDG_CONFIG_HOME", "")
+	// With no valid home dir, resolver creation fails; getAgentIDs returns nil gracefully.
+	ids := getAgentIDs()
+	_ = ids // Result may be nil or a real list depending on os.UserHomeDir fallback
 }
 
-func TestGetAgentDirectories_Consistency(t *testing.T) {
-	dirs1 := getAgentDirectories()
-	dirs2 := getAgentDirectories()
-	if len(dirs1) != len(dirs2) {
-		t.Fatalf("Expected consistent results, got different lengths: %d vs %d", len(dirs1), len(dirs2))
+func TestGetAgentIDs_Consistency(t *testing.T) {
+	ids1 := getAgentIDs()
+	ids2 := getAgentIDs()
+	if len(ids1) != len(ids2) {
+		t.Fatalf("Expected consistent results, got different lengths: %d vs %d", len(ids1), len(ids2))
 	}
-	for i, dir := range dirs1 {
-		if dir != dirs2[i] {
-			t.Errorf("Inconsistent results at index %d: %s vs %s", i, dir, dirs2[i])
+	for i, id := range ids1 {
+		if id != ids2[i] {
+			t.Errorf("Inconsistent results at index %d: %s vs %s", i, id, ids2[i])
 		}
 	}
 }
