@@ -270,37 +270,6 @@ goYoke uses Go binaries (not prompts) to enforce behavior:
 
 These aren't suggestions—they're enforced in binaries before Claude even sees the request.
 
-## Domain-Specific Capabilities
-
-goYoke includes specialized agents for specific domains:
-
-### Bioinformatics
-`/review-bioinformatics` spawns 6 Opus-tier domain specialists:
-- Genomics reviewer (alignment, variant calling, VCF)
-- Proteomics reviewer (FDR, quantification, search engines)
-- Proteogenomics reviewer (custom databases, novel peptides)
-- Proteoform reviewer (top-down, PTM, intact mass)
-- Mass spectrometry reviewer (instrument, acquisition, DDA/DIA)
-- Bioinformatician reviewer (pipeline, workflow, reproducibility)
-
-Findings are synthesized by a staff bioinformatician.
-
-### Machine Learning
-The `python-architect` agent handles ML design decisions:
-- Neural network architecture selection
-- Training strategy and loss function design
-- Attention mechanism tradeoffs
-- ONNX export considerations
-
-Escalation path: python-pro → python-architect → /braintrust
-
-### LLM Deployment
-The `llm-inference-architect` evaluates:
-- Model memory requirements and KV cache sizing
-- Vulkan/CUDA inference feasibility
-- Hardware requirements for local deployment
-- Quantization tradeoffs
-
 ## Customization
 
 ### Add a Custom Agent

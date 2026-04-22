@@ -68,7 +68,7 @@ jobs:
           # Clear public repo (except .git)
           find public -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} +
 
-          # Sync source (exclude private/runtime content)
+          # Sync source (exclude private/runtime/domain-specific content)
           rsync -a \
             --exclude='.goyoke/' \
             --exclude='.env' \
@@ -79,6 +79,26 @@ jobs:
             --exclude='scripts/claude-edit.sh' \
             --exclude='scripts/empirical-settings-test.sh' \
             --exclude='scripts/test-naked.sh' \
+            --exclude='.claude/agents/genomics-reviewer/' \
+            --exclude='.claude/agents/proteomics-reviewer/' \
+            --exclude='.claude/agents/proteogenomics-reviewer/' \
+            --exclude='.claude/agents/proteoform-reviewer/' \
+            --exclude='.claude/agents/mass-spec-reviewer/' \
+            --exclude='.claude/agents/bioinformatician-reviewer/' \
+            --exclude='.claude/agents/pasteur/' \
+            --exclude='.claude/agents/staff-bioinformatician/' \
+            --exclude='.claude/agents/teams/bioinformatics/' \
+            --exclude='.claude/agents/python-architect/' \
+            --exclude='.claude/agents/llm-inference-architect/' \
+            --exclude='.claude/conventions/python-datasci.md' \
+            --exclude='.claude/conventions/python-ml.md' \
+            --exclude='.claude/schemas/stdin/bioinformatics-*' \
+            --exclude='.claude/schemas/stdin/review-bioinformatics-*' \
+            --exclude='.claude/schemas/teams/review-bioinformatics.json' \
+            --exclude='.claude/schemas/teams/stdin-stdout/review-bioinformatics-*' \
+            --exclude='.claude/skills/review-bioinformatics/' \
+            --exclude='docs/teams/bioinformatics/' \
+            --exclude='internal/subcmd/utils/teampreparesynth/bioinformatics.go' \
             private/ public/
 
       - name: Get tag name

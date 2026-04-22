@@ -137,12 +137,12 @@ goYoke auto-loads coding conventions based on file context:
 | Language | Agents | Specialized Conventions |
 |----------|--------|------------------------|
 | Go | `go-pro`, `go-cli`, `go-tui`, `go-api`, `go-concurrent` | Cobra, Bubbletea |
-| Python | `python-pro`, `python-ux`, `python-architect` | Data science, ML/PyTorch |
+| Python | `python-pro`, `python-ux` | — |
 | TypeScript | `typescript-pro`, `react-pro` | React |
 | Rust | `rust-pro` | — |
 | R | `r-pro`, `r-shiny-pro` | Shiny, Golem |
 
-Domain specialists: bioinformatics (6 reviewers), ML architecture, LLM deployment feasibility.
+Custom domain agents can be added via `.claude/agents/` — see [Contributing](CONTRIBUTING.md).
 
 ## Author
 
