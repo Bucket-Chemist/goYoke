@@ -4,11 +4,19 @@
 
 goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, multi-agent workflows, and a terminal UI. Every request is classified, delegated to the right model tier, and tracked — so you produce deliverables, not chat.
 
+> *Built for Claude Code at launch. Multi-provider support planned.*
+
+<p align="center">
+  <img src="assets/goYoke_v1.png" alt="goYoke — multi-agent terminal orchestration" width="480">
+  <br>
+  <em>Stop being the model's token-spending monkey.</em>
+</p>
+
 ## Why goYoke?
 
-Claude is powerful but easy to misuse. You jump into implementation without a plan, burn Opus tokens on grep, lose context in long conversations, and end up with untested code you're not confident in. Each chat feels productive until you realize you've spent $50 and have no working feature.
+LLMs are powerful but easy to misuse. You jump into implementation without a plan, burn premium tokens on grep, lose context in long conversations, and end up with untested code you're not confident in. Each chat feels productive until you realize you've spent $50 and have no working feature.
 
-goYoke enforces a development workflow: scout the problem, create a plan, review it, then implement. Each step uses the cheapest model tier that can handle it. The router (Opus) never implements — it coordinates. Agents get fresh context with injected conventions. The cheapest tier (Haiku) handles file search. Mid-tier (Sonnet) implements. High-tier (Opus) only makes architectural decisions. No degradation, no wasted tokens.
+goYoke enforces a development workflow: scout the problem, create a plan, review it, then implement. Each step uses the cheapest model tier that can handle it. The router never implements — it coordinates. Agents get fresh context with injected conventions. The cheapest tier handles file search. Mid-tier implements. Premium tier only makes architectural decisions. No degradation, no wasted tokens.
 
 This isn't prompt engineering. goYoke uses 11 compiled Go binaries that intercept Claude Code events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that Claude forgets.
 
