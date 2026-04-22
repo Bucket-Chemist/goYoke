@@ -143,13 +143,6 @@ Single-provider (Claude Code), full enforcement stack.
 - [ ] Provider comparison heatmaps (quality × cost × latency)
 - [ ] Export to CSV/JSON for external analysis
 
-### v0.9.2 — Memory persistence
-
-- [ ] Persistent memory backend (decisions, sharp edges, learnings across sessions)
-- [ ] SessionStart hook injects relevant memories from previous sessions
-- [ ] Automatic learning capture from agent results
-- [ ] Memory deduplication and decay (stale memories surfaced less frequently)
-
 ---
 
 ## v1.0.0 — Stable
@@ -162,6 +155,73 @@ Single-provider (Claude Code), full enforcement stack.
 - [ ] Agent definition format at v1.0
 - [ ] Team config format at v1.0
 - [ ] Comprehensive documentation for all public APIs
+
+---
+
+## v1.1.0 — Obsidian Graph-Based Memory
+
+**Goal:** Replace the flat JSONL memory system with a structured temporal knowledge graph that provides semantically rich, graph-queryable memory with sub-100ms retrieval — and gives humans a browsable, editable view via an Obsidian vault.
+
+**Why this is v1.1 (not earlier):** The knowledge graph is a major new subsystem with its own schema, consolidation pipeline, and embedding infrastructure. It depends on a stable hook interface and agent contract system (v1.0). It doesn't change existing APIs — it adds a new memory backend behind a feature flag (`GOYOKE_MEMORY_BACKEND=graph`).
+
+**Full design:** See `tickets/obsidian-cli-knowledge-graph/SCOPE-v4.md` (1000+ lines, braintrust-reviewed).
+
+### v1.1.0 — Core storage layer
+
+Phase 0 (validation) + Phase 1 (deployment) + Phase 2 (storage) from SCOPE-v4.
+
+- [ ] SQLite graph store via `modernc.org/sqlite` (pure Go, no CGO): nodes, edges (bi-temporal), episodes
+- [ ] FTS5 full-text search with AFTER sync triggers for BM25 keyword retrieval
+- [ ] `chromem-go` vector index for embedding similarity search (<8ms at 10K vectors)
+- [ ] `atomic.Pointer[map]` hot cache for core memory blocks (<1ms reads, zero contention)
+- [ ] IR-based composite scoring: BM25 (30%) + cosine similarity (50%) + frequency (10%) + PageRank (10%)
+- [ ] Reciprocal Rank Fusion for merging BM25 and vector result sets (upgrade path to Convex Combination)
+- [ ] Dual connection pools (N readers + 1 writer) with WAL mode
+- [ ] `GraphStore`, `VectorIndex`, `VaultSync` Go interfaces for testability and future backend swaps
+- [ ] Pre-implementation validation: nomic-embed-text normalization, SQLite cold-start latency, goldmark extension coexistence
+
+### v1.1.1 — Obsidian vault + consolidation pipeline
+
+Phase 3 from SCOPE-v4.
+
+- [ ] Write-only vault export: entities, episodes, procedures, communities as Obsidian-compatible Markdown
+- [ ] YAML frontmatter with content hashes for change detection
+- [ ] `[[wikilinks]]` as graph edges — browsable in Obsidian Graph View
+- [ ] Batch import: detect human edits between sessions via content hash diffing
+- [ ] Hybrid goldmark parsing stack for vault import (powerman/goldmark-obsidian + callout extension)
+- [ ] Session-end consolidation pipeline: entity extraction (Claude Sonnet) → entity resolution (embedding-first, tiered OR-logic with context-enriched embeddings) → graph algorithms (PageRank, Louvain community detection via gonum) → pre-computed features written back to SQLite
+- [ ] Auto-synthesized `MEMORY.md` brief (first 200 lines injected at startup)
+
+### v1.1.2 — Hook integration + JSONL migration
+
+Phase 4 from SCOPE-v4.
+
+- [ ] Extend `goyoke-load-context` with graph memory retrieval (no new binary)
+- [ ] Three-phase startup: core blocks (<10ms, atomic cache) → session-relevant retrieval (<50ms, hybrid query) → lazy on-demand tools
+- [ ] `GOYOKE_MEMORY_BACKEND` env var: `jsonl` (default, preserves existing behavior) or `graph` (knowledge graph active)
+- [ ] Migrate existing JSONL memories: handoffs → episodes, decisions → semantic nodes, sharp edges → procedural nodes
+- [ ] JSONL originals preserved as `.jsonl.bak` (instant rollback: set env var back to `jsonl`)
+- [ ] Total startup overhead with graph backend: <100ms (72ms budget after baseline)
+- [ ] `memory_search` and `memory_get` MCP tools exposed to agents for on-demand retrieval
+
+### Vault structure
+
+```
+.goyoke-vault/                  ← Obsidian vault (human-browsable)
+├── entities/
+│   ├── agents/
+│   ├── concepts/
+│   ├── decisions/
+│   └── errors/
+├── episodes/
+├── procedures/
+├── communities/
+└── MEMORY.md                   ← auto-synthesized, loaded at startup
+
+.goyoke/graphdb/                ← Runtime (agent-only, gitignored)
+├── graph.db                    ← SQLite
+└── index/                      ← chromem-go persistence
+```
 
 ---
 
