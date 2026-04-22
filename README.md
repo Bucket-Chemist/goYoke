@@ -14,7 +14,7 @@ goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, mul
 <p align="center">
   <img src="assets/goyoke-monkey.png" alt="Don't be this." width="400">
   <br>
-  <em>Stop being the model's token-spending monkey.</em>
+  <em>^^^^ don't be their trained token monkey</em>
 </p>
 
 ## Why goYoke?
