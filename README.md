@@ -14,11 +14,11 @@ goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, mul
 
 ## Why goYoke?
 
-LLMs are powerful but easy to misuse. You jump into implementation without a plan, burn premium tokens on grep, lose context in long conversations, and end up with untested code you're not confident in. Each chat feels productive until you realize you've spent $50 and have no working feature.
+LLMs are a black box. Model providers silently alter quality between releases. The same prompt produces different results on Tuesday than it did on Monday. If you care about sitting down at your desk and getting the same quality of work every session — not hoping for it, not crossing your fingers — you need structure that the model cannot ignore.
 
-goYoke enforces a development workflow: scout the problem, create a plan, review it, then implement. Each step uses the cheapest model tier that can handle it. The router never implements — it coordinates. Agents get fresh context with injected conventions. The cheapest tier handles file search. Mid-tier implements. Premium tier only makes architectural decisions. No degradation, no wasted tokens.
+goYoke enforces a development workflow: scout the problem, create a plan, review it, then implement. Every handoff between agents is typed — JSON-schema-validated stdin/stdout contracts ensure that a reviewer always produces structured findings with severity, file, and recommendation, that a worker always reports which acceptance criteria were met with evidence, and that an architect always produces implementation plans with dependency graphs and testable criteria. Same contracts in, comparable quality out — regardless of what the model provider changed last night.
 
-This isn't prompt engineering. goYoke uses 11 compiled Go binaries that intercept Claude Code events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that Claude forgets.
+This isn't prompt engineering. goYoke uses 11 compiled Go binaries that intercept Claude Code events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that degrade over long conversations. The model can't forget a binary that blocks its tool call.
 
 ## Quick Start
 

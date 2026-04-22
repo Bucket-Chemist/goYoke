@@ -10,6 +10,91 @@ goYoke enforces sane development workflows through compiled Go binaries that int
 
 **How it works:** When you describe a task, the router (an Opus-tier Claude instance) classifies your request and delegates to one of 78 specialized agents at the appropriate tier (Haiku for search, Sonnet for implementation, Opus for design). Each agent gets the same conventions, rules, and identity injected automatically. Every decision is logged. Sharp edges are captured. Sessions are archived with handoffs.
 
+## Reproducibility & Standardization
+
+The floor is shifting. LLMs are a black box. Model providers silently change model behavior between releases. The same prompt produces different quality on Tuesday than Monday. If your development workflow depends on "the model being good today," you have no workflow—you have a hope.
+
+goYoke's answer: typed contracts. Every handoff between agents—every input and every output—is validated against a JSON schema. A reviewer doesn't produce freeform text; it produces structured findings with required fields (severity, file, title, impact, recommendation). A worker doesn't just "implement stuff"; it reports exactly which acceptance criteria were met, with evidence, and whether the build passes. The model can drift, but the contract cannot.
+
+### Stdin/Stdout Contracts
+
+Every agent in a team workflow receives typed JSON input (stdin) and must produce typed JSON output (stdout). These contracts are JSON schemas stored in `.claude/schemas/stdin/` and `.claude/schemas/stdout/`.
+
+**Reviewer stdin requires:** agent ID, workflow type, review scope (files, languages detected), git context (branch, recent commits), focus areas, project conventions.
+
+**Reviewer stdout requires:** status (complete/partial/failed), overall assessment (APPROVE/WARNING/BLOCK), summary, and findings—each finding must have: id, severity, category, file, title, message, impact, recommendation.
+
+**Worker stdin requires:** task (with task_id, subject, description, acceptance_criteria, dependency graph), implementation scope (target packages, related files, tests_required, build_verification command), conventions (language, conventions file), codebase context (architecture notes, patterns to follow, anti-patterns to avoid).
+
+**Worker stdout requires:** status, summary, files_modified (each with path, action, lines_changed, description), tests_written (file, count, names), acceptance_criteria_met (each criterion with status: met/not_met/partial and evidence), build_status (compiled: bool, tests_passed: bool), blockers.
+
+The key insight: acceptance criteria flow from plan to worker to output. The architect defines them. The worker receives them. The worker MUST report on each one with evidence. This is not a suggestion—it's a required field in the stdout schema.
+
+### Team Configs (Declarative Topology)
+
+Multi-agent workflows are defined as declarative JSON configs, not ad-hoc prompt chains. A team config specifies:
+
+- Team name and workflow type
+- Budget ceiling (max USD, warning threshold)
+- Waves with ordering (Wave 1 runs in parallel, Wave 2 waits for Wave 1)
+- Members in each wave (agent ID, model tier, stdin/stdout file paths, timeout, retry count)
+
+Same config → same agent topology → comparable output structure. Every time.
+
+```json
+{
+  "workflow_type": "review",
+  "budget_max_usd": 10.00,
+  "waves": [
+    {
+      "wave_number": 1,
+      "members": [
+        {"agent": "backend-reviewer", "model": "sonnet", "stdin_file": "stdin_backend.json"},
+        {"agent": "frontend-reviewer", "model": "sonnet", "stdin_file": "stdin_frontend.json"},
+        {"agent": "standards-reviewer", "model": "sonnet", "stdin_file": "stdin_standards.json"},
+        {"agent": "architect-reviewer", "model": "sonnet", "stdin_file": "stdin_architect.json"}
+      ]
+    },
+    {
+      "wave_number": 2,
+      "members": [
+        {"agent": "review-orchestrator", "model": "sonnet", "stdin_file": "stdin_synthesis.json"}
+      ]
+    }
+  ]
+}
+```
+
+Wave 1: four reviewers run in parallel. Wave 2: synthesizer runs after all Wave 1 agents complete, consuming their output. The topology is fixed. The budget is capped. The agent selection is explicit.
+
+### Implementation Plans & Tickets
+
+When `/plan-tickets` or `/implement` runs, the architect produces an implementation plan validated against a schema. Each task in the plan has:
+
+- `task_id` (pattern: `task-001`, `task-002`)
+- `subject` (short title)
+- `description` (full implementation guidance—workers don't read freeform specs)
+- `agent` (which agent executes this: go-pro, python-pro, etc.)
+- `target_packages` (which directories to modify)
+- `acceptance_criteria` (specific, testable requirements)
+- `blocked_by` / `blocks` (dependency graph between tasks)
+
+These tasks map 1:1 to worker stdin files. The plan IS the contract. The architect doesn't write prose and hope the worker reads it—the plan is decomposed into typed task objects that become the worker's input.
+
+### What This Means in Practice
+
+**Without contracts (raw LLM):**
+- You ask for a code review. The model writes 3 paragraphs of prose.
+- Next time, same request, different model version. The model writes 1 paragraph.
+- You can't compare them. You can't aggregate them. You can't tell if quality dropped.
+
+**With goYoke contracts:**
+- Every review produces: status, verdict (APPROVE/WARNING/BLOCK), findings array.
+- Each finding has: severity, category, file, line, title, recommendation.
+- Next time, same contract, different model version. Same structure. You can diff the findings arrays. You can count severity distributions. You can track quality over time.
+
+The model is still a black box. But the interface around it is not.
+
 ## Getting Started
 
 New to goYoke? Here's what happens in your first 5 minutes.
