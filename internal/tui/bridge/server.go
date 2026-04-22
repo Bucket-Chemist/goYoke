@@ -46,6 +46,7 @@ type IPCBridge struct {
 	pendingPermGates map[string]chan mcp.PermGateResponsePayload
 	mu               sync.Mutex
 	done             chan struct{}
+	shutdownOnce     sync.Once
 }
 
 // NewIPCBridge creates and binds a new IPCBridge.
@@ -483,39 +484,41 @@ func (b *IPCBridge) ResolveModalSimple(requestID string, value string) {
 // closes the listener, removes the socket file, and drains the pending
 // modal map.
 func (b *IPCBridge) Shutdown() {
-	// Signal all blocked handleModal goroutines to return.
-	close(b.done)
+	b.shutdownOnce.Do(func() {
+		// Signal all blocked handleModal goroutines to return.
+		close(b.done)
 
-	// Stop accepting new connections.
-	b.listener.Close()
+		// Stop accepting new connections.
+		b.listener.Close()
 
-	// Remove the socket file.
-	if err := os.Remove(b.socketPath); err != nil && !os.IsNotExist(err) {
-		slog.Warn("bridge: remove socket on shutdown", "path", b.socketPath, "error", err)
-	}
-
-	// Drain any channels still registered in the pending modal map.
-	// A non-blocking send is used instead of close(ch) to eliminate the
-	// double-close panic window: handleModal may have already received via
-	// <-b.done and deleted its entry, or ResolveModal may have already sent
-	// a value. The buffered channel (size 1) absorbs the signal if handleModal
-	// has not yet read from it; the default branch is a safe no-op if it has.
-	b.mu.Lock()
-	for id, ch := range b.pendingModals {
-		select {
-		case ch <- mcp.ModalResponsePayload{}:
-		default:
+		// Remove the socket file.
+		if err := os.Remove(b.socketPath); err != nil && !os.IsNotExist(err) {
+			slog.Warn("bridge: remove socket on shutdown", "path", b.socketPath, "error", err)
 		}
-		delete(b.pendingModals, id)
-	}
-	// Drain any channels still registered in the pending permission gate map.
-	// Same reasoning as above — non-blocking send avoids double-close panics.
-	for id, ch := range b.pendingPermGates {
-		select {
-		case ch <- mcp.PermGateResponsePayload{}:
-		default:
+
+		// Drain any channels still registered in the pending modal map.
+		// A non-blocking send is used instead of close(ch) to eliminate the
+		// double-close panic window: handleModal may have already received via
+		// <-b.done and deleted its entry, or ResolveModal may have already sent
+		// a value. The buffered channel (size 1) absorbs the signal if handleModal
+		// has not yet read from it; the default branch is a safe no-op if it has.
+		b.mu.Lock()
+		for id, ch := range b.pendingModals {
+			select {
+			case ch <- mcp.ModalResponsePayload{}:
+			default:
+			}
+			delete(b.pendingModals, id)
 		}
-		delete(b.pendingPermGates, id)
-	}
-	b.mu.Unlock()
+		// Drain any channels still registered in the pending permission gate map.
+		// Same reasoning as above — non-blocking send avoids double-close panics.
+		for id, ch := range b.pendingPermGates {
+			select {
+			case ch <- mcp.PermGateResponsePayload{}:
+			default:
+			}
+			delete(b.pendingPermGates, id)
+		}
+		b.mu.Unlock()
+	})
 }

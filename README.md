@@ -5,9 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-brightgreen)]()
 
-**Stop vibe coding. Plan, review, then implement.**
+**Slow the vibes down. *Really* plan, review, break it into context-sound chunks with testable boundaries, and THEN implement.**
 
-goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, multi-agent workflows, and a terminal UI. Every request is classified, delegated to the right model tier, and tracked — so you produce deliverables, not chat.
+goYoke wraps your models with compiled Go enforcement: tiered agent routing, multi-agent workflows, and a terminal UI to track your work history, track work dispatch, log work relative to budget. Every request is classified, delegated to the right model tier, and tracked.
+
+End result? You produce tested deliverables instead of a psychotic echo chamber with a sycophantic silicon voice designed to lull you into a false sense of dopamine-drunk security.
 
 > *Built for Claude Code at launch. Multi-provider support planned.*
 
@@ -19,11 +21,28 @@ goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, mul
 
 ## Why goYoke?
 
-LLMs are a black box. Model providers silently alter quality between releases. The same prompt produces different results on Tuesday than it did on Monday. If you care about sitting down at your desk and getting the same quality of work every session — not hoping for it, not crossing your fingers — you need structure that the model cannot ignore.
+goYoke encourages a development-centric workflow: scout the problem, create a plan, review it, then implement. Every handoff between agents is typed — JSON-schema-validated stdin/stdout contracts ensure that a reviewer always produces structured findings with severity, file, and recommendation; that a worker always reports which acceptance criteria were met with evidence, and that an architect always produces implementation plans with dependency graphs and testable criteria. Same contracts in, comparable quality out.
 
-goYoke enforces a development workflow: scout the problem, create a plan, review it, then implement. Every handoff between agents is typed — JSON-schema-validated stdin/stdout contracts ensure that a reviewer always produces structured findings with severity, file, and recommendation, that a worker always reports which acceptance criteria were met with evidence, and that an architect always produces implementation plans with dependency graphs and testable criteria. Same contracts in, comparable quality out — regardless of what the model provider changed last night.
+This project represents an attempt to deviate from documentation theatre as much as possible. goYoke uses numerous compiled Go binaries that intercept model events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that degrade over long conversations. The model can't forget a binary that blocks its tool call.
 
-This isn't prompt engineering. goYoke uses 11 compiled Go binaries that intercept Claude Code events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that degrade over long conversations. The model can't forget a binary that blocks its tool call.
+### How I use this
+
+I built the progress tracker so I could more accurately track what I had done during the session. Initially I used a zellij template with lazygit as a sidebar but in the past few weeks I have defaulted back to vscode with goyoke at ~50% of window width. Run a 2x2 grid of these (see below) and...baby you got a stew going.
+
+### Why I built this
+
+As a scientist by trade, I write code for an ISO compliant mass spectrometry facility. I abhor black boxes and as a field mass spectrometry generates absurdly precise biochemical measurements. As a supportive adjunct to this calibre of science - when I write pipelines or software it is a requirement that these are entirely transparent, reproducible and follow strict stylistic and best practice conventions.
+
+The barriers to having the same kind of experience when using inference providers are countless. Model providers silently alter quality between releases; or throttle inference quietly to a lower tier model whilst you pay for the frontier. The same prompt produces different results on Tuesday than it did on Monday because they don't have compute to cover users online.
+
+If you care about sitting down at your desk and getting the same quality of work every session - then agentic activity needs to be standardised, measurable, and more than anything **stable and consistent**.
+
+I started my AI journey in December 2022 with ChatGPT one-shotting some of my more obscure trading algorithm problems, and I remember thinking that humanity had entered a new era of tool discovery akin to stone tools. The real alpha laid not in those who swung the axe - but in those who found ways to abstract the sharp edge into more complex tools. This project represents my ongoing journey of using these tools (from chat interfaces, to Cursor, Windsurf, terminal, you name it) and trying to create a generalisable harness that reaches for the optimal model paired with the right schema no matter the use case. As a builder I built this to be the tool I use to build everything else in my work.
+
+## NB
+
+I am by no means done with this project - for those of you who are fortunate enough to have enjoyed Claude's generous subscription model - you will rightly be feeling the time of cheap frontier inference is coming to an end. I will be providing support for Codex (which I also use for various use cases) immediately following release, and then will be moving onto supporting standard tool call/message frameworks for open source models and any others that I use in my work routinely. If you have any providers you wish supported please feel free to drop me a line and I would be happy to accomodate.
+
 
 ## Quick Start
 
@@ -58,7 +77,7 @@ goyoke
 
 See [Workflow Guide](docs/WORKFLOWS.md) for detailed examples with sample output.
 
-## How It Works
+## How It Works (current at release specifically for Claude Code)
 
 ### Standalone wrapper — your Claude Code stays clean
 

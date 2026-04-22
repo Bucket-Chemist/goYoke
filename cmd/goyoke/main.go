@@ -27,6 +27,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -41,7 +42,6 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd"
 	mcpcmd "github.com/Bucket-Chemist/goYoke/internal/subcmd/mcp"
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd/utils"
-	tuiLifecycle "github.com/Bucket-Chemist/goYoke/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/bridge"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
 	claudepkg "github.com/Bucket-Chemist/goYoke/internal/tui/components/claude"
@@ -57,6 +57,7 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/telemetry"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/toast"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	tuiLifecycle "github.com/Bucket-Chemist/goYoke/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
 	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
@@ -74,8 +75,8 @@ func main() {
 	// then check for explicit subcommands. Both must run before flag.Parse()
 	// so subcommand names are not misinterpreted as unknown flags.
 	reg := buildRegistry()
-	if fn, remainingArgs, ok := subcmd.DispatchByArgv0(os.Args[0], reg); ok {
-		if err := fn(context.Background(), remainingArgs, os.Stdin, os.Stdout); err != nil {
+	if handled, err := dispatchByArgv0(context.Background(), os.Args, reg, os.Stdin, os.Stdout); handled {
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
@@ -324,12 +325,8 @@ func main() {
 	// Write embedded settings-template.json to temp file for --settings injection.
 	var settingsPath string
 	if tmplData, tmplErr := resolve.Default().ReadFile("settings-template.json"); tmplErr == nil {
-		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-		if runtimeDir == "" {
-			runtimeDir = os.TempDir()
-		}
-		tmpPath := filepath.Join(runtimeDir, fmt.Sprintf("goyoke-hooks-%d.json", os.Getpid()))
-		if writeErr := os.WriteFile(tmpPath, tmplData, 0600); writeErr == nil {
+		tmpPath, writeErr := writeRuntimeTempFile("goyoke-hooks-*.json", tmplData)
+		if writeErr == nil {
 			settingsPath = tmpPath
 			defer os.Remove(tmpPath)
 		} else {
@@ -344,29 +341,27 @@ func main() {
 	// even in zero-install environments where no CLAUDE.md exists on disk.
 	var systemPromptFile string
 	if claudeMD, claudeErr := resolve.Default().ReadFile("CLAUDE.md"); claudeErr == nil {
-		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-		if runtimeDir == "" {
-			runtimeDir = os.TempDir()
-		}
-		tmpPath := filepath.Join(runtimeDir, fmt.Sprintf("goyoke-claude-md-%d.md", os.Getpid()))
-		if writeErr := os.WriteFile(tmpPath, claudeMD, 0600); writeErr == nil {
+		tmpPath, writeErr := writeRuntimeTempFile("goyoke-claude-md-*.md", claudeMD)
+		if writeErr == nil {
 			systemPromptFile = tmpPath
 			defer os.Remove(tmpPath)
+		} else {
+			log.Printf("[goyoke] Warning: failed to write system prompt temp file: %v", writeErr)
 		}
 	}
 
 	// Build the CLI driver options from flags.
 	cliOpts := cli.CLIDriverOpts{
-		SessionID:          *sessionID,
-		Model:              initialModel,
-		ProjectDir:         ".", // current working directory
-		PermissionMode:     *permMode,
-		Verbose:            *verbose,
-		Debug:              *debug,
-		ConfigDir:          *configDir,
-		MCPConfigPath:      mcpConfigPath,
-		SettingsPath:       settingsPath,
-		SystemPromptFile:   systemPromptFile,
+		SessionID:        *sessionID,
+		Model:            initialModel,
+		ProjectDir:       ".", // current working directory
+		PermissionMode:   *permMode,
+		Verbose:          *verbose,
+		Debug:            *debug,
+		ConfigDir:        *configDir,
+		MCPConfigPath:    mcpConfigPath,
+		SettingsPath:     settingsPath,
+		SystemPromptFile: systemPromptFile,
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)
@@ -497,9 +492,49 @@ func main() {
 // directory and returns the open file.  The caller is responsible for
 // closing it.
 func openDebugLog() (*os.File, error) {
-	name := fmt.Sprintf("goyoke-debug-%s.log", time.Now().Format("20060102-150405"))
-	path := filepath.Join(os.TempDir(), name)
-	return os.Create(path)
+	pattern := fmt.Sprintf("goyoke-debug-%s-*.log", time.Now().Format("20060102-150405"))
+	return os.CreateTemp("", pattern)
+}
+
+func dispatchByArgv0(ctx context.Context, argv []string, reg *subcmd.Registry, stdin io.Reader, stdout io.Writer) (bool, error) {
+	if len(argv) == 0 {
+		return false, nil
+	}
+
+	fn, remainingArgs, ok := subcmd.DispatchByArgv0(argv[0], reg)
+	if !ok {
+		return false, nil
+	}
+	if remainingArgs == nil {
+		remainingArgs = argv[1:]
+	}
+	return true, fn(ctx, remainingArgs, stdin, stdout)
+}
+
+func runtimeTempDir() string {
+	if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
+		return runtimeDir
+	}
+	return os.TempDir()
+}
+
+func writeRuntimeTempFile(pattern string, data []byte) (string, error) {
+	f, err := os.CreateTemp(runtimeTempDir(), pattern)
+	if err != nil {
+		return "", err
+	}
+	path := f.Name()
+
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return "", err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+	return path, nil
 }
 
 // getMCPCommand returns the command and args to use for the MCP server.

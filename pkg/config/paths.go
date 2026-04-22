@@ -269,7 +269,10 @@ func GetToolCountAndIncrement() (int, error) {
 	if err == nil && len(data) > 0 {
 		content := strings.TrimSpace(string(data))
 		if content != "" {
-			count, _ = strconv.Atoi(content)
+			count, err = strconv.Atoi(content)
+			if err != nil {
+				return 0, fmt.Errorf("[config] invalid counter value: %w", err)
+			}
 		}
 	}
 

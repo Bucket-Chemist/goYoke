@@ -1020,6 +1020,35 @@ func TestGetToolCountAndIncrement_EmptyInitialContent(t *testing.T) {
 	}
 }
 
+func TestGetToolCountAndIncrement_InvalidInitialContent(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", tmpDir)
+
+	path := GetToolCounterPath()
+	if err := os.WriteFile(path, []byte("not-a-number"), 0644); err != nil {
+		t.Fatalf("Failed to write invalid counter file: %v", err)
+	}
+
+	count, err := GetToolCountAndIncrement()
+	if err == nil {
+		t.Fatal("Expected error for invalid counter content")
+	}
+	if count != 0 {
+		t.Errorf("Expected count 0 on error, got %d", count)
+	}
+	if !strings.Contains(err.Error(), "invalid counter value") {
+		t.Errorf("Expected invalid counter value error, got %v", err)
+	}
+
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatalf("Failed to read counter file: %v", readErr)
+	}
+	if string(data) != "not-a-number" {
+		t.Errorf("Invalid counter file should be preserved, got %q", string(data))
+	}
+}
+
 // Tests for GetgoYokeDataDir() and related path helpers
 
 func TestGetgoYokeDataDir_XDGSet(t *testing.T) {

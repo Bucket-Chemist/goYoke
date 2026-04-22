@@ -35,6 +35,23 @@ func (m *mockSender) Send(msg tea.Msg) {
 	m.msgs = append(m.msgs, msg)
 }
 
+type stubListener struct {
+	closeCount int
+}
+
+func (l *stubListener) Accept() (net.Conn, error) {
+	return nil, fmt.Errorf("stub listener closed")
+}
+
+func (l *stubListener) Close() error {
+	l.closeCount++
+	return nil
+}
+
+func (l *stubListener) Addr() net.Addr {
+	return &net.UnixAddr{Name: "stub", Net: "unix"}
+}
+
 // waitFor blocks until at least one message of type T is received or the
 // timeout expires.  It returns the first matching message and true, or the
 // zero value and false on timeout.
@@ -457,6 +474,27 @@ func TestAcceptLoop_ContinuesAfterShutdown(t *testing.T) {
 	case <-time.After(testTimeout):
 		t.Fatal("Shutdown timed out — acceptLoop may be looping on transient errors")
 	}
+}
+
+func TestShutdown_IsIdempotent(t *testing.T) {
+	socketPath := filepath.Join(t.TempDir(), "goyoke-test.sock")
+	require.NoError(t, os.WriteFile(socketPath, []byte("stale"), 0o600))
+	listener := &stubListener{}
+	b := &IPCBridge{
+		socketPath:       socketPath,
+		listener:         listener,
+		pendingModals:    make(map[string]chan mcp.ModalResponsePayload),
+		pendingPermGates: make(map[string]chan mcp.PermGateResponsePayload),
+		done:             make(chan struct{}),
+	}
+
+	require.NotPanics(t, func() {
+		b.Shutdown()
+		b.Shutdown()
+	})
+	assert.Equal(t, 1, listener.closeCount, "listener should only close once")
+	_, err := os.Stat(socketPath)
+	assert.True(t, os.IsNotExist(err), "socket path should be removed on first shutdown")
 }
 
 // TestAcceptLoop_NewConnectionAfterTransientError verifies that the bridge
