@@ -37,7 +37,7 @@ goyoke
 | Linux x86_64 | Supported | `goyoke-<version>-linux-amd64` |
 | macOS Intel | Supported | `goyoke-<version>-darwin-amd64` |
 | macOS Apple Silicon | Supported | `goyoke-<version>-darwin-arm64` |
-| Windows | In progress | See `tickets/windows-distro/` |
+| Windows x86_64 | Supported | `goyoke-<version>-windows-amd64.exe` |
 
 ## Build from Source
 

@@ -68,15 +68,17 @@ jobs:
           # Clear public repo (except .git)
           find public -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} +
 
-          # Sync source (exclude private content)
+          # Sync source (exclude private/runtime content)
           rsync -a \
-            --exclude='.claude/' \
             --exclude='.goyoke/' \
             --exclude='.env' \
             --exclude='.env.*' \
             --exclude='tickets/' \
             --exclude='.git/' \
             --exclude='bin/' \
+            --exclude='scripts/claude-edit.sh' \
+            --exclude='scripts/empirical-settings-test.sh' \
+            --exclude='scripts/test-naked.sh' \
             private/ public/
 
       - name: Get tag name
@@ -89,6 +91,7 @@ jobs:
           git config user.name "goYoke CI"
           git config user.email "ci@goyoke.dev"
           git add -A
+          git add -f defaults/
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "Release ${{ steps.tag.outputs.TAG }}"
           git tag "${{ steps.tag.outputs.TAG }}"

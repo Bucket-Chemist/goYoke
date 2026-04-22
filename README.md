@@ -14,10 +14,10 @@ Created and maintained by [Dokter Smol](https://github.com/Bucket-Chemist)
 
 **Prerequisites:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated.
 
-### Go install (recommended)
+### Go install
 
 ```bash
-go install github.com/Bucket-Chemist/goYoke/cmd/...@latest
+go install github.com/Bucket-Chemist/goYoke/cmd/goyoke@latest
 goyoke
 ```
 

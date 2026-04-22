@@ -10,12 +10,14 @@ builds:
     main: ./cmd/goyoke
     binary: goyoke
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     ldflags:
       - -w -X main.version={{.Version}}
     ignore:
       - goos: linux
+        goarch: arm64
+      - goos: windows
         goarch: arm64
 
 archives:
@@ -24,11 +26,10 @@ archives:
     name_template: "goYoke_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
-    # Windows zip override — re-enable when Windows port complete (see tickets/windows-distro/)
-    # format_overrides:
-    #   - goos: windows
-    #     formats:
-    #       - zip
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
 
 checksum:
   name_template: "checksums.txt"
