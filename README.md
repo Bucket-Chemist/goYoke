@@ -131,6 +131,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup including auth configuration.
 ## Documentation
 
 - **[Workflow Guide](docs/WORKFLOWS.md)** — Reproducibility contracts, team orchestration, skills, costs, anti-patterns
+- **[Roadmap](ROADMAP.md)** — Version plan: multi-provider, benchmarks, TUI editor, telemetry dashboard
 - **[Installation](INSTALL.md)** — Auth setup, platform details
 - **[Architecture](docs/ARCHITECTURE.md)** — System internals, hooks, team orchestration
 - **[Contributing](CONTRIBUTING.md)** — How to contribute agents, conventions, and skills
