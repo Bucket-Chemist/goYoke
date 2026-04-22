@@ -126,21 +126,28 @@ Single-provider (Claude Code), full enforcement stack.
 
 **Goal:** Do everything from the TUI. No more editing JSON files to configure agents or teams.
 
-### v0.9.0 — Agent & team config editor
+### v0.9.0 — Provider selection UX + agent/team config editor
 
-- [ ] Browse and edit agent configs in the agents tab (identity, triggers, model, tier)
+- [ ] Provider selector dropdown at session start (Bubbletea component: `internal/tui/components/provider/selector.go`)
+- [ ] Live provider status: connected/disconnected, latency, cost-per-1K, model version
+- [ ] Per-agent provider indicator in agent panel (which provider ran each agent, with cost)
+- [ ] "Best fit" recommendations from v0.8 telemetry displayed alongside provider options
+- [ ] User preference override: pin specific agents to specific providers via TUI config
+- [ ] Provider configuration panel: add/remove providers, set credentials, test connectivity
+- [ ] Browse and edit agent configs in the agents tab (identity, triggers, model, provider preference)
 - [ ] Create new agents from templates within the TUI
-- [ ] Team config editor: add/remove waves, members, adjust budgets
+- [ ] Team config editor: add/remove waves, members, adjust budgets, set per-member provider
 - [ ] Stdin/stdout editor with live schema validation
 - [ ] Preview team topology changes before execution
 
 ### v0.9.1 — Telemetry dashboard
 
-- [ ] Agent performance charts (success rate, cost, duration over time)
-- [ ] Workflow comparison views (which skills are most cost-effective)
+- [ ] Agent performance charts (success rate, cost, duration over time) grouped by provider
+- [ ] Workflow comparison views (which skills are most cost-effective on which provider)
 - [ ] Team execution timeline visualization (wave parallelism, stalls, failures)
 - [ ] Sharp edge trend analysis (recurring patterns across sessions)
-- [ ] Provider comparison heatmaps (quality × cost × latency)
+- [ ] Provider comparison heatmaps (quality × cost × latency per agent category)
+- [ ] "What if" simulator: estimate cost of running current workflow on different provider mix
 - [ ] Export to CSV/JSON for external analysis
 
 ---
