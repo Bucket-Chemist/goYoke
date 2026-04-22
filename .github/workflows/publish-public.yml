@@ -101,6 +101,52 @@ jobs:
             --exclude='internal/subcmd/utils/teampreparesynth/bioinformatics.go' \
             private/ public/
 
+      - name: Strip private agents from config files
+        working-directory: public
+        run: |
+          PAT="genomics-reviewer|proteomics-reviewer|proteogenomics-reviewer|proteoform-reviewer|mass-spec-reviewer|bioinformatician-reviewer|pasteur|staff-bioinformatician|python-architect|llm-inference-architect"
+
+          # Recursive filter: removes private agent IDs from all arrays and
+          # object keys/values throughout the JSON, then deletes the
+          # bioinformatics_review tool profile entirely.
+          JQ_FILTER='walk(
+            if type == "array" then
+              map(if type == "string" and test($pat) then empty else . end)
+            elif type == "object" then
+              with_entries(
+                select(
+                  (.key | test($pat) | not) and
+                  (if (.value | type) == "string" then (.value | test($pat) | not) else true end)
+                )
+              )
+            else .
+            end
+          ) | del(.tool_profiles.bioinformatics_review // empty)'
+
+          # Filter agents-index.json
+          for f in .claude/agents/agents-index.json defaults/agents/agents-index.json; do
+            if [ -f "$f" ]; then
+              jq --arg pat "$PAT" '.agents |= map(select(.id | test($pat) | not))' "$f" > tmp.json && mv tmp.json "$f"
+              echo "Filtered agents-index: $f"
+            fi
+          done
+
+          # Filter routing-schema.json
+          for f in .claude/routing-schema.json defaults/routing-schema.json; do
+            if [ -f "$f" ]; then
+              jq --arg pat "$PAT" "$JQ_FILTER" "$f" > tmp.json && mv tmp.json "$f"
+              echo "Filtered routing-schema: $f"
+            fi
+          done
+
+          # Verify no private agents leaked
+          LEAKED=$(grep -rliE "$PAT" .claude/agents/agents-index.json .claude/routing-schema.json defaults/agents/agents-index.json defaults/routing-schema.json 2>/dev/null || true)
+          if [ -n "$LEAKED" ]; then
+            echo "ERROR: Private agents still present in: $LEAKED"
+            exit 1
+          fi
+          echo "Verification passed: zero private agent references in public config"
+
       - name: Get tag name
         id: tag
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"

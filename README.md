@@ -7,7 +7,7 @@ goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, mul
 > *Built for Claude Code at launch. Multi-provider support planned.*
 
 <p align="center">
-  <img src="assets/goYoke_v1.png" alt="goYoke — multi-agent terminal orchestration" width="480">
+  <img src="assets/goyoke-monkey.png" alt="Don't be this." width="400">
   <br>
   <em>Stop being the model's token-spending monkey.</em>
 </p>
