@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"time"
 )
 
@@ -299,9 +301,9 @@ func (c *ChaosRunner) simulateFailure(file, errorType string, agentID int) (coun
 	cmd.Env = c.buildEnv()
 
 	// Process group for clean cancellation
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = process.NewProcessGroupAttr()
 	cmd.Cancel = func() error {
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		return process.KillGroup(cmd.Process.Pid, syscall.SIGKILL)
 	}
 
 	var stdout, stderr bytes.Buffer

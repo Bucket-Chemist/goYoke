@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 )
 
 func Main() {
@@ -50,7 +51,7 @@ func Main() {
 	// Become session leader if not already.
 	// This enables immunity to Ctrl+C in parent terminal.
 	// EPERM is expected when already a session leader (e.g. launched with Setsid:true by the MCP tool).
-	if _, err := syscall.Setsid(); err != nil && err != syscall.EPERM {
+	if err := process.Setsid(); err != nil && err != syscall.EPERM {
 		fmt.Fprintf(os.Stderr, "Warning: setsid failed unexpectedly: %v (runner may be vulnerable to parent cleanup)\n", err)
 	}
 

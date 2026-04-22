@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
+	"github.com/Bucket-Chemist/goYoke/pkg/filelock"
 	"time"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
@@ -117,10 +117,10 @@ func ArchivePendingLearnings(projectDir string) (*FlushContext, error) {
 	}
 	defer lockFile.Close()
 
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
+	if err := filelock.Lock(int(lockFile.Fd())); err != nil {
 		return nil, fmt.Errorf("[session] Failed to acquire lock: %w", err)
 	}
-	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+	defer filelock.Unlock(int(lockFile.Fd())) //nolint:errcheck
 
 	// Create archive directory
 	if err := os.MkdirAll(sharpEdgesDir, 0755); err != nil {

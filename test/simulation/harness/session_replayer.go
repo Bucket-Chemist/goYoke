@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"time"
 )
 
@@ -304,9 +306,9 @@ func (r *SessionReplayer) runCLI(cmdPath string, input interface{}, tempDir stri
 	cmd.Env = r.buildEnv(tempDir)
 
 	// Process group setup for clean timeout handling (mirrors DefaultRunner)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = process.NewProcessGroupAttr()
 	cmd.Cancel = func() error {
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		return process.KillGroup(cmd.Process.Pid, syscall.SIGKILL)
 	}
 	cmd.WaitDelay = 100 * time.Millisecond
 

@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 )
 
 // Sentinel errors for programmatic error handling (enables errors.Is())
@@ -102,11 +104,11 @@ func redirectOutput(teamDir string) (*os.File, error) {
 
 	logFd := int(logFile.Fd())
 
-	if err := syscall.Dup2(logFd, int(os.Stdout.Fd())); err != nil {
+	if err := dup2(logFd, int(os.Stdout.Fd())); err != nil {
 		logFile.Close()
 		return nil, fmt.Errorf("dup2 stdout: %w", err)
 	}
-	if err := syscall.Dup2(logFd, int(os.Stderr.Fd())); err != nil {
+	if err := dup2(logFd, int(os.Stderr.Fd())); err != nil {
 		// stdout already redirected — do NOT close logFile (would orphan stdout)
 		// Return logFile so caller can still close it cleanly
 		return logFile, fmt.Errorf("dup2 stderr (stdout already redirected): %w", err)
@@ -128,7 +130,7 @@ func daemonizeStdin() error {
 	defer devNull.Close()
 
 	// dup2 atomically replaces fd 0 with devNull, closing old stdin
-	if err := syscall.Dup2(int(devNull.Fd()), 0); err != nil {
+	if err := dup2(int(devNull.Fd()), 0); err != nil {
 		return fmt.Errorf("dup2 /dev/null to stdin: %w", err)
 	}
 
@@ -238,9 +240,9 @@ func (tr *TeamRunner) killAllChildren() []error {
 	// Phase 1: Send SIGTERM to all children and their process groups
 	for _, pid := range childPIDs {
 		// Try to kill the entire process group first (for session leaders)
-		if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+		if err := process.KillGroup(pid, syscall.SIGTERM); err != nil {
 			// If process group kill fails, try individual process
-			if err := syscall.Kill(pid, syscall.SIGTERM); err != nil {
+			if err := process.Kill(pid, syscall.SIGTERM); err != nil {
 				log.Printf("Failed to send SIGTERM to %d: %v", pid, err)
 				errs = append(errs, fmt.Errorf("SIGTERM to %d: %w", pid, err))
 			} else {
@@ -264,8 +266,8 @@ func (tr *TeamRunner) killAllChildren() []error {
 		}
 
 		// Try process group kill first, then individual
-		if err := syscall.Kill(-pid, syscall.SIGKILL); err != nil {
-			if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+		if err := process.KillGroup(pid, syscall.SIGKILL); err != nil {
+			if err := process.Kill(pid, syscall.SIGKILL); err != nil {
 				log.Printf("Failed to send SIGKILL to %d: %v", pid, err)
 				errs = append(errs, fmt.Errorf("SIGKILL to %d: %w", pid, err))
 			} else {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"github.com/Bucket-Chemist/goYoke/pkg/session"
 )
 
@@ -132,7 +133,7 @@ func cleanupSkillGuard(sessionID string) {
 	if err == nil && len(data) > 0 {
 		var active config.ActiveSkill
 		if jsonErr := json.Unmarshal(data, &active); jsonErr == nil && active.HolderPID > 0 {
-			if killErr := syscall.Kill(active.HolderPID, syscall.SIGTERM); killErr != nil && killErr != syscall.ESRCH {
+			if killErr := process.Kill(active.HolderPID, syscall.SIGTERM); killErr != nil {
 				fmt.Fprintf(os.Stderr, "[goyoke-archive] Warning: failed to SIGTERM skill guard holder PID %d: %v\n", active.HolderPID, killErr)
 			}
 			time.Sleep(100 * time.Millisecond)

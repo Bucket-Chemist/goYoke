@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 )
 
 // ---------------------------------------------------------------------------
@@ -517,7 +519,7 @@ func (r *AgentRegistry) KillRunning() {
 		if a.Status == StatusRunning && a.PID > 0 {
 			// Send SIGTERM to the process group (-pid) since spawned agents
 			// use Setsid: true and are session leaders.
-			if err := syscall.Kill(-a.PID, syscall.SIGTERM); err != nil {
+			if err := process.KillGroup(a.PID, syscall.SIGTERM); err != nil {
 				slog.Warn("kill running agent: SIGTERM failed",
 					"agent", a.ID, "pid", a.PID, "err", err)
 			}
@@ -561,7 +563,7 @@ func (r *AgentRegistry) KillByID(id string) error {
 		}
 		pid := t.PID
 		targetID := t.ID
-		if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+		if err := process.KillGroup(pid, syscall.SIGTERM); err != nil {
 			slog.Warn("KillByID: SIGTERM failed",
 				"agent", t.ID, "pid", pid, "err", err)
 		}
@@ -577,9 +579,9 @@ func (r *AgentRegistry) KillByID(id string) error {
 			stillKilled := exists && agent.Status == StatusKilled
 			r.mu.RUnlock()
 			if stillKilled {
-				if err := syscall.Kill(-pid, 0); err == nil {
+				if process.GroupExists(pid) {
 					// Process group still alive — escalate to SIGKILL.
-					syscall.Kill(-pid, syscall.SIGKILL) //nolint:errcheck
+					process.KillGroup(pid, syscall.SIGKILL) //nolint:errcheck
 				}
 			}
 		}(pid, targetID)

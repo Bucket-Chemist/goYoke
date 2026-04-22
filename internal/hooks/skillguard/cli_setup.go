@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"github.com/Bucket-Chemist/goYoke/pkg/skillsetup"
 )
 
@@ -53,7 +54,7 @@ func runSetup() {
 	if data, readErr := os.ReadFile(config.GetGuardFilePath(sessionID)); readErr == nil {
 		var existing config.ActiveSkill
 		if json.Unmarshal(data, &existing) == nil && existing.HolderPID > 0 {
-			syscall.Kill(existing.HolderPID, syscall.SIGTERM) //nolint:errcheck
+			process.Kill(existing.HolderPID, syscall.SIGTERM) //nolint:errcheck
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
@@ -105,7 +106,7 @@ func runRelease() {
 	if data, err := os.ReadFile(guardPath); err == nil {
 		var existing config.ActiveSkill
 		if json.Unmarshal(data, &existing) == nil && existing.HolderPID > 0 {
-			syscall.Kill(existing.HolderPID, syscall.SIGTERM) //nolint:errcheck
+			process.Kill(existing.HolderPID, syscall.SIGTERM) //nolint:errcheck
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
@@ -130,7 +131,7 @@ func forkLockHolder(lockPath string, ccPID int) int {
 	cmd.Stdout = nil
 	cmd.Stderr = os.Stderr
 	cmd.ExtraFiles = []*os.File{writePipe}
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = process.NewProcessGroupAttr()
 
 	if err := cmd.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "[goyoke-skill-guard] Warning: start lock-holder: %v, continuing unguarded\n", err)
