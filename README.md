@@ -1,5 +1,10 @@
 # goYoke
 
+[![Build](https://github.com/Bucket-Chemist/goYoke/actions/workflows/build-test.yml/badge.svg)](https://github.com/Bucket-Chemist/goYoke/actions/workflows/build-test.yml)
+[![Go](https://img.shields.io/github/go-mod/go-version/Bucket-Chemist/goYoke)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-brightgreen)]()
+
 **Stop vibe coding. Plan, review, then implement.**
 
 goYoke wraps Claude Code with compiled Go enforcement: tiered agent routing, multi-agent workflows, and a terminal UI. Every request is classified, delegated to the right model tier, and tracked — so you produce deliverables, not chat.
@@ -125,7 +130,7 @@ See [INSTALL.md](INSTALL.md) for detailed setup including auth configuration.
 
 ## Documentation
 
-- **[Workflow Guide](docs/WORKFLOWS.md)** — Skills, workflows, costs, anti-patterns
+- **[Workflow Guide](docs/WORKFLOWS.md)** — Reproducibility contracts, team orchestration, skills, costs, anti-patterns
 - **[Installation](INSTALL.md)** — Auth setup, platform details
 - **[Architecture](docs/ARCHITECTURE.md)** — System internals, hooks, team orchestration
 - **[Contributing](CONTRIBUTING.md)** — How to contribute agents, conventions, and skills
