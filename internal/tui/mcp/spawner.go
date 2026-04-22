@@ -24,6 +24,7 @@ import (
 
 	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	routing "github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
@@ -241,9 +242,7 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	cmd.Env = env
 	cmd.Stdin = strings.NewReader(augmentedPrompt)
 
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true,
-	}
+	cmd.SysProcAttr = process.NewSessionAttr()
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -259,6 +258,7 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	}
 
 	pid := cmd.Process.Pid
+	_ = process.TrackProcess(pid)
 
 	// Notify TUI with the subprocess PID for interrupt support.
 	// This is a second "running" notification (the first is sent by
@@ -358,7 +358,7 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 			if cmd.Process != nil {
 				slog.Warn("spawn_agent: sending signal to process group",
 					"agent", input.Agent, "signal", sig, "pid", pid)
-				if err := syscall.Kill(-pid, sig); err != nil {
+				if err := process.KillGroup(pid, sig); err != nil {
 					slog.Warn("spawn_agent: failed to send signal",
 						"agent", input.Agent, "signal", sig, "pid", pid, "err", err)
 				}
@@ -375,7 +375,7 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 		time.AfterFunc(time.Duration(sigkillGraceMS)*time.Millisecond, func() {
 			if cmd.Process != nil {
 				slog.Warn("spawn_agent: kill grace expired, sending SIGKILL", "agent", input.Agent)
-				syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) //nolint:errcheck
+				process.KillGroup(cmd.Process.Pid, syscall.SIGKILL) //nolint:errcheck
 			}
 		})
 	})

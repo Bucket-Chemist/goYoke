@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/filelock"
 )
 
 // AppendJSONL safely appends a line to a JSONL file with file locking
@@ -24,10 +25,10 @@ func AppendJSONL(path string, data []byte) error {
 	defer f.Close()
 
 	// Acquire exclusive lock (blocks until available)
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+	if err := filelock.Lock(int(f.Fd())); err != nil {
 		return fmt.Errorf("flock: %w", err)
 	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	defer filelock.Unlock(int(f.Fd())) //nolint:errcheck
 
 	// Write data with newline
 	if _, err := f.Write(append(data, '\n')); err != nil {

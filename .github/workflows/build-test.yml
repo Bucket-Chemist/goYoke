@@ -51,9 +51,66 @@ jobs:
             -o dist/goyoke-${{ steps.version.outputs.VERSION }}-darwin-arm64 \
             ./cmd/goyoke/
 
+      - name: Build Windows amd64
+        run: |
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
+            -ldflags "-w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o dist/goyoke-${{ steps.version.outputs.VERSION }}-windows-amd64.exe \
+            ./cmd/goyoke/
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: goyoke-${{ steps.version.outputs.VERSION }}
           path: dist/goyoke-*
           retention-days: 14
+
+  # Tier 1: Windows cross-compile check (Linux runner, free, fast)
+  # Expected to fail until Ticket A (platform abstraction) lands.
+  windows-cross-compile:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Generate defaults
+        run: make defaults
+
+      - name: Cross-compile for Windows amd64
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ./...
+
+  # Tier 2: Native Windows build + unit tests (manual trigger only)
+  # Runs on real Windows runner — use workflow_dispatch to avoid burning minutes.
+  windows-native:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Generate defaults
+        shell: bash
+        run: bash scripts/generate-defaults.sh
+
+      - name: Build binary
+        run: go build -o goyoke.exe ./cmd/goyoke/
+
+      - name: Verify binary exists
+        run: |
+          if (Test-Path goyoke.exe) { Write-Host "OK: goyoke.exe built" }
+          else { Write-Error "goyoke.exe not found"; exit 1 }
+
+      - name: Unit tests (short mode)
+        run: go test -short ./pkg/...
+        continue-on-error: true

@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 )
 
@@ -1004,9 +1004,7 @@ func handleTeamRun(
 	// os.Environ() implicitly, but making this explicit prevents silent
 	// breakage if Env is set to a filtered list in the future.
 	cmd.Env = os.Environ()
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true, // Detach: create new process group so signals don't cascade.
-	}
+	cmd.SysProcAttr = process.NewSessionAttr() // Detach: create new session so signals don't cascade.
 	// Discard stdout/stderr; goyoke-team-run writes its own logs.
 	cmd.Stdout = nil
 	cmd.Stderr = nil

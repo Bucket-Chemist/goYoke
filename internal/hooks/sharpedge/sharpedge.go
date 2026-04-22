@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -342,6 +343,10 @@ func cleanupVitestProcesses(event *routing.PostToolEvent) {
 		return
 	}
 
+	if runtime.GOOS == "windows" {
+		// taskkill lacks pkill's regex matching; skip vitest cleanup on Windows
+		return
+	}
 	cmd := exec.Command("pkill", "-f", "vitest")
 	_ = cmd.Run()
 

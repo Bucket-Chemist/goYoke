@@ -23,6 +23,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 )
 
 // ---------------------------------------------------------------------------
@@ -225,7 +227,7 @@ func (d *CLIDriver) Start() tea.Cmd {
 
 		// Run in a dedicated process group so Interrupt() can signal the
 		// entire tree (claude CLI + MCP servers + API calls) via Kill(-pgid).
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd.SysProcAttr = process.NewProcessGroupAttr()
 
 		// Merge extra env vars into the subprocess environment.
 		if len(d.opts.EnvVars) > 0 {
@@ -262,6 +264,8 @@ func (d *CLIDriver) Start() tea.Cmd {
 		d.stdout = stdoutPipe
 		d.state = DriverStreaming
 		d.mu.Unlock()
+
+		_ = process.TrackProcess(cmd.Process.Pid)
 
 		go d.consumeEvents()
 
@@ -553,7 +557,7 @@ func (d *CLIDriver) Interrupt() error {
 	// child processes (MCP servers, spawned agents, API calls) also receive
 	// the signal.  Matches the spawner pattern in mcp/spawner.go:244.
 	pid := cmd.Process.Pid
-	if err := syscall.Kill(-pid, syscall.SIGINT); err != nil {
+	if err := process.KillGroup(pid, syscall.SIGINT); err != nil {
 		// Fallback: try single-process signal if group signal fails.
 		if err2 := cmd.Process.Signal(syscall.SIGINT); err2 != nil {
 			return fmt.Errorf("cli driver: send SIGINT (group=%v, proc=%v)", err, err2)

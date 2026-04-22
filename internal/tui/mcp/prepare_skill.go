@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Bucket-Chemist/goYoke/pkg/config"
+	"github.com/Bucket-Chemist/goYoke/pkg/filelock"
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"github.com/Bucket-Chemist/goYoke/pkg/skillsetup"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -69,7 +71,7 @@ func (ls *LockStore) Acquire(sessionID string) error {
 	if err != nil {
 		return fmt.Errorf("open lock file: %w", err)
 	}
-	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
+	if err := filelock.Lock(int(fd.Fd())); err != nil {
 		fd.Close()
 		return fmt.Errorf("acquire LOCK_EX: %w", err)
 	}
@@ -88,7 +90,7 @@ func (ls *LockStore) Release(sessionID string) {
 	ls.mu.Unlock()
 
 	if held && fd != nil {
-		syscall.Flock(int(fd.Fd()), syscall.LOCK_UN) //nolint:errcheck
+		filelock.Unlock(int(fd.Fd())) //nolint:errcheck
 		fd.Close()
 	}
 	skillsetup.RemoveGuardFiles(sessionID) //nolint:errcheck
@@ -191,7 +193,7 @@ func handlePrepareSkillSetup(
 	if data, readErr := os.ReadFile(config.GetGuardFilePath(sessionID)); readErr == nil {
 		var existing config.ActiveSkill
 		if json.Unmarshal(data, &existing) == nil && existing.HolderPID > 0 {
-			syscall.Kill(existing.HolderPID, syscall.SIGTERM) //nolint:errcheck
+			process.Kill(existing.HolderPID, syscall.SIGTERM) //nolint:errcheck
 			time.Sleep(100 * time.Millisecond)
 		}
 	}

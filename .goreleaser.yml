@@ -10,12 +10,14 @@ builds:
     main: ./cmd/goyoke
     binary: goyoke
     env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
+    goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     ldflags:
       - -w -X main.version={{.Version}}
     ignore:
       - goos: linux
+        goarch: arm64
+      - goos: windows
         goarch: arm64
 
 archives:
@@ -24,11 +26,10 @@ archives:
     name_template: "goYoke_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
-    # Windows zip override — re-enable when Windows port complete (see tickets/windows-distro/)
-    # format_overrides:
-    #   - goos: windows
-    #     formats:
-    #       - zip
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
 
 checksum:
   name_template: "checksums.txt"
@@ -42,12 +43,50 @@ changelog:
       - "^test:"
       - "^ci:"
 
+brews:
+  - repository:
+      owner: Bucket-Chemist
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/Bucket-Chemist/goYoke"
+    description: "Programmatic enforcement for Claude Code agentic workflows"
+    license: "MIT"
+    install: |
+      bin.install "goyoke"
+    test: |
+      system bin/"goyoke", "version"
+
+aurs:
+  - name: goyoke-bin
+    homepage: "https://github.com/Bucket-Chemist/goYoke"
+    description: "Programmatic enforcement for Claude Code agentic workflows"
+    maintainers:
+      - "Dokter Smol <will.klare.nl@gmail.com>"
+    license: "MIT"
+    private_key: "{{ .Env.AUR_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/goyoke-bin.git"
+    depends:
+      - nodejs
+      - npm
+    package: |
+      install -Dm755 "./goyoke" "${pkgdir}/usr/bin/goyoke"
+
 release:
   draft: false
   prerelease: auto
   name_template: "goYoke {{ .Version }}"
   header: |
     ## Installation
+
+    **Homebrew** (macOS + Linux):
+    ```bash
+    brew install Bucket-Chemist/tap/goyoke
+    ```
+
+    **Arch Linux** (AUR):
+    ```bash
+    paru -S goyoke-bin
+    ```
 
     **Go install** (requires Go 1.25+):
     ```bash

@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 	"github.com/Bucket-Chemist/goYoke/pkg/routing"
 	"github.com/Bucket-Chemist/goYoke/pkg/session"
@@ -298,9 +299,7 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 	cmd.Stdin = strings.NewReader(cfg.envelope)
 
 	// 4. Set SysProcAttr Setsid: true (create new process group)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true,
-	}
+	cmd.SysProcAttr = process.NewSessionAttr()
 
 	// 5. Set Env: GOYOKE_NESTING_LEVEL=2, GOYOKE_PROJECT_ROOT, GOYOKE_SESSION_DIR
 	// Filter out Claude Code session env vars that block nested CLI invocations.
@@ -357,6 +356,7 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 	}
 
 	pid := cmd.Process.Pid
+	_ = process.TrackProcess(pid)
 
 	// 9. Send agent_update(running, PID) now that we have the PID.
 	if tr.uds != nil && !tr.uds.isNoop() {
@@ -400,7 +400,7 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		killOnce.Do(func() {
 			if cmd.Process != nil {
 				log.Printf("[%s] Sending %v to process group %d", reason, sig, -pid)
-				if err := syscall.Kill(-pid, sig); err != nil {
+				if err := process.KillGroup(pid, sig); err != nil {
 					log.Printf("WARNING: Failed to send %v to process group %d: %v", sig, -pid, err)
 				}
 			}
@@ -443,7 +443,7 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 		// Timeout - attempt graceful shutdown with SIGTERM first
 		log.Printf("[TIMEOUT] Sending SIGTERM to process group %d after %v", -pid, cfg.timeout)
 		if cmd.Process != nil {
-			if err := syscall.Kill(-pid, syscall.SIGTERM); err != nil {
+			if err := process.KillGroup(pid, syscall.SIGTERM); err != nil {
 				log.Printf("WARNING: Failed to send SIGTERM to process group %d: %v", -pid, err)
 			}
 		}

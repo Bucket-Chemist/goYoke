@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -125,7 +126,15 @@ func OpenInBrowser(name, content string) error {
 		return fmt.Errorf("close temp file: %w", err)
 	}
 
-	cmd := exec.Command("xdg-open", tmpPath)
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", tmpPath)
+	case "darwin":
+		cmd = exec.Command("open", tmpPath)
+	default:
+		cmd = exec.Command("xdg-open", tmpPath)
+	}
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	if err := cmd.Start(); err != nil {

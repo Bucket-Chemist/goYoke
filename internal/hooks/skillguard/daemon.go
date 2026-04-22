@@ -1,6 +1,7 @@
 package skillguard
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -8,6 +9,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/filelock"
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 )
 
 // runHoldLock is the --hold-lock daemon mode.
@@ -38,7 +42,7 @@ func runHoldLock() {
 		os.Exit(1)
 	}
 
-	if err := syscall.Flock(int(fd.Fd()), syscall.LOCK_EX); err != nil {
+	if err := filelock.Lock(int(fd.Fd())); err != nil {
 		fmt.Fprintf(os.Stderr, "[skill-guard:lock-holder] ERROR: acquire LOCK_EX on %q: %v\n", lockPath, err)
 		fd.Close()
 		os.Exit(1)
@@ -67,7 +71,7 @@ func runHoldLock() {
 	for {
 		select {
 		case <-ticker.C:
-			if err := syscall.Kill(ccPID, 0); err != nil {
+			if !process.Exists(ccPID) {
 				cleanup()
 				os.Exit(0)
 			}
@@ -86,13 +90,13 @@ func isGuardStale(lockPath string) bool {
 	}
 	defer fd.Close()
 
-	err = syscall.Flock(int(fd.Fd()), syscall.LOCK_SH|syscall.LOCK_NB)
+	err = filelock.LockSharedNonBlock(int(fd.Fd()))
 	if err == nil {
-		syscall.Flock(int(fd.Fd()), syscall.LOCK_UN) //nolint:errcheck
+		filelock.Unlock(int(fd.Fd())) //nolint:errcheck
 		return true
 	}
 
-	if err == syscall.EWOULDBLOCK {
+	if errors.Is(err, filelock.ErrWouldBlock) {
 		return false
 	}
 

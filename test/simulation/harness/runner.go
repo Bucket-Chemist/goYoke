@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+
+	"github.com/Bucket-Chemist/goYoke/pkg/process"
 	"time"
 )
 
@@ -193,13 +195,13 @@ func (r *DefaultRunner) executeScenario(s Scenario) (string, int, error) {
 	// Create a new process group so we can kill the entire tree on timeout.
 	// Without this, child processes (e.g., sleep in a bash script) survive
 	// context cancellation because CommandContext only signals the direct child.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.SysProcAttr = process.NewProcessGroupAttr()
 
 	// Cancel sends SIGKILL to the process group (negative PID).
 	// This ensures all descendants are terminated on context deadline.
 	cmd.Cancel = func() error {
 		// Kill entire process group by sending signal to negative PGID
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		return process.KillGroup(cmd.Process.Pid, syscall.SIGKILL)
 	}
 
 	// WaitDelay gives child processes time to exit after Cancel before
