@@ -55,15 +55,32 @@ See [Workflow Guide](docs/WORKFLOWS.md) for detailed examples with sample output
 
 ## How It Works
 
-goYoke is a single Go binary that wraps Claude Code CLI. When you type a request, the **router** (Opus tier) classifies it and delegates to one of **78 specialized agents** across 4 model tiers — Haiku for search, Sonnet for implementation, Opus for architecture. Each agent receives language-specific conventions, coding rules, and sharp edge patterns automatically.
+### Standalone wrapper — your Claude Code stays clean
 
-**11 compiled Go hooks** intercept every Claude Code event to enforce behavior: blocking wrong-tier delegation, tracking failures, warning when the router tries to implement directly, and capturing session metrics. This is deterministic enforcement in binaries, not probabilistic compliance in prompts.
+goYoke is a single Go binary. It wraps Claude Code CLI as a subprocess, injecting its hooks, agents, and settings at runtime via CLI flags. Your Claude Code installation, your `~/.claude/` directory, and your project's `.claude/` config are never modified. Everything goYoke needs is embedded in the binary and applied ephemerally — close goYoke, and Claude Code is exactly as it was.
+
+This means goYoke can sit on top of any Claude Code setup without conflict. No agents polluting your native config. No hooks left behind. No MCP servers registered in your settings. Install it, run it, remove it — zero residue.
+
+### MCP compliance boundary — one choke point for all agent interactions
+
+Claude Code has built-in tools for spawning subagents (`Agent`, `Task`). goYoke deliberately blocks these because they bypass all enforcement — no hook fires, no conventions load, no identity gets injected. The subagent just runs naked.
+
+Instead, goYoke provides its own `spawn_agent` tool through an MCP server that lives inside the TUI ecosystem. This creates a single compliance boundary: every agent spawn goes through the MCP server, which validates the tier, injects the agent's identity and conventions, checks parent-child authorization, and logs telemetry — before the agent ever starts.
+
+The router and all agents can only interact through these MCP tools. There is no back door. The enforcement is structural, not behavioral.
+
+### The full picture
 
 ```
-You → goYoke TUI → Router (classifies) → Agent (executes) → Your codebase
-                         ↑                      ↑
-                    11 Go hooks             Conventions
-                    enforce behavior        injected per language
+You → goYoke TUI → Router (classifies request)
+                        │
+                        ├─ MCP spawn_agent ──→ Agent (executes) → Your codebase
+                        │    validates tier       ↑
+                        │    injects identity     Conventions
+                        │    logs telemetry       injected per language
+                        │
+                        └─ 11 Go hooks fire on every Claude Code event
+                             validate, track, enforce, capture
 ```
 
 For the full technical architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
