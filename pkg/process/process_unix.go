@@ -48,3 +48,6 @@ func Setsid() error {
 	_, err := syscall.Setsid()
 	return err
 }
+
+// TrackProcess is a no-op on Unix; real Job Object tracking is in process_windows.go.
+func TrackProcess(pid int) error { return nil }

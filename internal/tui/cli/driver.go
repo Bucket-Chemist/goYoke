@@ -265,6 +265,8 @@ func (d *CLIDriver) Start() tea.Cmd {
 		d.state = DriverStreaming
 		d.mu.Unlock()
 
+		_ = process.TrackProcess(cmd.Process.Pid)
+
 		go d.consumeEvents()
 
 		if d.opts.Debug {

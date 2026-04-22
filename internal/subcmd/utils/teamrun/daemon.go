@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -123,6 +124,9 @@ func redirectOutput(teamDir string) (*os.File, error) {
 // daemonizeStdin replaces stdin (fd 0) with /dev/null
 // Prevents "bad file descriptor" errors when daemon tries to read stdin
 func daemonizeStdin() error {
+	if runtime.GOOS == "windows" {
+		return fmt.Errorf("daemon mode is not supported on Windows; use foreground mode")
+	}
 	devNull, err := os.Open("/dev/null")
 	if err != nil {
 		return fmt.Errorf("open /dev/null: %w", err)

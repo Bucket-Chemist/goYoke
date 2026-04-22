@@ -2,14 +2,34 @@
 
 package filelock
 
-// Lock is a no-op stub on Windows (Ticket B implements real LockFileEx).
-func Lock(fd int) error { return nil }
+import (
+	"golang.org/x/sys/windows"
+)
 
-// LockShared is a no-op stub on Windows.
-func LockShared(fd int) error { return nil }
+func Lock(fd int) error {
+	h := windows.Handle(fd)
+	var ol windows.Overlapped
+	return windows.LockFileEx(h, windows.LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &ol)
+}
 
-// LockSharedNonBlock is a no-op stub on Windows.
-func LockSharedNonBlock(fd int) error { return nil }
+func LockShared(fd int) error {
+	h := windows.Handle(fd)
+	var ol windows.Overlapped
+	return windows.LockFileEx(h, 0, 0, 1, 0, &ol)
+}
 
-// Unlock is a no-op stub on Windows.
-func Unlock(fd int) error { return nil }
+func LockSharedNonBlock(fd int) error {
+	h := windows.Handle(fd)
+	var ol windows.Overlapped
+	err := windows.LockFileEx(h, windows.LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ol)
+	if err == windows.ERROR_LOCK_VIOLATION {
+		return ErrWouldBlock
+	}
+	return err
+}
+
+func Unlock(fd int) error {
+	h := windows.Handle(fd)
+	var ol windows.Overlapped
+	return windows.UnlockFileEx(h, 0, 1, 0, &ol)
+}

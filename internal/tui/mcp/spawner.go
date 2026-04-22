@@ -258,6 +258,7 @@ func runSubprocess(ctx context.Context, agent *routing.Agent, input SpawnAgentIn
 	}
 
 	pid := cmd.Process.Pid
+	_ = process.TrackProcess(pid)
 
 	// Notify TUI with the subprocess PID for interrupt support.
 	// This is a second "running" notification (the first is sent by

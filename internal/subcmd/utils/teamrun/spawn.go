@@ -356,6 +356,7 @@ func (s *claudeSpawner) executeSpawn(ctx context.Context, tr *TeamRunner, cfg *s
 	}
 
 	pid := cmd.Process.Pid
+	_ = process.TrackProcess(pid)
 
 	// 9. Send agent_update(running, PID) now that we have the PID.
 	if tr.uds != nil && !tr.uds.isNoop() {
