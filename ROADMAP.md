@@ -104,7 +104,16 @@ Single-provider (Claude Code), full enforcement stack.
 - [ ] Wave timing analysis: identify bottlenecks in multi-wave workflows
 - [ ] Cost efficiency comparison: same workflow, different provider configurations
 
-### v0.8.2 — Telemetry-driven routing optimization
+### v0.8.2 — Hybrid benchmarks: agent categories, team operations, stdio extensions
+
+- [ ] Expand agent categories beyond language-specific: planning, review, analysis, synthesis, orchestration
+- [ ] Category-level quality metrics (do all reviewers meet the same bar? do all planners produce valid dependency graphs?)
+- [ ] Team configuration benchmarks: same operation type, different team topologies (2-wave vs 3-wave, parallel vs sequential)
+- [ ] Stdin/stdout schema extensions for benchmark capture: embed quality signals, timing, and token usage in the contract itself
+- [ ] Operation-type scoring: compare `/review` vs `/braintrust` vs `/plan-tickets` across providers and configurations
+- [ ] Golden-output comparison: diff agent stdout against known-good reference outputs per category
+
+### v0.8.3 — Telemetry-driven routing optimization
 
 - [ ] Merge benchmark data with routing telemetry for automated provider selection
 - [ ] Confidence scores on routing decisions (data-backed, not heuristic)
