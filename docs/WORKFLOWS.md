@@ -10,6 +10,92 @@ goYoke enforces sane development workflows through compiled Go binaries that int
 
 **How it works:** When you describe a task, the router (an Opus-tier Claude instance) classifies your request and delegates to one of 78 specialized agents at the appropriate tier (Haiku for search, Sonnet for implementation, Opus for design). Each agent gets the same conventions, rules, and identity injected automatically. Every decision is logged. Sharp edges are captured. Sessions are archived with handoffs.
 
+## Getting Started
+
+New to goYoke? Here's what happens in your first 5 minutes.
+
+### Prerequisites
+You need Claude Code installed and authenticated. If you don't have it, install it first from [claude.ai/code](https://claude.ai/code).
+
+### Your First Interaction
+
+1. **Open a terminal** in your project directory and run:
+   ```bash
+   goyoke
+   ```
+
+2. **See the TUI startup** — you'll see a `[Session Init]` message printed to the console telling you what language was detected and what conventions are loaded. This happens automatically.
+
+3. **See the input field** — the TUI shows a terminal interface with an input prompt waiting for your request.
+
+4. **Type your request** in natural language:
+   ```
+   add error handling to the auth middleware
+   ```
+
+5. **The router classifies and delegates** — you'll see routing messages like:
+   ```
+   [ROUTING] → go-pro (Go implementation task)
+   ```
+
+6. **The agent works** — progress appears in real-time. The agent reads your code, understands conventions, implements the fix.
+
+7. **Results appear in your codebase** — the code is written directly to your files. You review it like any other change.
+
+8. **Next request?** Type another request in the input field. The router remembers context across the session.
+
+The key difference from raw Claude: each request is atomic. One invocation, one agent, one deliverable. No chat pollution. No context degradation.
+
+## Example: What It Looks Like
+
+Here's what a real `/review-plan` workflow produces:
+
+### Setup
+You've created a plan for implementing a feature and saved it to `tickets/feature-x/PLAN.md`. Now you want expert review before implementation.
+
+### Running the Workflow
+```bash
+/review-plan
+```
+
+### What Happens
+1. The router spawns `staff-architect-critical-review` (an Opus-tier agent)
+2. The agent reads your plan
+3. The agent greps the codebase to verify your claims about affected files, existing patterns, and dependencies
+4. The agent applies a 7-layer review framework: assumptions, dependencies, failure modes, cost-benefit, testing strategy, architecture smells, and contractor readiness
+
+### What You Get Back
+Structured output with a verdict and detailed findings:
+
+```
+Verdict: CONCERNS (3 critical, 5 major, 4 minor, 4 commendations)
+
+Critical Issues:
+- Plan references 6 files but grep found 13 more affected files in the codebase
+  Affected: middleware/, handlers/, integrations/, schemas/
+- Unix Domain Sockets not mentioned (TUI-MCP bridge would crash on Windows)
+- Process group kill has no Windows equivalent (orphaned worker processes)
+
+Major Issues:
+- Error handling strategy incomplete for concurrent file operations
+- Database migration path not specified for schema changes
+- Dependency graph has implicit assumption about initialization order
+
+Commendations:
+- Excellent test coverage plan for edge cases
+- Good backward compatibility thinking
+- Clear rollback strategy
+```
+
+### Key Difference from "Ask Claude Directly"
+The agent **verified** your plan against the actual codebase using grep. It didn't just read your assumptions—it checked them. It found 7 issues you didn't mention because it actually looked at the code. That's the leverage goYoke provides: agents have access to your actual project state, not just what you describe.
+
+### Output
+Results saved to:
+- `review-critique.md` — full findings
+- `review-metadata.json` — structured data
+- Your session archive captures the decision
+
 ## Core Concepts
 
 ### Router
@@ -132,6 +218,46 @@ Scout reconnaissance finds the relevant files. Architect synthesizes findings. O
 
 **Rule of thumb:** Scout with Haiku before committing Opus time. A $0.02 scout can prevent a $0.50 mis-routing.
 
+## Cost Estimates
+
+Here's what typical workflows cost:
+
+| Workflow | Agents Used | Typical Cost | Duration |
+|----------|-------------|-------------|----------|
+| Bug fix (direct) | 1 Sonnet agent | $0.05-0.15 | 1-3 min |
+| /explore | 1 Haiku scout + 1 Opus architect | $0.10-0.30 | 2-4 min |
+| /review | 4 Sonnet reviewers + 1 Sonnet orchestrator | $0.15-0.40 | 3-5 min |
+| /review-plan | 1 Opus staff-architect | $0.20-0.30 | 2-3 min |
+| /braintrust | Mozart + Einstein + Staff-Architect + Beethoven (all Opus) | $0.50-1.50 | 5-10 min |
+| /plan-tickets | Scout + Planner + Architect + Review + Tickets (mixed tiers) | $2.00-5.00 | 10-20 min |
+| /implement | Architect + background workers | $1.00-3.00 | 5-15 min |
+
+Cost depends on codebase size and task complexity. The router automatically uses the cheapest tier that can handle each subtask.
+
+**Rule of thumb:** A day of heavy goYoke usage costs $5-15. Without tier routing, the same work in raw Opus would cost 3-5x more.
+
+## Anti-Patterns (What goYoke Prevents)
+
+### The Vibe Coding Pattern
+**Without goYoke:** "Just implement it." Claude implements in Opus ($0.045/1K tokens), floods the conversation with 500 lines of code, and loses context for follow-up questions. By the time you need clarification, the model has forgotten the original goal.
+
+**With goYoke:** Router delegates to Sonnet-tier go-pro ($0.009/1K tokens). Implementation happens in a one-shot agent that exits when done. Router context stays clean for your next request. Cost: ~5x cheaper.
+
+### The Context Pollution Pattern
+**Without goYoke:** You ask Claude to implement a feature, then review it, then fix issues, then add tests. By turn 15, Claude is losing context of the original requirements. You're repeating yourself. Prompts get longer to compensate.
+
+**With goYoke:** Each step is a separate agent invocation. The router remembers the requirements. Agents get fresh context with injected conventions. No degradation. No prompt inflation.
+
+### The Wrong-Tier Pattern
+**Without goYoke:** Every request goes to Opus regardless of complexity. File search? Opus. Grep for a pattern? Opus. Generate boilerplate? Opus. Paying $0.045/1K tokens for work that Haiku does for $0.0005/1K.
+
+**With goYoke:** The router automatically selects the cheapest tier that can handle the task. Haiku for search (50x cheaper), Sonnet for implementation (5x cheaper), Opus only for architecture. You save 10-50x on the same result.
+
+### The Skip-The-Plan Pattern
+**Without goYoke:** Jump straight into implementation. Discover halfway through that the approach is wrong, conflicts with existing patterns, or misses edge cases. Start over. Waste $2 and 30 minutes.
+
+**With goYoke:** /explore scouts the problem first ($0.10). /review-plan catches issues before implementation ($0.25). Total planning cost: $0.35. Saves $2+ in avoided rework. Every time.
+
 ## How Enforcement Works
 
 goYoke uses Go binaries (not prompts) to enforce behavior:
@@ -143,6 +269,37 @@ goYoke uses Go binaries (not prompts) to enforce behavior:
 - **goyoke-load-context** injects conventions and restores session state at session start. This is why agents stay consistent.
 
 These aren't suggestions—they're enforced in binaries before Claude even sees the request.
+
+## Domain-Specific Capabilities
+
+goYoke includes specialized agents for specific domains:
+
+### Bioinformatics
+`/review-bioinformatics` spawns 6 Opus-tier domain specialists:
+- Genomics reviewer (alignment, variant calling, VCF)
+- Proteomics reviewer (FDR, quantification, search engines)
+- Proteogenomics reviewer (custom databases, novel peptides)
+- Proteoform reviewer (top-down, PTM, intact mass)
+- Mass spectrometry reviewer (instrument, acquisition, DDA/DIA)
+- Bioinformatician reviewer (pipeline, workflow, reproducibility)
+
+Findings are synthesized by a staff bioinformatician.
+
+### Machine Learning
+The `python-architect` agent handles ML design decisions:
+- Neural network architecture selection
+- Training strategy and loss function design
+- Attention mechanism tradeoffs
+- ONNX export considerations
+
+Escalation path: python-pro → python-architect → /braintrust
+
+### LLM Deployment
+The `llm-inference-architect` evaluates:
+- Model memory requirements and KV cache sizing
+- Vulkan/CUDA inference feasibility
+- Hardware requirements for local deployment
+- Quantization tradeoffs
 
 ## Customization
 
