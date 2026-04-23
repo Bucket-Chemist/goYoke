@@ -5,174 +5,184 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-brightgreen)]()
 
-**Slow the vibes down. *Really* plan, review, break it into context-sound chunks with testable boundaries, and THEN implement.**
+**Plan first. Route deliberately. Ship reviewed code.**
 
-goYoke wraps your models with compiled Go enforcement: tiered agent routing, multi-agent workflows, and a terminal UI to track your work history, track work dispatch, log work relative to budget. Every request is classified, delegated to the right model tier, and tracked.
+goYoke is a single Go binary that wraps Claude Code with runtime enforcement, typed agent contracts, multi-agent workflows, and a terminal UI for tracking sessions, dispatch, progress, and cost.
 
-End result? You produce tested deliverables instead of a psychotic echo chamber with a sycophantic silicon voice designed to lull you into a false sense of dopamine-drunk security.
+It is built for people who use AI coding tools for real software work and want less chat drift, fewer unreviewed one-shot changes, and clearer evidence that work was planned, delegated, checked, and completed. That premise lines up with recent findings that experienced developers value agents as productivity tools, but retain control over design and implementation because software quality still matters [1].
 
-> *Built for Claude Code at launch. Multi-provider support planned.*
-
-<p align="center">
-  <img src="assets/goyoke-monkey.png" alt="Don't be this." width="400">
-  <br>
-  <em>^^^^ don't be their trained token monkey</em>
-</p>
+> Built for Claude Code at launch. Multi-provider support is planned.
 
 ## Why goYoke?
 
-goYoke encourages a development-centric workflow: scout the problem, create a plan, review it, then implement. Every handoff between agents is typed — JSON-schema-validated stdin/stdout contracts ensure that a reviewer always produces structured findings with severity, file, and recommendation; that a worker always reports which acceptance criteria were met with evidence, and that an architect always produces implementation plans with dependency graphs and testable criteria. Same contracts in, comparable quality out.
+Claude Code is powerful, but raw chat workflows are easy to misuse:
 
-This project represents an attempt to deviate from documentation theatre as much as possible. goYoke uses numerous compiled Go binaries that intercept model events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that degrade over long conversations. The model can't forget a binary that blocks its tool call.
+- exploratory work turns into implementation before the scope is known
+- expensive frontier models get used for simple search or boilerplate
+- reviewers produce prose that is hard to compare between runs
+- long sessions accumulate context noise and hidden assumptions
+- handoffs between "planner", "reviewer", and "worker" roles are informal
 
-### How I use this
+goYoke puts a structured harness around that work. It encourages a scout -> plan -> review -> implement loop, routes tasks to appropriate model tiers, and uses JSON-schema-validated contracts so agents produce comparable outputs instead of freeform theatre. This follows the same basic architectural direction as production agent guidance: prefer simple, composable workflows, explicit routing, parallelization, and evaluator-style review where those patterns fit the task [2].
 
-I built the progress tracker so I could more accurately track what I had done during the session. Initially I used a zellij template with lazygit as a sidebar but in the past few weeks I have defaulted back to vscode with goyoke at ~50% of window width. Run a 2x2 grid of these (see below) and...baby you got a stew going.
+In practice, that means:
 
-### Why I built this
+- reviewers report structured findings with severity, file, impact, and recommendation
+- workers report which acceptance criteria were met, with evidence
+- architects produce implementation plans with dependencies and testable criteria
+- team workflows run with explicit topology, budgets, and recorded outputs, matching the broader multi-agent pattern of assigning role-specific agents to staged collaborative workflows [3]
+- sessions preserve enough history to understand what happened later
 
-As a scientist by trade, I write code for an ISO compliant mass spectrometry facility. I abhor black boxes and as a field mass spectrometry generates absurdly precise biochemical measurements. As a supportive adjunct to this calibre of science - when I write pipelines or software it is a requirement that these are entirely transparent, reproducible and follow strict stylistic and best practice conventions.
-
-The barriers to having the same kind of experience when using inference providers are countless. Model providers silently alter quality between releases; or throttle inference quietly to a lower tier model whilst you pay for the frontier. The same prompt produces different results on Tuesday than it did on Monday because they don't have compute to cover users online.
-
-If you care about sitting down at your desk and getting the same quality of work every session - then agentic activity needs to be standardised, measurable, and more than anything **stable and consistent**.
-
-I started my AI journey in December 2022 with ChatGPT one-shotting some of my more obscure trading algorithm problems, and I remember thinking that humanity had entered a new era of tool discovery akin to stone tools. The real alpha laid not in those who swung the axe - but in those who found ways to abstract the sharp edge into more complex tools. This project represents my ongoing journey of using these tools (from chat interfaces, to Cursor, Windsurf, terminal, you name it) and trying to create a generalisable harness that reaches for the optimal model paired with the right schema no matter the use case. As a builder I built this to be the tool I use to build everything else in my work.
-
-## NB
-
-I am by no means done with this project - for those of you who are fortunate enough to have enjoyed Claude's generous subscription model - you will rightly be feeling the time of cheap frontier inference is coming to an end. I will be providing support for Codex (which I also use for various use cases) immediately following release, and then will be moving onto supporting standard tool call/message frameworks for open source models and any others that I use in my work routinely. If you have any providers you wish supported please feel free to drop me a line and I would be happy to accomodate.
-
+This project represents an attempt to deviate from documentation theatre as much as possible. goYoke uses numerous compiled Go binaries that intercept model events at runtime. They validate routing, track failures, enforce delegation, and capture sharp edges. Enforcement happens in code, not in text instructions that degrade over long conversations.
 
 ## Quick Start
 
-**Prerequisites:** [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated.
+Prerequisite: [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated.
 
-**Homebrew** (macOS + Linux):
+### Homebrew
+
 ```bash
 brew install Bucket-Chemist/tap/goyoke
 goyoke
 ```
 
-**Arch Linux:**
+### Arch Linux
+
 ```bash
 paru -S goyoke-bin
 goyoke
 ```
 
-**Binary download:** See [Releases](../../releases) for all platforms.
+### Go Install
+
+```bash
+go install github.com/Bucket-Chemist/goYoke/cmd/goyoke@latest
+goyoke
+```
+
+Standalone binaries are available from [Releases](../../releases).
+
+See [INSTALL.md](INSTALL.md) for platform details and authentication setup.
 
 ## What You Can Do
 
-| Command | What Happens | Cost |
-|---------|-------------|------|
-| "fix the login bug" | Router delegates to language-specific agent (Sonnet) | ~$0.10 |
-| `/explore "how does auth work?"` | Scout reconnoiters, architect analyzes | ~$0.20 |
-| `/review` | 4 specialist reviewers examine code in parallel | ~$0.30 |
-| `/review-plan` | Staff architect applies 7-layer critical review | ~$0.25 |
-| `/braintrust "Redis vs DB cache?"` | 4 Opus agents analyze from different perspectives | ~$1.00 |
-| `/plan-tickets "notifications"` | Full pipeline: scout → plan → architect → review → tickets | ~$3.00 |
-| `/implement` | Architect plans, background workers execute | ~$2.00 |
-| `/cleanup` | 8 specialist reviewers audit code hygiene | ~$0.50 |
+Run `goyoke` in a project directory, then ask for work in the TUI.
 
-See [Workflow Guide](docs/WORKFLOWS.md) for detailed examples with sample output.
+| Request | What goYoke does | Typical cost |
+| --- | --- | --- |
+| `fix the login bug` | Routes to the relevant implementation agent | ~$0.10 |
+| `/explore "how does auth work?"` | Scouts the codebase, then asks an architect to analyze scope | ~$0.20 |
+| `/review` | Runs specialist reviewers in parallel and synthesizes findings | ~$0.30 |
+| `/review-plan` | Applies a critical architecture review to an implementation plan | ~$0.25 |
+| `/braintrust "Redis vs DB cache?"` | Runs a deeper multi-perspective analysis workflow | ~$1.00 |
+| `/plan-tickets "notifications"` | Produces a plan, review, refinement, and ticket breakdown | ~$3.00 |
+| `/implement` | Plans the work, then dispatches background implementation workers | ~$2.00 |
+| `/cleanup` | Runs code hygiene reviewers across duplication, types, dead code, dependencies, and error handling | ~$0.50 |
 
-## How It Works (current at release specifically for Claude Code)
+Costs are approximate and depend on model pricing, codebase size, and task scope. The point is not perfect prediction; the point is that work is routed and measured instead of treated as an opaque chat session.
 
-### Standalone wrapper — your Claude Code stays clean
+## How It Works
 
-goYoke is a single Go binary. It wraps Claude Code CLI as a subprocess, injecting its hooks, agents, and settings at runtime via CLI flags. Your Claude Code installation, your `~/.claude/` directory, and your project's `.claude/` config are never modified. Everything goYoke needs is embedded in the binary and applied ephemerally — close goYoke, and Claude Code is exactly as it was.
+goYoke wraps Claude Code as a subprocess and injects its own hooks, agents, conventions, MCP tools, and settings at runtime.
 
-This means goYoke can sit on top of any Claude Code setup without conflict. No agents polluting your native config. No hooks left behind. No MCP servers registered in your settings. Install it, run it, remove it — zero residue.
+Your Claude Code installation stays clean:
 
-### MCP compliance boundary — one choke point for all agent interactions
+- no permanent agent files added to your native `~/.claude/`
+- no project `.claude/` configuration rewritten by default
+- no MCP servers left registered after exit
+- embedded defaults are applied ephemerally for the session
 
-Claude Code has built-in tools for spawning subagents (`Agent`, `Task`). goYoke deliberately blocks these because they bypass all enforcement — no hook fires, no conventions load, no identity gets injected. The subagent just runs naked.
+Close goYoke and Claude Code is still your Claude Code.
 
-Instead, goYoke provides its own `spawn_agent` tool through an MCP server that lives inside the TUI ecosystem. This creates a single compliance boundary: every agent spawn goes through the MCP server, which validates the tier, injects the agent's identity and conventions, checks parent-child authorization, and logs telemetry — before the agent ever starts.
+### Runtime Boundary
 
-The router and all agents can only interact through these MCP tools. There is no back door. The enforcement is structural, not behavioral.
+Claude Code can spawn subagents directly, but those spawns bypass goYoke's enforcement layer. goYoke therefore provides its own `spawn_agent` tool through an MCP server.
 
-### The full picture
+Within goYoke-routed workflows, agent spawning goes through that MCP boundary. The server validates tier selection, injects identity and conventions, checks parent-child authorization, and logs telemetry before the agent starts.
 
-```
-You → goYoke TUI → Router (classifies request)
-                        │
-                        ├─ MCP spawn_agent ──→ Agent (executes) → Your codebase
-                        │    validates tier       ↑
-                        │    injects identity     Conventions
-                        │    logs telemetry       injected per language
-                        │
-                        └─ 11 Go hooks fire on every Claude Code event
-                             validate, track, enforce, capture
-```
+### Typed Contracts
 
-For the full technical architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Multi-agent workflows use typed stdin/stdout contracts. Team configs define role-specific agents, ordered collaboration steps, and intermediate artifacts rather than relying on one undifferentiated chat loop [3]:
 
-## Installation
+- workflow type
+- budget ceiling
+- ordered waves
+- participating agents
+- input and output schema paths
+- timeout and retry policy
 
-### Homebrew (macOS + Linux)
-```bash
-brew install Bucket-Chemist/tap/goyoke
-```
+That gives each workflow a repeatable shape. A review run always produces review-shaped output. An implementation worker always reports acceptance criteria and evidence. A synthesis agent always receives structured upstream results.
 
-### Arch Linux (AUR)
-```bash
-paru -S goyoke-bin
-```
+### System Shape
 
-### Standalone binary
-Download from [Releases](../../releases) and add to PATH.
-
-### Go install
-```bash
-go install github.com/Bucket-Chemist/goYoke/cmd/goyoke@latest
+```text
+You -> goYoke TUI -> Router
+                       |
+                       +-> MCP spawn_agent -> Agent -> Your codebase
+                       |      validates tier
+                       |      injects identity and conventions
+                       |      records telemetry
+                       |
+                       +-> Go hooks on Claude Code events
+                              validate, track, enforce, capture
 ```
 
-### Build from source
-```bash
-git clone https://github.com/Bucket-Chemist/goYoke.git
-cd goYoke
-make dist && make install
-```
+For deeper internals, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-See [INSTALL.md](INSTALL.md) for detailed setup including auth configuration.
+## What goYoke Is Not
 
-## Platform Support
+goYoke is not a replacement for judgment. It cannot make model output deterministic, prove code is correct by itself, or remove the need to review generated changes.
 
-| Platform | Status | Install Methods |
-|----------|--------|-----------------|
-| Linux x86_64 | Supported | Homebrew, AUR, binary, go install |
-| macOS Intel | Supported | Homebrew, binary, go install |
-| macOS Apple Silicon | Supported | Homebrew, binary, go install |
-| Windows x86_64 | Supported | Binary, go install |
+It is a harness: a way to make agentic coding work more explicit, more constrained, more inspectable, and easier to improve over time.
 
-## Documentation
-
-- **[Workflow Guide](docs/WORKFLOWS.md)** — Reproducibility contracts, team orchestration, skills, costs, anti-patterns
-- **[Roadmap](ROADMAP.md)** — Version plan: multi-provider, benchmarks, TUI editor, telemetry dashboard
-- **[Installation](INSTALL.md)** — Auth setup, platform details
-- **[Architecture](docs/ARCHITECTURE.md)** — System internals, hooks, team orchestration
-- **[Contributing](CONTRIBUTING.md)** — How to contribute agents, conventions, and skills
+It is also currently Claude Code-first. The architecture is intended to generalize, and provider adapters for Codex, local models, and other runtimes are on the roadmap.
 
 ## Language Support
 
-goYoke auto-loads coding conventions based on file context:
+goYoke auto-loads coding conventions based on project and file context.
 
-| Language | Agents | Specialized Conventions |
-|----------|--------|------------------------|
+| Language | Agents | Conventions |
+| --- | --- | --- |
 | Go | `go-pro`, `go-cli`, `go-tui`, `go-api`, `go-concurrent` | Cobra, Bubbletea |
-| Python | `python-pro`, `python-ux` | — |
+| Python | `python-pro`, `python-ux` | general Python, UI patterns |
 | TypeScript | `typescript-pro`, `react-pro` | React |
-| Rust | `rust-pro` | — |
+| Rust | `rust-pro` | general Rust |
 | R | `r-pro`, `r-shiny-pro` | Shiny, Golem |
 
-Custom domain agents can be added via `.claude/agents/` — see [Contributing](CONTRIBUTING.md).
+Custom agents, skills, schemas, and conventions can be added by extending the embedded/default configuration. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Author
+## Documentation
 
-Created by [Dokter Smol](https://github.com/Bucket-Chemist)
+- [Workflow Guide](docs/WORKFLOWS.md): examples, costs, team orchestration, contracts, and anti-patterns
+- [Installation](INSTALL.md): platform setup and authentication
+- [Architecture](docs/ARCHITECTURE.md): hooks, MCP boundary, TUI, teams, and telemetry
+- [Roadmap](ROADMAP.md): provider adapters, benchmarking, TUI configuration, and graph memory
+- [Contributing](CONTRIBUTING.md): agents, team configs, conventions, and skills
+
+## Why I Built This
+
+I write software for an ISO-compliant mass spectrometry facility. In that world, black boxes are a liability: measurements need to be transparent, reproducible, and defensible.
+
+AI coding tools are useful enough that they deserve the same pressure. Model providers change behavior, throttle capacity, shift quality between releases, and expose users to a moving target. If you care about sitting down tomorrow and getting the same class of work you got today, agentic workflows need structure around them.
+
+goYoke is my attempt to make that structure concrete: enforceable runtime boundaries, typed handoffs, measurable cost, reviewable outputs, and conventions that live outside a model's short-term memory.
+
+## Status
+
+goYoke is under active development. The initial release targets Claude Code and a single-binary distribution model. Multi-provider support, Codex integration, local model adapters, benchmarks, and richer telemetry are tracked in [ROADMAP.md](ROADMAP.md).
+
+## References
+
+[1] R. Huang, A. Reyna, S. Lerner, H. Xia, and B. Hempel, "Professional Software Developers Don't Vibe, They Control: AI Agent Use for Coding in 2025," arXiv:2512.14012 [cs.SE], 2025. https://doi.org/10.48550/arXiv.2512.14012
+
+[2] Anthropic, "Building effective agents," Dec. 19, 2024. https://www.anthropic.com/engineering/building-effective-agents
+
+[3] S. Hong et al., "MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework," arXiv:2308.00352 [cs.AI], 2023. https://doi.org/10.48550/arXiv.2308.00352
 
 ## License
 
 [MIT](LICENSE)
+
+## Author
+
+Created by [Dokter Smol](https://github.com/Bucket-Chemist).
