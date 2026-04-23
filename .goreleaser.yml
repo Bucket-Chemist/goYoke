@@ -44,13 +44,16 @@ changelog:
       - "^ci:"
 
 brews:
-  - repository:
+  - name: goyoke
+    repository:
       owner: Bucket-Chemist
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: "https://github.com/Bucket-Chemist/goYoke"
     description: "Programmatic enforcement for Claude Code agentic workflows"
     license: "MIT"
+    url_template: "https://github.com/Bucket-Chemist/goYoke/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    download_strategy: CurlDownloadStrategy
     install: |
       bin.install "goyoke"
     test: |
@@ -88,7 +91,7 @@ release:
 
     **Go install** (requires Go 1.25+):
     ```bash
-    go install github.com/{{ .Env.GITHUB_REPOSITORY }}/cmd/goyoke@{{ .Tag }}
+    go install github.com/Bucket-Chemist/goYoke/cmd/goyoke@{{ .Tag }}
     ```
 
     **Standalone** (single binary — download and add to PATH):
