@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
-// Version is the current version string.
-const Version = "0.1.0"
+// Version is set at build time via -ldflags "-X .../internal/hooks/version.Version=...".
+var Version = "dev"
 
 // BuildTime is set at build time via -ldflags "-X .../internal/hooks/version.BuildTime=...".
 var BuildTime = "development"
@@ -37,7 +38,8 @@ func Run(w io.Writer, jsonOutput bool) error {
 		return err
 	}
 
-	_, err := fmt.Fprintf(w, "goYoke v%s (built: %s)\n", Version, BuildTime)
+	ver := strings.TrimPrefix(Version, "v")
+	_, err := fmt.Fprintf(w, "goYoke v%s (built: %s)\n", ver, BuildTime)
 	return err
 }
 

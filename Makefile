@@ -4,7 +4,7 @@
 
 BINARY_NAME=goyoke
 VERSION=$(shell git describe --tags --always --dirty)
-LDFLAGS=-ldflags "-X main.version=${VERSION}"
+LDFLAGS=-ldflags "-X main.version=${VERSION} -X github.com/Bucket-Chemist/goYoke/internal/hooks/version.Version=${VERSION}"
 
 .PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-codebase-extract install install-archive install-aggregate install-wrapper install-load-context install-codebase-extract uninstall uninstall-aggregate check-path clean defaults dist check-size clean-defaults test-defaults test-zero-install dev-setup test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes test-codebase-extract-coverage all
 
@@ -108,7 +108,7 @@ build-tui:
 build-go-tui:
 	@echo "Building Go TUI..."
 	@mkdir -p bin
-	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
+	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev) -X github.com/Bucket-Chemist/goYoke/internal/hooks/version.Version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
 		-o bin/goyoke ./cmd/goyoke
 	@echo "✓ Go TUI built at bin/goyoke"
 
@@ -190,7 +190,7 @@ telemetry-tools: build-log-review build-update-review-outcome
 build-codebase-extract:
 	@echo "Building goyoke-codebase-extract..."
 	@mkdir -p bin
-	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
+	@go build -ldflags "-X main.version=$$(git describe --tags --always 2>/dev/null || echo dev) -X github.com/Bucket-Chemist/goYoke/internal/hooks/version.Version=$$(git describe --tags --always 2>/dev/null || echo dev)" \
 		-o bin/goyoke-codebase-extract ./cmd/goyoke-codebase-extract
 	@echo "✓ goyoke-codebase-extract built at bin/goyoke-codebase-extract"
 
@@ -471,7 +471,7 @@ defaults:
 dist: defaults
 	@echo "Building distribution binary..."
 	@mkdir -p bin
-	@go build -ldflags "-w -X main.version=${VERSION}" -o bin/goyoke ./cmd/goyoke
+	@go build -ldflags "-w -X main.version=${VERSION} -X github.com/Bucket-Chemist/goYoke/internal/hooks/version.Version=${VERSION}" -o bin/goyoke ./cmd/goyoke
 	@echo "✓ Distribution build complete (single binary)"
 
 check-size: dist

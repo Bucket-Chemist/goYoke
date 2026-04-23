@@ -98,7 +98,6 @@ jobs:
             --exclude='.claude/schemas/teams/stdin-stdout/review-bioinformatics-*' \
             --exclude='.claude/skills/review-bioinformatics/' \
             --exclude='docs/teams/bioinformatics/' \
-            --exclude='internal/subcmd/utils/teampreparesynth/bioinformatics.go' \
             private/ public/
 
       - name: Strip private agents from config files
@@ -123,10 +122,10 @@ jobs:
             end
           ) | del(.tool_profiles.bioinformatics_review // empty)'
 
-          # Filter agents-index.json
+          # Filter agents-index.json (remove entries + deep-strip references)
           for f in .claude/agents/agents-index.json defaults/agents/agents-index.json; do
             if [ -f "$f" ]; then
-              jq --arg pat "$PAT" '.agents |= map(select(.id | test($pat) | not))' "$f" > tmp.json && mv tmp.json "$f"
+              jq --arg pat "$PAT" '.agents |= map(select(.id | test($pat) | not)) | '"$JQ_FILTER" "$f" > tmp.json && mv tmp.json "$f"
               echo "Filtered agents-index: $f"
             fi
           done
@@ -146,6 +145,13 @@ jobs:
             exit 1
           fi
           echo "Verification passed: zero private agent references in public config"
+
+      - name: Build check on filtered source
+        working-directory: public
+        run: |
+          echo "Verifying filtered public source compiles..."
+          go build ./...
+          echo "Build OK"
 
       - name: Get tag name
         id: tag

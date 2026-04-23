@@ -13,7 +13,7 @@ builds:
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
     ldflags:
-      - -w -X main.version={{.Version}}
+      - -w -X main.version={{.Version}} -X github.com/Bucket-Chemist/goYoke/internal/hooks/version.Version={{.Version}}
     ignore:
       - goos: linux
         goarch: arm64

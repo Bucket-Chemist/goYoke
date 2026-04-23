@@ -41,6 +41,7 @@ PRIVATE_AGENTS=$(jq -r '.agents[] | select(.distribution == "private") | .id' "$
 PRIVATE_CONVENTIONS=$(jq -r '.distribution.private_conventions[]' "$AGENTS_INDEX" 2>/dev/null || true)
 PRIVATE_SKILLS=$(jq -r '.distribution.private_skills[]' "$AGENTS_INDEX" 2>/dev/null || true)
 PRIVATE_SCHEMA_PREFIXES=$(jq -r '.distribution.private_schema_prefixes[]' "$AGENTS_INDEX" 2>/dev/null || true)
+PRIVATE_TEAMS=$(jq -r '.distribution.private_teams[]' "$AGENTS_INDEX" 2>/dev/null || true)
 
 # Filter agents-index.json: remove private agents, remove distribution metadata
 jq '
@@ -63,6 +64,12 @@ for agent_dir in "${SOURCE}/agents"/*/; do
     # Copy entire agent directory (md + sharp-edges.yaml + references/)
     cp -r "$agent_dir" "${DEST}/agents/${agent_name}"
 done
+# Filter private teams from agents/teams/
+if [[ -d "${DEST}/agents/teams" ]]; then
+    for team in $PRIVATE_TEAMS; do
+        rm -rf "${DEST}/agents/teams/${team}"
+    done
+fi
 
 # --- 3. Copy conventions (excluding private) ---
 echo "[generate-defaults] Copying conventions..."
@@ -95,11 +102,29 @@ for schema_dir in "${SOURCE}/schemas"/*/; do
     if [[ "$skip" == "true" ]]; then
         continue
     fi
-    cp -r "$schema_dir" "${DEST}/schemas/${schema_name}"
+    mkdir -p "${DEST}/schemas/${schema_name}"
+    for item in "$schema_dir"*; do
+        item_name=$(basename "$item")
+        item_skip=false
+        for prefix in $PRIVATE_SCHEMA_PREFIXES; do
+            if [[ "$item_name" == "$prefix"* ]]; then
+                item_skip=true
+                break
+            fi
+        done
+        if [[ "$item_skip" == "true" ]]; then
+            continue
+        fi
+        cp -r "$item" "${DEST}/schemas/${schema_name}/"
+    done
 done
 # Also copy any top-level schema files
 for schema_file in "${SOURCE}/schemas"/*.json; do
     [[ -f "$schema_file" ]] && cp "$schema_file" "${DEST}/schemas/" || true
+done
+# Remove any nested files matching private schema prefixes
+for prefix in $PRIVATE_SCHEMA_PREFIXES; do
+    find "${DEST}/schemas" -name "${prefix}*" -exec rm -rf {} + 2>/dev/null || true
 done
 
 # --- 6. Copy skills (excluding private) ---
