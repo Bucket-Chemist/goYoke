@@ -65,9 +65,7 @@ aurs:
     license: "MIT"
     private_key: "{{ .Env.AUR_KEY }}"
     git_url: "ssh://aur@aur.archlinux.org/goyoke-bin.git"
-    depends:
-      - nodejs
-      - npm
+    depends: []
     package: |
       install -Dm755 "./goyoke" "${pkgdir}/usr/bin/goyoke"
 
