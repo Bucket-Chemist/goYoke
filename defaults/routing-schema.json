@@ -1,0 +1,591 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "2.5.0",
+  "description": "Routing schema for Claude Code tiered agent architecture - v2.5: Staff architect moved to opus tier, added impl-manager",
+  "updated": "2026-02-01",
+  "tiers": {
+    "haiku": {
+      "description": "Mechanical work - fast, cheap, no reasoning required",
+      "model": "haiku",
+      "thinking": false,
+      "max_thinking_budget": 0,
+      "cost_per_1k_tokens": 0.0005,
+      "patterns": [
+        "count",
+        "list",
+        "find",
+        "search",
+        "glob",
+        "grep",
+        "format",
+        "lint",
+        "locate",
+        "where is",
+        "which files",
+        "look for",
+        "find all",
+        "how many"
+      ],
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
+      "thresholds": {
+        "max_files": 5,
+        "max_lines": 500,
+        "max_tokens_estimate": 10000
+      },
+      "agents": [
+        "codebase-search",
+        "haiku-scout"
+      ]
+    },
+    "haiku_thinking": {
+      "description": "Structured reasoning - Haiku with thinking for templated tasks",
+      "model": "haiku",
+      "thinking": true,
+      "max_thinking_budget": 6000,
+      "cost_per_1k_tokens": 0.001,
+      "patterns": [
+        "scaffold",
+        "boilerplate",
+        "template",
+        "stub",
+        "document",
+        "readme",
+        "docstring",
+        "review",
+        "check",
+        "spot check",
+        "quick review",
+        "research",
+        "library",
+        "best practice",
+        "how to use"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebFetch",
+        "WebSearch"
+      ],
+      "thresholds": {
+        "max_files": 10,
+        "max_lines": 1000,
+        "max_tokens_estimate": 25000
+      },
+      "agents": [
+        "scaffolder",
+        "tech-docs-writer",
+        "code-reviewer",
+        "librarian",
+        "memory-archivist",
+        "backend-reviewer",
+        "frontend-reviewer",
+        "standards-reviewer"
+      ]
+    },
+    "sonnet": {
+      "description": "Reasoning work - implementation, refactoring, debugging",
+      "model": "sonnet",
+      "thinking": true,
+      "max_thinking_budget": 16000,
+      "cost_per_1k_tokens": 0.009,
+      "patterns": [
+        "implement",
+        "refactor",
+        "debug",
+        "test",
+        "fix",
+        "create class",
+        "add function",
+        "write test",
+        "optimize",
+        "async",
+        "type hints",
+        "analyze",
+        "architect",
+        "synthesize",
+        "plan",
+        "ambiguous",
+        "cross-module",
+        "design decision",
+        "golang",
+        "go build",
+        "cobra",
+        "bubbletea",
+        "tui",
+        "goroutine",
+        "errgroup",
+        "http client",
+        "api client",
+        "cargo",
+        "crate",
+        "trait",
+        "lifetime",
+        "borrow",
+        "rust"
+      ],
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep",
+        "Task"
+      ],
+      "thresholds": {
+        "max_files": 20,
+        "max_lines": 5000,
+        "max_tokens_estimate": 50000
+      },
+      "agents": [
+        "python-pro",
+        "python-ux",
+        "r-pro",
+        "r-shiny-pro",
+        "orchestrator",
+        "go-pro",
+        "go-cli",
+        "go-tui",
+        "go-api",
+        "go-concurrent",
+        "typescript-pro",
+        "react-pro",
+        "review-orchestrator",
+        "impl-manager",
+        "rust-pro"
+      ]
+    },
+    "opus": {
+      "description": "Deep analysis - restricted invocation, allowlist for planning agents",
+      "model": "opus",
+      "thinking": true,
+      "max_thinking_budget": 32000,
+      "cost_per_1k_tokens": 0.045,
+      "patterns": [
+        "braintrust",
+        "einstein",
+        "deep analysis",
+        "security audit",
+        "architectural decision",
+        "complex tradeoff",
+        "synthesize findings",
+        "cross-domain",
+        "novel problem",
+        "nuclear option",
+        "plan",
+        "strategy",
+        "comprehensive planning",
+        "thought workshop",
+        "whiteboard"
+      ],
+      "tools": [
+        "*"
+      ],
+      "invocation": "/braintrust for multi-perspective analysis, Task() for allowlisted planning agents",
+      "task_invocation_blocked": true,
+      "task_invocation_allowlist": [
+        "planner",
+        "architect",
+        "staff-architect-critical-review",
+        "mozart",
+        "einstein",
+        "beethoven"
+      ],
+      "escalation_protocol": "escalate_to_einstein",
+      "thresholds": {
+        "max_files": null,
+        "max_lines": null,
+        "max_tokens_estimate": null
+      },
+      "agents": [
+        "einstein",
+        "planner",
+        "architect",
+        "staff-architect-critical-review",
+        "mozart",
+        "beethoven",
+        "schema-architect"
+      ]
+    }
+  },
+  "tier_levels": {
+    "description": "Numeric levels for tier comparison in delegation ceiling",
+    "haiku": 1,
+    "haiku_thinking": 2,
+    "sonnet": 3,
+    "opus": 4
+  },
+  "delegation_ceiling": {
+    "description": "Controls which agents can be spawned via Task(), independent of analysis context",
+    "file": ".claude/tmp/max_delegation",
+    "set_by": "calculate-complexity.sh",
+    "enforced_by": "validate-routing.sh",
+    "values": [
+      "haiku",
+      "haiku_thinking",
+      "sonnet"
+    ],
+    "note": "opus never allowed via Task() regardless of ceiling",
+    "override": "--force-delegation=<tier>",
+    "calculation": {
+      "haiku": "Simple queries, no reasoning required",
+      "haiku_thinking": "Structured tasks, documentation, review (default)",
+      "sonnet": "Implementation, multi-file edits, security-sensitive"
+    }
+  },
+  "scout_protocol": {
+    "description": "Pre-routing reconnaissance via native Go goyoke-scout binary only",
+    "primary": "goyoke-scout",
+    "backend": "native",
+    "capabilities": [
+      "file_count",
+      "line_count",
+      "language_detection",
+      "test_detection"
+    ],
+    "latency_target_ms": 100,
+    "cost_per_call_estimate": 0.001,
+    "invocation": "goyoke-scout <target> \"<instruction>\"",
+    "output_file": ".claude/tmp/scout_metrics.json",
+    "output_schema": {
+      "schema_version": "1.0",
+      "scope_metrics": [
+        "total_files",
+        "total_lines",
+        "estimated_tokens",
+        "languages",
+        "file_types"
+      ],
+      "complexity_signals": [
+        "available",
+        "import_density",
+        "cross_file_dependencies",
+        "test_coverage_present"
+      ],
+      "routing_recommendation": [
+        "recommended_tier",
+        "confidence",
+        "reasoning",
+        "clarification_needed"
+      ]
+    },
+    "when_to_use": [
+      "Unknown scope (refactor X, improve Y)",
+      "Task mentions modules or systems",
+      "Could involve 5+ files"
+    ],
+    "when_to_skip": [
+      "User specified exact files",
+      "Single file operation",
+      "Trivial task (typo, config change)"
+    ]
+  },
+  "escalation_paths": {
+    "python-pro": {
+      "triggers": [
+        "architecture ambiguity",
+        "design decision",
+        "tradeoff analysis",
+        "which approach should"
+      ],
+      "cost_threshold_usd": 0.1
+    }
+  },
+  "escalation_rules": {
+    "haiku_to_haiku_thinking": [
+      "reasoning required but simple domain",
+      "structured output needed",
+      "template-following task"
+    ],
+    "haiku_to_sonnet": [
+      "multi-file edit required",
+      "complex reasoning needed",
+      "error after 2 attempts",
+      "implementation task detected"
+    ],
+    "sonnet_to_opus": {
+      "triggers": [
+        "architectural decision required",
+        "security concern detected",
+        "3+ file dependencies with complex interaction",
+        "3 consecutive failures on same task",
+        "user explicitly requests deep analysis"
+      ],
+      "action": "DO NOT use Task(opus). Generate GAP document instead.",
+      "protocol": "escalate_to_einstein",
+      "output_path": ".claude/tmp/einstein-gap-{timestamp}.md",
+      "notification": "🚨 Run /einstein to process this escalation"
+    }
+  },
+  "compound_triggers": {
+    "description": "When 2+ patterns from different tiers fire, escalate to orchestrator",
+    "examples": [
+      [
+        "large context",
+        "synthesize"
+      ],
+      [
+        "implement",
+        "architectural review"
+      ],
+      [
+        "debug",
+        "cross-module"
+      ]
+    ],
+    "action": "Route to orchestrator for coordination"
+  },
+  "auto_fire": {
+    "description": "Patterns that automatically trigger specific agents",
+    "implementation_rust": "rust-pro"
+  },
+  "cost_thresholds": {
+    "scout_max_cost": 0.01,
+    "exploration_max_cost": 0.2,
+    "description": "Cost ceilings for pre-execution phases"
+  },
+  "override": {
+    "flag": "--force-tier=<tier>",
+    "description": "User escape hatch when routing produces false positives",
+    "valid_tiers": [
+      "haiku",
+      "haiku_thinking",
+      "sonnet",
+      "opus"
+    ],
+    "audit_log": "/tmp/claude-routing-violations.jsonl"
+  },
+  "subagent_types": {
+    "description": "Informational groupings of agent capabilities. Each agent now uses its specific CC agent type name (from agent_subagent_mapping) rather than these generic categories. These categories document the tool/permission model each group follows.",
+    "exploration": {
+      "description": "Read-only codebase exploration and analysis",
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Bash"
+      ],
+      "allows_write": false,
+      "agents": [
+        "codebase-search",
+        "haiku-scout",
+        "code-reviewer",
+        "librarian",
+        "backend-reviewer",
+        "frontend-reviewer",
+        "standards-reviewer"
+      ],
+      "rationale": "Exploration tasks should be non-destructive reconnaissance"
+    },
+    "implementation": {
+      "description": "Full tool access following agent YAML definitions",
+      "tools": [
+        "*"
+      ],
+      "allows_write": true,
+      "agents": [
+        "scaffolder",
+        "tech-docs-writer",
+        "python-pro",
+        "python-ux",
+        "r-pro",
+        "r-shiny-pro",
+        "memory-archivist",
+        "go-pro",
+        "go-cli",
+        "go-tui",
+        "go-api",
+        "go-concurrent",
+        "typescript-pro",
+        "react-pro",
+        "rust-pro"
+      ],
+      "rationale": "Implementation and documentation agents need write permissions"
+    },
+    "planning": {
+      "description": "Architecture and planning mode with controlled write access",
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Write",
+        "Task",
+        "spawn_agent",
+        "AskUserQuestion",
+        "TaskList",
+        "TaskGet",
+        "TaskCreate",
+        "TaskUpdate"
+      ],
+      "allows_write": true,
+      "agents": [
+        "orchestrator",
+        "architect",
+        "planner",
+        "review-orchestrator",
+        "impl-manager",
+        "mozart"
+      ],
+      "rationale": "Planning agents need to write plans and spawn other agents"
+    },
+    "analysis": {
+      "description": "Deep thinking and analysis with report writing",
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "Write",
+        "TaskGet"
+      ],
+      "allows_write": true,
+      "agents": [
+        "einstein",
+        "beethoven",
+        "staff-architect-critical-review",
+        "schema-architect"
+      ],
+      "rationale": "Analysts produce thought work and documents"
+    },
+    "bioinformatics_review": {
+      "description": "Opus-tier bioinformatics domain review and synthesis — read-only analysis of omics pipelines and data processing code",
+      "tools": [
+        "Read",
+        "Glob",
+        "Grep"
+      ],
+      "allows_write": false,
+      "agents": [],
+      "rationale": "Bioinformatics review agents analyze code quality and methodology but do not modify files"
+    }
+  },
+  "delegation_rules": {
+    "description": "Task() is always allowed regardless of session tier. It's delegation, not direct work.",
+    "task_always_allowed": true,
+    "tier_restrictions_apply_to": [
+      "Read",
+      "Write",
+      "Edit",
+      "Bash",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch"
+    ],
+    "tier_restrictions_do_not_apply_to": [
+      "Task"
+    ],
+    "rationale": "Session tier indicates what MODEL to use for direct analysis. It does not restrict which agents can be spawned. Spawned agents operate at their own tier."
+  },
+  "agent_subagent_mapping": {
+    "description": "Maps each agent to its required subagent_type (must match CC's available agent types)",
+    "codebase-search": "Codebase Search",
+    "haiku-scout": "Haiku Scout",
+    "code-reviewer": "Code Reviewer",
+    "librarian": "Librarian",
+    "tech-docs-writer": "Tech Docs Writer",
+    "scaffolder": "Scaffolder",
+    "memory-archivist": "Memory Archivist",
+    "python-pro": "Python Pro",
+    "python-ux": "Python UX (PySide6)",
+    "r-pro": "R Pro",
+    "r-shiny-pro": "R Shiny Pro",
+    "go-pro": "GO Pro",
+    "go-cli": "GO CLI (Cobra)",
+    "go-tui": "GO TUI (Bubbletea)",
+    "go-api": "GO API (HTTP Client)",
+    "go-concurrent": "GO Concurrent",
+    "typescript-pro": "TypeScript Pro",
+    "react-pro": "React Pro",
+    "backend-reviewer": "Backend Reviewer",
+    "frontend-reviewer": "Frontend Reviewer",
+    "standards-reviewer": "Standards Reviewer",
+    "review-orchestrator": "Review Orchestrator",
+    "impl-manager": "Implementation Manager",
+    "orchestrator": "Orchestrator",
+    "architect": "Architect",
+    "planner": "Planner",
+    "einstein": "Einstein",
+    "mozart": "Mozart",
+    "beethoven": "Beethoven",
+    "staff-architect-critical-review": "Staff Architect Critical Review",
+    "rust-pro": "Rust Pro",
+    "architect-reviewer": "Architect Reviewer",
+    "goyoke-scout": "goYoke Smart Scout",
+    "schema-architect": "Schema Architect"
+  },
+  "blocked_patterns": {
+    "description": "Patterns that should NEVER be used",
+    "patterns": [
+      {
+        "pattern": "Task.*model.*opus",
+        "reason": "Opus invocation via Task tool causes 60K+ token inheritance",
+        "alternative": "Use escalate_to_einstein protocol → /einstein slash command",
+        "cost_impact": "$2.38 wasted per call (72% overhead)"
+      }
+    ]
+  },
+  "direct_impl_check": {
+    "description": "Detects when router writes implementation code directly instead of delegating",
+    "enabled": true,
+    "write_threshold_lines": 50,
+    "edit_threshold_lines": 30,
+    "implementation_extensions": [
+      ".go",
+      ".py",
+      ".r",
+      ".ts",
+      ".js",
+      ".rs"
+    ],
+    "implementation_paths": [
+      "internal/",
+      "pkg/",
+      "cmd/",
+      "lib/",
+      "src/"
+    ],
+    "excluded_patterns": [
+      "*_test.go",
+      "testdata/*",
+      "*.gen.go",
+      "*_generated.go",
+      "agents/*",
+      "routing-schema.json",
+      "agents-index.json"
+    ]
+  },
+  "meta_rules": {
+    "documentation_theater": {
+      "description": "Enforcement belongs in hooks, not documentation",
+      "detection_patterns": [
+        "MUST NOT",
+        "NEVER use",
+        "is BLOCKED",
+        "SHALL NOT",
+        "ALWAYS .* instead",
+        "FORBIDDEN",
+        "PROHIBITED"
+      ],
+      "target_files": [
+        "**/CLAUDE.md",
+        "**/agent.md"
+      ],
+      "enforcement": "detect-documentation-theater.sh",
+      "guidance": "~/.claude/rules/LLM-guidelines.md §Enforcement Architecture"
+    }
+  },
+  "bash_blocked_binaries": {
+    "goyoke-team-run": {
+      "reason": "goyoke-team-run must be invoked via mcp__goyoke-interactive__team_run, not Bash. Direct invocation bypasses TUI registration, ensureTeamVisible, and UDS notifications.",
+      "redirect": "mcp__goyoke-interactive__team_run"
+    }
+  }
+}

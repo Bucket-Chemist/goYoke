@@ -1,0 +1,34 @@
+# Sharp Edges for Haiku Scout Agent
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: scope-underestimate
+    severity: medium
+    category: assessment
+    description: "Underestimating scope due to shallow search"
+    symptom: "Task routed to wrong tier, agent fails"
+    solution: |
+      Use multiple glob patterns:
+      - *.go, *.py, *.ts for source
+      - *_test.go, test_*.py for tests
+      - go.mod, package.json for deps
+      Don't rely on single pattern.
+    auto_inject: true
+
+  - id: output-format-mismatch
+    severity: high
+    category: output
+    description: "Scout metrics not matching expected JSON schema"
+    symptom: "calculate-complexity.sh fails to parse"
+    solution: |
+      Always output valid JSON matching schema:
+      {
+        "total_files": int,
+        "total_lines": int,
+        "estimated_tokens": int,
+        "recommended_tier": "haiku"|"sonnet"|"external",
+        "confidence": float
+      }
+    auto_inject: true

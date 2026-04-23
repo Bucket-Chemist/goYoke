@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goyoke-fortress/schemas/teams/team-config.json",
+  "title": "Team Configuration Schema",
+  "description": "Validates team config files for goYoke team coordination workflows",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "team_name",
+    "workflow_type",
+    "project_root",
+    "session_id",
+    "created_at",
+    "budget_max_usd",
+    "budget_remaining_usd",
+    "warning_threshold_usd",
+    "status",
+    "waves"
+  ],
+  "properties": {
+    "team_name": {
+      "type": "string",
+      "description": "Unique name for this team instance"
+    },
+    "workflow_type": {
+      "type": "string",
+      "enum": ["braintrust", "review", "implementation"],
+      "description": "Type of workflow this team executes"
+    },
+    "project_root": {
+      "type": "string",
+      "pattern": "^/",
+      "description": "Absolute path to project root directory"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "UUID of the parent session"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp when team was created"
+    },
+    "budget_max_usd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maximum budget for this team in USD"
+    },
+    "budget_remaining_usd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Remaining budget in USD"
+    },
+    "warning_threshold_usd": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Budget threshold that triggers warnings in USD"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "completed", "failed"],
+      "description": "Current status of the team workflow"
+    },
+    "background_pid": {
+      "type": ["integer", "null"],
+      "description": "Process ID if running in background, null otherwise"
+    },
+    "started_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 timestamp when execution started, null if not started"
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 timestamp when execution completed, null if not completed"
+    },
+    "waves": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Sequential waves of parallel agent execution",
+      "items": {
+        "type": "object",
+        "required": ["wave_number", "description", "members"],
+        "properties": {
+          "wave_number": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sequential wave number (1-indexed)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of what this wave does"
+          },
+          "members": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Agents executing in parallel within this wave",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "agent",
+                "model",
+                "stdin_file",
+                "stdout_file",
+                "status",
+                "cost_usd",
+                "retry_count",
+                "max_retries",
+                "timeout_ms"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Unique name for this agent instance within the team"
+                },
+                "agent": {
+                  "type": "string",
+                  "description": "Agent ID from agents-index.json"
+                },
+                "model": {
+                  "type": "string",
+                  "enum": ["haiku", "sonnet", "opus"],
+                  "description": "Claude model tier to use"
+                },
+                "stdin_file": {
+                  "type": "string",
+                  "description": "Filename for this agent's stdin JSON (relative to team dir)"
+                },
+                "stdout_file": {
+                  "type": "string",
+                  "description": "Filename for this agent's stdout JSON (relative to team dir)"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["pending", "running", "completed", "failed"],
+                  "description": "Current execution status of this agent"
+                },
+                "process_pid": {
+                  "type": ["integer", "null"],
+                  "description": "Process ID when running, null otherwise"
+                },
+                "exit_code": {
+                  "type": ["integer", "null"],
+                  "description": "Exit code after completion, null if not completed"
+                },
+                "cost_usd": {
+                  "type": "number",
+                  "minimum": 0,
+                  "description": "Actual cost incurred by this agent in USD"
+                },
+                "cost_status": {
+                  "type": "string",
+                  "description": "Budget status message (e.g., 'within budget', 'warning', 'exceeded')"
+                },
+                "error_message": {
+                  "type": "string",
+                  "description": "Error message if agent failed, empty otherwise"
+                },
+                "retry_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Number of retries attempted so far"
+                },
+                "max_retries": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Maximum number of retries allowed"
+                },
+                "timeout_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Timeout in milliseconds"
+                },
+                "started_at": {
+                  "type": ["string", "null"],
+                  "description": "ISO-8601 timestamp when this agent started, null if not started"
+                },
+                "completed_at": {
+                  "type": ["string", "null"],
+                  "description": "ISO-8601 timestamp when this agent completed, null if not completed"
+                }
+              }
+            }
+          },
+          "on_complete_script": {
+            "type": ["string", "null"],
+            "description": "Optional script to run after this wave completes (e.g., goyoke-team-prepare-synthesis)"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

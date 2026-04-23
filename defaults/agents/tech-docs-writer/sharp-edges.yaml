@@ -1,0 +1,42 @@
+edges:
+  - name: hallucinated_apis
+    severity: critical
+    description: >
+      Documenting functions or parameters that don't exist is worse than no docs.
+      Haiku is prone to guessing what an API "should" look like.
+    mitigation: >
+      NEVER guess. Read the actual code files (signatures, types) before 
+      writing documentation. Quote source code in your thinking block.
+    example:
+      wrong: |
+        # Writing docs without reading code
+        "The function takes `timeout` parameter..." (It actually takes `wait_time`)
+      right: |
+        Read({ file_path: "src/api.py" })
+        # "def connect(wait_time=5):"
+        "The function takes `wait_time` parameter..."
+
+  - name: verbose_fluff
+    severity: medium
+    description: >
+      Writing long, flowery introductions ("In the modern era of computing...") 
+      instead of technical facts.
+    mitigation: >
+      Stick to the "Active Voice". Use bullet points. Remove "marketing speak".
+
+  - name: obsolete_instructions
+    severity: high
+    description: >
+      Updating a README but leaving old installation instructions (e.g., pip vs uv).
+    mitigation: >
+      Scan the document for conflicting instructions after your edit. 
+      Check `pyproject.toml` or lockfiles to confirm current tools.
+
+  - name: blind_overwrites
+    severity: high
+    description: >
+      Rewriting a whole file when only one section needed updates, 
+      potentially deleting unread sections.
+    mitigation: >
+      Use `Edit` (replacement) for targeted changes. If using `Write`, 
+      read the FULL file first to ensure nothing is lost.

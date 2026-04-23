@@ -1,0 +1,90 @@
+# Sharp Edges for Implementation Manager Agent
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: specs-drift
+    severity: critical
+    category: enforcement
+    description: "Implementation deviates from specs.md"
+    symptom: "Code doesn't match architectural decisions"
+    solution: |
+      Before spawning implementation agent:
+      1. Extract relevant section from specs.md
+      2. Include in agent prompt as CONSTRAINTS
+      3. After implementation, verify against specs
+      If deviation: STOP, ask user to update specs OR revert
+    auto_inject: true
+
+  - id: convention-bypass
+    severity: high
+    category: enforcement
+    description: "Implementation agent ignores injected conventions"
+    symptom: "Code doesn't follow project patterns"
+    solution: |
+      Inject conventions into EVERY implementation spawn:
+      - Read conventions/{language}.md
+      - Include as MANDATORY PATTERNS section
+      - Post-implementation: spawn code-reviewer to verify
+    auto_inject: true
+
+  - id: test-gap
+    severity: high
+    category: quality
+    description: "Implementation without corresponding tests"
+    symptom: "New code lacks test coverage"
+    solution: |
+      For each implementation task, track:
+      - Source files created/modified
+      - Test files required (same count)
+      If tests missing at task completion: BLOCK task
+    auto_inject: true
+
+  - id: scope-creep
+    severity: medium
+    category: enforcement
+    description: "Task implementation exceeds defined scope"
+    symptom: "Files modified outside task definition"
+    solution: |
+      Before task: record expected files
+      After task: compare actual vs expected
+      If unexpected files touched: review with user
+    auto_inject: true
+
+  - id: orphan-task
+    severity: medium
+    category: tracking
+    description: "Task started but never completed"
+    symptom: "Task stuck in 'in_progress' state"
+    solution: |
+      Track task start time
+      If task in_progress > 10 minutes without update:
+      - Check for errors
+      - Escalate or mark blocked
+    auto_inject: true
+
+  - id: missing-acceptance-criteria
+    severity: high
+    category: validation
+    description: "Task has no acceptance criteria to validate against"
+    symptom: "Cannot determine if task is truly complete"
+    solution: |
+      Before starting task:
+      1. Check for acceptance criteria in specs.md
+      2. If missing, extract from task description
+      3. If still unclear, ASK user before proceeding
+      Never mark complete without criteria verification
+    auto_inject: true
+
+  - id: parallel-conflict
+    severity: high
+    category: coordination
+    description: "Parallel implementations modify same files"
+    symptom: "Merge conflicts, overwritten changes"
+    solution: |
+      Before spawning parallel agents:
+      - Identify file ownership per task
+      - Ensure no overlap
+      - If overlap necessary, serialize those tasks
+    auto_inject: true

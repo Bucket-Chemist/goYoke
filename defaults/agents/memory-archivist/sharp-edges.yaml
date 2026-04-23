@@ -1,0 +1,40 @@
+# Sharp Edges for Memory Archivist Agent
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: incomplete-archive
+    severity: medium
+    category: data-integrity
+    description: "Archive operation interrupted before completion"
+    symptom: "Partial data in memory files, missing decisions/learnings"
+    solution: |
+      Use atomic writes:
+      1. Write to temp file first
+      2. Validate JSON/JSONL structure
+      3. Rename to final location
+      Never append directly to production files.
+    auto_inject: true
+
+  - id: duplicate-entries
+    severity: low
+    category: data-integrity
+    description: "Same learning archived multiple times"
+    symptom: "Bloated memory files, redundant context"
+    solution: |
+      Check for duplicates before archiving:
+      - Hash content
+      - Compare with recent entries
+      - Skip if duplicate found
+    auto_inject: true
+
+  - id: stale-specs
+    severity: medium
+    category: input
+    description: "Archiving outdated specs.md"
+    symptom: "Memory contains obsolete decisions"
+    solution: |
+      Check specs.md timestamp before archiving.
+      If older than 1 hour, confirm with user before archiving.
+    auto_inject: true

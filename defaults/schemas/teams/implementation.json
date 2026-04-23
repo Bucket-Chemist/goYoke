@@ -1,0 +1,86 @@
+{
+  "$schema": "./team-config.json",
+  "version": "1.0.0",
+  "team_name": "implementation-{timestamp}",
+  "workflow_type": "implementation",
+  "project_root": "/absolute/path",
+  "session_id": "{uuid}",
+  "created_at": "{ISO-8601}",
+  "background_pid": null,
+  "budget_max_usd": 10.0,
+  "budget_remaining_usd": 10.0,
+  "warning_threshold_usd": 8.0,
+  "status": "pending",
+  "started_at": null,
+  "completed_at": null,
+  "waves": [
+    {
+      "wave_number": 1,
+      "description": "Foundation tasks with no dependencies",
+      "members": [
+        {
+          "name": "task-001",
+          "agent": "go-pro",
+          "model": "sonnet",
+          "stdin_file": "stdin_task-001.json",
+          "stdout_file": "stdout_task-001.json",
+          "status": "pending",
+          "process_pid": null,
+          "exit_code": null,
+          "cost_usd": 0.0,
+          "cost_status": "",
+          "error_message": "",
+          "retry_count": 0,
+          "max_retries": 2,
+          "timeout_ms": 600000,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "task-002",
+          "agent": "go-cli",
+          "model": "sonnet",
+          "stdin_file": "stdin_task-002.json",
+          "stdout_file": "stdout_task-002.json",
+          "status": "pending",
+          "process_pid": null,
+          "exit_code": null,
+          "cost_usd": 0.0,
+          "cost_status": "",
+          "error_message": "",
+          "retry_count": 0,
+          "max_retries": 2,
+          "timeout_ms": 600000,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "on_complete_script": null
+    },
+    {
+      "wave_number": 2,
+      "description": "Dependent tasks (blocked by wave 1)",
+      "members": [
+        {
+          "name": "task-003",
+          "agent": "go-pro",
+          "model": "sonnet",
+          "stdin_file": "stdin_task-003.json",
+          "stdout_file": "stdout_task-003.json",
+          "status": "pending",
+          "process_pid": null,
+          "exit_code": null,
+          "cost_usd": 0.0,
+          "cost_status": "",
+          "error_message": "",
+          "retry_count": 0,
+          "max_retries": 2,
+          "timeout_ms": 600000,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "on_complete_script": null
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+# Sharp Edges for Standards Reviewer Agent
+# Universal code quality pitfalls
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: magic-numbers
+    severity: medium
+    category: maintainability
+    description: "Hardcoded numeric literals without explanation"
+    symptom: "Unclear meaning, difficult to change consistently"
+    solution: |
+      Extract to named constant:
+      const MAX_RETRIES = 3;
+      const TIMEOUT_MS = 5000;
+      NOT: if (attempts > 3) { ... }
+    auto_inject: true
+
+  - id: inconsistent-naming
+    severity: medium
+    category: readability
+    description: "Mixed naming conventions (camelCase, snake_case, PascalCase)"
+    symptom: "Difficult to remember correct names, looks unprofessional"
+    solution: |
+      Follow language conventions consistently:
+      - JavaScript/TypeScript: camelCase for variables/functions, PascalCase for classes
+      - Python: snake_case for variables/functions, PascalCase for classes
+      - Go: MixedCaps (exported) vs mixedCaps (unexported)
+    auto_inject: true
+
+  - id: dead-code
+    severity: medium
+    category: maintainability
+    description: "Unused imports, variables, or functions"
+    symptom: "Clutter, false positives in searches, confusion"
+    solution: |
+      Remove all unused code:
+      - Run linter to detect unused imports/variables
+      - Delete commented-out code (use version control)
+      - Remove unused parameters
+    auto_inject: true
+
+  - id: excessive-complexity
+    severity: high
+    category: maintainability
+    description: "High cyclomatic complexity (> 10)"
+    symptom: "Difficult to test, understand, and modify"
+    solution: |
+      Refactor complex functions:
+      - Extract conditional logic into separate functions
+      - Use early returns to reduce nesting
+      - Apply strategy pattern for multiple branches
+      - Break into smaller single-purpose functions
+    auto_inject: true
+
+  - id: missing-docs
+    severity: medium
+    category: documentation
+    description: "Public API without docstrings/JSDoc"
+    symptom: "Users don't know how to use code, parameters unclear"
+    solution: |
+      Document public interfaces:
+      - Function purpose (one-line summary)
+      - Parameters (type, meaning, constraints)
+      - Return value (type, meaning)
+      - Exceptions/errors thrown
+      - Usage example for complex APIs
+    auto_inject: true
+
+  - id: copy-paste-code
+    severity: high
+    category: dry
+    description: "Duplicated code blocks violating DRY"
+    symptom: "Bugs fixed in one place but not others, maintenance burden"
+    solution: |
+      Extract common logic:
+      - Create shared function/method
+      - Use composition over duplication
+      - Consider strategy/template pattern
+      - Test extracted code once
+    auto_inject: true
+
+  - id: god-functions
+    severity: high
+    category: structure
+    description: "Functions > 100 lines doing multiple things"
+    symptom: "Difficult to understand, test, reuse, or modify"
+    solution: |
+      Break into smaller functions:
+      - Each function does ONE thing
+      - Extract logical sections into named functions
+      - Aim for < 50 lines per function
+      - Single Responsibility Principle
+    auto_inject: true
+
+  - id: deep-nesting
+    severity: medium
+    category: readability
+    description: "Nesting depth > 4 levels"
+    symptom: "Hard to follow logic, error-prone"
+    solution: |
+      Reduce nesting:
+      - Use early returns (guard clauses)
+      - Extract nested blocks into functions
+      - Invert conditions
+      - Use Boolean operators to combine conditions
+    auto_inject: true
+
+  - id: unclear-variable-names
+    severity: medium
+    category: readability
+    description: "Single-letter or abbreviated names (except loops)"
+    symptom: "Code requires mental translation to understand"
+    solution: |
+      Use descriptive names:
+      - NOT: x, tmp, d, mgr
+      - YES: userCount, tempFile, date, manager
+      - Exception: i, j for loop counters
+      - Avoid abbreviations unless universally known
+    auto_inject: true
+
+  - id: speculative-features
+    severity: medium
+    category: yagni
+    description: "Code for features not currently needed"
+    symptom: "Complexity without benefit, difficult to maintain"
+    solution: |
+      Apply YAGNI (You Aren't Gonna Need It):
+      - Implement features when needed, not before
+      - Remove hooks/extensibility until required
+      - Prefer simple working code over flexible future-proof code
+    auto_inject: true

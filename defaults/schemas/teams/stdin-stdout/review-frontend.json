@@ -1,0 +1,104 @@
+{
+  "$comment": "Stdin/stdout contract for frontend-reviewer in review workflow",
+  "stdin": {
+    "agent": "frontend-reviewer",
+    "workflow": "review",
+    "description": "Frontend code review: components, hooks, state management, accessibility",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
+    "review_scope": {
+      "files": [
+        {
+          "path": "relative/path/to/Component.tsx",
+          "language": "typescript",
+          "category": "component|hook|context|state|styling|test",
+          "changed_lines": {"added": 30, "removed": 5},
+          "is_new_file": false
+        }
+      ],
+      "total_files": 0,
+      "languages_detected": ["typescript", "tsx"]
+    },
+    "git_context": {
+      "commit_message": "What this change is supposed to do",
+      "pr_description": "PR description if available",
+      "related_tickets": ["TC-XXX"],
+      "branch_name": "feature/my-feature"
+    },
+    "focus_areas": {
+      "accessibility": {
+        "enabled": true,
+        "priorities": ["keyboard_nav", "screen_reader", "aria_labels", "focus_management", "color_contrast"]
+      },
+      "hooks_patterns": {
+        "enabled": true,
+        "priorities": ["dependency_arrays", "cleanup_effects", "custom_hooks", "rules_of_hooks"]
+      },
+      "performance": {
+        "enabled": true,
+        "priorities": ["unnecessary_rerenders", "memo_usage", "lazy_loading", "bundle_size"]
+      },
+      "memory_safety": {
+        "enabled": true,
+        "priorities": ["event_listener_cleanup", "subscription_cleanup", "timer_cleanup", "ref_lifecycle"]
+      },
+      "error_handling": {
+        "enabled": true,
+        "priorities": ["error_boundaries", "loading_states", "empty_states", "fallback_ui"]
+      },
+      "ux": {
+        "enabled": true,
+        "priorities": ["loading_indicators", "error_messages", "responsive_layout", "input_validation"]
+      }
+    },
+    "component_tree": {
+      "parent_components": ["List of parent components that render this"],
+      "child_components": ["List of child components used"],
+      "shared_state": ["Context providers or stores this component accesses"]
+    },
+    "project_conventions": {
+      "framework": "react|ink",
+      "conventions_file": "react.md",
+      "styling_approach": "lipgloss|css-modules|tailwind|styled-components",
+      "state_management": "context|zustand|redux|none"
+    }
+  },
+  "stdout": {
+    "reviewer": "frontend-reviewer",
+    "status": "complete|partial|failed",
+    "overall_assessment": "APPROVE|WARNING|BLOCK",
+    "summary": "1-2 sentence summary of findings",
+    "findings": [
+      {
+        "id": "FE-1",
+        "severity": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
+        "category": "memory|performance|accessibility|ux|hooks|reliability|error_handling",
+        "file": "relative/path/to/Component.tsx",
+        "line": 15,
+        "end_line": 22,
+        "title": "Brief issue title",
+        "message": "Detailed description with user impact",
+        "impact": "How this affects users (e.g., screen reader users can't navigate)",
+        "recommendation": "Specific fix with code example",
+        "code_snippet": "Relevant code from the file",
+        "sharp_edge_id": "memory-leak-listener|infinite-render-loop|missing-error-boundary|missing-aria|broken-keyboard-nav|missing-cleanup",
+        "references": ["Link to relevant React/accessibility docs"]
+      }
+    ],
+    "accessibility_summary": {
+      "keyboard_issues": 0,
+      "screen_reader_issues": 0,
+      "aria_issues": 0,
+      "focus_issues": 0
+    },
+    "files_reviewed": 0,
+    "files_skipped": 0,
+    "metadata": {
+      "duration_ms": 0,
+      "thinking_budget_used": 0,
+      "attempt_number": 1
+    }
+  }
+}

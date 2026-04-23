@@ -1,0 +1,144 @@
+{
+  "$comment": "Stdin/stdout contract for Einstein (theoretical analysis) in braintrust workflow",
+  "stdin": {
+    "agent": "einstein",
+    "workflow": "braintrust",
+    "description": "Theoretical analysis: {problem_brief.title}",
+    "context": {
+      "project_root": "/absolute/path/to/project",
+      "team_dir": "/absolute/path/to/team/directory"
+    },
+    "problem_brief": {
+      "title": "Brief problem title",
+      "statement": "Full problem statement as written by Mozart after clarification interview",
+      "scope": {
+        "in_scope": ["List of things explicitly in scope"],
+        "out_of_scope": ["List of things explicitly excluded"],
+        "affected_modules": ["module paths relevant to the problem"]
+      },
+      "complexity_signals": {
+        "cross_module": true,
+        "novel_problem": false,
+        "security_critical": false,
+        "performance_critical": false,
+        "estimated_files_affected": 12
+      },
+      "prior_art": {
+        "existing_patterns": ["Description of relevant patterns already in codebase"],
+        "previous_attempts": ["What was tried before and why it failed"],
+        "related_tickets": ["TC-XXX: description"]
+      },
+      "analysis_axes": {
+        "conceptual_focus": ["Specific questions Einstein should investigate"],
+        "novel_angles": ["Unconventional perspectives to explore"],
+        "first_principles": ["Core assumptions to challenge"]
+      },
+      "constraints": {
+        "technical": ["Hard technical constraints (e.g., must run on single binary, no external deps)"],
+        "organizational": ["Budget, timeline, team size constraints"],
+        "compatibility": ["Backward compat requirements, API contracts that can't break"]
+      }
+    },
+    "codebase_context": {
+      "architecture_summary": "High-level description of system architecture",
+      "key_files": [
+        {
+          "path": "relative/path/to/file.go",
+          "relevance": "Why this file matters for the analysis",
+          "excerpt": "Key code excerpt (optional, for critical sections)"
+        }
+      ],
+      "dependency_graph": "Description of how relevant modules connect",
+      "conventions": "Active coding conventions (e.g., go.md patterns)"
+    },
+    "scout_findings": {
+      "metrics": {
+        "total_files": 0,
+        "total_loc": 0,
+        "languages": ["go", "typescript"]
+      },
+      "summary": "Scout reconnaissance summary if available"
+    },
+    "output_instructions": {
+      "format": "json",
+      "delivery": "stdout",
+      "critical": "Your ENTIRE output must be a single JSON object conforming to the stdout section of this schema. goyoke-team-run captures your process stdout as your result file (stdout_einstein.json). Do NOT use the Write() tool — Write() calls to .claude/sessions/ and .claude/tmp/ are blocked as sensitive paths and will fail silently, wasting your time budget. Output JSON to stdout only.",
+      "team_dir_note": "context.team_dir is for READING only (e.g. Read problem-brief.md). Do not write to it."
+    }
+  },
+  "stdout": {
+    "analysis_id": "einstein-{timestamp}",
+    "status": "complete",
+    "executive_summary": "3-5 sentence summary of findings",
+    "root_cause_analysis": {
+      "identified_causes": [
+        {
+          "cause": "Description of root cause",
+          "evidence": "Supporting evidence from codebase or reasoning",
+          "confidence": "high|medium|low",
+          "affected_scope": ["files or modules affected"]
+        }
+      ]
+    },
+    "conceptual_framework": {
+      "framework_name": "Name of analytical framework applied",
+      "description": "How the framework applies to this problem",
+      "key_insights": ["Insights derived from framework application"]
+    },
+    "first_principles_analysis": {
+      "assumptions_challenged": [
+        {
+          "assumption": "The assumption being questioned",
+          "validity": "valid|questionable|invalid",
+          "evidence": "Why this assessment",
+          "implication_if_wrong": "What happens if this assumption is wrong"
+        }
+      ],
+      "fundamental_constraints": ["Irreducible constraints that any solution must respect"]
+    },
+    "novel_approaches": [
+      {
+        "approach": "Description of proposed approach",
+        "rationale": "Why this approach is worth considering",
+        "tradeoffs": {
+          "pros": ["Benefits"],
+          "cons": ["Drawbacks"],
+          "risks": ["Risks"]
+        },
+        "feasibility": "high|medium|low",
+        "implementation_sketch": "Brief description of how this would work"
+      }
+    ],
+    "theoretical_tradeoffs": [
+      {
+        "dimension": "What's being traded off (e.g., simplicity vs flexibility)",
+        "option_a": "Description of one end",
+        "option_b": "Description of other end",
+        "recommendation": "Which direction and why"
+      }
+    ],
+    "assumptions_surfaced": [
+      {
+        "assumption": "An assumption discovered during analysis",
+        "source": "Where this assumption comes from",
+        "risk_if_false": "Impact if assumption is wrong",
+        "validation_method": "How to verify this assumption"
+      }
+    ],
+    "open_questions": [
+      {
+        "question": "Unresolved question",
+        "importance": "high|medium|low",
+        "suggested_investigation": "How to resolve this"
+      }
+    ],
+    "handoff_notes": "Key points Beethoven should focus on during synthesis",
+    "metadata": {
+      "frameworks_applied": ["List of analytical frameworks used"],
+      "assumptions_surfaced_count": 0,
+      "novel_approaches_proposed": 0,
+      "scouts_spawned": 0,
+      "thinking_budget_used": 0
+    }
+  }
+}

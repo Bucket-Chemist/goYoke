@@ -1,0 +1,124 @@
+# Sharp Edges for Frontend Reviewer Agent
+# Common pitfalls in React and UI development
+
+version: "1.0"
+updated: "2026-02-01"
+
+sharp_edges:
+  - id: memory-leaks-listeners
+    severity: critical
+    category: memory
+    description: "Event listeners not cleaned up"
+    symptom: "Memory grows on mount/unmount cycles"
+    solution: |
+      Return cleanup function from useEffect:
+      useEffect(() => {
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+      }, []);
+    auto_inject: true
+
+  - id: infinite-render-loop
+    severity: critical
+    category: performance
+    description: "State update triggers re-render which updates state again"
+    symptom: "React error: 'Too many re-renders'"
+    solution: |
+      Check useEffect dependencies - avoid setState in body without deps
+      Use functional updates: setState(prev => prev + 1)
+      Move calculations outside effect when possible
+    auto_inject: true
+
+  - id: missing-cleanup
+    severity: high
+    category: memory
+    description: "Timers, intervals, subscriptions not cleaned up"
+    symptom: "setState called on unmounted component warning"
+    solution: |
+      useEffect(() => {
+        const timer = setInterval(fetch, 1000);
+        return () => clearInterval(timer);
+      }, []);
+    auto_inject: true
+
+  - id: accessibility-violations
+    severity: high
+    category: accessibility
+    description: "Missing ARIA labels, semantic HTML, keyboard support"
+    symptom: "Screen readers cannot navigate, keyboard users blocked"
+    solution: |
+      - Use semantic HTML (<button> not <div onClick>)
+      - Add aria-label to icon buttons
+      - Ensure keyboard navigation (tabIndex, onKeyDown)
+      - Test with screen reader
+    auto_inject: true
+
+  - id: excessive-re-renders
+    severity: medium
+    category: performance
+    description: "Component re-renders unnecessarily"
+    symptom: "Slow UI, expensive renders on every parent change"
+    solution: |
+      - Use React.memo for expensive components
+      - Memoize callbacks with useCallback
+      - Memoize expensive calculations with useMemo
+      - Check if state should be lifted down instead of up
+    auto_inject: true
+
+  - id: prop-drilling
+    severity: medium
+    category: maintainability
+    description: "Props passed through many layers"
+    symptom: "Components re-render unnecessarily, hard to refactor"
+    solution: |
+      - Use Context API for global state
+      - Consider component composition (children prop)
+      - Use state management library (Zustand, Redux)
+    auto_inject: true
+
+  - id: missing-error-boundaries
+    severity: high
+    category: reliability
+    description: "No error boundaries to catch component errors"
+    symptom: "Entire app crashes on component error"
+    solution: |
+      Wrap routes/major sections in ErrorBoundary:
+      <ErrorBoundary fallback={<ErrorPage />}>
+        <App />
+      </ErrorBoundary>
+    auto_inject: true
+
+  - id: stale-closure
+    severity: high
+    category: hooks
+    description: "useEffect captures stale values"
+    symptom: "Effect uses old props/state values"
+    solution: |
+      Add all dependencies to dependency array:
+      useEffect(() => {
+        doSomething(value);
+      }, [value]); // Include ALL used values
+    auto_inject: true
+
+  - id: missing-loading-state
+    severity: medium
+    category: ux
+    description: "No loading indicator for async operations"
+    symptom: "User sees stale data, unclear if action succeeded"
+    solution: |
+      Track loading state:
+      const [loading, setLoading] = useState(false);
+      Show spinner/skeleton while loading
+      Handle error state separately
+    auto_inject: true
+
+  - id: key-prop-index
+    severity: medium
+    category: performance
+    description: "Using array index as key prop"
+    symptom: "Items don't update correctly, state mismatch on reorder"
+    solution: |
+      Use stable unique ID as key:
+      {items.map(item => <Item key={item.id} />)}
+      NOT: {items.map((item, i) => <Item key={i} />)}
+    auto_inject: true

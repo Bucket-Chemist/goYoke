@@ -1,0 +1,18 @@
+classDiagram
+    %% Type relationships for module: {{.ModuleName}}
+    %% Arrow types: --> dependency (uses), --|> implements interface, --* composition (has field), --o aggregation (has slice/map)
+
+    {{range .Types}}
+    class {{.Name}} {
+        {{range .Fields}}
+        {{.Visibility}}{{.Name}} {{.Type}}
+        {{end}}
+        {{range .Methods}}
+        {{.Visibility}}{{.Name}}({{.Params}}) {{.Returns}}
+        {{end}}
+    }
+    {{end}}
+
+    {{range .Relationships}}
+    {{.From}} {{.Arrow}} {{.To}} : {{.Label}}
+    {{end}}
