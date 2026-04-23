@@ -163,3 +163,54 @@ jobs:
           git tag "${{ steps.tag.outputs.TAG }}"
           git push origin main
           git push origin "${{ steps.tag.outputs.TAG }}"
+
+      - name: Wait for private release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG }}"
+          echo "Waiting for release $TAG on private repo..."
+          for i in $(seq 1 30); do
+            if gh release view "$TAG" --repo Bucket-Chemist/goYoke-dev >/dev/null 2>&1; then
+              echo "Release found after ${i}0s"
+              break
+            fi
+            echo "  Attempt $i/30 — release not ready, waiting 10s..."
+            sleep 10
+          done
+
+      - name: Download release assets from private repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG }}"
+          mkdir -p /tmp/release-assets
+          gh release download "$TAG" \
+            --repo Bucket-Chemist/goYoke-dev \
+            --dir /tmp/release-assets \
+            --pattern '*.tar.gz' \
+            --pattern '*.zip' \
+            --pattern 'checksums.txt'
+          echo "Downloaded assets:"
+          ls -lh /tmp/release-assets/
+
+      - name: Fetch release notes from private repo
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG }}"
+          gh release view "$TAG" \
+            --repo Bucket-Chemist/goYoke-dev \
+            --json body -q .body > /tmp/release-notes.md
+
+      - name: Create release on public repo
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.TAG }}"
+          gh release create "$TAG" \
+            --repo "${{ vars.PUBLIC_REPO }}" \
+            --title "goYoke ${TAG#v}" \
+            --notes-file /tmp/release-notes.md \
+            /tmp/release-assets/*

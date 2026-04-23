@@ -146,12 +146,13 @@ if [ -f "$TEMPLATE" ]; then
     # Verify all commands use multicall format (goyoke hook <name>)
     COMMANDS=$(jq -r '[.hooks | to_entries[] | .value[] | .hooks[] | .command // empty] | unique | .[]' "$TEMPLATE" 2>/dev/null)
     ALL_MULTICALL=true
-    for cmd in $COMMANDS; do
-        if [[ "$cmd" != goyoke\ hook\ * ]]; then
+    while IFS= read -r cmd; do
+        [[ -z "$cmd" ]] && continue
+        if [[ "$cmd" != "goyoke hook "* ]]; then
             echo "  WARN: non-multicall command: $cmd"
             ALL_MULTICALL=false
         fi
-    done
+    done <<< "$COMMANDS"
     if [ "$ALL_MULTICALL" = true ]; then
         echo "  PASS: all hook commands use multicall format (goyoke hook <name>)"
         PASS=$((PASS + 1))
@@ -163,8 +164,8 @@ if [ -f "$TEMPLATE" ]; then
     # Verify goyoke binary can dispatch each hook command
     GOYOKE="${TEMP_BIN}/goyoke"
     HOOK_DISPATCH_OK=true
-    for cmd in $COMMANDS; do
-        # Extract hook name from "goyoke hook <name>"
+    while IFS= read -r cmd; do
+        [[ -z "$cmd" ]] && continue
         HOOK_NAME="${cmd#goyoke hook }"
         MOCK_EVENT='{"hook_event_name":"test","tool_name":"Bash","session_id":"test"}'
         if ! echo "$MOCK_EVENT" | "$GOYOKE" hook "$HOOK_NAME" >/dev/null 2>&1; then
@@ -175,7 +176,7 @@ if [ -f "$TEMPLATE" ]; then
                 HOOK_DISPATCH_OK=false
             fi
         fi
-    done
+    done <<< "$COMMANDS"
     if [ "$HOOK_DISPATCH_OK" = true ]; then
         echo "  PASS: all hooks dispatch without panic"
         PASS=$((PASS + 1))
