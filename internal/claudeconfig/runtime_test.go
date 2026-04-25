@@ -52,6 +52,14 @@ func TestPrepareStagesEmbeddedSkillsAndCredentials(t *testing.T) {
 		t.Fatalf("ticket script permissions = %o, want 0755", info.Mode().Perm())
 	}
 
+	indexInfo, err := os.Stat(filepath.Join(layout.ConfigDir, "agents", "agents-index.json"))
+	if err != nil {
+		t.Fatalf("stat staged agents-index.json: %v", err)
+	}
+	if indexInfo.Mode().Perm() != 0o644 {
+		t.Fatalf("agents-index.json permissions = %o, want 0644", indexInfo.Mode().Perm())
+	}
+
 	settingsData, err := os.ReadFile(filepath.Join(layout.ConfigDir, "settings.json"))
 	if err != nil {
 		t.Fatalf("read staged settings.json: %v", err)
@@ -70,6 +78,42 @@ func TestPrepareStagesEmbeddedSkillsAndCredentials(t *testing.T) {
 
 	if layout.ConfigDir != filepath.Join(layout.FakeHomeDir, ".claude") {
 		t.Fatalf("default config dir should live under fake HOME, got config=%s fakeHome=%s", layout.ConfigDir, layout.FakeHomeDir)
+	}
+}
+
+func TestPrepareCanRestageExistingReadonlyFiles(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	src := fstest.MapFS{
+		"agents/agents-index.json": {Data: []byte(`{"agents":[]}`)},
+		"routing-schema.json":      {Data: []byte(`{}`)},
+		"CLAUDE.md":                {Data: []byte("# Claude")},
+		"settings-template.json":   {Data: []byte(`{}`)},
+	}
+
+	layout, err := Prepare(PrepareOptions{EmbeddedFS: src})
+	if err != nil {
+		t.Fatalf("first Prepare returned error: %v", err)
+	}
+
+	target := filepath.Join(layout.ConfigDir, "agents", "agents-index.json")
+	if err := os.Chmod(target, 0o444); err != nil {
+		t.Fatalf("chmod agents-index.json readonly: %v", err)
+	}
+
+	if _, err := Prepare(PrepareOptions{
+		EmbeddedFS: src,
+		ConfigDir:  layout.ConfigDir,
+	}); err != nil {
+		t.Fatalf("second Prepare returned error: %v", err)
+	}
+
+	info, err := os.Stat(target)
+	if err != nil {
+		t.Fatalf("stat restaged agents-index.json: %v", err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Fatalf("restaged agents-index.json permissions = %o, want 0644", info.Mode().Perm())
 	}
 }
 

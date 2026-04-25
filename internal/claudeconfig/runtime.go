@@ -161,6 +161,9 @@ func writeEmbeddedFile(src fs.FS, srcPath, targetPath string, mode fs.FileMode) 
 	}
 
 	perm := filePermForPath(srcPath, mode)
+	if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("claudeconfig: reset %s: %w", targetPath, err)
+	}
 	if err := os.WriteFile(targetPath, data, perm); err != nil {
 		return fmt.Errorf("claudeconfig: write %s: %w", targetPath, err)
 	}
@@ -168,14 +171,10 @@ func writeEmbeddedFile(src fs.FS, srcPath, targetPath string, mode fs.FileMode) 
 }
 
 func filePermForPath(path string, mode fs.FileMode) fs.FileMode {
-	perm := mode.Perm()
-	if perm == 0 {
-		perm = 0o644
-	}
-	if perm&0o111 != 0 || shouldBeExecutable(path) {
+	if mode.Perm()&0o111 != 0 || shouldBeExecutable(path) {
 		return 0o755
 	}
-	return perm
+	return 0o644
 }
 
 func shouldBeExecutable(path string) bool {

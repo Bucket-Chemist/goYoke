@@ -52,6 +52,12 @@ type AssistantMsg struct {
 	MessageID string // stable within a turn, changes between turns
 }
 
+// RemoteSkillsLoadedMsg carries the authoritative skill names Claude reported
+// for the current session in SystemInitEvent.Skills.
+type RemoteSkillsLoadedMsg struct {
+	Skills []string
+}
+
 // ToolUseMsg signals that the assistant invoked a tool.  The Claude panel
 // renders it as a collapsed tool block in the conversation so the user
 // can see what tools the router is calling (spawn_agent, Read, etc.).

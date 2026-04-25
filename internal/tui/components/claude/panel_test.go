@@ -33,6 +33,26 @@ func newPanel() claude.ClaudePanelModel {
 	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
 	m.SetSize(80, 24)
 	m.SetFocused(true)
+	m, _ = m.Update(model.RemoteSkillsLoadedMsg{Skills: []string{
+		"explore",
+		"explore-add",
+		"braintrust",
+		"review",
+		"review-plan",
+		"benchmark",
+		"benchmark-meta",
+		"benchmark-agent",
+		"implement",
+		"ticket",
+		"plan-tickets",
+		"teams",
+		"team-status",
+		"team-result",
+		"team-cancel",
+		"init-auto",
+		"dummies-guide",
+		"memory-improvement",
+	}})
 	return m
 }
 
@@ -40,6 +60,26 @@ func newPanel() claude.ClaudePanelModel {
 func newUnfocusedPanel() claude.ClaudePanelModel {
 	m := claude.NewClaudePanelModel(config.DefaultKeyMap())
 	m.SetSize(80, 24)
+	m, _ = m.Update(model.RemoteSkillsLoadedMsg{Skills: []string{
+		"explore",
+		"explore-add",
+		"braintrust",
+		"review",
+		"review-plan",
+		"benchmark",
+		"benchmark-meta",
+		"benchmark-agent",
+		"implement",
+		"ticket",
+		"plan-tickets",
+		"teams",
+		"team-status",
+		"team-result",
+		"team-cancel",
+		"init-auto",
+		"dummies-guide",
+		"memory-improvement",
+	}})
 	return m
 }
 
@@ -1196,6 +1236,18 @@ func TestSlashHelp_IsLocal(t *testing.T) {
 	lastMsg := msgs[len(msgs)-1]
 	assert.Equal(t, "system", lastMsg.Role)
 	assert.Contains(t, lastMsg.Content, "slash command", "help text should mention slash commands")
+}
+
+func TestRemoteSkillsLoadedMsg_HelpUsesSessionSkillList(t *testing.T) {
+	m := newPanel()
+	m, _ = m.Update(model.RemoteSkillsLoadedMsg{Skills: []string{"plan-tickets"}})
+	m, _ = m.Update(slashcmd.SlashCmdSelectedMsg{Command: "/help"})
+
+	msgs := m.Messages()
+	require.NotEmpty(t, msgs)
+	lastMsg := msgs[len(msgs)-1]
+	assert.Contains(t, lastMsg.Content, "/plan-tickets")
+	assert.NotContains(t, lastMsg.Content, "/ticket")
 }
 
 func TestSlashRemote_CallsSendMessage(t *testing.T) {

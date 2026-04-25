@@ -59,6 +59,8 @@ func (m AppModel) handleCLIStarted() (tea.Model, tea.Cmd) {
 // handleSystemInit handles cli.SystemInitEvent: the CLI session is ready;
 // records session metadata and registers the root router agent.
 func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
 	m.cliReady = true
 	m.sessionID = msg.SessionID
 	m.activeModel = msg.Model
@@ -77,6 +79,11 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 	}
 	if m.statusLine.SessionStart.IsZero() {
 		m.statusLine.SessionStart = time.Now()
+	}
+	if m.shared != nil && m.shared.claudePanel != nil {
+		if cmd := m.shared.claudePanel.HandleMsg(RemoteSkillsLoadedMsg{Skills: msg.Skills}); cmd != nil {
+			cmds = append(cmds, cmd)
+		}
 	}
 
 	// Register the root "Router" agent so the agent tree shows the
@@ -109,7 +116,8 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 		}
 	}
 
-	return m, m.waitForCLIEvent()
+	cmds = append(cmds, m.waitForCLIEvent())
+	return m, tea.Batch(cmds...)
 }
 
 // handleAssistantEvent handles cli.AssistantEvent: forwards text content to

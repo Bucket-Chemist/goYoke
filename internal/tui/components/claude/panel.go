@@ -253,6 +253,12 @@ func (m ClaudePanelModel) Update(msg tea.Msg) (ClaudePanelModel, tea.Cmd) {
 		m, cmds = m.handleAssistantMsg(msg, cmds)
 		return m, tea.Batch(cmds...)
 
+	case model.RemoteSkillsLoadedMsg:
+		m.skillCmds = slashcmd.CommandsForNames(msg.Skills)
+		m.slashCmd = slashcmd.NewSlashCmdModel(m.skillCmds...)
+		m.slashCmd.SetWidth(m.width)
+		return m, nil
+
 	case model.ToolUseMsg:
 		m = m.handleToolUseMsg(msg)
 		return m, nil

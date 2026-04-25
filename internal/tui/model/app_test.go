@@ -409,9 +409,9 @@ func TestComputeLayout_WideTerminal_ShowsRightPanel65_35(t *testing.T) {
 	// At width=120, left outer = 78 (65%), right outer = 42 (35%).
 	// Inner widths subtract borderFrame (2).
 	w120 := float64(120)
-	leftOuter120 := int(w120 * 0.65)                          // 78
-	wantLeftInner := leftOuter120 - borderFrame                // 76
-	wantRightInner := (120 - leftOuter120) - borderFrame       // 40
+	leftOuter120 := int(w120 * 0.65)                     // 78
+	wantLeftInner := leftOuter120 - borderFrame          // 76
+	wantRightInner := (120 - leftOuter120) - borderFrame // 40
 
 	if dims.leftWidth != wantLeftInner {
 		t.Errorf("leftWidth = %d; want %d", dims.leftWidth, wantLeftInner)
@@ -1586,6 +1586,28 @@ func TestSystemInitEvent_EmptySessionID_NotPersisted(t *testing.T) {
 	}
 }
 
+func TestSystemInitEvent_ForwardsAuthoritativeSkillsToClaudePanel(t *testing.T) {
+	m, panel := newModelWithProvider()
+
+	updated, _ := m.Update(cli.SystemInitEvent{
+		SessionID: "init-session-123",
+		Model:     "sonnet",
+		Skills:    []string{"plan-tickets"},
+	})
+	_ = updated.(AppModel)
+
+	if !panel.handleMsgCalled {
+		t.Fatal("claudePanel.HandleMsg was not called")
+	}
+	msg, ok := panel.lastMsg.(RemoteSkillsLoadedMsg)
+	if !ok {
+		t.Fatalf("claudePanel lastMsg = %T; want RemoteSkillsLoadedMsg", panel.lastMsg)
+	}
+	if len(msg.Skills) != 1 || msg.Skills[0] != "plan-tickets" {
+		t.Fatalf("RemoteSkillsLoadedMsg.Skills = %#v; want [\"plan-tickets\"]", msg.Skills)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // SystemInitEvent — agent tree and detail panel population
 // ---------------------------------------------------------------------------
@@ -1766,9 +1788,9 @@ func (m *mockCLIDriverDebounce) Start() tea.Cmd {
 	m.startCalls++
 	return func() tea.Msg { return nil }
 }
-func (m *mockCLIDriverDebounce) WaitForEvent() tea.Cmd { return nil }
+func (m *mockCLIDriverDebounce) WaitForEvent() tea.Cmd        { return nil }
 func (m *mockCLIDriverDebounce) SendMessage(_ string) tea.Cmd { return nil }
-func (m *mockCLIDriverDebounce) Interrupt() error              { return nil }
+func (m *mockCLIDriverDebounce) Interrupt() error             { return nil }
 func (m *mockCLIDriverDebounce) Shutdown() error {
 	m.shutdownCalls++
 	return nil
@@ -1965,10 +1987,10 @@ func newModelWithProviderAndOpts() (AppModel, *mockClaudePanel, *mockDriverCaptu
 
 func TestProviderSwitch_FullRoundtrip(t *testing.T) {
 	tests := []struct {
-		name             string
-		initialMessages  []state.DisplayMessage
-		wantHandoff      bool // whether a system handoff message should be injected
-		wantSavedCount   int  // number of messages that should be saved for old provider
+		name            string
+		initialMessages []state.DisplayMessage
+		wantHandoff     bool // whether a system handoff message should be injected
+		wantSavedCount  int  // number of messages that should be saved for old provider
 	}{
 		{
 			name: "switch_with_two_messages_injects_handoff",
@@ -1988,10 +2010,10 @@ func TestProviderSwitch_FullRoundtrip(t *testing.T) {
 			wantSavedCount: 1,
 		},
 		{
-			name:             "switch_with_no_messages_no_handoff",
-			initialMessages:  nil,
-			wantHandoff:      false,
-			wantSavedCount:   0,
+			name:            "switch_with_no_messages_no_handoff",
+			initialMessages: nil,
+			wantHandoff:     false,
+			wantSavedCount:  0,
 		},
 	}
 
@@ -2509,14 +2531,14 @@ type mockTaskBoard struct {
 	width, h    int
 }
 
-func (m *mockTaskBoard) Toggle()                       { m.toggleCalls++; m.visible = !m.visible }
-func (m *mockTaskBoard) IsVisible() bool               { return m.visible }
-func (m *mockTaskBoard) View() string                  { return "" }
-func (m *mockTaskBoard) SetSize(w, h int)              { m.width = w; m.h = h }
-func (m *mockTaskBoard) Height() int                   { return 0 }
-func (m *mockTaskBoard) SetTasks(_ []state.TaskEntry)  {}
-func (m *mockTaskBoard) HandleMsg(_ tea.Msg) tea.Cmd   { return nil }
-func (m *mockTaskBoard) SetTier(_ LayoutTier)          {}
+func (m *mockTaskBoard) Toggle()                      { m.toggleCalls++; m.visible = !m.visible }
+func (m *mockTaskBoard) IsVisible() bool              { return m.visible }
+func (m *mockTaskBoard) View() string                 { return "" }
+func (m *mockTaskBoard) SetSize(w, h int)             { m.width = w; m.h = h }
+func (m *mockTaskBoard) Height() int                  { return 0 }
+func (m *mockTaskBoard) SetTasks(_ []state.TaskEntry) {}
+func (m *mockTaskBoard) HandleMsg(_ tea.Msg) tea.Cmd  { return nil }
+func (m *mockTaskBoard) SetTier(_ LayoutTier)         {}
 
 // TestHandleKey_ToggleTaskBoard_CallsToggle verifies that the ToggleTaskBoard
 // key binding (ctrl+t) calls Toggle() on the taskBoard widget when wired.
@@ -2559,32 +2581,32 @@ func TestHandleKey_ToggleTaskBoard_NilTaskBoard_NoPanic(t *testing.T) {
 // status line.
 func TestUpdate_PlanStepMsg_SetsFieldsOnStatusLine(t *testing.T) {
 	tests := []struct {
-		name           string
-		msg            PlanStepMsg
-		wantActive     bool
-		wantStep       int
-		wantTotal      int
+		name       string
+		msg        PlanStepMsg
+		wantActive bool
+		wantStep   int
+		wantTotal  int
 	}{
 		{
-			name:      "activate with known steps",
-			msg:       PlanStepMsg{Active: true, Step: 2, Total: 5},
+			name:       "activate with known steps",
+			msg:        PlanStepMsg{Active: true, Step: 2, Total: 5},
 			wantActive: true,
-			wantStep:  2,
-			wantTotal: 5,
+			wantStep:   2,
+			wantTotal:  5,
 		},
 		{
-			name:      "activate with unknown steps",
-			msg:       PlanStepMsg{Active: true, Step: 0, Total: 0},
+			name:       "activate with unknown steps",
+			msg:        PlanStepMsg{Active: true, Step: 0, Total: 0},
 			wantActive: true,
-			wantStep:  0,
-			wantTotal: 0,
+			wantStep:   0,
+			wantTotal:  0,
 		},
 		{
-			name:      "deactivate plan mode",
-			msg:       PlanStepMsg{Active: false, Step: 0, Total: 0},
+			name:       "deactivate plan mode",
+			msg:        PlanStepMsg{Active: false, Step: 0, Total: 0},
 			wantActive: false,
-			wantStep:  0,
-			wantTotal: 0,
+			wantStep:   0,
+			wantTotal:  0,
 		},
 	}
 

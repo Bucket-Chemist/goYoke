@@ -13,10 +13,30 @@ import (
 // DefaultCommands
 // ---------------------------------------------------------------------------
 
-func TestDefaultCommands_HasAtLeast16(t *testing.T) {
+func testRemoteCommands() []SlashCommand {
+	return []SlashCommand{
+		{Name: "explore", Description: "Structured codebase exploration"},
+		{Name: "explore-add", Description: "Add custom skill"},
+		{Name: "braintrust", Description: "Multi-perspective deep analysis"},
+		{Name: "review", Description: "Multi-domain code review"},
+		{Name: "review-plan", Description: "Critical 7-layer review of plans"},
+		{Name: "ticket", Description: "Ticket-driven implementation"},
+		{Name: "implement", Description: "Plan + implement a feature"},
+		{Name: "plan-tickets", Description: "Comprehensive planning workflow"},
+		{Name: "teams", Description: "List all teams"},
+		{Name: "team-status", Description: "Show team progress"},
+		{Name: "team-result", Description: "Display team output"},
+		{Name: "team-cancel", Description: "Stop running team"},
+		{Name: "benchmark", Description: "Run gold standard prompts"},
+		{Name: "benchmark-meta", Description: "Analyze benchmark trends"},
+		{Name: "benchmark-agent", Description: "Evaluate agents via Harbor"},
+	}
+}
+
+func TestDefaultCommands_HasAtLeast6(t *testing.T) {
 	cmds := DefaultCommands()
-	if len(cmds) < 16 {
-		t.Errorf("expected at least 16 default commands, got %d", len(cmds))
+	if len(cmds) < 6 {
+		t.Errorf("expected at least 6 default commands, got %d", len(cmds))
 	}
 }
 
@@ -33,8 +53,7 @@ func TestDefaultCommands_NamesNotEmpty(t *testing.T) {
 
 func TestDefaultCommands_ContainsExpectedCommands(t *testing.T) {
 	want := []string{
-		"explore", "braintrust", "review", "implement",
-		"ticket", "plan-tickets", "teams", "benchmark",
+		"clear", "cwd", "model", "effort", "help", "exit",
 	}
 	cmds := DefaultCommands()
 	names := make(map[string]bool, len(cmds))
@@ -117,8 +136,8 @@ func TestHelpText_IncludesExtraCommands(t *testing.T) {
 
 func TestHelpText_NoExtraBackwardCompat(t *testing.T) {
 	text := HelpText()
-	if !strings.Contains(text, "/explore") {
-		t.Error("HelpText() with no args should still include /explore")
+	if !strings.Contains(text, "/clear") {
+		t.Error("HelpText() with no args should still include /clear")
 	}
 }
 
@@ -174,7 +193,7 @@ func TestFilter_EmptyQuery_ShowsAll(t *testing.T) {
 }
 
 func TestFilter_PrefixMatch(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 	m.Filter("ex")
 	for _, cmd := range m.filtered {
@@ -196,7 +215,7 @@ func TestFilter_PrefixMatch(t *testing.T) {
 }
 
 func TestFilter_CaseInsensitive(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 	m.Filter("EX")
 	found := false
@@ -220,7 +239,7 @@ func TestFilter_NoMatch_Hides(t *testing.T) {
 }
 
 func TestFilter_SingleMatch(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 	m.Filter("braintr")
 	if len(m.filtered) != 1 {
@@ -232,7 +251,7 @@ func TestFilter_SingleMatch(t *testing.T) {
 }
 
 func TestFilter_SlashPrefix_Stripped(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 	// Querying with "/" prefix should work the same as without.
 	m.Filter("/explore")
@@ -445,7 +464,7 @@ func TestView_EmptyWhenHidden(t *testing.T) {
 }
 
 func TestView_ContainsCommandNames(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 
 	view := m.View()
@@ -455,7 +474,7 @@ func TestView_ContainsCommandNames(t *testing.T) {
 }
 
 func TestView_ContainsDescription(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 
 	view := m.View()
@@ -466,7 +485,7 @@ func TestView_ContainsDescription(t *testing.T) {
 }
 
 func TestView_HighlightsSelected(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 	m.selected = 0
 	firstName := m.filtered[0].Name
@@ -499,7 +518,7 @@ func TestView_HighlightsSelected(t *testing.T) {
 }
 
 func TestView_ScrollWindow(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 	// Move well past maxVisible to trigger scrolling.
 	m.selected = m.maxVisible + 2
@@ -542,7 +561,7 @@ func TestScrollIndicator_NoneWhenAllVisible(t *testing.T) {
 }
 
 func TestScrollIndicator_ShowsDownWhenMoreBelow(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 
 	got := m.scrollIndicator(0, m.maxVisible)
@@ -552,7 +571,7 @@ func TestScrollIndicator_ShowsDownWhenMoreBelow(t *testing.T) {
 }
 
 func TestScrollIndicator_ShowsUpWhenMoreAbove(t *testing.T) {
-	m := NewSlashCmdModel()
+	m := NewSlashCmdModel(testRemoteCommands()...)
 	m.Show("")
 
 	// Scroll down so there are items above.
@@ -806,13 +825,14 @@ func TestParseFrontmatterDescription_TableDriven(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestFilter_TableDriven(t *testing.T) {
+	total := len(buildCommands(testRemoteCommands()...))
 	tests := []struct {
-		query        string
-		wantAtLeast  int
-		wantAtMost   int
-		description  string
+		query       string
+		wantAtLeast int
+		wantAtMost  int
+		description string
 	}{
-		{"", len(DefaultCommands()), len(DefaultCommands()), "empty query returns all"},
+		{"", total, total, "empty query returns all"},
 		{"ex", 2, 5, "'ex' matches explore, explore-add"},
 		{"team", 3, 5, "'team' matches team-status, team-result, team-cancel, teams"},
 		{"benchmark", 2, 4, "'benchmark' matches benchmark, benchmark-meta, benchmark-agent"},
@@ -824,7 +844,7 @@ func TestFilter_TableDriven(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			m := NewSlashCmdModel()
+			m := NewSlashCmdModel(testRemoteCommands()...)
 			m.Show("")
 			m.Filter(tc.query)
 

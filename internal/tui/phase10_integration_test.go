@@ -270,17 +270,17 @@ func TestPhase10d_ShiftTabNavigation(t *testing.T) {
 // ---------------------------------------------------------------------------
 // TestPhase10d_SlashCommandDropdown (TUI-053)
 //
-// Verifies NewSlashCmdModel construction, DefaultCommands has 18+ entries,
-// and Filter narrows results correctly.
+// Verifies local slash command defaults, remote command injection, and
+// filtering behaviour.
 // ---------------------------------------------------------------------------
 
 func TestPhase10d_SlashCommandDropdown(t *testing.T) {
 	t.Parallel()
 
-	// DefaultCommands must contain at least 18 commands (matching CLAUDE.md table).
+	// DefaultCommands now covers only local goYoke commands.
 	cmds := slashcmd.DefaultCommands()
-	assert.GreaterOrEqual(t, len(cmds), 18,
-		"DefaultCommands must have >= 18 entries; got %d", len(cmds))
+	assert.GreaterOrEqual(t, len(cmds), 6,
+		"DefaultCommands must have >= 6 entries; got %d", len(cmds))
 
 	// Each command must have a non-empty Name and Description.
 	for i, cmd := range cmds {
@@ -288,8 +288,12 @@ func TestPhase10d_SlashCommandDropdown(t *testing.T) {
 		assert.NotEmpty(t, cmd.Description, "command[%d].Description must not be empty", i)
 	}
 
-	// NewSlashCmdModel must return a usable model.
-	m := slashcmd.NewSlashCmdModel()
+	// NewSlashCmdModel must return a usable model, and remote session skills
+	// should be injected via extra commands.
+	m := slashcmd.NewSlashCmdModel(
+		slashcmd.SlashCommand{Name: "explore", Description: "Structured codebase exploration"},
+		slashcmd.SlashCommand{Name: "ticket", Description: "Ticket-driven implementation"},
+	)
 	assert.False(t, m.IsVisible(), "dropdown must start hidden")
 
 	// Show with an empty query must display all commands.
@@ -692,4 +696,3 @@ func findModuleRoot(t *testing.T) string {
 // ---------------------------------------------------------------------------
 
 var _ state.SearchSource = (*mockSearchSource)(nil)
-

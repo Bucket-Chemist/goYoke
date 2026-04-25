@@ -10,6 +10,7 @@ package slashcmd
 
 import (
 	"log/slog"
+	"slices"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -95,45 +96,63 @@ const (
 // DefaultCommands
 // ---------------------------------------------------------------------------
 
-// DefaultCommands returns the canonical list of slash commands available in
-// goYoke. This list mirrors the Slash Commands table in CLAUDE.md.
+// DefaultCommands returns the local slash commands handled directly by goYoke.
+// Remote Claude skills are discovered from the staged config on disk and then
+// narrowed to the authoritative SystemInitEvent.Skills list once the session
+// starts.
 func DefaultCommands() []SlashCommand {
 	return []SlashCommand{
-		{"explore", "Structured codebase exploration"},
-		{"braintrust", "Multi-perspective deep analysis"},
-		{"review", "Multi-domain code review"},
-		{"review-plan", "Critical 7-layer review of plans"},
-		{"sandbox", "Manage sandbox permissions and write protected files"},
+		{"clear", "Clear conversation"},
 		{"cwd", "Change working directory for CC sessions"},
-		{"ticket", "Ticket-driven implementation"},
-		{"implement", "Plan + implement a feature"},
-		{"init-auto", "Initialize project config"},
-		{"benchmark", "Run gold standard prompts"},
-		{"benchmark-meta", "Analyze benchmark trends"},
-		{"benchmark-agent", "Evaluate agents via Harbor"},
-		{"memory-improvement", "Audit system memory"},
-		{"explore-add", "Add custom skill"},
-		{"dummies-guide", "Explain config system"},
-		{"team-status", "Show team progress"},
-		{"team-result", "Display team output"},
-		{"team-cancel", "Stop running team"},
-		{"plan-tickets", "Comprehensive planning workflow"},
-		{"teams", "List all teams"},
 		{"model", "Switch model (e.g. /model haiku)"},
+		{"effort", "Switch effort (e.g. /effort high)"},
+		{"help", "Show available slash commands"},
+		{"exit", "Exit goYoke"},
+		{"quit", "Exit goYoke"},
 	}
 }
 
-// HelpText returns a formatted string listing all available slash commands,
-// suitable for display as a system message in the Claude panel. Extra commands
-// (e.g. dynamically loaded skill commands) are appended after the defaults.
-func HelpText(extra ...SlashCommand) string {
+func buildCommands(remote ...SlashCommand) []SlashCommand {
+	cmds := make([]SlashCommand, 0, len(remote)+len(DefaultCommands()))
+	seen := make(map[string]struct{}, len(remote)+len(DefaultCommands()))
+	add := func(cmd SlashCommand) {
+		if cmd.Name == "" {
+			return
+		}
+		if _, ok := seen[cmd.Name]; ok {
+			return
+		}
+		seen[cmd.Name] = struct{}{}
+		cmds = append(cmds, cmd)
+	}
+
+	for _, cmd := range remote {
+		add(cmd)
+	}
+	for _, cmd := range DefaultCommands() {
+		add(cmd)
+	}
+
+	return cmds
+}
+
+// HelpText returns a formatted string listing the Claude skills currently
+// available in this session, followed by goYoke's local slash commands.
+func HelpText(remote ...SlashCommand) string {
 	var sb strings.Builder
-	sb.WriteString("Available slash commands:\n")
-	all := append(DefaultCommands(), extra...)
-	for _, cmd := range all {
+	sb.WriteString("Available Claude slash commands:\n")
+	if len(remote) == 0 {
+		sb.WriteString("  (none discovered for this session)\n")
+	} else {
+		for _, cmd := range remote {
+			sb.WriteString("  /" + cmd.Name + " — " + cmd.Description + "\n")
+		}
+	}
+
+	sb.WriteString("\nLocal goYoke commands:\n")
+	for _, cmd := range DefaultCommands() {
 		sb.WriteString("  /" + cmd.Name + " — " + cmd.Description + "\n")
 	}
-	sb.WriteString("\nLocal commands: /clear (clear conversation), /model [name] (switch model), /help (this message)")
 	return sb.String()
 }
 
@@ -188,6 +207,39 @@ func LoadSkillCommands() []SlashCommand {
 
 		desc := extractSkillDescription(r, name)
 		cmds = append(cmds, SlashCommand{Name: name, Description: desc})
+	}
+
+	return cmds
+}
+
+// CommandsForNames converts an authoritative list of skill names reported by
+// Claude into SlashCommand values, preserving the reported order and enriching
+// descriptions from staged SKILL.md files when available.
+func CommandsForNames(names []string) []SlashCommand {
+	r, err := resolve.NewFromEnv()
+	if err != nil {
+		slog.Warn("slashcmd: cannot create resolver", "err", err)
+		return nil
+	}
+
+	cmds := make([]SlashCommand, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for _, raw := range names {
+		name := strings.TrimSpace(strings.TrimPrefix(raw, "/"))
+		if name == "" {
+			continue
+		}
+		if _, reserved := localCommandNames[name]; reserved {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		cmds = append(cmds, SlashCommand{
+			Name:        name,
+			Description: extractSkillDescription(r, name),
+		})
 	}
 
 	return cmds
@@ -286,7 +338,7 @@ type SlashCmdModel struct {
 // and a maxVisible of 8. The dropdown starts hidden. Any extra commands
 // (e.g. dynamically loaded skill commands) are appended after the defaults.
 func NewSlashCmdModel(extra ...SlashCommand) SlashCmdModel {
-	cmds := append(DefaultCommands(), extra...)
+	cmds := buildCommands(extra...)
 	return SlashCmdModel{
 		commands:   cmds,
 		filtered:   append([]SlashCommand(nil), cmds...),
@@ -485,7 +537,7 @@ func (m *SlashCmdModel) applyFilter(query string) {
 			filtered = append(filtered, cmd)
 		}
 	}
-	m.filtered = filtered
+	m.filtered = slices.Clip(filtered)
 }
 
 // clampScroll adjusts scrollOffset so that the selected item is always
