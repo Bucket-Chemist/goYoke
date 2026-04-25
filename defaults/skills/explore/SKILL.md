@@ -305,3 +305,8 @@ This ensures future sessions can query:
 | `.claude/tmp/specs.md` | architect | memory-archivist | Planning decisions |
 | `.claude/memory/decisions/*.md` | memory-archivist | future sessions | Archived decisions |
 | `.claude/memory/sharp-edges/*.md` | memory-archivist | future sessions | Archived problems |
+
+## Not For
+- Tasks with clear scope and known files (route directly to language-specific agents)
+- Deep multi-perspective analysis (use /braintrust instead)
+- Implementation after planning is done (use /implement or /ticket)

@@ -533,11 +533,18 @@ func (m *AppModel) syncPlanPreview() {
 // findLatestPlanFile scans ~/.claude/plans/ for the most recently modified
 // .md file and returns its absolute path. Returns "" if no plan files exist.
 func findLatestPlanFile() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+	configDir := os.Getenv("CLAUDE_CONFIG_DIR")
+	if configDir == "" {
+		configDir = os.Getenv("GOYOKE_CONFIG_DIR")
 	}
-	dir := filepath.Join(home, ".claude", "plans")
+	if configDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		configDir = filepath.Join(home, ".claude")
+	}
+	dir := filepath.Join(configDir, "plans")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return ""

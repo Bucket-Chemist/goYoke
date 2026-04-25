@@ -1076,7 +1076,8 @@
         "python-pro",
         "typescript-pro",
         "react-pro",
-        "rust-pro"
+        "rust-pro",
+        "llm-inference-architect"
       ],
       "must_delegate": false,
       "scout_first": true,
@@ -1212,7 +1213,9 @@
         ],
         "conventions": {}
       },
-      "can_spawn": [],
+      "can_spawn": [
+        "llm-inference-architect"
+      ],
       "subagent_type": "Planner",
       "interactive": true,
       "spawned_by": [
@@ -1272,7 +1275,8 @@
       "can_spawn": [
         "haiku-scout",
         "codebase-search",
-        "librarian"
+        "librarian",
+        "llm-inference-architect"
       ],
       "interactive": true
     },
@@ -1438,7 +1442,9 @@
         ],
         "conventions": {}
       },
-      "can_spawn": [],
+      "can_spawn": [
+        "llm-inference-architect"
+      ],
       "subagent_type": "Staff Architect Critical Review",
       "interactive": true
     },
@@ -2740,8 +2746,17 @@
         "planner",
         "architect",
         "staff-architect-critical-review",
+        "python-architect",
         "mozart",
         "beethoven",
+        "llm-inference-architect",
+        "genomics-reviewer",
+        "proteomics-reviewer",
+        "proteogenomics-reviewer",
+        "proteoform-reviewer",
+        "mass-spec-reviewer",
+        "bioinformatician-reviewer",
+        "pasteur",
         "cleanup-synthesizer"
       ]
     },

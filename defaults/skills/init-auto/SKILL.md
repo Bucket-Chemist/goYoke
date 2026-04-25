@@ -550,3 +550,8 @@ User: /init-auto go-tui
 Claude: [init-auto] Creating CLAUDE.md with Go + Bubbletea TUI convention references...
         [init-auto] Created ./CLAUDE.md for Go TUI project
 ```
+
+## Not For
+- Understanding an existing goYoke setup (use /dummies-guide instead)
+- Adding skills to an initialized project (use /explore-add instead)
+- Modifying existing CLAUDE.md (edit directly or use /explore for planning)

@@ -25,6 +25,7 @@ import (
 
 	"github.com/Bucket-Chemist/goYoke/internal/tui/mcp"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	pkgconfig "github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 const maxUnixSocketPathBytes = 107
@@ -95,7 +96,7 @@ func buildSocketPath() string {
 
 func socketBaseCandidates() []string {
 	candidates := []string{
-		os.Getenv("XDG_RUNTIME_DIR"),
+		pkgconfig.GetgoYokeDir(),
 		os.TempDir(),
 		"/tmp",
 	}

@@ -1,6 +1,6 @@
 ---
 name: team-cancel
-description: Gracefully stop a running orchestration team
+description: Gracefully stop a running orchestration team. Use when a team is stuck, producing incorrect results, or no longer needed.
 version: 1.0.0
 ---
 
@@ -288,3 +288,8 @@ The skill updates `config.json` with:
 - Force kill (SIGKILL) immediately terminates all processes
 - Stale PIDs (process already dead) are marked as "failed"
 - Cost accounting includes partial work before cancellation
+
+## Not For
+- Checking team progress (use /team-status instead)
+- Reading team output (use /team-result instead)
+- Listing all teams (use /teams instead)

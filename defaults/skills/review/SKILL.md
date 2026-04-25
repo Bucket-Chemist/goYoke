@@ -629,3 +629,9 @@ This data feeds ML models for:
 **Skill Version**: 3.0
 **Last Updated**: 2026-02-10
 **Maintained By**: System
+
+## Not For
+- Bioinformatics pipeline review (use /review-bioinformatics instead)
+- Implementation plan review (use /review-plan instead)
+- Quick spot-checks on a single file (use code-reviewer agent directly)
+- Implementing fixes for review findings (use /implement or /ticket)

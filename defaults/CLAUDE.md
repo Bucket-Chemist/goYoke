@@ -197,7 +197,6 @@ When the request involves planning, use this tree to select the right command:
 | `/plan-tickets`       | Comprehensive planning workflow (Scout → Planner → Architect → Review → [Refine] → Tickets) |
 | `/teams`              | List all teams in current session with summary status                             |
 | `/benchmark-agent`    | Evaluate goYoke agents against SkillsBench benchmarks via Harbor                  |
-| `/sandbox`            | Write files to protected `.claude/` paths via MCP (bypasses CC sandbox)           |
 | `/schema-extend`          | Extend boilerplate agent with domain expertise via braintrust, or refine expanded agent |
 | `/codebase-map`           | Map codebase structure, generate ARCHITECTURE.md with Mermaid diagrams                  |
 

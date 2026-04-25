@@ -706,3 +706,8 @@ if (score === null) {
 | Plan-harmonizer (3 passes) | Sonnet + 10K thinking | ~$0.05-0.12 |
 | Skill overhead | Router | ~$0.01-0.03 |
 | **Total** | | **$0.05-0.15** |
+
+## Not For
+- Creating a plan from scratch (use /plan-tickets instead)
+- Reviewing a plan for the first time (use /review-plan instead)
+- Implementing a plan (use /implement instead)

@@ -1,6 +1,6 @@
 ---
 name: benchmark
-description: Run gold standard prompts against the system and generate compliance audit report
+description: Run gold standard prompts against the system and generate compliance audit report. Use after system changes to verify routing and agent behavior.
 triggers:
   - /benchmark
   - benchmark system
@@ -255,3 +255,8 @@ DO NOT: Implement changes directly. Output plan for user approval.`
 | `/benchmark --runs=3` | 3x runs for variance |
 | `/benchmark --quick` | Tier-1 only |
 | `/benchmark --audit-only` | Re-run Gemini audit on existing run |
+
+## Not For
+- Evaluating individual agents (use /benchmark-agent instead)
+- Analyzing trends across commits (use /benchmark-meta instead)
+- Code review or implementation tasks (use /review or language-specific agents)

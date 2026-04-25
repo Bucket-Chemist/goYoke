@@ -840,7 +840,8 @@ func TestNewIPCBridge_RemovesStaleSocket(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", dir)
 
 	// Pre-create a file at the path the bridge would use.
-	stalePath := filepath.Join(dir, fmt.Sprintf("goyoke-%d.sock", os.Getpid()))
+	stalePath := filepath.Join(dir, "goyoke", fmt.Sprintf("goyoke-%d.sock", os.Getpid()))
+	require.NoError(t, os.MkdirAll(filepath.Dir(stalePath), 0o755))
 	require.NoError(t, os.WriteFile(stalePath, []byte("stale"), 0o600))
 
 	// NewIPCBridge should remove the stale file and succeed.

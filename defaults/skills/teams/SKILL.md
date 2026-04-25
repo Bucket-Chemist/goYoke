@@ -1,6 +1,6 @@
 ---
 name: teams
-description: List all orchestration teams in the current session with summary status
+description: List all orchestration teams in the current session with summary status. Use to check what teams exist and their current state.
 version: 1.0.0
 ---
 
@@ -192,3 +192,8 @@ Typical execution:
 - Read (5-10 config files): ~$0.001
 - Processing and formatting: ~$0.0005
 - **Total: ~$0.002 per invocation**
+
+## Not For
+- Detailed progress on a specific team (use /team-status instead)
+- Reading final output from a team (use /team-result instead)
+- Stopping a team (use /team-cancel instead)

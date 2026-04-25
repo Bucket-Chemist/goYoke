@@ -255,6 +255,32 @@ func TestConsumeEvents_BlankLinesSkipped(t *testing.T) {
 	assert.True(t, isRateLimit, "first non-blank event should be RateLimitEvent, got %T", items[0])
 }
 
+func TestMergeEnvPreservesInheritedValueForEmptyOverride(t *testing.T) {
+	base := []string{"PATH=/usr/bin", "CLAUDE_CONFIG_DIR=/runtime/.claude", "OPENAI_API_KEY=secret"}
+	merged := mergeEnv(base, map[string]string{
+		"OPENAI_API_KEY": "",
+		"HOME":           "/tmp/fake-home",
+	})
+
+	joined := strings.Join(merged, "\n")
+	assert.Contains(t, joined, "OPENAI_API_KEY=secret")
+	assert.Contains(t, joined, "HOME=/tmp/fake-home")
+	assert.Contains(t, joined, "CLAUDE_CONFIG_DIR=/runtime/.claude")
+}
+
+func TestMergeEnvOverridesExistingValue(t *testing.T) {
+	base := []string{"HOME=/home/user", "CLAUDE_CONFIG_DIR=/home/user/.claude"}
+	merged := mergeEnv(base, map[string]string{
+		"HOME":              "/tmp/goyoke-home",
+		"CLAUDE_CONFIG_DIR": "/tmp/goyoke-home/.claude",
+	})
+
+	joined := strings.Join(merged, "\n")
+	assert.Contains(t, joined, "HOME=/tmp/goyoke-home")
+	assert.Contains(t, joined, "CLAUDE_CONFIG_DIR=/tmp/goyoke-home/.claude")
+	assert.NotContains(t, joined, "HOME=/home/user")
+}
+
 func TestConsumeEvents_MalformedLineSkipped(t *testing.T) {
 	d, writer, _ := newTestDriver(t, CLIDriverOpts{})
 

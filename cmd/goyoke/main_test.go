@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd"
+	pkgconfig "github.com/Bucket-Chemist/goYoke/pkg/config"
 )
 
 func TestDispatchByArgv0ForwardsArgs(t *testing.T) {
@@ -57,8 +58,9 @@ func TestWriteRuntimeTempFileUsesCreateTemp(t *testing.T) {
 	if firstPath == secondPath {
 		t.Fatalf("expected unique temp file names, both calls returned %q", firstPath)
 	}
-	if filepath.Dir(firstPath) != tmpDir || filepath.Dir(secondPath) != tmpDir {
-		t.Fatalf("expected temp files under %q, got %q and %q", tmpDir, firstPath, secondPath)
+	wantDir := pkgconfig.GetgoYokeDir()
+	if filepath.Dir(firstPath) != wantDir || filepath.Dir(secondPath) != wantDir {
+		t.Fatalf("expected temp files under %q, got %q and %q", wantDir, firstPath, secondPath)
 	}
 
 	data, err := os.ReadFile(firstPath)

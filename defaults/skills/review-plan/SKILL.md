@@ -380,3 +380,8 @@ vim my-custom-plan.md
 - After significant plan changes (e.g., revised 3+ phases)
 - If first review had CRITICAL issues and you addressed them
 - Cost: ~$0.25 per review (opus tier), budget accordingly
+
+## Not For
+- Code review of implementation (use /review instead)
+- Creating a plan from scratch (use /plan-tickets instead)
+- Enriching a plan with review findings (use /refine-plan after review)

@@ -81,3 +81,8 @@ If the Orchestrator proposes concrete changes, you may proceed to:
 2.  **Configuring:** Use `write_file` (or relevant agent) to update Agent YAMLs.
 
 *Note: Always ask for user confirmation before applying system-wide config changes.*
+
+## Not For
+- Saving a specific memory (write directly to memory files)
+- Recalling prior session context (read memory/MEMORY.md or handoffs)
+- Archiving a session (handled automatically by goyoke-archive hook)

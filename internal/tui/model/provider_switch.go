@@ -121,7 +121,7 @@ func (m AppModel) restartCLIDriver() (tea.Model, tea.Cmd) {
 
 	opts := m.shared.baseCLIOpts // value copy preserves Verbose, Debug, PermissionMode, MCPConfigPath, etc.
 	opts.Model = activeModel
-	opts.Effort = m.activeEffort // Carry forward the current effort level across restarts.
+	opts.Effort = m.activeEffort             // Carry forward the current effort level across restarts.
 	opts.SessionID = ps.GetActiveSessionID() // Resume if provider was used before (TUI-031)
 	opts.AdapterPath = cfg.AdapterPath
 	opts.ProjectDir = ps.GetActiveProjectDir()
@@ -129,11 +129,16 @@ func (m AppModel) restartCLIDriver() (tea.Model, tea.Cmd) {
 	// intentionally left empty here: the actual credentials must be present
 	// in the process environment already (set by the user before launch).
 	// We only pass the map so the driver knows which vars are relevant.
-	if len(cfg.EnvVars) > 0 {
-		envCopy := make(map[string]string, len(cfg.EnvVars))
-		for k := range cfg.EnvVars {
-			envCopy[k] = "" // empty — real value comes from os.Environ()
+	envCopy := make(map[string]string, len(opts.EnvVars)+len(cfg.EnvVars))
+	for k, v := range opts.EnvVars {
+		envCopy[k] = v
+	}
+	for k := range cfg.EnvVars {
+		if _, exists := envCopy[k]; !exists {
+			envCopy[k] = "" // inherit from the process environment if present
 		}
+	}
+	if len(envCopy) > 0 {
 		opts.EnvVars = envCopy
 	} else {
 		opts.EnvVars = nil

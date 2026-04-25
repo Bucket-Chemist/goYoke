@@ -780,3 +780,8 @@ FEAT-003
 **Skill Version**: 1.2
 **Last Updated**: 2026-02-08
 **Maintained By**: System
+
+## Not For
+- Planning a feature from scratch (use /plan-tickets first to generate tickets)
+- Implementing without tickets (use /implement for ad-hoc implementation)
+- Code review (use /review instead)

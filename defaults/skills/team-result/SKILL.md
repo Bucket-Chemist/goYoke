@@ -1,6 +1,6 @@
 ---
 name: team-result
-description: Display final output from a completed orchestration team
+description: Display final output from a completed orchestration team. Use after a team finishes to read its deliverable.
 version: 1.0.0
 ---
 
@@ -438,3 +438,8 @@ Team '{team_name}' is still {status}. Use /team-status to check progress.
 4. Extract cost/duration from config.json metadata
 5. Format duration using the conventions above
 6. Handle missing optional fields gracefully (display "Not provided" or skip section)
+
+## Not For
+- Checking in-progress team status (use /team-status instead)
+- Stopping a running team (use /team-cancel instead)
+- Listing all teams (use /teams instead)

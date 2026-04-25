@@ -1,6 +1,6 @@
 ---
 name: benchmark-agent
-description: Evaluate goYoke agents against SkillsBench benchmarks via Harbor
+description: Evaluate individual goYoke agents against SkillsBench benchmarks via Harbor. Use when validating a new or modified agent definition.
 triggers:
   - /benchmark-agent
   - benchmark agent
@@ -304,3 +304,8 @@ ls "${TASKS_DIR}/*/task.toml" >/dev/null 2>&1 || echo "ERROR: No tasks found in 
 - Each Harbor run creates a Docker container, runs the agent, evaluates with pytest, writes reward.txt
 - Results persist in RESULTS_DIR for later analysis
 - The existing `/benchmark` skill tests routing compliance; this skill tests agent *effectiveness*
+
+## Not For
+- System-wide compliance auditing (use /benchmark instead)
+- Trend analysis across releases (use /benchmark-meta instead)
+- Running agents for real tasks (use spawn_agent directly)

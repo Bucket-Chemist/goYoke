@@ -1,4 +1,0 @@
-{"session_id":"mixed-success-failure","description":"Two failures followed by success - count stays below threshold, no blocking","expected":{"sharp_edges_created":0,"blocking_responses":0,"files_not_created":[".claude/memory/pending-learnings.jsonl"]}}
-{"ts":1705000000,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python mixed.py"},"tool_response":{"exit_code":1,"output":"Error: test failed"},"success":false,"expected_decision":""}
-{"ts":1705000010,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python mixed.py"},"tool_response":{"exit_code":1,"output":"Error: test failed"},"success":false,"expected_decision":""}
-{"ts":1705000020,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python mixed.py"},"tool_response":{"exit_code":0,"output":"OK: all tests passed"},"success":true,"expected_decision":""}

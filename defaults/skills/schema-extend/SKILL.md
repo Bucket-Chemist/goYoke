@@ -1,6 +1,6 @@
 ---
 name: schema-extend
-description: Extend a boilerplate agent with deep domain expertise via braintrust, or refine an already-expanded agent with a targeted Opus pass
+description: Extend a boilerplate agent with deep domain expertise via braintrust, or refine an already-expanded agent with a targeted Opus pass. Use when an agent needs domain-specific knowledge beyond its generic template.
 ---
 
 # Schema Extend Skill v1.0
@@ -352,3 +352,8 @@ $ /schema-extend --list
 
 **Skill Version:** 1.0
 **Last Updated:** 2026-04-09
+
+## Not For
+- Adding a new custom skill (use /explore-add instead)
+- Implementing agent logic in Go code (use go-pro agent)
+- Reviewing existing agents (use /review or architect-reviewer agent)

@@ -94,11 +94,11 @@ What do you want to achieve? (One sentence describing the end state)
 
 ```bash
 # Gather metrics
-~/.claude/scripts/gather-scout-metrics.sh <target> > /tmp/bash_metrics.txt
+~/.claude/scripts/gather-scout-metrics.sh <target> > SESSION_DIR/bash_metrics.txt
 
 # Analyze with Gemini
 {
-  cat /tmp/bash_metrics.txt
+  cat SESSION_DIR/bash_metrics.txt
   echo "---FILES---"
   find . -type f \( -name "*.go" -o -name "*.py" -o -name "*.ts" \) | head -100
 ```
@@ -560,7 +560,7 @@ needs_planning: false
 
 ---
 
-_Generated from: .claude/tmp/specs.md Phase <N>_
+_Generated from: .claudeSESSION_DIR/specs.md Phase <N>_
 ```
 
 **Final output:**
@@ -777,3 +777,9 @@ Ready for implementation. Run /ticket to begin.
 **Skill Version:** 1.0
 **Last Updated:** 2026-01-31
 **Maintained By:** System
+
+## Not For
+- Implementing an existing plan (use /implement instead)
+- Reviewing an existing plan (use /review-plan instead)
+- Quick scope assessment (use /explore or haiku-scout)
+- Refining a reviewed plan (use /refine-plan instead)

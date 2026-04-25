@@ -399,3 +399,9 @@ cost_estimate: "$4-6 per invocation"
 output_location: ".claude/braintrust/"
 user_confirmation: required (Phase 4)
 ```
+
+## Not For
+- Simple implementation tasks (route to go-pro, python-pro, or language-specific agents)
+- Code review (use /review instead)
+- Scope assessment before committing resources (use haiku-scout or /explore)
+- Problems with a clear single solution (braintrust is for multi-perspective analysis)

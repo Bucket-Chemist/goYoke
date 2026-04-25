@@ -1,7 +1,0 @@
-{"session_id":"cross-session-context","description":"Multiple PostToolUse events accumulate state within session","expected":{"sharp_edges_created":2,"blocking_responses":2,"files_created":[".claude/memory/pending-learnings.jsonl",".gogent/failure-tracker.jsonl"]}}
-{"ts":1705000000,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"go test ./pkg/a"},"tool_response":{"exit_code":1,"output":"FAIL: TestA"},"success":false,"expected_decision":""}
-{"ts":1705000010,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"go test ./pkg/a"},"tool_response":{"exit_code":1,"output":"FAIL: TestA"},"success":false,"expected_decision":""}
-{"ts":1705000020,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"go test ./pkg/a"},"tool_response":{"exit_code":1,"output":"FAIL: TestA"},"success":false,"expected_decision":"block"}
-{"ts":1705000030,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"go test ./pkg/b"},"tool_response":{"exit_code":1,"output":"FAIL: TestB"},"success":false,"expected_decision":""}
-{"ts":1705000040,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"go test ./pkg/b"},"tool_response":{"exit_code":1,"output":"FAIL: TestB"},"success":false,"expected_decision":""}
-{"ts":1705000050,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"go test ./pkg/b"},"tool_response":{"exit_code":1,"output":"FAIL: TestB"},"success":false,"expected_decision":"block"}

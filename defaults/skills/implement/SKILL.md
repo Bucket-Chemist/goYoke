@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Plan and implement a feature end-to-end. Spawns architect for planning, then dispatches workers via background team-run.
+description: Plan and implement a feature end-to-end by spawning architect for planning, then dispatching workers via background team-run. Use when a feature is scoped and ready for implementation.
 ---
 
 # /implement Skill v2.0
@@ -257,3 +257,9 @@ mcp__goyoke-interactive__prepare_skill({ skill: "implement", release: true })
 **Skill Version**: 2.0
 **Last Updated**: 2026-02-10
 **Maintained By**: System
+
+## Not For
+- Exploration or scope assessment (use /explore first)
+- Planning without implementation (use /plan-tickets for planning only)
+- Trivial one-line fixes (handle directly without spawning agents)
+- Code review of existing changes (use /review instead)

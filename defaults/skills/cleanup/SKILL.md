@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Systematic codebase hygiene through 8 specialist cleanup reviewers with Opus synthesis
+description: Run systematic codebase hygiene analysis through 8 specialist cleanup reviewers with Opus synthesis. Use when technical debt accumulates or before major refactoring.
 ---
 
 # Cleanup Skill v1.0
@@ -197,7 +197,7 @@ Write to \`\$team_dir/stdin_cleanup-synthesizer.json\`.
 ### Phase 3: Launch and Return
 
 \`\`\`
-result = mcp__goyoke-interactive__team_run({
+result = mcp__goyoke-interactive__confirm_action (via MCP) before team_run({
     team_dir: "\$team_dir",
     wait_for_start: true,
     timeout_ms: 10000
@@ -380,7 +380,7 @@ $ /cleanup
   Reviewers (wave 0): dedup, types, dead-code, dependencies, type-safety, error-hygiene, legacy, slop
   Synthesizer (wave 1): cleanup-synthesizer (Opus)
   Scope: 127 files across 3 languages
-  Team: .goyoke/sessions/.../teams/1713196800.cleanup
+  Team: SESSION_DIR/teams/<timestamp>.cleanup
   PID: 67890
 
 Use /team-status to check progress
@@ -430,3 +430,9 @@ Top 3 Priorities:
 
 **Skill Version:** 1.0
 **Last Updated:** 2026-04-15
+
+## Not For
+- Feature implementation or bug fixes (use /implement or /ticket)
+- Code review of pending changes (use /review instead)
+- Refactoring with behavioral changes (use /explore to plan first)
+- Single-file cleanups (route to language-specific pro agent directly)

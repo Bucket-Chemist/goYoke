@@ -85,3 +85,8 @@ Or open in editor:
 ```bash
 code ~/.claude/docs/system-guide.md
 ```
+
+## Not For
+- Initializing a new project with Claude Code (use /init-auto instead)
+- Adding new skills to the system (use /explore-add instead)
+- Debugging hook failures (check hook logs and settings.json directly)

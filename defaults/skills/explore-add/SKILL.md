@@ -3,7 +3,7 @@ name: explore-add
 description: This skill should be used when the user wants to add a custom skill to the spawner system. Invoke with /explore-add. Guides user through creating a skill with the spawner structure (skill.yaml, sharp-edges.yaml). Custom skills are saved to ~/.claude/custom-skills/ and take precedence over spawner skills during matching.
 ---
 
-# Explore Add - Custom Skill Creator
+# Custom Skill Creator
 
 ## Overview
 
@@ -384,3 +384,8 @@ Everything else is optional but recommended.
 3. **Patterns should have examples** - show, don't just tell
 4. **Sharp edges should have detection patterns** - enable reactive warnings
 5. **Description should explain WHEN to use** - not just what it does
+
+## Not For
+- Understanding existing skills (use /dummies-guide instead)
+- Extending agent definitions with domain expertise (use /schema-extend instead)
+- Modifying goYoke system configuration (edit settings.json or CLAUDE.md directly)

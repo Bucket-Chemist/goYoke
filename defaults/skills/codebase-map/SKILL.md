@@ -1,6 +1,6 @@
 ---
 name: codebase-map
-description: Map codebase structure to JSON + ARCHITECTURE.md with Mermaid diagrams
+description: Map codebase structure to JSON and generate ARCHITECTURE.md with Mermaid diagrams. Use when onboarding to a new repo or after major structural changes.
 ---
 
 # /codebase-map
@@ -71,3 +71,8 @@ Exits 0 with "no changes detected" when nothing changed.
 ## Context Injection
 
 When `GOYOKE_CODEBASE_MAP_INJECT=1` is set, spawned implementation agents automatically receive relevant module context from graph.json in their prompts. Off by default (experimental).
+
+## Not For
+- Finding specific files or functions (use codebase-search agent)
+- Understanding a single module (use /explore instead)
+- Generating user-facing documentation (use tech-docs-writer agent)

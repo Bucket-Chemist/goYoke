@@ -1,6 +1,6 @@
 ---
 name: benchmark-meta
-description: Analyze benchmark trends across multiple commits. Weekly/monthly cadence for system optimization.
+description: Analyze benchmark trends across multiple commits to detect regressions or improvements. Use on a weekly/monthly cadence for system optimization.
 triggers:
   - /benchmark-meta
   - analyze benchmarks
@@ -268,3 +268,8 @@ Run sparingly to avoid cost accumulation.
 | `/benchmark-meta` | Last 5 runs | Opus | ~$0.75 |
 | `/benchmark-meta --commits=10` | Last 10 runs | Opus | ~$1.00 |
 | `/benchmark-meta --compare X Y` | 2 runs | Sonnet | ~$0.15 |
+
+## Not For
+- Running benchmarks for the first time (use /benchmark instead)
+- Evaluating a single agent (use /benchmark-agent instead)
+- One-off performance checks (use /benchmark for a single snapshot)

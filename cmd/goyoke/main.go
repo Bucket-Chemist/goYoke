@@ -37,6 +37,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/Bucket-Chemist/goYoke/defaults"
+	"github.com/Bucket-Chemist/goYoke/internal/claudeconfig"
 	"github.com/Bucket-Chemist/goYoke/internal/hooks"
 	"github.com/Bucket-Chemist/goYoke/internal/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd"
@@ -60,6 +61,7 @@ import (
 	tuiLifecycle "github.com/Bucket-Chemist/goYoke/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
+	pkgconfig "github.com/Bucket-Chemist/goYoke/pkg/config"
 	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
 )
 
@@ -119,12 +121,28 @@ func main() {
 		return
 	}
 
-	// If --config-dir is set, propagate to environment so the claude subprocess
-	// and session store both use the correct config directory.
-	if *configDir != "" {
-		if err := os.Setenv("CLAUDE_CONFIG_DIR", *configDir); err != nil {
-			log.Printf("[goyoke] warning: could not set CLAUDE_CONFIG_DIR: %v", err)
-		}
+	nativeHome, err := os.UserHomeDir()
+	if err != nil {
+		nativeHome = os.Getenv("HOME")
+	}
+	runtimeLayout, err := claudeconfig.Prepare(claudeconfig.PrepareOptions{
+		EmbeddedFS: defaults.FS,
+		ConfigDir:  *configDir,
+		NativeHome: nativeHome,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[goyoke] error: could not prepare isolated Claude runtime: %v\n", err)
+		os.Exit(1)
+	}
+	*configDir = runtimeLayout.ConfigDir
+
+	// Keep both goYoke and Claude pointed at the isolated runtime tree so the
+	// public skill/config bundle stays off the user's native ~/.claude.
+	if err := os.Setenv("CLAUDE_CONFIG_DIR", runtimeLayout.ConfigDir); err != nil {
+		log.Printf("[goyoke] warning: could not set CLAUDE_CONFIG_DIR: %v", err)
+	}
+	if err := os.Setenv("GOYOKE_CONFIG_DIR", runtimeLayout.ConfigDir); err != nil {
+		log.Printf("[goyoke] warning: could not set GOYOKE_CONFIG_DIR: %v", err)
 	}
 
 	// Clean up any socket files left by crashed sessions.
@@ -324,7 +342,7 @@ func main() {
 
 	// Write embedded settings-template.json to temp file for --settings injection.
 	var settingsPath string
-	if tmplData, tmplErr := resolve.Default().ReadFile("settings-template.json"); tmplErr == nil {
+	if tmplData, tmplErr := defaults.FS.ReadFile("settings-template.json"); tmplErr == nil {
 		tmpPath, writeErr := writeRuntimeTempFile("goyoke-hooks-*.json", tmplData)
 		if writeErr == nil {
 			settingsPath = tmpPath
@@ -340,7 +358,7 @@ func main() {
 	// This ensures Claude treats goYoke routing instructions as proper system instructions
 	// even in zero-install environments where no CLAUDE.md exists on disk.
 	var systemPromptFile string
-	if claudeMD, claudeErr := resolve.Default().ReadFile("CLAUDE.md"); claudeErr == nil {
+	if claudeMD, claudeErr := defaults.FS.ReadFile("CLAUDE.md"); claudeErr == nil {
 		tmpPath, writeErr := writeRuntimeTempFile("goyoke-claude-md-*.md", claudeMD)
 		if writeErr == nil {
 			systemPromptFile = tmpPath
@@ -362,6 +380,11 @@ func main() {
 		MCPConfigPath:    mcpConfigPath,
 		SettingsPath:     settingsPath,
 		SystemPromptFile: systemPromptFile,
+		EnvVars: map[string]string{
+			"HOME":              runtimeLayout.FakeHomeDir,
+			"CLAUDE_CONFIG_DIR": runtimeLayout.ConfigDir,
+			"GOYOKE_CONFIG_DIR": runtimeLayout.ConfigDir,
+		},
 	}
 	driver := cli.NewCLIDriver(cliOpts)
 	app.SetCLIDriver(driver)
@@ -512,10 +535,7 @@ func dispatchByArgv0(ctx context.Context, argv []string, reg *subcmd.Registry, s
 }
 
 func runtimeTempDir() string {
-	if runtimeDir := os.Getenv("XDG_RUNTIME_DIR"); runtimeDir != "" {
-		return runtimeDir
-	}
-	return os.TempDir()
+	return pkgconfig.GetgoYokeDir()
 }
 
 func writeRuntimeTempFile(pattern string, data []byte) (string, error) {

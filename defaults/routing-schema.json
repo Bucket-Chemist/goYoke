@@ -195,9 +195,11 @@
         "planner",
         "architect",
         "staff-architect-critical-review",
+        "python-architect",
         "mozart",
         "einstein",
-        "beethoven"
+        "beethoven",
+        "llm-inference-architect"
       ],
       "escalation_protocol": "escalate_to_einstein",
       "thresholds": {
@@ -210,8 +212,17 @@
         "planner",
         "architect",
         "staff-architect-critical-review",
+        "python-architect",
         "mozart",
         "beethoven",
+        "llm-inference-architect",
+        "genomics-reviewer",
+        "proteomics-reviewer",
+        "proteogenomics-reviewer",
+        "proteoform-reviewer",
+        "mass-spec-reviewer",
+        "bioinformatician-reviewer",
+        "pasteur",
         "schema-architect"
       ]
     }
@@ -290,6 +301,7 @@
   },
   "escalation_paths": {
     "python-pro": {
+      "target": "python-architect",
       "triggers": [
         "architecture ambiguity",
         "design decision",
@@ -345,7 +357,11 @@
   },
   "auto_fire": {
     "description": "Patterns that automatically trigger specific agents",
-    "implementation_rust": "rust-pro"
+    "ml_architecture_decision": "python-architect",
+    "nn_design_question": "python-architect",
+    "training_strategy_question": "python-architect",
+    "implementation_rust": "rust-pro",
+    "implementation_llm_inference": "llm-inference-architect"
   },
   "cost_thresholds": {
     "scout_max_cost": 0.01,
@@ -432,7 +448,8 @@
         "planner",
         "review-orchestrator",
         "impl-manager",
-        "mozart"
+        "mozart",
+        "python-architect"
       ],
       "rationale": "Planning agents need to write plans and spawn other agents"
     },
@@ -450,6 +467,7 @@
         "einstein",
         "beethoven",
         "staff-architect-critical-review",
+        "llm-inference-architect",
         "schema-architect"
       ],
       "rationale": "Analysts produce thought work and documents"
@@ -462,7 +480,15 @@
         "Grep"
       ],
       "allows_write": false,
-      "agents": [],
+      "agents": [
+        "genomics-reviewer",
+        "proteomics-reviewer",
+        "proteogenomics-reviewer",
+        "proteoform-reviewer",
+        "mass-spec-reviewer",
+        "bioinformatician-reviewer",
+        "pasteur"
+      ],
       "rationale": "Bioinformatics review agents analyze code quality and methodology but do not modify files"
     }
   },
@@ -512,13 +538,22 @@
     "orchestrator": "Orchestrator",
     "architect": "Architect",
     "planner": "Planner",
+    "python-architect": "Python ML Architect",
     "einstein": "Einstein",
     "mozart": "Mozart",
     "beethoven": "Beethoven",
     "staff-architect-critical-review": "Staff Architect Critical Review",
     "rust-pro": "Rust Pro",
+    "llm-inference-architect": "LLM Inference Architect",
     "architect-reviewer": "Architect Reviewer",
     "goyoke-scout": "goYoke Smart Scout",
+    "genomics-reviewer": "Genomics Reviewer",
+    "proteomics-reviewer": "Proteomics Reviewer",
+    "proteogenomics-reviewer": "Proteogenomics Reviewer",
+    "proteoform-reviewer": "Proteoform Reviewer",
+    "mass-spec-reviewer": "Mass Spectrometry Reviewer",
+    "bioinformatician-reviewer": "Bioinformatician Reviewer",
+    "pasteur": "Pasteur",
     "schema-architect": "Schema Architect"
   },
   "blocked_patterns": {

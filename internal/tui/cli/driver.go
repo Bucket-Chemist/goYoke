@@ -18,6 +18,8 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -231,11 +233,7 @@ func (d *CLIDriver) Start() tea.Cmd {
 
 		// Merge extra env vars into the subprocess environment.
 		if len(d.opts.EnvVars) > 0 {
-			env := os.Environ()
-			for k, v := range d.opts.EnvVars {
-				env = append(env, k+"="+v)
-			}
-			cmd.Env = env
+			cmd.Env = mergeEnv(os.Environ(), d.opts.EnvVars)
 		}
 
 		stdinPipe, err := cmd.StdinPipe()
@@ -275,6 +273,51 @@ func (d *CLIDriver) Start() tea.Cmd {
 
 		return CLIStartedMsg{PID: cmd.Process.Pid}
 	}
+}
+
+func mergeEnv(base []string, overrides map[string]string) []string {
+	if len(overrides) == 0 {
+		return append([]string(nil), base...)
+	}
+
+	envMap := make(map[string]string, len(base)+len(overrides))
+	order := make([]string, 0, len(base)+len(overrides))
+	for _, entry := range base {
+		key, value, ok := strings.Cut(entry, "=")
+		if !ok {
+			continue
+		}
+		if _, exists := envMap[key]; !exists {
+			order = append(order, key)
+		}
+		envMap[key] = value
+	}
+
+	keys := make([]string, 0, len(overrides))
+	for key := range overrides {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		value := overrides[key]
+		if value == "" {
+			if _, exists := envMap[key]; exists {
+				continue
+			}
+			continue
+		}
+		if _, exists := envMap[key]; !exists {
+			order = append(order, key)
+		}
+		envMap[key] = value
+	}
+
+	env := make([]string, 0, len(order))
+	for _, key := range order {
+		env = append(env, key+"="+envMap[key])
+	}
+	return env
 }
 
 // buildArgs constructs the argument slice for the claude command.

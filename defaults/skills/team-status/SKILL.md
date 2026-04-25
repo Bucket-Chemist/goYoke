@@ -1,6 +1,6 @@
 ---
 name: team-status
-description: Display detailed progress for running or completed orchestration teams
+description: Display detailed progress for running or completed orchestration teams. Use to monitor agent activity and costs during a team run.
 version: 1.0.0
 ---
 
@@ -318,3 +318,8 @@ Wave 1: FAILED (1/2 agents)
 - Heartbeat freshness is the best indicator of active progress.
 - Cost tracking depends on agents reporting their usage accurately.
 - All timestamps assume local timezone unless otherwise specified.
+
+## Not For
+- Quick list of all teams (use /teams instead)
+- Reading final output (use /team-result instead)
+- Stopping a running team (use /team-cancel instead)

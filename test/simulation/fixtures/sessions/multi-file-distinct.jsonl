@@ -1,4 +1,0 @@
-{"session_id":"multi-file-distinct","description":"Failures on different files are tracked separately - no blocking when distributed","expected":{"sharp_edges_created":0,"blocking_responses":0,"files_not_created":[".claude/memory/pending-learnings.jsonl"]}}
-{"ts":1705000000,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python file_a.py"},"tool_response":{"exit_code":1,"output":"Error in file_a"},"success":false,"expected_decision":""}
-{"ts":1705000010,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python file_b.py"},"tool_response":{"exit_code":1,"output":"Error in file_b"},"success":false,"expected_decision":""}
-{"ts":1705000020,"hook_type":"PostToolUse","tool_name":"Bash","tool_input":{"command":"python file_c.py"},"tool_response":{"exit_code":1,"output":"Error in file_c"},"success":false,"expected_decision":""}
