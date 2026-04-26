@@ -73,9 +73,9 @@ type resolvedRequest struct {
 	value     string
 }
 
-func (b *mockBridge) Start()           { b.started = true }
+func (b *mockBridge) Start()             { b.started = true }
 func (b *mockBridge) SocketPath() string { return b.socketPath }
-func (b *mockBridge) Shutdown()        { b.shutdownDone = true }
+func (b *mockBridge) Shutdown()          { b.shutdownDone = true }
 func (b *mockBridge) ResolveModalSimple(requestID, value string) {
 	b.resolvedRequests = append(b.resolvedRequests, resolvedRequest{requestID, value})
 }
@@ -285,6 +285,22 @@ func TestUpdate_SystemInitEvent_ReSubscribes(t *testing.T) {
 
 	if driver.waitCalled != 1 {
 		t.Errorf("WaitForEvent called %d times; want 1", driver.waitCalled)
+	}
+}
+
+func TestUpdate_SystemInitEvent_UpdatesHarnessMetadataSession(t *testing.T) {
+	driver := newMockDriver()
+	m := wiredModel(driver, nil)
+
+	var got string
+	m.SetHarnessMetadataSessionUpdater(func(sessionID string) {
+		got = sessionID
+	})
+
+	m.Update(cli.SystemInitEvent{SessionID: "sess-harness", Model: "m1"})
+
+	if got != "sess-harness" {
+		t.Errorf("harness updater sessionID = %q; want %q", got, "sess-harness")
 	}
 }
 

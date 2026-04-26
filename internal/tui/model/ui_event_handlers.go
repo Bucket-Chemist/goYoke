@@ -5,6 +5,8 @@
 package model
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,6 +18,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/Bucket-Chemist/goYoke/internal/subcmd/utils/harness"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/cli"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/agents"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/drawer"
@@ -219,6 +222,7 @@ func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model
 		m.updateHintContext()
 		m.updateBreadcrumbs()
 		m.propagateContentSizes()
+		m.publishSnapshot() // modal request: status → waiting_modal
 		return m, nil
 	}
 
@@ -227,6 +231,7 @@ func (m AppModel) handleBridgeModalRequest(msg BridgeModalRequestMsg) (tea.Model
 		cmd := m.shared.permHandler.HandleBridgeRequest(
 			msg.RequestID, msg.Message, msg.Options,
 		)
+		m.publishSnapshot() // modal request: status → waiting_modal
 		return m, cmd
 	}
 	return m, nil
@@ -257,6 +262,7 @@ func (m AppModel) handleCLIPermissionRequest(msg CLIPermissionRequestMsg) (tea.M
 	cmd := m.shared.permHandler.HandlePermGateRequest(
 		msg.RequestID, message, options, msg.TimeoutMS,
 	)
+	m.publishSnapshot() // permission request: status → waiting_permission
 	return m, cmd
 }
 
@@ -343,6 +349,7 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 		}
 		// Whether confirmed or cancelled, restore focus to the agent tree.
 		m.focus = FocusAgents
+		m.publishSnapshot() // modal resolved: agent kill confirmed/cancelled
 		return m, nil
 	}
 
@@ -365,6 +372,7 @@ func (m AppModel) handleModalResponse(msg modals.ModalResponseMsg) (tea.Model, t
 			}
 		}
 	}
+	m.publishSnapshot() // modal/permission resolved: status may revert to idle
 	return m, cmd
 }
 
@@ -446,6 +454,7 @@ func (m AppModel) handleAgentRegistryMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.shared.agentRegistry.InvalidateTreeCache()
 	m.agentTree.SetNodes(m.shared.agentRegistry.Tree())
 	m.statusLine.AgentStats = m.shared.agentRegistry.Count()
+	m.publishSnapshot() // agent update: agent count or status changed
 	return m, m.agentTree.MaybeStartPulseTick()
 }
 
@@ -558,6 +567,7 @@ func (m AppModel) handleCWDChanged(msg CWDChangedMsg) (tea.Model, tea.Cmd) {
 	os.Setenv("GOYOKE_CWD", msg.Path)
 	m.statusLine.CWD = msg.Path
 	log.Printf("[cwd] changed to %s", msg.Path)
+	m.publishSnapshot() // cwd change: CWD field updated
 	return m, func() tea.Msg {
 		return ToastMsg{Text: "CWD: " + msg.Path, Level: ToastLevelInfo}
 	}
@@ -683,6 +693,7 @@ func (m AppModel) handleTeamUpdate(msg TeamUpdateMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	m.publishSnapshot() // team update: team summary changed
 	return m, tea.Batch(cmds...)
 }
 
@@ -869,6 +880,7 @@ func (m AppModel) handleModelSwitchRequest(msg ModelSwitchRequestMsg) (tea.Model
 		}
 	}
 
+	appModel.publishSnapshot() // model switch: CLI restarting; handleSystemInit publishes the new model
 	return appModel, tea.Batch(cmd, toastCmd)
 }
 
@@ -961,6 +973,7 @@ func (m AppModel) handleEffortChangeRequest(msg EffortChangeRequestMsg) (tea.Mod
 		}
 	}
 
+	appModel.publishSnapshot() // effort change: activeEffort updated
 	return appModel, tea.Batch(cmd, toastCmd)
 }
 
@@ -1055,6 +1068,7 @@ func (m AppModel) handleDrawerModalResponse(msg drawer.ModalResponseMsg) (tea.Mo
 			m.propagateContentSizes()
 		}
 	}
+	m.publishSnapshot() // drawer modal resolved: pending prompt cleared
 	return m, nil
 }
 
@@ -1090,6 +1104,7 @@ func (m AppModel) handleShutdownRequest() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.shutdownInProgress = true
+	m.publishSnapshot() // shutdown: status → shutting_down
 	if m.shared != nil && m.shared.shutdownFunc != nil {
 		shutdownFn := m.shared.shutdownFunc
 		return m, func() tea.Msg {
@@ -1234,6 +1249,62 @@ func (m AppModel) handleFiguresContent(msg drawer.FiguresContentMsg) (tea.Model,
 		m.shared.figuresState = drawer.FiguresState{Diagrams: msg.Diagrams, Selected: 0}
 		m.shared.drawerStack.SetFiguresContent(drawer.FormatFiguresContent(m.shared.figuresState))
 	}
+	return m, nil
+}
+
+// handleHarnessLink handles HarnessLinkRequestMsg: runs harness.RunLink in a
+// goroutine and sends back HarnessResultMsg.
+func (m AppModel) handleHarnessLink(msg HarnessLinkRequestMsg) (tea.Model, tea.Cmd) {
+	provider := msg.Provider
+	return m, func() tea.Msg {
+		var buf bytes.Buffer
+		err := harness.RunLink(context.Background(), []string{provider}, nil, &buf)
+		return HarnessResultMsg{Command: "/link-harness", Output: buf.String(), Err: err}
+	}
+}
+
+// handleHarnessUnlink handles HarnessUnlinkRequestMsg: runs harness.RunUnlink
+// in a goroutine and sends back HarnessResultMsg.
+func (m AppModel) handleHarnessUnlink(msg HarnessUnlinkRequestMsg) (tea.Model, tea.Cmd) {
+	provider := msg.Provider
+	return m, func() tea.Msg {
+		var buf bytes.Buffer
+		err := harness.RunUnlink(context.Background(), []string{provider}, nil, &buf)
+		return HarnessResultMsg{Command: "/unlink-harness", Output: buf.String(), Err: err}
+	}
+}
+
+// handleHarnessStatus handles HarnessStatusRequestMsg: runs harness.RunStatus
+// in a goroutine and sends back HarnessResultMsg.
+func (m AppModel) handleHarnessStatus() (tea.Model, tea.Cmd) {
+	return m, func() tea.Msg {
+		var buf bytes.Buffer
+		err := harness.RunStatus(context.Background(), nil, nil, &buf)
+		return HarnessResultMsg{Command: "/harness-status", Output: buf.String(), Err: err}
+	}
+}
+
+// handleHarnessResult handles HarnessResultMsg: appends the harness operation
+// output to the conversation as a system message and shows an error toast on failure.
+func (m AppModel) handleHarnessResult(msg HarnessResultMsg) (tea.Model, tea.Cmd) {
+	if m.shared == nil || m.shared.claudePanel == nil {
+		return m, nil
+	}
+	if msg.Err != nil {
+		text := msg.Command + ": " + msg.Err.Error()
+		if msg.Output != "" {
+			text += "\n" + strings.TrimRight(msg.Output, "\n")
+		}
+		m.shared.claudePanel.AppendSystemMessage(text)
+		return m, func() tea.Msg {
+			return ToastMsg{Text: msg.Command + " failed", Level: ToastLevelError}
+		}
+	}
+	output := strings.TrimRight(msg.Output, "\n")
+	if output == "" {
+		output = msg.Command + ": done"
+	}
+	m.shared.claudePanel.AppendSystemMessage(output)
 	return m, nil
 }
 

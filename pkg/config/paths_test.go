@@ -1648,3 +1648,366 @@ func TestGetGuardLockPath_IncludesSessionID(t *testing.T) {
 		t.Errorf("Expected %q, got %q", expected, path)
 	}
 }
+
+// Harness path helper tests
+
+func TestGetHarnessRuntimeDir_XDGRuntime(t *testing.T) {
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	testDir := t.TempDir()
+	os.Setenv("XDG_RUNTIME_DIR", testDir)
+	os.Unsetenv("XDG_CACHE_HOME")
+
+	dir := GetHarnessRuntimeDir()
+	expected := filepath.Join(testDir, "goyoke", "harness")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("Expected harness runtime dir to exist: %v", err)
+	}
+	if !info.IsDir() {
+		t.Error("Expected harness runtime dir to be a directory")
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected permissions 0700, got %o", info.Mode().Perm())
+	}
+}
+
+func TestGetHarnessRuntimeDir_XDGCacheFallback(t *testing.T) {
+	origRuntime := os.Getenv("XDG_RUNTIME_DIR")
+	origCache := os.Getenv("XDG_CACHE_HOME")
+	defer func() {
+		os.Setenv("XDG_RUNTIME_DIR", origRuntime)
+		os.Setenv("XDG_CACHE_HOME", origCache)
+	}()
+
+	os.Unsetenv("XDG_RUNTIME_DIR")
+	testDir := t.TempDir()
+	os.Setenv("XDG_CACHE_HOME", testDir)
+
+	dir := GetHarnessRuntimeDir()
+	expected := filepath.Join(testDir, "goyoke", "harness")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("Expected harness runtime dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected permissions 0700, got %o", info.Mode().Perm())
+	}
+}
+
+func TestGetHarnessRuntimeDir_IsolatedFromTopLevel(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	harnessDir := GetHarnessRuntimeDir()
+	goyokeDir := GetgoYokeDir()
+
+	// Harness dir must be strictly nested inside goyoke dir
+	if !strings.HasPrefix(harnessDir, goyokeDir+string(filepath.Separator)) {
+		t.Errorf("Harness dir %q must be nested under goyoke dir %q", harnessDir, goyokeDir)
+	}
+	if filepath.Base(harnessDir) != "harness" {
+		t.Errorf("Harness dir must end in /harness, got %q", harnessDir)
+	}
+}
+
+// shortTempDir creates a temp dir under os.TempDir() with a short prefix,
+// keeping the path short enough to satisfy the 107-byte Unix socket limit in tests.
+func shortTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp(os.TempDir(), "gy")
+	if err != nil {
+		t.Fatalf("Failed to create short temp dir: %v", err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	return dir
+}
+
+func TestGetHarnessSocketPath_ValidPID(t *testing.T) {
+	testDir := shortTempDir(t)
+	t.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	path, err := GetHarnessSocketPath(12345)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	expected := filepath.Join(testDir, "goyoke", "harness", "goyoke-harness-12345.sock")
+	if path != expected {
+		t.Errorf("Expected %q, got %q", expected, path)
+	}
+}
+
+func TestGetHarnessSocketPath_NamingDistinctFromMCPBridge(t *testing.T) {
+	testDir := shortTempDir(t)
+	t.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	path, err := GetHarnessSocketPath(99)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	base := filepath.Base(path)
+	if !strings.HasPrefix(base, "goyoke-harness-") {
+		t.Errorf("Socket name %q must start with goyoke-harness-", base)
+	}
+	if !strings.HasSuffix(base, ".sock") {
+		t.Errorf("Socket name %q must end with .sock", base)
+	}
+	// Must not match the MCP bridge pattern goyoke-{pid}.sock
+	if base == fmt.Sprintf("goyoke-%d.sock", 99) {
+		t.Errorf("Socket name %q collides with MCP bridge pattern", base)
+	}
+}
+
+func TestGetHarnessSocketPath_LengthLimit(t *testing.T) {
+	// Construct a realistically long XDG_RUNTIME_DIR that exceeds 107 bytes
+	// once the socket filename is appended.
+	// Format: {dir}/goyoke/harness/goyoke-harness-99999.sock
+	// filename alone = 26 chars, so dir must push total > 107
+	longBase := t.TempDir()
+	// Pad the base dir with a long subdirectory name so total path > 107
+	nestedDir := filepath.Join(longBase, strings.Repeat("x", 80))
+	if err := os.MkdirAll(nestedDir, 0755); err != nil {
+		t.Fatalf("Failed to create long dir: %v", err)
+	}
+	t.Setenv("XDG_RUNTIME_DIR", nestedDir)
+
+	_, err := GetHarnessSocketPath(99999)
+	if err == nil {
+		// Calculate what the actual path length would be to provide a useful message
+		dir := GetHarnessRuntimeDir()
+		path := filepath.Join(dir, "goyoke-harness-99999.sock")
+		if len(path) <= 107 {
+			t.Skip("Long path did not actually exceed 107 bytes on this system; skipping length limit test")
+		}
+		t.Fatal("Expected error for socket path exceeding 107 bytes, got nil")
+	}
+	if !strings.Contains(err.Error(), "107") {
+		t.Errorf("Error message should mention 107-byte limit, got: %v", err)
+	}
+}
+
+func TestGetHarnessSocketPath_InPrivateSubdirectory(t *testing.T) {
+	testDir := shortTempDir(t)
+	t.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	path, err := GetHarnessSocketPath(1)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Socket must live inside a harness subdirectory, not directly in goyoke root
+	parent := filepath.Dir(path)
+	if filepath.Base(parent) != "harness" {
+		t.Errorf("Socket parent dir %q must be the harness leaf, not a broad shared root", parent)
+	}
+
+	// Socket must not be directly under XDG_RUNTIME_DIR
+	if filepath.Dir(path) == testDir {
+		t.Errorf("Socket %q must not be directly in XDG_RUNTIME_DIR %q", path, testDir)
+	}
+}
+
+func TestGetHarnessActiveMetadataPath(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	path := GetHarnessActiveMetadataPath()
+	expected := filepath.Join(testDir, "goyoke", "harness", "active.json")
+
+	if path != expected {
+		t.Errorf("Expected %q, got %q", expected, path)
+	}
+	if filepath.Base(path) != "active.json" {
+		t.Errorf("Expected filename active.json, got %q", filepath.Base(path))
+	}
+	// Must live in the harness runtime dir
+	if filepath.Dir(path) != GetHarnessRuntimeDir() {
+		t.Errorf("Active metadata must be in harness runtime dir, got parent %q", filepath.Dir(path))
+	}
+}
+
+func TestGetHarnessDataDir_XDGData(t *testing.T) {
+	origData := os.Getenv("XDG_DATA_HOME")
+	defer os.Setenv("XDG_DATA_HOME", origData)
+
+	testDir := t.TempDir()
+	os.Setenv("XDG_DATA_HOME", testDir)
+
+	dir := GetHarnessDataDir()
+	expected := filepath.Join(testDir, "goyoke", "harness")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("Expected harness data dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected permissions 0700, got %o", info.Mode().Perm())
+	}
+}
+
+func TestGetHarnessDataDir_XDGDataFallback(t *testing.T) {
+	origData := os.Getenv("XDG_DATA_HOME")
+	origHome := os.Getenv("HOME")
+	defer func() {
+		os.Setenv("XDG_DATA_HOME", origData)
+		os.Setenv("HOME", origHome)
+	}()
+
+	os.Unsetenv("XDG_DATA_HOME")
+	home := t.TempDir()
+	os.Setenv("HOME", home)
+
+	dir := GetHarnessDataDir()
+	expected := filepath.Join(home, ".local", "share", "goyoke", "harness")
+
+	if dir != expected {
+		t.Errorf("Expected %s, got %s", expected, dir)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("Expected harness data dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected permissions 0700, got %o", info.Mode().Perm())
+	}
+}
+
+func TestGetHarnessDataDir_IsolatedFromTopLevel(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", testDir)
+
+	harnessDir := GetHarnessDataDir()
+	dataDir := GetgoYokeDataDir()
+
+	if !strings.HasPrefix(harnessDir, dataDir+string(filepath.Separator)) {
+		t.Errorf("Harness data dir %q must be nested under goyoke data dir %q", harnessDir, dataDir)
+	}
+	if filepath.Base(harnessDir) != "harness" {
+		t.Errorf("Harness data dir must end in /harness, got %q", harnessDir)
+	}
+}
+
+func TestGetHarnessLinksDir(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", testDir)
+
+	dir := GetHarnessLinksDir()
+	expected := filepath.Join(testDir, "goyoke", "harness", "links")
+
+	if dir != expected {
+		t.Errorf("Expected %q, got %q", expected, dir)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("Expected harness links dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected permissions 0700, got %o", info.Mode().Perm())
+	}
+
+	// Must be nested under harness data dir
+	harnessDataDir := GetHarnessDataDir()
+	if !strings.HasPrefix(dir, harnessDataDir+string(filepath.Separator)) {
+		t.Errorf("Links dir %q must be nested under harness data dir %q", dir, harnessDataDir)
+	}
+}
+
+func TestGetHarnessProviderDir_TwoDistinctProviders(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", testDir)
+
+	for _, provider := range []string{"anthropic", "openai"} {
+		dir, err := GetHarnessProviderDir(provider)
+		if err != nil {
+			t.Fatalf("GetHarnessProviderDir(%q): unexpected error: %v", provider, err)
+		}
+
+		expected := filepath.Join(testDir, "goyoke", "harness", "providers", provider)
+		if dir != expected {
+			t.Errorf("Provider %q: expected %q, got %q", provider, expected, dir)
+		}
+
+		info, err := os.Stat(dir)
+		if err != nil {
+			t.Fatalf("Provider dir %q must exist: %v", dir, err)
+		}
+		if info.Mode().Perm() != 0700 {
+			t.Errorf("Provider dir %q: expected permissions 0700, got %o", dir, info.Mode().Perm())
+		}
+		if !info.IsDir() {
+			t.Errorf("Provider dir %q must be a directory", dir)
+		}
+	}
+}
+
+func TestGetHarnessProviderDir_EmptyNameReturnsError(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", testDir)
+
+	_, err := GetHarnessProviderDir("")
+	if err == nil {
+		t.Fatal("Expected error for empty provider name, got nil")
+	}
+	if !strings.Contains(err.Error(), "empty") {
+		t.Errorf("Expected 'empty' in error message, got: %v", err)
+	}
+}
+
+func TestGetHarnessProviderDir_PathTraversalRejected(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_DATA_HOME", testDir)
+
+	badNames := []string{"..", ".", "../other", "a/b", "a\\b"}
+	for _, name := range badNames {
+		_, err := GetHarnessProviderDir(name)
+		if err == nil {
+			t.Errorf("Expected error for unsafe provider name %q, got nil", name)
+		}
+	}
+}
+
+func TestGetHarnessRuntimeDir_PermissionsEnforced(t *testing.T) {
+	testDir := t.TempDir()
+	t.Setenv("XDG_RUNTIME_DIR", testDir)
+
+	// Pre-create the harness dir with broad permissions
+	goyokeDir := filepath.Join(testDir, "goyoke")
+	harnessDir := filepath.Join(goyokeDir, "harness")
+	if err := os.MkdirAll(harnessDir, 0755); err != nil {
+		t.Fatalf("Failed to pre-create harness dir: %v", err)
+	}
+
+	// GetHarnessRuntimeDir should tighten permissions to 0700
+	result := GetHarnessRuntimeDir()
+
+	info, err := os.Stat(result)
+	if err != nil {
+		t.Fatalf("Expected harness dir to exist: %v", err)
+	}
+	if info.Mode().Perm() != 0700 {
+		t.Errorf("Expected 0700 after enforcement, got %o", info.Mode().Perm())
+	}
+}

@@ -3,10 +3,11 @@
 # Purpose: Convenient task automation
 
 BINARY_NAME=goyoke
+DEV_BINARY_NAME=goyoke-dev
 VERSION=$(shell git describe --tags --always --dirty)
 LDFLAGS=-ldflags "-X main.version=${VERSION} -X github.com/Bucket-Chemist/goYoke/internal/hooks/version.Version=${VERSION}"
 
-.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-codebase-extract install install-archive install-aggregate install-wrapper install-load-context install-codebase-extract uninstall uninstall-aggregate check-path clean defaults dist check-size clean-defaults test-defaults test-zero-install dev-setup test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes test-codebase-extract-coverage all
+.PHONY: help test test-ecosystem test-unit test-integration test-race coverage build build-tui build-legacy build-hooks build-archive build-validate build-aggregate build-sharp-edge build-capture-intent build-load-context build-codebase-extract install install-dev install-archive install-aggregate install-wrapper install-load-context install-codebase-extract uninstall uninstall-dev uninstall-aggregate check-path clean defaults dist check-size clean-defaults test-defaults test-zero-install dev-setup test-simulation test-simulation-fuzz test-simulation-deterministic test-simulation-posttooluse test-simulation-replay test-simulation-behavioral test-simulation-chaos test-simulation-behavioral-all replay-crash clean-simulation test-sharp-edge-unit test-sharp-edge-integration test-sharp-edge-coverage test-sharp-edge-all telemetry-tools check-claude-writes test-codebase-extract-coverage all
 
 help:
 	@echo "goYoke - Available targets:"
@@ -215,6 +216,16 @@ install: build check-path
 	@echo ""
 	@$(MAKE) check-path
 
+install-dev: build check-path
+	@echo "Installing development goyoke binary to ~/.local/bin/$(DEV_BINARY_NAME)..."
+	@mkdir -p ~/.local/bin
+	@cp bin/goyoke ~/.local/bin/$(DEV_BINARY_NAME)
+	@chmod +x ~/.local/bin/$(DEV_BINARY_NAME)
+	@echo "✅ Installed development binary: ~/.local/bin/$(DEV_BINARY_NAME)"
+	@echo "Use $(DEV_BINARY_NAME) to avoid colliding with packaged 'goyoke' installs."
+	@echo ""
+	@$(MAKE) check-path
+
 install-archive: build-archive
 	@echo "Installing goyoke-archive to ~/.local/bin/..."
 	mkdir -p ~/.local/bin
@@ -282,6 +293,7 @@ check-path:
 
 uninstall:
 	@echo "Uninstalling goYoke CLIs from ~/.local/bin/..."
+	rm -f ~/.local/bin/goyoke
 	rm -f ~/.local/bin/goyoke-validate
 	rm -f ~/.local/bin/goyoke-archive
 	rm -f ~/.local/bin/goyoke-aggregate
@@ -294,6 +306,11 @@ uninstall:
 	rm -f ~/.local/bin/goyoke-log-review
 	rm -f ~/.local/bin/goyoke-codebase-extract
 	@echo "✅ Uninstalled all CLIs"
+
+uninstall-dev:
+	@echo "Removing $(DEV_BINARY_NAME) from ~/.local/bin/..."
+	rm -f ~/.local/bin/$(DEV_BINARY_NAME)
+	@echo "✅ Uninstalled ~/.local/bin/$(DEV_BINARY_NAME)"
 
 uninstall-aggregate:
 	@echo "Removing goyoke-aggregate from ~/.local/bin/..."
@@ -493,8 +510,13 @@ test-zero-install: defaults
 
 clean-defaults:
 	@echo "Cleaning defaults/ generated content..."
-	@find defaults/ -mindepth 1 -not -name embed.go -delete 2>/dev/null || true
-	@echo "✓ defaults/ cleaned (embed.go preserved)"
+	@find defaults/ -mindepth 1 \
+		-not -name embed.go \
+		-not -name settings-template.json \
+		-not -path 'defaults/harnesses' \
+		-not -path 'defaults/harnesses/*' \
+		-delete 2>/dev/null || true
+	@echo "✓ defaults/ cleaned (tracked assets preserved)"
 
 # CI check: ensure no residual .claude/ runtime write paths in production code
 check-claude-writes:

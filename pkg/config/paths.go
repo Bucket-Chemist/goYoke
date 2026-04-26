@@ -486,3 +486,113 @@ func GetGuardFilePath(sessionID string) string {
 func GetGuardLockPath(sessionID string) string {
 	return filepath.Join(GetGuardsDir(), sessionID+".lock")
 }
+
+// harnessLeaf is the subdirectory name for harness files within XDG roots.
+// Using a dedicated leaf prevents harness socket/metadata files from being
+// mixed with the top-level goYoke runtime or data files.
+const harnessLeaf = "harness"
+
+// GetHarnessRuntimeDir returns the private runtime directory for the harness.
+// The directory is created as a 0700 leaf under GetgoYokeDir()/harness,
+// ensuring it is private to the current user even when the parent XDG
+// runtime dir has broader permissions.
+func GetHarnessRuntimeDir() string {
+	base := GetgoYokeDir()
+	dir := filepath.Join(base, harnessLeaf)
+	if err := ensureWritableDirWithPerm(dir, 0700, true); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create harness runtime dir at %s: %v\n", dir, err)
+	}
+	return dir
+}
+
+// GetHarnessSocketPath returns the Unix domain socket path for a given PID.
+// The socket is named goyoke-harness-{pid}.sock — the "harness" infix makes
+// it visually distinct from the MCP bridge socket (goyoke-{pid}.sock).
+//
+// Returns an error if:
+//   - the generated path exceeds 107 bytes (Unix socket path limit)
+//   - the socket directory coincides with a broad shared root (XDG_RUNTIME_DIR,
+//     XDG_CACHE_HOME, or the OS temp dir) rather than a private subdirectory
+func GetHarnessSocketPath(pid int) (string, error) {
+	dir := GetHarnessRuntimeDir()
+
+	// Guard: socket must not be placed directly in a broad shared root.
+	// Check against known shared directories so that a misconfigured XDG env
+	// cannot silently expose the control socket to other users.
+	broadRoots := []string{os.TempDir()}
+	for _, xdgVar := range []string{"XDG_RUNTIME_DIR", "XDG_CACHE_HOME"} {
+		if v := os.Getenv(xdgVar); v != "" {
+			broadRoots = append(broadRoots, v)
+		}
+	}
+	cleanDir := filepath.Clean(dir)
+	for _, root := range broadRoots {
+		if root != "" && cleanDir == filepath.Clean(root) {
+			return "", fmt.Errorf(
+				"harness socket dir %q must not be a broad shared root; ensure it is a private subdirectory",
+				dir,
+			)
+		}
+	}
+
+	path := filepath.Join(dir, fmt.Sprintf("goyoke-harness-%d.sock", pid))
+
+	// Unix domain sockets have a hard limit of 108 bytes on Linux
+	// (including the null terminator). Stay under 107 to be safe.
+	if len(path) > 107 {
+		return "", fmt.Errorf(
+			"harness socket path exceeds 107-byte Unix socket limit: %q (%d bytes)",
+			path, len(path),
+		)
+	}
+
+	return path, nil
+}
+
+// GetHarnessActiveMetadataPath returns the path for the active harness endpoint
+// metadata JSON file. The file is written at harness startup and removed on
+// clean shutdown, allowing adapters to discover the live endpoint.
+func GetHarnessActiveMetadataPath() string {
+	return filepath.Join(GetHarnessRuntimeDir(), "active.json")
+}
+
+// GetHarnessDataDir returns the private persistent data directory for the
+// harness. Manifests, bundle cache, and link databases are stored here.
+// The directory is created as a 0700 leaf under GetgoYokeDataDir()/harness.
+func GetHarnessDataDir() string {
+	base := GetgoYokeDataDir()
+	dir := filepath.Join(base, harnessLeaf)
+	if err := ensureWritableDirWithPerm(dir, 0700, true); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create harness data dir at %s: %v\n", dir, err)
+	}
+	return dir
+}
+
+// GetHarnessLinksDir returns the directory for harness link manifests.
+func GetHarnessLinksDir() string {
+	dir := filepath.Join(GetHarnessDataDir(), "links")
+	if err := ensureWritableDirWithPerm(dir, 0700, true); err != nil {
+		fmt.Fprintf(os.Stderr, "[config] Failed to create harness links dir at %s: %v\n", dir, err)
+	}
+	return dir
+}
+
+// GetHarnessProviderDir returns the per-provider bundle directory under the
+// harness data dir. provider must be a non-empty simple identifier with no
+// path separators or traversal components.
+func GetHarnessProviderDir(provider string) (string, error) {
+	if provider == "" {
+		return "", fmt.Errorf("harness provider name must not be empty")
+	}
+	if provider == "." || provider == ".." {
+		return "", fmt.Errorf("harness provider name must not be a path traversal component: %q", provider)
+	}
+	if strings.ContainsAny(provider, "/\\") {
+		return "", fmt.Errorf("harness provider name must not contain path separators: %q", provider)
+	}
+	dir := filepath.Join(GetHarnessDataDir(), "providers", provider)
+	if err := ensureWritableDirWithPerm(dir, 0700, true); err != nil {
+		return "", fmt.Errorf("harness provider dir for %q: %w", provider, err)
+	}
+	return dir, nil
+}

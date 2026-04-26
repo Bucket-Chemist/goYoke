@@ -12,11 +12,15 @@ func TestPrepareStagesEmbeddedSkillsAndCredentials(t *testing.T) {
 
 	nativeHome := t.TempDir()
 	sourceCreds := filepath.Join(nativeHome, ".claude", ".credentials.json")
+	sourceAccountState := filepath.Join(nativeHome, ".claude.json")
 	if err := os.MkdirAll(filepath.Dir(sourceCreds), 0o755); err != nil {
 		t.Fatalf("create native claude dir: %v", err)
 	}
 	if err := os.WriteFile(sourceCreds, []byte(`{"token":"secret"}`), 0o600); err != nil {
 		t.Fatalf("write native credentials: %v", err)
+	}
+	if err := os.WriteFile(sourceAccountState, []byte(`{"oauthAccount":{"emailAddress":"user@example.com"}}`), 0o600); err != nil {
+		t.Fatalf("write native account state: %v", err)
 	}
 
 	src := fstest.MapFS{
@@ -76,8 +80,72 @@ func TestPrepareStagesEmbeddedSkillsAndCredentials(t *testing.T) {
 		t.Fatalf("staged credentials = %q", string(credsData))
 	}
 
+	accountStateData, err := os.ReadFile(filepath.Join(layout.ConfigDir, ".claude.json"))
+	if err != nil {
+		t.Fatalf("read staged account state: %v", err)
+	}
+	if string(accountStateData) != `{"oauthAccount":{"emailAddress":"user@example.com"}}` {
+		t.Fatalf("staged account state = %q", string(accountStateData))
+	}
+
 	if layout.ConfigDir != filepath.Join(layout.FakeHomeDir, ".claude") {
 		t.Fatalf("default config dir should live under fake HOME, got config=%s fakeHome=%s", layout.ConfigDir, layout.FakeHomeDir)
+	}
+}
+
+func TestPrepareRemovesStaleAuthStateWhenNativeFilesDisappear(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+
+	nativeHome := t.TempDir()
+	sourceCreds := filepath.Join(nativeHome, ".claude", ".credentials.json")
+	sourceAccountState := filepath.Join(nativeHome, ".claude.json")
+	if err := os.MkdirAll(filepath.Dir(sourceCreds), 0o755); err != nil {
+		t.Fatalf("create native claude dir: %v", err)
+	}
+	if err := os.WriteFile(sourceCreds, []byte(`{"token":"secret"}`), 0o600); err != nil {
+		t.Fatalf("write native credentials: %v", err)
+	}
+	if err := os.WriteFile(sourceAccountState, []byte(`{"oauthAccount":{"emailAddress":"user@example.com"}}`), 0o600); err != nil {
+		t.Fatalf("write native account state: %v", err)
+	}
+
+	src := fstest.MapFS{
+		"agents/agents-index.json": {Data: []byte(`{"agents":[]}`)},
+		"routing-schema.json":      {Data: []byte(`{}`)},
+		"CLAUDE.md":                {Data: []byte("# Claude")},
+		"settings-template.json":   {Data: []byte(`{}`)},
+	}
+
+	layout, err := Prepare(PrepareOptions{
+		EmbeddedFS: src,
+		NativeHome: nativeHome,
+	})
+	if err != nil {
+		t.Fatalf("first Prepare returned error: %v", err)
+	}
+
+	if err := os.Remove(sourceCreds); err != nil {
+		t.Fatalf("remove native credentials: %v", err)
+	}
+	if err := os.Remove(sourceAccountState); err != nil {
+		t.Fatalf("remove native account state: %v", err)
+	}
+
+	if _, err := Prepare(PrepareOptions{
+		EmbeddedFS: src,
+		ConfigDir:  layout.ConfigDir,
+		NativeHome: nativeHome,
+	}); err != nil {
+		t.Fatalf("second Prepare returned error: %v", err)
+	}
+
+	for _, path := range []string{
+		filepath.Join(layout.ConfigDir, ".credentials.json"),
+		filepath.Join(layout.ConfigDir, ".claude.json"),
+	} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("expected stale auth file %s to be removed, stat err=%v", path, err)
+		}
 	}
 }
 

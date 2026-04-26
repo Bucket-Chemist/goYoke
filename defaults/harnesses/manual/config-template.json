@@ -1,0 +1,15 @@
+{
+  "_note": "Configuration template for the goYoke manual harness adapter. Copy and fill in socket_path.",
+  "protocol": "harness-link",
+  "protocol_version": "1.0.0",
+  "provider": "manual",
+  "socket_path": "",
+  "connect_instructions": [
+    "1. Start goYoke — the TUI creates the control socket on startup.",
+    "2. Run 'goyoke harness status' or 'goyoke harness print-config manual' to find socket_path.",
+    "3. Open a SOCK_STREAM connection to socket_path.",
+    "4. Exchange newline-delimited JSON: send Request envelopes, read Response envelopes.",
+    "5. Supported kinds: submit_prompt, get_snapshot.",
+    "6. The socket_path changes on each goYoke restart — do not cache it across sessions."
+  ]
+}

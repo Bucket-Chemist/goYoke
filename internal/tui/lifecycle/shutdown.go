@@ -51,6 +51,12 @@ type ShutdownOpts struct {
 	// Bridge is the UDS IPC server. May be nil; bridge phase is skipped.
 	Bridge BridgeShutdownable
 
+	// HarnessStop is called before CLI interrupt to stop the harness control
+	// server and remove its discovery metadata. It must stop accepting new
+	// connections and drain any in-flight requests before returning. May be nil;
+	// harness phase is skipped.
+	HarnessStop func() error
+
 	// SessionSaver is called first during shutdown to persist session state.
 	// May be nil; save phase is skipped.
 	SessionSaver func()
@@ -82,13 +88,15 @@ type ShutdownOpts struct {
 //
 // Shutdown sequence (10 s total budget by default):
 //  1. Save session  (fast, atomic write)
-//  2. Interrupt CLI (SIGINT) then wait CLIBudget
-//  3. Shutdown CLI  (SIGTERM → SIGKILL escalation) then wait briefly
-//  4. Shutdown bridge
-//  5. Wait HookBudget for Go runtime hooks
+//  2. Stop harness control server (if enabled)
+//  3. Interrupt CLI (SIGINT) then wait CLIBudget
+//  4. Shutdown CLI  (SIGTERM → SIGKILL escalation) then wait briefly
+//  5. Shutdown bridge
+//  6. Wait HookBudget for Go runtime hooks
 type ShutdownManager struct {
 	driver       Shutdownable
 	bridge       BridgeShutdownable
+	harnessStop  func() error
 	sessionSaver func()
 	onStatus     func(string)
 	totalBudget  time.Duration
@@ -119,6 +127,7 @@ func NewShutdownManager(opts ShutdownOpts) *ShutdownManager {
 	return &ShutdownManager{
 		driver:       opts.Driver,
 		bridge:       opts.Bridge,
+		harnessStop:  opts.HarnessStop,
 		sessionSaver: opts.SessionSaver,
 		onStatus:     opts.OnStatus,
 		totalBudget:  total,
@@ -159,7 +168,19 @@ func (sm *ShutdownManager) Shutdown() error {
 	}
 
 	// ---------------------------------------------------------------------------
-	// Phase 2: Interrupt CLI (SIGINT) then wait cliBudget
+	// Phase 2: Stop harness control server (before CLI, so adapters see the
+	// endpoint go dark before the session starts tearing down).
+	// ---------------------------------------------------------------------------
+
+	sm.status("Stopping harness server...")
+	if sm.harnessStop != nil {
+		if err := sm.harnessStop(); err != nil {
+			sm.status(fmt.Sprintf("harness stop warning: %v", err))
+		}
+	}
+
+	// ---------------------------------------------------------------------------
+	// Phase 3: Interrupt CLI (SIGINT) then wait cliBudget
 	// ---------------------------------------------------------------------------
 
 	sm.status("Stopping CLI...")
@@ -180,7 +201,7 @@ func (sm *ShutdownManager) Shutdown() error {
 		}
 
 		// ---------------------------------------------------------------------------
-		// Phase 3: Shutdown CLI (SIGTERM → SIGKILL escalation) then brief wait
+		// Phase 4: Shutdown CLI (SIGTERM → SIGKILL escalation) then brief wait
 		// ---------------------------------------------------------------------------
 
 		_ = sm.driver.Shutdown()
@@ -199,7 +220,7 @@ func (sm *ShutdownManager) Shutdown() error {
 	}
 
 	// ---------------------------------------------------------------------------
-	// Phase 4: Shutdown bridge (AFTER driver)
+	// Phase 5: Shutdown bridge (AFTER driver)
 	// ---------------------------------------------------------------------------
 
 	sm.status("Closing bridge...")
@@ -208,7 +229,7 @@ func (sm *ShutdownManager) Shutdown() error {
 	}
 
 	// ---------------------------------------------------------------------------
-	// Phase 5: Wait for hooks
+	// Phase 6: Wait for hooks
 	// ---------------------------------------------------------------------------
 
 	sm.status("Waiting for hooks...")

@@ -143,3 +143,14 @@ func (q *ModalQueue) SetTermSize(w, h int) {
 		q.active.SetTermSize(w, h)
 	}
 }
+
+// ActiveRequestMessage returns the message body of the currently active modal,
+// or an empty string when no modal is active. Used by the harness snapshot
+// builder to surface the pending-prompt message without exposing ModalModel
+// internals outside the modals package.
+func (q *ModalQueue) ActiveRequestMessage() string {
+	if q.active == nil {
+		return ""
+	}
+	return q.active.request.Message
+}

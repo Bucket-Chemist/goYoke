@@ -5,6 +5,7 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/hooks/updatereviewoutcome"
 	"github.com/Bucket-Chemist/goYoke/internal/hooks/version"
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd"
+	"github.com/Bucket-Chemist/goYoke/internal/subcmd/utils/harness"
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd/utils/teampreparesynth"
 	"github.com/Bucket-Chemist/goYoke/internal/subcmd/utils/teamrun"
 )
@@ -28,4 +29,7 @@ func RegisterAll(r *subcmd.Registry) {
 	r.Register("validate-schemas", RunValidateSchemas)
 	r.Register("capture-intent", RunCaptureIntent)
 	r.Register("codebase-extract", RunCodebaseExtract)
+
+	// Harness command group: goyoke harness <subcommand>
+	r.RegisterGroup("harness", harness.Commands())
 }

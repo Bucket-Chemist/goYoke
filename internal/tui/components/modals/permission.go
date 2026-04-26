@@ -134,6 +134,20 @@ func (h *PermissionHandler) IsPending(requestID string) bool {
 	return ok
 }
 
+// HasActivePermissionGate reports whether the currently active queued modal
+// belongs to a FlowToolPermission flow. Used by the harness snapshot builder
+// to distinguish tool-permission gates from regular ask/confirm modals.
+func (h *PermissionHandler) HasActivePermissionGate() bool {
+	if h.queue == nil || h.queue.active == nil {
+		return false
+	}
+	flow, ok := h.pending[h.queue.active.request.ID]
+	if !ok {
+		return false
+	}
+	return flow.FlowType == FlowToolPermission
+}
+
 // ---------------------------------------------------------------------------
 // HandleBridgeRequest
 // ---------------------------------------------------------------------------

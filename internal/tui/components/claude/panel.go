@@ -886,6 +886,51 @@ func (m ClaudePanelModel) executeSlashCommand(cmd string) (ClaudePanelModel, tea
 			return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: true}
 		}
 
+	case "/link-harness":
+		if args == "" {
+			m.messages = append(m.messages, DisplayMessage{
+				Role:      "system",
+				Content:   "Usage: /link-harness <provider>",
+				Timestamp: time.Now(),
+			})
+			m.syncViewport()
+			if m.autoScroll {
+				m.vp.GotoBottom()
+			}
+			return m, func() tea.Msg {
+				return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: true}
+			}
+		}
+		provider := args
+		return m, func() tea.Msg {
+			return model.HarnessLinkRequestMsg{Provider: provider}
+		}
+
+	case "/unlink-harness":
+		if args == "" {
+			m.messages = append(m.messages, DisplayMessage{
+				Role:      "system",
+				Content:   "Usage: /unlink-harness <provider>",
+				Timestamp: time.Now(),
+			})
+			m.syncViewport()
+			if m.autoScroll {
+				m.vp.GotoBottom()
+			}
+			return m, func() tea.Msg {
+				return model.SlashExecutedMsg{Command: command, Args: args, IsLocal: true}
+			}
+		}
+		provider := args
+		return m, func() tea.Msg {
+			return model.HarnessUnlinkRequestMsg{Provider: provider}
+		}
+
+	case "/harness-status":
+		return m, func() tea.Msg {
+			return model.HarnessStatusRequestMsg{}
+		}
+
 	default:
 		// Remote command — forward the full slash invocation to the CLI.
 		text := command

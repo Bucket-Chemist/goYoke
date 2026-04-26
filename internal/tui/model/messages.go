@@ -473,3 +473,124 @@ type CWDChangedMsg struct {
 
 // OpenCWDSelectorMsg requests that the CWD selector modal be shown.
 type OpenCWDSelectorMsg struct{}
+
+// ---------------------------------------------------------------------------
+// Remote action messages (HL-005)
+//
+// These messages let the harness control server (HL-006) inject semantic
+// actions into the Bubbletea event loop via program.Send(). All driver and
+// bridge method calls happen on the Bubbletea goroutine — never directly from
+// the control-server goroutine.
+//
+// Each message carries an optional ResponseCh. When non-nil the handler writes
+// a nil error on success or a descriptive error on failure. The channel must
+// be buffered (capacity ≥ 1) so the handler never blocks the event loop.
+// ---------------------------------------------------------------------------
+
+// RemoteSubmitPromptMsg instructs AppModel to submit a user prompt through the
+// existing CLI driver send path. The Bubbletea loop serialises all subprocess
+// writes; callers must never write to the driver stdin directly.
+type RemoteSubmitPromptMsg struct {
+	// Prompt is the text to send to the CLI subprocess.
+	Prompt string
+	// ResponseCh receives nil on success or an error if the driver is not ready.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// RemoteInterruptMsg instructs AppModel to interrupt the active CLI operation
+// via the existing CLIDriver.Interrupt() method.
+type RemoteInterruptMsg struct {
+	// ResponseCh receives nil on success or the Interrupt() error.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// RemoteRespondModalMsg delivers a user response to a pending bridge modal
+// request, reusing the existing bridge.ResolveModalSimple path.
+type RemoteRespondModalMsg struct {
+	// RequestID is the IPC request identifier from the original BridgeModalRequestMsg.
+	RequestID string
+	// Value is the selected option label or free-text response. Empty means cancelled.
+	Value string
+	// ResponseCh receives nil on success or an error if the bridge is not available.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// RemoteRespondPermissionMsg delivers a permission decision to a pending bridge
+// permission gate request, reusing the existing bridge.ResolvePermGate path.
+type RemoteRespondPermissionMsg struct {
+	// RequestID is the IPC request identifier from the original CLIPermissionRequestMsg.
+	RequestID string
+	// Decision is one of "allow", "deny", or "allow_session".
+	Decision string
+	// ResponseCh receives nil on success or an error if the bridge is not available.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// RemoteSetModelMsg changes the active model by reusing the existing
+// handleModelSwitchRequest flow (provider state update + CLI driver restart).
+type RemoteSetModelMsg struct {
+	// ModelID is the model identifier to switch to (e.g. "haiku", "sonnet", "opus").
+	ModelID string
+	// ResponseCh receives nil when the switch request is accepted.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// RemoteSetEffortMsg changes the effort level by reusing the existing
+// handleEffortChangeRequest flow (activeEffort update + CLI driver restart).
+type RemoteSetEffortMsg struct {
+	// Level is the effort level to set. Valid values: "low", "medium", "high", "max".
+	// Empty or "auto" resets to the CLI default (omits the --effort flag).
+	Level string
+	// ResponseCh receives nil when the change request is accepted.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// RemoteSetCWDMsg changes the working directory by reusing the existing
+// handleCWDChanged flow (os.Chdir + GOYOKE_CWD env var update).
+type RemoteSetCWDMsg struct {
+	// Path is the absolute path of the new working directory.
+	Path string
+	// ResponseCh receives nil when the change request is accepted.
+	// Errors from os.Chdir are logged by the delegate; nil is always sent here.
+	// Must be buffered (capacity ≥ 1). May be nil for fire-and-forget.
+	ResponseCh chan<- error
+}
+
+// ---------------------------------------------------------------------------
+// Harness slash command messages (HL-010)
+//
+// These messages are emitted by the Claude panel local slash command handler
+// and consumed by AppModel.  The request messages carry the parsed command
+// arguments; the result message carries the captured stdout and any error.
+// ---------------------------------------------------------------------------
+
+// HarnessLinkRequestMsg is emitted when the user types /link-harness <provider>.
+type HarnessLinkRequestMsg struct {
+	// Provider is the adapter name to link (e.g. "hermes").
+	Provider string
+}
+
+// HarnessUnlinkRequestMsg is emitted when the user types /unlink-harness <provider>.
+type HarnessUnlinkRequestMsg struct {
+	// Provider is the adapter name to unlink.
+	Provider string
+}
+
+// HarnessStatusRequestMsg is emitted when the user types /harness-status.
+type HarnessStatusRequestMsg struct{}
+
+// HarnessResultMsg carries the output of a completed harness slash command.
+type HarnessResultMsg struct {
+	// Command is the originating slash command, e.g. "/link-harness".
+	Command string
+	// Output is the text written to stdout by the harness operation.
+	Output string
+	// Err is non-nil when the harness operation failed.
+	Err error
+}

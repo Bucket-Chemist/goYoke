@@ -17,6 +17,7 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/settingstree"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/statusline"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/observability"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/state"
 )
@@ -155,6 +156,19 @@ type sharedState struct {
 	sessionStore *session.Store
 	sessionData  *session.SessionData
 
+	// ── Observability (HL-004 / HL-004A) ─────────────────────────────────
+	// snapshotStore holds the latest SessionSnapshot and notifies subscribers
+	// on every meaningful state transition. Stored as a pointer so it survives
+	// Bubbletea's value-copy semantics and can be shared with the control server
+	// (HL-006) and downstream relays (HL-013) without coupling to their packages.
+	snapshotStore *observability.SnapshotStore
+	// lastPublishTime records when the last snapshot was published. Used by
+	// publishSnapshotDebounced to rate-limit streaming-token publications.
+	lastPublishTime time.Time
+	// harnessSessionUpdater mirrors the provider/CLI session ID into harness
+	// discovery metadata once SystemInit has assigned it.
+	harnessSessionUpdater func(string)
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────
 	// shutdownFunc is called to trigger the sequenced shutdown (TUI-034).
 	// Stored as a closure so the model package does not import lifecycle.
@@ -274,17 +288,18 @@ func NewAppModel() AppModel {
 	mq := modals.NewModalQueue(keys)
 	defaultTheme := config.DefaultTheme()
 	shared := &sharedState{
-		modalQueue:    &mq,
-		permHandler:   modals.NewPermissionHandler(&mq),
-		agentRegistry: state.NewAgentRegistry(),
-		costTracker:   state.NewCostTracker(),
-		providerState: state.NewProviderState(),
-		activeTheme:   &defaultTheme,
-		themeVariant:  config.ThemeDark,
+		modalQueue:       &mq,
+		permHandler:      modals.NewPermissionHandler(&mq),
+		agentRegistry:    state.NewAgentRegistry(),
+		costTracker:      state.NewCostTracker(),
+		providerState:    state.NewProviderState(),
+		activeTheme:      &defaultTheme,
+		themeVariant:     config.ThemeDark,
 		planViewModal:    modals.NewPlanViewModal(),
 		helpModal:        modals.NewHelpModal(),
 		optionsViewModal: modals.NewOptionsViewModal(),
 		modelModal:       modals.NewModelModal(),
+		snapshotStore:    observability.New(),
 	}
 	m := AppModel{
 		focus:          FocusClaude,
@@ -377,6 +392,15 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleModelModalClosed()
 	case EffortChangeRequestMsg:
 		return m.handleEffortChangeRequest(msg)
+	// Harness slash commands (HL-010)
+	case HarnessLinkRequestMsg:
+		return m.handleHarnessLink(msg)
+	case HarnessUnlinkRequestMsg:
+		return m.handleHarnessUnlink(msg)
+	case HarnessStatusRequestMsg:
+		return m.handleHarnessStatus()
+	case HarnessResultMsg:
+		return m.handleHarnessResult(msg)
 	// Bridge events (MCP server via UDS)
 	case BridgeModalRequestMsg:
 		return m.handleBridgeModalRequest(msg)
@@ -397,6 +421,21 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleOpenCWDSelector()
 	case CWDChangedMsg:
 		return m.handleCWDChanged(msg)
+	// Remote action messages (HL-005) — injected via program.Send() by control server
+	case RemoteSubmitPromptMsg:
+		return m.handleRemoteSubmitPrompt(msg)
+	case RemoteInterruptMsg:
+		return m.handleRemoteInterrupt(msg)
+	case RemoteRespondModalMsg:
+		return m.handleRemoteRespondModal(msg)
+	case RemoteRespondPermissionMsg:
+		return m.handleRemoteRespondPermission(msg)
+	case RemoteSetModelMsg:
+		return m.handleRemoteSetModel(msg)
+	case RemoteSetEffortMsg:
+		return m.handleRemoteSetEffort(msg)
+	case RemoteSetCWDMsg:
+		return m.handleRemoteSetCWD(msg)
 	// Agent and team events
 	case AgentRegisteredMsg, AgentUpdatedMsg, AgentActivityMsg:
 		return m.handleAgentRegistryMsg(msg)

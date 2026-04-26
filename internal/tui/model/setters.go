@@ -161,12 +161,32 @@ func (m *AppModel) SetShutdownManager(sm interface{ Shutdown() error }) {
 	m.shared.shutdownFunc = sm.Shutdown
 }
 
+// SetHarnessMetadataSessionUpdater injects a callback that mirrors the live
+// provider/CLI session ID into harness discovery metadata after SystemInit.
+// The model calls it best-effort; callers own any logging or error handling.
+func (m *AppModel) SetHarnessMetadataSessionUpdater(fn func(string)) {
+	if m.shared != nil {
+		m.shared.harnessSessionUpdater = fn
+	}
+}
+
 // SaveSessionPublic is the public entry point for session save, used by the
 // ShutdownManager's sessionSaver callback.  It delegates to the private
 // saveSession method which snapshots cost, provider state, and conversation
 // histories to disk.
 func (m *AppModel) SaveSessionPublic() {
 	m.saveSession()
+}
+
+// PublishSnapshotPublic primes or refreshes the external snapshot store with
+// the model's current semantic state. Used by startup wiring before the first
+// CLI/UI event so harness clients can inspect an initial session snapshot.
+// It intentionally does not touch the streaming debounce timer.
+func (m *AppModel) PublishSnapshotPublic() {
+	if m.shared == nil || m.shared.snapshotStore == nil {
+		return
+	}
+	m.shared.snapshotStore.Update(m.BuildHarnessSnapshot())
 }
 
 // SetSearchOverlay injects the unified search overlay into the shared state.

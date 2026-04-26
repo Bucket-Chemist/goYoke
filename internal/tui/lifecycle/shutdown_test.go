@@ -214,6 +214,7 @@ func TestShutdown_StatusCallbacks(t *testing.T) {
 
 	expected := []string{
 		"Saving session...",
+		"Stopping harness server...",
 		"Stopping CLI...",
 		"Closing bridge...",
 		"Waiting for hooks...",

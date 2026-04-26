@@ -106,6 +106,9 @@ func DefaultCommands() []SlashCommand {
 		{"cwd", "Change working directory for CC sessions"},
 		{"model", "Switch model (e.g. /model haiku)"},
 		{"effort", "Switch effort (e.g. /effort high)"},
+		{"link-harness", "Link a harness adapter (e.g. /link-harness hermes)"},
+		{"unlink-harness", "Unlink a harness adapter (e.g. /unlink-harness hermes)"},
+		{"harness-status", "Show linked providers and live endpoint info"},
 		{"help", "Show available slash commands"},
 		{"exit", "Exit goYoke"},
 		{"quit", "Exit goYoke"},
@@ -163,13 +166,16 @@ func HelpText(remote ...SlashCommand) string {
 // localCommandNames is the set of built-in TUI command names that must never
 // be overridden by skill discovery.
 var localCommandNames = map[string]struct{}{
-	"clear":  {},
-	"exit":   {},
-	"quit":   {},
-	"help":   {},
-	"cwd":    {},
-	"model":  {},
-	"effort": {},
+	"clear":          {},
+	"exit":           {},
+	"quit":           {},
+	"help":           {},
+	"cwd":            {},
+	"model":          {},
+	"effort":         {},
+	"link-harness":   {},
+	"unlink-harness": {},
+	"harness-status": {},
 }
 
 // LoadSkillCommands scans configDir/skills/ for subdirectories and returns a

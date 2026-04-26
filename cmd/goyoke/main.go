@@ -58,8 +58,10 @@ import (
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/telemetry"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/components/toast"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/config"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/harnesscontrol"
 	tuiLifecycle "github.com/Bucket-Chemist/goYoke/internal/tui/lifecycle"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/model"
+	"github.com/Bucket-Chemist/goYoke/internal/tui/relay"
 	"github.com/Bucket-Chemist/goYoke/internal/tui/session"
 	pkgconfig "github.com/Bucket-Chemist/goYoke/pkg/config"
 	"github.com/Bucket-Chemist/goYoke/pkg/resolve"
@@ -106,6 +108,7 @@ func main() {
 	configDir := flag.String("config-dir", "", "override Claude config directory (e.g. ~/.claude-em)")
 	resume := flag.Bool("resume", false, "resume most recent session")
 	mcpBinaryFlag := flag.String("mcp-binary", "", "explicit path to goyoke-mcp binary (overrides auto-discovery)")
+	enableHarnessLink := flag.Bool("enable-harness-link", false, "enable harness control server for external adapter integration (also enabled by GOYOKE_HARNESS_LINK=1 or a linked adapter manifest)")
 
 	flag.Parse()
 
@@ -457,6 +460,88 @@ func main() {
 	}
 
 	// -----------------------------------------------------------------------
+	// Phase 3c: Harness control server (feature-gated, HL-007).
+	//
+	// Enabled when any of the following is true:
+	//   - --enable-harness-link flag is set
+	//   - GOYOKE_HARNESS_LINK=1 environment variable is set
+	//   - One or more adapter manifests exist in GetHarnessLinksDir()
+	//
+	// When disabled, no socket or active metadata file is created and the
+	// existing GOYOKE_SOCKET behavior for the internal MCP bridge is unaffected.
+	// -----------------------------------------------------------------------
+
+	var harnessStopFn func() error
+	var harnessSocketPath string
+
+	harnessEnabled := *enableHarnessLink || os.Getenv("GOYOKE_HARNESS_LINK") == "1"
+	if !harnessEnabled {
+		if entries, err := os.ReadDir(pkgconfig.GetHarnessLinksDir()); err == nil && len(entries) > 0 {
+			harnessEnabled = true
+		}
+	}
+
+	if harnessEnabled {
+		socketPath, sockErr := pkgconfig.GetHarnessSocketPath(os.Getpid())
+		if sockErr != nil {
+			if *verbose {
+				log.Printf("[goyoke] harness: could not compute socket path: %v", sockErr)
+			}
+		} else {
+			harnessServer := harnesscontrol.NewServer(app.SnapshotStore(), p.Send, socketPath)
+			if startErr := harnessServer.Start(); startErr != nil {
+				if *verbose {
+					log.Printf("[goyoke] harness: could not start control server: %v", startErr)
+				}
+			} else {
+				harnessSocketPath = socketPath
+				if *verbose {
+					log.Printf("[goyoke] harness: control server started at %s", socketPath)
+				}
+				// The provider/CLI session ID is assigned later by SystemInit.
+				// Mirror it into active.json once it becomes available so
+				// discovery metadata and get_snapshot use the same identifier.
+				app.SetHarnessMetadataSessionUpdater(func(sessionID string) {
+					if metaErr := harnesscontrol.UpdateSessionID(sessionID); metaErr != nil && *verbose {
+						log.Printf("[goyoke] harness: could not update active metadata session_id: %v", metaErr)
+					}
+				})
+				// Safety net: remove metadata on abnormal exit (sm.Shutdown also removes it).
+				defer harnesscontrol.RemoveActiveMetadata() //nolint:errcheck
+
+				harnessStopFn = func() error {
+					_ = harnesscontrol.RemoveActiveMetadata()
+					return harnessServer.Stop()
+				}
+			}
+		}
+	}
+
+	// -----------------------------------------------------------------------
+	// Phase 3d: Discord relay (optional downstream sink, HL-013).
+	//
+	// Enabled when GOYOKE_DISCORD_WEBHOOK is set to a non-empty webhook URL.
+	// The relay subscribes to the SnapshotStore and forwards meaningful
+	// publish-hash changes as Discord messages. When the env var is absent
+	// the relay is disabled; all other flows are unaffected.
+	// -----------------------------------------------------------------------
+
+	discordUnsub := relay.StartDiscordRelay(app.SnapshotStore(), os.Getenv("GOYOKE_DISCORD_WEBHOOK"))
+	defer discordUnsub()
+	app.PublishSnapshotPublic()
+
+	if harnessSocketPath != "" {
+		// Publish discovery metadata only after the initial snapshot exists so a
+		// freshly-discovered harness can call get_snapshot immediately. The
+		// provider/CLI session_id may be absent briefly until SystemInit updates it.
+		if metaErr := harnesscontrol.WriteActiveMetadata(os.Getpid(), harnessSocketPath, ""); metaErr != nil {
+			if *verbose {
+				log.Printf("[goyoke] harness: could not write active metadata: %v", metaErr)
+			}
+		}
+	}
+
+	// -----------------------------------------------------------------------
 	// Phase 4: Create ShutdownManager for sequenced shutdown (TUI-034).
 	//
 	// Replaces the previous defer-based LIFO ordering which was wrong:
@@ -469,6 +554,7 @@ func main() {
 	sm := tuiLifecycle.NewShutdownManager(tuiLifecycle.ShutdownOpts{
 		Driver:       driver,
 		Bridge:       ipcBridge,
+		HarnessStop:  harnessStopFn,
 		SessionSaver: func() { app.SaveSessionPublic() },
 		OnStatus: func(msg string) {
 			if *verbose {

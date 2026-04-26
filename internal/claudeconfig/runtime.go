@@ -66,7 +66,7 @@ func Prepare(opts PrepareOptions) (Layout, error) {
 	if err := ensureSettingsJSON(configDir); err != nil {
 		return Layout{}, err
 	}
-	if err := copyAuthCredentials(configDir, opts.NativeHome); err != nil {
+	if err := syncAuthState(configDir, opts.NativeHome); err != nil {
 		return Layout{}, err
 	}
 
@@ -200,23 +200,50 @@ func ensureSettingsJSON(configDir string) error {
 	return nil
 }
 
-func copyAuthCredentials(configDir, nativeHome string) error {
+func syncAuthState(configDir, nativeHome string) error {
 	if nativeHome == "" {
 		return nil
 	}
 
-	source := filepath.Join(nativeHome, ".claude", ".credentials.json")
+	files := []struct {
+		source string
+		target string
+		label  string
+	}{
+		{
+			source: filepath.Join(nativeHome, ".claude", ".credentials.json"),
+			target: filepath.Join(configDir, ".credentials.json"),
+			label:  "auth credentials",
+		},
+		{
+			source: filepath.Join(nativeHome, ".claude.json"),
+			target: filepath.Join(configDir, ".claude.json"),
+			label:  "auth account state",
+		},
+	}
+
+	for _, f := range files {
+		if err := syncOptionalAuthFile(f.source, f.target, f.label); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func syncOptionalAuthFile(source, target, label string) error {
 	data, err := os.ReadFile(source)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if removeErr := os.Remove(target); removeErr != nil && !os.IsNotExist(removeErr) {
+				return fmt.Errorf("claudeconfig: remove stale %s: %w", label, removeErr)
+			}
 			return nil
 		}
-		return fmt.Errorf("claudeconfig: read auth credentials: %w", err)
+		return fmt.Errorf("claudeconfig: read %s: %w", label, err)
 	}
 
-	target := filepath.Join(configDir, ".credentials.json")
 	if err := os.WriteFile(target, data, 0o600); err != nil {
-		return fmt.Errorf("claudeconfig: write auth credentials: %w", err)
+		return fmt.Errorf("claudeconfig: write %s: %w", label, err)
 	}
 	return nil
 }

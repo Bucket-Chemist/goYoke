@@ -71,6 +71,9 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 	if m.shared != nil && m.shared.providerState != nil && msg.SessionID != "" {
 		m.shared.providerState.SetSessionID(msg.SessionID)
 	}
+	if m.shared != nil && m.shared.harnessSessionUpdater != nil && msg.SessionID != "" {
+		m.shared.harnessSessionUpdater(msg.SessionID)
+	}
 	// Sync status line with session metadata.
 	m.statusLine.ActiveModel = msg.Model
 	m.statusLine.PermissionMode = msg.PermissionMode
@@ -117,6 +120,7 @@ func (m AppModel) handleSystemInit(msg cli.SystemInitEvent) (tea.Model, tea.Cmd)
 	}
 
 	cmds = append(cmds, m.waitForCLIEvent())
+	m.publishSnapshot() // startup: session ready
 	return m, tea.Batch(cmds...)
 }
 
@@ -291,6 +295,7 @@ func (m AppModel) handleAssistantEvent(msg cli.AssistantEvent) (tea.Model, tea.C
 	}
 
 	cmds = append(cmds, m.waitForCLIEvent())
+	m.publishSnapshotDebounced() // streaming: rate-limited to 500 ms
 	return m, tea.Batch(cmds...)
 }
 
@@ -405,6 +410,7 @@ func (m AppModel) handleResultEvent(msg cli.ResultEvent) (tea.Model, tea.Cmd) {
 	}))
 
 	cmds = append(cmds, m.waitForCLIEvent())
+	m.publishSnapshot() // result: streaming stopped, turn complete
 	return m, tea.Batch(cmds...)
 }
 
@@ -414,6 +420,7 @@ func (m AppModel) handleCLIDisconnected(msg cli.CLIDisconnectedMsg) (tea.Model, 
 	// Subprocess exited or pipe broken — attempt reconnection.
 	if msg.Err != nil && m.reconnectCount < maxReconnectAttempts {
 		m.reconnectCount++
+		m.publishSnapshot() // reconnect: captures Reconnecting=true
 		return m, reconnectAfterDelay(m.reconnectCount, m.reconnectSeq)
 	}
 	// Exceeded retries or clean exit — remain disconnected.
